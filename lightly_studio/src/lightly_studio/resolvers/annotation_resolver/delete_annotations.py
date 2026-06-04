@@ -10,9 +10,13 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
 )
 from lightly_studio.resolvers import annotation_resolver
+from lightly_studio.resolvers.annotation_resolver.delete_annotation import (
+    delete_evaluation_metrics,
+)
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
+from lightly_studio.utils import batching
 
 
 def delete_annotations(
@@ -42,10 +46,17 @@ def delete_annotations(
 
     # Now delete the annotations themselves
     annotation_ids = [annotation.sample_id for annotation in annotations]
+    parent_sample_ids = list({annotation.parent_sample_id for annotation in annotations})
     if annotation_ids:
-        session.exec(
-            delete(AnnotationBaseTable).where(
-                col(AnnotationBaseTable.sample_id).in_(annotation_ids)
-            )
+        # TODO(Jonas, 06/2026): Replace eager deletion with explicit evaluation invalidation
+        # once evaluation results can be recomputed or marked stale independently.
+        delete_evaluation_metrics(
+            session=session,
+            annotation_ids=annotation_ids,
+            parent_sample_ids=parent_sample_ids,
         )
-        session.commit()
+    for batch in batching.batched(items=annotation_ids):
+        session.exec(
+            delete(AnnotationBaseTable).where(col(AnnotationBaseTable.sample_id).in_(batch))
+        )
+    session.commit()

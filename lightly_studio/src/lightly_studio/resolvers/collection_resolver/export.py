@@ -5,9 +5,11 @@ from __future__ import annotations
 from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
+from sqlalchemy import false
 from sqlmodel import Session, and_, col, func, or_, select
 from sqlmodel.sql.expression import SelectOfScalar
 
+from lightly_studio import db_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.image import ImageTable
@@ -166,7 +168,7 @@ def _build_export_query(  # noqa: C901
                     col(SampleTable.tags).any(
                         and_(
                             TagTable.kind == "annotation",
-                            col(TagTable.tag_id).in_(include.tag_ids),
+                            db_array.in_array(column=col(TagTable.tag_id), values=include.tag_ids),
                         )
                     )
                 )
@@ -182,7 +184,9 @@ def _build_export_query(  # noqa: C901
                         col(SampleTable.tags).any(
                             and_(
                                 TagTable.kind == "sample",
-                                col(TagTable.tag_id).in_(include.tag_ids),
+                                db_array.in_array(
+                                    column=col(TagTable.tag_id), values=include.tag_ids
+                                ),
                             )
                         ),
                         # Samples with matching annotation tags (via annotation sample)
@@ -199,7 +203,9 @@ def _build_export_query(  # noqa: C901
                 select(ImageTable)
                 .join(ImageTable.sample)
                 .where(SampleTable.collection_id == collection_id)
-                .where(col(ImageTable.sample_id).in_(include.sample_ids))
+                .where(
+                    db_array.in_array(column=col(ImageTable.sample_id), values=include.sample_ids)
+                )
                 .order_by(col(ImageTable.created_at).asc())
                 .distinct()
             )
@@ -211,14 +217,24 @@ def _build_export_query(  # noqa: C901
             # Filter by checking if the annotation's sample_id belongs to a sample in
             # annotation_collection_ids
             annotation_sample_subquery = select(SampleTable.sample_id).where(
-                col(SampleTable.collection_id).in_(annotation_collection_ids)
+                db_array.in_array(
+                    column=col(SampleTable.collection_id),
+                    values=annotation_collection_ids,
+                )
+                if annotation_collection_ids
+                else false()
             )
             return (
                 select(ImageTable)
                 .join(ImageTable.sample)
                 .join(SampleTable.annotations)
                 .where(col(AnnotationBaseTable.sample_id).in_(annotation_sample_subquery))
-                .where(col(AnnotationBaseTable.sample_id).in_(include.annotation_ids))
+                .where(
+                    db_array.in_array(
+                        column=col(AnnotationBaseTable.sample_id),
+                        values=include.annotation_ids,
+                    )
+                )
                 .order_by(col(ImageTable.created_at).asc())
                 .distinct()
             )
@@ -234,7 +250,7 @@ def _build_export_query(  # noqa: C901
                     col(SampleTable.tags).any(
                         and_(
                             TagTable.kind == "annotation",
-                            col(TagTable.tag_id).in_(exclude.tag_ids),
+                            db_array.in_array(column=col(TagTable.tag_id), values=exclude.tag_ids),
                         )
                     )
                 )
@@ -249,7 +265,9 @@ def _build_export_query(  # noqa: C901
                         ~col(SampleTable.tags).any(
                             and_(
                                 TagTable.kind == "sample",
-                                col(TagTable.tag_id).in_(exclude.tag_ids),
+                                db_array.in_array(
+                                    column=col(TagTable.tag_id), values=exclude.tag_ids
+                                ),
                             )
                         ),
                         ~col(SampleTable.sample_id).in_(annotation_tag_subquery),
@@ -263,7 +281,9 @@ def _build_export_query(  # noqa: C901
                 select(ImageTable)
                 .join(ImageTable.sample)
                 .where(SampleTable.collection_id == collection_id)
-                .where(col(ImageTable.sample_id).notin_(exclude.sample_ids))
+                .where(
+                    ~db_array.in_array(column=col(ImageTable.sample_id), values=exclude.sample_ids)
+                )
                 .order_by(col(ImageTable.created_at).asc())
                 .distinct()
             )
@@ -276,7 +296,10 @@ def _build_export_query(  # noqa: C901
                     or_(
                         ~col(SampleTable.annotations).any(),
                         ~col(SampleTable.annotations).any(
-                            col(AnnotationBaseTable.sample_id).in_(exclude.annotation_ids)
+                            db_array.in_array(
+                                column=col(AnnotationBaseTable.sample_id),
+                                values=exclude.annotation_ids,
+                            )
                         ),
                     )
                 )

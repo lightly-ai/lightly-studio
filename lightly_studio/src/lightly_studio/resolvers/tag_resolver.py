@@ -10,8 +10,10 @@ import sqlmodel
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
+from lightly_studio import db_array
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.tag import TagCreate, TagTable
+from lightly_studio.utils import batching
 
 
 def create(session: Session, tag: TagCreate) -> TagTable:
@@ -192,12 +194,13 @@ def remove_sample_ids_from_tag_id(
     if not tag or not tag.tag_id:
         return None
 
-    session.exec(
-        sqlmodel.delete(SampleTagLinkTable).where(
-            col(SampleTagLinkTable.tag_id) == tag_id,
-            col(SampleTagLinkTable.sample_id).in_(sample_ids),
+    for batch in batching.batched(items=sample_ids):
+        session.exec(
+            sqlmodel.delete(SampleTagLinkTable).where(
+                col(SampleTagLinkTable.tag_id) == tag_id,
+                col(SampleTagLinkTable.sample_id).in_(batch),
+            )
         )
-    )
 
     session.commit()
     session.refresh(tag)
@@ -208,7 +211,9 @@ def get_names_by_ids(session: Session, tag_ids: Sequence[UUID]) -> dict[UUID, st
     """Return ``{tag_id: name}`` for the requested tags."""
     if not tag_ids:
         return {}
-    stmt = select(TagTable.tag_id, TagTable.name).where(col(TagTable.tag_id).in_(tag_ids))
+    stmt = select(TagTable.tag_id, TagTable.name).where(
+        db_array.in_array(column=col(TagTable.tag_id), values=tag_ids)
+    )
     return dict(session.exec(stmt).all())
 
 
@@ -220,7 +225,7 @@ def get_tags_by_sample(
     if not tag_ids:
         return {}
     stmt = select(SampleTagLinkTable.sample_id, SampleTagLinkTable.tag_id).where(
-        col(SampleTagLinkTable.tag_id).in_(tag_ids)
+        db_array.in_array(column=col(SampleTagLinkTable.tag_id), values=tag_ids)
     )
     result: dict[UUID, set[UUID]] = {}
     for sample_id, tag_id in session.exec(stmt).all():

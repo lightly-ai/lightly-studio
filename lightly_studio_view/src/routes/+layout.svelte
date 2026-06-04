@@ -7,6 +7,7 @@
     import '../app.css';
     import { Toaster } from 'svelte-sonner';
     import { client } from '$lib/api/lightly_studio_local/client.gen';
+    import { PluginExecutingOverlay } from '$lib/components/PluginExecutingOverlay';
 
     interface ApiErrorWithStatus {
         error?: string;
@@ -53,5 +54,6 @@
     <div class="flex h-full w-full flex-col">
         {@render children()}
         <Toaster richColors />
+        <PluginExecutingOverlay />
     </div>
 </QueryClientProvider>

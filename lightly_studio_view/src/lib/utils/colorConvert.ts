@@ -4,6 +4,14 @@ export interface RGB {
     b: number;
 }
 
+interface OklchHueWheelColorParams {
+    index: number;
+    count: number;
+    lightness: number;
+    chroma: number;
+    hueOffset?: number;
+}
+
 export function hexToRgb(hex: string): RGB {
     return {
         r: parseInt(hex.slice(1, 3), 16),
@@ -42,4 +50,64 @@ export function withAlpha(color: string, alpha: number): string {
 /** Drops the alpha channel from an `rgba(...)` string, returning `rgb(r, g, b)`. */
 export function stripAlpha(color: string): string {
     return color.replace(/rgba?\((\d+,\s*\d+,\s*\d+)(?:,\s*[\d.]+)?\)/, 'rgb($1)');
+}
+
+/** Linear-light sRGB channel → gamma-encoded sRGB channel (IEC 61966-2-1). */
+function linearToGamma(c: number): number {
+    return c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+}
+
+/**
+ * Converts an OKLCH color to 8-bit sRGB.
+ *
+ * @param l Lightness, 0-1.
+ * @param c Chroma, typically 0-0.4.
+ * @param h Hue in degrees, 0-360.
+ *
+ * Channels that fall outside the sRGB gamut are clamped to [0, 255], which can
+ * shift the perceived hue/chroma for highly saturated inputs. Uses Björn
+ * Ottosson's OKLab matrices (https://bottosson.github.io/posts/oklab/).
+ */
+export function oklchToRgb(l: number, c: number, h: number): RGB {
+    const hRad = (h * Math.PI) / 180;
+    const a = c * Math.cos(hRad);
+    const b = c * Math.sin(hRad);
+
+    // OKLab → non-linear LMS → linear LMS (cube).
+    const l_ = l + 0.3963377774 * a + 0.2158037573 * b;
+    const m_ = l - 0.1055613458 * a - 0.0638541728 * b;
+    const s_ = l - 0.0894841775 * a - 1.291485548 * b;
+    const lCube = l_ ** 3;
+    const mCube = m_ ** 3;
+    const sCube = s_ ** 3;
+
+    // Linear LMS → linear sRGB.
+    const rLin = 4.0767416621 * lCube - 3.3077115913 * mCube + 0.2309699292 * sCube;
+    const gLin = -1.2684380046 * lCube + 2.6097574011 * mCube - 0.3413193965 * sCube;
+    const bLin = -0.0041960863 * lCube - 0.7034186147 * mCube + 1.707614701 * sCube;
+
+    const toByte = (channel: number) =>
+        Math.round(Math.max(0, Math.min(1, linearToGamma(channel))) * 255);
+
+    return { r: toByte(rLin), g: toByte(gLin), b: toByte(bLin) };
+}
+
+/**
+ * Returns the sRGB color for the `index`-th of `count` hues spread evenly around
+ * the OKLCH hue circle, at a fixed lightness and chroma. `hueOffset` (degrees)
+ * rotates the whole wheel — pass it to interleave several wheels so their hues
+ * land in each other's gaps.
+ */
+export function oklchHueWheelColor({
+    index,
+    count,
+    lightness,
+    chroma,
+    hueOffset = 0
+}: OklchHueWheelColorParams): RGB {
+    if (index < 0 || index >= count) {
+        throw new RangeError(`index must be in [0, ${count}), got ${index}`);
+    }
+    const hue = (hueOffset + (360 * index) / count) % 360;
+    return oklchToRgb(lightness, chroma, hue);
 }
