@@ -26,6 +26,10 @@
     // Only let the user pick a source when there is more than one to choose between.
     const showSourceSelect = $derived(sourceNames.length > 1);
 
+    // AnnotationSourceSelect expects {id, name}; when callers identify sources by
+    // name alone, the id and name are the same value.
+    const sourceOptions = $derived(sourceNames.map((name) => ({ id: name, name })));
+
     let selectedItem = $state<ListItem | undefined>(undefined);
     // Track close origin so the onOpenChange(false) that fires when we set
     // open = false from handleConfirm does not also invoke onCancel.
@@ -74,7 +78,7 @@
         {#if showSourceSelect}
             <div class="space-y-1 py-2">
                 <span class="text-sm text-muted-foreground">Annotation source</span>
-                <AnnotationSourceSelect {sourceNames} bind:selectedSource />
+                <AnnotationSourceSelect {sourceOptions} bind:selectedSource />
             </div>
         {/if}
 

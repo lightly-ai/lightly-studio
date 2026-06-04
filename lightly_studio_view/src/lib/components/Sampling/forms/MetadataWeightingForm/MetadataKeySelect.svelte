@@ -1,24 +1,21 @@
 <script lang="ts">
-    import * as Select from '$lib/components/ui/select';
+    import { Select } from '$lib/components/Select';
+
     interface Props {
         value: string;
         fieldNames: string[];
         onValueChange: (value: string) => void;
     }
     let { value, fieldNames, onValueChange }: Props = $props();
+
+    const items = $derived(fieldNames.map((name) => ({ value: name, label: name })));
 </script>
 
-<Select.Root type="single" name="metadata-weighting-key" {value} {onValueChange}>
-    <Select.Trigger class="w-full" data-testid="strategy-metadata-key-input">
-        {value || 'Select a metadata field'}
-    </Select.Trigger>
-    <Select.Content>
-        <Select.Group>
-            {#each fieldNames as fieldName (fieldName)}
-                <Select.Item value={fieldName} label={fieldName}>
-                    {fieldName}
-                </Select.Item>
-            {/each}
-        </Select.Group>
-    </Select.Content>
-</Select.Root>
+<Select
+    {items}
+    {value}
+    {onValueChange}
+    placeholder="Select a metadata field"
+    class="w-full"
+    testId="strategy-metadata-key-input"
+/>

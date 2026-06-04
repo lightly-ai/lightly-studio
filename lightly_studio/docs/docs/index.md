@@ -28,7 +28,7 @@ with an M1 chip and 16 GB of memory.
 
 ## Installation
 
-Ensure you have **Python 3.9 to 3.14**. We strongly recommend using a virtual environment.
+Ensure you have **Python 3.9 to 3.14**. We recommend **Python 3.10** for the best compatibility with plugins such as SAM autolabeling. We strongly recommend using a virtual environment.
 
 The library is OS-independent and works on Windows, Linux, and macOS.
 
