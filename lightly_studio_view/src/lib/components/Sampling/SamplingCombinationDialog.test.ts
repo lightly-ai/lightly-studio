@@ -30,11 +30,11 @@ vi.mock('$lib/hooks/useTags/useTags', () => ({
     })
 }));
 
-vi.mock('$lib/hooks/useSelectionDialog/useSelectionDialog', () => ({
-    useSelectionDialog: () => ({
-        isSelectionDialogOpen: readable(true),
-        openSelectionDialog: vi.fn(),
-        closeSelectionDialog: vi.fn()
+vi.mock('$lib/hooks/useSamplingDialog/useSamplingDialog', () => ({
+    useSamplingDialog: () => ({
+        isSamplingDialogOpen: readable(true),
+        openSamplingDialog: vi.fn(),
+        closeSamplingDialog: vi.fn()
     })
 }));
 
@@ -133,8 +133,8 @@ describe('SamplingCombinationDialog', () => {
 
         render(SamplingCombinationDialog);
 
-        await fireEvent.click(screen.getByTestId('add-strategy-button'));
-        await fireEvent.click(await screen.findByTestId('add-strategy-diversity'));
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+        await fireEvent.pointerUp(await screen.findByTestId('add-strategy-diversity'));
 
         expect(screen.getByTestId('selection-dialog-submit')).toBeDisabled();
     });
@@ -144,8 +144,8 @@ describe('SamplingCombinationDialog', () => {
 
         render(SamplingCombinationDialog);
 
-        await fireEvent.click(screen.getByTestId('add-strategy-button'));
-        await fireEvent.click(await screen.findByTestId('add-strategy-diversity'));
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+        await fireEvent.pointerUp(await screen.findByTestId('add-strategy-diversity'));
         await fireEvent.input(screen.getByTestId('selection-dialog-tag-name-input'), {
             target: { value: 'my-tag' }
         });
@@ -186,8 +186,8 @@ describe('SamplingCombinationDialog', () => {
     it('submit button is disabled when filteredSampleCount is 0', async () => {
         render(SamplingCombinationDialog);
 
-        await fireEvent.click(screen.getByTestId('add-strategy-button'));
-        await fireEvent.click(await screen.findByTestId('add-strategy-diversity'));
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+        await fireEvent.pointerUp(await screen.findByTestId('add-strategy-diversity'));
         await fireEvent.input(screen.getByTestId('selection-dialog-tag-name-input'), {
             target: { value: 'my-tag' }
         });
@@ -200,8 +200,8 @@ describe('SamplingCombinationDialog', () => {
 
         render(SamplingCombinationDialog);
 
-        await fireEvent.click(screen.getByTestId('add-strategy-button'));
-        await fireEvent.click(await screen.findByTestId('add-strategy-diversity'));
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+        await fireEvent.pointerUp(await screen.findByTestId('add-strategy-diversity'));
         await fireEvent.input(screen.getByTestId('selection-dialog-tag-name-input'), {
             target: { value: 'my-tag' }
         });
@@ -220,8 +220,8 @@ describe('SamplingCombinationDialog', () => {
 
         render(SamplingCombinationDialog);
 
-        await fireEvent.click(screen.getByTestId('add-strategy-button'));
-        await fireEvent.click(await screen.findByTestId('add-strategy-diversity'));
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+        await fireEvent.pointerUp(await screen.findByTestId('add-strategy-diversity'));
         await fireEvent.input(screen.getByTestId('selection-dialog-tag-name-input'), {
             target: { value: 'my-tag' }
         });
@@ -255,8 +255,8 @@ describe('SamplingCombinationDialog', () => {
 
         render(SamplingCombinationDialog);
 
-        await fireEvent.click(screen.getByTestId('add-strategy-button'));
-        await fireEvent.click(await screen.findByTestId('add-strategy-diversity'));
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+        await fireEvent.pointerUp(await screen.findByTestId('add-strategy-diversity'));
         await fireEvent.input(screen.getByTestId('selection-dialog-tag-name-input'), {
             target: { value: 'my-tag' }
         });
@@ -278,8 +278,8 @@ describe('SamplingCombinationDialog', () => {
 
         render(SamplingCombinationDialog);
 
-        await fireEvent.click(screen.getByTestId('add-strategy-button'));
-        await fireEvent.click(await screen.findByTestId('add-strategy-diversity'));
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+        await fireEvent.pointerUp(await screen.findByTestId('add-strategy-diversity'));
         await fireEvent.input(screen.getByTestId('selection-dialog-tag-name-input'), {
             target: { value: 'my-tag' }
         });
@@ -296,8 +296,8 @@ describe('SamplingCombinationDialog', () => {
 
         render(SamplingCombinationDialog);
 
-        await fireEvent.click(screen.getByTestId('add-strategy-button'));
-        await fireEvent.click(await screen.findByTestId('add-strategy-diversity'));
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+        await fireEvent.pointerUp(await screen.findByTestId('add-strategy-diversity'));
         await fireEvent.input(screen.getByTestId('selection-dialog-tag-name-input'), {
             target: { value: 'my-tag' }
         });

@@ -1,6 +1,6 @@
 <script lang="ts">
     import { page } from '$app/state';
-    import type { SelectionRequest } from '$lib/api/lightly_studio_local/types.gen';
+    import type { SamplingRequest } from '$lib/api/lightly_studio_local/types.gen';
     import { Info } from '@lucide/svelte';
     import AddStrategyButton from '$lib/components/Sampling/AddStrategyButton.svelte';
     import StrategyCard from '$lib/components/Sampling/StrategyCard/StrategyCard.svelte';
@@ -13,7 +13,7 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
-    import { useSelectionDialog } from '$lib/hooks/useSelectionDialog/useSelectionDialog';
+    import { useSamplingDialog } from '$lib/hooks/useSamplingDialog/useSamplingDialog';
     import { isStrategyInstanceValid, useStrategyBuilder } from '$lib/hooks/useStrategyBuilder';
     import { useSubmitCombinationSelection } from '$lib/hooks/useSubmitCombinationSelection/useSubmitCombinationSelection';
     import { useTags } from '$lib/hooks/useTags/useTags';
@@ -25,8 +25,7 @@
         useTags({ collection_id: collectionId, kind: ['sample'] })
     );
 
-    const { isSelectionDialogOpen, openSelectionDialog, closeSelectionDialog } =
-        useSelectionDialog();
+    const { isSamplingDialogOpen, openSamplingDialog, closeSamplingDialog } = useSamplingDialog();
 
     const isVideoCollection = $derived(
         page.data.collection?.sample_type === 'video' ||
@@ -46,7 +45,7 @@
     const hasAnnotationLabels = $derived(annotationLabels.length > 0);
 
     const currentFilter = $derived(isVideoCollection ? $videoFilter : $imageFilter);
-    const selectionFilter = $derived<SelectionRequest['filter']>(
+    const selectionFilter = $derived<SamplingRequest['filter']>(
         isVideoCollection
             ? currentFilter
                 ? { ...currentFilter, filter_type: 'video' }
@@ -79,7 +78,7 @@
         get loadTags() {
             return loadTags;
         },
-        closeSelectionDialog
+        closeSelectionDialog: closeSamplingDialog
     });
 
     const isFormValid = $derived(
@@ -124,8 +123,8 @@
 </script>
 
 <Dialog.Root
-    open={$isSelectionDialogOpen}
-    onOpenChange={(open) => (open ? openSelectionDialog() : closeSelectionDialog())}
+    open={$isSamplingDialogOpen}
+    onOpenChange={(open) => (open ? openSamplingDialog() : closeSamplingDialog())}
 >
     <Dialog.Portal>
         <Dialog.Overlay />
@@ -252,7 +251,7 @@
                     <Button
                         variant="outline"
                         type="button"
-                        onclick={closeSelectionDialog}
+                        onclick={closeSamplingDialog}
                         disabled={$isSubmitting}
                         data-testid="selection-dialog-cancel"
                     >
