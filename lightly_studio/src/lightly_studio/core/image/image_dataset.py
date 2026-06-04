@@ -259,6 +259,32 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             )
         _log_missing_images(annotation_source=annotation_source, missing_paths=missing)
 
+    def add_annotations_from_pascal_voc_segmentations(
+        self,
+        masks_path: PathLike,
+        images_root: PathLike,
+        class_id_to_name: Mapping[int, str],
+        annotation_source: str,
+    ) -> None:
+        """Attach Pascal VOC semantic segmentation masks to images already in the dataset.
+
+        Args:
+            masks_path: Path to the folder containing the segmentation masks.
+            images_root: Root path used for matching image filenames.
+            class_id_to_name: Mapping from class IDs to class names.
+            annotation_source: Name of the annotation source.
+        """
+        label_input = PascalVOCSemanticSegmentationInput.from_dirs(
+            images_dir=images_root,
+            masks_dir=masks_path,
+            class_id_to_name=class_id_to_name,
+        )
+        self.add_annotations_from_labelformat(
+            input_labels=label_input,
+            images_root=images_root,
+            annotation_source=annotation_source,
+        )
+
     def add_samples_from_labelformat(
         self,
         input_labels: ObjectDetectionInput | InstanceSegmentationInput,

@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pytest
 import yaml
 from PIL import Image
@@ -45,6 +46,11 @@ def _create_sample_images(image_paths: list[Path]) -> None:
     for image_path in image_paths:
         image_path.parent.mkdir(parents=True, exist_ok=True)
         Image.new("RGB", (10, 10)).save(image_path)
+
+
+def _create_mask(mask_path: Path, mask: np.ndarray) -> None:
+    mask_path.parent.mkdir(parents=True, exist_ok=True)
+    Image.fromarray(mask).save(mask_path)
 
 
 def _setup_dataset_with_images(tmp_path: Path, file_names: list[str]) -> tuple[ImageDataset, Path]:
@@ -230,3 +236,84 @@ class TestDataset:
             parent_collection_id=dataset.collection_id,
         )
         assert len(result.annotations) == 2
+
+    def test_add_annotations_from_pascal_voc_segmentations__appends_to_existing_images(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        dataset, images_path = _setup_dataset_with_images(tmp_path, ["image1.jpg", "image2.jpg"])
+        masks_path = tmp_path / "masks"
+        # image1 contains both background and "cat" pixels -> 2 annotations.
+        mask1 = np.zeros((10, 10), dtype=np.uint8)
+        mask1[0, 0] = 1
+        _create_mask(masks_path / "image1.png", mask1)
+        # image2 contains only background -> 1 annotation.
+        _create_mask(masks_path / "image2.png", np.zeros((10, 10), dtype=np.uint8))
+
+        dataset.add_annotations_from_pascal_voc_segmentations(
+            masks_path=masks_path,
+            images_root=images_path,
+            class_id_to_name={0: "bg", 1: "cat"},
+            annotation_source="ground_truth",
+        )
+
+        result = annotation_resolver.get_all_by_collection_name(
+            session=dataset.session,
+            collection_name="ground_truth",
+            parent_collection_id=dataset.collection_id,
+        )
+        assert len(result.annotations) == 3
+
+        cov_id = collection_resolver.get_or_create_child_collection(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            sample_type=SampleType.ANNOTATION,
+            name="ground_truth",
+        )
+        covered = set(
+            annotation_collection_coverage_resolver.list_by_collection_id(
+                session=dataset.session, annotation_collection_id=cov_id
+            )
+        )
+        assert covered == {s.sample_id for s in dataset}
+
+    def test_add_annotations_from_pascal_voc_segmentations__warns_on_missing_images(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        # Only image1 is added to the dataset.
+        images_path = tmp_path / "images"
+        images_path.mkdir()
+        _create_sample_images([images_path / "image1.jpg"])
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_images_from_path(path=images_path, embed=False)
+
+        # image2 exists on disk with a mask but was never added to the dataset.
+        _create_sample_images([images_path / "image2.jpg"])
+        masks_path = tmp_path / "masks"
+        _create_mask(masks_path / "image1.png", np.zeros((10, 10), dtype=np.uint8))
+        _create_mask(masks_path / "image2.png", np.zeros((10, 10), dtype=np.uint8))
+
+        with caplog.at_level(logging.WARNING):
+            dataset.add_annotations_from_pascal_voc_segmentations(
+                masks_path=masks_path,
+                images_root=images_path,
+                class_id_to_name={0: "bg"},
+                annotation_source="gt",
+            )
+
+        warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+        assert any(
+            "skipped 1 annotation" in r.getMessage() and "image2.jpg" in r.getMessage()
+            for r in warnings
+        )
+
+        result = annotation_resolver.get_all_by_collection_name(
+            session=dataset.session,
+            collection_name="gt",
+            parent_collection_id=dataset.collection_id,
+        )
+        assert len(result.annotations) == 1
