@@ -1,5 +1,7 @@
 export { default as Alert } from '$lib/components/Alert/index.svelte';
 export { default as Button } from '$lib/components/Button/Button.svelte';
+export { Select } from '$lib/components/Select';
+export type { SelectItem, SelectSize } from '$lib/components/Select';
 export { default as AnnotationsGrid } from '$lib/components/AnnotationsGrid/AnnotationsGrid.svelte';
 export { default as AnnotationsGridItem } from '$lib/components/AnnotationsGrid/AnnotationsGridItem/AnnotationsGridItem.svelte';
 export { default as Card } from '$lib/components/Card/Card.svelte';
