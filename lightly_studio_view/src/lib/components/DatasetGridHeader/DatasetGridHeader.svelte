@@ -10,11 +10,13 @@
 
     interface Props {
         canSelectAll: boolean;
+        isSelectionActive: boolean;
         isImages: boolean;
         hasEvaluationRuns: boolean;
         hasMediaWithEmbeddings: boolean;
         collectionDatasetId: string;
         onSelectAll: () => Promise<void>;
+        onDeselectAll: () => void;
         searchImage: SearchImage | undefined;
         searchPending: boolean;
         initialQueryText: string;
@@ -26,10 +28,12 @@
 
     const {
         canSelectAll,
+        isSelectionActive,
         isImages,
         hasEvaluationRuns,
         hasMediaWithEmbeddings,
         onSelectAll,
+        onDeselectAll,
         searchImage,
         searchPending,
         initialQueryText,
@@ -47,7 +51,12 @@
 <GridHeader>
     {#snippet selectionControls(compact)}
         {#if canSelectAll}
-            <GridHeaderSelectAllButton onclick={onSelectAll} {compact} />
+            <GridHeaderSelectAllButton
+                checked={isSelectionActive}
+                {onSelectAll}
+                {onDeselectAll}
+                {compact}
+            />
         {/if}
     {/snippet}
     {#snippet auxControls(compact)}
