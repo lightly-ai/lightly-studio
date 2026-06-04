@@ -1,29 +1,32 @@
-# Evaluation
+# Model Evaluation
 
-Evaluation runs let you compare model predictions against ground truth
+Model evaluation runs let you compare model predictions against ground truth
 [annotations](annotations.md) and surface per-sample quality metrics in LightlyStudio. Supported
 task types are object detection, classification and semantic segmentation.
 
-## Evaluation in the GUI
+## Model Evaluation in the GUI
 
 <video autoplay loop muted playsinline controls style="width: 100%;">
   <source src="https://storage.googleapis.com/lightly-public/studio/evaluation_overview.mp4" type="video/mp4">
 </video>
 
-Evaluation results are accessible in the **Evaluation** panel of the GUI once a run has been created via the [Python API](#evaluation-in-python). Select an evaluation run in the **Evaluation** panel to inspect its configuration and confusion matrix. Then use the sample grid to drill into the underlying samples:
+Evaluation results are accessible in the **Evaluation** panel of the GUI once a run has been created via the [Python API](#model-evaluation-in-python). Select an evaluation run in the **Evaluation** panel to inspect its configuration and confusion matrix. Then use the sample grid to drill into the underlying samples:
 
 - Sort by `fp`, `fn`, or `tp` for object detection runs.
 - Sort by `disagreement` for classification runs.
 - Sort by `miou` for semantic segmentation.
 - Filter to the affected classes and inspect the hardest samples in detail view.
 
+![Confusion matrix with hover tooltip showing GT: person, Pred: person, Count: 24](../_static/confusion_matrix_v0_0_1.png)
+
 !!! hint "Reading the confusion matrix"
 
-    - Strong diagonal values indicate correct predictions.
-    - Large off-diagonal values indicate systematic class confusion.
-    - Use those cells to decide which samples to inspect next in the grid.
+    - Color intensity reflects the number of samples in each cell.
+    - **Green diagonal cells** — the model predicts that class correctly.
+    - **Red off-diagonal cells** — the model is confusing those two classes.
+    - Use the red cells to decide which samples to inspect next in the grid.
 
-## Evaluation in Python
+## Model Evaluation in Python
 
 ### Creating an evaluation run
 

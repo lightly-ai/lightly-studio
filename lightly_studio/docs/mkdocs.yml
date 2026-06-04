@@ -44,7 +44,7 @@ nav:
     - Sampling: api/sampling.md
     - Plugin: api/plugin.md
     - Annotation: api/annotation.md
-    - Evaluation: api/evaluation.md
+    - Model Evaluation: api/evaluation.md
   - Concepts & Tools:
     - Concepts:
       - Annotations: concepts_and_tools/annotations.md
@@ -56,7 +56,7 @@ nav:
       - Export: concepts_and_tools/export.md
       - Sampling: concepts_and_tools/sampling.md
       - Plugins: concepts_and_tools/plugins.md
-      - Evaluation: concepts_and_tools/evaluation.md
+      - Model Evaluation: concepts_and_tools/evaluation.md
   - Advanced:
     - Run LightlyStudio from a Notebook: advanced/notebooks.md
     - Reuse Datasets: advanced/reuse_datasets.md
