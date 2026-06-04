@@ -11,6 +11,7 @@ const children = createRawSnippet(() => ({
 const defaultProps = {
     name: 'Ground truth',
     count: 3,
+    sampleId: 'sample-1',
     showColorMarker: true,
     allHidden: false,
     onToggleVisibility: vi.fn(),
@@ -72,6 +73,62 @@ describe('SampleDetailsAnnotationSourceGroup', () => {
         await user.click(screen.getByTestId('source-group-eye'));
 
         expect(onToggleVisibility).toHaveBeenCalledOnce();
+        expect(screen.getByTestId('group-content')).toBeInTheDocument();
+    });
+
+    it('starts expanded by default', () => {
+        render(SampleDetailsAnnotationSourceGroup, { props: defaultProps });
+
+        expect(screen.getByTestId('group-content')).toBeInTheDocument();
+    });
+
+    it('starts collapsed when initiallyOpen is false', () => {
+        render(SampleDetailsAnnotationSourceGroup, {
+            props: { ...defaultProps, initiallyOpen: false }
+        });
+
+        expect(screen.queryByTestId('group-content')).not.toBeInTheDocument();
+    });
+
+    it('toggles visibility via the eye without expanding a collapsed group', async () => {
+        const user = userEvent.setup();
+        const onToggleVisibility = vi.fn();
+        render(SampleDetailsAnnotationSourceGroup, {
+            props: { ...defaultProps, initiallyOpen: false, allHidden: true, onToggleVisibility }
+        });
+
+        await user.click(screen.getByTestId('source-group-eye-off'));
+
+        expect(onToggleVisibility).toHaveBeenCalledOnce();
+        expect(screen.queryByTestId('group-content')).not.toBeInTheDocument();
+    });
+
+    it('re-applies the initial collapse when the sample changes', async () => {
+        const user = userEvent.setup();
+        const { rerender } = render(SampleDetailsAnnotationSourceGroup, {
+            props: { ...defaultProps, initiallyOpen: false, sampleId: 'sample-1' }
+        });
+
+        // Manually expand the collapsed group.
+        await user.click(screen.getByText('Ground truth'));
+        expect(screen.getByTestId('group-content')).toBeInTheDocument();
+
+        // Navigating to another sample re-applies the seeded collapse.
+        await rerender({ ...defaultProps, initiallyOpen: false, sampleId: 'sample-2' });
+        expect(screen.queryByTestId('group-content')).not.toBeInTheDocument();
+    });
+
+    it('keeps the manual open state when re-rendered for the same sample', async () => {
+        const user = userEvent.setup();
+        const { rerender } = render(SampleDetailsAnnotationSourceGroup, {
+            props: { ...defaultProps, initiallyOpen: false, sampleId: 'sample-1' }
+        });
+
+        await user.click(screen.getByText('Ground truth'));
+        expect(screen.getByTestId('group-content')).toBeInTheDocument();
+
+        // A re-render for the same sample must not clobber the manual toggle.
+        await rerender({ ...defaultProps, initiallyOpen: false, sampleId: 'sample-1' });
         expect(screen.getByTestId('group-content')).toBeInTheDocument();
     });
 });
