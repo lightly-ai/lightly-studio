@@ -175,7 +175,7 @@
     {/if}
     {#if video.similarity_score !== undefined && video.similarity_score !== null}
         <div
-            class="absolute bottom-1 right-1 z-10 flex items-center rounded bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white backdrop-blur-sm"
+            class="absolute bottom-1 right-1 z-10 box-border flex h-5 items-center rounded bg-black/60 px-1.5 text-xs font-medium text-white backdrop-blur-sm"
         >
             <span
                 class="mr-1.5 block h-2 w-2 rounded-full"
