@@ -17,6 +17,15 @@ const defaultProps = {
     children
 };
 
+// Classifications reuse the group without a visibility toggle: omitting
+// onToggleVisibility hides the eye entirely.
+const propsWithoutEye = {
+    name: 'Ground truth',
+    count: 3,
+    showColorMarker: true,
+    children
+};
+
 describe('SampleDetailsAnnotationSourceGroup', () => {
     it('renders the source name, annotation count and children', () => {
         render(SampleDetailsAnnotationSourceGroup, { props: defaultProps });
@@ -72,6 +81,21 @@ describe('SampleDetailsAnnotationSourceGroup', () => {
         await user.click(screen.getByTestId('source-group-eye'));
 
         expect(onToggleVisibility).toHaveBeenCalledOnce();
+        expect(screen.getByTestId('group-content')).toBeInTheDocument();
+    });
+
+    it('hides the visibility eye when onToggleVisibility is omitted', () => {
+        render(SampleDetailsAnnotationSourceGroup, { props: propsWithoutEye });
+
+        expect(screen.queryByTestId('source-group-eye')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('source-group-eye-off')).not.toBeInTheDocument();
+    });
+
+    it('still renders the name, count and children without the eye', () => {
+        render(SampleDetailsAnnotationSourceGroup, { props: propsWithoutEye });
+
+        expect(screen.getByText('Ground truth')).toBeInTheDocument();
+        expect(screen.getByText('3')).toBeInTheDocument();
         expect(screen.getByTestId('group-content')).toBeInTheDocument();
     });
 });
