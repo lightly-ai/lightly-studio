@@ -74,4 +74,31 @@ describe('SampleDetailsAnnotationSourceGroup', () => {
         expect(onToggleVisibility).toHaveBeenCalledOnce();
         expect(screen.getByTestId('group-content')).toBeInTheDocument();
     });
+
+    it('starts expanded by default', () => {
+        render(SampleDetailsAnnotationSourceGroup, { props: defaultProps });
+
+        expect(screen.getByTestId('group-content')).toBeInTheDocument();
+    });
+
+    it('starts collapsed when initiallyOpen is false', () => {
+        render(SampleDetailsAnnotationSourceGroup, {
+            props: { ...defaultProps, initiallyOpen: false }
+        });
+
+        expect(screen.queryByTestId('group-content')).not.toBeInTheDocument();
+    });
+
+    it('toggles visibility via the eye without expanding a collapsed group', async () => {
+        const user = userEvent.setup();
+        const onToggleVisibility = vi.fn();
+        render(SampleDetailsAnnotationSourceGroup, {
+            props: { ...defaultProps, initiallyOpen: false, allHidden: true, onToggleVisibility }
+        });
+
+        await user.click(screen.getByTestId('source-group-eye-off'));
+
+        expect(onToggleVisibility).toHaveBeenCalledOnce();
+        expect(screen.queryByTestId('group-content')).not.toBeInTheDocument();
+    });
 });
