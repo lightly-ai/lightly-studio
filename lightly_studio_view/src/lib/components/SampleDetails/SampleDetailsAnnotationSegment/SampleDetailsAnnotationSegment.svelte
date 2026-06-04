@@ -231,6 +231,7 @@
                 <SampleDetailsAnnotationSourceGroup
                     name={group.name}
                     count={group.annotations.length}
+                    {sampleId}
                     initiallyOpen={!areAllAnnotationsHidden(group.annotations, seededHiddenIds)}
                     showColorMarker={colorBySource}
                     allHidden={areAllAnnotationsHidden(group.annotations, annotationsIdsToHide)}

@@ -13,9 +13,10 @@
     interface Props {
         name: string;
         count: number;
-        /** Whether the group starts expanded. Captured once on mount; the chevron then
-         * toggles independently of the eye. */
+        /** Whether the group starts expanded. Re-applied whenever `sampleId` changes. */
         initiallyOpen?: boolean;
+        /** The sample currently shown; changing it re-applies `initiallyOpen`. */
+        sampleId: string;
         showColorMarker: boolean;
         allHidden: boolean;
         onToggleVisibility: (e: MouseEvent) => void;
@@ -26,6 +27,7 @@
         name,
         count,
         initiallyOpen = true,
+        sampleId,
         showColorMarker,
         allHidden,
         onToggleVisibility,
@@ -33,6 +35,16 @@
     }: Props = $props();
 
     let open = $state(initiallyOpen);
+
+    // The component is reused across samples (the parent's {#each} is keyed by source id), so
+    // re-apply the seeded collapse on sample change. Tracked by sampleId so a manual toggle
+    // persists within a sample and the chevron stays independent of the eye.
+    let appliedSampleId = sampleId;
+    $effect(() => {
+        if (appliedSampleId === sampleId) return;
+        appliedSampleId = sampleId;
+        open = initiallyOpen;
+    });
 
     // Collapse animation duration in ms, matching the parent Segment component.
     const duration = 168;
