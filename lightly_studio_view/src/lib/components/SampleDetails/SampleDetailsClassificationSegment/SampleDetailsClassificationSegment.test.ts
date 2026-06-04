@@ -197,14 +197,14 @@ describe('SampleDetailsClassificationSegment', () => {
         render(SampleDetailsClassificationSegment, { props: { ...defaultProps, annotations } });
 
         expect(screen.getAllByTestId('annotation-source-group-header')).toHaveLength(2);
-        // One editable row per classification, rendered inside the groups.
-        expect(screen.getAllByTestId('select-list-trigger')).toHaveLength(3);
+        // One editable combobox per classification, rendered inside the groups.
+        expect(screen.getAllByRole('combobox')).toHaveLength(3);
         // The add button is rendered once, below the groups (not duplicated per group).
         expect(screen.getAllByTestId('add-classification-button')).toHaveLength(1);
 
-        // Adding a draft renders an extra row without duplicating the add button.
+        // Adding a draft renders an extra editable row without duplicating the add button.
         await user.click(screen.getByTestId('add-classification-button'));
-        expect(screen.getAllByTestId('select-list-trigger')).toHaveLength(4);
+        expect(screen.getAllByRole('combobox')).toHaveLength(4);
         expect(screen.getAllByTestId('add-classification-button')).toHaveLength(1);
     });
 });

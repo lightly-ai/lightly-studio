@@ -1,4 +1,5 @@
 <script lang="ts">
+    // TODO (Mihnea, 06/2026): Refactor this component, as it is way past the 100-line guideline.
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
     import { SampleDetailsAnnotationSourceGroup, Segment } from '$lib/components';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
@@ -238,6 +239,7 @@
             {#if $isEditingMode}
                 <button
                     type="button"
+                    aria-label="Delete classification"
                     onclick={(e) => {
                         e.stopPropagation();
                         handleDeleteAnnotation(annotation.sample_id);
