@@ -2,7 +2,7 @@
     import { SortDirection } from '$lib/api/lightly_studio_local';
     import { useOrderBy } from '$lib/hooks/useOrderBy/useOrderBy';
     import { useGlobalStorage } from '$lib/hooks';
-    import * as Select from '$lib/components/ui/select';
+    import { Select, type SelectItem } from '$lib/components/Select';
     import { Button } from '$lib/components/ui/button';
     import { ArrowDown, ArrowUp } from '@lucide/svelte';
 
@@ -34,6 +34,17 @@
         return idx >= 0 ? String(idx) : '';
     });
 
+    const sortItems = $derived<SelectItem[]>(
+        $allSortFields.map((field, i) => ({
+            value: String(i),
+            label: field.label,
+            testId:
+                field.source === 'evaluation_metric'
+                    ? `sort-field-${field.evaluation_run_name}-${field.metric_name}`
+                    : `sort-field-${field.value}`
+        }))
+    );
+
     const handleValueChange = (value: string) => {
         if (value === '') {
             const idx = $allSortFields.findIndex((field) => $isFieldSelected(field));
@@ -46,33 +57,18 @@
 </script>
 
 <div class="flex items-center gap-1">
-    <Select.Root
-        type="single"
+    <Select
+        items={sortItems}
         value={selectValue}
+        triggerLabel={$selectedLabel ?? undefined}
         allowDeselect
         onValueChange={handleValueChange}
         disabled={isSimilaritySearchActive}
-    >
-        <Select.Trigger
-            class="h-8 w-[100px] min-w-20 gap-1 px-2.5 text-xs font-normal"
-            data-testid="sort-by-trigger"
-        >
-            <span class="truncate">{$selectedLabel ?? 'Sort by'}</span>
-        </Select.Trigger>
-        <Select.Content class="max-h-64">
-            {#each $allSortFields as field, i}
-                <Select.Item
-                    value={String(i)}
-                    label={field.label}
-                    data-testid={field.source === 'evaluation_metric'
-                        ? `sort-field-${field.evaluation_run_name}-${field.metric_name}`
-                        : `sort-field-${field.value}`}
-                >
-                    {field.label}
-                </Select.Item>
-            {/each}
-        </Select.Content>
-    </Select.Root>
+        placeholder="Sort by"
+        size="xs"
+        class="w-[100px] min-w-20"
+        testId="sort-by-trigger"
+    />
 
     <Button
         variant="ghost"
