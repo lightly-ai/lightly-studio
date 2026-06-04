@@ -57,13 +57,14 @@ import DatasetGridHeader from './DatasetGridHeader.svelte';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 
 const defaultProps = {
-    compact: false,
     canSelectAll: false,
+    isSelectionActive: false,
     isImages: false,
     hasEvaluationRuns: true,
     hasMediaWithEmbeddings: false,
     collectionDatasetId: 'dataset-1',
     onSelectAll: vi.fn().mockResolvedValue(undefined),
+    onDeselectAll: vi.fn(),
     searchImage: undefined,
     searchPending: false,
     initialQueryText: '',
@@ -80,6 +81,7 @@ describe('DatasetGridHeader', () => {
         (storage.setShowEmbeddingPlot as ReturnType<typeof vi.fn>).mockClear();
         (storage.setShowEvaluationRuns as ReturnType<typeof vi.fn>).mockClear();
         defaultProps.onSelectAll.mockClear();
+        defaultProps.onDeselectAll.mockClear();
     });
 
     it('renders the select-all button when canSelectAll is true', async () => {
@@ -98,6 +100,17 @@ describe('DatasetGridHeader', () => {
         render(DatasetGridHeader, { props: { ...defaultProps, canSelectAll: false } });
 
         expect(screen.queryByTestId('select-all-button')).not.toBeInTheDocument();
+    });
+
+    it('calls onDeselectAll when the select-all checkbox is toggled off', async () => {
+        render(DatasetGridHeader, {
+            props: { ...defaultProps, canSelectAll: true, isSelectionActive: true }
+        });
+
+        const checkbox = screen.getByTestId('select-all-button');
+        await fireEvent.click(checkbox);
+        expect(defaultProps.onDeselectAll).toHaveBeenCalledTimes(1);
+        expect(defaultProps.onSelectAll).not.toHaveBeenCalled();
     });
 
     it('renders the OrderBy control only for image collections', () => {
@@ -197,19 +210,35 @@ describe('DatasetGridHeader', () => {
         expect(screen.queryByTestId('toggle-evaluation-runs-button')).not.toBeInTheDocument();
     });
 
-    it('hides the embeddings and evaluation runs labels in compact mode', () => {
+    it('shows the embeddings and evaluation runs labels at full width', () => {
+        // Compaction is driven by GridHeader's overflow measurement (covered in
+        // GridHeader.test.ts); jsdom reports zero widths, so the labels stay visible here.
         render(DatasetGridHeader, {
             props: {
                 ...defaultProps,
-                compact: true,
                 isImages: true,
                 hasMediaWithEmbeddings: true
             }
         });
 
-        expect(screen.getByTestId('toggle-plot-button')).toBeInTheDocument();
-        expect(screen.queryByText('Embeddings')).not.toBeInTheDocument();
-        expect(screen.getByTestId('toggle-evaluation-runs-button')).toBeInTheDocument();
-        expect(screen.queryByText('Evaluation')).not.toBeInTheDocument();
+        expect(screen.getByText('Embeddings')).toBeInTheDocument();
+        expect(screen.getByText('Evaluation')).toBeInTheDocument();
+    });
+
+    it('gives the embeddings and evaluation toggles a stable accessible name', () => {
+        // aria-label is unconditional, so the buttons keep their name once compaction hides
+        // the visible text label.
+        render(DatasetGridHeader, {
+            props: {
+                ...defaultProps,
+                isImages: true,
+                hasMediaWithEmbeddings: true
+            }
+        });
+
+        expect(screen.getByTestId('toggle-plot-button')).toHaveAccessibleName('Embeddings');
+        expect(screen.getByTestId('toggle-evaluation-runs-button')).toHaveAccessibleName(
+            'Evaluation'
+        );
     });
 });

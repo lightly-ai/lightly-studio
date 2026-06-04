@@ -2,7 +2,10 @@ import type { AnnotationView } from '$lib/api/lightly_studio_local';
 import { describe, expect, it } from 'vitest';
 import {
     UNKNOWN_SOURCE_NAME,
-    groupAnnotationsBySource
+    areAllAnnotationsHidden,
+    computeSeededHiddenIds,
+    groupAnnotationsBySource,
+    toggleSourceVisibility
 } from './SampleDetailsAnnotationSegment.helpers';
 
 const createAnnotation = (sampleId: string, sourceId: string, labelName: string): AnnotationView =>
@@ -97,5 +100,112 @@ describe('groupAnnotationsBySource', () => {
 
     it('returns no groups when there are no annotations', () => {
         expect(groupAnnotationsBySource([], [groundTruthSource, predictionsSource])).toEqual([]);
+    });
+});
+
+describe('areAllAnnotationsHidden', () => {
+    const annotations = [
+        createAnnotation('a1', groundTruthSource.collection_id, 'cat'),
+        createAnnotation('a2', groundTruthSource.collection_id, 'dog')
+    ];
+
+    it('returns true when every annotation is hidden', () => {
+        expect(areAllAnnotationsHidden(annotations, new Set(['a1', 'a2']))).toBe(true);
+    });
+
+    it('returns false when at least one annotation is visible', () => {
+        expect(areAllAnnotationsHidden(annotations, new Set(['a1']))).toBe(false);
+    });
+
+    it('returns false when there are no annotations', () => {
+        expect(areAllAnnotationsHidden([], new Set(['a1']))).toBe(false);
+    });
+});
+
+describe('toggleSourceVisibility', () => {
+    const annotations = [
+        createAnnotation('gt-1', groundTruthSource.collection_id, 'cat'),
+        createAnnotation('gt-2', groundTruthSource.collection_id, 'dog')
+    ];
+
+    it('hides all annotations of the source when at least one is visible', () => {
+        expect(toggleSourceVisibility(annotations, new Set(['gt-1']))).toEqual(
+            new Set(['gt-1', 'gt-2'])
+        );
+    });
+
+    it('shows all annotations of the source when all are hidden', () => {
+        expect(toggleSourceVisibility(annotations, new Set(['gt-1', 'gt-2']))).toEqual(new Set());
+    });
+
+    it('does not affect hidden annotations of other sources', () => {
+        expect(toggleSourceVisibility(annotations, new Set(['other-1']))).toEqual(
+            new Set(['other-1', 'gt-1', 'gt-2'])
+        );
+    });
+
+    it('does not mutate the given hidden set', () => {
+        const hiddenAnnotationIds = new Set(['gt-1']);
+
+        toggleSourceVisibility(annotations, hiddenAnnotationIds);
+
+        expect(hiddenAnnotationIds).toEqual(new Set(['gt-1']));
+    });
+});
+
+describe('computeSeededHiddenIds', () => {
+    const sources = [groundTruthSource, predictionsSource];
+    const annotations = [
+        createAnnotation('gt-1', groundTruthSource.collection_id, 'cat'),
+        createAnnotation('pred-1', predictionsSource.collection_id, 'cat'),
+        createAnnotation('pred-2', predictionsSource.collection_id, 'dog')
+    ];
+
+    it('hides annotations whose source is not selected', () => {
+        const hiddenIds = computeSeededHiddenIds(
+            annotations,
+            [groundTruthSource.collection_id],
+            sources
+        );
+
+        expect(hiddenIds).toEqual(new Set(['pred-1', 'pred-2']));
+    });
+
+    it('hides nothing when the selection is empty', () => {
+        expect(computeSeededHiddenIds(annotations, [], sources)).toEqual(new Set());
+    });
+
+    it('hides nothing when all sources are selected', () => {
+        const hiddenIds = computeSeededHiddenIds(
+            annotations,
+            [groundTruthSource.collection_id, predictionsSource.collection_id],
+            sources
+        );
+
+        expect(hiddenIds).toEqual(new Set());
+    });
+
+    it('hides nothing when the selection does not apply to this dataset', () => {
+        const hiddenIds = computeSeededHiddenIds(
+            annotations,
+            ['source-from-another-dataset'],
+            sources
+        );
+
+        expect(hiddenIds).toEqual(new Set());
+    });
+
+    it('hides annotations of an unselected source even when the selected source has no annotations', () => {
+        const predictionsOnly = [
+            createAnnotation('pred-1', predictionsSource.collection_id, 'cat')
+        ];
+
+        const hiddenIds = computeSeededHiddenIds(
+            predictionsOnly,
+            [groundTruthSource.collection_id],
+            sources
+        );
+
+        expect(hiddenIds).toEqual(new Set(['pred-1']));
     });
 });
