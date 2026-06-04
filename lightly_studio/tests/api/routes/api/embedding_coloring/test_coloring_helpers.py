@@ -50,6 +50,37 @@ class TestDiscreteColorScale:
         assert scale.value_to_category("only") == 2
         assert scale.legend == {2: "only"}
 
+    def test_from_values__exactly_fits_all_listed(self) -> None:
+        # 254 values fit in slots [2, 256): every value keeps its own category.
+        values = [f"v{i:03d}" for i in range(254)]
+        scale = DiscreteColorScale.from_values(values=values)
+        assert len(scale.legend) == 254
+        assert scale.value_to_category("v000") == 2
+        assert scale.value_to_category("v253") == 255
+        assert scale.legend[255] == "v253"
+        assert all(not label.startswith("Other") for label in scale.legend.values())
+
+    def test_from_values__overflow_groups_into_other(self) -> None:
+        # 256 values exceed the 254 slots: 253 are listed, the rest go to "Other".
+        values = [f"v{i:03d}" for i in range(256)]
+        scale = DiscreteColorScale.from_values(values=values)
+        # 253 individual categories (slots 2..254) + the "Other" slot 255.
+        assert len(scale.legend) == 254
+        assert scale.value_to_category("v000") == 2
+        assert scale.value_to_category("v252") == 254
+        # Everything from the 254th value onward collapses into the final slot.
+        assert scale.value_to_category("v253") == 255
+        assert scale.value_to_category("v254") == 255
+        assert scale.value_to_category("v255") == 255
+        # The "Other" label lists the first few grouped names then truncates.
+        assert scale.legend[255] == "Other (v253, v254, v255)"
+
+    def test_from_values__overflow_other_label_truncated(self) -> None:
+        values = [f"v{i:03d}" for i in range(260)]
+        scale = DiscreteColorScale.from_values(values=values)
+        # More grouped values than _MAX_OTHER_NAMES -> ellipsis appended.
+        assert scale.legend[255] == "Other (v253, v254, v255, v256, v257, …)"
+
     def test_from_integers__few_values(self) -> None:
         scale = DiscreteColorScale.from_integers(values=[3, 1, 2])
         assert scale.value_to_category(1) == 2
