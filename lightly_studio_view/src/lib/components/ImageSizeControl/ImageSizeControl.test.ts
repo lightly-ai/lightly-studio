@@ -53,4 +53,18 @@ describe('ImageSizeControl', () => {
         await fireEvent.click(zoomOut);
         expect(updateSampleSize).toHaveBeenCalledWith(17);
     });
+
+    it('shows the slider by default', () => {
+        render(ImageSizeControl);
+
+        expect(screen.getByRole('slider')).toBeInTheDocument();
+    });
+
+    it('hides the slider but keeps the zoom buttons when compact', () => {
+        render(ImageSizeControl, { compact: true });
+
+        expect(screen.queryByRole('slider')).not.toBeInTheDocument();
+        expect(screen.getByLabelText('Zoom in')).toBeInTheDocument();
+        expect(screen.getByLabelText('Zoom out')).toBeInTheDocument();
+    });
 });

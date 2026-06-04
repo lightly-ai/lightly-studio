@@ -3,7 +3,14 @@
     import { throttle } from 'lodash-es';
     import { ZoomIn, ZoomOut } from '@lucide/svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    const { min = 1, max = 16 } = $props();
+
+    interface Props {
+        min?: number;
+        max?: number;
+        compact?: boolean;
+    }
+
+    const { min = 1, max = 16, compact = false }: Props = $props();
 
     const { updateSampleSize, sampleSize } = useGlobalStorage();
 
@@ -27,7 +34,7 @@
     }
 </script>
 
-<div class="flex w-48 shrink-0 items-center space-x-2 text-diffuse-foreground">
+<div class="flex shrink-0 items-center space-x-2 text-diffuse-foreground" class:w-40={!compact}>
     <button
         onclick={zoomOut}
         disabled={width >= max}
@@ -37,15 +44,17 @@
         <ZoomOut class="h-4 w-4" />
     </button>
 
-    <Slider
-        type="multiple"
-        class="w-full flex-1"
-        value={[sliderValue]}
-        {min}
-        {max}
-        step={1}
-        onValueChange={handleChange}
-    />
+    {#if !compact}
+        <Slider
+            type="multiple"
+            class="w-full flex-1"
+            value={[sliderValue]}
+            {min}
+            {max}
+            step={1}
+            onValueChange={handleChange}
+        />
+    {/if}
 
     <button
         onclick={zoomIn}
