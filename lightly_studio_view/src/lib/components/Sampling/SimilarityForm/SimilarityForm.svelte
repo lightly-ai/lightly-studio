@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Label } from '$lib/components/ui/label';
-    import * as Select from '$lib/components/ui/select';
+    import { Select, SelectMenuItem } from '$lib/components/Select';
 
     interface Tag {
         tag_id: string;
@@ -22,31 +22,32 @@
 
 <div class="grid grid-cols-4 items-center gap-4">
     <Label for="query-tag" class="text-right text-foreground">Query Tag</Label>
-    <Select.Root type="single" name="query-tag" value={queryTagId} onValueChange={onQueryTagChange}>
-        <Select.Trigger class="col-span-3" data-testid="sampling-dialog-query-tag-select">
-            {selectedQueryTagName}
-        </Select.Trigger>
-        <Select.Content>
-            <Select.Group>
-                {#if tags.length === 0}
-                    <div
-                        class="py-1.5 pl-8 pr-2 text-sm italic text-muted-foreground"
-                        data-testid="sampling-dialog-no-query-tags"
+    <Select
+        value={queryTagId}
+        triggerLabel={selectedQueryTagName}
+        class="col-span-3"
+        testId="sampling-dialog-query-tag-select"
+        onValueChange={onQueryTagChange}
+    >
+        {#snippet children()}
+            {#if tags.length === 0}
+                <div
+                    class="py-1.5 pl-8 pr-2 text-sm italic text-muted-foreground"
+                    data-testid="sampling-dialog-no-query-tags"
+                >
+                    No sample tags available.
+                </div>
+            {:else}
+                {#each tags as tag (tag.tag_id)}
+                    <SelectMenuItem
+                        value={tag.tag_id}
+                        label={tag.name}
+                        data-testid={`sampling-query-tag-${tag.tag_id}`}
                     >
-                        No sample tags available.
-                    </div>
-                {:else}
-                    {#each tags as tag (tag.tag_id)}
-                        <Select.Item
-                            value={tag.tag_id}
-                            label={tag.name}
-                            data-testid={`sampling-query-tag-${tag.tag_id}`}
-                        >
-                            {tag.name}
-                        </Select.Item>
-                    {/each}
-                {/if}
-            </Select.Group>
-        </Select.Content>
-    </Select.Root>
+                        {tag.name}
+                    </SelectMenuItem>
+                {/each}
+            {/if}
+        {/snippet}
+    </Select>
 </div>
