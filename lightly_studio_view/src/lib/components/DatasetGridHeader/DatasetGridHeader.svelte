@@ -69,7 +69,7 @@
                 position="bottom"
             >
                 <Button
-                    class="flex items-center space-x-1"
+                    class="h-8 gap-1.5 px-2"
                     data-testid="toggle-plot-button"
                     variant={$showEmbeddingPlot ? 'default' : 'ghost'}
                     aria-label="Embeddings"
@@ -88,7 +88,7 @@
                 position="bottom"
             >
                 <Button
-                    class="flex items-center space-x-1"
+                    class="h-8 gap-1.5 px-2"
                     data-testid="toggle-evaluation-runs-button"
                     variant={$showEvaluationRuns ? 'default' : 'ghost'}
                     aria-label="Evaluation"

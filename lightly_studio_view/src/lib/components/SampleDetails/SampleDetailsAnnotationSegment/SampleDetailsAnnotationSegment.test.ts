@@ -7,8 +7,7 @@ import SampleDetailsAnnotationSegment from './SampleDetailsAnnotationSegment.sve
 const mocks = vi.hoisted(() => ({
     collections: [] as { collection_id: string; name: string }[],
     selectedCollectionIds: [] as string[],
-    setSelectedCollectionIds: vi.fn(),
-    setCollectionIdToName: vi.fn()
+    seedSelectionIfNeeded: vi.fn()
 }));
 
 // Replace the heavy per-annotation row with a lightweight stub.
@@ -30,8 +29,7 @@ vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilte
     return {
         useAnnotationCollectionsFilter: vi.fn(() => ({
             selectedCollectionIds: readable(mocks.selectedCollectionIds),
-            setSelectedCollectionIds: mocks.setSelectedCollectionIds,
-            setCollectionIdToName: mocks.setCollectionIdToName
+            seedSelectionIfNeeded: mocks.seedSelectionIfNeeded
         }))
     };
 });
@@ -168,39 +166,26 @@ describe('SampleDetailsAnnotationSegment', () => {
         expect(screen.getAllByTestId('mock-annotation-row')).toHaveLength(1);
     });
 
-    it('initializes the annotation source filter stores when they are empty', () => {
+    it('seeds the annotation source filter with all sources', () => {
         mocks.collections = [groundTruthSource, predictionsSource];
         mocks.selectedCollectionIds = [];
 
         render(SampleDetailsAnnotationSegment, { props: defaultProps });
 
-        expect(mocks.setSelectedCollectionIds).toHaveBeenCalledWith([
-            groundTruthSource.collection_id,
-            predictionsSource.collection_id
+        // The keyed no-op guarantee (keeping an existing selection) lives in the hook's
+        // own unit test; here we only assert the segment delegates with the full source list.
+        expect(mocks.seedSelectionIfNeeded).toHaveBeenCalledWith('collection-1', [
+            { id: groundTruthSource.collection_id, name: groundTruthSource.name },
+            { id: predictionsSource.collection_id, name: predictionsSource.name }
         ]);
-        expect(mocks.setCollectionIdToName).toHaveBeenCalledWith({
-            [groundTruthSource.collection_id]: groundTruthSource.name,
-            [predictionsSource.collection_id]: predictionsSource.name
-        });
     });
 
-    it('does not override an existing annotation source selection', () => {
-        mocks.collections = [groundTruthSource, predictionsSource];
-        mocks.selectedCollectionIds = [groundTruthSource.collection_id];
-
-        render(SampleDetailsAnnotationSegment, { props: defaultProps });
-
-        expect(mocks.setSelectedCollectionIds).not.toHaveBeenCalled();
-        expect(mocks.setCollectionIdToName).not.toHaveBeenCalled();
-    });
-
-    it('does not initialize the annotation source filter stores for a single source', () => {
+    it('does not seed the annotation source filter for a single source', () => {
         mocks.collections = [groundTruthSource];
 
         render(SampleDetailsAnnotationSegment, { props: defaultProps });
 
-        expect(mocks.setSelectedCollectionIds).not.toHaveBeenCalled();
-        expect(mocks.setCollectionIdToName).not.toHaveBeenCalled();
+        expect(mocks.seedSelectionIfNeeded).not.toHaveBeenCalled();
     });
 
     describe('source visibility toggle', () => {
