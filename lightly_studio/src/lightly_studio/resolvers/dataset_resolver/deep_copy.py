@@ -9,9 +9,9 @@ from uuid import UUID, uuid4
 
 from sqlmodel import Session, SQLModel, col, select
 
+from lightly_studio import db_array
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
-    AnnotationType,
 )
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
@@ -206,7 +206,9 @@ def _copy_samples(
     """Copy all samples, remapping collection_id to new collections."""
     # TODO (Mihnea, 01/2026): Handle large collections with batching if needed.
     samples = session.exec(
-        select(SampleTable).where(col(SampleTable.collection_id).in_(old_collection_ids))
+        select(SampleTable).where(
+            db_array.in_array(column=col(SampleTable.collection_id), values=old_collection_ids)
+        )
     ).all()
 
     for old_sample in samples:
@@ -230,7 +232,9 @@ def _copy_tags(
 ) -> None:
     """Copy tags, remapping collection_id."""
     tags = session.exec(
-        select(TagTable).where(col(TagTable.collection_id).in_(old_collection_ids))
+        select(TagTable).where(
+            db_array.in_array(column=col(TagTable.collection_id), values=old_collection_ids)
+        )
     ).all()
 
     for old_tag in tags:
@@ -276,7 +280,9 @@ def _copy_embedding_models(
     """Copy embedding models, remapping collection_id."""
     models = session.exec(
         select(EmbeddingModelTable).where(
-            col(EmbeddingModelTable.collection_id).in_(old_collection_ids)
+            db_array.in_array(
+                column=col(EmbeddingModelTable.collection_id), values=old_collection_ids
+            )
         )
     ).all()
 
@@ -301,7 +307,9 @@ def _copy_videos(
 ) -> None:
     """Copy video records, remapping sample_id."""
     videos = session.exec(
-        select(VideoTable).where(col(VideoTable.sample_id).in_(old_sample_ids))
+        select(VideoTable).where(
+            db_array.in_array(column=col(VideoTable.sample_id), values=old_sample_ids)
+        )
     ).all()
 
     for old_video in videos:
@@ -319,7 +327,9 @@ def _copy_video_frames(
 ) -> None:
     """Copy video frames, remapping both sample_id and parent_sample_id."""
     frames = session.exec(
-        select(VideoFrameTable).where(col(VideoFrameTable.sample_id).in_(old_sample_ids))
+        select(VideoFrameTable).where(
+            db_array.in_array(column=col(VideoFrameTable.sample_id), values=old_sample_ids)
+        )
     ).all()
 
     for old_frame in frames:
@@ -340,7 +350,9 @@ def _copy_images(
 ) -> None:
     """Copy image records, remapping sample_id."""
     images = session.exec(
-        select(ImageTable).where(col(ImageTable.sample_id).in_(old_sample_ids))
+        select(ImageTable).where(
+            db_array.in_array(column=col(ImageTable.sample_id), values=old_sample_ids)
+        )
     ).all()
 
     for old_image in images:
@@ -358,7 +370,9 @@ def _copy_groups(
 ) -> None:
     """Copy group records."""
     groups = session.exec(
-        select(GroupTable).where(col(GroupTable.sample_id).in_(old_sample_ids))
+        select(GroupTable).where(
+            db_array.in_array(column=col(GroupTable.sample_id), values=old_sample_ids)
+        )
     ).all()
 
     for old_group in groups:
@@ -376,7 +390,9 @@ def _copy_captions(
 ) -> None:
     """Copy captions, remapping sample_id and parent_sample_id."""
     captions = session.exec(
-        select(CaptionTable).where(col(CaptionTable.sample_id).in_(old_sample_ids))
+        select(CaptionTable).where(
+            db_array.in_array(column=col(CaptionTable.sample_id), values=old_sample_ids)
+        )
     ).all()
 
     for old_caption in captions:
@@ -421,7 +437,9 @@ def _copy_annotations(
 ) -> None:
     """Copy annotations with their detail tables."""
     annotations = session.exec(
-        select(AnnotationBaseTable).where(col(AnnotationBaseTable.sample_id).in_(old_sample_ids))
+        select(AnnotationBaseTable).where(
+            db_array.in_array(column=col(AnnotationBaseTable.sample_id), values=old_sample_ids)
+        )
     ).all()
 
     for old_ann in annotations:
@@ -443,37 +461,21 @@ def _copy_annotations(
         )
         session.add(new_ann)
 
-        _copy_annotation_details(session, old_ann.sample_id, new_sample_id, old_ann.annotation_type)
-
-
-def _copy_annotation_details(
-    session: Session,
-    old_sample_id: UUID,
-    new_sample_id: UUID,
-    annotation_type: AnnotationType,
-) -> None:
-    """Copy annotation detail table based on type."""
-    if annotation_type == AnnotationType.OBJECT_DETECTION:
-        old_obj_det = session.get(ObjectDetectionAnnotationTable, old_sample_id)
-        if old_obj_det:
-            new_obj_det = _copy_with_updates(
-                old_obj_det,
-                {"sample_id": new_sample_id},
+    # Go over detail annotation tables to copy bboxes and segmentation mask.
+    for detail_table in (ObjectDetectionAnnotationTable, SegmentationAnnotationTable):
+        old_details = session.exec(
+            select(detail_table).where(
+                db_array.in_array(column=col(detail_table.sample_id), values=old_sample_ids)
             )
-            session.add(new_obj_det)
-    elif annotation_type == AnnotationType.SEGMENTATION_MASK:
-        old_seg = session.get(SegmentationAnnotationTable, old_sample_id)
-        if old_seg:
-            new_seg = _copy_with_updates(
-                old_seg,
-                {"sample_id": new_sample_id},
+        ).all()
+        for old_detail in old_details:
+            session.add(
+                _copy_with_updates(
+                    old_detail,
+                    # Both tables contain sample_id, thus the mypy error is wrong.
+                    {"sample_id": ctx.sample_map[old_detail.sample_id]},  # type: ignore[attr-defined]
+                )
             )
-            session.add(new_seg)
-    elif annotation_type == AnnotationType.CLASSIFICATION:
-        # No details table for classification annotations, nothing to copy.
-        pass
-    else:
-        raise ValueError(f"Unsupported annotation type: {annotation_type}")
 
 
 def _copy_metadata(
@@ -483,7 +485,9 @@ def _copy_metadata(
 ) -> None:
     """Copy sample metadata."""
     metadata_records = session.exec(
-        select(SampleMetadataTable).where(col(SampleMetadataTable.sample_id).in_(old_sample_ids))
+        select(SampleMetadataTable).where(
+            db_array.in_array(column=col(SampleMetadataTable.sample_id), values=old_sample_ids)
+        )
     ).all()
 
     for old_meta in metadata_records:
@@ -504,7 +508,9 @@ def _copy_embeddings(
 ) -> None:
     """Copy sample embeddings, remapping sample_id and embedding_model_id."""
     embeddings = session.exec(
-        select(SampleEmbeddingTable).where(col(SampleEmbeddingTable.sample_id).in_(old_sample_ids))
+        select(SampleEmbeddingTable).where(
+            db_array.in_array(column=col(SampleEmbeddingTable.sample_id), values=old_sample_ids)
+        )
     ).all()
 
     for old_emb in embeddings:
@@ -528,7 +534,9 @@ def _copy_sample_tag_links(
 ) -> None:
     """Copy sample-tag links."""
     links = session.exec(
-        select(SampleTagLinkTable).where(col(SampleTagLinkTable.sample_id).in_(old_sample_ids))
+        select(SampleTagLinkTable).where(
+            db_array.in_array(column=col(SampleTagLinkTable.sample_id), values=old_sample_ids)
+        )
     ).all()
 
     for old_link in links:
@@ -551,7 +559,9 @@ def _copy_sample_group_links(
 ) -> None:
     """Copy sample-group links."""
     links = session.exec(
-        select(SampleGroupLinkTable).where(col(SampleGroupLinkTable.sample_id).in_(old_sample_ids))
+        select(SampleGroupLinkTable).where(
+            db_array.in_array(column=col(SampleGroupLinkTable.sample_id), values=old_sample_ids)
+        )
     ).all()
 
     for old_link in links:
@@ -607,7 +617,9 @@ def _copy_evaluation_sample_metrics(
     old_run_ids = list(ctx.evaluation_run_map.keys())
     metrics = session.exec(
         select(EvaluationSampleMetricTable).where(
-            col(EvaluationSampleMetricTable.evaluation_run_id).in_(old_run_ids)
+            db_array.in_array(
+                column=col(EvaluationSampleMetricTable.evaluation_run_id), values=old_run_ids
+            )
         )
     ).all()
 
@@ -632,7 +644,9 @@ def _copy_evaluation_annotation_metrics(
     old_run_ids = list(ctx.evaluation_run_map.keys())
     metrics = session.exec(
         select(EvaluationAnnotationMetricTable).where(
-            col(EvaluationAnnotationMetricTable.evaluation_run_id).in_(old_run_ids)
+            db_array.in_array(
+                column=col(EvaluationAnnotationMetricTable.evaluation_run_id), values=old_run_ids
+            )
         )
     ).all()
 
@@ -668,7 +682,10 @@ def _copy_annotation_collection_coverage(
     old_collection_ids = list(ctx.collection_map.keys())
     rows = session.exec(
         select(AnnotationCollectionCoverageTable).where(
-            col(AnnotationCollectionCoverageTable.annotation_collection_id).in_(old_collection_ids)
+            db_array.in_array(
+                column=col(AnnotationCollectionCoverageTable.annotation_collection_id),
+                values=old_collection_ids,
+            )
         )
     ).all()
 
