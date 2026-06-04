@@ -266,8 +266,6 @@ dataset = ls.ImageDataset.load()
 Datasets persist in a DuckDB file (`lightly_studio.db` by default). All tags, annotations, captions, metadata, and embeddings are saved, so you can stop and resume anytime. Use `Dataset.load_or_create` to reopen existing datasets:
 
 ```python
-from __future__ import annotations
-
 import lightly_studio as ls
 
 dataset = ls.ImageDataset.load_or_create(name="my-dataset")
@@ -374,12 +372,12 @@ for sample in query:
 samples = query.to_list()
 
 # Export all resulting samples in coco format
-query.export().to_coco_object_detections()
+dataset.export(query).to_coco_object_detections()
 
 ```
 
 ### Sampling
-LightlyStudio offers a premium feature for automated data sampling. [Contact us](https://www.lightly.ai/contact) to get access to premium features. Sampling the right subset of your data can save labeling cost and training time while improving model quality. Sampling in LightlyStudio automatically picks the most useful samples - those that are both representative (typical) and diverse (novel).
+Sampling the right subset of your data can save labeling cost and training time while improving model quality. Sampling in LightlyStudio automatically picks the most useful samples - those that are both representative (typical) and diverse (novel).
 
 You can mix and match these strategies to fit your goal: stable core data, edge cases, or fixing class imbalances.
 
