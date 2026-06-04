@@ -1,8 +1,8 @@
 """End-to-end demonstration of object detection evaluation and the UI."""
 
 import lightly_studio as ls
-from lightly_studio import db_manager
 from lightly_studio.core.dataset_query import ImageSampleField
+from lightly_studio.database import db_manager
 from lightly_studio.evaluation.image_dataset_evaluate import ObjectDetectionEvaluationConfig
 
 IMAGES_PATH = "dataset_examples/coco_subset_128_images/images"

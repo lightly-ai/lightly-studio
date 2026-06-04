@@ -17,7 +17,7 @@ from sqlalchemy import inspect
 from sqlalchemy.engine import Engine, Inspector
 
 import lightly_studio.api.db_tables  # noqa: F401
-from lightly_studio import db_url
+from lightly_studio.database import db_url
 from lightly_studio.migrations.config_utils import ensure_script_location, find_alembic_ini
 
 

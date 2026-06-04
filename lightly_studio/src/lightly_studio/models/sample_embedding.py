@@ -6,7 +6,7 @@ from uuid import UUID
 
 from sqlmodel import Column, Field, Relationship, SQLModel
 
-from lightly_studio.db_vector import VectorType
+from lightly_studio.database.db_vector import VectorType
 from lightly_studio.models.sample import SampleTable
 
 

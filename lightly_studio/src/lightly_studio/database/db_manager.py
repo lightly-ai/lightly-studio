@@ -27,7 +27,7 @@ from sqlalchemy.engine import Engine
 from sqlmodel import Session, SQLModel, create_engine
 
 import lightly_studio.api.db_tables  # noqa: F401, required for SQLModel to work properly
-from lightly_studio import db_migrations, db_url
+from lightly_studio.database import db_migrations, db_url
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_DATABASE_URL
 
 

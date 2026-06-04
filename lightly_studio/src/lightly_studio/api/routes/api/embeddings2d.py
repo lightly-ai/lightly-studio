@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 from sqlmodel import select
 
 from lightly_studio.api.routes.api.embedding_coloring import ColorBy, build_color_data
-from lightly_studio.db_manager import SessionDep
+from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.resolvers import image_resolver, twodim_embedding_resolver, video_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter

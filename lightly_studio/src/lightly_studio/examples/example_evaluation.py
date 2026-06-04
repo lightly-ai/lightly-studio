@@ -5,9 +5,9 @@ from time import perf_counter
 
 from environs import Env
 
-from lightly_studio import db_manager
 from lightly_studio.core.dataset_query import ImageSampleField
 from lightly_studio.core.image.image_dataset import ImageDataset
+from lightly_studio.database import db_manager
 from lightly_studio.evaluation.image_dataset_evaluate import ObjectDetectionEvaluationConfig
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.resolvers import (

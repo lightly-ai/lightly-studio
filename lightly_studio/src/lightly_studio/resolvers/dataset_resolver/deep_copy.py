@@ -9,7 +9,7 @@ from uuid import UUID, uuid4
 
 from sqlmodel import Session, SQLModel, col, select
 
-from lightly_studio import db_array
+from lightly_studio.database import db_array
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
 )
