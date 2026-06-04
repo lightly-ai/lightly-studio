@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
-import { readable, writable, type Writable } from 'svelte/store';
+import { readable, writable, type Readable, type Writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SamplingCombinationDialog from './SamplingCombinationDialog.svelte';
 
@@ -38,9 +38,12 @@ vi.mock('$lib/hooks/useSamplingDialog/useSamplingDialog', () => ({
     })
 }));
 
+type MockMetadataInfo = { name: string; type: string };
+
 let imageFilterStore: Writable<Record<string, unknown> | null>;
 let videoFilterStore: Writable<Record<string, unknown> | null>;
 let filteredSampleCountStore: Writable<number>;
+let metadataInfoStore: Readable<MockMetadataInfo[]>;
 
 vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
     useImageFilters: () => ({
@@ -62,7 +65,7 @@ vi.mock('$lib/hooks/useGlobalStorage', () => ({
 
 vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
     useMetadataFilters: () => ({
-        metadataInfo: readable([])
+        metadataInfo: metadataInfoStore
     })
 }));
 
@@ -92,6 +95,7 @@ describe('SamplingCombinationDialog', () => {
         imageFilterStore = writable(null);
         videoFilterStore = writable(null);
         filteredSampleCountStore = writable(0);
+        metadataInfoStore = readable([]);
         isSubmittingStore = writable(false);
         loadingMessageStore = writable('');
         tagsStore = writable([{ tag_id: 'tag-1', name: 'Query Tag', kind: 'sample' as const }]);
@@ -328,5 +332,47 @@ describe('SamplingCombinationDialog', () => {
         render(SamplingCombinationDialog);
 
         expect(screen.getByTestId('selection-dialog-submit')).toHaveTextContent('Creating...');
+    });
+
+    it('disables metadata weighting when only non-numeric metadata fields are present', async () => {
+        metadataInfoStore = readable([{ name: 'label', type: 'string' }]);
+
+        render(SamplingCombinationDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+
+        expect(await screen.findByTestId('add-strategy-metadata_weighting')).toHaveAttribute(
+            'data-disabled'
+        );
+    });
+
+    it('renders the metadata key selector when numeric fields are available and metadata weighting is added', async () => {
+        metadataInfoStore = readable([
+            { name: 'sharpness', type: 'float' },
+            { name: 'brightness', type: 'integer' }
+        ]);
+        filteredSampleCountStore.set(100);
+
+        render(SamplingCombinationDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+        await fireEvent.pointerUp(await screen.findByTestId('add-strategy-metadata_weighting'));
+
+        expect(await screen.findByTestId('strategy-metadata-key-input')).toBeInTheDocument();
+    });
+
+    it('submit button remains disabled when metadata weighting strategy has no key selected', async () => {
+        metadataInfoStore = readable([{ name: 'sharpness', type: 'float' }]);
+        filteredSampleCountStore.set(100);
+
+        render(SamplingCombinationDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+        await fireEvent.pointerUp(await screen.findByTestId('add-strategy-metadata_weighting'));
+        await fireEvent.input(screen.getByTestId('selection-dialog-tag-name-input'), {
+            target: { value: 'my-tag' }
+        });
+
+        expect(screen.getByTestId('selection-dialog-submit')).toBeDisabled();
     });
 });

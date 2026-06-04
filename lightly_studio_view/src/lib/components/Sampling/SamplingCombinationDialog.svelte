@@ -36,7 +36,12 @@
     const { videoFilter } = useVideoFilters();
     const { filteredSampleCount } = useGlobalStorage();
     const { metadataInfo } = $derived(useMetadataFilters(collectionId));
-    const hasMetadataFields = $derived($metadataInfo.length > 0);
+    const metadataFieldNames = $derived(
+        $metadataInfo
+            .filter((info) => info.type === 'integer' || info.type === 'float')
+            .map((info) => info.name)
+    );
+    const hasMetadataFields = $derived(metadataFieldNames.length > 0);
 
     const annotationLabelsQuery = $derived(useAnnotationLabels(() => ({ collectionId })));
     const annotationLabels = $derived(
@@ -131,7 +136,7 @@
         <Dialog.Content class="border-border bg-background sm:max-w-[560px]">
             <form onsubmit={handleFormSubmit}>
                 <Dialog.Header>
-                    <Dialog.Title class="text-foreground">Create Selection</Dialog.Title>
+                    <Dialog.Title class="text-foreground">Create Sampling</Dialog.Title>
                     <Dialog.Description class="text-foreground">
                         Sample from the <strong class="font-semibold text-primary"
                             >{sampleCountLabel}</strong
@@ -166,6 +171,7 @@
                                         {instance}
                                         tags={$tags}
                                         {annotationLabels}
+                                        {metadataFieldNames}
                                         onRemove={() => removeStrategy(instance.id)}
                                         onDuplicate={() => duplicateStrategy(instance.id)}
                                         onUpdate={(params) => updateParams(instance.id, params)}
