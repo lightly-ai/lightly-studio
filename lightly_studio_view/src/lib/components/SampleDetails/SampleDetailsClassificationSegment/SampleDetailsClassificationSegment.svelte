@@ -8,8 +8,12 @@
     import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
-    import { useAnnotationCollections } from '$lib/hooks';
-    import { groupAnnotationsBySource } from '../SampleDetailsAnnotationSegment/SampleDetailsAnnotationSegment.helpers';
+    import { useAnnotationCollections, useAnnotationCollectionsFilter } from '$lib/hooks';
+    import {
+        areAllAnnotationsHidden,
+        computeSeededHiddenIds,
+        groupAnnotationsBySource
+    } from '../SampleDetailsAnnotationSegment/SampleDetailsAnnotationSegment.helpers';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
@@ -59,10 +63,17 @@
     });
 
     const annotationCollectionsQuery = useAnnotationCollections({ collectionId });
+    const { selectedCollectionIds } = useAnnotationCollectionsFilter();
     const annotationSources = $derived(annotationCollectionsQuery.data ?? []);
     const isGrouped = $derived(annotationSources.length > 1);
     const sourceGroups = $derived(
         isGrouped ? groupAnnotationsBySource(classificationAnnotations, annotationSources) : []
+    );
+
+    // Hidden set implied by the grid filter, as a derived so it's readable at mount (unlike
+    // the effect-written `annotationsIdsToHide`); drives the seed and the initial collapse.
+    const seededHiddenIds = $derived(
+        computeSeededHiddenIds(classificationAnnotations, $selectedCollectionIds, annotationSources)
     );
 
     const handleDeleteAnnotation = async (annotationId: string) => {
@@ -248,6 +259,11 @@
                         <SampleDetailsAnnotationSourceGroup
                             name={group.name}
                             count={group.annotations.length}
+                            {sampleId}
+                            initiallyOpen={!areAllAnnotationsHidden(
+                                group.annotations,
+                                seededHiddenIds
+                            )}
                             showColorMarker={true}
                         >
                             <div class="flex flex-col gap-2">
