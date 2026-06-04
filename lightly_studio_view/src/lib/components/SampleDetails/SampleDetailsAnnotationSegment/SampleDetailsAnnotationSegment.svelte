@@ -57,8 +57,7 @@
     const { selectAnnotation } = useAnnotationSelection();
 
     const annotationCollectionsQuery = useAnnotationCollections({ collectionId });
-    const { selectedCollectionIds, setSelectedCollectionIds, setCollectionIdToName } =
-        useAnnotationCollectionsFilter();
+    const { selectedCollectionIds, seedSelectionIfNeeded } = useAnnotationCollectionsFilter();
 
     const annotationsSort = $derived.by(() => {
         return annotations
@@ -86,16 +85,14 @@
     // by source, label legends in the rows otherwise.
     const colorBySource = $derived(countVisibleSources(annotationsSort, annotationsIdsToHide) >= 2);
 
-    // Initialize the global annotation source stores when landing directly on the
-    // details page (browser refresh / deep link), so annotations are colored by
-    // source.
+    // Seed the global annotation source stores the first time this collection is shown
+    // (e.g. landing directly on the details page via deep link), so annotations are colored
+    // by source. seedSelectionIfNeeded keeps an existing selection from the grid filter.
     $effect(() => {
-        if (annotationSources.length > 1 && $selectedCollectionIds.length === 0) {
-            setSelectedCollectionIds(annotationSources.map((source) => source.collection_id));
-            setCollectionIdToName(
-                Object.fromEntries(
-                    annotationSources.map((source) => [source.collection_id, source.name])
-                )
+        if (annotationSources.length > 1) {
+            seedSelectionIfNeeded(
+                collectionId,
+                annotationSources.map((source) => ({ id: source.collection_id, name: source.name }))
             );
         }
     });
