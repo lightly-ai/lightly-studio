@@ -1,22 +1,27 @@
 <script lang="ts">
     import { Select } from '$lib/components/Select';
 
-    interface Props {
-        /** Names of the annotation sources (collections) to choose from. */
-        sourceNames: string[];
-        /** Currently selected source name. */
-        selectedSource?: string;
-        /** Optional notification when the selection changes (the value also flows out via `bind:selectedSource`). */
-        onSelect?: (source: string) => void;
+    interface SourceOption {
+        id: string;
+        name: string;
     }
 
-    let { sourceNames, selectedSource = $bindable(), onSelect }: Props = $props();
+    interface Props {
+        /** Annotation sources (collections) to choose from. */
+        sourceOptions: SourceOption[];
+        /** Currently selected source id. */
+        selectedSource?: string;
+        /** Optional notification when the selection changes (the value also flows out via `bind:selectedSource`). */
+        onSelect?: (sourceId: string) => void;
+    }
+
+    let { sourceOptions, selectedSource = $bindable(), onSelect }: Props = $props();
 
     const items = $derived(
-        sourceNames.map((name) => ({
-            value: name,
-            label: name,
-            testId: `annotation-source-option-${name}`
+        sourceOptions.map((option) => ({
+            value: option.id,
+            label: option.name,
+            testId: `annotation-source-option-${option.name}`
         }))
     );
 </script>
