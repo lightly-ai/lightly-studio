@@ -9,6 +9,8 @@
     let {
         label,
         icon,
+        iconAfter,
+        iconAfterClass,
         variant,
         buttonProps,
         collapseAt,
@@ -17,6 +19,8 @@
     }: {
         label?: string;
         icon?: Component<IconProps>;
+        iconAfter?: Component<IconProps>;
+        iconAfterClass?: string;
         variant?: ButtonVariant;
         buttonProps?: ButtonProps;
         collapseAt?: CollapseAt;
@@ -26,12 +30,23 @@
 </script>
 
 {#if label !== undefined}
-    <Button {icon} {variant} {buttonProps} {collapseAt} {isPending} {ariaLabel}>
+    <Button
+        {icon}
+        {iconAfter}
+        {iconAfterClass}
+        {variant}
+        {buttonProps}
+        {collapseAt}
+        {isPending}
+        {ariaLabel}
+    >
         {label}
     </Button>
 {:else}
     <Button
         {icon}
+        {iconAfter}
+        {iconAfterClass}
         {variant}
         {buttonProps}
         {collapseAt}
