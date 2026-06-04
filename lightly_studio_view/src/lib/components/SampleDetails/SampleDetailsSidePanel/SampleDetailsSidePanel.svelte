@@ -75,6 +75,7 @@
                     {isPanModeEnabled}
                     refetch={onUpdate}
                     annotations={sample.annotations}
+                    sampleId={sample.sample_id}
                 />
                 <SampleDetailsClassificationSegment
                     {collectionId}
