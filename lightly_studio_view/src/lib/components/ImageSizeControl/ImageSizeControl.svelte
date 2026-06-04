@@ -36,7 +36,7 @@
 
 <div
     class="flex shrink-0 items-center text-diffuse-foreground"
-    class:w-40={!compact}
+    class:w-36={!compact}
     class:space-x-2={!compact}
     class:space-x-4={compact}
 >
