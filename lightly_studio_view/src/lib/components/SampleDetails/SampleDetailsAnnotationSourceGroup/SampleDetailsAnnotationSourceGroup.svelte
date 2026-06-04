@@ -13,15 +13,26 @@
     interface Props {
         name: string;
         count: number;
+        /** Whether the group starts expanded. Captured once on mount; the chevron then
+         * toggles independently of the eye. */
+        initiallyOpen?: boolean;
         showColorMarker: boolean;
         allHidden: boolean;
         onToggleVisibility: (e: MouseEvent) => void;
         children: Snippet;
     }
 
-    let { name, count, showColorMarker, allHidden, onToggleVisibility, children }: Props = $props();
+    let {
+        name,
+        count,
+        initiallyOpen = true,
+        showColorMarker,
+        allHidden,
+        onToggleVisibility,
+        children
+    }: Props = $props();
 
-    let open = $state(true);
+    let open = $state(initiallyOpen);
 
     // Collapse animation duration in ms, matching the parent Segment component.
     const duration = 168;
