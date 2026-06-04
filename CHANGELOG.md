@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed operations on large datasets (more than ~65,535 samples) failing on PostgreSQL with
   `number of parameters must be between 0 and 65535`.
 - Fixed cascaded delete for annotations linked by calculated metrics.
+- Grid annotation source selection now persists when navigating to image details and back.
 
 ### Security
 

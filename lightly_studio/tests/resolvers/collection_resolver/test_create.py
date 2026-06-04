@@ -23,7 +23,7 @@ def test_create(db_session: Session) -> None:
     assert db_dataset is not None
 
     # Creating a collection with the same name should raise an error.
-    with pytest.raises(ValueError, match=r"Collection with name 'my_collection' already exists."):
+    with pytest.raises(ValueError, match=r"A dataset named 'my_collection' already exists."):
         collection_resolver.create(
             session=db_session,
             collection=CollectionCreate(name="my_collection", sample_type=SampleType.IMAGE),
@@ -84,7 +84,9 @@ def test_create__collections_with_same_name_same_parent_fails(db_session: Sessio
     )
 
     # Creating another child with the same name under the same parent should fail
-    with pytest.raises(ValueError, match=r"Collection with name 'child' already exists."):
+    with pytest.raises(
+        ValueError, match=r"A collection named 'child' already exists under the same parent"
+    ):
         collection_resolver.create(
             session=db_session,
             collection=CollectionCreate(
@@ -103,7 +105,7 @@ def test_create__root_collections_with_same_name_fails(db_session: Session) -> N
     )
 
     # Creating another root collection with the same name should fail
-    with pytest.raises(ValueError, match=r"Collection with name 'root' already exists."):
+    with pytest.raises(ValueError, match=r"A dataset named 'root' already exists."):
         collection_resolver.create(
             session=db_session,
             collection=CollectionCreate(name="root", sample_type=SampleType.IMAGE),
