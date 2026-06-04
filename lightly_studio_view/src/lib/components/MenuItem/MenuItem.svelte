@@ -21,6 +21,11 @@
 >
     <Button
         icon={item.icon}
+        iconAfter={hasSiblings ? ChevronDown : undefined}
+        iconAfterClass={cn(
+            'shrink-0 opacity-60 transition-transform duration-200',
+            open && 'rotate-180'
+        )}
         buttonProps={{
             href: item.href,
             'data-testid': `navigation-menu-${item.title.toLowerCase()}`,
@@ -28,14 +33,6 @@
         }}
     >
         {item.title}
-        {#if hasSiblings}
-            <ChevronDown
-                class={cn(
-                    'size-4 shrink-0 opacity-60 transition-transform duration-200',
-                    open && 'rotate-180'
-                )}
-            />
-        {/if}
     </Button>
 
     {#if hasSiblings && open}

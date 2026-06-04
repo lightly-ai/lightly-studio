@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import { Pencil } from '@lucide/svelte';
+import { ChevronDown, Pencil } from '@lucide/svelte';
 import '@testing-library/jest-dom';
 import ButtonTestWrapper from './ButtonTestWrapper.test.svelte';
 
@@ -33,6 +33,38 @@ describe('Button', () => {
 
         expect(container.querySelector('button')).toBeInTheDocument();
         expect(container.querySelector(labelSelector)).toBeNull();
+    });
+
+    it('renders the trailing icon after the label when iconAfter is provided', () => {
+        const { container } = render(ButtonTestWrapper, {
+            props: { label: 'Open', iconAfter: ChevronDown }
+        });
+
+        const children = Array.from(container.querySelector('button')?.children ?? []);
+        const labelIndex = children.findIndex((el) => el.tagName === 'SPAN');
+        const svgIndex = children.findIndex((el) => el.tagName === 'svg' || el.tagName === 'SVG');
+        expect(labelIndex).toBeGreaterThan(-1);
+        expect(svgIndex).toBeGreaterThan(labelIndex);
+        expect(children[svgIndex]).toHaveClass('size-4');
+    });
+
+    it('renders both leading and trailing icons when both are provided', () => {
+        const { container } = render(ButtonTestWrapper, {
+            props: { label: 'Open', icon: Pencil, iconAfter: ChevronDown }
+        });
+
+        const svgs = container.querySelectorAll(iconSelector);
+        expect(svgs.length).toBe(2);
+    });
+
+    it('merges iconAfterClass with the default size class on the trailing icon', () => {
+        const { container } = render(ButtonTestWrapper, {
+            props: { label: 'Open', iconAfter: ChevronDown, iconAfterClass: 'rotate-180' }
+        });
+
+        const svg = container.querySelector('button > svg:last-of-type');
+        expect(svg?.getAttribute('class')).toContain('size-4');
+        expect(svg?.getAttribute('class')).toContain('rotate-180');
     });
 
     it('applies the variant passed through to the underlying button', () => {

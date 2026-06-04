@@ -1,7 +1,7 @@
 <script module>
     import { defineMeta } from '@storybook/addon-svelte-csf';
     import { fn } from 'storybook/test';
-    import { Pencil, Plus } from '@lucide/svelte';
+    import { ChevronDown, Pencil, Plus } from '@lucide/svelte';
     import Button from './Button.svelte';
 
     const { Story } = defineMeta({
@@ -39,6 +39,15 @@
                 description: 'Lucide icon component rendered before the label.',
                 control: false
             },
+            iconAfter: {
+                description: 'Lucide icon component rendered after the label.',
+                control: false
+            },
+            iconAfterClass: {
+                description:
+                    'Additional class applied to the trailing icon (merged with `size-4`).',
+                control: 'text'
+            },
             buttonProps: {
                 description:
                     'Props forwarded to the underlying shadcn button element (e.g. `onclick`, `disabled`, `title`, `type`, `class`).',
@@ -61,6 +70,10 @@
 
 <Story name="With Icon" args={{ icon: Pencil, buttonProps: { onclick: fn() } }}>
     Edit Annotations
+</Story>
+
+<Story name="With Icon After" args={{ iconAfter: ChevronDown, buttonProps: { onclick: fn() } }}>
+    Open menu
 </Story>
 
 <Story
