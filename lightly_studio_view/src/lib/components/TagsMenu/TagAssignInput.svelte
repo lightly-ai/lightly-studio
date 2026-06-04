@@ -83,7 +83,6 @@
             oninput={handleInput}
             onfocus={handleFocus}
             onblur={handleBlur}
-            class="disabled:opacity-60"
             disabled={busy}
         />
     </div>
