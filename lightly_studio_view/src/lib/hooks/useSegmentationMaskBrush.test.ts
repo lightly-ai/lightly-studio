@@ -318,13 +318,14 @@ describe('useSegmentationMaskBrush', () => {
         );
     });
 
-    it('persists the label and source chosen via requestLabel and uses the source', async () => {
+    it('persists the label chosen via requestLabel (source is owned by the pill)', async () => {
         const refetch = vi.fn();
 
         annotationLabelContext.annotationLabel = null;
-        annotationLabelContext.annotationSource = null;
+        // The source is chosen separately via the on-canvas pill, not the class dialog.
+        annotationLabelContext.annotationSource = 'predictions';
 
-        const requestLabel = vi.fn().mockResolvedValue({ label: 'car', source: 'predictions' });
+        const requestLabel = vi.fn().mockResolvedValue({ label: 'car' });
 
         const { finishBrush } = useSegmentationMaskBrush({
             collectionId: 'c1',
@@ -338,15 +339,13 @@ describe('useSegmentationMaskBrush', () => {
         await finishBrush(mask, null, []);
 
         expect(annotationLabelContext.annotationLabel).toBe('car');
-        expect(annotationLabelContext.annotationSource).toBe('predictions');
+        // The label choice is persisted to the session store, keyed by collection id.
+        const { lastAnnotationLabel } = useGlobalStorage();
+        expect(get(lastAnnotationLabel)['c1']).toBe('car');
+        // The collection name still flows from the context source set by the pill.
         expect(createAnnotation).toHaveBeenCalledWith(
             expect.objectContaining({ annotation_collection_name: 'predictions' })
         );
-
-        // The choice is persisted to the session store, keyed by collection id.
-        const { lastAnnotationLabel, lastAnnotationSource } = useGlobalStorage();
-        expect(get(lastAnnotationLabel)['c1']).toBe('car');
-        expect(get(lastAnnotationSource)['c1']).toBe('predictions');
     });
 
     it('omits annotation_collection_name when no source is selected', async () => {
