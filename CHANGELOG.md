@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   it now shrinks with the available width and wraps onto a second line when too narrow.
 - Fixed operations on large datasets (more than ~65,535 samples) failing on PostgreSQL with
   `number of parameters must be between 0 and 65535`.
+- Fixed cascaded delete for annotations linked by calculated metrics.
 
 ### Security
 
