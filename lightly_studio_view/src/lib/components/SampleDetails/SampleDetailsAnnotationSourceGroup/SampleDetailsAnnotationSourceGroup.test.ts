@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { createRawSnippet } from 'svelte';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import SampleDetailsAnnotationSourceGroup from './SampleDetailsAnnotationSourceGroup.svelte';
 
 const children = createRawSnippet(() => ({
@@ -12,6 +12,8 @@ const defaultProps = {
     name: 'Ground truth',
     count: 3,
     showColorMarker: true,
+    allHidden: false,
+    onToggleVisibility: vi.fn(),
     children
 };
 
@@ -42,5 +44,34 @@ describe('SampleDetailsAnnotationSourceGroup', () => {
 
         const header = screen.getByTestId('annotation-source-group-header');
         expect(header.querySelector('span[style*="background-color"]')).not.toBeInTheDocument();
+    });
+
+    it('shows an open eye when not all annotations are hidden', () => {
+        render(SampleDetailsAnnotationSourceGroup, { props: defaultProps });
+
+        expect(screen.getByTestId('source-group-eye')).toBeInTheDocument();
+        expect(screen.queryByTestId('source-group-eye-off')).not.toBeInTheDocument();
+    });
+
+    it('shows a closed eye when all annotations are hidden', () => {
+        render(SampleDetailsAnnotationSourceGroup, {
+            props: { ...defaultProps, allHidden: true }
+        });
+
+        expect(screen.getByTestId('source-group-eye-off')).toBeInTheDocument();
+        expect(screen.queryByTestId('source-group-eye')).not.toBeInTheDocument();
+    });
+
+    it('calls onToggleVisibility when clicking the eye without collapsing the group', async () => {
+        const user = userEvent.setup();
+        const onToggleVisibility = vi.fn();
+        render(SampleDetailsAnnotationSourceGroup, {
+            props: { ...defaultProps, onToggleVisibility }
+        });
+
+        await user.click(screen.getByTestId('source-group-eye'));
+
+        expect(onToggleVisibility).toHaveBeenCalledOnce();
+        expect(screen.getByTestId('group-content')).toBeInTheDocument();
     });
 });
