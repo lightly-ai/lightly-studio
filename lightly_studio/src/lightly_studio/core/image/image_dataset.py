@@ -274,6 +274,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             class_id_to_name: Mapping from class IDs to class names.
             annotation_source: Name of the annotation source.
         """
+        images_root = _normalize_input_path(path=images_root)
+        masks_path = _normalize_input_path(path=masks_path)
+
         label_input = PascalVOCSemanticSegmentationInput.from_dirs(
             images_dir=images_root,
             masks_dir=masks_path,

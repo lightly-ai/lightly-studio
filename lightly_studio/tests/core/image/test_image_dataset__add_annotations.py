@@ -8,6 +8,7 @@ from typing import Any
 import numpy as np
 import pytest
 import yaml
+from numpy.typing import NDArray
 from PIL import Image
 
 from lightly_studio import ImageDataset
@@ -48,7 +49,7 @@ def _create_sample_images(image_paths: list[Path]) -> None:
         Image.new("RGB", (10, 10)).save(image_path)
 
 
-def _create_mask(mask_path: Path, mask: np.ndarray) -> None:
+def _create_mask(mask_path: Path, mask: NDArray[np.uint8]) -> None:
     mask_path.parent.mkdir(parents=True, exist_ok=True)
     Image.fromarray(mask).save(mask_path)
 
