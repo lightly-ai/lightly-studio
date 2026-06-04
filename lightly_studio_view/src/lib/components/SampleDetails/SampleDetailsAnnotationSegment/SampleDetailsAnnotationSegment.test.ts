@@ -7,8 +7,7 @@ import SampleDetailsAnnotationSegment from './SampleDetailsAnnotationSegment.sve
 const mocks = vi.hoisted(() => ({
     collections: [] as { collection_id: string; name: string }[],
     selectedCollectionIds: [] as string[],
-    setSelectedCollectionIds: vi.fn(),
-    setCollectionIdToName: vi.fn()
+    seedSelectionIfNeeded: vi.fn()
 }));
 
 // Replace the heavy per-annotation row with a lightweight stub.
@@ -30,8 +29,7 @@ vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilte
     return {
         useAnnotationCollectionsFilter: vi.fn(() => ({
             selectedCollectionIds: readable(mocks.selectedCollectionIds),
-            setSelectedCollectionIds: mocks.setSelectedCollectionIds,
-            setCollectionIdToName: mocks.setCollectionIdToName
+            seedSelectionIfNeeded: mocks.seedSelectionIfNeeded
         }))
     };
 });
@@ -168,39 +166,26 @@ describe('SampleDetailsAnnotationSegment', () => {
         expect(screen.getAllByTestId('mock-annotation-row')).toHaveLength(1);
     });
 
-    it('initializes the annotation source filter stores when they are empty', () => {
+    it('seeds the annotation source filter with all sources', () => {
         mocks.collections = [groundTruthSource, predictionsSource];
         mocks.selectedCollectionIds = [];
 
         render(SampleDetailsAnnotationSegment, { props: defaultProps });
 
-        expect(mocks.setSelectedCollectionIds).toHaveBeenCalledWith([
-            groundTruthSource.collection_id,
-            predictionsSource.collection_id
+        // The keyed no-op guarantee (keeping an existing selection) lives in the hook's
+        // own unit test; here we only assert the segment delegates with the full source list.
+        expect(mocks.seedSelectionIfNeeded).toHaveBeenCalledWith('collection-1', [
+            { id: groundTruthSource.collection_id, name: groundTruthSource.name },
+            { id: predictionsSource.collection_id, name: predictionsSource.name }
         ]);
-        expect(mocks.setCollectionIdToName).toHaveBeenCalledWith({
-            [groundTruthSource.collection_id]: groundTruthSource.name,
-            [predictionsSource.collection_id]: predictionsSource.name
-        });
     });
 
-    it('does not override an existing annotation source selection', () => {
-        mocks.collections = [groundTruthSource, predictionsSource];
-        mocks.selectedCollectionIds = [groundTruthSource.collection_id];
-
-        render(SampleDetailsAnnotationSegment, { props: defaultProps });
-
-        expect(mocks.setSelectedCollectionIds).not.toHaveBeenCalled();
-        expect(mocks.setCollectionIdToName).not.toHaveBeenCalled();
-    });
-
-    it('does not initialize the annotation source filter stores for a single source', () => {
+    it('does not seed the annotation source filter for a single source', () => {
         mocks.collections = [groundTruthSource];
 
         render(SampleDetailsAnnotationSegment, { props: defaultProps });
 
-        expect(mocks.setSelectedCollectionIds).not.toHaveBeenCalled();
-        expect(mocks.setCollectionIdToName).not.toHaveBeenCalled();
+        expect(mocks.seedSelectionIfNeeded).not.toHaveBeenCalled();
     });
 
     describe('source visibility toggle', () => {
@@ -266,16 +251,48 @@ describe('SampleDetailsAnnotationSegment', () => {
             mocks.collections = [groundTruthSource, predictionsSource];
         });
 
-        it('starts with annotations of unselected sources hidden', () => {
+        it('collapses an unselected source and keeps its annotations hidden', async () => {
+            const user = userEvent.setup();
             mocks.selectedCollectionIds = [groundTruthSource.collection_id];
 
             render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
 
+            // The selected source stays expanded; the unselected Predictions group starts
+            // collapsed (its rows are not rendered) but still shows a closed eye.
+            const visibleRowIds = () =>
+                screen
+                    .queryAllByTestId('mock-annotation-row')
+                    .map((row) => row.getAttribute('data-annotation-id'));
+            expect(visibleRowIds()).toEqual(['gt-1']);
             expect(getRow('gt-1')).not.toHaveAttribute('data-hidden', 'true');
+            expect(screen.getAllByTestId('source-group-eye-off')).toHaveLength(1);
+
+            // Expanding the collapsed group reveals its annotations, which are hidden.
+            await user.click(screen.getByText(predictionsSource.name));
             expect(getRow('pred-1')).toHaveAttribute('data-hidden', 'true');
             expect(getRow('pred-2')).toHaveAttribute('data-hidden', 'true');
-            // The fully hidden Predictions group shows a closed eye.
-            expect(screen.getAllByTestId('source-group-eye-off')).toHaveLength(1);
+        });
+
+        it('re-collapses a seeded-hidden source after navigating to another sample', async () => {
+            const user = userEvent.setup();
+            mocks.selectedCollectionIds = [groundTruthSource.collection_id];
+
+            const { rerender } = render(SampleDetailsAnnotationSegment, {
+                props: { ...defaultProps, annotations }
+            });
+
+            // Expand the initially collapsed Predictions group on the first sample.
+            await user.click(screen.getByText(predictionsSource.name));
+            expect(getRow('pred-1')).toBeDefined();
+
+            // Navigating to another sample re-applies the seeded collapse.
+            await rerender({ ...defaultProps, annotations, sampleId: 'sample-2' });
+
+            const visibleRowIds = screen
+                .queryAllByTestId('mock-annotation-row')
+                .map((row) => row.getAttribute('data-annotation-id'));
+            expect(visibleRowIds).not.toContain('pred-1');
+            expect(visibleRowIds).not.toContain('pred-2');
         });
 
         it('starts with all annotations visible when all sources are selected', () => {
@@ -303,6 +320,7 @@ describe('SampleDetailsAnnotationSegment', () => {
         });
 
         it('seeds once the annotations become available', async () => {
+            const user = userEvent.setup();
             mocks.selectedCollectionIds = [groundTruthSource.collection_id];
 
             const { rerender } = render(SampleDetailsAnnotationSegment, {
@@ -312,6 +330,8 @@ describe('SampleDetailsAnnotationSegment', () => {
             await rerender({ annotations });
 
             expect(getRow('gt-1')).not.toHaveAttribute('data-hidden', 'true');
+            // Predictions is seeded hidden, so its group starts collapsed; expand to inspect.
+            await user.click(screen.getByText(predictionsSource.name));
             expect(getRow('pred-1')).toHaveAttribute('data-hidden', 'true');
             expect(getRow('pred-2')).toHaveAttribute('data-hidden', 'true');
         });

@@ -57,8 +57,7 @@
     const { selectAnnotation } = useAnnotationSelection();
 
     const annotationCollectionsQuery = useAnnotationCollections({ collectionId });
-    const { selectedCollectionIds, setSelectedCollectionIds, setCollectionIdToName } =
-        useAnnotationCollectionsFilter();
+    const { selectedCollectionIds, seedSelectionIfNeeded } = useAnnotationCollectionsFilter();
 
     const annotationsSort = $derived.by(() => {
         return annotations
@@ -80,22 +79,26 @@
         isGrouped ? groupAnnotationsBySource(annotationsSort, annotationSources) : []
     );
 
+    // Hidden set implied by the grid filter, as a derived so it's readable at mount (unlike
+    // the effect-written `annotationsIdsToHide`); drives the seed and the initial collapse.
+    const seededHiddenIds = $derived(
+        computeSeededHiddenIds(annotationsSort, $selectedCollectionIds, annotationSources)
+    );
+
     // Annotations are colored by source only while multiple sources are visible,
     // matching the details canvas. Swatches are shown only when they match the
     // colors drawn on the image: source markers in the group headers when coloring
     // by source, label legends in the rows otherwise.
     const colorBySource = $derived(countVisibleSources(annotationsSort, annotationsIdsToHide) >= 2);
 
-    // Initialize the global annotation source stores when landing directly on the
-    // details page (browser refresh / deep link), so annotations are colored by
-    // source.
+    // Seed the global annotation source stores the first time this collection is shown
+    // (e.g. landing directly on the details page via deep link), so annotations are colored
+    // by source. seedSelectionIfNeeded keeps an existing selection from the grid filter.
     $effect(() => {
-        if (annotationSources.length > 1 && $selectedCollectionIds.length === 0) {
-            setSelectedCollectionIds(annotationSources.map((source) => source.collection_id));
-            setCollectionIdToName(
-                Object.fromEntries(
-                    annotationSources.map((source) => [source.collection_id, source.name])
-                )
+        if (annotationSources.length > 1) {
+            seedSelectionIfNeeded(
+                collectionId,
+                annotationSources.map((source) => ({ id: source.collection_id, name: source.name }))
             );
         }
     });
@@ -120,11 +123,7 @@
         }
 
         seededSampleId = sampleId;
-        annotationsIdsToHide = computeSeededHiddenIds(
-            annotationsSort,
-            $selectedCollectionIds,
-            annotationSources
-        );
+        annotationsIdsToHide = new Set(seededHiddenIds);
     });
 
     const toggleAnnotationSelection = (annotationId: string) => {
@@ -232,6 +231,8 @@
                 <SampleDetailsAnnotationSourceGroup
                     name={group.name}
                     count={group.annotations.length}
+                    {sampleId}
+                    initiallyOpen={!areAllAnnotationsHidden(group.annotations, seededHiddenIds)}
                     showColorMarker={colorBySource}
                     allHidden={areAllAnnotationsHidden(group.annotations, annotationsIdsToHide)}
                     onToggleVisibility={(e) => {
