@@ -95,7 +95,7 @@ def main() -> None:
     images_path = env.path("EXAMPLES_PASCALVOC_IMAGES_PATH", "/path/to/your/dataset/images")
     gt_masks_path = env.path("EXAMPLES_PASCALVOC_MASKS_PATH", "/path/to/your/dataset/masks")
     pred_masks_path = env.path(
-        "EXAMPLES_PASCALVOC_MASKS_PATH_PREDICTIONS", "/path/to/your/dataset/pred_masks"
+        "EXAMPLES_PASCALVOC_PRED_MASKS_PATH", "/path/to/your/dataset/pred_masks"
     )
 
     # A mapping from class IDs to class names must be provided. We load it from a JSON file,
@@ -109,7 +109,7 @@ def main() -> None:
 
     # Create a dataset and add images and annotations from the Pascal VOC format for ground truth
     # and predictions.
-    dataset = ls.ImageDataset.create()
+    dataset = ls.ImageDataset.create(name=DATASET_NAME)
     dataset.add_images_from_path(path=images_path)
 
     dataset.add_annotations_from_pascal_voc_segmentations(
