@@ -10,9 +10,10 @@ LightlyStudio has a powerful Python interface. You can not only index datasets b
 - **Annotations** — [Annotations](../concepts_and_tools/annotations.md) covers annotation workflows, examples, and format notes.
 - **Search and Filter** — [Search and Filter](../concepts_and_tools/search_and_filter.md) covers the `DatasetQuery` API for filtering, sorting, and slicing.
 - **Sampling** — [Sampling](../concepts_and_tools/sampling.md) covers diverse, metadata-weighted, similarity, class-balancing, and combined sampling strategies.
+- **Evaluation** — [Evaluation](../concepts_and_tools/evaluation.md) covers evaluation runs, per-sample metrics, and GUI visualizations.
 
 The full API reference for each module is available in the navigation sidebar:
-[Dataset](dataset.md), [Sample](sample.md), [DatasetQuery](dataset_query.md), [Sampling](sampling.md), [Plugin](plugin.md), [Annotation](annotation.md).
+[Dataset](dataset.md), [Sample](sample.md), [DatasetQuery](dataset_query.md), [Sampling](sampling.md), [Plugin](plugin.md), [Annotation](annotation.md), [Evaluation](evaluation.md).
 
 ## API Reference
 

@@ -13,6 +13,7 @@
     import { countVisibleSources, getColorByLabel } from '$lib/utils';
     import { throttle } from 'lodash-es';
     import BrushToolPopUp from '../BrushToolPopUp/BrushToolPopUp.svelte';
+    import { AnnotationSourcePill } from '$lib/components';
     import SampleDetailsToolbar from '../SampleDetailsToolbar/SampleDetailsToolbar.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
@@ -210,6 +211,11 @@
         {/if}
     {/snippet}
     {#snippet zoomPanelContent()}
+        {#if $isEditingMode && !annotationLabelContext.isOnAnnotationDetailsView}
+            <div class="mb-1">
+                <AnnotationSourcePill {collectionId} />
+            </div>
+        {/if}
         {#if shouldShowBrushToolPopup}
             <BrushToolPopUp />
         {/if}
