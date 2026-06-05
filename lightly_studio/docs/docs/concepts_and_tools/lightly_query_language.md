@@ -1,7 +1,7 @@
 # Lightly Query Language
 
 This document explains how to write queries in the
-[LightlyStudio query editor.](../concepts_and_tools/search_and_filter.md#query-in-gui)
+[LightlyStudio query editor.](search_and_filter.md#query-in-gui)
 
 A query helps you find images that match certain rules. For example, you can search for:
 
