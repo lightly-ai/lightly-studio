@@ -58,6 +58,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Show confusion matrix in evaluation results for object detection.
 - Added option to select annotation source for class balancing.
 - Added query editor for advanced filtering with custom queries.
+- Added Model Evaluation:
+    - Users can annotations from different sources managing e.g. ground truth and predictions
+    - Users can evaluate per sample metrics for object detection, classification and semantic segmentation
+    - Users can sort the image grid by the sample metrics: finding errors quickly.
+    - Users can display confusion matrix to find error patterns.
 
 ### Changed
 
