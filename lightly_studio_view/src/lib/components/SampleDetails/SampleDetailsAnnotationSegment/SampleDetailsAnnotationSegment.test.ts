@@ -7,6 +7,7 @@ import SampleDetailsAnnotationSegment from './SampleDetailsAnnotationSegment.sve
 const mocks = vi.hoisted(() => ({
     collections: [] as { collection_id: string; name: string }[],
     selectedCollectionIds: [] as string[],
+    lastCreatedAnnotationId: null as string | null,
     seedSelectionIfNeeded: vi.fn()
 }));
 
@@ -46,7 +47,7 @@ vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
         context: {
             annotationId: null,
             lockedAnnotationIds: new Set<string>(),
-            lastCreatedAnnotationId: null,
+            lastCreatedAnnotationId: mocks.lastCreatedAnnotationId,
             annotationType: null
         },
         setAnnotationId: vi.fn(),
@@ -108,6 +109,7 @@ describe('SampleDetailsAnnotationSegment', () => {
         vi.clearAllMocks();
         mocks.collections = [];
         mocks.selectedCollectionIds = [];
+        mocks.lastCreatedAnnotationId = null;
     });
 
     it('renders a flat list without source groups when there is a single source', () => {
@@ -271,6 +273,21 @@ describe('SampleDetailsAnnotationSegment', () => {
             await user.click(screen.getByText(predictionsSource.name));
             expect(getRow('pred-1')).toHaveAttribute('data-hidden', 'true');
             expect(getRow('pred-2')).toHaveAttribute('data-hidden', 'true');
+        });
+
+        it('keeps a freshly created source expanded even though it is unselected', () => {
+            // Predictions is unselected on the grid, so it would normally seed collapsed...
+            mocks.selectedCollectionIds = [groundTruthSource.collection_id];
+            // ...but the user just created an annotation in it, so its group stays open.
+            mocks.lastCreatedAnnotationId = 'pred-1';
+
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            const visibleRowIds = screen
+                .queryAllByTestId('mock-annotation-row')
+                .map((row) => row.getAttribute('data-annotation-id'));
+            expect(visibleRowIds).toContain('pred-1');
+            expect(visibleRowIds).toContain('pred-2');
         });
 
         it('re-collapses a seeded-hidden source after navigating to another sample', async () => {

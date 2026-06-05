@@ -5,6 +5,7 @@ import {
     areAllAnnotationsHidden,
     computeSeededHiddenIds,
     groupAnnotationsBySource,
+    isSourceGroupInitiallyOpen,
     toggleSourceVisibility
 } from './SampleDetailsAnnotationSegment.helpers';
 
@@ -207,5 +208,30 @@ describe('computeSeededHiddenIds', () => {
         );
 
         expect(hiddenIds).toEqual(new Set(['pred-1']));
+    });
+});
+
+describe('isSourceGroupInitiallyOpen', () => {
+    const annotations = [
+        createAnnotation('a1', groundTruthSource.collection_id, 'cat'),
+        createAnnotation('a2', groundTruthSource.collection_id, 'dog')
+    ];
+
+    it('is open when not all annotations are seeded hidden', () => {
+        expect(isSourceGroupInitiallyOpen(annotations, new Set(['a1']), null)).toBe(true);
+    });
+
+    it('is collapsed when every annotation is seeded hidden', () => {
+        expect(isSourceGroupInitiallyOpen(annotations, new Set(['a1', 'a2']), null)).toBe(false);
+    });
+
+    it('stays open when it holds the just-created annotation despite being seeded hidden', () => {
+        expect(isSourceGroupInitiallyOpen(annotations, new Set(['a1', 'a2']), 'a2')).toBe(true);
+    });
+
+    it('ignores a just-created annotation that belongs to another group', () => {
+        expect(isSourceGroupInitiallyOpen(annotations, new Set(['a1', 'a2']), 'other-1')).toBe(
+            false
+        );
     });
 });
