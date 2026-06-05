@@ -66,41 +66,102 @@ Supported features:
 
 ## 🚀 Quickstart
 
-The examples below download the required example data the first time you run them. You can also
-directly use your own image, video, or YOLO/COCO dataset.
+LightlyStudio is a browser app that runs on your own computer. Use it in two simple steps:
 
-### Image Folder
-To run an example using an image-only dataset, create a file named `example_image.py` with the following contents:
+1. Load your data into the local database with a Python script.
+2. Start the server and explore the data in your browser.
 
-```python title="example_image.py"
+Get started with one of these example workflows:
+
+<details open>
+<summary><strong>Index a folder of images for curation and labeling</strong></summary>
+
+Create a file named `example_image.py`:
+
+```python
 import lightly_studio as ls
-from lightly_studio.utils import download_example_dataset
 
 # Download the example dataset (will be skipped if it already exists)
-dataset_path = download_example_dataset(download_dir="dataset_examples")
+dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
 
-# Indexes the dataset, creates embeddings and stores everything in the database. Here we only load images.
-dataset = ls.ImageDataset.create()
-dataset.add_images_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
+# Index the images, create embeddings, and store everything in the local database.
+dataset = ls.ImageDataset.load_or_create()
+dataset.add_images_from_path(
+    path=f"{dataset_path}/coco_subset_128_images/images",
+)
 
 # Start the UI server on localhost:8001.
-# Use `host` and `port` arguments to customize it.
+# Pass `host` and `port` parameters to customize it.
 ls.start_gui()
 ```
 
-Run the script with `python example_image.py`. Now you can inspect samples in the app.
+Run `python example_image.py` and open the printed URL in your browser.
 
-### Notebook / Colab
-For Jupyter or Google Colab, you can run the same image folder flow inside a notebook cell and embed the UI.
+</details>
+
+<details>
+<summary><strong>Index a YOLO dataset</strong></summary>
+
+Create a file named `example_yolo.py`:
+
+```python
+import lightly_studio as ls
+
+# Download the example dataset (will be skipped if it already exists)
+dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+
+dataset = ls.ImageDataset.load_or_create()
+dataset.add_samples_from_yolo(
+    data_yaml=f"{dataset_path}/road_signs_yolo/data.yaml",
+)
+
+ls.start_gui()
+```
+
+Run `python example_yolo.py` and open the printed URL to inspect images with their annotations.
+
+</details>
+
+<details>
+<summary><strong>Index a COCO dataset</strong></summary>
+
+Create a file named `example_coco.py`:
+
+```python
+import lightly_studio as ls
+
+# Download the example dataset (will be skipped if it already exists)
+dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+
+dataset = ls.ImageDataset.load_or_create()
+dataset.add_samples_from_coco(
+    annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
+    images_path=f"{dataset_path}/coco_subset_128_images/images",
+)
+
+ls.start_gui()
+```
+
+Run `python example_coco.py` and open the printed URL to inspect images with their annotations.
+
+To import COCO segmentation masks instead of object detections, set:
+
+```python
+annotation_type=ls.AnnotationType.SEGMENTATION_MASK
+```
+
+</details>
+
+<details>
+<summary><strong>Working with notebooks</strong></summary>
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb)
 
 ```python
 import lightly_studio as ls
-from lightly_studio.utils import download_example_dataset
 
-dataset_path = download_example_dataset(download_dir="dataset_examples")
-dataset = ls.ImageDataset.create()
+dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+dataset = ls.ImageDataset.load_or_create()
 dataset.add_images_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
 
 # Colab needs 0.0.0.0 to expose the port.
@@ -123,105 +184,24 @@ from google.colab import output
 output.serve_kernel_port_as_iframe(server.port, width=1000, height=800)
 ```
 
-**Tagging by Folder Structure**
+</details>
 
-When using `dataset.add_images_from_path`, you can automatically assign tags based on your folder
-structure. The folder hierarchy is **relative to the `path` argument** you provide. See
-our [documentation](https://docs.lightly.ai/studio/) for more information.
+<details>
+<summary><strong>Index a folder of videos for curation and labeling</strong></summary>
 
 ```python
-dataset.add_images_from_path(path="my_data/", tag_depth=1)
-```
-
-### Video Folder
-
-Create a file named `example_video.py` with the following contents:
-
-```python title="example_video.py"
 import lightly_studio as ls
-from lightly_studio.utils import download_example_dataset
 
-# Download the example dataset (will be skipped if it already exists)
-dataset_path = download_example_dataset(download_dir="dataset_examples")
+dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
 
-# Create a dataset and populate it with videos.
-dataset = ls.VideoDataset.create()
+dataset = ls.VideoDataset.load_or_create()
 dataset.add_videos_from_path(path=f"{dataset_path}/youtube_vis_50_videos/train/videos")
 
-# Start the UI server.
 ls.start_gui()
 ```
 
-Run the script with `python example_video.py`. Now you can inspect videos in the app.
 
-The same `dataset.add_videos_from_path()` call also accepts cloud storage URLs such as `s3://my-bucket/videos/` after installing `pip install "lightly-studio[cloud-storage]"`.
-
-### YOLO Object Detection
-
-To run an object detection example using a [YOLO](https://labelformat.com/formats/object-detection/yolov8/) dataset, create a file named `example_yolo.py`:
-
-```python title="example_yolo.py"
-import lightly_studio as ls
-from lightly_studio.utils import download_example_dataset
-
-# Download the example dataset (will be skipped if it already exists)
-dataset_path = download_example_dataset(download_dir="dataset_examples")
-
-dataset = ls.ImageDataset.create()
-dataset.add_samples_from_yolo(
-    data_yaml=f"{dataset_path}/road_signs_yolo/data.yaml",
-)
-
-ls.start_gui()
-```
-
-Run the script with `python example_yolo.py`. Now you can inspect samples with their assigned annotations in the app.
-
-### COCO Segmentation Mask
-
-To run a segmentation mask example using a [COCO](https://labelformat.com/formats/object-detection/coco/) dataset, create a file named
-`example_coco.py`:
-
-```python title="example_coco.py"
-import lightly_studio as ls
-from lightly_studio.utils import download_example_dataset
-
-# Download the example dataset (will be skipped if it already exists)
-dataset_path = download_example_dataset(download_dir="dataset_examples")
-
-dataset = ls.ImageDataset.create()
-dataset.add_samples_from_coco(
-    annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
-    images_path=f"{dataset_path}/coco_subset_128_images/images",
-    annotation_type=ls.AnnotationType.SEGMENTATION_MASK,
-)
-
-ls.start_gui()
-```
-
-Run the script via `python example_coco.py`. Now you can inspect samples with their assigned annotations in the app.
-
-### COCO Captions
-
-To run a caption example using a COCO dataset, create a file named `example_coco_captions.py`:
-
-```python title="example_coco_captions.py"
-import lightly_studio as ls
-from lightly_studio.utils import download_example_dataset
-
-# Download the example dataset (will be skipped if it already exists)
-dataset_path = download_example_dataset(download_dir="dataset_examples")
-
-dataset = ls.ImageDataset.create()
-dataset.add_samples_from_coco_caption(
-    annotations_json=f"{dataset_path}/coco_subset_128_images/captions_train2017.json",
-    images_path=f"{dataset_path}/coco_subset_128_images/images",
-)
-
-ls.start_gui()
-```
-
-Run the script with `python example_coco_captions.py`. Now you can inspect samples with their assigned captions in the app.
+</details>
 
 ## 🐍 Python Interface
 
@@ -266,8 +246,6 @@ dataset = ls.ImageDataset.load()
 Datasets persist in a DuckDB file (`lightly_studio.db` by default). All tags, annotations, captions, metadata, and embeddings are saved, so you can stop and resume anytime. Use `Dataset.load_or_create` to reopen existing datasets:
 
 ```python
-from __future__ import annotations
-
 import lightly_studio as ls
 
 dataset = ls.ImageDataset.load_or_create(name="my-dataset")
@@ -374,12 +352,12 @@ for sample in query:
 samples = query.to_list()
 
 # Export all resulting samples in coco format
-query.export().to_coco_object_detections()
+dataset.export(query).to_coco_object_detections()
 
 ```
 
 ### Sampling
-LightlyStudio offers a premium feature for automated data sampling. [Contact us](https://www.lightly.ai/contact) to get access to premium features. Sampling the right subset of your data can save labeling cost and training time while improving model quality. Sampling in LightlyStudio automatically picks the most useful samples - those that are both representative (typical) and diverse (novel).
+Sampling the right subset of your data can save labeling cost and training time while improving model quality. Sampling in LightlyStudio automatically picks the most useful samples - those that are both representative (typical) and diverse (novel).
 
 You can mix and match these strategies to fit your goal: stable core data, edge cases, or fixing class imbalances.
 
