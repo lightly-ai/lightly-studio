@@ -5,7 +5,7 @@
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
-    import { cn } from '$lib/utils';
+    import { cn, formatConfidence } from '$lib/utils';
     import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
@@ -234,6 +234,12 @@
                     <span class="block min-w-0 truncate">
                         {annotation.annotation_label.annotation_label_name}
                     </span>
+                    {#if annotation.confidence != null}
+                        {@const formattedConfidence = formatConfidence(annotation.confidence)}
+                        <span class="text-xs text-muted-foreground"
+                            >Confidence: {formattedConfidence}</span
+                        >
+                    {/if}
                     {#if annotation.object_track_number != null}
                         <span class="shrink-0 font-mono text-xs opacity-80"
                             >#{annotation.object_track_number}</span
