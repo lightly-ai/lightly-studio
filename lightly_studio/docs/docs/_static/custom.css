@@ -221,7 +221,7 @@ code.doc-symbol-module {
 /* Each slide fills the track width so only one shows at a time */
 .md-content .md-typeset .ls-carousel > * {
   flex: 0 0 100%;
-  scroll-snap-align: center;
+  scroll-snap-align: start;
   margin: 0; /* override default paragraph/image spacing */
 }
 
