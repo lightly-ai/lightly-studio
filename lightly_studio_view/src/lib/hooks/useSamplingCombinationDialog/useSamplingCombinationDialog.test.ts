@@ -23,13 +23,11 @@ const { useImageFilters } = await import('$lib/hooks/useImageFilters/useImageFil
 const { useVideoFilters } = await import('$lib/hooks/useVideoFilters/useVideoFilters');
 const { useGlobalStorage } = await import('$lib/hooks/useGlobalStorage');
 const { useMetadataFilters } = await import('$lib/hooks/useMetadataFilters/useMetadataFilters');
-const { useStrategyBuilder, isStrategyInstanceValid } = await import(
-    '$lib/hooks/useStrategyBuilder'
-);
+const { useStrategyBuilder, isStrategyInstanceValid } =
+    await import('$lib/hooks/useStrategyBuilder');
 const { useSamplingDialog } = await import('$lib/hooks/useSamplingDialog/useSamplingDialog');
-const { useSubmitCombinationSelection } = await import(
-    '$lib/hooks/useSubmitCombinationSelection/useSubmitCombinationSelection'
-);
+const { useSubmitCombinationSelection } =
+    await import('$lib/hooks/useSubmitCombinationSelection/useSubmitCombinationSelection');
 
 describe('useSamplingCombinationDialog', () => {
     let filteredSampleCount: ReturnType<typeof writable<number>>;
@@ -156,7 +154,8 @@ describe('useSamplingCombinationDialog', () => {
     describe('notEnoughSamples', () => {
         it('is true when nSamplesToSelect exceeds a positive filteredSampleCount', () => {
             filteredSampleCount.set(5);
-            const { notEnoughSamples, nSamplesToSelect } = useSamplingCombinationDialog(defaultParams);
+            const { notEnoughSamples, nSamplesToSelect } =
+                useSamplingCombinationDialog(defaultParams);
             nSamplesToSelect.set(10);
 
             expect(get(notEnoughSamples)).toBe(true);
@@ -164,7 +163,8 @@ describe('useSamplingCombinationDialog', () => {
 
         it('is false when filteredSampleCount is 0', () => {
             filteredSampleCount.set(0);
-            const { notEnoughSamples, nSamplesToSelect } = useSamplingCombinationDialog(defaultParams);
+            const { notEnoughSamples, nSamplesToSelect } =
+                useSamplingCombinationDialog(defaultParams);
             nSamplesToSelect.set(10);
 
             expect(get(notEnoughSamples)).toBe(false);
@@ -172,7 +172,8 @@ describe('useSamplingCombinationDialog', () => {
 
         it('is false when nSamplesToSelect does not exceed filteredSampleCount', () => {
             filteredSampleCount.set(20);
-            const { notEnoughSamples, nSamplesToSelect } = useSamplingCombinationDialog(defaultParams);
+            const { notEnoughSamples, nSamplesToSelect } =
+                useSamplingCombinationDialog(defaultParams);
             nSamplesToSelect.set(10);
 
             expect(get(notEnoughSamples)).toBe(false);
