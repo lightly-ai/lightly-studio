@@ -26,6 +26,7 @@
             />
         </div>
         <AnnotationSourceSelect
+            id="class-balancing-annotation-source"
             sourceOptions={annotationSourceOptions}
             selectedSource={params.annotation_source_id}
             onSelect={(id) => onUpdate({ annotation_source_id: id })}
