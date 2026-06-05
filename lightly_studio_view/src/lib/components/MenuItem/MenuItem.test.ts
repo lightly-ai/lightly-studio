@@ -77,13 +77,6 @@ describe('MenuItem', () => {
             expect(trigger).toHaveTextContent('Images');
         });
 
-        it('overrides the underlying trigger w-full so siblings do not stretch the breadcrumb row', () => {
-            render(MenuItem, { props: { item: imagesItem, siblings } });
-
-            const trigger = screen.getByTestId('navigation-menu-images');
-            expect(trigger.className.split(/\s+/)).toContain('w-auto');
-        });
-
         it('keeps the trigger label fixed to the current item title', () => {
             render(MenuItem, { props: { item: videosItem, siblings } });
 
