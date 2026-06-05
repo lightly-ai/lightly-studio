@@ -154,10 +154,11 @@
         content="The annotation will be associated with the selected annotation source."
         position="top"
         triggerClass="flex shrink-0 items-center"
+        ariaLabel="Annotation source help"
     >
         <InfoIcon
             class="size-3.5 text-muted-foreground"
-            aria-label="Annotation source help"
+            aria-hidden="true"
             data-testid="annotation-source-pill-info"
         />
     </Tooltip>
