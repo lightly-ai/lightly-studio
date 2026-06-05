@@ -12,17 +12,25 @@ Contact [sales@lightly.ai](mailto:sales@lightly.ai) to find the right option for
 
 ## A Look Inside
 
-<div class="ls-carousel" markdown>
+=== "Single Sign-On"
 
-![Sign in with username, password, or SSO](https://storage.googleapis.com/lightly-public/studio/docs/enterprise_login_v1.0.0.png)
+    ![Sign in with username, password, or SSO](https://storage.googleapis.com/lightly-public/studio/docs/enterprise_login_v1.0.0.png){ width="100%" }
+    _Sign in with username, password, or your organization's SSO provider._
 
-![Manage multiple datasets with access control](https://storage.googleapis.com/lightly-public/studio/docs/enterprise_datasets_v1.0.0.png)
+=== "Dataset Overview"
 
-![Multi-user management with roles and permissions](https://storage.googleapis.com/lightly-public/studio/docs/enterprise_user_management_v1.0.0.png)
+    ![Manage multiple datasets with access control](https://storage.googleapis.com/lightly-public/studio/docs/enterprise_datasets_v1.0.0.png){ width="100%" }
+    _Manage multiple datasets with fine-grained access control._
 
-![Curate and search your data in the samples grid](https://storage.googleapis.com/lightly-public/studio/docs/enterprise_samples_grid_v1.0.0.png)
+=== "User Management"
 
-</div>
+    ![Multi-user management with roles and permissions](https://storage.googleapis.com/lightly-public/studio/docs/enterprise_user_management_v1.0.0.png){ width="100%" }
+    _Onboard your team with roles and permissions._
+
+=== "Samples Grid"
+
+    ![Curate and search your data in the samples grid](https://storage.googleapis.com/lightly-public/studio/docs/enterprise_samples_grid_v1.0.0.png){ width="100%" }
+    _Curate and search your data in the samples grid._
 
 ## Key Differences from Open-Source
 

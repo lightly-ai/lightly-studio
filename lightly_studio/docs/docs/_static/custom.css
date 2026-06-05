@@ -204,39 +204,3 @@ code.doc-symbol-module {
 .md-content .md-typeset iframe {
   border-radius: 8px;
 }
-
-/* ===== Screenshot carousel (pure CSS, scroll-snap) ===== */
-
-/* Horizontal scroll track that snaps one slide at a time */
-.md-content .md-typeset .ls-carousel {
-  display: flex;
-  gap: 1rem;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 0.5rem; /* room for the scrollbar */
-}
-
-/* Each slide fills the track width so only one shows at a time */
-.md-content .md-typeset .ls-carousel > * {
-  flex: 0 0 100%;
-  scroll-snap-align: start;
-  margin: 0; /* override default paragraph/image spacing */
-}
-
-.md-content .md-typeset .ls-carousel img {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-/* Slimmer, themed scrollbar for the track */
-.md-content .md-typeset .ls-carousel::-webkit-scrollbar {
-  height: 8px;
-}
-
-.md-content .md-typeset .ls-carousel::-webkit-scrollbar-thumb {
-  background: var(--md-default-fg-color--lighter);
-  border-radius: 4px;
-}
