@@ -6,7 +6,10 @@ import logging
 from dataclasses import dataclass
 from uuid import UUID
 
+import numpy as np
+from numpy.typing import NDArray
 from sqlmodel import Session
+from tqdm import tqdm
 
 from lightly_studio.dataset import env
 from lightly_studio.dataset.embedding_generator import (
@@ -24,8 +27,13 @@ from lightly_studio.resolvers import (
     sample_embedding_resolver,
     video_resolver,
 )
+from lightly_studio.utils import batching
 
 logger = logging.getLogger(__name__)
+
+# Batch size for inserting embeddings into the database.
+# Choosing 1024 is rather arbitrary.
+EMBEDDING_INSERTION_BATCH_SIZE = 1024
 
 
 class EmbeddingManagerProvider:
@@ -166,18 +174,12 @@ class EmbeddingManager:
         # Generate embeddings for the samples.
         embeddings = model.embed_images(filepaths=filepaths)
 
-        # Convert to SampleEmbeddingCreate objects.
-        sample_embeddings = [
-            SampleEmbeddingCreate(
-                sample_id=sample_id,
-                embedding_model_id=model_id,
-                embedding=embedding,
-            )
-            for sample_id, embedding in zip(sample_ids, embeddings)
-        ]
-
-        # Store the embeddings in the database.
-        sample_embedding_resolver.create_many(session=session, sample_embeddings=sample_embeddings)
+        _store_embeddings(
+            session=session,
+            model_id=model_id,
+            sample_ids=sample_ids,
+            embeddings=embeddings,
+        )
 
     def compute_image_embedding(
         self,
@@ -256,18 +258,12 @@ class EmbeddingManager:
         # Generate embeddings for the samples.
         embeddings = model.embed_videos(filepaths=filepaths)
 
-        # Convert to SampleEmbeddingCreate objects.
-        sample_embeddings = [
-            SampleEmbeddingCreate(
-                sample_id=sample_id,
-                embedding_model_id=model_id,
-                embedding=embedding,
-            )
-            for sample_id, embedding in zip(sample_ids, embeddings)
-        ]
-
-        # Store the embeddings in the database.
-        sample_embedding_resolver.create_many(session=session, sample_embeddings=sample_embeddings)
+        _store_embeddings(
+            session=session,
+            model_id=model_id,
+            sample_ids=sample_ids,
+            embeddings=embeddings,
+        )
 
     def load_or_get_default_model(
         self,
@@ -327,6 +323,37 @@ class EmbeddingManager:
         if embedding_model_id not in self._models:
             raise ValueError(f"No embedding model found with ID {embedding_model_id}")
         return embedding_model_id
+
+
+def _store_embeddings(
+    session: Session,
+    model_id: UUID,
+    sample_ids: list[UUID],
+    embeddings: NDArray[np.float32],
+) -> None:
+    """Store embeddings in the database.
+
+    Insertion is batched to reduce peak memory.
+    """
+    with tqdm(total=len(sample_ids), desc="Storing embeddings", unit=" embeddings") as progress:
+        for batch in batching.batched(
+            zip(sample_ids, embeddings), batch_size=EMBEDDING_INSERTION_BATCH_SIZE
+        ):
+            # Convert to SampleEmbeddingCreate objects.
+            sample_embeddings = [
+                SampleEmbeddingCreate(
+                    sample_id=sample_id,
+                    embedding_model_id=model_id,
+                    embedding=embedding,
+                )
+                for sample_id, embedding in batch
+            ]
+            # Store the embeddings in the database.
+            sample_embedding_resolver.create_many(
+                session=session, sample_embeddings=sample_embeddings
+            )
+
+            progress.update(len(sample_embeddings))
 
 
 def _load_embedding_generator_from_env(sample_type: SampleType) -> EmbeddingGenerator | None:
