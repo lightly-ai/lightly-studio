@@ -53,39 +53,51 @@ pip install lightly-studio
   <tr>
     <td align="center">
       <a href="https://docs.lightly.ai/studio/dataset_setup/image_dataset/">
-        <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/image_dataset.png" width="400" height="225" style="object-fit:cover" alt="Image Datasets"/>
+        <div style="width:400px;height:225px;overflow:hidden;display:flex;align-items:center;justify-content:center">
+          <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/image_dataset.png" width="400" alt="Image Datasets"/>
+        </div>
       </a>
       <br/><strong>Image Datasets</strong>
     </td>
     <td align="center">
       <a href="https://docs.lightly.ai/studio/dataset_setup/video_dataset/">
-        <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/video_dataset.png" width="400" height="225" style="object-fit:cover" alt="Video Dataset"/>
+        <div style="width:400px;height:225px;overflow:hidden;display:flex;align-items:center;justify-content:center">
+          <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/video_dataset.png" width="400" alt="Video Dataset"/>
+        </div>
       </a>
       <br/><strong>Video Dataset</strong>
     </td>
     <td align="center">
       <a href="https://docs.lightly.ai/studio/concepts_and_tools/annotations/">
-        <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/annotation.png" width="400" height="225" style="object-fit:cover" alt="Annotate"/>
+        <div style="width:400px;height:225px;overflow:hidden;display:flex;align-items:center;justify-content:center">
+          <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/annotation.png" width="400" alt="Annotate"/>
+        </div>
       </a>
-      <br/><strong>Annotate</strong> Classification, Object Detection, Segmentation, Captions
+      <br/><strong>Annotate:</strong> Classification, Object Detection, Segmentation, Captions
     </td>
   </tr>
   <tr>
     <td align="center">
       <a href="https://docs.lightly.ai/studio/concepts_and_tools/sampling/">
-        <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/sampling.png" width="400" height="225" style="object-fit:cover" alt="Curate"/>
+        <div style="width:400px;height:225px;overflow:hidden;display:flex;align-items:center;justify-content:center">
+          <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/sampling.png" width="400" alt="Curate"/>
+        </div>
       </a>
       <br/><strong>Curate</strong>
     </td>
     <td align="center">
       <a href="https://docs.lightly.ai/studio/concepts_and_tools/plugins/">
-        <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/plugins.png" width="400" height="225" style="object-fit:cover" alt="Plugins"/>
+        <div style="width:400px;height:225px;overflow:hidden;display:flex;align-items:center;justify-content:center">
+          <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/plugins.png" width="400" alt="Plugins"/>
+        </div>
       </a>
       <br/><strong>Plugins:</strong> Extendable features
     </td>
     <td align="center">
       <a href="https://docs.lightly.ai/studio/concepts_and_tools/model_evaluation/">
-        <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/model_evaluation.png" width="400" height="225" style="object-fit:cover" alt="Model Evaluation"/>
+        <div style="width:400px;height:225px;overflow:hidden;display:flex;align-items:center;justify-content:center">
+          <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/model_evaluation.png" width="400" alt="Model Evaluation"/>
+        </div>
       </a>
       <br/><strong>Model Evaluation</strong>
     </td>
