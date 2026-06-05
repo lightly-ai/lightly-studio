@@ -227,6 +227,11 @@
                     <span class="block min-w-0 truncate">
                         {annotation.annotation_label.annotation_label_name}
                     </span>
+                    {#if annotation.confidence != null}
+                        <span class="text-xs text-muted-foreground"
+                            >Confidence: {annotation.confidence.toFixed(2)}</span
+                        >
+                    {/if}
                     {#if annotation.object_track_number != null}
                         <span class="shrink-0 font-mono text-xs opacity-80"
                             >#{annotation.object_track_number}</span

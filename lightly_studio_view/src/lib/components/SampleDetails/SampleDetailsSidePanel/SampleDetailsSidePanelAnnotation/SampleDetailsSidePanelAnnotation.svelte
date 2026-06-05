@@ -197,6 +197,11 @@
                                     class="flex w-full min-w-0 flex-1 flex-col gap-1 overflow-hidden"
                                 >
                                     <span class="truncate">{annotationLabelName}</span>
+                                    {#if annotation.confidence != null}
+                                        <span class="text-xs text-muted-foreground"
+                                            >Confidence: {annotation.confidence.toFixed(2)}</span
+                                        >
+                                    {/if}
                                 </div>
                             {/if}
                         </div>
