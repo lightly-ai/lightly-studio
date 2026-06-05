@@ -232,6 +232,6 @@ directly use your own image, video, or YOLO/COCO dataset.
 
 ## Python API
 
-LightlyStudio has a powerful [Python interface](api/index.md). You can not only index datasets but
+LightlyStudio has a powerful [Python interface](api/dataset.md). You can not only index datasets but
 also query and manipulate them using code. It supports local and cloud-hosted image and video
 folders; see [Using Cloud Storage](advanced/cloud_storage.md) for setup and limitations.
