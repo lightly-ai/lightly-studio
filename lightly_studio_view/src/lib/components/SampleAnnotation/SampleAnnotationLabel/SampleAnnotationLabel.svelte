@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { getColorByLabel } from '$lib/utils';
+    import { formatConfidence, getColorByLabel } from '$lib/utils';
     const {
         coordinates,
         colorText,
@@ -21,7 +21,8 @@
     const displayLabel = $derived.by(() => {
         const base = isPrediction ? `${label} (pred)` : label;
         const withTrack = trackId != null ? `${base} #${trackId}` : base;
-        return confidence != null ? `${withTrack} (${confidence.toFixed(2)})` : withTrack;
+        const formattedConfidence = formatConfidence(confidence);
+        return formattedConfidence ? `${withTrack} (${formattedConfidence})` : withTrack;
     });
     const [x, y] = $derived(coordinates);
     let textElement: SVGTextElement | null = $state(null);
