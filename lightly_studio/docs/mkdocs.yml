@@ -32,7 +32,9 @@ repo_name: LightlyStudio
 docs_dir: docs
 
 nav:
-  - Getting Started: index.md
+  - Getting Started:
+    - Getting Started:
+      - index.md
   - Dataset Setup:
     - Data Types:
       - Image Dataset: dataset_setup/image_dataset.md
@@ -42,13 +44,14 @@ nav:
       - Cloud Storage: dataset_setup/cloud_storage.md
       - Reuse Datasets: dataset_setup/reuse_datasets.md
   - Python API:
-    - Dataset: api/dataset.md
-    - Sample: api/sample.md
-    - DatasetQuery: api/dataset_query.md
-    - Sampling: api/sampling.md
-    - Plugin: api/plugin.md
-    - Annotation: api/annotation.md
-    - Model Evaluation: api/evaluation.md
+    - Python API:
+      - Dataset: api/dataset.md
+      - Sample: api/sample.md
+      - DatasetQuery: api/dataset_query.md
+      - Sampling: api/sampling.md
+      - Plugin: api/plugin.md
+      - Annotation: api/annotation.md
+      - Model Evaluation: api/evaluation.md
   - Concepts & Tools:
     - Concepts:
       - Annotations: concepts_and_tools/annotations.md
@@ -63,13 +66,16 @@ nav:
       - Model Evaluation: concepts_and_tools/evaluation.md
     - More:
       - Lightly Query Language: concepts_and_tools/lightly_query_language.md
-  - About Us: about-us.md
+  - About Us:
+    - About Us:
+      - about-us.md
   - 🏢 Enterprise:
-    - enterprise/index.md
-    - Connect from Python: enterprise/connect.md
-    - Security and Architecture: enterprise/security.md
-    - On-Premise Deployment: enterprise/on-premise.md
-    - Local Storage: enterprise/local_storage.md
+    - Enterprise:
+      - enterprise/index.md
+      - Connect from Python: enterprise/connect.md
+      - Security and Architecture: enterprise/security.md
+      - On-Premise Deployment: enterprise/on-premise.md
+      - Local Storage: enterprise/local_storage.md
     - Cloud Storage:
       - enterprise/cloud_storage/index.md
       - AWS S3: enterprise/cloud_storage/aws.md
