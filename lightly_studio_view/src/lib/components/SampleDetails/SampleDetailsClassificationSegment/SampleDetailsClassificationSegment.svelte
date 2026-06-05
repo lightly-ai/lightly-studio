@@ -11,9 +11,9 @@
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
     import { useAnnotationCollections, useAnnotationCollectionsFilter } from '$lib/hooks';
     import {
-        areAllAnnotationsHidden,
         computeSeededHiddenIds,
-        groupAnnotationsBySource
+        groupAnnotationsBySource,
+        isSourceGroupInitiallyOpen
     } from '../SampleDetailsAnnotationSegment/SampleDetailsAnnotationSegment.helpers';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
@@ -22,6 +22,7 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
+    import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { page } from '$app/state';
     import { Trash2 } from '@lucide/svelte';
     import { toast } from 'svelte-sonner';
@@ -42,6 +43,8 @@
     const { deleteAnnotation } = useDeleteAnnotation({ collectionId });
     const { createLabel } = useCreateLabel({ collectionId });
     const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId });
+    const { context: annotationLabelContext, setLastCreatedAnnotationId } =
+        useAnnotationLabelContext();
     const datasetId = $derived(page.params.dataset_id!);
     const { refetch: refetchRootCollection } = $derived.by(() =>
         useCollectionWithChildren({ collectionId: datasetId })
@@ -119,7 +122,8 @@
             const newAnnotation = await createAnnotation({
                 parent_sample_id: sampleId,
                 annotation_type: AnnotationType.CLASSIFICATION,
-                annotation_label_id: label.annotation_label_id!
+                annotation_label_id: label.annotation_label_id!,
+                annotation_collection_name: annotationLabelContext.annotationSource ?? undefined
             });
 
             if (annotations.length === 0) {
@@ -134,6 +138,9 @@
             });
 
             refetch();
+            // Keep the (possibly brand-new) source group expanded for the just-created
+            // classification instead of letting the grid-filter seed collapse it.
+            setLastCreatedAnnotationId(newAnnotation.sample_id);
             toast.success('Classification created successfully');
             return true;
         } catch (error) {
@@ -268,9 +275,10 @@
                             name={group.name}
                             count={group.annotations.length}
                             {sampleId}
-                            initiallyOpen={!areAllAnnotationsHidden(
+                            initiallyOpen={isSourceGroupInitiallyOpen(
                                 group.annotations,
-                                seededHiddenIds
+                                seededHiddenIds,
+                                annotationLabelContext.lastCreatedAnnotationId
                             )}
                             showColorMarker={true}
                         >

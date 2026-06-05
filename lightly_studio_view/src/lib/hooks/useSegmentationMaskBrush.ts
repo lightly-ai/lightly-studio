@@ -34,13 +34,12 @@ export function useSegmentationMaskBrush({
     refetch: () => void;
     onAnnotationCreated?: () => void;
     /** Called when no label is currently selected. Should show a class-picker and resolve with
-     *  the chosen class and source, or null if the user cancelled. */
-    requestLabel?: () => Promise<{ label: string; source?: string } | null>;
+     *  the chosen class, or null if the user cancelled. */
+    requestLabel?: () => Promise<{ label: string } | null>;
 }) {
     const { createLabel } = useCreateLabel({ collectionId });
     const { createAnnotation } = useCreateAnnotation({ collectionId });
-    const { addReversibleAction, updateLastAnnotationLabel, updateLastAnnotationSource } =
-        useGlobalStorage();
+    const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
     const { deleteAnnotation } = useDeleteAnnotation({
         collectionId
     });
@@ -48,7 +47,6 @@ export function useSegmentationMaskBrush({
         context: annotationLabelContext,
         setIsDrawing,
         setAnnotationLabel,
-        setAnnotationSource,
         setLastCreatedAnnotationId,
         setAnnotationId,
         setAnnotationType
@@ -91,10 +89,6 @@ export function useSegmentationMaskBrush({
             annotationLabelName = result.label;
             setAnnotationLabel(annotationLabelName);
             updateLastAnnotationLabel(collectionId, annotationLabelName);
-            if (result.source) {
-                setAnnotationSource(result.source);
-                updateLastAnnotationSource(collectionId, result.source);
-            }
         }
 
         const overriddenAnnotations = await applySegmentationMaskConstraints({

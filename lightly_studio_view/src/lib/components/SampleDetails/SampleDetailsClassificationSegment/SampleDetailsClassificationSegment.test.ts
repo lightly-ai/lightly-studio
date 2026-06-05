@@ -7,6 +7,7 @@ import SampleDetailsClassificationSegment from './SampleDetailsClassificationSeg
 const mocks = vi.hoisted(() => ({
     collections: [] as { collection_id: string; name: string }[],
     selectedCollectionIds: [] as string[],
+    lastCreatedAnnotationId: null as string | null,
     isEditingMode: undefined as unknown as { set: (value: boolean) => void }
 }));
 
@@ -41,6 +42,19 @@ vi.mock('$lib/hooks/useGlobalStorage', async () => {
         })
     };
 });
+
+// The component reads annotationLabelContext (annotationSource to tag a new classification's
+// source, lastCreatedAnnotationId to keep its group expanded) and sets the last created id on
+// create; the real hook throws when rendered without a provider.
+vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
+    useAnnotationLabelContext: vi.fn(() => ({
+        context: {
+            annotationSource: null,
+            lastCreatedAnnotationId: mocks.lastCreatedAnnotationId
+        },
+        setLastCreatedAnnotationId: vi.fn()
+    }))
+}));
 
 vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
     useAnnotationLabels: vi.fn(() => ({ data: [] }))
@@ -101,6 +115,7 @@ describe('SampleDetailsClassificationSegment', () => {
         vi.clearAllMocks();
         mocks.collections = [];
         mocks.selectedCollectionIds = [];
+        mocks.lastCreatedAnnotationId = null;
         mocks.isEditingMode.set(false);
     });
 
@@ -166,6 +181,22 @@ describe('SampleDetailsClassificationSegment', () => {
         expect(screen.getAllByTestId('annotation-source-group-header')).toHaveLength(2);
         expect(screen.getByText('cat')).toBeInTheDocument();
         expect(screen.queryByText('zebra')).not.toBeInTheDocument();
+    });
+
+    it('keeps a freshly created source expanded even though it is unselected', () => {
+        // Predictions is unselected on the grid, so it would normally seed collapsed...
+        mocks.collections = [groundTruthSource, predictionsSource];
+        mocks.selectedCollectionIds = [groundTruthSource.collection_id];
+        // ...but the user just created this classification in it, so its group stays open.
+        mocks.lastCreatedAnnotationId = 'c2';
+        const annotations = [
+            createClassification('c1', groundTruthSource.collection_id, 'cat'),
+            createClassification('c2', predictionsSource.collection_id, 'zebra')
+        ];
+
+        render(SampleDetailsClassificationSegment, { props: { ...defaultProps, annotations } });
+
+        expect(screen.getByText('zebra')).toBeInTheDocument();
     });
 
     it('expands a collapsed source when its header is clicked', async () => {
