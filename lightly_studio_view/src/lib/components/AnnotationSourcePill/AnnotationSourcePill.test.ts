@@ -120,4 +120,19 @@ describe('AnnotationSourcePill', () => {
 
         expect(mocks.setAnnotationSource).not.toHaveBeenCalled();
     });
+
+    it('explains the target via an info tooltip on hover', async () => {
+        const user = userEvent.setup();
+        mocks.collections = [source('ground_truth')];
+        renderPill();
+
+        const infoTrigger = screen
+            .getByTestId('annotation-source-pill-info')
+            .closest('[role="button"]')!;
+        await user.hover(infoTrigger);
+
+        expect(screen.getByRole('tooltip')).toHaveTextContent(
+            'associated with the selected annotation source'
+        );
+    });
 });
