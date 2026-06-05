@@ -1,6 +1,7 @@
 <script lang="ts">
+    // TODO (Mihnea, 06/2026): Refactor this component, as it is way past the 100-line guideline.
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
-    import { Segment } from '$lib/components';
+    import { SampleDetailsAnnotationSourceGroup, Segment } from '$lib/components';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
@@ -8,6 +9,12 @@
     import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
+    import { useAnnotationCollections, useAnnotationCollectionsFilter } from '$lib/hooks';
+    import {
+        areAllAnnotationsHidden,
+        computeSeededHiddenIds,
+        groupAnnotationsBySource
+    } from '../SampleDetailsAnnotationSegment/SampleDetailsAnnotationSegment.helpers';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
@@ -55,6 +62,20 @@
                   )
             : [];
     });
+
+    const annotationCollectionsQuery = useAnnotationCollections({ collectionId });
+    const { selectedCollectionIds } = useAnnotationCollectionsFilter();
+    const annotationSources = $derived(annotationCollectionsQuery.data ?? []);
+    const isGrouped = $derived(annotationSources.length > 1);
+    const sourceGroups = $derived(
+        isGrouped ? groupAnnotationsBySource(classificationAnnotations, annotationSources) : []
+    );
+
+    // Hidden set implied by the grid filter, as a derived so it's readable at mount (unlike
+    // the effect-written `annotationsIdsToHide`); drives the seed and the initial collapse.
+    const seededHiddenIds = $derived(
+        computeSeededHiddenIds(classificationAnnotations, $selectedCollectionIds, annotationSources)
+    );
 
     const handleDeleteAnnotation = async (annotationId: string) => {
         if (!annotationLabels.data) return;
@@ -177,61 +198,89 @@
     });
 </script>
 
+{#snippet classificationRow(annotation: AnnotationView)}
+    <div
+        class="flex w-full items-center justify-between gap-2 rounded-sm bg-card px-4 py-3 text-left"
+        data-annotation-id={annotation.sample_id}
+    >
+        <span class="flex min-w-0 flex-1 flex-col gap-1">
+            <span class="min-w-0 text-sm font-medium">
+                {#if $isEditingMode}
+                    <SelectList
+                        {items}
+                        selectedItem={items.find(
+                            (i) => i.value === getLabelValue(annotation)?.value
+                        )}
+                        name="classification-label"
+                        placeholder="Select or create a class"
+                        className="w-full min-w-0"
+                        contentClassName="w-full min-w-0"
+                        onSelect={async (item) => {
+                            await updateClassificationLabel(annotation, item.value);
+                        }}
+                    >
+                        {#snippet notFound({ inputValue })}
+                            <LabelNotFound label={inputValue} />
+                        {/snippet}
+                    </SelectList>
+                {:else}
+                    <span class="block min-w-0 truncate">
+                        {annotation.annotation_label.annotation_label_name}
+                    </span>
+                    {#if annotation.object_track_number != null}
+                        <span class="shrink-0 font-mono text-xs opacity-80"
+                            >#{annotation.object_track_number}</span
+                        >
+                    {/if}
+                {/if}
+            </span>
+        </span>
+        <div class="flex shrink-0 items-center gap-3">
+            {#if $isEditingMode}
+                <button
+                    type="button"
+                    aria-label="Delete classification"
+                    onclick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteAnnotation(annotation.sample_id);
+                    }}
+                >
+                    <Trash2 class="size-6" />
+                </button>
+            {/if}
+        </div>
+    </div>
+{/snippet}
+
 <Segment title="Classification">
     <div class="flex flex-col gap-3 space-y-4">
         <div class="flex flex-col gap-2">
-            {#each classificationAnnotations as annotation}
-                <div
-                    class="flex w-full items-center justify-between gap-2 rounded-sm bg-card px-4 py-3 text-left"
-                    data-annotation-id={annotation.sample_id}
-                >
-                    <span class="flex min-w-0 flex-1 flex-col gap-1">
-                        <span class="min-w-0 text-sm font-medium">
-                            {#if $isEditingMode}
-                                <SelectList
-                                    {items}
-                                    selectedItem={items.find(
-                                        (i) => i.value === getLabelValue(annotation)?.value
-                                    )}
-                                    name="classification-label"
-                                    placeholder="Select or create a class"
-                                    className="w-full min-w-0"
-                                    contentClassName="w-full min-w-0"
-                                    onSelect={async (item) => {
-                                        await updateClassificationLabel(annotation, item.value);
-                                    }}
-                                >
-                                    {#snippet notFound({ inputValue })}
-                                        <LabelNotFound label={inputValue} />
-                                    {/snippet}
-                                </SelectList>
-                            {:else}
-                                <span class="block min-w-0 truncate">
-                                    {annotation.annotation_label.annotation_label_name}
-                                </span>
-                                {#if annotation.object_track_number != null}
-                                    <span class="shrink-0 font-mono text-xs opacity-80"
-                                        >#{annotation.object_track_number}</span
-                                    >
-                                {/if}
-                            {/if}
-                        </span>
-                    </span>
-                    <div class="flex shrink-0 items-center gap-3">
-                        {#if $isEditingMode}
-                            <button
-                                type="button"
-                                onclick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteAnnotation(annotation.sample_id);
-                                }}
-                            >
-                                <Trash2 class="size-6" />
-                            </button>
-                        {/if}
-                    </div>
+            {#if isGrouped}
+                <div class="flex flex-col gap-3">
+                    {#each sourceGroups as group (group.id)}
+                        <SampleDetailsAnnotationSourceGroup
+                            name={group.name}
+                            count={group.annotations.length}
+                            {sampleId}
+                            initiallyOpen={!areAllAnnotationsHidden(
+                                group.annotations,
+                                seededHiddenIds
+                            )}
+                            showColorMarker={true}
+                        >
+                            <div class="flex flex-col gap-2">
+                                {#each group.annotations as annotation (annotation.sample_id)}
+                                    {@render classificationRow(annotation)}
+                                {/each}
+                            </div>
+                        </SampleDetailsAnnotationSourceGroup>
+                    {/each}
                 </div>
-            {/each}
+            {:else}
+                {#each classificationAnnotations as annotation (annotation.sample_id)}
+                    {@render classificationRow(annotation)}
+                {/each}
+            {/if}
             {#if $isEditingMode}
                 {#each draftClassifications as draftId (draftId)}
                     <div
