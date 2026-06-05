@@ -69,9 +69,9 @@ segmentation_mask(class_name = "car" AND width < 100)
 
 You can programmatically filter samples by attributes (e.g., image size, tags), sort them, and select subsets. This is useful for creating training/validation splits, finding specific samples, or exporting filtered data.
 
-Create a query object by combining [`match`](../api/dataset_query.md/#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.match), [`order_by`](../api/dataset_query.md/#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.order_by) and [`slice`](../api/dataset_query.md/#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.slice) (or [`[start:end]`](../api/dataset_query.md/#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.__getitem__)) calls. The query is composed lazily and executed against the database once it is consumed, e.g. by iterating over it or calling [`add_tag`](../api/dataset_query.md/#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.add_tag).
+Create a query object by combining [`match`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.match), [`order_by`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.order_by) and [`slice`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.slice) (or [`[start:end]`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.__getitem__)) calls. The query is composed lazily and executed against the database once it is consumed, e.g. by iterating over it or calling [`add_tag`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.add_tag).
 
-The example below uses the [`ImageSampleField`](../api/dataset_query.md/#imagesamplefield) for demonstration, for video datasets, use [`VideoSampleField`](../api/dataset_query.md/#videosamplefield) instead.
+The example below uses the [`ImageSampleField`](../api/dataset_query.md#imagesamplefield) for demonstration, for video datasets, use [`VideoSampleField`](../api/dataset_query.md#videosamplefield) instead.
 ```py
 from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, ImageSampleField
 
