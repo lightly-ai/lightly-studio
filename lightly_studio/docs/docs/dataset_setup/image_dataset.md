@@ -324,7 +324,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
 Moreover, you can write an adapter to load images with annotations from a custom format, see the
 [TODO](../todo) for details. -->
 
-### From a Pre-Existing Dataset
+### From an Existing Dataset
 
 Once a dataset is populated, the data is stored in a database. It can be loaded later as follows
 to skip indexing and embedding it again:
