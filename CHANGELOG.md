@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## \[1.0.0\] - 2026-06-05
+
+### Added
+
 - Show confusion matrix in evaluation results for classification.
 - enable picker for annotation source menu
 - Embedding plot: added a "No coloring" option to the "Color by" dropdown to disable coloring.
@@ -22,10 +37,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Embedding plot coloring now supports multiple categories per sample, resolving issues with toggling visibility of categories in the legend.
 - Made annotation and plot colors more distinguishable.
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Embedding plot: when a coloring has more categories than the legend can display, the extra
@@ -36,8 +47,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `number of parameters must be between 0 and 65535`.
 - Fixed cascaded delete for annotations linked by calculated metrics.
 - Grid annotation source selection now persists when navigating to image details and back.
-
-### Security
 
 ## \[1.0.0rc1\] - 2026-05-28
 
