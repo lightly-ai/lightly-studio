@@ -19,11 +19,11 @@ from lightly_studio.resolvers import (
 )
 
 DATASET_NAME = "sem_segmentation_evaluation_example_dataset"
-GT_ANNOTATION_SOURCE = "gt"
-PRED_ANNOTATION_SOURCE = "pred"
+GT_ANNOTATION_SOURCE = "ground_truth"
+PRED_ANNOTATION_SOURCE = "predictions"
 
-TAGGED_SAMPLES_EVALUATION_NAME = "sem-segmentation-evaluation-tagged-samples"
-ALL_SAMPLES_EVALUATION_NAME = "sem-segmentation-evaluation-all-samples"
+TAGGED_SAMPLES_EVALUATION_NAME = "semseg-eval-tagged-samples"
+ALL_SAMPLES_EVALUATION_NAME = "semseg-eval-all-samples"
 
 TAGGED_SAMPLE_COUNT = 3
 
