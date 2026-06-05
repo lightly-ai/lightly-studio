@@ -115,6 +115,18 @@
   width: 0.1rem;
 }
 
+/* Underline section headings in the left navigation */
+.md-sidebar--primary .md-nav__item--section > .md-nav__link,
+.md-sidebar--primary .md-nav__item--section > .md-nav__container {
+  border-bottom: 0.05rem solid var(--md-default-fg-color--lightest);
+  font-size: 0.75rem;
+  padding-bottom: 0.2rem;
+}
+
+.md-sidebar--primary .md-nav__item--section:not(:first-child) {
+  margin-top: 1.3rem;
+}
+
 
 /* ===== Multi-row tab overrides ===== */
 
