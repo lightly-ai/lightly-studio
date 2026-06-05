@@ -16,7 +16,7 @@
             label: sibling.title,
             icon: sibling.icon,
             testId: `navigation-dropdown-${sibling.title.toLowerCase()}`,
-            class: 'cursor-pointer'
+            class: 'cursor-pointer pl-2'
         }))
     );
 
@@ -38,7 +38,7 @@
         icon={item.icon}
         items={selectItems}
         onValueChange={handleValueChange}
-        class={cn('w-auto', item.isSelected && 'bg-accent')}
+        class={cn(item.isSelected && 'bg-accent')}
         testId={`navigation-menu-${item.title.toLowerCase()}`}
     />
 {:else}
