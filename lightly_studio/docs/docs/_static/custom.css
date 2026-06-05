@@ -101,19 +101,18 @@
 /* Highlight the current page in the left navigation */
 .md-nav__link--active {
   color: #0d8abf;
+  position: relative;
 }
 
 .md-nav__link--active::before {
-  align-self: flex-start;
   background-color: currentcolor;
-  border-radius: 50%;
+  border-radius: 999px;
+  bottom: 0.15em;
   content: "";
-  display: block;
-  flex-shrink: 0;
-  height: 0.28rem;
-  margin-top: 0.65em;
-  transform: translateY(-50%);
-  width: 0.28rem;
+  left: -0.5rem;
+  position: absolute;
+  top: 0.15em;
+  width: 0.1rem;
 }
 
 
