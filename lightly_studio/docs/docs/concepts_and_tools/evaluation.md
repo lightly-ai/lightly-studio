@@ -17,7 +17,7 @@ Evaluation results are accessible in the **Evaluation** panel of the GUI once a 
 - Sort by `miou` for semantic segmentation.
 - Filter to the affected classes and inspect the hardest samples in detail view.
 
-![Confusion matrix with hover tooltip showing GT: person, Pred: person, Count: 24](../_static/confusion_matrix_v0_0_1.png)
+![Confusion matrix with hover tooltip showing GT: person, Pred: person, Count: 24](https://storage.googleapis.com/lightly-public/studio/docs/confusion_matrix_v1.0.0.png)
 
 !!! hint "Reading the confusion matrix"
 
