@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Show confusion matrix in evaluation results for classification.
-- enable picker for annotation source menu
+- Enable picker for annotation source menu
 - Embedding plot: added a "No coloring" option to the "Color by" dropdown to disable coloring.
 - Show ground truth and prediction annotation sources in run details panel
 - Image details view: annotations are now grouped by annotation source.
