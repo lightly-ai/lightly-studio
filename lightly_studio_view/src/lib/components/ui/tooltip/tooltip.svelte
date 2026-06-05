@@ -9,12 +9,14 @@
         position = 'top',
         class: className,
         triggerClass,
+        ariaLabel,
         children
     }: {
         content: string;
         position?: 'top' | 'bottom' | 'left' | 'right';
         class?: string;
         triggerClass?: string;
+        ariaLabel?: string;
         children: Snippet;
     } = $props();
 
@@ -97,6 +99,7 @@
     bind:this={triggerElement}
     tabindex="0"
     role="button"
+    aria-label={ariaLabel}
     aria-describedby={showTooltip ? 'tooltip' : undefined}
 >
     {@render children()}

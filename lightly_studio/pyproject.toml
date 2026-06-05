@@ -34,7 +34,7 @@ dependencies = [
     # Unreleased and released labelformat versions can be referenced with this syntax:
     # - "labelformat @ git+https://github.com/lightly-ai/labelformat.git@325a20b"
     # - "labelformat>=0.1.9"
-    "labelformat>=0.1.15",
+    "labelformat>=0.1.16",
     "tqdm>=4.65.0",
     "eval-type-backport>=0.2.2",
     "xxhash>=3.5.0",
@@ -157,6 +157,11 @@ allow-direct-references = true
 [tool.uv]
 keyring-provider = "subprocess"
 required-version = ">=0.8.17"
+# moto[server] pulls in antlr4-python3-runtime unconstrained (latest 4.13.x), but it
+# only loads it lazily for StepFunctions mocking, which we never use (moto is only
+# used for S3 mocking in tests). The lightly_train plugin's omegaconf/hydra require
+# antlr 4.9.* and crash on import with 4.13.x, so we pin it back to 4.9.3.
+constraint-dependencies = ["antlr4-python3-runtime==4.9.3"]
 
 [[tool.uv.index]]
 name = "lightly-pypi"

@@ -44,7 +44,7 @@ Head over to the [official LightlyStudio documentation](https://docs.lightly.ai/
 
 ## 💻 Installation
 
-Runs on **Python 3.9 to 3.14** on Windows, Linux and MacOS.
+Runs on **Python 3.9 to 3.14** on Windows, Linux and MacOS. We recommend **Python 3.10** for the best compatibility with plugins such as SAM autolabeling.
 
 ```shell
 pip install lightly-studio

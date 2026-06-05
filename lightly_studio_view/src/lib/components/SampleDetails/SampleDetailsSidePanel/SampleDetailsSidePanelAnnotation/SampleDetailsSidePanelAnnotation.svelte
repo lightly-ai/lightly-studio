@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { cn } from '$lib/utils';
+    import { cn, formatConfidence } from '$lib/utils';
     import { page } from '$app/state';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
@@ -27,7 +27,8 @@
         canHighlight = false,
         onClickSelectList,
         isLocked = false,
-        onToggleLock
+        onToggleLock,
+        colorBySource
     }: {
         annotation: AnnotationView;
         isSelected: boolean;
@@ -41,6 +42,10 @@
         onClickSelectList?: () => void;
         isLocked?: boolean;
         onToggleLock?: (e: MouseEvent) => void;
+        // Whether annotations are currently colored by source instead of by label.
+        // When undefined, falls back to the global rule (2+ sources selected in the
+        // grid).
+        colorBySource?: boolean;
     } = $props();
 
     const formatAnnotationType = (annotationType: string) => {
@@ -72,10 +77,11 @@
     const items = $derived(getSelectionItems(result.data || []));
     const { addReversibleAction } = useGlobalStorage();
 
-    // Label colors only match the boxes on the image while fewer than two
-    // annotation sources are selected; otherwise boxes are colored by source.
-    // Mirrors the behavior of LabelsMenu.
+    // Label colors only match the boxes on the image while they are not colored by
+    // source. The colorBySource prop drives this on the details page; the global
+    // selection rule is the fallback, mirroring the behavior of LabelsMenu.
     const { selectedCollectionIds } = useAnnotationCollectionsFilter();
+    const showLabelColorLegend = $derived(!(colorBySource ?? $selectedCollectionIds.length >= 2));
 
     const annotationId = $derived(annotationProp.sample_id);
 
@@ -123,7 +129,7 @@
                         class="flex w-full min-w-0 items-center gap-2 text-sm font-medium leading-5"
                         data-testid="sample-details-pannel-annotation-name"
                     >
-                        {#if $selectedCollectionIds.length < 2}
+                        {#if showLabelColorLegend}
                             <div class="h-4 shrink-0">
                                 <AnnotationColorLegend
                                     labelName={annotationLabelName}
@@ -191,6 +197,14 @@
                                     class="flex w-full min-w-0 flex-1 flex-col gap-1 overflow-hidden"
                                 >
                                     <span class="truncate">{annotationLabelName}</span>
+                                    {#if annotation.confidence != null}
+                                        {@const formattedConfidence = formatConfidence(
+                                            annotation.confidence
+                                        )}
+                                        <span class="text-xs text-muted-foreground"
+                                            >Confidence: {formattedConfidence}</span
+                                        >
+                                    {/if}
                                 </div>
                             {/if}
                         </div>

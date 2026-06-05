@@ -1,5 +1,6 @@
 export * from './triggerDownloadBlob';
 export * from './groupAnnotationLabels';
+export * from './countVisibleSources';
 export * from './getColorByLabel';
 export * from './getSimilarityColor';
 export * from './formatter';

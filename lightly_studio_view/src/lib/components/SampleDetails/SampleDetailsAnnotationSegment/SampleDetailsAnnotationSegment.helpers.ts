@@ -52,3 +52,74 @@ export const groupAnnotationsBySource = (
 
     return groups;
 };
+
+/**
+ * Whether every annotation in the list is hidden.
+ */
+export const areAllAnnotationsHidden = (
+    annotations: AnnotationView[],
+    hiddenAnnotationIds: Set<string>
+): boolean =>
+    annotations.length > 0 &&
+    annotations.every((annotation) => hiddenAnnotationIds.has(annotation.sample_id));
+
+/**
+ * Whether a source group should start expanded: when the grid filter leaves at least one of
+ * its annotations visible, or when it holds the annotation the user just created. The latter
+ * keeps a brand-new source (absent from the grid selection, so seeded hidden) from appearing
+ * collapsed right after adding the first annotation to it.
+ */
+export const isSourceGroupInitiallyOpen = (
+    annotations: AnnotationView[],
+    seededHiddenIds: Set<string>,
+    lastCreatedAnnotationId: string | null | undefined
+): boolean =>
+    !areAllAnnotationsHidden(annotations, seededHiddenIds) ||
+    (lastCreatedAnnotationId != null &&
+        annotations.some((annotation) => annotation.sample_id === lastCreatedAnnotationId));
+
+/**
+ * Returns the next hidden set after toggling a source's visibility: hides all of the
+ * source's annotations unless they are already all hidden, in which case it shows
+ * them all. The given hidden set is not mutated.
+ */
+export const toggleSourceVisibility = (
+    sourceAnnotations: AnnotationView[],
+    hiddenAnnotationIds: Set<string>
+): Set<string> => {
+    const hideAll = !areAllAnnotationsHidden(sourceAnnotations, hiddenAnnotationIds);
+    const next = new Set(hiddenAnnotationIds);
+    for (const annotation of sourceAnnotations) {
+        if (hideAll) {
+            next.add(annotation.sample_id);
+        } else {
+            next.delete(annotation.sample_id);
+        }
+    }
+    return next;
+};
+
+/**
+ * Computes the initially hidden annotations when entering the details page:
+ * annotations whose source is not selected in the grid's source filter start hidden.
+ *
+ * The selection is first intersected with this dataset's sources so that a stale
+ * selection from another dataset never hides anything.
+ * When that intersection is empty (no filter, or a filter that does not apply here),
+ * nothing is hidden.
+ */
+export const computeSeededHiddenIds = (
+    annotations: AnnotationView[],
+    selectedCollectionIds: string[],
+    sources: AnnotationCollectionView[]
+): Set<string> => {
+    const sourceIds = new Set(sources.map((source) => source.collection_id));
+    const applicableSelectedIds = new Set(selectedCollectionIds.filter((id) => sourceIds.has(id)));
+    if (applicableSelectedIds.size === 0) return new Set();
+
+    return new Set(
+        annotations
+            .filter((annotation) => !applicableSelectedIds.has(annotation.annotation_collection_id))
+            .map((annotation) => annotation.sample_id)
+    );
+};

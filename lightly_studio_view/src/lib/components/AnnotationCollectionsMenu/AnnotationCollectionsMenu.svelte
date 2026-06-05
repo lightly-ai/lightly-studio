@@ -15,20 +15,16 @@
         (annotationCollectionsQuery.data ?? []).map((c) => ({ id: c.collection_id, name: c.name }))
     );
 
-    const { setSelectedCollectionIds, setCollectionIdToName, selectedCollectionIds } =
+    const { setSelectedCollectionIds, selectedCollectionIds, seedSelectionIfNeeded } =
         useAnnotationCollectionsFilter();
-
-    let initialized = $state(false);
 
     const isEnabled = $derived(items.length > 1);
 
+    // Seed all sources the first time this collection is shown; remounts (e.g. returning
+    // from image details) keep the user's existing selection. See seedSelectionIfNeeded.
     $effect(() => {
-        if (isEnabled && !initialized) {
-            initialized = true;
-            setSelectedCollectionIds(items.map((i) => i.id));
-            setCollectionIdToName(
-                Object.fromEntries(items.map((i: { id: string; name: string }) => [i.id, i.name]))
-            );
+        if (isEnabled) {
+            seedSelectionIfNeeded(collectionId, items);
         }
     });
 </script>
@@ -39,7 +35,7 @@
             showColorMarker={$selectedCollectionIds.length > 1}
             enableColorPicker
             {items}
-            initialSelectedItemsIds={items.map((i) => i.id)}
+            selectedItemsIds={$selectedCollectionIds}
             onChangeSelectedItems={setSelectedCollectionIds}
         />
     </Segment>

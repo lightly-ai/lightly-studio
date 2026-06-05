@@ -3,7 +3,12 @@
     import FormField from '$lib/components/FormField/FormField.svelte';
     import { Checkbox } from '$lib/components';
     import { Button } from '$lib/components/ui';
-    import * as Select from '$lib/components/ui/select/index.js';
+    import {
+        Select,
+        SelectMenuItem,
+        SelectMenuGroup,
+        SelectMenuGroupHeading
+    } from '$lib/components/Select';
     import * as Tabs from '$lib/components/ui/tabs/index.js';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { exportCollection } from '$lib/services/exportCollection';
@@ -157,59 +162,62 @@
                 <Tabs.Root bind:value={exportType} class="w-full">
                     <!-- TODO(lukas 3/2026): Consider constructing this by iterating over exportTypeLabels-->
                     <FormField label="Export Type">
-                        <Select.Root type="single" bind:value={exportType}>
-                            <Select.Trigger class="w-full" data-testid="export-type-select">
-                                {exportTypeTriggerContent}
-                            </Select.Trigger>
-                            <Select.Content>
+                        <Select
+                            value={exportType}
+                            triggerLabel={exportTypeTriggerContent}
+                            class="w-full"
+                            testId="export-type-select"
+                            onValueChange={(v) => (exportType = v as typeof exportType)}
+                        >
+                            {#snippet children()}
                                 {#if isVideoCollection}
-                                    <Select.Item
+                                    <SelectMenuItem
                                         value="youtube_vis_segmentation"
                                         label="YouTube-VIS Video Segmentation Masks"
-                                        >YouTube-VIS Video Segmentation Masks</Select.Item
+                                        >YouTube-VIS Video Segmentation Masks</SelectMenuItem
                                     >
                                 {:else}
-                                    <Select.Item value="samples" label="Image Filenames"
-                                        >Image Filenames</Select.Item
+                                    <SelectMenuItem value="samples" label="Image Filenames"
+                                        >Image Filenames</SelectMenuItem
                                     >
-                                    <Select.Item
+                                    <SelectMenuItem
                                         value="object_detections"
                                         label="Image Object Detections"
-                                        >Image Object Detections</Select.Item
+                                        >Image Object Detections</SelectMenuItem
                                     >
-                                    <Select.Item
+                                    <SelectMenuItem
                                         value="segmentation"
                                         label="Image Segmentation Mask (COCO)"
-                                        >Image Segmentation Mask (COCO)</Select.Item
+                                        >Image Segmentation Mask (COCO)</SelectMenuItem
                                     >
-                                    <Select.Item
+                                    <SelectMenuItem
                                         value="semantic_segmentations"
                                         label="Image Segmentation Mask (PASCAL VOC)"
-                                        >Image Segmentation Mask (PASCAL VOC)</Select.Item
+                                        >Image Segmentation Mask (PASCAL VOC)</SelectMenuItem
                                     >
-                                    <Select.Item value="captions" label="Image Captions"
-                                        >Image Captions</Select.Item
+                                    <SelectMenuItem value="captions" label="Image Captions"
+                                        >Image Captions</SelectMenuItem
                                     >
                                 {/if}
-                            </Select.Content>
-                        </Select.Root>
+                            {/snippet}
+                        </Select>
                     </FormField>
 
                     <!-- Samples tab -->
 
                     <Tabs.Content value="samples" class="pt-2">
                         <FormField label="Tag">
-                            <Select.Root
-                                type="single"
-                                name="tagIdToExport"
-                                bind:value={tagIdToExport}
+                            <Select
+                                value={tagIdToExport}
+                                triggerLabel={triggerContent}
+                                class="w-full"
+                                onValueChange={(v) => (tagIdToExport = v)}
                             >
-                                <Select.Trigger class="w-full">
-                                    {triggerContent}
-                                </Select.Trigger>
-                                <Select.Content>
-                                    <Select.Group>
-                                        <Select.GroupHeading>Annotation tags</Select.GroupHeading>
+                                {#snippet children()}
+                                    <SelectMenuGroup>
+                                        <SelectMenuGroupHeading
+                                            >Annotation tags</SelectMenuGroupHeading
+                                        >
                                         {#if $tags.filter((tag) => tag.kind === 'annotation').length === 0}
                                             <div
                                                 class="py-1.5 pl-8 pr-2 text-sm italic text-muted-foreground"
@@ -218,13 +226,13 @@
                                             </div>
                                         {/if}
                                         {#each $tags.filter((tag) => tag.kind === 'annotation') as annotationTag}
-                                            <Select.Item
+                                            <SelectMenuItem
                                                 value={annotationTag.tag_id}
                                                 label={annotationTag.name}
-                                                >{annotationTag.name}</Select.Item
+                                                >{annotationTag.name}</SelectMenuItem
                                             >
                                         {/each}
-                                        <Select.GroupHeading>Sample tags</Select.GroupHeading>
+                                        <SelectMenuGroupHeading>Sample tags</SelectMenuGroupHeading>
                                         {#if $tags.filter((tag) => tag.kind === 'sample').length === 0}
                                             <div
                                                 class="py-1.5 pl-8 pr-2 text-sm italic text-muted-foreground"
@@ -233,14 +241,15 @@
                                             </div>
                                         {/if}
                                         {#each $tags.filter((tag) => tag.kind === 'sample') as sampleTag}
-                                            <Select.Item
+                                            <SelectMenuItem
                                                 value={sampleTag.tag_id}
-                                                label={sampleTag.name}>{sampleTag.name}</Select.Item
+                                                label={sampleTag.name}
+                                                >{sampleTag.name}</SelectMenuItem
                                             >
                                         {/each}
-                                    </Select.Group>
-                                </Select.Content>
-                            </Select.Root>
+                                    </SelectMenuGroup>
+                                {/snippet}
+                            </Select>
                         </FormField>
 
                         <div class="my-4">

@@ -83,6 +83,17 @@ describe('EvaluationRunConfusionMatrixSection', () => {
         );
     });
 
+    it('hides the section when data is null and not loading', () => {
+        queryState.isLoading = false;
+        queryState.isError = false;
+        queryState.data = null;
+        queryState.error = undefined;
+
+        render(EvaluationRunConfusionMatrixSection, { props: defaultProps });
+
+        expect(screen.queryByTestId('evaluation-run-confusion-matrix')).not.toBeInTheDocument();
+    });
+
     it('renders the matrix when data is available', () => {
         queryState.isLoading = false;
         queryState.isError = false;

@@ -11,11 +11,19 @@
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useAnnotationSelection } from '$lib/hooks/useAnnotationSelection/useAnnotationSelection';
-    import { groupAnnotationsBySource } from './SampleDetailsAnnotationSegment.helpers';
+    import { countVisibleSources } from '$lib/utils';
+    import {
+        areAllAnnotationsHidden,
+        computeSeededHiddenIds,
+        groupAnnotationsBySource,
+        isSourceGroupInitiallyOpen,
+        toggleSourceVisibility
+    } from './SampleDetailsAnnotationSegment.helpers';
 
     type SampleDetailsAnnotationSegmentProps = {
         annotationsIdsToHide: Set<string>;
         collectionId: string;
+        sampleId: string;
         annotations: AnnotationView[];
         isPanModeEnabled: boolean;
         refetch: () => void;
@@ -24,6 +32,7 @@
     let {
         annotationsIdsToHide = $bindable<Set<string>>(new Set()),
         collectionId,
+        sampleId,
         annotations,
         isPanModeEnabled,
         refetch
@@ -49,8 +58,7 @@
     const { selectAnnotation } = useAnnotationSelection();
 
     const annotationCollectionsQuery = useAnnotationCollections({ collectionId });
-    const { selectedCollectionIds, setSelectedCollectionIds, setCollectionIdToName } =
-        useAnnotationCollectionsFilter();
+    const { selectedCollectionIds, seedSelectionIfNeeded } = useAnnotationCollectionsFilter();
 
     const annotationsSort = $derived.by(() => {
         return annotations
@@ -72,18 +80,51 @@
         isGrouped ? groupAnnotationsBySource(annotationsSort, annotationSources) : []
     );
 
-    // Initialize the global annotation source stores when landing directly on the
-    // details page (browser refresh / deep link), so annotations are colored by
-    // source.
+    // Hidden set implied by the grid filter, as a derived so it's readable at mount (unlike
+    // the effect-written `annotationsIdsToHide`); drives the seed and the initial collapse.
+    const seededHiddenIds = $derived(
+        computeSeededHiddenIds(annotationsSort, $selectedCollectionIds, annotationSources)
+    );
+
+    // Annotations are colored by source only while multiple sources are visible,
+    // matching the details canvas. Swatches are shown only when they match the
+    // colors drawn on the image: source markers in the group headers when coloring
+    // by source, label legends in the rows otherwise.
+    const colorBySource = $derived(countVisibleSources(annotationsSort, annotationsIdsToHide) >= 2);
+
+    // Seed the global annotation source stores the first time this collection is shown
+    // (e.g. landing directly on the details page via deep link), so annotations are colored
+    // by source. seedSelectionIfNeeded keeps an existing selection from the grid filter.
     $effect(() => {
-        if (annotationSources.length > 1 && $selectedCollectionIds.length === 0) {
-            setSelectedCollectionIds(annotationSources.map((source) => source.collection_id));
-            setCollectionIdToName(
-                Object.fromEntries(
-                    annotationSources.map((source) => [source.collection_id, source.name])
-                )
+        if (annotationSources.length > 1) {
+            seedSelectionIfNeeded(
+                collectionId,
+                annotationSources.map((source) => ({ id: source.collection_id, name: source.name }))
             );
         }
+    });
+
+    // Tracks which sample the hidden set was seeded for. Intentionally not reactive:
+    // it must not re-trigger the seeding effect.
+    let seededSampleId: string | undefined = undefined;
+
+    // Seed the local visibility state from the grid's annotation source filter, once
+    // per sample. Annotations of unselected sources start hidden
+    // but stay re-showable locally without touching the global grid filter.
+    // Refetches (same sample) keep manual changes; navigating to a sample re-seeds.
+    // Waits until both the sources query and the annotations are available so an
+    // empty hidden set is never locked in prematurely.
+    $effect(() => {
+        if (
+            seededSampleId === sampleId ||
+            annotationSources.length === 0 ||
+            annotationsSort.length === 0
+        ) {
+            return;
+        }
+
+        seededSampleId = sampleId;
+        annotationsIdsToHide = new Set(seededHiddenIds);
     });
 
     const toggleAnnotationSelection = (annotationId: string) => {
@@ -142,11 +183,16 @@
                 : [...annotationsIdsToHide, annotationId]
         );
     };
+
+    const onToggleSourceVisibility = (sourceAnnotations: AnnotationView[]) => {
+        annotationsIdsToHide = toggleSourceVisibility(sourceAnnotations, annotationsIdsToHide);
+    };
 </script>
 
 {#snippet annotationRow(annotation: AnnotationView)}
     <SampleDetailsSidePanelAnnotation
         {annotation}
+        {colorBySource}
         isSelected={annotationLabelContext.annotationId === annotation.sample_id}
         onClick={() => toggleAnnotationSelection(annotation.sample_id)}
         onDeleteAnnotation={() => handleDeleteAnnotation(annotation.sample_id)}
@@ -186,7 +232,18 @@
                 <SampleDetailsAnnotationSourceGroup
                     name={group.name}
                     count={group.annotations.length}
-                    showColorMarker={$selectedCollectionIds.length > 1}
+                    {sampleId}
+                    initiallyOpen={isSourceGroupInitiallyOpen(
+                        group.annotations,
+                        seededHiddenIds,
+                        annotationLabelContext.lastCreatedAnnotationId
+                    )}
+                    showColorMarker={colorBySource}
+                    allHidden={areAllAnnotationsHidden(group.annotations, annotationsIdsToHide)}
+                    onToggleVisibility={(e) => {
+                        e.stopPropagation();
+                        onToggleSourceVisibility(group.annotations);
+                    }}
                 >
                     <div class="flex flex-col gap-2">
                         {#each group.annotations as annotation (annotation.sample_id)}

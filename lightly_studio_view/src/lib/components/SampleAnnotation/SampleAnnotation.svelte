@@ -24,7 +24,8 @@
         onBoundingBoxChanged,
         highlight = 'auto',
         prerenderedDataUrl,
-        prerenderedHeight
+        prerenderedHeight,
+        colorBySource
     }: {
         annotation: Annotation;
         showLabel?: boolean;
@@ -37,6 +38,9 @@
         highlight?: 'active' | 'disabled' | 'auto';
         prerenderedDataUrl?: string;
         prerenderedHeight?: number;
+        // Overrides when to color by annotation source instead of by label. When
+        // undefined, falls back to the global rule (2+ sources selected in the grid).
+        colorBySource?: boolean;
     } = $props();
 
     const { customLabelColorsStore } = useCustomLabelColors();
@@ -45,7 +49,8 @@
     const label = $derived(annotation.annotation_label.annotation_label_name);
 
     const colorLabel = $derived.by(() => {
-        if ($selectedCollectionIds.length < 2) return label;
+        const bySource = colorBySource ?? $selectedCollectionIds.length >= 2;
+        if (!bySource) return label;
         return $collectionIdToName[annotation.annotation_collection_id] ?? label;
     });
 
@@ -126,6 +131,7 @@
             {colorText}
             {label}
             trackId={annotation.object_track_number}
+            confidence={annotation.confidence}
         />
     {/if}
 

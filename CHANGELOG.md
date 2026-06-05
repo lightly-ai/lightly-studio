@@ -12,9 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - enable picker for annotation source menu
 - Embedding plot: added a "No coloring" option to the "Color by" dropdown to disable coloring.
 - Show ground truth and prediction annotation sources in run details panel
-- Image details view: Annotations are now grouped by annotation source.
-
-- Image details: select the annotation source when adding an annotation.
+- Image details view: annotations are now grouped by annotation source.
+- Image details view: annotation source visibility can be toggled.
+- Image details view: pick the target annotation source for new annotations from an on-canvas selector.
 
 ### Changed
 
@@ -28,8 +28,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Embedding plot: when a coloring has more categories than the legend can display, the extra
+  categories are now grouped into an "Other" entry instead of exceeding the available legend slots.
+- Grid top bar no longer overflows its container or covers the grid when a side panel is open;
+  it now shrinks with the available width and wraps onto a second line when too narrow.
 - Fixed operations on large datasets (more than ~65,535 samples) failing on PostgreSQL with
   `number of parameters must be between 0 and 65535`.
+- Fixed cascaded delete for annotations linked by calculated metrics.
+- Grid annotation source selection now persists when navigating to image details and back.
 
 ### Security
 
