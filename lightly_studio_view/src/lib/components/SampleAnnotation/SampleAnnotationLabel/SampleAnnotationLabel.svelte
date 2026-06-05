@@ -1,14 +1,7 @@
 <script lang="ts">
     import { formatConfidence, getColorByLabel } from '$lib/utils';
-    const {
-        coordinates,
-        colorText,
-        label,
-        fontSize = 14,
-        isPrediction = false,
-        trackId = null,
-        confidence = null
-    }: {
+
+    interface Props {
         coordinates: [number, number];
         colorText: ReturnType<typeof getColorByLabel>;
         label: string;
@@ -17,7 +10,17 @@
         isPrediction?: boolean;
         trackId?: number | null;
         confidence?: number | null;
-    } = $props();
+    }
+
+    const {
+        coordinates,
+        colorText,
+        label,
+        fontSize = 14,
+        isPrediction = false,
+        trackId = null,
+        confidence = null
+    }: Props = $props();
     const displayLabel = $derived.by(() => {
         const base = isPrediction ? `${label} (pred)` : label;
         const withTrack = trackId != null ? `${base} #${trackId}` : base;
