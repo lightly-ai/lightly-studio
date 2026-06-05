@@ -8,6 +8,7 @@
     import * as Dialog from '$lib/components/ui/dialog';
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
+    import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useSamplingDialog } from '$lib/hooks/useSamplingDialog/useSamplingDialog';
     import { useSamplingCombinationDialog } from '$lib/hooks/useSamplingCombinationDialog/useSamplingCombinationDialog';
@@ -50,6 +51,11 @@
         (annotationLabelsQuery.data ?? []).map((label) => label.annotation_label_name)
     );
     const hasAnnotationLabels = $derived(annotationLabels.length > 0);
+
+    const annotationCollectionsQuery = $derived(useAnnotationCollections({ collectionId }));
+    const annotationSourceOptions = $derived(
+        (annotationCollectionsQuery.data ?? []).map((c) => ({ id: c.collection_id, name: c.name }))
+    );
 </script>
 
 <Dialog.Root
@@ -96,6 +102,7 @@
                                         {instance}
                                         tags={$tags}
                                         {annotationLabels}
+                                        {annotationSourceOptions}
                                         metadataFieldNames={$metadataFieldNames}
                                         onRemove={() => removeStrategy(instance.id)}
                                         onDuplicate={() => duplicateStrategy(instance.id)}
