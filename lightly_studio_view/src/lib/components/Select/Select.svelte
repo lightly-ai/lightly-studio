@@ -18,6 +18,8 @@
         /** Disable this item in the dropdown. */
         disabled?: boolean;
         testId?: string;
+        /** Additional class names applied to the dropdown item. */
+        class?: string;
     }
 
     export type SelectSize = 'xs' | 'sm' | 'md' | 'lg';
@@ -150,7 +152,7 @@
                     label={item.label}
                     disabled={item.disabled}
                     data-testid={item.testId}
-                    class={cn('gap-2', itemSizeClass[size])}
+                    class={cn('gap-2', itemSizeClass[size], item.class)}
                 >
                     {#if item.icon}
                         {@const ItemIcon = item.icon}
