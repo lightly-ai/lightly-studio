@@ -599,8 +599,8 @@ def test_to_coco_object_detections(
         ],
         "annotations": [
             {"image_id": 0, "category_id": 1, "bbox": [10.0, 10.0, 10.0, 10.0]},
-            {"image_id": 0, "category_id": 0, "bbox": [20.0, 20.0, 20.0, 20.0]},
-            {"image_id": 1, "category_id": 1, "bbox": [30.0, 30.0, 30.0, 30.0]},
+            {"image_id": 0, "category_id": 0, "bbox": [20.0, 20.0, 20.0, 20.0], "score": 0.25},
+            {"image_id": 1, "category_id": 1, "bbox": [30.0, 30.0, 30.0, 30.0], "score": 0.375},
         ],
     }
 

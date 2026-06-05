@@ -120,4 +120,18 @@ describe('AnnotationSourcePill', () => {
 
         expect(mocks.setAnnotationSource).not.toHaveBeenCalled();
     });
+
+    it('explains the target via an accessibly-named info tooltip on hover', async () => {
+        const user = userEvent.setup();
+        mocks.collections = [source('ground_truth')];
+        renderPill();
+
+        // The accessible name lives on the focusable trigger, not the decorative icon.
+        const infoTrigger = screen.getByRole('button', { name: 'Annotation source help' });
+        await user.hover(infoTrigger);
+
+        expect(screen.getByRole('tooltip')).toHaveTextContent(
+            'associated with the selected annotation source'
+        );
+    });
 });

@@ -85,7 +85,7 @@
         >
             <SampleAnnotation
                 {annotation}
-                showLabel={$showAnnotationTextLabelsStore}
+                showLabel={$showAnnotationTextLabelsStore || colorBySource}
                 {showBoundingBox}
                 imageWidth={sample.width}
                 constraintBox={{
