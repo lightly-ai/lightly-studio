@@ -333,7 +333,8 @@ def _store_embeddings(
 ) -> None:
     """Store embeddings in the database.
 
-    Insertion is batched to reduce peak memory.
+    Insertion is batched to reduce peak memory. All batches are committed together
+    so a failure leaves no partially embedded dataset behind.
     """
     with tqdm(total=len(sample_ids), desc="Storing embeddings", unit=" embeddings") as progress:
         for batch in batching.batched(
@@ -348,10 +349,12 @@ def _store_embeddings(
                 for sample_id, embedding in batch
             ]
             sample_embedding_resolver.create_many(
-                session=session, sample_embeddings=sample_embeddings
+                session=session, sample_embeddings=sample_embeddings, commit=False
             )
 
             progress.update(len(sample_embeddings))
+
+    session.commit()
 
 
 def _load_embedding_generator_from_env(sample_type: SampleType) -> EmbeddingGenerator | None:
