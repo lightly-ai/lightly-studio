@@ -31,8 +31,8 @@ from lightly_studio.utils import batching
 
 logger = logging.getLogger(__name__)
 
-# Batch size for inserting embeddings into the database.
-# Choosing 1024 is rather arbitrary.
+# Number of embeddings inserted per database round-trip. Larger batches mean fewer
+# round-trips but higher peak memory. 1024 balances the two.
 EMBEDDING_INSERTION_BATCH_SIZE = 1024
 
 
@@ -337,9 +337,8 @@ def _store_embeddings(
     """
     with tqdm(total=len(sample_ids), desc="Storing embeddings", unit=" embeddings") as progress:
         for batch in batching.batched(
-            zip(sample_ids, embeddings), batch_size=EMBEDDING_INSERTION_BATCH_SIZE
+            items=zip(sample_ids, embeddings), batch_size=EMBEDDING_INSERTION_BATCH_SIZE
         ):
-            # Convert to SampleEmbeddingCreate objects.
             sample_embeddings = [
                 SampleEmbeddingCreate(
                     sample_id=sample_id,
@@ -348,7 +347,6 @@ def _store_embeddings(
                 )
                 for sample_id, embedding in batch
             ]
-            # Store the embeddings in the database.
             sample_embedding_resolver.create_many(
                 session=session, sample_embeddings=sample_embeddings
             )
