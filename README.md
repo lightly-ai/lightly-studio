@@ -55,7 +55,7 @@ pip install lightly-studio
       <a href="https://docs.lightly.ai/studio/dataset_setup/image_dataset/">
         <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/image_dataset.png" width="400" alt="Image Datasets"/>
       </a>
-      <br/><strong>Image Datasets</strong>
+      <br/><strong>Image Dataset</strong>
     </td>
     <td align="center">
       <a href="https://docs.lightly.ai/studio/dataset_setup/video_dataset/">
@@ -67,7 +67,7 @@ pip install lightly-studio
       <a href="https://docs.lightly.ai/studio/concepts_and_tools/annotations/">
         <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/annotation.png" width="400" alt="Annotate"/>
       </a>
-      <br/><strong>Annotate</strong>
+      <br/><strong>Annotation</strong>
     </td>
   </tr>
   <tr>
@@ -75,7 +75,7 @@ pip install lightly-studio
       <a href="https://docs.lightly.ai/studio/concepts_and_tools/sampling/">
         <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/sampling.png" width="400" alt="Curate"/>
       </a>
-      <br/><strong>Curate</strong>
+      <br/><strong>Curation</strong>
     </td>
     <td align="center">
       <a href="https://docs.lightly.ai/studio/concepts_and_tools/plugins/">
