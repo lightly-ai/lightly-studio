@@ -159,7 +159,7 @@
                     disabled={item.disabled}
                     data-testid={item.testId}
                     class={cn(
-                        'gap-2',
+                        'gap-2 pr-3',
                         itemSizeClass[size],
                         hideSelectionMarker && 'pl-2',
                         itemsAsLinks && 'cursor-pointer',
