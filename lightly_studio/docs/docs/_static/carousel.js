@@ -15,6 +15,7 @@
   function initCarousel(track) {
     var timer = null;
     var resumeTimer = null;
+    var hovering = false; // pointer is currently over the track
 
     function advance() {
       // One slide == the visible width of the track. Loop back at the end.
@@ -34,17 +35,35 @@
         window.clearInterval(timer);
         timer = null;
       }
+      // Cancel any pending interaction-resume too, so it can't restart
+      // autoplay after we've been asked to stop.
+      window.clearTimeout(resumeTimer);
+      resumeTimer = null;
+    }
+
+    function onEnter() {
+      hovering = true;
+      stop();
+    }
+
+    function onLeave() {
+      hovering = false;
+      start();
     }
 
     function pauseThenResume() {
       stop();
-      window.clearTimeout(resumeTimer);
-      resumeTimer = window.setTimeout(start, RESUME_MS);
+      // While hovering, mouseleave owns the restart (indefinite pause). Only
+      // arm a timed resume when the pointer is not over the carousel (e.g.
+      // touch scroll), otherwise this timer would undercut the hover pause.
+      if (!hovering) {
+        resumeTimer = window.setTimeout(start, RESUME_MS);
+      }
     }
 
     // Pause while hovering or touching; resume shortly after.
-    track.addEventListener("mouseenter", stop);
-    track.addEventListener("mouseleave", start);
+    track.addEventListener("mouseenter", onEnter);
+    track.addEventListener("mouseleave", onLeave);
     track.addEventListener("pointerdown", pauseThenResume);
     track.addEventListener("wheel", pauseThenResume, { passive: true });
 
@@ -52,9 +71,8 @@
 
     return function cleanup() {
       stop();
-      window.clearTimeout(resumeTimer);
-      track.removeEventListener("mouseenter", stop);
-      track.removeEventListener("mouseleave", start);
+      track.removeEventListener("mouseenter", onEnter);
+      track.removeEventListener("mouseleave", onLeave);
       track.removeEventListener("pointerdown", pauseThenResume);
       track.removeEventListener("wheel", pauseThenResume);
     };
