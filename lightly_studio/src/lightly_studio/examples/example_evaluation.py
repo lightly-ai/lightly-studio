@@ -16,11 +16,11 @@ from lightly_studio.resolvers import (
 )
 
 DATASET_NAME = "evaluation_example_dataset"
-GT_ANNOTATION_SOURCE = "gt"
-PRED_ANNOTATION_SOURCE = "pred"
+GT_ANNOTATION_SOURCE = "ground_truth"
+PRED_ANNOTATION_SOURCE = "predictions"
 
-TAGGED_SAMPLES_EVALUATION_NAME = "evaluation-example-tagged-samples"
-ALL_SAMPLES_EVALUATION_NAME = "evaluation-example-all-samples"
+TAGGED_SAMPLES_EVALUATION_NAME = "eval-tagged-samples"
+ALL_SAMPLES_EVALUATION_NAME = "eval-all-samples"
 
 
 def get_evaluation_run(dataset: ImageDataset, name: str) -> EvaluationRunTable:
