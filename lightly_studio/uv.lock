@@ -2708,7 +2708,7 @@ wheels = [
 
 [[package]]
 name = "labelformat"
-version = "0.1.15"
+version = "0.1.16"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "fsspec", version = "2025.10.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -2723,9 +2723,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7f/42/c9ed31d4bb11e46c11fa138c219c797ef426434bbd5a1b90d4793155d5b5/labelformat-0.1.15.tar.gz", hash = "sha256:3dee2d7cc81c181934583107306ad3f5242c433832a0f011ada873993d0a880c", size = 38683, upload-time = "2026-06-01T13:49:17.897Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d4/c6/9e5ecea46d0bc9d52cffccaeacad656f36c1082b315a30cb1b9c735815fe/labelformat-0.1.16.tar.gz", hash = "sha256:eee410ed77c94e37726c71b6092e651f1e831043e8759ff4a7ec76dd7d16357f", size = 40089, upload-time = "2026-06-05T09:42:46.843Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9f/32/ca2581132308d6386892b645ec754090e70d431e1de1b001507f9776c387/labelformat-0.1.15-py3-none-any.whl", hash = "sha256:3813c67037289bbc8f718e81a3cae83d73deedda5b31c05750bab2500eab315d", size = 56908, upload-time = "2026-06-01T13:49:16.204Z" },
+    { url = "https://files.pythonhosted.org/packages/89/67/829de439f50a6fdd0c69b58f23469191a0a78f489e7b52ac6e0201d543cd/labelformat-0.1.16-py3-none-any.whl", hash = "sha256:628c875858b1b3c5b88fac362901ab25488ab58197b310feee789ffdc6463e8d", size = 57447, upload-time = "2026-06-05T09:42:48.077Z" },
 ]
 
 [[package]]
@@ -2889,7 +2889,7 @@ wheels = [
 
 [[package]]
 name = "lightly-studio"
-version = "1.0.0rc1"
+version = "1.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "alembic", version = "1.16.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -3002,7 +3002,7 @@ requires-dist = [
     { name = "fsspec", specifier = ">=2023.1.0" },
     { name = "gcsfs", marker = "extra == 'cloud-storage'", specifier = ">=2023.1.0" },
     { name = "jinja2", specifier = ">=3.1.0" },
-    { name = "labelformat", specifier = ">=0.1.15" },
+    { name = "labelformat", specifier = ">=0.1.16" },
     { name = "lightly-mundig", specifier = "==0.1.12" },
     { name = "open-clip-torch", specifier = ">=2.20.0" },
     { name = "opencv-python-headless", specifier = ">=4.11.0.86" },

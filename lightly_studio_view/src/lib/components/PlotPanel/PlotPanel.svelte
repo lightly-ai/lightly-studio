@@ -307,21 +307,23 @@
                 bind:this={plotContainer}
             >
                 {#if $plotData && width >= MIN_RENDER_SIZE && height >= MIN_RENDER_SIZE}
-                    <EmbeddingView
-                        class="h-full w-full"
-                        config={embeddingConfig}
-                        {width}
-                        {height}
-                        {categoryCount}
-                        data={$plotData}
-                        {categoryColors}
-                        tooltip={null}
-                        theme={embeddingTheme}
-                        {onRangeSelection}
-                        {onViewportState}
-                        {viewportState}
-                        rangeSelection={$rangeSelection}
-                    />
+                    <div class="embedding-view h-full w-full">
+                        <EmbeddingView
+                            config={embeddingConfig}
+                            {width}
+                            {height}
+                            {categoryCount}
+                            data={$plotData}
+                            {categoryColors}
+                            tooltip={null}
+                            theme={embeddingTheme}
+                            {onRangeSelection}
+                            {onViewportState}
+                            {viewportState}
+                            rangeSelection={$rangeSelection}
+                        />
+                    </div>
+
                     <PlotPanelLegend
                         {categoryColors}
                         {includedLabel}
@@ -374,15 +376,15 @@
 <svelte:window onmouseup={handleMouseUp} onkeydown={onWindowKeyDown} />
 
 <style>
-    :global(.embedding-plot-wrapper button) {
+    :global(.embedding-view button) {
         width: 20px !important;
         height: 20px !important;
     }
-    :global(.embedding-plot-wrapper button svg) {
+    :global(.embedding-view button svg) {
         width: 18px !important;
         height: 18px !important;
     }
-    :global(.embedding-plot-wrapper div[style*='bottom: 0px'][style*='position: absolute']) {
+    :global(.embedding-view div[style*='bottom: 0px'][style*='position: absolute']) {
         font-size: 15px !important;
         height: 25px !important;
         line-height: 25px !important;

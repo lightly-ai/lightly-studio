@@ -1,26 +1,31 @@
-"""Example script demonstrating model evaluation capabilities."""
+"""Example script demonstrating semantic segmentation model evaluation capabilities."""
 
+import json
 from collections import defaultdict
+from pathlib import Path
 from time import perf_counter
+from uuid import UUID
 
 from environs import Env
 
+import lightly_studio as ls
 from lightly_studio import db_manager
 from lightly_studio.core.dataset_query import ImageSampleField
 from lightly_studio.core.image.image_dataset import ImageDataset
-from lightly_studio.evaluation.image_dataset_evaluate import ObjectDetectionEvaluationConfig
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.resolvers import (
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
 )
 
-DATASET_NAME = "evaluation_example_dataset"
+DATASET_NAME = "sem_segmentation_evaluation_example_dataset"
 GT_ANNOTATION_SOURCE = "ground_truth"
 PRED_ANNOTATION_SOURCE = "predictions"
 
-TAGGED_SAMPLES_EVALUATION_NAME = "eval-tagged-samples"
-ALL_SAMPLES_EVALUATION_NAME = "eval-all-samples"
+TAGGED_SAMPLES_EVALUATION_NAME = "semseg-eval-tagged-samples"
+ALL_SAMPLES_EVALUATION_NAME = "semseg-eval-all-samples"
+
+TAGGED_SAMPLE_COUNT = 3
 
 
 def get_evaluation_run(dataset: ImageDataset, name: str) -> EvaluationRunTable:
@@ -35,7 +40,10 @@ def get_evaluation_run(dataset: ImageDataset, name: str) -> EvaluationRunTable:
     return evaluation_run
 
 
-def print_evaluation_metrics(dataset: ImageDataset, name: str) -> None:
+def print_evaluation_metrics(
+    dataset: ImageDataset,
+    name: str,
+) -> None:
     """Print metric bounds and per-sample metrics for an evaluation run."""
     evaluation_run = get_evaluation_run(dataset=dataset, name=name)
 
@@ -48,74 +56,85 @@ def print_evaluation_metrics(dataset: ImageDataset, name: str) -> None:
     for metric in sorted(metric_list, key=lambda x: x.metric_name):
         print(f"- {metric.metric_name}: min={metric.min_value:.2f}, max={metric.max_value:.2f}")
 
-    print_per_sample_metrics(dataset=dataset, evaluation_run=evaluation_run)
+    print_per_sample_metrics(
+        dataset=dataset,
+        evaluation_run=evaluation_run,
+    )
 
 
 def print_per_sample_metrics(
     dataset: ImageDataset,
     evaluation_run: EvaluationRunTable,
 ) -> None:
-    """Print true/false positive and false negative counts per sample."""
+    """Print miou scores per sample."""
     sample_metrics = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
         session=dataset.session,
         evaluation_run_id=evaluation_run.id,
     )
 
-    metrics_by_sample: dict[str, dict[str, float]] = defaultdict(dict)
+    metrics_by_sample: dict[UUID, dict[str, float]] = defaultdict(dict)
     for row in sample_metrics:
-        metrics_by_sample[str(row.sample_id)][row.metric_name] = row.value
+        metrics_by_sample[row.sample_id][row.metric_name] = row.value
 
     print("\n=== Per-Sample Metrics ===")
     for sample_id in sorted(metrics_by_sample):
-        sample_values = metrics_by_sample[sample_id]
-        tp = sample_values.get("tp", 0.0)
-        fp = sample_values.get("fp", 0.0)
-        fn = sample_values.get("fn", 0.0)
-        print(f"- sample_id={sample_id} -> tp={tp:.0f}, fp={fp:.0f}, fn={fn:.0f}")
+        miou = metrics_by_sample[sample_id].get("miou", 0.0)
+        print(f"- sample_id={sample_id}: miou={miou:.2f}")
 
 
 def main() -> None:
-    """Run the evaluation example."""
+    """Run the semantic segmentation evaluation example."""
+    # Read environment variables
     env = Env()
     env.read_env()
 
+    # Cleanup an existing database
     db_manager.connect(cleanup_existing=True)
 
-    images_path = env.path("EXAMPLES_COCO_IMAGES_PATH", "/path/to/your/images")
-    gt_annotations_json = env.path("EXAMPLES_COCO_JSON_PATH", "/path/to/your/gt.json")
-    pred_annotations_json = env.path("EXAMPLES_PRED_ANNOTATIONS_JSON", "/path/to/your/pred.json")
-    evaluation_config = ObjectDetectionEvaluationConfig(
-        iou_threshold=0.5,
-        classwise=True,
+    # Define data paths
+    images_path = env.path("EXAMPLES_PASCALVOC_IMAGES_PATH", "/path/to/your/dataset/images")
+    gt_masks_path = env.path("EXAMPLES_PASCALVOC_MASKS_PATH", "/path/to/your/dataset/masks")
+    pred_masks_path = env.path(
+        "EXAMPLES_PASCALVOC_PRED_MASKS_PATH", "/path/to/your/dataset/pred_masks"
     )
 
-    dataset = ImageDataset.create(name=DATASET_NAME)
+    # A mapping from class IDs to class names must be provided. We load it from a JSON file,
+    # the file is not part of the Pascal VOC format.
+    class_id_to_name_path = env.path(
+        "EXAMPLES_PASCALVOC_CATEGORIES_JSON_PATH",
+        "/path/to/your/dataset/class_id_to_name.json",
+    )
+    json_dict = json.loads(Path(class_id_to_name_path).read_text())
+    class_id_to_name = {int(k): v for k, v in json_dict.items()}
+
+    # Create a dataset and add images and annotations from the Pascal VOC format for ground truth
+    # and predictions.
+    dataset = ls.ImageDataset.create(name=DATASET_NAME)
     dataset.add_images_from_path(path=images_path)
-    # Add GT annotations
-    dataset.add_annotations_from_coco(
-        annotations_json=gt_annotations_json,
+
+    dataset.add_annotations_from_pascal_voc_segmentations(
         images_root=images_path,
+        masks_path=gt_masks_path,
+        class_id_to_name=class_id_to_name,
         annotation_source=GT_ANNOTATION_SOURCE,
     )
-    # Add Pred annotations
-    dataset.add_annotations_from_coco(
-        annotations_json=pred_annotations_json,
+    dataset.add_annotations_from_pascal_voc_segmentations(
         images_root=images_path,
+        masks_path=pred_masks_path,
+        class_id_to_name=class_id_to_name,
         annotation_source=PRED_ANNOTATION_SOURCE,
     )
-    # Add tag to tagged samples
+
     tag_name = "evaluated_samples"
-    dataset.query()[:10].add_tag(tag_name)
-    # Create query for tagged samples
+    dataset[:TAGGED_SAMPLE_COUNT].add_tag(tag_name)
     tagged_evaluation_query = dataset.query().match(ImageSampleField.tags.contains(tag_name))
 
     print("\nEvaluating tagged samples...")
     start_time = perf_counter()
-    evaluation_result = dataset.evaluate(query=tagged_evaluation_query).object_detection(
+    evaluation_result = dataset.evaluate(query=tagged_evaluation_query).semantic_segmentation(
         name=TAGGED_SAMPLES_EVALUATION_NAME,
         gt_annotation_source=GT_ANNOTATION_SOURCE,
         pred_annotation_source=PRED_ANNOTATION_SOURCE,
-        config=evaluation_config,
     )
     print(
         f"Completed in {perf_counter() - start_time:.2f}s "
@@ -123,15 +142,17 @@ def main() -> None:
         f"{evaluation_result.gt_annotation_count} GT annotations, and "
         f"{evaluation_result.pred_annotation_count} prediction annotations"
     )
-    print_evaluation_metrics(dataset=dataset, name=TAGGED_SAMPLES_EVALUATION_NAME)
+    print_evaluation_metrics(
+        dataset=dataset,
+        name=TAGGED_SAMPLES_EVALUATION_NAME,
+    )
 
-    print("\nEvaluating all samples...")
+    print("\nEvaluating all annotated samples...")
     start_time = perf_counter()
-    evaluation_result = dataset.evaluate().object_detection(
+    evaluation_result = dataset.evaluate().semantic_segmentation(
         name=ALL_SAMPLES_EVALUATION_NAME,
         gt_annotation_source=GT_ANNOTATION_SOURCE,
         pred_annotation_source=PRED_ANNOTATION_SOURCE,
-        config=evaluation_config,
     )
     print(
         f"Completed in {perf_counter() - start_time:.2f}s "
@@ -139,7 +160,12 @@ def main() -> None:
         f"{evaluation_result.gt_annotation_count} GT annotations, and "
         f"{evaluation_result.pred_annotation_count} prediction annotations"
     )
-    print_evaluation_metrics(dataset=dataset, name=ALL_SAMPLES_EVALUATION_NAME)
+    print_evaluation_metrics(
+        dataset=dataset,
+        name=ALL_SAMPLES_EVALUATION_NAME,
+    )
+
+    ls.start_gui()
 
 
 if __name__ == "__main__":

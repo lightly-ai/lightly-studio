@@ -3,17 +3,15 @@ import { writable, type Writable } from 'svelte/store';
 interface SelectClassResult {
     /** The chosen (or newly typed) class label. */
     label: string;
-    /** The chosen annotation source (collection name), if a source selector was shown. */
-    source?: string;
 }
 
 interface SelectClassDialog {
     /** Reactive flag to bind to `<SelectClassDialog bind:open>`. */
     open: Writable<boolean>;
-    /** Opens the dialog and resolves with the chosen class and source, or `null` if cancelled. */
+    /** Opens the dialog and resolves with the chosen class, or `null` if cancelled. */
     requestLabel: () => Promise<SelectClassResult | null>;
     /** Wire to the dialog's `onConfirm`. */
-    handleConfirm: (label: string, source?: string) => void;
+    handleConfirm: (label: string) => void;
     /** Wire to the dialog's `onCancel`. */
     handleCancel: () => void;
 }
@@ -48,7 +46,7 @@ export function useSelectClassDialog(): SelectClassDialog {
     return {
         open,
         requestLabel,
-        handleConfirm: (label, source) => settle({ label, source }),
+        handleConfirm: (label) => settle({ label }),
         handleCancel: () => settle(null)
     };
 }

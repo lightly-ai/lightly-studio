@@ -7,6 +7,7 @@ import SampleDetailsClassificationSegment from './SampleDetailsClassificationSeg
 const mocks = vi.hoisted(() => ({
     collections: [] as { collection_id: string; name: string }[],
     selectedCollectionIds: [] as string[],
+    lastCreatedAnnotationId: null as string | null,
     isEditingMode: undefined as unknown as { set: (value: boolean) => void }
 }));
 
@@ -42,6 +43,19 @@ vi.mock('$lib/hooks/useGlobalStorage', async () => {
     };
 });
 
+// The component reads annotationLabelContext (annotationSource to tag a new classification's
+// source, lastCreatedAnnotationId to keep its group expanded) and sets the last created id on
+// create; the real hook throws when rendered without a provider.
+vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
+    useAnnotationLabelContext: vi.fn(() => ({
+        context: {
+            annotationSource: null,
+            lastCreatedAnnotationId: mocks.lastCreatedAnnotationId
+        },
+        setLastCreatedAnnotationId: vi.fn()
+    }))
+}));
+
 vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
     useAnnotationLabels: vi.fn(() => ({ data: [] }))
 }));
@@ -76,7 +90,8 @@ const predictionsSource = { collection_id: 'source-pred', name: 'Predictions' };
 const createClassification = (
     sampleId: string,
     sourceId: string,
-    labelName: string
+    labelName: string,
+    confidence?: number | null
 ): AnnotationView =>
     ({
         parent_sample_id: 'parent-sample-1',
@@ -84,7 +99,8 @@ const createClassification = (
         annotation_collection_id: sourceId,
         annotation_type: 'classification',
         annotation_label: { annotation_label_name: labelName },
-        created_at: new Date('1970-01-01T00:00:00.000Z')
+        created_at: new Date('1970-01-01T00:00:00.000Z'),
+        confidence
     }) satisfies AnnotationView;
 
 const defaultProps = {
@@ -99,6 +115,7 @@ describe('SampleDetailsClassificationSegment', () => {
         vi.clearAllMocks();
         mocks.collections = [];
         mocks.selectedCollectionIds = [];
+        mocks.lastCreatedAnnotationId = null;
         mocks.isEditingMode.set(false);
     });
 
@@ -166,6 +183,22 @@ describe('SampleDetailsClassificationSegment', () => {
         expect(screen.queryByText('zebra')).not.toBeInTheDocument();
     });
 
+    it('keeps a freshly created source expanded even though it is unselected', () => {
+        // Predictions is unselected on the grid, so it would normally seed collapsed...
+        mocks.collections = [groundTruthSource, predictionsSource];
+        mocks.selectedCollectionIds = [groundTruthSource.collection_id];
+        // ...but the user just created this classification in it, so its group stays open.
+        mocks.lastCreatedAnnotationId = 'c2';
+        const annotations = [
+            createClassification('c1', groundTruthSource.collection_id, 'cat'),
+            createClassification('c2', predictionsSource.collection_id, 'zebra')
+        ];
+
+        render(SampleDetailsClassificationSegment, { props: { ...defaultProps, annotations } });
+
+        expect(screen.getByText('zebra')).toBeInTheDocument();
+    });
+
     it('expands a collapsed source when its header is clicked', async () => {
         const user = userEvent.setup();
         mocks.collections = [groundTruthSource, predictionsSource];
@@ -182,6 +215,30 @@ describe('SampleDetailsClassificationSegment', () => {
         await user.click(screen.getByText(predictionsSource.name));
 
         expect(screen.getByText('zebra')).toBeInTheDocument();
+    });
+
+    it('shows confidence value when present', () => {
+        mocks.collections = [groundTruthSource];
+        const annotations = [
+            createClassification('c1', groundTruthSource.collection_id, 'bird', 0.95)
+        ];
+
+        render(SampleDetailsClassificationSegment, { props: { ...defaultProps, annotations } });
+
+        expect(screen.getByText('bird')).toBeInTheDocument();
+        expect(screen.getByText('Confidence: 0.95')).toBeInTheDocument();
+    });
+
+    it('does not show confidence line when confidence is null', () => {
+        mocks.collections = [groundTruthSource];
+        const annotations = [
+            createClassification('c1', groundTruthSource.collection_id, 'bird', null)
+        ];
+
+        render(SampleDetailsClassificationSegment, { props: { ...defaultProps, annotations } });
+
+        expect(screen.getByText('bird')).toBeInTheDocument();
+        expect(screen.queryByText(/Confidence:/)).not.toBeInTheDocument();
     });
 
     it('renders editable rows inside groups with a single add button below', async () => {
