@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Header menu: show collection name in Annotations entries
 - Embedding plot coloring now supports multiple categories per sample, resolving issues with toggling visibility of categories in the legend.
 - Made annotation and plot colors more distinguishable.
+- General UI improvements.
 
 ### Fixed
 
