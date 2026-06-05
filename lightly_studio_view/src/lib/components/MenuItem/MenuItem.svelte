@@ -15,8 +15,7 @@
             value: sibling.id,
             label: sibling.title,
             icon: sibling.icon,
-            testId: `navigation-dropdown-${sibling.title.toLowerCase()}`,
-            class: 'cursor-pointer pl-2'
+            testId: `navigation-dropdown-${sibling.title.toLowerCase()}`
         }))
     );
 
@@ -38,6 +37,8 @@
         icon={item.icon}
         items={selectItems}
         onValueChange={handleValueChange}
+        hideSelectionMarker
+        itemsAsLinks
         class={cn(item.isSelected && 'bg-accent')}
         testId={`navigation-menu-${item.title.toLowerCase()}`}
     />

@@ -43,6 +43,10 @@
         open?: boolean;
         /** Trigger size. Heights align with the Button primitive. */
         size?: SelectSize;
+        /** Skip reserving the left padding for the selection check marker on items. */
+        hideSelectionMarker?: boolean;
+        /** Render items as links (uses pointer cursor instead of the default select caret). */
+        itemsAsLinks?: boolean;
         /** Additional class names for the trigger button. */
         class?: string;
         /** `data-testid` for the trigger element. */
@@ -70,6 +74,8 @@
         disabled = false,
         open = $bindable(false),
         size = 'md',
+        hideSelectionMarker = false,
+        itemsAsLinks = false,
         class: className,
         testId,
         selectProps,
@@ -152,7 +158,13 @@
                     label={item.label}
                     disabled={item.disabled}
                     data-testid={item.testId}
-                    class={cn('gap-2', itemSizeClass[size], item.class)}
+                    class={cn(
+                        'gap-2',
+                        itemSizeClass[size],
+                        hideSelectionMarker && 'pl-2',
+                        itemsAsLinks && 'cursor-pointer',
+                        item.class
+                    )}
                 >
                     {#if item.icon}
                         {@const ItemIcon = item.icon}
