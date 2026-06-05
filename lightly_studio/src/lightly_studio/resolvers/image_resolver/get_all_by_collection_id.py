@@ -217,8 +217,7 @@ def _get_all_without_similarity(  # noqa: PLR0913
         # Each metadata/evaluation-metric expression joins via its own per-instance alias,
         # so applying every expression cannot collide with joins added by filters.
         for expr in order_by:
-            updated, _ = expr.apply(samples_query)
-            samples_query = cast(SelectOfScalar[ImageTable], updated)
+            samples_query = cast(SelectOfScalar[ImageTable], expr.apply(samples_query))
         if not _file_path_abs_in_order_by(order_by):
             file_path_col = col(ImageTable.file_path_abs)
             tiebreaker = file_path_col.asc() if order_by[0].ascending else file_path_col.desc()

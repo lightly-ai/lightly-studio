@@ -5,6 +5,7 @@ from sqlmodel import select
 
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import (
+    ORDER_VALUE_LABEL,
     OrderByEvaluationMetricField,
     OrderByField,
     OrderByMetadataField,
@@ -14,34 +15,33 @@ from lightly_studio.models.image import ImageTable
 
 class TestOrderByField:
     def test_apply__add_order_value(self) -> None:
-        """Test that add_order_value appends the sort column to the SELECT list."""
+        """Test that add_order_value appends the labeled sort column to the SELECT list."""
         query = select(ImageTable)
         order_by = OrderByField(ImageSampleField.file_name)
 
-        returned_query, order_value_index = order_by.apply(query, order=False, add_order_value=True)
+        returned_query = order_by.apply(query, order=False, add_order_value=True)
 
         sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
         assert "select image" in sql
         assert "image.file_name" in sql
-        assert order_value_index == 1
+        assert f"as {ORDER_VALUE_LABEL}" in sql
 
     def test_apply__no_joins(self) -> None:
         """Test that apply does not add JOINs for image fields."""
         query = select(ImageTable)
         order_by = OrderByField(ImageSampleField.file_name)
 
-        returned_query, order_value_index = order_by.apply(query, order=False)
+        returned_query = order_by.apply(query, order=False)
 
         sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
         assert "join" not in sql
-        assert order_value_index is None
 
     def test_apply__default_ascending(self) -> None:
         """Test that default ordering is ascending."""
         query = select(ImageTable)
         order_by = OrderByField(ImageSampleField.file_name)
 
-        returned_query, _ = order_by.apply(query)
+        returned_query = order_by.apply(query)
 
         sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
         assert "order by image.file_name asc" in sql
@@ -51,7 +51,7 @@ class TestOrderByField:
         query = select(ImageTable)
         order_by = OrderByField(ImageSampleField.file_name).desc()
 
-        returned_query, _ = order_by.apply(query)
+        returned_query = order_by.apply(query)
 
         sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
         assert "order by image.file_name desc" in sql
@@ -61,7 +61,7 @@ class TestOrderByField:
         query = select(ImageTable)
         order_by = OrderByField(ImageSampleField.file_name).desc().asc()
 
-        returned_query, _ = order_by.apply(query)
+        returned_query = order_by.apply(query)
 
         sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
         assert "order by image.file_name asc" in sql
@@ -75,34 +75,33 @@ class TestOrderByMetadataField:
         query = select(ImageTable)
         order_by = OrderByMetadataField("brightness", cast_to_float=False)
 
-        returned_query, order_value_index = order_by.apply(query, order=False)
+        returned_query = order_by.apply(query, order=False)
 
         sql = str(
             returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
         ).lower()
         assert "left outer join metadata" in sql
-        assert order_value_index is None
 
     def test_apply__add_order_value(self) -> None:
-        """Test that add_order_value selects the JSON extract expression."""
+        """Test that add_order_value selects the labeled JSON extract expression."""
         query = select(ImageTable)
         order_by = OrderByMetadataField("score", cast_to_float=True)
 
-        returned_query, order_value_index = order_by.apply(query, order=False, add_order_value=True)
+        returned_query = order_by.apply(query, order=False, add_order_value=True)
 
         sql = str(
             returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
         ).lower()
         assert "left outer join metadata" in sql
         assert "json_extract(metadata_1.data, '$.score')" in sql
-        assert order_value_index == 1
+        assert f"as {ORDER_VALUE_LABEL}" in sql
 
     def test_apply__default_ascending(self) -> None:
         """Test that default ordering is ascending."""
         query = select(ImageTable)
         order_by = OrderByMetadataField("brightness", cast_to_float=False)
 
-        returned_query, _ = order_by.apply(query)
+        returned_query = order_by.apply(query)
 
         sql = str(
             returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
@@ -114,7 +113,7 @@ class TestOrderByMetadataField:
         query = select(ImageTable)
         order_by = OrderByMetadataField("brightness", cast_to_float=False).desc()
 
-        returned_query, _ = order_by.apply(query)
+        returned_query = order_by.apply(query)
 
         sql = str(
             returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
@@ -126,7 +125,7 @@ class TestOrderByMetadataField:
         query = select(ImageTable)
         order_by = OrderByMetadataField("brightness", cast_to_float=False).desc().asc()
 
-        returned_query, _ = order_by.apply(query)
+        returned_query = order_by.apply(query)
 
         sql = str(
             returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
@@ -138,7 +137,7 @@ class TestOrderByMetadataField:
         query = select(ImageTable)
         order_by = OrderByMetadataField("score", cast_to_float=True)
 
-        returned_query, _ = order_by.apply(query)
+        returned_query = order_by.apply(query)
 
         sql = str(
             returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
@@ -154,7 +153,7 @@ class TestOrderByEvaluationMetricField:
         query = select(ImageTable)
         order_by = OrderByEvaluationMetricField("run1", "score")
 
-        returned_query, order_value_index = order_by.apply(query, order=False)
+        returned_query = order_by.apply(query, order=False)
 
         sql = str(
             returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
@@ -162,14 +161,13 @@ class TestOrderByEvaluationMetricField:
         assert "left outer join evaluation_run" in sql
         assert "left outer join evaluation_sample_metric" in sql
         assert "evaluation_sample_metric_1.metric_name = 'score'" in sql
-        assert order_value_index is None
 
     def test_apply__default_ascending(self) -> None:
         """Test that default ordering is ascending with the expected JOINs."""
         query = select(ImageTable)
         order_by = OrderByEvaluationMetricField("run1", "score")
 
-        returned_query, _ = order_by.apply(query)
+        returned_query = order_by.apply(query)
 
         sql = str(
             returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
@@ -184,7 +182,7 @@ class TestOrderByEvaluationMetricField:
         query = select(ImageTable)
         order_by = OrderByEvaluationMetricField("run1", "score").desc()
 
-        returned_query, _ = order_by.apply(query)
+        returned_query = order_by.apply(query)
 
         sql = str(
             returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
@@ -196,7 +194,7 @@ class TestOrderByEvaluationMetricField:
         query = select(ImageTable)
         order_by = OrderByEvaluationMetricField("run1", "score").desc().asc()
 
-        returned_query, _ = order_by.apply(query)
+        returned_query = order_by.apply(query)
 
         sql = str(
             returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})

@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Union, cast
 
 from sqlalchemy import ColumnElement, and_
+from sqlalchemy.engine import Row
 from sqlalchemy.orm import aliased
 from sqlmodel import col
 from sqlmodel.sql.expression import Select, SelectOfScalar
@@ -19,6 +20,12 @@ from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import SampleMetadataTable
 
 SelectQuery: TypeAlias = Union[Select[Any], SelectOfScalar[Any]]
+ORDER_VALUE_LABEL = "order_value"
+
+
+def get_order_value(row: Row[Any]) -> Any | None:
+    """Read the sort value from a row produced by ``apply(..., add_order_value=True)``."""
+    return getattr(row, ORDER_VALUE_LABEL, None)
 
 
 class OrderByExpression(ABC):
@@ -67,7 +74,7 @@ class OrderByExpression(ABC):
         *,
         order: bool = True,
         add_order_value: bool = False,
-    ) -> tuple[SelectQuery, int | None]:
+    ) -> SelectQuery:
         """Apply joins for this sort; optionally append the sort value and/or ORDER BY.
 
         Args:
@@ -75,21 +82,20 @@ class OrderByExpression(ABC):
             order: When True, append ``ORDER BY`` using the directed sort expression.
                 Pass False when ordering is handled separately (e.g. window functions).
             add_order_value: When True and this expression has a sort value, append it
-                to the SELECT list (row index 1).
+                to the SELECT list as ``ORDER_VALUE_LABEL``. Read values with
+                ``get_order_value``.
 
         Returns:
-            The modified query and the sort-value column index, or ``None``.
+            The modified query after joining and optionally ordering.
         """
         query = self._apply_joins(query)
-        order_value_index: int | None = None
         if add_order_value:
             sort_expr = self._sort_value_expression()
             if sort_expr is not None:
-                query = cast(SelectQuery, query.add_columns(sort_expr))
-                order_value_index = 1
+                query = cast(SelectQuery, query.add_columns(sort_expr.label(ORDER_VALUE_LABEL)))
         if order:
             query = query.order_by(self.to_column_element())
-        return query, order_value_index
+        return query
 
     def asc(self) -> Self:
         """Set the ordering to ascending.
