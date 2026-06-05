@@ -12,8 +12,9 @@ export class CaptionsPage {
     /**
      * Navigates to the captions page via the navigation menu.
      *
-     * If the button at `menuLevel` is the captions button itself (no siblings),
-     * it clicks directly. Otherwise it hovers to open the dropdown and selects captions.
+     * A breadcrumb level without siblings renders as an <a> link and clicking
+     * navigates directly; a level with siblings renders as a Select trigger
+     * (button) and clicking opens a dropdown to pick from.
      *
      * @param menuLevel - Zero-based index of the menu button to interact with.
      */
@@ -21,15 +22,12 @@ export class CaptionsPage {
         await this.page.goto('/');
         const menuButton = this.page
             .getByTestId('navigation-menu')
-            .getByRole('link')
+            .locator('[data-testid^="navigation-menu-"]')
             .nth(menuLevel);
 
-        // If this button IS the captions button, click it directly (no dropdown).
-        // Otherwise, hover to open the dropdown and select captions from it.
-        if ((await menuButton.getAttribute('data-testid')) === 'navigation-menu-captions') {
-            await menuButton.click();
-        } else {
-            await menuButton.hover();
+        const tag = await menuButton.evaluate((el) => el.tagName);
+        await menuButton.click();
+        if (tag !== 'A') {
             await this.page.getByTestId('navigation-dropdown-captions').click();
         }
 

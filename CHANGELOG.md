@@ -8,23 +8,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## \[1.0.0\] - 2026-06-05
+
+### Added
+
 - Show confusion matrix in evaluation results for classification.
-- enable picker for annotation source menu
+- Enable picker for annotation source menu
 - Embedding plot: added a "No coloring" option to the "Color by" dropdown to disable coloring.
 - Show ground truth and prediction annotation sources in run details panel
-- Image details view: Annotations are now grouped by annotation source.
-- Image details view: Annotation source visibility can be toggled.
-- Image details: select the annotation source when adding an annotation.
+- Image details view: annotations are now grouped by annotation source.
+- Image details view: annotation source visibility can be toggled.
+- Image details view: pick the target annotation source for new annotations from an on-canvas selector.
 
 ### Changed
 
 - Header menu: show collection name in Annotations entries
 - Embedding plot coloring now supports multiple categories per sample, resolving issues with toggling visibility of categories in the legend.
 - Made annotation and plot colors more distinguishable.
-
-### Deprecated
-
-### Removed
+- General UI improvements.
 
 ### Fixed
 
@@ -37,8 +49,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed cascaded delete for annotations linked by calculated metrics.
 - Grid annotation source selection now persists when navigating to image details and back.
 
-### Security
-
 ## \[1.0.0rc1\] - 2026-05-28
 
 ### Added
@@ -49,6 +59,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Show confusion matrix in evaluation results for object detection.
 - Added option to select annotation source for class balancing.
 - Added query editor for advanced filtering with custom queries.
+- Added Model Evaluation:
+    - Users can manage annotations from different sources, e.g. ground truth and predictions.
+    - Users can evaluate per sample metrics for object detection, classification and semantic segmentation
+    - Users can sort the image grid by the sample metrics: finding errors quickly.
+    - Users can display confusion matrix to find error patterns.
 
 ### Changed
 

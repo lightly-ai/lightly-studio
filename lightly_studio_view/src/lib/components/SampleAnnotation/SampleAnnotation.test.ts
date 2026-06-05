@@ -103,6 +103,31 @@ describe('SampleAnnotation', () => {
         expect(screen.getByTestId('svg-annotation-text')).toHaveTextContent('person');
     });
 
+    it('appends confidence to the canvas label when confidence is set', () => {
+        render(SampleAnnotation, {
+            props: {
+                annotation: { ...createObjectDetectionAnnotation(), confidence: 0.87 },
+                imageWidth: 100,
+                showLabel: true
+            }
+        });
+
+        expect(screen.getByTestId('svg-annotation-text')).toHaveTextContent('car (0.87)');
+    });
+
+    it('does not show confidence in the canvas label when confidence is null', () => {
+        render(SampleAnnotation, {
+            props: {
+                annotation: { ...createObjectDetectionAnnotation(), confidence: null },
+                imageWidth: 100,
+                showLabel: true
+            }
+        });
+
+        expect(screen.getByTestId('svg-annotation-text')).toHaveTextContent('car');
+        expect(screen.getByTestId('svg-annotation-text')).not.toHaveTextContent('(');
+    });
+
     it('keeps object-detection label visible when bounding boxes are hidden', () => {
         render(SampleAnnotation, {
             props: {

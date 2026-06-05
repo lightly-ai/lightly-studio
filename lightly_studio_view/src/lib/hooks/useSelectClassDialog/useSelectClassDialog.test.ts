@@ -23,17 +23,7 @@ describe('useSelectClassDialog', () => {
         const labelPromise = dialog.requestLabel();
         dialog.handleConfirm('dog');
 
-        await expect(labelPromise).resolves.toEqual({ label: 'dog', source: undefined });
-        expect(get(dialog.open)).toBe(false);
-    });
-
-    it('resolves with the chosen label and source on confirm', async () => {
-        const dialog = useSelectClassDialog();
-
-        const labelPromise = dialog.requestLabel();
-        dialog.handleConfirm('dog', 'predictions');
-
-        await expect(labelPromise).resolves.toEqual({ label: 'dog', source: 'predictions' });
+        await expect(labelPromise).resolves.toEqual({ label: 'dog' });
         expect(get(dialog.open)).toBe(false);
     });
 
@@ -57,8 +47,8 @@ describe('useSelectClassDialog', () => {
 
         dialog.handleConfirm('cat');
 
-        await expect(firstPromise).resolves.toEqual({ label: 'cat', source: undefined });
-        await expect(secondPromise).resolves.toEqual({ label: 'cat', source: undefined });
+        await expect(firstPromise).resolves.toEqual({ label: 'cat' });
+        await expect(secondPromise).resolves.toEqual({ label: 'cat' });
     });
 
     it('creates a fresh promise for the next request after settling', async () => {
