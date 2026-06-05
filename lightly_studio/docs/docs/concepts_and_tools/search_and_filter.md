@@ -50,7 +50,7 @@ query editor by clicking the `Add query filter` button in the left sidebar.
 
 The language supports filtering by image fields such as dimensions or file name, tags, annotations,
 as well as logical combinations of these. For a full reference, see the
-[Lightly Query Language](../advanced/lightly_query_language.md) documentation.
+[Lightly Query Language](lightly_query_language.md) documentation.
 
 Example queries:
 
