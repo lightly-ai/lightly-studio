@@ -3,7 +3,7 @@
     import { Button } from '$lib/components/ui/button';
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
-    import * as Select from '$lib/components/ui/select';
+    import { Select, type SelectItem } from '$lib/components/Select';
     import FieldTooltip from '$lib/components/FieldTooltip/FieldTooltip.svelte';
     import type { ClassBalancingTargetRow } from '$lib/hooks/useStrategyBuilder';
 
@@ -58,29 +58,20 @@
     {/if}
 
     {#each targetDistribution as row, index (index)}
+        {@const rowItems = annotationLabels.map<SelectItem>((label) => ({
+            value: label,
+            label,
+            testId: `class-balancing-class-name-${index}-${label}`
+        }))}
         <div class="grid grid-cols-[1fr_120px_auto] gap-2">
-            <Select.Root
-                type="single"
+            <Select
+                items={rowItems}
                 value={row.class_name}
+                placeholder="Select class"
+                class="w-full"
+                testId={`class-balancing-class-name-${index}`}
                 onValueChange={(value) => updateRow(index, { class_name: value })}
-            >
-                <Select.Trigger class="w-full" data-testid={`class-balancing-class-name-${index}`}>
-                    {row.class_name || 'Select class'}
-                </Select.Trigger>
-                <Select.Content>
-                    <Select.Group>
-                        {#each annotationLabels as label (label)}
-                            <Select.Item
-                                value={label}
-                                {label}
-                                data-testid={`class-balancing-class-name-${index}-${label}`}
-                            >
-                                {label}
-                            </Select.Item>
-                        {/each}
-                    </Select.Group>
-                </Select.Content>
-            </Select.Root>
+            />
             <Input
                 type="number"
                 min="0"

@@ -5,7 +5,7 @@
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { Button } from '$lib/components';
     import { Checkbox, Alert } from '$lib/components';
-    import * as Select from '$lib/components/ui/select';
+    import { Select } from '$lib/components/Select';
     import * as Dialog from '$lib/components/ui/dialog';
     import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -72,8 +72,6 @@
         [classifiersSelected, classifiers],
         ([$sel, $list]) => $sel.size > 0 && $list.length > 0
     );
-
-    const triggerContent = derived(exportType, ($type) => $type || 'Select export type');
 
     // Sort classifiers alphabetically by name
     const sortedClassifiers = derived(classifiers, ($classifiers) => {
@@ -406,21 +404,13 @@
                     <label for="exportType" class="text-sm font-medium"
                         >Select the export type for the classifier.</label
                     >
-                    <Select.Root type="single" name="exportType" bind:value={$exportType}>
-                        <Select.Trigger class="w-full">
-                            {$triggerContent}
-                        </Select.Trigger>
-                        <Select.Content>
-                            <Select.Group>
-                                <Select.GroupHeading>Export Types</Select.GroupHeading>
-                                {#each exportOptions as value (value)}
-                                    <Select.Item {value} label={value}>
-                                        {value}
-                                    </Select.Item>
-                                {/each}
-                            </Select.Group>
-                        </Select.Content>
-                    </Select.Root>
+                    <Select
+                        items={exportOptions.map((v) => ({ value: v, label: v }))}
+                        value={$exportType}
+                        placeholder="Select export type"
+                        class="w-full"
+                        onValueChange={(v) => exportType.set(v as typeof $exportType)}
+                    />
                 </div>
 
                 <Button buttonProps={{ onclick: () => handleExportWithType(), class: 'flex-1' }}>
