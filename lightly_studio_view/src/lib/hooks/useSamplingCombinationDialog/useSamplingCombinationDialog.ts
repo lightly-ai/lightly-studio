@@ -108,7 +108,8 @@ export function useSamplingCombinationDialog({
 
     function handleFormSubmit(event: Event) {
         event.preventDefault();
-        if (!get(isFormValid) || get(notEnoughSamples) || get(noSamples)) return;
+        if (!get(isFormValid) || get(notEnoughSamples) || get(noSamples) || get(isSubmitting))
+            return;
         void submitSelection();
     }
 
