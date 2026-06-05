@@ -8,18 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Show confusion matrix in evaluation results for classification.
-- enable picker for annotation source menu
-- Embedding plot: added a "No coloring" option to the "Color by" dropdown to disable coloring.
-- Show ground truth and prediction annotation sources in run details panel
-
-- Image details: select the annotation source when adding an annotation.
 
 ### Changed
-
-- Header menu: show collection name in Annotations entries
-- Embedding plot coloring now supports multiple categories per sample, resolving issues with toggling visibility of categories in the legend.
-- Made annotation and plot colors more distinguishable.
 
 ### Deprecated
 
@@ -27,10 +17,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+### Security
+
+## \[1.0.0\] - 2026-06-05
+
+### Added
+
+- Show confusion matrix in evaluation results for classification.
+- Enable picker for annotation source menu
+- Embedding plot: added a "No coloring" option to the "Color by" dropdown to disable coloring.
+- Show ground truth and prediction annotation sources in run details panel
+- Image details view: annotations are now grouped by annotation source.
+- Image details view: annotation source visibility can be toggled.
+- Image details view: pick the target annotation source for new annotations from an on-canvas selector.
+
+### Changed
+
+- Header menu: show collection name in Annotations entries
+- Embedding plot coloring now supports multiple categories per sample, resolving issues with toggling visibility of categories in the legend.
+- Made annotation and plot colors more distinguishable.
+- General UI improvements.
+
+### Fixed
+
+- Embedding plot: when a coloring has more categories than the legend can display, the extra
+  categories are now grouped into an "Other" entry instead of exceeding the available legend slots.
+- Grid top bar no longer overflows its container or covers the grid when a side panel is open;
+  it now shrinks with the available width and wraps onto a second line when too narrow.
 - Fixed operations on large datasets (more than ~65,535 samples) failing on PostgreSQL with
   `number of parameters must be between 0 and 65535`.
-
-### Security
+- Fixed cascaded delete for annotations linked by calculated metrics.
+- Grid annotation source selection now persists when navigating to image details and back.
 
 ## \[1.0.0rc1\] - 2026-05-28
 
@@ -42,6 +59,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Show confusion matrix in evaluation results for object detection.
 - Added option to select annotation source for class balancing.
 - Added query editor for advanced filtering with custom queries.
+- Added Model Evaluation:
+    - Users can manage annotations from different sources, e.g. ground truth and predictions.
+    - Users can evaluate per sample metrics for object detection, classification and semantic segmentation
+    - Users can sort the image grid by the sample metrics: finding errors quickly.
+    - Users can display confusion matrix to find error patterns.
 
 ### Changed
 

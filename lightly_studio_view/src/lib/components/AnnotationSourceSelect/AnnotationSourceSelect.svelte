@@ -1,36 +1,39 @@
 <script lang="ts">
-    import * as Select from '$lib/components/ui/select';
+    import { Select } from '$lib/components/Select';
 
-    interface Props {
-        /** Names of the annotation sources (collections) to choose from. */
-        sourceNames: string[];
-        /** Currently selected source name. */
-        selectedSource?: string;
-        /** Optional notification when the selection changes (the value also flows out via `bind:selectedSource`). */
-        onSelect?: (source: string) => void;
+    interface SourceOption {
+        id: string;
+        name: string;
     }
 
-    let { sourceNames, selectedSource = $bindable(), onSelect }: Props = $props();
+    interface Props {
+        /** Annotation sources (collections) to choose from. */
+        sourceOptions: SourceOption[];
+        /** Currently selected source id. */
+        selectedSource?: string;
+        /** Optional notification when the selection changes (the value also flows out via `bind:selectedSource`). */
+        onSelect?: (sourceId: string) => void;
+    }
+
+    let { sourceOptions, selectedSource = $bindable(), onSelect }: Props = $props();
+
+    const items = $derived(
+        sourceOptions.map((option) => ({
+            value: option.id,
+            label: option.name,
+            testId: `annotation-source-option-${option.name}`
+        }))
+    );
 </script>
 
-<Select.Root
-    type="single"
+<Select
+    {items}
     value={selectedSource}
+    placeholder="Select a source..."
+    class="w-full"
+    testId="annotation-source-trigger"
     onValueChange={(value) => {
         selectedSource = value;
         onSelect?.(value);
     }}
->
-    <Select.Trigger class="w-full" data-testid="annotation-source-trigger">
-        {selectedSource ?? 'Select a source...'}
-    </Select.Trigger>
-    <Select.Content>
-        {#each sourceNames as name (name)}
-            <Select.Item
-                value={name}
-                label={name}
-                data-testid={`annotation-source-option-${name}`}
-            />
-        {/each}
-    </Select.Content>
-</Select.Root>
+/>

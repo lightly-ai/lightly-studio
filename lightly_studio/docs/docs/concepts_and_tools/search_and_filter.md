@@ -32,7 +32,7 @@ The left sidebar combines the most common ways to narrow down the visible sample
 - `Dimensions`: Use `Width` and `Height` to constrain the visible item size.
 - `Metadata`: If numeric metadata fields are available, they appear as additional sliders in the same area.
 
-![Tag filters](https://storage.googleapis.com/lightly-public/studio/search_filter_tags_v3.png){ width="100%"}
+![Tag filters](https://storage.googleapis.com/lightly-public/studio/docs/search_filter_tags_v1.0.0.png){ width="100%"}
 
 
 For videos, the sidebar adds `Duration`. If the videos in the current view contain varying frame rates, it also shows `FPS`.
@@ -46,7 +46,7 @@ For videos, the sidebar adds `Duration`. If the videos in the current view conta
 Your dataset can be filtered by a custom query written in an SQL-like language. Open the
 query editor by clicking the `Add query filter` button in the left sidebar.
 
-![Query filter](https://storage.googleapis.com/lightly-public/studio/search_filter_query_v1.png){ width="100%" }
+![Query filter](https://storage.googleapis.com/lightly-public/studio/docs/search_filter_query_v1.0.0.png){ width="100%" }
 
 The language supports filtering by image fields such as dimensions or file name, tags, annotations,
 as well as logical combinations of these. For a full reference, see the
@@ -69,9 +69,9 @@ segmentation_mask(class_name = "car" AND width < 100)
 
 You can programmatically filter samples by attributes (e.g., image size, tags), sort them, and select subsets. This is useful for creating training/validation splits, finding specific samples, or exporting filtered data.
 
-Create a query object by combining `match`, `order_by` and `slice` (or `[start:end]`) calls. The query is composed lazily and executed against the database once it is consumed, e.g. by iterating over it or calling `add_tag`.
+Create a query object by combining [`match`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.match), [`order_by`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.order_by) and [`slice`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.slice) (or [`[start:end]`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.__getitem__)) calls. The query is composed lazily and executed against the database once it is consumed, e.g. by iterating over it or calling [`add_tag`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.add_tag).
 
-The example below uses the `ImageSampleField` for demonstration, for video datasets, use `VideoSampleField` instead.
+The example below uses the [`ImageSampleField`](../api/dataset_query.md#imagesamplefield) for demonstration, for video datasets, use [`VideoSampleField`](../api/dataset_query.md#videosamplefield) instead.
 ```py
 from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, ImageSampleField
 
@@ -120,7 +120,7 @@ dataset.export(query).to_coco_object_detections()
 ### Reference
 
 The following sections explain the available methods for defining a query in more detail.
-They use the `ImageSampleField` for demonstration, but the same applies to `VideoSampleField` for video datasets.
+They use the [`ImageSampleField`](../api/dataset_query.md/#imagesamplefield) for demonstration, but the same applies to [`VideoSampleField`](../api/dataset_query.md/#videosamplefield) for video datasets.
 
 === "`match`"
 
@@ -149,7 +149,7 @@ They use the `ImageSampleField` for demonstration, but the same applies to `Vide
     query.match(expr)
     ```
 
-    The filtering on individual fields can flexibly be combined to create more complex match expression. For this, the boolean operators [`AND`](../api/dataset_query.md#lightly_studio.core.dataset_query.boolean_expression.AND), [`OR`](../api/dataset_query.md#lightly_studio.core.dataset_query.boolean_expression.OR), and [`NOT`](../api/dataset_query.md#lightly_studio.core.dataset_query.boolean_expression.NOT) are available. Boolean operators can arbitrarily be nested.
+    The filtering on individual fields can flexibly be combined to create more complex match expression. For this, the boolean operators `AND`, `OR`, and `NOT` are available. Boolean operators can arbitrarily be nested.
 
 
     ```py

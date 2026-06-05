@@ -8,7 +8,10 @@ describe('AnnotationSourceSelect', () => {
     });
 
     const defaultProps = {
-        sourceNames: ['ground_truth', 'predictions'],
+        sourceOptions: [
+            { id: 'ground-truth-id', name: 'ground_truth' },
+            { id: 'predictions-id', name: 'predictions' }
+        ],
         onSelect: vi.fn()
     };
 
@@ -22,7 +25,7 @@ describe('AnnotationSourceSelect', () => {
 
     it('shows the currently selected source', () => {
         render(AnnotationSourceSelect, {
-            props: { ...defaultProps, selectedSource: 'predictions' }
+            props: { ...defaultProps, selectedSource: 'predictions-id' }
         });
 
         expect(screen.getByTestId('annotation-source-trigger')).toHaveTextContent('predictions');
@@ -37,6 +40,6 @@ describe('AnnotationSourceSelect', () => {
             await screen.findByTestId('annotation-source-option-predictions')
         );
 
-        expect(onSelect).toHaveBeenCalledWith('predictions');
+        expect(onSelect).toHaveBeenCalledWith('predictions-id');
     });
 });

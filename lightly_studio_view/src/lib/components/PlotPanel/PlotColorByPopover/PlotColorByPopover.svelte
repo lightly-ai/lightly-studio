@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Palette } from '@lucide/svelte';
-    import * as Select from '$lib/components/ui/select';
+    import { Select, SelectMenuItem } from '$lib/components/Select';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import { usePlotColorByType } from './usePlotColorByType/usePlotColorByType';
 
@@ -57,6 +57,7 @@
         });
         return idx >= 0 ? String(idx) : NO_COLOR_BY;
     });
+
     const triggerLabel = $derived.by(() => {
         if (selectedKey) {
             return `metadata.${selectedKey}`;
@@ -93,23 +94,26 @@
     };
 </script>
 
-<Select.Root type="single" value={selectValue} allowDeselect onValueChange={handleValueChange}>
-    <Select.Trigger class="h-8 w-48 gap-2 px-2.5" data-testid="plot-color-by-button">
-        <div class="flex min-w-0 items-center gap-2">
-            <Palette class="h-4 w-4 shrink-0" />
-            <span class="truncate">{triggerLabel}</span>
-        </div>
-    </Select.Trigger>
-    <Select.Content class="max-h-64" data-testid="plot-color-by-options">
+<Select
+    icon={Palette}
+    {triggerLabel}
+    value={selectValue}
+    allowDeselect
+    onValueChange={handleValueChange}
+    size="xs"
+    class="w-48"
+    testId="plot-color-by-button"
+>
+    {#snippet children()}
         {#if colorByOptions.length === 0}
             <p class="px-2 py-1.5 text-sm text-muted-foreground">Nothing to color by</p>
         {:else}
-            <Select.Item value={NO_COLOR_BY} label="No coloring">No coloring</Select.Item>
+            <SelectMenuItem value={NO_COLOR_BY} label="No coloring">No coloring</SelectMenuItem>
             {#each colorByOptions as option, i (option.type === 'metadata' ? `metadata:${option.fieldName}` : `type:${option.type}`)}
-                <Select.Item value={String(i)} label={option.label}>
+                <SelectMenuItem value={String(i)} label={option.label}>
                     {option.label}
-                </Select.Item>
+                </SelectMenuItem>
             {/each}
         {/if}
-    </Select.Content>
-</Select.Root>
+    {/snippet}
+</Select>

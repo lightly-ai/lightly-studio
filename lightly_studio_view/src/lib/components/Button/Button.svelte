@@ -13,6 +13,10 @@
     interface BaseProps {
         /** Lucide icon component rendered before the label. */
         icon?: Component<IconProps>;
+        /** Lucide icon component rendered after the label. */
+        iconAfter?: Component<IconProps>;
+        /** Additional class applied to the trailing icon (merged with `size-4`). */
+        iconAfterClass?: string;
         /**
          * Visual style of the button. One of:
          * `default` | `destructive` | `outline` | `secondary` | `ghost` | `link`.
@@ -48,7 +52,9 @@
 
     let {
         icon: Icon,
-        variant,
+        iconAfter: IconAfter,
+        iconAfterClass,
+        variant = 'ghost',
         buttonProps = {},
         collapseAt = 'never',
         isPending = false,
@@ -86,6 +92,9 @@
     {/if}
     {#if children}
         <span class={labelCollapseClass[collapseAt]}>{@render children()}</span>
+    {/if}
+    {#if IconAfter}
+        <IconAfter class={cn('size-4', iconAfterClass)} />
     {/if}
     {#if isPending}
         <span

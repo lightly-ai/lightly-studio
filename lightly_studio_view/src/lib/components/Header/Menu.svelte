@@ -1,14 +1,11 @@
 <script lang="ts">
-    import { Button } from '$lib/components/ui/button';
-    import { Popover, PopoverContent, PopoverTrigger } from '$lib/components/ui/popover';
+    import { Select, type SelectItem } from '$lib/components/Select';
     import { useClassifiersMenu } from '$lib/hooks/useClassifiers/useClassifiersMenu';
     import { useSamplingDialog } from '$lib/hooks/useSamplingDialog/useSamplingDialog';
     import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
     import {
-        ChevronDown,
-        ChevronRight,
         Puzzle as PuzzleIcon,
         Download as DownloadIcon,
         Settings as SettingsIcon,
@@ -40,15 +37,7 @@
     const { openSettingsDialog } = useSettingsDialog();
     const { openOperatorsDialog } = useOperatorsDialog();
 
-    let isMenuOpen = $state(false);
-
-    type MenuIcon = typeof BrainCircuitIcon;
-    type MenuItem = {
-        icon: MenuIcon;
-        label: string;
-        onSelect: () => void;
-        testId: string;
-    };
+    type MenuAction = SelectItem & { onSelect: () => void };
 
     const hasClassifier = $derived(isImages && hasEmbeddings);
     const hasSampling = $derived(isImages || isVideos);
@@ -60,92 +49,80 @@
 
     const isEditor = $derived(hasMinimumRole(user?.role, 'editor'));
 
-    const menuItems = $derived.by<MenuItem[]>(() => {
-        const items: MenuItem[] = [];
+    const menuActions = $derived.by<MenuAction[]>(() => {
+        const items: MenuAction[] = [];
 
         if (hasClassifier && isEditor) {
             items.push({
-                icon: BrainCircuitIcon,
+                value: 'menu-classifiers',
                 label: 'Few Shot Classifier',
-                onSelect: openClassifiersMenu,
-                testId: 'menu-classifiers'
+                icon: BrainCircuitIcon,
+                testId: 'menu-classifiers',
+                onSelect: openClassifiersMenu
             });
         }
 
         if (hasSampling && isEditor) {
             items.push({
-                icon: WandSparklesIcon,
+                value: 'menu-sampling',
                 label: 'Sampling',
-                onSelect: openSamplingDialog,
-                testId: 'menu-sampling'
+                icon: WandSparklesIcon,
+                testId: 'menu-sampling',
+                onSelect: openSamplingDialog
             });
         }
 
         if (isEditor) {
             items.push({
-                icon: PuzzleIcon,
+                value: 'menu-operators',
                 label: 'Plugins',
-                onSelect: openOperatorsDialog,
-                testId: 'menu-operators'
+                icon: PuzzleIcon,
+                testId: 'menu-operators',
+                onSelect: openOperatorsDialog
             });
         }
 
         if (hasExport) {
             items.push({
-                icon: DownloadIcon,
+                value: 'menu-export',
                 label: 'Export',
-                onSelect: openExportDialog,
-                testId: 'menu-export'
+                icon: DownloadIcon,
+                testId: 'menu-export',
+                onSelect: openExportDialog
             });
         }
 
         if (isEditor) {
             items.push({
-                icon: SettingsIcon,
+                value: 'menu-settings',
                 label: 'Settings',
-                onSelect: openSettingsDialog,
-                testId: 'menu-settings'
+                icon: SettingsIcon,
+                testId: 'menu-settings',
+                onSelect: openSettingsDialog
             });
         }
 
         return items;
     });
 
-    function handle(callback: () => void) {
-        isMenuOpen = false;
-        callback();
-    }
+    let selectedValue = $state<string | undefined>(undefined);
+
+    const handleValueChange = (value: string) => {
+        const action = menuActions.find((item) => item.value === value);
+        selectedValue = undefined;
+        action?.onSelect();
+    };
 </script>
 
-{#if menuItems.length > 0}
-    <Popover bind:open={isMenuOpen}>
-        <PopoverTrigger>
-            <Button
-                variant="ghost"
-                class="nav-button flex items-center space-x-2"
-                data-testid="menu-trigger"
-            >
-                <span>Menu</span>
-                <ChevronDown class="size-4" />
-            </Button>
-        </PopoverTrigger>
-        <PopoverContent class="w-64 p-2">
-            <div class="flex flex-col">
-                {#each menuItems as item (item.testId)}
-                    <button
-                        type="button"
-                        class="flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        onclick={() => handle(item.onSelect)}
-                        data-testid={item.testId}
-                    >
-                        <div class="flex items-center gap-2">
-                            <item.icon class="size-4 text-muted-foreground" />
-                            <span>{item.label}</span>
-                        </div>
-                        <ChevronRight class="size-4 text-muted-foreground" />
-                    </button>
-                {/each}
-            </div>
-        </PopoverContent>
-    </Popover>
+{#if menuActions.length > 0}
+    <Select
+        bind:value={selectedValue}
+        triggerLabel="Menu"
+        items={menuActions}
+        hideSelectionMarker
+        itemsAsLinks
+        onValueChange={handleValueChange}
+        class="nav-button w-[100px]"
+        testId="menu-trigger"
+    />
 {/if}

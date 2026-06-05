@@ -9,13 +9,14 @@
     type SearchImage = { name: string; previewUrl: string };
 
     interface Props {
-        compact?: boolean;
         canSelectAll: boolean;
+        isSelectionActive: boolean;
         isImages: boolean;
         hasEvaluationRuns: boolean;
         hasMediaWithEmbeddings: boolean;
         collectionDatasetId: string;
         onSelectAll: () => Promise<void>;
+        onDeselectAll: () => void;
         searchImage: SearchImage | undefined;
         searchPending: boolean;
         initialQueryText: string;
@@ -26,12 +27,13 @@
     }
 
     const {
-        compact = false,
         canSelectAll,
+        isSelectionActive,
         isImages,
         hasEvaluationRuns,
         hasMediaWithEmbeddings,
         onSelectAll,
+        onDeselectAll,
         searchImage,
         searchPending,
         initialQueryText,
@@ -47,12 +49,17 @@
 </script>
 
 <GridHeader>
-    {#snippet selectionControls()}
+    {#snippet selectionControls(compact)}
         {#if canSelectAll}
-            <GridHeaderSelectAllButton onclick={onSelectAll} />
+            <GridHeaderSelectAllButton
+                checked={isSelectionActive}
+                {onSelectAll}
+                {onDeselectAll}
+                {compact}
+            />
         {/if}
     {/snippet}
-    {#snippet auxControls()}
+    {#snippet auxControls(compact)}
         {#if isImages}
             <OrderBy datasetId={collectionDatasetId} />
         {/if}
@@ -62,9 +69,10 @@
                 position="bottom"
             >
                 <Button
-                    class="flex items-center space-x-1"
+                    class="h-8 gap-1.5 px-2"
                     data-testid="toggle-plot-button"
                     variant={$showEmbeddingPlot ? 'default' : 'ghost'}
+                    aria-label="Embeddings"
                     onclick={() => setShowEmbeddingPlot(!$showEmbeddingPlot)}
                 >
                     <ChartNetwork class="size-4" />
@@ -80,9 +88,10 @@
                 position="bottom"
             >
                 <Button
-                    class="flex items-center space-x-1"
+                    class="h-8 gap-1.5 px-2"
                     data-testid="toggle-evaluation-runs-button"
                     variant={$showEvaluationRuns ? 'default' : 'ghost'}
+                    aria-label="Evaluation"
                     onclick={() => setShowEvaluationRuns(!$showEvaluationRuns)}
                 >
                     <Gauge class="size-4" />

@@ -50,7 +50,7 @@ endif
 
 # Fast build: skips npm ci, nvm install, and langium generate in the frontend.
 .PHONY: build-dirty
-build-dirty: clean build-dirty-lightly_studio_view
+build-dirty: build-dirty-lightly_studio_view
 	@echo "Building a distribution package..."
 	uv build
 

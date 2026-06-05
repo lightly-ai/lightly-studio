@@ -2,10 +2,10 @@
     import { page } from '$app/state';
     import { writable, derived, get } from 'svelte/store';
     import type { ClassifierExportType } from '$lib/services/types';
-    import { Button } from '$lib/components/ui';
     import { Tooltip } from '$lib/components/ui/tooltip';
+    import { Button } from '$lib/components';
     import { Checkbox, Alert } from '$lib/components';
-    import * as Select from '$lib/components/ui/select';
+    import { Select } from '$lib/components/Select';
     import * as Dialog from '$lib/components/ui/dialog';
     import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -72,8 +72,6 @@
         [classifiersSelected, classifiers],
         ([$sel, $list]) => $sel.size > 0 && $list.length > 0
     );
-
-    const triggerContent = derived(exportType, ($type) => $type || 'Select export type');
 
     // Sort classifiers alphabetically by name
     const sortedClassifiers = derived(classifiers, ($classifiers) => {
@@ -221,11 +219,12 @@
                                         {$selectedSampleIds.size} samples selected
                                     </p>
                                     <Button
-                                        variant="default"
-                                        class="w-full"
-                                        onclick={handleNewClassifier}
+                                        icon={NetworkIcon}
+                                        buttonProps={{
+                                            onclick: handleNewClassifier,
+                                            class: 'w-full'
+                                        }}
                                     >
-                                        <NetworkIcon class="mr-2 size-4" />
                                         Create New Classifier
                                     </Button>
                                 {/if}
@@ -236,9 +235,6 @@
 
                             <!-- Load Classifier -->
                             <div class="space-y-3">
-                                <div class="flex items-center gap-2">
-                                    <h4 class="text-sm font-medium">Load Existing Classifier</h4>
-                                </div>
                                 <div class="relative">
                                     <input
                                         title="Load Classifier"
@@ -247,8 +243,7 @@
                                         class="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                                         onchange={handleLoadClassifier}
                                     />
-                                    <Button variant="outline" class="w-full">
-                                        <Upload class="mr-2 size-4" />
+                                    <Button icon={Upload} buttonProps={{ class: 'w-full' }}>
                                         Load Classifier (.pkl)
                                     </Button>
                                 </div>
@@ -288,32 +283,36 @@
                                         </div>
                                         <div class="flex items-center gap-1">
                                             <Button
+                                                icon={Pencil}
                                                 variant="ghost"
-                                                size="sm"
-                                                title="Edit classifier"
-                                                onclick={() => {
-                                                    shouldRestoreMenu = true;
-                                                    startRefinement(
-                                                        'existing',
-                                                        classifier.classifier_id,
-                                                        classifier.classifier_name,
-                                                        classifier.class_list,
-                                                        collectionId
-                                                    );
-                                                    closeClassifiersMenu();
+                                                ariaLabel="Edit classifier"
+                                                buttonProps={{
+                                                    size: 'sm',
+                                                    title: 'Edit classifier',
+                                                    onclick: () => {
+                                                        shouldRestoreMenu = true;
+                                                        startRefinement(
+                                                            'existing',
+                                                            classifier.classifier_id,
+                                                            classifier.classifier_name,
+                                                            classifier.class_list,
+                                                            collectionId
+                                                        );
+                                                        closeClassifiersMenu();
+                                                    }
                                                 }}
-                                            >
-                                                <Pencil class="size-4" />
-                                            </Button>
+                                            />
                                             <Button
+                                                icon={Download}
                                                 variant="ghost"
-                                                size="sm"
-                                                title="Download classifier"
-                                                onclick={() =>
-                                                    handleDownload(classifier.classifier_id)}
-                                            >
-                                                <Download class="size-4" />
-                                            </Button>
+                                                ariaLabel="Download classifier"
+                                                buttonProps={{
+                                                    size: 'sm',
+                                                    title: 'Download classifier',
+                                                    onclick: () =>
+                                                        handleDownload(classifier.classifier_id)
+                                                }}
+                                            />
                                         </div>
                                     </div>
                                 {/each}
@@ -347,10 +346,11 @@
                                             </Tooltip>
                                         </div>
                                         <Button
-                                            variant="default"
-                                            class="w-full"
-                                            disabled={!$isApplyButtonEnabled}
-                                            onclick={runClassifier}
+                                            buttonProps={{
+                                                onclick: runClassifier,
+                                                disabled: !$isApplyButtonEnabled,
+                                                class: 'w-full'
+                                            }}
                                         >
                                             {#if $isLoading}
                                                 <Loader2 class="mr-2 size-4 animate-spin" />
@@ -404,24 +404,18 @@
                     <label for="exportType" class="text-sm font-medium"
                         >Select the export type for the classifier.</label
                     >
-                    <Select.Root type="single" name="exportType" bind:value={$exportType}>
-                        <Select.Trigger class="w-full">
-                            {$triggerContent}
-                        </Select.Trigger>
-                        <Select.Content>
-                            <Select.Group>
-                                <Select.GroupHeading>Export Types</Select.GroupHeading>
-                                {#each exportOptions as value (value)}
-                                    <Select.Item {value} label={value}>
-                                        {value}
-                                    </Select.Item>
-                                {/each}
-                            </Select.Group>
-                        </Select.Content>
-                    </Select.Root>
+                    <Select
+                        items={exportOptions.map((v) => ({ value: v, label: v }))}
+                        value={$exportType}
+                        placeholder="Select export type"
+                        class="w-full"
+                        onValueChange={(v) => exportType.set(v as typeof $exportType)}
+                    />
                 </div>
 
-                <Button class="flex-1" onclick={() => handleExportWithType()}>Export</Button>
+                <Button buttonProps={{ onclick: () => handleExportWithType(), class: 'flex-1' }}>
+                    Export
+                </Button>
             </div>
         </Dialog.Content>
     </Dialog.Portal>

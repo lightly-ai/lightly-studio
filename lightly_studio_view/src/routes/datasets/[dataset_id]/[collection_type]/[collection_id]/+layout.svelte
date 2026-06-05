@@ -304,8 +304,6 @@
     const isCollectionGrid = $derived(
         isImages || isAnnotations || isVideos || isVideoFrames || isGroups
     );
-
-    const isSidePanelOpen = $derived($activePanel !== 'none');
 </script>
 
 <div class="flex-none">
@@ -370,12 +368,13 @@
                 {#if isCollectionGrid}
                     <DatasetGridHeader
                         {canSelectAll}
+                        isSelectionActive={$selectedCount > 0}
                         {isImages}
                         {hasEvaluationRuns}
                         {hasMediaWithEmbeddings}
                         collectionDatasetId={collection.dataset_id}
-                        compact={isSidePanelOpen}
                         onSelectAll={selectAllHandle.handleSelectAll}
+                        onDeselectAll={clearSelection}
                         searchImage={$searchImage}
                         searchPending={$searchPending}
                         initialQueryText={$textEmbedding?.queryText ?? ''}
@@ -387,7 +386,7 @@
                     <Separator class="mb-4 bg-border-hard" />
                 {/if}
 
-                <div class="flex min-h-0 flex-1">
+                <div class="flex min-h-0 min-w-0 flex-1">
                     {@render children()}
                 </div>
                 {#if isCollectionGrid}
@@ -406,10 +405,10 @@
             {/snippet}
 
             {#if $activePanel === 'evaluationRuns' && hasEvaluationRuns}
-                <PaneGroup direction="horizontal" class="flex-1">
+                <PaneGroup direction="horizontal" class="min-w-0 flex-1">
                     <Pane defaultSize={65} minSize={35} class="flex">
                         <div
-                            class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2"
+                            class="relative flex min-w-0 flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2"
                         >
                             {@render mainContent()}
                         </div>
@@ -430,19 +429,20 @@
                 </PaneGroup>
             {:else if $activePanel === 'embeddingPlot' && (isImages || isVideos)}
                 <!-- When plot is shown, use PaneGroup for the main content + plot -->
-                <PaneGroup direction="horizontal" class="flex-1">
+                <PaneGroup direction="horizontal" class="min-w-0 flex-1">
                     <Pane defaultSize={50} minSize={30} class="flex">
                         <div
-                            class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4"
+                            class="relative flex min-w-0 flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4"
                         >
                             <DatasetGridHeader
                                 {canSelectAll}
+                                isSelectionActive={$selectedCount > 0}
                                 {isImages}
                                 {hasEvaluationRuns}
                                 {hasMediaWithEmbeddings}
                                 collectionDatasetId={collection.dataset_id}
-                                compact={isSidePanelOpen}
                                 onSelectAll={selectAllHandle.handleSelectAll}
+                                onDeselectAll={clearSelection}
                                 searchImage={$searchImage}
                                 searchPending={$searchPending}
                                 initialQueryText={$textEmbedding?.queryText ?? ''}
@@ -471,10 +471,10 @@
                     </Pane>
                 </PaneGroup>
             {:else if $activePanel === 'queryEditor' && isImages}
-                <PaneGroup direction="horizontal" class="flex-1">
+                <PaneGroup direction="horizontal" class="min-w-0 flex-1">
                     <Pane defaultSize={65} minSize={35} class="flex">
                         <div
-                            class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2"
+                            class="relative flex min-w-0 flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2"
                         >
                             {@render mainContent()}
                         </div>
@@ -488,7 +488,9 @@
                 </PaneGroup>
             {:else}
                 <!-- Normal layout (no side panel) -->
-                <div class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
+                <div
+                    class="relative flex min-w-0 flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2"
+                >
                     {@render mainContent()}
                 </div>
             {/if}

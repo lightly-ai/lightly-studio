@@ -2,6 +2,8 @@ import { render, screen } from '@testing-library/svelte';
 import type { ComponentProps } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
+import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
+import { getColorByLabel } from '$lib/utils';
 import SampleAnnotation from './SampleAnnotation.svelte';
 
 const BASE_ANNOTATION_FIELDS = {
@@ -101,6 +103,31 @@ describe('SampleAnnotation', () => {
         expect(screen.getByTestId('svg-annotation-text')).toHaveTextContent('person');
     });
 
+    it('appends confidence to the canvas label when confidence is set', () => {
+        render(SampleAnnotation, {
+            props: {
+                annotation: { ...createObjectDetectionAnnotation(), confidence: 0.87 },
+                imageWidth: 100,
+                showLabel: true
+            }
+        });
+
+        expect(screen.getByTestId('svg-annotation-text')).toHaveTextContent('car (0.87)');
+    });
+
+    it('does not show confidence in the canvas label when confidence is null', () => {
+        render(SampleAnnotation, {
+            props: {
+                annotation: { ...createObjectDetectionAnnotation(), confidence: null },
+                imageWidth: 100,
+                showLabel: true
+            }
+        });
+
+        expect(screen.getByTestId('svg-annotation-text')).toHaveTextContent('car');
+        expect(screen.getByTestId('svg-annotation-text')).not.toHaveTextContent('(');
+    });
+
     it('keeps object-detection label visible when bounding boxes are hidden', () => {
         render(SampleAnnotation, {
             props: {
@@ -112,6 +139,66 @@ describe('SampleAnnotation', () => {
         });
 
         expect(screen.getByTestId('svg-annotation-text')).toHaveTextContent('car');
+    });
+
+    describe('coloring by source', () => {
+        const { setSelectedCollectionIds, setCollectionIdToName } =
+            useAnnotationCollectionsFilter();
+
+        // The factory annotation belongs to 'collection-1' (named "Predictions" below)
+        // and has the label 'car'.
+        const sourceColor = getColorByLabel('Predictions', 1).color;
+        const labelColor = getColorByLabel('car', 1).color;
+
+        afterEach(() => {
+            setSelectedCollectionIds([]);
+            setCollectionIdToName({});
+        });
+
+        it('uses distinct colors for the source and the label', () => {
+            // Sanity check so the assertions below are meaningful.
+            expect(sourceColor).not.toBe(labelColor);
+        });
+
+        it('colors by the source name when colorBySource is true', () => {
+            setCollectionIdToName({ 'collection-1': 'Predictions' });
+
+            render(SampleAnnotation, {
+                props: {
+                    annotation: createObjectDetectionAnnotation(),
+                    imageWidth: 100,
+                    colorBySource: true
+                }
+            });
+
+            expect(screen.getByTestId('annotation_box')).toHaveAttribute('stroke', sourceColor);
+        });
+
+        it('colors by the label when colorBySource is false, even with multiple sources selected', () => {
+            setSelectedCollectionIds(['collection-1', 'collection-2']);
+            setCollectionIdToName({ 'collection-1': 'Predictions' });
+
+            render(SampleAnnotation, {
+                props: {
+                    annotation: createObjectDetectionAnnotation(),
+                    imageWidth: 100,
+                    colorBySource: false
+                }
+            });
+
+            expect(screen.getByTestId('annotation_box')).toHaveAttribute('stroke', labelColor);
+        });
+
+        it('falls back to the global selection rule when colorBySource is omitted', () => {
+            setSelectedCollectionIds(['collection-1', 'collection-2']);
+            setCollectionIdToName({ 'collection-1': 'Predictions' });
+
+            render(SampleAnnotation, {
+                props: { annotation: createObjectDetectionAnnotation(), imageWidth: 100 }
+            });
+
+            expect(screen.getByTestId('annotation_box')).toHaveAttribute('stroke', sourceColor);
+        });
     });
 
     describe('opacity when custom label color is absent', () => {

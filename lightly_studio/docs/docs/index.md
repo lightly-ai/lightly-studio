@@ -28,7 +28,7 @@ with an M1 chip and 16 GB of memory.
 
 ## Installation
 
-Ensure you have **Python 3.9 to 3.14**. We strongly recommend using a virtual environment.
+Ensure you have **Python 3.9 to 3.14**. We recommend **Python 3.10** for the best compatibility with plugins such as SAM autolabeling. We strongly recommend using a virtual environment.
 
 The library is OS-independent and works on Windows, Linux, and macOS.
 
@@ -70,7 +70,7 @@ directly use your own image, video, or YOLO/COCO dataset.
         dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
 
         # Indexes the dataset, creates embeddings and stores everything in the database.
-        dataset = ls.ImageDataset.create()
+        dataset = ls.ImageDataset.load_or_create()
         dataset.add_images_from_path(
             path=f"{dataset_path}/coco_subset_128_images/images",
         )
@@ -94,7 +94,7 @@ directly use your own image, video, or YOLO/COCO dataset.
         dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
 
         # Create a dataset and populate it with videos.
-        dataset = ls.VideoDataset.create()
+        dataset = ls.VideoDataset.load_or_create()
         dataset.add_videos_from_path(path=f"{dataset_path}/youtube_vis_50_videos/train/videos")
 
         # Start the UI server.
@@ -114,7 +114,7 @@ directly use your own image, video, or YOLO/COCO dataset.
         # Download the example dataset (will be skipped if it already exists)
         dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
 
-        dataset = ls.ImageDataset.create()
+        dataset = ls.ImageDataset.load_or_create()
         dataset.add_samples_from_yolo(
             data_yaml=f"{dataset_path}/road_signs_yolo/data.yaml",
         )
@@ -135,7 +135,7 @@ directly use your own image, video, or YOLO/COCO dataset.
         # Download the example dataset (will be skipped if it already exists)
         dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
 
-        dataset = ls.ImageDataset.create()
+        dataset = ls.ImageDataset.load_or_create()
         dataset.add_samples_from_coco(
             annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
             images_path=f"{dataset_path}/coco_subset_128_images/images",
@@ -219,6 +219,10 @@ directly use your own image, video, or YOLO/COCO dataset.
 -   **[Plugins](concepts_and_tools/plugins.md)**
 
     [![Plugins](https://storage.googleapis.com/lightly-public/studio/docs_cards/plugins.png)](concepts_and_tools/plugins.md)
+
+-   **[Model Evaluation](concepts_and_tools/evaluation.md)**
+
+    [![Model Evaluation](https://storage.googleapis.com/lightly-public/studio/docs_cards/model_evaluation.png)](concepts_and_tools/evaluation.md)
 
 </div>
 

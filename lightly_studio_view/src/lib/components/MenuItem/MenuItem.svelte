@@ -1,67 +1,56 @@
 <script lang="ts">
+    import { Button } from '$lib/components';
+    import { Select } from '$lib/components/Select';
+    import { goto } from '$app/navigation';
     import { cn } from '$lib/utils/shadcn';
-    import Button from '../ui/button/button.svelte';
-    import { ChevronDown } from '@lucide/svelte';
     import type { NavigationMenuItem } from '../NavigationMenu/types';
 
     const { item, siblings = [] }: { item: NavigationMenuItem; siblings?: NavigationMenuItem[] } =
         $props();
 
-    let open = $state(false);
     const hasSiblings = $derived(siblings.length > 0);
+
+    const selectItems = $derived(
+        siblings.map((sibling) => ({
+            value: sibling.id,
+            label: sibling.title,
+            icon: sibling.icon,
+            testId: `navigation-dropdown-${sibling.title.toLowerCase()}`
+        }))
+    );
+
+    let selectedValue = $state<string | undefined>(undefined);
+
+    const handleValueChange = (value: string) => {
+        const sibling = siblings.find((s) => s.id === value);
+        selectedValue = undefined;
+        if (sibling) {
+            goto(sibling.href);
+        }
+    };
 </script>
 
-<div
-    class="relative inline-block"
-    onmouseenter={() => (open = true)}
-    onmouseleave={() => (open = false)}
-    onfocusin={() => (open = true)}
-    onfocusout={() => (open = false)}
-    role={'button'}
->
+{#if hasSiblings}
+    <Select
+        bind:value={selectedValue}
+        triggerLabel={item.title}
+        icon={item.icon}
+        items={selectItems}
+        onValueChange={handleValueChange}
+        hideSelectionMarker
+        itemsAsLinks
+        class={cn(item.isSelected && 'bg-accent')}
+        testId={`navigation-menu-${item.title.toLowerCase()}`}
+    />
+{:else}
     <Button
-        variant="ghost"
-        class={cn('flex items-center justify-between', item.isSelected && 'bg-accent')}
-        href={item.href}
-        data-testid={`navigation-menu-${item.title.toLowerCase()}`}
+        icon={item.icon}
+        buttonProps={{
+            href: item.href,
+            'data-testid': `navigation-menu-${item.title.toLowerCase()}`,
+            class: cn(item.isSelected && 'bg-accent')
+        }}
     >
-        <div class="flex items-center gap-2">
-            {#if item.icon}
-                <item.icon class="size-4 shrink-0" />
-            {/if}
-            <span>{item.title}</span>
-        </div>
-
-        {#if hasSiblings}
-            <ChevronDown
-                class={cn(
-                    'size-4 shrink-0 opacity-60 transition-transform duration-200',
-                    open && 'rotate-180'
-                )}
-            />
-        {/if}
+        {item.title}
     </Button>
-
-    {#if hasSiblings && open}
-        <div class={cn('absolute z-50 min-w-[200px]', 'left-0 top-full pt-1')}>
-            <div class="w-full min-w-[200px] rounded-md border bg-popover p-1 shadow-md">
-                {#each siblings as sibling (sibling.id)}
-                    <Button
-                        variant="ghost"
-                        class={cn(
-                            'flex w-full items-center justify-start gap-2',
-                            sibling.isSelected && 'bg-accent'
-                        )}
-                        href={sibling.href}
-                        data-testid={`navigation-dropdown-${sibling.title.toLowerCase()}`}
-                    >
-                        {#if sibling.icon}
-                            <sibling.icon class="size-4 shrink-0" />
-                        {/if}
-                        <span>{sibling.title}</span>
-                    </Button>
-                {/each}
-            </div>
-        </div>
-    {/if}
-</div>
+{/if}

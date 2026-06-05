@@ -400,6 +400,49 @@ describe('useCreateSampling', () => {
         expect(computeSimilarityMetadata).not.toHaveBeenCalled();
     });
 
+    it('submit with class_balancing includes annotation source when provided', async () => {
+        vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
+        const loadTags = vi.fn().mockResolvedValue(undefined);
+        const setTagSelected = vi.fn();
+        const closeSamplingDialog = vi.fn();
+        const tagsStore = writable([]);
+
+        const { submit } = useCreateSampling({
+            tags: tagsStore,
+            setTagSelected,
+            loadTags,
+            closeSamplingDialog
+        });
+        const result = await submit({
+            collectionId: 'col-1',
+            isSimilaritySupported: true,
+            samplingStrategy: 'class_balancing',
+            nSamplesToSelect: 20,
+            samplingResultTagName: 'balanced-tag',
+            queryTagId: '',
+            balancingMode: 'uniform',
+            annotationSourceId: 'annotation-source-2',
+            samplingFilter: null
+        });
+
+        expect(result).toBe(true);
+        expect(createSampling).toHaveBeenCalledWith({
+            path: { collection_id: 'col-1' },
+            body: {
+                n_samples_to_select: 20,
+                sampling_result_tag_name: 'balanced-tag',
+                strategies: [
+                    {
+                        strategy_name: 'balance',
+                        target_distribution: 'uniform',
+                        annotation_source_id: 'annotation-source-2'
+                    }
+                ],
+                filter: undefined
+            }
+        });
+    });
+
     it('submit with class_balancing and input mode passes input as target_distribution', async () => {
         vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
         const loadTags = vi.fn().mockResolvedValue(undefined);
