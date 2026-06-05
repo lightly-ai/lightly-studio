@@ -1,11 +1,28 @@
 # LightlyStudio Enterprise
 
-**LightlyStudio Enterprise** is the multi-user, multi-dataset version of LightlyStudio.
+**LightlyStudio Enterprise** is for ML teams that want a scalable and professional data management,
+curation and annotation solution.
 
-All features of the open-source Python API work the same way once you are connected to an
-enterprise instance.
+We offer it in two deployment variants:
 
-Contact [sales@lightly.ai](mailto:sales@lightly.ai) to learn more about LightlyStudio Enterprise.
+- Hosted
+- On-premise
+
+Contact [sales@lightly.ai](mailto:sales@lightly.ai) to find the right option for your team.
+
+## A Look Inside
+
+<div class="ls-carousel" markdown>
+
+![Sign in with username, password, or SSO](https://storage.googleapis.com/lightly-public/studio/docs/enterprise_login_v1.0.0.png)
+
+![Manage multiple datasets with access control](https://storage.googleapis.com/lightly-public/studio/docs/enterprise_datasets_v1.0.0.png)
+
+![Multi-user management with roles and permissions](https://storage.googleapis.com/lightly-public/studio/docs/enterprise_user_management_v1.0.0.png)
+
+![Curate and search your data in the samples grid](https://storage.googleapis.com/lightly-public/studio/docs/enterprise_samples_grid_v1.0.0.png)
+
+</div>
 
 ## Key Differences from Open-Source
 

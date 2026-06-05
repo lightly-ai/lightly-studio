@@ -76,6 +76,9 @@ nav:
 extra_css:
   - _static/custom.css
 
+extra_javascript:
+  - _static/carousel.js
+
 plugins:
   - search
   - mkdocstrings:
