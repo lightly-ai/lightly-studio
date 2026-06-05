@@ -33,8 +33,7 @@ docs_dir: docs
 
 nav:
   - Getting Started:
-    - Getting Started:
-      - index.md
+    - index.md
   - Dataset Setup:
     - Data Types:
       - Image Dataset: dataset_setup/image_dataset.md
@@ -67,8 +66,7 @@ nav:
     - More:
       - Lightly Query Language: concepts_and_tools/lightly_query_language.md
   - About Us:
-    - About Us:
-      - about-us.md
+    - about_us/index.md
   - 🏢 Enterprise:
     - Enterprise:
       - enterprise/index.md
