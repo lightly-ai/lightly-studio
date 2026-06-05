@@ -84,7 +84,7 @@ pip install lightly-studio
       <br/><strong>Plugins</strong>
     </td>
     <td align="center">
-      <a href="https://docs.lightly.ai/studio/concepts_and_tools/model_evaluation/">
+      <a href="https://docs.lightly.ai/studio/concepts_and_tools/evaluation/">
         <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/model_evaluation.png" width="400" alt="Model Evaluation"/>
       </a>
       <br/><strong>Model Evaluation</strong>
