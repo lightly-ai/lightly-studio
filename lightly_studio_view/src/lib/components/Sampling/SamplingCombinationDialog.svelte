@@ -9,6 +9,7 @@
     import * as Dialog from '$lib/components/ui/dialog';
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
+    import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
@@ -42,6 +43,11 @@
             .map((info) => info.name)
     );
     const hasMetadataFields = $derived(metadataFieldNames.length > 0);
+
+    const annotationCollectionsQuery = $derived(useAnnotationCollections({ collectionId }));
+    const annotationSourceOptions = $derived(
+        (annotationCollectionsQuery.data ?? []).map((c) => ({ id: c.collection_id, name: c.name }))
+    );
 
     const annotationLabelsQuery = $derived(useAnnotationLabels(() => ({ collectionId })));
     const annotationLabels = $derived(
@@ -171,6 +177,7 @@
                                         {instance}
                                         tags={$tags}
                                         {annotationLabels}
+                                        {annotationSourceOptions}
                                         {metadataFieldNames}
                                         onRemove={() => removeStrategy(instance.id)}
                                         onDuplicate={() => duplicateStrategy(instance.id)}

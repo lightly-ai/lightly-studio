@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import StrategyCard from './StrategyCard.svelte';
 import type { StrategyInstance } from '$lib/hooks/useStrategyBuilder';
 
@@ -13,6 +13,10 @@ const defaultProps = {
 };
 
 describe('StrategyCard', () => {
+    beforeEach(() => {
+        Element.prototype.scrollIntoView = vi.fn();
+    });
+
     describe('header', () => {
         it('renders the strategy label', () => {
             const instance: StrategyInstance = {
@@ -199,6 +203,41 @@ describe('StrategyCard', () => {
             });
 
             expect(screen.getByText('Class Balancing')).toBeInTheDocument();
+        });
+
+        it('forwards annotationSourceOptions to the class balancing form', async () => {
+            const instance: StrategyInstance = {
+                id: 'abc',
+                type: 'class_balancing',
+                params: {
+                    annotation_source_id: '',
+                    target_distribution_mode: 'uniform',
+                    target_distribution: [],
+                    strength: 1
+                },
+                isExpanded: true
+            };
+
+            render(StrategyCard, {
+                props: {
+                    ...defaultProps,
+                    instance,
+                    annotationLabels: [],
+                    annotationSourceOptions: [
+                        { id: 'col-1', name: 'ground_truth' },
+                        { id: 'col-2', name: 'predictions' }
+                    ]
+                }
+            });
+
+            await fireEvent.keyDown(screen.getByTestId('annotation-source-trigger'), {
+                key: 'Enter'
+            });
+
+            expect(
+                await screen.findByTestId('annotation-source-option-ground_truth')
+            ).toBeInTheDocument();
+            expect(screen.getByTestId('annotation-source-option-predictions')).toBeInTheDocument();
         });
     });
 });
