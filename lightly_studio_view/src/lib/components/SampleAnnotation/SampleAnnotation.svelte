@@ -131,6 +131,7 @@
             {colorText}
             {label}
             trackId={annotation.object_track_number}
+            confidence={annotation.confidence}
         />
     {/if}
 
