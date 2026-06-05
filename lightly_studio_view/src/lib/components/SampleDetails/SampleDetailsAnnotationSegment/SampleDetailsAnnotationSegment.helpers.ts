@@ -64,6 +64,21 @@ export const areAllAnnotationsHidden = (
     annotations.every((annotation) => hiddenAnnotationIds.has(annotation.sample_id));
 
 /**
+ * Whether a source group should start expanded: when the grid filter leaves at least one of
+ * its annotations visible, or when it holds the annotation the user just created. The latter
+ * keeps a brand-new source (absent from the grid selection, so seeded hidden) from appearing
+ * collapsed right after adding the first annotation to it.
+ */
+export const isSourceGroupInitiallyOpen = (
+    annotations: AnnotationView[],
+    seededHiddenIds: Set<string>,
+    lastCreatedAnnotationId: string | null | undefined
+): boolean =>
+    !areAllAnnotationsHidden(annotations, seededHiddenIds) ||
+    (lastCreatedAnnotationId != null &&
+        annotations.some((annotation) => annotation.sample_id === lastCreatedAnnotationId));
+
+/**
  * Returns the next hidden set after toggling a source's visibility: hides all of the
  * source's annotations unless they are already all hidden, in which case it shows
  * them all. The given hidden set is not mutated.

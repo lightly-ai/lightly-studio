@@ -16,6 +16,7 @@
         areAllAnnotationsHidden,
         computeSeededHiddenIds,
         groupAnnotationsBySource,
+        isSourceGroupInitiallyOpen,
         toggleSourceVisibility
     } from './SampleDetailsAnnotationSegment.helpers';
 
@@ -232,7 +233,11 @@
                     name={group.name}
                     count={group.annotations.length}
                     {sampleId}
-                    initiallyOpen={!areAllAnnotationsHidden(group.annotations, seededHiddenIds)}
+                    initiallyOpen={isSourceGroupInitiallyOpen(
+                        group.annotations,
+                        seededHiddenIds,
+                        annotationLabelContext.lastCreatedAnnotationId
+                    )}
                     showColorMarker={colorBySource}
                     allHidden={areAllAnnotationsHidden(group.annotations, annotationsIdsToHide)}
                     onToggleVisibility={(e) => {
