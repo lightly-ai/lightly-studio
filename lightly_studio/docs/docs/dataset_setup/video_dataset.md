@@ -122,7 +122,7 @@ and segmentation mask annotations are supported. See
 
     </details>
 
-### From a Pre-Existing Dataset
+### From an Existing Dataset
 
 Once a dataset is populated, the data is stored in a database. It can be loaded later as follows
 to skip indexing and embedding it again:
