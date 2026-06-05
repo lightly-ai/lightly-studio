@@ -19,10 +19,20 @@ test('selection is cleared when switching from samples view and back', async ({
     await samplesPage.getSampleByIndex(1).click();
     expect(await samplesPage.getNumSelectedSamples()).toBe(2);
 
-    await page.getByTestId('navigation-menu-annotations').click();
+    const annotationsMenu = page.getByTestId('navigation-menu-annotations');
+    const annotationsMenuTag = await annotationsMenu.evaluate((el) => el.tagName);
+    await annotationsMenu.click();
+    if (annotationsMenuTag !== 'A') {
+        await page.getByTestId('navigation-dropdown-annotations').click();
+    }
     await expect(page.getByTestId('annotation-grid-item').first()).toBeVisible({ timeout: 10000 });
 
-    await page.getByTestId('navigation-menu-images').click();
+    const imagesMenu = page.getByTestId('navigation-menu-images');
+    const imagesMenuTag = await imagesMenu.evaluate((el) => el.tagName);
+    await imagesMenu.click();
+    if (imagesMenuTag !== 'A') {
+        await page.getByTestId('navigation-dropdown-images').click();
+    }
     await expect(samplesPage.getSamples().first()).toBeVisible({ timeout: 10000 });
     expect(await samplesPage.getNumSelectedSamples()).toBe(0);
 });

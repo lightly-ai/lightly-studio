@@ -1,6 +1,5 @@
 <script lang="ts">
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-    import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
@@ -69,8 +68,7 @@
     const { deleteAnnotation } = useDeleteAnnotation({
         collectionId
     });
-    const { addReversibleAction, updateLastAnnotationLabel, updateLastAnnotationSource } =
-        useGlobalStorage();
+    const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
 
     const {
         startPending: startCreateBoundingBoxPending,
@@ -191,10 +189,6 @@
                 selectedLabelName = result.label;
                 setAnnotationLabel(selectedLabelName);
                 updateLastAnnotationLabel(collectionId, selectedLabelName);
-                if (result.source) {
-                    setAnnotationSource(result.source);
-                    updateLastAnnotationSource(collectionId, result.source);
-                }
             }
 
             let label = labels.data?.find(
@@ -257,12 +251,8 @@
         setAnnotationId,
         setIsDrawing,
         setCurrentBoundingBox,
-        setAnnotationLabel,
-        setAnnotationSource
+        setAnnotationLabel
     } = useAnnotationLabelContext();
-
-    const annotationCollections = useAnnotationCollections({ collectionId });
-    const sourceNames = $derived(annotationCollections.data?.map((c) => c.name) ?? []);
 
     const interactionPointerEvents = $derived(shouldDisableInteraction ? 'none' : 'all');
 
@@ -372,7 +362,6 @@
 <SelectClassDialog
     bind:open={$showSelectClassDialog}
     labels={labels.data?.map((l) => l.annotation_label_name ?? '').filter(Boolean) ?? []}
-    {sourceNames}
     onConfirm={handleClassSelected}
     onCancel={handleClassDialogCancel}
 />

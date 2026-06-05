@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { cn } from '$lib/utils';
+    import { cn, formatConfidence } from '$lib/utils';
     import { page } from '$app/state';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
@@ -197,6 +197,14 @@
                                     class="flex w-full min-w-0 flex-1 flex-col gap-1 overflow-hidden"
                                 >
                                     <span class="truncate">{annotationLabelName}</span>
+                                    {#if annotation.confidence != null}
+                                        {@const formattedConfidence = formatConfidence(
+                                            annotation.confidence
+                                        )}
+                                        <span class="text-xs text-muted-foreground"
+                                            >Confidence: {formattedConfidence}</span
+                                        >
+                                    {/if}
                                 </div>
                             {/if}
                         </div>

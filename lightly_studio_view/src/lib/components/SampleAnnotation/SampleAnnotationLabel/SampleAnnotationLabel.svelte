@@ -1,13 +1,7 @@
 <script lang="ts">
-    import { getColorByLabel } from '$lib/utils';
-    const {
-        coordinates,
-        colorText,
-        label,
-        fontSize = 14,
-        isPrediction = false,
-        trackId = null
-    }: {
+    import { formatConfidence, getColorByLabel } from '$lib/utils';
+
+    interface Props {
         coordinates: [number, number];
         colorText: ReturnType<typeof getColorByLabel>;
         label: string;
@@ -15,10 +9,23 @@
         boxGap?: number;
         isPrediction?: boolean;
         trackId?: number | null;
-    } = $props();
+        confidence?: number | null;
+    }
+
+    const {
+        coordinates,
+        colorText,
+        label,
+        fontSize = 14,
+        isPrediction = false,
+        trackId = null,
+        confidence = null
+    }: Props = $props();
     const displayLabel = $derived.by(() => {
         const base = isPrediction ? `${label} (pred)` : label;
-        return trackId != null ? `${base} #${trackId}` : base;
+        const withTrack = trackId != null ? `${base} #${trackId}` : base;
+        const formattedConfidence = formatConfidence(confidence);
+        return formattedConfidence ? `${withTrack} (${formattedConfidence})` : withTrack;
     });
     const [x, y] = $derived(coordinates);
     let textElement: SVGTextElement | null = $state(null);

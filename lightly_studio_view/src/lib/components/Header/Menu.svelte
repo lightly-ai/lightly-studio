@@ -119,6 +119,8 @@
         bind:value={selectedValue}
         triggerLabel="Menu"
         items={menuActions}
+        hideSelectionMarker
+        itemsAsLinks
         onValueChange={handleValueChange}
         class="nav-button w-[100px]"
         testId="menu-trigger"
