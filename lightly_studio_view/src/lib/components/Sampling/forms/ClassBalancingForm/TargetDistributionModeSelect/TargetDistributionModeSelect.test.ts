@@ -15,7 +15,7 @@ describe('TargetDistributionModeSelect', () => {
             }
         });
 
-        expect(screen.getByTestId('class-balancing-annotation-source')).toHaveTextContent(
+        expect(screen.getByTestId('class-balancing-target-distribution')).toHaveTextContent(
             'Uniform'
         );
     });
@@ -28,16 +28,16 @@ describe('TargetDistributionModeSelect', () => {
             }
         });
 
-        await fireEvent.keyDown(screen.getByTestId('class-balancing-annotation-source'), {
+        await fireEvent.keyDown(screen.getByTestId('class-balancing-target-distribution'), {
             key: 'Enter'
         });
 
         expect(
-            await screen.findByTestId('class-balancing-annotation-source-uniform')
+            await screen.findByTestId('class-balancing-target-distribution-uniform')
         ).toBeInTheDocument();
-        expect(screen.getByTestId('class-balancing-annotation-source-input')).toBeInTheDocument();
+        expect(screen.getByTestId('class-balancing-target-distribution-input')).toBeInTheDocument();
         expect(
-            screen.getByTestId('class-balancing-annotation-source-dictionary')
+            screen.getByTestId('class-balancing-target-distribution-dictionary')
         ).toBeInTheDocument();
     });
 
@@ -51,11 +51,11 @@ describe('TargetDistributionModeSelect', () => {
             }
         });
 
-        await fireEvent.keyDown(screen.getByTestId('class-balancing-annotation-source'), {
+        await fireEvent.keyDown(screen.getByTestId('class-balancing-target-distribution'), {
             key: 'Enter'
         });
         await fireEvent.pointerUp(
-            await screen.findByTestId('class-balancing-annotation-source-input')
+            await screen.findByTestId('class-balancing-target-distribution-input')
         );
 
         expect(onUpdate).toHaveBeenCalledWith('input');
