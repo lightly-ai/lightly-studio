@@ -100,8 +100,11 @@
 
 /* Highlight the current page in the left navigation */
 .md-nav__link--active {
-  color: #0d8abf;
   position: relative;
+}
+
+.md-sidebar--primary .md-nav__link--active {
+  color: #0a6f99;
 }
 
 .md-nav__link--active::before {
