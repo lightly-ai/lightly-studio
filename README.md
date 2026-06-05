@@ -66,10 +66,12 @@ Supported features:
 
 ## 🚀 Quickstart
 
-The examples below download the required example data the first time you run them. In practice,
-you will usually start by working directly with your own data.
+LightlyStudio is a browser app that runs on your own computer. Use it in two simple steps:
 
-Get started with these workflows:
+1. Load your data into the local database with a Python script.
+2. Start the server and explore the data in your browser.
+
+Get started with one of these example workflows:
 
 <details open>
 <summary><strong>Index a folder of images for curation and labeling</strong></summary>
@@ -94,12 +96,6 @@ ls.start_gui()
 ```
 
 Run `python example_image.py` and open the printed URL in your browser.
-
-If your folders already encode labels or splits, you can turn them into tags:
-
-```python
-dataset.add_images_from_path(path="my_data/", tag_depth=1)
-```
 
 </details>
 
@@ -204,8 +200,6 @@ dataset.add_videos_from_path(path=f"{dataset_path}/youtube_vis_50_videos/train/v
 ls.start_gui()
 ```
 
-`dataset.add_videos_from_path()` also accepts cloud storage URLs such as `s3://my-bucket/videos/`
-after installing `pip install "lightly-studio[cloud-storage]"`.
 
 </details>
 
