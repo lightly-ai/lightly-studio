@@ -1,7 +1,12 @@
 <script lang="ts">
-    import { Check as CheckIcon, ChevronsUpDown as ChevronsUpDownIcon } from '@lucide/svelte';
+    import {
+        Check as CheckIcon,
+        ChevronsUpDown as ChevronsUpDownIcon,
+        Info as InfoIcon
+    } from '@lucide/svelte';
     import * as Command from '$lib/components/ui/command/index.js';
     import * as Popover from '$lib/components/ui/popover/index.js';
+    import { Tooltip } from '$lib/components/ui/tooltip';
     import ColorMarker from '$lib/components/SideMenu/ColorMarker/ColorMarker.svelte';
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
@@ -81,59 +86,80 @@
     );
 </script>
 
-<Popover.Root bind:open>
-    <Popover.Trigger>
-        {#snippet child({ props })}
-            <button
-                {...props}
-                type="button"
-                class="pointer-events-auto flex max-w-full items-center gap-1.5 whitespace-nowrap rounded-lg bg-muted/80 px-2.5 py-1.5 text-sm shadow-md backdrop-blur-sm"
-                data-testid="annotation-source-pill-trigger"
-            >
-                <span class="shrink-0 text-muted-foreground">Adding to</span>
-                <ColorMarker label={effectiveSource} />
-                <span class="min-w-0 truncate font-medium">{effectiveSource}</span>
-                <ChevronsUpDownIcon class="size-3.5 shrink-0 opacity-50" />
-            </button>
-        {/snippet}
-    </Popover.Trigger>
-    <Popover.Content class="w-[220px] p-0" side="top" align="start">
-        <Command.Root bind:value={highlightedValue}>
-            <Command.Input
-                placeholder="Search or create a source..."
-                onkeydown={handleKeyDown}
-                bind:value={inputValue}
-                data-testid="annotation-source-pill-input"
-            />
-            <Command.List class="dark:[color-scheme:dark]">
-                <Command.Group>
-                    {#each options as name (name)}
-                        <Command.Item
-                            value={name}
-                            onSelect={() => selectSource(name)}
-                            data-testid={`annotation-source-pill-option-${name}`}
-                        >
-                            <CheckIcon class={cn(effectiveSource !== name && 'text-transparent')} />
-                            <ColorMarker label={name} />
-                            <span class="min-w-0 flex-1 truncate">{name}</span>
-                        </Command.Item>
-                    {/each}
-                </Command.Group>
-                {#if canCreate}
-                    <div class="border-t">
-                        <Command.Item
-                            value="__create__"
-                            onSelect={() => selectSource(inputValue)}
-                            forceMount
-                            keywords={[]}
-                            data-testid="annotation-source-pill-create"
-                        >
-                            <span class="opacity-50">Create:</span>
-                            <span class="ml-1 font-semibold">{inputValue.trim()}</span>
-                        </Command.Item>
-                    </div>
-                {/if}
-            </Command.List>
-        </Command.Root>
-    </Popover.Content>
-</Popover.Root>
+<div
+    class="pointer-events-auto flex max-w-full items-center gap-1.5 rounded-lg bg-muted/80 px-2.5 py-1.5 text-sm shadow-md"
+>
+    <Popover.Root bind:open>
+        <Popover.Trigger>
+            {#snippet child({ props })}
+                <button
+                    {...props}
+                    type="button"
+                    class="flex min-w-0 items-center gap-1.5 whitespace-nowrap"
+                    data-testid="annotation-source-pill-trigger"
+                >
+                    <span class="shrink-0 text-muted-foreground">Adding to</span>
+                    <ColorMarker label={effectiveSource} />
+                    <span class="min-w-0 truncate font-medium">{effectiveSource}</span>
+                    <ChevronsUpDownIcon class="size-3.5 shrink-0 opacity-50" />
+                </button>
+            {/snippet}
+        </Popover.Trigger>
+        <Popover.Content class="w-[220px] p-0" side="top" align="start">
+            <Command.Root bind:value={highlightedValue}>
+                <Command.Input
+                    placeholder="Search or create a source..."
+                    onkeydown={handleKeyDown}
+                    bind:value={inputValue}
+                    data-testid="annotation-source-pill-input"
+                />
+                <Command.List class="dark:[color-scheme:dark]">
+                    <Command.Group>
+                        {#each options as name (name)}
+                            <Command.Item
+                                value={name}
+                                onSelect={() => selectSource(name)}
+                                data-testid={`annotation-source-pill-option-${name}`}
+                            >
+                                <CheckIcon
+                                    class={cn(effectiveSource !== name && 'text-transparent')}
+                                />
+                                <ColorMarker label={name} />
+                                <span class="min-w-0 flex-1 truncate">{name}</span>
+                            </Command.Item>
+                        {/each}
+                    </Command.Group>
+                    {#if canCreate}
+                        <div class="border-t">
+                            <Command.Item
+                                value="__create__"
+                                onSelect={() => selectSource(inputValue)}
+                                forceMount
+                                keywords={[]}
+                                data-testid="annotation-source-pill-create"
+                            >
+                                <span class="opacity-50">Create:</span>
+                                <span class="ml-1 font-semibold">{inputValue.trim()}</span>
+                            </Command.Item>
+                        </div>
+                    {/if}
+                </Command.List>
+            </Command.Root>
+        </Popover.Content>
+    </Popover.Root>
+
+    <div class="h-4 w-px shrink-0 bg-white/15"></div>
+
+    <Tooltip
+        content="The annotation will be associated with the selected annotation source."
+        position="top"
+        triggerClass="flex shrink-0 items-center"
+        ariaLabel="Annotation source help"
+    >
+        <InfoIcon
+            class="size-3.5 text-muted-foreground"
+            aria-hidden="true"
+            data-testid="annotation-source-pill-info"
+        />
+    </Tooltip>
+</div>
