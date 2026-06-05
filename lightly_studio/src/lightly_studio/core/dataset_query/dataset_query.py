@@ -296,12 +296,14 @@ class DatasetQuery(Generic[T]):
         # Apply ordering
         if self.order_by_expressions:
             for order_by in self.order_by_expressions:
-                query = order_by.apply(query)
+                updated, _ = order_by.apply(query)
+                query = cast(SelectOfScalar[Table], updated)
         elif self.dataset.sample_type == SampleType.IMAGE:
             # TODO(lukas 1/2026): provide default order for other sample types
             # Order by ImageSampleField.created_at by default.
             default_order_by = OrderByField(ImageSampleField.created_at)
-            query = default_order_by.apply(query)
+            updated, _ = default_order_by.apply(query)
+            query = cast(SelectOfScalar[Table], updated)
 
         # Apply slicing if present
         if self._slice is not None:

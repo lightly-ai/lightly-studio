@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import cast
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -10,14 +11,11 @@ from sqlalchemy import ColumnElement
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.orm.interfaces import LoaderOption
 from sqlmodel import Session, col, func, select
+from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
-from lightly_studio.core.dataset_query.order_by import (
-    OrderByExpression,
-    OrderByField,
-    OrderByMetadataField,
-)
+from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
@@ -30,18 +28,10 @@ from lightly_studio.resolvers.similarity_utils import (
 
 
 def _file_path_abs_in_order_by(order_by: list[OrderByExpression]) -> bool:
+    """Return True if ``file_path_abs`` is already used as a sort key."""
     return any(
         isinstance(expr, OrderByField) and expr.field is ImageSampleField.file_path_abs
         for expr in order_by
-    )
-
-
-def _has_metadata_join(filters: ImageFilter | None) -> bool:
-    """Return True if filters already join SampleMetadataTable."""
-    return (
-        filters is not None
-        and filters.sample_filter is not None
-        and bool(filters.sample_filter.metadata_filters)
     )
 
 
@@ -215,12 +205,11 @@ def _get_all_without_similarity(  # noqa: PLR0913
         total_count_query = total_count_query.where(col(ImageTable.sample_id).in_(sample_ids))
 
     if order_by:
-        metadata_already_joined = _has_metadata_join(filters)
+        # Each metadata/evaluation-metric expression joins via its own per-instance alias,
+        # so applying every expression cannot collide with joins added by filters.
         for expr in order_by:
-            if metadata_already_joined and isinstance(expr, OrderByMetadataField):
-                samples_query = samples_query.order_by(expr.to_column_element())
-            else:
-                samples_query = expr.apply(samples_query)
+            updated, _ = expr.apply(samples_query)
+            samples_query = cast(SelectOfScalar[ImageTable], updated)
         if not _file_path_abs_in_order_by(order_by):
             file_path_col = col(ImageTable.file_path_abs)
             tiebreaker = file_path_col.asc() if order_by[0].ascending else file_path_col.desc()
