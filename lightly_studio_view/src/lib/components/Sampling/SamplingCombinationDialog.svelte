@@ -1,6 +1,5 @@
 <script lang="ts">
     import { page } from '$app/state';
-    import type { SamplingRequest } from '$lib/api/lightly_studio_local/types.gen';
     import { Info } from '@lucide/svelte';
     import AddStrategyButton from '$lib/components/Sampling/AddStrategyButton.svelte';
     import StrategyCard from '$lib/components/Sampling/StrategyCard/StrategyCard.svelte';
@@ -9,128 +8,48 @@
     import * as Dialog from '$lib/components/ui/dialog';
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
-    import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
-    import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import { useSamplingDialog } from '$lib/hooks/useSamplingDialog/useSamplingDialog';
-    import { isStrategyInstanceValid, useStrategyBuilder } from '$lib/hooks/useStrategyBuilder';
-    import { useSubmitCombinationSelection } from '$lib/hooks/useSubmitCombinationSelection/useSubmitCombinationSelection';
-    import { useTags } from '$lib/hooks/useTags/useTags';
-    import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+    import { useSamplingCombinationDialog } from '$lib/hooks/useSamplingCombinationDialog/useSamplingCombinationDialog';
 
     const collectionId = $derived(page.params.collection_id!);
-
-    const { loadTags, tags, setTagSelected } = $derived(
-        useTags({ collection_id: collectionId, kind: ['sample'] })
-    );
-
-    const { isSamplingDialogOpen, openSamplingDialog, closeSamplingDialog } = useSamplingDialog();
-
     const isVideoCollection = $derived(
         page.data.collection?.sample_type === 'video' ||
             page.data.collection?.sample_type === 'video_frame'
     );
 
-    const { imageFilter } = useImageFilters();
-    const { videoFilter } = useVideoFilters();
-    const { filteredSampleCount } = useGlobalStorage();
-    const { metadataInfo } = $derived(useMetadataFilters(collectionId));
-    const metadataFieldNames = $derived(
-        $metadataInfo
-            .filter((info) => info.type === 'integer' || info.type === 'float')
-            .map((info) => info.name)
-    );
-    const hasMetadataFields = $derived(metadataFieldNames.length > 0);
+    const { isSamplingDialogOpen, openSamplingDialog, closeSamplingDialog } = useSamplingDialog();
 
-    const annotationCollectionsQuery = $derived(useAnnotationCollections({ collectionId }));
-    const annotationSourceOptions = $derived(
-        (annotationCollectionsQuery.data ?? []).map((c) => ({ id: c.collection_id, name: c.name }))
-    );
+    const {
+        tags,
+        instances,
+        nSamplesToSelect,
+        selectionResultTagName,
+        filteredSampleCount,
+        metadataFieldNames,
+        hasMetadataFields,
+        noSamples,
+        notEnoughSamples,
+        sampleCountLabel,
+        isFormValid,
+        isSubmitting,
+        loadingMessage,
+        addStrategy,
+        duplicateStrategy,
+        removeStrategy,
+        updateParams,
+        toggleExpand,
+        handleFormSubmit
+    } = useSamplingCombinationDialog({
+        getCollectionId: () => collectionId,
+        getIsVideoCollection: () => isVideoCollection
+    });
 
     const annotationLabelsQuery = $derived(useAnnotationLabels(() => ({ collectionId })));
     const annotationLabels = $derived(
         (annotationLabelsQuery.data ?? []).map((label) => label.annotation_label_name)
     );
     const hasAnnotationLabels = $derived(annotationLabels.length > 0);
-
-    const currentFilter = $derived(isVideoCollection ? $videoFilter : $imageFilter);
-    const selectionFilter = $derived<SamplingRequest['filter']>(
-        isVideoCollection
-            ? currentFilter
-                ? { ...currentFilter, filter_type: 'video' }
-                : null
-            : currentFilter
-              ? { ...currentFilter, filter_type: 'image' }
-              : null
-    );
-
-    const {
-        instances,
-        addStrategy,
-        duplicateStrategy,
-        removeStrategy,
-        resetStrategies,
-        toggleExpand,
-        updateParams
-    } = useStrategyBuilder();
-
-    let nSamplesToSelect = $state<number>(10);
-    let selectionResultTagName = $state('');
-
-    const { isSubmitting, loadingMessage, submit } = useSubmitCombinationSelection({
-        get tags() {
-            return tags;
-        },
-        get setTagSelected() {
-            return setTagSelected;
-        },
-        get loadTags() {
-            return loadTags;
-        },
-        closeSelectionDialog: closeSamplingDialog
-    });
-
-    const isFormValid = $derived(
-        $instances.length > 0 &&
-            $instances.every((instance) => isStrategyInstanceValid(instance)) &&
-            nSamplesToSelect > 0 &&
-            selectionResultTagName.trim().length > 0
-    );
-
-    const noSamples = $derived($filteredSampleCount === 0);
-    const notEnoughSamples = $derived(
-        $filteredSampleCount > 0 && nSamplesToSelect > $filteredSampleCount
-    );
-
-    const sampleCountLabel = $derived(
-        `${$filteredSampleCount} ${$filteredSampleCount === 1 ? 'sample' : 'samples'}`
-    );
-
-    function handleFormSubmit(event: Event) {
-        event.preventDefault();
-        if (!isFormValid || notEnoughSamples || noSamples) return;
-        void submitSelection();
-    }
-
-    function resetForm() {
-        resetStrategies();
-        nSamplesToSelect = 10;
-        selectionResultTagName = '';
-    }
-
-    async function submitSelection() {
-        const success = await submit({
-            collectionId,
-            isVideoCollection,
-            instances: $instances,
-            nSamplesToSelect,
-            selectionResultTagName,
-            selectionFilter
-        });
-        if (success) resetForm();
-    }
 </script>
 
 <Dialog.Root
@@ -145,7 +64,7 @@
                     <Dialog.Title class="text-foreground">Create Sampling</Dialog.Title>
                     <Dialog.Description class="text-foreground">
                         Sample from the <strong class="font-semibold text-primary"
-                            >{sampleCountLabel}</strong
+                            >{$sampleCountLabel}</strong
                         > currently matching your filters.
                     </Dialog.Description>
                 </Dialog.Header>
@@ -159,7 +78,7 @@
                                     : $tags.length === 0
                                       ? 'No sample tags in this collection. Create a sample tag first to use as the similarity reference.'
                                       : undefined}
-                                metadataWeightingDisabledReason={!hasMetadataFields
+                                metadataWeightingDisabledReason={!$hasMetadataFields
                                     ? 'No numeric metadata fields found. Index metadata on your samples to enable this strategy.'
                                     : undefined}
                                 classBalancingDisabledReason={!hasAnnotationLabels
@@ -177,8 +96,7 @@
                                         {instance}
                                         tags={$tags}
                                         {annotationLabels}
-                                        {annotationSourceOptions}
-                                        {metadataFieldNames}
+                                        metadataFieldNames={$metadataFieldNames}
                                         onRemove={() => removeStrategy(instance.id)}
                                         onDuplicate={() => duplicateStrategy(instance.id)}
                                         onUpdate={(params) => updateParams(instance.id, params)}
@@ -205,7 +123,7 @@
                             <Input
                                 id="n-samples"
                                 type="number"
-                                bind:value={nSamplesToSelect}
+                                bind:value={$nSamplesToSelect}
                                 min="1"
                                 placeholder="Enter number of samples"
                                 required
@@ -223,14 +141,14 @@
                             <Input
                                 id="tag-name"
                                 type="text"
-                                bind:value={selectionResultTagName}
+                                bind:value={$selectionResultTagName}
                                 placeholder="Enter a tag for the sampled subset"
                                 required
                                 data-testid="selection-dialog-tag-name-input"
                             />
                         </div>
 
-                        {#if noSamples}
+                        {#if $noSamples}
                             <p
                                 class="text-sm text-destructive"
                                 data-testid="selection-dialog-no-samples-warning"
@@ -239,13 +157,13 @@
                             </p>
                         {/if}
 
-                        {#if notEnoughSamples}
+                        {#if $notEnoughSamples}
                             <p
                                 class="text-sm text-destructive"
                                 data-testid="selection-dialog-not-enough-samples-warning"
                             >
                                 Only {$filteredSampleCount} samples are available, but
-                                {nSamplesToSelect} were requested.
+                                {$nSamplesToSelect} were requested.
                             </p>
                         {/if}
                     </div>
@@ -272,7 +190,7 @@
                     </Button>
                     <Button
                         type="submit"
-                        disabled={!isFormValid || $isSubmitting || notEnoughSamples || noSamples}
+                        disabled={!$isFormValid || $isSubmitting || $notEnoughSamples || $noSamples}
                         data-testid="selection-dialog-submit"
                     >
                         {$isSubmitting ? $loadingMessage || 'Creating...' : 'Create Selection'}

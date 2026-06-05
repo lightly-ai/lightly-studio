@@ -69,18 +69,9 @@ vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
     })
 }));
 
-let annotationLabelsData: { annotation_label_name: string }[];
-let annotationCollectionsData: { collection_id: string; name: string }[];
-
 vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
     useAnnotationLabels: () => ({
-        data: annotationLabelsData
-    })
-}));
-
-vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
-    useAnnotationCollections: () => ({
-        data: annotationCollectionsData
+        data: []
     })
 }));
 
@@ -109,8 +100,6 @@ describe('SamplingCombinationDialog', () => {
         loadingMessageStore = writable('');
         tagsStore = writable([{ tag_id: 'tag-1', name: 'Query Tag', kind: 'sample' as const }]);
         submitMock.mockResolvedValue(undefined);
-        annotationLabelsData = [];
-        annotationCollectionsData = [];
     });
 
     it('shows the plural sample count in the header when filteredSampleCount is greater than 1', () => {
@@ -370,26 +359,6 @@ describe('SamplingCombinationDialog', () => {
         await fireEvent.pointerUp(await screen.findByTestId('add-strategy-metadata_weighting'));
 
         expect(await screen.findByTestId('strategy-metadata-key-input')).toBeInTheDocument();
-    });
-
-    it('passes annotation source options to the class balancing form', async () => {
-        annotationLabelsData = [{ annotation_label_name: 'cat' }];
-        annotationCollectionsData = [
-            { collection_id: 'col-1', name: 'ground_truth' },
-            { collection_id: 'col-2', name: 'predictions' }
-        ];
-        filteredSampleCountStore.set(100);
-
-        render(SamplingCombinationDialog);
-
-        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
-        await fireEvent.pointerUp(await screen.findByTestId('add-strategy-class_balancing'));
-        await fireEvent.keyDown(screen.getByTestId('annotation-source-trigger'), { key: 'Enter' });
-
-        expect(
-            await screen.findByTestId('annotation-source-option-ground_truth')
-        ).toBeInTheDocument();
-        expect(screen.getByTestId('annotation-source-option-predictions')).toBeInTheDocument();
     });
 
     it('submit button remains disabled when metadata weighting strategy has no key selected', async () => {
