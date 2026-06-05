@@ -186,6 +186,7 @@ describe('StrategyCard', () => {
                 id: 'abc',
                 type: 'class_balancing',
                 params: {
+                    annotation_source_id: '',
                     target_distribution_mode: 'uniform',
                     target_distribution: [],
                     strength: 1

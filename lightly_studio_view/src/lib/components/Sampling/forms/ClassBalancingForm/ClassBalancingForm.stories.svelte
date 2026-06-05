@@ -9,7 +9,8 @@
         tags: ['autodocs'],
         argTypes: {
             params: { control: 'object' },
-            annotationLabels: { control: 'object' }
+            annotationLabels: { control: 'object' },
+            annotationSourceOptions: { control: 'object' }
         }
     });
 </script>
@@ -17,8 +18,17 @@
 <Story
     name="Uniform"
     args={{
-        params: { target_distribution_mode: 'uniform', target_distribution: [], strength: 1 },
+        params: {
+            annotation_source_id: '',
+            target_distribution_mode: 'uniform',
+            target_distribution: [],
+            strength: 1
+        },
         annotationLabels: ['cat', 'dog', 'bird'],
+        annotationSourceOptions: [
+            { id: 'source-1', name: 'Ground Truth' },
+            { id: 'source-2', name: 'Predictions v1' }
+        ],
         onUpdate: fn()
     }}
 />
@@ -26,8 +36,17 @@
 <Story
     name="Input"
     args={{
-        params: { target_distribution_mode: 'input', target_distribution: [], strength: 1 },
+        params: {
+            annotation_source_id: '',
+            target_distribution_mode: 'input',
+            target_distribution: [],
+            strength: 1
+        },
         annotationLabels: ['cat', 'dog', 'bird'],
+        annotationSourceOptions: [
+            { id: 'source-1', name: 'Ground Truth' },
+            { id: 'source-2', name: 'Predictions v1' }
+        ],
         onUpdate: fn()
     }}
 />
@@ -35,8 +54,17 @@
 <Story
     name="DictionaryEmpty"
     args={{
-        params: { target_distribution_mode: 'dictionary', target_distribution: [], strength: 1 },
+        params: {
+            annotation_source_id: '',
+            target_distribution_mode: 'dictionary',
+            target_distribution: [],
+            strength: 1
+        },
         annotationLabels: ['cat', 'dog', 'bird'],
+        annotationSourceOptions: [
+            { id: 'source-1', name: 'Ground Truth' },
+            { id: 'source-2', name: 'Predictions v1' }
+        ],
         onUpdate: fn()
     }}
 />
@@ -45,6 +73,7 @@
     name="DictionaryWithRows"
     args={{
         params: {
+            annotation_source_id: '',
             target_distribution_mode: 'dictionary',
             target_distribution: [
                 { class_name: 'cat', weight: 0.2 },
@@ -53,6 +82,10 @@
             strength: 1
         },
         annotationLabels: ['cat', 'dog', 'bird'],
+        annotationSourceOptions: [
+            { id: 'source-1', name: 'Ground Truth' },
+            { id: 'source-2', name: 'Predictions v1' }
+        ],
         onUpdate: fn()
     }}
 />

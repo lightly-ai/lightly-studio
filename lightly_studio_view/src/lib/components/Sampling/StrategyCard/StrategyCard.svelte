@@ -25,6 +25,7 @@
         instance: StrategyInstance;
         tags: StrategySummaryTag[];
         annotationLabels: string[];
+        annotationSourceOptions?: { id: string; name: string }[];
         metadataFieldNames?: string[];
         onRemove: () => void;
         onDuplicate: () => void;
@@ -35,6 +36,7 @@
         instance,
         tags,
         annotationLabels,
+        annotationSourceOptions = [],
         metadataFieldNames = [],
         onRemove,
         onDuplicate,
@@ -127,6 +129,7 @@
                         <ClassBalancingForm
                             params={instance.params as ClassBalancingParams}
                             {annotationLabels}
+                            {annotationSourceOptions}
                             {onUpdate}
                         />
                     {/if}
