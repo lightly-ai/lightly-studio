@@ -98,6 +98,24 @@
     display: none !important;
 }
 
+/* Highlight the current page in the left navigation */
+.md-nav__link--active {
+  color: #0d8abf;
+}
+
+.md-nav__link--active::before {
+  align-self: flex-start;
+  background-color: currentcolor;
+  border-radius: 50%;
+  content: "";
+  display: block;
+  flex-shrink: 0;
+  height: 0.28rem;
+  margin-top: 0.65em;
+  transform: translateY(-50%);
+  width: 0.28rem;
+}
+
 
 /* ===== Multi-row tab overrides ===== */
 
