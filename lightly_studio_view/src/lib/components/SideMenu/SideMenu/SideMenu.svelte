@@ -6,7 +6,10 @@
 
     interface SideMenuProps {
         items: MenuItemType[];
+        /** Uncontrolled: seeds the selection once on mount. */
         initialSelectedItemsIds?: string[];
+        /** Controlled: when provided, the checkboxes track this value reactively. */
+        selectedItemsIds?: string[];
         onChangeSelectedItems: (selectedItemsIds: string[]) => void;
         containerProps?: HTMLAttributes<HTMLDivElement>;
         showColorMarker?: boolean;
@@ -17,20 +20,25 @@
     let {
         items,
         initialSelectedItemsIds,
+        selectedItemsIds,
         onChangeSelectedItems,
         containerProps,
         showColorMarker,
         enableColorPicker
     }: SideMenuProps = $props();
-    let selectedItemsIds = $state(initialSelectedItemsIds ?? []);
+
+    let internalSelectedItemsIds = $state(initialSelectedItemsIds ?? []);
+    const selected = $derived(selectedItemsIds ?? internalSelectedItemsIds);
 
     const handleCheckedChange = (id: string) => {
-        if (selectedItemsIds.includes(id)) {
-            selectedItemsIds = selectedItemsIds.filter((itemId) => itemId !== id);
-        } else {
-            selectedItemsIds = [...selectedItemsIds, id];
+        const next = selected.includes(id)
+            ? selected.filter((itemId) => itemId !== id)
+            : [...selected, id];
+        // Only own the state when uncontrolled; otherwise the parent drives `selected`.
+        if (selectedItemsIds === undefined) {
+            internalSelectedItemsIds = next;
         }
-        onChangeSelectedItems(selectedItemsIds);
+        onChangeSelectedItems(next);
     };
 </script>
 
@@ -40,7 +48,7 @@
             {name}
             {showColorMarker}
             {enableColorPicker}
-            checked={selectedItemsIds.includes(id)}
+            checked={selected.includes(id)}
             onCheckedChange={() => handleCheckedChange(id)}
         />
     {/each}

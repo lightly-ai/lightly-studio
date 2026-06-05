@@ -1,18 +1,26 @@
 <script lang="ts">
     import type { Component, Snippet } from 'svelte';
+    import { Select as SelectBits, type WithoutChild } from 'bits-ui';
     import type { IconProps } from '@lucide/svelte';
     import * as SelectPrimitive from '$lib/components/ui/select';
     import { cn } from '$lib/utils/shadcn';
+
+    type SelectTriggerProps = Omit<
+        WithoutChild<SelectBits.TriggerProps>,
+        'class' | 'data-testid' | 'ref'
+    >;
 
     export interface SelectItem {
         value: string;
         label: string;
         /** Optional Lucide icon rendered before the label, in both the trigger and dropdown. */
         icon?: Component<IconProps>;
+        /** Disable this item in the dropdown. */
+        disabled?: boolean;
         testId?: string;
     }
 
-    export type SelectSize = 'sm' | 'md' | 'lg';
+    export type SelectSize = 'xs' | 'sm' | 'md' | 'lg';
 
     interface Props {
         /** List of items to render. Mutually exclusive with `children` slot. */
@@ -21,6 +29,10 @@
         value?: string;
         /** Placeholder text shown when nothing is selected. */
         placeholder?: string;
+        /** Fixed label shown in the trigger instead of the selected value's label. */
+        triggerLabel?: string;
+        /** Icon rendered in the trigger, irrespective of the current selection. */
+        icon?: Component<IconProps>;
         /** Allow clearing the current selection. */
         allowDeselect?: boolean;
         /** Whether the select is disabled. */
@@ -33,8 +45,12 @@
         class?: string;
         /** `data-testid` for the trigger element. */
         testId?: string;
+        /** Additional attributes forwarded to the trigger button (e.g. `id` for `<Label for>`). */
+        selectProps?: SelectTriggerProps;
         /** Called when the selected value changes. */
         onValueChange?: (value: string) => void;
+        /** Called when the dropdown open state changes. */
+        onOpenChange?: (open: boolean) => void;
         /**
          * Advanced slot: provide custom `Select.Item` / `Select.Group` markup.
          * When provided, `items` prop is ignored.
@@ -46,29 +62,36 @@
         items,
         value = $bindable(undefined),
         placeholder = 'Select…',
+        triggerLabel,
+        icon: TriggerIconProp,
         allowDeselect = false,
         disabled = false,
         open = $bindable(false),
         size = 'md',
         class: className,
         testId,
+        selectProps,
         onValueChange,
+        onOpenChange,
         children
     }: Props = $props();
 
     const triggerSizeClass: Record<SelectSize, string> = {
+        xs: 'h-8 text-xs',
         sm: 'h-9 text-xs',
         md: 'h-10 text-sm',
         lg: 'h-11 text-base'
     };
 
     const itemSizeClass: Record<SelectSize, string> = {
+        xs: 'py-1 text-xs',
         sm: 'py-1 text-xs',
         md: 'py-1.5 text-sm',
         lg: 'py-2 text-base'
     };
 
     const iconSizeClass: Record<SelectSize, string> = {
+        xs: 'size-3.5',
         sm: 'size-3.5',
         md: 'size-4',
         lg: 'size-5'
@@ -91,8 +114,10 @@
     {disabled}
     bind:open
     onValueChange={handleValueChange}
+    {onOpenChange}
 >
     <SelectPrimitive.Trigger
+        {...selectProps}
         data-testid={testId}
         class={cn(
             // Ghost-style: no border, no background, height matches the Button primitive
@@ -106,11 +131,13 @@
         )}
     >
         {@const selectedItem = findItem(value)}
-        {#if selectedItem?.icon}
-            {@const TriggerIcon = selectedItem.icon}
+        {@const TriggerIcon = TriggerIconProp ?? selectedItem?.icon}
+        {#if TriggerIcon}
             <TriggerIcon class={cn(iconSizeClass[size], 'shrink-0')} />
         {/if}
-        <span class="truncate">{value ? (selectedItem?.label ?? value) : placeholder}</span>
+        <span class="truncate"
+            >{triggerLabel ?? (value ? (selectedItem?.label ?? value) : placeholder)}</span
+        >
     </SelectPrimitive.Trigger>
 
     <SelectPrimitive.Content>
@@ -121,6 +148,7 @@
                 <SelectPrimitive.Item
                     value={item.value}
                     label={item.label}
+                    disabled={item.disabled}
                     data-testid={item.testId}
                     class={cn('gap-2', itemSizeClass[size])}
                 >

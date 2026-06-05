@@ -76,6 +76,14 @@ describe('Select', () => {
         );
     });
 
+    it('forwards selectProps attributes (e.g. id) to the trigger element', () => {
+        const { container } = render(Select, {
+            props: { items: ITEMS, selectProps: { id: 'metric-trigger' } }
+        });
+
+        expect(container.querySelector(triggerSelector)).toHaveAttribute('id', 'metric-trigger');
+    });
+
     it('disables the trigger when disabled is true', () => {
         const { container } = render(Select, {
             props: { items: ITEMS, disabled: true }

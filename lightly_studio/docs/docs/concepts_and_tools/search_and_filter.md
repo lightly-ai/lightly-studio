@@ -32,7 +32,7 @@ The left sidebar combines the most common ways to narrow down the visible sample
 - `Dimensions`: Use `Width` and `Height` to constrain the visible item size.
 - `Metadata`: If numeric metadata fields are available, they appear as additional sliders in the same area.
 
-![Tag filters](https://storage.googleapis.com/lightly-public/studio/search_filter_tags_v3.png){ width="100%"}
+![Tag filters](https://storage.googleapis.com/lightly-public/studio/docs/search_filter_tags_v1.0.0.png){ width="100%"}
 
 
 For videos, the sidebar adds `Duration`. If the videos in the current view contain varying frame rates, it also shows `FPS`.
@@ -46,7 +46,7 @@ For videos, the sidebar adds `Duration`. If the videos in the current view conta
 Your dataset can be filtered by a custom query written in an SQL-like language. Open the
 query editor by clicking the `Add query filter` button in the left sidebar.
 
-![Query filter](https://storage.googleapis.com/lightly-public/studio/search_filter_query_v1.png){ width="100%" }
+![Query filter](https://storage.googleapis.com/lightly-public/studio/docs/search_filter_query_v1.0.0.png){ width="100%" }
 
 The language supports filtering by image fields such as dimensions or file name, tags, annotations,
 as well as logical combinations of these. For a full reference, see the

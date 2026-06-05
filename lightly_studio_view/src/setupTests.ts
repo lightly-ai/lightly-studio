@@ -20,6 +20,28 @@ vi.mock('$env/static/public', () => ({
     PUBLIC_LIGHTLY_STUDIO_API_URL: 'http://mock-url.com/api'
 }));
 
+// jsdom has no ResizeObserver. Track instances so tests can trigger the callback manually
+// (jsdom reports scrollWidth/clientWidth as 0, so observers never fire on their own).
+class MockResizeObserver implements ResizeObserver {
+    static instances: MockResizeObserver[] = [];
+    private readonly callback: ResizeObserverCallback;
+
+    constructor(callback: ResizeObserverCallback) {
+        this.callback = callback;
+        MockResizeObserver.instances.push(this);
+    }
+
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+
+    trigger(): void {
+        this.callback([], this);
+    }
+}
+
+vi.stubGlobal('ResizeObserver', MockResizeObserver);
+
 Object.defineProperty(Element.prototype, 'animate', {
     writable: true,
     value: vi.fn().mockImplementation(() => {
