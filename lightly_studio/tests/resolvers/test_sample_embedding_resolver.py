@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+import numpy as np
 from sqlmodel import Session
 
 from lightly_studio.models.sample_embedding import (
@@ -66,7 +67,7 @@ def test_create_many_sample_embeddings(db_session: Session) -> None:
         SampleEmbeddingCreate(
             sample_id=sample.sample_id,
             embedding_model_id=embedding_model_id,
-            embedding=[float(i), float(i + 1), float(i + 2)],
+            embedding=np.array([float(i), float(i + 1), float(i + 2)], dtype=np.float32),
         )
         for i, sample in enumerate(samples)
     ]
@@ -146,7 +147,7 @@ def test_get_sample_embeddings_by_sample_ids(db_session: Session) -> None:
         SampleEmbeddingCreate(
             sample_id=sample.sample_id,
             embedding_model_id=embedding_model_id,
-            embedding=[float(i), float(i + 1), float(i + 2)],
+            embedding=np.array([float(i), float(i + 1), float(i + 2)], dtype=np.float32),
         )
         for i, sample in enumerate(samples)
     ]
@@ -207,12 +208,12 @@ def test_get_embedding_count(db_session: Session) -> None:
         SampleEmbeddingCreate(
             sample_id=images_col1[0].sample_id,
             embedding_model_id=embedding_model_1_id,
-            embedding=[0.0, 0.0, 0.0],
+            embedding=np.array([0.0, 0.0, 0.0], dtype=np.float32),
         ),
         SampleEmbeddingCreate(
             sample_id=images_col1[1].sample_id,
             embedding_model_id=embedding_model_1_id,
-            embedding=[0.0, 0.0, 0.0],
+            embedding=np.array([0.0, 0.0, 0.0], dtype=np.float32),
         ),
     ]
     sample_embedding_resolver.create_many(session=db_session, sample_embeddings=embedding_inputs)

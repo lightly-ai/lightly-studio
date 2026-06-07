@@ -1,23 +1,32 @@
 """Dialect-aware vector types and functions.
 
-Provides VectorType and cosine_distance that work across both DuckDB and PostgreSQL
-(with pgvector) backends.
+Embeddings are stored as pgvector's VECTOR() on PostgreSQL and ARRAY(Float) on DuckDB,
+and returned to Python as ``float32`` numpy arrays (~4 B vs ~50 B per element for a
+Python float in a list), which bounds memory when loading many of them.
 """
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Annotated, Any
 
+import numpy as np
+from numpy.typing import NDArray
+from pydantic import GetCoreSchemaHandler
+from pydantic_core import core_schema
 from sqlalchemy import ARRAY, Float
 from sqlalchemy.engine.interfaces import Dialect
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.compiler import SQLCompiler
 from sqlalchemy.sql.functions import GenericFunction
 from sqlalchemy.types import TypeDecorator, TypeEngine
+from typing_extensions import TypeAlias
+
+# A single embedding vector. Always 1-D float32 numpy; a batch is a Sequence[Embedding].
+Embedding: TypeAlias = NDArray[np.float32]
 
 
-class VectorType(TypeDecorator[list[float]]):
-    """A dialect-aware vector column type.
+class VectorType(TypeDecorator[Embedding]):
+    """A dialect-aware vector column with a float32 numpy Python representation.
 
     Returns pgvector's VECTOR() for PostgreSQL and ARRAY(Float) for DuckDB.
     """
@@ -41,6 +50,44 @@ class VectorType(TypeDecorator[list[float]]):
         raise NotImplementedError(
             f"Unsupported dialect: {dialect.name}. Only 'postgresql' and 'duckdb' are supported."
         )
+
+    def process_bind_param(
+        self,
+        value: Embedding | list[float] | None,
+        dialect: Dialect,  # noqa: ARG002
+    ) -> list[float] | None:
+        """Bind a numpy array as a list."""
+        if value is None:
+            return None
+        if isinstance(value, np.ndarray):
+            as_list: list[float] = value.tolist()
+            return as_list
+        return value
+
+    def process_result_value(
+        self,
+        value: Any,
+        dialect: Dialect,  # noqa: ARG002
+    ) -> Embedding | None:
+        """Return the stored array as a float32 numpy array."""
+        return None if value is None else np.asarray(value, dtype=np.float32)
+
+
+class _NumpyArrayPydanticAnnotation:
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source_type: Any, handler: GetCoreSchemaHandler
+    ) -> core_schema.CoreSchema:
+        return core_schema.no_info_plain_validator_function(
+            lambda value: np.asarray(value, dtype=np.float32),
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                lambda value: value.tolist()
+            ),
+        )
+
+
+# Numpy field type for pydantic models (validates + serializes, no arbitrary_types_allowed).
+NumpyArray = Annotated[Embedding, _NumpyArrayPydanticAnnotation]
 
 
 class cosine_distance(GenericFunction[float]):  # noqa: N801

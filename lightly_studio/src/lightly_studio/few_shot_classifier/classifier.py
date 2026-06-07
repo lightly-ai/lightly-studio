@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import io
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Protocol, runtime_checkable
+
+from lightly_studio.database.db_vector import Embedding
 
 ExportType = Literal["sklearn", "lightly"]
 
@@ -21,7 +24,7 @@ class AnnotatedEmbedding:
                     any other type.
     """
 
-    embedding: list[float]
+    embedding: Embedding
     annotation: str
 
 
@@ -42,12 +45,11 @@ class FewShotClassifier(Protocol):
         """
         ...
 
-    def predict(self, embeddings: list[list[float]]) -> list[list[float]]:
+    def predict(self, embeddings: Sequence[Embedding]) -> list[list[float]]:
         """Predicts the classification scores for a list of embeddings.
 
         Args:
-            embeddings: A list of embeddings, where each embedding is a list of
-            floats.
+            embeddings: A sequence of embeddings.
 
         Returns:
             A list of lists, where each inner list represents the probability
