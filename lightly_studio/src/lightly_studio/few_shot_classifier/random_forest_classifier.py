@@ -20,7 +20,7 @@ from sklearn.tree import (  # type: ignore[import-untyped]
 from sklearn.utils import validation  # type: ignore[import-untyped]
 from typing_extensions import assert_never
 
-from lightly_studio.database.db_vector import Embedding
+from lightly_studio.db_vector import Embedding
 
 from .classifier import AnnotatedEmbedding, ExportType, FewShotClassifier
 

@@ -9,7 +9,7 @@ from lightly_mundig import TwoDimEmbedding  # type: ignore[import-untyped]
 from numpy.typing import NDArray
 from sqlmodel import Session
 
-from lightly_studio.database.db_vector import Embedding
+from lightly_studio.db_vector import Embedding
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
 from lightly_studio.resolvers import sample_embedding_resolver
