@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import cast
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -11,7 +10,6 @@ from sqlalchemy import ColumnElement
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.orm.interfaces import LoaderOption
 from sqlmodel import Session, col, func, select
-from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio import db_array
 from lightly_studio.api.routes.api.validators import Paginated
@@ -217,7 +215,7 @@ def _get_all_without_similarity(  # noqa: PLR0913
         # Each metadata/evaluation-metric expression joins via its own per-instance alias,
         # so applying every expression cannot collide with joins added by filters.
         for expr in order_by:
-            samples_query = cast(SelectOfScalar[ImageTable], expr.apply(samples_query))
+            samples_query = expr.apply(samples_query)
         if not _file_path_abs_in_order_by(order_by):
             file_path_col = col(ImageTable.file_path_abs)
             tiebreaker = file_path_col.asc() if order_by[0].ascending else file_path_col.desc()

@@ -10,7 +10,7 @@ from sqlalchemy.engine import Row
 from sqlalchemy.orm import aliased
 from sqlmodel import col
 from sqlmodel.sql.expression import Select, SelectOfScalar
-from typing_extensions import Self, TypeAlias
+from typing_extensions import Self, TypeAlias, TypeVar
 
 from lightly_studio import db_json
 from lightly_studio.core.dataset_query.field import Field
@@ -20,6 +20,7 @@ from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import SampleMetadataTable
 
 SelectQuery: TypeAlias = Union[Select[Any], SelectOfScalar[Any]]
+T = TypeVar("T", default=ImageTable)
 ORDER_VALUE_LABEL = "order_value"
 
 
@@ -35,14 +36,15 @@ class OrderByExpression(ABC):
         self.ascending = ascending
 
     @abstractmethod
-    def _sort_value_expression(self) -> ColumnElement[Any]:
+    def _order_value_expression(self) -> ColumnElement[Any]:
         """Return the SQL expression used for sorting (no ASC/DESC)."""
 
     @abstractmethod
     def _apply_joins(self, query: SelectQuery) -> SelectQuery:
-        """Add any JOINs needed so ``_sort_value_expression()`` is valid on this query.
+        """Add any JOINs needed so ``_order_value_expression()`` is valid on this query.
 
-        Called by ``apply()`` before ORDER BY or ``add_columns``. Does not sort.
+        Called by ``apply()`` and ``apply_with_options()`` before ORDER BY or
+        ``add_columns``. Does not sort.
         Each subclass must implement this — return the query unchanged when the sort
         column is already reachable from the FROM clause (e.g. image-table fields).
         Use per-instance aliases when joining the same table more than once.
@@ -54,34 +56,50 @@ class OrderByExpression(ABC):
         For use in ``query.order_by()`` or window ``over(order_by=...)``. Does not
         apply joins; call ``apply`` first when joins are required.
         """
-        sort_expr = self._sort_value_expression()
+        order_expr = self._order_value_expression()
         if self.ascending:
-            return sort_expr.asc()
-        return sort_expr.desc()
+            return order_expr.asc()
+        return order_expr.desc()
 
-    def apply(
+    def apply(self, query: SelectOfScalar[T]) -> SelectOfScalar[T]:
+        """Apply joins for this sort and append the ``ORDER BY``.
+
+        Args:
+            query: The SQLModel Select query to modify.
+
+        Returns:
+            The modified query after joining and ordering.
+        """
+        joined = cast(SelectOfScalar[T], self._apply_joins(query))
+        return joined.order_by(self.to_column_element())
+
+    def apply_with_options(
         self,
         query: SelectQuery,
         order: bool = True,
-        add_order_value: bool = False,
+        add_order_value: bool = True,
     ) -> SelectQuery:
-        """Apply joins for this sort; optionally append the sort value and/or ORDER BY.
+        """Apply this sort and optionally append its value to the SELECT list.
+
+        Behaves like ``apply`` but can also append the sort value to the SELECT list
+        as ``ORDER_VALUE_LABEL``. Read values back with ``get_order_value``.
 
         Args:
             query: The SQLModel Select query to modify.
             order: When True, append ``ORDER BY`` using the directed sort expression.
                 Pass False when ordering is handled separately (e.g. window functions).
-            add_order_value: When True and this expression has a sort value, append it
-                to the SELECT list as ``ORDER_VALUE_LABEL``. Read values with
-                ``get_order_value``.
+            add_order_value: When True, append the sort value to the SELECT list as
+                ``ORDER_VALUE_LABEL``. Pass False to apply joins (and ordering) only,
+                e.g. when this expression contributes joins but its value is not needed.
 
         Returns:
-            The modified query after joining and optionally ordering.
+            The modified query after joining, optionally appending the sort value, and
+            optionally ordering.
         """
         query = self._apply_joins(query)
         if add_order_value:
-            sort_expr = self._sort_value_expression()
-            query = cast(SelectQuery, query.add_columns(sort_expr.label(ORDER_VALUE_LABEL)))
+            order_expr = self._order_value_expression()
+            query = cast(SelectQuery, query.add_columns(order_expr.label(ORDER_VALUE_LABEL)))
         if order:
             query = query.order_by(self.to_column_element())
         return query
@@ -118,7 +136,7 @@ class OrderByField(OrderByExpression):
         super().__init__()
         self.field = field
 
-    def _sort_value_expression(self) -> ColumnElement[Any]:
+    def _order_value_expression(self) -> ColumnElement[Any]:
         """Return the image table column used for sorting."""
         return cast(ColumnElement[Any], self.field.get_sqlmodel_field())
 
@@ -150,7 +168,7 @@ class OrderByMetadataField(OrderByExpression):
         # Per-instance alias so sort joins do not collide with filter joins on metadata.
         self._metadata_alias = aliased(SampleMetadataTable)
 
-    def _sort_value_expression(self) -> ColumnElement[Any]:
+    def _order_value_expression(self) -> ColumnElement[Any]:
         """Return the JSON-extract expression for the metadata field."""
         return db_json.json_extract(
             column=self._metadata_alias.data,
@@ -190,7 +208,7 @@ class OrderByEvaluationMetricField(OrderByExpression):
         self._run_alias = aliased(EvaluationRunTable)
         self._metric_alias = aliased(EvaluationSampleMetricTable)
 
-    def _sort_value_expression(self) -> ColumnElement[Any]:
+    def _order_value_expression(self) -> ColumnElement[Any]:
         """Return the evaluation metric value column from the per-instance alias."""
         return cast(ColumnElement[Any], col(self._metric_alias.value))
 
@@ -211,5 +229,5 @@ class OrderByEvaluationMetricField(OrderByExpression):
 
 
 def get_order_value(row: Row[Any]) -> Any | None:
-    """Read the sort value from a row produced by ``apply(..., add_order_value=True)``."""
+    """Read the sort value from a row produced by ``apply_with_options``."""
     return getattr(row, ORDER_VALUE_LABEL, None)
