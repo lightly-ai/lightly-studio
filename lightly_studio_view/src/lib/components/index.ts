@@ -32,6 +32,7 @@ export { SettingsDialog } from '$lib/components/Settings/';
 export { default as TagsMenu } from '$lib/components/TagsMenu/TagsMenu.svelte';
 export { default as UserInfo } from '$lib/components/UserInfo/index.svelte';
 export { default as CreateSamplingDialog } from '$lib/components/Sampling/CreateSamplingDialog.svelte';
+export { default as SamplingCombinationDialog } from '$lib/components/Sampling/SamplingCombinationDialog.svelte';
 export { default as ClassifiersMenu } from '$lib/components/FewShotClassifier/ClassifiersMenu.svelte';
 export { default as CreateClassifierDialog } from '$lib/components/FewShotClassifier/CreateClassifierDialog.svelte';
 export { default as RefineClassifierDialog } from '$lib/components/FewShotClassifier/RefineClassifierDialog.svelte';
