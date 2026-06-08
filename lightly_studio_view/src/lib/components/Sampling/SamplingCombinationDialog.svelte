@@ -134,6 +134,7 @@
                                 min="1"
                                 placeholder="Enter number of samples"
                                 required
+                                class="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                 data-testid="selection-dialog-n-samples-input"
                             />
                         </div>
