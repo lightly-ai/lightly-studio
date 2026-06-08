@@ -36,17 +36,16 @@ class OrderByExpression(ABC):
 
     @abstractmethod
     def _sort_value_expression(self) -> ColumnElement[Any]:
-        """Return the SQL expression used for sorting.
-
-        Used for ``ImageView.order_value`` when exposed via ``apply``.
-        """
+        """Return the SQL expression used for sorting (no ASC/DESC)."""
 
     @abstractmethod
     def _apply_joins(self, query: SelectQuery) -> SelectQuery:
-        """Apply joins required before sort expressions are valid in SQL.
+        """Add any JOINs needed so ``_sort_value_expression()`` is valid on this query.
 
-        Subclasses that sort on an already-present column must still return the
-        query unchanged, so missing joins surface as a class-definition error.
+        Called by ``apply()`` before ORDER BY or ``add_columns``. Does not sort.
+        Each subclass must implement this — return the query unchanged when the sort
+        column is already reachable from the FROM clause (e.g. image-table fields).
+        Use per-instance aliases when joining the same table more than once.
         """
 
     def to_column_element(self) -> ColumnElement[Any]:
@@ -63,7 +62,6 @@ class OrderByExpression(ABC):
     def apply(
         self,
         query: SelectQuery,
-        *,
         order: bool = True,
         add_order_value: bool = False,
     ) -> SelectQuery:
