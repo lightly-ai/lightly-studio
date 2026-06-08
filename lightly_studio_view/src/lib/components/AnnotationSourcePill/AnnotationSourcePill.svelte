@@ -29,7 +29,7 @@
 
     const { context: annotationLabelContext, setAnnotationSource } = useAnnotationLabelContext();
     const { updateLastAnnotationSource } = useGlobalStorage();
-    const annotationCollections = useAnnotationCollections({ collectionId });
+    const annotationCollections = useAnnotationCollections(() => ({ collectionId }));
 
     const sourceNames = $derived(annotationCollections.data?.map((c) => c.name) ?? []);
 

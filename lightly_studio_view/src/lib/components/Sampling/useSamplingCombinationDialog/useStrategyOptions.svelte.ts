@@ -6,9 +6,9 @@ import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFil
 
 export function useStrategyOptions(getCollectionId: () => string) {
     const annotationLabelsQuery = useAnnotationLabels(() => ({ collectionId: getCollectionId() }));
-    const annotationCollectionsQuery = useAnnotationCollections({
+    const annotationCollectionsQuery = useAnnotationCollections(() => ({
         collectionId: getCollectionId()
-    });
+    }));
     const { metadataInfo } = useMetadataFilters(getCollectionId());
 
     let metadataInfoValue = $state<MetadataInfoView[]>(get(metadataInfo));
