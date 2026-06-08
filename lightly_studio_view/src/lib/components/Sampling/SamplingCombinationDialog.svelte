@@ -31,13 +31,7 @@
         updateParams
     } = useStrategyBuilder();
 
-    const {
-        metadataFieldNames,
-        hasMetadataFields,
-        annotationLabels,
-        hasAnnotationLabels,
-        annotationSourceOptions
-    } = useStrategyOptions(() => collectionId);
+    const strategyOptions = useStrategyOptions(() => collectionId);
 
     const {
         tags,
@@ -85,10 +79,10 @@
                                     : $tags.length === 0
                                       ? 'No sample tags in this collection. Create a sample tag first to use as the similarity reference.'
                                       : undefined}
-                                metadataWeightingDisabledReason={!hasMetadataFields
+                                metadataWeightingDisabledReason={!strategyOptions.hasMetadataFields
                                     ? 'No numeric metadata fields found. Index metadata on your samples to enable this strategy.'
                                     : undefined}
-                                classBalancingDisabledReason={!hasAnnotationLabels
+                                classBalancingDisabledReason={!strategyOptions.hasAnnotationLabels
                                     ? 'No annotation labels found. Add annotations to your samples to enable this strategy.'
                                     : undefined}
                                 onAdd={addStrategy}
@@ -102,9 +96,9 @@
                                     <StrategyCard
                                         {instance}
                                         tags={$tags}
-                                        {annotationLabels}
-                                        {annotationSourceOptions}
-                                        {metadataFieldNames}
+                                        annotationLabels={strategyOptions.annotationLabels}
+                                        annotationSourceOptions={strategyOptions.annotationSourceOptions}
+                                        metadataFieldNames={strategyOptions.metadataFieldNames}
                                         onRemove={() => removeStrategy(instance.id)}
                                         onDuplicate={() => duplicateStrategy(instance.id)}
                                         onUpdate={(params) => updateParams(instance.id, params)}
