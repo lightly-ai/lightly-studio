@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
+import numpy as np
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import (
@@ -323,7 +324,7 @@ def create_sample_embedding(
         sample_embedding=SampleEmbeddingCreate(
             sample_id=sample_id,
             embedding_model_id=embedding_model_id,
-            embedding=embedding,
+            embedding=np.asarray(embedding, dtype=np.float32),
         ),
     )
 

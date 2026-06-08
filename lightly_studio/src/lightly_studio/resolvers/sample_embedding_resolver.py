@@ -102,6 +102,8 @@ def get_all_by_collection_id(
     )
     if filters:
         query = filters.apply(query)
+    # Fetch in chunks so list[float] rows are converted to numpy and freed per batch.
+    query = query.execution_options(yield_per=batching.DEFAULT_BATCH_SIZE)
     return list(session.exec(query).all())
 
 
