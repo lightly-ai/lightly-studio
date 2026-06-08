@@ -153,10 +153,10 @@ class RandomForest(FewShotClassifier):
         """Predicts the classification scores for a list of embeddings.
 
         Args:
-            embeddings: A sequence of embeddings.
+            embeddings: One embedding per sample.
 
         Returns:
-            A list of lists, where each inner list represents the probability
+            One inner list per sample. Each inner list represents the probability
             distribution over classes for the corresponding input embedding.
             Each value in the inner list corresponds to the likelihood of the
             embedding belonging to a specific class.
