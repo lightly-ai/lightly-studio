@@ -131,13 +131,3 @@ uv run tests/benchmarks/embedding_io_benchmark.py --num-embeddings 10000
 | `--insert-batch-size` | 1 024 | Embeddings inserted per `create_many` call |
 | `--seed` | 0 | Random seed for reproducibility |
 | `--postgres` | off | Benchmark PostgreSQL (pgvector) instead of the temporary DuckDB |
-
-### Interpreting the results
-
-The backends differ in how they return vectors, which shows up clearly in the load phase:
-
-- **DuckDB** (`ARRAY(Float)`) returns Python `list[float]`, so load peak memory is high.
-- **PostgreSQL** (pgvector) returns numpy arrays, so load peak memory is much lower.
-
-Insert is CPU/DB-bound rather than memory-bound (each batch is freed before the next), so its peak
-memory stays low on both backends.
