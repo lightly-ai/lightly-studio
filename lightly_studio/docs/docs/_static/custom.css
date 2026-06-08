@@ -58,6 +58,7 @@
     --md-primary-fg-color--dark: #051315;
     --md-accent-fg-color: #13a6e6;
     --md-accent-fg-color--transparent: #13a6e61a;
+    --lightly-nav-active-color: #0a6f99;
 }
 
 /* Override Material theme primary colors */
@@ -96,6 +97,57 @@
 /* Hide Material for MkDocs footer */
 .md-footer-meta {
     display: none !important;
+}
+
+/* Highlight the current page in the left and right navigation */
+.md-nav__link--active {
+  position: relative;
+}
+
+/* Set highlight color for the current page in the left navigation */
+.md-sidebar--primary .md-nav__link--active {
+  color: var(--lightly-nav-active-color);
+}
+
+.md-nav__link--active::before {
+  background-color: currentcolor;
+  border-radius: 999px;
+  bottom: 0.15em;
+  content: "";
+  left: -0.5rem;
+  position: absolute;
+  top: 0.15em;
+  width: 0.1rem;
+}
+
+/* Underline section headings in the left navigation */
+.md-sidebar--primary .md-nav__title {
+  color: var(--md-default-fg-color);
+}
+
+.md-sidebar--primary .md-nav:not([data-md-level="0"]) > .md-nav__list > .md-nav__item--nested > .md-nav__link,
+.md-sidebar--primary .md-nav[data-md-level="0"] > .md-nav__list > .md-nav__item--nested > .md-nav__container,
+.md-sidebar--primary .md-nav__item--section > .md-nav__container {
+  border-bottom: 0.05rem solid var(--md-default-fg-color--lightest);
+  color: var(--md-default-fg-color);
+  font-size: 0.75rem;
+  margin-top: 0;
+  padding-bottom: 0.2rem;
+}
+
+.md-sidebar--primary .md-nav[data-md-level="0"] > .md-nav__list > .md-nav__item--nested > .md-nav__link {
+  display: none;
+}
+
+.md-sidebar--primary .md-nav__item--section:has(> .md-nav__container) ~ .md-nav__item--section:has(> .md-nav__container),
+.md-sidebar--primary .md-nav:not([data-md-level="0"]) > .md-nav__list > .md-nav__item--nested ~ .md-nav__item--nested {
+  margin-top: 1.3rem;
+}
+
+
+/* Bold the active top-level menu item in the header navigation tabs */
+.md-tabs__item--active .md-tabs__link {
+  font-weight: 700;
 }
 
 
