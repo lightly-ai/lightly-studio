@@ -23,11 +23,6 @@ SelectQuery: TypeAlias = Union[Select[Any], SelectOfScalar[Any]]
 ORDER_VALUE_LABEL = "order_value"
 
 
-def get_order_value(row: Row[Any]) -> Any | None:
-    """Read the sort value from a row produced by ``apply(..., add_order_value=True)``."""
-    return getattr(row, ORDER_VALUE_LABEL, None)
-
-
 class OrderByExpression(ABC):
     """Base class for all order by expressions that can be applied to database queries."""
 
@@ -40,8 +35,8 @@ class OrderByExpression(ABC):
         self.ascending = ascending
 
     @abstractmethod
-    def _sort_value_expression(self) -> ColumnElement[Any] | None:
-        """Return the SQL expression used for sorting, if selectable.
+    def _sort_value_expression(self) -> ColumnElement[Any]:
+        """Return the SQL expression used for sorting.
 
         Used for ``ImageView.order_value`` when exposed via ``apply``.
         """
@@ -61,9 +56,6 @@ class OrderByExpression(ABC):
         apply joins; call ``apply`` first when joins are required.
         """
         sort_expr = self._sort_value_expression()
-        if sort_expr is None:
-            msg = f"{type(self).__name__} has no sort value expression"
-            raise NotImplementedError(msg)
         if self.ascending:
             return sort_expr.asc()
         return sort_expr.desc()
@@ -91,8 +83,7 @@ class OrderByExpression(ABC):
         query = self._apply_joins(query)
         if add_order_value:
             sort_expr = self._sort_value_expression()
-            if sort_expr is not None:
-                query = cast(SelectQuery, query.add_columns(sort_expr.label(ORDER_VALUE_LABEL)))
+            query = cast(SelectQuery, query.add_columns(sort_expr.label(ORDER_VALUE_LABEL)))
         if order:
             query = query.order_by(self.to_column_element())
         return query
@@ -219,3 +210,8 @@ class OrderByEvaluationMetricField(OrderByExpression):
                 col(self._metric_alias.metric_name) == self.metric_name,
             ),
         )
+
+
+def get_order_value(row: Row[Any]) -> Any | None:
+    """Read the sort value from a row produced by ``apply(..., add_order_value=True)``."""
+    return getattr(row, ORDER_VALUE_LABEL, None)
