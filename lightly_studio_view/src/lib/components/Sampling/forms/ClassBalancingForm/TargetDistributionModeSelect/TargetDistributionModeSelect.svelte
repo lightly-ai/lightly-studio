@@ -12,12 +12,16 @@
     let { targetDistributionMode, onUpdate }: Props = $props();
 
     const items = [
-        { value: 'uniform', label: 'Uniform', testId: 'class-balancing-annotation-source-uniform' },
-        { value: 'input', label: 'Input', testId: 'class-balancing-annotation-source-input' },
+        {
+            value: 'uniform',
+            label: 'Uniform',
+            testId: 'class-balancing-target-distribution-uniform'
+        },
+        { value: 'input', label: 'Input', testId: 'class-balancing-target-distribution-input' },
         {
             value: 'dictionary',
             label: 'Dictionary',
-            testId: 'class-balancing-annotation-source-dictionary'
+            testId: 'class-balancing-target-distribution-dictionary'
         }
     ] satisfies { value: ClassBalancingTargetDistributionMode; label: string; testId: string }[];
 </script>
@@ -31,7 +35,7 @@
         {items}
         value={targetDistributionMode}
         class="w-full"
-        testId="class-balancing-annotation-source"
+        testId="class-balancing-target-distribution"
         onValueChange={(value) => onUpdate(value as ClassBalancingTargetDistributionMode)}
     />
 </div>
