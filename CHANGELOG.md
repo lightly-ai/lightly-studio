@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- When sorting the image grid by a numeric field, the sort value is now shown as an overlay on each sample.
+
 ### Changed
 
 ### Deprecated
