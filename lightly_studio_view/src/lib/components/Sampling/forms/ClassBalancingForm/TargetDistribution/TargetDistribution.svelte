@@ -82,6 +82,7 @@
                     updateRow(index, {
                         weight: Number((event.currentTarget as HTMLInputElement).value)
                     })}
+                class="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 data-testid={`class-balancing-weight-${index}`}
             />
             <Button
