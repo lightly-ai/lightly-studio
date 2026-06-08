@@ -58,6 +58,7 @@
     --md-primary-fg-color--dark: #051315;
     --md-accent-fg-color: #13a6e6;
     --md-accent-fg-color--transparent: #13a6e61a;
+    --lightly-nav-active-color: #0a6f99;
 }
 
 /* Override Material theme primary colors */
@@ -98,13 +99,14 @@
     display: none !important;
 }
 
-/* Highlight the current page in the left navigation */
+/* Highlight the current page in the left and right navigation */
 .md-nav__link--active {
   position: relative;
 }
 
+/* Set highlight color for the current page in the left navigation */
 .md-sidebar--primary .md-nav__link--active {
-  color: #0a6f99;
+  color: var(--lightly-nav-active-color);
 }
 
 .md-nav__link--active::before {
