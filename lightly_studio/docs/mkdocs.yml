@@ -43,7 +43,7 @@ nav:
       - Cloud Storage: dataset_setup/cloud_storage.md
       - Reuse Datasets: dataset_setup/reuse_datasets.md
   - Python API:
-    - Python API:
+    - API Reference:
       - Dataset: api/dataset.md
       - Sample: api/sample.md
       - DatasetQuery: api/dataset_query.md
