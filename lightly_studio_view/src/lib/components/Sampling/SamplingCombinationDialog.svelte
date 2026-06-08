@@ -8,10 +8,10 @@
     import * as Dialog from '$lib/components/ui/dialog';
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
-    import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
-    import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useSamplingDialog } from '$lib/hooks/useSamplingDialog/useSamplingDialog';
-    import { useSamplingCombinationDialog } from '$lib/hooks/useSamplingCombinationDialog/useSamplingCombinationDialog';
+    import { useStrategyBuilder } from '$lib/hooks/useStrategyBuilder';
+    import { useSamplingCombinationDialog } from './useSamplingCombinationDialog/useSamplingCombinationDialog';
+    import { useStrategyOptions } from './useSamplingCombinationDialog/useStrategyOptions.svelte';
 
     const collectionId = $derived(page.params.collection_id!);
     const isVideoCollection = $derived(
@@ -22,40 +22,41 @@
     const { isSamplingDialogOpen, openSamplingDialog, closeSamplingDialog } = useSamplingDialog();
 
     const {
-        tags,
         instances,
+        addStrategy,
+        duplicateStrategy,
+        removeStrategy,
+        resetStrategies,
+        toggleExpand,
+        updateParams
+    } = useStrategyBuilder();
+
+    const {
+        metadataFieldNames,
+        hasMetadataFields,
+        annotationLabels,
+        hasAnnotationLabels,
+        annotationSourceOptions
+    } = useStrategyOptions(() => collectionId);
+
+    const {
+        tags,
         nSamplesToSelect,
         selectionResultTagName,
         filteredSampleCount,
-        metadataFieldNames,
-        hasMetadataFields,
         noSamples,
         notEnoughSamples,
         sampleCountLabel,
         isFormValid,
         isSubmitting,
         loadingMessage,
-        addStrategy,
-        duplicateStrategy,
-        removeStrategy,
-        updateParams,
-        toggleExpand,
         handleFormSubmit
     } = useSamplingCombinationDialog({
         getCollectionId: () => collectionId,
-        getIsVideoCollection: () => isVideoCollection
+        getIsVideoCollection: () => isVideoCollection,
+        instances,
+        onSubmitSuccess: resetStrategies
     });
-
-    const annotationLabelsQuery = $derived(useAnnotationLabels(() => ({ collectionId })));
-    const annotationLabels = $derived(
-        (annotationLabelsQuery.data ?? []).map((label) => label.annotation_label_name)
-    );
-    const hasAnnotationLabels = $derived(annotationLabels.length > 0);
-
-    const annotationCollectionsQuery = $derived(useAnnotationCollections({ collectionId }));
-    const annotationSourceOptions = $derived(
-        (annotationCollectionsQuery.data ?? []).map((c) => ({ id: c.collection_id, name: c.name }))
-    );
 </script>
 
 <Dialog.Root
@@ -84,7 +85,7 @@
                                     : $tags.length === 0
                                       ? 'No sample tags in this collection. Create a sample tag first to use as the similarity reference.'
                                       : undefined}
-                                metadataWeightingDisabledReason={!$hasMetadataFields
+                                metadataWeightingDisabledReason={!hasMetadataFields
                                     ? 'No numeric metadata fields found. Index metadata on your samples to enable this strategy.'
                                     : undefined}
                                 classBalancingDisabledReason={!hasAnnotationLabels
@@ -103,7 +104,7 @@
                                         tags={$tags}
                                         {annotationLabels}
                                         {annotationSourceOptions}
-                                        metadataFieldNames={$metadataFieldNames}
+                                        {metadataFieldNames}
                                         onRemove={() => removeStrategy(instance.id)}
                                         onDuplicate={() => duplicateStrategy(instance.id)}
                                         onUpdate={(params) => updateParams(instance.id, params)}
