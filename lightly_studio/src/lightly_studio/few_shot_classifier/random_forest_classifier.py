@@ -153,8 +153,7 @@ class RandomForest(FewShotClassifier):
         """Predicts the classification scores for a list of embeddings.
 
         Args:
-            embeddings: A list of embeddings, where each embedding is a list of
-            floats.
+            embeddings: A sequence of embeddings.
 
         Returns:
             A list of lists, where each inner list represents the probability

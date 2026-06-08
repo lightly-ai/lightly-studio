@@ -73,13 +73,21 @@ class VectorType(TypeDecorator[Embedding]):
         return None if value is None else np.asarray(value, dtype=np.float32)
 
 
+def _validate_embedding(value: Any) -> Embedding:
+    """Coerce to a 1-D float32 array, enforcing the single-vector Embedding contract."""
+    array = np.asarray(value, dtype=np.float32)
+    if array.ndim != 1:
+        raise ValueError(f"Embedding must be a 1-D vector, got {array.ndim}-D.")
+    return array
+
+
 class _NumpyArrayPydanticAnnotation:
     @classmethod
     def __get_pydantic_core_schema__(
         cls, source_type: Any, handler: GetCoreSchemaHandler
     ) -> core_schema.CoreSchema:
         return core_schema.no_info_plain_validator_function(
-            lambda value: np.asarray(value, dtype=np.float32),
+            _validate_embedding,
             serialization=core_schema.plain_serializer_function_ser_schema(
                 lambda value: value.tolist()
             ),

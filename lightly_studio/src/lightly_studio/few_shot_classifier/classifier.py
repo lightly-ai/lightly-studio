@@ -18,7 +18,7 @@ class AnnotatedEmbedding:
     """Annotated embedding class.
 
     Attributes:
-        embedding: The embedding vector as a list of floats.
+        embedding: The embedding vector.
         annotation: The annotation for the embedding.
                     Note: Currently it is an string but it can be a integer or
                     any other type.
