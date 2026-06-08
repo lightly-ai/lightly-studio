@@ -51,19 +51,6 @@ class VectorType(TypeDecorator[Embedding]):
             f"Unsupported dialect: {dialect.name}. Only 'postgresql' and 'duckdb' are supported."
         )
 
-    def process_bind_param(
-        self,
-        value: Embedding | list[float] | None,
-        dialect: Dialect,  # noqa: ARG002
-    ) -> list[float] | None:
-        """Bind a numpy array as a list."""
-        if value is None:
-            return None
-        if isinstance(value, np.ndarray):
-            as_list: list[float] = value.tolist()
-            return as_list
-        return value
-
     def process_result_value(
         self,
         value: Any,
@@ -82,6 +69,14 @@ def _validate_embedding(value: Any) -> Embedding:
 
 
 class _NumpyArrayPydanticAnnotation:
+    """Pydantic core schema that lets a model field be typed as a numpy ``Embedding``.
+
+    Pydantic v2 has no built-in support for ``np.ndarray``, so a model that declares
+    ``embedding: NumpyArray`` (e.g. ``SampleEmbeddingCreate``) needs this to validate
+    input into a 1-D float32 array and serialize it back to a list, without resorting
+    to ``arbitrary_types_allowed``.
+    """
+
     @classmethod
     def __get_pydantic_core_schema__(
         cls, source_type: Any, handler: GetCoreSchemaHandler
