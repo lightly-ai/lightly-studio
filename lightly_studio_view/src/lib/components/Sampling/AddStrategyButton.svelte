@@ -17,6 +17,7 @@
         onAdd
     }: Props = $props();
 
+    let isOpen = $state(false);
     let hoveredType = $state<StrategyType | null>(null);
     let tooltipRect = $state<DOMRect | null>(null);
     // wrapper element refs used to position the tooltip on keyboard highlight
@@ -56,6 +57,7 @@
         if (v) onAdd(v as StrategyType);
     }}
     onOpenChange={(open) => {
+        isOpen = open;
         if (!open) handleMouseLeave();
     }}
 >
@@ -93,7 +95,7 @@
     {/snippet}
 </Select>
 
-{#if hoveredType && tooltipRect && hoveredStrategy}
+{#if isOpen && hoveredType && tooltipRect && hoveredStrategy}
     <Portal>
         <div
             id="strategy-tooltip-{hoveredType}"
