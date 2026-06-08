@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import cast
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -10,6 +11,7 @@ from sqlalchemy import ColumnElement
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.orm.interfaces import LoaderOption
 from sqlmodel import Session, col, func, select
+from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio import db_array
 from lightly_studio.api.routes.api.validators import Paginated
@@ -17,6 +19,7 @@ from lightly_studio.core.dataset_query.image_sample_field import ImageSampleFiel
 from lightly_studio.core.dataset_query.order_by import (
     OrderByExpression,
     OrderByField,
+    SelectQuery,
     get_order_value,
 )
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
@@ -28,8 +31,6 @@ from lightly_studio.resolvers.similarity_utils import (
     distance_to_similarity,
     get_distance_expression,
 )
-
-ImageSamplesQuery: TypeAlias = Union[Select[tuple[ImageTable, Any]], SelectOfScalar[ImageTable]]
 
 
 def _file_path_abs_in_order_by(order_by: list[OrderByExpression]) -> bool:
@@ -210,7 +211,7 @@ def _get_all_without_similarity(  # noqa: PLR0913
     """
     load_options = _get_load_options()
 
-    samples_query: ImageSamplesQuery = (
+    samples_query: SelectQuery = (
         select(ImageTable)
         .options(load_options)
         .join(ImageTable.sample)
@@ -238,10 +239,10 @@ def _get_all_without_similarity(  # noqa: PLR0913
         )
 
     if order_by:
-        # Each metadata/evaluation-metric expression joins via its own per-instance alias,
-        # so applying every expression cannot collide with joins added by filters.
-        for expr in order_by:
-            samples_query = expr.apply(samples_query)
+        # The primary sort (first expression) value is appended to the SELECT
+        # (labelled for ``get_order_value``).
+        for i, expr in enumerate(order_by):
+            samples_query = expr.apply_with_options(samples_query, add_order_value=(i == 0))
         if not _file_path_abs_in_order_by(order_by):
             file_path_col = col(ImageTable.file_path_abs)
             tiebreaker = file_path_col.asc() if order_by[0].ascending else file_path_col.desc()
