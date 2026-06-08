@@ -127,6 +127,7 @@
                         />
                     {:else}
                         <ClassBalancingForm
+                            instanceId={instance.id}
                             params={instance.params as ClassBalancingParams}
                             {annotationLabels}
                             {annotationSourceOptions}

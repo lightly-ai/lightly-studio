@@ -10,7 +10,8 @@
         argTypes: {
             params: { control: 'object' },
             annotationLabels: { control: 'object' },
-            annotationSourceOptions: { control: 'object' }
+            annotationSourceOptions: { control: 'object' },
+            instanceId: { control: 'text' }
         }
     });
 </script>
@@ -24,6 +25,7 @@
             target_distribution: [],
             strength: 1
         },
+        instanceId: 'story',
         annotationLabels: ['cat', 'dog', 'bird'],
         annotationSourceOptions: [
             { id: 'source-1', name: 'Ground Truth' },
@@ -42,6 +44,7 @@
             target_distribution: [],
             strength: 1
         },
+        instanceId: 'story',
         annotationLabels: ['cat', 'dog', 'bird'],
         annotationSourceOptions: [
             { id: 'source-1', name: 'Ground Truth' },
@@ -60,6 +63,7 @@
             target_distribution: [],
             strength: 1
         },
+        instanceId: 'story',
         annotationLabels: ['cat', 'dog', 'bird'],
         annotationSourceOptions: [
             { id: 'source-1', name: 'Ground Truth' },
@@ -81,6 +85,7 @@
             ],
             strength: 1
         },
+        instanceId: 'story',
         annotationLabels: ['cat', 'dog', 'bird'],
         annotationSourceOptions: [
             { id: 'source-1', name: 'Ground Truth' },

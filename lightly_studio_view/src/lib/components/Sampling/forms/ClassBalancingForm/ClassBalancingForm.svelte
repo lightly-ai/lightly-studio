@@ -8,25 +8,32 @@
     import FieldTooltip from '$lib/components/FieldTooltip/FieldTooltip.svelte';
 
     interface Props {
+        instanceId: string;
         params: ClassBalancingParams;
         annotationLabels: string[];
         annotationSourceOptions?: { id: string; name: string }[];
         onUpdate: (params: Partial<StrategyParams>) => void;
     }
 
-    let { params, annotationLabels, annotationSourceOptions = [], onUpdate }: Props = $props();
+    let {
+        instanceId,
+        params,
+        annotationLabels,
+        annotationSourceOptions = [],
+        onUpdate
+    }: Props = $props();
 </script>
 
 <div class="grid gap-3" data-testid="class-balancing-form">
     <div class="grid gap-2">
         <div class="flex items-center gap-1.5">
-            <Label for="class-balancing-annotation-source">Annotation Source</Label>
+            <Label for={`class-balancing-annotation-source-${instanceId}`}>Annotation Source</Label>
             <FieldTooltip
                 content="The annotation collection used to read class labels for balancing."
             />
         </div>
         <AnnotationSourceSelect
-            id="class-balancing-annotation-source"
+            id={`class-balancing-annotation-source-${instanceId}`}
             sourceOptions={annotationSourceOptions}
             selectedSource={params.annotation_source_id}
             onSelect={(id) => onUpdate({ annotation_source_id: id })}
@@ -38,8 +45,8 @@
     />
     <StrengthField
         strength={params.strength}
-        id="class-balancing-strength"
-        testid="strategy-class-balancing-strength-input"
+        id={`class-balancing-strength-${instanceId}`}
+        testid={`strategy-class-balancing-strength-input-${instanceId}`}
         onUpdate={(strength) => onUpdate({ strength })}
     />
     {#if params.target_distribution_mode === 'dictionary'}
