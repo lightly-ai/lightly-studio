@@ -69,9 +69,19 @@ vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
     })
 }));
 
+let annotationLabelsData: { annotation_label_name: string }[] = [];
+
 vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
     useAnnotationLabels: () => ({
-        data: []
+        data: annotationLabelsData
+    })
+}));
+
+let annotationCollectionsData: { collection_id: string; name: string }[] = [];
+
+vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
+    useAnnotationCollections: () => ({
+        data: annotationCollectionsData
     })
 }));
 
@@ -99,6 +109,8 @@ describe('SamplingCombinationDialog', () => {
         isSubmittingStore = writable(false);
         loadingMessageStore = writable('');
         tagsStore = writable([{ tag_id: 'tag-1', name: 'Query Tag', kind: 'sample' as const }]);
+        annotationLabelsData = [];
+        annotationCollectionsData = [];
         submitMock.mockResolvedValue(undefined);
     });
 
@@ -324,6 +336,27 @@ describe('SamplingCombinationDialog', () => {
             'Computing typicality metadata...'
         );
         expect(screen.getByTestId('selection-dialog-cancel')).toBeDisabled();
+    });
+
+    it('passes annotation source collections to the class balancing strategy form', async () => {
+        annotationLabelsData = [{ annotation_label_name: 'cat' }];
+        annotationCollectionsData = [
+            { collection_id: 'col-1', name: 'ground_truth' },
+            { collection_id: 'col-2', name: 'predictions' }
+        ];
+        filteredSampleCountStore.set(100);
+
+        render(SamplingCombinationDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+        await fireEvent.pointerUp(await screen.findByTestId('add-strategy-class_balancing'));
+
+        await fireEvent.keyDown(screen.getByTestId('annotation-source-trigger'), { key: 'Enter' });
+
+        expect(
+            await screen.findByTestId('annotation-source-option-ground_truth')
+        ).toBeInTheDocument();
+        expect(screen.getByTestId('annotation-source-option-predictions')).toBeInTheDocument();
     });
 
     it('shows Creating... on the submit button when submitting without a loading message', () => {
