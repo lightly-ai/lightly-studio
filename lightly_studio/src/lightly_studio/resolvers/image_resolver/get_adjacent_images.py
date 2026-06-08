@@ -99,6 +99,11 @@ def _base_query(
 
     if order_by:
         for expr in order_by:
-            query = cast(Select[Any], expr.apply(cast(SelectQuery, query), order=False))
+            query = cast(
+                Select[Any],
+                expr.apply_with_options(
+                    cast(SelectQuery, query), order=False, add_order_value=False
+                ),
+            )
 
     return query

@@ -14,24 +14,24 @@ from lightly_studio.models.image import ImageTable
 
 
 class TestOrderByField:
-    def test_apply__add_order_value(self) -> None:
-        """Test that add_order_value appends the labeled sort column to the SELECT list."""
+    def test_apply_with_options(self) -> None:
+        """Test that apply_with_options appends the labeled sort column to the SELECT list."""
         query = select(ImageTable)
         order_by = OrderByField(ImageSampleField.file_name)
 
-        returned_query = order_by.apply(query, order=False, add_order_value=True)
+        returned_query = order_by.apply_with_options(query, order=False)
 
         sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
         assert "select image" in sql
         assert "image.file_name" in sql
         assert f"as {ORDER_VALUE_LABEL}" in sql
 
-    def test_apply__no_joins(self) -> None:
-        """Test that apply does not add JOINs for image fields."""
+    def test_apply_with_options__no_joins(self) -> None:
+        """Test that applying joins only does not add JOINs for image fields."""
         query = select(ImageTable)
         order_by = OrderByField(ImageSampleField.file_name)
 
-        returned_query = order_by.apply(query, order=False)
+        returned_query = order_by.apply_with_options(query, order=False, add_order_value=False)
 
         sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
         assert "join" not in sql
@@ -70,24 +70,24 @@ class TestOrderByField:
 class TestOrderByMetadataField:
     dialect = DuckDBDialect()
 
-    def test_apply__metadata_join(self) -> None:
-        """Test that apply adds the metadata outer join."""
+    def test_apply_with_options__metadata_join(self) -> None:
+        """Test that applying joins only adds the metadata outer join."""
         query = select(ImageTable)
         order_by = OrderByMetadataField("brightness", cast_to_float=False)
 
-        returned_query = order_by.apply(query, order=False)
+        returned_query = order_by.apply_with_options(query, order=False, add_order_value=False)
 
         sql = str(
             returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
         ).lower()
         assert "left outer join metadata" in sql
 
-    def test_apply__add_order_value(self) -> None:
-        """Test that add_order_value selects the labeled JSON extract expression."""
+    def test_apply_with_options(self) -> None:
+        """Test that apply_with_options selects the labeled JSON extract expression."""
         query = select(ImageTable)
         order_by = OrderByMetadataField("score", cast_to_float=True)
 
-        returned_query = order_by.apply(query, order=False, add_order_value=True)
+        returned_query = order_by.apply_with_options(query, order=False)
 
         sql = str(
             returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
@@ -148,12 +148,12 @@ class TestOrderByMetadataField:
 class TestOrderByEvaluationMetricField:
     dialect = DuckDBDialect()
 
-    def test_apply__evaluation_joins(self) -> None:
-        """Test that apply adds evaluation run and metric joins."""
+    def test_apply_with_options__evaluation_joins(self) -> None:
+        """Test that applying joins only adds evaluation run and metric joins."""
         query = select(ImageTable)
         order_by = OrderByEvaluationMetricField("run1", "score")
 
-        returned_query = order_by.apply(query, order=False)
+        returned_query = order_by.apply_with_options(query, order=False, add_order_value=False)
 
         sql = str(
             returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
