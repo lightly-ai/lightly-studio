@@ -33,7 +33,16 @@
 We at Lightly created **LightlyStudio**, an open-source tool designed to unify your data workflows from curation, annotation, model evaluation and management in a single tool. Since we're big fans of Rust we used it to speed things up. You can work with COCO and ImageNet on a Macbook Pro with M1 and 16GB of memory!
 
 <p align="center">
-  <img alt="LightlyStudio Overview" src="https://storage.googleapis.com/lightly-public/studio/studio_overview.gif" width="70%">
+  <iframe
+    width="70%"
+    height="394"
+    src="https://www.youtube.com/embed/iUS9hjI4VQ4"
+    title="LightlyStudio Overview"
+    frameborder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    referrerpolicy="strict-origin-when-cross-origin"
+    allowfullscreen
+  ></iframe>
   <br/>
   <em>Curate, Annotate, and Manage Your Data in LightlyStudio.</em>
 </p>
