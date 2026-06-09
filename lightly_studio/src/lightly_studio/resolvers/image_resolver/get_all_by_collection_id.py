@@ -27,7 +27,6 @@ from lightly_studio.resolvers.similarity_utils import (
 
 
 def _file_path_abs_in_order_by(order_by: list[OrderByExpression]) -> bool:
-    """Return True if ``file_path_abs`` is already used as a sort key."""
     return any(
         isinstance(expr, OrderByField) and expr.field is ImageSampleField.file_path_abs
         for expr in order_by
@@ -212,8 +211,6 @@ def _get_all_without_similarity(  # noqa: PLR0913
         )
 
     if order_by:
-        # Each metadata/evaluation-metric expression joins via its own per-instance alias,
-        # so applying every expression cannot collide with joins added by filters.
         for expr in order_by:
             samples_query = expr.apply(samples_query)
         if not _file_path_abs_in_order_by(order_by):
