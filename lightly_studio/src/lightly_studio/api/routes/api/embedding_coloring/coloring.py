@@ -59,9 +59,10 @@ def build_color_data(
         collection_id: Collection whose samples are being colored.
         color_by: Coloring configuration to apply to the samples.
         sample_ids: Sample IDs in the same order as the returned color categories.
-        matching_sample_ids: Sample IDs matching the active filter, used to rank
-            values by in-filter frequency so the legend reflects the filtered
-            view. ``None`` means no filter is active (rank over all samples).
+        matching_sample_ids: Sample IDs matching the active filter. Values are
+            prioritized by their frequency among these samples so the legend
+            reflects the filtered view. ``None`` means no filter is active (all
+            samples are counted).
 
     Returns:
         A tuple of `(color_categories, color_legend)` for the provided samples. The

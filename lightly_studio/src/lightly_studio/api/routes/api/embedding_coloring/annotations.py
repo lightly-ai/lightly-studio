@@ -20,17 +20,18 @@ def build_annotation_color_maps(
 ) -> tuple[list[list[int]], dict[int, str]]:
     """Build color categories and a legend for annotation-based sample coloring.
 
-    Labels are ranked by how many filter-matching samples carry them, so the most
-    frequent labels in the current view keep their own color category (starting
-    at 2) and the rare tail collapses into "Other". Labels with no matching sample
-    are omitted from the legend.
+    When more labels are selected than fit in the legend, the labels carried by
+    the most filter-matching samples each get a dedicated color category and the
+    rest are merged into a single "Other" category. Labels with no matching
+    sample are omitted from the legend entirely.
 
     Args:
         session: Database session.
         annotation_label_ids: Label IDs to color by.
         sample_ids: Sample IDs in the order for which to build color categories.
-        matching_sample_ids: Sample IDs matching the active filter, used to rank
-            labels by in-filter frequency. ``None`` ranks over all samples.
+        matching_sample_ids: Sample IDs matching the active filter. Labels are
+            prioritized by their frequency among these samples. ``None`` counts
+            all samples.
 
     Returns:
         A tuple of `(color_categories, color_legend)` for the provided samples.

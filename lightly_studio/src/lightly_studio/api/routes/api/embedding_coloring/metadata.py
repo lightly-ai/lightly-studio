@@ -31,9 +31,9 @@ def build_metadata_color_maps(
         collection_id: ID of the collection whose metadata should be used.
         key: Metadata field used for coloring.
         sample_ids: Sample IDs in the order for which to build color categories.
-        matching_sample_ids: Sample IDs matching the active filter, used to rank
-            string and boolean values by in-filter frequency so the legend
-            reflects the filtered view. ``None`` ranks over all samples.
+        matching_sample_ids: Sample IDs matching the active filter. String and
+            boolean values are prioritized by their frequency among these samples
+            so the legend reflects the filtered view. ``None`` counts all samples.
 
     Returns:
         A tuple of `(color_categories, color_legend)` for the provided samples. The
@@ -67,10 +67,11 @@ def _build_metadata_color_scale(
 ) -> DiscreteColorScale[Any]:
     """Build a DiscreteColorScale for one metadata key.
 
-    String and boolean values are ranked by their frequency among the
-    filter-matching samples, so the values that dominate the current view keep
-    their own color category and the rare tail collapses into "Other". Integer
-    values use fixed-range bucketing and stay filter-independent.
+    For string and boolean fields, when there are more values than fit in the
+    legend, the values most common among the filter-matching samples each get a
+    dedicated color category and the rest are merged into a single "Other"
+    category; values absent from the matching samples are omitted. Integer values
+    use fixed-range bucketing and stay filter-independent.
     """
     if metadata_type in ("string", "boolean"):
         format_fn: Callable[[Any], str] = (

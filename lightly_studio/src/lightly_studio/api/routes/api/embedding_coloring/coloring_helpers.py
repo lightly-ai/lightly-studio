@@ -205,10 +205,11 @@ def order_values_by_frequency(
     """Distinct values among matching samples, ordered by descending frequency.
 
     Counting only the samples in ``matching_sample_ids`` (all samples when it is
-    ``None``) makes the ordering *filter-aware*: the values that occur most often
-    in the current view rank first and so keep their own legend slot, while the
-    rare tail collapses into "Other" downstream. Values that never occur in a
-    matching sample are omitted entirely, which is what hides categories with
+    ``None``) makes the result *filter-aware*. When the values are later split
+    into a fixed number of legend slots, this ordering ensures the values most
+    common among the matching samples each get a dedicated category, while the
+    less common ones are merged into a single "Other" category. Values that never
+    occur in a matching sample are omitted entirely, which hides categories with
     zero samples after filtering.
 
     Args:

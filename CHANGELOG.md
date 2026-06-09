@@ -12,9 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - The embedding plot legend now reflects the active filter: categories with no
-  matching samples are hidden, and values are ranked by their frequency among the
-  filtered samples so the most relevant ones keep an individual color before the
-  rest collapse into "Other".
+  matching samples are hidden, and when there are more values than fit in the
+  legend, the values most common among the filtered samples each get a dedicated
+  color while the rest are merged into a single "Other" category.
 
 ### Deprecated
 

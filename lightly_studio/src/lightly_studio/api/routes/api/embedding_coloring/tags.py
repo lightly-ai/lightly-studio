@@ -19,17 +19,18 @@ def build_tag_color_maps(
 ) -> tuple[list[list[int]], dict[int, str]]:
     """Build color categories and a legend for tag-based sample coloring.
 
-    Tags are ranked by how many filter-matching samples carry them, so the most
-    frequent tags in the current view keep their own color category (starting at
-    2) and the rare tail collapses into "Other". Tags with no matching sample are
-    omitted from the legend.
+    When more tags are selected than fit in the legend, the tags carried by the
+    most filter-matching samples each get a dedicated color category and the rest
+    are merged into a single "Other" category. Tags with no matching sample are
+    omitted from the legend entirely.
 
     Args:
         session: Database session.
         tag_ids: Tag IDs to color by.
         sample_ids: Sample IDs in the order for which to build color categories.
-        matching_sample_ids: Sample IDs matching the active filter, used to rank
-            tags by in-filter frequency. ``None`` ranks over all samples.
+        matching_sample_ids: Sample IDs matching the active filter. Tags are
+            prioritized by their frequency among these samples. ``None`` counts
+            all samples.
 
     Returns:
         A tuple of `(color_categories, color_legend)` for the provided samples. The
