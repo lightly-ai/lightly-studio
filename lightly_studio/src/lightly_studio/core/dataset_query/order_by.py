@@ -76,7 +76,7 @@ class OrderByExpression(ABC):
         joined = self.apply_joins(query)
         return joined.order_by(self.to_column_element())
 
-    def apply_with_order_value(self, query: SelectOfScalar[T]) -> SQLAlchemySelect[Any]:
+    def apply_with_order_value(self, query: SelectOfScalar[T]) -> SQLAlchemySelect[tuple[T, Any]]:
         """Apply this sort and append its value to the SELECT list.
 
         Behaves like ``apply`` but also appends the sort value to the SELECT list as

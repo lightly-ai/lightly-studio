@@ -26,7 +26,10 @@ def get_adjacent_images(  # noqa: PLR0913
     text_embedding: list[float] | None = None,
     order_by: list[OrderByExpression] | None = None,
 ) -> AdjacentResultView | None:
-    """Get the adjacent images for a given sample ID."""
+    """Get the previous and next image for a sample in the current sort order."""
+    # TODO(Horatiu, 06/2026): Unify ordering for adjacency queries. Similarity sort is
+    # injected via ``ordering_expression`` and rebuilds the window query, while dataset
+    # ``order_by`` uses ``OrderByExpression`` — see ``_base_query`` for assumptions.
     base_query = _base_query(order_by=order_by)
     base_query = base_query.where(col(SampleTable.collection_id) == collection_id)
 
@@ -59,26 +62,21 @@ def _base_query(
     ordering_expression: Any | None = None,
     order_by: list[OrderByExpression] | None = None,
 ) -> Select[Any]:
-    """Build the window query used to resolve previous/next image sample IDs.
+    """Return a per-image window query for adjacency lookup.
 
-    Each row is one image sample, ordered by ``order_col`` (built from
-    ``ordering_expression``, ``order_by``, and an optional tiebreaker). Window
-    functions annotate every row with its predecessor, successor, and position
-    in that ordering.
-
-    When ``order_by`` includes metadata or evaluation-metric fields, their
-    required JOINs are applied via ``apply_joins`` so sort expressions are
-    valid inside the ``OVER`` clause.
+    Rows are ordered by ``ordering_expression``, then ``order_by``, then an optional
+    ``file_path_abs`` tiebreaker (default sort when both are omitted). Each row
+    includes ``sample_id``, ``previous_sample_id``, ``next_sample_id``, and
+    ``row_number`` via ``lag`` / ``lead`` / ``row_number`` over that ordering.
 
     Args:
-        ordering_expression: Optional primary sort key(s), e.g. a similarity
-            distance expression. Prepended before ``order_by`` columns.
-        order_by: Optional dataset-query sort expressions. When omitted, rows
-            are ordered by ``ImageTable.file_path_abs`` ascending.
+        ordering_expression: Extra sort keys passed through to the window
+            ``ORDER BY`` (e.g. similarity distance). Caller must add any JOINs
+            these expressions need.
+        order_by: Dataset sort expressions; JOINs are applied via ``apply_joins``.
 
     Returns:
-        A query selecting ``sample_id``, ``previous_sample_id``,
-        ``next_sample_id``, and ``row_number`` for each image in the collection.
+        Query consumed by ``get_sample_adjacent_info``.
     """
     needs_tiebreaker = not order_by or not any(
         isinstance(expr, OrderByField) and expr.field is ImageSampleField.file_path_abs
