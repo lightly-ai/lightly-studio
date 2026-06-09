@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import ColumnElement, and_
+from sqlalchemy import Select as SQLAlchemySelect
+from sqlalchemy.engine import Row
 from sqlalchemy.orm import aliased
 from sqlmodel import col
 from sqlmodel.sql.expression import SelectOfScalar
@@ -19,6 +21,10 @@ from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import SampleMetadataTable
 
 T = TypeVar("T", default=ImageTable)
+# Preserves the query type so apply_joins works on both SelectOfScalar (apply)
+# and Select (window query).
+SelectT = TypeVar("SelectT", bound=SQLAlchemySelect[Any])
+ORDER_VALUE_LABEL = "order_value"
 
 
 class OrderByExpression(ABC):
@@ -33,23 +39,60 @@ class OrderByExpression(ABC):
         self.ascending = ascending
 
     @abstractmethod
+    def _order_value_expression(self) -> ColumnElement[Any]:
+        """Return the SQL expression used for sorting (no ASC/DESC)."""
+
+    @abstractmethod
+    def apply_joins(self, query: SelectT) -> SelectT:
+        """Add any JOINs needed so ``_order_value_expression()`` is valid on this query.
+
+        Called by ``apply()`` and ``apply_with_order_value()`` before ORDER BY or
+        ``add_columns``. Does not sort.
+        Each subclass must implement this — return the query unchanged when the sort
+        column is already reachable from the FROM clause (e.g. image-table fields).
+        Use per-instance aliases when joining the same table more than once.
+        """
+
+    def to_column_element(self) -> ColumnElement[Any]:
+        """Return the SQLAlchemy column element with direction applied.
+
+        For use in ``query.order_by()`` or window ``over(order_by=...)``. Does not
+        apply joins; call ``apply`` first when joins are required.
+        """
+        order_expr = self._order_value_expression()
+        if self.ascending:
+            return order_expr.asc()
+        return order_expr.desc()
+
     def apply(self, query: SelectOfScalar[T]) -> SelectOfScalar[T]:
-        """Apply this ordering to a SQLModel Select query.
+        """Apply joins for this sort and append the ``ORDER BY``.
 
         Args:
             query: The SQLModel Select query to modify.
 
         Returns:
-            The modified query after ordering
+            The modified query after joining and ordering.
         """
+        joined = self.apply_joins(query)
+        return joined.order_by(self.to_column_element())
 
-    @abstractmethod
-    def to_column_element(self) -> ColumnElement[Any]:
-        """Return the SQLAlchemy column element with direction applied.
+    def apply_with_order_value(self, query: SelectOfScalar[T]) -> SQLAlchemySelect[tuple[T, Any]]:
+        """Apply this sort and append its value to the SELECT list.
+
+        Behaves like ``apply`` but also appends the sort value to the SELECT list as
+        ``ORDER_VALUE_LABEL``. Read values back with ``get_order_value``. Returns a
+        multi-column ``Select`` (read rows with ``session.execute``) because the sort
+        value is added to the row.
+
+        Args:
+            query: The SQLModel Select query to modify.
 
         Returns:
-            A column element ordered ascending or descending.
+            The query after joining, appending the labeled sort value, and ordering.
         """
+        joined = self.apply_joins(query)
+        order_value = self._order_value_expression().label(ORDER_VALUE_LABEL)
+        return joined.add_columns(order_value).order_by(self.to_column_element())
 
     def asc(self) -> Self:
         """Set the ordering to ascending.
@@ -83,28 +126,13 @@ class OrderByField(OrderByExpression):
         super().__init__()
         self.field = field
 
-    def to_column_element(self) -> ColumnElement[Any]:
-        """Return the SQLAlchemy column element with direction applied.
+    def _order_value_expression(self) -> ColumnElement[Any]:
+        """Return the image table column used for sorting."""
+        return cast(ColumnElement[Any], self.field.get_sqlmodel_field())
 
-        Returns:
-            A column element ordered ascending or descending.
-        """
-        if self.ascending:
-            return self.field.get_sqlmodel_field().asc()
-        return self.field.get_sqlmodel_field().desc()
-
-    def apply(self, query: SelectOfScalar[T]) -> SelectOfScalar[T]:
-        """Apply this ordering to a SQLModel Select query.
-
-        Args:
-            query: The SQLModel Select query to modify.
-
-        Returns:
-            The modified query after ordering
-        """
-        if self.ascending:
-            return query.order_by(self.field.get_sqlmodel_field().asc())
-        return query.order_by(self.field.get_sqlmodel_field().desc())
+    def apply_joins(self, query: SelectT) -> SelectT:
+        """Image-table fields are already in the FROM clause; no joins needed."""
+        return query
 
 
 class OrderByMetadataField(OrderByExpression):
@@ -127,46 +155,23 @@ class OrderByMetadataField(OrderByExpression):
         # TODO(Leonardo, 05/2026): Rework to avoid requiring callers to pass
         # cast_to_float explicitly.
         self.cast_to_float = cast_to_float
+        # Per-instance alias so sort joins do not collide with filter joins on metadata.
+        self._metadata_alias = aliased(SampleMetadataTable)
 
-    def to_column_element(self) -> ColumnElement[Any]:
-        """Return the JSON-extract column element with direction applied.
-
-        Returns:
-            A column element ordered ascending or descending.
-        """
-        extract_expr = db_json.json_extract(
-            column=SampleMetadataTable.data,
+    def _order_value_expression(self) -> ColumnElement[Any]:
+        """Return the JSON-extract expression for the metadata field."""
+        return db_json.json_extract(
+            column=self._metadata_alias.data,
             field=self.field_name,
             cast_to_float=self.cast_to_float,
         )
-        if self.ascending:
-            return extract_expr.asc()
-        return extract_expr.desc()
 
-    def apply(self, query: SelectOfScalar[T]) -> SelectOfScalar[T]:
-        """Apply this ordering to a SQLModel Select query.
-
-        Joins SampleMetadataTable (left outer join) and adds an ORDER BY clause
-        on the extracted JSON field.
-
-        Args:
-            query: The SQLModel Select query to modify.
-
-        Returns:
-            The modified query after joining and ordering.
-        """
-        query = query.outerjoin(
-            SampleMetadataTable,
-            SampleMetadataTable.sample_id == col(ImageTable.sample_id),  # type: ignore[arg-type]
+    def apply_joins(self, query: SelectT) -> SelectT:
+        """Left-outer-join aliased ``SampleMetadataTable`` on ``sample_id``."""
+        return query.outerjoin(
+            self._metadata_alias,
+            col(self._metadata_alias.sample_id) == col(ImageTable.sample_id),
         )
-        extract_expr = db_json.json_extract(
-            column=SampleMetadataTable.data,
-            field=self.field_name,
-            cast_to_float=self.cast_to_float,
-        )
-        if self.ascending:
-            return query.order_by(extract_expr.asc())
-        return query.order_by(extract_expr.desc())
 
 
 class OrderByEvaluationMetricField(OrderByExpression):
@@ -193,29 +198,12 @@ class OrderByEvaluationMetricField(OrderByExpression):
         self._run_alias = aliased(EvaluationRunTable)
         self._metric_alias = aliased(EvaluationSampleMetricTable)
 
-    def to_column_element(self) -> ColumnElement[Any]:
-        """Return the metric value column element with direction applied.
+    def _order_value_expression(self) -> ColumnElement[Any]:
+        """Return the evaluation metric value column from the per-instance alias."""
+        return cast(ColumnElement[Any], col(self._metric_alias.value))
 
-        Returns:
-            A column element ordered ascending or descending.
-        """
-        value_col = col(self._metric_alias.value)
-        if self.ascending:
-            return value_col.asc()
-        return value_col.desc()
-
-    def apply_join(self, query: SelectOfScalar[T]) -> SelectOfScalar[T]:
-        """Perform the two LEFT OUTER JOINs without adding ORDER BY.
-
-        Used by resolvers in the similarity/window-function code path where
-        to_column_element() handles ordering separately.
-
-        Args:
-            query: The SQLModel Select query to modify.
-
-        Returns:
-            The modified query after joining.
-        """
+    def apply_joins(self, query: SelectT) -> SelectT:
+        """Left-outer-join evaluation run and sample-metric tables."""
         query = query.outerjoin(
             self._run_alias,
             col(self._run_alias.name) == self.evaluation_run_name,
@@ -229,20 +217,7 @@ class OrderByEvaluationMetricField(OrderByExpression):
             ),
         )
 
-    def apply(self, query: SelectOfScalar[T]) -> SelectOfScalar[T]:
-        """Apply this ordering to a SQLModel Select query.
 
-        Joins EvaluationRunTable and EvaluationSampleMetricTable (left outer joins)
-        and adds an ORDER BY clause on the metric value.
-
-        Args:
-            query: The SQLModel Select query to modify.
-
-        Returns:
-            The modified query after joining and ordering.
-        """
-        query = self.apply_join(query)
-        value_col = col(self._metric_alias.value)
-        if self.ascending:
-            return query.order_by(value_col.asc())
-        return query.order_by(value_col.desc())
+def get_order_value(row: Row[Any]) -> Any | None:
+    """Read the sort value from a row produced by ``apply_with_order_value``."""
+    return getattr(row, ORDER_VALUE_LABEL, None)
