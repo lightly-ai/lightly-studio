@@ -23,7 +23,7 @@ from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
-from lightly_studio.resolvers import embedding_model_resolver
+from lightly_studio.resolvers import embedding_model_resolver, sample_embedding_resolver
 from tests.helpers_resolvers import create_collection
 from tests.resolvers.video.helpers import VideoStub, create_videos
 
@@ -197,11 +197,16 @@ def test_embed_images(
     db_session: Session,
     collection: CollectionTable,
     samples: list[ImageTable],
+    mocker: MockerFixture,
 ) -> None:
     """Test generating and storing image embeddings."""
+    # Use a small batch size so the 10 samples span multiple insertion batches.
+    mocker.patch.object(embedding_manager, "EMBEDDING_INSERTION_BATCH_SIZE", 4)
+    create_many_spy = mocker.spy(sample_embedding_resolver, "create_many")
+
     # Register model
-    embedding_manager = EmbeddingManager()
-    model_id = embedding_manager.register_embedding_model(
+    manager = EmbeddingManager()
+    model_id = manager.register_embedding_model(
         session=db_session,
         embedding_generator=RandomEmbeddingGenerator(),
         collection_id=collection.collection_id,
@@ -210,9 +215,12 @@ def test_embed_images(
 
     # Generate embeddings for samples
     sample_ids = [sample.sample_id for sample in samples]
-    embedding_manager.embed_images(
+    manager.embed_images(
         session=db_session, collection_id=collection.collection_id, sample_ids=sample_ids
     )
+
+    # 10 samples -> 3 batches with sizes 4, 4, and 2
+    assert create_many_spy.call_count == 3
 
     # Verify embeddings were stored in the database
     stored_embeddings = db_session.exec(

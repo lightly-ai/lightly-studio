@@ -6,7 +6,9 @@ describe('ClassBalancingForm', () => {
     it('does not show the target distribution section when target_distribution_mode is uniform', () => {
         render(ClassBalancingForm, {
             props: {
+                instanceId: 'test',
                 params: {
+                    annotation_source_id: '',
                     target_distribution_mode: 'uniform',
                     target_distribution: [],
                     strength: 1
@@ -22,7 +24,13 @@ describe('ClassBalancingForm', () => {
     it('does not show the target distribution section when target_distribution_mode is input', () => {
         render(ClassBalancingForm, {
             props: {
-                params: { target_distribution_mode: 'input', target_distribution: [], strength: 1 },
+                instanceId: 'test',
+                params: {
+                    annotation_source_id: '',
+                    target_distribution_mode: 'input',
+                    target_distribution: [],
+                    strength: 1
+                },
                 annotationLabels: [],
                 onUpdate: vi.fn()
             }
@@ -34,7 +42,9 @@ describe('ClassBalancingForm', () => {
     it('shows the target distribution section when target_distribution_mode is dictionary', () => {
         render(ClassBalancingForm, {
             props: {
+                instanceId: 'test',
                 params: {
+                    annotation_source_id: '',
                     target_distribution_mode: 'dictionary',
                     target_distribution: [],
                     strength: 1

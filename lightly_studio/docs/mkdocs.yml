@@ -32,19 +32,25 @@ repo_name: LightlyStudio
 docs_dir: docs
 
 nav:
-  - Getting Started: index.md
+  - Getting Started:
+    - index.md
   - Dataset Setup:
-    - Image Dataset: dataset_setup/image_dataset.md
-    - Video Dataset: dataset_setup/video_dataset.md
+    - Data Types:
+      - Image Dataset: dataset_setup/image_dataset.md
+      - Video Dataset: dataset_setup/video_dataset.md
+    - Setup Options:
+      - Run LightlyStudio from a Notebook: dataset_setup/notebooks.md
+      - Cloud Storage: dataset_setup/cloud_storage.md
+      - Reuse Datasets: dataset_setup/reuse_datasets.md
   - Python API:
-    - api/index.md
-    - Dataset: api/dataset.md
-    - Sample: api/sample.md
-    - DatasetQuery: api/dataset_query.md
-    - Sampling: api/sampling.md
-    - Plugin: api/plugin.md
-    - Annotation: api/annotation.md
-    - Model Evaluation: api/evaluation.md
+    - API Reference:
+      - Dataset: api/dataset.md
+      - Sample: api/sample.md
+      - DatasetQuery: api/dataset_query.md
+      - Sampling: api/sampling.md
+      - Plugin: api/plugin.md
+      - Annotation: api/annotation.md
+      - Model Evaluation: api/evaluation.md
   - Concepts & Tools:
     - Concepts:
       - Annotations: concepts_and_tools/annotations.md
@@ -57,18 +63,17 @@ nav:
       - Sampling: concepts_and_tools/sampling.md
       - Plugins: concepts_and_tools/plugins.md
       - Model Evaluation: concepts_and_tools/evaluation.md
-  - Advanced:
-    - Run LightlyStudio from a Notebook: advanced/notebooks.md
-    - Reuse Datasets: advanced/reuse_datasets.md
-    - Cloud Storage: advanced/cloud_storage.md
-    - Lightly Query Language: advanced/lightly_query_language.md
-  - About Us: about-us.md
+    - More:
+      - Lightly Query Language: concepts_and_tools/lightly_query_language.md
+  - About Us:
+    - about_us/index.md
   - 🏢 Enterprise:
-    - enterprise/index.md
-    - Connect from Python: enterprise/connect.md
-    - Security and Architecture: enterprise/security.md
-    - On-Premise Deployment: enterprise/on-premise.md
-    - Local Storage: enterprise/local_storage.md
+    - Enterprise:
+      - enterprise/index.md
+      - Connect from Python: enterprise/connect.md
+      - Security and Architecture: enterprise/security.md
+      - On-Premise Deployment: enterprise/on-premise.md
+      - Local Storage: enterprise/local_storage.md
     - Cloud Storage:
       - enterprise/cloud_storage/index.md
       - AWS S3: enterprise/cloud_storage/aws.md

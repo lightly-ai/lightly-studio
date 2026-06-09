@@ -24,7 +24,7 @@ The `ls.VideoDataset.create()` method call is lightweight and initializes an emp
 
 The `add_videos_from_path(...)` method accepts a path to a file or a folder. If the path is a folder,
 it will recursively search for videos in it. A remote path like `s3://my-bucket/my-folder` is also
-supported, see [Using Cloud Storage](../advanced/cloud_storage.md) for more details.
+supported, see [Using Cloud Storage](cloud_storage.md) for more details.
 
 Videos are automatically embedded so that embedding plot and video search
 are enabled. To skip embedding, pass `embed=False` to the method.
@@ -122,7 +122,7 @@ and segmentation mask annotations are supported. See
 
     </details>
 
-### From a Pre-Existing Dataset
+### From an Existing Dataset
 
 Once a dataset is populated, the data is stored in a database. It can be loaded later as follows
 to skip indexing and embedding it again:

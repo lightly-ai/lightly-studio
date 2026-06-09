@@ -1,8 +1,13 @@
 <script lang="ts">
-    import { CreateSamplingDialog, ExportSamples } from '$lib/components';
+    import {
+        CreateSamplingDialog,
+        ExportSamples,
+        SamplingCombinationDialog
+    } from '$lib/components';
     import { ClassifiersMenu } from '$lib/components/FewShotClassifier';
     import { SettingsDialog } from '$lib/components/Settings';
     import OperatorsMenu from '$lib/components/Operator/OperatorsMenu.svelte';
+    import { useFeatureFlags } from '$lib/hooks';
     import type { CollectionView } from '$lib/api/lightly_studio_local';
 
     let {
@@ -23,6 +28,9 @@
     const isVideoCollection = $derived(
         collection.sample_type == 'video' || collection.sample_type == 'video_frame'
     );
+
+    const { featureFlags } = useFeatureFlags();
+    const isCombinationSamplingEnabled = $derived($featureFlags.includes('combination_sampling'));
 </script>
 
 {#if hasClassifier}
@@ -30,7 +38,11 @@
 {/if}
 
 {#if hasSelection}
-    <CreateSamplingDialog />
+    {#if isCombinationSamplingEnabled}
+        <SamplingCombinationDialog />
+    {:else}
+        <CreateSamplingDialog />
+    {/if}
 {/if}
 
 {#if isImageCollection || isVideoCollection}
