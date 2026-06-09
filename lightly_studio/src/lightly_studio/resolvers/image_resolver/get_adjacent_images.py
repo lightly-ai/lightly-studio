@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import func
@@ -10,7 +10,7 @@ from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import Select
 
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
-from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField, SelectQuery
+from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
 from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
@@ -99,11 +99,6 @@ def _base_query(
 
     if order_by:
         for expr in order_by:
-            query = cast(
-                Select[Any],
-                expr.apply_with_options(
-                    cast(SelectQuery, query), order=False, add_order_value=False
-                ),
-            )
+            query = expr.apply_joins(query)
 
     return query
