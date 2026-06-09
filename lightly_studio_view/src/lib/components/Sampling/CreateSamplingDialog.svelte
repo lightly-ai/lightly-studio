@@ -25,7 +25,7 @@
     );
 
     const { isSamplingDialogOpen, openSamplingDialog, closeSamplingDialog } = useSamplingDialog();
-    const annotationCollectionsQuery = $derived(useAnnotationCollections({ collectionId }));
+    const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
 
     const isVideoCollection = $derived(
         page.data.collection?.sample_type === 'video' ||
