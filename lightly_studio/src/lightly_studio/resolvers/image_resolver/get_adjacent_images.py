@@ -26,7 +26,10 @@ def get_adjacent_images(  # noqa: PLR0913
     text_embedding: list[float] | None = None,
     order_by: list[OrderByExpression] | None = None,
 ) -> AdjacentResultView | None:
-    """Get the adjacent images for a given sample ID."""
+    """Get the previous and next image for a sample in the current sort order."""
+    # TODO(Horatiu, 06/2026): Unify ordering for adjacency queries. Similarity sort is
+    # injected via ``ordering_expression`` and rebuilds the window query, while dataset
+    # ``order_by`` uses ``OrderByExpression`` — see ``_base_query`` for assumptions.
     base_query = _base_query(order_by=order_by)
     base_query = base_query.where(col(SampleTable.collection_id) == collection_id)
 
@@ -59,6 +62,22 @@ def _base_query(
     ordering_expression: Any | None = None,
     order_by: list[OrderByExpression] | None = None,
 ) -> Select[Any]:
+    """Return a per-image window query for adjacency lookup.
+
+    Rows are ordered by ``ordering_expression``, then ``order_by``, then an optional
+    ``file_path_abs`` tiebreaker (default sort when both are omitted). Each row
+    includes ``sample_id``, ``previous_sample_id``, ``next_sample_id``, and
+    ``row_number`` via ``lag`` / ``lead`` / ``row_number`` over that ordering.
+
+    Args:
+        ordering_expression: Extra sort keys passed through to the window
+            ``ORDER BY`` (e.g. similarity distance). Caller must add any JOINs
+            these expressions need.
+        order_by: Dataset sort expressions; JOINs are applied via ``apply_joins``.
+
+    Returns:
+        Query consumed by ``get_sample_adjacent_info``.
+    """
     needs_tiebreaker = not order_by or not any(
         isinstance(expr, OrderByField) and expr.field is ImageSampleField.file_path_abs
         for expr in order_by
@@ -82,8 +101,6 @@ def _base_query(
     else:
         order_col = col(ImageTable.file_path_abs).asc()
 
-    # Build the base query that orders samples by absolute file path and
-    # annotates each row with its previous/next sample_id and row number
     query: Select[Any] = (
         select(
             col(ImageTable.sample_id).label("sample_id"),
