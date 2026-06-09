@@ -19,7 +19,6 @@ from lightly_studio.core.dataset_query.image_sample_field import ImageSampleFiel
 from lightly_studio.core.dataset_query.order_by import (
     OrderByExpression,
     OrderByField,
-    SelectQuery,
     get_order_value,
 )
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
@@ -210,7 +209,7 @@ def _get_all_without_similarity(  # noqa: PLR0913
     """
     load_options = _get_load_options()
 
-    samples_query: SelectQuery = (
+    samples_query: SelectOfScalar[ImageTable] = (
         select(ImageTable)
         .options(load_options)
         .join(ImageTable.sample)
@@ -225,7 +224,7 @@ def _get_all_without_similarity(  # noqa: PLR0913
     )
 
     if filters:
-        samples_query = filters.apply(cast(SelectOfScalar[ImageTable], samples_query))
+        samples_query = filters.apply(samples_query)
         total_count_query = filters.apply(total_count_query)
 
     # TODO(Michal, 06/2025): Consider adding sample_ids to the filters.
@@ -237,34 +236,43 @@ def _get_all_without_similarity(  # noqa: PLR0913
             db_array.in_array(column=col(ImageTable.sample_id), values=sample_ids)
         )
 
-    if order_by:
-        for expr in order_by:
-            samples_query = expr.apply(samples_query)
-        if not _file_path_abs_in_order_by(order_by):
-            file_path_col = col(ImageTable.file_path_abs)
-            tiebreaker = file_path_col.asc() if order_by[0].ascending else file_path_col.desc()
-            samples_query = samples_query.order_by(tiebreaker)
-    else:
-        samples_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
-
-    if pagination is not None:
-        samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
-
     total_count = session.exec(total_count_query).one()
+    next_cursor = _compute_next_cursor(pagination, total_count)
 
-    order_values: list[float | None] | None = None
-    if order_by:
-        # Multi-column rows: ImageTable at index 0, sort value read by label.
-        rows = session.execute(samples_query).all()
-        samples: Sequence[ImageTable] = [cast(ImageTable, row[0]) for row in rows]
-        order_values = [_coerce_order_value(get_order_value(row)) for row in rows]
-    else:
-        samples = session.exec(cast(SelectOfScalar[ImageTable], samples_query)).all()
+    if not order_by:
+        scalar_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
+        if pagination is not None:
+            scalar_query = scalar_query.offset(pagination.offset).limit(pagination.limit)
+        return GetAllSamplesByCollectionIdResult(
+            samples=session.exec(scalar_query).all(),
+            total_count=total_count,
+            next_cursor=next_cursor,
+            similarity_scores=None,
+            order_values=None,
+        )
+
+    # A sort is requested: append the primary sort value to the SELECT so it can be
+    # returned per row. Secondary expressions only contribute joins and ORDER BY.
+    ordered_query = order_by[0].apply_with_order_value(samples_query)
+    for expr in order_by[1:]:
+        ordered_query = expr.apply_joins(ordered_query)
+        ordered_query = ordered_query.order_by(expr.to_column_element())
+    if not _file_path_abs_in_order_by(order_by):
+        file_path_col = col(ImageTable.file_path_abs)
+        tiebreaker = file_path_col.asc() if order_by[0].ascending else file_path_col.desc()
+        ordered_query = ordered_query.order_by(tiebreaker)
+    if pagination is not None:
+        ordered_query = ordered_query.offset(pagination.offset).limit(pagination.limit)
+
+    # Multi-column rows: ImageTable at index 0, sort value read by label.
+    rows = session.execute(ordered_query).all()
+    samples = [cast(ImageTable, row[0]) for row in rows]
+    order_values = [_coerce_order_value(get_order_value(row)) for row in rows]
 
     return GetAllSamplesByCollectionIdResult(
         samples=samples,
         total_count=total_count,
-        next_cursor=_compute_next_cursor(pagination, total_count),
+        next_cursor=next_cursor,
         similarity_scores=None,
         order_values=order_values,
     )
