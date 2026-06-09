@@ -1,9 +1,18 @@
 # Metadata
 
-Metadata allows you to store arbitrary key-value data for every sample in your dataset. Use it to
-attach context such as capture conditions, GPS coordinates, model confidence scores, or any custom
-attribute you want to track. Metadata can be viewed and filtered in the GUI or managed through the
-Python API.
+Metadata allows you to store arbitrary key-value data for every sample in your dataset. It can be viewed and filtered in the GUI or managed through the Python API. Use metadata to attach context such as:
+
+- capture conditions (e.g. weather, lighting, camera settings),
+- GPS coordinates or location information,
+- camera or sensor identifiers,
+- production line or machine IDs,
+- data source or collection campaign,
+- recording date, season, or time of day,
+- customer, project, or site identifiers,
+- or any custom attribute you want to track.
+
+For embeddings, [captions](../concepts_and_tools/captions.md), [annotations](../concepts_and_tools/annotations.md), [predictions](../concepts_and_tools/annotations.md), or [tags](../concepts_and_tools/tags.md), their build-in concepts are best suited.
+
 
 ## View and Filter Metadata in the GUI
 
