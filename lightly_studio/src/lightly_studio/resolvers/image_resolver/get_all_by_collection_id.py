@@ -34,7 +34,6 @@ from lightly_studio.resolvers.similarity_utils import (
 
 
 def _file_path_abs_in_order_by(order_by: list[OrderByExpression]) -> bool:
-    """Return True if ``file_path_abs`` is already used as a sort key."""
     return any(
         isinstance(expr, OrderByField) and expr.field is ImageSampleField.file_path_abs
         for expr in order_by
@@ -239,10 +238,8 @@ def _get_all_without_similarity(  # noqa: PLR0913
         )
 
     if order_by:
-        # The primary sort (first expression) value is appended to the SELECT
-        # (labelled for ``get_order_value``).
-        for i, expr in enumerate(order_by):
-            samples_query = expr.apply_with_options(samples_query, add_order_value=(i == 0))
+        for expr in order_by:
+            samples_query = expr.apply(samples_query)
         if not _file_path_abs_in_order_by(order_by):
             file_path_col = col(ImageTable.file_path_abs)
             tiebreaker = file_path_col.asc() if order_by[0].ascending else file_path_col.desc()

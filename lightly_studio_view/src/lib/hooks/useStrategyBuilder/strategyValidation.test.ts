@@ -32,7 +32,12 @@ const defaultMetadataWeighting: StrategyInstance = {
 const defaultClassBalancing: StrategyInstance = {
     id: '1',
     type: 'class_balancing',
-    params: { target_distribution_mode: 'uniform', target_distribution: [], strength: 1 },
+    params: {
+        annotation_source_id: 'src-1',
+        target_distribution_mode: 'uniform',
+        target_distribution: [],
+        strength: 1
+    },
     isExpanded: true
 };
 

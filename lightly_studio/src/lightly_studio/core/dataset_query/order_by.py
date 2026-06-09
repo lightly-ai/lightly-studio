@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Union, cast
+from typing import Any, cast
 
 from sqlalchemy import ColumnElement, and_
+from sqlalchemy import Select as SQLAlchemySelect
 from sqlalchemy.engine import Row
 from sqlalchemy.orm import aliased
 from sqlmodel import col
-from sqlmodel.sql.expression import Select, SelectOfScalar
-from typing_extensions import Self, TypeAlias, TypeVar
+from sqlmodel.sql.expression import SelectOfScalar
+from typing_extensions import Self, TypeVar
 
 from lightly_studio import db_json
 from lightly_studio.core.dataset_query.field import Field
@@ -19,8 +20,11 @@ from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetri
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import SampleMetadataTable
 
-SelectQuery: TypeAlias = Union[Select[Any], SelectOfScalar[Any]]
 T = TypeVar("T", default=ImageTable)
+# Preserves the concrete query type through ``apply_joins`` (``outerjoin`` returns
+# ``Self``), so callers keep their ``Select`` / ``SelectOfScalar`` type without casting.
+# Bound to the common SQLAlchemy ``Select`` base that both SQLModel query types subclass.
+SelectT = TypeVar("SelectT", bound=SQLAlchemySelect[Any])
 ORDER_VALUE_LABEL = "order_value"
 
 
@@ -40,10 +44,10 @@ class OrderByExpression(ABC):
         """Return the SQL expression used for sorting (no ASC/DESC)."""
 
     @abstractmethod
-    def _apply_joins(self, query: SelectQuery) -> SelectQuery:
+    def apply_joins(self, query: SelectT) -> SelectT:
         """Add any JOINs needed so ``_order_value_expression()`` is valid on this query.
 
-        Called by ``apply()`` and ``apply_with_options()`` before ORDER BY or
+        Called by ``apply()`` and ``apply_with_order_value()`` before ORDER BY or
         ``add_columns``. Does not sort.
         Each subclass must implement this — return the query unchanged when the sort
         column is already reachable from the FROM clause (e.g. image-table fields).
@@ -70,39 +74,26 @@ class OrderByExpression(ABC):
         Returns:
             The modified query after joining and ordering.
         """
-        joined = cast(SelectOfScalar[T], self._apply_joins(query))
+        joined = self.apply_joins(query)
         return joined.order_by(self.to_column_element())
 
-    def apply_with_options(
-        self,
-        query: SelectQuery,
-        order: bool = True,
-        add_order_value: bool = True,
-    ) -> SelectQuery:
-        """Apply this sort and optionally append its value to the SELECT list.
+    def apply_with_order_value(self, query: SelectOfScalar[T]) -> SQLAlchemySelect[Any]:
+        """Apply this sort and append its value to the SELECT list.
 
-        Behaves like ``apply`` but can also append the sort value to the SELECT list
-        as ``ORDER_VALUE_LABEL``. Read values back with ``get_order_value``.
+        Behaves like ``apply`` but also appends the sort value to the SELECT list as
+        ``ORDER_VALUE_LABEL``. Read values back with ``get_order_value``. Returns a
+        multi-column ``Select`` (read rows with ``session.execute``) because the sort
+        value is added to the row.
 
         Args:
             query: The SQLModel Select query to modify.
-            order: When True, append ``ORDER BY`` using the directed sort expression.
-                Pass False when ordering is handled separately (e.g. window functions).
-            add_order_value: When True, append the sort value to the SELECT list as
-                ``ORDER_VALUE_LABEL``. Pass False to apply joins (and ordering) only,
-                e.g. when this expression contributes joins but its value is not needed.
 
         Returns:
-            The modified query after joining, optionally appending the sort value, and
-            optionally ordering.
+            The query after joining, appending the labeled sort value, and ordering.
         """
-        query = self._apply_joins(query)
-        if add_order_value:
-            order_expr = self._order_value_expression()
-            query = cast(SelectQuery, query.add_columns(order_expr.label(ORDER_VALUE_LABEL)))
-        if order:
-            query = query.order_by(self.to_column_element())
-        return query
+        joined = self.apply_joins(query)
+        order_value = self._order_value_expression().label(ORDER_VALUE_LABEL)
+        return joined.add_columns(order_value).order_by(self.to_column_element())
 
     def asc(self) -> Self:
         """Set the ordering to ascending.
@@ -140,7 +131,7 @@ class OrderByField(OrderByExpression):
         """Return the image table column used for sorting."""
         return cast(ColumnElement[Any], self.field.get_sqlmodel_field())
 
-    def _apply_joins(self, query: SelectQuery) -> SelectQuery:
+    def apply_joins(self, query: SelectT) -> SelectT:
         """Image-table fields are already in the FROM clause; no joins needed."""
         return query
 
@@ -176,7 +167,7 @@ class OrderByMetadataField(OrderByExpression):
             cast_to_float=self.cast_to_float,
         )
 
-    def _apply_joins(self, query: SelectQuery) -> SelectQuery:
+    def apply_joins(self, query: SelectT) -> SelectT:
         """Left-outer-join aliased ``SampleMetadataTable`` on ``sample_id``."""
         return query.outerjoin(
             self._metadata_alias,
@@ -212,7 +203,7 @@ class OrderByEvaluationMetricField(OrderByExpression):
         """Return the evaluation metric value column from the per-instance alias."""
         return cast(ColumnElement[Any], col(self._metric_alias.value))
 
-    def _apply_joins(self, query: SelectQuery) -> SelectQuery:
+    def apply_joins(self, query: SelectT) -> SelectT:
         """Left-outer-join evaluation run and sample-metric tables."""
         query = query.outerjoin(
             self._run_alias,
@@ -229,5 +220,5 @@ class OrderByEvaluationMetricField(OrderByExpression):
 
 
 def get_order_value(row: Row[Any]) -> Any | None:
-    """Read the sort value from a row produced by ``apply_with_options``."""
+    """Read the sort value from a row produced by ``apply_with_order_value``."""
     return getattr(row, ORDER_VALUE_LABEL, None)

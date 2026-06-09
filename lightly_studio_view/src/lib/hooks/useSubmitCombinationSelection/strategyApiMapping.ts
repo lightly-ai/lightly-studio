@@ -43,6 +43,7 @@ export function toApiStrategy(instance: StrategyInstance): SamplingRequest['stra
     return {
         strategy_name: 'balance',
         target_distribution: targetDistribution,
+        annotation_source_id: instance.params.annotation_source_id || null,
         strength: instance.params.strength
     };
 }
