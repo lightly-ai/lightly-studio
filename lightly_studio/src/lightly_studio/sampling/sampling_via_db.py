@@ -13,6 +13,7 @@ import sqlalchemy
 from numpy.typing import NDArray
 from sqlmodel import Session, col, select
 
+from lightly_studio.db_vector import Embedding
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagCreate
@@ -283,7 +284,7 @@ def _get_embeddings_by_sample_ids(
     session: Session,
     context: _SamplingContext,
     embedding_model_name: str | None,
-) -> list[list[float]]:
+) -> list[Embedding]:
     """Resolve sample embeddings for the given model and sample ids."""
     embedding_model_id = embedding_model_resolver.get_by_name(
         session=session,
