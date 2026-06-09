@@ -25,6 +25,7 @@ export interface ClassBalancingTargetRow {
 export type ClassBalancingTargetDistributionMode = 'uniform' | 'input' | 'dictionary';
 
 export interface ClassBalancingParams {
+    annotation_source_id: string;
     target_distribution_mode: ClassBalancingTargetDistributionMode;
     target_distribution: ClassBalancingTargetRow[];
     strength: number;
@@ -95,5 +96,10 @@ export const STRATEGY_DEFAULTS: { [K in StrategyType]: StrategyParamsByType[K] }
     typicality: { strength: 1 },
     similarity: { query_tag_id: '', strength: 1 },
     metadata_weighting: { metadata_key: '', strength: 1 },
-    class_balancing: { target_distribution_mode: 'uniform', target_distribution: [], strength: 1 }
+    class_balancing: {
+        annotation_source_id: '',
+        target_distribution_mode: 'uniform',
+        target_distribution: [],
+        strength: 1
+    }
 };

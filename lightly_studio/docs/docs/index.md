@@ -148,7 +148,11 @@ directly use your own image, video, or YOLO/COCO dataset.
     1. Run `python example_coco.py` in your terminal.
     1. Click on the printed URL to open the app in your browser.
 
-**How It Works**
+!!! tip
+    Call `lightly-studio gui` from the command line instead of `ls.start_gui()` in Python
+    to skip reindexing your dataset.
+
+## How It Works
 
 -  Your **Python script** creates a LightlyStudio **dataset**.
 -  The `dataset.add_<samples>_from_<source>` functions read your samples and annotations, calculate
@@ -228,6 +232,6 @@ directly use your own image, video, or YOLO/COCO dataset.
 
 ## Python API
 
-LightlyStudio has a powerful [Python interface](api/index.md). You can not only index datasets but
+LightlyStudio has a powerful [Python interface](api/dataset.md). You can not only index datasets but
 also query and manipulate them using code. It supports local and cloud-hosted image and video
-folders; see [Using Cloud Storage](advanced/cloud_storage.md) for setup and limitations.
+folders; see [Using Cloud Storage](dataset_setup/cloud_storage.md) for setup and limitations.
