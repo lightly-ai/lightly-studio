@@ -148,7 +148,8 @@ def test_get_embeddings2d__with_boolean_metadata_color_by(
     sample_ids_payload = table.column("sample_id").to_pylist()
     color_categories = table.column("color_categories").to_pylist()
 
-    # False is sorted before True, so False -> cat 2, True -> cat 3.
+    # Values are frequency-ordered: False is in 2 samples, True in 1, so False
+    # takes cat 2 and True cat 3.
     sample_id_to_colors = dict(zip(sample_ids_payload, color_categories))
     assert sample_id_to_colors[str(samples[0].sample_id)] == [2]  # False -> cat 2
     assert sample_id_to_colors[str(samples[1].sample_id)] == [3]  # True -> cat 3
