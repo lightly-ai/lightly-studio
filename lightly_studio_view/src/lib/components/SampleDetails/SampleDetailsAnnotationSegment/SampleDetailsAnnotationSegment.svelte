@@ -57,7 +57,7 @@
     });
     const { selectAnnotation } = useAnnotationSelection();
 
-    const annotationCollectionsQuery = useAnnotationCollections({ collectionId });
+    const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
     const { selectedCollectionIds, seedSelectionIfNeeded } = useAnnotationCollectionsFilter();
 
     const annotationsSort = $derived.by(() => {

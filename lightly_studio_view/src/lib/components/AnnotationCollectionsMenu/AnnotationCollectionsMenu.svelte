@@ -10,7 +10,7 @@
 
     let { collectionId }: Props = $props();
 
-    const annotationCollectionsQuery = useAnnotationCollections({ collectionId });
+    const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
     const items = $derived(
         (annotationCollectionsQuery.data ?? []).map((c) => ({ id: c.collection_id, name: c.name }))
     );
