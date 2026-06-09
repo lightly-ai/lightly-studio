@@ -19,7 +19,7 @@ Annotations are shown in sample detail view and in dedicated annotation-focused 
 <div style="width: 100%; aspect-ratio: 16 / 9; overflow: hidden;">
   <iframe
     style="width: 100%; height: 100%; border: 0;"
-    src="https://www.youtube.com/embed/IZTkloqpZ4k"
+    src="https://www.youtube.com/embed/IZTkloqpZ4k?autoplay=1&mute=1&playsinline=1&rel=0"
     title="LightlyStudio annotations workflow"
     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
     referrerpolicy="strict-origin-when-cross-origin"
