@@ -131,78 +131,6 @@ class TestDiscreteColorScale:
         assert scale.legend == {2: "0", 3: "1", 4: "2"}
 
 
-class TestOrderValuesByFrequency:
-    """Tests for order_values_by_frequency."""
-
-    def test_orders_by_descending_frequency(self) -> None:
-        ids = [uuid4() for _ in range(4)]
-        sample_to_values = {
-            ids[0]: ["a"],
-            ids[1]: ["b"],
-            ids[2]: ["b"],
-            ids[3]: ["b", "c"],
-        }
-        ordered = coloring_helpers.order_values_by_frequency(
-            sample_to_values=sample_to_values,
-            matching_sample_ids=None,
-        )
-        # "b" in 3 samples, "a"/"c" in 1 each (tie broken alphabetically).
-        assert ordered == ["b", "a", "c"]
-
-    def test_tie_break_by_formatted_label(self) -> None:
-        ids = [uuid4(), uuid4()]
-        sample_to_values = {ids[0]: [2], ids[1]: [10]}
-        # As integers 2 < 10, but formatted labels sort "10" < "2".
-        ordered = coloring_helpers.order_values_by_frequency(
-            sample_to_values=sample_to_values,
-            matching_sample_ids=None,
-        )
-        assert ordered == [10, 2]
-
-    def test_none_mask_counts_all_samples(self) -> None:
-        ids = [uuid4(), uuid4()]
-        sample_to_values = {ids[0]: ["x"], ids[1]: ["y"]}
-        ordered = coloring_helpers.order_values_by_frequency(
-            sample_to_values=sample_to_values,
-            matching_sample_ids=None,
-        )
-        assert set(ordered) == {"x", "y"}
-
-    def test_mask_restricts_counting_and_omits_absent_values(self) -> None:
-        ids = [uuid4() for _ in range(3)]
-        sample_to_values = {
-            ids[0]: ["kept"],
-            ids[1]: ["kept"],
-            ids[2]: ["dropped"],
-        }
-        # Only the first two samples match; "dropped" never occurs among them.
-        ordered = coloring_helpers.order_values_by_frequency(
-            sample_to_values=sample_to_values,
-            matching_sample_ids={ids[0], ids[1]},
-        )
-        assert ordered == ["kept"]
-
-    def test_empty_mask_yields_no_values(self) -> None:
-        ids = [uuid4()]
-        ordered = coloring_helpers.order_values_by_frequency(
-            sample_to_values={ids[0]: ["a"]},
-            matching_sample_ids=set(),
-        )
-        assert ordered == []
-
-    def test_repeated_value_in_one_sample_counts_once(self) -> None:
-        sid = uuid4()
-        other = uuid4()
-        sample_to_values = {sid: ["dup", "dup"], other: ["single"]}
-        ordered = coloring_helpers.order_values_by_frequency(
-            sample_to_values=sample_to_values,
-            matching_sample_ids=None,
-        )
-        # "dup" appears twice in one sample but counts as one sample -> tie,
-        # broken alphabetically: "dup" < "single".
-        assert ordered == ["dup", "single"]
-
-
 def test_assign_color_categories() -> None:
     ids = [uuid4(), uuid4()]
     scale = DiscreteColorScale.from_values(values=["cat", "dog"])
@@ -298,3 +226,56 @@ def test_assign_color_categories__unmapped_value_is_empty() -> None:
 
     assert legend == {2: "known"}
     assert categories == [[]]
+
+
+def test_order_values_by_frequency() -> None:
+    ids = [uuid4() for _ in range(4)]
+    sample_to_values = {
+        ids[0]: ["a"],
+        ids[1]: ["b"],
+        ids[2]: ["b"],
+        ids[3]: ["b", "c"],
+    }
+    ordered = coloring_helpers.order_values_by_frequency(
+        sample_to_values=sample_to_values,
+        matching_sample_ids=None,
+    )
+    # "b" in 3 samples, "a"/"c" in 1 each (tie broken alphabetically).
+    assert ordered == ["b", "a", "c"]
+
+
+def test_order_values_by_frequency__tie_broken_by_formatted_label() -> None:
+    ids = [uuid4(), uuid4()]
+    sample_to_values = {ids[0]: [2], ids[1]: [10]}
+    # As integers 2 < 10, but the formatted labels sort "10" < "2".
+    ordered = coloring_helpers.order_values_by_frequency(
+        sample_to_values=sample_to_values,
+        matching_sample_ids=None,
+    )
+    assert ordered == [10, 2]
+
+
+def test_order_values_by_frequency__mask_restricts_and_omits_absent_values() -> None:
+    ids = [uuid4() for _ in range(3)]
+    sample_to_values = {
+        ids[0]: ["kept"],
+        ids[1]: ["kept"],
+        ids[2]: ["dropped"],
+    }
+    # Only the first two samples match; "dropped" never occurs among them.
+    ordered = coloring_helpers.order_values_by_frequency(
+        sample_to_values=sample_to_values,
+        matching_sample_ids={ids[0], ids[1]},
+    )
+    assert ordered == ["kept"]
+
+
+def test_order_values_by_frequency__value_counts_once_per_sample() -> None:
+    sid, other = uuid4(), uuid4()
+    sample_to_values = {sid: ["dup", "dup"], other: ["single"]}
+    ordered = coloring_helpers.order_values_by_frequency(
+        sample_to_values=sample_to_values,
+        matching_sample_ids=None,
+    )
+    # "dup" repeats within one sample but counts once -> tie, broken by label.
+    assert ordered == ["dup", "single"]
