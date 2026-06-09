@@ -1,60 +1,52 @@
 import { get, writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { StrategyInstance } from '$lib/hooks/useStrategyBuilder';
 import { useSamplingCombinationDialog } from './useSamplingCombinationDialog';
 
 vi.mock('$lib/hooks/useTags/useTags', () => ({ useTags: vi.fn() }));
-vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({ useImageFilters: vi.fn() }));
-vi.mock('$lib/hooks/useVideoFilters/useVideoFilters', () => ({ useVideoFilters: vi.fn() }));
 vi.mock('$lib/hooks/useGlobalStorage', () => ({ useGlobalStorage: vi.fn() }));
-vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
-    useMetadataFilters: vi.fn()
-}));
 vi.mock('$lib/hooks/useStrategyBuilder', () => ({
-    useStrategyBuilder: vi.fn(),
     isStrategyInstanceValid: vi.fn()
 }));
 vi.mock('$lib/hooks/useSamplingDialog/useSamplingDialog', () => ({ useSamplingDialog: vi.fn() }));
 vi.mock('$lib/hooks/useSubmitCombinationSelection/useSubmitCombinationSelection', () => ({
     useSubmitCombinationSelection: vi.fn()
 }));
+vi.mock('./useSelectionFilter', () => ({ useSelectionFilter: vi.fn() }));
 
 const { useTags } = await import('$lib/hooks/useTags/useTags');
-const { useImageFilters } = await import('$lib/hooks/useImageFilters/useImageFilters');
-const { useVideoFilters } = await import('$lib/hooks/useVideoFilters/useVideoFilters');
 const { useGlobalStorage } = await import('$lib/hooks/useGlobalStorage');
-const { useMetadataFilters } = await import('$lib/hooks/useMetadataFilters/useMetadataFilters');
-const { useStrategyBuilder, isStrategyInstanceValid } =
-    await import('$lib/hooks/useStrategyBuilder');
+const { isStrategyInstanceValid } = await import('$lib/hooks/useStrategyBuilder');
 const { useSamplingDialog } = await import('$lib/hooks/useSamplingDialog/useSamplingDialog');
 const { useSubmitCombinationSelection } =
     await import('$lib/hooks/useSubmitCombinationSelection/useSubmitCombinationSelection');
+const { useSelectionFilter } = await import('./useSelectionFilter');
 
 describe('useSamplingCombinationDialog', () => {
     let filteredSampleCount: ReturnType<typeof writable<number>>;
-    let metadataInfo: ReturnType<typeof writable<{ name: string; type: string }[]>>;
-    let imageFilter: ReturnType<typeof writable>;
-    let videoFilter: ReturnType<typeof writable>;
-    let instances: ReturnType<typeof writable>;
+    let instances: ReturnType<typeof writable<StrategyInstance[]>>;
     let isSubmitting: ReturnType<typeof writable<boolean>>;
     let submitFn: ReturnType<typeof vi.fn>;
     let resetStrategiesFn: ReturnType<typeof vi.fn>;
-
-    const defaultParams = {
-        getCollectionId: () => 'col-1',
-        getIsVideoCollection: () => false
-    };
+    let buildSelectionFilterFn: ReturnType<typeof vi.fn>;
+    let defaultParams: Parameters<typeof useSamplingCombinationDialog>[0];
 
     beforeEach(() => {
         vi.clearAllMocks();
 
         filteredSampleCount = writable(5);
-        metadataInfo = writable([]);
-        imageFilter = writable(null);
-        videoFilter = writable(null);
         instances = writable([]);
         isSubmitting = writable(false);
         submitFn = vi.fn().mockResolvedValue(false);
         resetStrategiesFn = vi.fn();
+        buildSelectionFilterFn = vi.fn().mockReturnValue(null);
+
+        defaultParams = {
+            getCollectionId: () => 'col-1',
+            getIsVideoCollection: () => false,
+            instances,
+            onSubmitSuccess: resetStrategiesFn
+        };
 
         vi.mocked(useTags).mockReturnValue({
             tags: writable([]),
@@ -62,20 +54,7 @@ describe('useSamplingCombinationDialog', () => {
             setTagSelected: vi.fn()
         } as never);
 
-        vi.mocked(useImageFilters).mockReturnValue({ imageFilter } as never);
-        vi.mocked(useVideoFilters).mockReturnValue({ videoFilter } as never);
         vi.mocked(useGlobalStorage).mockReturnValue({ filteredSampleCount } as never);
-        vi.mocked(useMetadataFilters).mockReturnValue({ metadataInfo } as never);
-
-        vi.mocked(useStrategyBuilder).mockReturnValue({
-            instances,
-            addStrategy: vi.fn(),
-            duplicateStrategy: vi.fn(),
-            removeStrategy: vi.fn(),
-            resetStrategies: resetStrategiesFn,
-            toggleExpand: vi.fn(),
-            updateParams: vi.fn()
-        } as never);
 
         vi.mocked(useSamplingDialog).mockReturnValue({
             isSamplingDialogOpen: writable(false),
@@ -89,48 +68,11 @@ describe('useSamplingCombinationDialog', () => {
             submit: submitFn
         } as never);
 
+        vi.mocked(useSelectionFilter).mockReturnValue({
+            buildSelectionFilter: buildSelectionFilterFn
+        });
+
         vi.mocked(isStrategyInstanceValid).mockReturnValue(true);
-    });
-
-    describe('metadataFieldNames', () => {
-        it('returns only names of integer and float metadata fields', () => {
-            metadataInfo.set([
-                { name: 'score', type: 'float' },
-                { name: 'count', type: 'integer' },
-                { name: 'label', type: 'string' },
-                { name: 'flag', type: 'boolean' }
-            ]);
-
-            const { metadataFieldNames } = useSamplingCombinationDialog(defaultParams);
-
-            expect(get(metadataFieldNames)).toEqual(['score', 'count']);
-        });
-
-        it('returns empty array when metadataInfo has no numeric fields', () => {
-            metadataInfo.set([{ name: 'label', type: 'string' }]);
-
-            const { metadataFieldNames } = useSamplingCombinationDialog(defaultParams);
-
-            expect(get(metadataFieldNames)).toEqual([]);
-        });
-    });
-
-    describe('hasMetadataFields', () => {
-        it('is true when metadataInfo contains numeric fields', () => {
-            metadataInfo.set([{ name: 'score', type: 'float' }]);
-
-            const { hasMetadataFields } = useSamplingCombinationDialog(defaultParams);
-
-            expect(get(hasMetadataFields)).toBe(true);
-        });
-
-        it('is false when metadataInfo is empty', () => {
-            metadataInfo.set([]);
-
-            const { hasMetadataFields } = useSamplingCombinationDialog(defaultParams);
-
-            expect(get(hasMetadataFields)).toBe(false);
-        });
     });
 
     describe('noSamples', () => {
@@ -219,7 +161,9 @@ describe('useSamplingCombinationDialog', () => {
         });
 
         it('is false when any strategy instance is invalid', () => {
-            instances.set([{ id: 'a', type: 'diversity', params: {}, isExpanded: true }]);
+            instances.set([
+                { id: 'a', type: 'diversity', params: { strength: 1 }, isExpanded: true }
+            ]);
             vi.mocked(isStrategyInstanceValid).mockReturnValue(false);
 
             const { isFormValid, nSamplesToSelect, selectionResultTagName } =
@@ -231,7 +175,9 @@ describe('useSamplingCombinationDialog', () => {
         });
 
         it('is false when nSamplesToSelect is 0', () => {
-            instances.set([{ id: 'a', type: 'diversity', params: {}, isExpanded: true }]);
+            instances.set([
+                { id: 'a', type: 'diversity', params: { strength: 1 }, isExpanded: true }
+            ]);
 
             const { isFormValid, nSamplesToSelect, selectionResultTagName } =
                 useSamplingCombinationDialog(defaultParams);
@@ -242,7 +188,9 @@ describe('useSamplingCombinationDialog', () => {
         });
 
         it('is false when selectionResultTagName is blank', () => {
-            instances.set([{ id: 'a', type: 'diversity', params: {}, isExpanded: true }]);
+            instances.set([
+                { id: 'a', type: 'diversity', params: { strength: 1 }, isExpanded: true }
+            ]);
 
             const { isFormValid, nSamplesToSelect, selectionResultTagName } =
                 useSamplingCombinationDialog(defaultParams);
@@ -253,7 +201,9 @@ describe('useSamplingCombinationDialog', () => {
         });
 
         it('is true when instances are non-empty, all valid, count > 0, and tag name is set', () => {
-            instances.set([{ id: 'a', type: 'diversity', params: {}, isExpanded: true }]);
+            instances.set([
+                { id: 'a', type: 'diversity', params: { strength: 1 }, isExpanded: true }
+            ]);
 
             const { isFormValid, nSamplesToSelect, selectionResultTagName } =
                 useSamplingCombinationDialog(defaultParams);
@@ -266,7 +216,9 @@ describe('useSamplingCombinationDialog', () => {
 
     describe('handleFormSubmit', () => {
         function makeValidForm(hook: ReturnType<typeof useSamplingCombinationDialog>) {
-            instances.set([{ id: 'a', type: 'diversity', params: {}, isExpanded: true }]);
+            instances.set([
+                { id: 'a', type: 'diversity', params: { strength: 1 }, isExpanded: true }
+            ]);
             filteredSampleCount.set(100);
             hook.nSamplesToSelect.set(10);
             hook.selectionResultTagName.set('my-tag');
@@ -305,7 +257,9 @@ describe('useSamplingCombinationDialog', () => {
 
         it('does not call submit when notEnoughSamples', () => {
             const hook = useSamplingCombinationDialog(defaultParams);
-            instances.set([{ id: 'a', type: 'diversity', params: {}, isExpanded: true }]);
+            instances.set([
+                { id: 'a', type: 'diversity', params: { strength: 1 }, isExpanded: true }
+            ]);
             filteredSampleCount.set(5);
             hook.nSamplesToSelect.set(10);
             hook.selectionResultTagName.set('my-tag');
@@ -328,10 +282,13 @@ describe('useSamplingCombinationDialog', () => {
         });
 
         it('calls submit with collectionId, instances, count, tag name, and filter', async () => {
+            buildSelectionFilterFn.mockReturnValue({
+                sample_filter: { tag_ids: ['t-1'] },
+                filter_type: 'image'
+            });
             submitFn.mockResolvedValue(false);
             const hook = useSamplingCombinationDialog(defaultParams);
             makeValidForm(hook);
-            imageFilter.set({ sample_filter: { tag_ids: ['t-1'] } });
             const event = { preventDefault: vi.fn() } as unknown as Event;
 
             hook.handleFormSubmit(event);
@@ -343,64 +300,19 @@ describe('useSamplingCombinationDialog', () => {
                     isVideoCollection: false,
                     nSamplesToSelect: 10,
                     selectionResultTagName: 'my-tag',
-                    selectionFilter: {
-                        sample_filter: { tag_ids: ['t-1'] },
-                        filter_type: 'image'
-                    }
+                    selectionFilter: { sample_filter: { tag_ids: ['t-1'] }, filter_type: 'image' }
                 })
-            );
-        });
-    });
-
-    describe('buildSelectionFilter', () => {
-        function makeValidForm(hook: ReturnType<typeof useSamplingCombinationDialog>) {
-            instances.set([{ id: 'a', type: 'diversity', params: {}, isExpanded: true }]);
-            filteredSampleCount.set(100);
-            hook.nSamplesToSelect.set(10);
-            hook.selectionResultTagName.set('my-tag');
-        }
-
-        it('appends filter_type "video" and uses videoFilter for video collections', async () => {
-            submitFn.mockResolvedValue(false);
-            const hook = useSamplingCombinationDialog({
-                getCollectionId: () => 'col-1',
-                getIsVideoCollection: () => true
-            });
-            makeValidForm(hook);
-            videoFilter.set({ video_filter: { tag_ids: ['t-2'] } });
-            const event = { preventDefault: vi.fn() } as unknown as Event;
-
-            hook.handleFormSubmit(event);
-            await new Promise((r) => setTimeout(r, 0));
-
-            expect(submitFn).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    selectionFilter: { video_filter: { tag_ids: ['t-2'] }, filter_type: 'video' }
-                })
-            );
-        });
-
-        it('passes null selectionFilter when imageFilter is null', async () => {
-            submitFn.mockResolvedValue(false);
-            imageFilter.set(null);
-            const hook = useSamplingCombinationDialog(defaultParams);
-            makeValidForm(hook);
-            const event = { preventDefault: vi.fn() } as unknown as Event;
-
-            hook.handleFormSubmit(event);
-            await new Promise((r) => setTimeout(r, 0));
-
-            expect(submitFn).toHaveBeenCalledWith(
-                expect.objectContaining({ selectionFilter: null })
             );
         });
     });
 
     describe('resetForm', () => {
-        it('resets strategies, nSamplesToSelect, and selectionResultTagName after successful submit', async () => {
+        it('calls onSubmitSuccess, resets nSamplesToSelect, and selectionResultTagName after successful submit', async () => {
             submitFn.mockResolvedValue(true);
             const hook = useSamplingCombinationDialog(defaultParams);
-            instances.set([{ id: 'a', type: 'diversity', params: {}, isExpanded: true }]);
+            instances.set([
+                { id: 'a', type: 'diversity', params: { strength: 1 }, isExpanded: true }
+            ]);
             filteredSampleCount.set(100);
             hook.nSamplesToSelect.set(50);
             hook.selectionResultTagName.set('result-tag');
@@ -417,7 +329,9 @@ describe('useSamplingCombinationDialog', () => {
         it('does not reset form when submit fails', async () => {
             submitFn.mockResolvedValue(false);
             const hook = useSamplingCombinationDialog(defaultParams);
-            instances.set([{ id: 'a', type: 'diversity', params: {}, isExpanded: true }]);
+            instances.set([
+                { id: 'a', type: 'diversity', params: { strength: 1 }, isExpanded: true }
+            ]);
             filteredSampleCount.set(100);
             hook.nSamplesToSelect.set(50);
             hook.selectionResultTagName.set('result-tag');
