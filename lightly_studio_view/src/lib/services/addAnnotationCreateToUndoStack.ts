@@ -22,6 +22,7 @@ export const addAnnotationCreateToUndoStack = ({
         refetch();
     };
 
+    console.log('123');
     addReversibleAction({
         id: `annotation-create-${annotation.sample_id}-${Date.now()}`,
         description: `Undo create annotation`,

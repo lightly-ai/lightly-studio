@@ -5,16 +5,13 @@ import {
 } from '$lib/components/SampleAnnotation/utils';
 import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
-import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
-import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
-import type { BoundingBox } from '$lib/types';
-import { toast } from 'svelte-sonner';
-import { useGlobalStorage } from './useGlobalStorage';
-import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
-import { useDeleteAnnotation } from './useDeleteAnnotation/useDeleteAnnotation';
-import { useUpdateAnnotationsMutation } from './useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
-import { applySegmentationMaskConstraints } from '$lib/utils/segmentationOverlap';
 import { restoreOverriddenSegmentationAnnotationsForUndo } from '$lib/services/restoreOverriddenSegmentationAnnotationsForUndo';
+import { applySegmentationMaskConstraints } from '$lib/utils/segmentationOverlap';
+import { toast } from 'svelte-sonner';
+import { useCreateSegmentationMask } from './useCreateSegmentationMask';
+import { useResolveAnnotationLabel } from './useResolveAnnotationLabel';
+import { useUpdateAnnotationsMutation } from './useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
+import { useUpdateSegmentationMask } from './useUpdateSegmentationMask';
 
 export function useSegmentationMaskBrush({
     collectionId,
@@ -37,21 +34,17 @@ export function useSegmentationMaskBrush({
      *  the chosen class, or null if the user cancelled. */
     requestLabel?: () => Promise<{ label: string } | null>;
 }) {
-    const { createLabel } = useCreateLabel({ collectionId });
-    const { createAnnotation } = useCreateAnnotation({ collectionId });
-    const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
-    const { deleteAnnotation } = useDeleteAnnotation({
-        collectionId
-    });
-    const {
-        context: annotationLabelContext,
-        setIsDrawing,
-        setAnnotationLabel,
-        setLastCreatedAnnotationId,
-        setAnnotationId,
-        setAnnotationType
-    } = useAnnotationLabelContext();
+    const { context: annotationLabelContext, setIsDrawing } = useAnnotationLabelContext();
     const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId });
+    const { createAnnotation } = useCreateAnnotation({ collectionId });
+    const { resolveAnnotationLabel } = useResolveAnnotationLabel({ collectionId, requestLabel });
+    const { updateSegmentationMask } = useUpdateSegmentationMask({ collectionId, refetch });
+    const { createSegmentationMask } = useCreateSegmentationMask({
+        collectionId,
+        datasetId,
+        sampleId,
+        refetch
+    });
 
     const finishBrush = async (
         workingMask: Uint8Array | null,
@@ -79,16 +72,10 @@ export function useSegmentationMaskBrush({
             return;
         }
 
-        let annotationLabelName = annotationLabelContext.annotationLabel;
-        if (!selectedAnnotation && !annotationLabelName) {
-            const result = requestLabel ? await requestLabel() : null;
-            if (!result?.label) {
-                toast.error('Please select a class before creating an annotation');
-                return;
-            }
-            annotationLabelName = result.label;
-            setAnnotationLabel(annotationLabelName);
-            updateLastAnnotationLabel(collectionId, annotationLabelName);
+        let labelName = annotationLabelContext.annotationLabel;
+        if (!selectedAnnotation) {
+            labelName = await resolveAnnotationLabel();
+            if (!labelName) return;
         }
 
         const overriddenAnnotations = await applySegmentationMaskConstraints({
@@ -111,84 +98,33 @@ export function useSegmentationMaskBrush({
             });
         };
 
-        const bbox: BoundingBox | null = computeBoundingBoxFromMask(
-            workingMask,
-            sample.width,
-            sample.height
-        );
-
+        const bbox = computeBoundingBoxFromMask(workingMask, sample.width, sample.height);
         if (!bbox) {
             toast.error('Invalid segmentation mask');
             return;
         }
-
         const rle = encodeBinaryMaskToRLE(workingMask);
+
         if (selectedAnnotation) {
-            try {
-                if (!updateAnnotation) return;
-                await updateAnnotation({
-                    annotation_id: selectedAnnotation.sample_id!,
-                    collection_id: collectionId,
-                    bounding_box: bbox,
-                    segmentation_mask: rle
-                });
-
-                setAnnotationType('segmentation_mask');
-                refetch();
-
-                addAnnotationUpdateToUndoStack({
-                    annotation: selectedAnnotation,
-                    collection_id: collectionId,
-                    addReversibleAction,
-                    updateAnnotation,
-                    onUndo: async () => {
-                        await restoreOverriddenAnnotations();
-                        refetch();
-                    }
-                });
-
-                return;
-            } catch (error) {
-                console.error('Failed to update annotation:', (error as Error).message);
-                return;
-            }
-        }
-
-        let label = labels?.find((l) => l.annotation_label_name === annotationLabelName);
-
-        if (!label) {
-            label = await createLabel({
-                dataset_id: datasetId,
-                annotation_label_name: annotationLabelName!
+            if (!updateAnnotation) return;
+            await updateSegmentationMask({
+                annotation: selectedAnnotation,
+                bbox,
+                rle,
+                updateAnnotation,
+                onUndo: restoreOverriddenAnnotations
             });
+            return;
         }
 
-        const newAnnotation = await createAnnotation({
-            parent_sample_id: sampleId,
-            annotation_type: 'segmentation_mask',
-            x: bbox.x,
-            y: bbox.y,
-            width: bbox.width,
-            height: bbox.height,
-            segmentation_mask: rle,
-            annotation_label_id: label.annotation_label_id!,
-            annotation_collection_name: annotationLabelContext.annotationSource ?? undefined
-        });
-
-        addAnnotationCreateToUndoStack({
-            annotation: newAnnotation,
-            addReversibleAction,
-            deleteAnnotation,
-            refetch,
+        await createSegmentationMask({
+            labelName: labelName!,
+            bbox,
+            rle,
+            labels,
             onUndo: restoreOverriddenAnnotations
         });
 
-        setAnnotationType('segmentation_mask');
-        setAnnotationLabel(label.annotation_label_name!);
-        setAnnotationId(newAnnotation.sample_id);
-        setLastCreatedAnnotationId(newAnnotation.sample_id);
-
-        refetch();
         onAnnotationCreated?.();
     };
 
