@@ -21,9 +21,8 @@ from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import SampleMetadataTable
 
 T = TypeVar("T", default=ImageTable)
-# Preserves the concrete query type through ``apply_joins`` (``outerjoin`` returns
-# ``Self``), so callers keep their ``Select`` / ``SelectOfScalar`` type without casting.
-# Bound to the common SQLAlchemy ``Select`` base that both SQLModel query types subclass.
+# Preserves the query type so apply_joins works on both SelectOfScalar (apply)
+# and Select (window query).
 SelectT = TypeVar("SelectT", bound=SQLAlchemySelect[Any])
 ORDER_VALUE_LABEL = "order_value"
 

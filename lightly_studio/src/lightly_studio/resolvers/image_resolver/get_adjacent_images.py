@@ -59,6 +59,27 @@ def _base_query(
     ordering_expression: Any | None = None,
     order_by: list[OrderByExpression] | None = None,
 ) -> Select[Any]:
+    """Build the window query used to resolve previous/next image sample IDs.
+
+    Each row is one image sample, ordered by ``order_col`` (built from
+    ``ordering_expression``, ``order_by``, and an optional tiebreaker). Window
+    functions annotate every row with its predecessor, successor, and position
+    in that ordering.
+
+    When ``order_by`` includes metadata or evaluation-metric fields, their
+    required JOINs are applied via ``apply_joins`` so sort expressions are
+    valid inside the ``OVER`` clause.
+
+    Args:
+        ordering_expression: Optional primary sort key(s), e.g. a similarity
+            distance expression. Prepended before ``order_by`` columns.
+        order_by: Optional dataset-query sort expressions. When omitted, rows
+            are ordered by ``ImageTable.file_path_abs`` ascending.
+
+    Returns:
+        A query selecting ``sample_id``, ``previous_sample_id``,
+        ``next_sample_id``, and ``row_number`` for each image in the collection.
+    """
     needs_tiebreaker = not order_by or not any(
         isinstance(expr, OrderByField) and expr.field is ImageSampleField.file_path_abs
         for expr in order_by
@@ -82,8 +103,6 @@ def _base_query(
     else:
         order_col = col(ImageTable.file_path_abs).asc()
 
-    # Build the base query that orders samples by absolute file path and
-    # annotates each row with its previous/next sample_id and row number
     query: Select[Any] = (
         select(
             col(ImageTable.sample_id).label("sample_id"),
