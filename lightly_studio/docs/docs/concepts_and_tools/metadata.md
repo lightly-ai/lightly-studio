@@ -11,7 +11,7 @@ Metadata allows you to store arbitrary key-value data for every sample in your d
 - customer, project, or site identifiers,
 - or any custom attribute you want to track.
 
-For embeddings, [captions](../concepts_and_tools/captions.md), [annotations](../concepts_and_tools/annotations.md), [predictions](../concepts_and_tools/annotations.md), or [tags](../concepts_and_tools/tags.md), their build-in concepts are best suited.
+For embeddings, [captions](../concepts_and_tools/captions.md), [annotations](../concepts_and_tools/annotations.md), [predictions](../concepts_and_tools/annotations.md), or [tags](../concepts_and_tools/tags.md), the corresponding built-in concepts are better suited.
 
 
 ## View and Filter Metadata in the GUI
