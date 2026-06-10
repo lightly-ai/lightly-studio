@@ -202,10 +202,10 @@ def _get_all_without_similarity(  # noqa: PLR0913
 ) -> GetAllSamplesByCollectionIdResult:
     """Get samples without similarity search.
 
-    When ``order_by`` is set, the primary sort expression is appended to the SELECT so the
-    per-sample sort value can be returned in ``order_values`` alongside each ``ImageTable``.
-    Without a sort, results default to ``file_path_abs`` ascending and ``order_values`` is
-    ``None``.
+    When ``order_by`` is omitted, sorting defaults to ``file_path_abs`` ascending;
+    otherwise a ``file_path_abs`` tiebreaker is appended when missing. The primary sort expression
+    is appended to the SELECT so its value can be returned per row in ``order_values``.
+    Non-numeric sort values (e.g. strings) are coerced to ``None``.
     """
     load_options = _get_load_options()
 
@@ -240,27 +240,20 @@ def _get_all_without_similarity(  # noqa: PLR0913
     next_cursor = _compute_next_cursor(pagination, total_count)
 
     if not order_by:
-        scalar_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
-        if pagination is not None:
-            scalar_query = scalar_query.offset(pagination.offset).limit(pagination.limit)
-        return GetAllSamplesByCollectionIdResult(
-            samples=session.exec(scalar_query).all(),
-            total_count=total_count,
-            next_cursor=next_cursor,
-            similarity_scores=None,
-            order_values=None,
+        order_by = [OrderByField(field=ImageSampleField.file_path_abs).asc()]
+    elif not _file_path_abs_in_order_by(order_by):
+        order_by.append(
+            OrderByField(field=ImageSampleField.file_path_abs).asc()
+            if order_by[0].ascending
+            else OrderByField(field=ImageSampleField.file_path_abs).desc()
         )
 
-    # A sort is requested: append the primary sort value to the SELECT so it can be
-    # returned per row. Secondary expressions only contribute joins and ORDER BY.
+    # Append the primary sort value to the SELECT so it can be returned per row.
+    # Secondary expressions only contribute joins and ORDER BY.
     ordered_query = order_by[0].apply_with_order_value(samples_query)
     for expr in order_by[1:]:
         ordered_query = expr.apply_joins(ordered_query)
         ordered_query = ordered_query.order_by(expr.to_column_element())
-    if not _file_path_abs_in_order_by(order_by):
-        file_path_col = col(ImageTable.file_path_abs)
-        tiebreaker = file_path_col.asc() if order_by[0].ascending else file_path_col.desc()
-        ordered_query = ordered_query.order_by(tiebreaker)
     if pagination is not None:
         ordered_query = ordered_query.offset(pagination.offset).limit(pagination.limit)
 
