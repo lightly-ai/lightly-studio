@@ -41,6 +41,20 @@ class TestImageView:
         assert image_view.captions == []
         assert image_view.tags == []
         assert image_view.metadata_dict is None
+        assert image_view.order_value is None
+
+    def test_from_image_table__with_order_value(self, db_session: Session) -> None:
+        """Test conversion includes an explicit order value."""
+        collection = create_collection(session=db_session)
+        image = create_image(
+            session=db_session,
+            collection_id=collection.collection_id,
+            file_path_abs="/path/to/sorted_image.jpg",
+        )
+
+        image_view = ImageView.from_image_table(image=image, order_value=12.5)
+
+        assert image_view.order_value == 12.5
 
     def test_from_image_table__with_annotations(self, db_session: Session) -> None:
         """Test conversion with annotations."""
