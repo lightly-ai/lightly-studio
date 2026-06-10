@@ -50,6 +50,7 @@ def build_color_data(
     collection_id: UUID,
     color_by: ColorBy | None,
     sample_ids: list[UUID],
+    matching_sample_ids: set[UUID] | None,
 ) -> tuple[list[list[int]], dict[int, str]]:
     """Build color categories and a legend for embedding coloring.
 
@@ -58,6 +59,10 @@ def build_color_data(
         collection_id: Collection whose samples are being colored.
         color_by: Coloring configuration to apply to the samples.
         sample_ids: Sample IDs in the same order as the returned color categories.
+        matching_sample_ids: Sample IDs matching the active filter. Values are
+            prioritized by their frequency among these samples so the legend
+            reflects the filtered view. ``None`` means no filter is active (all
+            samples are counted).
 
     Returns:
         A tuple of `(color_categories, color_legend)` for the provided samples. The
@@ -70,6 +75,7 @@ def build_color_data(
             session=session,
             tag_ids=color_by.tag_ids,
             sample_ids=sample_ids,
+            matching_sample_ids=matching_sample_ids,
         )
 
     if isinstance(color_by, MetadataFieldColorBy):
@@ -78,6 +84,7 @@ def build_color_data(
             collection_id=collection_id,
             key=color_by.key,
             sample_ids=sample_ids,
+            matching_sample_ids=matching_sample_ids,
         )
 
     if isinstance(color_by, AnnotationColorBy):
@@ -85,6 +92,7 @@ def build_color_data(
             session=session,
             annotation_label_ids=color_by.annotation_label_ids,
             sample_ids=sample_ids,
+            matching_sample_ids=matching_sample_ids,
         )
 
     # Static check that all ColorBy variants are handled above.
