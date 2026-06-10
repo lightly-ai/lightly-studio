@@ -11,7 +11,10 @@ let rangeSelectionStore: Writable<Array<{ x: number; y: number }> | null>;
 let selectedSampleIdsStore: Writable<string[]>;
 let imageFilterStore: Writable<Record<string, unknown>>;
 let arrowDataStore: Writable<Record<string, unknown> | undefined>;
+let colorLegendStore: Writable<Map<number, string>>;
 let metadataInfoStore: Writable<Array<{ name: string; type: string }>>;
+
+const mockResetCategoryVisibility = vi.fn();
 
 const tagsStore = writable([
     { tag_id: 'tag-a', name: 'alpha', kind: 'sample' },
@@ -52,8 +55,16 @@ vi.mock('$lib/hooks/useEmbeddings/useEmbeddings');
 vi.mock('./useArrowData/useArrowData', () => ({
     useArrowData: () => ({
         data: arrowDataStore,
-        colorLegend: writable(new Map()),
+        colorLegend: colorLegendStore,
         error: writable(null)
+    })
+}));
+vi.mock('./useCategoryVisibility/useCategoryVisibility', () => ({
+    useCategoryVisibility: () => ({
+        hiddenCategories: writable(new Set<number>()),
+        toggleCategoryVisibility: vi.fn(),
+        focusCategoryVisibility: vi.fn(),
+        resetCategoryVisibility: mockResetCategoryVisibility
     })
 }));
 vi.mock('./usePlotData/usePlotData', () => ({
@@ -125,6 +136,7 @@ describe('PlotPanel.svelte', () => {
         selectedSampleIdsStore = writable([]);
         imageFilterStore = writable({ sample_filter: { sample_ids: [] } });
         arrowDataStore = writable(undefined);
+        colorLegendStore = writable(new Map());
         metadataInfoStore = writable([{ name: 'split', type: 'string' }]);
         tagsStore.set([
             { tag_id: 'tag-a', name: 'alpha', kind: 'sample' },
@@ -288,5 +300,17 @@ describe('PlotPanel.svelte', () => {
             type: 'tag',
             tag_ids: ['tag-a', 'tag-b']
         });
+    });
+
+    it('resets hidden categories when the legend changes', async () => {
+        render(PlotPanel);
+        await tick();
+
+        // Ignore the reset that fires on mount; assert the one triggered by the legend change.
+        mockResetCategoryVisibility.mockClear();
+        colorLegendStore.set(new Map([[2, 'dog']]));
+        await tick();
+
+        expect(mockResetCategoryVisibility).toHaveBeenCalled();
     });
 });
