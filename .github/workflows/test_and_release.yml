@@ -174,3 +174,35 @@ jobs:
         env:
           UV_PYTHON: ${{ matrix.python }}
         run: make test
+
+  check-docs:
+    name: Build Docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      # Authenticate to download dev versions of lightly-mundig.
+      - name: Authenticate with GCP
+        uses: 'google-github-actions/auth@v3'
+        with:
+          project_id: boris-250909
+          credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
+
+      - name: Set Up uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          version: "0.8.17"
+          enable-cache: true
+
+      - name: Set Up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.9"
+
+      # `make docs` checks broken links.
+      - name: Build docs
+        working-directory: lightly_studio/docs
+        run: make docs
