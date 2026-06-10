@@ -202,8 +202,7 @@ jobs:
         with:
           python-version: "3.9"
 
-      # Installs the Artifact Registry keyring so uv can sync lightly-mundig
-      # even when it is pinned to an internal (non-public) version.
+      # Installs keyring to download dev versions of lightly-mundig.
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
         run: make install-optional-deps
