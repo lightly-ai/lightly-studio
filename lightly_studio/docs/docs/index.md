@@ -9,7 +9,7 @@ with an M1 chip and 16 GB of memory.
   <iframe
     style="width: 100%; height: 100%; border: 0;"
     src="https://www.youtube.com/embed/iUS9hjI4VQ4?autoplay=1&mute=1&playsinline=1&rel=0"
-    title="LightlyStudio annotations workflow"
+    title="LightlyStudio overview"
     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
     referrerpolicy="strict-origin-when-cross-origin"
     allowfullscreen
