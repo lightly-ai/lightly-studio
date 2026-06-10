@@ -226,3 +226,56 @@ def test_assign_color_categories__unmapped_value_is_empty() -> None:
 
     assert legend == {2: "known"}
     assert categories == [[]]
+
+
+def test_order_values_by_frequency() -> None:
+    ids = [uuid4() for _ in range(4)]
+    sample_to_values = {
+        ids[0]: ["a"],
+        ids[1]: ["b"],
+        ids[2]: ["b"],
+        ids[3]: ["b", "c"],
+    }
+    ordered = coloring_helpers.order_values_by_frequency(
+        sample_to_values=sample_to_values,
+        matching_sample_ids=None,
+    )
+    # "b" in 3 samples, "a"/"c" in 1 each (tie broken alphabetically).
+    assert ordered == ["b", "a", "c"]
+
+
+def test_order_values_by_frequency__tie_broken_by_formatted_label() -> None:
+    ids = [uuid4(), uuid4()]
+    sample_to_values = {ids[0]: [2], ids[1]: [10]}
+    # As integers 2 < 10, but the formatted labels sort "10" < "2".
+    ordered = coloring_helpers.order_values_by_frequency(
+        sample_to_values=sample_to_values,
+        matching_sample_ids=None,
+    )
+    assert ordered == [10, 2]
+
+
+def test_order_values_by_frequency__mask_restricts_and_omits_absent_values() -> None:
+    ids = [uuid4() for _ in range(3)]
+    sample_to_values = {
+        ids[0]: ["kept"],
+        ids[1]: ["kept"],
+        ids[2]: ["dropped"],
+    }
+    # Only the first two samples match; "dropped" never occurs among them.
+    ordered = coloring_helpers.order_values_by_frequency(
+        sample_to_values=sample_to_values,
+        matching_sample_ids={ids[0], ids[1]},
+    )
+    assert ordered == ["kept"]
+
+
+def test_order_values_by_frequency__value_counts_once_per_sample() -> None:
+    sid, other = uuid4(), uuid4()
+    sample_to_values = {sid: ["dup", "dup"], other: ["single"]}
+    ordered = coloring_helpers.order_values_by_frequency(
+        sample_to_values=sample_to_values,
+        matching_sample_ids=None,
+    )
+    # "dup" repeats within one sample but counts once -> tie, broken by label.
+    assert ordered == ["dup", "single"]

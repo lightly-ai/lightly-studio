@@ -66,7 +66,7 @@
             : [];
     });
 
-    const annotationCollectionsQuery = useAnnotationCollections({ collectionId });
+    const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
     const { selectedCollectionIds } = useAnnotationCollectionsFilter();
     const annotationSources = $derived(annotationCollectionsQuery.data ?? []);
     const isGrouped = $derived(annotationSources.length > 1);

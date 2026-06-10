@@ -1,44 +1,32 @@
-import { derived, get, writable } from 'svelte/store';
-import type { SamplingRequest } from '$lib/api/lightly_studio_local/types.gen';
+import { derived, get, writable, type Readable } from 'svelte/store';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
-import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import { useSamplingDialog } from '$lib/hooks/useSamplingDialog/useSamplingDialog';
-import { isStrategyInstanceValid, useStrategyBuilder } from '$lib/hooks/useStrategyBuilder';
+import { isStrategyInstanceValid, type StrategyInstance } from '$lib/hooks/useStrategyBuilder';
 import { useSubmitCombinationSelection } from '$lib/hooks/useSubmitCombinationSelection/useSubmitCombinationSelection';
 import { useTags } from '$lib/hooks/useTags/useTags';
-import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+import { useSelectionFilter } from './useSelectionFilter';
 
 interface UseSamplingCombinationDialogParams {
     getCollectionId: () => string;
     getIsVideoCollection: () => boolean;
+    instances: Readable<StrategyInstance[]>;
+    onSubmitSuccess: () => void;
 }
 
 export function useSamplingCombinationDialog({
     getCollectionId,
-    getIsVideoCollection
+    getIsVideoCollection,
+    instances,
+    onSubmitSuccess
 }: UseSamplingCombinationDialogParams) {
     const { tags, loadTags, setTagSelected } = useTags({
         collection_id: getCollectionId(),
         kind: ['sample']
     });
 
-    const { imageFilter } = useImageFilters();
-    const { videoFilter } = useVideoFilters();
     const { filteredSampleCount } = useGlobalStorage();
-    const { metadataInfo } = useMetadataFilters(getCollectionId());
-
-    const {
-        instances,
-        addStrategy,
-        duplicateStrategy,
-        removeStrategy,
-        resetStrategies,
-        toggleExpand,
-        updateParams
-    } = useStrategyBuilder();
-
     const { closeSamplingDialog } = useSamplingDialog();
+    const { buildSelectionFilter } = useSelectionFilter(getIsVideoCollection);
 
     const { isSubmitting, loadingMessage, submit } = useSubmitCombinationSelection({
         tags,
@@ -49,14 +37,6 @@ export function useSamplingCombinationDialog({
 
     const nSamplesToSelect = writable<number>(10);
     const selectionResultTagName = writable('');
-
-    const metadataFieldNames = derived(metadataInfo, ($metadataInfo) =>
-        $metadataInfo
-            .filter((info) => info.type === 'integer' || info.type === 'float')
-            .map((info) => info.name)
-    );
-
-    const hasMetadataFields = derived(metadataFieldNames, ($names) => $names.length > 0);
 
     const noSamples = derived(filteredSampleCount, ($count) => $count === 0);
 
@@ -79,17 +59,8 @@ export function useSamplingCombinationDialog({
             $name.trim().length > 0
     );
 
-    function buildSelectionFilter(): SamplingRequest['filter'] {
-        if (getIsVideoCollection()) {
-            const currentFilter = get(videoFilter);
-            return currentFilter ? { ...currentFilter, filter_type: 'video' } : null;
-        }
-        const currentFilter = get(imageFilter);
-        return currentFilter ? { ...currentFilter, filter_type: 'image' } : null;
-    }
-
     function resetForm() {
-        resetStrategies();
+        onSubmitSuccess();
         nSamplesToSelect.set(10);
         selectionResultTagName.set('');
     }
@@ -115,23 +86,15 @@ export function useSamplingCombinationDialog({
 
     return {
         tags,
-        instances,
         nSamplesToSelect,
         selectionResultTagName,
         filteredSampleCount,
-        metadataFieldNames,
-        hasMetadataFields,
         noSamples,
         notEnoughSamples,
         sampleCountLabel,
         isFormValid,
         isSubmitting,
         loadingMessage,
-        addStrategy,
-        duplicateStrategy,
-        removeStrategy,
-        updateParams,
-        toggleExpand,
         handleFormSubmit
     };
 }
