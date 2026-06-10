@@ -240,12 +240,22 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
         source: 'object_detection(confidence > 0.5)',
         expected: query(objectDetection(float('object_detection', 'confidence', '>', 0.5)))
     },
+    {
+        name: 'object detection annotation source equality',
+        source: 'object_detection(source = "predictions")',
+        expected: query(objectDetection(str('object_detection', 'source', '==', 'predictions')))
+    },
 
     /* Classification expression */
     {
         name: 'classification class_name',
         source: 'classification(class_name = "cat")',
         expected: query(classification(str('classification', 'class_name', '==', 'cat')))
+    },
+    {
+        name: 'classification annotation source equality',
+        source: 'classification(source = "ground_truth")',
+        expected: query(classification(str('classification', 'source', '==', 'ground_truth')))
     },
     {
         name: 'classification confidence greater than',
@@ -261,6 +271,11 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
         name: 'segmentation confidence greater than',
         source: 'segmentation_mask(confidence > 0.9)',
         expected: query(segmentationMask(float('segmentation_mask', 'confidence', '>', 0.9)))
+    },
+    {
+        name: 'segmentation annotation source equality',
+        source: 'segmentation_mask(source = "predictions")',
+        expected: query(segmentationMask(str('segmentation_mask', 'source', '==', 'predictions')))
     },
     {
         name: 'segmentation x inequality',
