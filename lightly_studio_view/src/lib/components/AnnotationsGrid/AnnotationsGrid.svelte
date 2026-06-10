@@ -2,6 +2,7 @@
     import { AnnotationsGridItem, SelectableBox } from '$lib/components';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
     import { useSettings } from '$lib/hooks/useSettings';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
@@ -50,8 +51,13 @@
         getCollectionVersion,
         setfilteredAnnotationCount,
         addReversibleAction,
-        clearReversibleActions
+        clearReversibleActions,
+        textEmbedding
     } = useGlobalStorage();
+
+    // LIG-9521 prototype: the embedding plot lasso selection on the annotations route.
+    const { annotationPlotSampleIds } = useAnnotationPlotSelection();
+    const plotSelectedAnnotationIds = $derived($annotationPlotSampleIds);
 
     afterNavigate(() => {
         clearReversibleActions();
@@ -73,7 +79,11 @@
         query: {
             annotation_label_ids:
                 $selectedAnnotationFilterIds.length > 0 ? $selectedAnnotationFilterIds : undefined,
-            tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined
+            tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
+            // LIG-9521 prototype: embedding plot selection + embedding text search.
+            sample_ids:
+                plotSelectedAnnotationIds.length > 0 ? plotSelectedAnnotationIds : undefined,
+            text_embedding: $textEmbedding?.embedding ?? undefined
         }
     });
 
@@ -88,7 +98,10 @@
         collectionId: collection_id
     });
     let infiniteLoaderIdentifier = $derived(
-        $selectedAnnotationFilterIds.join(',') + Array.from($tagsSelected).join(',')
+        $selectedAnnotationFilterIds.join(',') +
+            Array.from($tagsSelected).join(',') +
+            plotSelectedAnnotationIds.join(',') +
+            ($textEmbedding ? `search:${$textEmbedding.queryText}` : '')
     );
 
     const filterHash = $derived(infiniteLoaderIdentifier);
