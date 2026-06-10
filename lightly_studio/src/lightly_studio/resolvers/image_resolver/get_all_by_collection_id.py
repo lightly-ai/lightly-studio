@@ -239,6 +239,7 @@ def _get_all_without_similarity(  # noqa: PLR0913
     total_count = session.exec(total_count_query).one()
     next_cursor = _compute_next_cursor(pagination, total_count)
 
+    # Add `file_path_abs` tiebreaker to `order_by`.
     if not order_by:
         order_by = [OrderByField(field=ImageSampleField.file_path_abs).asc()]
     else:
