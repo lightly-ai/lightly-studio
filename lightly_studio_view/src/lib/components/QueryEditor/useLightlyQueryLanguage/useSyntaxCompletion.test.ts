@@ -453,6 +453,21 @@ describe('useSyntaxCompletion', () => {
         });
     });
 
+    it('suggests source and confidence in annotation scopes', async () => {
+        const { provideCompletionItems } = await loadAndAttach([]);
+        const result = await provideCompletionItems(
+            makeModel('object_detection(') as never,
+            { lineNumber: 1, column: 18 } as never
+        );
+
+        const labels = result.suggestions.map((suggestion) =>
+            typeof suggestion.label === 'string' ? suggestion.label : suggestion.label.label
+        );
+
+        expect(labels).toContain('source');
+        expect(labels).toContain('confidence');
+    });
+
     it('resolves field scope from cursor context (segmentation_mask)', async () => {
         const { provideCompletionItems } = await loadAndAttach([
             { label: 'class_name', kind: LspCompletionItemKind.Field }
