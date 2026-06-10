@@ -121,10 +121,9 @@
                     <div class="p-4 text-sm text-muted-foreground">
                         <p>No plugins available.</p>
                         <p class="mt-2">
-                            LightlyStudio can be customized with plugins. You can write your own
-                            plugins to import or export data in custom formats, or to run operations
-                            such as model-assisted annotation on individual images or the full
-                            dataset.
+                            Extend LightlyStudio with plugins. Install ready-made plugins or build
+                            your own to import/export data, run model-assisted annotation, and
+                            automate workflows.
                         </p>
                     </div>
                 {:else}
