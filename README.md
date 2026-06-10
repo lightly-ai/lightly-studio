@@ -103,32 +103,6 @@ LightlyStudio is a browser app that runs on your own computer. Use it in two sim
 Get started with one of these example workflows:
 
 <details open>
-<summary><strong>Index a folder of images for curation and labeling</strong></summary>
-
-Create a file named `example_image.py`:
-
-```python
-import lightly_studio as ls
-
-# Download the example dataset (will be skipped if it already exists)
-dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
-
-# Index the images, create embeddings, and store everything in the local database.
-dataset = ls.ImageDataset.load_or_create()
-dataset.add_images_from_path(
-    path=f"{dataset_path}/coco_subset_128_images/images",
-)
-
-# Start the UI server on localhost:8001.
-# Pass `host` and `port` parameters to customize it.
-ls.start_gui()
-```
-
-Run `python example_image.py` and open the printed URL in your browser.
-
-</details>
-
-<details>
 <summary><strong>Index a YOLO dataset</strong></summary>
 
 Create a file named `example_yolo.py`:
@@ -212,6 +186,31 @@ from google.colab import output
 
 output.serve_kernel_port_as_iframe(server.port, width=1000, height=800)
 ```
+</details>
+
+<details>
+<summary><strong>Index a folder of images for curation and labeling</strong></summary>
+
+Create a file named `example_image.py`:
+
+```python
+import lightly_studio as ls
+
+# Download the example dataset (will be skipped if it already exists)
+dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+
+# Index the images, create embeddings, and store everything in the local database.
+dataset = ls.ImageDataset.load_or_create()
+dataset.add_images_from_path(
+    path=f"{dataset_path}/coco_subset_128_images/images",
+)
+
+# Start the UI server on localhost:8001.
+# Pass `host` and `port` parameters to customize it.
+ls.start_gui()
+```
+
+Run `python example_image.py` and open the printed URL in your browser.
 
 </details>
 
