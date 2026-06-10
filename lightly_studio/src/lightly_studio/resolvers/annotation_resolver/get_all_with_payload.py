@@ -30,6 +30,7 @@ from lightly_studio.resolvers.annotations.annotations_filter import (
 )
 from lightly_studio.resolvers.similarity_utils import (
     apply_similarity_join,
+    distance_to_similarity,
     get_distance_expression,
 )
 
@@ -71,8 +72,9 @@ def get_all_with_payload(
     embedding_model_id, distance_expr = get_distance_expression(
         session=session, collection_id=collection_id, text_embedding=text_embedding
     )
+    has_similarity = distance_expr is not None and embedding_model_id is not None
     similarity_order_by = []
-    if distance_expr is not None and embedding_model_id is not None:
+    if has_similarity:
         base_query = apply_similarity_join(
             query=base_query,
             sample_id_column=col(AnnotationBaseTable.sample_id),
@@ -86,6 +88,8 @@ def get_all_with_payload(
         col(AnnotationBaseTable.created_at).asc(),
         col(AnnotationBaseTable.sample_id).asc(),
     )
+    if has_similarity:
+        annotations_query = annotations_query.add_columns(distance_expr)
 
     total_count_query = select(func.count()).select_from(base_query.subquery())
     total_count = session.exec(total_count_query).one()
@@ -99,17 +103,27 @@ def get_all_with_payload(
 
     rows = session.exec(annotations_query).all()
 
-    return AnnotationWithPayloadAndCountView(
-        total_count=total_count,
-        next_cursor=next_cursor,
-        annotations=[
+    annotation_views = []
+    for row in rows:
+        if has_similarity:
+            annotation, payload, distance = row
+            similarity_score = distance_to_similarity(distance)
+        else:
+            annotation, payload = row
+            similarity_score = None
+        annotation_views.append(
             AnnotationWithPayloadView(
                 parent_sample_type=sample_type,
                 annotation=AnnotationView.from_annotation_table(annotation=annotation),
                 parent_sample_data=_serialize_annotation_payload(payload=payload),
+                similarity_score=similarity_score,
             )
-            for annotation, payload in rows
-        ],
+        )
+
+    return AnnotationWithPayloadAndCountView(
+        total_count=total_count,
+        next_cursor=next_cursor,
+        annotations=annotation_views,
     )
 
 
