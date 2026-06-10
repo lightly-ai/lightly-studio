@@ -102,6 +102,13 @@ const int = (table: string, name: string, operator: OrdOp, value: number): Match
     value
 });
 
+const float = (table: string, name: string, operator: OrdOp, value: number): MatchExpr => ({
+    type: 'ordinal_float_expr',
+    field: { table, name },
+    operator,
+    value
+});
+
 const str = (table: string, name: string, operator: EqOp, value: string): MatchExpr => ({
     type: 'string_expr',
     field: { table, name },
@@ -228,6 +235,11 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
         source: 'object_detection(height <= 120)',
         expected: query(objectDetection(int('object_detection', 'height', '<=', 120)))
     },
+    {
+        name: 'object detection confidence greater than',
+        source: 'object_detection(confidence > 0.5)',
+        expected: query(objectDetection(float('object_detection', 'confidence', '>', 0.5)))
+    },
 
     /* Classification expression */
     {
@@ -236,9 +248,19 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
         expected: query(classification(str('classification', 'class_name', '==', 'cat')))
     },
     {
+        name: 'classification confidence greater than',
+        source: 'classification(confidence > 0.9)',
+        expected: query(classification(float('classification', 'confidence', '>', 0.9)))
+    },
+    {
         name: 'segmentation class_name',
         source: 'segmentation_mask(class_name = "cat")',
         expected: query(segmentationMask(str('segmentation_mask', 'class_name', '==', 'cat')))
+    },
+    {
+        name: 'segmentation confidence greater than',
+        source: 'segmentation_mask(confidence > 0.9)',
+        expected: query(segmentationMask(float('segmentation_mask', 'confidence', '>', 0.9)))
     },
     {
         name: 'segmentation x inequality',

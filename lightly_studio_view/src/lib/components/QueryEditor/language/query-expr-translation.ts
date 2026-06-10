@@ -18,8 +18,11 @@ import {
     isNumberLiteral,
     isObjectDetectionIntFieldName,
     isObjectDetectionStringFieldName,
+    isObjectDetectionFloatFieldName,
+    isClassificationFloatFieldName,
     isSegmentationMaskIntFieldName,
     isSegmentationMaskStringFieldName,
+    isSegmentationMaskFloatFieldName,
     isStringLiteral,
     isTagInExpression,
     isVideoEqualityFloatFieldName,
@@ -256,6 +259,14 @@ function visitComparisonExpression(
                         value: right.value
                     };
                 }
+                if (isObjectDetectionFloatFieldName(fieldName)) {
+                    return {
+                        type: 'ordinal_float_expr',
+                        field: { table, name: fieldName },
+                        operator: toOrdinalComparisonOperator(expr.operator),
+                        value: right.value
+                    };
+                }
                 break;
             case 'segmentation_mask':
                 if (isSegmentationMaskIntFieldName(fieldName)) {
@@ -266,9 +277,24 @@ function visitComparisonExpression(
                         value: right.value
                     };
                 }
+                if (isSegmentationMaskFloatFieldName(fieldName)) {
+                    return {
+                        type: 'ordinal_float_expr',
+                        field: { table, name: fieldName },
+                        operator: toOrdinalComparisonOperator(expr.operator),
+                        value: right.value
+                    };
+                }
                 break;
             case 'classification':
-                // This is a placeholder in case a field is added later. The code throws later.
+                if (isClassificationFloatFieldName(fieldName)) {
+                    return {
+                        type: 'ordinal_float_expr',
+                        field: { table, name: fieldName },
+                        operator: toOrdinalComparisonOperator(expr.operator),
+                        value: right.value
+                    };
+                }
                 break;
         }
     }
