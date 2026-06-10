@@ -86,6 +86,61 @@
     // Calculate values for use in template
     const xOffset = $derived(getXOffset());
     const yOffset = $derived(getYOffset());
+
+    // Render the visible window (padded bbox crop) into a canvas and use the result as
+    // the <img> source, so the browser's native right-click "Copy image" copies exactly
+    // the crop instead of the whole parent image (see PR #556 for images).
+    let cropImageUrl = $state<string | null>(null);
+
+    $effect(() => {
+        const sourceUrl = sample.url;
+        const sampleWidth = sample.width;
+        const sampleHeight = sample.height;
+        const windowWidth = containerWidth / scale;
+        const windowHeight = containerHeight / scale;
+        const windowX = -xOffset / scale;
+        const windowY = -yOffset / scale;
+        if (!sourceUrl) return;
+
+        let cancelled = false;
+        let objectUrl: string | null = null;
+        const imageElement = new Image();
+        // The thumbnail may be served cross-origin (dev server); without this the
+        // canvas would be tainted and toBlob would throw.
+        imageElement.crossOrigin = 'anonymous';
+        imageElement.onload = () => {
+            if (cancelled) return;
+            // The thumbnail can be downscaled relative to the original image size the
+            // crop geometry is expressed in.
+            const resolutionX = imageElement.naturalWidth / sampleWidth;
+            const resolutionY = imageElement.naturalHeight / sampleHeight;
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(windowWidth * resolutionX));
+            canvas.height = Math.max(1, Math.round(windowHeight * resolutionY));
+            const context = canvas.getContext('2d');
+            if (!context) return;
+            context.fillStyle = '#000';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            context.drawImage(
+                imageElement,
+                -windowX * resolutionX,
+                -windowY * resolutionY,
+                imageElement.naturalWidth,
+                imageElement.naturalHeight
+            );
+            canvas.toBlob((blob) => {
+                if (!blob || cancelled) return;
+                objectUrl = URL.createObjectURL(blob);
+                cropImageUrl = objectUrl;
+            }, 'image/png');
+        };
+        imageElement.src = sourceUrl;
+
+        return () => {
+            cancelled = true;
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+        };
+    });
 </script>
 
 {#if sample}
@@ -95,14 +150,27 @@
         style={`
         width: ${containerWidth}px;
         height: ${containerHeight}px;
-        background-image: url("${sample.url}");
-        background-position: ${xOffset}px ${yOffset}px;
-        background-size: ${sample.width * scale}px ${sample.height * scale}px;
-        background-repeat: no-repeat;
     `}
     >
+        <!-- Real <img> instead of a CSS background so the browser's native
+             right-click "Copy image" works; the source is the canvas-rendered
+             crop so only the crop gets copied (see PR #556 for images). -->
+        {#if cropImageUrl}
+            <img
+                src={cropImageUrl}
+                alt=""
+                draggable="false"
+                class="crop-image"
+                style={`
+                left: 0;
+                top: 0;
+                width: ${containerWidth}px;
+                height: ${containerHeight}px;
+            `}
+            />
+        {/if}
         <div
-            class="annotation-box"
+            class="annotation-box pointer-events-none"
             class:invisible={$isHidden}
             style={`
             left: ${(containerWidth - annotationWidth * scale) / 2}px;
@@ -155,6 +223,11 @@
     .crop {
         position: relative;
         overflow: hidden;
+    }
+
+    .crop-image {
+        position: absolute;
+        max-width: none;
     }
 
     .annotation-box {
