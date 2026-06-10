@@ -15,15 +15,7 @@
     import { useClassifiersMenu } from '$lib/hooks/useClassifiers/useClassifiersMenu';
     import { useQueryClient } from '@tanstack/svelte-query';
     import { readAnnotationLabelsOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-    import {
-        Network as NetworkIcon,
-        Pencil,
-        Download,
-        Upload,
-        Play,
-        LoaderCircle as Loader2,
-        Info
-    } from '@lucide/svelte';
+    import { Network as NetworkIcon, Pencil, Download, Upload, Play, Info } from '@lucide/svelte';
     import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 
     const exportOptions: ClassifierExportType[] = ['sklearn', 'lightly'];
@@ -346,19 +338,17 @@
                                             </Tooltip>
                                         </div>
                                         <Button
+                                            icon={Play}
+                                            isPending={$isLoading}
                                             buttonProps={{
                                                 onclick: runClassifier,
                                                 disabled: !$isApplyButtonEnabled,
                                                 class: 'w-full'
                                             }}
                                         >
-                                            {#if $isLoading}
-                                                <Loader2 class="mr-2 size-4 animate-spin" />
-                                                Running Classifiers...
-                                            {:else}
-                                                <Play class="mr-2 size-4" />
-                                                Run Selected Classifiers
-                                            {/if}
+                                            {$isLoading
+                                                ? 'Running Classifiers...'
+                                                : 'Run Selected Classifiers'}
                                         </Button>
                                     </div>
                                 {:else}
