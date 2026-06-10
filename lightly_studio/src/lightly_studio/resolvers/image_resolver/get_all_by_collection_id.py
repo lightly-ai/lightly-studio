@@ -241,12 +241,15 @@ def _get_all_without_similarity(  # noqa: PLR0913
 
     if not order_by:
         order_by = [OrderByField(field=ImageSampleField.file_path_abs).asc()]
-    elif not _file_path_abs_in_order_by(order_by):
-        order_by.append(
-            OrderByField(field=ImageSampleField.file_path_abs).asc()
-            if order_by[0].ascending
-            else OrderByField(field=ImageSampleField.file_path_abs).desc()
-        )
+    else:
+        # Copy so appending the tiebreaker does not mutate the caller's list.
+        order_by = list(order_by)
+        if not _file_path_abs_in_order_by(order_by):
+            order_by.append(
+                OrderByField(field=ImageSampleField.file_path_abs).asc()
+                if order_by[0].ascending
+                else OrderByField(field=ImageSampleField.file_path_abs).desc()
+            )
 
     # Append the primary sort value to the SELECT so it can be returned per row.
     # Secondary expressions only contribute joins and ORDER BY.
