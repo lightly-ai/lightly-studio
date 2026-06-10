@@ -16,7 +16,13 @@ from sqlmodel import select
 from lightly_studio.api.routes.api.embedding_coloring import ColorBy, build_color_data
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.embedding_model import EmbeddingModelTable
-from lightly_studio.resolvers import image_resolver, twodim_embedding_resolver, video_resolver
+from lightly_studio.resolvers import (
+    annotation_resolver,
+    image_resolver,
+    twodim_embedding_resolver,
+    video_resolver,
+)
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
@@ -26,7 +32,7 @@ embeddings2d_router = APIRouter()
 class GetEmbeddings2DRequest(BaseModel):
     """Request body for retrieving 2D embeddings."""
 
-    filters: ImageFilter | VideoFilter = Field(
+    filters: ImageFilter | VideoFilter | AnnotationsFilter = Field(
         description="Filter parameters identifying matching samples"
     )
     color_by: ColorBy | None = None
@@ -119,7 +125,7 @@ def get_2d_embeddings(
 def _get_matching_sample_ids(
     session: SessionDep,
     collection_id: UUID,
-    filters: ImageFilter | VideoFilter,
+    filters: ImageFilter | VideoFilter | AnnotationsFilter,
 ) -> set[UUID]:
     """Get the set of sample IDs that match the given filters.
 
@@ -131,6 +137,14 @@ def _get_matching_sample_ids(
     Returns:
         Set of sample IDs that match the filters.
     """
+    if isinstance(filters, AnnotationsFilter):
+        return set(
+            annotation_resolver.get_sample_ids(
+                session=session,
+                collection_id=collection_id,
+                filters=filters,
+            )
+        )
     if isinstance(filters, VideoFilter):
         return video_resolver.get_sample_ids(
             session=session,

@@ -28,6 +28,10 @@ from lightly_studio.resolvers import collection_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
+from lightly_studio.resolvers.similarity_utils import (
+    apply_similarity_join,
+    get_distance_expression,
+)
 
 
 def get_all_with_payload(
@@ -35,6 +39,7 @@ def get_all_with_payload(
     collection_id: UUID,
     pagination: Paginated | None = None,
     filters: AnnotationsFilter | None = None,
+    text_embedding: list[float] | None = None,
 ) -> AnnotationWithPayloadAndCountView:
     """Get all annotations with payload from the database.
 
@@ -43,6 +48,8 @@ def get_all_with_payload(
         pagination: Optional pagination parameters
         filters: Optional filters to apply to the query
         collection_id: ID of the collection to get annotations for
+        text_embedding: Optional embedding; when given, annotations are ordered by
+            cosine distance of their embedding to it.
 
     Returns:
         List of annotations matching the filters with payload
@@ -61,7 +68,20 @@ def get_all_with_payload(
     if filters:
         base_query = filters.apply(base_query)
 
+    embedding_model_id, distance_expr = get_distance_expression(
+        session=session, collection_id=collection_id, text_embedding=text_embedding
+    )
+    similarity_order_by = []
+    if distance_expr is not None and embedding_model_id is not None:
+        base_query = apply_similarity_join(
+            query=base_query,
+            sample_id_column=col(AnnotationBaseTable.sample_id),
+            embedding_model_id=embedding_model_id,
+        )
+        similarity_order_by = [distance_expr]
+
     annotations_query = base_query.order_by(
+        *similarity_order_by,
         *_extra_order_by(sample_type=sample_type),
         col(AnnotationBaseTable.created_at).asc(),
         col(AnnotationBaseTable.sample_id).asc(),

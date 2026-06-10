@@ -359,7 +359,9 @@ def _store_embeddings(
 
 def _load_embedding_generator_from_env(sample_type: SampleType) -> EmbeddingGenerator | None:
     """Load the embedding generator based on environment variable configuration."""
-    if sample_type == SampleType.IMAGE:
+    # LIG-9521 prototype: annotation collections use the image embedding model so that
+    # text search and the embedding plot work for (fake) annotation embeddings.
+    if sample_type in (SampleType.IMAGE, SampleType.ANNOTATION):
         return _load_image_embedding_generator_from_env()
     if sample_type == SampleType.VIDEO:
         return _load_video_embedding_generator()
