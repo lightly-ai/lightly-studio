@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import cast
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -10,6 +11,7 @@ from sqlalchemy import ColumnElement
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.orm.interfaces import LoaderOption
 from sqlmodel import Session, col, func, select
+from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio import db_array
 from lightly_studio.api.routes.api.validators import Paginated
@@ -17,7 +19,7 @@ from lightly_studio.core.dataset_query.image_sample_field import ImageSampleFiel
 from lightly_studio.core.dataset_query.order_by import (
     OrderByExpression,
     OrderByField,
-    OrderByMetadataField,
+    get_order_value,
 )
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
@@ -37,13 +39,16 @@ def _file_path_abs_in_order_by(order_by: list[OrderByExpression]) -> bool:
     )
 
 
-def _has_metadata_join(filters: ImageFilter | None) -> bool:
-    """Return True if filters already join SampleMetadataTable."""
-    return (
-        filters is not None
-        and filters.sample_filter is not None
-        and bool(filters.sample_filter.metadata_filters)
-    )
+def _coerce_order_value(value: object) -> float | None:
+    """Convert a raw SQL sort value to a float suitable for ``ImageView.order_value``.
+
+    Only numeric values are converted; booleans return ``None``.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
 
 
 class GetAllSamplesByCollectionIdResult(BaseModel):
@@ -53,6 +58,7 @@ class GetAllSamplesByCollectionIdResult(BaseModel):
     total_count: int
     next_cursor: int | None = None
     similarity_scores: Sequence[float] | None = None
+    order_values: Sequence[float | None] | None = None
 
 
 def _get_load_options() -> LoaderOption:
@@ -182,6 +188,7 @@ def _get_all_with_similarity(  # noqa: PLR0913
         total_count=total_count,
         next_cursor=_compute_next_cursor(pagination, total_count),
         similarity_scores=similarity_scores,
+        order_values=None,
     )
 
 
@@ -193,10 +200,16 @@ def _get_all_without_similarity(  # noqa: PLR0913
     sample_ids: list[UUID] | None,
     order_by: list[OrderByExpression] | None,
 ) -> GetAllSamplesByCollectionIdResult:
-    """Get samples without similarity search - returns ImageTable directly."""
+    """Get samples without similarity search.
+
+    When ``order_by`` is omitted, sorting defaults to ``file_path_abs`` ascending;
+    otherwise a ``file_path_abs`` tiebreaker is appended when missing. The primary sort expression
+    is appended to the SELECT so its value can be returned per row in ``order_values``.
+    Non-numeric sort values (e.g. strings) are coerced to ``None``.
+    """
     load_options = _get_load_options()
 
-    samples_query = (
+    samples_query: SelectOfScalar[ImageTable] = (
         select(ImageTable)
         .options(load_options)
         .join(ImageTable.sample)
@@ -223,29 +236,40 @@ def _get_all_without_similarity(  # noqa: PLR0913
             db_array.in_array(column=col(ImageTable.sample_id), values=sample_ids)
         )
 
-    if order_by:
-        metadata_already_joined = _has_metadata_join(filters)
-        for expr in order_by:
-            if metadata_already_joined and isinstance(expr, OrderByMetadataField):
-                samples_query = samples_query.order_by(expr.to_column_element())
-            else:
-                samples_query = expr.apply(samples_query)
-        if not _file_path_abs_in_order_by(order_by):
-            file_path_col = col(ImageTable.file_path_abs)
-            tiebreaker = file_path_col.asc() if order_by[0].ascending else file_path_col.desc()
-            samples_query = samples_query.order_by(tiebreaker)
-    else:
-        samples_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
-
-    if pagination is not None:
-        samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
-
     total_count = session.exec(total_count_query).one()
-    samples = session.exec(samples_query).all()
+    next_cursor = _compute_next_cursor(pagination, total_count)
+
+    # Add `file_path_abs` tiebreaker to `order_by`.
+    if not order_by:
+        order_by = [OrderByField(field=ImageSampleField.file_path_abs).asc()]
+    else:
+        # Copy so appending the tiebreaker does not mutate the caller's list.
+        order_by = list(order_by)
+        if not _file_path_abs_in_order_by(order_by):
+            order_by.append(
+                OrderByField(field=ImageSampleField.file_path_abs).asc()
+                if order_by[0].ascending
+                else OrderByField(field=ImageSampleField.file_path_abs).desc()
+            )
+
+    # Append the primary sort value to the SELECT so it can be returned per row.
+    # Secondary expressions only contribute joins and ORDER BY.
+    ordered_query = order_by[0].apply_with_order_value(samples_query)
+    for expr in order_by[1:]:
+        ordered_query = expr.apply_joins(ordered_query)
+        ordered_query = ordered_query.order_by(expr.to_column_element())
+    if pagination is not None:
+        ordered_query = ordered_query.offset(pagination.offset).limit(pagination.limit)
+
+    # Multi-column rows: ImageTable at index 0, sort value read by label.
+    rows = session.execute(ordered_query).all()
+    samples = [cast(ImageTable, row[0]) for row in rows]
+    order_values = [_coerce_order_value(get_order_value(row)) for row in rows]
 
     return GetAllSamplesByCollectionIdResult(
         samples=samples,
         total_count=total_count,
-        next_cursor=_compute_next_cursor(pagination, total_count),
+        next_cursor=next_cursor,
         similarity_scores=None,
+        order_values=order_values,
     )

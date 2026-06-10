@@ -19,6 +19,19 @@
     } = $props();
 
     const { gridViewThumbnailQualityStore } = useSettings();
+
+    const sampleOrderValue = $derived(sample.order_value ?? undefined);
+    const shouldShowOrderValue = $derived(sampleOrderValue !== undefined);
+    const orderValueLabel = $derived(
+        sampleOrderValue !== undefined
+            ? Number.isInteger(sampleOrderValue)
+                ? String(sampleOrderValue)
+                : sampleOrderValue.toFixed(2)
+            : ''
+    );
+    const hasSimilarityScore = $derived(
+        sample.similarity_score !== undefined && sample.similarity_score !== null
+    );
 </script>
 
 <SampleImage
@@ -31,11 +44,19 @@
 <SampleClassificationPills
     {sample}
     hasBottomOverlay={Boolean(displayTextOnImage)}
-    hasRightOverlay={sample.similarity_score !== undefined && sample.similarity_score !== null}
+    hasRightOverlay={shouldShowOrderValue || hasSimilarityScore}
 />
 <SampleAnnotations {sample} {objectFit} />
 
-{#if sample.similarity_score !== undefined && sample.similarity_score !== null}
+{#if shouldShowOrderValue}
+    <div
+        class="absolute right-1 z-10 box-border flex h-5 items-center rounded bg-black/60 px-1.5 text-xs font-medium text-white backdrop-blur-sm {displayTextOnImage
+            ? 'bottom-8'
+            : 'bottom-1'}"
+    >
+        {orderValueLabel}
+    </div>
+{:else if sample.similarity_score !== undefined && sample.similarity_score !== null}
     <div
         class="absolute right-1 z-10 box-border flex h-5 items-center rounded bg-black/60 px-1.5 text-xs font-medium text-white backdrop-blur-sm {displayTextOnImage
             ? 'bottom-8'
