@@ -74,6 +74,7 @@ def get_2d_embeddings(
         collection_id=collection_id,
         color_by=color_by,
         sample_ids=sample_ids,
+        matching_sample_ids=matching_sample_ids,
     )
 
     schema = pa.schema(
