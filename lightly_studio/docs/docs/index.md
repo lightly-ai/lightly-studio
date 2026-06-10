@@ -5,26 +5,17 @@ your data workflows from curation, annotation and management. Built with Rust fo
 efficiency, it lets you work seamlessly with datasets like COCO and ImageNet, even on a MacBook Pro
 with an M1 chip and 16 GB of memory.
 
-=== "Explore"
+<div style="width: 100%; aspect-ratio: 16 / 9; overflow: hidden;">
+  <iframe
+    style="width: 100%; height: 100%; border: 0;"
+    src="https://www.youtube.com/embed/iUS9hjI4VQ4?autoplay=1&mute=1&playsinline=1&rel=0"
+    title="LightlyStudio overview"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    referrerpolicy="strict-origin-when-cross-origin"
+    allowfullscreen
+  ></iframe>
+</div>
 
-    ![Image title](https://storage.googleapis.com/lightly-public/studio/search.gif){ width="100%"}
-    _Discover insights instantly with AI-powered search and smart filters.
-    Learn more in [Search and Filter](concepts_and_tools/search_and_filter.md)._
-
-=== "Annotate"
-
-    ![Image title](https://storage.googleapis.com/lightly-public/studio/annotate.gif){ width="100%" }
-    _Create, edit, or remove annotations directly within your dataset._
-
-=== "Embedding Plot"
-
-    ![Image title](https://storage.googleapis.com/lightly-public/studio/embedding.gif){ width="100%" }
-    _Visualize your dataset’s structure in the embedding space projected with [PaCMAP](https://github.com/YingfanWang/PaCMAP)._
-
-=== "Export"
-
-    ![Image title](https://storage.googleapis.com/lightly-public/studio/export.gif){ width="100%" }
-    _Export selected samples and annotations in your preferred format._
 
 ## Installation
 
