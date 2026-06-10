@@ -14,11 +14,7 @@ from sqlmodel import Session, col, func, select
 from lightly_studio import db_array
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
-from lightly_studio.core.dataset_query.order_by import (
-    OrderByExpression,
-    OrderByField,
-    OrderByMetadataField,
-)
+from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
@@ -34,15 +30,6 @@ def _file_path_abs_in_order_by(order_by: list[OrderByExpression]) -> bool:
     return any(
         isinstance(expr, OrderByField) and expr.field is ImageSampleField.file_path_abs
         for expr in order_by
-    )
-
-
-def _has_metadata_join(filters: ImageFilter | None) -> bool:
-    """Return True if filters already join SampleMetadataTable."""
-    return (
-        filters is not None
-        and filters.sample_filter is not None
-        and bool(filters.sample_filter.metadata_filters)
     )
 
 
@@ -224,12 +211,8 @@ def _get_all_without_similarity(  # noqa: PLR0913
         )
 
     if order_by:
-        metadata_already_joined = _has_metadata_join(filters)
         for expr in order_by:
-            if metadata_already_joined and isinstance(expr, OrderByMetadataField):
-                samples_query = samples_query.order_by(expr.to_column_element())
-            else:
-                samples_query = expr.apply(samples_query)
+            samples_query = expr.apply(samples_query)
         if not _file_path_abs_in_order_by(order_by):
             file_path_col = col(ImageTable.file_path_abs)
             tiebreaker = file_path_col.asc() if order_by[0].ascending else file_path_col.desc()
