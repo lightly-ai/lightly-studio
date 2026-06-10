@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from sqlalchemy import ColumnElement, and_
 from sqlmodel import col
 
+from lightly_studio.core.dataset_query.annotation_expression import AnnotationSourceField
 from lightly_studio.core.dataset_query.boolean_expression import AND
 from lightly_studio.core.dataset_query.foreign_field import ForeignComparableField
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
@@ -25,6 +26,7 @@ class ClassificationField:
         column=col(AnnotationLabelTable.annotation_label_name),
         relationship=AnnotationBaseTable.annotation_label,
     )
+    source = AnnotationSourceField()
 
 
 class ClassificationQuery:

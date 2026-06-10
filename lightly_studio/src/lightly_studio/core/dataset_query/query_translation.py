@@ -92,8 +92,11 @@ _STRING_FIELDS: dict[tuple[str, str], _EqualityField[str]] = {
     ("video", "file_name"): VideoSampleField.file_name,
     ("video", "file_path_abs"): VideoSampleField.file_path_abs,
     ("classification", "class_name"): ClassificationField.class_name,
+    ("classification", "source"): ClassificationField.source,
     ("object_detection", "class_name"): ObjectDetectionField.class_name,
+    ("object_detection", "source"): ObjectDetectionField.source,
     ("segmentation_mask", "class_name"): SegmentationMaskField.class_name,
+    ("segmentation_mask", "source"): SegmentationMaskField.source,
 }
 
 _INTEGER_FIELDS: dict[tuple[str, str], _OrdinalField[int]] = {
