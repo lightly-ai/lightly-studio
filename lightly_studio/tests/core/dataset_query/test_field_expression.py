@@ -137,7 +137,7 @@ class TestDatetimeFieldExpression:
         assert "where image.created_at <= '2024-06-15 10:30:00+00:00'" in sql
 
 
-class TestNullableNumericalFieldExpression:
+class TestNullableNumericalField:
     def test_apply__greater_equal(self) -> None:
         query = select(AnnotationBaseTable)
         confidence_field = NullableNumericalField(col(AnnotationBaseTable.confidence))
