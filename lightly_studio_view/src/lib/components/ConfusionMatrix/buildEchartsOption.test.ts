@@ -121,6 +121,18 @@ describe('buildEchartsOption', () => {
         expect(fpFnMap.seriesIndex).toBe(1);
     });
 
+    it('maps color from the raw count dimension when logScale is disabled', () => {
+        const option = buildEchartsOption(small3Classes, {
+            logScale: false
+        }) as unknown as BuiltOption;
+        const [tpMap, fpFnMap] = option.visualMap;
+        expect(tpMap.dimension).toBe(2);
+        expect(tpMap.min).toBe(1);
+        expect(tpMap.max).toBe(156);
+        expect(fpFnMap.dimension).toBe(2);
+        expect(fpFnMap.max).toBe(156);
+    });
+
     it('divides the visualMap range by colorIntensity so cells saturate earlier', () => {
         const option = buildEchartsOption(small3Classes, {
             colorIntensity: 2

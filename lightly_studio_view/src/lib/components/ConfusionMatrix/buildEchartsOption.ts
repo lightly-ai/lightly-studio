@@ -9,15 +9,15 @@ interface BuildEchartsOptionOptions {
     /** Enables inside (scroll/pinch) zoom on both axes. */
     zoomable?: boolean;
     /**
-     * Row (y-axis) labels that get a "✕" remove affordance and emit
-     * axis-label click events (componentType "yAxis").
-     */
-    removableLabels?: string[];
-    /**
      * Color intensity multiplier (> 0, default 1). Values > 1 saturate
      * cells earlier (more intense); values < 1 keep cells paler.
      */
     colorIntensity?: number;
+    /**
+     * Map color from log10(count) instead of the raw count (default true).
+     * Log scaling keeps small counts visible next to huge diagonal cells.
+     */
+    logScale?: boolean;
 }
 
 // TP and FP/FN are split into two series with separate visualMaps so each
@@ -55,9 +55,12 @@ export function buildEchartsOption(
     const logMaxCount = maxCount > 1 ? Math.log10(maxCount) : 1;
     // Dividing the range by the intensity makes cells hit full color sooner.
     const colorIntensity = Math.max(options.colorIntensity ?? 1, 0.01);
-    const visualMapMax = logMaxCount / colorIntensity;
+    const logScale = options.logScale ?? true;
+    // Dimension 3 is log10(count), dimension 2 the raw count.
+    const visualMapDimension = logScale ? 3 : 2;
+    const visualMapMin = logScale ? 0 : 1;
+    const visualMapMax = (logScale ? logMaxCount : maxCount) / colorIntensity;
 
-    const removableSet = new Set(options.removableLabels ?? []);
     const nameGap = 20;
     return {
         backgroundColor: 'transparent',
@@ -95,33 +98,23 @@ export function buildEchartsOption(
             nameGap,
             nameRotate: 90,
             nameTextStyle: { color: '#9ca3af', fontSize: 13, fontWeight: 'bold' },
-            triggerEvent: removableSet.size > 0,
-            axisLabel: {
-                interval: 0,
-                color: '#9ca3af',
-                fontSize: 12,
-                formatter: (value: string) =>
-                    removableSet.has(value) ? `${value} {removeIcon|✕}` : value,
-                rich: {
-                    removeIcon: { color: '#6b7280', fontSize: 10, padding: [0, 0, 0, 2] }
-                }
-            },
+            axisLabel: { interval: 0, color: '#9ca3af', fontSize: 12 },
             axisLine: { lineStyle: { color: '#374151' } },
             splitArea: { show: false }
         },
         visualMap: [
             {
                 seriesIndex: 0,
-                dimension: 3,
-                min: 0,
+                dimension: visualMapDimension,
+                min: visualMapMin,
                 max: visualMapMax,
                 inRange: { color: TP_COLOR_RAMP },
                 show: false
             },
             {
                 seriesIndex: 1,
-                dimension: 3,
-                min: 0,
+                dimension: visualMapDimension,
+                min: visualMapMin,
                 max: visualMapMax,
                 inRange: { color: FP_FN_COLOR_RAMP },
                 show: false

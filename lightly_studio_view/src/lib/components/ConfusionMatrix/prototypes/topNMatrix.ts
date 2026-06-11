@@ -33,6 +33,55 @@ export function rankClassesByConfusion(matrix: ConfusionMatrix): string[] {
     return getRealClasses(matrix).sort((a, b) => (scores.get(b) ?? 0) - (scores.get(a) ?? 0));
 }
 
+export type ClassSortOption = 'most-confused' | 'least-confused' | 'most-samples' | 'alphabetical';
+
+export const CLASS_SORT_LABELS: Record<ClassSortOption, string> = {
+    'most-confused': 'Most confused',
+    'least-confused': 'Least confused',
+    'most-samples': 'Most ground truth samples',
+    alphabetical: 'Alphabetical'
+};
+
+/** How the visible class set is chosen (Voxel51-style configure dialog). */
+export interface ClassSetConfig {
+    mode: 'topN' | 'manual';
+    n: number;
+    sortBy: ClassSortOption;
+    manualClasses: string[];
+}
+
+/** Coloring options configured in the same dialog. */
+export interface ColorConfig {
+    intensity: number;
+    logScale: boolean;
+}
+
+/** Ranks real classes by the given sort criterion. */
+export function rankClasses(matrix: ConfusionMatrix, sortBy: ClassSortOption): string[] {
+    switch (sortBy) {
+        case 'most-confused':
+            return rankClassesByConfusion(matrix);
+        case 'least-confused':
+            return rankClassesByConfusion(matrix).reverse();
+        case 'most-samples': {
+            const gtCounts = new Map<string, number>();
+            for (let i = 0; i < matrix.row_labels.length; i++) {
+                const label = matrix.row_labels[i];
+                if (SENTINELS.has(label)) continue;
+                gtCounts.set(
+                    label,
+                    matrix.counts[i].reduce((a, b) => a + Math.max(b, 0), 0)
+                );
+            }
+            return getRealClasses(matrix).sort(
+                (a, b) => (gtCounts.get(b) ?? 0) - (gtCounts.get(a) ?? 0)
+            );
+        }
+        case 'alphabetical':
+            return [...getRealClasses(matrix)].sort((a, b) => a.localeCompare(b));
+    }
+}
+
 /**
  * Filters class labels by a comma-separated query. Each term is matched
  * case-insensitively as a substring; terms are OR-combined

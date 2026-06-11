@@ -5,6 +5,7 @@ import {
     filterClasses,
     getRealClasses,
     OTHER_LABEL,
+    rankClasses,
     rankClassesByConfusion
 } from './topNMatrix';
 
@@ -32,6 +33,23 @@ describe('rankClassesByConfusion', () => {
         // person: row(3+6+21) + col(2+4+8) = 44; car: row(0+4+7) + col(1+6+4) = 22;
         // bike: row(1+2+5) + col(0+3+2) = 13
         expect(rankClassesByConfusion(fixture)).toEqual(['person', 'car', 'bike']);
+    });
+});
+
+describe('rankClasses', () => {
+    it('most-confused matches rankClassesByConfusion and least-confused reverses it', () => {
+        expect(rankClasses(fixture, 'most-confused')).toEqual(['person', 'car', 'bike']);
+        expect(rankClasses(fixture, 'least-confused')).toEqual(['bike', 'car', 'person']);
+    });
+
+    it('most-samples ranks by ground-truth row totals', () => {
+        // GT rows: bike=50, car=99, person=186
+        expect(rankClasses(fixture, 'most-samples')).toEqual(['person', 'car', 'bike']);
+    });
+
+    it('alphabetical sorts labels without mutating the source order', () => {
+        expect(rankClasses(fixture, 'alphabetical')).toEqual(['bike', 'car', 'person']);
+        expect(getRealClasses(fixture)).toEqual(['bike', 'car', 'person']);
     });
 });
 
