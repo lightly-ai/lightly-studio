@@ -53,8 +53,10 @@ class SampleTable(SampleBase, table=True):
         },
     )
     collection: Mapped["CollectionTable"] = Relationship(
-        back_populates="samples",
-        sa_relationship_kwargs={"lazy": "select"},
+        sa_relationship_kwargs={
+            "lazy": "select",
+            "foreign_keys": "[SampleTable.collection_id]",
+        },
     )
     captions: Mapped[list["CaptionTable"]] = Relationship(
         back_populates="parent_sample",

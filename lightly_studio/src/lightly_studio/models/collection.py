@@ -57,10 +57,6 @@ class CollectionTable(CollectionBase, table=True):
         back_populates="parent",
         sa_relationship_kwargs={"lazy": "select"},
     )
-    samples: list["SampleTable"] = Relationship(
-        back_populates="collection",
-        sa_relationship_kwargs={"lazy": "select"},
-    )
     # TODO(lukas, 3/2026): add a relationship to DatasetTable
 
 
@@ -117,6 +113,3 @@ class AnnotationCollectionView(SQLModel):
 
     collection_id: UUID
     name: str
-
-
-from lightly_studio.models.sample import SampleTable  # noqa: E402
