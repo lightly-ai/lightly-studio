@@ -152,6 +152,43 @@ def test_to_match_expression__classification_match(db_session: Session) -> None:
     assert [r.sample_id for r in results] == [image1.sample_id]
 
 
+def test_to_match_expression__classification_source(db_session: Session) -> None:
+    dataset = create_collection(session=db_session)
+    cid = dataset.collection_id
+    image1 = create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/cat.jpg")
+    image2 = create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/dog.jpg")
+
+    label = create_annotation_label(session=db_session, root_collection_id=cid, label_name="cat")
+    create_annotation(
+        session=db_session,
+        collection_id=cid,
+        sample_id=image1.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+        annotation_collection_name="ground_truth",
+    )
+    create_annotation(
+        session=db_session,
+        collection_id=cid,
+        sample_id=image2.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+        annotation_collection_name="predictions",
+    )
+
+    expr = ClassificationMatchExpr(
+        subexpr=StringExpr(
+            field=FieldRef(table="classification", name="source"),
+            operator=EqualityComparisonOperator.EQ,
+            value="ground_truth",
+        )
+    )
+    match = query_translation.to_match_expression(expr)
+    results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
+
+    assert [r.sample_id for r in results] == [image1.sample_id]
+
+
 def test_to_match_expression__object_detection_match(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
     cid = dataset.collection_id
@@ -189,6 +226,36 @@ def test_to_match_expression__object_detection_match(db_session: Session) -> Non
     assert [r.sample_id for r in results] == [image1.sample_id]
 
 
+def test_to_match_expression__object_detection_source(db_session: Session) -> None:
+    dataset = create_collection(session=db_session)
+    cid = dataset.collection_id
+    image1 = create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/1.jpg")
+    create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/2.jpg")
+
+    label = create_annotation_label(session=db_session, root_collection_id=cid, label_name="person")
+    create_annotation(
+        session=db_session,
+        collection_id=cid,
+        sample_id=image1.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
+        annotation_collection_name="predictions",
+        annotation_data={"x": 0, "y": 0, "width": 100, "height": 100},
+    )
+
+    expr = ObjectDetectionMatchExpr(
+        subexpr=StringExpr(
+            field=FieldRef(table="object_detection", name="source"),
+            operator=EqualityComparisonOperator.EQ,
+            value="predictions",
+        )
+    )
+    match = query_translation.to_match_expression(expr)
+    results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
+
+    assert [r.sample_id for r in results] == [image1.sample_id]
+
+
 def test_to_match_expression__segmentation_mask_match(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
     cid = dataset.collection_id
@@ -209,6 +276,35 @@ def test_to_match_expression__segmentation_mask_match(db_session: Session) -> No
             field=FieldRef(table="segmentation_mask", name="class_name"),
             operator=EqualityComparisonOperator.EQ,
             value="person",
+        )
+    )
+    match = query_translation.to_match_expression(expr)
+    results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
+
+    assert [r.sample_id for r in results] == [image1.sample_id]
+
+
+def test_to_match_expression__segmentation_mask_source(db_session: Session) -> None:
+    dataset = create_collection(session=db_session)
+    cid = dataset.collection_id
+    image1 = create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/1.jpg")
+    create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/2.jpg")
+
+    label = create_annotation_label(session=db_session, root_collection_id=cid, label_name="person")
+    create_annotation(
+        session=db_session,
+        collection_id=cid,
+        sample_id=image1.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.SEGMENTATION_MASK,
+        annotation_collection_name="ground_truth",
+    )
+
+    expr = SegmentationMaskMatchExpr(
+        subexpr=StringExpr(
+            field=FieldRef(table="segmentation_mask", name="source"),
+            operator=EqualityComparisonOperator.EQ,
+            value="ground_truth",
         )
     )
     match = query_translation.to_match_expression(expr)

@@ -52,6 +52,12 @@ class SampleTable(SampleBase, table=True):
             "foreign_keys": "[AnnotationBaseTable.parent_sample_id]",
         },
     )
+    collection: Mapped["CollectionTable"] = Relationship(
+        sa_relationship_kwargs={
+            "lazy": "select",
+            "foreign_keys": "[SampleTable.collection_id]",
+        },
+    )
     captions: Mapped[list["CaptionTable"]] = Relationship(
         back_populates="parent_sample",
         sa_relationship_kwargs={
@@ -142,6 +148,7 @@ from lightly_studio.models.annotation.annotation_base import (  # noqa: E402
     AnnotationView,
 )
 from lightly_studio.models.caption import CaptionTable, CaptionView  # noqa: E402
+from lightly_studio.models.collection import CollectionTable  # noqa: E402
 from lightly_studio.models.metadata import (  # noqa: E402
     SampleMetadataTable,
     SampleMetadataView,
