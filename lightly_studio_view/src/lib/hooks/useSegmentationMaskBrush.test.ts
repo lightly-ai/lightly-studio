@@ -5,6 +5,7 @@ import type { AnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotati
 
 import { useSegmentationMaskBrush } from './useSegmentationMaskBrush';
 import { useGlobalStorage } from './useGlobalStorage';
+import { useReversibleActions } from './useReversibleActions';
 import {
     computeBoundingBoxFromMask,
     encodeBinaryMaskToRLE
@@ -69,10 +70,6 @@ vi.mock('$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation', 
     useUpdateAnnotationsMutation: () => ({ updateAnnotations })
 }));
 
-vi.mock('$lib/hooks/useDeleteAnnotation/useDeleteAnnotation', () => ({
-    useDeleteAnnotation: () => ({ deleteAnnotation })
-}));
-
 vi.mock('$lib/hooks/useCreateLabel/useCreateLabel', () => ({
     useCreateLabel: () => ({ createLabel })
 }));
@@ -94,6 +91,7 @@ const sample = { width: 100, height: 100 };
 
 describe('useSegmentationMaskBrush', () => {
     beforeEach(() => {
+        useGlobalStorage().clearReversibleActions();
         annotationLabelContext.isDrawing = true;
         annotationLabelContext.annotationId = null;
         annotationLabelContext.annotationLabel = null;
@@ -126,7 +124,8 @@ describe('useSegmentationMaskBrush', () => {
             datasetId,
             sampleId: 's1',
             sample,
-            refetch
+            refetch,
+            deleteAnnotation
         });
 
         await finishBrush(mask, null, []);
@@ -148,7 +147,8 @@ describe('useSegmentationMaskBrush', () => {
             datasetId,
             sampleId: 's1',
             sample,
-            refetch
+            refetch,
+            deleteAnnotation
         });
 
         await finishBrush(mask, null, []);
@@ -173,7 +173,8 @@ describe('useSegmentationMaskBrush', () => {
             datasetId,
             sampleId: 's1',
             sample,
-            refetch
+            refetch,
+            deleteAnnotation
         });
 
         await finishBrush(mask, selectedAnnotation, [], updateAnnotation);
@@ -202,7 +203,8 @@ describe('useSegmentationMaskBrush', () => {
             datasetId,
             sampleId: 's1',
             sample,
-            refetch
+            refetch,
+            deleteAnnotation
         });
 
         await finishBrush(mask, selectedAnnotation, [], updateAnnotation, new Set(['locked-id']));
@@ -225,7 +227,8 @@ describe('useSegmentationMaskBrush', () => {
             datasetId,
             sampleId: 's1',
             sample,
-            refetch
+            refetch,
+            deleteAnnotation
         });
 
         await finishBrush(mask, selectedAnnotation, [], updateAnnotation, new Set(['locked-id']));
@@ -252,7 +255,8 @@ describe('useSegmentationMaskBrush', () => {
             datasetId,
             sampleId: 's1',
             sample,
-            refetch
+            refetch,
+            deleteAnnotation
         });
 
         await finishBrush(mask, null, labels);
@@ -281,7 +285,8 @@ describe('useSegmentationMaskBrush', () => {
             datasetId,
             sampleId: 's1',
             sample,
-            refetch
+            refetch,
+            deleteAnnotation
         });
 
         await finishBrush(mask, null, []);
@@ -308,7 +313,8 @@ describe('useSegmentationMaskBrush', () => {
             datasetId,
             sampleId: 's1',
             sample,
-            refetch
+            refetch,
+            deleteAnnotation
         });
 
         await finishBrush(mask, null, labels);
@@ -333,6 +339,7 @@ describe('useSegmentationMaskBrush', () => {
             sampleId: 's1',
             sample,
             refetch,
+            deleteAnnotation,
             requestLabel
         });
 
@@ -361,7 +368,8 @@ describe('useSegmentationMaskBrush', () => {
             datasetId,
             sampleId: 's1',
             sample,
-            refetch
+            refetch,
+            deleteAnnotation
         });
 
         await finishBrush(mask, null, labels);
@@ -381,7 +389,8 @@ describe('useSegmentationMaskBrush', () => {
             datasetId,
             sampleId: 's1',
             sample,
-            refetch
+            refetch,
+            deleteAnnotation
         });
 
         await finishBrush(mask, null, []);
@@ -393,5 +402,108 @@ describe('useSegmentationMaskBrush', () => {
 
         expect(createAnnotation).toHaveBeenCalled();
         expect(refetch).toHaveBeenCalled();
+    });
+
+    it('adds a create-annotation undo action to the stack when a new annotation is created with a brush stroke', async () => {
+        const { reversibleActions } = useReversibleActions();
+
+        annotationLabelContext.annotationLabel = 'car';
+        const refetch = vi.fn();
+
+        const { finishBrush } = useSegmentationMaskBrush({
+            collectionId: 'c1',
+            datasetId,
+            sampleId: 's1',
+            sample,
+            refetch,
+            deleteAnnotation
+        });
+
+        await finishBrush(mask, null, [
+            { annotation_label_id: 'car-label-id', annotation_label_name: 'car' }
+        ]);
+
+        const actions = get(reversibleActions);
+        expect(actions).toHaveLength(1);
+        expect(actions[0].groupId).toBe('annotation-create');
+        expect(actions[0].description).toBe('Undo create annotation');
+    });
+
+    it('places create-annotation undo below stroke-update undo after a second stroke on the newly created annotation', async () => {
+        const { reversibleActions } = useReversibleActions();
+
+        annotationLabelContext.annotationLabel = 'car';
+        const refetch = vi.fn();
+        const updateAnnotation = vi.fn().mockResolvedValue(undefined);
+
+        const { finishBrush } = useSegmentationMaskBrush({
+            collectionId: 'c1',
+            datasetId,
+            sampleId: 's1',
+            sample,
+            refetch,
+            deleteAnnotation
+        });
+
+        // First stroke: creates the annotation (no selected annotation)
+        await finishBrush(mask, null, [
+            { annotation_label_id: 'car-label-id', annotation_label_name: 'car' }
+        ]);
+
+        // Simulate the user starting a new stroke (onpointerdown sets isDrawing back to true)
+        annotationLabelContext.isDrawing = true;
+
+        // Second stroke: updates the newly created annotation
+        const createdAnnotation = {
+            sample_id: 'new-annotation-id',
+            annotation_type: 'segmentation_mask',
+            segmentation_details: {
+                segmentation_mask: [1, 2, 3]
+            }
+        } as AnnotationView;
+        await finishBrush(
+            mask,
+            createdAnnotation,
+            [{ annotation_label_id: 'car-label-id', annotation_label_name: 'car' }],
+            updateAnnotation
+        );
+
+        const actions = get(reversibleActions);
+        expect(actions).toHaveLength(2);
+        // Most recent action (update stroke) must be first so it is undone first
+        expect(actions[0].groupId).toBe('bbox-change-annotation-details');
+        // Annotation creation must be second so it is undone after all strokes are reverted
+        expect(actions[1].groupId).toBe('annotation-create');
+    });
+
+    it('calls deleteAnnotation with the annotation id when the create undo action is executed', async () => {
+        const { reversibleActions, executeReversibleAction } = useReversibleActions();
+
+        annotationLabelContext.annotationLabel = 'car';
+        const refetch = vi.fn();
+        deleteAnnotation.mockResolvedValue(undefined);
+
+        const { finishBrush } = useSegmentationMaskBrush({
+            collectionId: 'c1',
+            datasetId,
+            sampleId: 's1',
+            sample,
+            refetch,
+            deleteAnnotation
+        });
+
+        await finishBrush(mask, null, [
+            { annotation_label_id: 'car-label-id', annotation_label_name: 'car' }
+        ]);
+
+        // After creating the annotation, annotationId is set to the new annotation's id.
+        expect(annotationLabelContext.annotationId).toBe('new-annotation-id');
+
+        const actions = get(reversibleActions);
+        await executeReversibleAction(actions[0].id);
+
+        expect(deleteAnnotation).toHaveBeenCalledWith('new-annotation-id');
+        expect(get(reversibleActions)).toHaveLength(0);
+        expect(annotationLabelContext.annotationId).toBeNull();
     });
 });

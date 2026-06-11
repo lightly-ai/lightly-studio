@@ -11,7 +11,6 @@ import type { BoundingBox } from '$lib/types';
 import { toast } from 'svelte-sonner';
 import { useGlobalStorage } from './useGlobalStorage';
 import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
-import { useDeleteAnnotation } from './useDeleteAnnotation/useDeleteAnnotation';
 import { useUpdateAnnotationsMutation } from './useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
 import { applySegmentationMaskConstraints } from '$lib/utils/segmentationOverlap';
 import { restoreOverriddenSegmentationAnnotationsForUndo } from '$lib/services/restoreOverriddenSegmentationAnnotationsForUndo';
@@ -23,6 +22,7 @@ export function useSegmentationMaskBrush({
     sample,
     annotations = [],
     refetch,
+    deleteAnnotation,
     onAnnotationCreated,
     requestLabel
 }: {
@@ -32,6 +32,9 @@ export function useSegmentationMaskBrush({
     sample: { width: number; height: number };
     annotations?: AnnotationView[];
     refetch: () => void;
+    /** Must be a stable reference (not recreated on re-renders) to ensure undo closures
+     *  call the live mutation rather than a disposed one. */
+    deleteAnnotation: (annotationId: string) => Promise<void>;
     onAnnotationCreated?: () => void;
     /** Called when no label is currently selected. Should show a class-picker and resolve with
      *  the chosen class, or null if the user cancelled. */
@@ -40,9 +43,6 @@ export function useSegmentationMaskBrush({
     const { createLabel } = useCreateLabel({ collectionId });
     const { createAnnotation } = useCreateAnnotation({ collectionId });
     const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
-    const { deleteAnnotation } = useDeleteAnnotation({
-        collectionId
-    });
     const {
         context: annotationLabelContext,
         setIsDrawing,
@@ -126,6 +126,7 @@ export function useSegmentationMaskBrush({
         if (selectedAnnotation) {
             try {
                 if (!updateAnnotation) return;
+
                 await updateAnnotation({
                     annotation_id: selectedAnnotation.sample_id!,
                     collection_id: collectionId,
@@ -180,7 +181,8 @@ export function useSegmentationMaskBrush({
             addReversibleAction,
             deleteAnnotation,
             refetch,
-            onUndo: restoreOverriddenAnnotations
+            onUndo: restoreOverriddenAnnotations,
+            onDelete: () => setAnnotationId(null)
         });
 
         setAnnotationType('segmentation_mask');

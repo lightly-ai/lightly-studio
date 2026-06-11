@@ -17,6 +17,7 @@
         useAnnotation,
         useAnnotationLabelContext
     } from '$lib/hooks';
+    import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { page } from '$app/state';
     import type { PendingChange } from '../pendingChange';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
@@ -58,6 +59,8 @@
         setAnnotationId
     } = useAnnotationLabelContext();
 
+    const { deleteAnnotation } = useDeleteAnnotation({ collectionId });
+
     const labels = useAnnotationLabels(() => ({ collectionId }));
 
     const activeAnnotationId = $derived.by(() => {
@@ -94,6 +97,7 @@
             sample,
             annotations: sample.annotations,
             refetch,
+            deleteAnnotation,
             requestLabel,
             onAnnotationCreated: () => {
                 // Only refresh root collection if there were no annotations before
