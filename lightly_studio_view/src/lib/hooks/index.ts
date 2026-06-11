@@ -40,3 +40,4 @@ export { useCreateSampling } from '$lib/hooks/useCreateSampling/useCreateSamplin
 export { useColorPicker } from '$lib/hooks/useColorPicker/useColorPicker.svelte';
 export { useSubmitCombinationSelection } from '$lib/hooks/useSubmitCombinationSelection/useSubmitCombinationSelection';
 export { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
+export { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';

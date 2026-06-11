@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Show plugin description and a link to documentation when no plugins are available.
 - When sorting the image grid by a numeric field, the field value is now shown as an overlay on each sample.
 
 ### Changed
@@ -24,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Removed outdated documentation note recommending Firefox on Linux for embedding plots.
+- Fixed embedding rendering for users without WebGPU by updating `embedding-atlas` from `0.10.0` to `0.21.0`.
 
 ### Security
 

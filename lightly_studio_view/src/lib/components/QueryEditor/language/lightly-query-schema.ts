@@ -65,6 +65,16 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
                 type: 'string',
                 description: 'Annotation class of the detection.'
             },
+            {
+                name: 'source',
+                type: 'string',
+                description: 'Annotation source collection name.'
+            },
+            {
+                name: 'confidence',
+                type: 'float',
+                description: 'Detection confidence score.'
+            },
             { name: 'x', type: 'int', description: 'Top-left X coordinate of the bounding box.' },
             { name: 'y', type: 'int', description: 'Top-left Y coordinate of the bounding box.' },
             { name: 'width', type: 'int', description: 'Bounding box width in pixels.' },
@@ -80,6 +90,16 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
                 name: 'class_name',
                 type: 'string',
                 description: 'Annotation class of the classification.'
+            },
+            {
+                name: 'source',
+                type: 'string',
+                description: 'Annotation source collection name.'
+            },
+            {
+                name: 'confidence',
+                type: 'float',
+                description: 'Classification confidence score.'
             }
         ]
     },
@@ -93,6 +113,16 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
                 name: 'class_name',
                 type: 'string',
                 description: 'Annotation class of the segmentation mask.'
+            },
+            {
+                name: 'source',
+                type: 'string',
+                description: 'Annotation source collection name.'
+            },
+            {
+                name: 'confidence',
+                type: 'float',
+                description: 'Segmentation confidence score.'
             },
             { name: 'x', type: 'int', description: 'Top-left X coordinate of the mask bounds.' },
             { name: 'y', type: 'int', description: 'Top-left Y coordinate of the mask bounds.' },
@@ -120,7 +150,7 @@ export const TOP_LEVEL_KEYWORDS: KeywordDoc[] = [
     {
         name: 'object_detection',
         description: 'Filter on detections inside an image.',
-        insertText: 'object_detection(${1:condition})'
+        insertText: 'object_detection(${1:class_name = "..."})'
     },
     {
         name: 'classification',
