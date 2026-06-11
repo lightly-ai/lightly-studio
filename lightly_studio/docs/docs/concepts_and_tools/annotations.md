@@ -2,16 +2,16 @@
 
 LightlyStudio supports three annotation types:
 
-- classification
-- object detection
-- segmentation
+- classification,
+- object detection, and
+- segmentation.
 
 You can inspect and edit annotations in the GUI, or add and read them in Python. For dataset-level
 imports such as COCO, YOLO, and Label Studio format, see [Image Dataset](../dataset_setup/image_dataset.md)
 and [Video Dataset](../dataset_setup/video_dataset.md).
 
 !!! info "Terminology"
-    - **Annotation** — a classification, object-detection box, or segmentation mask attached to a sample.
+    - **Annotation**: A classification, object-detection box, or segmentation mask attached to a sample.
     - **Prediction**: An annotation with an optional confidence score.
     - **Annotation class**: The category of an annotation, e.g. `"dog"` or `"cat"`.
     - **Annotation source**: A named group of annotations, e.g. `ground_truth` or `model_a`.
@@ -145,7 +145,7 @@ or
 Predictions use the same annotation types as human annotations. The practical difference is that
 predictions can include a `confidence` value and are usually stored in their own annotation source.
 
-For existing image datasets, the `add_annotations_from_*` helpers are the easiest way to import
+For existing image datasets, the `add_annotations_from_*` methods are the easiest way to import
 predictions into a named source:
 
 ```python
@@ -167,7 +167,7 @@ dataset.add_annotations_from_coco(
 )
 ```
 
-Supported helpers:
+Supported methods:
 
 - [add_annotations_from_coco](../api/dataset.md#lightly_studio.ImageDataset.add_annotations_from_coco)
 - [add_annotations_from_yolo](../api/dataset.md#lightly_studio.ImageDataset.add_annotations_from_yolo)
