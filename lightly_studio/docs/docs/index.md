@@ -162,10 +162,6 @@ directly use your own image, video, or YOLO/COCO dataset.
    your browser (by default `http://localhost:8001`).
 -  Images and videos are streamed from their original local folder or remote storage for display in the UI.
 
-!!! note "For Linux Users"
-    We recommend using Firefox for the best experience with embedding plots, as other browsers might
-    not render them correctly.
-
 ## Feature Overview
 
 ### Datasets
