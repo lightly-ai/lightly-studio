@@ -156,7 +156,7 @@ def test_to_match_expression__classification_source(db_session: Session) -> None
     dataset = create_collection(session=db_session)
     cid = dataset.collection_id
     image1 = create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/cat.jpg")
-    create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/dog.jpg")
+    image2 = create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/dog.jpg")
 
     label = create_annotation_label(session=db_session, root_collection_id=cid, label_name="cat")
     create_annotation(
@@ -166,6 +166,14 @@ def test_to_match_expression__classification_source(db_session: Session) -> None
         annotation_label_id=label.annotation_label_id,
         annotation_type=AnnotationType.CLASSIFICATION,
         annotation_collection_name="ground_truth",
+    )
+    create_annotation(
+        session=db_session,
+        collection_id=cid,
+        sample_id=image2.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+        annotation_collection_name="predictions",
     )
 
     expr = ClassificationMatchExpr(

@@ -17,8 +17,6 @@ from lightly_studio.models.sample import SampleTable
 T = TypeVar("T")
 
 
-# Ignore PLW1641 because `==` and `!=` create query conditions here, so these
-# classes do not need normal hash behavior.
 @dataclass
 class RelationshipMatchExpression(MatchExpression, Generic[T]):
     """Evaluates a match expression against a related table using the SQLAlchemy `.has()` operator.
@@ -57,10 +55,10 @@ class RelationshipMatchExpression(MatchExpression, Generic[T]):
         return self.relationship.has(self.criterion.get())
 
 
-class AnnotationSourceField:
+# Ignore PLW1641 because `==` and `!=` create query conditions here, so these
+# classes do not need normal hash behavior.
+class AnnotationSourceField:  # noqa: PLW1641
     """Queryable annotation source field."""
-
-    __hash__ = object.__hash__
 
     def __eq__(self, other: str) -> MatchExpression:  # type: ignore[override]
         """Return a match expression for a source name equality check."""
