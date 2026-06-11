@@ -34,13 +34,13 @@
     <div class="mb-3 min-w-0">
         <div class="flex items-center justify-between">
             <Typography variant="h5" component="h2" className="text-foreground"
-                >Query Filter</Typography
+                >Advanced filters</Typography
             >
             <Button
                 variant="ghost"
                 size="icon"
                 onclick={onClose}
-                aria-label="Close query filter panel"
+                aria-label="Close advanced filters panel"
                 class="h-8 w-8"
                 data-testid="query-editor-close-button"
             >
