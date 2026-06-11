@@ -103,6 +103,88 @@ LightlyStudio is a browser app that runs on your own computer. Use it in two sim
 Get started with one of these example workflows:
 
 <details open>
+<summary><strong>Evaluate object detection predictions on a COCO dataset</strong></summary>
+
+Create a file named `example_coco_od_evaluation.py`:
+
+```python
+import lightly_studio as ls
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
+from lightly_studio.evaluation.image_dataset_evaluate import ObjectDetectionEvaluationConfig
+
+
+# Download the example dataset (will be skipped if it already exists)
+dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+
+images_path = f"{dataset_path}/coco_subset_128_images/images"
+evaluation_config = ObjectDetectionEvaluationConfig(
+    iou_threshold=0.5,
+    classwise=True,
+)
+
+dataset = ls.ImageDataset.load_or_create()
+dataset.add_images_from_path(path=images_path)
+# Add ground truth annotations
+dataset.add_annotations_from_coco(
+    annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
+    images_root=images_path,
+    annotation_source="ground_truth",
+)
+# Add predictions annotations
+dataset.add_annotations_from_coco(
+    annotations_json=f"{dataset_path}/coco_subset_128_images/predictions_train2017.json",
+    images_root=images_path,
+    annotation_source="predictions",
+)
+# Optional: tag a subset of samples to run the evaluation on.
+dataset.query()[:10].add_tag("evaluated_samples")
+# Create query for tagged samples
+tagged_evaluation_query = dataset.query().match(ImageSampleField.tags.contains("evaluated_samples"))
+
+dataset.evaluate(query=tagged_evaluation_query).object_detection(
+    name="od_evaluation",
+    gt_annotation_source="ground_truth",
+    pred_annotation_source="predictions",
+    config=evaluation_config,
+)
+
+ls.start_gui()
+```
+</details>
+
+<details>
+<summary><strong>Index a COCO dataset</strong></summary>
+
+Create a file named `example_coco.py`:
+
+```python
+import lightly_studio as ls
+
+# Download the example dataset (will be skipped if it already exists)
+dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+
+dataset = ls.ImageDataset.load_or_create()
+dataset.add_samples_from_coco(
+    annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
+    images_path=f"{dataset_path}/coco_subset_128_images/images",
+)
+# Optional: tag a subset of samples to filter them in the GUI. 
+dataset.query()[:10].add_tag("sample_subset")
+
+ls.start_gui()
+```
+
+Run `python example_coco.py` and open the printed URL to inspect images with their annotations.
+
+To import COCO segmentation masks instead of object detections, set:
+
+```python
+annotation_type=ls.AnnotationType.SEGMENTATION_MASK
+```
+
+</details>
+
+<details>
 <summary><strong>Index a YOLO dataset</strong></summary>
 
 Create a file named `example_yolo.py`:
@@ -122,36 +204,6 @@ ls.start_gui()
 ```
 
 Run `python example_yolo.py` and open the printed URL to inspect images with their annotations.
-
-</details>
-
-<details>
-<summary><strong>Index a COCO dataset</strong></summary>
-
-Create a file named `example_coco.py`:
-
-```python
-import lightly_studio as ls
-
-# Download the example dataset (will be skipped if it already exists)
-dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
-
-dataset = ls.ImageDataset.load_or_create()
-dataset.add_samples_from_coco(
-    annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
-    images_path=f"{dataset_path}/coco_subset_128_images/images",
-)
-
-ls.start_gui()
-```
-
-Run `python example_coco.py` and open the printed URL to inspect images with their annotations.
-
-To import COCO segmentation masks instead of object detections, set:
-
-```python
-annotation_type=ls.AnnotationType.SEGMENTATION_MASK
-```
 
 </details>
 
