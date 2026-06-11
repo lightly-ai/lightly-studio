@@ -59,7 +59,7 @@ The library is OS-independent and works on Windows, Linux, and macOS.
 The examples below download the required example data the first time you run them. You can also
 directly use your own image, video, or YOLO/COCO dataset.
 
-=== "COCO Segmentation Mask"
+=== "COCO Object Detection"
 
     1. Create a file named `example_coco.py` with the following contents:
 
@@ -73,7 +73,6 @@ directly use your own image, video, or YOLO/COCO dataset.
         dataset.add_samples_from_coco(
             annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
             images_path=f"{dataset_path}/coco_subset_128_images/images",
-            annotation_type=ls.AnnotationType.SEGMENTATION_MASK,
         )
         # Optional: tag a subset of samples to filter them in the GUI. 
         dataset.query()[:10].add_tag("sample_subset")
