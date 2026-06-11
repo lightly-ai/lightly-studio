@@ -1,6 +1,7 @@
 <script lang="ts">
-    import { SlidersHorizontal as SlidersIcon } from '@lucide/svelte';
+    import { Maximize2 as Maximize2Icon, SlidersHorizontal as SlidersIcon } from '@lucide/svelte';
     import { Button } from '$lib/components';
+    import * as Dialog from '$lib/components/ui/dialog/index.js';
     import ConfusionMatrix from '../ConfusionMatrix.svelte';
     import type { ConfusionMatrix as ConfusionMatrixData } from '../types';
     import ClassSetDialog from './ClassSetDialog.svelte';
@@ -32,6 +33,7 @@
     });
     let color: ColorConfig = $state({ intensity: 1, logScale: true });
     let configDialogOpen = $state(false);
+    let expandOpen = $state(false);
 
     const realClasses = $derived(getRealClasses(matrix));
     const isLarge = $derived(realClasses.length > classCountThreshold);
@@ -82,6 +84,17 @@
         >
             Configure
         </Button>
+        <Button
+            variant="ghost"
+            icon={Maximize2Icon}
+            ariaLabel="Expand confusion matrix"
+            buttonProps={{
+                size: 'sm',
+                class: 'h-8 w-8 p-0',
+                onclick: () => (expandOpen = true),
+                'data-testid': 'confusion-matrix-expand'
+            }}
+        />
     </div>
 
     <ConfusionMatrix
@@ -97,4 +110,23 @@
         {color}
         onApply={applyConfig}
     />
+    <Dialog.Root bind:open={expandOpen}>
+        <Dialog.Content class="flex h-[92vh] max-w-[94vw] flex-col sm:max-w-[94vw]">
+            <Dialog.Header>
+                <Dialog.Title>Confusion matrix</Dialog.Title>
+                <Dialog.Description>
+                    Scroll or pinch inside the chart to zoom · hover a cell for details
+                </Dialog.Description>
+            </Dialog.Header>
+            <div class="min-h-0 flex-1 overflow-y-auto">
+                <ConfusionMatrix
+                    matrix={subMatrix}
+                    {showLegend}
+                    colorIntensity={color.intensity}
+                    logScale={color.logScale}
+                    zoomable
+                />
+            </div>
+        </Dialog.Content>
+    </Dialog.Root>
 {/if}
