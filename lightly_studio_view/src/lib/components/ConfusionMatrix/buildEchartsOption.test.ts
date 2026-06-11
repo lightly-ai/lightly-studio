@@ -3,10 +3,15 @@ import { buildEchartsOption } from './buildEchartsOption';
 import { empty, singleClass, small3Classes } from './fixtures';
 import { NO_GROUND_TRUTH_ROW_LABEL, NO_PREDICTION_COL_LABEL, type ConfusionMatrix } from './types';
 
-type Cell = [string, string, number];
+type Cell = [string, string, number, number];
+
+function cell(col: string, row: string, count: number): Cell {
+    return [col, row, count, Math.log10(count)];
+}
 
 interface VisualMap {
     seriesIndex: number;
+    dimension: number;
     min: number;
     max: number;
     inRange: { color: [string, string] };
@@ -49,9 +54,9 @@ describe('buildEchartsOption', () => {
         // The sentinel/sentinel cell (FP-row, FN-col) is 0 and must be skipped.
         expect(new Set(tpSeries.data)).toEqual(
             new Set<Cell>([
-                ['bike', 'bike', 42],
-                ['car', 'car', 88],
-                ['person', 'person', 156]
+                cell('bike', 'bike', 42),
+                cell('car', 'car', 88),
+                cell('person', 'person', 156)
             ])
         );
     });
@@ -98,20 +103,30 @@ describe('buildEchartsOption', () => {
         const option = build(matrix);
         expect(option.series[0].data).toEqual([]);
         expect(option.series[1].data).toEqual([
-            [NO_GROUND_TRUTH_ROW_LABEL, NO_GROUND_TRUTH_ROW_LABEL, 9]
+            cell(NO_GROUND_TRUTH_ROW_LABEL, NO_GROUND_TRUTH_ROW_LABEL, 9)
         ]);
     });
 
-    it('sets both visualMaps to share the same max count, with min fixed at 1', () => {
+    it('maps color from the log dimension with a shared log-scaled range', () => {
         const option = build(small3Classes);
         const [tpMap, fpFnMap] = option.visualMap;
         // small3Classes' largest cell is 156 (person→person).
-        expect(tpMap.min).toBe(1);
-        expect(tpMap.max).toBe(156);
-        expect(fpFnMap.min).toBe(1);
-        expect(fpFnMap.max).toBe(156);
+        expect(tpMap.dimension).toBe(3);
+        expect(tpMap.min).toBe(0);
+        expect(tpMap.max).toBe(Math.log10(156));
+        expect(fpFnMap.dimension).toBe(3);
+        expect(fpFnMap.min).toBe(0);
+        expect(fpFnMap.max).toBe(Math.log10(156));
         expect(tpMap.seriesIndex).toBe(0);
         expect(fpFnMap.seriesIndex).toBe(1);
+    });
+
+    it('divides the visualMap range by colorIntensity so cells saturate earlier', () => {
+        const option = buildEchartsOption(small3Classes, {
+            colorIntensity: 2
+        }) as unknown as BuiltOption;
+        expect(option.visualMap[0].max).toBe(Math.log10(156) / 2);
+        expect(option.visualMap[1].max).toBe(Math.log10(156) / 2);
     });
 
     it('keeps max at 1 when every cell is empty so visualMap stays valid', () => {
@@ -124,18 +139,18 @@ describe('buildEchartsOption', () => {
 
     it('handles the single-class fixture: one TP cell plus sentinel-involving FP/FN cells', () => {
         const option = build(singleClass);
-        expect(option.series[0].data).toEqual([['person', 'person', 142]]);
+        expect(option.series[0].data).toEqual([cell('person', 'person', 142)]);
         expect(new Set(option.series[1].data)).toEqual(
             new Set<Cell>([
-                [NO_PREDICTION_COL_LABEL, 'person', 18],
-                ['person', NO_GROUND_TRUTH_ROW_LABEL, 11]
+                cell(NO_PREDICTION_COL_LABEL, 'person', 18),
+                cell('person', NO_GROUND_TRUTH_ROW_LABEL, 11)
             ])
         );
     });
 
     it('renders a tooltip with GT, Pred, and Count from the cell value', () => {
         const option = build(small3Classes);
-        const html = option.tooltip.formatter({ value: ['car', 'bike', 3] });
+        const html = option.tooltip.formatter({ value: cell('car', 'bike', 3) });
         expect(html).toContain('GT: <b>bike</b>');
         expect(html).toContain('Pred: <b>car</b>');
         expect(html).toContain('Count: <b>3</b>');

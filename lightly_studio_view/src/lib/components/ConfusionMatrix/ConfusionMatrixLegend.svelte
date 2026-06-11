@@ -44,6 +44,6 @@
     </div>
 
     <span class="text-muted-foreground/70">
-        Color intensity scales with cell count. Hover for breakdown.
+        Color intensity scales logarithmically with cell count. Hover for breakdown.
     </span>
 </div>

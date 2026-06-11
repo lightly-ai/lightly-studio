@@ -4,7 +4,12 @@
 
     const { Story } = defineMeta({
         title: 'Prototypes/ConfusionMatrix LIG-9665',
-        component: CombinedConfusionMatrix
+        component: CombinedConfusionMatrix,
+        args: { topN: 5, classCountThreshold: 30, showLegend: true },
+        argTypes: {
+            topN: { control: { type: 'number', min: 1, max: 80, step: 1 } },
+            classCountThreshold: { control: { type: 'number', min: 0, max: 80, step: 1 } }
+        }
     });
 </script>
 
@@ -13,11 +18,11 @@
 </script>
 
 <!--
-Combined flow: top-N most confused classes + "(other)" aggregation in the panel,
-"Full matrix" dialog with comma-separated class filter and inside zoom.
+Combined flow: comma-separated class filter with typed suggestions on top;
+otherwise top-N most confused classes + "(other)" aggregation.
 -->
-<Story name="Large (80 classes, top-N + dialog)">
-    {#snippet template()}
-        <CombinedConfusionMatrix matrix={coco80Classes} showLegend />
+<Story name="Large (80 classes, filter + top-N)">
+    {#snippet template(args)}
+        <CombinedConfusionMatrix {...args} matrix={coco80Classes} />
     {/snippet}
 </Story>

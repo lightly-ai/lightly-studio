@@ -27,9 +27,22 @@
         showLegend?: boolean;
         /** Enables inside (scroll/pinch) zoom on both axes. */
         zoomable?: boolean;
+        /** Row labels that show a "✕" remove affordance on the y-axis. */
+        removableLabels?: string[];
+        /** Called when the user clicks a removable row label. */
+        onLabelRemove?: (label: string) => void;
+        /** Color intensity multiplier (> 0, default 1). */
+        colorIntensity?: number;
     }
 
-    const { matrix, showLegend = false, zoomable = false }: Props = $props();
+    const {
+        matrix,
+        showLegend = false,
+        zoomable = false,
+        removableLabels = [],
+        onLabelRemove,
+        colorIntensity = 1
+    }: Props = $props();
 
     let container: HTMLDivElement | undefined = $state();
     let chart: echarts.ECharts | null = $state(null);
@@ -45,6 +58,11 @@
         if (!container) return;
         const instance = echarts.init(container, null, { renderer: 'canvas' });
         chart = instance;
+        instance.on('click', (params: { componentType?: string; value?: unknown }) => {
+            if (params.componentType !== 'yAxis') return;
+            const label = String(params.value);
+            if (removableLabels.includes(label)) onLabelRemove?.(label);
+        });
         const resizeObserver = new ResizeObserver(() => instance.resize());
         resizeObserver.observe(container);
         return () => {
@@ -56,7 +74,10 @@
 
     $effect(() => {
         if (!chart) return;
-        chart.setOption(buildEchartsOption(matrix, { zoomable }), true);
+        chart.setOption(
+            buildEchartsOption(matrix, { zoomable, removableLabels, colorIntensity }),
+            true
+        );
     });
 
     onDestroy(() => chart?.dispose());

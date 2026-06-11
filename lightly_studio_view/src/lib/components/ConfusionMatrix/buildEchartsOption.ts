@@ -8,6 +8,16 @@ const SENTINEL_LABELS = new Set<string>([NO_GROUND_TRUTH_ROW_LABEL, NO_PREDICTIO
 interface BuildEchartsOptionOptions {
     /** Enables inside (scroll/pinch) zoom on both axes. */
     zoomable?: boolean;
+    /**
+     * Row (y-axis) labels that get a "✕" remove affordance and emit
+     * axis-label click events (componentType "yAxis").
+     */
+    removableLabels?: string[];
+    /**
+     * Color intensity multiplier (> 0, default 1). Values > 1 saturate
+     * cells earlier (more intense); values < 1 keep cells paler.
+     */
+    colorIntensity?: number;
 }
 
 // TP and FP/FN are split into two series with separate visualMaps so each
@@ -20,8 +30,11 @@ export function buildEchartsOption(
     const xLabels = matrix.col_labels;
     const yLabels = [...matrix.row_labels].reverse();
 
-    const tpData: [string, string, number][] = [];
-    const fpFnData: [string, string, number][] = [];
+    // Cells carry [pred, gt, count, log10(count)]. Color maps to the log
+    // dimension so a few huge cells don't wash out all smaller counts;
+    // tooltips still read the raw count.
+    const tpData: [string, string, number, number][] = [];
+    const fpFnData: [string, string, number, number][] = [];
     let maxCount = 1;
 
     for (let i = 0; i < matrix.row_labels.length; i++) {
@@ -34,10 +47,17 @@ export function buildEchartsOption(
             const isTrueClassPair =
                 !SENTINEL_LABELS.has(rowLabel) && !SENTINEL_LABELS.has(colLabel);
             const isTp = isTrueClassPair && rowLabel === colLabel;
-            (isTp ? tpData : fpFnData).push([colLabel, rowLabel, count]);
+            (isTp ? tpData : fpFnData).push([colLabel, rowLabel, count, Math.log10(count)]);
         }
     }
 
+    // Falls back to 1 when all counts are <= 1 so the visualMap range stays valid.
+    const logMaxCount = maxCount > 1 ? Math.log10(maxCount) : 1;
+    // Dividing the range by the intensity makes cells hit full color sooner.
+    const colorIntensity = Math.max(options.colorIntensity ?? 1, 0.01);
+    const visualMapMax = logMaxCount / colorIntensity;
+
+    const removableSet = new Set(options.removableLabels ?? []);
     const nameGap = 20;
     return {
         backgroundColor: 'transparent',
@@ -75,22 +95,34 @@ export function buildEchartsOption(
             nameGap,
             nameRotate: 90,
             nameTextStyle: { color: '#9ca3af', fontSize: 13, fontWeight: 'bold' },
-            axisLabel: { interval: 0, color: '#9ca3af', fontSize: 12 },
+            triggerEvent: removableSet.size > 0,
+            axisLabel: {
+                interval: 0,
+                color: '#9ca3af',
+                fontSize: 12,
+                formatter: (value: string) =>
+                    removableSet.has(value) ? `${value} {removeIcon|✕}` : value,
+                rich: {
+                    removeIcon: { color: '#6b7280', fontSize: 10, padding: [0, 0, 0, 2] }
+                }
+            },
             axisLine: { lineStyle: { color: '#374151' } },
             splitArea: { show: false }
         },
         visualMap: [
             {
                 seriesIndex: 0,
-                min: 1,
-                max: maxCount,
+                dimension: 3,
+                min: 0,
+                max: visualMapMax,
                 inRange: { color: TP_COLOR_RAMP },
                 show: false
             },
             {
                 seriesIndex: 1,
-                min: 1,
-                max: maxCount,
+                dimension: 3,
+                min: 0,
+                max: visualMapMax,
                 inRange: { color: FP_FN_COLOR_RAMP },
                 show: false
             }
