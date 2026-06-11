@@ -10,6 +10,7 @@
         TagsMenu
     } from '$lib/components';
     import QueryEditorPanel from '$lib/components/QueryEditorPanel/QueryEditorPanel.svelte';
+    import { SidePanelTabs } from '$lib/components';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { GripVertical, SlidersHorizontal } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
@@ -304,6 +305,12 @@
     const isCollectionGrid = $derived(
         isImages || isAnnotations || isVideos || isVideoFrames || isGroups
     );
+
+    const panelIsVisible = $derived(
+        ($activePanel === 'evaluationRuns' && hasEvaluationRuns) ||
+            ($activePanel === 'embeddingPlot' && (isImages || isVideos)) ||
+            ($activePanel === 'queryEditor' && isImages)
+    );
 </script>
 
 <div class="flex-none">
@@ -370,7 +377,6 @@
                         {canSelectAll}
                         isSelectionActive={$selectedCount > 0}
                         {isImages}
-                        {hasEvaluationRuns}
                         {hasMediaWithEmbeddings}
                         collectionDatasetId={collection.dataset_id}
                         onSelectAll={selectAllHandle.handleSelectAll}
@@ -386,7 +392,7 @@
                     <Separator class="mb-4 bg-border-hard" />
                 {/if}
 
-                <div class="flex min-h-0 min-w-0 flex-1">
+                <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden">
                     {@render children()}
                 </div>
                 {#if isCollectionGrid}
@@ -404,7 +410,7 @@
                 </PaneResizer>
             {/snippet}
 
-            {#if $activePanel === 'evaluationRuns' && hasEvaluationRuns}
+            {#if panelIsVisible}
                 <PaneGroup direction="horizontal" class="min-w-0 flex-1">
                     <Pane defaultSize={65} minSize={35} class="flex">
                         <div
@@ -417,73 +423,22 @@
                     {@render paneResizer()}
 
                     <Pane defaultSize={35} minSize={25} class="flex min-h-0 flex-col">
-                        {#await import('$lib/components/EvaluationRunsPanel/EvaluationRunsPanel.svelte') then { default: EvaluationRunsPanel }}
-                            <EvaluationRunsPanel
-                                onClose={() => setActivePanel('none')}
-                                {evaluationRuns}
-                                isLoading={evaluationRunsQuery.isLoading}
-                                error={evaluationRunsQuery.error?.message}
-                            />
-                        {/await}
-                    </Pane>
-                </PaneGroup>
-            {:else if $activePanel === 'embeddingPlot' && (isImages || isVideos)}
-                <!-- When plot is shown, use PaneGroup for the main content + plot -->
-                <PaneGroup direction="horizontal" class="min-w-0 flex-1">
-                    <Pane defaultSize={50} minSize={30} class="flex">
-                        <div
-                            class="relative flex min-w-0 flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4"
-                        >
-                            <DatasetGridHeader
-                                {canSelectAll}
-                                isSelectionActive={$selectedCount > 0}
-                                {isImages}
-                                {hasEvaluationRuns}
-                                {hasMediaWithEmbeddings}
-                                collectionDatasetId={collection.dataset_id}
-                                onSelectAll={selectAllHandle.handleSelectAll}
-                                onDeselectAll={clearSelection}
-                                searchImage={$searchImage}
-                                searchPending={$searchPending}
-                                initialQueryText={$textEmbedding?.queryText ?? ''}
-                                onSubmitText={search.setText}
-                                onSubmitFile={search.setImage}
-                                onSearchClear={search.clear}
-                                onSearchError={search.onError}
-                            />
-                            <Separator class="mb-4 bg-border-hard" />
-                            <div class="flex min-h-0 flex-1 overflow-hidden">
-                                {@render children()}
-                            </div>
-                            <SelectionPill
-                                selectedCount={$selectedCount}
-                                onClear={clearSelection}
-                            />
-                        </div>
-                    </Pane>
-
-                    {@render paneResizer()}
-
-                    <Pane defaultSize={50} minSize={30} class="flex min-h-0 flex-col">
-                        {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
-                            <PlotPanel />
-                        {/await}
-                    </Pane>
-                </PaneGroup>
-            {:else if $activePanel === 'queryEditor' && isImages}
-                <PaneGroup direction="horizontal" class="min-w-0 flex-1">
-                    <Pane defaultSize={65} minSize={35} class="flex">
-                        <div
-                            class="relative flex min-w-0 flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2"
-                        >
-                            {@render mainContent()}
-                        </div>
-                    </Pane>
-
-                    {@render paneResizer()}
-
-                    <Pane defaultSize={35} minSize={25} class="flex min-h-0 flex-col">
-                        <QueryEditorPanel onClose={() => setActivePanel('none')} />
+                        {#if $activePanel === 'evaluationRuns' && hasEvaluationRuns}
+                            {#await import('$lib/components/EvaluationRunsPanel/EvaluationRunsPanel.svelte') then { default: EvaluationRunsPanel }}
+                                <EvaluationRunsPanel
+                                    onClose={() => setActivePanel('none')}
+                                    {evaluationRuns}
+                                    isLoading={evaluationRunsQuery.isLoading}
+                                    error={evaluationRunsQuery.error?.message}
+                                />
+                            {/await}
+                        {:else if $activePanel === 'embeddingPlot' && (isImages || isVideos)}
+                            {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
+                                <PlotPanel />
+                            {/await}
+                        {:else if $activePanel === 'queryEditor' && isImages}
+                            <QueryEditorPanel onClose={() => setActivePanel('none')} />
+                        {/if}
                     </Pane>
                 </PaneGroup>
             {:else}
@@ -493,6 +448,9 @@
                 >
                     {@render mainContent()}
                 </div>
+            {/if}
+            {#if isCollectionGrid}
+                <SidePanelTabs {isImages} {hasMediaWithEmbeddings} {hasEvaluationRuns} />
             {/if}
             {#if hasEmbeddings}
                 {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then { default: CreateClassifierDialog }}
