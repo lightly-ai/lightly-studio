@@ -22,7 +22,11 @@ async function typeAndApply(page: Page, query: string): Promise<void> {
 test.describe('query editor', () => {
     test('apply query and verify filtered grid', async ({ samplesPage, page }) => {
         await page.getByTestId('query-filter-add-button').click();
-        await expect(page.getByRole('heading', { name: 'Advanced filters' })).toBeVisible();
+        await expect(
+            page
+                .getByTestId('query-editor-panel')
+                .getByRole('heading', { name: 'Advanced filters' })
+        ).toBeVisible();
 
         // On first open: The apply button should be enabled.
         await expect(page.getByTestId('query-editor-apply-button')).toBeEnabled();
@@ -74,7 +78,11 @@ test.describe('query editor', () => {
 
         // Click the chip body to reopen the editor
         await page.getByTestId('query-filter-chip-body').click();
-        await expect(page.getByRole('heading', { name: 'Advanced filters' })).toBeVisible();
+        await expect(
+            page
+                .getByTestId('query-editor-panel')
+                .getByRole('heading', { name: 'Advanced filters' })
+        ).toBeVisible();
 
         // Editor should contain the previously applied query
         await expect(page.locator('.monaco-editor .view-lines')).toContainText(QUERY);
