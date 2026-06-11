@@ -9,6 +9,7 @@ from sqlmodel import col
 
 from lightly_studio.core.dataset_query.annotation_expression import AnnotationSourceField
 from lightly_studio.core.dataset_query.boolean_expression import AND
+from lightly_studio.core.dataset_query.field import NullableOrdinalField
 from lightly_studio.core.dataset_query.foreign_field import (
     ForeignComparableField,
     ForeignNumericalField,
@@ -47,6 +48,7 @@ class SegmentationMaskField:
         relationship=AnnotationBaseTable.annotation_label,
     )
     source = AnnotationSourceField()
+    confidence = NullableOrdinalField(col(AnnotationBaseTable.confidence))
 
 
 class SegmentationMaskQuery:
