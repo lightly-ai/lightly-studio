@@ -5,12 +5,14 @@
     import { STRATEGY_OPTIONS, type StrategyType } from '$lib/hooks/useStrategyBuilder';
 
     interface Props {
+        diversityDisabledReason?: string;
         similarityDisabledReason?: string;
         metadataWeightingDisabledReason?: string;
         classBalancingDisabledReason?: string;
         onAdd: (type: StrategyType) => void;
     }
     let {
+        diversityDisabledReason,
         similarityDisabledReason,
         metadataWeightingDisabledReason,
         classBalancingDisabledReason,
@@ -24,6 +26,7 @@
     let itemRefs: Partial<Record<StrategyType, HTMLElement>> = {};
 
     function getDisabledReason(type: StrategyType): string | undefined {
+        if (type === 'diversity') return diversityDisabledReason;
         if (type === 'similarity') return similarityDisabledReason;
         if (type === 'metadata_weighting') return metadataWeightingDisabledReason;
         if (type === 'class_balancing') return classBalancingDisabledReason;
