@@ -17,6 +17,9 @@
             url: string;
         };
         selected?: boolean;
+        // LIG-9521 prototype: reports the generated crop blob URL so the grid can use
+        // it as drag-to-search payload.
+        onCropImageUrlChange?: (annotationId: string, url: string | null) => void;
     };
 
     let {
@@ -25,7 +28,8 @@
         containerHeight,
         sample,
         showLabel = true,
-        selected = false
+        selected = false,
+        onCropImageUrlChange
     }: Props = $props();
 
     const padding = 20;
@@ -92,6 +96,12 @@
     // the crop instead of the whole parent image (see PR #556 for images).
     let cropImageUrl = $state<string | null>(null);
 
+    // Captured by value at init: props are lazy getters, and reading `annotation` during
+    // effect cleanup would re-evaluate `annotations[index]` in the grid against an
+    // already-shrunken array (crash on filter changes). The id is constant per instance —
+    // the {#key} wrapper in the grid remounts this component when it changes.
+    const annotationId = annotation.sample_id;
+
     $effect(() => {
         const sourceUrl = sample.url;
         const sampleWidth = sample.width;
@@ -132,13 +142,17 @@
                 if (!blob || cancelled) return;
                 objectUrl = URL.createObjectURL(blob);
                 cropImageUrl = objectUrl;
+                onCropImageUrlChange?.(annotationId, objectUrl);
             }, 'image/png');
         };
         imageElement.src = sourceUrl;
 
         return () => {
             cancelled = true;
-            if (objectUrl) URL.revokeObjectURL(objectUrl);
+            if (objectUrl) {
+                URL.revokeObjectURL(objectUrl);
+                onCropImageUrlChange?.(annotationId, null);
+            }
         };
     });
 </script>
