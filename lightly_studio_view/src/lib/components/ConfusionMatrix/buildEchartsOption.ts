@@ -5,10 +5,18 @@ const TP_COLOR_RAMP: [string, string] = ['rgba(34,197,94,0.15)', 'rgba(34,197,94
 const FP_FN_COLOR_RAMP: [string, string] = ['rgba(239,68,68,0.15)', 'rgba(239,68,68,0.95)'];
 const SENTINEL_LABELS = new Set<string>([NO_GROUND_TRUTH_ROW_LABEL, NO_PREDICTION_COL_LABEL]);
 
+interface BuildEchartsOptionOptions {
+    /** Enables inside (scroll/pinch) zoom on both axes. */
+    zoomable?: boolean;
+}
+
 // TP and FP/FN are split into two series with separate visualMaps so each
 // can use its own color ramp (ECharts can't color cells in a single heatmap
 // series along two scales).
-export function buildEchartsOption(matrix: ConfusionMatrix): EChartsCoreOption {
+export function buildEchartsOption(
+    matrix: ConfusionMatrix,
+    options: BuildEchartsOptionOptions = {}
+): EChartsCoreOption {
     const xLabels = matrix.col_labels;
     const yLabels = [...matrix.row_labels].reverse();
 
@@ -33,6 +41,12 @@ export function buildEchartsOption(matrix: ConfusionMatrix): EChartsCoreOption {
     const nameGap = 20;
     return {
         backgroundColor: 'transparent',
+        ...(options.zoomable && {
+            dataZoom: [
+                { type: 'inside', xAxisIndex: 0 },
+                { type: 'inside', yAxisIndex: 0, orient: 'vertical' }
+            ]
+        }),
         tooltip: {
             trigger: 'item',
             formatter: (params: { value: [string, string, number] }) => {
