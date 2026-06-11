@@ -78,6 +78,17 @@ nav:
       - enterprise/cloud_storage/index.md
       - AWS S3: enterprise/cloud_storage/aws.md
 
+# Promote link/nav checks from INFO to WARNING so that `mkdocs build --strict`
+# turns them into build errors (see the Makefile `docs` target).
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+  nav:
+    omitted_files: warn
+    not_found: warn
+
 extra_css:
   - _static/custom.css
 

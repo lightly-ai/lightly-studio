@@ -113,6 +113,15 @@
         resetCategoryVisibility
     } = useCategoryVisibility();
 
+    // Hide-toggles are keyed by color-slot index, but the backend re-ranks slots per request
+    // (most frequent in-filter values win individual slots), so a new legend remaps those indices.
+    // Reset hidden categories whenever the legend changes — covering both filter and color-by
+    // changes — so a stale toggle can never hide a different category than the user picked.
+    $effect(() => {
+        void $colorLegend;
+        resetCategoryVisibility();
+    });
+
     const hasActiveFilter = $derived(filter !== null || activeSampleIds.length > 0);
 
     let { data: plotData, selectedSampleIds } = $derived(
@@ -356,7 +365,6 @@
                 selectedKey={$selectedColorByKey}
                 onSelectedKeyChange={(key) => {
                     setSelectedColorByKey(key);
-                    resetCategoryVisibility();
                 }}
             />
             <Button
