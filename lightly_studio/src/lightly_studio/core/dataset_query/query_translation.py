@@ -122,6 +122,20 @@ _ORDINAL_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
     ("video", "fps"): VideoSampleField.fps,
 }
 
+# Annotation confidence is stored in a nullable column, but still supports
+# ordinal numeric comparisons in the query language.
+_ORDINAL_NULLABLE_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
+    ("classification", "confidence"): ClassificationField.confidence,
+    ("object_detection", "confidence"): ObjectDetectionField.confidence,
+    ("segmentation_mask", "confidence"): SegmentationMaskField.confidence,
+}
+# We can merge ordinal fields with nullable, as NULL values fail any comparison in SQL, so it just
+# works as expected.
+_ALL_ORDINAL_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
+    **_ORDINAL_FLOAT_FIELDS,
+    **_ORDINAL_NULLABLE_FLOAT_FIELDS,
+}
+
 _EQUALITY_FLOAT_FIELDS: dict[tuple[str, str], _EqualityField[Number]] = {
     ("video", "duration_s"): VideoSampleField.duration_s,
 }
@@ -242,7 +256,11 @@ def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 C9
         )
     if isinstance(expr, OrdinalFloatExpr):
         return _apply_ordinal_operator(
-            field=_lookup(mapping=_ORDINAL_FLOAT_FIELDS, field=expr.field, type_="ordinal float"),
+            field=_lookup(
+                mapping=_ALL_ORDINAL_FLOAT_FIELDS,
+                field=expr.field,
+                type_="ordinal float",
+            ),
             operator=expr.operator,
             value=expr.value,
         )
