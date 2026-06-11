@@ -50,6 +50,51 @@ The library is OS-independent and works on Windows, Linux, and macOS.
 The examples below download the required example data the first time you run them. You can also
 directly use your own image, video, or YOLO/COCO dataset.
 
+=== "COCO Object Detection"
+
+    1. Create a file named `example_coco.py` with the following contents:
+
+        ```python title="example_coco.py"
+        import lightly_studio as ls
+
+        # Download the example dataset (will be skipped if it already exists)
+        dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+
+        dataset = ls.ImageDataset.load_or_create()
+        dataset.add_samples_from_coco(
+            annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
+            images_path=f"{dataset_path}/coco_subset_128_images/images",
+        )
+        # Optional: tag a subset of samples to filter them in the GUI. 
+        dataset.query()[:10].add_tag("sample_subset")
+
+        ls.start_gui()
+        ```
+
+    1. Run `python example_coco.py` in your terminal.
+    1. Click on the printed URL to open the app in your browser.
+
+=== "YOLO Object Detection"
+
+    1. Create a file named `example_yolo.py` with the following contents:
+
+        ```python title="example_yolo.py"
+        import lightly_studio as ls
+
+        # Download the example dataset (will be skipped if it already exists)
+        dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+
+        dataset = ls.ImageDataset.load_or_create()
+        dataset.add_samples_from_yolo(
+            data_yaml=f"{dataset_path}/road_signs_yolo/data.yaml",
+        )
+
+        ls.start_gui()
+        ```
+
+    1. Run `python example_yolo.py` in your terminal.
+    1. Click on the printed URL to open the app in your browser.
+
 === "Image Folder"
 
     1. Create a file named `example_image.py` with the following contents:
@@ -95,50 +140,6 @@ directly use your own image, video, or YOLO/COCO dataset.
     1. Run `python example_video.py` in your terminal.
     1. Click on the printed URL to open the app in your browser.
 
-=== "YOLO Object Detection"
-
-    1. Create a file named `example_yolo.py` with the following contents:
-
-        ```python title="example_yolo.py"
-        import lightly_studio as ls
-
-        # Download the example dataset (will be skipped if it already exists)
-        dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
-
-        dataset = ls.ImageDataset.load_or_create()
-        dataset.add_samples_from_yolo(
-            data_yaml=f"{dataset_path}/road_signs_yolo/data.yaml",
-        )
-
-        ls.start_gui()
-        ```
-
-    1. Run `python example_yolo.py` in your terminal.
-    1. Click on the printed URL to open the app in your browser.
-
-=== "COCO Segmentation Mask"
-
-    1. Create a file named `example_coco.py` with the following contents:
-
-        ```python title="example_coco.py"
-        import lightly_studio as ls
-
-        # Download the example dataset (will be skipped if it already exists)
-        dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
-
-        dataset = ls.ImageDataset.load_or_create()
-        dataset.add_samples_from_coco(
-            annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
-            images_path=f"{dataset_path}/coco_subset_128_images/images",
-            annotation_type=ls.AnnotationType.SEGMENTATION_MASK,
-        )
-
-        ls.start_gui()
-        ```
-
-    1. Run `python example_coco.py` in your terminal.
-    1. Click on the printed URL to open the app in your browser.
-
 !!! tip
     Call `lightly-studio gui` from the command line instead of `ls.start_gui()` in Python
     to skip reindexing your dataset.
@@ -152,10 +153,6 @@ directly use your own image, video, or YOLO/COCO dataset.
 -  This server reads from `lightly_studio.db` and serves data to the **UI Application** running in
    your browser (by default `http://localhost:8001`).
 -  Images and videos are streamed from their original local folder or remote storage for display in the UI.
-
-!!! note "For Linux Users"
-    We recommend using Firefox for the best experience with embedding plots, as other browsers might
-    not render them correctly.
 
 ## Feature Overview
 
