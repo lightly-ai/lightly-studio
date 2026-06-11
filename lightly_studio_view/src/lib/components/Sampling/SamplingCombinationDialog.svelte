@@ -106,6 +106,7 @@
                                         annotationLabels={strategyOptions.annotationLabels}
                                         annotationSourceOptions={strategyOptions.annotationSourceOptions}
                                         metadataFieldNames={strategyOptions.metadataFieldNames}
+                                        isDuplicateDisabled={instance.type === 'diversity'}
                                         onRemove={() => removeStrategy(instance.id)}
                                         onDuplicate={() => duplicateStrategy(instance.id)}
                                         onUpdate={(params) => updateParams(instance.id, params)}

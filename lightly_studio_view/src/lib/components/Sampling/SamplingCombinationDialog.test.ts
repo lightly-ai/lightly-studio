@@ -367,6 +367,18 @@ describe('SamplingCombinationDialog', () => {
         expect(screen.getByTestId('selection-dialog-submit')).toHaveTextContent('Creating...');
     });
 
+    it('disables the duplicate button on a diversity strategy card', async () => {
+        filteredSampleCountStore.set(100);
+
+        render(SamplingCombinationDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+        await fireEvent.pointerUp(await screen.findByTestId('add-strategy-diversity'));
+
+        const duplicateButton = await screen.findByTestId(/strategy-card-duplicate-/);
+        expect(duplicateButton).toBeDisabled();
+    });
+
     it('disables diversity in the add strategy menu after one diversity strategy has been added', async () => {
         filteredSampleCountStore.set(100);
 
