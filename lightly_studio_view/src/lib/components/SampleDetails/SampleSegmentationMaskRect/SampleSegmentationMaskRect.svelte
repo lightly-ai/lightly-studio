@@ -15,9 +15,9 @@
         useSegmentationMaskPreview,
         useAnnotationLabels,
         useAnnotation,
-        useAnnotationLabelContext
+        useAnnotationLabelContext,
+        useDeleteAnnotation
     } from '$lib/hooks';
-    import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { page } from '$app/state';
     import type { PendingChange } from '../pendingChange';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';

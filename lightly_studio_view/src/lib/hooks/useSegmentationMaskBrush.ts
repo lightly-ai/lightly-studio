@@ -182,7 +182,11 @@ export function useSegmentationMaskBrush({
             deleteAnnotation,
             refetch,
             onUndo: restoreOverriddenAnnotations,
-            onDelete: () => setAnnotationId(null)
+            onDelete: () => {
+                if (annotationLabelContext.annotationId === newAnnotation.sample_id) {
+                    setAnnotationId(null);
+                }
+            }
         });
 
         setAnnotationType('segmentation_mask');
