@@ -15,7 +15,8 @@
         useSegmentationMaskPreview,
         useAnnotationLabels,
         useAnnotation,
-        useAnnotationLabelContext
+        useAnnotationLabelContext,
+        useDeleteAnnotation
     } from '$lib/hooks';
     import { page } from '$app/state';
     import type { PendingChange } from '../pendingChange';
@@ -58,6 +59,8 @@
         setAnnotationId
     } = useAnnotationLabelContext();
 
+    const { deleteAnnotation } = useDeleteAnnotation({ collectionId });
+
     const labels = useAnnotationLabels(() => ({ collectionId }));
 
     const activeAnnotationId = $derived.by(() => {
@@ -94,6 +97,7 @@
             sample,
             annotations: sample.annotations,
             refetch,
+            deleteAnnotation,
             requestLabel,
             onAnnotationCreated: () => {
                 // Only refresh root collection if there were no annotations before
