@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from collections import Counter
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Generic, Protocol, TypeVar
@@ -194,6 +195,40 @@ def assign_color_categories(
         color_categories.append(sorted(categories_not_none))
 
     return color_categories, scale.legend
+
+
+def order_values_by_frequency(
+    sample_to_values: Mapping[UUID, Iterable[T]],
+    matching_sample_ids: set[UUID] | None,
+    format_fn: Callable[[T], str] = str,
+) -> list[T]:
+    """Distinct values among matching samples, ordered by descending frequency.
+
+    Counting only the samples in ``matching_sample_ids`` (all samples when it is
+    ``None``) makes the result *filter-aware*. When the values are later split
+    into a fixed number of legend slots, this ordering ensures the values most
+    common among the matching samples each get a dedicated category, while the
+    less common ones are merged into a single "Other" category. Values that never
+    occur in a matching sample are omitted entirely, which hides categories with
+    zero samples after filtering.
+
+    Args:
+        sample_to_values: Mapping from sample ID to the values it carries.
+        matching_sample_ids: Sample IDs to count. ``None`` counts every sample
+            in ``sample_to_values``.
+        format_fn: Function producing the label used to break frequency ties,
+            keeping the ordering deterministic. Defaults to ``str``.
+
+    Returns:
+        Distinct values sorted by ``(-count, format_fn(value))``.
+    """
+    counts: Counter[T] = Counter()
+    for sample_id, values in sample_to_values.items():
+        if matching_sample_ids is not None and sample_id not in matching_sample_ids:
+            continue
+        counts.update(set(values))
+
+    return sorted(counts, key=lambda value: (-counts[value], format_fn(value)))
 
 
 def _format_other_label(values: Sequence[T], format_fn: Callable[[T], str]) -> str:

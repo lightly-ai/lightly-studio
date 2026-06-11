@@ -63,15 +63,16 @@ def test_get_embeddings2d__with_metadata_field_color_by(
     sample_ids_payload = table.column("sample_id").to_pylist()
     color_categories = table.column("color_categories").to_pylist()
 
+    # Values are ranked by frequency: "Paris" (2 samples) before "London" (1).
     sample_id_to_colors = dict(zip(sample_ids_payload, color_categories))
-    assert sample_id_to_colors[str(samples[0].sample_id)] == [3]  # Paris
-    assert sample_id_to_colors[str(samples[1].sample_id)] == [2]  # London
-    assert sample_id_to_colors[str(samples[2].sample_id)] == [3]  # Paris
+    assert sample_id_to_colors[str(samples[0].sample_id)] == [2]  # Paris
+    assert sample_id_to_colors[str(samples[1].sample_id)] == [3]  # London
+    assert sample_id_to_colors[str(samples[2].sample_id)] == [2]  # Paris
     assert sample_id_to_colors[str(samples[3].sample_id)] == []  # Unassigned
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
-    assert legend["2"] == "London"
-    assert legend["3"] == "Paris"
+    assert legend["2"] == "Paris"
+    assert legend["3"] == "London"
 
 
 def test_get_embeddings2d__with_mixed_type_metadata_color_by(
@@ -147,7 +148,8 @@ def test_get_embeddings2d__with_boolean_metadata_color_by(
     sample_ids_payload = table.column("sample_id").to_pylist()
     color_categories = table.column("color_categories").to_pylist()
 
-    # False is sorted before True, so False -> cat 2, True -> cat 3.
+    # Values are frequency-ordered: False is in 2 samples, True in 1, so False
+    # takes cat 2 and True cat 3.
     sample_id_to_colors = dict(zip(sample_ids_payload, color_categories))
     assert sample_id_to_colors[str(samples[0].sample_id)] == [2]  # False -> cat 2
     assert sample_id_to_colors[str(samples[1].sample_id)] == [3]  # True -> cat 3
@@ -312,18 +314,71 @@ def test_get_embeddings2d__with_metadata_field_color_by_and_sample_ids_filter(
     assert sample_id_to_filter[str(samples[2].sample_id)] == 1
     assert sample_id_to_filter[str(samples[3].sample_id)] == 0
 
-    # Color categories are filter-unaware: every sample reports its own category.
+    # The legend is filter-aware: only values carried by a matching sample appear,
+    # so "London" and "Berlin" (filtered out) are dropped and their samples report
+    # no category. The survivors keep individual slots, ordered by label on the tie.
     sample_id_to_colors = dict(zip(sample_ids_payload, color_categories))
-    assert sample_id_to_colors[str(samples[0].sample_id)] == [4]  # Paris
-    assert sample_id_to_colors[str(samples[1].sample_id)] == [3]  # London
-    assert sample_id_to_colors[str(samples[2].sample_id)] == [5]  # Rome
-    assert sample_id_to_colors[str(samples[3].sample_id)] == [2]  # Berlin
+    assert sample_id_to_colors[str(samples[0].sample_id)] == [2]  # Paris
+    assert sample_id_to_colors[str(samples[1].sample_id)] == []  # London, hidden
+    assert sample_id_to_colors[str(samples[2].sample_id)] == [3]  # Rome
+    assert sample_id_to_colors[str(samples[3].sample_id)] == []  # Berlin, hidden
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
-    assert legend["2"] == "Berlin"
-    assert legend["3"] == "London"
-    assert legend["4"] == "Paris"
-    assert legend["5"] == "Rome"
+    assert legend == {"2": "Paris", "3": "Rome"}
+
+
+def test_get_embeddings2d__filter_promotes_metadata_value_out_of_other(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    """A value buried in "Other" globally gets its own slot once filtered to."""
+    n_samples = 300
+
+    collection_id = fill_db_with_samples_and_embeddings(
+        session=db_session,
+        n_samples=n_samples,
+        embedding_model_names=["model_a"],
+        embedding_dimension=EMBEDDING_DIMENSION,
+    )
+
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+    ).samples
+    assert len(samples) == n_samples
+
+    # More distinct values than fit in the 254 individual slots, one per sample.
+    for i, sample in enumerate(samples):
+        sample.sample["label"] = f"v{i:03d}"
+
+    # Unfiltered: every value has frequency 1, so ordering is alphabetical and
+    # the alphabetically-late values collapse into the trailing "Other" slot.
+    response = test_client.post(
+        f"/api/collections/{collection_id}/embeddings2d/default",
+        json={"filters": {}, "color_by": {"type": "metadata_field", "key": "label"}},
+    )
+    assert response.status_code == 200
+    table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
+    legend_all = json.loads(table.schema.metadata[b"color_legend"])
+    assert any(label.startswith("Other") for label in legend_all.values())
+    assert "v299" not in legend_all.values()
+
+    # Filter to the single sample whose value was inside "Other": it now is the
+    # only value present, so it is promoted to its own individual slot.
+    image_filter = ImageFilter(
+        sample_filter=SampleFilter(sample_ids=[samples[299].sample_id]),
+    )
+    response = test_client.post(
+        f"/api/collections/{collection_id}/embeddings2d/default",
+        json={
+            "filters": image_filter.model_dump(mode="json"),
+            "color_by": {"type": "metadata_field", "key": "label"},
+        },
+    )
+    assert response.status_code == 200
+    table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
+    legend_filtered = json.loads(table.schema.metadata[b"color_legend"])
+    assert legend_filtered == {"2": "v299"}
 
 
 @pytest.mark.parametrize(
@@ -468,6 +523,10 @@ def test_get_embeddings2d__with_tag_color_by_and_filter(
         session=db_session,
         tag=TagCreate(collection_id=collection_id, name="filter_tag", kind="sample"),
     )
+    tag_hidden = tag_resolver.create(
+        session=db_session,
+        tag=TagCreate(collection_id=collection_id, name="hidden_tag", kind="sample"),
+    )
 
     # All samples get the color tag.
     for sample in samples:
@@ -481,6 +540,10 @@ def test_get_embeddings2d__with_tag_color_by_and_filter(
     tag_resolver.add_tag_to_sample(
         session=db_session, tag_id=tag_filter.tag_id, sample=samples[1].sample
     )
+    # The hidden tag only lands on a filtered-out sample.
+    tag_resolver.add_tag_to_sample(
+        session=db_session, tag_id=tag_hidden.tag_id, sample=samples[2].sample
+    )
 
     image_filter = ImageFilter(
         sample_filter=SampleFilter(tag_ids=[tag_filter.tag_id]),
@@ -492,7 +555,7 @@ def test_get_embeddings2d__with_tag_color_by_and_filter(
             "filters": image_filter.model_dump(mode="json"),
             "color_by": {
                 "type": "tag",
-                "tag_ids": [str(tag_color.tag_id)],
+                "tag_ids": [str(tag_color.tag_id), str(tag_hidden.tag_id)],
             },
         },
     )
@@ -511,7 +574,8 @@ def test_get_embeddings2d__with_tag_color_by_and_filter(
     assert sample_id_to_filter[str(samples[2].sample_id)] == 0
     assert sample_id_to_filter[str(samples[3].sample_id)] == 0
 
-    # All samples have the color tag → category 2, independent of the filter.
+    # All samples have the color tag → category 2. The hidden tag has no matching
+    # sample, so it is dropped from the legend and contributes no category.
     sample_id_to_colors = dict(zip(sample_ids_payload, color_categories))
     assert sample_id_to_colors[str(samples[0].sample_id)] == [2]
     assert sample_id_to_colors[str(samples[1].sample_id)] == [2]
@@ -633,6 +697,9 @@ def test_get_embeddings2d__with_annotation_color_by_and_filter(
     label = create_annotation_label(
         session=db_session, root_collection_id=collection_id, label_name="cat"
     )
+    label_hidden = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="dog"
+    )
 
     # All samples get annotated.
     for sample in samples:
@@ -642,6 +709,13 @@ def test_get_embeddings2d__with_annotation_color_by_and_filter(
             sample_id=sample.sample_id,
             annotation_label_id=label.annotation_label_id,
         )
+    # The hidden label only lands on a filtered-out sample.
+    create_annotation(
+        session=db_session,
+        collection_id=collection_id,
+        sample_id=samples[2].sample_id,
+        annotation_label_id=label_hidden.annotation_label_id,
+    )
 
     # Only first two pass the filter.
     selected_sample_ids = [samples[0].sample_id, samples[1].sample_id]
@@ -655,7 +729,10 @@ def test_get_embeddings2d__with_annotation_color_by_and_filter(
             "filters": image_filter.model_dump(mode="json"),
             "color_by": {
                 "type": "annotation",
-                "annotation_label_ids": [str(label.annotation_label_id)],
+                "annotation_label_ids": [
+                    str(label.annotation_label_id),
+                    str(label_hidden.annotation_label_id),
+                ],
             },
         },
     )
@@ -674,7 +751,8 @@ def test_get_embeddings2d__with_annotation_color_by_and_filter(
     assert sample_id_to_filter[str(samples[2].sample_id)] == 0
     assert sample_id_to_filter[str(samples[3].sample_id)] == 0
 
-    # All samples have the label → category 2, independent of the filter.
+    # All samples have "cat" → category 2. The hidden label has no matching
+    # sample, so it is dropped from the legend and contributes no category.
     sample_id_to_colors = dict(zip(sample_ids_payload, color_categories))
     assert sample_id_to_colors[str(samples[0].sample_id)] == [2]
     assert sample_id_to_colors[str(samples[1].sample_id)] == [2]
