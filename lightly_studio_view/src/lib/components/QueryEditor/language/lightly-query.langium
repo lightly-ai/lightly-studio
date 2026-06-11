@@ -99,10 +99,14 @@ ObjectDetectionUnary returns Expression:
 
 ObjectDetectionComparison returns ComparisonExpression:
   ObjectDetectionIntFieldReference {ComparisonExpression.left=current} operator=('=' | '!=' | '<' | '>' | '<=' | '>=') right=IntLiteral
+   | ObjectDetectionFloatFieldReference {ComparisonExpression.left=current} operator=('=' | '!=' | '<' | '>' | '<=' | '>=') right=NumericLiteral
    | ObjectDetectionStringFieldReference {ComparisonExpression.left=current} operator=('=' | '!=') right=StringLiteral;
 
 ObjectDetectionIntFieldReference returns FieldReference:
   {FieldReference} member=ObjectDetectionIntFieldName;
+
+ObjectDetectionFloatFieldReference returns FieldReference:
+  {FieldReference} member=ObjectDetectionFloatFieldName;
 
 ObjectDetectionStringFieldReference returns FieldReference:
   {FieldReference} member=ObjectDetectionStringFieldName;
@@ -122,10 +126,14 @@ ClassificationUnary returns Expression:
     | ClassificationComparison;
 
 ClassificationComparison returns ComparisonExpression:
-  ClassificationFieldReference {ComparisonExpression.left=current} operator=('=' | '!=') right=StringLiteral;
+  ClassificationStringFieldReference {ComparisonExpression.left=current} operator=('=' | '!=') right=StringLiteral
+   | ClassificationFloatFieldReference {ComparisonExpression.left=current} operator=('=' | '!=' | '<' | '>' | '<=' | '>=') right=NumericLiteral;
 
-ClassificationFieldReference returns Expression:
-  {FieldReference} member=CLASS_NAME;
+ClassificationStringFieldReference returns FieldReference:
+  {FieldReference} member=ClassificationStringFieldName;
+
+ClassificationFloatFieldReference returns FieldReference:
+  {FieldReference} member=ClassificationFloatFieldName;
 
 SegmentationMask returns Expression:
   SegmentationMaskOr;
@@ -143,10 +151,14 @@ SegmentationMaskUnary returns Expression:
 
 SegmentationMaskComparison returns ComparisonExpression:
   SegmentationMaskIntFieldReference {ComparisonExpression.left=current} operator=('=' | '!=' | '<' | '>' | '<=' | '>=') right=IntLiteral
+   | SegmentationMaskFloatFieldReference {ComparisonExpression.left=current} operator=('=' | '!=' | '<' | '>' | '<=' | '>=') right=NumericLiteral
    | SegmentationMaskStringFieldReference {ComparisonExpression.left=current} operator=('=' | '!=') right=StringLiteral;
 
 SegmentationMaskIntFieldReference returns FieldReference:
   {FieldReference} member=SegmentationMaskIntFieldName;
+
+SegmentationMaskFloatFieldReference returns FieldReference:
+  {FieldReference} member=SegmentationMaskFloatFieldName;
 
 SegmentationMaskStringFieldReference returns FieldReference:
   {FieldReference} member=SegmentationMaskStringFieldName;
@@ -162,8 +174,10 @@ TagInExpression returns Expression:
 terminal HEIGHT returns string: /\bheight\b/;
 terminal WIDTH returns string: /\bwidth\b/;
 terminal CLASS_NAME returns string: /\bclass_name\b/;
+terminal SOURCE returns string: /\bsource\b/;
 terminal X_COORD returns string: /\bx\b/;
 terminal Y_COORD returns string: /\by\b/;
+terminal CONFIDENCE returns string: /\bconfidence\b/;
 
 ImageIntFieldName returns string:
   HEIGHT | WIDTH;
@@ -189,14 +203,26 @@ VideoStringFieldName returns string:
 ObjectDetectionIntFieldName returns string:
   HEIGHT | WIDTH | X_COORD | Y_COORD;
 
+ObjectDetectionFloatFieldName returns string:
+  CONFIDENCE;
+
 ObjectDetectionStringFieldName returns string:
-  CLASS_NAME;
+  CLASS_NAME | SOURCE;
+
+ClassificationFloatFieldName returns string:
+  CONFIDENCE;
+
+ClassificationStringFieldName returns string:
+  CLASS_NAME | SOURCE;
 
 SegmentationMaskIntFieldName returns string:
   HEIGHT | WIDTH | X_COORD | Y_COORD;
 
+SegmentationMaskFloatFieldName returns string:
+  CONFIDENCE;
+
 SegmentationMaskStringFieldName returns string:
-  CLASS_NAME;
+  CLASS_NAME | SOURCE;
 
 NumericLiteral returns Expression:
   IntLiteral | FloatLiteral;
