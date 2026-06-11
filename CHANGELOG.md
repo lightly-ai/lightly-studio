@@ -10,7 +10,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - When sorting the image grid by a numeric field, the field value is now shown as an overlay on each sample.
-- Query editor now supports annotation `source` and `confidence` fields in queries.
 
 ### Changed
 
