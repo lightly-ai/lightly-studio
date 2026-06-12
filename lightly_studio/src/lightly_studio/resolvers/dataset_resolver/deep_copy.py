@@ -261,10 +261,11 @@ def _copy_table(
     # Every declared foreign key must be remapped; an unmapped one would be copied verbatim
     # and point back at the source dataset. Catches a new FK column on a copied table.
     unmapped_fk_columns = {c.name for c in table.columns if c.foreign_keys} - set(overrides)
-    assert not unmapped_fk_columns, (
-        f"{table.name}: foreign-key column(s) {sorted(unmapped_fk_columns)} are not in "
-        "`overrides`; add them so they are remapped to the copied dataset."
-    )
+    if unmapped_fk_columns:
+        raise RuntimeError(
+            f"{table.name}: foreign-key column(s) {sorted(unmapped_fk_columns)} are not in "
+            "`overrides`; add them so they are remapped to the copied dataset."
+        )
     columns = list(table.columns)
     select_exprs = [
         (
