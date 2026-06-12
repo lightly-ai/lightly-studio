@@ -35,7 +35,7 @@
                         ? 'bg-primary text-primary-foreground'
                         : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                 )}
-                data-testid="right-rail-embed"
+                data-testid="side-panel-tabs-embed"
                 aria-label="Embeddings"
                 aria-pressed={$activePanel === 'embeddingPlot'}
                 onclick={() => toggle('embeddingPlot')}
@@ -59,7 +59,7 @@
                         ? 'bg-primary text-primary-foreground'
                         : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                 )}
-                data-testid="right-rail-query"
+                data-testid="side-panel-tabs-query"
                 aria-label="Query"
                 aria-pressed={$activePanel === 'queryEditor'}
                 onclick={() => toggle('queryEditor')}
@@ -83,7 +83,7 @@
                         ? 'bg-primary text-primary-foreground'
                         : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                 )}
-                data-testid="right-rail-eval"
+                data-testid="side-panel-tabs-eval"
                 aria-label="Evaluation"
                 aria-pressed={$activePanel === 'evaluationRuns'}
                 onclick={() => toggle('evaluationRuns')}

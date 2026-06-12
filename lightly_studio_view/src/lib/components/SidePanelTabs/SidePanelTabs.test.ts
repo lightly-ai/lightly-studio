@@ -25,39 +25,39 @@ describe('SidePanelTabs', () => {
         const { unmount } = render(SidePanelTabs, {
             props: { isImages: true, hasMediaWithEmbeddings: false, hasEvaluationRuns: false }
         });
-        expect(screen.getByTestId('right-rail-query')).toBeInTheDocument();
+        expect(screen.getByTestId('side-panel-tabs-query')).toBeInTheDocument();
         unmount();
 
         render(SidePanelTabs, {
             props: { isImages: false, hasMediaWithEmbeddings: false, hasEvaluationRuns: false }
         });
-        expect(screen.queryByTestId('right-rail-query')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('side-panel-tabs-query')).not.toBeInTheDocument();
     });
 
     it('renders the Embed button only when hasMediaWithEmbeddings is true', () => {
         const { unmount } = render(SidePanelTabs, {
             props: { isImages: false, hasMediaWithEmbeddings: true, hasEvaluationRuns: false }
         });
-        expect(screen.getByTestId('right-rail-embed')).toBeInTheDocument();
+        expect(screen.getByTestId('side-panel-tabs-embed')).toBeInTheDocument();
         unmount();
 
         render(SidePanelTabs, {
             props: { isImages: false, hasMediaWithEmbeddings: false, hasEvaluationRuns: false }
         });
-        expect(screen.queryByTestId('right-rail-embed')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('side-panel-tabs-embed')).not.toBeInTheDocument();
     });
 
     it('renders the Eval button only when isImages and hasEvaluationRuns are both true', () => {
         const { unmount } = render(SidePanelTabs, {
             props: { isImages: true, hasMediaWithEmbeddings: false, hasEvaluationRuns: true }
         });
-        expect(screen.getByTestId('right-rail-eval')).toBeInTheDocument();
+        expect(screen.getByTestId('side-panel-tabs-eval')).toBeInTheDocument();
         unmount();
 
         render(SidePanelTabs, {
             props: { isImages: false, hasMediaWithEmbeddings: false, hasEvaluationRuns: true }
         });
-        expect(screen.queryByTestId('right-rail-eval')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('side-panel-tabs-eval')).not.toBeInTheDocument();
     });
 
     it('calls setActivePanel with queryEditor when Query button is clicked', async () => {
@@ -65,7 +65,7 @@ describe('SidePanelTabs', () => {
             props: { isImages: true, hasMediaWithEmbeddings: false, hasEvaluationRuns: false }
         });
 
-        await fireEvent.click(screen.getByTestId('right-rail-query'));
+        await fireEvent.click(screen.getByTestId('side-panel-tabs-query'));
         expect(setActivePanel).toHaveBeenCalledWith('queryEditor');
     });
 
@@ -75,7 +75,7 @@ describe('SidePanelTabs', () => {
             props: { isImages: true, hasMediaWithEmbeddings: false, hasEvaluationRuns: false }
         });
 
-        await fireEvent.click(screen.getByTestId('right-rail-query'));
+        await fireEvent.click(screen.getByTestId('side-panel-tabs-query'));
         expect(setActivePanel).toHaveBeenCalledWith('none');
     });
 
@@ -84,7 +84,7 @@ describe('SidePanelTabs', () => {
             props: { isImages: false, hasMediaWithEmbeddings: true, hasEvaluationRuns: false }
         });
 
-        await fireEvent.click(screen.getByTestId('right-rail-embed'));
+        await fireEvent.click(screen.getByTestId('side-panel-tabs-embed'));
         expect(setActivePanel).toHaveBeenCalledWith('embeddingPlot');
     });
 
@@ -93,7 +93,7 @@ describe('SidePanelTabs', () => {
             props: { isImages: true, hasMediaWithEmbeddings: false, hasEvaluationRuns: true }
         });
 
-        await fireEvent.click(screen.getByTestId('right-rail-eval'));
+        await fireEvent.click(screen.getByTestId('side-panel-tabs-eval'));
         expect(setActivePanel).toHaveBeenCalledWith('evaluationRuns');
     });
 
@@ -103,8 +103,11 @@ describe('SidePanelTabs', () => {
             props: { isImages: true, hasMediaWithEmbeddings: true, hasEvaluationRuns: true }
         });
 
-        expect(screen.getByTestId('right-rail-embed')).toHaveAttribute('aria-pressed', 'true');
-        expect(screen.getByTestId('right-rail-query')).toHaveAttribute('aria-pressed', 'false');
-        expect(screen.getByTestId('right-rail-eval')).toHaveAttribute('aria-pressed', 'false');
+        expect(screen.getByTestId('side-panel-tabs-embed')).toHaveAttribute('aria-pressed', 'true');
+        expect(screen.getByTestId('side-panel-tabs-query')).toHaveAttribute(
+            'aria-pressed',
+            'false'
+        );
+        expect(screen.getByTestId('side-panel-tabs-eval')).toHaveAttribute('aria-pressed', 'false');
     });
 });

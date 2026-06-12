@@ -21,7 +21,7 @@ async function typeAndApply(page: Page, query: string): Promise<void> {
 
 test.describe('query editor', () => {
     test('apply query and verify filtered grid', async ({ samplesPage, page }) => {
-        await page.getByTestId('right-rail-query').click();
+        await page.getByTestId('side-panel-tabs-query').click();
         await expect(
             page
                 .getByTestId('query-editor-panel')
@@ -44,7 +44,7 @@ test.describe('query editor', () => {
     });
 
     test('toggling filter chip disables and re-enables query', async ({ samplesPage, page }) => {
-        await page.getByTestId('right-rail-query').click();
+        await page.getByTestId('side-panel-tabs-query').click();
         await typeAndApply(page, QUERY);
         await expect(page.getByTestId('query-filter-chip')).toBeVisible();
         await page.getByTestId('query-editor-close-button').click();
@@ -72,7 +72,7 @@ test.describe('query editor', () => {
         samplesPage,
         page
     }) => {
-        await page.getByTestId('right-rail-query').click();
+        await page.getByTestId('side-panel-tabs-query').click();
         await typeAndApply(page, QUERY);
         await page.getByTestId('query-editor-close-button').click();
 
@@ -95,7 +95,7 @@ test.describe('query editor', () => {
     });
 
     test('clearing filter removes chip and restores grid', async ({ samplesPage, page }) => {
-        await page.getByTestId('right-rail-query').click();
+        await page.getByTestId('side-panel-tabs-query').click();
         await typeAndApply(page, QUERY);
         await page.getByTestId('query-editor-close-button').click();
 
@@ -114,7 +114,7 @@ test.describe('query editor', () => {
     });
 
     test('syntax error shows toast and Apply stays enabled', async ({ samplesPage, page }) => {
-        await page.getByTestId('right-rail-query').click();
+        await page.getByTestId('side-panel-tabs-query').click();
         await typeAndApply(page, QUERY);
 
         // Now type an invalid query over the existing one

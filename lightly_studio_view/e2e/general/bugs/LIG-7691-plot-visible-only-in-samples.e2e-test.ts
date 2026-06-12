@@ -3,7 +3,7 @@ import { expect, test } from '../../utils';
 test('Plot is visible only on samples page', async ({ samplesPage, page }) => {
     await samplesPage.goto();
 
-    const togglePlotButton = page.getByTestId('right-rail-embed');
+    const togglePlotButton = page.getByTestId('side-panel-tabs-embed');
     const plotPanel = page.getByTestId('plot-panel');
     const plotCloseButton = page.getByTestId('plot-close-button');
     const plotControls = page.getByTestId('plot-panel-controls');
@@ -38,6 +38,6 @@ test('Plot is visible only on samples page', async ({ samplesPage, page }) => {
 
     await expect(page.getByTestId('annotations-grid')).toBeVisible({ timeout: 10000 });
 
-    await expect(page.getByTestId('right-rail-embed')).not.toBeVisible();
+    await expect(page.getByTestId('side-panel-tabs-embed')).not.toBeVisible();
     await expect(page.getByTestId('plot-panel')).not.toBeVisible();
 });
