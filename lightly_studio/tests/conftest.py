@@ -64,16 +64,11 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
 
 
-def pytest_configure(config: pytest.Config) -> None:
-    """Register custom markers for database backend selection."""
-    config.addinivalue_line(
-        "markers",
-        "postgres_only: run the test only on the Postgres backend (skipped under DuckDB)",
-    )
-
-
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
-    """Skip postgres_only tests unless the suite runs with --postgres."""
+    """Skip postgres_only tests unless the suite runs with --postgres.
+
+    The ``postgres_only`` marker is registered in ``pytest.ini``.
+    """
     if config.getoption("--postgres"):
         return
     skip_marker = pytest.mark.skip(reason="postgres_only: skipped under DuckDB")
