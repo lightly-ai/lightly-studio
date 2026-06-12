@@ -29,7 +29,7 @@
         {id}
         type="number"
         step="0.1"
-        min={min}
+        {min}
         value={strength}
         oninput={(event) => {
             const raw = (event.currentTarget as HTMLInputElement).value;
