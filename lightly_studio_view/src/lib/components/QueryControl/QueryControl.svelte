@@ -21,15 +21,15 @@
     });
 </script>
 
-{#if lastQueryExpression}
-    <Segment title="Query">
+<Segment title="Advanced filters">
+    {#if lastQueryExpression}
         <FilterChip
             testId="query-filter-chip"
             checked={!!$imageQueryExpression?.query_expr_str}
-            title="Query Filter"
+            title="Advanced filters"
             checkboxLabel={$imageQueryExpression?.query_expr_str
-                ? 'Disable query filter'
-                : 'Enable query filter'}
+                ? 'Disable advanced filters'
+                : 'Enable advanced filters'}
             onCheckedChange={(v) => {
                 if (v) {
                     updateQueryExpr(lastQueryExpression!);
@@ -52,5 +52,5 @@
                 </div>
             {/snippet}
         </FilterChip>
-    </Segment>
-{/if}
+    {/if}
+</Segment>

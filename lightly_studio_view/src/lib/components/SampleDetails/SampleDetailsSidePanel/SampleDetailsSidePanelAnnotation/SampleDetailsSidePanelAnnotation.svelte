@@ -216,7 +216,9 @@
                     <div class="flex shrink-0 gap-3">
                         {#if $isEditingMode && annotation.annotation_type != 'object_detection'}
                             {#if isLocked}
-                                <Tooltip content="Unlock annotation">
+                                <Tooltip
+                                    content="Unlock annotation. Allows new brush strokes to paint over this mask again."
+                                >
                                     <Lock
                                         class="size-4 text-muted-foreground"
                                         onclick={(e) => {
@@ -226,7 +228,9 @@
                                     />
                                 </Tooltip>
                             {:else}
-                                <Tooltip content="Lock annotation">
+                                <Tooltip
+                                    content="Lock annotation. Locked masks are protected: new brush strokes won't paint over or modify them."
+                                >
                                     <Unlock
                                         class="size-4"
                                         onclick={(e) => {

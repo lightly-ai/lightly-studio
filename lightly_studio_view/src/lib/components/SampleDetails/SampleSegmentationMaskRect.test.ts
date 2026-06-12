@@ -110,6 +110,12 @@ vi.mock('$lib/hooks/useSegmentationMaskBrush', () => ({
     useSegmentationMaskBrush: useSegmentationMaskBrushMock
 }));
 
+vi.mock('$lib/hooks/useDeleteAnnotation/useDeleteAnnotation', () => ({
+    useDeleteAnnotation: () => ({
+        deleteAnnotation: vi.fn()
+    })
+}));
+
 const baseProps = {
     collectionId: 'collection-1',
     brushRadius: 5,
