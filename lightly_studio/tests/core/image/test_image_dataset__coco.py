@@ -15,6 +15,7 @@ from lightly_studio.models.annotation.object_detection import ObjectDetectionAnn
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
+    annotation_resolver,
     collection_resolver,
 )
 
@@ -510,9 +511,12 @@ class TestDataset:
             annotation_source="ground_truth",
         )
 
-        annotations = [a for sample in dataset for a in sample.annotations]
+        annotations = annotation_resolver.get_all_by_collection_name(
+            session=dataset.session,
+            collection_name="ground_truth",
+            parent_collection_id=dataset.collection_id,
+        ).annotations
         assert len(annotations) == 2
-        assert all(a.annotation_source == "ground_truth" for a in annotations)
 
     def test_add_samples_from_coco__default_annotation_source(
         self,
@@ -531,9 +535,12 @@ class TestDataset:
             embed=False,
         )
 
-        annotations = [a for sample in dataset for a in sample.annotations]
+        annotations = annotation_resolver.get_all_by_collection_name(
+            session=dataset.session,
+            collection_name="annotation",
+            parent_collection_id=dataset.collection_id,
+        ).annotations
         assert len(annotations) == 2
-        assert all(a.annotation_source == "annotation" for a in annotations)
 
     def test_add_samples_from_coco__relative_local_images_path_normalized_to_absolute(
         self,
