@@ -27,6 +27,7 @@
         annotationLabels: string[];
         annotationSourceOptions?: { id: string; name: string }[];
         metadataFieldNames?: string[];
+        isDuplicateDisabled?: boolean;
         onRemove: () => void;
         onDuplicate: () => void;
         onUpdate: (params: Partial<StrategyParams>) => void;
@@ -38,6 +39,7 @@
         annotationLabels,
         annotationSourceOptions = [],
         metadataFieldNames = [],
+        isDuplicateDisabled = false,
         onRemove,
         onDuplicate,
         onUpdate,
@@ -79,6 +81,7 @@
                     size="icon"
                     aria-label="Duplicate strategy"
                     onclick={onDuplicate}
+                    disabled={isDuplicateDisabled}
                     data-testid={`strategy-card-duplicate-${instance.id}`}
                 >
                     <Copy class="size-4" />
