@@ -7,12 +7,10 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 import sqlmodel
-from sqlalchemy import insert
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
-from lightly_studio import db_array
+from lightly_studio import db_array, db_insert
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.tag import TagCreate, TagTable
 from lightly_studio.utils import batching
@@ -185,17 +183,7 @@ def add_sample_ids_to_tag_id(
         return None
 
     rows = [{"sample_id": sample_id, "tag_id": tag_id} for sample_id in set(sample_ids)]
-
-    # Database-level conflict handling keeps this idempotent on both backends; the
-    # conflict clause is re-applied per batch, and batches are disjoint slices of a
-    # deduplicated set, so already-linked and duplicate samples are silently ignored.
-    dialect_name = session.get_bind().dialect.name if session.get_bind() else None
-    for batch in batching.batched(items=rows):
-        if dialect_name == "postgresql":
-            session.exec(pg_insert(SampleTagLinkTable).values(batch).on_conflict_do_nothing())
-        else:
-            # DuckDB and SQLite: use OR IGNORE prefix.
-            session.exec(insert(SampleTagLinkTable).values(batch).prefix_with("OR IGNORE"))
+    db_insert.insert_ignoring_conflicts(session=session, table=SampleTagLinkTable, rows=rows)
 
     session.commit()
     session.refresh(tag)
