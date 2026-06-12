@@ -38,7 +38,7 @@ Annotations are shown in sample detail view and in the annotation-focused views.
 Use the [Python API](../api/annotation.md) to create annotations and predictions directly, import them from model
 outputs, or inspect them programmatically.
 
-## Classification
+### Classification
 
 Use [CreateClassification](../api/annotation.md#createclassification) for sample-level labels:
 
@@ -53,7 +53,7 @@ sample.add_annotation(
 )
 ```
 
-## Object Detection
+### Object Detection
 
 Use [CreateObjectDetection](../api/annotation.md#createobjectdetection) for bounding boxes:
 
@@ -72,16 +72,16 @@ sample.add_annotation(
 )
 ```
 
-To import object detection annotations at dataset level, use
+To import object detection annotations at the dataset level, use
 [add_annotations_from_coco](../api/dataset.md#lightly_studio.ImageDataset.add_annotations_from_coco),
 [add_annotations_from_yolo](../api/dataset.md#lightly_studio.ImageDataset.add_annotations_from_yolo),
 or
 [add_annotations_from_labelformat](../api/dataset.md#lightly_studio.ImageDataset.add_annotations_from_labelformat).
 
-## Segmentation
+### Segmentation
 
 Use [CreateSegmentationMask](../api/annotation.md#createsegmentationmask) for segmentation masks.
-In most cases, `from_binary_mask(...)` is the easiest option:
+In most cases, [`from_binary_mask(...)`](../api/annotation.md#lightly_studio.core.annotation.CreateSegmentationMask.from_binary_mask) is the easiest option:
 
 ```python
 import numpy as np
@@ -133,19 +133,19 @@ If you already have RLE masks, use
     [1, 2, 1, 4]
     ```
 
-To import segmentation annotations at dataset level, use
+To import segmentation annotations at the dataset level, use
 [add_annotations_from_coco](../api/dataset.md#lightly_studio.ImageDataset.add_annotations_from_coco),
 [add_annotations_from_labelformat](../api/dataset.md#lightly_studio.ImageDataset.add_annotations_from_labelformat),
 or
 [add_annotations_from_pascal_voc_segmentations](../api/dataset.md#lightly_studio.ImageDataset.add_annotations_from_pascal_voc_segmentations).
 
 
-## Predictions
+### Predictions
 
-Predictions use the same annotation types as human annotations. The practical difference is that
+Predictions are represented by the same objects as annotations. The only difference is that
 predictions can include a `confidence` value and are usually stored in their own annotation source.
 
-For existing image datasets, the `add_annotations_from_*` methods are the easiest way to import
+For image datasets, the `add_annotations_from_*` methods are the easiest way to import 
 predictions into a named source:
 
 ```python
@@ -177,7 +177,7 @@ Supported methods:
 If the input is a COCO prediction file, LightlyStudio reads the `score` field and stores it as
 annotation confidence.
 
-## Reading annotations
+### Reading annotations
 
 Each sample exposes its annotations through `sample.annotations`:
 
