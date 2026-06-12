@@ -33,7 +33,7 @@
 
     const strategyOptions = useStrategyOptions(() => collectionId);
 
-    // TODO: Update once there are multiple embedding models - currently only one diversity
+    // TODO(Leonardo, 06/2026): Update once there are multiple embedding models - currently only one diversity
     // strategy is supported since all samples share a single embedding space.
     const hasDiversity = $derived($instances.some((i) => i.type === 'diversity'));
 
