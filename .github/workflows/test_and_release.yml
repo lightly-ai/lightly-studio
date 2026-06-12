@@ -37,10 +37,14 @@ jobs:
         uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         with:
           filters: |
+            # static-checks runs `mypy .` / `ruff check` over the whole tree,
+            # so every Python dir it lints belongs here, not just src/tests.
             backend:
               - '.github/workflows/test_and_release.yml'
               - 'lightly_studio/src/**'
               - 'lightly_studio/tests/**'
+              - 'lightly_studio/e2e-tests/**'
+              - 'lightly_studio/dataset_examples/**'
               - 'lightly_studio/pyproject.toml'
               - 'lightly_studio/uv.lock'
               - 'lightly_studio/ruff.toml'
