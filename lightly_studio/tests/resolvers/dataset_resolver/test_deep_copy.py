@@ -44,7 +44,7 @@ from tests.resolvers.evaluation_sample_metric_resolver import (
     helpers as evaluation_sample_metric_helpers,
 )
 
-# deep_copy is enterprise-only and PostgreSQL-backed; skip on the default DuckDB run.
+# Deep copying is enterprise-only and PostgreSQL-backed; skip on the default DuckDB run.
 pytestmark = pytest.mark.postgres_only
 
 
