@@ -217,6 +217,18 @@ def test_to_match_expression__classification_source() -> None:
     assert "collection.name = 'ground_truth'" in sql
 
 
+def test_to_match_expression__classification_confidence() -> None:
+    expr = ClassificationMatchExpr(
+        subexpr=OrdinalFloatExpr(
+            field=FieldRef(table="classification", name="confidence"),
+            operator=OrdinalComparisonOperator.GTE,
+            value=0.7,
+        )
+    )
+    sql = _to_sql(query_translation.to_match_expression(expr))
+    assert "annotation_base.confidence >= 0.7" in sql
+
+
 def test_to_match_expression__object_detection_match() -> None:
     subexpr = IntegerExpr(
         field=FieldRef(table="object_detection", name="width"),
@@ -242,6 +254,18 @@ def test_to_match_expression__object_detection_source() -> None:
     assert "collection.name = 'predictions'" in sql
 
 
+def test_to_match_expression__object_detection_confidence() -> None:
+    expr = ObjectDetectionMatchExpr(
+        subexpr=OrdinalFloatExpr(
+            field=FieldRef(table="object_detection", name="confidence"),
+            operator=OrdinalComparisonOperator.GT,
+            value=0.9,
+        )
+    )
+    sql = _to_sql(query_translation.to_match_expression(expr))
+    assert "annotation_base.confidence > 0.9" in sql
+
+
 def test_to_match_expression__segmentation_mask_match() -> None:
     subexpr = StringExpr(
         field=FieldRef(table="segmentation_mask", name="class_name"),
@@ -265,6 +289,18 @@ def test_to_match_expression__segmentation_mask_source() -> None:
     )
     sql = _to_sql(query_translation.to_match_expression(expr))
     assert "collection.name = 'ground_truth'" in sql
+
+
+def test_to_match_expression__segmentation_mask_confidence() -> None:
+    expr = SegmentationMaskMatchExpr(
+        subexpr=OrdinalFloatExpr(
+            field=FieldRef(table="segmentation_mask", name="confidence"),
+            operator=OrdinalComparisonOperator.LTE,
+            value=0.5,
+        )
+    )
+    sql = _to_sql(query_translation.to_match_expression(expr))
+    assert "annotation_base.confidence <= 0.5" in sql
 
 
 def test_to_match_expression__and() -> None:
