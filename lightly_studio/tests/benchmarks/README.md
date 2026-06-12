@@ -165,7 +165,7 @@ Copy an existing collection (uses `$LIGHTLY_STUDIO_DATABASE_URL` as-is, no clean
 
 ```bash
 LIGHTLY_STUDIO_DATABASE_URL=<postgres-url> \
-    uv run tests/benchmarks/deep_copy_benchmark.py --collection-name "coco"
+    uv run tests/benchmarks/deep_copy_benchmark.py --collection-name "coco" --copy-name "coco_copy"
 ```
 
 `--generate` recreates the database at `$LIGHTLY_STUDIO_DATABASE_URL` (or the default dev URL);
@@ -177,6 +177,7 @@ scale `--generate` toward 1M+ for the enterprise target.
 |---|---|---|
 | `--generate N` | — | Generate N images with embeddings, then copy them |
 | `--collection-name NAME` | — | Copy an existing root collection instead (mutually exclusive with `--generate`) |
+| `--copy-name NAME` | `deep_copy_benchmark_copy` | Name for the copied root collection (must not already exist) |
 | `--embedding-dim` | 512 | Embedding vector dimensionality (generate mode) |
 | `--batch-size` | 5 000 | Generation batch size |
 | `--seed` | 0 | Random seed for reproducibility |

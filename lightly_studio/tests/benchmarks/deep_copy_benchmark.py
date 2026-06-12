@@ -53,6 +53,7 @@ DEFAULT_EMBEDDING_DIM = 512
 DEFAULT_BATCH_SIZE = 5_000
 DEFAULT_SEED = 0
 DEFAULT_DATASET_NAME = "deep_copy_benchmark"
+DEFAULT_COPY_NAME = "deep_copy_benchmark_copy"
 DEFAULT_EMBEDDING_MODEL_NAME = "benchmark_embeddings"
 DEFAULT_POSTGRES_URL = "postgresql://lightly:lightly@localhost:5433/lightly_studio"
 
@@ -98,7 +99,9 @@ def main() -> None:
         num_images = config.num_images
 
     try:
-        result = _run_deep_copy(root_collection_id=root_collection_id)
+        result = _run_deep_copy(
+            root_collection_id=root_collection_id, copy_name=args.copy_name
+        )
     finally:
         db_manager.close()
 
@@ -121,6 +124,11 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--embedding-dim", type=int, default=DEFAULT_EMBEDDING_DIM)
     parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
+    parser.add_argument(
+        "--copy-name",
+        default=DEFAULT_COPY_NAME,
+        help="Name for the copied root collection (must not already exist).",
+    )
     return parser.parse_args()
 
 
@@ -190,7 +198,7 @@ def _generate_dataset(config: GenerationConfig) -> UUID:
         return collection.collection_id
 
 
-def _run_deep_copy(root_collection_id: UUID) -> DeepCopyResult:
+def _run_deep_copy(root_collection_id: UUID, copy_name: str) -> DeepCopyResult:
     """Deep-copy the root collection, measuring time and peak Python allocation."""
     with db_manager.session() as session:
         source = collection_resolver.get_by_id(session=session, collection_id=root_collection_id)
@@ -202,7 +210,7 @@ def _run_deep_copy(root_collection_id: UUID) -> DeepCopyResult:
         dataset_resolver.deep_copy(
             session=session,
             dataset_id=source.dataset_id,
-            copy_name="deep_copy_benchmark_copy",
+            copy_name=copy_name,
         )
         elapsed = time.perf_counter() - started
         peak_mib = tracemalloc.get_traced_memory()[1] / _BYTES_PER_MIB
