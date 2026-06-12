@@ -81,10 +81,10 @@ def deep_copy(
     Args:
         session: Database session (must be bound to PostgreSQL).
         dataset_id: Dataset ID to copy.
-        copy_name: Name for the new root collection.
+        copy_name: Name for the new dataset.
 
     Returns:
-        The newly created root collection.
+        The newly created dataset.
     """
     db_manager.require_postgres_backend(session)
     # If this fails, a new table was added. Update deep_copy to handle it, then update
@@ -94,7 +94,7 @@ def deep_copy(
     new_dataset_id = uuid4()
     now = datetime.now(timezone.utc)
 
-    # The hierarchy gives the root collection name, needed to derive copied names.
+    # The hierarchy gives the root collection name that's needed to derive copied names.
     hierarchy = dataset_resolver.get_hierarchy(session=session, dataset_id=dataset_id)
     old_root_name = hierarchy[0].name
 
@@ -319,9 +319,7 @@ def _copy_collections(
     map_parent = _map(_MAP_COLLECTION, alias="map_parent")
 
     # Replace the first occurrence of the old root name with copy_name, leaving names
-    # that do not contain it unchanged. Equivalent to the previous
-    # name.replace(old_root_name, copy_name, 1); for the root (name == old_root_name)
-    # this yields copy_name.
+    # that do not contain it unchanged.
     root_pos = func.strpos(src.c["name"], literal(old_root_name))
     name_expr = case(
         (root_pos == 0, src.c["name"]),
