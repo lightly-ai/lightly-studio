@@ -13,10 +13,10 @@
 
     let { strength, id, testid, min, onUpdate }: Props = $props();
 
+    const negativeValuesAllowed = $derived(min === undefined || min < 0);
     const tooltipContent = $derived(
-        min !== undefined && min >= 0
-            ? 'Relative weight of this strategy in the combination. A strength of 2 gives this strategy twice the influence of one with strength 1.'
-            : 'Relative weight of this strategy in the combination. A strength of 2 gives this strategy twice the influence of one with strength 1. Negative values invert the scoring direction.'
+        'Relative weight of this strategy in the combination. A strength of 2 gives this strategy twice the influence of one with strength 1.' +
+            (negativeValuesAllowed ? ' Negative values invert the scoring direction.' : '')
     );
 </script>
 
@@ -34,8 +34,9 @@
         oninput={(event) => {
             const raw = (event.currentTarget as HTMLInputElement).value;
             const parsed = Number(raw);
-            if (raw !== '' && !Number.isNaN(parsed) && (min === undefined || parsed >= min))
-                onUpdate(parsed);
+            const isNumberInput = raw !== '' && !Number.isNaN(parsed);
+            const isAboveMin = min === undefined || parsed >= min;
+            if (isNumberInput && isAboveMin) onUpdate(parsed);
         }}
         data-testid={testid}
         class="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
