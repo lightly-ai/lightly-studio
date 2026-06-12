@@ -22,7 +22,12 @@
 
 <div class="flex w-14 flex-col gap-2 rounded-xl bg-card p-1.5">
     {#if hasMediaWithEmbeddings}
-        <Tooltip content="Explore the embedding space" position="left" triggerClass="w-full" class="w-max">
+        <Tooltip
+            content="Explore the embedding space"
+            position="left"
+            triggerClass="w-full"
+            class="w-max"
+        >
             <button
                 class={cn(
                     'flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-md p-1.5 text-[10px] font-medium transition-colors',
@@ -41,7 +46,12 @@
         </Tooltip>
     {/if}
     {#if isImages}
-        <Tooltip content="Write a query expression to filter your dataset" position="left" triggerClass="w-full" class="w-max">
+        <Tooltip
+            content="Write a query expression to filter your dataset"
+            position="left"
+            triggerClass="w-full"
+            class="w-max"
+        >
             <button
                 class={cn(
                     'flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-md p-1.5 text-[10px] font-medium transition-colors',
@@ -60,7 +70,12 @@
         </Tooltip>
     {/if}
     {#if isImages && hasEvaluationRuns}
-        <Tooltip content="Review evaluation run results" position="left" triggerClass="w-full" class="w-max">
+        <Tooltip
+            content="Review evaluation run results"
+            position="left"
+            triggerClass="w-full"
+            class="w-max"
+        >
             <button
                 class={cn(
                     'flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-md p-1.5 text-[10px] font-medium transition-colors',
