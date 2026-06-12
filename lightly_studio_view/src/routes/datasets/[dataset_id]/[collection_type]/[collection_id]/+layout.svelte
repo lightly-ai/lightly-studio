@@ -204,7 +204,10 @@
 
     const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId }));
     const hasEmbeddings = $derived(!!hasEmbeddingsQuery.data);
-    const hasMediaWithEmbeddings = $derived((isImages || isVideos) && hasEmbeddings);
+    // LIG-9521 prototype: annotations have (fake) embeddings too.
+    const hasMediaWithEmbeddings = $derived(
+        (isImages || isVideos || isAnnotations) && hasEmbeddings
+    );
 
     const { metadataValues } = $derived.by(() => useMetadataFilters(collectionId));
     const { dimensionsValues } = useDimensions(collectionIdStore);
@@ -345,6 +348,7 @@
                                 {collectionIdStore}
                                 {isVideos}
                                 {isImages}
+                                {isAnnotations}
                             />
                             {#if isImages}
                                 <AnnotationCollectionsMenu {collectionId} />
@@ -427,7 +431,7 @@
                         {/await}
                     </Pane>
                 </PaneGroup>
-            {:else if $activePanel === 'embeddingPlot' && (isImages || isVideos)}
+            {:else if $activePanel === 'embeddingPlot' && (isImages || isVideos || isAnnotations)}
                 <!-- When plot is shown, use PaneGroup for the main content + plot -->
                 <PaneGroup direction="horizontal" class="min-w-0 flex-1">
                     <Pane defaultSize={50} minSize={30} class="flex">
@@ -466,7 +470,11 @@
 
                     <Pane defaultSize={50} minSize={30} class="flex min-h-0 flex-col">
                         {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
-                            <PlotPanel />
+                            <!-- LIG-9521 prototype: PlotPanel captures collectionId at mount;
+                                 remount it when switching collections (e.g. images <-> annotations tab). -->
+                            {#key collectionId}
+                                <PlotPanel />
+                            {/key}
                         {/await}
                     </Pane>
                 </PaneGroup>

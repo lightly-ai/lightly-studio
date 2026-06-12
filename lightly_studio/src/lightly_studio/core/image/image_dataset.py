@@ -8,6 +8,7 @@ from pathlib import Path
 from uuid import UUID
 
 import fsspec
+import numpy as np
 from fsspec.implementations.local import LocalFileSystem
 from labelformat.formats import (
     COCOInstanceSegmentationInput,
@@ -22,7 +23,7 @@ from labelformat.model.instance_segmentation import (
 from labelformat.model.object_detection import (
     ObjectDetectionInput,
 )
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from lightly_studio.core.dataset import BaseSampleDataset
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
@@ -32,10 +33,14 @@ from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.evaluation.image_dataset_evaluate import ImageDatasetEvaluate
 from lightly_studio.export.image_dataset_export import ImageDatasetExport
-from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample_embedding import SampleEmbeddingCreate
 from lightly_studio.resolvers import (
+    collection_resolver,
     image_resolver,
+    sample_embedding_resolver,
     tag_resolver,
 )
 from lightly_studio.type_definitions import PathLike
@@ -435,6 +440,12 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             embed=embed,
         )
 
+        if embed:
+            _generate_fake_annotation_embeddings(
+                session=self.session,
+                root_collection_id=self.collection_id,
+            )
+
     def add_samples_from_pascal_voc_segmentations(
         self,
         images_path: PathLike,
@@ -609,6 +620,100 @@ def _postprocess_created_images(
             collection_id=collection_id,
             sample_ids=sample_ids,
         )
+
+
+# LIG-9521 prototype: per-dimension noise std for fake annotation embeddings. With
+# 512-dim unit-norm image embeddings this gives a noise vector of norm ~0.23, enough
+# to spread annotations of the same image apart without destroying cluster structure.
+_FAKE_ANNOTATION_EMBEDDING_NOISE_STD = 0.01
+
+
+def _generate_fake_annotation_embeddings(
+    session: Session,
+    root_collection_id: UUID,
+) -> None:
+    """Generate fake embeddings for annotation samples (LIG-9521 prototype).
+
+    Each annotation gets its parent image's embedding plus gaussian noise, normalized
+    to unit length. Also registers the parent collection's embedding model for each
+    annotation collection so text search and the 2D embedding plot work there.
+    """
+    embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
+    parent_model_id = embedding_manager.load_or_get_default_model(
+        session=session, collection_id=root_collection_id
+    )
+    if parent_model_id is None:
+        return
+    generator = embedding_manager._models[parent_model_id]  # noqa: SLF001
+
+    annotation_collections = collection_resolver.get_annotation_collections(
+        session=session, parent_collection_id=root_collection_id
+    )
+    rng = np.random.default_rng(seed=0)
+    for annotation_collection in annotation_collections:
+        annotation_model = embedding_manager.register_embedding_model(
+            session=session,
+            collection_id=annotation_collection.collection_id,
+            embedding_generator=generator,
+            set_as_default=True,
+        )
+
+        rows = session.exec(
+            select(AnnotationBaseTable.sample_id, AnnotationBaseTable.parent_sample_id)
+            .join(SampleTable, SampleTable.sample_id == AnnotationBaseTable.sample_id)
+            .where(SampleTable.collection_id == annotation_collection.collection_id)
+        ).all()
+        annotation_ids = [annotation_id for annotation_id, _ in rows]
+        already_embedded_ids = {
+            embedding.sample_id
+            for embedding in sample_embedding_resolver.get_by_sample_ids(
+                session=session,
+                sample_ids=annotation_ids,
+                embedding_model_id=annotation_model.embedding_model_id,
+            )
+        }
+        pairs = [
+            (annotation_id, parent_id)
+            for annotation_id, parent_id in rows
+            if annotation_id not in already_embedded_ids
+        ]
+        if not pairs:
+            continue
+
+        parent_ids = list({parent_id for _, parent_id in pairs})
+        parent_embeddings = {
+            embedding.sample_id: embedding.embedding
+            for embedding in sample_embedding_resolver.get_by_sample_ids(
+                session=session,
+                sample_ids=parent_ids,
+                embedding_model_id=parent_model_id,
+            )
+        }
+
+        fake_embeddings = []
+        for annotation_id, parent_id in pairs:
+            parent_embedding = parent_embeddings.get(parent_id)
+            if parent_embedding is None:
+                continue
+            noisy = parent_embedding + rng.normal(
+                0.0, _FAKE_ANNOTATION_EMBEDDING_NOISE_STD, size=parent_embedding.shape
+            )
+            noisy /= np.linalg.norm(noisy)
+            fake_embeddings.append(
+                SampleEmbeddingCreate(
+                    sample_id=annotation_id,
+                    embedding_model_id=annotation_model.embedding_model_id,
+                    embedding=noisy.astype(np.float32),
+                )
+            )
+        if fake_embeddings:
+            sample_embedding_resolver.create_many(
+                session=session, sample_embeddings=fake_embeddings
+            )
+            logger.info(
+                f"Stored {len(fake_embeddings)} fake annotation embeddings for "
+                f"collection '{annotation_collection.name}'."
+            )
 
 
 def _normalize_input_path(path: PathLike) -> PathLike:

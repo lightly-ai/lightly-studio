@@ -7,6 +7,7 @@ import { useVideoFilters, buildVideoFilter } from '$lib/hooks/useVideoFilters/us
 import { useFramesFilter } from '$lib/hooks/useFramesFilter/useFramesFilter';
 import { getFrameFilter } from '$lib/hooks/useFramesFilter/frameFilter';
 import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
+import { useAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
 import { fetchSampleIdsForImages } from './fetchSampleIdsForImages';
 import { fetchSampleIdsForVideos } from './fetchSampleIdsForVideos';
 import { fetchSampleIdsForVideoFrames } from './fetchSampleIdsForVideoFrames';
@@ -18,6 +19,7 @@ export function useSelectAll(collectionId: string, gridType: GridType) {
     const { filterParams: videoFilterParams } = useVideoFilters();
     const { filterParams: frameFilterParams } = useFramesFilter();
     const { annotationFilter } = useSelectedAnnotationsFilter(collectionId);
+    const { annotationPlotSampleIds } = useAnnotationPlotSelection();
 
     let isLoading = false;
 
@@ -35,8 +37,20 @@ export function useSelectAll(collectionId: string, gridType: GridType) {
                     collectionId,
                     getFrameFilter(get(frameFilterParams))
                 );
-            case 'annotations':
-                return fetchSampleIdsForAnnotations(collectionId, get(annotationFilter));
+            case 'annotations': {
+                // LIG-9521 prototype: include the embedding plot selection so select-all
+                // only selects the filtered annotations (mirrors imageFilter.sample_filter).
+                const plotSampleIds = get(annotationPlotSampleIds);
+                const filter =
+                    plotSampleIds.length > 0
+                        ? {
+                              ...get(annotationFilter),
+                              filter_type: 'annotations' as const,
+                              sample_ids: plotSampleIds
+                          }
+                        : get(annotationFilter);
+                return fetchSampleIdsForAnnotations(collectionId, filter);
+            }
             default:
                 return [];
         }

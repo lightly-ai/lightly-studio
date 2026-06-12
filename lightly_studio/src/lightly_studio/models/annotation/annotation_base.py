@@ -251,6 +251,8 @@ class AnnotationWithPayloadView(BaseModel):
     parent_sample_type: SampleType
     annotation: AnnotationView
     parent_sample_data: Union[ImageAnnotationView, VideoFrameAnnotationView]
+    # LIG-9521 prototype: set when results are ordered by embedding similarity.
+    similarity_score: Optional[float] = None
 
 
 class AnnotationWithPayloadAndCountView(BaseModel):

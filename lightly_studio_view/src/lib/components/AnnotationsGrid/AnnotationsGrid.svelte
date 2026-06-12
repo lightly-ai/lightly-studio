@@ -2,6 +2,7 @@
     import { AnnotationsGridItem, SelectableBox } from '$lib/components';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
     import { useSettings } from '$lib/hooks/useSettings';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
@@ -50,8 +51,24 @@
         getCollectionVersion,
         setfilteredAnnotationCount,
         addReversibleAction,
-        clearReversibleActions
+        clearReversibleActions,
+        textEmbedding
     } = useGlobalStorage();
+
+    // LIG-9521 prototype: the embedding plot lasso selection on the annotations route.
+    const { annotationPlotSampleIds } = useAnnotationPlotSelection();
+    const plotSelectedAnnotationIds = $derived($annotationPlotSampleIds);
+
+    // LIG-9521 prototype: crop blob URLs reported by the tiles, used as the
+    // drag-to-search payload (mirrors the images grid dragData).
+    let cropImageUrlByAnnotationId = $state<Record<string, string>>({});
+    function handleCropImageUrlChange(annotationId: string, url: string | null) {
+        if (url) {
+            cropImageUrlByAnnotationId[annotationId] = url;
+        } else {
+            delete cropImageUrlByAnnotationId[annotationId];
+        }
+    }
 
     afterNavigate(() => {
         clearReversibleActions();
@@ -73,7 +90,11 @@
         query: {
             annotation_label_ids:
                 $selectedAnnotationFilterIds.length > 0 ? $selectedAnnotationFilterIds : undefined,
-            tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined
+            tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
+            // LIG-9521 prototype: embedding plot selection + embedding text search.
+            sample_ids:
+                plotSelectedAnnotationIds.length > 0 ? plotSelectedAnnotationIds : undefined,
+            text_embedding: $textEmbedding?.embedding ?? undefined
         }
     });
 
@@ -88,7 +109,10 @@
         collectionId: collection_id
     });
     let infiniteLoaderIdentifier = $derived(
-        $selectedAnnotationFilterIds.join(',') + Array.from($tagsSelected).join(',')
+        $selectedAnnotationFilterIds.join(',') +
+            Array.from($tagsSelected).join(',') +
+            plotSelectedAnnotationIds.join(',') +
+            ($textEmbedding ? `search:${$textEmbedding.queryText}` : '')
     );
 
     const filterHash = $derived(infiniteLoaderIdentifier);
@@ -253,6 +277,16 @@
                                     dataTestId="annotation-grid-item"
                                     tag={false}
                                     ariaLabel={`Edit annotation: ${annotations[index].annotation.sample_id}`}
+                                    dragData={cropImageUrlByAnnotationId[
+                                        annotations[index].annotation.sample_id
+                                    ]
+                                        ? {
+                                              url: cropImageUrlByAnnotationId[
+                                                  annotations[index].annotation.sample_id
+                                              ],
+                                              fileName: `${annotations[index].annotation.annotation_label.annotation_label_name}-crop.png`
+                                          }
+                                        : undefined}
                                     onSelect={(event) =>
                                         handleGridItemSelect(
                                             event,
@@ -293,6 +327,7 @@
                                             selected={$pickedAnnotationIds[collection_id]?.has(
                                                 annotations[index].annotation.sample_id
                                             )}
+                                            onCropImageUrlChange={handleCropImageUrlChange}
                                         />
                                     </div>
                                 </GridItem>

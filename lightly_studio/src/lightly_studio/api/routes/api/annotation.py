@@ -64,17 +64,23 @@ class AnnotationQueryParamsModel(BaseModel):
     pagination: PaginatedWithCursor
     annotation_label_ids: list[UUID] | None = None
     tag_ids: list[UUID] | None = None
+    sample_ids: list[UUID] | None = None
+    text_embedding: list[float] | None = None
 
 
 def _get_annotation_query_params(
     pagination: Annotated[PaginatedWithCursor, Depends()],
     annotation_label_ids: Annotated[list[UUID] | None, Query()] = None,
     tag_ids: Annotated[list[UUID] | None, Query()] = None,
+    sample_ids: Annotated[list[UUID] | None, Query()] = None,
+    text_embedding: Annotated[list[float] | None, Query()] = None,
 ) -> AnnotationQueryParamsModel:
     return AnnotationQueryParamsModel(
         pagination=pagination,
         annotation_label_ids=annotation_label_ids,
         tag_ids=tag_ids,
+        sample_ids=sample_ids,
+        text_embedding=text_embedding,
     )
 
 
@@ -149,8 +155,10 @@ def read_annotations_with_payload(
             collection_ids=[collection_id],
             annotation_label_ids=params.annotation_label_ids,
             tag_ids=params.tag_ids,
+            sample_ids=params.sample_ids,
         ),
         collection_id=collection_id,
+        text_embedding=params.text_embedding,
     )
 
 

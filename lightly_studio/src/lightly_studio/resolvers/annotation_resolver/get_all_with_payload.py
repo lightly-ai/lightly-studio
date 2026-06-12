@@ -28,6 +28,11 @@ from lightly_studio.resolvers import collection_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
+from lightly_studio.resolvers.similarity_utils import (
+    apply_similarity_join,
+    distance_to_similarity,
+    get_distance_expression,
+)
 
 
 def get_all_with_payload(
@@ -35,6 +40,7 @@ def get_all_with_payload(
     collection_id: UUID,
     pagination: Paginated | None = None,
     filters: AnnotationsFilter | None = None,
+    text_embedding: list[float] | None = None,
 ) -> AnnotationWithPayloadAndCountView:
     """Get all annotations with payload from the database.
 
@@ -43,6 +49,8 @@ def get_all_with_payload(
         pagination: Optional pagination parameters
         filters: Optional filters to apply to the query
         collection_id: ID of the collection to get annotations for
+        text_embedding: Optional embedding; when given, annotations are ordered by
+            cosine distance of their embedding to it.
 
     Returns:
         List of annotations matching the filters with payload
@@ -61,11 +69,27 @@ def get_all_with_payload(
     if filters:
         base_query = filters.apply(base_query)
 
+    embedding_model_id, distance_expr = get_distance_expression(
+        session=session, collection_id=collection_id, text_embedding=text_embedding
+    )
+    has_similarity = distance_expr is not None and embedding_model_id is not None
+    similarity_order_by = []
+    if has_similarity:
+        base_query = apply_similarity_join(
+            query=base_query,
+            sample_id_column=col(AnnotationBaseTable.sample_id),
+            embedding_model_id=embedding_model_id,
+        )
+        similarity_order_by = [distance_expr]
+
     annotations_query = base_query.order_by(
+        *similarity_order_by,
         *_extra_order_by(sample_type=sample_type),
         col(AnnotationBaseTable.created_at).asc(),
         col(AnnotationBaseTable.sample_id).asc(),
     )
+    if has_similarity:
+        annotations_query = annotations_query.add_columns(distance_expr)
 
     total_count_query = select(func.count()).select_from(base_query.subquery())
     total_count = session.exec(total_count_query).one()
@@ -79,17 +103,27 @@ def get_all_with_payload(
 
     rows = session.exec(annotations_query).all()
 
-    return AnnotationWithPayloadAndCountView(
-        total_count=total_count,
-        next_cursor=next_cursor,
-        annotations=[
+    annotation_views = []
+    for row in rows:
+        if has_similarity:
+            annotation, payload, distance = row
+            similarity_score = distance_to_similarity(distance)
+        else:
+            annotation, payload = row
+            similarity_score = None
+        annotation_views.append(
             AnnotationWithPayloadView(
                 parent_sample_type=sample_type,
                 annotation=AnnotationView.from_annotation_table(annotation=annotation),
                 parent_sample_data=_serialize_annotation_payload(payload=payload),
+                similarity_score=similarity_score,
             )
-            for annotation, payload in rows
-        ],
+        )
+
+    return AnnotationWithPayloadAndCountView(
+        total_count=total_count,
+        next_cursor=next_cursor,
+        annotations=annotation_views,
     )
 
 
