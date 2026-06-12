@@ -51,7 +51,7 @@
 <Select
     icon={Plus}
     triggerLabel="Add strategy"
-    class="w-full border border-border"
+    class="w-full"
     testId="add-strategy-button"
     onValueChange={(v) => {
         if (v) onAdd(v as StrategyType);
