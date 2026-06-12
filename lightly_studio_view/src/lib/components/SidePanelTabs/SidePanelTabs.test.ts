@@ -47,15 +47,15 @@ describe('SidePanelTabs', () => {
         expect(screen.queryByTestId('right-rail-embed')).not.toBeInTheDocument();
     });
 
-    it('renders the Eval button only when hasEvaluationRuns is true', () => {
+    it('renders the Eval button only when isImages and hasEvaluationRuns are both true', () => {
         const { unmount } = render(SidePanelTabs, {
-            props: { isImages: false, hasMediaWithEmbeddings: false, hasEvaluationRuns: true }
+            props: { isImages: true, hasMediaWithEmbeddings: false, hasEvaluationRuns: true }
         });
         expect(screen.getByTestId('right-rail-eval')).toBeInTheDocument();
         unmount();
 
         render(SidePanelTabs, {
-            props: { isImages: false, hasMediaWithEmbeddings: false, hasEvaluationRuns: false }
+            props: { isImages: false, hasMediaWithEmbeddings: false, hasEvaluationRuns: true }
         });
         expect(screen.queryByTestId('right-rail-eval')).not.toBeInTheDocument();
     });
@@ -90,7 +90,7 @@ describe('SidePanelTabs', () => {
 
     it('calls setActivePanel with evaluationRuns when Eval button is clicked', async () => {
         render(SidePanelTabs, {
-            props: { isImages: false, hasMediaWithEmbeddings: false, hasEvaluationRuns: true }
+            props: { isImages: true, hasMediaWithEmbeddings: false, hasEvaluationRuns: true }
         });
 
         await fireEvent.click(screen.getByTestId('right-rail-eval'));

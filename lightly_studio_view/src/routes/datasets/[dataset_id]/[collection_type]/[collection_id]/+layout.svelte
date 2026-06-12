@@ -308,7 +308,9 @@
 
     const panelIsVisible = $derived(
         ($activePanel === 'evaluationRuns' && hasEvaluationRuns) ||
-            ($activePanel === 'embeddingPlot' && (isImages || isVideos)) ||
+            ($activePanel === 'embeddingPlot' &&
+                hasMediaWithEmbeddings &&
+                (isImages || isVideos)) ||
             ($activePanel === 'queryEditor' && isImages)
     );
 </script>
@@ -432,7 +434,7 @@
                                     error={evaluationRunsQuery.error?.message}
                                 />
                             {/await}
-                        {:else if $activePanel === 'embeddingPlot' && (isImages || isVideos)}
+                        {:else if $activePanel === 'embeddingPlot' && hasMediaWithEmbeddings && (isImages || isVideos)}
                             {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
                                 <PlotPanel />
                             {/await}
@@ -449,7 +451,7 @@
                     {@render mainContent()}
                 </div>
             {/if}
-            {#if isCollectionGrid}
+            {#if isCollectionGrid && (isImages || hasMediaWithEmbeddings || hasEvaluationRuns)}
                 <SidePanelTabs {isImages} {hasMediaWithEmbeddings} {hasEvaluationRuns} />
             {/if}
             {#if hasEmbeddings}

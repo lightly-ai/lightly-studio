@@ -54,7 +54,7 @@
             <span>Query</span>
         </button>
     {/if}
-    {#if hasEvaluationRuns}
+    {#if isImages && hasEvaluationRuns}
         <button
             class={cn(
                 'flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-md p-1.5 text-[10px] font-medium transition-colors',
