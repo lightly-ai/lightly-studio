@@ -34,11 +34,7 @@ from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
 )
-from lightly_studio.models.collection import (
-    CollectionCreate,
-    CollectionTable,
-    SampleType,
-)
+from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.tag import TagCreate, TagTable
