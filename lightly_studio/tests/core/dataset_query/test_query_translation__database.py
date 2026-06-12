@@ -25,6 +25,7 @@ from lightly_studio.models.query_expr import (
     NotExpr,
     ObjectDetectionMatchExpr,
     OrdinalComparisonOperator,
+    OrdinalFloatExpr,
     OrExpr,
     SegmentationMaskMatchExpr,
     StringExpr,
@@ -189,6 +190,100 @@ def test_to_match_expression__classification_source(db_session: Session) -> None
     assert [r.sample_id for r in results] == [image1.sample_id]
 
 
+def test_to_match_expression__classification_confidence(db_session: Session) -> None:
+    dataset = create_collection(session=db_session)
+    cid = dataset.collection_id
+    image1 = create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/cat.jpg")
+    create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/dog.jpg")
+
+    label = create_annotation_label(session=db_session, root_collection_id=cid, label_name="cat")
+    create_annotation(
+        session=db_session,
+        collection_id=cid,
+        sample_id=image1.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+        annotation_data={"confidence": 0.8},
+    )
+
+    expr = ClassificationMatchExpr(
+        subexpr=OrdinalFloatExpr(
+            field=FieldRef(table="classification", name="confidence"),
+            operator=OrdinalComparisonOperator.GTE,
+            value=0.7,
+        )
+    )
+    match = query_translation.to_match_expression(expr)
+    results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
+
+    assert [r.sample_id for r in results] == [image1.sample_id]
+
+
+def test_to_match_expression__classification_confidence_no_match(db_session: Session) -> None:
+    dataset = create_collection(session=db_session)
+    cid = dataset.collection_id
+    image1 = create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/cat.jpg")
+
+    label = create_annotation_label(session=db_session, root_collection_id=cid, label_name="cat")
+    create_annotation(
+        session=db_session,
+        collection_id=cid,
+        sample_id=image1.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+        annotation_data={"confidence": 0.8},
+    )
+
+    expr = ClassificationMatchExpr(
+        subexpr=OrdinalFloatExpr(
+            field=FieldRef(table="classification", name="confidence"),
+            operator=OrdinalComparisonOperator.LT,
+            value=0.7,
+        )
+    )
+
+    results = (
+        DatasetQuery(dataset=dataset, session=db_session)
+        .match(query_translation.to_match_expression(expr))
+        .to_list()
+    )
+
+    assert results == []
+
+
+def test_to_match_expression__classification_confidence_none_no_match(
+    db_session: Session,
+) -> None:
+    dataset = create_collection(session=db_session)
+    cid = dataset.collection_id
+    image1 = create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/cat.jpg")
+
+    label = create_annotation_label(session=db_session, root_collection_id=cid, label_name="cat")
+    create_annotation(
+        session=db_session,
+        collection_id=cid,
+        sample_id=image1.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+    )
+
+    expr = ClassificationMatchExpr(
+        subexpr=OrdinalFloatExpr(
+            field=FieldRef(table="classification", name="confidence"),
+            operator=OrdinalComparisonOperator.GTE,
+            value=0.7,
+        )
+    )
+
+    results = (
+        DatasetQuery(dataset=dataset, session=db_session)
+        .match(query_translation.to_match_expression(expr))
+        .to_list()
+    )
+
+    assert results == []
+
+
 def test_to_match_expression__object_detection_match(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
     cid = dataset.collection_id
@@ -256,6 +351,67 @@ def test_to_match_expression__object_detection_source(db_session: Session) -> No
     assert [r.sample_id for r in results] == [image1.sample_id]
 
 
+def test_to_match_expression__object_detection_confidence(db_session: Session) -> None:
+    dataset = create_collection(session=db_session)
+    cid = dataset.collection_id
+    image1 = create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/1.jpg")
+    create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/2.jpg")
+
+    label = create_annotation_label(session=db_session, root_collection_id=cid, label_name="person")
+    create_annotation(
+        session=db_session,
+        collection_id=cid,
+        sample_id=image1.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
+        annotation_data={"x": 0, "y": 0, "width": 100, "height": 100, "confidence": 0.95},
+    )
+
+    expr = ObjectDetectionMatchExpr(
+        subexpr=OrdinalFloatExpr(
+            field=FieldRef(table="object_detection", name="confidence"),
+            operator=OrdinalComparisonOperator.GT,
+            value=0.9,
+        )
+    )
+    match = query_translation.to_match_expression(expr)
+    results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
+
+    assert [r.sample_id for r in results] == [image1.sample_id]
+
+
+def test_to_match_expression__object_detection_confidence_no_match(db_session: Session) -> None:
+    dataset = create_collection(session=db_session)
+    cid = dataset.collection_id
+    image1 = create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/1.jpg")
+
+    label = create_annotation_label(session=db_session, root_collection_id=cid, label_name="person")
+    create_annotation(
+        session=db_session,
+        collection_id=cid,
+        sample_id=image1.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
+        annotation_data={"x": 0, "y": 0, "width": 100, "height": 100, "confidence": 0.95},
+    )
+
+    expr = ObjectDetectionMatchExpr(
+        subexpr=OrdinalFloatExpr(
+            field=FieldRef(table="object_detection", name="confidence"),
+            operator=OrdinalComparisonOperator.GT,
+            value=0.99,
+        )
+    )
+
+    results = (
+        DatasetQuery(dataset=dataset, session=db_session)
+        .match(query_translation.to_match_expression(expr))
+        .to_list()
+    )
+
+    assert results == []
+
+
 def test_to_match_expression__segmentation_mask_match(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
     cid = dataset.collection_id
@@ -305,6 +461,35 @@ def test_to_match_expression__segmentation_mask_source(db_session: Session) -> N
             field=FieldRef(table="segmentation_mask", name="source"),
             operator=EqualityComparisonOperator.EQ,
             value="ground_truth",
+        )
+    )
+    match = query_translation.to_match_expression(expr)
+    results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
+
+    assert [r.sample_id for r in results] == [image1.sample_id]
+
+
+def test_to_match_expression__segmentation_mask_confidence(db_session: Session) -> None:
+    dataset = create_collection(session=db_session)
+    cid = dataset.collection_id
+    image1 = create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/1.jpg")
+    create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/2.jpg")
+
+    label = create_annotation_label(session=db_session, root_collection_id=cid, label_name="person")
+    create_annotation(
+        session=db_session,
+        collection_id=cid,
+        sample_id=image1.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.SEGMENTATION_MASK,
+        annotation_data={"confidence": 0.4},
+    )
+
+    expr = SegmentationMaskMatchExpr(
+        subexpr=OrdinalFloatExpr(
+            field=FieldRef(table="segmentation_mask", name="confidence"),
+            operator=OrdinalComparisonOperator.LTE,
+            value=0.5,
         )
     )
     match = query_translation.to_match_expression(expr)

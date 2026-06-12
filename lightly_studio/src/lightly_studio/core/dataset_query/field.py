@@ -78,7 +78,44 @@ class OrdinalField(Field, Generic[T]):  # noqa: PLW1641
         return OrdinalFieldExpression(field=self, operator="!=", value=other)
 
 
+class NullableOrdinalField(Field, Generic[T]):  # noqa: PLW1641
+    """Generic field for nullable ordinal values that support comparison operations."""
+
+    def __init__(self, column: Mapped[T | None]) -> None:
+        """Initialize the nullable ordinal field with a database column."""
+        self._column = column
+
+    def get_sqlmodel_field(self) -> Mapped[T | None]:
+        """Get the nullable ordinal database column or property."""
+        return self._column
+
+    def __gt__(self, other: T) -> OrdinalFieldExpression[T]:
+        """Create a greater-than expression."""
+        return OrdinalFieldExpression(field=self, operator=">", value=other)
+
+    def __lt__(self, other: T) -> OrdinalFieldExpression[T]:
+        """Create a less-than expression."""
+        return OrdinalFieldExpression(field=self, operator="<", value=other)
+
+    def __ge__(self, other: T) -> OrdinalFieldExpression[T]:
+        """Create a greater-than-or-equal expression."""
+        return OrdinalFieldExpression(field=self, operator=">=", value=other)
+
+    def __le__(self, other: T) -> OrdinalFieldExpression[T]:
+        """Create a less-than-or-equal expression."""
+        return OrdinalFieldExpression(field=self, operator="<=", value=other)
+
+    def __eq__(self, other: T) -> OrdinalFieldExpression[T]:  # type: ignore[override]
+        """Create an equality expression."""
+        return OrdinalFieldExpression(field=self, operator="==", value=other)
+
+    def __ne__(self, other: T) -> OrdinalFieldExpression[T]:  # type: ignore[override]
+        """Create a not-equal expression."""
+        return OrdinalFieldExpression(field=self, operator="!=", value=other)
+
+
 NumericalField = OrdinalField[Union[float, int]]
+NullableNumericalField = NullableOrdinalField[Union[float, int]]
 DatetimeField = OrdinalField[datetime]
 
 
