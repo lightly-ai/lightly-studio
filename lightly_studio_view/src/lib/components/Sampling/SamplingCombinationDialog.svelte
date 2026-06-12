@@ -180,7 +180,7 @@
                         class="mr-auto self-center text-xs text-muted-foreground underline-offset-4 hover:underline"
                         data-testid="selection-dialog-docs-link"
                     >
-                        Learn more about sampling combinations →
+                        How do sampling combinations work?
                     </a>
                     <Button
                         variant="outline"
