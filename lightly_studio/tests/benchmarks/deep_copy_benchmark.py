@@ -20,7 +20,8 @@ exercises the annotation copy paths)::
         uv run tests/benchmarks/deep_copy_benchmark.py --collection-name "coco"
 
 ``--generate`` uses ``$LIGHTLY_STUDIO_DATABASE_URL`` if set (otherwise the default dev URL) and
-recreates the database; ``--collection-name`` uses the configured database as-is.
+recreates the database; ``--collection-name`` uses the configured database as-is. ``--copy-name``
+sets the copied collection's name (default ``deep_copy_benchmark_copy``).
 """
 
 from __future__ import annotations
@@ -99,9 +100,7 @@ def main() -> None:
         num_images = config.num_images
 
     try:
-        result = _run_deep_copy(
-            root_collection_id=root_collection_id, copy_name=args.copy_name
-        )
+        result = _run_deep_copy(root_collection_id=root_collection_id, copy_name=args.copy_name)
     finally:
         db_manager.close()
 
