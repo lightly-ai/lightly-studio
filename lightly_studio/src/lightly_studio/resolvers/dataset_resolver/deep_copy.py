@@ -12,9 +12,10 @@ bounded and large (1M-10M sample) datasets are handled by the database.
 This is enterprise-only and PostgreSQL-only (it relies on ``gen_random_uuid()``,
 temporary tables, and statement-end FK checks). DuckDB is not supported.
 
-Adding an FK column to an existing table requires adding it to that table's ``overrides``
-dict below, otherwise it would be copied verbatim and still point at the source dataset.
-``verify_table_coverage`` only guards new *tables*, not new *columns*.
+New columns are copied verbatim automatically; a new *foreign-key* column must be added to
+its table's ``overrides`` dict so it is remapped to the copied dataset. ``_copy_table``
+asserts that every declared FK column is remapped (fails fast otherwise), and
+``verify_table_coverage`` separately guards against new *tables*.
 """
 
 from __future__ import annotations
@@ -213,6 +214,14 @@ def _create_id_map(
     ``ON COMMIT DROP`` ties the table's lifetime to the surrounding transaction, so it is
     released on commit and never leaks onto a pooled connection. The primary key on
     ``old_id`` keeps the downstream joins fast on large datasets.
+
+    Args:
+        session: Database session.
+        source_table: Table to map ids for; also determines the temp table name.
+        id_column: Primary-key column whose values become ``old_id``.
+        where_sql: SQL predicate selecting the in-scope rows. An internal constant; any
+            values are bound through ``params``.
+        params: Bind parameters referenced by ``where_sql``.
     """
     map_name = f"deep_copy_map_{source_table}"
     session.execute(
@@ -235,12 +244,28 @@ def _copy_table(
 ) -> None:
     """Emit ``INSERT INTO target (cols) SELECT <override|verbatim per col> FROM ...``.
 
-    Column names come from ``_table(target).columns`` so new columns are copied
-    verbatim automatically. For each column an ``overrides`` expression is selected if
-    present, otherwise the source column is copied as-is. Names and select expressions are
-    built from the same ordered column list, so they align positionally.
+    Column names come from the target table so new columns are copied verbatim
+    automatically. For each column an ``overrides`` expression is selected if present,
+    otherwise the source column is copied as-is. Names and select expressions are built
+    from the same ordered column list, so they align positionally.
+
+    Args:
+        session: Database session.
+        target: SQLModel table class to insert into.
+        source: Aliased source table to select from (exposes ``.c``).
+        from_clause: ``source`` joined to the map tables needed for the remaps.
+        overrides: Column name -> expression to select instead of the verbatim source
+            column (FK/PK remaps, fresh ``gen_random_uuid()`` ids, regenerated timestamps).
     """
-    columns = list(_table(target).columns)
+    table = _table(target)
+    # Every declared foreign key must be remapped; an unmapped one would be copied verbatim
+    # and point back at the source dataset. Catches a new FK column on a copied table.
+    unmapped_fk_columns = {c.name for c in table.columns if c.foreign_keys} - set(overrides)
+    assert not unmapped_fk_columns, (
+        f"{table.name}: foreign-key column(s) {sorted(unmapped_fk_columns)} are not in "
+        "`overrides`; add them so they are remapped to the copied dataset."
+    )
+    columns = list(table.columns)
     select_exprs = [
         (
             overrides[column.name].label(column.name)
@@ -250,11 +275,17 @@ def _copy_table(
         for column in columns
     ]
     statement = sa_select(*select_exprs).select_from(from_clause)
-    session.exec(insert(_table(target)).from_select([c.name for c in columns], statement))
+    session.exec(insert(table).from_select([c.name for c in columns], statement))
 
 
 def _map(name: str, alias: str | None = None) -> Any:
-    """Return a lightweight clause for a temporary map table (columns old_id, new_id)."""
+    """Return a lightweight clause for a temporary map table (columns old_id, new_id).
+
+    Args:
+        name: Temp map table name.
+        alias: Optional alias, needed when the same map table is joined more than once in
+            a single statement.
+    """
     handle = sa_table(name, sa_column("old_id"), sa_column("new_id"))
     return handle.alias(alias) if alias is not None else handle
 
@@ -275,6 +306,13 @@ def _copy_collections(
 
     The single multi-row insert satisfies the self-referential ``parent_collection_id``
     FK because PostgreSQL checks it at statement end, once all rows are present.
+
+    Args:
+        session: Database session.
+        new_dataset_id: Dataset id the copied collections belong to.
+        copy_name: New name for the root collection.
+        old_root_name: Name of the source root, used to derive child names.
+        now: Timestamp for the copied collections' created_at/updated_at.
     """
     src = _table(CollectionTable).alias("src")
     map_collection = _map(_MAP_COLLECTION)
