@@ -20,7 +20,10 @@ from lightly_studio.api import features
 from lightly_studio.api.app import app
 from lightly_studio.dataset import embedding_manager
 from lightly_studio.dataset.embedding_generator import RandomEmbeddingGenerator
-from lightly_studio.dataset.embedding_manager import EmbeddingManager, EmbeddingManagerProvider
+from lightly_studio.dataset.embedding_manager import (
+    EmbeddingManager,
+    EmbeddingManagerProvider,
+)
 from lightly_studio.db_manager import DatabaseEngine
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
@@ -31,7 +34,11 @@ from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
 )
-from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
+from lightly_studio.models.collection import (
+    CollectionCreate,
+    CollectionTable,
+    SampleType,
+)
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.tag import TagCreate, TagTable
@@ -55,6 +62,24 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default=False,
         help="Run tests against a Postgres container instead of in-memory DuckDB.",
     )
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """Register custom markers for database backend selection."""
+    config.addinivalue_line(
+        "markers",
+        "postgres_only: run the test only on the Postgres backend (skipped under DuckDB)",
+    )
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Skip postgres_only tests unless the suite runs with --postgres."""
+    if config.getoption("--postgres"):
+        return
+    skip_marker = pytest.mark.skip(reason="postgres_only: skipped under DuckDB")
+    for item in items:
+        if "postgres_only" in item.keywords:
+            item.add_marker(skip_marker)
 
 
 def _truncate_tables(session: Session) -> None:
