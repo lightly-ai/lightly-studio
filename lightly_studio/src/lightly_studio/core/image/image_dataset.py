@@ -304,7 +304,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             split: Optional split name to tag samples (e.g., 'train', 'val').
                 If provided, all samples will be tagged with this name.
             embed: If True, generate embeddings for the newly added samples.
-            annotation_source: Optional name of the annotation source to add the annotations
+            annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
         """
@@ -340,7 +340,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             input_split: The split to load (e.g., 'train', 'val', 'test').
                 If None, all available splits will be loaded and assigned a corresponding tag.
             embed: If True, generate embeddings for the newly added samples.
-            annotation_source: Optional name of the annotation source to add the annotations
+            annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
         """
@@ -412,7 +412,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             split: Optional split name to tag samples (e.g., 'train', 'val').
                 If provided, all samples will be tagged with this name.
             embed: If True, generate embeddings for the newly added samples.
-            annotation_source: Optional name of the annotation source to add the annotations
+            annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
         """
@@ -472,7 +472,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             split: Optional split name to tag samples (e.g., 'train', 'val').
                 If provided, all samples will be tagged with this name.
             embed: If True, generate embeddings for the newly added samples.
-            annotation_source: Optional name of the annotation source to add the annotations
+            annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
         """
@@ -517,7 +517,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             split: Optional split name to tag samples (e.g., 'train', 'val').
                 If provided, all samples will be tagged with this name.
             embed: If True, generate embeddings for the newly added samples.
-            annotation_source: Optional name of the annotation source to add the annotations
+            annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
         """
