@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 import sqlmodel
+from sqlalchemy import insert
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
@@ -171,13 +173,29 @@ def add_sample_ids_to_tag_id(
     tag_id: UUID,
     sample_ids: list[UUID],
 ) -> TagTable | None:
-    """Add a list of sample_ids to a tag."""
+    """Add a list of sample_ids to a tag.
+
+    Idempotent: sample ids that are already linked to the tag are skipped via
+    database-level conflict handling, and duplicate sample ids in the input are
+    deduplicated, so links are never created twice. Uses a batched bulk INSERT
+    (one statement per batch) instead of one round-trip per sample id.
+    """
     tag = get_by_id(session=session, tag_id=tag_id)
     if not tag or not tag.tag_id:
         return None
 
-    for sample_id in sample_ids:
-        session.merge(SampleTagLinkTable(sample_id=sample_id, tag_id=tag_id))
+    rows = [{"sample_id": sample_id, "tag_id": tag_id} for sample_id in set(sample_ids)]
+
+    # Database-level conflict handling keeps this idempotent on both backends; the
+    # conflict clause is re-applied per batch, and batches are disjoint slices of a
+    # deduplicated set, so already-linked and duplicate samples are silently ignored.
+    dialect_name = session.get_bind().dialect.name if session.get_bind() else None
+    for batch in batching.batched(items=rows):
+        if dialect_name == "postgresql":
+            session.exec(pg_insert(SampleTagLinkTable).values(batch).on_conflict_do_nothing())
+        else:
+            # DuckDB and SQLite: use OR IGNORE prefix.
+            session.exec(insert(SampleTagLinkTable).values(batch).prefix_with("OR IGNORE"))
 
     session.commit()
     session.refresh(tag)
