@@ -16,8 +16,111 @@ concurrency:
 
   
 jobs:
+  # Detects which areas of the repo changed so downstream jobs can skip work
+  # that the change can't affect (e.g. a docs-only PR skips the test jobs).
+  # The required status check is `Unit Success Check`, not these jobs, so the
+  # test jobs are free to be skipped without stranding the merge queue.
+  detect:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      docs: ${{ steps.filter.outputs.docs }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Detect which areas changed
+        id: filter
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          import sys
+
+
+          def write_outputs(**areas):
+              with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+                  for name, changed in areas.items():
+                      out.write(f"{name}={'true' if changed else 'false'}\n")
+
+
+          def run_all(reason):
+              # Fail safe: when in doubt, run everything rather than risk
+              # skipping a job the change actually affects.
+              print(f"{reason}; running all jobs (fail-safe).")
+              write_outputs(backend=True, frontend=True, docs=True)
+              sys.exit(0)
+
+
+          # Resolve the base/head pair to diff from the event payload. Reading
+          # the payload file avoids interpolating workflow expressions here.
+          event = os.environ["GITHUB_EVENT_NAME"]
+          with open(os.environ["GITHUB_EVENT_PATH"]) as fh:
+              payload = json.load(fh)
+
+          if event == "pull_request":
+              base = payload["pull_request"]["base"]["sha"]
+              head = payload["pull_request"]["head"]["sha"]
+          elif event == "merge_group":
+              base = payload["merge_group"]["base_sha"]
+              head = payload["merge_group"]["head_sha"]
+          else:
+              # push to main, workflow_dispatch, etc.: nothing to diff against.
+              run_all(f"Event {event!r} has no base to diff")
+
+          try:
+              subprocess.run(
+                  ["git", "fetch", "--no-tags", "--depth=1", "origin", base, head],
+                  check=True,
+                  capture_output=True,
+              )
+              files = subprocess.run(
+                  ["git", "diff", "--name-only", base, head],
+                  check=True,
+                  capture_output=True,
+                  text=True,
+              ).stdout.split()
+          except subprocess.CalledProcessError:
+              run_all(f"Could not diff {base}..{head}")
+
+          print("Changed files:", *files, sep="\n")
+
+          # Each area lists the path patterns whose changes require its jobs.
+          WORKFLOW = r"^\.github/workflows/test_and_release\.yml$"
+          BACKEND = [
+              r"^lightly_studio/(src|tests)/",
+              r"^lightly_studio/(pyproject\.toml|uv\.lock|ruff\.toml|pytest\.ini|Makefile|alembic\.ini)$",
+              WORKFLOW,
+          ]
+          FRONTEND = [
+              r"^lightly_studio_view/",
+              WORKFLOW,
+          ]
+          DOCS = [
+              r"\.md$",
+              r"^lightly_studio/docs/",
+              r"^ai_guidelines/",
+          ]
+
+          def any_changed(patterns):
+              return any(re.search(p, f) for p in patterns for f in files)
+
+          backend = any_changed(BACKEND)
+          frontend = any_changed(FRONTEND)
+          docs = any_changed(DOCS)
+
+          write_outputs(backend=backend, frontend=frontend, docs=docs)
+          print(f"Result: backend={backend} frontend={frontend} docs={docs}")
+          PY
+
   check-python:
     name: Static Checks Python
+    needs: detect
+    if: needs.detect.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -53,6 +156,10 @@ jobs:
 
   check-typescript:
     name: Static Checks Typescript
+    needs: detect
+    # Schema/version files are exported from the backend, so backend changes
+    # can affect the generated TypeScript too.
+    if: needs.detect.outputs.frontend == 'true' || needs.detect.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -102,6 +209,9 @@ jobs:
 
   test-unit:
     name: Unit (${{ matrix.python }}, ${{ matrix.database }})
+    needs: detect
+    # The matrix runs Python unit tests (backend) and view tests (frontend).
+    if: needs.detect.outputs.backend == 'true' || needs.detect.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -177,6 +287,10 @@ jobs:
 
   check-docs:
     name: Build Docs
+    needs: detect
+    # API reference is generated from backend docstrings, so backend changes
+    # can break the docs build / link checks too.
+    if: needs.detect.outputs.docs == 'true' || needs.detect.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -211,3 +325,58 @@ jobs:
       - name: Build docs
         working-directory: lightly_studio/docs
         run: make docs
+
+  # Single required status check for this workflow. It always runs, so the
+  # gated jobs above can be skipped (on e.g. docs-only changes) without
+  # stranding the merge queue. Configure the branch ruleset to require
+  # `Unit Success Check` instead of the individual job names.
+  unit-success:
+    name: Unit Success Check
+    runs-on: ubuntu-latest
+    needs:
+      - detect
+      - check-python
+      - check-typescript
+      - test-unit
+      - check-docs
+    if: always()
+    steps:
+      - name: Verify required jobs
+        env:
+          DETECT: ${{ needs.detect.result }}
+          PYTHON_CHECKS: ${{ needs.check-python.result }}
+          TYPESCRIPT_CHECKS: ${{ needs.check-typescript.result }}
+          UNIT_TESTS: ${{ needs.test-unit.result }}
+          DOCS: ${{ needs.check-docs.result }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import sys
+
+          # If change detection itself failed, every gated job was skipped for
+          # the wrong reason. Fail safe rather than report a green gate.
+          detect = os.environ["DETECT"]
+          if detect != "success":
+              sys.exit(f"::error::Change detection did not succeed (result={detect}); failing the gate.")
+
+          # A gated job is fine if it passed or was deliberately skipped.
+          # Anything else (failure, cancelled, timed_out) fails the gate.
+          gated = {
+              "Static Checks Python": os.environ["PYTHON_CHECKS"],
+              "Static Checks Typescript": os.environ["TYPESCRIPT_CHECKS"],
+              "Unit tests": os.environ["UNIT_TESTS"],
+              "Build Docs": os.environ["DOCS"],
+          }
+          allowed = {"success", "skipped"}
+
+          for name, result in gated.items():
+              print(f"{name}: {result}")
+
+          failed = {name: result for name, result in gated.items() if result not in allowed}
+          if failed:
+              for name, result in failed.items():
+                  print(f"::error::Required job '{name}' finished with result '{result}'.")
+              sys.exit(1)
+
+          print("All required jobs passed or were skipped.")
+          PY
