@@ -19,28 +19,11 @@
     }
 </script>
 
-<div class="w-18 flex flex-col gap-1 rounded-[1vw] bg-card p-2">
-    {#if isImages}
-        <button
-            class={cn(
-                'flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-md p-2 text-xs font-medium transition-colors',
-                $activePanel === 'queryEditor'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-            )}
-            data-testid="right-rail-query"
-            aria-label="Query"
-            aria-pressed={$activePanel === 'queryEditor'}
-            onclick={() => toggle('queryEditor')}
-        >
-            <SearchCode class="size-5" />
-            <span>Query</span>
-        </button>
-    {/if}
+<div class="flex w-12 flex-col gap-1 rounded-xl bg-card p-1.5">
     {#if hasMediaWithEmbeddings}
         <button
             class={cn(
-                'flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-md p-2 text-xs font-medium transition-colors',
+                'flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-md p-1.5 text-[10px] font-medium transition-colors',
                 $activePanel === 'embeddingPlot'
                     ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
@@ -50,14 +33,31 @@
             aria-pressed={$activePanel === 'embeddingPlot'}
             onclick={() => toggle('embeddingPlot')}
         >
-            <ChartNetwork class="size-5" />
+            <ChartNetwork class="size-4" />
             <span>Embed</span>
+        </button>
+    {/if}
+    {#if isImages}
+        <button
+            class={cn(
+                'flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-md p-1.5 text-[10px] font-medium transition-colors',
+                $activePanel === 'queryEditor'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+            )}
+            data-testid="right-rail-query"
+            aria-label="Query"
+            aria-pressed={$activePanel === 'queryEditor'}
+            onclick={() => toggle('queryEditor')}
+        >
+            <SearchCode class="size-4" />
+            <span>Query</span>
         </button>
     {/if}
     {#if hasEvaluationRuns}
         <button
             class={cn(
-                'flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-md p-2 text-xs font-medium transition-colors',
+                'flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-md p-1.5 text-[10px] font-medium transition-colors',
                 $activePanel === 'evaluationRuns'
                     ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
@@ -67,7 +67,7 @@
             aria-pressed={$activePanel === 'evaluationRuns'}
             onclick={() => toggle('evaluationRuns')}
         >
-            <Gauge class="size-5" />
+            <Gauge class="size-4" />
             <span>Eval</span>
         </button>
     {/if}
