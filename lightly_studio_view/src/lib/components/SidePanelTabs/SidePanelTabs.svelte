@@ -19,7 +19,7 @@
     }
 </script>
 
-<div class="flex w-12 flex-col gap-1 rounded-xl bg-card p-1.5">
+<div class="flex w-14 flex-col gap-2 rounded-xl bg-card p-1.5">
     {#if hasMediaWithEmbeddings}
         <button
             class={cn(
