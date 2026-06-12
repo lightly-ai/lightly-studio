@@ -16,7 +16,6 @@ concurrency:
 
   
 jobs:
-  # Lets downstream jobs skip work a change can't affect (e.g. docs-only PRs).
   detect:
     name: Detect changes
     runs-on: ubuntu-latest
@@ -27,7 +26,7 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend || 'true' }}
       docs: ${{ steps.filter.outputs.docs || 'true' }}
     steps:
-      - name: Checkout Code # Needed for merge_group; PRs use the API.
+      - name: Checkout Code # Needed for merge_group event
         uses: actions/checkout@v6
 
       - name: Filter changed paths
@@ -37,8 +36,8 @@ jobs:
         uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         with:
           filters: |
-            # static-checks runs `mypy .` / `ruff check` over the whole tree,
-            # so every Python dir it lints belongs here, not just src/tests.
+            # List paths in `lightly_studio/` to exclude triggering on docs.
+            # E2E tests and examples are included for static checks.
             backend:
               - '.github/workflows/test_and_release.yml'
               - 'lightly_studio/src/**'
