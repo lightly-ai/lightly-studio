@@ -72,4 +72,79 @@ describe('StrengthField', () => {
 
         expect(onUpdate).not.toHaveBeenCalled();
     });
+
+    it('does not call onUpdate with a negative value when min is 0', async () => {
+        const onUpdate = vi.fn();
+
+        render(StrengthField, {
+            props: {
+                strength: 1,
+                id: 'test-strength',
+                testid: 'test-strength-input',
+                min: 0,
+                onUpdate
+            }
+        });
+
+        await fireEvent.input(screen.getByTestId('test-strength-input'), {
+            target: { value: '-1' }
+        });
+
+        expect(onUpdate).not.toHaveBeenCalled();
+    });
+
+    it('calls onUpdate with a non-negative value when min is 0', async () => {
+        const onUpdate = vi.fn();
+
+        render(StrengthField, {
+            props: {
+                strength: 1,
+                id: 'test-strength',
+                testid: 'test-strength-input',
+                min: 0,
+                onUpdate
+            }
+        });
+
+        await fireEvent.input(screen.getByTestId('test-strength-input'), {
+            target: { value: '2' }
+        });
+
+        expect(onUpdate).toHaveBeenCalledWith(2);
+    });
+
+    it('shows tooltip mentioning negative values when min is not set', async () => {
+        render(StrengthField, {
+            props: {
+                strength: 1,
+                id: 'test-strength',
+                testid: 'test-strength-input',
+                onUpdate: vi.fn()
+            }
+        });
+
+        await fireEvent.mouseEnter(screen.getByRole('button', { name: 'More information' }));
+
+        expect(screen.getByRole('tooltip')).toHaveTextContent(
+            'Negative values invert the scoring direction.'
+        );
+    });
+
+    it('shows tooltip without negative values mention when min is 0', async () => {
+        render(StrengthField, {
+            props: {
+                strength: 1,
+                id: 'test-strength',
+                testid: 'test-strength-input',
+                min: 0,
+                onUpdate: vi.fn()
+            }
+        });
+
+        await fireEvent.mouseEnter(screen.getByRole('button', { name: 'More information' }));
+
+        expect(screen.getByRole('tooltip')).not.toHaveTextContent(
+            'Negative values invert the scoring direction.'
+        );
+    });
 });

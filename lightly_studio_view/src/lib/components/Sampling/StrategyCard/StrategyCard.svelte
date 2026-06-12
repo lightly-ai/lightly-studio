@@ -104,6 +104,7 @@
                             strength={instance.params.strength}
                             id={`diversity-strength-${instance.id}`}
                             testid={`strategy-diversity-strength-input-${instance.id}`}
+                            min={0}
                             onUpdate={(strength) => onUpdate({ strength })}
                         />
                     {:else if instance.type === 'typicality'}
