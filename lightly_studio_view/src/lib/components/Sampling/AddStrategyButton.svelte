@@ -20,6 +20,7 @@
     }: Props = $props();
 
     let isOpen = $state(false);
+    let selectedValue = $state<string | undefined>(undefined);
     let hoveredType = $state<StrategyType | null>(null);
     let tooltipRect = $state<DOMRect | null>(null);
     // wrapper element refs used to position the tooltip on keyboard highlight
@@ -56,8 +57,12 @@
     triggerLabel="Add strategy"
     class="w-full"
     testId="add-strategy-button"
+    bind:value={selectedValue}
     onValueChange={(v) => {
-        if (v) onAdd(v as StrategyType);
+        if (v) {
+            onAdd(v as StrategyType);
+            selectedValue = undefined;
+        }
     }}
     onOpenChange={(open) => {
         isOpen = open;
