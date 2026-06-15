@@ -22,11 +22,7 @@ async function typeAndApply(page: Page, query: string): Promise<void> {
 test.describe('query editor', () => {
     test('apply query and verify filtered grid', async ({ samplesPage, page }) => {
         await page.getByTestId('query-filter-add-button').click();
-        await expect(
-            page
-                .getByTestId('query-editor-panel')
-                .getByRole('heading', { name: 'Advanced filters' })
-        ).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Query Filter' })).toBeVisible();
 
         // On first open: The apply button should be enabled.
         await expect(page.getByTestId('query-editor-apply-button')).toBeEnabled();
@@ -51,7 +47,7 @@ test.describe('query editor', () => {
 
         // Uncheck the filter chip checkbox to disable the query
         const disableRefetch = waitForImageListResponse(page);
-        await page.getByRole('checkbox', { name: 'Disable advanced filters' }).click();
+        await page.getByRole('checkbox', { name: 'Disable query filter' }).click();
         await disableRefetch;
 
         // Grid should show at least one full page of unfiltered results.
@@ -62,7 +58,7 @@ test.describe('query editor', () => {
 
         // Re-check to re-enable the query
         const enableRefetch = waitForImageListResponse(page);
-        await page.getByRole('checkbox', { name: 'Enable advanced filters' }).click();
+        await page.getByRole('checkbox', { name: 'Enable query filter' }).click();
         await enableRefetch;
 
         await expect(samplesPage.getSamples()).toHaveCount(cocoDataset.labels.airplane.sampleCount);
@@ -78,11 +74,7 @@ test.describe('query editor', () => {
 
         // Click the chip body to reopen the editor
         await page.getByTestId('query-filter-chip-body').click();
-        await expect(
-            page
-                .getByTestId('query-editor-panel')
-                .getByRole('heading', { name: 'Advanced filters' })
-        ).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Query Filter' })).toBeVisible();
 
         // Editor should contain the previously applied query
         await expect(page.locator('.monaco-editor .view-lines')).toContainText(QUERY);
@@ -101,10 +93,10 @@ test.describe('query editor', () => {
 
         // Click the X button to clear the filter
         const refetchPromise = waitForImageListResponse(page);
-        await page.getByRole('button', { name: 'Clear advanced filters' }).click();
+        await page.getByRole('button', { name: 'Clear query filter' }).click();
         await refetchPromise;
 
-        // "Create advanced filters" button should reappear
+        // "Add query filter" button should reappear
         await expect(page.getByTestId('query-filter-add-button')).toBeVisible();
 
         // Grid should show at least one full page of unfiltered results
