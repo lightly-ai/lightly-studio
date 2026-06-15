@@ -108,8 +108,8 @@
     onfocusout={hideTooltipHandler}
     onkeydown={(e) => e.key === 'Escape' && hideTooltipHandler()}
     bind:this={triggerElement}
-    tabindex="0"
-    role="button"
+    tabindex={content ? 0 : undefined}
+    role={content ? 'button' : undefined}
     aria-label={ariaLabel}
     aria-describedby={showTooltip ? 'tooltip' : undefined}
 >
