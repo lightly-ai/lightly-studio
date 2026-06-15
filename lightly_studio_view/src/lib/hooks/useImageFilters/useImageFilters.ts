@@ -42,7 +42,7 @@ export interface QueryExpression {
     query_expr_str: string;
 }
 
-const imageQueryExpression = writable<QueryExpression | null>({} as QueryExpression);
+const imageQueryExpression = writable<QueryExpression | null>(null);
 
 const imageFilter = derived(
     [filterParams, imageQueryExpression],
