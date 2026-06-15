@@ -63,6 +63,21 @@ describe('StrategyCard', () => {
             expect(onDuplicate).toHaveBeenCalledOnce();
         });
 
+        it('disables the duplicate button when isDuplicateDisabled is true', () => {
+            const instance: StrategyInstance = {
+                id: 'abc',
+                type: 'diversity',
+                params: { strength: 1 },
+                isExpanded: true
+            };
+
+            render(StrategyCard, {
+                props: { ...defaultProps, instance, isDuplicateDisabled: true }
+            });
+
+            expect(screen.getByTestId('strategy-card-duplicate-abc')).toBeDisabled();
+        });
+
         it('calls onRemove when the remove button is clicked', async () => {
             const onRemove = vi.fn();
             const instance: StrategyInstance = {

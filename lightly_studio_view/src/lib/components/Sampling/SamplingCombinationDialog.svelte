@@ -33,6 +33,10 @@
 
     const strategyOptions = useStrategyOptions(() => collectionId);
 
+    // TODO(Leonardo, 06/2026): Update once there are multiple embedding models - currently only one diversity
+    // strategy is supported since all samples share a single embedding space.
+    const hasDiversity = $derived($instances.some((i) => i.type === 'diversity'));
+
     const {
         tags,
         nSamplesToSelect,
@@ -74,6 +78,9 @@
                     <div class="grid gap-4 py-4">
                         <div class="w-full">
                             <AddStrategyButton
+                                diversityDisabledReason={hasDiversity
+                                    ? 'Only one diversity strategy can be added per selection.'
+                                    : undefined}
                                 similarityDisabledReason={isVideoCollection
                                     ? 'Not available for video collections. Similarity selection requires image embeddings.'
                                     : $tags.length === 0
@@ -99,6 +106,7 @@
                                         annotationLabels={strategyOptions.annotationLabels}
                                         annotationSourceOptions={strategyOptions.annotationSourceOptions}
                                         metadataFieldNames={strategyOptions.metadataFieldNames}
+                                        isDuplicateDisabled={instance.type === 'diversity'}
                                         onRemove={() => removeStrategy(instance.id)}
                                         onDuplicate={() => duplicateStrategy(instance.id)}
                                         onUpdate={(params) => updateParams(instance.id, params)}
