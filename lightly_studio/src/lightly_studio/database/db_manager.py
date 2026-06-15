@@ -91,7 +91,6 @@ class DatabaseEngine:
         # In tests (where single_threaded=True): Disable preparing, cause constant
         # database recreations under a single connection cause prepared statements to
         # become invalid, leading to "cached plan must not change result type" errors.
-        # See https://linear.app/lightly/issue/LIG-9924.
         connect_args: dict[str, Any] = {}
         if single_threaded and self._backend == DatabaseBackend.POSTGRESQL:
             connect_args["prepare_threshold"] = None
