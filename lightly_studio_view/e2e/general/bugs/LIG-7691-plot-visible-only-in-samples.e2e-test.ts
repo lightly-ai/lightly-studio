@@ -29,7 +29,12 @@ test('Plot is visible only on samples page', async ({ samplesPage, page }) => {
         await expect(plotPanel).not.toBeVisible();
     }
 
-    await page.getByTestId('navigation-menu-annotations').click();
+    const annotationsMenu = page.getByTestId('navigation-menu-annotations');
+    const annotationsMenuTag = await annotationsMenu.evaluate((el) => el.tagName);
+    await annotationsMenu.click();
+    if (annotationsMenuTag !== 'A') {
+        await page.getByTestId('navigation-dropdown-annotations').click();
+    }
 
     await expect(page.getByTestId('annotations-grid')).toBeVisible({ timeout: 10000 });
 

@@ -23,6 +23,25 @@ describe('enrichWithSchemaDocs', () => {
         });
     });
 
+    it('enriches annotation source and confidence fields in annotation scopes', async () => {
+        const { enrichWithSchemaDocs } = await import('./completionAdapterEnrichWithSchemaDocs');
+
+        const sourceResult = enrichWithSchemaDocs({ label: 'source' } as never, 'classification');
+        expect(sourceResult.detail).toBe('Classification.source: string');
+        expect(sourceResult.documentation).toEqual({
+            value: 'Annotation source collection name.'
+        });
+
+        const confidenceResult = enrichWithSchemaDocs(
+            { label: 'confidence' } as never,
+            'object_detection'
+        );
+        expect(confidenceResult.detail).toBe('ObjectDetection.confidence: float');
+        expect(confidenceResult.documentation).toEqual({
+            value: 'Detection confidence score.'
+        });
+    });
+
     it('returns unchanged item for unknown label', async () => {
         const { enrichWithSchemaDocs } = await import('./completionAdapterEnrichWithSchemaDocs');
         const item = { label: 'unknown' };

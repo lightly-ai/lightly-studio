@@ -27,11 +27,21 @@ def create(session: Session, sample_embedding: SampleEmbeddingCreate) -> SampleE
     return db_sample_embedding
 
 
-def create_many(session: Session, sample_embeddings: list[SampleEmbeddingCreate]) -> None:
-    """Create many sample embeddings in a single database commit."""
+def create_many(
+    session: Session, sample_embeddings: list[SampleEmbeddingCreate], commit: bool = True
+) -> None:
+    """Create many sample embeddings.
+
+    Args:
+        session: The database session.
+        sample_embeddings: The embeddings to insert.
+        commit: Whether to commit. Pass ``False`` to insert as part of a larger
+            transaction that the caller commits, so multiple calls stay atomic.
+    """
     db_sample_embeddings = [SampleEmbeddingTable.model_validate(e) for e in sample_embeddings]
     session.bulk_save_objects(db_sample_embeddings)
-    session.commit()
+    if commit:
+        session.commit()
 
 
 def get_by_sample_ids(
@@ -92,6 +102,8 @@ def get_all_by_collection_id(
     )
     if filters:
         query = filters.apply(query)
+    # Fetch in chunks so list[float] rows are converted to numpy and freed per batch.
+    query = query.execution_options(yield_per=batching.DEFAULT_BATCH_SIZE)
     return list(session.exec(query).all())
 
 

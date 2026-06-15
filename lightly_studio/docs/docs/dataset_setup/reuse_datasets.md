@@ -54,7 +54,7 @@ ls.start_gui()
 - Manual annotations created in the GUI, metadata changed via Python, and tags assigned anywhere are all stored in `lightly_studio.db`, so you can stop/start the process at will.
 - External files such as images/videos (`.jpg`, `.png`, `.mp4` files etc.) remain in their original location; keep them accessible so the GUI can display them when you reopen the dataset.
 
-For dataset-type-specific loading examples, see [Image Dataset · From a Pre-Existing Dataset](../dataset_setup/image_dataset.md#from-a-pre-existing-dataset) and [Video Dataset · From a Pre-Existing Dataset](../dataset_setup/video_dataset.md#from-a-pre-existing-dataset).
+For dataset-type-specific loading examples, see [Image Dataset · From an Existing Dataset](image_dataset.md#from-an-existing-dataset) and [Video Dataset · From an Existing Dataset](video_dataset.md#from-an-existing-dataset).
 
 ## Iterate using the CLI
 

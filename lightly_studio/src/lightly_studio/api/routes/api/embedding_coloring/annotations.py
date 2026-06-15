@@ -16,16 +16,22 @@ def build_annotation_color_maps(
     session: Session,
     annotation_label_ids: list[UUID],
     sample_ids: list[UUID],
+    matching_sample_ids: set[UUID] | None,
 ) -> tuple[list[list[int]], dict[int, str]]:
     """Build color categories and a legend for annotation-based sample coloring.
 
-    Each annotation label gets a consecutive color category (starting at 2). All requested
-    labels appear in the legend even if no samples match.
+    When more labels are selected than fit in the legend, the labels carried by
+    the most filter-matching samples each get a dedicated color category and the
+    rest are merged into a single "Other" category. Labels with no matching
+    sample are omitted from the legend entirely.
 
     Args:
         session: Database session.
-        annotation_label_ids: Ordered label IDs that define coloring priority.
+        annotation_label_ids: Label IDs to color by.
         sample_ids: Sample IDs in the order for which to build color categories.
+        matching_sample_ids: Sample IDs matching the active filter. Labels are
+            prioritized by their frequency among these samples. ``None`` counts
+            all samples.
 
     Returns:
         A tuple of `(color_categories, color_legend)` for the provided samples.
@@ -45,8 +51,13 @@ def build_annotation_color_maps(
         if ann.annotation_label_id in requested:
             sample_to_labels[ann.parent_sample_id].add(ann.annotation_label_id)
 
+    ordered_label_ids = coloring_helpers.order_values_by_frequency(
+        sample_to_values=sample_to_labels,
+        matching_sample_ids=matching_sample_ids,
+        format_fn=lambda lid: names.get(str(lid), str(lid)),
+    )
     scale = DiscreteColorScale.from_values(
-        values=annotation_label_ids,
+        values=ordered_label_ids,
         format_fn=lambda lid: names.get(str(lid), str(lid)),
     )
 

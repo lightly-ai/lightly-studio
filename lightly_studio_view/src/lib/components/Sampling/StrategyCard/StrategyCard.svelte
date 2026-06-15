@@ -25,7 +25,9 @@
         instance: StrategyInstance;
         tags: StrategySummaryTag[];
         annotationLabels: string[];
+        annotationSourceOptions?: { id: string; name: string }[];
         metadataFieldNames?: string[];
+        isDuplicateDisabled?: boolean;
         onRemove: () => void;
         onDuplicate: () => void;
         onUpdate: (params: Partial<StrategyParams>) => void;
@@ -35,7 +37,9 @@
         instance,
         tags,
         annotationLabels,
+        annotationSourceOptions = [],
         metadataFieldNames = [],
+        isDuplicateDisabled = false,
         onRemove,
         onDuplicate,
         onUpdate,
@@ -77,6 +81,7 @@
                     size="icon"
                     aria-label="Duplicate strategy"
                     onclick={onDuplicate}
+                    disabled={isDuplicateDisabled}
                     data-testid={`strategy-card-duplicate-${instance.id}`}
                 >
                     <Copy class="size-4" />
@@ -102,6 +107,7 @@
                             strength={instance.params.strength}
                             id={`diversity-strength-${instance.id}`}
                             testid={`strategy-diversity-strength-input-${instance.id}`}
+                            min={0}
                             onUpdate={(strength) => onUpdate({ strength })}
                         />
                     {:else if instance.type === 'typicality'}
@@ -125,8 +131,10 @@
                         />
                     {:else}
                         <ClassBalancingForm
+                            instanceId={instance.id}
                             params={instance.params as ClassBalancingParams}
                             {annotationLabels}
+                            {annotationSourceOptions}
                             {onUpdate}
                         />
                     {/if}

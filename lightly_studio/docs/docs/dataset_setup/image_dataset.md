@@ -24,7 +24,7 @@ The `ls.ImageDataset.create()` method call is lightweight and initializes an emp
 
 The `add_images_from_path(...)` method accepts a path to a file or a folder. If the path is a folder,
 it will recursively search for images in it. A remote path like `s3://my-bucket/my-folder` is also
-supported, see [Using Cloud Storage](../advanced/cloud_storage.md) for more details.
+supported, see [Using Cloud Storage](cloud_storage.md) for more details.
 
 Added images are automatically embedded so that embedding plot and image search are enabled.
 To skip embedding, pass `embed=False` to the method.
@@ -324,7 +324,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
 Moreover, you can write an adapter to load images with annotations from a custom format, see the
 [TODO](../todo) for details. -->
 
-### From a Pre-Existing Dataset
+### From an Existing Dataset
 
 Once a dataset is populated, the data is stored in a database. It can be loaded later as follows
 to skip indexing and embedding it again:
@@ -410,14 +410,14 @@ The main view shows a grid of images in your dataset. From here, you can perform
 
 Refer to dedicated pages in this documentation on every feature for more details.
 
-![Image Dataset Grid](https://storage.googleapis.com/lightly-public/studio/image_dataset_grid.png){ width="100%" }
+![Image Dataset Grid](https://storage.googleapis.com/lightly-public/studio/docs/image_dataset_grid_v1.0.0.png){ width="100%" }
 
 ### Detail View
 
 Double-clicking on an image opens the image detail view. Here you can annotate the image,
 add captions or view metadata.
 
-![Image Detail View](https://storage.googleapis.com/lightly-public/studio/image_dataset_detail.png){ width="100%" }
+![Image Detail View](https://storage.googleapis.com/lightly-public/studio/docs/image_dataset_detail_v1.0.0.png){ width="100%" }
 
 
 ## Image Dataset in the Python API

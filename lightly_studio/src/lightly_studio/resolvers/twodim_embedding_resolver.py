@@ -9,6 +9,7 @@ from lightly_mundig import TwoDimEmbedding  # type: ignore[import-untyped]
 from numpy.typing import NDArray
 from sqlmodel import Session
 
+from lightly_studio.database.db_vector import Embedding
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
 from lightly_studio.resolvers import sample_embedding_resolver
@@ -87,7 +88,9 @@ def get_twodim_embeddings(
     return x_values, y_values, sample_ids_of_samples_with_embeddings
 
 
-def _calculate_2d_embeddings(embedding_values: list[list[float]]) -> list[tuple[float, float]]:
+def _calculate_2d_embeddings(
+    embedding_values: list[Embedding],
+) -> list[tuple[float, float]]:
     n_samples = len(embedding_values)
     # For 0, 1 or 2 samples we hard-code deterministic coordinates.
     if n_samples == 0:

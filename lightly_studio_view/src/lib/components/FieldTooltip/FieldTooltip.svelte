@@ -12,6 +12,17 @@
     let tooltipStyle = $state('visibility: hidden');
     const tooltipId = `field-tooltip-${Math.random().toString(36).slice(2)}`;
 
+    // Moves the node to document.body so it is not affected by CSS transforms on ancestor elements,
+    // which would otherwise break fixed positioning.
+    function portal(node: HTMLElement) {
+        document.body.appendChild(node);
+        return {
+            destroy() {
+                node.remove();
+            }
+        };
+    }
+
     $effect(() => {
         if (!visible || !wrapperEl || !tooltipEl) {
             tooltipStyle = 'visibility: hidden';
@@ -57,6 +68,7 @@
     {#if visible}
         <div
             bind:this={tooltipEl}
+            use:portal
             style={tooltipStyle}
             class="fixed z-50 w-max max-w-[220px] rounded-md bg-popover px-3 py-1.5 text-xs text-popover-foreground shadow-md"
             id={tooltipId}

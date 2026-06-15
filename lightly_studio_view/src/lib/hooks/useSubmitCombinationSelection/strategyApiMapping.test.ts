@@ -33,7 +33,12 @@ const defaultMetadataWeighting: StrategyInstance = {
 const defaultClassBalancing: StrategyInstance = {
     id: 'cb-1',
     type: 'class_balancing',
-    params: { target_distribution_mode: 'uniform', target_distribution: [], strength: 1 },
+    params: {
+        annotation_source_id: '',
+        target_distribution_mode: 'uniform',
+        target_distribution: [],
+        strength: 1
+    },
     isExpanded: true
 };
 
@@ -97,6 +102,7 @@ describe('toApiStrategy', () => {
         expect(toApiStrategy(defaultClassBalancing)).toEqual({
             strategy_name: 'balance',
             target_distribution: 'uniform',
+            annotation_source_id: null,
             strength: 1
         });
     });
@@ -107,7 +113,12 @@ describe('toApiStrategy', () => {
                 ...defaultClassBalancing,
                 params: { ...defaultClassBalancing.params, target_distribution_mode: 'input' }
             })
-        ).toEqual({ strategy_name: 'balance', target_distribution: 'input', strength: 1 });
+        ).toEqual({
+            strategy_name: 'balance',
+            target_distribution: 'input',
+            annotation_source_id: null,
+            strength: 1
+        });
     });
 
     it('maps class_balancing with dictionary source to balance strategy converting rows to object', () => {
@@ -115,6 +126,7 @@ describe('toApiStrategy', () => {
             toApiStrategy({
                 ...defaultClassBalancing,
                 params: {
+                    annotation_source_id: '',
                     target_distribution_mode: 'dictionary',
                     target_distribution: [
                         { class_name: 'cat', weight: 2 },
@@ -126,6 +138,24 @@ describe('toApiStrategy', () => {
         ).toEqual({
             strategy_name: 'balance',
             target_distribution: { cat: 2, dog: 1 },
+            annotation_source_id: null,
+            strength: 1
+        });
+    });
+
+    it('maps class_balancing with annotation source id to balance strategy with annotation_source_id', () => {
+        expect(
+            toApiStrategy({
+                ...defaultClassBalancing,
+                params: {
+                    ...defaultClassBalancing.params,
+                    annotation_source_id: 'source-uuid-1'
+                }
+            })
+        ).toEqual({
+            strategy_name: 'balance',
+            target_distribution: 'uniform',
+            annotation_source_id: 'source-uuid-1',
             strength: 1
         });
     });

@@ -24,6 +24,7 @@ export { default as SampleAnnotations } from '$lib/components/SampleAnnotations/
 export { default as ImageDetails } from '$lib/components/SampleDetails/ImageDetails.svelte';
 export { default as SampleDetailsSidePanel } from '$lib/components/SampleDetails/SampleDetailsSidePanel/SampleDetailsSidePanel.svelte';
 export { default as SampleDetailsAnnotationSourceGroup } from '$lib/components/SampleDetails/SampleDetailsAnnotationSourceGroup/SampleDetailsAnnotationSourceGroup.svelte';
+export { default as AnnotationSourcePill } from '$lib/components/AnnotationSourcePill/AnnotationSourcePill.svelte';
 export { default as SampleImage } from '$lib/components/SampleImage/index.svelte';
 export { default as Images } from '$lib/components/Images/Images.svelte';
 export { default as SelectableBox } from '$lib/components/SelectableBox/SelectableBox.svelte';
@@ -31,6 +32,7 @@ export { SettingsDialog } from '$lib/components/Settings/';
 export { default as TagsMenu } from '$lib/components/TagsMenu/TagsMenu.svelte';
 export { default as UserInfo } from '$lib/components/UserInfo/index.svelte';
 export { default as CreateSamplingDialog } from '$lib/components/Sampling/CreateSamplingDialog.svelte';
+export { default as SamplingCombinationDialog } from '$lib/components/Sampling/SamplingCombinationDialog.svelte';
 export { default as ClassifiersMenu } from '$lib/components/FewShotClassifier/ClassifiersMenu.svelte';
 export { default as CreateClassifierDialog } from '$lib/components/FewShotClassifier/CreateClassifierDialog.svelte';
 export { default as RefineClassifierDialog } from '$lib/components/FewShotClassifier/RefineClassifierDialog.svelte';

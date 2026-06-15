@@ -18,11 +18,18 @@ export const useEvaluationConfusionMatrix = (getParams: () => Params) => {
             enabled,
             queryKey: ['getEvaluationConfusionMatrix', datasetId, evaluationRunId],
             queryFn: async () => {
-                const { data } = await getEvaluationConfusionMatrix({
-                    path: { dataset_id: datasetId, evaluation_run_id: evaluationRunId },
-                    throwOnError: true
-                });
-                return data;
+                try {
+                    const { data } = await getEvaluationConfusionMatrix({
+                        path: { dataset_id: datasetId, evaluation_run_id: evaluationRunId },
+                        throwOnError: true
+                    });
+                    return data ?? null;
+                } catch (error) {
+                    if ((error as { status?: number })?.status === 501) {
+                        return null;
+                    }
+                    throw error;
+                }
             }
         };
     });

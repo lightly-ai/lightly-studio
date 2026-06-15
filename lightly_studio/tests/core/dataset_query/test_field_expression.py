@@ -4,8 +4,9 @@ from datetime import datetime, timezone
 from typing import cast
 
 import pytest
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
+from lightly_studio.core.dataset_query.field import NullableNumericalField
 from lightly_studio.core.dataset_query.field_expression import (
     ComparableFieldExpression,
     ComparisonOperator,
@@ -14,9 +15,15 @@ from lightly_studio.core.dataset_query.field_expression import (
     OrdinalOperator,
 )
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
-from tests.helpers_resolvers import create_collection, create_image
+from tests.helpers_resolvers import (
+    create_annotation,
+    create_annotation_label,
+    create_collection,
+    create_image,
+)
 
 
 class TestNumericalFieldExpression:
@@ -128,6 +135,50 @@ class TestDatetimeFieldExpression:
 
         sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
         assert "where image.created_at <= '2024-06-15 10:30:00+00:00'" in sql
+
+
+class TestNullableNumericalField:
+    def test_apply__greater_equal(self) -> None:
+        query = select(AnnotationBaseTable)
+        confidence_field = NullableNumericalField(col(AnnotationBaseTable.confidence))
+
+        expr = confidence_field >= 0.7
+        returned_query = query.where(expr.get())
+
+        sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
+        assert "where annotation_base.confidence >= 0.7" in sql
+
+    def test_operators__null_does_not_match(self, db_session: Session) -> None:
+        dataset = create_collection(session=db_session)
+        image = create_image(
+            session=db_session,
+            collection_id=dataset.collection_id,
+            file_path_abs="/path/to/test.jpg",
+            width=200,
+            height=100,
+        )
+        label = create_annotation_label(
+            session=db_session,
+            root_collection_id=dataset.collection_id,
+            label_name="cat",
+        )
+        create_annotation(
+            session=db_session,
+            collection_id=dataset.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=label.annotation_label_id,
+            annotation_type=AnnotationType.CLASSIFICATION,
+        )
+
+        confidence_field = NullableNumericalField(col(AnnotationBaseTable.confidence))
+        query = select(AnnotationBaseTable).where(
+            AnnotationBaseTable.parent_sample_id == image.sample_id
+        )
+
+        result_query = query.where((confidence_field >= 0.7).get())
+        results = db_session.exec(result_query).all()
+
+        assert results == []
 
 
 class TestStringFieldExpression:

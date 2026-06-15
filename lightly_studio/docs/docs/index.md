@@ -5,26 +5,17 @@ your data workflows from curation, annotation and management. Built with Rust fo
 efficiency, it lets you work seamlessly with datasets like COCO and ImageNet, even on a MacBook Pro
 with an M1 chip and 16 GB of memory.
 
-=== "Explore"
+<div style="width: 100%; aspect-ratio: 16 / 9; overflow: hidden;">
+  <iframe
+    style="width: 100%; height: 100%; border: 0;"
+    src="https://www.youtube.com/embed/iUS9hjI4VQ4?autoplay=1&mute=1&playsinline=1&rel=0"
+    title="LightlyStudio overview"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    referrerpolicy="strict-origin-when-cross-origin"
+    allowfullscreen
+  ></iframe>
+</div>
 
-    ![Image title](https://storage.googleapis.com/lightly-public/studio/search.gif){ width="100%"}
-    _Discover insights instantly with AI-powered search and smart filters.
-    Learn more in [Search and Filter](concepts_and_tools/search_and_filter.md)._
-
-=== "Annotate"
-
-    ![Image title](https://storage.googleapis.com/lightly-public/studio/annotate.gif){ width="100%" }
-    _Create, edit, or remove annotations directly within your dataset._
-
-=== "Embedding Plot"
-
-    ![Image title](https://storage.googleapis.com/lightly-public/studio/embedding.gif){ width="100%" }
-    _Visualize your dataset’s structure in the embedding space projected with [PaCMAP](https://github.com/YingfanWang/PaCMAP)._
-
-=== "Export"
-
-    ![Image title](https://storage.googleapis.com/lightly-public/studio/export.gif){ width="100%" }
-    _Export selected samples and annotations in your preferred format._
 
 ## Installation
 
@@ -58,6 +49,51 @@ The library is OS-independent and works on Windows, Linux, and macOS.
 
 The examples below download the required example data the first time you run them. You can also
 directly use your own image, video, or YOLO/COCO dataset.
+
+=== "COCO Object Detection"
+
+    1. Create a file named `example_coco.py` with the following contents:
+
+        ```python title="example_coco.py"
+        import lightly_studio as ls
+
+        # Download the example dataset (will be skipped if it already exists)
+        dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+
+        dataset = ls.ImageDataset.load_or_create()
+        dataset.add_samples_from_coco(
+            annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
+            images_path=f"{dataset_path}/coco_subset_128_images/images",
+        )
+        # Optional: tag a subset of samples to filter them in the GUI.
+        dataset.query()[:10].add_tag("sample_subset")
+
+        ls.start_gui()
+        ```
+
+    1. Run `python example_coco.py` in your terminal.
+    1. Click on the printed URL to open the app in your browser.
+
+=== "YOLO Object Detection"
+
+    1. Create a file named `example_yolo.py` with the following contents:
+
+        ```python title="example_yolo.py"
+        import lightly_studio as ls
+
+        # Download the example dataset (will be skipped if it already exists)
+        dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+
+        dataset = ls.ImageDataset.load_or_create()
+        dataset.add_samples_from_yolo(
+            data_yaml=f"{dataset_path}/road_signs_yolo/data.yaml",
+        )
+
+        ls.start_gui()
+        ```
+
+    1. Run `python example_yolo.py` in your terminal.
+    1. Click on the printed URL to open the app in your browser.
 
 === "Image Folder"
 
@@ -104,51 +140,11 @@ directly use your own image, video, or YOLO/COCO dataset.
     1. Run `python example_video.py` in your terminal.
     1. Click on the printed URL to open the app in your browser.
 
-=== "YOLO Object Detection"
+!!! tip
+    Call `lightly-studio gui` from the command line instead of `ls.start_gui()` in Python
+    to skip reindexing your dataset.
 
-    1. Create a file named `example_yolo.py` with the following contents:
-
-        ```python title="example_yolo.py"
-        import lightly_studio as ls
-
-        # Download the example dataset (will be skipped if it already exists)
-        dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
-
-        dataset = ls.ImageDataset.load_or_create()
-        dataset.add_samples_from_yolo(
-            data_yaml=f"{dataset_path}/road_signs_yolo/data.yaml",
-        )
-
-        ls.start_gui()
-        ```
-
-    1. Run `python example_yolo.py` in your terminal.
-    1. Click on the printed URL to open the app in your browser.
-
-=== "COCO Segmentation Mask"
-
-    1. Create a file named `example_coco.py` with the following contents:
-
-        ```python title="example_coco.py"
-        import lightly_studio as ls
-
-        # Download the example dataset (will be skipped if it already exists)
-        dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
-
-        dataset = ls.ImageDataset.load_or_create()
-        dataset.add_samples_from_coco(
-            annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
-            images_path=f"{dataset_path}/coco_subset_128_images/images",
-            annotation_type=ls.AnnotationType.SEGMENTATION_MASK,
-        )
-
-        ls.start_gui()
-        ```
-
-    1. Run `python example_coco.py` in your terminal.
-    1. Click on the printed URL to open the app in your browser.
-
-**How It Works**
+## How It Works
 
 -  Your **Python script** creates a LightlyStudio **dataset**.
 -  The `dataset.add_<samples>_from_<source>` functions read your samples and annotations, calculate
@@ -157,10 +153,6 @@ directly use your own image, video, or YOLO/COCO dataset.
 -  This server reads from `lightly_studio.db` and serves data to the **UI Application** running in
    your browser (by default `http://localhost:8001`).
 -  Images and videos are streamed from their original local folder or remote storage for display in the UI.
-
-!!! note "For Linux Users"
-    We recommend using Firefox for the best experience with embedding plots, as other browsers might
-    not render them correctly.
 
 ## Feature Overview
 
@@ -220,10 +212,14 @@ directly use your own image, video, or YOLO/COCO dataset.
 
     [![Plugins](https://storage.googleapis.com/lightly-public/studio/docs_cards/plugins.png)](concepts_and_tools/plugins.md)
 
+-   **[Model Evaluation](concepts_and_tools/evaluation.md)**
+
+    [![Model Evaluation](https://storage.googleapis.com/lightly-public/studio/docs_cards/model_evaluation.png)](concepts_and_tools/evaluation.md)
+
 </div>
 
 ## Python API
 
-LightlyStudio has a powerful [Python interface](api/index.md). You can not only index datasets but
+LightlyStudio has a powerful [Python interface](api/dataset.md). You can not only index datasets but
 also query and manipulate them using code. It supports local and cloud-hosted image and video
-folders; see [Using Cloud Storage](advanced/cloud_storage.md) for setup and limitations.
+folders; see [Using Cloud Storage](dataset_setup/cloud_storage.md) for setup and limitations.

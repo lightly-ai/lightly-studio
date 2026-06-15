@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { cn } from '$lib/utils';
+    import { cn, formatConfidence } from '$lib/utils';
     import { page } from '$app/state';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
@@ -197,6 +197,14 @@
                                     class="flex w-full min-w-0 flex-1 flex-col gap-1 overflow-hidden"
                                 >
                                     <span class="truncate">{annotationLabelName}</span>
+                                    {#if annotation.confidence != null}
+                                        {@const formattedConfidence = formatConfidence(
+                                            annotation.confidence
+                                        )}
+                                        <span class="text-xs text-muted-foreground"
+                                            >Confidence: {formattedConfidence}</span
+                                        >
+                                    {/if}
                                 </div>
                             {/if}
                         </div>
@@ -208,7 +216,9 @@
                     <div class="flex shrink-0 gap-3">
                         {#if $isEditingMode && annotation.annotation_type != 'object_detection'}
                             {#if isLocked}
-                                <Tooltip content="Unlock annotation">
+                                <Tooltip
+                                    content="Unlock annotation. Allows new brush strokes to paint over this mask again."
+                                >
                                     <Lock
                                         class="size-4 text-muted-foreground"
                                         onclick={(e) => {
@@ -218,7 +228,9 @@
                                     />
                                 </Tooltip>
                             {:else}
-                                <Tooltip content="Lock annotation">
+                                <Tooltip
+                                    content="Lock annotation. Locked masks are protected: new brush strokes won't paint over or modify them."
+                                >
                                     <Unlock
                                         class="size-4"
                                         onclick={(e) => {

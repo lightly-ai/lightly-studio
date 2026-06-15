@@ -5,24 +5,29 @@
     import { STRATEGY_OPTIONS, type StrategyType } from '$lib/hooks/useStrategyBuilder';
 
     interface Props {
+        diversityDisabledReason?: string;
         similarityDisabledReason?: string;
         metadataWeightingDisabledReason?: string;
         classBalancingDisabledReason?: string;
         onAdd: (type: StrategyType) => void;
     }
     let {
+        diversityDisabledReason,
         similarityDisabledReason,
         metadataWeightingDisabledReason,
         classBalancingDisabledReason,
         onAdd
     }: Props = $props();
 
+    let isOpen = $state(false);
+    let selectedValue = $state<string | undefined>(undefined);
     let hoveredType = $state<StrategyType | null>(null);
     let tooltipRect = $state<DOMRect | null>(null);
     // wrapper element refs used to position the tooltip on keyboard highlight
     let itemRefs: Partial<Record<StrategyType, HTMLElement>> = {};
 
     function getDisabledReason(type: StrategyType): string | undefined {
+        if (type === 'diversity') return diversityDisabledReason;
         if (type === 'similarity') return similarityDisabledReason;
         if (type === 'metadata_weighting') return metadataWeightingDisabledReason;
         if (type === 'class_balancing') return classBalancingDisabledReason;
@@ -52,10 +57,15 @@
     triggerLabel="Add strategy"
     class="w-full"
     testId="add-strategy-button"
+    bind:value={selectedValue}
     onValueChange={(v) => {
-        if (v) onAdd(v as StrategyType);
+        if (v) {
+            onAdd(v as StrategyType);
+            selectedValue = undefined;
+        }
     }}
     onOpenChange={(open) => {
+        isOpen = open;
         if (!open) handleMouseLeave();
     }}
 >
@@ -93,7 +103,7 @@
     {/snippet}
 </Select>
 
-{#if hoveredType && tooltipRect && hoveredStrategy}
+{#if isOpen && hoveredType && tooltipRect && hoveredStrategy}
     <Portal>
         <div
             id="strategy-tooltip-{hoveredType}"

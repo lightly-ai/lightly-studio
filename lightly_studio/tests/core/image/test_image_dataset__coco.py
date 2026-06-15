@@ -15,6 +15,7 @@ from lightly_studio.models.annotation.object_detection import ObjectDetectionAnn
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
+    annotation_resolver,
     collection_resolver,
 )
 
@@ -491,6 +492,55 @@ class TestDataset:
             )
         )
         assert covered == {s.sample_id for s in samples}
+
+    def test_add_samples_from_coco__annotation_source(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        annotations_path = tmp_path / "annotations.json"
+        annotations_path.write_text(json.dumps(get_coco_annotation_dict_valid()))
+        images_path = _create_valid_samples(tmp_path)
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_samples_from_coco(
+            annotations_json=annotations_path,
+            images_path=images_path,
+            annotation_type=AnnotationType.OBJECT_DETECTION,
+            embed=False,
+            annotation_source="ground_truth",
+        )
+
+        annotations = annotation_resolver.get_all_by_collection_name(
+            session=dataset.session,
+            collection_name="ground_truth",
+            parent_collection_id=dataset.collection_id,
+        ).annotations
+        assert len(annotations) == 2
+
+    def test_add_samples_from_coco__default_annotation_source(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        annotations_path = tmp_path / "annotations.json"
+        annotations_path.write_text(json.dumps(get_coco_annotation_dict_valid()))
+        images_path = _create_valid_samples(tmp_path)
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_samples_from_coco(
+            annotations_json=annotations_path,
+            images_path=images_path,
+            annotation_type=AnnotationType.OBJECT_DETECTION,
+            embed=False,
+        )
+
+        annotations = annotation_resolver.get_all_by_collection_name(
+            session=dataset.session,
+            collection_name="annotation",
+            parent_collection_id=dataset.collection_id,
+        ).annotations
+        assert len(annotations) == 2
 
     def test_add_samples_from_coco__relative_local_images_path_normalized_to_absolute(
         self,

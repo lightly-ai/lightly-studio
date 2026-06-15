@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pytest
 from pydantic_core._pydantic_core import ValidationError
 from sqlmodel import Session
@@ -18,6 +20,9 @@ from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsF
 from lightly_studio.resolvers.image_filter import (
     FilterDimensions,
     ImageFilter,
+)
+from lightly_studio.resolvers.image_resolver.get_all_by_collection_id import (
+    _coerce_order_value,
 )
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
@@ -806,6 +811,7 @@ def test_get_all_by_collection_id__sort_by_metadata_field_asc(db_session: Sessio
     )
 
     assert [s.file_name for s in result.samples] == ["b.png", "c.png", "a.png"]
+    assert result.order_values == [1.0, 2.0, 3.0]
 
 
 def test_get_all_by_collection_id__sort_by_width_asc(db_session: Session) -> None:
@@ -823,6 +829,7 @@ def test_get_all_by_collection_id__sort_by_width_asc(db_session: Session) -> Non
     )
 
     assert [s.width for s in result.samples] == [100, 200, 300]
+    assert result.order_values == [100.0, 200.0, 300.0]
 
 
 def test_get_all_by_collection_id__sort_by_evaluation_metric_asc(db_session: Session) -> None:
@@ -853,6 +860,7 @@ def test_get_all_by_collection_id__sort_by_evaluation_metric_asc(db_session: Ses
         image_c.sample_id,
         image_a.sample_id,
     ]
+    assert result.order_values == [1.0, 2.0, 3.0]
 
 
 def test_get_all_by_collection_id__sort_by_evaluation_metric_desc(db_session: Session) -> None:
@@ -883,6 +891,43 @@ def test_get_all_by_collection_id__sort_by_evaluation_metric_desc(db_session: Se
         image_c.sample_id,
         image_b.sample_id,
     ]
+    assert result.order_values == [3.0, 2.0, 1.0]
+
+
+def test_get_all_by_collection_id__sort_by_two_evaluation_metrics(db_session: Session) -> None:
+    # Each OrderByEvaluationMetricField owns per-instance table aliases, so both joins must be
+    # applied; the second metric breaks ties left by the first. order_values reflects the primary.
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    run, image_a = create_run_and_image(session=db_session, dataset_collection_id=collection_id)
+    image_b = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
+    )
+    image_c = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/c.png"
+    )
+
+    # score ties a and b at 1.0; rank breaks the tie so b precedes a.
+    insert_metrics(db_session, run.id, image_a.sample_id, {"score": 1.0, "rank": 2.0})
+    insert_metrics(db_session, run.id, image_b.sample_id, {"score": 1.0, "rank": 1.0})
+    insert_metrics(db_session, run.id, image_c.sample_id, {"score": 2.0, "rank": 3.0})
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        order_by=[
+            OrderByEvaluationMetricField("test_run", "score"),
+            OrderByEvaluationMetricField("test_run", "rank"),
+        ],
+    )
+
+    assert [s.sample_id for s in result.samples] == [
+        image_b.sample_id,
+        image_a.sample_id,
+        image_c.sample_id,
+    ]
+    assert result.order_values == [1.0, 1.0, 2.0]
 
 
 def test_get_all_by_collection_id__sort_by_height_asc_is_reverse_of_desc(
@@ -920,3 +965,20 @@ def test_get_all_by_collection_id__sort_by_height_asc_is_reverse_of_desc(
     desc_paths = [s.file_path_abs for s in result_desc.samples]
 
     assert asc_paths == list(reversed(desc_paths))
+    assert result_asc.order_values == [100.0, 200.0, 200.0, 300.0]
+    assert result_desc.order_values == [300.0, 200.0, 200.0, 100.0]
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (None, None),
+        (True, None),
+        (False, None),
+        (1, 1.0),
+        (1.5, 1.5),
+        ("text", None),
+    ],
+)
+def test_coerce_order_value(value: object, expected: float | None) -> None:
+    assert _coerce_order_value(value) == expected

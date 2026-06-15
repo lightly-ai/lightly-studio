@@ -16,7 +16,7 @@
         useAnnotationLabels,
         useAnnotation,
         useAnnotationLabelContext,
-        useAnnotationCollections
+        useDeleteAnnotation
     } from '$lib/hooks';
     import { page } from '$app/state';
     import type { PendingChange } from '../pendingChange';
@@ -59,10 +59,9 @@
         setAnnotationId
     } = useAnnotationLabelContext();
 
-    const labels = useAnnotationLabels(() => ({ collectionId }));
+    const { deleteAnnotation } = useDeleteAnnotation({ collectionId });
 
-    const annotationCollections = useAnnotationCollections({ collectionId });
-    const sourceNames = $derived(annotationCollections.data?.map((c) => c.name) ?? []);
+    const labels = useAnnotationLabels(() => ({ collectionId }));
 
     const activeAnnotationId = $derived.by(() => {
         if (annotationLabelContext.annotationId) return annotationLabelContext.annotationId;
@@ -98,6 +97,7 @@
             sample,
             annotations: sample.annotations,
             refetch,
+            deleteAnnotation,
             requestLabel,
             onAnnotationCreated: () => {
                 // Only refresh root collection if there were no annotations before
@@ -370,7 +370,6 @@
 <SelectClassDialog
     bind:open={$selectClassDialogOpen}
     labels={labels.data?.map((l) => l.annotation_label_name ?? '').filter(Boolean) ?? []}
-    {sourceNames}
     onConfirm={handleSelectClassDialogConfirm}
     onCancel={handleSelectClassDialogCancel}
 />

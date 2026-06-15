@@ -73,10 +73,13 @@ def read_images(
     scores: list[float | None] = (
         list(result.similarity_scores) if result.similarity_scores else [None] * len(result.samples)
     )
+    order_values: list[float | None] = (
+        list(result.order_values) if result.order_values else [None] * len(result.samples)
+    )
     return ImageViewsWithCount(
         samples=[
-            ImageView.from_image_table(image=image, similarity_score=score)
-            for image, score in zip(result.samples, scores)
+            ImageView.from_image_table(image=image, similarity_score=score, order_value=order_value)
+            for image, score, order_value in zip(result.samples, scores, order_values)
         ],
         total_count=result.total_count,
         next_cursor=result.next_cursor,

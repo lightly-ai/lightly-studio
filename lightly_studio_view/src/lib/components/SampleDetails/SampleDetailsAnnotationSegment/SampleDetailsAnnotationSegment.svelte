@@ -16,6 +16,7 @@
         areAllAnnotationsHidden,
         computeSeededHiddenIds,
         groupAnnotationsBySource,
+        isSourceGroupInitiallyOpen,
         toggleSourceVisibility
     } from './SampleDetailsAnnotationSegment.helpers';
 
@@ -56,7 +57,7 @@
     });
     const { selectAnnotation } = useAnnotationSelection();
 
-    const annotationCollectionsQuery = useAnnotationCollections({ collectionId });
+    const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
     const { selectedCollectionIds, seedSelectionIfNeeded } = useAnnotationCollectionsFilter();
 
     const annotationsSort = $derived.by(() => {
@@ -77,6 +78,12 @@
     const isGrouped = $derived(annotationSources.length > 1);
     const sourceGroups = $derived(
         isGrouped ? groupAnnotationsBySource(annotationsSort, annotationSources) : []
+    );
+
+    // Hidden set implied by the grid filter, as a derived so it's readable at mount (unlike
+    // the effect-written `annotationsIdsToHide`); drives the seed and the initial collapse.
+    const seededHiddenIds = $derived(
+        computeSeededHiddenIds(annotationsSort, $selectedCollectionIds, annotationSources)
     );
 
     // Annotations are colored by source only while multiple sources are visible,
@@ -117,11 +124,7 @@
         }
 
         seededSampleId = sampleId;
-        annotationsIdsToHide = computeSeededHiddenIds(
-            annotationsSort,
-            $selectedCollectionIds,
-            annotationSources
-        );
+        annotationsIdsToHide = new Set(seededHiddenIds);
     });
 
     const toggleAnnotationSelection = (annotationId: string) => {
@@ -229,6 +232,12 @@
                 <SampleDetailsAnnotationSourceGroup
                     name={group.name}
                     count={group.annotations.length}
+                    {sampleId}
+                    initiallyOpen={isSourceGroupInitiallyOpen(
+                        group.annotations,
+                        seededHiddenIds,
+                        annotationLabelContext.lastCreatedAnnotationId
+                    )}
                     showColorMarker={colorBySource}
                     allHidden={areAllAnnotationsHidden(group.annotations, annotationsIdsToHide)}
                     onToggleVisibility={(e) => {

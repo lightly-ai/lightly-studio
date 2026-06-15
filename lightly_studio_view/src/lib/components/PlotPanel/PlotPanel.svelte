@@ -113,6 +113,15 @@
         resetCategoryVisibility
     } = useCategoryVisibility();
 
+    // Hide-toggles are keyed by color-slot index, but the backend re-ranks slots per request
+    // (most frequent in-filter values win individual slots), so a new legend remaps those indices.
+    // Reset hidden categories whenever the legend changes — covering both filter and color-by
+    // changes — so a stale toggle can never hide a different category than the user picked.
+    $effect(() => {
+        void $colorLegend;
+        resetCategoryVisibility();
+    });
+
     const hasActiveFilter = $derived(filter !== null || activeSampleIds.length > 0);
 
     let { data: plotData, selectedSampleIds } = $derived(
@@ -307,21 +316,23 @@
                 bind:this={plotContainer}
             >
                 {#if $plotData && width >= MIN_RENDER_SIZE && height >= MIN_RENDER_SIZE}
-                    <EmbeddingView
-                        class="h-full w-full"
-                        config={embeddingConfig}
-                        {width}
-                        {height}
-                        {categoryCount}
-                        data={$plotData}
-                        {categoryColors}
-                        tooltip={null}
-                        theme={embeddingTheme}
-                        {onRangeSelection}
-                        {onViewportState}
-                        {viewportState}
-                        rangeSelection={$rangeSelection}
-                    />
+                    <div class="embedding-view h-full w-full">
+                        <EmbeddingView
+                            config={embeddingConfig}
+                            {width}
+                            {height}
+                            {categoryCount}
+                            data={$plotData}
+                            {categoryColors}
+                            tooltip={null}
+                            theme={embeddingTheme}
+                            {onRangeSelection}
+                            {onViewportState}
+                            {viewportState}
+                            rangeSelection={$rangeSelection}
+                        />
+                    </div>
+
                     <PlotPanelLegend
                         {categoryColors}
                         {includedLabel}
@@ -354,7 +365,6 @@
                 selectedKey={$selectedColorByKey}
                 onSelectedKeyChange={(key) => {
                     setSelectedColorByKey(key);
-                    resetCategoryVisibility();
                 }}
             />
             <Button
@@ -374,15 +384,15 @@
 <svelte:window onmouseup={handleMouseUp} onkeydown={onWindowKeyDown} />
 
 <style>
-    :global(.embedding-plot-wrapper button) {
+    :global(.embedding-view button) {
         width: 20px !important;
         height: 20px !important;
     }
-    :global(.embedding-plot-wrapper button svg) {
+    :global(.embedding-view button svg) {
         width: 18px !important;
         height: 18px !important;
     }
-    :global(.embedding-plot-wrapper div[style*='bottom: 0px'][style*='position: absolute']) {
+    :global(.embedding-view div[style*='bottom: 0px'][style*='position: absolute']) {
         font-size: 15px !important;
         height: 25px !important;
         line-height: 25px !important;

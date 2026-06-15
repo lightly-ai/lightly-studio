@@ -205,6 +205,30 @@ def test_to_match_expression__classification_match() -> None:
     assert "annotation_label_name = 'cat'" in sql
 
 
+def test_to_match_expression__classification_source() -> None:
+    expr = ClassificationMatchExpr(
+        subexpr=StringExpr(
+            field=FieldRef(table="classification", name="source"),
+            operator=EqualityComparisonOperator.EQ,
+            value="ground_truth",
+        )
+    )
+    sql = _to_sql(query_translation.to_match_expression(expr))
+    assert "collection.name = 'ground_truth'" in sql
+
+
+def test_to_match_expression__classification_confidence() -> None:
+    expr = ClassificationMatchExpr(
+        subexpr=OrdinalFloatExpr(
+            field=FieldRef(table="classification", name="confidence"),
+            operator=OrdinalComparisonOperator.GTE,
+            value=0.7,
+        )
+    )
+    sql = _to_sql(query_translation.to_match_expression(expr))
+    assert "annotation_base.confidence >= 0.7" in sql
+
+
 def test_to_match_expression__object_detection_match() -> None:
     subexpr = IntegerExpr(
         field=FieldRef(table="object_detection", name="width"),
@@ -218,6 +242,30 @@ def test_to_match_expression__object_detection_match() -> None:
     assert "object_detection_annotation.width > 50" in sql
 
 
+def test_to_match_expression__object_detection_source() -> None:
+    expr = ObjectDetectionMatchExpr(
+        subexpr=StringExpr(
+            field=FieldRef(table="object_detection", name="source"),
+            operator=EqualityComparisonOperator.EQ,
+            value="predictions",
+        )
+    )
+    sql = _to_sql(query_translation.to_match_expression(expr))
+    assert "collection.name = 'predictions'" in sql
+
+
+def test_to_match_expression__object_detection_confidence() -> None:
+    expr = ObjectDetectionMatchExpr(
+        subexpr=OrdinalFloatExpr(
+            field=FieldRef(table="object_detection", name="confidence"),
+            operator=OrdinalComparisonOperator.GT,
+            value=0.9,
+        )
+    )
+    sql = _to_sql(query_translation.to_match_expression(expr))
+    assert "annotation_base.confidence > 0.9" in sql
+
+
 def test_to_match_expression__segmentation_mask_match() -> None:
     subexpr = StringExpr(
         field=FieldRef(table="segmentation_mask", name="class_name"),
@@ -229,6 +277,30 @@ def test_to_match_expression__segmentation_mask_match() -> None:
     assert "exists" in sql
     assert "annotation_type = 'segmentation_mask'" in sql
     assert "annotation_label_name = 'person'" in sql
+
+
+def test_to_match_expression__segmentation_mask_source() -> None:
+    expr = SegmentationMaskMatchExpr(
+        subexpr=StringExpr(
+            field=FieldRef(table="segmentation_mask", name="source"),
+            operator=EqualityComparisonOperator.EQ,
+            value="ground_truth",
+        )
+    )
+    sql = _to_sql(query_translation.to_match_expression(expr))
+    assert "collection.name = 'ground_truth'" in sql
+
+
+def test_to_match_expression__segmentation_mask_confidence() -> None:
+    expr = SegmentationMaskMatchExpr(
+        subexpr=OrdinalFloatExpr(
+            field=FieldRef(table="segmentation_mask", name="confidence"),
+            operator=OrdinalComparisonOperator.LTE,
+            value=0.5,
+        )
+    )
+    sql = _to_sql(query_translation.to_match_expression(expr))
+    assert "annotation_base.confidence <= 0.5" in sql
 
 
 def test_to_match_expression__and() -> None:
