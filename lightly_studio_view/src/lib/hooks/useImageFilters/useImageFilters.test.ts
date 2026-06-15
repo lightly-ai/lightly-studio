@@ -5,8 +5,13 @@ import type { QueryExpr, SortFieldExpr } from '$lib/api/lightly_studio_local/typ
 import { SortDirection } from '$lib/api/lightly_studio_local/types.gen';
 
 const queryExpr = {
-    match_expr: { type: 'string_expr', field_name: 'caption', value: 'cat' }
-} as unknown as QueryExpr;
+    match_expr: {
+        type: 'string_expr',
+        field: { table: 'image', name: 'caption' },
+        operator: '==',
+        value: 'cat'
+    }
+} satisfies QueryExpr;
 
 const normalFilterParams = {
     collection_id: 'collection-1',
