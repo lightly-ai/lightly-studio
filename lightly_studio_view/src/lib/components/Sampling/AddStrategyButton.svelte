@@ -106,7 +106,7 @@
         >
             <p>{hoveredStrategy.description}</p>
             {#if hoveredDisabledReason}
-                <p class="mt-1.5 border-t border-border pt-1.5 text-destructive">
+                <p class="mt-1.5 border-t border-border pt-1.5 text-destructive-text">
                     {hoveredDisabledReason}
                 </p>
             {/if}

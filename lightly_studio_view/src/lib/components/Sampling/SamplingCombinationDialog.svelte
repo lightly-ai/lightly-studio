@@ -153,7 +153,7 @@
 
                         {#if $noSamples}
                             <p
-                                class="text-sm text-destructive"
+                                class="text-sm text-destructive-text"
                                 data-testid="selection-dialog-no-samples-warning"
                             >
                                 No samples match the current filters.
@@ -162,7 +162,7 @@
 
                         {#if $notEnoughSamples}
                             <p
-                                class="text-sm text-destructive"
+                                class="text-sm text-destructive-text"
                                 data-testid="selection-dialog-not-enough-samples-warning"
                             >
                                 Only {$filteredSampleCount} samples are available, but

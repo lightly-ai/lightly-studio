@@ -33,6 +33,7 @@
         --accent-foreground: 240 5.9% 10%;
         --destructive: 0 72.22% 50.59%;
         --destructive-foreground: 0 0% 98%;
+        --destructive-text: 0 72% 50%;
         --border: 240 5.9% 90%;
         --border-hard: 240 5.9% 90%;
         --input: 240 5.9% 90%;
@@ -58,15 +59,12 @@
         --accent-foreground: 0 0% 98%;
         --destructive: 0 62.8% 30.6%;
         --destructive-foreground: 0 85.7% 97.3%;
+        --destructive-text: 0 84% 65%;
         --border: 240 3.7% 15.9%;
         --border-hard: 223 12% 66%;
         --input: 240 3.7% 15.9%;
         --ring: 142.4 71.8% 29.2%;
     }
-}
-
-.dark .text-destructive {
-    color: hsl(0 84% 65%);
 }
 
 @layer base {
