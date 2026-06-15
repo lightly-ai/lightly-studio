@@ -30,7 +30,7 @@
                     rel="noreferrer"
                     class="text-primary underline-offset-4 hover:underline"
                 >
-                    Add annotations manually or import them from code.
+                    Label samples directly in Studio or import annotations from code.
                 </a>
             </p>
         {:else}
