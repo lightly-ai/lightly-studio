@@ -258,6 +258,27 @@ def get_backend() -> DatabaseBackend:
     return get_engine().backend
 
 
+def require_postgres_backend(session: Session) -> None:
+    """Raise unless ``session`` is bound to a PostgreSQL backend.
+
+    Some operations (dataset deep-copy and delete) are enterprise-only and are
+    implemented with PostgreSQL-specific set-based SQL; they are not supported on
+    DuckDB. The check uses the session's bind rather than the global engine so it
+    is correct in tests, which run on per-test engines that are not registered
+    globally.
+
+    Raises:
+        NotImplementedError: If the session is not bound to PostgreSQL.
+    """
+    bind = session.get_bind()
+    dialect_name = bind.dialect.name if bind is not None else None
+    if dialect_name != DatabaseBackend.POSTGRESQL.value:
+        raise NotImplementedError(
+            "This operation is only supported on the PostgreSQL backend. "
+            f"Current backend: {dialect_name or 'unknown'}."
+        )
+
+
 def _initialize_postgres_schema(
     engine: Engine,
     engine_url: str,

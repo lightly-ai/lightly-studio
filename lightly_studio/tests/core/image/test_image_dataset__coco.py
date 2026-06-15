@@ -492,6 +492,49 @@ class TestDataset:
         )
         assert covered == {s.sample_id for s in samples}
 
+    def test_add_samples_from_coco__annotation_source(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        annotations_path = tmp_path / "annotations.json"
+        annotations_path.write_text(json.dumps(get_coco_annotation_dict_valid()))
+        images_path = _create_valid_samples(tmp_path)
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_samples_from_coco(
+            annotations_json=annotations_path,
+            images_path=images_path,
+            annotation_type=AnnotationType.OBJECT_DETECTION,
+            embed=False,
+            annotation_source="ground_truth",
+        )
+
+        annotations = [a for sample in dataset for a in sample.annotations]
+        assert len(annotations) == 2
+        assert all(a.annotation_source == "ground_truth" for a in annotations)
+
+    def test_add_samples_from_coco__default_annotation_source(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        annotations_path = tmp_path / "annotations.json"
+        annotations_path.write_text(json.dumps(get_coco_annotation_dict_valid()))
+        images_path = _create_valid_samples(tmp_path)
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_samples_from_coco(
+            annotations_json=annotations_path,
+            images_path=images_path,
+            annotation_type=AnnotationType.OBJECT_DETECTION,
+            embed=False,
+        )
+
+        annotations = [a for sample in dataset for a in sample.annotations]
+        assert len(annotations) == 2
+        assert all(a.annotation_source == "annotation" for a in annotations)
+
     def test_add_samples_from_coco__relative_local_images_path_normalized_to_absolute(
         self,
         patch_collection: None,  # noqa: ARG002
