@@ -21,7 +21,7 @@ async function typeAndApply(page: Page, query: string): Promise<void> {
 
 test.describe('query editor', () => {
     test('apply query and verify filtered grid', async ({ samplesPage, page }) => {
-        await page.getByTestId('query-filter-add-button').click();
+        await page.getByTestId('side-panel-tabs-query').click();
         await expect(page.getByRole('heading', { name: 'Query Filter' })).toBeVisible();
 
         // On first open: The apply button should be enabled.
@@ -96,8 +96,8 @@ test.describe('query editor', () => {
         await page.getByRole('button', { name: 'Clear query filter' }).click();
         await refetchPromise;
 
-        // "Add query filter" button should reappear
-        await expect(page.getByTestId('query-filter-add-button')).toBeVisible();
+        // Filter chip should no longer be visible
+        await expect(page.getByTestId('query-filter-chip')).not.toBeVisible();
 
         // Grid should show at least one full page of unfiltered results
         await expect
