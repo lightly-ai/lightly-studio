@@ -57,6 +57,19 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
 
 
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Skip postgres_only tests unless the suite runs with --postgres.
+
+    The ``postgres_only`` marker is registered in ``pytest.ini``.
+    """
+    if config.getoption("--postgres"):
+        return
+    skip_marker = pytest.mark.skip(reason="postgres_only: skipped under DuckDB")
+    for item in items:
+        if "postgres_only" in item.keywords:
+            item.add_marker(skip_marker)
+
+
 def _truncate_tables(session: Session) -> None:
     """Truncate all tables in the database to reset state between tests.
 
