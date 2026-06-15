@@ -47,6 +47,7 @@
         notEnoughSamples,
         sampleCountLabel,
         isFormValid,
+        createButtonTooltip,
         isSubmitting,
         loadingMessage,
         handleFormSubmit
@@ -201,9 +202,7 @@
                         Cancel
                     </Button>
                     <Tooltip
-                        content={!$isFormValid
-                            ? 'To create a selection, add at least 1 strategy, a number of samples, and a tag name.'
-                            : ''}
+                        content={$createButtonTooltip}
                         position="top"
                         triggerClass="inline-block"
                     >
