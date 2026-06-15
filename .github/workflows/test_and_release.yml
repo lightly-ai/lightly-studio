@@ -255,11 +255,8 @@ jobs:
           make export-schema
           make export-version
 
-      - name: Install dependencies
-        working-directory: lightly_studio_view
-        run: make install
-
-      # Generates the Langium and API-client sources the unit tests import.
+      # `make build` installs deps (build: install) and generates the Langium
+      # and API-client sources the unit tests import.
       - name: Build app
         working-directory: lightly_studio_view
         run: make build
