@@ -1,12 +1,10 @@
 <script lang="ts">
-    import { Button } from '$lib/components';
     import FilterChip from '$lib/components/FilterChip/FilterChip.svelte';
     import Segment from '$lib/components/Segment/Segment.svelte';
     import {
         useImageFilters,
         type QueryExpression
     } from '$lib/hooks/useImageFilters/useImageFilters';
-    import { Pencil } from '@lucide/svelte';
 
     interface Props {
         onOpen: () => void;
@@ -23,8 +21,8 @@
     });
 </script>
 
-<Segment title="Query">
-    {#if lastQueryExpression}
+{#if lastQueryExpression}
+    <Segment title="Query">
         <FilterChip
             testId="query-filter-chip"
             checked={!!$imageQueryExpression?.query_expr_str}
@@ -54,17 +52,5 @@
                 </div>
             {/snippet}
         </FilterChip>
-    {:else}
-        <Button
-            icon={Pencil}
-            variant="outline"
-            buttonProps={{
-                onclick: onOpen,
-                'data-testid': 'query-filter-add-button',
-                class: 'w-full'
-            }}
-        >
-            Add query filter
-        </Button>
-    {/if}
-</Segment>
+    </Segment>
+{/if}
