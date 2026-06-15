@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed embedding rendering for users without WebGPU by updating `embedding-atlas` from `0.10.0` to `0.21.0`.
+- The embedding plot now greys out samples excluded by the query filter, matching the image grid.
 
 ### Security
 
