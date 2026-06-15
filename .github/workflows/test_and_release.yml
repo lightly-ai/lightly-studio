@@ -149,7 +149,6 @@ jobs:
   test-backend:
     name: Backend (${{ matrix.python }}, ${{ matrix.database }})
     needs: detect
-    # Matrix runs the Python backend unit tests. View tests live in `test-frontend`.
     if: needs.detect.outputs.backend == 'true'
     runs-on: ubuntu-latest
     strategy:
