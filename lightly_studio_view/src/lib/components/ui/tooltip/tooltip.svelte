@@ -24,6 +24,17 @@
     let triggerRect: DOMRect | null = $state(null);
     let triggerElement: HTMLElement;
 
+    // Moves the tooltip to document.body so CSS transforms on ancestor elements
+    // (e.g. dialog animations) don't break position: fixed.
+    function portal(node: HTMLElement) {
+        document.body.appendChild(node);
+        return {
+            destroy() {
+                node.remove();
+            }
+        };
+    }
+
     const updateRect = () => {
         if (!triggerElement) return;
         triggerRect = triggerElement.getBoundingClientRect();
@@ -106,8 +117,9 @@
 
     {#if showTooltip && content}
         <div
+            use:portal
             class={cn(
-                'bg-popover text-popover-foreground absolute z-50 max-w-xs rounded-md px-3 py-1.5 text-xs shadow-md',
+                'bg-popover text-popover-foreground z-50 max-w-xs rounded-md px-3 py-1.5 text-xs shadow-md',
                 className
             )}
             style={getPositionStyles()}
