@@ -57,20 +57,14 @@ describe('useImageFilters', () => {
     });
 
     describe('imageFilter query expression', () => {
-        it('includes query_expr in sample_filter when a query expression is set', () => {
+        it('includes query_expr when set and omits it when toggled off', () => {
             const { imageFilter, updateFilterParams, updateQueryExpr } = useImageFilters();
             updateFilterParams(normalFilterParams);
-            updateQueryExpr({ query_expr: queryExpr, query_expr_str: 'caption == cat' });
 
+            updateQueryExpr({ query_expr: queryExpr, query_expr_str: 'caption == cat' });
             expect(get(imageFilter)?.sample_filter?.query_expr).toEqual(queryExpr);
-        });
 
-        it('omits query_expr when the query expression is toggled off', () => {
-            const { imageFilter, updateFilterParams, updateQueryExpr } = useImageFilters();
-            updateFilterParams(normalFilterParams);
-            updateQueryExpr({ query_expr: queryExpr, query_expr_str: 'caption == cat' });
             updateQueryExpr(undefined);
-
             expect(get(imageFilter)?.sample_filter?.query_expr).toBeUndefined();
         });
     });
