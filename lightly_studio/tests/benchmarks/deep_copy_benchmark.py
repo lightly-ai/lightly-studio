@@ -36,7 +36,7 @@ from uuid import UUID
 import numpy as np
 from tqdm import tqdm
 
-from lightly_studio import db_manager
+from lightly_studio.database import db_manager
 from lightly_studio.models.collection import CollectionCreate, SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.models.image import ImageCreate
