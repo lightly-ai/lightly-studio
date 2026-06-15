@@ -23,14 +23,14 @@
     <div class="width-full space-y-2 overflow-hidden">
         {#if $annotationFilterRows.length === 0}
             <p class="text-sm text-diffuse-foreground">
-                No annotations.
+                No annotations yet.
                 <a
-                    href="https://docs.lightly.ai/studio/dataset_setup/image_dataset/"
+                    href="https://docs.lightly.ai/studio/concepts_and_tools/annotations"
                     target="_blank"
                     rel="noreferrer"
                     class="text-primary underline-offset-4 hover:underline"
                 >
-                    Learn how to add annotations.
+                    Add annotations manually or import them from code.
                 </a>
             </p>
         {:else}
