@@ -9,7 +9,8 @@ from click.testing import CliRunner
 from pytest_mock import MockerFixture
 
 import lightly_studio
-from lightly_studio import cli, db_manager
+from lightly_studio import cli
+from lightly_studio.database import db_manager
 
 
 @pytest.fixture(autouse=True)

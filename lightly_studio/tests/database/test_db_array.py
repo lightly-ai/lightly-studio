@@ -9,7 +9,7 @@ from duckdb_engine import Dialect
 from sqlalchemy.dialects import postgresql, sqlite
 from sqlmodel import Session, col, select
 
-from lightly_studio import db_array
+from lightly_studio.database import db_array
 from lightly_studio.models.sample import SampleTable
 from tests.helpers_resolvers import create_collection, create_image
 

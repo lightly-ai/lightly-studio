@@ -13,8 +13,8 @@ from sqlmodel import col
 from sqlmodel.sql.expression import SelectOfScalar
 from typing_extensions import Self, TypeVar
 
-from lightly_studio import db_json
 from lightly_studio.core.dataset_query.field import Field
+from lightly_studio.database import db_json
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.image import ImageTable

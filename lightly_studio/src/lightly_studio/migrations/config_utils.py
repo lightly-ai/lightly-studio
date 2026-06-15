@@ -6,7 +6,7 @@ from pathlib import Path
 
 from alembic.config import Config
 
-from lightly_studio import db_url
+from lightly_studio.database import db_url
 
 
 def ensure_script_location(config: Config, migrations_dir: Path) -> None:

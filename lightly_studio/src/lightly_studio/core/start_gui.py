@@ -9,8 +9,8 @@ from dataclasses import dataclass
 
 import uvicorn
 
-from lightly_studio import db_manager
 from lightly_studio.api.server import Server
+from lightly_studio.database import db_manager
 from lightly_studio.resolvers import collection_resolver, sample_resolver
 
 logger = logging.getLogger(__name__)
