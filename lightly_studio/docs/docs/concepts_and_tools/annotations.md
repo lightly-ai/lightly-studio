@@ -15,7 +15,7 @@ and [Video Dataset](../dataset_setup/video_dataset.md).
     - **Prediction**: An annotation with an optional confidence score.
     - **Annotation class**: The category of an annotation, e.g. `"dog"` or `"cat"`.
     - **Annotation source**: A named group of annotations, e.g. `ground_truth` or `model_a`.
-
+    
 
 ## Annotations in the GUI
 
@@ -145,7 +145,7 @@ or
 Predictions are represented by the same objects as annotations. The only difference is that
 predictions can include a `confidence` value and are usually stored in their own annotation source.
 
-For image datasets, the `add_annotations_from_*` methods are the easiest way to import
+For image datasets, the `add_annotations_from_*` methods are the easiest way to import 
 predictions into a named source:
 
 ```python
@@ -173,7 +173,7 @@ Supported methods:
 - [add_annotations_from_yolo](../api/dataset.md#lightly_studio.ImageDataset.add_annotations_from_yolo)
 - [add_annotations_from_labelformat](../api/dataset.md#lightly_studio.ImageDataset.add_annotations_from_labelformat)
 - [add_annotations_from_pascal_voc_segmentations](../api/dataset.md#lightly_studio.ImageDataset.add_annotations_from_pascal_voc_segmentations)
-
+ 
 If the input is a COCO prediction file, LightlyStudio reads the `score` field and stores it as
 annotation confidence.
 

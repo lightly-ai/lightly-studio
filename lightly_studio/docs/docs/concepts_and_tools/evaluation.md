@@ -44,7 +44,7 @@ summary.
     IMAGES_PATH = "path/to/your/images/"
     GROUND_TRUTH_JSON = "path/to/your/GT_annotations.json"
     PREDICTIONS_JSON = "path/to/your/pred_annotations.json"
-
+    
     dataset = ls.ImageDataset.create()
     dataset.add_images_from_path(path=IMAGES_PATH)
     # Add ground truth annotations
