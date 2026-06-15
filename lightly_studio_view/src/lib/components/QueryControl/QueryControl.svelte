@@ -22,14 +22,14 @@
 </script>
 
 {#if lastQueryExpression}
-    <Segment title="Advanced filters">
+    <Segment title="Query">
         <FilterChip
             testId="query-filter-chip"
             checked={!!$imageQueryExpression?.query_expr_str}
-            title="Advanced filters"
+            title="Query Filter"
             checkboxLabel={$imageQueryExpression?.query_expr_str
-                ? 'Disable advanced filters'
-                : 'Enable advanced filters'}
+                ? 'Disable query filter'
+                : 'Enable query filter'}
             onCheckedChange={(v) => {
                 if (v) {
                     updateQueryExpr(lastQueryExpression!);
