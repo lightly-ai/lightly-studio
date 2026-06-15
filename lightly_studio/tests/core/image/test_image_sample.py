@@ -559,6 +559,60 @@ class TestImageSample:
         assert dog_ann.width == 30
         assert dog_ann.height == 40
 
+    def test_add_annotation__annotation_source(
+        self,
+        db_session: Session,
+    ) -> None:
+        collection = create_collection(session=db_session)
+        image_table = create_image(
+            session=db_session,
+            collection_id=collection.collection_id,
+        )
+        image = ImageSample(inner=image_table)
+
+        # Add annotations with and without an explicit annotation source.
+        image.add_annotation(CreateClassification(class_name="cat", confidence=0.75))
+        image.add_annotation(
+            CreateClassification(class_name="dog", confidence=0.9),
+            annotation_source="model-v1",
+        )
+
+        annotations = image.annotations
+        assert len(annotations) == 2
+        cat_ann = next(a for a in annotations if a.class_name == "cat")
+        dog_ann = next(a for a in annotations if a.class_name == "dog")
+
+        # Without an explicit source, the default source is used.
+        assert cat_ann.annotation_source == "annotation"
+        assert cat_ann.confidence == pytest.approx(0.75)
+        assert dog_ann.annotation_source == "model-v1"
+        assert dog_ann.confidence == pytest.approx(0.9)
+
+    def test_add_annotations__annotation_source_appends(
+        self,
+        db_session: Session,
+    ) -> None:
+        collection = create_collection(session=db_session)
+        image_table = create_image(
+            session=db_session,
+            collection_id=collection.collection_id,
+        )
+        image = ImageSample(inner=image_table)
+
+        # Reusing the same source name appends to the same source.
+        image.add_annotations(
+            [CreateClassification(class_name="cat")],
+            annotation_source="model-v1",
+        )
+        image.add_annotations(
+            [CreateObjectDetection(class_name="dog", x=10, y=20, width=30, height=40)],
+            annotation_source="model-v1",
+        )
+
+        annotations = image.annotations
+        assert len(annotations) == 2
+        assert all(a.annotation_source == "model-v1" for a in annotations)
+
     def test_delete_annotation(
         self,
         db_session: Session,

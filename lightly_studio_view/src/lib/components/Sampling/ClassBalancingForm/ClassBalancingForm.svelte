@@ -3,6 +3,7 @@
     import { type BalancingMode } from '$lib/components/Sampling/balancingMode';
     import AnnotationSourceSelect from '$lib/components/AnnotationSourceSelect/AnnotationSourceSelect.svelte';
     import BalancingModeSelect from './BalancingModeSelect.svelte';
+    import { Label } from '$lib/components/ui/label';
 
     interface Props {
         balancingMode: BalancingMode;
@@ -30,8 +31,14 @@
 
 <BalancingModeSelect {balancingMode} {onBalancingModeChange} />
 
-<AnnotationSourceSelect
-    {sourceOptions}
-    selectedSource={annotationSourceId}
-    onSelect={onAnnotationSourceChange}
-/>
+<div class="grid grid-cols-4 items-center gap-4">
+    <Label for="annotation-source" class="text-right text-foreground">Annotation Source</Label>
+    <div class="col-span-3">
+        <AnnotationSourceSelect
+            id="annotation-source"
+            {sourceOptions}
+            selectedSource={annotationSourceId}
+            onSelect={onAnnotationSourceChange}
+        />
+    </div>
+</div>
