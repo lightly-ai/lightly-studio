@@ -8,6 +8,8 @@ Manual performance benchmarks for Lightly Studio. Each script is standalone and 
   performance at the database layer.
 - [Deep-copy benchmark](#deep-copy-benchmark) — measure collection deep-copy time and peak
   memory at enterprise scale.
+- [Delete-dataset benchmark](#delete-dataset-benchmark) — measure dataset delete time and peak
+  memory at enterprise scale.
 
 ## GUI benchmark
 
@@ -178,6 +180,58 @@ scale `--generate` toward 1M+ for the enterprise target.
 | `--generate N` | — | Generate N images with embeddings, then copy them |
 | `--collection-name NAME` | — | Copy an existing root collection instead (mutually exclusive with `--generate`) |
 | `--copy-name NAME` | `deep_copy_benchmark_copy` | Name for the copied root collection (must not already exist) |
+| `--embedding-dim` | 512 | Embedding vector dimensionality (generate mode) |
+| `--batch-size` | 5 000 | Generation batch size |
+| `--seed` | 0 | Random seed for reproducibility |
+
+## Delete-dataset benchmark
+
+A script that times `dataset_resolver.delete_dataset` and reports wall-clock time and **peak Python
+allocation**. `delete_dataset` is enterprise-only and runs server-side via subquery-scoped
+`DELETE`s in a single transaction, so it only supports PostgreSQL and peak Python memory should stay
+low (a few MiB) regardless of dataset size — that is the key signal that no rows are materialized in
+Python.
+
+It has two modes: generate a synthetic dataset of images with embeddings and delete it, or delete an
+existing root collection by name (e.g. the COCO demo on an enterprise database, which also exercises
+the annotation/video/evaluation delete paths).
+
+### Running the benchmark
+
+From the `lightly_studio` directory, against a running Postgres:
+
+```bash
+make start-postgres
+uv run tests/benchmarks/delete_dataset_benchmark.py --generate 250000
+make stop-postgres
+```
+
+A quick smoke-test with a smaller dataset:
+
+```bash
+uv run tests/benchmarks/delete_dataset_benchmark.py --generate 10000
+```
+
+Delete an existing collection (uses `$LIGHTLY_STUDIO_DATABASE_URL` as-is, no cleanup):
+
+```bash
+LIGHTLY_STUDIO_DATABASE_URL=<postgres-url> \
+    uv run tests/benchmarks/delete_dataset_benchmark.py --collection-name "coco"
+```
+
+> **Warning:** `--collection-name` is destructive — it permanently deletes the named collection and
+> all its data from the configured database. Use it only against a database you are willing to mutate
+> (e.g. a throwaway copy), not one whose data you want to keep.
+
+`--generate` recreates the database at `$LIGHTLY_STUDIO_DATABASE_URL` (or the default dev URL); scale
+`--generate` toward 1M+ for the enterprise target.
+
+### Key options
+
+| Flag | Default | Description |
+|---|---|---|
+| `--generate N` | — | Generate N images with embeddings, then delete them |
+| `--collection-name NAME` | — | Permanently delete an existing root collection instead (destructive; mutually exclusive with `--generate`) |
 | `--embedding-dim` | 512 | Embedding vector dimensionality (generate mode) |
 | `--batch-size` | 5 000 | Generation batch size |
 | `--seed` | 0 | Random seed for reproducibility |
