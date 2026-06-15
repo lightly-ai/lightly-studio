@@ -86,6 +86,11 @@ class TestDataset:
         )
         assert len(result.annotations) == 2
 
+        # The annotation source is readable on each annotation.
+        sample_annotations = [a for sample in dataset for a in sample.annotations]
+        assert len(sample_annotations) == 2
+        assert all(a.annotation_source == "ground_truth" for a in sample_annotations)
+
         cov_id = collection_resolver.get_or_create_child_collection(
             session=dataset.session,
             collection_id=dataset.collection_id,

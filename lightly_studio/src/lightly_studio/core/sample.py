@@ -259,19 +259,29 @@ class Sample(ABC):
                 annotations.append(Annotation(annotation_base=annotation))
         return annotations
 
-    def add_annotation(self, annotation: CreateAnnotation) -> None:
+    def add_annotation(
+        self, annotation: CreateAnnotation, annotation_source: str | None = None
+    ) -> None:
         """Add an annotation to this sample.
 
         Args:
             annotation: The annotation to add.
+            annotation_source: Name of the annotation source to add the annotation to.
+                Reusing the same source name appends to that source. If `None`, a
+                default source is used.
         """
-        self.add_annotations(annotations=[annotation])
+        self.add_annotations(annotations=[annotation], annotation_source=annotation_source)
 
-    def add_annotations(self, annotations: Iterable[CreateAnnotation]) -> None:
+    def add_annotations(
+        self, annotations: Iterable[CreateAnnotation], annotation_source: str | None = None
+    ) -> None:
         """Add annotations to this sample.
 
         Args:
             annotations: The annotations to add.
+            annotation_source: Name of the annotation source to add the annotations to.
+                Reusing the same source name appends to that source. If `None`, a
+                default source is used.
         """
         session = self.get_object_session()
         collection = collection_resolver.get_by_id(
@@ -293,6 +303,7 @@ class Sample(ABC):
             session=session,
             parent_collection_id=self.collection_id,
             annotations=annotation_creates,
+            collection_name=annotation_source,
         )
 
     def delete_annotation(self, annotation: Annotation) -> None:
