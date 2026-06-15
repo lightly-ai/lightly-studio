@@ -30,20 +30,17 @@
     };
 </script>
 
-<div
-    class="flex h-full min-w-0 flex-1 flex-col rounded-[1vw] bg-card p-4"
-    data-testid="query-editor-panel"
->
+<div class="flex h-full min-w-0 flex-1 flex-col rounded-[1vw] bg-card p-4">
     <div class="mb-3 min-w-0">
         <div class="flex items-center justify-between">
             <Typography variant="h5" component="h2" className="text-foreground"
-                >Advanced filters</Typography
+                >Query Filter</Typography
             >
             <Button
                 variant="ghost"
                 size="icon"
                 onclick={onClose}
-                aria-label="Close advanced filters panel"
+                aria-label="Close query filter panel"
                 class="h-8 w-8"
                 data-testid="query-editor-close-button"
             >

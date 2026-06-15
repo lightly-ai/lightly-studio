@@ -2,12 +2,11 @@
     import { Button } from '$lib/components';
     import FilterChip from '$lib/components/FilterChip/FilterChip.svelte';
     import Segment from '$lib/components/Segment/Segment.svelte';
-    import Tooltip from '$lib/components/ui/tooltip/tooltip.svelte';
     import {
         useImageFilters,
         type QueryExpression
     } from '$lib/hooks/useImageFilters/useImageFilters';
-    import { ListFilterPlus } from '@lucide/svelte';
+    import { Pencil } from '@lucide/svelte';
 
     interface Props {
         onOpen: () => void;
@@ -24,15 +23,15 @@
     });
 </script>
 
-<Segment title="Advanced filters">
+<Segment title="Query">
     {#if lastQueryExpression}
         <FilterChip
             testId="query-filter-chip"
             checked={!!$imageQueryExpression?.query_expr_str}
-            title="Advanced filters"
+            title="Query Filter"
             checkboxLabel={$imageQueryExpression?.query_expr_str
-                ? 'Disable advanced filters'
-                : 'Enable advanced filters'}
+                ? 'Disable query filter'
+                : 'Enable query filter'}
             onCheckedChange={(v) => {
                 if (v) {
                     updateQueryExpr(lastQueryExpression!);
@@ -56,22 +55,16 @@
             {/snippet}
         </FilterChip>
     {:else}
-        <Tooltip
-            content="Write a query to filter with conditions the simple filters can't express: e.g. images that contain both a cat AND a dog. Combine annotation classes, image properties, and tags with AND, OR, and NOT."
-            position="right"
-            triggerClass="block w-full"
+        <Button
+            icon={Pencil}
+            variant="outline"
+            buttonProps={{
+                onclick: onOpen,
+                'data-testid': 'query-filter-add-button',
+                class: 'w-full'
+            }}
         >
-            <Button
-                icon={ListFilterPlus}
-                variant="outline"
-                buttonProps={{
-                    onclick: onOpen,
-                    'data-testid': 'query-filter-add-button',
-                    class: 'w-full'
-                }}
-            >
-                Create advanced filters
-            </Button>
-        </Tooltip>
+            Add query filter
+        </Button>
     {/if}
 </Segment>
