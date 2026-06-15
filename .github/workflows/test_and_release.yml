@@ -134,14 +134,11 @@ jobs:
           make export-schema
           make export-version
 
-      - name: Install dependencies
-        working-directory: lightly_studio_view
-        run:  make install
-      
+      # `make build` installs deps (build: install) before building.
       - name: Build app to get svelte types
         working-directory: lightly_studio_view
         run:  make build
-      
+
       - name: Make static checks
         working-directory: lightly_studio_view
         run: make static-checks
