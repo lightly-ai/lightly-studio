@@ -22,7 +22,7 @@ class ObjectTrackTable(SQLModel, table=True):
     object_track_number: int
 
     # The dataset the object track belongs to.
-    dataset_id: UUID = Field(foreign_key="dataset.dataset_id")
+    dataset_id: UUID = Field(foreign_key="dataset.dataset_id", index=True)
 
 
 class ObjectTrackView(BaseModel):

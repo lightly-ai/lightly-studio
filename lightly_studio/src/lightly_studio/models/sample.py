@@ -16,14 +16,16 @@ class SampleTagLinkTable(SQLModel, table=True):
     sample_id: Optional[UUID] = Field(
         default=None, foreign_key="sample.sample_id", primary_key=True
     )
-    tag_id: Optional[UUID] = Field(default=None, foreign_key="tag.tag_id", primary_key=True)
+    tag_id: Optional[UUID] = Field(
+        default=None, foreign_key="tag.tag_id", primary_key=True, index=True
+    )
 
 
 class SampleBase(SQLModel):
     """Base class for the Sample model."""
 
     """The collection ID to which the sample belongs."""
-    collection_id: UUID = Field(default=None, foreign_key="collection.collection_id")
+    collection_id: UUID = Field(default=None, foreign_key="collection.collection_id", index=True)
 
 
 class SampleCreate(SampleBase):
