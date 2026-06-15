@@ -175,7 +175,7 @@ start-example:
 .PHONY: test
 test: build
 	@echo "Running tests..."
-	PYTHONPATH=$(PWD) uv run pytest -n 3
+	PYTHONPATH=$(PWD) uv run pytest -n auto
 
 .PHONY: test-ci
 test-ci:
