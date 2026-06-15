@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlmodel import Session
@@ -246,6 +247,7 @@ def test_has_embeddings(
     mock_get_model.assert_called_once_with(session=db_session, collection_id=col_id)
 
 
+@pytest.mark.postgres_only  # Deep copying is enterprise-only (PostgreSQL-backed).
 def test_deep_copy__success(test_client: TestClient, db_session: Session) -> None:
     """Test successful deep copy of a collection."""
     collection = create_collection(session=db_session, collection_name="original")
