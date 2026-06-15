@@ -107,7 +107,7 @@
     {#if showTooltip && content}
         <div
             class={cn(
-                'bg-popover text-popover-foreground absolute z-50 max-w-xs rounded-md px-3 py-1.5 text-xs shadow-md',
+                'bg-popover text-popover-foreground pointer-events-none absolute z-50 max-w-xs rounded-md px-3 py-1.5 text-xs shadow-md',
                 className
             )}
             style={getPositionStyles()}
