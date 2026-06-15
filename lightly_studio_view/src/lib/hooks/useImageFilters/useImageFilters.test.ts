@@ -1,8 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
 import { useImageFilters } from './useImageFilters';
-import type { SortFieldExpr } from '$lib/api/lightly_studio_local/types.gen';
+import type { QueryExpr, SortFieldExpr } from '$lib/api/lightly_studio_local/types.gen';
 import { SortDirection } from '$lib/api/lightly_studio_local/types.gen';
+
+const queryExpr = {
+    match_expr: {
+        type: 'string_expr',
+        field: { table: 'image', name: 'caption' },
+        operator: '==',
+        value: 'cat'
+    }
+} satisfies QueryExpr;
+
+const normalFilterParams = {
+    collection_id: 'collection-1',
+    mode: 'normal'
+} as Parameters<ReturnType<typeof useImageFilters>['updateFilterParams']>[0];
 
 vi.mock('../useMetadataFilters/useMetadataFilters', () => ({
     createMetadataFilters: vi.fn(() => [])
@@ -11,8 +25,9 @@ vi.mock('../useMetadataFilters/useMetadataFilters', () => ({
 describe('useImageFilters', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        const { updateFilterParams } = useImageFilters();
+        const { updateFilterParams, updateQueryExpr } = useImageFilters();
         updateFilterParams({} as Parameters<typeof updateFilterParams>[0]);
+        updateQueryExpr(undefined);
     });
 
     describe('updateSortBy', () => {
@@ -38,6 +53,19 @@ describe('useImageFilters', () => {
             updateSortBy(null);
 
             expect(get(imageSortBy)).toBeNull();
+        });
+    });
+
+    describe('imageFilter query expression', () => {
+        it('includes query_expr when set and omits it when toggled off', () => {
+            const { imageFilter, updateFilterParams, updateQueryExpr } = useImageFilters();
+            updateFilterParams(normalFilterParams);
+
+            updateQueryExpr({ query_expr: queryExpr, query_expr_str: 'caption == cat' });
+            expect(get(imageFilter)?.sample_filter?.query_expr).toEqual(queryExpr);
+
+            updateQueryExpr(undefined);
+            expect(get(imageFilter)?.sample_filter?.query_expr).toBeUndefined();
         });
     });
 });
