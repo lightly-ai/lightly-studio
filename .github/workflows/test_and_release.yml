@@ -252,8 +252,7 @@ jobs:
           make export-schema
           make export-version
 
-      # `make build` installs deps (build: install) and generates the Langium
-      # and API-client sources the unit tests import.
+      # `make build` installs deps (build: install) before building.
       - name: Build app
         working-directory: lightly_studio_view
         run: make build
