@@ -204,6 +204,8 @@ describe('BrushTool component', () => {
         const { container } = render(BrushTool);
 
         const finishButton = getByLabelText(container, 'Finish');
+        expect(finishButton).toBeEnabled();
+
         await fireEvent.click(finishButton);
 
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
