@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 
 import numpy as np
 import pytest
+from pydantic import ValidationError
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
@@ -129,6 +130,12 @@ def test_sampling_via_database__embedding_deduplication(
         for j in selected_positions:
             if i != j:
                 assert np.sqrt(2) * abs(i - j) >= 5.0
+
+
+def test_embedding_deduplication_strategy__rejects_negative_minimum_distance() -> None:
+    """The deduplication strategy rejects a negative minimum distance."""
+    with pytest.raises(ValidationError):
+        EmbeddingDeduplicationStrategy(stopping_condition_minimum_distance=-0.1)
 
 
 def test_sampling_via_database__multi_embedding_diversity(

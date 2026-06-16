@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 AnnotationsClassName = str
 AnnotationClassToTarget = dict[AnnotationsClassName, float]
@@ -44,7 +44,7 @@ class EmbeddingDeduplicationStrategy(SamplingStrategy):
 
     strategy_name: Literal["deduplication"] = "deduplication"
     embedding_model_name: str | None = None
-    stopping_condition_minimum_distance: float
+    stopping_condition_minimum_distance: float = Field(ge=0)
 
 
 class EmbeddingSimilarityStrategy(SamplingStrategy):
