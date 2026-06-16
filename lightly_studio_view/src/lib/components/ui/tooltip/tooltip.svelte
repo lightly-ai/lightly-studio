@@ -111,7 +111,7 @@
     tabindex={content ? 0 : undefined}
     role={content ? 'button' : undefined}
     aria-label={ariaLabel}
-    aria-describedby={showTooltip ? 'tooltip' : undefined}
+    aria-describedby={showTooltip && content ? 'tooltip' : undefined}
 >
     {@render children()}
 
