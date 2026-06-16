@@ -87,7 +87,7 @@ class VideoFrameBase(SQLModel):
     frame_timestamp_s: float
 
     """The video ID to which the video frame belongs."""
-    parent_sample_id: UUID = Field(default=None, foreign_key="video.sample_id")
+    parent_sample_id: UUID = Field(default=None, foreign_key="video.sample_id", index=True)
 
     """The rotation of the encoded frame in degrees.
 
