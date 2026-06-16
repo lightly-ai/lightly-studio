@@ -160,7 +160,7 @@
                     class="w-full translate-y-1 rounded bg-primary p-1 text-center text-accent-foreground
          transition-all duration-300 ease-out
          animate-in fade-in hover:bg-primary/90
-         disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-primary"
+         disabled:pointer-events-none disabled:opacity-50"
                     type="button"
                     aria-label="Finish"
                     disabled={!canFinish}
