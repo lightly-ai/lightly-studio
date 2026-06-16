@@ -407,8 +407,7 @@ jobs:
         with:
           name: performance-metrics-${{ matrix.name }}
           path: lightly_studio_view/performance-metrics.json
-          # Only the shard that happens to run the performance test produces this file;
-          # the other general/videos shards legitimately have nothing to upload.
+          # Only the shard running the performance test produces this file.
           if-no-files-found: ignore
 
       - name: Create e2e success marker
