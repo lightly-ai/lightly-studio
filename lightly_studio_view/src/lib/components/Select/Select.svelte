@@ -23,6 +23,7 @@
     }
 
     export type SelectSize = 'xs' | 'sm' | 'md' | 'lg';
+    export type SelectVariant = 'default' | 'ghost';
 
     interface Props {
         /** List of items to render. Mutually exclusive with `children` slot. */
@@ -43,6 +44,8 @@
         open?: boolean;
         /** Trigger size. Heights align with the Button primitive. */
         size?: SelectSize;
+        /** Visual style of the trigger. `'default'` shows a bordered input; `'ghost'` is borderless. */
+        variant?: SelectVariant;
         /** Skip reserving the left padding for the selection check marker on items. */
         hideSelectionMarker?: boolean;
         /** Render items as links (uses pointer cursor instead of the default select caret). */
@@ -74,6 +77,7 @@
         disabled = false,
         open = $bindable(false),
         size = 'md',
+        variant = 'default',
         hideSelectionMarker = false,
         itemsAsLinks = false,
         class: className,
@@ -128,8 +132,9 @@
         {...selectProps}
         data-testid={testId}
         class={cn(
-            // Ghost-style: no border, no background, height matches the Button primitive
-            'm-0 flex items-center gap-2 rounded-md border-0 bg-transparent pr-2 font-normal',
+            'm-0 flex items-center justify-start gap-2 rounded-md font-normal [&>svg:last-child]:ml-auto [&>svg:last-child]:shrink-0',
+            variant === 'default' && 'border border-input bg-background px-3',
+            variant === 'ghost' && 'border-0 bg-transparent pr-2',
             triggerSizeClass[size],
             'text-foreground hover:bg-accent hover:text-accent-foreground',
             'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
