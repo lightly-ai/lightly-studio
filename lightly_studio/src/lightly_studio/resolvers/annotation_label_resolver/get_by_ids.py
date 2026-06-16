@@ -7,7 +7,7 @@ from uuid import UUID
 
 from sqlmodel import Session, col, select
 
-from lightly_studio import db_array
+from lightly_studio.database import db_array
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 
 

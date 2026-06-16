@@ -10,8 +10,8 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlmodel import SQLModel
 
-from lightly_studio import db_migrations, db_url
-from lightly_studio.db_manager import DatabaseEngine
+from lightly_studio.database import db_migrations, db_url
+from lightly_studio.database.db_manager import DatabaseEngine
 
 _POSTGRES_URL = "postgresql://localhost/db"
 

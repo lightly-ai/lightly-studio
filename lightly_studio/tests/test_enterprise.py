@@ -8,7 +8,8 @@ import pytest
 import requests
 from pytest_mock import MockerFixture, MockType
 
-from lightly_studio import db_manager, enterprise
+from lightly_studio import enterprise
+from lightly_studio.database import db_manager
 
 
 @pytest.fixture(autouse=True)

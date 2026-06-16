@@ -9,8 +9,8 @@ import fsspec
 from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
-from lightly_studio import db_manager
 from lightly_studio.api.routes.api import status
+from lightly_studio.database import db_manager
 from lightly_studio.models import video
 
 app_router = APIRouter(prefix="/videos/media")

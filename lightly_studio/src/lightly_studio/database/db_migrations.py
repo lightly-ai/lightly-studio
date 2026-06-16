@@ -17,7 +17,7 @@ from sqlalchemy import inspect
 from sqlalchemy.engine import Engine, Inspector
 
 import lightly_studio.api.db_tables  # noqa: F401
-from lightly_studio import db_url
+from lightly_studio.database import db_url
 from lightly_studio.migrations.config_utils import ensure_script_location, find_alembic_ini
 
 
@@ -76,9 +76,11 @@ def get_alembic_config(engine_url: str) -> Config:
 
 def _base_config() -> Config:
     """Load alembic.ini and point it at the migrations package."""
-    package_dir = Path(__file__).resolve().parent
+    # db_migrations.py lives in the `database` subpackage, so go up one level to
+    # reach the package root where alembic.ini and the migrations package live.
+    package_dir = Path(__file__).resolve().parent.parent
     alembic_config = Config(str(find_alembic_ini(package_dir=package_dir)))
-    migrations_dir = Path(__file__).resolve().parent / "migrations"
+    migrations_dir = package_dir / "migrations"
     ensure_script_location(config=alembic_config, migrations_dir=migrations_dir)
     return alembic_config
 

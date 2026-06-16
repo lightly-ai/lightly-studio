@@ -11,9 +11,9 @@ from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.orm.interfaces import LoaderOption
 from sqlmodel import Session, col, func, select
 
-from lightly_studio import db_array
 from lightly_studio.api.routes.api.frame import build_frame_view
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.database import db_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.sample import SampleTable, SampleView
 from lightly_studio.models.video import (

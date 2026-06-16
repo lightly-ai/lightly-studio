@@ -115,8 +115,7 @@
                                 {/each}
                                 <span class="flex items-center gap-1 text-xs text-muted-foreground">
                                     <Info class="size-3 shrink-0" />
-                                    Strategies are scored and combined simultaneously using their strength
-                                    weights - the order shown here does not affect the result.
+                                    The order of strategies does not affect the result.
                                 </span>
                             </div>
                         {/if}

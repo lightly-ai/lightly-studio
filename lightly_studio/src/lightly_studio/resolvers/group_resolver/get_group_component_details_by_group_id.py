@@ -6,7 +6,7 @@ from uuid import UUID
 
 from sqlmodel import Session, col, select
 
-from lightly_studio import db_array
+from lightly_studio.database import db_array
 from lightly_studio.models.collection import CollectionTable, ComponentCollectionView
 from lightly_studio.models.group import GroupComponentView
 from lightly_studio.resolvers import group_resolver, image_resolver, video_resolver

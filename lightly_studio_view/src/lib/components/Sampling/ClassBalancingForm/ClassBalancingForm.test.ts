@@ -60,4 +60,24 @@ describe('ClassBalancingForm', () => {
         expect(inputOption).toHaveAttribute('data-disabled');
         expect(inputOption).toHaveTextContent('Input (Coming soon)');
     });
+
+    it('wires the annotation source label to the select trigger', () => {
+        render(ClassBalancingForm, {
+            props: {
+                balancingMode: 'uniform',
+                annotationCollections: [
+                    {
+                        collection_id: 'annotation-source-1',
+                        name: 'Ground Truth'
+                    }
+                ],
+                annotationSourceId: 'annotation-source-1',
+                onBalancingModeChange: vi.fn(),
+                onAnnotationSourceChange: vi.fn()
+            }
+        });
+
+        const trigger = screen.getByTestId('annotation-source-trigger');
+        expect(screen.getByLabelText('Annotation Source')).toBe(trigger);
+    });
 });
