@@ -107,9 +107,8 @@ def _postgres_engine(postgres_url: str | None) -> Generator[DatabaseEngine | Non
 def _duckdb_engine(_use_postgres: bool) -> Generator[DatabaseEngine | None, None, None]:
     """Create a session-scoped in-memory DuckDB engine, or None under --postgres.
 
-    Each pytest-xdist worker is its own process with its own session scope, so
-    this yields exactly one in-memory DB per worker. The ~16-table schema is
-    built once per worker instead of once per test.
+    Each pytest-xdist worker is its own process, so this yields one in-memory DB
+    per worker and the schema is built once per worker rather than once per test.
     """
     if _use_postgres:
         yield None
@@ -560,8 +559,7 @@ def _truncate_tables(session: Session, backend: DatabaseBackend) -> None:
 def _truncate_tables_postgres(session: Session) -> None:
     """Reset all tables on Postgres with TRUNCATE ... CASCADE.
 
-    CASCADE handles foreign key constraints regardless of table order. Table
-    names are quoted to handle reserved words (e.g. "group").
+    CASCADE handles foreign key constraints regardless of table order.
     """
     for table in reversed(SQLModel.metadata.sorted_tables):
         session.execute(sqlalchemy.text(f'TRUNCATE TABLE "{table.name}" CASCADE'))
@@ -571,13 +569,9 @@ def _truncate_tables_postgres(session: Session) -> None:
 def _truncate_tables_duckdb(session: Session) -> None:
     """Reset all tables on DuckDB with ordered DELETEs.
 
-    DuckDB does not support TRUNCATE ... CASCADE and validates FK constraints
-    against committed state, so it deletes in child-first order
-    (``reversed(sorted_tables)``) and commits after each table, ensuring a
-    table's referencing rows are gone before its own. Self-referential tables
-    (e.g. ``collection``) are emptied leaf-by-leaf via
-    ``_delete_self_referential_table``. Table names are quoted to handle
-    reserved words (e.g. "group").
+    DuckDB has no TRUNCATE ... CASCADE and validates FK constraints against
+    committed state, so it deletes child-first and commits after each table.
+    Self-referential tables need special handling (see the helper).
     """
     for table in reversed(SQLModel.metadata.sorted_tables):
         if any(fk.column.table is table for fk in table.foreign_keys):
@@ -590,11 +584,9 @@ def _truncate_tables_duckdb(session: Session) -> None:
 def _delete_self_referential_table(session: Session, table: sqlalchemy.Table) -> None:
     """Empty a self-referential table by repeatedly deleting its leaf rows.
 
-    DuckDB validates FK constraints row-by-row and cannot delete a self-referential
-    table in one statement (surviving rows still reference deleted parents). It also
-    treats UPDATE as delete+insert, so nulling the self-FK trips the same check.
-    Instead, repeatedly delete rows that are not referenced as a parent until the
-    table is empty. Converges in ``tree depth`` rounds for an acyclic hierarchy.
+    DuckDB can't delete a self-referential table in one statement (strict FK checks),
+    and treats UPDATE as delete+insert, so even nulling the FK column does not work.
+    We delete the unreferenced rows round by round until the table is empty.
     """
     (pk_column,) = table.primary_key.columns
     self_ref_columns = [fk.parent.name for fk in table.foreign_keys if fk.column.table is table]
@@ -606,6 +598,10 @@ def _delete_self_referential_table(session: Session, table: sqlalchemy.Table) ->
     )
     count_rows = f'SELECT COUNT(*) FROM "{table.name}"'
     # duckdb-engine reports rowcount as -1, so terminate on the row count instead.
-    while session.execute(sqlalchemy.text(count_rows)).scalar_one() > 0:
+    remaining = session.execute(sqlalchemy.text(count_rows)).scalar_one()
+    while remaining > 0:
         session.execute(sqlalchemy.text(delete_leaves))
         session.commit()
+        # Check that the number of rows is decreasing.
+        previous, remaining = remaining, session.execute(sqlalchemy.text(count_rows)).scalar_one()
+        assert remaining < previous, f'"{table.name}" did not shrink; possible FK cycle'
