@@ -128,8 +128,8 @@ def _db_engine(
     """Provide the per-worker DatabaseEngine for each test.
 
     Reuses one session-scoped engine (in-memory DuckDB by default, or Postgres
-    under --postgres) and resets data between tests instead of rebuilding the
-    schema for every test.
+    under --postgres). Resets data between tests keeping the DB schema.
+    That saves the schema creation time across 1000s of tests, speeding up our CI.
     """
     engine = _postgres_engine if _use_postgres else _duckdb_engine
     assert engine is not None
@@ -557,10 +557,7 @@ def _truncate_tables(session: Session, backend: DatabaseBackend) -> None:
 
 
 def _truncate_tables_postgres(session: Session) -> None:
-    """Reset all tables on Postgres with TRUNCATE ... CASCADE.
-
-    CASCADE handles foreign key constraints regardless of table order.
-    """
+    """Reset all tables on Postgres with TRUNCATE ... CASCADE."""
     for table in reversed(SQLModel.metadata.sorted_tables):
         session.execute(sqlalchemy.text(f'TRUNCATE TABLE "{table.name}" CASCADE'))
     session.commit()
