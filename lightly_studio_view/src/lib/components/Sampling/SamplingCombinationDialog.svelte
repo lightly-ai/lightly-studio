@@ -5,6 +5,7 @@
     import StrategyCard from '$lib/components/Sampling/StrategyCard/StrategyCard.svelte';
     import FieldTooltip from '$lib/components/FieldTooltip/FieldTooltip.svelte';
     import { Button } from '$lib/components/ui/button';
+    import { Tooltip } from '$lib/components/ui/tooltip';
     import * as Dialog from '$lib/components/ui/dialog';
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
@@ -46,6 +47,7 @@
         notEnoughSamples,
         sampleCountLabel,
         isFormValid,
+        createButtonTooltip,
         isSubmitting,
         loadingMessage,
         handleFormSubmit
@@ -198,13 +200,22 @@
                     >
                         Cancel
                     </Button>
-                    <Button
-                        type="submit"
-                        disabled={!$isFormValid || $isSubmitting || $notEnoughSamples || $noSamples}
-                        data-testid="selection-dialog-submit"
+                    <Tooltip
+                        content={$createButtonTooltip}
+                        position="top"
+                        triggerClass="inline-block"
                     >
-                        {$isSubmitting ? $loadingMessage || 'Creating...' : 'Create Selection'}
-                    </Button>
+                        <Button
+                            type="submit"
+                            disabled={!$isFormValid ||
+                                $isSubmitting ||
+                                $notEnoughSamples ||
+                                $noSamples}
+                            data-testid="selection-dialog-submit"
+                        >
+                            {$isSubmitting ? $loadingMessage || 'Creating...' : 'Create Selection'}
+                        </Button>
+                    </Tooltip>
                 </Dialog.Footer>
             </form>
         </Dialog.Content>
