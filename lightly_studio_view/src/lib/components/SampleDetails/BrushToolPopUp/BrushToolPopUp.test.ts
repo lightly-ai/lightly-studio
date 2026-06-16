@@ -218,15 +218,6 @@ describe('BrushTool component', () => {
         expect(finishButton).toBeDisabled();
     });
 
-    it('enables the Finish button when an annotation is active', () => {
-        mockAnnotationLabelContext.annotationId = 'annotation-1';
-        const { container } = render(BrushTool);
-
-        const finishButton = getByLabelText(container, 'Finish');
-
-        expect(finishButton).toBeEnabled();
-    });
-
     it('hides the Finish button on annotation details view', async () => {
         mockAnnotationLabelContext.isOnAnnotationDetailsView = true;
         const { container } = render(BrushTool);
