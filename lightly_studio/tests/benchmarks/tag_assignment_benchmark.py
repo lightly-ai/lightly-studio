@@ -35,7 +35,6 @@ from uuid import UUID
 
 from sqlalchemy import func
 from sqlmodel import select
-from tqdm import tqdm
 
 from lightly_studio.database import db_manager
 from lightly_studio.models.collection import CollectionCreate, SampleType
@@ -188,12 +187,8 @@ def _run_assign_benchmark(
     tracemalloc.reset_peak()
     started = time.perf_counter()
 
-    with (
-        db_manager.session() as session,
-        tqdm(total=len(sample_ids), desc=name.capitalize(), unit=" samples") as progress,
-    ):
+    with db_manager.session() as session:
         tag_resolver.add_sample_ids_to_tag_id(session=session, tag_id=tag_id, sample_ids=sample_ids)
-        progress.update(len(sample_ids))
 
     elapsed = time.perf_counter() - started
     peak_mib = tracemalloc.get_traced_memory()[1] / _BYTES_PER_MIB
