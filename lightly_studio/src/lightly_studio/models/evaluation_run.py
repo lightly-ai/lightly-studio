@@ -26,8 +26,8 @@ class EvaluationRunBase(SQLModel):
 
     name: str
     # Foreign keys to the annotation collections containing Ground Truth and predicted annotations.
-    gt_annotation_collection_id: UUID = Field(foreign_key="collection.collection_id")
-    pred_annotation_collection_id: UUID = Field(foreign_key="collection.collection_id")
+    gt_annotation_collection_id: UUID = Field(foreign_key="collection.collection_id", index=True)
+    pred_annotation_collection_id: UUID = Field(foreign_key="collection.collection_id", index=True)
 
     task_type: EvaluationTaskType
 
