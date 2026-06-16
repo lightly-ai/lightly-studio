@@ -237,6 +237,7 @@ export function useVideoFrames({ video }: { video: VideoView }) {
             return state.reachedEnd;
         },
         loadFramesFromFrameNumber,
+        setCurrentFrame,
         loadFrameByPlaybackTime,
         loadFrames
     };

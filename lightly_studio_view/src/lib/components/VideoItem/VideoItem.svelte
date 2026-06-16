@@ -1,18 +1,17 @@
 <script lang="ts">
     import { PUBLIC_VIDEOS_MEDIA_URL } from '$env/static/public';
+    import { goto } from '$app/navigation';
     import {
         getAllFrames,
         type FrameView,
         type SampleView,
-        type VideoFrameView,
         type VideoView
     } from '$lib/api/lightly_studio_local';
-    import { routeHelpers } from '$lib/routes';
-    import { getSimilarityColor } from '$lib/utils';
-    import VideoFrameAnnotationItem from '../VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
-    import { goto } from '$app/navigation';
-    import Video from '../Video/Video.svelte';
     import { page } from '$app/state';
+    import { routeHelpers } from '$lib/routes';
+    import { getGridFrameURL, getGridThumbnailRequestSize, getSimilarityColor } from '$lib/utils';
+    import CanvasVideoPlayer from '../CanvasVideoPlayer/CanvasVideoPlayer.svelte';
+    import VideoFrameAnnotationItem from '../VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
 
     let {
         video,
@@ -26,38 +25,26 @@
         showCaption?: boolean;
     } = $props();
 
-    let videoEl: HTMLVideoElement | null = $state(null);
-
-    let currentFrame: FrameView | null = $state(null);
-
     let cursor = 0;
     let loading = false;
     let reachedEnd = false;
     const BATCH_SIZE = 50;
     let hoverTimer: ReturnType<typeof setTimeout> | null = null;
     const HOVER_DELAY = 200;
-    let isHovering = false;
-    // Start it with the initial frame
+    let isHovering = $state(false);
+    let showPreview = $state(false);
     let frames = $state<FrameView[]>(video.frame == null ? [] : [video.frame]);
 
     async function handleMouseEnter() {
         isHovering = true;
         hoverTimer = setTimeout(async () => {
-            if (showAnnotations) await loadFrames();
+            await loadFrames();
 
-            if (videoEl) {
-                if (!videoEl.getAttribute('src')) {
-                    videoEl.src = `${PUBLIC_VIDEOS_MEDIA_URL}/${video.sample_id}`;
-                }
-
-                if (videoEl.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
-                    videoEl.load();
-                    await new Promise((res) =>
-                        videoEl?.addEventListener('loadeddata', res, { once: true })
-                    );
-                }
-                if (isHovering) videoEl.play();
+            if (!isHovering) {
+                return;
             }
+
+            showPreview = true;
         }, HOVER_DELAY);
     }
 
@@ -67,13 +54,7 @@
             clearTimeout(hoverTimer);
             hoverTimer = null;
         }
-
-        if (!videoEl) return;
-
-        videoEl?.pause();
-        videoEl.currentTime = 0;
-        videoEl.removeAttribute('src');
-        videoEl.load();
+        showPreview = false;
     }
 
     const datasetId = $derived(page.params.dataset_id!);
@@ -90,14 +71,6 @@
                     sampleId: video.sample_id
                 })
             );
-        }
-    }
-
-    function onUpdate(frame: FrameView | VideoFrameView | null, index: number | null) {
-        if (!showAnnotations) return;
-        currentFrame = frame;
-        if (index != null && cursor - index < BATCH_SIZE / 2 && index != 0) {
-            loadFrames();
         }
     }
 
@@ -132,46 +105,79 @@
             return;
         }
 
-        frames = [...frames, ...newFrames];
-
+        frames = Array.from(
+            new Map([...frames, ...newFrames].map((frame) => [frame.sample_id, frame])).values()
+        );
         cursor = res?.data?.nextCursor ?? cursor + BATCH_SIZE;
 
         loading = false;
     }
-
     const caption = $derived(
         showCaption && video.sample.captions?.length ? video.sample.captions[0] : null
     );
+    const poster = $derived.by(() => {
+        const frame = frames[0];
+        if (!frame) {
+            return null;
+        }
+
+        const requestedSize = getGridThumbnailRequestSize(
+            size,
+            globalThis.window?.devicePixelRatio || 1
+        );
+
+        return getGridFrameURL({
+            sampleId: frame.sample_id,
+            quality: 'high',
+            renderedWidth: requestedSize,
+            renderedHeight: requestedSize
+        });
+    });
 </script>
 
 <div
     class="video-frame-container relative overflow-hidden rounded-lg"
     ondblclick={handleOnDoubleClick}
+    onmouseenter={handleMouseEnter}
+    onmouseleave={handleMouseLeave}
     role="img"
     style={`width: var(${video.width}); height: var(${video.height});`}
 >
-    <Video
-        bind:videoEl
-        {video}
-        {frames}
-        update={onUpdate}
-        muted={true}
-        playsinline={true}
-        preload="none"
-        {handleMouseEnter}
-        {handleMouseLeave}
-        posterSize={size}
-        className="h-full w-full cursor-pointer rounded-lg shadow-md"
-    />
-    {#if currentFrame}
-        <VideoFrameAnnotationItem
-            width={size}
-            height={size}
+    {#if showPreview && frames.length > 0}
+        <CanvasVideoPlayer
+            src={`${PUBLIC_VIDEOS_MEDIA_URL}/${video.sample_id}`}
+            {frames}
             sampleWidth={video.width}
             sampleHeight={video.height}
-            sample={currentFrame}
-            showLabel={false}
+            autoplay={true}
+            muted={true}
+            loop={true}
+            lazyLoad={true}
+            {showAnnotations}
+            className="h-full w-full cursor-pointer rounded-lg shadow-md"
         />
+    {:else if poster}
+        <div class="relative h-full w-full overflow-hidden rounded-lg shadow-md">
+            <img
+                src={poster}
+                alt={video.file_name}
+                class="h-full w-full rounded-lg object-contain"
+                draggable="false"
+            />
+            {#if showAnnotations && frames[0]}
+                <!-- Scale SVG mask opacity (0.65) down to match CanvasVideoPlayer mask opacity (0.40) -->
+                <div class="pointer-events-none absolute inset-0" style="opacity: {0.4 / 0.65}">
+                    <VideoFrameAnnotationItem
+                        width={size}
+                        height={size}
+                        sampleWidth={video.width}
+                        sampleHeight={video.height}
+                        sample={frames[0]}
+                        showLabel={false}
+                    />
+                </div>
+            {/if}
+        </div>
     {/if}
     {#if video.similarity_score !== undefined && video.similarity_score !== null}
         <div
