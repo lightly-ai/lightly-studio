@@ -10,7 +10,7 @@ import sqlmodel
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
-from lightly_studio import db_array
+from lightly_studio.database import db_array, db_insert
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.tag import TagCreate, TagTable
 from lightly_studio.utils import batching
@@ -171,13 +171,19 @@ def add_sample_ids_to_tag_id(
     tag_id: UUID,
     sample_ids: list[UUID],
 ) -> TagTable | None:
-    """Add a list of sample_ids to a tag."""
+    """Add a list of sample_ids to a tag.
+
+    Idempotent: sample ids that are already linked to the tag are skipped via
+    database-level conflict handling, and duplicate sample ids in the input are
+    deduplicated, so links are never created twice. Uses a batched bulk INSERT
+    (one statement per batch) instead of one round-trip per sample id.
+    """
     tag = get_by_id(session=session, tag_id=tag_id)
     if not tag or not tag.tag_id:
         return None
 
-    for sample_id in sample_ids:
-        session.merge(SampleTagLinkTable(sample_id=sample_id, tag_id=tag_id))
+    rows = [{"sample_id": sample_id, "tag_id": tag_id} for sample_id in set(sample_ids)]
+    db_insert.insert_ignoring_conflicts(session=session, table=SampleTagLinkTable, rows=rows)
 
     session.commit()
     session.refresh(tag)

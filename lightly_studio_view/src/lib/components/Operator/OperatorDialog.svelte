@@ -209,7 +209,7 @@
             </div>
         {:else if loadError}
             <div
-                class="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive"
+                class="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive-text"
             >
                 {loadError}
             </div>
@@ -239,7 +239,7 @@
                 {/if}
 
                 {#if executionError}
-                    <div class="text-sm text-destructive">Error: {executionError}</div>
+                    <div class="text-sm text-destructive-text">Error: {executionError}</div>
                 {/if}
                 {#if executionSuccess}
                     <div class="text-sm text-emerald-600">{executionSuccess}</div>

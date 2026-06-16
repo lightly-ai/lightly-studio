@@ -3,7 +3,7 @@
 from . import setup_logging  # noqa: F401 I001
 
 # Import db_manager for SQLModel to discover db models.
-from lightly_studio import db_manager  # noqa: F401
+from lightly_studio.database import db_manager  # noqa: F401
 
 # Import utils to expose utility functions at the package level.
 from lightly_studio import utils  # noqa: F401

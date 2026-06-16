@@ -3,13 +3,13 @@ from pathlib import Path
 import pytest
 from PIL import Image as PILImage
 
-from lightly_studio import db_manager
 from lightly_studio.core.group.group_dataset import GroupDataset
 from lightly_studio.core.group.group_sample import GroupSample
 from lightly_studio.core.image.create_image import CreateImage
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.core.video.create_video import CreateVideo
 from lightly_studio.core.video.video_sample import VideoSample
+from lightly_studio.database import db_manager
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import collection_resolver
 from tests.helpers_resolvers import create_collection

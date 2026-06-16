@@ -22,7 +22,7 @@ Development setup:
 from environs import Env
 
 import lightly_studio as ls
-from lightly_studio import db_manager
+from lightly_studio.database import db_manager
 from lightly_studio.examples.coco_plugins_demo import partial_labeling
 from lightly_studio.examples.coco_plugins_demo.lightly_train_inference_operator import (
     LightlyTrainObjectDetectionInferenceOperator,

@@ -32,7 +32,7 @@ class SampleGroupLinkTable(SQLModel, table=True):
     """Model to define links between Group and Sample One-to-Many."""
 
     sample_id: UUID = Field(foreign_key="sample.sample_id", primary_key=True)
-    parent_sample_id: UUID = Field(foreign_key="group.sample_id")
+    parent_sample_id: UUID = Field(foreign_key="group.sample_id", index=True)
 
 
 class GroupView(BaseModel):
