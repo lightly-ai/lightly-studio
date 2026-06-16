@@ -7,7 +7,7 @@ from uuid import UUID
 
 from sqlmodel import Session, col, select
 
-from lightly_studio import db_json
+from lightly_studio.database import db_json
 from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.sample import SampleTable
 

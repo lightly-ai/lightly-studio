@@ -17,7 +17,7 @@ from sqlmodel import Field
 from lightly_studio.api.routes.api import collection as collection_api
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.video.video_sample import VideoSample
-from lightly_studio.db_manager import SessionDep
+from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.export import image_dataset_export, video_dataset_export
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.export_format import ExportFormat

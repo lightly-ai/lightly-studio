@@ -6,6 +6,8 @@ Manual performance benchmarks for Lightly Studio. Each script is standalone and 
 - [GUI benchmark](#gui-benchmark) — generate a synthetic dataset and drive the GUI/API.
 - [Embedding I/O benchmark](#embedding-io-benchmark) — measure embedding insert and load
   performance at the database layer.
+- [Tag assignment benchmark](#tag-assignment-benchmark) — measure bulk tag-assignment
+  performance at the database layer.
 - [Deep-copy benchmark](#deep-copy-benchmark) — measure collection deep-copy time and peak
   memory at enterprise scale.
 - [Delete-dataset benchmark](#delete-dataset-benchmark) — measure dataset delete time and peak
@@ -135,6 +137,50 @@ uv run tests/benchmarks/embedding_io_benchmark.py --num-embeddings 10000
 | `--insert-batch-size` | 1 024 | Embeddings inserted per `create_many` call |
 | `--seed` | 0 | Random seed for reproducibility |
 | `--postgres` | off | Benchmark PostgreSQL (pgvector) instead of the temporary DuckDB |
+
+## Tag assignment benchmark
+
+A script that measures the database code path for assigning a tag to many samples:
+`tag_resolver.add_sample_ids_to_tag_id`. It reproduces the slowdown described in LIG-9850, where the
+original implementation issued one `session.merge` round-trip per sample id, so the GUI "add to tag"
+action could run for minutes on large datasets.
+
+For each phase it reports wall-clock time, throughput, and **peak Python allocation** (via
+`tracemalloc`):
+
+- **assign** — assign the tag to all samples (the main operation).
+- **reassign** — repeat the call with the same sample ids; this exercises the idempotent
+  conflict-handling path (already-tagged samples) and the script verifies that no duplicate links were
+  created.
+
+### Running the benchmark
+
+From the `lightly_studio` directory (temporary DuckDB by default):
+
+```bash
+uv run tests/benchmarks/tag_assignment_benchmark.py
+```
+
+Against PostgreSQL:
+
+```bash
+make start-postgres
+uv run tests/benchmarks/tag_assignment_benchmark.py --postgres
+make stop-postgres
+```
+
+A quick smoke-test with a smaller dataset:
+
+```bash
+uv run tests/benchmarks/tag_assignment_benchmark.py --num-samples 10000
+```
+
+### Key options
+
+| Flag | Default | Description |
+|---|---|---|
+| `--num-samples` | 100 000 | Number of samples to create and tag |
+| `--postgres` | off | Benchmark PostgreSQL instead of the temporary DuckDB |
 
 ## Deep-copy benchmark
 

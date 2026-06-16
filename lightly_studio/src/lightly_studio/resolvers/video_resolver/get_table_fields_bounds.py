@@ -8,7 +8,7 @@ from uuid import UUID
 from sqlalchemy import Select, select
 from sqlmodel import Session, col, func
 
-from lightly_studio import db_array
+from lightly_studio.database import db_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.range import FloatRange, IntRange
 from lightly_studio.models.sample import SampleTable

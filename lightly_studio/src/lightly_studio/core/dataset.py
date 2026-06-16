@@ -10,11 +10,11 @@ from uuid import UUID
 
 from typing_extensions import Self, TypeVar
 
-from lightly_studio import db_manager
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
 from lightly_studio.core.sample import Sample
+from lightly_studio.database import db_manager
 from lightly_studio.metadata import compute_similarity, compute_typicality
 from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
 from lightly_studio.resolvers import (

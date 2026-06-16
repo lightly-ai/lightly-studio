@@ -9,7 +9,7 @@ from sqlalchemy import false
 from sqlmodel import Session, and_, col, func, or_, select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from lightly_studio import db_array
+from lightly_studio.database import db_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.image import ImageTable

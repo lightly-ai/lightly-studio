@@ -15,13 +15,13 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session, SQLModel
 from testcontainers.postgres import PostgresContainer  # type: ignore[import-untyped]
 
-from lightly_studio import db_manager
 from lightly_studio.api import features
 from lightly_studio.api.app import app
+from lightly_studio.database import db_manager
+from lightly_studio.database.db_manager import DatabaseEngine
 from lightly_studio.dataset import embedding_manager
 from lightly_studio.dataset.embedding_generator import RandomEmbeddingGenerator
 from lightly_studio.dataset.embedding_manager import EmbeddingManager, EmbeddingManagerProvider
-from lightly_studio.db_manager import DatabaseEngine
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationCreate,
