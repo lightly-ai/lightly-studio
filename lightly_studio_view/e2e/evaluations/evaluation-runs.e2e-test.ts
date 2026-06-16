@@ -1,4 +1,7 @@
 import { expect, gotoFirstPage, test } from '../utils';
+import { getEvaluationRunItemTestId } from '../../src/lib/components/EvaluationRunsPanel/EvaluationRunItem/EvaluationRunItem.testIds';
+
+const ALL_SAMPLES_EVALUATION_RUN_NAME = 'evaluation-example-all-samples';
 
 test('shows evaluation run details from indexed backend data', async ({ page }) => {
     await gotoFirstPage(page);
@@ -12,11 +15,9 @@ test('shows evaluation run details from indexed backend data', async ({ page }) 
 
     await expect(page.getByTestId('evaluation-runs-panel')).toBeVisible();
     await expect(page.getByText('evaluation-example-tagged-samples')).toBeVisible();
-    await expect(page.getByText('evaluation-example-all-samples')).toBeVisible();
+    await expect(page.getByText(ALL_SAMPLES_EVALUATION_RUN_NAME)).toBeVisible();
 
-    const run = page
-        .getByTestId('evaluation-run-item')
-        .filter({ hasText: 'evaluation-example-all-samples' });
+    const run = page.getByTestId(getEvaluationRunItemTestId(ALL_SAMPLES_EVALUATION_RUN_NAME));
     await expect(run).toHaveCount(1);
 
     const confusionMatrixResponse = page.waitForResponse(
