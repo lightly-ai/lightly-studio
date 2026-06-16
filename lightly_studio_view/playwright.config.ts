@@ -46,6 +46,10 @@ export default defineConfig({
         {
             name: 'groups',
             testDir: './e2e/groups'
+        },
+        {
+            name: 'evaluations',
+            testDir: './e2e/evaluations'
         }
     ],
 
