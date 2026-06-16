@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fixed embedding rendering for users without WebGPU by updating `embedding-atlas` from `0.10.0` to `0.21.0`.
 - The query filter is now applied consistently across features that use the image filter, such as the embedding plot, sampling, and select-all.
+- Brush tool's `Finish` button gives better visual feedback when an annotation can be finished.
 
 ### Security
 
