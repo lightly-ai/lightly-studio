@@ -159,7 +159,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: General 1/2
+          - name: General 1 of 2
             index_script: index_general.py
             playwright_project: general
             shard: "1/2"
@@ -167,7 +167,7 @@ jobs:
             success_key: e2e-success-general-1
             artifact_name: Playwright Report (General 1)
             postgres: false
-          - name: General 2/2
+          - name: General 2 of 2
             index_script: index_general.py
             playwright_project: general
             shard: "2/2"
@@ -191,7 +191,7 @@ jobs:
             success_key: e2e-success-groups
             artifact_name: Playwright Report (Groups)
             postgres: false
-          - name: General Postgres 1/2
+          - name: General Postgres 1 of 2
             index_script: index_general.py
             playwright_project: general
             shard: "1/2"
@@ -199,7 +199,7 @@ jobs:
             success_key: e2e-success-general-postgres-1
             artifact_name: Playwright Report (General Postgres 1)
             postgres: true
-          - name: General Postgres 2/2
+          - name: General Postgres 2 of 2
             index_script: index_general.py
             playwright_project: general
             shard: "2/2"
@@ -407,7 +407,9 @@ jobs:
         with:
           name: performance-metrics-${{ matrix.name }}
           path: lightly_studio_view/performance-metrics.json
-          if-no-files-found: warn
+          # Only the shard that happens to run the performance test produces this file;
+          # the other general/videos shards legitimately have nothing to upload.
+          if-no-files-found: ignore
 
       - name: Create e2e success marker
         if: steps.cache-success.outputs.cache-hit != 'true'
