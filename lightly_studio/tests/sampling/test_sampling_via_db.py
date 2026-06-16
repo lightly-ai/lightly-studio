@@ -20,6 +20,7 @@ from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.sampling.mundig import Mundig
 from lightly_studio.sampling.sampling_config import (
     AnnotationClassBalancingStrategy,
+    EmbeddingDeduplicationStrategy,
     EmbeddingDiversityStrategy,
     EmbeddingSimilarityStrategy,
     SamplingConfig,
@@ -73,6 +74,61 @@ def test_sampling_via_database__embedding_diversity(
     expected_sample_paths = {"sample_0.jpg", "sample_19.jpg"}
     actual_sample_paths = {sample.file_path_abs for sample in samples_in_tag}
     assert actual_sample_paths == expected_sample_paths
+
+
+def test_sampling_via_database__embedding_deduplication(
+    db_session: Session,
+) -> None:
+    """Runs sampling with an embedding deduplication strategy.
+
+    The embeddings lie on a line at positions [i, i] for sample i, so the
+    distance between two samples is sqrt(2) * |i - j|. With a stopping condition
+    of 5.0, selection stops before reaching the requested number of samples,
+    keeping only samples that are sufficiently distant from each other.
+    """
+    collection_id = fill_db_with_samples_and_embeddings(
+        db_session, n_samples=20, embedding_model_names=["embedding_model_1"]
+    )
+
+    sampling_config = SamplingConfig(
+        collection_id=collection_id,
+        n_samples_to_select=10,
+        sampling_result_tag_name="sampling_1",
+        strategies=[
+            EmbeddingDeduplicationStrategy(
+                embedding_model_name="embedding_model_1",
+                stopping_condition_minimum_distance=5.0,
+            )
+        ],
+    )
+
+    sampling_via_database(
+        db_session, sampling_config, input_sample_ids=_all_sample_ids(db_session, collection_id)
+    )
+
+    tags = tag_resolver.get_all_by_collection_id(db_session, collection_id=collection_id)
+    assert len(tags) == 1
+    assert tags[0].name == "sampling_1"
+    samples_in_tag = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
+    ).samples
+
+    # The stopping condition halts selection before reaching the requested 10 samples.
+    assert 2 <= len(samples_in_tag) < 10
+
+    # Each selected sample i has embedding [i, i], so the distance between samples
+    # i and j is sqrt(2) * |i - j|. Deduplication guarantees that all selected
+    # samples stay at least the minimum distance (5.0) apart.
+    selected_positions = [
+        int(sample.file_path_abs.removeprefix("sample_").removesuffix(".jpg"))
+        for sample in samples_in_tag
+    ]
+    for i in selected_positions:
+        for j in selected_positions:
+            if i != j:
+                assert np.sqrt(2) * abs(i - j) >= 5.0
 
 
 def test_sampling_via_database__multi_embedding_diversity(

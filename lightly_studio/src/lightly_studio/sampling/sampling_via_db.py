@@ -30,6 +30,7 @@ from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.sampling.mundig import Mundig
 from lightly_studio.sampling.sampling_config import (
     AnnotationClassBalancingStrategy,
+    EmbeddingDeduplicationStrategy,
     EmbeddingDiversityStrategy,
     EmbeddingSimilarityStrategy,
     MetadataWeightingStrategy,
@@ -343,6 +344,16 @@ def _add_strategy_to_mundig(
                 embedding_model_name=strat.embedding_model_name,
             ),
             strength=strat.strength,
+        )
+    elif isinstance(strat, EmbeddingDeduplicationStrategy):
+        mundig.add_diversity(
+            embeddings=_get_embeddings_by_sample_ids(
+                session=session,
+                context=context,
+                embedding_model_name=strat.embedding_model_name,
+            ),
+            strength=strat.strength,
+            stopping_condition_minimum_distance=strat.stopping_condition_minimum_distance,
         )
     elif isinstance(strat, EmbeddingSimilarityStrategy):
         embeddings = _get_embeddings_by_sample_ids(

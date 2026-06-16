@@ -34,6 +34,19 @@ class EmbeddingDiversityStrategy(SamplingStrategy):
     embedding_model_name: str | None = None
 
 
+class EmbeddingDeduplicationStrategy(SamplingStrategy):
+    """Sampling strategy that removes near-duplicates based on embedding distance.
+
+    Selects samples that are spread out in embedding space and stops selecting
+    once the closest remaining sample would be nearer than
+    ``stopping_condition_minimum_distance`` to the already selected samples.
+    """
+
+    strategy_name: Literal["deduplication"] = "deduplication"
+    embedding_model_name: str | None = None
+    stopping_condition_minimum_distance: float
+
+
 class EmbeddingSimilarityStrategy(SamplingStrategy):
     """Sampling strategy based on embedding similarity to a tagged query set."""
 

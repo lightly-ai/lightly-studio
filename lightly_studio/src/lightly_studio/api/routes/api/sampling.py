@@ -15,6 +15,7 @@ from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from lightly_studio.sampling.sampling_config import (
     AnnotationClassBalancingStrategy,
+    EmbeddingDeduplicationStrategy,
     EmbeddingDiversityStrategy,
     EmbeddingSimilarityStrategy,
     MetadataWeightingStrategy,
@@ -27,6 +28,7 @@ sampling_router = APIRouter()
 Strategy = Annotated[
     Union[
         AnnotationClassBalancingStrategy,
+        EmbeddingDeduplicationStrategy,
         EmbeddingDiversityStrategy,
         EmbeddingSimilarityStrategy,
         MetadataWeightingStrategy,
