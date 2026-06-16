@@ -300,7 +300,7 @@ test('Sampling shows error toast when tag already exists', async ({ page, sample
         ).toBeVisible({ timeout: 10000 });
 
         // Close the sampling dialog to reset for the next iteration.
-        await pressButton(page, 'sampling-dialog-cancel');
+        await pressButton(page, 'selection-dialog-cancel');
     }
 });
 
