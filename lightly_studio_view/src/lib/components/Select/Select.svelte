@@ -23,7 +23,7 @@
     }
 
     export type SelectSize = 'xs' | 'sm' | 'md' | 'lg';
-    export type SelectVariant = 'default' | 'ghost';
+    type SelectVariant = 'default' | 'ghost';
 
     interface Props {
         /** List of items to render. Mutually exclusive with `children` slot. */
