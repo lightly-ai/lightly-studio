@@ -3,6 +3,7 @@
     import { SideMenu } from '$lib/components/SideMenu';
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
+    import ColorBySourceToggle from '$lib/components/ColorBySourceToggle/ColorBySourceToggle.svelte';
 
     interface Props {
         collectionId: string;
@@ -15,7 +16,7 @@
         (annotationCollectionsQuery.data ?? []).map((c) => ({ id: c.collection_id, name: c.name }))
     );
 
-    const { setSelectedCollectionIds, selectedCollectionIds, seedSelectionIfNeeded } =
+    const { setSelectedCollectionIds, selectedCollectionIds, seedSelectionIfNeeded, colorBySource, setColorBySource } =
         useAnnotationCollectionsFilter();
 
     const isEnabled = $derived(items.length > 1);
@@ -30,9 +31,10 @@
 </script>
 
 {#if isEnabled}
+    <ColorBySourceToggle colorBySource={$colorBySource} onToggle={setColorBySource} />
     <Segment title="Annotation Sources">
         <SideMenu
-            showColorMarker={$selectedCollectionIds.length > 1}
+            showColorMarker={$colorBySource}
             enableColorPicker
             {items}
             selectedItemsIds={$selectedCollectionIds}
