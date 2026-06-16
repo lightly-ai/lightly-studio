@@ -14,3 +14,4 @@ lightly_studio/.env
 dataset_examples_studio
 
 .claude/settings.local.json
+.claude/settings.json
