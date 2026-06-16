@@ -70,57 +70,6 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
             item.add_marker(skip_marker)
 
 
-def _delete_self_referential_table(session: Session, table: sqlalchemy.Table) -> None:
-    """Empty a self-referential table by repeatedly deleting its leaf rows.
-
-    DuckDB validates FK constraints row-by-row and cannot delete a self-referential
-    table in one statement (surviving rows still reference deleted parents). It also
-    treats UPDATE as delete+insert, so nulling the self-FK trips the same check.
-    Instead, repeatedly delete rows that are not referenced as a parent until the
-    table is empty. Converges in ``tree depth`` rounds for an acyclic hierarchy.
-    """
-    (pk_column,) = table.primary_key.columns
-    self_ref_columns = [fk.parent.name for fk in table.foreign_keys if fk.column.table is table]
-    parent_keys = ", ".join(f'"{column}"' for column in self_ref_columns)
-    not_null = " OR ".join(f'"{column}" IS NOT NULL' for column in self_ref_columns)
-    delete_leaves = (
-        f'DELETE FROM "{table.name}" WHERE "{pk_column.name}" NOT IN '
-        f'(SELECT {parent_keys} FROM "{table.name}" WHERE {not_null})'
-    )
-    count_rows = f'SELECT COUNT(*) FROM "{table.name}"'
-    # duckdb-engine reports rowcount as -1, so terminate on the row count instead.
-    while session.execute(sqlalchemy.text(count_rows)).scalar_one() > 0:
-        session.execute(sqlalchemy.text(delete_leaves))
-        session.commit()
-
-
-def _truncate_tables(session: Session, backend: DatabaseBackend) -> None:
-    """Reset all tables in the database to clear state between tests.
-
-    Postgres uses a single TRUNCATE ... CASCADE per table to handle foreign key
-    constraints. DuckDB does not support TRUNCATE ... CASCADE and validates FK
-    constraints against committed state, so it deletes in child-first order
-    (``reversed(sorted_tables)``) and commits after each table, ensuring a
-    table's referencing rows are gone before its own. Self-referential tables
-    (e.g. ``collection``) are emptied leaf-by-leaf via
-    ``_delete_self_referential_table``. Table names are quoted to handle
-    reserved words (e.g. "group").
-    """
-    sorted_tables = SQLModel.metadata.sorted_tables
-    if backend == DatabaseBackend.POSTGRESQL:
-        for table in reversed(sorted_tables):
-            session.execute(sqlalchemy.text(f'TRUNCATE TABLE "{table.name}" CASCADE'))
-        session.commit()
-        return
-
-    for table in reversed(sorted_tables):
-        if any(fk.column.table is table for fk in table.foreign_keys):
-            _delete_self_referential_table(session, table)
-        else:
-            session.execute(sqlalchemy.text(f'DELETE FROM "{table.name}"'))
-            session.commit()
-
-
 @pytest.fixture(scope="session")
 def _use_postgres(request: pytest.FixtureRequest) -> bool:
     """Return True when the test suite is running against Postgres."""
@@ -598,3 +547,65 @@ def patch_collection(
 
     # Create test-specific lightly_studio_active_features.
     mocker.patch.object(features, "lightly_studio_active_features", [])
+
+
+def _truncate_tables(session: Session, backend: DatabaseBackend) -> None:
+    """Reset all tables in the database to clear state between tests."""
+    if backend == DatabaseBackend.POSTGRESQL:
+        _truncate_tables_postgres(session)
+    else:
+        _truncate_tables_duckdb(session)
+
+
+def _truncate_tables_postgres(session: Session) -> None:
+    """Reset all tables on Postgres with TRUNCATE ... CASCADE.
+
+    CASCADE handles foreign key constraints regardless of table order. Table
+    names are quoted to handle reserved words (e.g. "group").
+    """
+    for table in reversed(SQLModel.metadata.sorted_tables):
+        session.execute(sqlalchemy.text(f'TRUNCATE TABLE "{table.name}" CASCADE'))
+    session.commit()
+
+
+def _truncate_tables_duckdb(session: Session) -> None:
+    """Reset all tables on DuckDB with ordered DELETEs.
+
+    DuckDB does not support TRUNCATE ... CASCADE and validates FK constraints
+    against committed state, so it deletes in child-first order
+    (``reversed(sorted_tables)``) and commits after each table, ensuring a
+    table's referencing rows are gone before its own. Self-referential tables
+    (e.g. ``collection``) are emptied leaf-by-leaf via
+    ``_delete_self_referential_table``. Table names are quoted to handle
+    reserved words (e.g. "group").
+    """
+    for table in reversed(SQLModel.metadata.sorted_tables):
+        if any(fk.column.table is table for fk in table.foreign_keys):
+            _delete_self_referential_table(session, table)
+        else:
+            session.execute(sqlalchemy.text(f'DELETE FROM "{table.name}"'))
+            session.commit()
+
+
+def _delete_self_referential_table(session: Session, table: sqlalchemy.Table) -> None:
+    """Empty a self-referential table by repeatedly deleting its leaf rows.
+
+    DuckDB validates FK constraints row-by-row and cannot delete a self-referential
+    table in one statement (surviving rows still reference deleted parents). It also
+    treats UPDATE as delete+insert, so nulling the self-FK trips the same check.
+    Instead, repeatedly delete rows that are not referenced as a parent until the
+    table is empty. Converges in ``tree depth`` rounds for an acyclic hierarchy.
+    """
+    (pk_column,) = table.primary_key.columns
+    self_ref_columns = [fk.parent.name for fk in table.foreign_keys if fk.column.table is table]
+    parent_keys = ", ".join(f'"{column}"' for column in self_ref_columns)
+    not_null = " OR ".join(f'"{column}" IS NOT NULL' for column in self_ref_columns)
+    delete_leaves = (
+        f'DELETE FROM "{table.name}" WHERE "{pk_column.name}" NOT IN '
+        f'(SELECT {parent_keys} FROM "{table.name}" WHERE {not_null})'
+    )
+    count_rows = f'SELECT COUNT(*) FROM "{table.name}"'
+    # duckdb-engine reports rowcount as -1, so terminate on the row count instead.
+    while session.execute(sqlalchemy.text(count_rows)).scalar_one() > 0:
+        session.execute(sqlalchemy.text(delete_leaves))
+        session.commit()
