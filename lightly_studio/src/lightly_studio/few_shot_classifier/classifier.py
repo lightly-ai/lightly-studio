@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Protocol, runtime_checkable
 
-from lightly_studio.db_vector import Embedding
+from lightly_studio.database.db_vector import Embedding
 
 ExportType = Literal["sklearn", "lightly"]
 

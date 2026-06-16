@@ -37,67 +37,74 @@ const extractDimensions = (dimensions?: DimensionBounds) => {
     };
 };
 
-const imageFilter = derived(filterParams, ($filterParams): ImageFilter | null => {
-    if (!$filterParams?.collection_id || !$filterParams?.mode) {
-        return null;
-    }
-
-    if ($filterParams.mode === 'classifier') {
-        return null;
-    }
-
-    const filters: ImageFilter = {
-        filter_type: 'image'
-    };
-
-    const { width, height } = extractDimensions($filterParams.filters?.dimensions);
-    if (width) {
-        filters.width = width;
-    }
-    if (height) {
-        filters.height = height;
-    }
-
-    const sampleFilter: SampleFilter = {};
-
-    const sampleIds = $filterParams.filters?.sample_ids;
-    if (sampleIds && sampleIds.length > 0) {
-        sampleFilter.sample_ids = sampleIds;
-    }
-
-    const annotationLabelIds = $filterParams.filters?.annotation_label_ids;
-    if (annotationLabelIds && annotationLabelIds.length > 0) {
-        sampleFilter.annotations_filter = {
-            filter_type: 'annotations',
-            annotation_label_ids: annotationLabelIds
-        } satisfies AnnotationsFilter;
-    }
-
-    const tagIds = $filterParams.filters?.tag_ids;
-    if (tagIds && tagIds.length > 0) {
-        sampleFilter.tag_ids = tagIds;
-    }
-
-    if ($filterParams.metadata_values) {
-        const metadataFilters = createMetadataFilters($filterParams.metadata_values);
-        if (metadataFilters.length > 0) {
-            sampleFilter.metadata_filters = metadataFilters;
-        }
-    }
-
-    if (Object.keys(sampleFilter).length > 0) {
-        filters.sample_filter = sampleFilter;
-    }
-
-    return Object.keys(filters).length > 0 ? filters : null;
-});
-
 export interface QueryExpression {
     query_expr: QueryExpr;
     query_expr_str: string;
 }
 
-const imageQueryExpression = writable<QueryExpression | null>({} as QueryExpression);
+const imageQueryExpression = writable<QueryExpression | null>(null);
+
+const imageFilter = derived(
+    [filterParams, imageQueryExpression],
+    ([$filterParams, $imageQueryExpression]): ImageFilter | null => {
+        if (!$filterParams?.collection_id || !$filterParams?.mode) {
+            return null;
+        }
+
+        if ($filterParams.mode === 'classifier') {
+            return null;
+        }
+
+        const filters: ImageFilter = {
+            filter_type: 'image'
+        };
+
+        const { width, height } = extractDimensions($filterParams.filters?.dimensions);
+        if (width) {
+            filters.width = width;
+        }
+        if (height) {
+            filters.height = height;
+        }
+
+        const sampleFilter: SampleFilter = {};
+
+        const sampleIds = $filterParams.filters?.sample_ids;
+        if (sampleIds && sampleIds.length > 0) {
+            sampleFilter.sample_ids = sampleIds;
+        }
+
+        const annotationLabelIds = $filterParams.filters?.annotation_label_ids;
+        if (annotationLabelIds && annotationLabelIds.length > 0) {
+            sampleFilter.annotations_filter = {
+                filter_type: 'annotations',
+                annotation_label_ids: annotationLabelIds
+            } satisfies AnnotationsFilter;
+        }
+
+        const tagIds = $filterParams.filters?.tag_ids;
+        if (tagIds && tagIds.length > 0) {
+            sampleFilter.tag_ids = tagIds;
+        }
+
+        if ($filterParams.metadata_values) {
+            const metadataFilters = createMetadataFilters($filterParams.metadata_values);
+            if (metadataFilters.length > 0) {
+                sampleFilter.metadata_filters = metadataFilters;
+            }
+        }
+
+        if ($imageQueryExpression?.query_expr) {
+            sampleFilter.query_expr = $imageQueryExpression.query_expr;
+        }
+
+        if (Object.keys(sampleFilter).length > 0) {
+            filters.sample_filter = sampleFilter;
+        }
+
+        return Object.keys(filters).length > 0 ? filters : null;
+    }
+);
 
 const imageSortBy = writable<SortExpr[] | null>([
     {

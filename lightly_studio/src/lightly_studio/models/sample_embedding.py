@@ -6,7 +6,7 @@ from uuid import UUID
 
 from sqlmodel import Column, Field, Relationship, SQLModel
 
-from lightly_studio.db_vector import NumpyArray, VectorType
+from lightly_studio.database.db_vector import NumpyArray, VectorType
 from lightly_studio.models.sample import SampleTable
 
 
@@ -15,7 +15,7 @@ class SampleEmbeddingBase(SQLModel):
 
     sample_id: UUID = Field(foreign_key="sample.sample_id", primary_key=True)
     embedding_model_id: UUID = Field(
-        foreign_key="embedding_model.embedding_model_id", primary_key=True
+        foreign_key="embedding_model.embedding_model_id", primary_key=True, index=True
     )
     embedding: NumpyArray = Field(sa_column=Column(VectorType()))
 

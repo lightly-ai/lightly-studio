@@ -11,10 +11,11 @@ import pytest
 import sqlmodel
 from pytest_mock import MockerFixture
 
-from lightly_studio import ImageDataset, db_manager
+from lightly_studio import ImageDataset
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByField
-from lightly_studio.db_manager import (
+from lightly_studio.database import db_manager
+from lightly_studio.database.db_manager import (
     DatabaseBackend,
     DatabaseEngine,
     _detect_backend_from_url,

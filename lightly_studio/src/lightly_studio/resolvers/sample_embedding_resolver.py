@@ -8,7 +8,7 @@ from uuid import UUID
 from sqlalchemy import String, cast, func
 from sqlmodel import Session, col, select
 
-from lightly_studio import db_vector
+from lightly_studio.database import db_vector
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
