@@ -17,8 +17,8 @@ from sqlalchemy.engine import Connection
 from sqlmodel import SQLModel
 
 import lightly_studio.api.db_tables  # noqa: F401
+from lightly_studio.database.db_vector import VectorType
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_DATABASE_URL
-from lightly_studio.db_vector import VectorType
 from lightly_studio.migrations.config_utils import (
     configure_database_url,
     ensure_script_location,

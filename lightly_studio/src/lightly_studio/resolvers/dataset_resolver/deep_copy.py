@@ -30,7 +30,7 @@ from sqlalchemy import select as sa_select
 from sqlalchemy import table as sa_table
 from sqlmodel import Session, SQLModel, col, select
 
-from lightly_studio import db_manager
+from lightly_studio.database import db_manager
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,

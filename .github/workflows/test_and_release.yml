@@ -16,8 +16,51 @@ concurrency:
 
   
 jobs:
+  detect:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      # Empty when the filter is skipped (non-PR/MG events), so `|| 'true'`
+      # runs everything. A real 'false' is non-empty and preserved.
+      backend: ${{ steps.filter.outputs.backend || 'true' }}
+      frontend: ${{ steps.filter.outputs.frontend || 'true' }}
+      docs: ${{ steps.filter.outputs.docs || 'true' }}
+    steps:
+      - name: Checkout Code # Needed for merge_group event
+        uses: actions/checkout@v6
+
+      - name: Filter changed paths
+        id: filter
+        # Other events have no base to diff; they fall back to running all jobs.
+        if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        with:
+          filters: |
+            # List paths in `lightly_studio/` to exclude triggering on docs.
+            # E2E tests and examples are included for static checks.
+            backend:
+              - '.github/workflows/test_and_release.yml'
+              - 'lightly_studio/src/**'
+              - 'lightly_studio/tests/**'
+              - 'lightly_studio/e2e-tests/**'
+              - 'lightly_studio/dataset_examples/**'
+              - 'lightly_studio/pyproject.toml'
+              - 'lightly_studio/uv.lock'
+              - 'lightly_studio/ruff.toml'
+              - 'lightly_studio/pytest.ini'
+              - 'lightly_studio/Makefile'
+              - 'lightly_studio/alembic.ini'
+            frontend:
+              - '.github/workflows/test_and_release.yml'
+              - 'lightly_studio_view/**'
+            docs:
+              - '.github/workflows/test_and_release.yml'
+              - 'lightly_studio/docs/**'
+
   check-python:
     name: Static Checks Python
+    needs: detect
+    if: needs.detect.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -53,6 +96,9 @@ jobs:
 
   check-typescript:
     name: Static Checks Typescript
+    needs: detect
+    # Backend changes can alter the exported schema/version, hence the generated TS.
+    if: needs.detect.outputs.frontend == 'true' || needs.detect.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -88,20 +134,19 @@ jobs:
           make export-schema
           make export-version
 
-      - name: Install dependencies
-        working-directory: lightly_studio_view
-        run:  make install
-      
+      # `make build` installs deps (build: install) before building.
       - name: Build app to get svelte types
         working-directory: lightly_studio_view
         run:  make build
-      
+
       - name: Make static checks
         working-directory: lightly_studio_view
         run: make static-checks
 
-  test-unit:
-    name: Unit (${{ matrix.python }}, ${{ matrix.database }})
+  test-backend:
+    name: Backend (${{ matrix.python }}, ${{ matrix.database }})
+    needs: detect
+    if: needs.detect.outputs.backend == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -109,21 +154,15 @@ jobs:
         include:
           # Postgres is only tested on 3.14 because PostgreSQL dialect/driver
           # behavior doesn't vary by Python version.
-          # View tests (lightly_studio_view) run only once because they are
-          # independent of the Python version.
-          # TODO(Mihnea, 03/2026): Extract view tests to a separate job.
           - python: "3.9"
             database: DuckDB
             make_target: test
-            run_view_tests: false
           - python: "3.14"
             database: DuckDB
             make_target: test
-            run_view_tests: true
           - python: "3.14"
             database: Postgres
             make_target: test-postgres
-            run_view_tests: false
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
@@ -168,15 +207,65 @@ jobs:
           UV_PYTHON: ${{ matrix.python }}
         run: make ${{ matrix.make_target }}
 
-      - name: Run Tests for lightly_studio_view
-        if: matrix.run_view_tests
+  test-frontend:
+    name: Frontend Tests
+    needs: detect
+    # View tests are Python-version independent, so they run in a single job
+    # instead of across the backend matrix. Backend changes can alter the
+    # exported schema (and thus the generated API client), hence `backend` too.
+    if: needs.detect.outputs.frontend == 'true' || needs.detect.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      # Authenticate to download dev versions of lightly-mundig.
+      - name: Authenticate with GCP
+        uses: 'google-github-actions/auth@v3'
+        with:
+          project_id: boris-250909
+          credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
+
+      - name: Set Up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.9"
+
+      - name: Set Up uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          version: "0.8.17"
+          python-version: "3.9"
+          enable-cache: true
+
+      - name: Install LightlyStudio dependencies
+        working-directory: lightly_studio
+        run: make install-optional-deps
+
+      # The view test suite imports the generated API client, which is built
+      # from the backend's exported schema.
+      - name: Export schema and generate version file from backend
+        working-directory: lightly_studio
+        run: |
+          make export-schema
+          make export-version
+
+      # `make build` installs deps (build: install) before building.
+      - name: Build app
         working-directory: lightly_studio_view
-        env:
-          UV_PYTHON: ${{ matrix.python }}
+        run: make build
+
+      - name: Run Tests for lightly_studio_view
+        working-directory: lightly_studio_view
         run: make test
 
   check-docs:
     name: Build Docs
+    needs: detect
+    # API reference is generated from backend docstrings.
+    if: needs.detect.outputs.docs == 'true' || needs.detect.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -211,3 +300,57 @@ jobs:
       - name: Build docs
         working-directory: lightly_studio/docs
         run: make docs
+
+  # The single required status check: always runs, so gated jobs can be skipped
+  # without stranding the merge queue. Require this in the branch ruleset.
+  unit-success:
+    name: CI Success Check
+    runs-on: ubuntu-latest
+    needs:
+      - detect
+      - check-python
+      - check-typescript
+      - test-backend
+      - test-frontend
+      - check-docs
+    if: always()
+    steps:
+      - name: Verify required jobs
+        env:
+          DETECT: ${{ needs.detect.result }}
+          PYTHON_CHECKS: ${{ needs.check-python.result }}
+          TYPESCRIPT_CHECKS: ${{ needs.check-typescript.result }}
+          BACKEND_TESTS: ${{ needs.test-backend.result }}
+          FRONTEND_TESTS: ${{ needs.test-frontend.result }}
+          DOCS: ${{ needs.check-docs.result }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import sys
+
+          # If detection failed, jobs were skipped for the wrong reason.
+          detect = os.environ["DETECT"]
+          if detect != "success":
+              sys.exit(f"::error::Change detection did not succeed (result={detect}); failing the gate.")
+
+          # A gated job is fine only if it passed or was skipped.
+          gated = {
+              "Static Checks Python": os.environ["PYTHON_CHECKS"],
+              "Static Checks Typescript": os.environ["TYPESCRIPT_CHECKS"],
+              "Backend tests": os.environ["BACKEND_TESTS"],
+              "Frontend tests": os.environ["FRONTEND_TESTS"],
+              "Build Docs": os.environ["DOCS"],
+          }
+          allowed = {"success", "skipped"}
+
+          for name, result in gated.items():
+              print(f"{name}: {result}")
+
+          failed = {name: result for name, result in gated.items() if result not in allowed}
+          if failed:
+              for name, result in failed.items():
+                  print(f"::error::Required job '{name}' finished with result '{result}'.")
+              sys.exit(1)
+
+          print("All required jobs passed or were skipped.")
+          PY

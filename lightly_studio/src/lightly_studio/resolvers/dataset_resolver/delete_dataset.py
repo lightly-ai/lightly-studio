@@ -13,11 +13,10 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import Delete
 from sqlmodel import Session, col, delete, select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from lightly_studio import db_manager
+from lightly_studio.database import db_manager
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
@@ -44,6 +43,13 @@ from lightly_studio.models.tag import TagTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import dataset_resolver
 from lightly_studio.resolvers.dataset_resolver import table_coverage_utils
+
+# Execution options for every bulk DELETE below. An ORM-enabled DELETE with a subquery predicate
+# defaults to ``synchronize_session="fetch"``: SQLAlchemy first SELECTs every matching primary key
+# into Python to evict it from the session's identity map, so peak memory scales with the number
+# of deleted rows. Nothing is loaded in this session, so we disable synchronization and the delete
+# runs entirely server-side with bounded memory regardless of dataset size.
+_DELETE_EXECUTION_OPTIONS = {"synchronize_session": False}
 
 
 def delete_dataset(
@@ -128,184 +134,173 @@ def _sample_ids_subquery(dataset_id: UUID) -> SelectOfScalar[UUID]:
     )
 
 
-def _execute_delete(session: Session, statement: Delete) -> None:
-    """Run a server-side bulk DELETE without ORM session synchronization.
-
-    An ORM-enabled DELETE with a subquery predicate defaults to ``synchronize_session="fetch"``:
-    SQLAlchemy first SELECTs every matching primary key into Python to evict it from the session's
-    identity map, so peak memory scales with the number of deleted rows. Nothing is loaded in this
-    session, so we disable synchronization; the delete then runs entirely server-side with bounded
-    memory regardless of dataset size.
-    """
-    session.exec(statement.execution_options(synchronize_session=False))
-
-
 def _delete_sample_tag_links(session: Session, dataset_id: UUID) -> None:
     """Delete sample-tag links for the dataset's samples."""
-    _execute_delete(
-        session,
+    session.exec(
         delete(SampleTagLinkTable).where(
             col(SampleTagLinkTable.sample_id).in_(_sample_ids_subquery(dataset_id))
         ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
 
 def _delete_sample_group_links(session: Session, dataset_id: UUID) -> None:
     """Delete sample-group links for the dataset's samples."""
-    _execute_delete(
-        session,
+    session.exec(
         delete(SampleGroupLinkTable).where(
             col(SampleGroupLinkTable.sample_id).in_(_sample_ids_subquery(dataset_id))
         ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
 
 def _delete_sample_embeddings(session: Session, dataset_id: UUID) -> None:
     """Delete sample embeddings for the dataset's samples."""
-    _execute_delete(
-        session,
+    session.exec(
         delete(SampleEmbeddingTable).where(
             col(SampleEmbeddingTable.sample_id).in_(_sample_ids_subquery(dataset_id))
         ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
 
 def _delete_sample_metadata(session: Session, dataset_id: UUID) -> None:
     """Delete sample metadata for the dataset's samples."""
-    _execute_delete(
-        session,
+    session.exec(
         delete(SampleMetadataTable).where(
             col(SampleMetadataTable.sample_id).in_(_sample_ids_subquery(dataset_id))
         ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
 
 def _delete_object_detection_annotations(session: Session, dataset_id: UUID) -> None:
     """Delete object detection annotation details for the dataset's samples."""
-    _execute_delete(
-        session,
+    session.exec(
         delete(ObjectDetectionAnnotationTable).where(
             col(ObjectDetectionAnnotationTable.sample_id).in_(_sample_ids_subquery(dataset_id))
         ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
 
 def _delete_segmentation_annotations(session: Session, dataset_id: UUID) -> None:
     """Delete segmentation annotation details for the dataset's samples."""
-    _execute_delete(
-        session,
+    session.exec(
         delete(SegmentationAnnotationTable).where(
             col(SegmentationAnnotationTable.sample_id).in_(_sample_ids_subquery(dataset_id))
         ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
 
 def _delete_annotation_base(session: Session, dataset_id: UUID) -> None:
     """Delete annotation base records for the dataset's samples."""
-    _execute_delete(
-        session,
+    session.exec(
         delete(AnnotationBaseTable).where(
             col(AnnotationBaseTable.sample_id).in_(_sample_ids_subquery(dataset_id))
         ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
 
 def _delete_annotation_collection_coverage(session: Session, dataset_id: UUID) -> None:
     """Delete annotation collection coverage rows scoped to the dataset's collections."""
-    _execute_delete(
-        session,
+    session.exec(
         delete(AnnotationCollectionCoverageTable).where(
             col(AnnotationCollectionCoverageTable.annotation_collection_id).in_(
                 _collection_ids_subquery(dataset_id)
             )
         ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
 
 def _delete_object_tracks(session: Session, dataset_id: UUID) -> None:
     """Delete object tracks for the given dataset."""
-    _execute_delete(
-        session, delete(ObjectTrackTable).where(col(ObjectTrackTable.dataset_id) == dataset_id)
+    session.exec(
+        delete(ObjectTrackTable).where(col(ObjectTrackTable.dataset_id) == dataset_id),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
 
 def _delete_captions(session: Session, dataset_id: UUID) -> None:
     """Delete captions for the dataset's samples."""
-    _execute_delete(
-        session,
+    session.exec(
         delete(CaptionTable).where(
             col(CaptionTable.sample_id).in_(_sample_ids_subquery(dataset_id))
         ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
 
 def _delete_video_frames(session: Session, dataset_id: UUID) -> None:
     """Delete video frames for the dataset's samples."""
-    _execute_delete(
-        session,
+    session.exec(
         delete(VideoFrameTable).where(
             col(VideoFrameTable.sample_id).in_(_sample_ids_subquery(dataset_id))
         ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
 
 def _delete_groups(session: Session, dataset_id: UUID) -> None:
     """Delete group records for the dataset's samples."""
-    _execute_delete(
-        session,
+    session.exec(
         delete(GroupTable).where(col(GroupTable.sample_id).in_(_sample_ids_subquery(dataset_id))),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
 
 def _delete_videos(session: Session, dataset_id: UUID) -> None:
     """Delete videos for the dataset's samples."""
-    _execute_delete(
-        session,
+    session.exec(
         delete(VideoTable).where(col(VideoTable.sample_id).in_(_sample_ids_subquery(dataset_id))),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
 
 def _delete_images(session: Session, dataset_id: UUID) -> None:
     """Delete images for the dataset's samples."""
-    _execute_delete(
-        session,
+    session.exec(
         delete(ImageTable).where(col(ImageTable.sample_id).in_(_sample_ids_subquery(dataset_id))),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
 
 def _delete_samples(session: Session, dataset_id: UUID) -> None:
     """Delete samples belonging to the dataset's collections."""
-    _execute_delete(
-        session,
+    session.exec(
         delete(SampleTable).where(col(SampleTable.sample_id).in_(_sample_ids_subquery(dataset_id))),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
 
 def _delete_annotation_labels(session: Session, dataset_id: UUID) -> None:
     """Delete annotation labels for the dataset."""
-    _execute_delete(
-        session,
+    session.exec(
         delete(AnnotationLabelTable).where(col(AnnotationLabelTable.dataset_id) == dataset_id),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
 
 def _delete_tags(session: Session, dataset_id: UUID) -> None:
     """Delete tags for the dataset's collections."""
-    _execute_delete(
-        session,
+    session.exec(
         delete(TagTable).where(
             col(TagTable.collection_id).in_(_collection_ids_subquery(dataset_id))
         ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
 
 def _delete_embedding_models(session: Session, dataset_id: UUID) -> None:
     """Delete embedding models for the dataset's collections."""
-    _execute_delete(
-        session,
+    session.exec(
         delete(EmbeddingModelTable).where(
             col(EmbeddingModelTable.collection_id).in_(_collection_ids_subquery(dataset_id))
         ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
 
@@ -320,11 +315,11 @@ def _delete_evaluation_sample_metrics(session: Session, dataset_id: UUID) -> Non
         )
         .where(col(CollectionTable.dataset_id) == dataset_id)
     )
-    _execute_delete(
-        session,
+    session.exec(
         delete(EvaluationSampleMetricTable).where(
             col(EvaluationSampleMetricTable.evaluation_run_id).in_(run_ids_subquery)
         ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
 
@@ -339,23 +334,23 @@ def _delete_evaluation_annotation_metrics(session: Session, dataset_id: UUID) ->
         )
         .where(col(CollectionTable.dataset_id) == dataset_id)
     )
-    _execute_delete(
-        session,
+    session.exec(
         delete(EvaluationAnnotationMetricTable).where(
             col(EvaluationAnnotationMetricTable.evaluation_run_id).in_(run_ids_subquery)
         ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
 
 def _delete_evaluation_runs(session: Session, dataset_id: UUID) -> None:
     """Delete evaluation runs for the given dataset."""
-    _execute_delete(
-        session,
+    session.exec(
         delete(EvaluationRunTable).where(
             col(EvaluationRunTable.gt_annotation_collection_id).in_(
                 _collection_ids_subquery(dataset_id)
             )
         ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
 
@@ -365,11 +360,15 @@ def _delete_collections(session: Session, dataset_id: UUID) -> None:
     Deleting every collection at once satisfies the self-referential
     ``parent_collection_id`` FK: all rows are gone when the check fires at statement end.
     """
-    _execute_delete(
-        session, delete(CollectionTable).where(col(CollectionTable.dataset_id) == dataset_id)
+    session.exec(
+        delete(CollectionTable).where(col(CollectionTable.dataset_id) == dataset_id),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
 
 def _delete_dataset(session: Session, dataset_id: UUID) -> None:
     """Delete the dataset record from DatasetTable."""
-    _execute_delete(session, delete(DatasetTable).where(col(DatasetTable.dataset_id) == dataset_id))
+    session.exec(
+        delete(DatasetTable).where(col(DatasetTable.dataset_id) == dataset_id),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )

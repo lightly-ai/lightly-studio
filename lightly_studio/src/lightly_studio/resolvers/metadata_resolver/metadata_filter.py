@@ -6,7 +6,7 @@ from typing import Any, Callable, Literal, Protocol, TypeVar
 from pydantic import BaseModel
 from sqlalchemy.sql.elements import ColumnElement
 
-from lightly_studio import db_json
+from lightly_studio.database import db_json
 from lightly_studio.type_definitions import QueryType
 
 # Type variables for generic constraints

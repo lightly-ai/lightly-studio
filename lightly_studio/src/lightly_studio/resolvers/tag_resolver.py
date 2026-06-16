@@ -10,7 +10,7 @@ import sqlmodel
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
-from lightly_studio import db_array
+from lightly_studio.database import db_array
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.tag import TagCreate, TagTable
 from lightly_studio.utils import batching

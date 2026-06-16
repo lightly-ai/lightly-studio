@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Mapped, aliased
 from sqlmodel import col, select
 
-from lightly_studio import db_array
+from lightly_studio.database import db_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
