@@ -7,7 +7,7 @@ from uuid import UUID
 from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import Select
 
-from lightly_studio import db_array
+from lightly_studio.database import db_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.image import ImageTable

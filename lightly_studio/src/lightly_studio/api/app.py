@@ -12,7 +12,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRoute
 from sqlmodel import Session
 
-from lightly_studio import db_manager
 from lightly_studio.api.middleware import RequestTimingMiddleware
 from lightly_studio.api.routes import (
     healthz,
@@ -49,6 +48,7 @@ from lightly_studio.api.routes.api import (
 from lightly_studio.api.routes.api.exceptions import (
     register_exception_handlers,
 )
+from lightly_studio.database import db_manager
 from lightly_studio.dataset.env import (
     LIGHTLY_STUDIO_DEBUG,
     LIGHTLY_STUDIO_REQUEST_TIMING_ENABLED,

@@ -6,7 +6,7 @@ from uuid import UUID
 
 from sqlmodel import Session, col, select
 
-from lightly_studio import db_insert
+from lightly_studio.database import db_insert
 from lightly_studio.models.sample import SampleTagLinkTable
 from tests.helpers_resolvers import create_collection, create_image, create_tag
 

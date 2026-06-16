@@ -7,7 +7,7 @@ from uuid import UUID
 
 from sqlmodel import Session, select
 
-from lightly_studio import db_insert
+from lightly_studio.database import db_insert
 from lightly_studio.models.annotation_collection_coverage import (
     AnnotationCollectionCoverageTable,
 )

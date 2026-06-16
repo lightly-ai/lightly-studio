@@ -8,6 +8,8 @@ Manual performance benchmarks for Lightly Studio. Each script is standalone and 
   performance at the database layer.
 - [Tag assignment benchmark](#tag-assignment-benchmark) — measure bulk tag-assignment
   performance at the database layer.
+- [Deep-copy benchmark](#deep-copy-benchmark) — measure collection deep-copy time and peak
+  memory at enterprise scale.
 
 ## GUI benchmark
 
@@ -177,3 +179,51 @@ uv run tests/benchmarks/tag_assignment_benchmark.py --num-samples 10000
 |---|---|---|
 | `--num-samples` | 100 000 | Number of samples to create and tag |
 | `--postgres` | off | Benchmark PostgreSQL instead of the temporary DuckDB |
+
+## Deep-copy benchmark
+
+A script that times `dataset_resolver.deep_copy` and reports wall-clock time and **peak Python
+allocation**. `deep_copy` is enterprise-only and runs the copy server-side via `INSERT ... SELECT`,
+so it only supports PostgreSQL and peak Python memory should stay low (a few MiB) regardless of
+dataset size — that is the key signal that no rows are materialized in Python.
+
+It has two modes: generate a synthetic dataset of images with embeddings and copy it, or copy an
+existing root collection (e.g. the COCO demo on an enterprise database, which also exercises the
+annotation copy paths).
+
+### Running the benchmark
+
+From the `lightly_studio` directory, against a running Postgres:
+
+```bash
+make start-postgres
+uv run tests/benchmarks/deep_copy_benchmark.py --generate 250000
+make stop-postgres
+```
+
+A quick smoke-test with a smaller dataset:
+
+```bash
+uv run tests/benchmarks/deep_copy_benchmark.py --generate 10000
+```
+
+Copy an existing collection (uses `$LIGHTLY_STUDIO_DATABASE_URL` as-is, no cleanup):
+
+```bash
+LIGHTLY_STUDIO_DATABASE_URL=<postgres-url> \
+    uv run tests/benchmarks/deep_copy_benchmark.py --collection-name "coco" --copy-name "coco_copy"
+```
+
+`--generate` recreates the database at `$LIGHTLY_STUDIO_DATABASE_URL` (or the default dev URL);
+scale `--generate` toward 1M+ for the enterprise target.
+
+### Key options
+
+| Flag | Default | Description |
+|---|---|---|
+| `--generate N` | — | Generate N images with embeddings, then copy them |
+| `--collection-name NAME` | — | Copy an existing root collection instead (mutually exclusive with `--generate`) |
+| `--copy-name NAME` | `deep_copy_benchmark_copy` | Name for the copied root collection (must not already exist) |
+| `--embedding-dim` | 512 | Embedding vector dimensionality (generate mode) |
+| `--batch-size` | 5 000 | Generation batch size |
+| `--seed` | 0 | Random seed for reproducibility |

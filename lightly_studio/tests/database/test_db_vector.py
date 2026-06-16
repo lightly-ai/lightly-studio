@@ -10,8 +10,8 @@ from sqlalchemy import ARRAY, Float
 from sqlalchemy.dialects import postgresql, sqlite
 from sqlmodel import Session
 
-from lightly_studio import db_vector
-from lightly_studio.db_vector import VectorType
+from lightly_studio.database import db_vector
+from lightly_studio.database.db_vector import VectorType
 
 
 def test_load_dialect_impl__from_session(db_session: Session) -> None:

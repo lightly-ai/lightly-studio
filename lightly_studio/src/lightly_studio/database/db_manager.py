@@ -18,7 +18,7 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from enum import Enum
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import sqlalchemy_utils
 from fastapi import Depends
@@ -27,7 +27,7 @@ from sqlalchemy.engine import Engine
 from sqlmodel import Session, SQLModel, create_engine
 
 import lightly_studio.api.db_tables  # noqa: F401, required for SQLModel to work properly
-from lightly_studio import db_migrations, db_url
+from lightly_studio.database import db_migrations, db_url
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_DATABASE_URL
 
 
@@ -88,10 +88,18 @@ class DatabaseEngine:
         if cleanup_existing and self._backend == DatabaseBackend.DUCKDB:
             _cleanup_database_file(engine_url=self._engine_url)
 
+        # In tests (where single_threaded=True): Disable preparing, cause constant
+        # database recreations under a single connection cause prepared statements to
+        # become invalid, leading to "cached plan must not change result type" errors.
+        connect_args: dict[str, Any] = {}
+        if single_threaded and self._backend == DatabaseBackend.POSTGRESQL:
+            connect_args["prepare_threshold"] = None
+
         if single_threaded:
             self._engine = create_engine(
                 url=self._engine_url,
                 poolclass=StaticPool,
+                connect_args=connect_args,
             )
         else:
             # TODO(Mihnea, 02/2026): Consider adding Postgres-specific pool options
@@ -256,6 +264,27 @@ def close() -> None:
 def get_backend() -> DatabaseBackend:
     """Get the current database backend type."""
     return get_engine().backend
+
+
+def require_postgres_backend(session: Session) -> None:
+    """Raise unless ``session`` is bound to a PostgreSQL backend.
+
+    Some operations (dataset deep-copy and delete) are enterprise-only and are
+    implemented with PostgreSQL-specific set-based SQL; they are not supported on
+    DuckDB. The check uses the session's bind rather than the global engine so it
+    is correct in tests, which run on per-test engines that are not registered
+    globally.
+
+    Raises:
+        NotImplementedError: If the session is not bound to PostgreSQL.
+    """
+    bind = session.get_bind()
+    dialect_name = bind.dialect.name if bind is not None else None
+    if dialect_name != DatabaseBackend.POSTGRESQL.value:
+        raise NotImplementedError(
+            "This operation is only supported on the PostgreSQL backend. "
+            f"Current backend: {dialect_name or 'unknown'}."
+        )
 
 
 def _initialize_postgres_schema(

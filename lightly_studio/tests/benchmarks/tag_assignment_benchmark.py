@@ -37,7 +37,7 @@ from sqlalchemy import func
 from sqlmodel import select
 from tqdm import tqdm
 
-from lightly_studio import db_manager
+from lightly_studio.database import db_manager
 from lightly_studio.models.collection import CollectionCreate, SampleType
 from lightly_studio.models.sample import SampleCreate, SampleTagLinkTable
 from lightly_studio.models.tag import TagCreate
