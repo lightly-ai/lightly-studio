@@ -18,7 +18,7 @@ from testcontainers.postgres import PostgresContainer  # type: ignore[import-unt
 from lightly_studio.api import features
 from lightly_studio.api.app import app
 from lightly_studio.database import db_manager
-from lightly_studio.database.db_manager import DatabaseEngine
+from lightly_studio.database.db_manager import DatabaseBackend, DatabaseEngine
 from lightly_studio.dataset import embedding_manager
 from lightly_studio.dataset.embedding_generator import RandomEmbeddingGenerator
 from lightly_studio.dataset.embedding_manager import EmbeddingManager, EmbeddingManagerProvider
@@ -70,16 +70,55 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
             item.add_marker(skip_marker)
 
 
-def _truncate_tables(session: Session) -> None:
-    """Truncate all tables in the database to reset state between tests.
+def _delete_self_referential_table(session: Session, table: sqlalchemy.Table) -> None:
+    """Empty a self-referential table by repeatedly deleting its leaf rows.
 
-    Uses TRUNCATE ... CASCADE on Postgres to handle foreign key constraints.
-    Table names are quoted to handle reserved words (e.g. "group").
+    DuckDB validates FK constraints row-by-row and cannot delete a self-referential
+    table in one statement (surviving rows still reference deleted parents). It also
+    treats UPDATE as delete+insert, so nulling the self-FK trips the same check.
+    Instead, repeatedly delete rows that are not referenced as a parent until the
+    table is empty. Converges in ``tree depth`` rounds for an acyclic hierarchy.
     """
-    table_names = [table.name for table in reversed(SQLModel.metadata.sorted_tables)]
-    for table_name in table_names:
-        session.execute(sqlalchemy.text(f'TRUNCATE TABLE "{table_name}" CASCADE'))
-    session.commit()
+    (pk_column,) = table.primary_key.columns
+    self_ref_columns = [fk.parent.name for fk in table.foreign_keys if fk.column.table is table]
+    parent_keys = ", ".join(f'"{column}"' for column in self_ref_columns)
+    not_null = " OR ".join(f'"{column}" IS NOT NULL' for column in self_ref_columns)
+    delete_leaves = (
+        f'DELETE FROM "{table.name}" WHERE "{pk_column.name}" NOT IN '
+        f'(SELECT {parent_keys} FROM "{table.name}" WHERE {not_null})'
+    )
+    count_rows = f'SELECT COUNT(*) FROM "{table.name}"'
+    # duckdb-engine reports rowcount as -1, so terminate on the row count instead.
+    while session.execute(sqlalchemy.text(count_rows)).scalar_one() > 0:
+        session.execute(sqlalchemy.text(delete_leaves))
+        session.commit()
+
+
+def _truncate_tables(session: Session, backend: DatabaseBackend) -> None:
+    """Reset all tables in the database to clear state between tests.
+
+    Postgres uses a single TRUNCATE ... CASCADE per table to handle foreign key
+    constraints. DuckDB does not support TRUNCATE ... CASCADE and validates FK
+    constraints against committed state, so it deletes in child-first order
+    (``reversed(sorted_tables)``) and commits after each table, ensuring a
+    table's referencing rows are gone before its own. Self-referential tables
+    (e.g. ``collection``) are emptied leaf-by-leaf via
+    ``_delete_self_referential_table``. Table names are quoted to handle
+    reserved words (e.g. "group").
+    """
+    sorted_tables = SQLModel.metadata.sorted_tables
+    if backend == DatabaseBackend.POSTGRESQL:
+        for table in reversed(sorted_tables):
+            session.execute(sqlalchemy.text(f'TRUNCATE TABLE "{table.name}" CASCADE'))
+        session.commit()
+        return
+
+    for table in reversed(sorted_tables):
+        if any(fk.column.table is table for fk in table.foreign_keys):
+            _delete_self_referential_table(session, table)
+        else:
+            session.execute(sqlalchemy.text(f'DELETE FROM "{table.name}"'))
+            session.commit()
 
 
 @pytest.fixture(scope="session")
@@ -115,26 +154,41 @@ def _postgres_engine(postgres_url: str | None) -> Generator[DatabaseEngine | Non
     engine.close()
 
 
+@pytest.fixture(scope="session")
+def _duckdb_engine(_use_postgres: bool) -> Generator[DatabaseEngine | None, None, None]:
+    """Create a session-scoped in-memory DuckDB engine, or None under --postgres.
+
+    Each pytest-xdist worker is its own process with its own session scope, so
+    this yields exactly one in-memory DB per worker. The ~16-table schema is
+    built once per worker instead of once per test.
+    """
+    if _use_postgres:
+        yield None
+        return
+
+    engine = DatabaseEngine("duckdb:///:memory:", single_threaded=True)
+    yield engine
+    engine.close()
+
+
 @pytest.fixture
 def _db_engine(
     _use_postgres: bool,
     _postgres_engine: DatabaseEngine | None,
+    _duckdb_engine: DatabaseEngine | None,
 ) -> Generator[DatabaseEngine, None, None]:
-    """Provide a single DatabaseEngine for each test.
+    """Provide the per-worker DatabaseEngine for each test.
 
-    DuckDB mode (default): creates a fresh in-memory engine per test.
-    Postgres mode (--postgres): reuses the session-scoped Postgres engine.
+    Reuses one session-scoped engine (in-memory DuckDB by default, or Postgres
+    under --postgres) and resets data between tests instead of rebuilding the
+    schema for every test.
     """
-    if _use_postgres:
-        assert _postgres_engine is not None
-        yield _postgres_engine
-        with _postgres_engine.session() as session:
-            session.rollback()
-            _truncate_tables(session)
-    else:
-        engine = DatabaseEngine("duckdb:///:memory:", single_threaded=True)
-        yield engine
-        engine.close()
+    engine = _postgres_engine if _use_postgres else _duckdb_engine
+    assert engine is not None
+    yield engine
+    with engine.session() as session:
+        session.rollback()
+        _truncate_tables(session, backend=engine.backend)
 
 
 @pytest.fixture
