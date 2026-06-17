@@ -3,26 +3,55 @@
 Run this script with `uv run tests/benchmarks/gui_benchmark.py` from the
 `lightly_studio` directory, or from the repository root with
 `uv run lightly_studio/tests/benchmarks/gui_benchmark.py`.
+
+The target database is selected with `--backend`:
+
+DuckDB (default):
+
+    uv run tests/benchmarks/gui_benchmark.py
+
+Local PostgreSQL:
+
+    make start-postgres
+    uv run tests/benchmarks/gui_benchmark.py --backend postgres
+    make stop-postgres
+
+Remote enterprise instance (credentials come from the environment):
+
+    export LIGHTLY_STUDIO_API_URL="http://<enterprise-host>:8400"
+    export LIGHTLY_STUDIO_TOKEN="<token-from-the-enterprise-GUI>"
+    uv run tests/benchmarks/gui_benchmark.py --backend enterprise
+
+The enterprise backend does not wipe the remote database, so it creates a uniquely
+named dataset per run and leaves the data in place for inspection.
 """
 
 from __future__ import annotations
 
 import argparse
+import logging
 import os
+import secrets
 import time
+import uuid
 from dataclasses import dataclass
+from datetime import datetime, timezone
+from enum import Enum
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 from uuid import UUID
 
 import numpy as np
+import pgvector.psycopg
 import pyarrow as pa
 from numpy.typing import NDArray
 from PIL import Image
+from sqlmodel import Session
 from tqdm import tqdm
 
 import lightly_studio.core.start_gui as start_gui_module
+from lightly_studio import enterprise
 from lightly_studio.api.server import Server
 from lightly_studio.database import db_manager
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
@@ -60,11 +89,21 @@ DEFAULT_ANNOTATION_LABEL_NAMES = ["car", "person", "bicycle", "truck", "bus"]
 DEFAULT_EMBEDDING_MODEL_NAME = "benchmark_embeddings"
 DEFAULT_POSTGRES_URL = "postgresql://lightly:lightly@localhost:5433/lightly_studio"
 
+logger = logging.getLogger(__name__)
+
 
 def _make_uuid_str(i: int) -> str:
     """Format an integer as a UUID string without creating a UUID object."""
     h = format(i, "032x")
     return f"{h[:8]}-{h[8:12]}-{h[12:16]}-{h[16:20]}-{h[20:]}"
+
+
+class Backend(str, Enum):
+    """Database backend the benchmark runs against."""
+
+    DUCKDB = "duckdb"
+    POSTGRES = "postgres"
+    ENTERPRISE = "enterprise"
 
 
 @dataclass(frozen=True)
@@ -73,7 +112,6 @@ class BenchmarkConfig:
 
     num_images: int
     boxes_per_image: int
-    embedding_dim: int
     image_width: int
     image_height: int
     image_format: str
@@ -81,7 +119,8 @@ class BenchmarkConfig:
     seed: int
     host: str | None
     port: int | None
-    postgres: bool
+    backend: Backend
+    id_offset: int
 
 
 def main() -> None:
@@ -90,7 +129,6 @@ def main() -> None:
     config = BenchmarkConfig(
         num_images=args.num_images,
         boxes_per_image=args.boxes_per_image,
-        embedding_dim=args.embedding_dim,
         image_width=args.image_width,
         image_height=args.image_height,
         image_format=args.image_format,
@@ -98,9 +136,12 @@ def main() -> None:
         seed=args.seed,
         host=args.host,
         port=args.port,
-        postgres=args.postgres,
+        backend=Backend(args.backend),
+        id_offset=_resolve_id_offset(backend=Backend(args.backend)),
     )
     _validate_config(config=config)
+
+    dataset_name = _resolve_dataset_name(backend=config.backend)
 
     with TemporaryDirectory(prefix="lightly_studio_gui_benchmark_") as tmp_dir:
         benchmark_dir = Path(tmp_dir)
@@ -113,8 +154,10 @@ def main() -> None:
             image_width=config.image_width,
             image_height=config.image_height,
         )
-        db_target = _initialize_database(db_path=db_path, use_postgres=config.postgres)
-        root_collection_id = _populate_database(config=config, image_path=image_path)
+        db_target = _initialize_database(db_path=db_path, backend=config.backend)
+        root_collection_id = _populate_database(
+            config=config, image_path=image_path, dataset_name=dataset_name
+        )
         _verify_annotation_counts(
             collection_id=root_collection_id,
             boxes_per_image=config.boxes_per_image,
@@ -141,7 +184,6 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--num-images", type=int, default=DEFAULT_NUM_IMAGES)
     parser.add_argument("--boxes-per-image", type=int, default=DEFAULT_BOXES_PER_IMAGE)
-    parser.add_argument("--embedding-dim", type=int, default=DEFAULT_EMBEDDING_DIM)
     parser.add_argument("--image-width", type=int, default=DEFAULT_IMAGE_WIDTH)
     parser.add_argument("--image-height", type=int, default=DEFAULT_IMAGE_HEIGHT)
     parser.add_argument(
@@ -155,12 +197,16 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--host", type=str, default=None)
     parser.add_argument("--port", type=int, default=None)
     parser.add_argument(
-        "--postgres",
-        action="store_true",
+        "--backend",
+        choices=[backend.value for backend in Backend],
+        default=Backend.DUCKDB.value,
         help=(
-            "Populate a PostgreSQL (pgvector) database instead of a temporary DuckDB file. "
-            "Uses $LIGHTLY_STUDIO_DATABASE_URL if set, otherwise "
-            f"{DEFAULT_POSTGRES_URL}."
+            "Database backend to populate. "
+            "'duckdb' (default) uses a temporary DuckDB file. "
+            "'postgres' (pgvector) uses $LIGHTLY_STUDIO_DATABASE_URL if set, otherwise "
+            f"{DEFAULT_POSTGRES_URL}. "
+            "'enterprise' connects to a remote instance via $LIGHTLY_STUDIO_API_URL "
+            "and $LIGHTLY_STUDIO_TOKEN."
         ),
     )
     return parser.parse_args()
@@ -172,8 +218,6 @@ def _validate_config(config: BenchmarkConfig) -> None:
         raise ValueError("--num-images must be greater than zero.")
     if config.boxes_per_image < 0:
         raise ValueError("--boxes-per-image must be zero or greater.")
-    if config.embedding_dim <= 0:
-        raise ValueError("--embedding-dim must be greater than zero.")
     if config.image_width <= 0:
         raise ValueError("--image-width must be greater than zero.")
     if config.image_height <= 0:
@@ -187,14 +231,53 @@ def _create_shared_image(image_path: Path, image_width: int, image_height: int) 
     Image.new("RGB", (image_width, image_height), color=(120, 120, 120)).save(image_path)
 
 
-def _initialize_database(db_path: Path, use_postgres: bool) -> str:
-    """Connect to a fresh database and return a description of its target.
+def _resolve_dataset_name(backend: Backend) -> str:
+    """Resolve the root collection name for the run.
 
-    Uses a temporary on-disk DuckDB by default, or PostgreSQL when ``use_postgres`` is
-    set (``$LIGHTLY_STUDIO_DATABASE_URL`` if defined, otherwise ``DEFAULT_POSTGRES_URL``).
+    The enterprise backend runs against a persistent remote database, so it uses a
+    unique suffix per run to avoid colliding with the ``(name, parent_collection_id)``
+    unique constraint on collections. A unique root collection also gets a fresh
+    ``dataset_id``, which scopes the child annotation collection, embedding model, and
+    annotation labels so they cannot collide either. The DuckDB and PostgreSQL backends
+    start from a wiped database each run, so they keep the stable default name.
+    """
+    if backend is Backend.ENTERPRISE:
+        return f"{DEFAULT_DATASET_NAME}_{uuid.uuid4().hex[:8]}"
+    return DEFAULT_DATASET_NAME
+
+
+def _resolve_id_offset(backend: Backend) -> int:
+    """Return a per-run offset for the generated sample ids.
+
+    Sample ids are built deterministically from a running integer via
+    ``_make_uuid_str`` (0, 1, 2, ...). On the persistent enterprise database (which is
+    not wiped) those would collide with rows from earlier runs on the ``sample`` primary
+    key, so each run gets a random 64-bit high component, giving it a disjoint id block
+    while keeping the fast id-generation path. The low 64 bits stay free for the running
+    integer (well above any feasible row count), so the value stays within a UUID's 128
+    bits. DuckDB and PostgreSQL start from a wiped database, so they keep a zero offset
+    and their stable, deterministic ids.
+    """
+    if backend is Backend.ENTERPRISE:
+        return secrets.randbits(64) << 64
+    return 0
+
+
+def _initialize_database(db_path: Path, backend: Backend) -> str:
+    """Connect to the database and return a description of its target.
+
+    Uses a temporary on-disk DuckDB by default, a local PostgreSQL container, or a
+    remote enterprise instance. DuckDB and PostgreSQL are wiped and re-created; the
+    enterprise backend connects via ``$LIGHTLY_STUDIO_API_URL`` /
+    ``$LIGHTLY_STUDIO_TOKEN`` and is not wiped.
     """
     db_manager.close()
-    if use_postgres:
+    if backend is Backend.ENTERPRISE:
+        # Reads $LIGHTLY_STUDIO_API_URL and $LIGHTLY_STUDIO_TOKEN; delegates to
+        # db_manager.connect without cleanup, so the remote database is not wiped.
+        enterprise.connect()
+        return os.environ.get("LIGHTLY_STUDIO_API_URL", "<enterprise>")
+    if backend is Backend.POSTGRES:
         database_url = os.environ.get("LIGHTLY_STUDIO_DATABASE_URL", DEFAULT_POSTGRES_URL)
         db_manager.connect(db_url=database_url, cleanup_existing=True)
         return database_url
@@ -202,14 +285,14 @@ def _initialize_database(db_path: Path, use_postgres: bool) -> str:
     return str(db_path)
 
 
-def _populate_database(config: BenchmarkConfig, image_path: Path) -> UUID:
+def _populate_database(config: BenchmarkConfig, image_path: Path, dataset_name: str) -> UUID:
     """Populate the benchmark dataset with images, embeddings, and annotations."""
     rng = np.random.default_rng(config.seed)
     with db_manager.session() as session:
         root_collection = collection_resolver.create(
             session=session,
             collection=CollectionCreate(
-                name=DEFAULT_DATASET_NAME,
+                name=dataset_name,
                 sample_type=SampleType.IMAGE,
             ),
         )
@@ -218,14 +301,6 @@ def _populate_database(config: BenchmarkConfig, image_path: Path) -> UUID:
             collection_id=root_collection.collection_id,
             sample_type=SampleType.ANNOTATION,
             name=DEFAULT_ANNOTATION_COLLECTION_NAME,
-        )
-        embedding_model = embedding_model_resolver.create(
-            session=session,
-            embedding_model=EmbeddingModelCreate(
-                collection_id=root_collection.collection_id,
-                name=DEFAULT_EMBEDDING_MODEL_NAME,
-                embedding_dimension=config.embedding_dim,
-            ),
         )
         annotation_label_ids = [
             annotation_label_resolver.create(
@@ -238,15 +313,16 @@ def _populate_database(config: BenchmarkConfig, image_path: Path) -> UUID:
             for name in DEFAULT_ANNOTATION_LABEL_NAMES
         ]
         root_collection_id = root_collection.collection_id
-        embedding_model_id = embedding_model.embedding_model_id
+        embedding_model_id, embedding_dim = _resolve_embedding_model(
+            session=session, collection_id=root_collection_id
+        )
 
-    _set_default_embedding_model(
-        collection_id=root_collection_id,
-        embedding_model_id=embedding_model_id,
-    )
     raw_connection = db_manager.get_engine()._engine.raw_connection()
     try:
         connection = raw_connection.driver_connection
+        if config.backend in (Backend.POSTGRES, Backend.ENTERPRISE):
+            # Register pgvector adapters so embeddings stream via binary COPY.
+            pgvector.psycopg.register_vector(connection)
         with tqdm(
             total=config.num_images,
             desc="Populating database",
@@ -262,6 +338,7 @@ def _populate_database(config: BenchmarkConfig, image_path: Path) -> UUID:
                     image_collection_id=root_collection_id,
                     annotation_collection_id=annotation_collection_id,
                     embedding_model_id=embedding_model_id,
+                    embedding_dim=embedding_dim,
                     annotation_label_ids=annotation_label_ids,
                     shared_image_path=image_path,
                 )
@@ -287,10 +364,49 @@ def _verify_annotation_counts(collection_id: UUID, boxes_per_image: int) -> None
         assert total > 0, f"Expected total > 0 for label '{label}', got {total}"
 
 
-def _set_default_embedding_model(collection_id: UUID, embedding_model_id: UUID) -> None:
-    """Make the manually created embedding model visible to GUI embedding features."""
+def _resolve_embedding_model(session: Session, collection_id: UUID) -> tuple[UUID, int]:
+    """Resolve the embedding model the benchmark stores its embeddings under.
+
+    Prefers the server's configured default embedding generator (e.g. MobileCLIP) so the
+    embedding-model row's identity (name, file hash, and dimension) matches what *any*
+    LightlyStudio server resolves as the collection's default — including a separate or
+    deployed server. This is what makes the GUI's embeddings view appear there: the
+    server falls back to that default generator and finds the embeddings stored under it.
+
+    Loading the generator also registers it as the in-process default, so the benchmark's
+    own GUI shows the view too. Returns the model id and the dimension the embeddings must
+    have (dictated by the model, so the ``get_or_create`` hash/dimension check passes).
+
+    Falls back to a synthetic model if no default generator is available; in that case the
+    embeddings view only appears in this process's own GUI, not on a separate server.
+    """
     embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
-    embedding_manager._collection_id_to_default_model_id[collection_id] = embedding_model_id
+    model_id = embedding_manager.load_or_get_default_model(
+        session=session, collection_id=collection_id
+    )
+    if model_id is not None:
+        model = embedding_model_resolver.get_by_id(session=session, embedding_model_id=model_id)
+        assert model is not None, "Default embedding model just registered but not found."
+        return model_id, model.embedding_dimension
+
+    logger.warning(
+        "No default embedding generator is available (set LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE "
+        "and install the model package, e.g. MobileCLIP). Falling back to a synthetic embedding "
+        "model: the embeddings view will appear in this process's GUI but not on a separate or "
+        "deployed server."
+    )
+    synthetic_model = embedding_model_resolver.create(
+        session=session,
+        embedding_model=EmbeddingModelCreate(
+            collection_id=collection_id,
+            name=DEFAULT_EMBEDDING_MODEL_NAME,
+            embedding_dimension=DEFAULT_EMBEDDING_DIM,
+        ),
+    )
+    embedding_manager._collection_id_to_default_model_id[collection_id] = (
+        synthetic_model.embedding_model_id
+    )
+    return synthetic_model.embedding_model_id, DEFAULT_EMBEDDING_DIM
 
 
 @dataclass(frozen=True)
@@ -322,11 +438,12 @@ def _build_batch_data(  # noqa: PLR0913
     image_collection_id: UUID,
     annotation_collection_id: UUID,
     embedding_model_id: UUID,
+    embedding_dim: int,
     annotation_label_ids: list[UUID],
     shared_image_path: Path,
 ) -> BatchData:
     """Build all Arrow tables for a batch."""
-    image_id_strs = [_make_uuid_str(batch_start + i) for i in range(batch_count)]
+    image_id_strs = [_make_uuid_str(config.id_offset + batch_start + i) for i in range(batch_count)]
 
     image_samples = _build_image_samples_table(
         image_id_strs=image_id_strs,
@@ -355,12 +472,12 @@ def _build_batch_data(  # noqa: PLR0913
     embeddings = _build_embeddings_table(
         rng=rng,
         image_id_strs=image_id_strs,
-        embedding_dim=config.embedding_dim,
+        embedding_dim=embedding_dim,
         embedding_model_id_str=str(embedding_model_id),
     )
 
     annotation_count = batch_count * config.boxes_per_image
-    annotation_id_base = config.num_images + batch_start * config.boxes_per_image
+    annotation_id_base = config.id_offset + config.num_images + batch_start * config.boxes_per_image
     annotation_id_strs = [_make_uuid_str(annotation_id_base + i) for i in range(annotation_count)]
 
     annotation_samples = _build_annotation_samples_table(
@@ -663,7 +780,21 @@ def _insert_arrow_table_postgres(
     table: pa.Table,
     spec: ArrowInsertSpec,
 ) -> None:
-    """Insert an Arrow table into PostgreSQL via ``executemany`` (psycopg has no Arrow path)."""
+    """Bulk-load an Arrow table into PostgreSQL via ``COPY`` (psycopg has no Arrow path).
+
+    ``COPY ... FROM STDIN`` is far faster than per-row ``executemany`` for large loads.
+    The only SQL literal in ``select_columns_sql`` is ``current_timestamp``; since
+    ``COPY`` streams literal values rather than SQL expressions, those columns are
+    filled with a single Python timestamp captured per batch. Postgres applies each
+    column's input function to the text we stream, so the enum columns are loaded from
+    their text representation without explicit casts.
+    """
+    if "embedding" in table.column_names:
+        # The embeddings table dominates load time at scale; stream it via pgvector's
+        # binary protocol to skip building a float-vector string per row.
+        _copy_embeddings_postgres(connection=connection, table=table, spec=spec)
+        return
+
     source_cols = table.column_names
     insert_cols = spec.insert_columns or tuple(source_cols)
     select_terms = (
@@ -671,46 +802,72 @@ def _insert_arrow_table_postgres(
         if spec.select_columns_sql
         else list(source_cols)
     )
+    created_at = datetime.now(timezone.utc)
+    copy_sql = f"COPY {spec.table_name} ({', '.join(insert_cols)}) FROM STDIN"
 
-    placeholders: list[str] = []
-    bound_columns: list[str] = []
-    for term in select_terms:
-        if term not in source_cols:
-            placeholders.append(term)  # SQL literal carried over verbatim (e.g. current_timestamp).
-            continue
-        placeholders.append(_postgres_placeholder(column=term))
-        bound_columns.append(term)
-
-    statement = (
-        f"INSERT INTO {spec.table_name} ({', '.join(insert_cols)}) "
-        f"VALUES ({', '.join(placeholders)})"
-    )
-    params = [
-        tuple(_to_postgres_value(column=column, value=row[column]) for column in bound_columns)
-        for row in table.to_pylist()
-    ]
     cursor = connection.cursor()  # type: ignore[attr-defined]
     try:
-        cursor.executemany(statement, params)
+        with cursor.copy(copy_sql) as copy:
+            for row in table.to_pylist():
+                copy.write_row(
+                    [
+                        _to_postgres_value(column=term, value=row[term])
+                        if term in source_cols
+                        else created_at
+                        for term in select_terms
+                    ]
+                )
     finally:
         cursor.close()
 
 
-def _postgres_placeholder(column: str) -> str:
-    """Return the VALUES placeholder for a column, casting the enum and vector columns."""
-    if column == "embedding":
-        return "%s::vector"
-    if column == "annotation_type":
-        return "%s::annotationtype"
-    return "%s"
+_EMBEDDING_COPY_TYPES = {
+    "sample_id": "uuid",
+    "embedding_model_id": "uuid",
+    "embedding": "vector",
+}
+
+
+def _copy_embeddings_postgres(
+    connection: object,
+    table: pa.Table,
+    spec: ArrowInsertSpec,
+) -> None:
+    """Bulk-load the embeddings table into PostgreSQL via pgvector's binary ``COPY``.
+
+    The embedding column is read as a ``(n, dim)`` float32 numpy array (a near
+    zero-copy view of the Arrow buffer) and streamed with pgvector's binary dumper.
+    This avoids materializing a Python list and a comma-joined string per row, which
+    is the dominant cost of loading high-dimensional embeddings.
+    """
+    insert_cols = spec.insert_columns or tuple(table.column_names)
+    row_count = len(table)
+    embeddings = (
+        table.column("embedding").combine_chunks().flatten().to_numpy(zero_copy_only=False)
+    ).reshape(row_count, -1)
+    column_values: dict[str, Any] = {
+        "sample_id": [UUID(value) for value in table.column("sample_id").to_pylist()],
+        "embedding_model_id": [
+            UUID(value) for value in table.column("embedding_model_id").to_pylist()
+        ],
+        "embedding": embeddings,
+    }
+
+    copy_sql = f"COPY {spec.table_name} ({', '.join(insert_cols)}) FROM STDIN WITH (FORMAT BINARY)"
+    cursor = connection.cursor()  # type: ignore[attr-defined]
+    try:
+        with cursor.copy(copy_sql) as copy:
+            copy.set_types([_EMBEDDING_COPY_TYPES[col] for col in insert_cols])
+            for index in range(row_count):
+                copy.write_row([column_values[col][index] for col in insert_cols])
+    finally:
+        cursor.close()
 
 
 def _to_postgres_value(column: str, value: Any) -> Any:
-    """Adapt an Arrow cell to the value psycopg binds for the target column."""
+    """Adapt an Arrow cell to the value streamed via ``COPY`` for the target column."""
     if column in _UUID_INSERT_COLUMNS:
         return UUID(str(value))
-    if column == "embedding":
-        return "[" + ",".join(str(component) for component in value) + "]"
     return value
 
 
