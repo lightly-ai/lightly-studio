@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 AnnotationsClassName = str
 AnnotationClassToTarget = dict[AnnotationsClassName, float]
@@ -32,6 +32,19 @@ class EmbeddingDiversityStrategy(SamplingStrategy):
 
     strategy_name: Literal["diversity"] = "diversity"
     embedding_model_name: str | None = None
+
+
+class EmbeddingDeduplicationStrategy(SamplingStrategy):
+    """Sampling strategy that removes near-duplicates based on embedding distance.
+
+    Selects samples that are spread out in embedding space and stops selecting
+    once the closest remaining sample would be nearer than
+    ``stopping_condition_minimum_distance`` to the already selected samples.
+    """
+
+    strategy_name: Literal["deduplication"] = "deduplication"
+    embedding_model_name: str | None = None
+    stopping_condition_minimum_distance: float = Field(ge=0)
 
 
 class EmbeddingSimilarityStrategy(SamplingStrategy):

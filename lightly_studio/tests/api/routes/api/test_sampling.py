@@ -132,6 +132,44 @@ def test_create_combination_sampling__diversity_success_videos(
     assert len(result.samples) == 3
 
 
+def test_create_combination_sampling__deduplication_success(
+    test_client: TestClient, db_session: Session
+) -> None:
+    """Test successful deduplication sampling on an image collection."""
+    collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
+        session=db_session, n_samples=20, embedding_model_names=["test_embedding_model"]
+    )
+
+    request_data = {
+        "n_samples_to_select": 10,
+        "sampling_result_tag_name": "test_deduplication_sampling",
+        "strategies": [
+            {
+                "strategy_name": "deduplication",
+                "embedding_model_name": "test_embedding_model",
+                "stopping_condition_minimum_distance": 5.0,
+            }
+        ],
+    }
+
+    response = test_client.post(f"/api/collections/{collection_id}/sampling", json=request_data)
+
+    assert response.status_code == 204
+    assert response.text == ""
+
+    created_tag = tag_resolver.get_by_name(
+        session=db_session, tag_name="test_deduplication_sampling", collection_id=collection_id
+    )
+    assert created_tag is not None
+
+    tag_filter = ImageFilter(sample_filter=SampleFilter(tag_ids=[created_tag.tag_id]))
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection_id, filters=tag_filter
+    )
+    # The stopping condition halts selection before reaching the requested 10 samples.
+    assert 2 <= len(result.samples) < 10
+
+
 def test_create_combination_sampling__insufficient_samples(
     test_client: TestClient, db_session: Session
 ) -> None:
