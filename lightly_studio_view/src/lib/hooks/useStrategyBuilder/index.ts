@@ -8,6 +8,7 @@ export {
     type StrategyInstance,
     STRATEGY_DEFAULTS,
     STRATEGY_LABELS,
+    type DeduplicationParams,
     type SimilarityParams,
     type StrategySummaryTag,
     type MetadataWeightingParams

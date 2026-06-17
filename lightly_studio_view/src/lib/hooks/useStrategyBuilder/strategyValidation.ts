@@ -13,6 +13,10 @@ export function isStrategyInstanceValid(instance: StrategyInstance): boolean {
         return false;
     }
 
+    if (instance.type === 'deduplication') {
+        return isPositiveNumber(instance.params.stopping_condition_minimum_distance);
+    }
+
     if (instance.type === 'similarity') {
         return instance.params.query_tag_id.trim().length > 0;
     }
