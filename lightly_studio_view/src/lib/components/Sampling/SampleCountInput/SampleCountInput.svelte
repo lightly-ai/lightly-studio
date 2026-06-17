@@ -21,7 +21,7 @@
         placeholder="Count"
         required
         class="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-        data-testid="selection-dialog-n-samples-input"
+        data-testid="sampling-dialog-n-samples-input"
     />
     <div class="relative flex items-center">
         <Input
@@ -32,7 +32,7 @@
             min="0"
             placeholder="%"
             class="w-24 pr-6 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-            data-testid="selection-dialog-n-samples-percentage-input"
+            data-testid="sampling-dialog-n-samples-percentage-input"
         />
         <span class="pointer-events-none absolute right-2 text-sm text-muted-foreground">%</span>
     </div>

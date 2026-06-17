@@ -11,7 +11,7 @@ describe('SampleCountInput', () => {
             onPercentageChange: vi.fn()
         });
 
-        expect(screen.getByTestId('selection-dialog-n-samples-input')).toHaveValue(42);
+        expect(screen.getByTestId('sampling-dialog-n-samples-input')).toHaveValue(42);
     });
 
     it('renders the percentage input with the given percentage value', () => {
@@ -22,7 +22,7 @@ describe('SampleCountInput', () => {
             onPercentageChange: vi.fn()
         });
 
-        expect(screen.getByTestId('selection-dialog-n-samples-percentage-input')).toHaveValue(25);
+        expect(screen.getByTestId('sampling-dialog-n-samples-percentage-input')).toHaveValue(25);
     });
 
     it('calls onCountChange with the entered value when the count input changes', async () => {
@@ -35,7 +35,7 @@ describe('SampleCountInput', () => {
             onPercentageChange: vi.fn()
         });
 
-        await fireEvent.input(screen.getByTestId('selection-dialog-n-samples-input'), {
+        await fireEvent.input(screen.getByTestId('sampling-dialog-n-samples-input'), {
             target: { value: '500' }
         });
 
@@ -52,7 +52,7 @@ describe('SampleCountInput', () => {
             onPercentageChange
         });
 
-        await fireEvent.input(screen.getByTestId('selection-dialog-n-samples-percentage-input'), {
+        await fireEvent.input(screen.getByTestId('sampling-dialog-n-samples-percentage-input'), {
             target: { value: '20' }
         });
 
