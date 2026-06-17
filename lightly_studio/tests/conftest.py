@@ -53,7 +53,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "--postgres",
         action="store_true",
         default=False,
-        help="Run tests against a Postgres container instead of in-memory DuckDB.",
+        help="Run tests against a Postgres container instead of file-based DuckDB.",
     )
 
 
@@ -104,17 +104,29 @@ def _postgres_engine(postgres_url: str | None) -> Generator[DatabaseEngine | Non
 
 
 @pytest.fixture(scope="session")
-def _duckdb_engine(_use_postgres: bool) -> Generator[DatabaseEngine | None, None, None]:
-    """Create a session-scoped in-memory DuckDB engine, or None under --postgres.
+def _duckdb_engine(
+    _use_postgres: bool,
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Generator[DatabaseEngine | None, None, None]:
+    """Create a session-scoped on-disk DuckDB engine, or None under --postgres.
 
-    Each pytest-xdist worker is its own process, so this yields one in-memory DB
-    per worker and the schema is built once per worker rather than once per test.
+    Each pytest-xdist worker is its own process, so this yields one DuckDB
+    database per worker and the schema is built once per worker rather than
+    once per test.
+
+    A file-based database is used instead of ``:memory:`` on purpose. When an
+    in-memory DuckDB connection is reused across many DELETE/INSERT cycles (our
+    per-test reset), it eventually serves a stale cached query plan for
+    parameterized ``LIMIT``/``OFFSET`` queries, so reads return zero rows even
+    though the rows exist. The file backend invalidates these plans correctly,
+    and it matches production, which also uses a file-based DuckDB.
     """
     if _use_postgres:
         yield None
         return
 
-    engine = DatabaseEngine("duckdb:///:memory:", single_threaded=True)
+    db_path = tmp_path_factory.mktemp("duckdb") / "test.duckdb"
+    engine = DatabaseEngine(f"duckdb:///{db_path}", single_threaded=True)
     yield engine
     engine.close()
 
@@ -127,7 +139,7 @@ def _db_engine(
 ) -> Generator[DatabaseEngine, None, None]:
     """Provide the per-worker DatabaseEngine for each test.
 
-    Reuses one session-scoped engine (in-memory DuckDB by default, or Postgres
+    Reuses one session-scoped engine (file-based DuckDB by default, or Postgres
     under --postgres). Resets data between tests keeping the DB schema.
     That saves the schema creation time across 1000s of tests, speeding up our CI.
     """
@@ -172,8 +184,8 @@ def media_test_client(
 
     Media endpoints call ``db_manager.session()`` directly instead of using the
     session dependency. Patch it to yield the per-test ``db_session`` so requests
-    read the data the test creates: the in-memory DuckDB ``StaticPool`` has a
-    single connection, which cannot host two concurrent sessions.
+    read the data the test creates: the DuckDB ``StaticPool`` has a single
+    connection, which cannot host two concurrent sessions.
     """
 
     @contextlib.contextmanager
@@ -520,7 +532,7 @@ def patch_collection(
 ) -> None:
     """Fixture to patch the collection resources.
 
-    Patches get_engine() to return the per-test engine (in-memory DuckDB or
+    Patches get_engine() to return the per-test engine (file-based DuckDB or
     session-scoped Postgres). Table truncation is handled by _db_engine teardown.
     """
     # Create a mock database manager.
