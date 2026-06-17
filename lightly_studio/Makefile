@@ -5,6 +5,7 @@ POSTGRES_USER := lightly
 POSTGRES_PASSWORD := lightly
 POSTGRES_DB := lightly_studio
 POSTGRES_IMAGE := pgvector/pgvector:0.8.1-pg18-bookworm
+POSTGRES_SHM_SIZE ?= 2g
 POSTGRES_URL ?= postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@localhost:$(POSTGRES_PORT)/$(POSTGRES_DB)
 
 .PHONY: install-uv
@@ -104,6 +105,7 @@ start-postgres: stop-postgres
 	@echo "Starting PostgreSQL container ($(POSTGRES_IMAGE))..."
 	docker run -d \
 		--name $(POSTGRES_CONTAINER_NAME) \
+		--shm-size=$(POSTGRES_SHM_SIZE) \
 		-e POSTGRES_USER=$(POSTGRES_USER) \
 		-e POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) \
 		-e POSTGRES_DB=$(POSTGRES_DB) \
