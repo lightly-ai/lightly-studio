@@ -185,7 +185,7 @@ test-ci:
 .PHONY: test-postgres
 test-postgres: build
 	@echo "Running tests against Postgres..."
-	uv run pytest --postgres
+	uv run pytest --postgres -n 3
 
 # Alembic loads lightly_studio package code that expects dist_lightly_studio_view_app.
 .PHONY: mock-webapp-dist
