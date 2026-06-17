@@ -320,7 +320,7 @@ def _populate_database(config: BenchmarkConfig, image_path: Path, dataset_name: 
     raw_connection = db_manager.get_engine()._engine.raw_connection()
     try:
         connection = raw_connection.driver_connection
-        if config.backend is not Backend.DUCKDB:
+        if config.backend in (Backend.POSTGRES, Backend.ENTERPRISE):
             # Register pgvector adapters so embeddings stream via binary COPY.
             pgvector.psycopg.register_vector(connection)
         with tqdm(
