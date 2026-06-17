@@ -111,15 +111,12 @@ def _duckdb_engine(
     """Create a session-scoped on-disk DuckDB engine, or None under --postgres.
 
     Each pytest-xdist worker is its own process, so this yields one DuckDB
-    database per worker and the schema is built once per worker rather than
-    once per test.
+    database per worker, building the schema once per worker instead of per test.
 
-    A file-based database is used instead of ``:memory:`` on purpose. When an
-    in-memory DuckDB connection is reused across many DELETE/INSERT cycles (our
-    per-test reset), it eventually serves a stale cached query plan for
-    parameterized ``LIMIT``/``OFFSET`` queries, so reads return zero rows even
-    though the rows exist. The file backend invalidates these plans correctly,
-    and it matches production, which also uses a file-based DuckDB.
+    A file is used instead of ``:memory:`` on purpose: a reused in-memory
+    connection serves a stale cached query plan after many DELETE/INSERT cycles
+    (our per-test reset), making parameterized ``LIMIT``/``OFFSET`` reads return
+    zero rows. The file backend invalidates these plans and matches production.
     """
     if _use_postgres:
         yield None
