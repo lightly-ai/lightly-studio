@@ -127,6 +127,44 @@ describe('StrategyCard', () => {
         });
     });
 
+    describe('deduplication', () => {
+        it('renders the minimum distance and strength fields when expanded', () => {
+            const instance: StrategyInstance = {
+                id: 'abc',
+                type: 'deduplication',
+                params: { strength: 1, stopping_condition_minimum_distance: 0.1 },
+                isExpanded: true
+            };
+
+            render(StrategyCard, { props: { ...defaultProps, instance } });
+
+            expect(
+                screen.getByTestId('strategy-deduplication-min-distance-input')
+            ).toBeInTheDocument();
+            expect(
+                screen.getByTestId('strategy-deduplication-strength-input')
+            ).toBeInTheDocument();
+        });
+
+        it('calls onUpdate with a new minimum distance', async () => {
+            const onUpdate = vi.fn();
+            const instance: StrategyInstance = {
+                id: 'abc',
+                type: 'deduplication',
+                params: { strength: 1, stopping_condition_minimum_distance: 0.1 },
+                isExpanded: true
+            };
+
+            render(StrategyCard, { props: { ...defaultProps, onUpdate, instance } });
+
+            await fireEvent.input(screen.getByTestId('strategy-deduplication-min-distance-input'), {
+                target: { value: '0.5' }
+            });
+
+            expect(onUpdate).toHaveBeenCalledWith({ stopping_condition_minimum_distance: 0.5 });
+        });
+    });
+
     describe('typicality', () => {
         it('renders the strength field when expanded', () => {
             const instance: StrategyInstance = {
