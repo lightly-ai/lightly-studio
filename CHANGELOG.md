@@ -9,19 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Show plugin description and a link to documentation when no plugins are available.
-- When sorting the image grid by a numeric field, the field value is now shown as an overlay on each sample.
-- Query editor now supports annotation `source` and `confidence` fields in queries.
-- Panel toggles (Embeddings, Query, Evaluation) moved to a right-rail icon menu beside the collection grid.
-- Python SDK: `annotation_source` parameter on `ImageDataset.add_samples_from*` methods and
-  `Sample.add_annotation` / `add_annotations` to import or add annotations to a named source.
-- Python SDK: `Annotation.annotation_source` property to read the annotation source name.
+- Sampling in Browser now supports combining multiple strategies (diversity, typicality, similarity, metadata weighting, class balancing) in a single selection.
 
 ### Changed
-
-- The embedding plot legend now reflects the active filter: categories with no
-  matching samples are hidden. When there are more values than fit in the
-  legend, the least frequent values are merged into a single "Other" category.
 
 ### Deprecated
 
@@ -29,11 +19,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+### Security
+
+## \[1.0.1\] - 2026-06-17
+
+### Added
+
+- Show plugin description and a link to documentation when no plugins are available.
+- When sorting the image grid by a numeric field, the field value is now shown as an overlay on each sample.
+- Query editor now supports annotation `source` and `confidence` fields in queries.
+- Panel toggles (Embeddings, Query, Evaluation) moved to a right-rail icon menu beside the collection grid.
+- Python SDK: `annotation_source` parameter on `ImageDataset.add_samples_from*` methods and
+  `Sample.add_annotation` / `add_annotations` to import or add annotations to a named source.
+- Python SDK: `Annotation.annotation_source` property to read the annotation source name.
+- Python SDK: `Sampling.deduplicate` method to select a deduplicated subset based on embedding distance.
+
+### Changed
+
+- The embedding plot legend now reflects the active filter: categories with no
+  matching samples are hidden. When there are more values than fit in the
+  legend, the least frequent values are merged into a single "Other" category.
+
+### Fixed
+
 - Fixed embedding rendering for users without WebGPU by updating `embedding-atlas` from `0.10.0` to `0.21.0`.
 - The query filter is now applied consistently across features that use the image filter, such as the embedding plot, sampling, and select-all.
 - Brush tool's `Finish` button gives better visual feedback when an annotation can be finished.
-
-### Security
 
 ## \[1.0.0\] - 2026-06-05
 

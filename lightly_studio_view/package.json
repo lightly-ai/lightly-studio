@@ -20,6 +20,7 @@
     "test:unit": "vitest",
     "test": "npm run test:unit -- --run && npm run test:e2e",
     "test:e2e": "playwright test --project=general",
+    "test:e2e-evaluations": "playwright test --project=evaluations",
     "test:e2e-videos": "playwright test --project=videos",
     "test:e2e-debug": "playwright test --ui",
     "test:e2e-debug-videos": "playwright test --ui --project=videos",

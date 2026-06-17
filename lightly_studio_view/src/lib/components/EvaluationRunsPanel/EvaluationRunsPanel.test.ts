@@ -71,8 +71,8 @@ describe('EvaluationRunsPanel', () => {
         ];
         renderPanel({ evaluationRuns: runs });
 
-        const items = screen.getAllByTestId('evaluation-run-item');
-        expect(items).toHaveLength(2);
+        expect(screen.getByTestId('evaluation-run-item-Run A')).toBeInTheDocument();
+        expect(screen.getByTestId('evaluation-run-item-Run B')).toBeInTheDocument();
         expect(screen.getByText('Run A')).toBeInTheDocument();
         expect(screen.getByText('Run B')).toBeInTheDocument();
     });
@@ -92,18 +92,20 @@ describe('EvaluationRunsPanel', () => {
         ];
         renderPanel({ evaluationRuns: runs });
 
-        const [itemA] = screen.getAllByTestId('evaluation-run-item');
+        const itemA = screen.getByTestId('evaluation-run-item-Run A');
 
         await fireEvent.click(itemA);
-        const items = screen.getAllByTestId('evaluation-run-item');
-        expect(items).toHaveLength(1);
-        expect(items[0]).toHaveAttribute('aria-expanded', 'true');
+        expect(screen.getByTestId('evaluation-run-item-Run A')).toHaveAttribute(
+            'aria-expanded',
+            'true'
+        );
         expect(screen.getAllByTestId('evaluation-run-details')).toHaveLength(1);
         expect(screen.queryByText('Run B')).not.toBeInTheDocument();
 
-        await fireEvent.click(items[0]);
+        await fireEvent.click(screen.getByTestId('evaluation-run-item-Run A'));
         expect(screen.queryByTestId('evaluation-run-details')).not.toBeInTheDocument();
-        expect(screen.getAllByTestId('evaluation-run-item')).toHaveLength(2);
+        expect(screen.getByTestId('evaluation-run-item-Run A')).toBeInTheDocument();
+        expect(screen.getByTestId('evaluation-run-item-Run B')).toBeInTheDocument();
         expect(screen.getByText('Run B')).toBeInTheDocument();
     });
 
@@ -116,13 +118,14 @@ describe('EvaluationRunsPanel', () => {
 
         expect(screen.queryByTestId('evaluation-runs-back-button')).not.toBeInTheDocument();
 
-        await fireEvent.click(screen.getAllByTestId('evaluation-run-item')[0]);
+        await fireEvent.click(screen.getByTestId('evaluation-run-item-Run A'));
         const backButton = screen.getByTestId('evaluation-runs-back-button');
         expect(backButton).toBeInTheDocument();
 
         await fireEvent.click(backButton);
         expect(screen.queryByTestId('evaluation-runs-back-button')).not.toBeInTheDocument();
-        expect(screen.getAllByTestId('evaluation-run-item')).toHaveLength(2);
+        expect(screen.getByTestId('evaluation-run-item-Run A')).toBeInTheDocument();
+        expect(screen.getByTestId('evaluation-run-item-Run B')).toBeInTheDocument();
         expect(screen.queryByTestId('evaluation-run-details')).not.toBeInTheDocument();
     });
 

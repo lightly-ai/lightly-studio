@@ -33,7 +33,7 @@
         type="button"
         class="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-muted/50"
         onclick={onToggle}
-        data-testid="evaluation-run-item"
+        data-testid={`evaluation-run-item-${run.name}`}
         aria-expanded={expanded}
     >
         <div class="min-w-0 flex-1">

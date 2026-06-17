@@ -43,7 +43,12 @@ class Mundig:
         )
         return selected
 
-    def add_diversity(self, embeddings: Iterable[Iterable[float]], strength: float = 1.0) -> None:
+    def add_diversity(
+        self,
+        embeddings: Iterable[Iterable[float]],
+        strength: float = 1.0,
+        stopping_condition_minimum_distance: float | None = None,
+    ) -> None:
         """Add diversity-based sampling using sample embeddings.
 
         Args:
@@ -54,6 +59,12 @@ class Mundig:
                 all samples.
             strength:
                 The strength of the diversity strategy.
+            stopping_condition_minimum_distance:
+                When a sample would be closer than this distance to the already
+                selected samples, selection stops. This is useful for
+                deduplication, where only samples that are sufficiently distant
+                from each other should be selected. ``None`` disables the
+                stopping condition.
 
         """
         # Convert to ndarray with float32 dtype if not already
@@ -62,7 +73,11 @@ class Mundig:
         else:
             embeddings_ndarray = np.array(embeddings, dtype=np.float32)
         self._check_consistent_input_size(embeddings_ndarray.shape[0])
-        self.mundig.add_diversifying_strategy(embeddings=embeddings_ndarray, strength=strength)
+        self.mundig.add_diversifying_strategy(
+            embeddings=embeddings_ndarray,
+            strength=strength,
+            stopping_condition_minimum_distance=stopping_condition_minimum_distance,
+        )
 
     def add_weighting(self, weights: Iterable[float], strength: float = 1.0) -> None:
         """Add a weighting strategy.

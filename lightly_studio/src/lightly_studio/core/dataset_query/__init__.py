@@ -1,6 +1,7 @@
 from .boolean_expression import AND, NOT, OR
 from .classification_expression import ClassificationField, ClassificationQuery
 from .dataset_query import DatasetQuery
+from .evaluation_metric_expression import EvaluationMetricField
 from .image_sample_field import ImageSampleField
 from .object_detection_expression import ObjectDetectionField, ObjectDetectionQuery
 from .order_by import (
@@ -19,6 +20,7 @@ __all__ = [
     "ClassificationField",
     "ClassificationQuery",
     "DatasetQuery",
+    "EvaluationMetricField",
     "ImageSampleField",
     "ObjectDetectionField",
     "ObjectDetectionQuery",

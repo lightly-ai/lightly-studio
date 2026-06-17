@@ -191,6 +191,14 @@ jobs:
             success_key: e2e-success-groups
             artifact_name: Playwright Report (Groups)
             postgres: false
+          - name: Evaluations
+            index_script: index_evaluations.py
+            playwright_project: evaluations
+            shard: "1/1"
+            success_marker: .e2e-success-evaluations
+            success_key: e2e-success-evaluations
+            artifact_name: Playwright Report (Evaluations)
+            postgres: false
           - name: General Postgres 1 of 2
             index_script: index_general.py
             playwright_project: general

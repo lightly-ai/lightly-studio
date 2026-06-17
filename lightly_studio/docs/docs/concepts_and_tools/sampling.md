@@ -55,6 +55,28 @@ dataset.query().sampling().diverse(
 
 If your dataset has multiple embedding models, pass `embedding_model_name` to specify which one to use. See [`Sampling.diverse`](../api/sampling.md#lightly_studio.sampling.sample.Sampling.diverse) for the full API reference.
 
+#### Deduplicate
+
+Deduplication builds a subset in which no two selected samples are closer than `stopping_condition_minimum_distance` in embedding space. A sample is added to the result only if it is at least that far from every sample already selected; any sample that falls within the threshold is treated as a near-duplicate and skipped. Selection continues until `n_samples_to_select` samples have been collected or no sufficiently distinct sample remains, so fewer than `n_samples_to_select` samples may be returned.
+
+```py
+import lightly_studio as ls
+
+# Load your dataset
+dataset = ls.ImageDataset.load_or_create()
+dataset.add_images_from_path(path="/path/to/image_dataset")
+
+# Select up to 100 samples, stopping early once the remaining samples are
+# closer than 0.1 to the already selected ones.
+dataset.query().sampling().deduplicate(
+    n_samples_to_select=100,
+    sampling_result_tag_name="deduplicated_sampling",
+    stopping_condition_minimum_distance=0.1,
+)
+```
+
+The right value for `stopping_condition_minimum_distance` depends on the embedding model and the distances in your dataset. See [`Sampling.deduplicate`](../api/sampling.md#lightly_studio.sampling.sample.Sampling.deduplicate) for the full API reference.
+
 #### Metadata Weighting
 
 Metadata weighting selects samples by treating a numeric metadata field as a score: samples with higher values are preferred. Any float or int metadata field can be used as the weight.
