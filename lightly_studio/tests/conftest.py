@@ -123,7 +123,7 @@ def _duckdb_engine(
         return
 
     db_path = tmp_path_factory.mktemp("duckdb") / "test.duckdb"
-    engine = DatabaseEngine(f"duckdb:///{db_path}", single_threaded=True)
+    engine = DatabaseEngine(engine_url=f"duckdb:///{db_path}", single_threaded=True)
     yield engine
     engine.close()
 
@@ -603,7 +603,7 @@ def _delete_self_referential_table(session: Session, table: sqlalchemy.Table) ->
         f'(SELECT {parent_keys} FROM "{table.name}" WHERE {not_null})'
     )
     count_rows = f'SELECT COUNT(*) FROM "{table.name}"'
-    # duckdb-engine reports rowcount as -1, so terminate on the row count instead.
+    # DuckDB reports rowcount as -1, so condition on COUNT(*) instead.
     remaining = session.execute(sqlalchemy.text(count_rows)).scalar_one()
     while remaining > 0:
         session.execute(sqlalchemy.text(delete_leaves))
