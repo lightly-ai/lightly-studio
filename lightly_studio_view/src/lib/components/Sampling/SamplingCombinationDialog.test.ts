@@ -359,6 +359,62 @@ describe('SamplingCombinationDialog', () => {
         expect(screen.getByTestId('annotation-source-option-predictions')).toBeInTheDocument();
     });
 
+    it('updates the percentage input when the absolute count is changed', async () => {
+        filteredSampleCountStore.set(1000);
+
+        render(SamplingCombinationDialog);
+
+        const absoluteInput = screen.getByTestId('selection-dialog-n-samples-input');
+        await fireEvent.input(absoluteInput, { target: { value: '100' } });
+
+        expect(screen.getByTestId('selection-dialog-n-samples-percentage-input')).toHaveValue(10);
+    });
+
+    it('updates the absolute count when the percentage input is changed', async () => {
+        filteredSampleCountStore.set(1000);
+
+        render(SamplingCombinationDialog);
+
+        const percentageInput = screen.getByTestId('selection-dialog-n-samples-percentage-input');
+        await fireEvent.input(percentageInput, { target: { value: '25' } });
+
+        expect(screen.getByTestId('selection-dialog-n-samples-input')).toHaveValue(250);
+    });
+
+    it('rounds the absolute count to the nearest integer when converting from percentage', async () => {
+        filteredSampleCountStore.set(1000);
+
+        render(SamplingCombinationDialog);
+
+        const percentageInput = screen.getByTestId('selection-dialog-n-samples-percentage-input');
+        await fireEvent.input(percentageInput, { target: { value: '0.1' } });
+
+        expect(screen.getByTestId('selection-dialog-n-samples-input')).toHaveValue(1);
+    });
+
+    it('submits the resolved absolute count after editing the percentage', async () => {
+        submitMock.mockResolvedValue(false);
+        filteredSampleCountStore.set(1000);
+
+        render(SamplingCombinationDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+        await fireEvent.pointerUp(await screen.findByTestId('add-strategy-diversity'));
+        await fireEvent.input(screen.getByTestId('selection-dialog-tag-name-input'), {
+            target: { value: 'my-tag' }
+        });
+        await fireEvent.input(screen.getByTestId('selection-dialog-n-samples-percentage-input'), {
+            target: { value: '10' }
+        });
+        await fireEvent.click(screen.getByTestId('selection-dialog-submit'));
+
+        await waitFor(() => {
+            expect(submitMock).toHaveBeenCalledWith(
+                expect.objectContaining({ nSamplesToSelect: 100 })
+            );
+        });
+    });
+
     it('shows Creating... on the submit button when submitting without a loading message', () => {
         isSubmittingStore.set(true);
 

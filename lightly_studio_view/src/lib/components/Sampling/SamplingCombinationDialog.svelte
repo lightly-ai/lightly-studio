@@ -13,6 +13,7 @@
     import { useStrategyBuilder } from '$lib/hooks/useStrategyBuilder';
     import { useSamplingCombinationDialog } from './useSamplingCombinationDialog/useSamplingCombinationDialog';
     import { useStrategyOptions } from './useSamplingCombinationDialog/useStrategyOptions.svelte';
+    import SampleCountInput from '$lib/components/Sampling/SampleCountInput/SampleCountInput.svelte';
 
     const collectionId = $derived(page.params.collection_id!);
     const isVideoCollection = $derived(
@@ -41,6 +42,9 @@
     const {
         tags,
         nSamplesToSelect,
+        percentageToSelect,
+        updateAbsolute,
+        updatePercentage,
         selectionResultTagName,
         filteredSampleCount,
         noSamples,
@@ -131,15 +135,11 @@
                                     content="How many samples will be written to the output tag. Cannot exceed the number of samples matching the current filters."
                                 />
                             </div>
-                            <Input
-                                id="n-samples"
-                                type="number"
-                                bind:value={$nSamplesToSelect}
-                                min="1"
-                                placeholder="Enter number of samples"
-                                required
-                                class="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                data-testid="selection-dialog-n-samples-input"
+                            <SampleCountInput
+                                count={$nSamplesToSelect}
+                                percentage={$percentageToSelect}
+                                onCountChange={updateAbsolute}
+                                onPercentageChange={updatePercentage}
                             />
                         </div>
 
