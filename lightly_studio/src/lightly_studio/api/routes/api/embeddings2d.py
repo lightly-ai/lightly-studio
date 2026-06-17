@@ -8,13 +8,14 @@ from typing import Annotated
 from uuid import UUID
 
 import pyarrow as pa
-from fastapi import APIRouter, Path, Response
+from fastapi import APIRouter, HTTPException, Path, Response
 from pyarrow import ipc
 from pydantic import BaseModel, Field
 from sqlmodel import select
 
 from lightly_studio.api.routes.api.embedding_coloring import ColorBy, build_color_data
 from lightly_studio.db_manager import SessionDep
+from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.resolvers import (
     annotation_resolver,
@@ -36,6 +37,7 @@ class GetEmbeddings2DRequest(BaseModel):
         description="Filter parameters identifying matching samples"
     )
     color_by: ColorBy | None = None
+    embedding_model_id: UUID | None = None
 
 
 @embeddings2d_router.post("/collections/{collection_id}/embeddings2d/default")
@@ -45,12 +47,19 @@ def get_2d_embeddings(
     body: GetEmbeddings2DRequest,
 ) -> Response:
     """Return 2D embeddings serialized as an Arrow stream."""
-    # TODO(Malte, 09/2025): Support choosing the embedding model via API parameter.
-    embedding_model = session.exec(
-        select(EmbeddingModelTable)
-        .where(EmbeddingModelTable.collection_id == collection_id)
-        .limit(1)
-    ).first()
+    collection = session.get(CollectionTable, collection_id)
+    if collection is None:
+        raise ValueError(f"Collection {collection_id} not found.")
+    _validate_filter_type(collection=collection, filters=body.filters)
+
+    embedding_model_statement = select(EmbeddingModelTable).where(
+        EmbeddingModelTable.collection_id == collection_id
+    )
+    if body.embedding_model_id is not None:
+        embedding_model_statement = embedding_model_statement.where(
+            EmbeddingModelTable.embedding_model_id == body.embedding_model_id
+        )
+    embedding_model = session.exec(embedding_model_statement.limit(1)).first()
     if embedding_model is None:
         raise ValueError("No embedding model configured.")
 
@@ -156,4 +165,20 @@ def _get_matching_sample_ids(
         session=session,
         collection_id=collection_id,
         filters=filters,
+    )
+
+
+def _validate_filter_type(
+    collection: CollectionTable,
+    filters: ImageFilter | VideoFilter | AnnotationsFilter,
+) -> None:
+    if collection.sample_type == SampleType.IMAGE and isinstance(filters, ImageFilter):
+        return
+    if collection.sample_type == SampleType.VIDEO and isinstance(filters, VideoFilter):
+        return
+    if collection.sample_type == SampleType.ANNOTATION and isinstance(filters, AnnotationsFilter):
+        return
+    raise HTTPException(
+        status_code=400,
+        detail=f"Invalid filter type for {collection.sample_type.value} collection.",
     )

@@ -19,7 +19,7 @@ from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.vendor import mobileclip
 
 from . import file_utils
-from .embedding_generator import ImageEmbeddingGenerator
+from .embedding_generator import ImageCrop, ImageEmbeddingGenerator
 
 MODEL_NAME = "mobileclip_s0"
 MOBILECLIP_DOWNLOAD_URL = (
@@ -154,6 +154,81 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
                 progress_bar.update(batch_size)
 
         return embeddings
+
+    def embed_image_crops(
+        self, image_crops: list[ImageCrop], show_progress: bool = True
+    ) -> NDArray[np.float32]:
+        """Embed image crops with MobileCLIP, loading each source image once."""
+        total_crops = len(image_crops)
+        if not total_crops:
+            return np.empty((0, EMBEDDING_DIMENSION), dtype=np.float32)
+
+        crops_by_filepath: dict[str, list[tuple[int, ImageCrop]]] = {}
+        for index, image_crop in enumerate(image_crops):
+            crops_by_filepath.setdefault(image_crop.filepath, []).append((index, image_crop))
+
+        embeddings = np.empty((total_crops, EMBEDDING_DIMENSION), dtype=np.float32)
+        batch_tensors: list[torch.Tensor] = []
+        batch_indices: list[int] = []
+        with (
+            tqdm(
+                total=total_crops,
+                desc="Generating crop embeddings",
+                unit=" crops",
+                disable=not show_progress,
+            ) as progress_bar,
+            torch.no_grad(),
+        ):
+            for filepath, indexed_crops in crops_by_filepath.items():
+                with fsspec.open(filepath, "rb") as file:
+                    image = Image.open(file).convert("RGB")
+                    for index, image_crop in indexed_crops:
+                        cropped = image.crop(
+                            (
+                                image_crop.x,
+                                image_crop.y,
+                                image_crop.x + image_crop.width,
+                                image_crop.y + image_crop.height,
+                            )
+                        )
+                        batch_tensors.append(self._preprocess(cropped))
+                        batch_indices.append(index)
+                        if len(batch_tensors) >= MAX_BATCH_SIZE:
+                            _encode_batch(
+                                model=self._model,
+                                device=self._device,
+                                batch_tensors=batch_tensors,
+                                batch_indices=batch_indices,
+                                embeddings=embeddings,
+                            )
+                            progress_bar.update(len(batch_tensors))
+                            batch_tensors.clear()
+                            batch_indices.clear()
+
+            if batch_tensors:
+                _encode_batch(
+                    model=self._model,
+                    device=self._device,
+                    batch_tensors=batch_tensors,
+                    batch_indices=batch_indices,
+                    embeddings=embeddings,
+                )
+                progress_bar.update(len(batch_tensors))
+
+        return embeddings
+
+
+def _encode_batch(
+    model: torch.nn.Module,
+    device: torch.device,
+    batch_tensors: list[torch.Tensor],
+    batch_indices: list[int],
+    embeddings: NDArray[np.float32],
+) -> None:
+    images_tensor = torch.stack(batch_tensors).to(device, non_blocking=True)
+    batch_embeddings = model.encode_image(images_tensor).cpu().numpy()  # type: ignore[attr-defined]
+    for batch_position, crop_index in enumerate(batch_indices):
+        embeddings[crop_index] = batch_embeddings[batch_position]
 
 
 def _get_cached_mobileclip_checkpoint() -> Path:
