@@ -39,6 +39,7 @@
         onValueChange={handleValueChange}
         hideSelectionMarker
         itemsAsLinks
+        variant="ghost"
         class={cn(item.isSelected && 'bg-accent')}
         testId={`navigation-menu-${item.title.toLowerCase()}`}
     />

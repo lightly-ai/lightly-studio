@@ -59,6 +59,18 @@ export function useSamplingCombinationDialog({
             $name.trim().length > 0
     );
 
+    const createButtonTooltip = derived(
+        [instances, nSamplesToSelect, selectionResultTagName],
+        ([$instances, $n, $name]) => {
+            if ($instances.length === 0) return 'Add at least 1 strategy to create a selection.';
+            if (!$instances.every(isStrategyInstanceValid))
+                return 'Complete the required fields in all strategies.';
+            if ($n <= 0) return 'Enter a number of samples greater than 0.';
+            if ($name.trim().length === 0) return 'Enter a tag name.';
+            return '';
+        }
+    );
+
     function resetForm() {
         onSubmitSuccess();
         nSamplesToSelect.set(10);
@@ -93,6 +105,7 @@ export function useSamplingCombinationDialog({
         notEnoughSamples,
         sampleCountLabel,
         isFormValid,
+        createButtonTooltip,
         isSubmitting,
         loadingMessage,
         handleFormSubmit
