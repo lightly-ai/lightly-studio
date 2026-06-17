@@ -18,7 +18,7 @@ Local PostgreSQL:
 
 Remote enterprise instance (credentials come from the environment):
 
-    export LIGHTLY_STUDIO_API_URL="http://100.87.208.47:8400"
+    export LIGHTLY_STUDIO_API_URL="http://<enterprise-host>:8400"
     export LIGHTLY_STUDIO_TOKEN="<token-from-the-enterprise-GUI>"
     uv run tests/benchmarks/gui_benchmark.py --backend enterprise
 
@@ -33,18 +33,19 @@ import logging
 import os
 import secrets
 import time
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import numpy as np
+import pgvector.psycopg
 import pyarrow as pa
 from numpy.typing import NDArray
-from pgvector.psycopg import register_vector
 from PIL import Image
 from sqlmodel import Session
 from tqdm import tqdm
@@ -241,7 +242,7 @@ def _resolve_dataset_name(backend: Backend) -> str:
     start from a wiped database each run, so they keep the stable default name.
     """
     if backend is Backend.ENTERPRISE:
-        return f"{DEFAULT_DATASET_NAME}_{uuid4().hex[:8]}"
+        return f"{DEFAULT_DATASET_NAME}_{uuid.uuid4().hex[:8]}"
     return DEFAULT_DATASET_NAME
 
 
@@ -321,7 +322,7 @@ def _populate_database(config: BenchmarkConfig, image_path: Path, dataset_name: 
         connection = raw_connection.driver_connection
         if config.backend is not Backend.DUCKDB:
             # Register pgvector adapters so embeddings stream via binary COPY.
-            register_vector(connection)
+            pgvector.psycopg.register_vector(connection)
         with tqdm(
             total=config.num_images,
             desc="Populating database",
