@@ -11,6 +11,7 @@ from sqlmodel import Session
 from lightly_studio.sampling.sampling_config import (
     AnnotationClassBalancingStrategy,
     AnnotationClassToTarget,
+    EmbeddingDeduplicationStrategy,
     EmbeddingDiversityStrategy,
     MetadataWeightingStrategy,
     SamplingConfig,
@@ -150,6 +151,40 @@ class Sampling:
                 available model or raises if multiple exist.
         """
         strategy = EmbeddingDiversityStrategy(embedding_model_name=embedding_model_name)
+        self.multi_strategies(
+            n_samples_to_select=n_samples_to_select,
+            sampling_result_tag_name=sampling_result_tag_name,
+            sampling_strategies=[strategy],
+        )
+
+    def deduplicate(
+        self,
+        n_samples_to_select: int,
+        sampling_result_tag_name: str,
+        stopping_condition_minimum_distance: float,
+        embedding_model_name: str | None = None,
+    ) -> None:
+        """Select a deduplicated subset using embeddings.
+
+        Removes near-duplicates by selecting samples that are spread out in
+        embedding space and stopping once the closest remaining sample would be
+        nearer than `stopping_condition_minimum_distance` to the already selected
+        samples. Fewer than `n_samples_to_select` samples may be selected if the
+        stopping condition is reached first.
+
+        Args:
+            n_samples_to_select: Maximum number of samples to select.
+            sampling_result_tag_name: Tag name for the sampling result.
+            stopping_condition_minimum_distance: Minimum embedding distance between
+                selected samples. Selection stops once no remaining sample is at
+                least this far from the already selected samples.
+            embedding_model_name: Optional embedding model name. If None, uses the only
+                available model or raises if multiple exist.
+        """
+        strategy = EmbeddingDeduplicationStrategy(
+            embedding_model_name=embedding_model_name,
+            stopping_condition_minimum_distance=stopping_condition_minimum_distance,
+        )
         self.multi_strategies(
             n_samples_to_select=n_samples_to_select,
             sampling_result_tag_name=sampling_result_tag_name,
