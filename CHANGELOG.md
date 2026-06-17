@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## \[1.0.1\] - 2026-06-17
+
+### Added
+
 - Show plugin description and a link to documentation when no plugins are available.
 - When sorting the image grid by a numeric field, the field value is now shown as an overlay on each sample.
 - Query editor now supports annotation `source` and `confidence` fields in queries.
