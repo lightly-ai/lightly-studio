@@ -155,14 +155,14 @@ export class SamplesPage {
             await this.page.getByTestId(`similarity-query-tag-${queryTagId}`).click();
         }
 
-        const nSamplesInput = this.page.getByTestId('selection-dialog-n-samples-input');
+        const nSamplesInput = this.page.getByTestId('sampling-dialog-n-samples-input');
         await nSamplesInput.clear();
         await nSamplesInput.fill(nSamples.toString());
 
-        const tagNameInput = this.page.getByTestId('selection-dialog-tag-name-input');
+        const tagNameInput = this.page.getByTestId('sampling-dialog-tag-name-input');
         await tagNameInput.fill(tagName);
 
-        await pressButton(this.page, 'selection-dialog-submit');
+        await pressButton(this.page, 'sampling-dialog-submit');
     }
 
     async createDiversitySampling(nSamples: number, tagName: string): Promise<void> {
