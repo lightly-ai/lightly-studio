@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python SDK: `annotation_source` parameter on `ImageDataset.add_samples_from*` methods and
   `Sample.add_annotation` / `add_annotations` to import or add annotations to a named source.
 - Python SDK: `Annotation.annotation_source` property to read the annotation source name.
+- Python SDK: `Sampling.deduplicate` method to select a deduplicated subset based on embedding distance.
 
 ### Changed
 
