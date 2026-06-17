@@ -23,6 +23,7 @@ class EvaluationMetricField:  # noqa: PLW1641
 
     def __init__(self, evaluation_run_id: UUID, metric_name: str) -> None:
         """Initialize a queryable metric reference."""
+        # TODO(lukas 6/2026): consider using the run name instead.
         self.evaluation_run_id = evaluation_run_id
         self.metric_name = metric_name
 
