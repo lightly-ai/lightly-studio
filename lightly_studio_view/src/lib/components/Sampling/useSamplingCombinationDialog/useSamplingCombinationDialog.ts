@@ -36,23 +36,18 @@ export function useSamplingCombinationDialog({
     });
 
     const nSamplesToSelect = writable<number>(10);
-    const percentageToSelect = writable<number>(0);
+    const percentageToSelect = derived([nSamplesToSelect, filteredSampleCount], ([$n, $total]) =>
+        $total > 0 ? Math.round(($n / $total) * 100) : 0
+    );
     const selectionResultTagName = writable('');
 
     function updateAbsolute(count: number) {
         nSamplesToSelect.set(count);
-        const total = get(filteredSampleCount);
-        percentageToSelect.set(total > 0 ? Math.round((count / total) * 100) : 0);
     }
 
     function updatePercentage(percentage: number) {
-        percentageToSelect.set(percentage);
         const total = get(filteredSampleCount);
-        if (total <= 0) {
-            nSamplesToSelect.set(0);
-            return;
-        }
-        nSamplesToSelect.set(Math.round((percentage / 100) * total));
+        nSamplesToSelect.set(total > 0 ? Math.round((percentage / 100) * total) : 0);
     }
 
     const noSamples = derived(filteredSampleCount, ($count) => $count === 0);
@@ -91,7 +86,6 @@ export function useSamplingCombinationDialog({
     function resetForm() {
         onSubmitSuccess();
         nSamplesToSelect.set(10);
-        percentageToSelect.set(0);
         selectionResultTagName.set('');
     }
 
