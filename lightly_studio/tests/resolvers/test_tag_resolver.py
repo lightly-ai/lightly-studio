@@ -511,3 +511,70 @@ def test_add_and_remove_sample_ids_to_tag_id__twice_same_sample_ids(
 
     # ensure all samples were removed again
     assert len(tag_1.samples) == 0
+
+
+def test_get_most_used_by_collection_id__orders_by_usage(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    most_used_tag = create_tag(session=db_session, collection_id=collection_id, tag_name="tag_1")
+    middle_used_tag = create_tag(session=db_session, collection_id=collection_id, tag_name="tag_2")
+    least_used_tag = create_tag(session=db_session, collection_id=collection_id, tag_name="tag_3")
+
+    images = [
+        create_image(
+            session=db_session, collection_id=collection_id, file_path_abs=f"sample{i}.png"
+        )
+        for i in range(4)
+    ]
+
+    tag_resolver.add_tag_to_sample(
+        session=db_session, tag_id=most_used_tag.tag_id, sample=images[0].sample
+    )
+    tag_resolver.add_tag_to_sample(
+        session=db_session, tag_id=most_used_tag.tag_id, sample=images[1].sample
+    )
+    tag_resolver.add_tag_to_sample(
+        session=db_session, tag_id=most_used_tag.tag_id, sample=images[2].sample
+    )
+    tag_resolver.add_tag_to_sample(
+        session=db_session, tag_id=middle_used_tag.tag_id, sample=images[0].sample
+    )
+    tag_resolver.add_tag_to_sample(
+        session=db_session, tag_id=middle_used_tag.tag_id, sample=images[1].sample
+    )
+    tag_resolver.add_tag_to_sample(
+        session=db_session, tag_id=least_used_tag.tag_id, sample=images[0].sample
+    )
+
+    tags = tag_resolver.get_most_used_by_collection_id(
+        session=db_session, collection_id=collection_id
+    )
+
+    assert list(tags.keys()) == [
+        most_used_tag.tag_id,
+        middle_used_tag.tag_id,
+        least_used_tag.tag_id,
+    ]
+    assert tags == {
+        most_used_tag.tag_id: most_used_tag.name,
+        middle_used_tag.tag_id: middle_used_tag.name,
+        least_used_tag.tag_id: least_used_tag.name,
+    }
+
+
+def test_get_most_used_by_collection_id__limits_to_30_tags(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    created_tags = [
+        create_tag(session=db_session, collection_id=collection_id, tag_name=f"tag_{i}")
+        for i in range(31)
+    ]
+
+    tags = tag_resolver.get_most_used_by_collection_id(
+        session=db_session, collection_id=collection_id
+    )
+
+    assert len(tags) == 30
+    assert list(tags.keys()) == [tag.tag_id for tag in created_tags[:30]]
