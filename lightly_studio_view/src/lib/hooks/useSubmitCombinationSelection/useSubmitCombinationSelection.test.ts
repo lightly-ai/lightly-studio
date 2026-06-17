@@ -159,7 +159,7 @@ describe('useSubmitCombinationSelection', () => {
         const result = await submit({ ...defaultSubmitParams, selectionResultTagName: 'new-tag' });
 
         expect(result).toBe(true);
-        expect(toast.success).toHaveBeenCalledWith('Selection created successfully');
+        expect(toast.success).toHaveBeenCalledWith('Sampling created successfully');
         expect(loadTags).toHaveBeenCalled();
         expect(setTagSelected).toHaveBeenCalledWith('tag-abc', true);
         expect(closeSelectionDialog).toHaveBeenCalled();
