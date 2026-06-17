@@ -66,6 +66,7 @@
         disabled={isSimilaritySearchActive}
         placeholder="Sort by"
         size="xs"
+        variant="ghost"
         class="w-[100px] min-w-20"
         testId="sort-by-trigger"
     />

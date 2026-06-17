@@ -54,12 +54,11 @@ Open the printed URL in your browser.
 |---|---|---|
 | `--num-images` | 100 000 | Number of images to generate |
 | `--boxes-per-image` | 10 | Object-detection boxes per image |
-| `--embedding-dim` | 512 | Embedding vector dimensionality |
 | `--batch-size` | 5 000 | Insertion batch size |
 | `--seed` | 0 | Random seed for reproducibility |
 | `--host` | auto | Host to bind the server to |
 | `--port` | auto | Port to bind the server to |
-| `--postgres` | off | Populate PostgreSQL (pgvector) instead of the temporary DuckDB |
+| `--backend` | `duckdb` | Database backend: `duckdb` (temporary file), `postgres` (local pgvector via `make start-postgres`), or `enterprise` (remote instance via `$LIGHTLY_STUDIO_API_URL` / `$LIGHTLY_STUDIO_TOKEN`) |
 
 Example with a smaller dataset for a quick smoke-test:
 ```bash
@@ -69,8 +68,15 @@ uv run tests/benchmarks/gui_benchmark.py --num-images 10000
 Same for postgres:
 ```bash
 make start-postgres
-uv run tests/benchmarks/gui_benchmark.py --num-images 10000 --postgres
+uv run tests/benchmarks/gui_benchmark.py --num-images 10000 --backend postgres
 make stop-postgres
+```
+
+Against a remote enterprise instance (credentials come from the environment):
+```bash
+export LIGHTLY_STUDIO_API_URL="http://<enterprise-host>:8400"
+export LIGHTLY_STUDIO_TOKEN="<token-from-the-enterprise-GUI>"
+uv run tests/benchmarks/gui_benchmark.py --num-images 10000 --backend enterprise
 ```
 
 ### Measuring performance
