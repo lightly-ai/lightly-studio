@@ -12,8 +12,8 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from PIL import Image, ImageOps, UnidentifiedImageError
 
-from lightly_studio import db_manager
 from lightly_studio.api.routes.api import status
+from lightly_studio.database import db_manager
 from lightly_studio.models import image
 from lightly_studio.models.settings import GridViewThumbnailQualityType
 from lightly_studio.utils.executor import get_media_executor

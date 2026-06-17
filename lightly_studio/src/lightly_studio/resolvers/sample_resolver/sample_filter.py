@@ -6,8 +6,8 @@ from uuid import UUID
 from pydantic import BaseModel
 from sqlmodel import col, select
 
-from lightly_studio import db_array
 from lightly_studio.core.dataset_query import query_translation
+from lightly_studio.database import db_array
 from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.query_expr import QueryExpr
 from lightly_studio.models.sample import SampleTable

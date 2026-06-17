@@ -7,7 +7,7 @@ import sqlalchemy
 from duckdb_engine import Dialect
 from sqlalchemy.dialects import postgresql, sqlite
 
-from lightly_studio import db_json
+from lightly_studio.database import db_json
 
 
 def test_build_pg_json_accessor__simple_key() -> None:

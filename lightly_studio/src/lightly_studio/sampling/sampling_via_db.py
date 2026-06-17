@@ -13,7 +13,7 @@ import sqlalchemy
 from numpy.typing import NDArray
 from sqlmodel import Session, col, select
 
-from lightly_studio.db_vector import Embedding
+from lightly_studio.database.db_vector import Embedding
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagCreate

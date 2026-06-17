@@ -9,7 +9,7 @@ from fastapi import APIRouter, Path
 from fastapi.params import Body
 from pydantic import BaseModel
 
-from lightly_studio.db_manager import SessionDep
+from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationType,

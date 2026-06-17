@@ -23,8 +23,8 @@ from PIL import Image
 from tqdm import tqdm
 
 import lightly_studio.core.start_gui as start_gui_module
-from lightly_studio import db_manager
 from lightly_studio.api.server import Server
+from lightly_studio.database import db_manager
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,

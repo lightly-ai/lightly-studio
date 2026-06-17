@@ -15,7 +15,7 @@ import os
 import requests
 from pydantic import BaseModel, ValidationError
 
-from lightly_studio import db_manager
+from lightly_studio.database import db_manager
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_API_URL, LIGHTLY_STUDIO_TOKEN
 
 logger = logging.getLogger(__name__)

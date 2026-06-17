@@ -54,13 +54,15 @@ class AnnotationBaseTable(SQLModel, table=True):
 
     sample_id: UUID = Field(foreign_key="sample.sample_id", primary_key=True)
     annotation_type: AnnotationType
-    annotation_label_id: UUID = Field(foreign_key="annotation_label.annotation_label_id")
+    annotation_label_id: UUID = Field(
+        foreign_key="annotation_label.annotation_label_id", index=True
+    )
 
     confidence: Optional[float] = None
-    parent_sample_id: UUID = Field(foreign_key="sample.sample_id")
+    parent_sample_id: UUID = Field(foreign_key="sample.sample_id", index=True)
 
     object_track_id: Optional[UUID] = Field(
-        default=None, foreign_key="object_track.object_track_id"
+        default=None, foreign_key="object_track.object_track_id", index=True
     )
 
     annotation_label: Mapped["AnnotationLabelTable"] = Relationship(

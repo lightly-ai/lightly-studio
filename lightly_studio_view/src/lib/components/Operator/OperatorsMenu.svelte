@@ -113,7 +113,7 @@
                         <span>Loading plugins…</span>
                     </div>
                 {:else if errorMessage}
-                    <div class="flex items-center gap-2 p-4 text-sm text-destructive">
+                    <div class="flex items-center gap-2 p-4 text-sm text-destructive-text">
                         <AlertCircle class="size-4" />
                         <span>{errorMessage}</span>
                     </div>
