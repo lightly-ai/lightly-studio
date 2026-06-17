@@ -31,6 +31,7 @@ const defaultProps = {
     expanded: false,
     onToggle: vi.fn()
 };
+const baseRunItemTestId = `evaluation-run-item-${baseRun.name}`;
 
 describe('EvaluationRunItem', () => {
     it('renders the run name and creation date', () => {
@@ -40,7 +41,7 @@ describe('EvaluationRunItem', () => {
         expect(screen.getByTestId('evaluation-run-date')).toHaveTextContent(
             formatDate(baseRun.created_at)
         );
-        expect(screen.getByTestId('evaluation-run-item')).toHaveAttribute('aria-expanded', 'false');
+        expect(screen.getByTestId(baseRunItemTestId)).toHaveAttribute('aria-expanded', 'false');
     });
 
     it('hides configuration details when collapsed', () => {
@@ -60,7 +61,7 @@ describe('EvaluationRunItem', () => {
         expect(details).toHaveTextContent('val');
         expect(details).toHaveTextContent('classwise');
         expect(details).toHaveTextContent('true');
-        expect(screen.getByTestId('evaluation-run-item')).toHaveAttribute('aria-expanded', 'true');
+        expect(screen.getByTestId(baseRunItemTestId)).toHaveAttribute('aria-expanded', 'true');
     });
 
     it('shows a placeholder when configuration is empty', () => {
@@ -87,7 +88,7 @@ describe('EvaluationRunItem', () => {
         const onToggle = vi.fn();
         render(EvaluationRunItem, { props: { ...defaultProps, onToggle } });
 
-        await fireEvent.click(screen.getByTestId('evaluation-run-item'));
+        await fireEvent.click(screen.getByTestId(baseRunItemTestId));
         expect(onToggle).toHaveBeenCalledOnce();
     });
 
