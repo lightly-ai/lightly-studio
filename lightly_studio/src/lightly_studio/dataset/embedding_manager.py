@@ -8,17 +8,22 @@ from uuid import UUID
 
 import numpy as np
 from numpy.typing import NDArray
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 from tqdm import tqdm
 
 from lightly_studio.dataset import env
 from lightly_studio.dataset.embedding_generator import (
     EmbeddingGenerator,
+    ImageCrop,
     ImageEmbeddingGenerator,
     VideoEmbeddingGenerator,
 )
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
+from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelTable
+from lightly_studio.models.image import ImageTable
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingCreate
 from lightly_studio.resolvers import (
     collection_resolver,
@@ -64,12 +69,21 @@ class TextEmbedQuery:
     embedding_model_id: UUID | None = None
 
 
+@dataclass(frozen=True)
+class _AnnotationCrop:
+    """Resolved annotation crop ready for embedding."""
+
+    annotation_sample_id: UUID
+    image_crop: ImageCrop
+
+
 class EmbeddingManager:
     """Manages embedding models and handles embedding generation and storage."""
 
     def __init__(self) -> None:
         """Initialize the embedding manager."""
         self._models: dict[UUID, EmbeddingGenerator] = {}
+        self._model_id_to_collection_id: dict[UUID, UUID] = {}
         self._collection_id_to_default_model_id: dict[UUID, UUID] = {}
 
     def register_embedding_model(
@@ -105,6 +119,7 @@ class EmbeddingManager:
 
         # Store the model in our dictionary
         self._models[model_id] = embedding_generator
+        self._model_id_to_collection_id[model_id] = collection_id
 
         # Set as default if requested or if it's the first model
         if set_as_default or collection_id not in self._collection_id_to_default_model_id:
@@ -178,6 +193,53 @@ class EmbeddingManager:
             session=session,
             model_id=model_id,
             sample_ids=sample_ids,
+            embeddings=embeddings,
+        )
+
+    def embed_annotations(
+        self,
+        session: Session,
+        annotation_collection_id: UUID,
+        embedding_model_id: UUID | None = None,
+    ) -> None:
+        """Generate and store embeddings for object-detection annotations.
+
+        Args:
+            session: Database session for resolver operations.
+            annotation_collection_id: The annotation collection whose annotation
+                samples should receive embeddings.
+            embedding_model_id: ID of the model to use. Uses default if None.
+
+        Raises:
+            ValueError: If no image-compatible embedding model is registered.
+        """
+        model_id = self._get_default_or_validate(
+            collection_id=annotation_collection_id, embedding_model_id=embedding_model_id
+        )
+
+        model = self._models[model_id]
+        if not isinstance(model, ImageEmbeddingGenerator):
+            raise ValueError("Embedding model not compatible with annotation crops.")
+
+        annotation_crops = _get_annotation_crops_to_embed(
+            session=session,
+            annotation_collection_id=annotation_collection_id,
+            embedding_model_id=model_id,
+        )
+        if not annotation_crops:
+            logger.info("No annotation crops to embed.")
+            return
+
+        embeddings = model.embed_image_crops(
+            image_crops=[annotation_crop.image_crop for annotation_crop in annotation_crops]
+        )
+
+        _store_embeddings(
+            session=session,
+            model_id=model_id,
+            sample_ids=[
+                annotation_crop.annotation_sample_id for annotation_crop in annotation_crops
+            ],
             embeddings=embeddings,
         )
 
@@ -322,6 +384,11 @@ class EmbeddingManager:
 
         if embedding_model_id not in self._models:
             raise ValueError(f"No embedding model found with ID {embedding_model_id}")
+        if self._model_id_to_collection_id.get(embedding_model_id) != collection_id:
+            raise ValueError(
+                f"Embedding model {embedding_model_id} is not registered for "
+                f"collection {collection_id}."
+            )
         return embedding_model_id
 
 
@@ -357,10 +424,89 @@ def _store_embeddings(
     session.commit()
 
 
+def _get_annotation_crops_to_embed(
+    session: Session,
+    annotation_collection_id: UUID,
+    embedding_model_id: UUID,
+) -> list[_AnnotationCrop]:
+    rows = session.exec(
+        select(
+            AnnotationBaseTable.sample_id,
+            ImageTable.file_path_abs,
+            ImageTable.width.label("image_width"),
+            ImageTable.height.label("image_height"),
+            ObjectDetectionAnnotationTable.x,
+            ObjectDetectionAnnotationTable.y,
+            ObjectDetectionAnnotationTable.width,
+            ObjectDetectionAnnotationTable.height,
+        )
+        .join(SampleTable, col(SampleTable.sample_id) == col(AnnotationBaseTable.sample_id))
+        .join(
+            ObjectDetectionAnnotationTable,
+            col(ObjectDetectionAnnotationTable.sample_id) == col(AnnotationBaseTable.sample_id),
+        )
+        .join(ImageTable, col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id))
+        .where(col(SampleTable.collection_id) == annotation_collection_id)
+        .where(col(AnnotationBaseTable.annotation_type) == AnnotationType.OBJECT_DETECTION)
+    ).all()
+
+    annotation_sample_ids = [row.sample_id for row in rows]  # type: ignore[attr-defined]
+    already_embedded_ids = {
+        embedding.sample_id
+        for embedding in sample_embedding_resolver.get_by_sample_ids(
+            session=session,
+            sample_ids=annotation_sample_ids,
+            embedding_model_id=embedding_model_id,
+        )
+    }
+
+    annotation_crops: list[_AnnotationCrop] = []
+    for row in rows:
+        annotation_sample_id = row.sample_id  # type: ignore[attr-defined]
+        if annotation_sample_id in already_embedded_ids:
+            continue
+
+        image_crop = _create_valid_image_crop(
+            filepath=row.file_path_abs,  # type: ignore[attr-defined]
+            image_size=(row.image_width, row.image_height),  # type: ignore[attr-defined]
+            box=(row.x, row.y, row.width, row.height),  # type: ignore[attr-defined]
+        )
+        if image_crop is None:
+            logger.warning("Skipping invalid annotation crop %s.", annotation_sample_id)
+            continue
+        annotation_crops.append(
+            _AnnotationCrop(annotation_sample_id=annotation_sample_id, image_crop=image_crop)
+        )
+
+    return annotation_crops
+
+
+def _create_valid_image_crop(
+    filepath: str,
+    image_size: tuple[int, int],
+    box: tuple[int, int, int, int],
+) -> ImageCrop | None:
+    image_width, image_height = image_size
+    x, y, width, height = box
+    x_min = max(0, x)
+    y_min = max(0, y)
+    x_max = min(image_width, x + width)
+    y_max = min(image_height, y + height)
+    crop_width = x_max - x_min
+    crop_height = y_max - y_min
+    if crop_width <= 0 or crop_height <= 0:
+        return None
+    return ImageCrop(
+        filepath=filepath,
+        x=x_min,
+        y=y_min,
+        width=crop_width,
+        height=crop_height,
+    )
+
+
 def _load_embedding_generator_from_env(sample_type: SampleType) -> EmbeddingGenerator | None:
     """Load the embedding generator based on environment variable configuration."""
-    # LIG-9521 prototype: annotation collections use the image embedding model so that
-    # text search and the embedding plot work for (fake) annotation embeddings.
     if sample_type in (SampleType.IMAGE, SampleType.ANNOTATION):
         return _load_image_embedding_generator_from_env()
     if sample_type == SampleType.VIDEO:
