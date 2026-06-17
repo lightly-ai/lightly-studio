@@ -147,22 +147,22 @@ export class SamplesPage {
         await this.page.getByTestId('menu-trigger').click();
         await this.page.getByTestId('menu-sampling').click();
 
-        await this.page.getByTestId('sampling-dialog-strategy-select').click();
-        await this.page.getByTestId(`sampling-strategy-${strategy}`).click();
+        await this.page.getByTestId('add-strategy-button').click();
+        await this.page.getByTestId(`add-strategy-${strategy}`).click();
 
         if (strategy === 'similarity') {
-            await this.page.getByTestId('sampling-dialog-query-tag-select').click();
-            await this.page.getByTestId(`sampling-query-tag-${queryTagId}`).click();
+            await this.page.getByTestId('similarity-query-tag-select').click();
+            await this.page.getByTestId(`similarity-query-tag-${queryTagId}`).click();
         }
 
-        const nSamplesInput = this.page.getByTestId('sampling-dialog-n-samples-input');
+        const nSamplesInput = this.page.getByTestId('selection-dialog-n-samples-input');
         await nSamplesInput.clear();
         await nSamplesInput.fill(nSamples.toString());
 
-        const tagNameInput = this.page.getByTestId('sampling-dialog-tag-name-input');
+        const tagNameInput = this.page.getByTestId('selection-dialog-tag-name-input');
         await tagNameInput.fill(tagName);
 
-        await pressButton(this.page, 'sampling-dialog-submit');
+        await pressButton(this.page, 'selection-dialog-submit');
     }
 
     async createDiversitySampling(nSamples: number, tagName: string): Promise<void> {

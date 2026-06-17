@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { CreateSamplingDialog, ExportSamples } from '$lib/components';
+    import { ExportSamples, SamplingCombinationDialog } from '$lib/components';
     import { ClassifiersMenu } from '$lib/components/FewShotClassifier';
     import { SettingsDialog } from '$lib/components/Settings';
     import OperatorsMenu from '$lib/components/Operator/OperatorsMenu.svelte';
@@ -30,7 +30,7 @@
 {/if}
 
 {#if hasSelection}
-    <CreateSamplingDialog />
+    <SamplingCombinationDialog />
 {/if}
 
 {#if isImageCollection || isVideoCollection}
