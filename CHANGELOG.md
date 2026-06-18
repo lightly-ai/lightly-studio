@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Sampling in Browser now supports combining multiple strategies (diversity, typicality, similarity, metadata weighting, class balancing) in a single selection.
+- Deduplication strategy is available in the Sampling Dialog in the GUI
 
 ### Changed
 
