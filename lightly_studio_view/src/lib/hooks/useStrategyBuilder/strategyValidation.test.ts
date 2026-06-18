@@ -119,7 +119,10 @@ describe('isStrategyInstanceValid', () => {
         it('returns false when minimum distance is negative', () => {
             const instance: StrategyInstance = {
                 ...defaultDeduplication,
-                params: { ...defaultDeduplication.params, stopping_condition_minimum_distance: -0.1 }
+                params: {
+                    ...defaultDeduplication.params,
+                    stopping_condition_minimum_distance: -0.1
+                }
             };
 
             expect(isStrategyInstanceValid(instance)).toBe(false);

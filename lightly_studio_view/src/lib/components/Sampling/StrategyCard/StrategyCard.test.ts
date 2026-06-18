@@ -141,9 +141,7 @@ describe('StrategyCard', () => {
             expect(
                 screen.getByTestId('strategy-deduplication-min-distance-input')
             ).toBeInTheDocument();
-            expect(
-                screen.getByTestId('strategy-deduplication-strength-input')
-            ).toBeInTheDocument();
+            expect(screen.getByTestId('strategy-deduplication-strength-input')).toBeInTheDocument();
         });
 
         it('calls onUpdate with a new minimum distance', async () => {

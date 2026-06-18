@@ -22,8 +22,7 @@ export function toApiStrategy(instance: StrategyInstance): SamplingRequest['stra
             strategy_name: 'deduplication',
             embedding_model_name: null,
             strength: instance.params.strength,
-            stopping_condition_minimum_distance:
-                instance.params.stopping_condition_minimum_distance
+            stopping_condition_minimum_distance: instance.params.stopping_condition_minimum_distance
         };
     }
 

@@ -24,12 +24,12 @@
             id="deduplication-min-distance"
             type="number"
             step="0.001"
-            min={0}
+            min={0.001}
             value={params.stopping_condition_minimum_distance}
             oninput={(event) => {
                 const raw = (event.currentTarget as HTMLInputElement).value;
                 const parsed = Number(raw);
-                if (raw !== '' && !Number.isNaN(parsed) && parsed > 0) {
+                if (raw !== '' && !Number.isNaN(parsed) && parsed >= 0.001) {
                     onUpdate({ stopping_condition_minimum_distance: parsed });
                 }
             }}
