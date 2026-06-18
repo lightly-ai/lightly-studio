@@ -5,10 +5,34 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlmodel import Session, col, select
+from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers.image_filter import ImageFilter
+
+
+def build_sample_ids_query(
+    collection_id: UUID,
+    filters: ImageFilter | None = None,
+) -> SelectOfScalar[UUID]:
+    """Build the query selecting distinct sample ids for a given collection.
+
+    Returned un-executed so callers can either run it (see :func:`get_sample_ids`)
+    or embed it as the ``SELECT`` of an ``INSERT … SELECT``.
+
+    Args:
+        collection_id: The ID of the collection to scope results to.
+        filters: The image filters to apply.
+
+    Returns:
+        A query selecting the distinct sample ids matching the given filters.
+    """
+    query = select(ImageTable.sample_id).join(ImageTable.sample)
+    query = query.where(col(SampleTable.collection_id) == collection_id)
+    if filters is not None:
+        query = filters.apply(query)
+    return query.distinct()
 
 
 def get_sample_ids(
@@ -26,10 +50,4 @@ def get_sample_ids(
     Returns:
         List of sample ids matching the given filters.
     """
-    query = select(ImageTable.sample_id).join(ImageTable.sample)
-    query = query.where(col(SampleTable.collection_id) == collection_id)
-    if filters is not None:
-        query = filters.apply(query)
-    sample_ids = session.exec(query.distinct()).all()
-
-    return set(sample_ids)
+    return set(session.exec(build_sample_ids_query(collection_id, filters)).all())
