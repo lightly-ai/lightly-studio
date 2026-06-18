@@ -144,7 +144,7 @@
                                 placeholder="Enter number of samples"
                                 required
                                 class="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                data-testid="selection-dialog-n-samples-input"
+                                data-testid="sampling-dialog-n-samples-input"
                             />
                         </div>
 
@@ -161,14 +161,14 @@
                                 bind:value={$selectionResultTagName}
                                 placeholder="Enter a tag for the sampled subset"
                                 required
-                                data-testid="selection-dialog-tag-name-input"
+                                data-testid="sampling-dialog-tag-name-input"
                             />
                         </div>
 
                         {#if $noSamples}
                             <p
                                 class="text-sm text-destructive-text"
-                                data-testid="selection-dialog-no-samples-warning"
+                                data-testid="sampling-dialog-no-samples-warning"
                             >
                                 No samples match the current filters.
                             </p>
@@ -177,7 +177,7 @@
                         {#if $notEnoughSamples}
                             <p
                                 class="text-sm text-destructive-text"
-                                data-testid="selection-dialog-not-enough-samples-warning"
+                                data-testid="sampling-dialog-not-enough-samples-warning"
                             >
                                 Only {$filteredSampleCount} samples are available, but
                                 {$nSamplesToSelect} were requested.
@@ -192,7 +192,7 @@
                         target="_blank"
                         rel="noreferrer"
                         class="mr-auto self-center text-xs text-muted-foreground underline-offset-4 hover:underline"
-                        data-testid="selection-dialog-docs-link"
+                        data-testid="sampling-dialog-docs-link"
                     >
                         How do sampling combinations work?
                     </a>
@@ -201,7 +201,7 @@
                         type="button"
                         onclick={closeSamplingDialog}
                         disabled={$isSubmitting}
-                        data-testid="selection-dialog-cancel"
+                        data-testid="sampling-dialog-cancel"
                     >
                         Cancel
                     </Button>
@@ -216,7 +216,7 @@
                                 $isSubmitting ||
                                 $notEnoughSamples ||
                                 $noSamples}
-                            data-testid="selection-dialog-submit"
+                            data-testid="sampling-dialog-submit"
                         >
                             {$isSubmitting ? $loadingMessage || 'Creating...' : 'Create Selection'}
                         </Button>
