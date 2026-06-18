@@ -6,6 +6,7 @@
 
     interface Props {
         diversityDisabledReason?: string;
+        deduplicationDisabledReason?: string;
         similarityDisabledReason?: string;
         metadataWeightingDisabledReason?: string;
         classBalancingDisabledReason?: string;
@@ -13,6 +14,7 @@
     }
     let {
         diversityDisabledReason,
+        deduplicationDisabledReason,
         similarityDisabledReason,
         metadataWeightingDisabledReason,
         classBalancingDisabledReason,
@@ -28,6 +30,7 @@
 
     function getDisabledReason(type: StrategyType): string | undefined {
         if (type === 'diversity') return diversityDisabledReason;
+        if (type === 'deduplication') return deduplicationDisabledReason;
         if (type === 'similarity') return similarityDisabledReason;
         if (type === 'metadata_weighting') return metadataWeightingDisabledReason;
         if (type === 'class_balancing') return classBalancingDisabledReason;

@@ -9,6 +9,7 @@
 
     import {
         STRATEGY_LABELS,
+        type DeduplicationParams,
         type MetadataWeightingParams,
         type SimilarityParams,
         type StrategyInstance,
@@ -16,6 +17,7 @@
         type StrategySummaryTag,
         type ClassBalancingParams
     } from '$lib/hooks/useStrategyBuilder';
+    import DeduplicationForm from '../forms/DeduplicationForm/DeduplicationForm.svelte';
     import MetadataWeightingForm from '../forms/MetadataWeightingForm/MetadataWeightingForm.svelte';
     import SimilarityForm from '../forms/SimilarityForm/SimilarityForm.svelte';
     import ClassBalancingForm from '../forms/ClassBalancingForm/ClassBalancingForm.svelte';
@@ -109,6 +111,11 @@
                             testid={`strategy-diversity-strength-input-${instance.id}`}
                             min={0}
                             onUpdate={(strength) => onUpdate({ strength })}
+                        />
+                    {:else if instance.type === 'deduplication'}
+                        <DeduplicationForm
+                            params={instance.params as DeduplicationParams}
+                            {onUpdate}
                         />
                     {:else if instance.type === 'typicality'}
                         <StrengthField
