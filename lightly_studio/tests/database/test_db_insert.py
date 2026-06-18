@@ -9,7 +9,13 @@ from sqlmodel import Session, col, select
 
 from lightly_studio.database import db_insert
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
-from tests.helpers_resolvers import create_collection, create_image, create_tag
+from tests.helpers_resolvers import (
+    ImageStub,
+    create_collection,
+    create_image,
+    create_images,
+    create_tag,
+)
 
 
 def _linked_sample_ids(session: Session, tag_id: UUID) -> set[UUID]:
@@ -78,10 +84,11 @@ def test_insert_from_select_ignoring_conflicts__inserts_rows(db_session: Session
     """A server-side INSERT … SELECT links every sample the query returns."""
     collection_id = create_collection(session=db_session).collection_id
     tag = create_tag(session=db_session, collection_id=collection_id)
-    samples = [
-        create_image(session=db_session, collection_id=collection_id, file_path_abs=f"/p/{i}.png")
-        for i in range(3)
-    ]
+    samples = create_images(
+        db_session=db_session,
+        collection_id=collection_id,
+        images=[ImageStub(path="/p/0.png"), ImageStub(path="/p/1.png")],
+    )
 
     select_stmt = select(SampleTable.sample_id, literal(tag.tag_id)).where(
         col(SampleTable.collection_id) == collection_id
@@ -99,17 +106,14 @@ def test_insert_from_select_ignoring_conflicts__inserts_rows(db_session: Session
 
 
 def test_insert_from_select_ignoring_conflicts__skips_conflicting_rows(db_session: Session) -> None:
-    """Re-running the same INSERT … SELECT is ignored: no error and no duplicate links.
-
-    Exercises DuckDB's ``INSERT … SELECT … OR IGNORE`` idempotency directly — the
-    one shape without prior in-repo proof.
-    """
+    """Re-running the same INSERT … SELECT is ignored: no error and no duplicate links."""
     collection_id = create_collection(session=db_session).collection_id
     tag = create_tag(session=db_session, collection_id=collection_id)
-    samples = [
-        create_image(session=db_session, collection_id=collection_id, file_path_abs=f"/p/{i}.png")
-        for i in range(3)
-    ]
+    samples = create_images(
+        db_session=db_session,
+        collection_id=collection_id,
+        images=[ImageStub(path="/p/0.png"), ImageStub(path="/p/1.png")],
+    )
 
     select_stmt = select(SampleTable.sample_id, literal(tag.tag_id)).where(
         col(SampleTable.collection_id) == collection_id
