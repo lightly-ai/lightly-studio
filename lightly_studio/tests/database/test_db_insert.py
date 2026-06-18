@@ -12,7 +12,6 @@ from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from tests.helpers_resolvers import (
     ImageStub,
     create_collection,
-    create_image,
     create_images,
     create_tag,
 )
@@ -30,10 +29,11 @@ def test_insert_ignoring_conflicts__inserts_rows(db_session: Session) -> None:
     """Rows are bulk-inserted and all become readable."""
     collection_id = create_collection(session=db_session).collection_id
     tag = create_tag(session=db_session, collection_id=collection_id)
-    samples = [
-        create_image(session=db_session, collection_id=collection_id, file_path_abs=f"/p/{i}.png")
-        for i in range(3)
-    ]
+    samples = create_images(
+        db_session=db_session,
+        collection_id=collection_id,
+        images=[ImageStub(path="/p/0.png"), ImageStub(path="/p/1.png")],
+    )
     rows = [{"sample_id": sample.sample_id, "tag_id": tag.tag_id} for sample in samples]
 
     db_insert.insert_ignoring_conflicts(session=db_session, table=SampleTagLinkTable, rows=rows)
@@ -47,10 +47,11 @@ def test_insert_ignoring_conflicts__skips_conflicting_rows(db_session: Session) 
     """Re-inserting existing rows is ignored (no error); only genuinely new rows are added."""
     collection_id = create_collection(session=db_session).collection_id
     tag = create_tag(session=db_session, collection_id=collection_id)
-    samples = [
-        create_image(session=db_session, collection_id=collection_id, file_path_abs=f"/p/{i}.png")
-        for i in range(4)
-    ]
+    samples = create_images(
+        db_session=db_session,
+        collection_id=collection_id,
+        images=[ImageStub(path=f"/p/{i}.png") for i in range(4)],
+    )
 
     first = [{"sample_id": sample.sample_id, "tag_id": tag.tag_id} for sample in samples[:3]]
     db_insert.insert_ignoring_conflicts(session=db_session, table=SampleTagLinkTable, rows=first)
