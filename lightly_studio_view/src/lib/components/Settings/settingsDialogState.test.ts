@@ -19,6 +19,7 @@ const TEST_SETTINGS: SettingView = {
     show_annotation_text_labels: false,
     show_sample_filenames: false,
     show_bounding_boxes_for_segmentation: true,
+    enforce_coloring_by_class: false,
     created_at: new Date(),
     updated_at: new Date(),
     key_toolbar_selection: 's',
@@ -47,7 +48,8 @@ describe('createSettingsDialogFormState', () => {
             gridViewThumbnailQuality: 'raw',
             showAnnotationTextLabels: false,
             showSampleFilenames: false,
-            showBoundingBoxesForSegmentation: true
+            showBoundingBoxesForSegmentation: true,
+            enforceColoringByClass: false
         });
     });
 });
@@ -71,7 +73,8 @@ describe('createSettingsSavePayload', () => {
                 gridViewThumbnailQuality: 'high',
                 showAnnotationTextLabels: true,
                 showSampleFilenames: true,
-                showBoundingBoxesForSegmentation: false
+                showBoundingBoxesForSegmentation: false,
+                enforceColoringByClass: true
             })
         ).toEqual({
             key_hide_annotations: 'h',
@@ -82,6 +85,7 @@ describe('createSettingsSavePayload', () => {
             show_annotation_text_labels: true,
             show_sample_filenames: true,
             show_bounding_boxes_for_segmentation: false,
+            enforce_coloring_by_class: true,
             key_toolbar_selection: 'a',
             key_toolbar_drag: 'g',
             key_toolbar_bounding_box: 'q',
@@ -117,7 +121,8 @@ describe('SettingsDialogState', () => {
             ...TEST_SETTINGS,
             key_hide_annotations: 'h',
             grid_view_sample_rendering: 'cover',
-            show_annotation_text_labels: true
+            show_annotation_text_labels: true,
+            enforce_coloring_by_class: true
         };
 
         state.hydrate(customSettings);
@@ -125,6 +130,7 @@ describe('SettingsDialogState', () => {
         expect(state.shortcuts.hideAnnotations).toBe('h');
         expect(state.gridViewRendering).toBe('cover');
         expect(state.showAnnotationTextLabels).toBe(true);
+        expect(state.enforceColoringByClass).toBe(true);
     });
 
     it('clears recording state on clearRecording', () => {
@@ -170,6 +176,7 @@ describe('SettingsDialogState', () => {
         state.hydrate(TEST_SETTINGS);
         state.shortcuts.hideAnnotations = 'z';
         state.showSampleFilenames = true;
+        state.enforceColoringByClass = true;
 
         const payload = state.getSavePayload();
 
@@ -177,6 +184,7 @@ describe('SettingsDialogState', () => {
             expect.objectContaining({
                 key_hide_annotations: 'z',
                 show_sample_filenames: true,
+                enforce_coloring_by_class: true,
                 key_go_back: 'Escape',
                 grid_view_sample_rendering: 'contain'
             })
