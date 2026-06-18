@@ -1,9 +1,8 @@
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
-from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagCreate
@@ -481,10 +480,9 @@ def test_add_samples_to_tag_from_query__tags_only_query_matches(db_session: Sess
 def test_add_samples_to_tag_from_query__unknown_tag_returns_none(db_session: Session) -> None:
     collection_id = create_collection(session=db_session).collection_id
 
+    query = select(SampleTable.sample_id).where(col(SampleTable.collection_id) == collection_id)
     result = tag_resolver.add_samples_to_tag_from_query(
-        session=db_session,
-        tag_id=uuid4(),
-        sample_ids_query=_collection_sample_ids_query(collection_id),
+        session=db_session, tag_id=uuid4(), sample_ids_query=query
     )
 
     assert result is None
@@ -544,8 +542,3 @@ def test_add_and_remove_sample_ids_to_tag_id__twice_same_sample_ids(
 
     # ensure all samples were removed again
     assert len(tag_1.samples) == 0
-
-
-def _collection_sample_ids_query(collection_id: UUID) -> SelectOfScalar[UUID]:
-    """Select every ``sample_id`` in ``collection_id`` (a stand-in grid query)."""
-    return select(SampleTable.sample_id).where(col(SampleTable.collection_id) == collection_id)
