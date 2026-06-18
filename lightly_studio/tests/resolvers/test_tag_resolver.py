@@ -459,11 +459,6 @@ def test_add_and_remove_sample_ids_to_tag_id(
     assert tag_1_samples_sorted == tag_2_samples_sorted
 
 
-def _collection_sample_ids_query(collection_id: UUID) -> SelectOfScalar[UUID]:
-    """Select every ``sample_id`` in ``collection_id`` (a stand-in grid query)."""
-    return select(SampleTable.sample_id).where(col(SampleTable.collection_id) == collection_id)
-
-
 def test_add_samples_to_tag_from_query__tags_matched_samples(db_session: Session) -> None:
     collection_id = create_collection(session=db_session).collection_id
     tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
@@ -619,3 +614,8 @@ def test_add_and_remove_sample_ids_to_tag_id__twice_same_sample_ids(
 
     # ensure all samples were removed again
     assert len(tag_1.samples) == 0
+
+
+def _collection_sample_ids_query(collection_id: UUID) -> SelectOfScalar[UUID]:
+    """Select every ``sample_id`` in ``collection_id`` (a stand-in grid query)."""
+    return select(SampleTable.sample_id).where(col(SampleTable.collection_id) == collection_id)
