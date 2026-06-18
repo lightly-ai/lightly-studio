@@ -17,6 +17,15 @@ export function toApiStrategy(instance: StrategyInstance): SamplingRequest['stra
         };
     }
 
+    if (instance.type === 'deduplication') {
+        return {
+            strategy_name: 'deduplication',
+            embedding_model_name: null,
+            strength: instance.params.strength,
+            stopping_condition_minimum_distance: instance.params.stopping_condition_minimum_distance
+        };
+    }
+
     if (instance.type === 'typicality' || instance.type === 'similarity') {
         return {
             strategy_name: 'weights',
