@@ -5,7 +5,8 @@ Drop this file (together with ``pipeline.py`` and ``row_uniformity.py``) into yo
 previous run. Airflow is not a dependency of LightlyStudio; install it separately in the
 environment that runs the scheduler/workers.
 
-Configure it via environment variables (see ``README.md``):
+``pipeline.py`` is a plain script, so the DAG just runs it. Configure it via environment
+variables (see ``README.md``):
 - ``VIDEO_CURATION_INPUT_URI``   - location of the input videos, e.g. ``s3://bucket/videos/``
 - ``VIDEO_CURATION_OUTPUT_URI``  - location for the curated frames
 - ``VIDEO_CURATION_DB_FILE``     - path to the persistent DuckDB file (durable storage!)
@@ -18,9 +19,9 @@ import os
 from datetime import datetime
 
 from airflow import DAG
-from airflow.operators.python import PythonOperator
+from airflow.operators.bash import BashOperator
 
-from pipeline import run_pipeline
+PIPELINE_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pipeline.py")
 
 with DAG(
     dag_id="video_frame_curation",
@@ -29,17 +30,7 @@ with DAG(
     schedule="@weekly",
     catchup=False,
 ) as dag:
-    PythonOperator(
+    BashOperator(
         task_id="curate_video_frames",
-        python_callable=run_pipeline,
-        op_kwargs={
-            "input_uri": os.environ["VIDEO_CURATION_INPUT_URI"],
-            "output_uri": os.environ["VIDEO_CURATION_OUTPUT_URI"],
-            "db_file": os.environ.get(
-                "VIDEO_CURATION_DB_FILE", "/opt/airflow/data/video_frame_curation.duckdb"
-            ),
-            "extract_dir": os.environ.get(
-                "VIDEO_CURATION_EXTRACT_DIR", "/opt/airflow/data/video_frame_curation_frames"
-            ),
-        },
+        bash_command=f"python {PIPELINE_SCRIPT}",
     )

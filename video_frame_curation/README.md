@@ -19,7 +19,8 @@ For every new video in the input location, the pipeline:
    are kept.
 3. **Deduplicates** the remaining frames with embedding-based deduplication sampling
    (diversity selection with a minimum-distance stopping condition). The selected frames are
-   marked with the persistent `deduplicated` tag, which is visible in the GUI.
+   marked with the `deduplicated` tag (visible in the GUI), which sampling creates. The tag
+   is re-created each run, so it reflects the most recent run's selection.
 4. **Uploads** the selected frames to `output_uri/<video_stem>/`.
 
 ## Incremental processing (only new videos)
@@ -69,8 +70,9 @@ S3 access uses the standard AWS credential resolution (`AWS_ACCESS_KEY_ID`,
 
 Copy `pipeline.py`, `row_uniformity.py`, and `airflow_dag.py` into your Airflow `dags/`
 folder, install Airflow in the worker environment, and set the `VIDEO_CURATION_*`
-environment variables. The DAG (`video_frame_curation`) runs `@weekly` and calls
-`run_pipeline`. Airflow is intentionally **not** a dependency of LightlyStudio.
+environment variables. The DAG (`video_frame_curation`) runs `@weekly` and simply executes
+`pipeline.py` (via a `BashOperator`). Airflow is intentionally **not** a dependency of
+LightlyStudio.
 
 ## Curation knobs
 
