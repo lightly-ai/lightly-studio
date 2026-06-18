@@ -42,12 +42,13 @@ export function useSamplingCombinationDialog({
     const selectionResultTagName = writable('');
 
     function updateAbsolute(count: number) {
-        nSamplesToSelect.set(count);
+        nSamplesToSelect.set(Number.isFinite(count) ? count : 0);
     }
 
     function updatePercentage(percentage: number) {
         const total = get(filteredSampleCount);
-        nSamplesToSelect.set(total > 0 ? Math.round((percentage / 100) * total) : 0);
+        const result = total > 0 ? Math.round((percentage / 100) * total) : 0;
+        nSamplesToSelect.set(Number.isFinite(result) ? result : 0);
     }
 
     const noSamples = derived(filteredSampleCount, ($count) => $count === 0);
