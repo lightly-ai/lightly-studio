@@ -38,18 +38,18 @@
         highlight?: 'active' | 'disabled' | 'auto';
         prerenderedDataUrl?: string;
         prerenderedHeight?: number;
-        // Overrides when to color by annotation source instead of by label. When
-        // undefined, falls back to the global rule (2+ sources selected in the grid).
+        // Overrides the global colorBySource store. When undefined, the store value is used.
         colorBySource?: boolean;
     } = $props();
 
     const { customLabelColorsStore } = useCustomLabelColors();
-    const { selectedCollectionIds, collectionIdToName } = useAnnotationCollectionsFilter();
+    const { collectionIdToName, colorBySource: colorBySourceStore } =
+        useAnnotationCollectionsFilter();
 
     const label = $derived(annotation.annotation_label.annotation_label_name);
 
     const colorLabel = $derived.by(() => {
-        const bySource = colorBySource ?? $selectedCollectionIds.length >= 2;
+        const bySource = colorBySource ?? $colorBySourceStore;
         if (!bySource) return label;
         return $collectionIdToName[annotation.annotation_collection_id] ?? label;
     });

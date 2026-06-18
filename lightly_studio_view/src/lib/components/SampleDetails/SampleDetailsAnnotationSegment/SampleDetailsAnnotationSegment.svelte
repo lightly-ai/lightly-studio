@@ -5,6 +5,7 @@
     import SampleDetailsSidePanelAnnotation from '../SampleDetailsSidePanel/SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useAnnotationCollections, useAnnotationCollectionsFilter } from '$lib/hooks';
+    import ColorBySourceToggle from '$lib/components/ColorBySourceToggle/ColorBySourceToggle.svelte';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { toast } from 'svelte-sonner';
@@ -58,7 +59,8 @@
     const { selectAnnotation } = useAnnotationSelection();
 
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
-    const { selectedCollectionIds, seedSelectionIfNeeded } = useAnnotationCollectionsFilter();
+    const { selectedCollectionIds, seedSelectionIfNeeded, colorBySource, setColorBySource } =
+        useAnnotationCollectionsFilter();
 
     const annotationsSort = $derived.by(() => {
         return annotations
@@ -86,11 +88,6 @@
         computeSeededHiddenIds(annotationsSort, $selectedCollectionIds, annotationSources)
     );
 
-    // Annotations are colored by source only while multiple sources are visible,
-    // matching the details canvas. Swatches are shown only when they match the
-    // colors drawn on the image: source markers in the group headers when coloring
-    // by source, label legends in the rows otherwise.
-    const colorBySource = $derived(countVisibleSources(annotationsSort, annotationsIdsToHide) >= 2);
 
     // Seed the global annotation source stores the first time this collection is shown
     // (e.g. landing directly on the details page via deep link), so annotations are colored
@@ -185,14 +182,16 @@
     };
 
     const onToggleSourceVisibility = (sourceAnnotations: AnnotationView[]) => {
-        annotationsIdsToHide = toggleSourceVisibility(sourceAnnotations, annotationsIdsToHide);
+        const newHidden = toggleSourceVisibility(sourceAnnotations, annotationsIdsToHide);
+        setColorBySource(countVisibleSources(annotationsSort, newHidden) >= 2);
+        annotationsIdsToHide = newHidden;
     };
 </script>
 
 {#snippet annotationRow(annotation: AnnotationView)}
     <SampleDetailsSidePanelAnnotation
         {annotation}
-        {colorBySource}
+        colorBySource={$colorBySource}
         isSelected={annotationLabelContext.annotationId === annotation.sample_id}
         onClick={() => toggleAnnotationSelection(annotation.sample_id)}
         onDeleteAnnotation={() => handleDeleteAnnotation(annotation.sample_id)}
@@ -225,6 +224,9 @@
     />
 {/snippet}
 
+{#if isGrouped}
+    <ColorBySourceToggle colorBySource={$colorBySource} onToggle={setColorBySource} />
+{/if}
 <Segment title="Annotations">
     {#if isGrouped}
         <div class="flex flex-col gap-3">
@@ -238,7 +240,7 @@
                         seededHiddenIds,
                         annotationLabelContext.lastCreatedAnnotationId
                     )}
-                    showColorMarker={colorBySource}
+                    showColorMarker={$colorBySource}
                     allHidden={areAllAnnotationsHidden(group.annotations, annotationsIdsToHide)}
                     onToggleVisibility={(e) => {
                         e.stopPropagation();

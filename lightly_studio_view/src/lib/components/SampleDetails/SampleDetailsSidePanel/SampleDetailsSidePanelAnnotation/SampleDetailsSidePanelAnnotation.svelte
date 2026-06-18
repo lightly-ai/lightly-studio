@@ -43,8 +43,7 @@
         isLocked?: boolean;
         onToggleLock?: (e: MouseEvent) => void;
         // Whether annotations are currently colored by source instead of by label.
-        // When undefined, falls back to the global rule (2+ sources selected in the
-        // grid).
+        // When undefined, falls back to the global colorBySource store.
         colorBySource?: boolean;
     } = $props();
 
@@ -79,9 +78,9 @@
 
     // Label colors only match the boxes on the image while they are not colored by
     // source. The colorBySource prop drives this on the details page; the global
-    // selection rule is the fallback, mirroring the behavior of LabelsMenu.
-    const { selectedCollectionIds } = useAnnotationCollectionsFilter();
-    const showLabelColorLegend = $derived(!(colorBySource ?? $selectedCollectionIds.length >= 2));
+    // store is the fallback, mirroring the behavior of LabelsMenu.
+    const { colorBySource: colorBySourceStore } = useAnnotationCollectionsFilter();
+    const showLabelColorLegend = $derived(!(colorBySource ?? $colorBySourceStore));
 
     const annotationId = $derived(annotationProp.sample_id);
 
