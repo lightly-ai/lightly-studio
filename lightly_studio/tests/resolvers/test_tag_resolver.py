@@ -1,9 +1,11 @@
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session
+from sqlmodel import Session, col, select
+from sqlmodel.sql.expression import SelectOfScalar
 
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import tag_resolver
 from tests.helpers_resolvers import create_collection, create_image, create_tag
@@ -455,6 +457,112 @@ def test_add_and_remove_sample_ids_to_tag_id(
     tag_1_samples_sorted = sorted(tag_1.samples, key=lambda s: s.sample_id)
     tag_2_samples_sorted = sorted(tag_2.samples, key=lambda s: s.sample_id)
     assert tag_1_samples_sorted == tag_2_samples_sorted
+
+
+def _collection_sample_ids_query(collection_id: UUID) -> SelectOfScalar[UUID]:
+    """Select every ``sample_id`` in ``collection_id`` (a stand-in grid query)."""
+    return select(SampleTable.sample_id).where(col(SampleTable.collection_id) == collection_id)
+
+
+def test_add_samples_to_tag_from_query__tags_matched_samples(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
+    images = [
+        create_image(session=db_session, collection_id=collection_id, file_path_abs=f"s{i}.png")
+        for i in range(3)
+    ]
+
+    result = tag_resolver.add_samples_to_tag_from_query(
+        session=db_session,
+        tag_id=tag.tag_id,
+        sample_ids_query=_collection_sample_ids_query(collection_id),
+    )
+
+    assert result is not None
+    assert {sample.sample_id for sample in tag.samples} == {img.sample_id for img in images}
+
+
+def test_add_samples_to_tag_from_query__subset_tags_only_subset(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
+    images = [
+        create_image(session=db_session, collection_id=collection_id, file_path_abs=f"s{i}.png")
+        for i in range(4)
+    ]
+    wanted = {images[0].sample_id, images[2].sample_id}
+
+    query = select(SampleTable.sample_id).where(col(SampleTable.sample_id).in_(wanted))
+    tag_resolver.add_samples_to_tag_from_query(
+        session=db_session, tag_id=tag.tag_id, sample_ids_query=query
+    )
+
+    assert {sample.sample_id for sample in tag.samples} == wanted
+
+
+def test_add_samples_to_tag_from_query__idempotent_on_rerun(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
+    images = [
+        create_image(session=db_session, collection_id=collection_id, file_path_abs=f"s{i}.png")
+        for i in range(3)
+    ]
+
+    for _ in range(2):
+        tag_resolver.add_samples_to_tag_from_query(
+            session=db_session,
+            tag_id=tag.tag_id,
+            sample_ids_query=_collection_sample_ids_query(collection_id),
+        )
+
+    # Re-running adds no duplicate links (composite PK + conflict handling).
+    assert len(tag.samples) == len(images)
+
+
+def test_add_samples_to_tag_from_query__skips_already_tagged(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
+    images = [
+        create_image(session=db_session, collection_id=collection_id, file_path_abs=f"s{i}.png")
+        for i in range(3)
+    ]
+
+    # Pre-link one sample; the by-query insert must skip it without error.
+    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=images[0].sample)
+
+    tag_resolver.add_samples_to_tag_from_query(
+        session=db_session,
+        tag_id=tag.tag_id,
+        sample_ids_query=_collection_sample_ids_query(collection_id),
+    )
+
+    assert {sample.sample_id for sample in tag.samples} == {img.sample_id for img in images}
+
+
+def test_add_samples_to_tag_from_query__empty_query_is_noop(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
+
+    # No samples exist in the collection, so the query matches nothing.
+    result = tag_resolver.add_samples_to_tag_from_query(
+        session=db_session,
+        tag_id=tag.tag_id,
+        sample_ids_query=_collection_sample_ids_query(collection_id),
+    )
+
+    assert result is not None
+    assert tag.samples == []
+
+
+def test_add_samples_to_tag_from_query__unknown_tag_returns_none(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+
+    result = tag_resolver.add_samples_to_tag_from_query(
+        session=db_session,
+        tag_id=uuid4(),
+        sample_ids_query=_collection_sample_ids_query(collection_id),
+    )
+
+    assert result is None
 
 
 def test_add_and_remove_sample_ids_to_tag_id__twice_same_sample_ids(

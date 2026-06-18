@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from sqlalchemy import literal
 from sqlmodel import Session, col, select
 
 from lightly_studio.database import db_insert
-from lightly_studio.models.sample import SampleTagLinkTable
+from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from tests.helpers_resolvers import create_collection, create_image, create_tag
 
 
@@ -68,6 +69,83 @@ def test_insert_ignoring_conflicts__empty_rows_is_noop(db_session: Session) -> N
     tag = create_tag(session=db_session, collection_id=collection_id)
 
     db_insert.insert_ignoring_conflicts(session=db_session, table=SampleTagLinkTable, rows=[])
+    db_session.commit()
+
+    assert _linked_sample_ids(session=db_session, tag_id=tag.tag_id) == set()
+
+
+def test_insert_from_select_ignoring_conflicts__inserts_rows(db_session: Session) -> None:
+    """A server-side INSERT … SELECT links every sample the query returns."""
+    collection_id = create_collection(session=db_session).collection_id
+    tag = create_tag(session=db_session, collection_id=collection_id)
+    samples = [
+        create_image(session=db_session, collection_id=collection_id, file_path_abs=f"/p/{i}.png")
+        for i in range(3)
+    ]
+
+    select_stmt = select(SampleTable.sample_id, literal(tag.tag_id)).where(
+        col(SampleTable.collection_id) == collection_id
+    )
+    db_insert.insert_from_select_ignoring_conflicts(
+        session=db_session,
+        table=SampleTagLinkTable,
+        columns=["sample_id", "tag_id"],
+        select_stmt=select_stmt,
+    )
+    db_session.commit()
+
+    expected = {sample.sample_id for sample in samples}
+    assert _linked_sample_ids(session=db_session, tag_id=tag.tag_id) == expected
+
+
+def test_insert_from_select_ignoring_conflicts__skips_conflicting_rows(db_session: Session) -> None:
+    """Re-running the same INSERT … SELECT is ignored: no error and no duplicate links.
+
+    Exercises DuckDB's ``INSERT … SELECT … OR IGNORE`` idempotency directly — the
+    one shape without prior in-repo proof.
+    """
+    collection_id = create_collection(session=db_session).collection_id
+    tag = create_tag(session=db_session, collection_id=collection_id)
+    samples = [
+        create_image(session=db_session, collection_id=collection_id, file_path_abs=f"/p/{i}.png")
+        for i in range(3)
+    ]
+
+    select_stmt = select(SampleTable.sample_id, literal(tag.tag_id)).where(
+        col(SampleTable.collection_id) == collection_id
+    )
+    for _ in range(2):
+        db_insert.insert_from_select_ignoring_conflicts(
+            session=db_session,
+            table=SampleTagLinkTable,
+            columns=["sample_id", "tag_id"],
+            select_stmt=select_stmt,
+        )
+        db_session.commit()
+
+    links = db_session.exec(
+        select(SampleTagLinkTable).where(col(SampleTagLinkTable.tag_id) == tag.tag_id)
+    ).all()
+    # Every sample is linked exactly once despite running the insert twice.
+    assert {link.sample_id for link in links} == {sample.sample_id for sample in samples}
+    assert len(links) == len(samples)
+
+
+def test_insert_from_select_ignoring_conflicts__empty_select_is_noop(db_session: Session) -> None:
+    """A query matching no rows links nothing and does not error."""
+    collection_id = create_collection(session=db_session).collection_id
+    tag = create_tag(session=db_session, collection_id=collection_id)
+
+    # No samples were created, so the select returns no rows.
+    select_stmt = select(SampleTable.sample_id, literal(tag.tag_id)).where(
+        col(SampleTable.collection_id) == collection_id
+    )
+    db_insert.insert_from_select_ignoring_conflicts(
+        session=db_session,
+        table=SampleTagLinkTable,
+        columns=["sample_id", "tag_id"],
+        select_stmt=select_stmt,
+    )
     db_session.commit()
 
     assert _linked_sample_ids(session=db_session, tag_id=tag.tag_id) == set()
