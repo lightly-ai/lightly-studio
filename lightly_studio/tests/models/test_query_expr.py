@@ -9,6 +9,7 @@ from lightly_studio.models.query_expr import (
     AndExpr,
     ClassificationMatchExpr,
     DatetimeExpr,
+    EvaluationMetricExpr,
     NotExpr,
     QueryExpr,
     StringExpr,
@@ -80,6 +81,22 @@ class TestQueryExpr:
         )
         assert isinstance(tree.match_expr, DatetimeExpr)
         assert tree.match_expr.value == datetime(2026, 1, 1, tzinfo=timezone.utc)
+
+    def test_model_validate__evaluation_metric_expr(self) -> None:
+        tree = QueryExpr.model_validate(
+            {
+                "match_expr": {
+                    "type": "evaluation_metric_expr",
+                    "evaluation_run_name": "cls-eval",
+                    "metric_name": "disagreement",
+                    "operator": ">=",
+                    "value": 0.8,
+                }
+            }
+        )
+        assert isinstance(tree.match_expr, EvaluationMetricExpr)
+        assert tree.match_expr.evaluation_run_name == "cls-eval"
+        assert tree.match_expr.metric_name == "disagreement"
 
     def test_model_validate__rejects_wrong_value_type(self) -> None:
         """String value is rejected where an integer is expected."""

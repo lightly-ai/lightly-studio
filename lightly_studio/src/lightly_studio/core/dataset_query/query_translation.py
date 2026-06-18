@@ -16,6 +16,7 @@ from lightly_studio.core.dataset_query.classification_expression import (
     ClassificationField,
     ClassificationQuery,
 )
+from lightly_studio.core.dataset_query.evaluation_metric_expression import EvaluationMetricField
 from lightly_studio.core.dataset_query.field import Field
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
@@ -41,6 +42,7 @@ from lightly_studio.models.query_expr import (
     DatetimeExpr,
     EqualityComparisonOperator,
     EqualityFloatExpr,
+    EvaluationMetricExpr,
     FieldRef,
     IntegerExpr,
     MatchExpr,
@@ -234,8 +236,15 @@ def evaluation_metric_sort_to_order_by(
     return order_by
 
 
-def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 C901
+def to_match_expression(expr: MatchExpr) -> MatchExpression:
     """Translate a validated query-language expression to a dataset-query expression."""
+    return _to_match_expression(expr=expr, allow_sample_level_metrics=True)
+
+
+def _to_match_expression(  # noqa: PLR0911 PLR0912 C901
+    expr: MatchExpr, *, allow_sample_level_metrics: bool
+) -> MatchExpression:
+    """Translate a query expression with explicit sample-metric scope handling."""
     if isinstance(expr, StringExpr):
         return _apply_equality_operator(
             field=_lookup(mapping=_STRING_FIELDS, field=expr.field, type_="string"),
@@ -270,21 +279,59 @@ def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 C9
             operator=expr.operator,
             value=expr.value,
         )
+    if isinstance(expr, EvaluationMetricExpr):
+        if not allow_sample_level_metrics:
+            raise QueryExprError("evaluation_metric_expr is only valid at the sample-query level")
+        return _apply_ordinal_operator(
+            field=EvaluationMetricField(
+                run_name=expr.evaluation_run_name,
+                metric_name=expr.metric_name,
+            ),
+            operator=expr.operator,
+            value=expr.value,
+        )
     if isinstance(expr, TagsContainsExpr):
         accessor: _TagsAccessor = _lookup(mapping=_TAGS_FIELDS, field=expr.field, type_="tags")
         return accessor.contains(expr.tag_name)
     if isinstance(expr, ClassificationMatchExpr):
-        return ClassificationQuery.match(to_match_expression(expr=expr.subexpr))
+        return ClassificationQuery.match(
+            _to_match_expression(expr=expr.subexpr, allow_sample_level_metrics=False)
+        )
     if isinstance(expr, ObjectDetectionMatchExpr):
-        return ObjectDetectionQuery.match(to_match_expression(expr=expr.subexpr))
+        return ObjectDetectionQuery.match(
+            _to_match_expression(expr=expr.subexpr, allow_sample_level_metrics=False)
+        )
     if isinstance(expr, SegmentationMaskMatchExpr):
-        return SegmentationMaskQuery.match(to_match_expression(expr=expr.subexpr))
+        return SegmentationMaskQuery.match(
+            _to_match_expression(expr=expr.subexpr, allow_sample_level_metrics=False)
+        )
     if isinstance(expr, AndExpr):
-        return AND(*(to_match_expression(expr=child) for child in expr.children))
+        return AND(
+            *(
+                _to_match_expression(
+                    expr=child,
+                    allow_sample_level_metrics=allow_sample_level_metrics,
+                )
+                for child in expr.children
+            )
+        )
     if isinstance(expr, OrExpr):
-        return OR(*(to_match_expression(expr=child) for child in expr.children))
+        return OR(
+            *(
+                _to_match_expression(
+                    expr=child,
+                    allow_sample_level_metrics=allow_sample_level_metrics,
+                )
+                for child in expr.children
+            )
+        )
     if isinstance(expr, NotExpr):
-        return NOT(to_match_expression(expr=expr.child))
+        return NOT(
+            _to_match_expression(
+                expr=expr.child,
+                allow_sample_level_metrics=allow_sample_level_metrics,
+            )
+        )
     assert_never(expr)
 
 

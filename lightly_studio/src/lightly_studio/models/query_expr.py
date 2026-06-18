@@ -80,6 +80,16 @@ class EqualityFloatExpr(BaseModel):
     value: StrictInt | StrictFloat
 
 
+class EvaluationMetricExpr(BaseModel):
+    """Leaf node for comparisons against a persisted evaluation metric."""
+
+    type: Literal["evaluation_metric_expr"] = "evaluation_metric_expr"
+    evaluation_run_name: StrictStr
+    metric_name: StrictStr
+    operator: OrdinalComparisonOperator
+    value: StrictInt | StrictFloat
+
+
 class TagsContainsExpr(BaseModel):
     """Leaf node checking if a sample has a specific tag."""
 
@@ -137,6 +147,7 @@ MatchExpr: TypeAlias = Annotated[
         DatetimeExpr,
         OrdinalFloatExpr,
         EqualityFloatExpr,
+        EvaluationMetricExpr,
         TagsContainsExpr,
         ClassificationMatchExpr,
         ObjectDetectionMatchExpr,
