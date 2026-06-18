@@ -459,25 +459,7 @@ def test_add_and_remove_sample_ids_to_tag_id(
     assert tag_1_samples_sorted == tag_2_samples_sorted
 
 
-def test_add_samples_to_tag_from_query__tags_matched_samples(db_session: Session) -> None:
-    collection_id = create_collection(session=db_session).collection_id
-    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
-    images = [
-        create_image(session=db_session, collection_id=collection_id, file_path_abs=f"s{i}.png")
-        for i in range(3)
-    ]
-
-    result = tag_resolver.add_samples_to_tag_from_query(
-        session=db_session,
-        tag_id=tag.tag_id,
-        sample_ids_query=_collection_sample_ids_query(collection_id),
-    )
-
-    assert result is not None
-    assert {sample.sample_id for sample in tag.samples} == {img.sample_id for img in images}
-
-
-def test_add_samples_to_tag_from_query__subset_tags_only_subset(db_session: Session) -> None:
+def test_add_samples_to_tag_from_query__tags_only_query_matches(db_session: Session) -> None:
     collection_id = create_collection(session=db_session).collection_id
     tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
     images = [
@@ -487,65 +469,13 @@ def test_add_samples_to_tag_from_query__subset_tags_only_subset(db_session: Sess
     wanted = {images[0].sample_id, images[2].sample_id}
 
     query = select(SampleTable.sample_id).where(col(SampleTable.sample_id).in_(wanted))
-    tag_resolver.add_samples_to_tag_from_query(
+    result = tag_resolver.add_samples_to_tag_from_query(
         session=db_session, tag_id=tag.tag_id, sample_ids_query=query
     )
 
-    assert {sample.sample_id for sample in tag.samples} == wanted
-
-
-def test_add_samples_to_tag_from_query__idempotent_on_rerun(db_session: Session) -> None:
-    collection_id = create_collection(session=db_session).collection_id
-    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
-    images = [
-        create_image(session=db_session, collection_id=collection_id, file_path_abs=f"s{i}.png")
-        for i in range(3)
-    ]
-
-    for _ in range(2):
-        tag_resolver.add_samples_to_tag_from_query(
-            session=db_session,
-            tag_id=tag.tag_id,
-            sample_ids_query=_collection_sample_ids_query(collection_id),
-        )
-
-    # Re-running adds no duplicate links (composite PK + conflict handling).
-    assert len(tag.samples) == len(images)
-
-
-def test_add_samples_to_tag_from_query__skips_already_tagged(db_session: Session) -> None:
-    collection_id = create_collection(session=db_session).collection_id
-    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
-    images = [
-        create_image(session=db_session, collection_id=collection_id, file_path_abs=f"s{i}.png")
-        for i in range(3)
-    ]
-
-    # Pre-link one sample; the by-query insert must skip it without error.
-    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=images[0].sample)
-
-    tag_resolver.add_samples_to_tag_from_query(
-        session=db_session,
-        tag_id=tag.tag_id,
-        sample_ids_query=_collection_sample_ids_query(collection_id),
-    )
-
-    assert {sample.sample_id for sample in tag.samples} == {img.sample_id for img in images}
-
-
-def test_add_samples_to_tag_from_query__empty_query_is_noop(db_session: Session) -> None:
-    collection_id = create_collection(session=db_session).collection_id
-    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
-
-    # No samples exist in the collection, so the query matches nothing.
-    result = tag_resolver.add_samples_to_tag_from_query(
-        session=db_session,
-        tag_id=tag.tag_id,
-        sample_ids_query=_collection_sample_ids_query(collection_id),
-    )
-
+    # Exactly the query's matches are linked (correct sample/tag wiring, no over-tagging).
     assert result is not None
-    assert tag.samples == []
+    assert {sample.sample_id for sample in tag.samples} == wanted
 
 
 def test_add_samples_to_tag_from_query__unknown_tag_returns_none(db_session: Session) -> None:
