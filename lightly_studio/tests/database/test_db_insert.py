@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy import literal
+from sqlalchemy import Select, literal
 from sqlmodel import Session, col, select
 
 from lightly_studio.database import db_insert
@@ -107,31 +108,42 @@ def test_insert_from_select_ignoring_conflicts__inserts_rows(db_session: Session
 
 
 def test_insert_from_select_ignoring_conflicts__skips_conflicting_rows(db_session: Session) -> None:
-    """Re-running the same INSERT … SELECT is ignored: no error and no duplicate links."""
+    """Rows matched by a second INSERT … SELECT that already exist are ignored."""
     collection_id = create_collection(session=db_session).collection_id
     tag = create_tag(session=db_session, collection_id=collection_id)
     samples = create_images(
         db_session=db_session,
         collection_id=collection_id,
-        images=[ImageStub(path="/p/0.png"), ImageStub(path="/p/1.png")],
+        images=[ImageStub(path=f"/p/{i}.png") for i in range(3)],
     )
 
-    select_stmt = select(SampleTable.sample_id, literal(tag.tag_id)).where(
-        col(SampleTable.collection_id) == collection_id
-    )
-    for _ in range(2):
-        db_insert.insert_from_select_ignoring_conflicts(
-            session=db_session,
-            table=SampleTagLinkTable,
-            columns=["sample_id", "tag_id"],
-            select_stmt=select_stmt,
+    def _tag_samples_query(sample_ids: list[UUID]) -> Select[Any]:
+        return select(SampleTable.sample_id, literal(tag.tag_id)).where(
+            col(SampleTable.sample_id).in_(sample_ids)
         )
-        db_session.commit()
+
+    # Tag the first two samples.
+    db_insert.insert_from_select_ignoring_conflicts(
+        session=db_session,
+        table=SampleTagLinkTable,
+        columns=["sample_id", "tag_id"],
+        select_stmt=_tag_samples_query([samples[0].sample_id, samples[1].sample_id]),
+    )
+    db_session.commit()
+
+    # Tag the last two: samples[1] already linked (ignored), samples[2] is new.
+    db_insert.insert_from_select_ignoring_conflicts(
+        session=db_session,
+        table=SampleTagLinkTable,
+        columns=["sample_id", "tag_id"],
+        select_stmt=_tag_samples_query([samples[1].sample_id, samples[2].sample_id]),
+    )
+    db_session.commit()
 
     links = db_session.exec(
         select(SampleTagLinkTable).where(col(SampleTagLinkTable.tag_id) == tag.tag_id)
     ).all()
-    # Every sample is linked exactly once despite running the insert twice.
+    # Every sample is linked exactly once; the overlapping row neither raised nor duplicated.
     assert {link.sample_id for link in links} == {sample.sample_id for sample in samples}
     assert len(links) == len(samples)
 
