@@ -25,6 +25,7 @@ from tests.helpers_resolvers import create_collection, create_image
 def create_run_and_image(
     session: Session,
     dataset_collection_id: UUID | None = None,
+    name: str = "test_run",
 ) -> tuple[EvaluationRunTable, ImageTable]:
     if dataset_collection_id is None:
         dataset_collection_id = create_collection(session=session).collection_id
@@ -41,8 +42,9 @@ def create_run_and_image(
     run = evaluation_run_resolver.create(
         session=session,
         evaluation_run_input=EvaluationRunCreate(
-            name="test_run",
+            name=name,
             gt_annotation_collection_id=gt_collection.collection_id,
+            dataset_id=gt_collection.dataset_id,
             pred_annotation_collection_id=pred_collection.collection_id,
             task_type=EvaluationTaskType.OBJECT_DETECTION,
         ),

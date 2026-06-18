@@ -101,6 +101,7 @@ def test_evaluation_metric_field__filters_matching_samples(db_session: Session) 
         evaluation_run_input=EvaluationRunCreate(
             name="run1",
             gt_annotation_collection_id=gt_collection.collection_id,
+            dataset_id=gt_collection.dataset_id,
             pred_annotation_collection_id=pred_collection.collection_id,
             task_type=EvaluationTaskType.OBJECT_DETECTION,
         ),
