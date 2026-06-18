@@ -49,11 +49,14 @@ def insert_from_select_ignoring_conflicts(
 ) -> None:
     """Insert the rows produced by ``select_stmt`` into ``table``'s ``columns``.
 
-    A single server-side ``INSERT … SELECT`` statement: the rows never leave the
-    database, so there is neither a client-side row list nor a bind-parameter cap,
-    and no batching is needed. ``columns`` are matched to the select's output
-    columns by position. Rows colliding with a unique or primary-key constraint
-    are skipped. Does not commit or flush; the caller owns the transaction.
+    Runs as one ``INSERT … SELECT``, so the database constructs and inserts the rows
+    itself. Unlike ``insert_ignoring_conflicts``, no rows are sent from Python, so
+    the count is not bound by PostgreSQL's bind-parameter cap and no batching is
+    needed.
+
+    ``columns`` are matched to the select's output columns by position. Rows
+    colliding with a unique or primary-key constraint are skipped. Does not commit
+    or flush; the caller owns the transaction.
     """
     bind = session.get_bind()
     dialect_name = bind.dialect.name if bind is not None else None
