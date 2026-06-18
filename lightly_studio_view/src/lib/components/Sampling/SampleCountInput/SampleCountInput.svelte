@@ -31,6 +31,7 @@
             value={percentage}
             oninput={(e) => onPercentageChange((e.target as HTMLInputElement).valueAsNumber)}
             min="0"
+            step="any"
             placeholder="%"
             class="w-24 pr-6 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             data-testid="sampling-dialog-n-samples-percentage-input"
