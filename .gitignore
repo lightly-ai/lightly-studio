@@ -15,3 +15,4 @@ dataset_examples_studio
 
 .claude/settings.local.json
 .claude/settings.json
+/video_frame_curation_frames

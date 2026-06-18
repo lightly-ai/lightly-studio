@@ -23,10 +23,11 @@ from labelformat.model.object_detection import (
     ObjectDetectionInput,
 )
 from sqlmodel import Session
+from tqdm import tqdm
 
 from lightly_studio.core.dataset import BaseSampleDataset
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
-from lightly_studio.core.image import add_annotations, add_images
+from lightly_studio.core.image import add_annotations, add_frames_from_video, add_images
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
@@ -56,6 +57,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
     Samples can be added to the dataset using various methods:
     ```python
     dataset.add_images_from_path(...)
+    dataset.add_frames_from_videos(...)
     dataset.add_samples_from_yolo(...)
     dataset.add_samples_from_coco(...)
     dataset.add_samples_from_coco_caption(...)
@@ -178,6 +180,98 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 collection_id=self.collection_id,
                 sample_ids=created_sample_ids,
             )
+
+    def add_frames_from_videos(
+        self,
+        videos_path: PathLike,
+        extract_dir: PathLike,
+        fps: float | None = None,
+        embed: bool = True,
+    ) -> list[UUID]:
+        """Extract frames from all videos under a path and add them as images.
+
+        This supports image-frame workflows where the frames originate from videos: the
+        videos under ``videos_path`` are decoded, their frames written to ``extract_dir`` as
+        JPEG images, and added to the dataset as a normal image dataset (no video dataset is
+        created). Each video's frames are always tagged with the video file stem, which
+        preserves the frame-to-video relationship.
+
+        Videos whose stem tag already exists in the dataset are skipped. This makes repeated
+        runs against a persistent dataset incremental and idempotent (mirroring how video
+        loading skips already-loaded paths), so it can be called periodically as new videos
+        arrive without re-extracting old ones.
+
+        Args:
+            videos_path: Local or remote (e.g. ``s3://``) directory, glob, or single video
+                file. All contained video files are processed.
+            extract_dir: Local directory the extracted frames are written to (one
+                subdirectory per video). Created if it does not exist. This assumes local
+                disk space is available.
+            fps: Target frames per second. If ``None`` or ``<= 0``, every decoded frame is
+                added. Otherwise frames are sub-sampled to roughly ``fps`` frames per second.
+            embed: If True, generate embeddings for the newly added frames.
+
+        Returns:
+            A list of UUIDs of the created frame samples across all processed videos.
+        """
+        video_paths = list(
+            fsspec_lister.iter_files_from_path(
+                path=str(videos_path),
+                allowed_extensions=add_frames_from_video.VIDEO_EXTENSIONS,
+            )
+        )
+        logger.info(f"Found {len(video_paths)} videos in {videos_path}.")
+
+        extract_dir = Path(extract_dir)
+        created_sample_ids: list[UUID] = []
+        for video_path in tqdm(video_paths, desc="Extracting frames from videos", unit=" video"):
+            video_stem = Path(video_path).stem
+
+            # Skip videos that have already been processed into this dataset.
+            if (
+                tag_resolver.get_by_name(
+                    session=self.session,
+                    tag_name=video_stem,
+                    collection_id=self.collection_id,
+                )
+                is not None
+            ):
+                logger.info(f"Skipping already-processed video {video_path}.")
+                continue
+
+            frame_paths = add_frames_from_video.extract_frames_to_dir(
+                video_path=video_path,
+                extract_dir=extract_dir / video_stem,
+                fps=fps,
+            )
+
+            video_sample_ids = add_images.load_into_dataset_from_paths(
+                session=self.session,
+                root_collection_id=self.collection_id,
+                image_paths=frame_paths,
+                show_progress=False,
+            )
+            if video_sample_ids:
+                video_tag = tag_resolver.get_or_create_sample_tag_by_name(
+                    session=self.session,
+                    collection_id=self.collection_id,
+                    tag_name=video_stem,
+                )
+                tag_resolver.add_sample_ids_to_tag_id(
+                    session=self.session,
+                    tag_id=video_tag.tag_id,
+                    sample_ids=video_sample_ids,
+                )
+            created_sample_ids.extend(video_sample_ids)
+
+        if embed:
+            _generate_embeddings_image(
+                session=self.session,
+                collection_id=self.collection_id,
+                sample_ids=created_sample_ids,
+            )
+
+        return created_sample_ids
 
     def add_annotations_from_labelformat(
         self,
