@@ -27,6 +27,7 @@
         <Input
             id="n-samples-percentage"
             type="number"
+            aria-label="Percentage of filtered samples"
             value={percentage}
             oninput={(e) => onPercentageChange((e.target as HTMLInputElement).valueAsNumber)}
             min="0"
