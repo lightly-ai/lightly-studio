@@ -18,9 +18,6 @@ def build_sample_ids_query(
 ) -> SelectOfScalar[UUID]:
     """Build the query selecting distinct sample ids for a given collection.
 
-    Returned un-executed so callers can either run it (see :func:`get_sample_ids`)
-    or embed it as the ``SELECT`` of an ``INSERT … SELECT``.
-
     Args:
         collection_id: The ID of the collection to scope results to.
         filters: The video frame filters to apply.
@@ -52,4 +49,5 @@ def get_sample_ids(
     Returns:
         Set of sample ids matching the given filters.
     """
-    return set(session.exec(build_sample_ids_query(collection_id, filters)).all())
+    query = build_sample_ids_query(collection_id=collection_id, filters=filters)
+    return set(session.exec(query).all())
