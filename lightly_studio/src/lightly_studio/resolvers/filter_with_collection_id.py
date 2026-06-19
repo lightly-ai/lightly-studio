@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Generic, TypeVar
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -12,12 +13,15 @@ from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import Vid
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from lightly_studio.type_definitions import QueryType
 
+# FilterWithCollectionId is used for SampleAdjacent functionality for videos.
+T = TypeVar("T", VideoFrameFilter, VideoFilter)
 
-class FilterWithCollectionId(BaseModel):
+
+class FilterWithCollectionId(BaseModel, Generic[T]):
     """Pairs a collection ID with a video or video frame filter."""
 
     collection_id: UUID
-    filter: VideoFrameFilter | VideoFilter
+    filter: T
 
     def apply(
         self,
