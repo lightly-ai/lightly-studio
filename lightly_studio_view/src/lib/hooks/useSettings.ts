@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS: SettingView = {
     show_annotation_text_labels: false,
     show_sample_filenames: false,
     show_bounding_boxes_for_segmentation: true,
+    enforce_coloring_by_class: false,
     created_at: new Date(),
     updated_at: new Date(),
     key_toolbar_selection: 's',
@@ -50,6 +51,11 @@ const showSampleFilenamesStore = derived(
 const showBoundingBoxesForSegmentationStore = derived(
     settingsStore,
     ($settings) => $settings.show_bounding_boxes_for_segmentation
+);
+
+const enforceColoringByClassStore = derived(
+    settingsStore,
+    ($settings) => $settings.enforce_coloring_by_class
 );
 
 const gridViewThumbnailQualityStore = derived(
@@ -155,6 +161,7 @@ export function useSettings() {
         showAnnotationTextLabelsStore,
         showSampleFilenamesStore,
         showBoundingBoxesForSegmentationStore,
+        enforceColoringByClassStore,
         gridViewThumbnailQualityStore,
 
         // Functions
