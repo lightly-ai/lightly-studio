@@ -27,12 +27,6 @@ from tests.helpers_resolvers import (
 )
 
 
-def _count_sample_joins(query: SelectOfScalar[UUID]) -> int:
-    """Count how many times ``sample`` is joined in the compiled query."""
-    sql = str(query.compile(compile_kwargs={"literal_binds": True})).lower()
-    return sql.count("join sample")
-
-
 def test_build_sample_ids_query__unfiltered_joins_sample_once() -> None:
     """An empty filter must not add the predicate-only aliased ``sample`` join."""
     query = AnnotationsFilter().build_sample_ids_query(collection_id=uuid4())
@@ -207,3 +201,9 @@ def test_combined_filters(
     ).annotations
     assert len(filtered_annotations) == 1
     assert filtered_annotations[0].sample_id == annotation1.sample_id
+
+
+def _count_sample_joins(query: SelectOfScalar[UUID]) -> int:
+    """Count how many times ``sample`` is joined in the compiled query."""
+    sql = str(query.compile(compile_kwargs={"literal_binds": True})).lower()
+    return sql.count("join sample")
