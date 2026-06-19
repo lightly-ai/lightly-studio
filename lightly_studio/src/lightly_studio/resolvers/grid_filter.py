@@ -1,4 +1,7 @@
-"""The grid filter: a discriminated union over the per-grid sample filters."""
+"""The grid filter: a discriminated union over the per-grid sample filters.
+
+Per-grid sample filters are explected to implement GridFilterBase.
+"""
 
 from __future__ import annotations
 
