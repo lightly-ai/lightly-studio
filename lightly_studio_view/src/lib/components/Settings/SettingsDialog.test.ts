@@ -17,6 +17,7 @@ vi.mock('$lib/hooks/useSettings', () => {
         show_annotation_text_labels: false,
         show_sample_filenames: true,
         show_bounding_boxes_for_segmentation: true,
+        enforce_coloring_by_class: false,
         key_toolbar_selection: 's',
         key_toolbar_drag: 'd',
         key_toolbar_bounding_box: 'b',
@@ -118,6 +119,24 @@ describe('SettingsDialog', () => {
         );
     });
 
+    it('should show and save the enforce coloring by class switch', async () => {
+        render(SettingsDialog);
+        await openDialog();
+
+        const toggle = screen.getByRole('switch', { name: 'Enforce Coloring by Class' });
+        expect(toggle).toHaveAttribute('aria-checked', 'false');
+
+        await fireEvent.click(toggle);
+        await fireEvent.click(screen.getByText('Save Changes'));
+
+        const { saveSettings } = useSettings();
+        expect(saveSettings).toHaveBeenCalledWith(
+            expect.objectContaining({
+                enforce_coloring_by_class: true
+            })
+        );
+    });
+
     it('should save all initial settings unchanged when no edits are made', async () => {
         render(SettingsDialog);
         await openDialog();
@@ -134,6 +153,7 @@ describe('SettingsDialog', () => {
             show_annotation_text_labels: false,
             show_sample_filenames: true,
             show_bounding_boxes_for_segmentation: true,
+            enforce_coloring_by_class: false,
             key_toolbar_selection: 's',
             key_toolbar_drag: 'd',
             key_toolbar_bounding_box: 'b',
