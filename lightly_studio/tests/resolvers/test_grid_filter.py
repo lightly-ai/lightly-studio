@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlmodel import Session
 
 from lightly_studio.models.collection import SampleType
-from lightly_studio.resolvers import collection_resolver, grid_filter
+from lightly_studio.resolvers import collection_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
@@ -24,9 +24,7 @@ def test_build_sample_ids_query__image_filter_selects_images(db_session: Session
         for i in range(3)
     ]
 
-    query = grid_filter.build_sample_ids_query(
-        grid_filter=ImageFilter(), collection_id=collection_id
-    )
+    query = ImageFilter().build_sample_ids_query(collection_id=collection_id)
 
     assert set(db_session.exec(query).all()) == {image.sample_id for image in images}
 
@@ -40,8 +38,7 @@ def test_build_sample_ids_query__image_filter_applies_constraints(db_session: Se
         session=db_session, collection_id=collection_id, file_path_abs="narrow.png", width=10
     )
 
-    query = grid_filter.build_sample_ids_query(
-        grid_filter=ImageFilter.model_validate({"width": {"min": 100}}),
+    query = ImageFilter.model_validate({"width": {"min": 100}}).build_sample_ids_query(
         collection_id=collection_id,
     )
 
@@ -54,9 +51,7 @@ def test_build_sample_ids_query__video_filter_selects_videos(db_session: Session
     ).collection_id
     video = create_video(session=db_session, collection_id=collection_id, video=VideoStub())
 
-    query = grid_filter.build_sample_ids_query(
-        grid_filter=VideoFilter(), collection_id=collection_id
-    )
+    query = VideoFilter().build_sample_ids_query(collection_id=collection_id)
 
     assert set(db_session.exec(query).all()) == {video.sample_id}
 
@@ -69,8 +64,7 @@ def test_build_sample_ids_query__video_frame_filter_selects_frames(db_session: S
         video=VideoStub(duration_s=0.1, fps=30.0),
     )
 
-    query = grid_filter.build_sample_ids_query(
-        grid_filter=VideoFrameFilter(),
+    query = VideoFrameFilter().build_sample_ids_query(
         collection_id=video_with_frames.video_frames_collection_id,
     )
 
@@ -95,8 +89,6 @@ def test_build_sample_ids_query__annotations_filter_selects_annotations(
         sample_type=SampleType.ANNOTATION,
     )
 
-    query = grid_filter.build_sample_ids_query(
-        grid_filter=AnnotationsFilter(), collection_id=annotation_collection_id
-    )
+    query = AnnotationsFilter().build_sample_ids_query(collection_id=annotation_collection_id)
 
     assert set(db_session.exec(query).all()) == {annotation.sample_id}

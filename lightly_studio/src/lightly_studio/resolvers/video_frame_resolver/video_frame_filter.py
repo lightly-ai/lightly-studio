@@ -3,22 +3,30 @@
 from typing import Literal, Optional
 from uuid import UUID
 
-from pydantic import BaseModel
-from sqlmodel import col
+from sqlmodel import col, select
+from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.models.video import VideoFrameTable, VideoTable
+from lightly_studio.resolvers.grid_filter_base import GridFilterBase
 from lightly_studio.resolvers.image_filter import FilterDimensions
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.type_definitions import QueryType
 
 
-class VideoFrameFilter(BaseModel):
+class VideoFrameFilter(GridFilterBase):
     """Encapsulates filter parameters for querying video frames."""
 
     frame_number: Optional[FilterDimensions] = None
     video_id: Optional[UUID] = None
     sample_filter: Optional[SampleFilter] = None
     filter_type: Literal["video_frame"] = "video_frame"
+
+    def _select_sample_ids(self) -> SelectOfScalar[UUID]:
+        return (
+            select(VideoFrameTable.sample_id)
+            .join(VideoFrameTable.sample)
+            .join(VideoFrameTable.video)
+        )
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""

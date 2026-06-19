@@ -5,18 +5,20 @@ from __future__ import annotations
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 from sqlalchemy.orm import Mapped, aliased
 from sqlmodel import col, select
+from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.database import db_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
+from lightly_studio.resolvers.grid_filter_base import GridFilterBase
 from lightly_studio.type_definitions import QueryType
 
 
-class AnnotationsFilter(BaseModel):
+class AnnotationsFilter(GridFilterBase):
     """Handles filtering for annotation queries."""
 
     filter_type: Literal["annotations"] = "annotations"
@@ -29,6 +31,9 @@ class AnnotationsFilter(BaseModel):
         default=None, description="List of annotation label UUIDs"
     )
     tag_ids: list[UUID] | None = Field(default=None, description="List of tag UUIDs")
+
+    def _select_sample_ids(self) -> SelectOfScalar[UUID]:
+        return select(AnnotationBaseTable.sample_id).join(AnnotationBaseTable.sample)
 
     def apply(
         self,
