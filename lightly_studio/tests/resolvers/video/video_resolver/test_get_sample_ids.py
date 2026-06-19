@@ -42,3 +42,31 @@ def test_get_sample_ids(db_session: Session) -> None:
         ),
     )
     assert filtered_sample_ids == {created_video_ids[1]}
+
+
+def test_build_sample_ids_query(db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    other_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+
+    created_video_ids = create_videos(
+        session=db_session,
+        collection_id=collection.collection_id,
+        videos=[
+            VideoStub(path="/path/to/small.mp4", width=100, height=100),
+            VideoStub(path="/path/to/large.mp4", width=800, height=800),
+        ],
+    )
+    create_videos(
+        session=db_session,
+        collection_id=other_collection.collection_id,
+        videos=[VideoStub(path="/path/to/other.mp4", width=800, height=800)],
+    )
+
+    query = video_resolver.build_sample_ids_query(collection_id=collection.collection_id)
+    assert set(db_session.exec(query).all()) == set(created_video_ids)
+
+    filtered_query = video_resolver.build_sample_ids_query(
+        collection_id=collection.collection_id,
+        filters=VideoFilter(width=FilterDimensions(min=500)),
+    )
+    assert set(db_session.exec(filtered_query).all()) == {created_video_ids[1]}
