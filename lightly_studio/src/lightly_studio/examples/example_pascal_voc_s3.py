@@ -1,4 +1,4 @@
-"""Example of how to create a dataset with semantic segmentation annotations."""
+"""Example of how to create a dataset with Pascal VOC annotations."""
 
 import json
 
