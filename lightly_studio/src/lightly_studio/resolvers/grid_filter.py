@@ -25,9 +25,6 @@ from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
-# A grid filter is self-describing: its ``filter_type`` literal selects the source
-# table to query from. Mirrors the discriminated union in
-# ``services/sample_services/sample_adjacents_service.py``.
 GridFilter = Annotated[
     Union[ImageFilter, VideoFilter, VideoFrameFilter, AnnotationsFilter],
     Field(discriminator="filter_type"),
@@ -35,7 +32,7 @@ GridFilter = Annotated[
 
 
 def build_sample_ids_query(
-    grid_filter: ImageFilter | VideoFilter | VideoFrameFilter | AnnotationsFilter,
+    grid_filter: GridFilter,
     collection_id: UUID,
 ) -> SelectOfScalar[UUID]:
     """Dispatch a grid filter to its resolver's ``build_sample_ids_query``.
