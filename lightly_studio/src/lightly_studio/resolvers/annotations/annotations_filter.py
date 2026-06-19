@@ -45,6 +45,12 @@ class AnnotationsFilter(GridFilterBase):
         Returns:
             The query with filters applied
         """
+        if not self._has_predicates():
+            # Skip the unused join; it would only add a redundant sample scan.
+            return query
+        # TODO(Michal, 06/2026): When predicates are set this aliased join scans
+        # sample a second time (the base query already joined it for collection
+        # scoping). Reuse the base join instead of aliasing a new one.
         annotation_sample = aliased(SampleTable)
         query = query.join(annotation_sample, AnnotationBaseTable.sample)
         return self._apply_annotation_filters(
@@ -73,6 +79,15 @@ class AnnotationsFilter(GridFilterBase):
             annotation_sample=annotation_sample,
         )
         return query.where(sample_id_column.in_(sample_ids_subquery.distinct()))
+
+    def _has_predicates(self) -> bool:
+        """Whether any filtering predicate is set."""
+        return bool(
+            self.collection_ids
+            or self.annotation_label_ids
+            or self.tag_ids
+            or self.annotation_types
+        )
 
     def _apply_annotation_filters(
         self,
