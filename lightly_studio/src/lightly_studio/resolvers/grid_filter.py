@@ -12,6 +12,7 @@ from typing import Annotated, Union
 from uuid import UUID
 
 from pydantic import Field
+from typing_extensions import assert_never
 from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.resolvers import (
@@ -52,6 +53,8 @@ def build_sample_ids_query(
         return video_frame_resolver.build_sample_ids_query(
             collection_id=collection_id, filters=grid_filter
         )
-    return annotation_resolver.build_sample_ids_query(
-        collection_id=collection_id, filters=grid_filter
-    )
+    if isinstance(grid_filter, AnnotationsFilter):
+        return annotation_resolver.build_sample_ids_query(
+            collection_id=collection_id, filters=grid_filter
+        )
+    assert_never(grid_filter)
