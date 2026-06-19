@@ -8,6 +8,13 @@ const defaultDiversity: StrategyInstance = {
     isExpanded: true
 };
 
+const defaultDeduplication: StrategyInstance = {
+    id: '1',
+    type: 'deduplication',
+    params: { strength: 1, stopping_condition_minimum_distance: 0.1 },
+    isExpanded: true
+};
+
 const defaultTypicality: StrategyInstance = {
     id: '1',
     type: 'typicality',
@@ -92,6 +99,45 @@ describe('isStrategyInstanceValid', () => {
     describe('diversity', () => {
         it('returns true when strength is valid', () => {
             expect(isStrategyInstanceValid(defaultDiversity)).toBe(true);
+        });
+    });
+
+    describe('deduplication', () => {
+        it('returns true when minimum distance is positive', () => {
+            expect(isStrategyInstanceValid(defaultDeduplication)).toBe(true);
+        });
+
+        it('returns false when minimum distance is 0', () => {
+            const instance: StrategyInstance = {
+                ...defaultDeduplication,
+                params: { ...defaultDeduplication.params, stopping_condition_minimum_distance: 0 }
+            };
+
+            expect(isStrategyInstanceValid(instance)).toBe(false);
+        });
+
+        it('returns false when minimum distance is negative', () => {
+            const instance: StrategyInstance = {
+                ...defaultDeduplication,
+                params: {
+                    ...defaultDeduplication.params,
+                    stopping_condition_minimum_distance: -0.1
+                }
+            };
+
+            expect(isStrategyInstanceValid(instance)).toBe(false);
+        });
+
+        it('returns false when minimum distance is NaN', () => {
+            const instance: StrategyInstance = {
+                ...defaultDeduplication,
+                params: {
+                    ...defaultDeduplication.params,
+                    stopping_condition_minimum_distance: Number.NaN
+                }
+            };
+
+            expect(isStrategyInstanceValid(instance)).toBe(false);
         });
     });
 

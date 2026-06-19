@@ -157,6 +157,16 @@
                                 disabled={dialogState.isSaving}
                             />
                         </SettingsFieldRow>
+                        <SettingsFieldRow
+                            id="enforce-coloring-by-class"
+                            label="Enforce Coloring by Class"
+                        >
+                            <Switch
+                                id="enforce-coloring-by-class"
+                                bind:checked={dialogState.enforceColoringByClass}
+                                disabled={dialogState.isSaving}
+                            />
+                        </SettingsFieldRow>
                     </div>
                 </div>
 

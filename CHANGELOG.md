@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Sampling in Browser now supports combining multiple strategies (diversity, typicality, similarity, metadata weighting, class balancing) in a single selection.
 - Sampling dialog now accepts a percentage input alongside the absolute sample count. Editing either field updates the other based on the current    
 filtered sample count.
+- Deduplication strategy is available in the Sampling Dialog in the GUI
 
 ### Changed
 

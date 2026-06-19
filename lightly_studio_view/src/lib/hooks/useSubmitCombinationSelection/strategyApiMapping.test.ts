@@ -9,6 +9,13 @@ const defaultDiversity: StrategyInstance = {
     isExpanded: true
 };
 
+const defaultDeduplication: StrategyInstance = {
+    id: 'dedup-1',
+    type: 'deduplication',
+    params: { strength: 1, stopping_condition_minimum_distance: 0.1 },
+    isExpanded: true
+};
+
 const defaultTypicality: StrategyInstance = {
     id: 'typ-1',
     type: 'typicality',
@@ -59,6 +66,10 @@ describe('getMetadataKey', () => {
         expect(getMetadataKey(defaultDiversity)).toBe('');
     });
 
+    it('returns empty string for deduplication instances', () => {
+        expect(getMetadataKey(defaultDeduplication)).toBe('');
+    });
+
     it('returns empty string for class_balancing instances', () => {
         expect(getMetadataKey(defaultClassBalancing)).toBe('');
     });
@@ -70,6 +81,20 @@ describe('toApiStrategy', () => {
             strategy_name: 'diversity',
             embedding_model_name: null,
             strength: 2
+        });
+    });
+
+    it('maps deduplication to deduplication strategy with null embedding model, strength and min distance', () => {
+        expect(
+            toApiStrategy({
+                ...defaultDeduplication,
+                params: { strength: 2, stopping_condition_minimum_distance: 0.25 }
+            })
+        ).toEqual({
+            strategy_name: 'deduplication',
+            embedding_model_name: null,
+            strength: 2,
+            stopping_condition_minimum_distance: 0.25
         });
     });
 

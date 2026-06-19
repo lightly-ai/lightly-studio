@@ -3,6 +3,8 @@
     import { SideMenu } from '$lib/components/SideMenu';
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
+    import { useSettings } from '$lib/hooks/useSettings';
+    import { resolveEffectiveColorBySource } from '$lib/utils';
 
     interface Props {
         collectionId: string;
@@ -17,6 +19,7 @@
 
     const { setSelectedCollectionIds, selectedCollectionIds, seedSelectionIfNeeded } =
         useAnnotationCollectionsFilter();
+    const { enforceColoringByClassStore } = useSettings();
 
     const isEnabled = $derived(items.length > 1);
 
@@ -32,7 +35,10 @@
 {#if isEnabled}
     <Segment title="Annotation Sources">
         <SideMenu
-            showColorMarker={$selectedCollectionIds.length > 1}
+            showColorMarker={resolveEffectiveColorBySource({
+                multipleSourcesVisible: $selectedCollectionIds.length > 1,
+                enforceColoringByClass: $enforceColoringByClassStore
+            })}
             enableColorPicker
             {items}
             selectedItemsIds={$selectedCollectionIds}
