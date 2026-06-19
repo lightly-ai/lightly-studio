@@ -18,6 +18,7 @@ from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
+# TODO(Michal, 06/2026): Add GroupFilter.
 GridFilter = Annotated[
     Union[ImageFilter, VideoFilter, VideoFrameFilter, AnnotationsFilter],
     Field(discriminator="filter_type"),
