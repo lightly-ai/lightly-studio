@@ -19,7 +19,6 @@ from lightly_studio.resolvers.filter_with_collection_id import FilterWithCollect
 from lightly_studio.resolvers.video_frame_resolver.video_frame_adjacent_filter import (
     VideoFrameAdjacentFilter,
 )
-from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 
 def get_adjacent_video_frames(
@@ -103,7 +102,7 @@ def _default_ordering_expression() -> tuple[ColumnElement[Any], ColumnElement[An
 
 
 def _video_ids_subquery(
-    video_filter: FilterWithCollectionId[VideoFilter] | None,
+    video_filter: FilterWithCollectionId | None,
 ) -> Subquery | None:
     if video_filter is None:
         return None
