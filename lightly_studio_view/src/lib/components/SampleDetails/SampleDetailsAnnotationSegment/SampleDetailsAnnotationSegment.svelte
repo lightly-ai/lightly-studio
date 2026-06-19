@@ -11,7 +11,8 @@
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useAnnotationSelection } from '$lib/hooks/useAnnotationSelection/useAnnotationSelection';
-    import { countVisibleSources } from '$lib/utils';
+    import { countVisibleSources, resolveEffectiveColorBySource } from '$lib/utils';
+    import { useSettings } from '$lib/hooks/useSettings';
     import {
         areAllAnnotationsHidden,
         computeSeededHiddenIds,
@@ -39,6 +40,7 @@
     }: SampleDetailsAnnotationSegmentProps = $props();
 
     const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
+    const { enforceColoringByClassStore } = useSettings();
 
     const {
         context: annotationLabelContext,
@@ -90,7 +92,12 @@
     // matching the details canvas. Swatches are shown only when they match the
     // colors drawn on the image: source markers in the group headers when coloring
     // by source, label legends in the rows otherwise.
-    const colorBySource = $derived(countVisibleSources(annotationsSort, annotationsIdsToHide) >= 2);
+    const colorBySource = $derived(
+        resolveEffectiveColorBySource(
+            countVisibleSources(annotationsSort, annotationsIdsToHide) >= 2,
+            $enforceColoringByClassStore
+        )
+    );
 
     // Seed the global annotation source stores the first time this collection is shown
     // (e.g. landing directly on the details page via deep link), so annotations are colored

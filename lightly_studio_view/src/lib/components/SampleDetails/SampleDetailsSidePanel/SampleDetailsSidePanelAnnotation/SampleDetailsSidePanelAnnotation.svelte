@@ -14,6 +14,8 @@
     import AnnotationColorLegend from '$lib/components/AnnotationColorLegend/AnnotationColorLegend.svelte';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { useAnnotationCollectionsFilter } from '$lib/hooks';
+    import { resolveEffectiveColorBySource } from '$lib/utils';
+    import { useSettings } from '$lib/hooks/useSettings';
 
     const {
         annotation: annotationProp,
@@ -81,7 +83,13 @@
     // source. The colorBySource prop drives this on the details page; the global
     // selection rule is the fallback, mirroring the behavior of LabelsMenu.
     const { selectedCollectionIds } = useAnnotationCollectionsFilter();
-    const showLabelColorLegend = $derived(!(colorBySource ?? $selectedCollectionIds.length >= 2));
+    const { enforceColoringByClassStore } = useSettings();
+    const showLabelColorLegend = $derived(
+        !resolveEffectiveColorBySource(
+            colorBySource ?? $selectedCollectionIds.length >= 2,
+            $enforceColoringByClassStore
+        )
+    );
 
     const annotationId = $derived(annotationProp.sample_id);
 

@@ -1,10 +1,42 @@
 import { render, screen } from '@testing-library/svelte';
 import type { ComponentProps } from 'svelte';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
 import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
 import { getColorByLabel } from '$lib/utils';
 import SampleAnnotation from './SampleAnnotation.svelte';
+import { useSettings } from '$lib/hooks/useSettings';
+
+type UseSettingsReturn = ReturnType<typeof useSettings>;
+type MockEnforceColoringByClass = {
+    setEnforceColoringByClass: (value: boolean) => void;
+};
+
+const mockSettingsControls: MockEnforceColoringByClass = vi.hoisted(() => ({
+    setEnforceColoringByClass: () => {
+        throw new Error('enforceColoringByClassStore is not initialized');
+    }
+}));
+
+vi.mock('$lib/hooks/useSettings', async () => {
+    const { writable, derived } = await import('svelte/store');
+
+    const settingsStore = writable({ enforce_coloring_by_class: false });
+    const enforceColoringByClassStore = derived(
+        settingsStore,
+        ($s) => $s.enforce_coloring_by_class
+    );
+
+    mockSettingsControls.setEnforceColoringByClass = (value) => {
+        settingsStore.update((s) => ({ ...s, enforce_coloring_by_class: value }));
+    };
+
+    return {
+        useSettings: (): Pick<UseSettingsReturn, 'enforceColoringByClassStore'> => ({
+            enforceColoringByClassStore
+        })
+    };
+});
 
 const BASE_ANNOTATION_FIELDS = {
     parent_sample_id: 'parent-sample-1',
@@ -190,6 +222,60 @@ describe('SampleAnnotation', () => {
         });
 
         it('falls back to the global selection rule when colorBySource is omitted', () => {
+            setSelectedCollectionIds(['collection-1', 'collection-2']);
+            setCollectionIdToName({ 'collection-1': 'Predictions' });
+
+            render(SampleAnnotation, {
+                props: { annotation: createObjectDetectionAnnotation(), imageWidth: 100 }
+            });
+
+            expect(screen.getByTestId('annotation_box')).toHaveAttribute('stroke', sourceColor);
+        });
+    });
+
+    describe('enforceColoringByClass setting', () => {
+        const { setSelectedCollectionIds, setCollectionIdToName } =
+            useAnnotationCollectionsFilter();
+
+        const sourceColor = getColorByLabel('Predictions', 1).color;
+        const labelColor = getColorByLabel('car', 1).color;
+
+        afterEach(() => {
+            setSelectedCollectionIds([]);
+            setCollectionIdToName({});
+            mockSettingsControls.setEnforceColoringByClass(false);
+        });
+
+        it('colors by label even when colorBySource is true and multiple sources are selected', () => {
+            mockSettingsControls.setEnforceColoringByClass(true);
+            setSelectedCollectionIds(['collection-1', 'collection-2']);
+            setCollectionIdToName({ 'collection-1': 'Predictions' });
+
+            render(SampleAnnotation, {
+                props: {
+                    annotation: createObjectDetectionAnnotation(),
+                    imageWidth: 100,
+                    colorBySource: true
+                }
+            });
+
+            expect(screen.getByTestId('annotation_box')).toHaveAttribute('stroke', labelColor);
+        });
+
+        it('colors by label via the global fallback when enforce is on and colorBySource is omitted', () => {
+            mockSettingsControls.setEnforceColoringByClass(true);
+            setSelectedCollectionIds(['collection-1', 'collection-2']);
+            setCollectionIdToName({ 'collection-1': 'Predictions' });
+
+            render(SampleAnnotation, {
+                props: { annotation: createObjectDetectionAnnotation(), imageWidth: 100 }
+            });
+
+            expect(screen.getByTestId('annotation_box')).toHaveAttribute('stroke', labelColor);
+        });
+
+        it('preserves source coloring when enforce is disabled', () => {
+            mockSettingsControls.setEnforceColoringByClass(false);
             setSelectedCollectionIds(['collection-1', 'collection-2']);
             setCollectionIdToName({ 'collection-1': 'Predictions' });
 

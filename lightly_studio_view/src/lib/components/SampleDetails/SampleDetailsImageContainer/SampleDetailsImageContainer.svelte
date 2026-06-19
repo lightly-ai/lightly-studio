@@ -10,7 +10,12 @@
     import SampleSegmentationMaskRect from '../SampleSegmentationMaskRect/SampleSegmentationMaskRect.svelte';
     import SampleObjectDetectionRect from '../SampleObjectDetectionRect/SampleObjectDetectionRect.svelte';
     import { select } from 'd3-selection';
-    import { countVisibleSources, getColorByLabel } from '$lib/utils';
+    import {
+        countVisibleSources,
+        getColorByLabel,
+        resolveEffectiveColorBySource
+    } from '$lib/utils';
+    import { useSettings } from '$lib/hooks/useSettings';
     import { throttle } from 'lodash-es';
     import BrushToolPopUp from '../BrushToolPopUp/BrushToolPopUp.svelte';
     import { AnnotationSourcePill } from '$lib/components';
@@ -58,6 +63,7 @@
 
     const { isEditingMode, imageBrightness, imageContrast } = useGlobalStorage();
     const { isHidden } = useHideAnnotations();
+    const { enforceColoringByClassStore } = useSettings();
 
     let resetZoomTransform: (() => void) | undefined = $state();
     let mousePosition = $state<{ x: number; y: number } | null>(null);
@@ -81,7 +87,10 @@
     // Color boxes by source only while annotations from multiple sources are visible,
     // mirroring the side panel (sample.annotations is already classification-free).
     const colorBySource = $derived(
-        countVisibleSources(sample.annotations, hideAnnotationsIds) >= 2
+        resolveEffectiveColorBySource(
+            countVisibleSources(sample.annotations, hideAnnotationsIds) >= 2,
+            $enforceColoringByClassStore
+        )
     );
 
     const drawerStrokeColor = $derived(

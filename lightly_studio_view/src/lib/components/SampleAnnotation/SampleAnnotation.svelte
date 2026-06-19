@@ -8,7 +8,8 @@
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import type { Annotation } from '$lib/services/types';
     import type { BoundingBox } from '$lib/types';
-    import { getColorByLabel, withAlpha } from '$lib/utils';
+    import { getColorByLabel, resolveEffectiveColorBySource, withAlpha } from '$lib/utils';
+    import { useSettings } from '$lib/hooks/useSettings';
     import { getConstrainedCoordinates } from '$lib/utils/getConstrainedCoordinates';
     import ResizableRectangle from '../ResizableRectangle/ResizableRectangle.svelte';
     import { getBoundingBox } from './utils';
@@ -45,11 +46,15 @@
 
     const { customLabelColorsStore } = useCustomLabelColors();
     const { selectedCollectionIds, collectionIdToName } = useAnnotationCollectionsFilter();
+    const { enforceColoringByClassStore } = useSettings();
 
     const label = $derived(annotation.annotation_label.annotation_label_name);
 
     const colorLabel = $derived.by(() => {
-        const bySource = colorBySource ?? $selectedCollectionIds.length >= 2;
+        const bySource = resolveEffectiveColorBySource(
+            colorBySource ?? $selectedCollectionIds.length >= 2,
+            $enforceColoringByClassStore
+        );
         if (!bySource) return label;
         return $collectionIdToName[annotation.annotation_collection_id] ?? label;
     });
