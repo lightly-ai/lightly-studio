@@ -13,10 +13,10 @@
     const { enforceColoringByClassStore } = useSettings();
 
     const showClassColorLegend = $derived(
-        !resolveEffectiveColorBySource(
-            $selectedCollectionIds.length > 1,
-            $enforceColoringByClassStore
-        )
+        !resolveEffectiveColorBySource({
+            multipleSourcesVisible: $selectedCollectionIds.length > 1,
+            enforceColoringByClass: $enforceColoringByClassStore
+        })
     );
 
     let {
@@ -59,13 +59,12 @@
                         class="flex min-w-0 flex-1 cursor-pointer items-center space-x-2 text-nowrap peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                     >
                         {#if showClassColorLegend}
-                            <div data-testid="label-color-legend">
-                                <AnnotationColorLegend
-                                    labelName={label_name}
-                                    className="h-3 w-3"
-                                    {selected}
-                                />
-                            </div>
+                            <AnnotationColorLegend
+                                labelName={label_name}
+                                className="h-3 w-3"
+                                {selected}
+                                testId="label-color-legend"
+                            />
                         {/if}
                         <p
                             class="flex-1 truncate text-base font-normal"

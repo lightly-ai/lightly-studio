@@ -68,10 +68,10 @@
         const showInstanceSegmentationBoundingBoxes = $showBoundingBoxesForSegmentationStore;
         const selectedIds = $selectedCollectionIds;
         const idToName = $collectionIdToName;
-        const colorBySource = resolveEffectiveColorBySource(
-            selectedIds.length > 1,
-            $enforceColoringByClassStore
-        );
+        const colorBySource = resolveEffectiveColorBySource({
+            multipleSourcesVisible: selectedIds.length > 1,
+            enforceColoringByClass: $enforceColoringByClassStore
+        });
 
         return sample.annotations
             .filter(

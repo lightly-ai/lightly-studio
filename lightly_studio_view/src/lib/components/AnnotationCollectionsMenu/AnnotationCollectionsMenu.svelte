@@ -35,10 +35,10 @@
 {#if isEnabled}
     <Segment title="Annotation Sources">
         <SideMenu
-            showColorMarker={resolveEffectiveColorBySource(
-                $selectedCollectionIds.length > 1,
-                $enforceColoringByClassStore
-            )}
+            showColorMarker={resolveEffectiveColorBySource({
+                multipleSourcesVisible: $selectedCollectionIds.length > 1,
+                enforceColoringByClass: $enforceColoringByClassStore
+            })}
             enableColorPicker
             {items}
             selectedItemsIds={$selectedCollectionIds}

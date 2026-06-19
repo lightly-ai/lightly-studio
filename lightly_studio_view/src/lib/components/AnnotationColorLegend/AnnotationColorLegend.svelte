@@ -6,11 +6,13 @@
     const {
         labelName,
         className,
-        selected = false
+        selected = false,
+        testId
     }: {
         labelName: string;
         className: string;
         selected: boolean;
+        testId?: string;
     } = $props();
 
     const { setCustomColor, getCustomColor, hasCustomColor, customLabelColorsStore } =
@@ -52,7 +54,7 @@
     });
 </script>
 
-<div class="color-picker-container">
+<div class="color-picker-container" data-testid={testId}>
     <ColorPicker
         initialColor={getInitialColor(labelName)}
         initialAlpha={getInitialAlpha(labelName)}
