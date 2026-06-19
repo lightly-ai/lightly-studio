@@ -3,12 +3,14 @@
     import { Checkbox } from '$lib/components/ui/checkbox/index.js';
     import { Label } from '$lib/components/ui/label/index.js';
     import type { Annotation } from '$lib/types';
-    import { formatInteger } from '$lib/utils';
+    import { formatInteger, resolveEffectiveColorBySource } from '$lib/utils';
     import { type Readable } from 'svelte/store';
     import AnnotationColorLegend from '../AnnotationColorLegend/AnnotationColorLegend.svelte';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
+    import { useSettings } from '$lib/hooks/useSettings';
 
     const { selectedCollectionIds } = useAnnotationCollectionsFilter();
+    const { enforceColoringByClassStore } = useSettings();
 
     let {
         annotationFilterRows,
@@ -49,7 +51,7 @@
                         data-testid="labels-menu-item"
                         class="flex min-w-0 flex-1 cursor-pointer items-center space-x-2 text-nowrap peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                     >
-                        {#if $selectedCollectionIds.length < 2}
+                        {#if !resolveEffectiveColorBySource($selectedCollectionIds.length > 1, $enforceColoringByClassStore)}
                             <AnnotationColorLegend
                                 labelName={label_name}
                                 className="h-3 w-3"
