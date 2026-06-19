@@ -12,6 +12,13 @@
     const { selectedCollectionIds } = useAnnotationCollectionsFilter();
     const { enforceColoringByClassStore } = useSettings();
 
+    const showClassColorLegend = $derived(
+        !resolveEffectiveColorBySource(
+            $selectedCollectionIds.length > 1,
+            $enforceColoringByClassStore
+        )
+    );
+
     let {
         annotationFilterRows,
         onToggleAnnotationFilter
@@ -51,12 +58,14 @@
                         data-testid="labels-menu-item"
                         class="flex min-w-0 flex-1 cursor-pointer items-center space-x-2 text-nowrap peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                     >
-                        {#if !resolveEffectiveColorBySource($selectedCollectionIds.length > 1, $enforceColoringByClassStore)}
-                            <AnnotationColorLegend
-                                labelName={label_name}
-                                className="h-3 w-3"
-                                {selected}
-                            />
+                        {#if showClassColorLegend}
+                            <div data-testid="label-color-legend">
+                                <AnnotationColorLegend
+                                    labelName={label_name}
+                                    className="h-3 w-3"
+                                    {selected}
+                                />
+                            </div>
                         {/if}
                         <p
                             class="flex-1 truncate text-base font-normal"

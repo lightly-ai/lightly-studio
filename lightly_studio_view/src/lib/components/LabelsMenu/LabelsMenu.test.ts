@@ -62,21 +62,21 @@ describe('LabelsMenu', () => {
     it('shows class color legends when only one source is selected', () => {
         mocks.selectedCollectionIds.set(['col-a']);
         render(LabelsMenu, defaultProps);
-        expect(document.querySelectorAll('.color-picker-container').length).toBe(2);
+        expect(screen.getAllByTestId('label-color-legend')).toHaveLength(2);
     });
 
     it('hides class color legends when multiple sources are selected and enforce is disabled', () => {
         mocks.selectedCollectionIds.set(['col-a', 'col-b']);
         mocks.enforceColoringByClassStore.set(false);
         render(LabelsMenu, defaultProps);
-        expect(document.querySelectorAll('.color-picker-container').length).toBe(0);
+        expect(screen.queryByTestId('label-color-legend')).not.toBeInTheDocument();
     });
 
     it('shows class color legends when multiple sources are selected and enforce is enabled', () => {
         mocks.selectedCollectionIds.set(['col-a', 'col-b']);
         mocks.enforceColoringByClassStore.set(true);
         render(LabelsMenu, defaultProps);
-        expect(document.querySelectorAll('.color-picker-container').length).toBe(2);
+        expect(screen.getAllByTestId('label-color-legend')).toHaveLength(2);
     });
 
     it('renders a row for each annotation label', () => {

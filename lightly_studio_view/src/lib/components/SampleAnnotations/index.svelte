@@ -2,6 +2,7 @@
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import { useSettings } from '$lib/hooks/useSettings';
+    import { resolveEffectiveColorBySource } from '$lib/utils';
     import { onMount, type ComponentProps } from 'svelte';
     import type { AnnotationView } from '$lib/api/lightly_studio_local';
     import { AnnotationCanvas } from '$lib/components';
@@ -25,8 +26,6 @@
         sample: SampleView;
         objectFit?: SampleImageObjectFit;
     } = $props();
-
-    import { resolveEffectiveColorBySource } from '$lib/utils';
 
     const { isHidden } = useHideAnnotations();
     const { showBoundingBoxesForSegmentationStore, enforceColoringByClassStore } = useSettings();
