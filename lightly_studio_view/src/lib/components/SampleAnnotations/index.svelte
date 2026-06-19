@@ -26,8 +26,10 @@
         objectFit?: SampleImageObjectFit;
     } = $props();
 
+    import { resolveEffectiveColorBySource } from '$lib/utils';
+
     const { isHidden } = useHideAnnotations();
-    const { showBoundingBoxesForSegmentationStore } = useSettings();
+    const { showBoundingBoxesForSegmentationStore, enforceColoringByClassStore } = useSettings();
     const { selectedCollectionIds, collectionIdToName } = useAnnotationCollectionsFilter();
 
     // Normalize backend annotation variants into the smaller canvas render contract.
@@ -67,6 +69,10 @@
         const showInstanceSegmentationBoundingBoxes = $showBoundingBoxesForSegmentationStore;
         const selectedIds = $selectedCollectionIds;
         const idToName = $collectionIdToName;
+        const colorBySource = resolveEffectiveColorBySource(
+            selectedIds.length > 1,
+            $enforceColoringByClassStore
+        );
 
         return sample.annotations
             .filter(
@@ -81,7 +87,7 @@
                     showInstanceSegmentationBoundingBoxes
                 );
                 if (!canvas) return null;
-                if (selectedIds.length > 1) {
+                if (colorBySource) {
                     const collectionName = idToName[annotation.annotation_collection_id];
                     if (collectionName) return { ...canvas, annotation_label_name: collectionName };
                 }
