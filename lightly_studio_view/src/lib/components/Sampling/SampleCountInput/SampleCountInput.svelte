@@ -18,7 +18,7 @@
         value={count}
         oninput={(e) => onCountChange((e.target as HTMLInputElement).valueAsNumber)}
         min="1"
-        placeholder="Count"
+        placeholder="Enter the number of samples"
         required
         class="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         data-testid="sampling-dialog-n-samples-input"
