@@ -1,11 +1,4 @@
-"""The grid filter: a discriminated union over the four per-grid filters.
-
-Each grid (images, videos, video frames, annotations) has its own filter type.
-``GridFilter`` unifies them into a single ``filter_type``-discriminated union so a
-caller can accept any grid's filter and resolve it to the sample ids it matches
-without hand-parsing the request shape. Resolution is done by the filter itself via
-``GridFilterBase.build_sample_ids_query``.
-"""
+"""The grid filter: a discriminated union over the per-grid sample filters."""
 
 from __future__ import annotations
 

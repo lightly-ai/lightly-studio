@@ -1,11 +1,4 @@
-"""Shared base class for the per-grid filters.
-
-Each grid (images, videos, video frames, annotations) has its own filter type.
-They all resolve to the same shape of "distinct sample ids in a collection that
-match this filter", differing only in which base query they start from. This base
-captures that shared algorithm and leaves the one varying step -- the base select
--- abstract for each concrete filter to supply.
-"""
+"""Shared base class for the per-grid filters."""
 
 from __future__ import annotations
 
