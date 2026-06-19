@@ -32,9 +32,6 @@ class AnnotationsFilter(GridFilterBase):
     )
     tag_ids: list[UUID] | None = Field(default=None, description="List of tag UUIDs")
 
-    def _select_sample_ids(self) -> SelectOfScalar[UUID]:
-        return select(AnnotationBaseTable.sample_id).join(AnnotationBaseTable.sample)
-
     def apply(
         self,
         query: QueryType,
@@ -118,3 +115,6 @@ class AnnotationsFilter(GridFilterBase):
             query = query.where(col(AnnotationBaseTable.annotation_type).in_(self.annotation_types))
 
         return query
+
+    def _select_sample_ids(self) -> SelectOfScalar[UUID]:
+        return select(AnnotationBaseTable.sample_id).join(AnnotationBaseTable.sample)

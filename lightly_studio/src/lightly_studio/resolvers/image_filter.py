@@ -29,9 +29,6 @@ class ImageFilter(GridFilterBase):
     width: Optional[FilterDimensions] = None
     height: Optional[FilterDimensions] = None
 
-    def _select_sample_ids(self) -> SelectOfScalar[UUID]:
-        return select(ImageTable.sample_id).join(ImageTable.sample)
-
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
         # Apply sample filters to the query.
@@ -56,3 +53,6 @@ class ImageFilter(GridFilterBase):
             if self.height.max is not None:
                 query = query.where(ImageTable.height <= self.height.max)
         return query
+
+    def _select_sample_ids(self) -> SelectOfScalar[UUID]:
+        return select(ImageTable.sample_id).join(ImageTable.sample)

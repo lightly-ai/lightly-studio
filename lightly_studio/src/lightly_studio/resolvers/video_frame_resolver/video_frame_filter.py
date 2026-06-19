@@ -21,13 +21,6 @@ class VideoFrameFilter(GridFilterBase):
     sample_filter: Optional[SampleFilter] = None
     filter_type: Literal["video_frame"] = "video_frame"
 
-    def _select_sample_ids(self) -> SelectOfScalar[UUID]:
-        return (
-            select(VideoFrameTable.sample_id)
-            .join(VideoFrameTable.sample)
-            .join(VideoFrameTable.video)
-        )
-
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
         query = self._apply_frame_number_filters(query)
@@ -64,3 +57,10 @@ class VideoFrameFilter(GridFilterBase):
             query = query.where(col(VideoFrameTable.frame_number) <= max_frame_number)
 
         return query
+
+    def _select_sample_ids(self) -> SelectOfScalar[UUID]:
+        return (
+            select(VideoFrameTable.sample_id)
+            .join(VideoFrameTable.sample)
+            .join(VideoFrameTable.video)
+        )

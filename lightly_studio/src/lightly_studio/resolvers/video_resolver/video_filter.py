@@ -26,9 +26,6 @@ class VideoFilter(GridFilterBase):
     sample_filter: Optional[SampleFilter] = None
     frame_annotation_filter: Optional[AnnotationsFilter] = None
 
-    def _select_sample_ids(self) -> SelectOfScalar[UUID]:
-        return select(VideoTable.sample_id).join(VideoTable.sample)
-
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
         query = self._apply_width_and_height_filters(query)
@@ -97,3 +94,6 @@ class VideoFilter(GridFilterBase):
         )
 
         return query.where(col(VideoTable.sample_id).in_(frame_filtered_video_ids_subquery))
+
+    def _select_sample_ids(self) -> SelectOfScalar[UUID]:
+        return select(VideoTable.sample_id).join(VideoTable.sample)
