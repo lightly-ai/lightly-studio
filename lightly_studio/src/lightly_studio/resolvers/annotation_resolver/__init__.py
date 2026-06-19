@@ -31,6 +31,7 @@ from lightly_studio.resolvers.annotation_resolver.get_by_id_with_payload import 
     get_by_id_with_payload,
 )
 from lightly_studio.resolvers.annotation_resolver.get_sample_ids import (
+    build_sample_ids_query,
     get_sample_ids,
 )
 from lightly_studio.resolvers.annotation_resolver.update_annotation_label import (
@@ -44,6 +45,7 @@ from lightly_studio.resolvers.annotation_resolver.update_segmentation_mask impor
 )
 
 __all__ = [
+    "build_sample_ids_query",
     "create_many",
     "delete_annotation",
     "delete_annotations",
