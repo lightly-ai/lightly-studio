@@ -90,12 +90,10 @@ def test_get_all_by_evaluation_run_id__returns_empty_for_unknown_run(
 def test_get_all_by_evaluation_run_id__excludes_other_runs(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
     run1, image1 = evaluation_sample_metric_helpers.create_run_and_image(
-        session=db_session,
-        dataset_collection_id=dataset.collection_id,
+        session=db_session, dataset_collection_id=dataset.collection_id, name="run1"
     )
     run2, image2 = evaluation_sample_metric_helpers.create_run_and_image(
-        session=db_session,
-        dataset_collection_id=dataset.collection_id,
+        session=db_session, dataset_collection_id=dataset.collection_id, name="run2"
     )
     label = create_annotation_label(
         session=db_session,
