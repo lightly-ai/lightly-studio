@@ -206,8 +206,9 @@
 
     const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId }));
     const hasEmbeddings = $derived(!!hasEmbeddingsQuery.data);
-    const hasMediaWithEmbeddings = $derived((isImages || isVideos) && hasEmbeddings);
-    const hasCollectionSearch = $derived((isImages || isVideos || isAnnotations) && hasEmbeddings);
+    const hasMediaWithEmbeddings = $derived(
+        (isImages || isVideos || isAnnotations) && hasEmbeddings
+    );
     const collectionSearchPlaceholder = $derived(
         isAnnotations
             ? 'Search annotations by description or image'
@@ -317,7 +318,7 @@
         ($activePanel === 'evaluationRuns' && hasEvaluationRuns) ||
             ($activePanel === 'embeddingPlot' &&
                 hasMediaWithEmbeddings &&
-                (isImages || isVideos)) ||
+                (isImages || isVideos || isAnnotations)) ||
             ($activePanel === 'queryEditor' && isImages)
     );
 </script>
@@ -361,6 +362,7 @@
                                 {collectionIdStore}
                                 {isVideos}
                                 {isImages}
+                                {isAnnotations}
                             />
                             {#if isImages}
                                 <ConfusionCellFilterItem />
@@ -390,7 +392,7 @@
                         {canSelectAll}
                         isSelectionActive={$selectedCount > 0}
                         {isImages}
-                        hasMediaWithEmbeddings={hasCollectionSearch}
+                        {hasMediaWithEmbeddings}
                         collectionDatasetId={collection.dataset_id}
                         onSelectAll={selectAllHandle.handleSelectAll}
                         onDeselectAll={clearSelection}
@@ -446,9 +448,13 @@
                                     error={evaluationRunsQuery.error?.message}
                                 />
                             {/await}
-                        {:else if $activePanel === 'embeddingPlot' && hasMediaWithEmbeddings && (isImages || isVideos)}
+                        {:else if $activePanel === 'embeddingPlot' && hasMediaWithEmbeddings && (isImages || isVideos || isAnnotations)}
                             {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
-                                <PlotPanel />
+                                <!-- PlotPanel captures collectionId at mount; remount it when
+                                     switching collections (e.g. images <-> annotations tab). -->
+                                {#key collectionId}
+                                    <PlotPanel />
+                                {/key}
                             {/await}
                         {:else if $activePanel === 'queryEditor' && isImages}
                             <QueryEditorPanel onClose={() => setActivePanel('none')} />

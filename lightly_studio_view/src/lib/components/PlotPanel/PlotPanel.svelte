@@ -10,6 +10,7 @@
     import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+    import { useAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
     import { useArrowData } from './useArrowData/useArrowData';
     import { usePlotData } from './usePlotData/usePlotData';
     import PlotPanelLegend from './PlotPanelLegend.svelte';
@@ -19,11 +20,12 @@
     import { getCategoryColors, getCategoryCount, getLegendEntries } from './plotColorUtils';
     import { INCLUDED_BY_FILTERS_LABEL, NO_CATEGORY_LABEL } from './plotCategories';
     import { page } from '$app/state';
-    import { isVideosRoute } from '$lib/routes';
+    import { isAnnotationsRoute, isVideosRoute } from '$lib/routes';
     import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { usePlotColorBy } from './usePlotColorBy/usePlotColorBy';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
+    import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { writable } from 'svelte/store';
 
     const collectionId = page.params.collection_id;
@@ -40,22 +42,41 @@
 
     // Detect if we're on the videos route
     const isVideos = $derived(isVideosRoute(page.route?.id ?? null));
+    // Detect if we're on the annotations route
+    const isAnnotations = $derived(isAnnotationsRoute(page.route?.id ?? null));
 
     // Use appropriate filter hook based on route
     const imageFilters = useImageFilters();
     const videoFilters = useVideoFilters();
+    const { annotationPlotSampleIds, updateSampleIds: updateAnnotationPlotSampleIds } =
+        useAnnotationPlotSelection();
 
     const updateSampleIds = $derived(
-        isVideos ? videoFilters.updateSampleIds : imageFilters.updateSampleIds
+        isAnnotations
+            ? updateAnnotationPlotSampleIds
+            : isVideos
+              ? videoFilters.updateSampleIds
+              : imageFilters.updateSampleIds
     );
     const imageFilter = $derived(isVideos ? null : imageFilters.imageFilter);
     const videoFilter = $derived(isVideos ? videoFilters.videoFilter : null);
     const activeSampleIds = $derived(
-        (isVideos ? $videoFilter : $imageFilter)?.sample_filter?.sample_ids ?? []
+        isAnnotations
+            ? $annotationPlotSampleIds
+            : ((isVideos ? $videoFilter : $imageFilter)?.sample_filter?.sample_ids ?? [])
     );
+
+    // The active annotation label/tag filter, mirroring what the annotations grid applies.
+    const { annotationFilter: selectedAnnotationsFilter } =
+        useSelectedAnnotationsFilter(collectionId);
 
     // Prepare filter for embeddings API - use VideoFilter for videos, ImageFilter for images
     const filter = $derived.by(() => {
+        // On the annotations route, send the active annotation label/tag filter (or an
+        // empty annotations filter so all points count as included).
+        if (isAnnotations) {
+            return $selectedAnnotationsFilter ?? { filter_type: 'annotations' as const };
+        }
         const currentFilter = isVideos ? $videoFilter : $imageFilter;
         if (!currentFilter) return null;
 
@@ -73,7 +94,12 @@
     });
 
     const { selectedColorByType } = usePlotColorByType(collectionId);
-    const { tags } = useTags({ collection_id: collectionId, kind: ['sample'] });
+    // Annotation samples carry annotation-kind tags. Captured once at mount, like
+    // collectionId above.
+    const { tags } = useTags({
+        collection_id: collectionId,
+        kind: isAnnotationsRoute(page.route?.id ?? null) ? ['annotation'] : ['sample']
+    });
     const annotationLabelsQuery = useAnnotationLabels(() => ({ collectionId }));
     const annotationLabels = writable<{ annotation_label_id: string }[]>([]);
     $effect(() => {
@@ -147,8 +173,9 @@
             return;
         }
 
-        const filter = isVideos ? $videoFilter : $imageFilter;
-        const currentSampleIds = filter?.sample_filter?.sample_ids || [];
+        const currentSampleIds = isAnnotations
+            ? $annotationPlotSampleIds
+            : ((isVideos ? $videoFilter : $imageFilter)?.sample_filter?.sample_ids ?? []);
         const selectableCount =
             ($arrowData?.fulfils_filter as Uint8Array | undefined)?.reduce((count, fulfils) => {
                 return fulfils !== 0 ? count + 1 : count;
