@@ -24,8 +24,17 @@ from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
-from lightly_studio.resolvers import embedding_model_resolver, sample_embedding_resolver
-from tests.helpers_resolvers import create_collection
+from lightly_studio.resolvers import (
+    collection_resolver,
+    embedding_model_resolver,
+    sample_embedding_resolver,
+)
+from tests.helpers_resolvers import (
+    create_annotation,
+    create_annotation_label,
+    create_collection,
+    create_image,
+)
 from tests.resolvers.video.helpers import VideoStub, create_videos
 
 
@@ -255,6 +264,200 @@ def test_embed_images_with_incompatible_generator(
         manager.embed_images(
             session=db_session, collection_id=collection.collection_id, sample_ids=[uuid4()]
         )
+
+
+def test_embed_annotations(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """embed_annotations stores one embedding per object-detection annotation."""
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+    annotation_source = "predictions"
+    create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_collection_name=annotation_source,
+    )
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+        name=annotation_source,
+    )
+
+    manager = EmbeddingManager()
+    model_id = manager.register_embedding_model(
+        session=db_session,
+        embedding_generator=RandomEmbeddingGenerator(),
+        collection_id=annotation_collection_id,
+        set_as_default=True,
+    ).embedding_model_id
+
+    manager.embed_annotations(
+        session=db_session,
+        annotation_collection_id=annotation_collection_id,
+        embedding_model_id=model_id,
+    )
+
+    stored_embeddings = db_session.exec(
+        select(SampleEmbeddingTable).where(SampleEmbeddingTable.embedding_model_id == model_id)
+    ).all()
+    assert len(stored_embeddings) == 1
+    assert len(stored_embeddings[0].embedding) == 3
+
+
+def test_embed_annotations_is_idempotent(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """Re-running embed_annotations does not duplicate embeddings."""
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+    create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_collection_name="predictions",
+    )
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+        name="predictions",
+    )
+
+    manager = EmbeddingManager()
+    model_id = manager.register_embedding_model(
+        session=db_session,
+        embedding_generator=RandomEmbeddingGenerator(),
+        collection_id=annotation_collection_id,
+        set_as_default=True,
+    ).embedding_model_id
+
+    manager.embed_annotations(session=db_session, annotation_collection_id=annotation_collection_id)
+    manager.embed_annotations(session=db_session, annotation_collection_id=annotation_collection_id)
+
+    stored_embeddings = db_session.exec(
+        select(SampleEmbeddingTable).where(SampleEmbeddingTable.embedding_model_id == model_id)
+    ).all()
+    assert len(stored_embeddings) == 1
+
+
+def test_embed_annotations_processes_all_chunks(
+    db_session: Session,
+    collection: CollectionTable,
+    mocker: MockerFixture,
+) -> None:
+    """All annotations are embedded even when they span multiple chunks."""
+    # Force several chunks from a handful of annotations.
+    mocker.patch.object(embedding_manager, "ANNOTATION_EMBED_BATCH_SIZE", 2)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+    annotation_source = "predictions"
+    for index in range(3):
+        image = create_image(
+            session=db_session,
+            collection_id=collection.collection_id,
+            file_path_abs=f"/path/to/sample_{index}.png",
+        )
+        create_annotation(
+            session=db_session,
+            collection_id=collection.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=label.annotation_label_id,
+            annotation_collection_name=annotation_source,
+        )
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+        name=annotation_source,
+    )
+
+    manager = EmbeddingManager()
+    model_id = manager.register_embedding_model(
+        session=db_session,
+        embedding_generator=RandomEmbeddingGenerator(),
+        collection_id=annotation_collection_id,
+        set_as_default=True,
+    ).embedding_model_id
+
+    manager.embed_annotations(
+        session=db_session,
+        annotation_collection_id=annotation_collection_id,
+        embedding_model_id=model_id,
+    )
+
+    stored_embeddings = db_session.exec(
+        select(SampleEmbeddingTable).where(SampleEmbeddingTable.embedding_model_id == model_id)
+    ).all()
+    assert len(stored_embeddings) == 3
+
+
+def test_embed_annotations_with_incompatible_generator(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """Ensure a clear error is raised when the model doesn't support images."""
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+        name="predictions",
+    )
+    manager = EmbeddingManager()
+    manager.register_embedding_model(
+        session=db_session,
+        embedding_generator=TextOnlyEmbeddingGenerator(),
+        collection_id=annotation_collection_id,
+        set_as_default=True,
+    )
+
+    with pytest.raises(ValueError, match=r"Embedding model not compatible with annotation crops."):
+        manager.embed_annotations(
+            session=db_session, annotation_collection_id=annotation_collection_id
+        )
+
+
+def test_get_default_or_validate_rejects_model_from_other_collection(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """A model registered for one collection cannot be used with another."""
+    manager = EmbeddingManager()
+    model_id = manager.register_embedding_model(
+        session=db_session,
+        embedding_generator=RandomEmbeddingGenerator(),
+        collection_id=collection.collection_id,
+        set_as_default=True,
+    ).embedding_model_id
+    other_collection = create_collection(session=db_session)
+
+    with pytest.raises(ValueError, match="is not registered for collection"):
+        manager._get_default_or_validate(
+            collection_id=other_collection.collection_id, embedding_model_id=model_id
+        )
+
+
+class TestCreateValidImageCrop:
+    def test_clamps_to_image_bounds(self) -> None:
+        crop = embedding_manager._create_valid_image_crop(
+            filepath="/img.jpg",
+            image_size=(100, 100),
+            box=(-10, -10, 50, 50),
+        )
+        assert crop == ImageCrop(filepath="/img.jpg", x=0, y=0, width=40, height=40)
+
+    def test_returns_none_for_degenerate_box(self) -> None:
+        crop = embedding_manager._create_valid_image_crop(
+            filepath="/img.jpg",
+            image_size=(100, 100),
+            box=(200, 200, 10, 10),
+        )
+        assert crop is None
 
 
 def test_get_valid_model_id_without_default_model() -> None:
