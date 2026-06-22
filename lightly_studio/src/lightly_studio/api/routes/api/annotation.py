@@ -59,11 +59,21 @@ def read_annotation_collections(
 
 
 class AnnotationQueryParamsModel(BaseModel):
-    """Model for all annotation query parameters."""
+    """Query parameters for GET /annotations/payload."""
 
     pagination: PaginatedWithCursor
     annotation_label_ids: list[UUID] | None = None
     tag_ids: list[UUID] | None = None
+
+
+class AnnotationPayloadQueryBody(BaseModel):
+    """Request body for reading annotations with payload without URL-sized filters."""
+
+    pagination: PaginatedWithCursor
+    annotation_label_ids: list[UUID] | None = None
+    tag_ids: list[UUID] | None = None
+    sample_ids: list[UUID] | None = None
+    text_embedding: list[float] | None = None
 
 
 def _get_annotation_query_params(
@@ -139,6 +149,36 @@ def read_annotations_with_payload(
     params: Annotated[AnnotationQueryParamsModel, Depends(_get_annotation_query_params)],
 ) -> AnnotationWithPayloadAndCountView:
     """Retrieve a list of annotations along with the parent sample data from the database."""
+    return _read_annotations_with_payload(
+        collection_id=collection_id,
+        session=session,
+        params=AnnotationPayloadQueryBody(**params.model_dump()),
+    )
+
+
+@annotations_router.post(
+    "/annotations/payload/list",
+)
+def read_annotations_with_payload_list(
+    collection_id: Annotated[
+        UUID, Path(title="collection Id", description="The ID of the collection")
+    ],
+    session: SessionDep,
+    body: AnnotationPayloadQueryBody,
+) -> AnnotationWithPayloadAndCountView:
+    """Retrieve annotations with payload using body filters for large sample selections."""
+    return _read_annotations_with_payload(
+        collection_id=collection_id,
+        session=session,
+        params=body,
+    )
+
+
+def _read_annotations_with_payload(
+    collection_id: UUID,
+    session: SessionDep,
+    params: AnnotationPayloadQueryBody,
+) -> AnnotationWithPayloadAndCountView:
     return annotation_resolver.get_all_with_payload(
         session=session,
         pagination=Paginated(
@@ -149,8 +189,10 @@ def read_annotations_with_payload(
             collection_ids=[collection_id],
             annotation_label_ids=params.annotation_label_ids,
             tag_ids=params.tag_ids,
+            sample_ids=params.sample_ids,
         ),
         collection_id=collection_id,
+        text_embedding=params.text_embedding,
     )
 
 
