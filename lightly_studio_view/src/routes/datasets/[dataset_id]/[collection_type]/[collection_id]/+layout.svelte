@@ -64,6 +64,7 @@
     import { isInputElement } from '$lib/utils';
     import { shutdownMaskRendererPool } from '$lib/workers/maskRendererPool';
     import { GRID_IMAGE_SEARCH_DROP_EVENT, type GridItemDragData } from '$lib/components/GridItem';
+    import { readAnnotationEmbedding } from '$lib/api/lightly_studio_local/sdk.gen';
     import { useSearchEmbedding } from '$lib/hooks/useSearchEmbedding/useSearchEmbedding';
     import { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
     import { clearAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
@@ -138,8 +139,26 @@
     const searchPending = $derived(search.isPending);
 
     async function handleGridImageSearchDrop(event: Event) {
-        const { url, fileName } = (event as CustomEvent<GridItemDragData>).detail;
+        const { url, fileName, annotationSampleId, annotationCollectionId } = (
+            event as CustomEvent<GridItemDragData>
+        ).detail;
         try {
+            if (annotationSampleId) {
+                const { data: storedEmbedding } = await readAnnotationEmbedding({
+                    path: {
+                        collection_id: annotationCollectionId ?? collectionId,
+                        sample_id: annotationSampleId
+                    },
+                    throwOnError: true
+                });
+                search.setEmbedding({
+                    queryText: fileName,
+                    embedding: storedEmbedding,
+                    imagePreview: { name: fileName, previewUrl: url }
+                });
+                return;
+            }
+
             const response = await fetch(url);
             if (!response.ok) {
                 throw new Error(`Failed to fetch dragged image: ${response.statusText}`);

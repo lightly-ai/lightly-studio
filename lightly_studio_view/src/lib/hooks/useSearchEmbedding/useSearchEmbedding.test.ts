@@ -29,6 +29,7 @@ const mocks = vi.hoisted(() => {
         toastError: vi.fn(),
         upload: vi.fn(),
         clearImage: vi.fn(),
+        setPreview: vi.fn(),
         embedText: vi.fn(),
         imageName: createStore<string | undefined>(undefined),
         previewUrl: createStore<string | undefined>(undefined),
@@ -51,7 +52,8 @@ vi.mock('$lib/hooks/useImageUpload/useImageUpload', () => ({
             previewUrl: mocks.previewUrl,
             isUploading: mocks.isUploading,
             upload: mocks.upload,
-            clear: mocks.clearImage
+            clear: mocks.clearImage,
+            setPreview: mocks.setPreview
         };
     }
 }));
@@ -153,6 +155,24 @@ describe('useSearchEmbedding', () => {
 
         mocks.isUploading.set(false);
         expect(get(search.isPending)).toBe(false);
+    });
+
+    it('setEmbedding writes a precomputed vector and optional preview without uploading', () => {
+        const search = useSearchEmbedding({ collectionId: 'collection-id', embedding });
+
+        search.setEmbedding({
+            queryText: 'person-crop.png',
+            embedding: [1, 0, 0],
+            imagePreview: { name: 'person-crop.png', previewUrl: 'blob:crop' }
+        });
+
+        expect(mocks.clearImage).toHaveBeenCalled();
+        expect(mocks.setPreview).toHaveBeenCalledWith('person-crop.png', 'blob:crop', false);
+        expect(get(embedding)).toEqual({
+            queryText: 'person-crop.png',
+            embedding: [1, 0, 0]
+        });
+        expect(mocks.upload).not.toHaveBeenCalled();
     });
 
     it('setImage delegates to useImageUpload and writes embedding on success', async () => {

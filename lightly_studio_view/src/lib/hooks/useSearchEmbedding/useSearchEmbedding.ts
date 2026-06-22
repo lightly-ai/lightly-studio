@@ -27,6 +27,12 @@ interface Return {
     setText: (text: string) => Promise<void>;
     /** Upload `file`, embed it, and update the embedding/image stores. */
     setImage: (file: File) => Promise<void>;
+    /** Set a precomputed embedding (e.g. stored annotation vector for drag-to-search). */
+    setEmbedding: (params: {
+        queryText: string;
+        embedding: number[];
+        imagePreview?: { name: string; previewUrl: string };
+    }) => void;
     /** Reset both image and embedding state. */
     clear: () => void;
     /** Surface a user-visible error (used by external callers like grid drop). */
@@ -76,6 +82,23 @@ export function useSearchEmbedding({ collectionId, embedding }: Params): Return 
         await upload.upload(file);
     };
 
+    const setEmbedding = ({
+        queryText,
+        embedding: vector,
+        imagePreview
+    }: {
+        queryText: string;
+        embedding: number[];
+        imagePreview?: { name: string; previewUrl: string };
+    }) => {
+        upload.clear();
+        if (imagePreview) {
+            // Preview URL is owned by the annotation tile; do not revoke on clear.
+            upload.setPreview(imagePreview.name, imagePreview.previewUrl, false);
+        }
+        embedding.set({ queryText, embedding: vector });
+    };
+
     const clear = () => {
         upload.clear();
         embedding.set(undefined);
@@ -87,6 +110,7 @@ export function useSearchEmbedding({ collectionId, embedding }: Params): Return 
         isPending: readonly(isPending),
         setText,
         setImage,
+        setEmbedding,
         clear,
         onError
     };

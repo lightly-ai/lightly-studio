@@ -280,7 +280,12 @@
                                               url: cropImageUrlByAnnotationId[
                                                   annotations[index].annotation.sample_id
                                               ],
-                                              fileName: `${annotations[index].annotation.annotation_label.annotation_label_name}-crop.png`
+                                              fileName: `${annotations[index].annotation.annotation_label.annotation_label_name}-crop.png`,
+                                              annotationSampleId:
+                                                  annotations[index].annotation.sample_id,
+                                              annotationCollectionId:
+                                                  annotations[index].annotation
+                                                      .annotation_collection_id
                                           }
                                         : undefined}
                                     onSelect={(event) =>

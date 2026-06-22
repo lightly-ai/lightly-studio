@@ -27,6 +27,8 @@ type UseImageUploadReturn = {
     isUploading: Readable<boolean>;
     /** Validates and uploads an image file to retrieve its embedding. */
     upload: (file: File) => Promise<void>;
+    /** Show a preview without uploading (e.g. annotation crop owned elsewhere). */
+    setPreview: (fileName: string, previewUrl: string, revokeOnClear?: boolean) => void;
     /** Clears current image state and revokes preview object URL if present. */
     clear: () => void;
 };
@@ -43,6 +45,7 @@ export function useImageUpload({
     const imageName = writable<string | undefined>(undefined);
     const previewUrl = writable<string | undefined>(undefined);
     const isUploading = writable(false);
+    let previewOwned = false;
 
     const maxImageSizeBytes = maxSizeMb * 1024 * 1024;
 
@@ -50,10 +53,23 @@ export function useImageUpload({
         imageName.set(undefined);
 
         const currentPreviewUrl = get(previewUrl);
-        if (currentPreviewUrl) {
+        if (currentPreviewUrl && previewOwned) {
             URL.revokeObjectURL(currentPreviewUrl);
         }
         previewUrl.set(undefined);
+        previewOwned = false;
+    };
+
+    const setPreview = (fileName: string, url: string, revokeOnClear = true) => {
+        imageName.set(fileName);
+
+        const currentPreviewUrl = get(previewUrl);
+        if (currentPreviewUrl && previewOwned) {
+            URL.revokeObjectURL(currentPreviewUrl);
+        }
+
+        previewUrl.set(url);
+        previewOwned = revokeOnClear;
     };
 
     const upload = async (file: File) => {
@@ -90,14 +106,7 @@ export function useImageUpload({
                 );
             });
 
-            imageName.set(file.name);
-
-            const currentPreviewUrl = get(previewUrl);
-            if (currentPreviewUrl) {
-                URL.revokeObjectURL(currentPreviewUrl);
-            }
-
-            previewUrl.set(URL.createObjectURL(file));
+            setPreview(file.name, URL.createObjectURL(file));
             onSuccess({ fileName: file.name, embedding });
         } catch (error: unknown) {
             clear();
@@ -113,6 +122,7 @@ export function useImageUpload({
         previewUrl: readonly(previewUrl),
         isUploading: readonly(isUploading),
         upload,
+        setPreview,
         clear
     };
 }
