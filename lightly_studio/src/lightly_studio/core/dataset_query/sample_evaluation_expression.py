@@ -41,15 +41,6 @@ class SampleEvaluationMatchExpression(MatchExpression):
     run_name: str
     criteria: list[MatchExpression]
 
-    def _sample_is_part_of_run_expression(self) -> ColumnElement[bool]:
-        return exists(
-            select(1)
-            .select_from(EvaluationSampleMetricTable)
-            .where(col(EvaluationSampleMetricTable.evaluation_run_id) == col(EvaluationRunTable.id))
-            .where(col(EvaluationSampleMetricTable.sample_id) == col(SampleTable.sample_id))
-            .correlate(EvaluationRunTable, SampleTable)
-        )
-
     def get(self) -> ColumnElement[bool]:
         """Get the sample evaluation match expression."""
         sample_dataset_id = (
@@ -68,3 +59,12 @@ class SampleEvaluationMatchExpression(MatchExpression):
         for criterion in self.criteria:
             subquery = subquery.where(criterion.get())
         return exists(subquery)
+
+    def _sample_is_part_of_run_expression(self) -> ColumnElement[bool]:
+        return exists(
+            select(1)
+            .select_from(EvaluationSampleMetricTable)
+            .where(col(EvaluationSampleMetricTable.evaluation_run_id) == col(EvaluationRunTable.id))
+            .where(col(EvaluationSampleMetricTable.sample_id) == col(SampleTable.sample_id))
+            .correlate(EvaluationRunTable, SampleTable)
+        )
