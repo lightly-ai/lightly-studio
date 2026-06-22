@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Union
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel
-from pydantic import Field as PydanticField
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Field
 from sqlmodel.sql.expression import SelectOfScalar
@@ -38,6 +37,7 @@ from lightly_studio.resolvers import (
     video_resolver,
 )
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
+from lightly_studio.resolvers.grid_filter import GridFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
@@ -203,14 +203,6 @@ def add_sample_ids_to_tag_id(
     return True
 
 
-# The ``filter_type`` discriminator selects both the source table to tag from and the
-# allowed tag kind. Same union as in services/sample_services/sample_adjacents_service.py.
-GridFilter = Annotated[
-    Union[ImageFilter, VideoFilter, VideoFrameFilter, AnnotationsFilter],
-    PydanticField(discriminator="filter_type"),
-]
-
-
 class TagByFilterBody(BaseModel):
     """Body for tagging every sample a grid filter matches.
 
@@ -223,7 +215,7 @@ class TagByFilterBody(BaseModel):
 
 
 def _build_sample_ids_query(
-    grid_filter: ImageFilter | VideoFilter | VideoFrameFilter | AnnotationsFilter,
+    grid_filter: GridFilter,
     collection_id: UUID,
 ) -> SelectOfScalar[UUID]:
     """Dispatch a grid filter to its resolver's ``build_sample_ids_query``."""
@@ -245,7 +237,7 @@ def _build_sample_ids_query(
 
 
 def _expected_tag_kind(
-    grid_filter: ImageFilter | VideoFilter | VideoFrameFilter | AnnotationsFilter,
+    grid_filter: GridFilter,
 ) -> TagKind:
     """Return the tag kind a grid may write: annotations grid ⇒ annotation, else sample."""
     return "annotation" if isinstance(grid_filter, AnnotationsFilter) else "sample"
