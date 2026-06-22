@@ -11,7 +11,7 @@
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { useSettings } from '$lib/hooks/useSettings';
+    import { useSettings } from '$lib/hooks';
     import { cn } from '$lib/utils';
 
     // Not built on SelectList: it has no slot for a custom trigger or per-item colour swatch, and

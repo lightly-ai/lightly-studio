@@ -33,10 +33,12 @@ vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
     })
 }));
 
-vi.mock('$lib/hooks/useSettings', async () => {
+vi.mock('$lib/hooks', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('$lib/hooks')>();
     const { writable } = await import('svelte/store');
     mocks.enforceColoringByClassStore = writable<boolean>(false);
     return {
+        ...actual,
         useSettings: vi.fn(() => ({
             enforceColoringByClassStore: mocks.enforceColoringByClassStore
         }))
@@ -148,29 +150,24 @@ describe('AnnotationSourcePill', () => {
         );
     });
 
-    it('shows color markers in trigger and options when enforce coloring by class is disabled', async () => {
+    it('shows color markers when enforcement is off and hides them when enforcement is on', async () => {
         const user = userEvent.setup();
         mocks.annotationSource = 'ground_truth';
         mocks.collections = [source('ground_truth'), source('predictions')];
-        mocks.enforceColoringByClassStore.set(false);
-        renderPill();
 
-        expect(screen.getByTestId('color-marker-ground_truth')).toBeInTheDocument();
+        const { unmount } = renderPill();
 
+        // enforcement off — markers visible in trigger and options
         await user.click(trigger());
         expect(screen.getAllByTestId('color-marker-ground_truth')).toHaveLength(2);
         expect(screen.getByTestId('color-marker-predictions')).toBeInTheDocument();
-    });
 
-    it('hides color markers in trigger and options when enforce coloring by class is enabled', async () => {
-        const user = userEvent.setup();
-        mocks.annotationSource = 'ground_truth';
-        mocks.collections = [source('ground_truth'), source('predictions')];
+        unmount();
         mocks.enforceColoringByClassStore.set(true);
         renderPill();
 
+        // enforcement on — markers absent everywhere
         expect(screen.queryByTestId('color-marker-ground_truth')).not.toBeInTheDocument();
-
         await user.click(trigger());
         expect(screen.queryByTestId('color-marker-ground_truth')).not.toBeInTheDocument();
         expect(screen.queryByTestId('color-marker-predictions')).not.toBeInTheDocument();
