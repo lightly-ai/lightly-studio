@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from uuid import UUID, uuid4
+import uuid
+from uuid import UUID
 
 import pytest
 from sqlmodel import Session
@@ -29,7 +30,7 @@ from tests.helpers_resolvers import (
 
 def test_build_sample_ids_query__unfiltered_joins_sample_once() -> None:
     """An empty filter must not add the predicate-only aliased ``sample`` join."""
-    query = AnnotationsFilter().build_sample_ids_query(collection_id=uuid4())
+    query = AnnotationsFilter().build_sample_ids_query(collection_id=uuid.uuid4())
 
     assert _count_sample_joins(query) == 1
 
@@ -38,7 +39,7 @@ def test_build_sample_ids_query__filtered_joins_sample_for_predicates() -> None:
     """A filter with predicates still joins ``sample`` to apply them."""
     query = AnnotationsFilter(
         annotation_types=[AnnotationType.OBJECT_DETECTION]
-    ).build_sample_ids_query(collection_id=uuid4())
+    ).build_sample_ids_query(collection_id=uuid.uuid4())
 
     assert _count_sample_joins(query) == 2
 
