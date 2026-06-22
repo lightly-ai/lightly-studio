@@ -417,6 +417,5 @@ describe('SampleDetailsAnnotationSegment', () => {
             expect(getRow('gt-1')).toHaveAttribute('data-color-by-source', 'false');
             expect(getRow('pred-1')).toHaveAttribute('data-color-by-source', 'false');
         });
-
     });
 });
