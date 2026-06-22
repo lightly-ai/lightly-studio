@@ -103,6 +103,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         path: PathLike,
         allowed_extensions: Iterable[str] | None = None,
         num_decode_threads: int | None = None,
+        fps: float | None = None,
         embed: bool = True,
     ) -> None:
         """Adding video frames from the specified path to the dataset.
@@ -114,8 +115,15 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
                 uses default VIDEO_EXTENSIONS.
             num_decode_threads: Optional override for the number of FFmpeg decode threads.
                 If omitted, the available CPU cores - 1 (max 16) are used.
+            fps: Optional target frame rate for subsampling. If set, frames are ingested
+                at approximately this rate by keeping a subset of the source frames; each
+                kept frame keeps its original frame_number. If omitted, or greater than or
+                equal to the source frame rate, all frames are kept. Must be greater than 0.
             embed: If True, generate embeddings for the newly added videos.
         """
+        if fps is not None and fps <= 0:
+            raise ValueError(f"fps must be greater than 0, got {fps}.")
+
         video_paths = _collect_video_file_paths(path=path, allowed_extensions=allowed_extensions)
         logger.info(f"Found {len(video_paths)} videos in {path}.")
 
@@ -125,6 +133,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             collection_id=self.collection_id,
             video_paths=video_paths,
             num_decode_threads=num_decode_threads,
+            fps=fps,
         )
 
         if embed:

@@ -18,6 +18,6 @@ dataset_path = env.path("EXAMPLES_VIDEO_DATASET_PATH", "/path/to/your/dataset")
 
 # Create a Dataset from a path
 dataset = VideoDataset.create()
-dataset.add_videos_from_path(path=dataset_path)
+dataset.add_videos_from_path(path=dataset_path, fps=1)
 
 ls.start_gui()

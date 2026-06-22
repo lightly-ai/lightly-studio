@@ -8,7 +8,14 @@ import pytest
 from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.models.annotation.annotation_base import AnnotationType
-from lightly_studio.resolvers import annotation_resolver, sample_embedding_resolver, video_resolver
+from lightly_studio.models.collection import SampleType
+from lightly_studio.resolvers import (
+    annotation_resolver,
+    collection_resolver,
+    sample_embedding_resolver,
+    video_frame_resolver,
+    video_resolver,
+)
 from tests.resolvers.video.helpers import create_video_file
 
 
@@ -106,6 +113,80 @@ class TestDataset:
             embedding_model_id=model_id,
         )
         assert len(embeddings) == 0
+
+    def test_dataset_add_videos_from_path__fps_subsamples(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        create_video_file(
+            output_path=tmp_path / "test_video.mp4",
+            width=640,
+            height=480,
+            num_frames=30,
+            fps=30,
+        )
+
+        dataset = VideoDataset.create(name="test_dataset")
+        dataset.add_videos_from_path(path=tmp_path, fps=10, embed=False)
+
+        # The video-level fps remains the original source rate.
+        videos = video_resolver.get_all_by_collection_id(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+        ).samples
+        assert len(videos) == 1
+        assert videos[0].fps == 30.0
+
+        # Only a subset of frames is kept, with their original frame numbers preserved.
+        frames_collection_id = collection_resolver.get_or_create_child_collection(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            sample_type=SampleType.VIDEO_FRAME,
+        )
+        frames = video_frame_resolver.get_all_by_collection_id(
+            session=dataset.session,
+            collection_id=frames_collection_id,
+        ).samples
+        assert [frame.frame_number for frame in frames] == [0, 3, 6, 9, 12, 15, 18, 21, 24, 27]
+
+    def test_dataset_add_videos_from_path__fps_none_keeps_all(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        create_video_file(
+            output_path=tmp_path / "test_video.mp4",
+            width=640,
+            height=480,
+            num_frames=30,
+            fps=30,
+        )
+
+        dataset = VideoDataset.create(name="test_dataset")
+        dataset.add_videos_from_path(path=tmp_path, embed=False)
+
+        frames_collection_id = collection_resolver.get_or_create_child_collection(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            sample_type=SampleType.VIDEO_FRAME,
+        )
+        frames = video_frame_resolver.get_all_by_collection_id(
+            session=dataset.session,
+            collection_id=frames_collection_id,
+        ).samples
+        assert [frame.frame_number for frame in frames] == list(range(30))
+
+    @pytest.mark.parametrize("fps", [0, -5])
+    def test_dataset_add_videos_from_path__invalid_fps_raises(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+        fps: float,
+    ) -> None:
+        dataset = VideoDataset.create(name="test_dataset")
+        with pytest.raises(ValueError, match="fps must be greater than 0"):
+            dataset.add_videos_from_path(path=tmp_path, fps=fps)
 
     def test_add_videos_from_youtube_vis__object_detection(
         self,
