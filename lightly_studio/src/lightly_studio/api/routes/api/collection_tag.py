@@ -12,7 +12,6 @@ from sqlmodel import Field
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import (
-    HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_CONFLICT,
     HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,
@@ -23,13 +22,11 @@ from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.tag import (
     TagCreate,
     TagCreateBody,
-    TagKind,
     TagRenameBody,
     TagTable,
     TagView,
 )
 from lightly_studio.resolvers import tag_resolver
-from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.grid_filter import GridFilter
 
 tag_router = APIRouter()
@@ -171,7 +168,7 @@ class SampleIdsBody(BaseModel):
 def add_sample_ids_to_tag_id(
     session: SessionDep,
     # collection_id is needed for the generator
-    collection_id: Annotated[  # noqa: ARG001
+    collection_id: Annotated[
         UUID,
         Path(title="collection Id", description="The ID of the collection"),
     ],
@@ -179,13 +176,17 @@ def add_sample_ids_to_tag_id(
     body: SampleIdsBody,
 ) -> bool:
     """Add sample_ids to a tag_id."""
-    # TODO(LIG-9942): backfill the collection-scope and tag-kind validation that
-    # add_samples_to_tag_by_filter enforces.
     tag = tag_resolver.get_by_id(session=session, tag_id=tag_id)
-    if not tag:
+    if tag is None:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail=f"Tag {tag_id} not found, can't add sample_ids.",
+        )
+    # Validate the collection id.
+    if tag.collection_id != collection_id:
+        raise HTTPException(
+            status_code=HTTP_STATUS_NOT_FOUND,
+            detail=f"Tag {tag_id} not found in collection {collection_id}.",
         )
 
     sample_ids = body.sample_ids if body.sample_ids else []
@@ -220,29 +221,19 @@ def add_samples_to_tag_by_filter(
 ) -> bool:
     """Tag every sample a grid filter matches.
 
-    No sample ids cross the wire. Idempotent on re-run.
+    Idempotent on re-run.
     """
     tag = tag_resolver.get_by_id(session=session, tag_id=tag_id)
-    if not tag:
+    if tag is None:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail=f"Tag {tag_id} not found, can't add samples.",
         )
-    # The link table carries only sample/tag FKs, so collection scope and tag kind
-    # are not schema-enforced and must be checked here.
+    # Validate the collection id.
     if tag.collection_id != collection_id:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail=f"Tag {tag_id} not found in collection {collection_id}.",
-        )
-    expected_kind = _expected_tag_kind(body.filter)
-    if tag.kind != expected_kind:
-        raise HTTPException(
-            status_code=HTTP_STATUS_BAD_REQUEST,
-            detail=(
-                f"Tag {tag_id} has kind '{tag.kind}', but the "
-                f"'{body.filter.filter_type}' grid requires kind '{expected_kind}'."
-            ),
         )
 
     sample_ids_query = body.filter.build_sample_ids_query(collection_id=collection_id)
@@ -273,10 +264,3 @@ def remove_thing_ids_to_tag_id(
         session=session, tag_id=tag_id, sample_ids=sample_ids
     )
     return True
-
-
-def _expected_tag_kind(
-    grid_filter: GridFilter,
-) -> TagKind:
-    """Return the tag kind a grid may write: annotations grid ⇒ annotation, else sample."""
-    return "annotation" if isinstance(grid_filter, AnnotationsFilter) else "sample"
