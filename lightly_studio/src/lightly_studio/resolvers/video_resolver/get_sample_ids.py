@@ -4,11 +4,9 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlmodel import Session, col, select
+from sqlmodel import Session
 from sqlmodel.sql.expression import SelectOfScalar
 
-from lightly_studio.models.sample import SampleTable
-from lightly_studio.models.video import VideoTable
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 
@@ -25,11 +23,7 @@ def build_sample_ids_query(
     Returns:
         A query selecting the distinct sample ids matching the given filters.
     """
-    query = select(VideoTable.sample_id).join(VideoTable.sample)
-    query = query.where(col(SampleTable.collection_id) == collection_id)
-    if filters is not None:
-        query = filters.apply(query)
-    return query.distinct()
+    return (filters or VideoFilter()).build_sample_ids_query(collection_id=collection_id)
 
 
 def get_sample_ids(
