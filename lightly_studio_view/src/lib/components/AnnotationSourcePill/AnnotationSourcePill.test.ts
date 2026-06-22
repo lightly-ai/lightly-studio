@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
+import { type Writable } from 'svelte/store';
 import AnnotationSourcePill from './AnnotationSourcePill.svelte';
 
 // Control the source list, the current selection, and the persistence/setter spies.
@@ -9,7 +10,8 @@ const mocks = vi.hoisted(() => ({
     annotationSource: null as string | null,
     collections: [] as { collection_id: string; name: string }[],
     setAnnotationSource: vi.fn(),
-    updateLastAnnotationSource: vi.fn()
+    updateLastAnnotationSource: vi.fn(),
+    enforceColoringByClassStore: null as unknown as Writable<boolean>
 }));
 
 vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
@@ -31,6 +33,16 @@ vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
     })
 }));
 
+vi.mock('$lib/hooks/useSettings', async () => {
+    const { writable } = await import('svelte/store');
+    mocks.enforceColoringByClassStore = writable<boolean>(false);
+    return {
+        useSettings: vi.fn(() => ({
+            enforceColoringByClassStore: mocks.enforceColoringByClassStore
+        }))
+    };
+});
+
 const source = (name: string) => ({ collection_id: name, name });
 
 describe('AnnotationSourcePill', () => {
@@ -38,6 +50,7 @@ describe('AnnotationSourcePill', () => {
         vi.clearAllMocks();
         mocks.annotationSource = null;
         mocks.collections = [];
+        mocks.enforceColoringByClassStore.set(false);
         Element.prototype.scrollIntoView = vi.fn();
     });
 
@@ -133,5 +146,33 @@ describe('AnnotationSourcePill', () => {
         expect(screen.getByRole('tooltip')).toHaveTextContent(
             'associated with the selected annotation source'
         );
+    });
+
+    it('shows color markers in trigger and options when enforce coloring by class is disabled', async () => {
+        const user = userEvent.setup();
+        mocks.annotationSource = 'ground_truth';
+        mocks.collections = [source('ground_truth'), source('predictions')];
+        mocks.enforceColoringByClassStore.set(false);
+        renderPill();
+
+        expect(screen.getByTestId('color-marker-ground_truth')).toBeInTheDocument();
+
+        await user.click(trigger());
+        expect(screen.getAllByTestId('color-marker-ground_truth')).toHaveLength(2);
+        expect(screen.getByTestId('color-marker-predictions')).toBeInTheDocument();
+    });
+
+    it('hides color markers in trigger and options when enforce coloring by class is enabled', async () => {
+        const user = userEvent.setup();
+        mocks.annotationSource = 'ground_truth';
+        mocks.collections = [source('ground_truth'), source('predictions')];
+        mocks.enforceColoringByClassStore.set(true);
+        renderPill();
+
+        expect(screen.queryByTestId('color-marker-ground_truth')).not.toBeInTheDocument();
+
+        await user.click(trigger());
+        expect(screen.queryByTestId('color-marker-ground_truth')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('color-marker-predictions')).not.toBeInTheDocument();
     });
 });
