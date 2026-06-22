@@ -10,7 +10,11 @@
     import SampleSegmentationMaskRect from '../SampleSegmentationMaskRect/SampleSegmentationMaskRect.svelte';
     import SampleObjectDetectionRect from '../SampleObjectDetectionRect/SampleObjectDetectionRect.svelte';
     import { select } from 'd3-selection';
-    import { countVisibleSources, getColorByLabel, resolveEffectiveColorBySource } from '$lib/utils';
+    import {
+        countVisibleSources,
+        getColorByLabel,
+        resolveEffectiveColorBySource
+    } from '$lib/utils';
     import { useSettings } from '$lib/hooks/useSettings';
     import { throttle } from 'lodash-es';
     import BrushToolPopUp from '../BrushToolPopUp/BrushToolPopUp.svelte';
