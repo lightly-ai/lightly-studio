@@ -50,7 +50,8 @@
         getCollectionVersion,
         setfilteredAnnotationCount,
         addReversibleAction,
-        clearReversibleActions
+        clearReversibleActions,
+        textEmbedding
     } = useGlobalStorage();
 
     afterNavigate(() => {
@@ -70,7 +71,9 @@
         collection_id: collection_id,
         annotation_label_ids:
             $selectedAnnotationFilterIds.length > 0 ? $selectedAnnotationFilterIds : undefined,
-        tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined
+        tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
+        // Embedding text search reorders the grid by similarity (shared with images tab).
+        text_embedding: $textEmbedding?.embedding ?? undefined
     });
 
     const {
@@ -84,7 +87,9 @@
         collectionId: collection_id
     });
     let infiniteLoaderIdentifier = $derived(
-        $selectedAnnotationFilterIds.join(',') + Array.from($tagsSelected).join(',')
+        $selectedAnnotationFilterIds.join(',') +
+            Array.from($tagsSelected).join(',') +
+            ($textEmbedding ? `search:${$textEmbedding.queryText}` : '')
     );
 
     const filterHash = $derived(infiniteLoaderIdentifier);
