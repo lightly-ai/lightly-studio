@@ -1,5 +1,5 @@
 import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
-import { resolveEffectiveColorBySource } from '$lib/utils/resolveEffectiveColorBySource';
+import { resolveEffectiveColorBySource } from '$lib/utils';
 
 interface GetSampleClassificationPillsParams {
     annotations: AnnotationView[];
