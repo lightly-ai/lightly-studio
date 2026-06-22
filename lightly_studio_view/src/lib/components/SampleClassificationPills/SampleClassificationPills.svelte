@@ -2,6 +2,7 @@
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
+    import { useSettings } from '$lib/hooks';
     import { getColorByLabel } from '$lib/utils';
     import { getColorPair } from '$lib/utils/getColorPair';
     import {
@@ -24,12 +25,14 @@
 
     const { selectedCollectionIds, collectionIdToName } = useAnnotationCollectionsFilter();
     const { customLabelColorsStore } = useCustomLabelColors();
+    const { enforceColoringByClassStore } = useSettings();
 
     const pills = $derived(
         getSampleClassificationPills({
             annotations: sample.annotations,
             selectedCollectionIds: $selectedCollectionIds,
-            collectionIdToName: $collectionIdToName
+            collectionIdToName: $collectionIdToName,
+            enforceColoringByClass: $enforceColoringByClassStore
         })
     );
 

@@ -5,18 +5,20 @@ from __future__ import annotations
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 from sqlalchemy.orm import Mapped, aliased
 from sqlmodel import col, select
+from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.database import db_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
+from lightly_studio.resolvers.grid_filter_base import GridFilterBase
 from lightly_studio.type_definitions import QueryType
 
 
-class AnnotationsFilter(BaseModel):
+class AnnotationsFilter(GridFilterBase):
     """Handles filtering for annotation queries."""
 
     filter_type: Literal["annotations"] = "annotations"
@@ -43,6 +45,12 @@ class AnnotationsFilter(BaseModel):
         Returns:
             The query with filters applied
         """
+        if not self._has_predicates():
+            # Skip the unused join; it would only add a redundant sample scan.
+            return query
+        # TODO(Michal, 06/2026): When predicates are set this aliased join scans
+        # sample a second time (the base query already joined it for collection
+        # scoping). Reuse the base join instead of aliasing a new one.
         annotation_sample = aliased(SampleTable)
         query = query.join(annotation_sample, AnnotationBaseTable.sample)
         return self._apply_annotation_filters(
@@ -71,6 +79,15 @@ class AnnotationsFilter(BaseModel):
             annotation_sample=annotation_sample,
         )
         return query.where(sample_id_column.in_(sample_ids_subquery.distinct()))
+
+    def _has_predicates(self) -> bool:
+        """Whether any filtering predicate is set."""
+        return bool(
+            self.collection_ids
+            or self.annotation_label_ids
+            or self.tag_ids
+            or self.annotation_types
+        )
 
     def _apply_annotation_filters(
         self,
@@ -113,3 +130,6 @@ class AnnotationsFilter(BaseModel):
             query = query.where(col(AnnotationBaseTable.annotation_type).in_(self.annotation_types))
 
         return query
+
+    def _select_sample_ids(self) -> SelectOfScalar[UUID]:
+        return select(AnnotationBaseTable.sample_id).join(AnnotationBaseTable.sample)
