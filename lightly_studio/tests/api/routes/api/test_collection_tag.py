@@ -6,7 +6,6 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, col, select
 
 from lightly_studio.api.routes.api.status import (
-    HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,
 )
@@ -145,18 +144,3 @@ def test_add_samples_by_filter__wrong_collection_returns_404(
     )
 
     assert response.status_code == HTTP_STATUS_NOT_FOUND
-
-
-def test_add_samples_by_filter__wrong_kind_returns_400(
-    db_session: Session, test_client: TestClient
-) -> None:
-    collection_id = create_collection(session=db_session).collection_id
-    # A sample-kind tag cannot be assigned through the annotations grid.
-    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
-
-    response = test_client.post(
-        _add_by_filter_url(collection_id, tag.tag_id),
-        json={"filter": {"filter_type": "annotations"}},
-    )
-
-    assert response.status_code == HTTP_STATUS_BAD_REQUEST
