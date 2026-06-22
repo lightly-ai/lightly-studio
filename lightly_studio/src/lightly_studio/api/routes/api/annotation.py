@@ -8,6 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from fastapi.params import Query
 from pydantic import BaseModel, Field
+from sqlmodel import select
 
 from lightly_studio.api.routes.api import annotations as annotations_module
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
@@ -22,7 +23,12 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationWithPayloadAndCountView,
 )
 from lightly_studio.models.collection import AnnotationCollectionView, CollectionTable
-from lightly_studio.resolvers import annotation_resolver, collection_resolver
+from lightly_studio.models.embedding_model import EmbeddingModelTable
+from lightly_studio.resolvers import (
+    annotation_resolver,
+    collection_resolver,
+    sample_embedding_resolver,
+)
 from lightly_studio.resolvers.annotation_resolver.get_all import (
     GetAllAnnotationsResult,
 )
@@ -158,6 +164,47 @@ def read_annotations_with_payload(
         collection_id=collection_id,
         text_embedding=body.text_embedding,
     )
+
+
+@annotations_router.get(
+    "/annotations/{sample_id}/embedding",
+    response_model=list[float],
+)
+def read_annotation_embedding(
+    collection_id: Annotated[
+        UUID, Path(title="collection Id", description="The ID of the annotation collection")
+    ],
+    sample_id: Annotated[UUID, Path(title="sample Id", description="The annotation sample ID")],
+    session: SessionDep,
+) -> list[float]:
+    """Return the stored embedding vector for a single annotation sample.
+
+    Used for drag-to-search self-similarity: searching with an annotation's own
+    stored embedding.
+    """
+    embedding_model_id = session.exec(
+        select(EmbeddingModelTable.embedding_model_id)
+        .where(EmbeddingModelTable.collection_id == collection_id)
+        .limit(1)
+    ).first()
+    if embedding_model_id is None:
+        raise HTTPException(
+            status_code=HTTP_STATUS_NOT_FOUND,
+            detail="No embedding model is registered for this collection.",
+        )
+
+    embeddings = sample_embedding_resolver.get_by_sample_ids(
+        session=session,
+        sample_ids=[sample_id],
+        embedding_model_id=embedding_model_id,
+    )
+    if not embeddings:
+        raise HTTPException(
+            status_code=HTTP_STATUS_NOT_FOUND,
+            detail="No stored embedding found for this annotation.",
+        )
+
+    return [float(value) for value in embeddings[0].embedding]
 
 
 class AnnotationUpdateInput(BaseModel):

@@ -15,7 +15,9 @@ from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
     create_collection,
+    create_embedding_model,
     create_image,
+    create_sample_embedding,
 )
 
 
@@ -297,6 +299,64 @@ def test_get_annotation_sample_ids(
 
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == [str(annotation.sample_id)]
+
+
+def test_read_annotation_embedding__returns_stored_vector(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+    annotation = create_annotation(
+        session=db_session,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        collection_id=collection.collection_id,
+    )
+    annotation_collection_id = annotation.sample.collection_id
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        embedding_dimension=3,
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=annotation.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[0.1, 0.2, 0.3],
+    )
+
+    response = test_client.get(
+        f"/api/collections/{annotation_collection_id}/annotations/{annotation.sample_id}/embedding",
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    embedding = response.json()
+    assert len(embedding) == 3
+    assert embedding == pytest.approx([0.1, 0.2, 0.3], abs=1e-5)
+
+
+def test_read_annotation_embedding__missing_returns_404(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+    annotation = create_annotation(
+        session=db_session,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        collection_id=collection.collection_id,
+    )
+    annotation_collection_id = annotation.sample.collection_id
+
+    response = test_client.get(
+        f"/api/collections/{annotation_collection_id}/annotations/{annotation.sample_id}/embedding",
+    )
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
 
 
 def test_read_annotation_collections(
