@@ -271,17 +271,17 @@ def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 PL
             operator=expr.operator,
             value=expr.value,
         )
-    if isinstance(expr, ClassificationMatchExpr):
-        return ClassificationQuery.match(to_match_expression(expr=expr.subexpr))
-    if isinstance(expr, ObjectDetectionMatchExpr):
-        return ObjectDetectionQuery.match(to_match_expression(expr=expr.subexpr))
-    if isinstance(expr, SegmentationMaskMatchExpr):
-        return SegmentationMaskQuery.match(to_match_expression(expr=expr.subexpr))
-    if isinstance(expr, SampleEvaluationMatchExpr):
-        raise QueryExprError("evaluation_metric_match_expr is not yet supported")
     if isinstance(expr, TagsContainsExpr):
         accessor: _TagsAccessor = _lookup(mapping=_TAGS_FIELDS, field=expr.field, type_="tags")
         return accessor.contains(expr.tag_name)
+    if isinstance(expr, ClassificationMatchExpr):
+        return ClassificationQuery.match(_to_annotation_match_expression(expr=expr.subexpr))
+    if isinstance(expr, ObjectDetectionMatchExpr):
+        return ObjectDetectionQuery.match(_to_annotation_match_expression(expr=expr.subexpr))
+    if isinstance(expr, SegmentationMaskMatchExpr):
+        return SegmentationMaskQuery.match(_to_annotation_match_expression(expr=expr.subexpr))
+    if isinstance(expr, SampleEvaluationMatchExpr):
+        raise QueryExprError("SampleEvaluationMatchExpr is not yet supported")
     if isinstance(expr, AndExpr):
         return AND(*(to_match_expression(expr=child) for child in expr.children))
     if isinstance(expr, OrExpr):
