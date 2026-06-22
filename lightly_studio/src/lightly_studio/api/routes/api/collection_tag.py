@@ -197,10 +197,8 @@ def add_sample_ids_to_tag_id(
 class TagByFilterBody(BaseModel):
     """Body for tagging every sample a grid filter matches.
 
-    ``filter`` has no default: its ``filter_type`` tells the server which grid
-    (images, videos, video frames, annotations) to read from, so the caller
-    must always supply it. To tag a whole collection, send a filter with only
-    the type and no predicates, e.g. ``{"filter_type": "image"}``.
+    The caller must supply a filter to determine the sample type. The filter
+    itself can have no conditions, e.g. ``{"filter_type": "image"}``.
     """
 
     filter: GridFilter
