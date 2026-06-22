@@ -13,24 +13,14 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleTagLinkTable
 from lightly_studio.resolvers import collection_resolver
 from tests.helpers_resolvers import (
+    ImageStub,
     create_annotation,
     create_annotation_label,
     create_collection,
     create_image,
+    create_images,
     create_tag,
 )
-
-
-def _tagged_sample_ids(session: Session, tag_id: UUID) -> set[UUID]:
-    """Read the sample ids currently linked to ``tag_id`` straight from the link table."""
-    linked = session.exec(
-        select(SampleTagLinkTable.sample_id).where(col(SampleTagLinkTable.tag_id) == tag_id)
-    ).all()
-    return {sample_id for sample_id in linked if sample_id is not None}
-
-
-def _add_by_filter_url(collection_id: UUID, tag_id: UUID) -> str:
-    return f"/api/collections/{collection_id}/tags/{tag_id}/add/samples_by_filter"
 
 
 def test_add_samples_by_filter__image_empty_filter_tags_whole_collection(
@@ -38,10 +28,11 @@ def test_add_samples_by_filter__image_empty_filter_tags_whole_collection(
 ) -> None:
     collection_id = create_collection(session=db_session).collection_id
     tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
-    images = [
-        create_image(session=db_session, collection_id=collection_id, file_path_abs=f"s{i}.png")
-        for i in range(3)
-    ]
+    images = create_images(
+        db_session=db_session,
+        collection_id=collection_id,
+        images=[ImageStub(path="s0.png"), ImageStub(path="s1.png")],
+    )
 
     response = test_client.post(
         _add_by_filter_url(collection_id, tag.tag_id),
@@ -144,3 +135,15 @@ def test_add_samples_by_filter__wrong_collection_returns_404(
     )
 
     assert response.status_code == HTTP_STATUS_NOT_FOUND
+
+
+def _tagged_sample_ids(session: Session, tag_id: UUID) -> set[UUID]:
+    """Read the sample ids currently linked to ``tag_id`` straight from the link table."""
+    linked = session.exec(
+        select(SampleTagLinkTable.sample_id).where(col(SampleTagLinkTable.tag_id) == tag_id)
+    ).all()
+    return {sample_id for sample_id in linked if sample_id is not None}
+
+
+def _add_by_filter_url(collection_id: UUID, tag_id: UUID) -> str:
+    return f"/api/collections/{collection_id}/tags/{tag_id}/add/samples_by_filter"
