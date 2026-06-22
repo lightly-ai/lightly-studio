@@ -196,19 +196,13 @@ def add_sample_ids_to_tag_id(
 class TagByFilterBody(BaseModel):
     """Body for tagging every sample a grid filter matches.
 
-    ``filter`` is required because the source table is dispatched on its
-    ``filter_type``. "Whole collection" is a typed-but-empty filter, e.g.
-    ``{"filter_type": "image"}``.
+    ``filter`` has no default: its ``filter_type`` tells the server which grid
+    (images, videos, video frames, annotations) to read from, so the caller
+    must always supply it. To tag a whole collection, send a filter with only
+    the type and no predicates, e.g. ``{"filter_type": "image"}``.
     """
 
     filter: GridFilter
-
-
-def _expected_tag_kind(
-    grid_filter: GridFilter,
-) -> TagKind:
-    """Return the tag kind a grid may write: annotations grid ⇒ annotation, else sample."""
-    return "annotation" if isinstance(grid_filter, AnnotationsFilter) else "sample"
 
 
 @tag_router.post(
@@ -224,7 +218,7 @@ def add_samples_to_tag_by_filter(
     tag_id: Annotated[UUID, Path(title="Tag Id")],
     body: TagByFilterBody,
 ) -> bool:
-    """Tag every sample a grid filter matches via a server-side ``INSERT … SELECT``.
+    """Tag every sample a grid filter matches.
 
     No sample ids cross the wire. Idempotent on re-run.
     """
@@ -279,3 +273,10 @@ def remove_thing_ids_to_tag_id(
         session=session, tag_id=tag_id, sample_ids=sample_ids
     )
     return True
+
+
+def _expected_tag_kind(
+    grid_filter: GridFilter,
+) -> TagKind:
+    """Return the tag kind a grid may write: annotations grid ⇒ annotation, else sample."""
+    return "annotation" if isinstance(grid_filter, AnnotationsFilter) else "sample"
