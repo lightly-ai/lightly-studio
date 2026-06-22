@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Maximize2 as Maximize2Icon, SlidersHorizontal as SlidersIcon } from '@lucide/svelte';
+    import { Maximize2 as Maximize2Icon, Settings as SettingsIcon } from '@lucide/svelte';
     import { Button } from '$lib/components';
     import * as Dialog from '$lib/components/ui/dialog/index.js';
     import ConfusionMatrix from '../ConfusionMatrix.svelte';
@@ -74,16 +74,14 @@
         </div>
         <Button
             variant="ghost"
-            icon={SlidersIcon}
+            icon={SettingsIcon}
             buttonProps={{
                 size: 'sm',
                 class: 'h-8 gap-1',
                 onclick: () => (configDialogOpen = true),
                 'data-testid': 'confusion-matrix-configure'
             }}
-        >
-            Configure
-        </Button>
+        />
         <Button
             variant="ghost"
             icon={Maximize2Icon}
