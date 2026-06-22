@@ -16,6 +16,7 @@
         cachedCollectionVersion: string;
         showLabel: boolean;
         selected?: boolean;
+        onCropImageUrlChange?: (annotationId: string, url: string | null) => void;
     };
 
     let {
@@ -24,7 +25,8 @@
         height,
         cachedCollectionVersion = '',
         showLabel = true,
-        selected = false
+        selected = false,
+        onCropImageUrlChange
     }: Props = $props();
 </script>
 
@@ -37,6 +39,7 @@
         {cachedCollectionVersion}
         {showLabel}
         {selected}
+        {onCropImageUrlChange}
     />
 {:else if annotationWithPayload.parent_sample_type == SampleType.VIDEO_FRAME || annotationWithPayload.parent_sample_type == SampleType.VIDEO}
     <AnnotationVideoFrameGridItem

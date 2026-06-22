@@ -13,6 +13,7 @@
         cachedCollectionVersion: string;
         showLabel: boolean;
         selected?: boolean;
+        onCropImageUrlChange?: (annotationId: string, url: string | null) => void;
     };
 
     let {
@@ -22,7 +23,8 @@
         image,
         cachedCollectionVersion = '',
         showLabel = true,
-        selected = false
+        selected = false,
+        onCropImageUrlChange
     }: Props = $props();
 
     const { getCollectionVersion } = useGlobalStorage();
@@ -84,5 +86,6 @@
         {containerWidth}
         {showLabel}
         {selected}
+        {onCropImageUrlChange}
     />
 {/if}
