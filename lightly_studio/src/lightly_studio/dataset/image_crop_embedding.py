@@ -103,20 +103,7 @@ def _flush_crop_batch(  # noqa: PLR0913
     encode_batch: Callable[[torch.Tensor], NDArray[np.float32]],
     progress_bar: Any,
 ) -> None:
-    """Encode the pending batch, write embeddings to their slots, and reset the batch.
-
-    Encoded embeddings are written into ``embeddings`` at the positions held in
-    ``batch_indices``, preserving the caller's input order. ``batch_tensors`` and
-    ``batch_indices`` are cleared in place so the caller can keep accumulating the next batch.
-
-    Args:
-        batch_tensors: Preprocessed crop tensors to encode; cleared in place on return.
-        batch_indices: Output positions for each crop in ``embeddings``; cleared in place.
-        embeddings: Destination array, mutated in place with the encoded embeddings.
-        device: Torch device for model inference.
-        encode_batch: Callable that encodes a batch tensor and returns embeddings.
-        progress_bar: tqdm progress bar advanced by the number of encoded crops.
-    """
+    """Encode the current crop batch and write results into ``embeddings``."""
     if not batch_tensors:
         return
     images_tensor = torch.stack(batch_tensors).to(device, non_blocking=True)
