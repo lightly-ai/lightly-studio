@@ -304,6 +304,7 @@ def test_delete_dataset__with_evaluation_runs(db_session: Session) -> None:
         evaluation_run_input=EvaluationRunCreate(
             name="my_eval",
             gt_annotation_collection_id=gt_collection.collection_id,
+            dataset_id=gt_collection.dataset_id,
             pred_annotation_collection_id=pred_collection.collection_id,
             task_type=EvaluationTaskType.OBJECT_DETECTION,
         ),

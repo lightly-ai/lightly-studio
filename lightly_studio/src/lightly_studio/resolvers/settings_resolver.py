@@ -68,6 +68,9 @@ def set_settings(session: Session, settings: SettingView) -> SettingView:
         settings.show_bounding_boxes_for_segmentation
     )
 
+    # Update annotation coloring enforcement
+    current_settings.enforce_coloring_by_class = settings.enforce_coloring_by_class
+
     session.commit()
     session.refresh(current_settings)
 

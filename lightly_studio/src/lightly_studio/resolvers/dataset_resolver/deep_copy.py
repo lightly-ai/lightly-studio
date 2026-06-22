@@ -118,7 +118,7 @@ def deep_copy(
     _copy_annotation_labels(session=session, new_dataset_id=new_dataset_id)
     _copy_embedding_models(session=session, now=now)
     _copy_samples(session=session, now=now)
-    _copy_evaluation_runs(session=session, now=now)
+    _copy_evaluation_runs(session=session, new_dataset_id=new_dataset_id, now=now)
 
     _copy_images(session=session, now=now)
     _copy_videos(session=session)
@@ -456,8 +456,8 @@ def _copy_embedding_models(session: Session, now: datetime) -> None:
     )
 
 
-def _copy_evaluation_runs(session: Session, now: datetime) -> None:
-    """Copy evaluation runs, remapping both collection FKs."""
+def _copy_evaluation_runs(session: Session, new_dataset_id: UUID, now: datetime) -> None:
+    """Copy evaluation runs, remapping the dataset and collection FKs."""
     src = _table(EvaluationRunTable).alias("src")
     map_run = _map(_MAP_EVALUATION_RUN)
     map_gt = _map(_MAP_COLLECTION, alias="map_gt")
@@ -469,6 +469,7 @@ def _copy_evaluation_runs(session: Session, now: datetime) -> None:
     )
     overrides = {
         "id": map_run.c.new_id,
+        "dataset_id": literal(new_dataset_id),
         "gt_annotation_collection_id": map_gt.c.new_id,
         "pred_annotation_collection_id": map_pred.c.new_id,
         "created_at": literal(now),
