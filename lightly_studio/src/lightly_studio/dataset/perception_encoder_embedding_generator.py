@@ -247,7 +247,7 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             as the input crops.
         """
         return embed_image_crops_batched(
-            image_crops,
+            image_crops=image_crops,
             embedding_dimension=self._model.output_dim,
             max_batch_size=MAX_BATCH_SIZE,
             device=self._device,

@@ -734,7 +734,15 @@ def _generate_embeddings_annotations(
     root_collection_id: UUID,
     annotation_collection_name: str | None,
 ) -> None:
-    """Generate and store embeddings for object-detection annotation samples."""
+    """Generate and store embeddings for object-detection annotation samples.
+
+    Args:
+        session: Database session for resolver operations.
+        root_collection_id: The ID of the root collection whose annotation child
+            collection should receive embeddings.
+        annotation_collection_name: Name of the annotation child collection. If None,
+            the default annotation collection name is used.
+    """
     annotation_collection_id = collection_resolver.get_or_create_child_collection(
         session=session,
         collection_id=root_collection_id,
