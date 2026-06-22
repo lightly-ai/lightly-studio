@@ -41,7 +41,9 @@ def test_add_samples_by_filter__image_empty_filter_tags_whole_collection(
     )
 
     assert response.status_code == HTTP_STATUS_CREATED
-    assert _tagged_sample_ids(db_session, tag.tag_id) == {image.sample_id for image in images}
+    assert _tagged_sample_ids(session=db_session, tag_id=tag.tag_id) == {
+        image.sample_id for image in images
+    }
 
 
 def test_add_samples_by_filter__image_subset_filter_tags_only_subset(
@@ -62,7 +64,7 @@ def test_add_samples_by_filter__image_subset_filter_tags_only_subset(
     )
 
     assert response.status_code == HTTP_STATUS_CREATED
-    assert _tagged_sample_ids(db_session, tag.tag_id) == {wide.sample_id}
+    assert _tagged_sample_ids(session=db_session, tag_id=tag.tag_id) == {wide.sample_id}
 
 
 def test_add_samples_by_filter__idempotent_on_rerun(
@@ -80,7 +82,7 @@ def test_add_samples_by_filter__idempotent_on_rerun(
     assert first.status_code == HTTP_STATUS_CREATED
     assert second.status_code == HTTP_STATUS_CREATED
     # Re-running adds no duplicate link.
-    assert _tagged_sample_ids(db_session, tag.tag_id) == {image.sample_id}
+    assert _tagged_sample_ids(session=db_session, tag_id=tag.tag_id) == {image.sample_id}
 
 
 def test_add_samples_by_filter__annotation_grid(
@@ -108,7 +110,7 @@ def test_add_samples_by_filter__annotation_grid(
     )
 
     assert response.status_code == HTTP_STATUS_CREATED
-    assert _tagged_sample_ids(db_session, tag.tag_id) == {annotation.sample_id}
+    assert _tagged_sample_ids(session=db_session, tag_id=tag.tag_id) == {annotation.sample_id}
 
 
 def test_add_samples_by_filter__unknown_tag_returns_404(
