@@ -8,13 +8,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
-from lightly_studio.db_manager import SessionDep
+from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.resolvers import image_resolver, video_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from lightly_studio.sampling.sampling_config import (
     AnnotationClassBalancingStrategy,
+    EmbeddingDeduplicationStrategy,
     EmbeddingDiversityStrategy,
     EmbeddingSimilarityStrategy,
     MetadataWeightingStrategy,
@@ -27,6 +28,7 @@ sampling_router = APIRouter()
 Strategy = Annotated[
     Union[
         AnnotationClassBalancingStrategy,
+        EmbeddingDeduplicationStrategy,
         EmbeddingDiversityStrategy,
         EmbeddingSimilarityStrategy,
         MetadataWeightingStrategy,

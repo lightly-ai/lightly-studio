@@ -5,6 +5,7 @@
     import StrategyCard from '$lib/components/Sampling/StrategyCard/StrategyCard.svelte';
     import FieldTooltip from '$lib/components/FieldTooltip/FieldTooltip.svelte';
     import { Button } from '$lib/components/ui/button';
+    import { Tooltip } from '$lib/components/ui/tooltip';
     import * as Dialog from '$lib/components/ui/dialog';
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
@@ -12,6 +13,7 @@
     import { useStrategyBuilder } from '$lib/hooks/useStrategyBuilder';
     import { useSamplingCombinationDialog } from './useSamplingCombinationDialog/useSamplingCombinationDialog';
     import { useStrategyOptions } from './useSamplingCombinationDialog/useStrategyOptions.svelte';
+    import SampleCountInput from '$lib/components/Sampling/SampleCountInput/SampleCountInput.svelte';
 
     const collectionId = $derived(page.params.collection_id!);
     const isVideoCollection = $derived(
@@ -33,15 +35,24 @@
 
     const strategyOptions = useStrategyOptions(() => collectionId);
 
+    // TODO(Leonardo, 06/2026): Update once there are multiple embedding models - currently only one diversity
+    // strategy is supported since all samples share a single embedding space.
+    const hasDiversity = $derived($instances.some((i) => i.type === 'diversity'));
+    const hasDeduplication = $derived($instances.some((i) => i.type === 'deduplication'));
+
     const {
         tags,
         nSamplesToSelect,
+        percentageToSelect,
+        updateAbsolute,
+        updatePercentage,
         selectionResultTagName,
         filteredSampleCount,
         noSamples,
         notEnoughSamples,
         sampleCountLabel,
         isFormValid,
+        createButtonTooltip,
         isSubmitting,
         loadingMessage,
         handleFormSubmit
@@ -74,6 +85,12 @@
                     <div class="grid gap-4 py-4">
                         <div class="w-full">
                             <AddStrategyButton
+                                diversityDisabledReason={hasDiversity
+                                    ? 'Only one diversity strategy can be added per selection.'
+                                    : undefined}
+                                deduplicationDisabledReason={hasDeduplication
+                                    ? 'Only one deduplication strategy can be added per selection.'
+                                    : undefined}
                                 similarityDisabledReason={isVideoCollection
                                     ? 'Not available for video collections. Similarity selection requires image embeddings.'
                                     : $tags.length === 0
@@ -99,6 +116,8 @@
                                         annotationLabels={strategyOptions.annotationLabels}
                                         annotationSourceOptions={strategyOptions.annotationSourceOptions}
                                         metadataFieldNames={strategyOptions.metadataFieldNames}
+                                        isDuplicateDisabled={instance.type === 'diversity' ||
+                                            instance.type === 'deduplication'}
                                         onRemove={() => removeStrategy(instance.id)}
                                         onDuplicate={() => duplicateStrategy(instance.id)}
                                         onUpdate={(params) => updateParams(instance.id, params)}
@@ -107,8 +126,7 @@
                                 {/each}
                                 <span class="flex items-center gap-1 text-xs text-muted-foreground">
                                     <Info class="size-3 shrink-0" />
-                                    Strategies are scored and combined simultaneously using their strength
-                                    weights - the order shown here does not affect the result.
+                                    The order of strategies does not affect the result.
                                 </span>
                             </div>
                         {/if}
@@ -122,15 +140,11 @@
                                     content="How many samples will be written to the output tag. Cannot exceed the number of samples matching the current filters."
                                 />
                             </div>
-                            <Input
-                                id="n-samples"
-                                type="number"
-                                bind:value={$nSamplesToSelect}
-                                min="1"
-                                placeholder="Enter number of samples"
-                                required
-                                class="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                data-testid="selection-dialog-n-samples-input"
+                            <SampleCountInput
+                                count={$nSamplesToSelect}
+                                percentage={$percentageToSelect}
+                                onCountChange={updateAbsolute}
+                                onPercentageChange={updatePercentage}
                             />
                         </div>
 
@@ -147,14 +161,14 @@
                                 bind:value={$selectionResultTagName}
                                 placeholder="Enter a tag for the sampled subset"
                                 required
-                                data-testid="selection-dialog-tag-name-input"
+                                data-testid="sampling-dialog-tag-name-input"
                             />
                         </div>
 
                         {#if $noSamples}
                             <p
-                                class="text-sm text-destructive"
-                                data-testid="selection-dialog-no-samples-warning"
+                                class="text-sm text-destructive-text"
+                                data-testid="sampling-dialog-no-samples-warning"
                             >
                                 No samples match the current filters.
                             </p>
@@ -162,8 +176,8 @@
 
                         {#if $notEnoughSamples}
                             <p
-                                class="text-sm text-destructive"
-                                data-testid="selection-dialog-not-enough-samples-warning"
+                                class="text-sm text-destructive-text"
+                                data-testid="sampling-dialog-not-enough-samples-warning"
                             >
                                 Only {$filteredSampleCount} samples are available, but
                                 {$nSamplesToSelect} were requested.
@@ -178,26 +192,35 @@
                         target="_blank"
                         rel="noreferrer"
                         class="mr-auto self-center text-xs text-muted-foreground underline-offset-4 hover:underline"
-                        data-testid="selection-dialog-docs-link"
+                        data-testid="sampling-dialog-docs-link"
                     >
-                        Learn more about sampling combinations →
+                        How do sampling combinations work?
                     </a>
                     <Button
                         variant="outline"
                         type="button"
                         onclick={closeSamplingDialog}
                         disabled={$isSubmitting}
-                        data-testid="selection-dialog-cancel"
+                        data-testid="sampling-dialog-cancel"
                     >
                         Cancel
                     </Button>
-                    <Button
-                        type="submit"
-                        disabled={!$isFormValid || $isSubmitting || $notEnoughSamples || $noSamples}
-                        data-testid="selection-dialog-submit"
+                    <Tooltip
+                        content={$createButtonTooltip}
+                        position="top"
+                        triggerClass="inline-block"
                     >
-                        {$isSubmitting ? $loadingMessage || 'Creating...' : 'Create Selection'}
-                    </Button>
+                        <Button
+                            type="submit"
+                            disabled={!$isFormValid ||
+                                $isSubmitting ||
+                                $notEnoughSamples ||
+                                $noSamples}
+                            data-testid="sampling-dialog-submit"
+                        >
+                            {$isSubmitting ? $loadingMessage || 'Creating...' : 'Create Selection'}
+                        </Button>
+                    </Tooltip>
                 </Dialog.Footer>
             </form>
         </Dialog.Content>

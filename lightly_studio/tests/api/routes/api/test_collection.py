@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlmodel import Session
@@ -246,6 +247,7 @@ def test_has_embeddings(
     mock_get_model.assert_called_once_with(session=db_session, collection_id=col_id)
 
 
+@pytest.mark.postgres_only  # Deep copying is enterprise-only (PostgreSQL-backed).
 def test_deep_copy__success(test_client: TestClient, db_session: Session) -> None:
     """Test successful deep copy of a collection."""
     collection = create_collection(session=db_session, collection_name="original")
@@ -309,6 +311,7 @@ def test_deep_copy__not_root_collection(test_client: TestClient, db_session: Ses
     assert response.json()["error"] == "Only root collections can be deep copied."
 
 
+@pytest.mark.postgres_only  # Deleting a dataset is enterprise-only (PostgreSQL-backed).
 def test_delete_dataset__success(test_client: TestClient, db_session: Session) -> None:
     """Test successful deletion of a dataset and all related data."""
     collection_id = create_collection(session=db_session, collection_name="to_delete").collection_id

@@ -1,4 +1,4 @@
-"""Example of how to create a dataset with semantic segmentation annotations."""
+"""Example of how to create a dataset with Pascal VOC annotations."""
 
 import json
 
@@ -6,7 +6,7 @@ import fsspec
 from environs import Env
 
 import lightly_studio as ls
-from lightly_studio import db_manager
+from lightly_studio.database import db_manager
 
 # Read environment variables
 env = Env()

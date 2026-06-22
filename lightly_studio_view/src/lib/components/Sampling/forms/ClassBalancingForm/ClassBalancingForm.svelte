@@ -47,6 +47,7 @@
         strength={params.strength}
         id={`class-balancing-strength-${instanceId}`}
         testid={`strategy-class-balancing-strength-input-${instanceId}`}
+        min={0}
         onUpdate={(strength) => onUpdate({ strength })}
     />
     {#if params.target_distribution_mode === 'dictionary'}

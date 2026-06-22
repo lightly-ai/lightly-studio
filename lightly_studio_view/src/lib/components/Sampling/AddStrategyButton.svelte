@@ -5,12 +5,16 @@
     import { STRATEGY_OPTIONS, type StrategyType } from '$lib/hooks/useStrategyBuilder';
 
     interface Props {
+        diversityDisabledReason?: string;
+        deduplicationDisabledReason?: string;
         similarityDisabledReason?: string;
         metadataWeightingDisabledReason?: string;
         classBalancingDisabledReason?: string;
         onAdd: (type: StrategyType) => void;
     }
     let {
+        diversityDisabledReason,
+        deduplicationDisabledReason,
         similarityDisabledReason,
         metadataWeightingDisabledReason,
         classBalancingDisabledReason,
@@ -18,12 +22,15 @@
     }: Props = $props();
 
     let isOpen = $state(false);
+    let selectedValue = $state<string | undefined>(undefined);
     let hoveredType = $state<StrategyType | null>(null);
     let tooltipRect = $state<DOMRect | null>(null);
     // wrapper element refs used to position the tooltip on keyboard highlight
     let itemRefs: Partial<Record<StrategyType, HTMLElement>> = {};
 
     function getDisabledReason(type: StrategyType): string | undefined {
+        if (type === 'diversity') return diversityDisabledReason;
+        if (type === 'deduplication') return deduplicationDisabledReason;
         if (type === 'similarity') return similarityDisabledReason;
         if (type === 'metadata_weighting') return metadataWeightingDisabledReason;
         if (type === 'class_balancing') return classBalancingDisabledReason;
@@ -53,8 +60,12 @@
     triggerLabel="Add strategy"
     class="w-full"
     testId="add-strategy-button"
+    bind:value={selectedValue}
     onValueChange={(v) => {
-        if (v) onAdd(v as StrategyType);
+        if (v) {
+            onAdd(v as StrategyType);
+            selectedValue = undefined;
+        }
     }}
     onOpenChange={(open) => {
         isOpen = open;
@@ -106,7 +117,7 @@
         >
             <p>{hoveredStrategy.description}</p>
             {#if hoveredDisabledReason}
-                <p class="mt-1.5 border-t border-border pt-1.5 text-destructive">
+                <p class="mt-1.5 border-t border-border pt-1.5 text-destructive-text">
                     {hoveredDisabledReason}
                 </p>
             {/if}

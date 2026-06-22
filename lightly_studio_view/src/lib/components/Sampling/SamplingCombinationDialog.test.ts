@@ -141,7 +141,7 @@ describe('SamplingCombinationDialog', () => {
 
         render(SamplingCombinationDialog);
 
-        expect(screen.getByTestId('selection-dialog-submit')).toBeDisabled();
+        expect(screen.getByTestId('sampling-dialog-submit')).toBeDisabled();
     });
 
     it('submit button is disabled when strategies are added but tag name is empty', async () => {
@@ -152,7 +152,7 @@ describe('SamplingCombinationDialog', () => {
         await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
         await fireEvent.pointerUp(await screen.findByTestId('add-strategy-diversity'));
 
-        expect(screen.getByTestId('selection-dialog-submit')).toBeDisabled();
+        expect(screen.getByTestId('sampling-dialog-submit')).toBeDisabled();
     });
 
     it('submit button is enabled when a strategy is added and tag name is filled', async () => {
@@ -162,17 +162,17 @@ describe('SamplingCombinationDialog', () => {
 
         await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
         await fireEvent.pointerUp(await screen.findByTestId('add-strategy-diversity'));
-        await fireEvent.input(screen.getByTestId('selection-dialog-tag-name-input'), {
+        await fireEvent.input(screen.getByTestId('sampling-dialog-tag-name-input'), {
             target: { value: 'my-tag' }
         });
 
-        expect(screen.getByTestId('selection-dialog-submit')).not.toBeDisabled();
+        expect(screen.getByTestId('sampling-dialog-submit')).not.toBeDisabled();
     });
 
     it('shows no samples warning when filteredSampleCount is 0', () => {
         render(SamplingCombinationDialog);
 
-        expect(screen.getByTestId('selection-dialog-no-samples-warning')).toBeInTheDocument();
+        expect(screen.getByTestId('sampling-dialog-no-samples-warning')).toBeInTheDocument();
     });
 
     it('shows not enough samples warning when requested count exceeds available', async () => {
@@ -180,22 +180,22 @@ describe('SamplingCombinationDialog', () => {
 
         render(SamplingCombinationDialog);
 
-        const input = screen.getByTestId('selection-dialog-n-samples-input');
+        const input = screen.getByTestId('sampling-dialog-n-samples-input');
         await fireEvent.input(input, { target: { value: '10' } });
 
         expect(
-            screen.getByTestId('selection-dialog-not-enough-samples-warning')
+            screen.getByTestId('sampling-dialog-not-enough-samples-warning')
         ).toBeInTheDocument();
     });
 
     it('does not show not enough samples warning when filteredSampleCount is 0', async () => {
         render(SamplingCombinationDialog);
 
-        const input = screen.getByTestId('selection-dialog-n-samples-input');
+        const input = screen.getByTestId('sampling-dialog-n-samples-input');
         await fireEvent.input(input, { target: { value: '100' } });
 
         expect(
-            screen.queryByTestId('selection-dialog-not-enough-samples-warning')
+            screen.queryByTestId('sampling-dialog-not-enough-samples-warning')
         ).not.toBeInTheDocument();
     });
 
@@ -204,11 +204,11 @@ describe('SamplingCombinationDialog', () => {
 
         await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
         await fireEvent.pointerUp(await screen.findByTestId('add-strategy-diversity'));
-        await fireEvent.input(screen.getByTestId('selection-dialog-tag-name-input'), {
+        await fireEvent.input(screen.getByTestId('sampling-dialog-tag-name-input'), {
             target: { value: 'my-tag' }
         });
 
-        expect(screen.getByTestId('selection-dialog-submit')).toBeDisabled();
+        expect(screen.getByTestId('sampling-dialog-submit')).toBeDisabled();
     });
 
     it('submit button is disabled when not enough samples', async () => {
@@ -218,14 +218,14 @@ describe('SamplingCombinationDialog', () => {
 
         await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
         await fireEvent.pointerUp(await screen.findByTestId('add-strategy-diversity'));
-        await fireEvent.input(screen.getByTestId('selection-dialog-tag-name-input'), {
+        await fireEvent.input(screen.getByTestId('sampling-dialog-tag-name-input'), {
             target: { value: 'my-tag' }
         });
-        await fireEvent.input(screen.getByTestId('selection-dialog-n-samples-input'), {
+        await fireEvent.input(screen.getByTestId('sampling-dialog-n-samples-input'), {
             target: { value: '10' }
         });
 
-        expect(screen.getByTestId('selection-dialog-submit')).toBeDisabled();
+        expect(screen.getByTestId('sampling-dialog-submit')).toBeDisabled();
     });
 
     it('calls submit with correct instances, count, tag name, and filter', async () => {
@@ -238,13 +238,13 @@ describe('SamplingCombinationDialog', () => {
 
         await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
         await fireEvent.pointerUp(await screen.findByTestId('add-strategy-diversity'));
-        await fireEvent.input(screen.getByTestId('selection-dialog-tag-name-input'), {
+        await fireEvent.input(screen.getByTestId('sampling-dialog-tag-name-input'), {
             target: { value: 'my-tag' }
         });
-        await fireEvent.input(screen.getByTestId('selection-dialog-n-samples-input'), {
+        await fireEvent.input(screen.getByTestId('sampling-dialog-n-samples-input'), {
             target: { value: '25' }
         });
-        await fireEvent.click(screen.getByTestId('selection-dialog-submit'));
+        await fireEvent.click(screen.getByTestId('sampling-dialog-submit'));
 
         await waitFor(() => {
             expect(submitMock).toHaveBeenCalledWith(
@@ -273,10 +273,10 @@ describe('SamplingCombinationDialog', () => {
 
         await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
         await fireEvent.pointerUp(await screen.findByTestId('add-strategy-diversity'));
-        await fireEvent.input(screen.getByTestId('selection-dialog-tag-name-input'), {
+        await fireEvent.input(screen.getByTestId('sampling-dialog-tag-name-input'), {
             target: { value: 'my-tag' }
         });
-        await fireEvent.click(screen.getByTestId('selection-dialog-submit'));
+        await fireEvent.click(screen.getByTestId('sampling-dialog-submit'));
 
         await waitFor(() => {
             expect(submitMock).toHaveBeenCalledWith(
@@ -296,13 +296,13 @@ describe('SamplingCombinationDialog', () => {
 
         await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
         await fireEvent.pointerUp(await screen.findByTestId('add-strategy-diversity'));
-        await fireEvent.input(screen.getByTestId('selection-dialog-tag-name-input'), {
+        await fireEvent.input(screen.getByTestId('sampling-dialog-tag-name-input'), {
             target: { value: 'my-tag' }
         });
-        await fireEvent.click(screen.getByTestId('selection-dialog-submit'));
+        await fireEvent.click(screen.getByTestId('sampling-dialog-submit'));
 
         await waitFor(() => {
-            expect(screen.getByTestId('selection-dialog-tag-name-input')).toHaveValue('');
+            expect(screen.getByTestId('sampling-dialog-tag-name-input')).toHaveValue('');
         });
     });
 
@@ -314,15 +314,15 @@ describe('SamplingCombinationDialog', () => {
 
         await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
         await fireEvent.pointerUp(await screen.findByTestId('add-strategy-diversity'));
-        await fireEvent.input(screen.getByTestId('selection-dialog-tag-name-input'), {
+        await fireEvent.input(screen.getByTestId('sampling-dialog-tag-name-input'), {
             target: { value: 'my-tag' }
         });
-        await fireEvent.click(screen.getByTestId('selection-dialog-submit'));
+        await fireEvent.click(screen.getByTestId('sampling-dialog-submit'));
 
         await waitFor(() => {
             expect(submitMock).toHaveBeenCalled();
         });
-        expect(screen.getByTestId('selection-dialog-tag-name-input')).toHaveValue('my-tag');
+        expect(screen.getByTestId('sampling-dialog-tag-name-input')).toHaveValue('my-tag');
     });
 
     it('disables both buttons and shows loading message while submitting', () => {
@@ -331,11 +331,11 @@ describe('SamplingCombinationDialog', () => {
 
         render(SamplingCombinationDialog);
 
-        expect(screen.getByTestId('selection-dialog-submit')).toBeDisabled();
-        expect(screen.getByTestId('selection-dialog-submit')).toHaveTextContent(
+        expect(screen.getByTestId('sampling-dialog-submit')).toBeDisabled();
+        expect(screen.getByTestId('sampling-dialog-submit')).toHaveTextContent(
             'Computing typicality metadata...'
         );
-        expect(screen.getByTestId('selection-dialog-cancel')).toBeDisabled();
+        expect(screen.getByTestId('sampling-dialog-cancel')).toBeDisabled();
     });
 
     it('passes annotation source collections to the class balancing strategy form', async () => {
@@ -359,12 +359,95 @@ describe('SamplingCombinationDialog', () => {
         expect(screen.getByTestId('annotation-source-option-predictions')).toBeInTheDocument();
     });
 
+    it('updates the percentage input when the absolute count is changed', async () => {
+        filteredSampleCountStore.set(1000);
+
+        render(SamplingCombinationDialog);
+
+        const absoluteInput = screen.getByTestId('sampling-dialog-n-samples-input');
+        await fireEvent.input(absoluteInput, { target: { value: '100' } });
+
+        expect(screen.getByTestId('sampling-dialog-n-samples-percentage-input')).toHaveValue(10);
+    });
+
+    it('updates the absolute count when the percentage input is changed', async () => {
+        filteredSampleCountStore.set(1000);
+
+        render(SamplingCombinationDialog);
+
+        const percentageInput = screen.getByTestId('sampling-dialog-n-samples-percentage-input');
+        await fireEvent.input(percentageInput, { target: { value: '25' } });
+
+        expect(screen.getByTestId('sampling-dialog-n-samples-input')).toHaveValue(250);
+    });
+
+    it('rounds the absolute count to the nearest integer when converting from percentage', async () => {
+        filteredSampleCountStore.set(1000);
+
+        render(SamplingCombinationDialog);
+
+        const percentageInput = screen.getByTestId('sampling-dialog-n-samples-percentage-input');
+        await fireEvent.input(percentageInput, { target: { value: '0.1' } });
+
+        expect(screen.getByTestId('sampling-dialog-n-samples-input')).toHaveValue(1);
+    });
+
+    it('submits the resolved absolute count after editing the percentage', async () => {
+        submitMock.mockResolvedValue(false);
+        filteredSampleCountStore.set(1000);
+
+        render(SamplingCombinationDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+        await fireEvent.pointerUp(await screen.findByTestId('add-strategy-diversity'));
+        await fireEvent.input(screen.getByTestId('sampling-dialog-tag-name-input'), {
+            target: { value: 'my-tag' }
+        });
+        await fireEvent.input(screen.getByTestId('sampling-dialog-n-samples-percentage-input'), {
+            target: { value: '10' }
+        });
+        await fireEvent.click(screen.getByTestId('sampling-dialog-submit'));
+
+        await waitFor(() => {
+            expect(submitMock).toHaveBeenCalledWith(
+                expect.objectContaining({ nSamplesToSelect: 100 })
+            );
+        });
+    });
+
     it('shows Creating... on the submit button when submitting without a loading message', () => {
         isSubmittingStore.set(true);
 
         render(SamplingCombinationDialog);
 
-        expect(screen.getByTestId('selection-dialog-submit')).toHaveTextContent('Creating...');
+        expect(screen.getByTestId('sampling-dialog-submit')).toHaveTextContent('Creating...');
+    });
+
+    it('disables the duplicate button on a diversity strategy card', async () => {
+        filteredSampleCountStore.set(100);
+
+        render(SamplingCombinationDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+        await fireEvent.pointerUp(await screen.findByTestId('add-strategy-diversity'));
+
+        const duplicateButton = await screen.findByTestId(/strategy-card-duplicate-/);
+        expect(duplicateButton).toBeDisabled();
+    });
+
+    it('disables diversity in the add strategy menu after one diversity strategy has been added', async () => {
+        filteredSampleCountStore.set(100);
+
+        render(SamplingCombinationDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+        await fireEvent.pointerUp(await screen.findByTestId('add-strategy-diversity'));
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+
+        expect(await screen.findByTestId('add-strategy-diversity')).toHaveAttribute(
+            'data-disabled'
+        );
     });
 
     it('disables metadata weighting when only non-numeric metadata fields are present', async () => {
@@ -402,10 +485,10 @@ describe('SamplingCombinationDialog', () => {
 
         await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
         await fireEvent.pointerUp(await screen.findByTestId('add-strategy-metadata_weighting'));
-        await fireEvent.input(screen.getByTestId('selection-dialog-tag-name-input'), {
+        await fireEvent.input(screen.getByTestId('sampling-dialog-tag-name-input'), {
             target: { value: 'my-tag' }
         });
 
-        expect(screen.getByTestId('selection-dialog-submit')).toBeDisabled();
+        expect(screen.getByTestId('sampling-dialog-submit')).toBeDisabled();
     });
 });

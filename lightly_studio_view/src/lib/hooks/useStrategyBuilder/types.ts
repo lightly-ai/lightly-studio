@@ -3,6 +3,11 @@ export interface DiversityParams {
     strength: number;
 }
 
+export interface DeduplicationParams {
+    strength: number;
+    stopping_condition_minimum_distance: number;
+}
+
 export interface TypicalityParams {
     strength: number;
 }
@@ -33,6 +38,7 @@ export interface ClassBalancingParams {
 
 export interface StrategyParamsByType {
     diversity: DiversityParams;
+    deduplication: DeduplicationParams;
     typicality: TypicalityParams;
     similarity: SimilarityParams;
     metadata_weighting: MetadataWeightingParams;
@@ -60,6 +66,12 @@ export const STRATEGY_OPTIONS: { type: StrategyType; label: string; description:
         label: 'Diversity',
         description:
             'Selects samples spread across the embedding space. Use to reduce redundancy and build varied training sets.'
+    },
+    {
+        type: 'deduplication',
+        label: 'Deduplication',
+        description:
+            'Removes near-duplicates by keeping only samples that are at least a minimum distance apart in embedding space. May select fewer than the requested number of samples.'
     },
     {
         type: 'typicality',
@@ -93,6 +105,7 @@ export const STRATEGY_LABELS: Record<StrategyType, string> = Object.fromEntries(
 
 export const STRATEGY_DEFAULTS: { [K in StrategyType]: StrategyParamsByType[K] } = {
     diversity: { strength: 1 },
+    deduplication: { strength: 1, stopping_condition_minimum_distance: 0.1 },
     typicality: { strength: 1 },
     similarity: { query_tag_id: '', strength: 1 },
     metadata_weighting: { metadata_key: '', strength: 1 },

@@ -15,13 +15,13 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session, SQLModel
 from testcontainers.postgres import PostgresContainer  # type: ignore[import-untyped]
 
-from lightly_studio import db_manager
 from lightly_studio.api import features
 from lightly_studio.api.app import app
+from lightly_studio.database import db_manager
+from lightly_studio.database.db_manager import DatabaseBackend, DatabaseEngine
 from lightly_studio.dataset import embedding_manager
 from lightly_studio.dataset.embedding_generator import RandomEmbeddingGenerator
 from lightly_studio.dataset.embedding_manager import EmbeddingManager, EmbeddingManagerProvider
-from lightly_studio.db_manager import DatabaseEngine
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationCreate,
@@ -53,20 +53,21 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "--postgres",
         action="store_true",
         default=False,
-        help="Run tests against a Postgres container instead of in-memory DuckDB.",
+        help="Run tests against a Postgres container instead of file-based DuckDB.",
     )
 
 
-def _truncate_tables(session: Session) -> None:
-    """Truncate all tables in the database to reset state between tests.
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Skip postgres_only tests unless the suite runs with --postgres.
 
-    Uses TRUNCATE ... CASCADE on Postgres to handle foreign key constraints.
-    Table names are quoted to handle reserved words (e.g. "group").
+    The ``postgres_only`` marker is registered in ``pytest.ini``.
     """
-    table_names = [table.name for table in reversed(SQLModel.metadata.sorted_tables)]
-    for table_name in table_names:
-        session.execute(sqlalchemy.text(f'TRUNCATE TABLE "{table_name}" CASCADE'))
-    session.commit()
+    if config.getoption("--postgres"):
+        return
+    skip_marker = pytest.mark.skip(reason="postgres_only: skipped under DuckDB")
+    for item in items:
+        if "postgres_only" in item.keywords:
+            item.add_marker(skip_marker)
 
 
 @pytest.fixture(scope="session")
@@ -102,26 +103,49 @@ def _postgres_engine(postgres_url: str | None) -> Generator[DatabaseEngine | Non
     engine.close()
 
 
+@pytest.fixture(scope="session")
+def _duckdb_engine(
+    _use_postgres: bool,
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Generator[DatabaseEngine | None, None, None]:
+    """Create a session-scoped on-disk DuckDB engine, or None under --postgres.
+
+    Each pytest-xdist worker is its own process, so this yields one DuckDB
+    database per worker, building the schema once per worker instead of per test.
+
+    A file is used instead of ``:memory:`` on purpose: a reused in-memory
+    connection serves a stale cached query plan after many DELETE/INSERT cycles
+    (our per-test reset), making parameterized ``LIMIT``/``OFFSET`` reads return
+    zero rows. The file backend invalidates these plans and matches production.
+    """
+    if _use_postgres:
+        yield None
+        return
+
+    db_path = tmp_path_factory.mktemp("duckdb") / "test.duckdb"
+    engine = DatabaseEngine(engine_url=f"duckdb:///{db_path}", single_threaded=True)
+    yield engine
+    engine.close()
+
+
 @pytest.fixture
 def _db_engine(
     _use_postgres: bool,
     _postgres_engine: DatabaseEngine | None,
+    _duckdb_engine: DatabaseEngine | None,
 ) -> Generator[DatabaseEngine, None, None]:
-    """Provide a single DatabaseEngine for each test.
+    """Provide the per-worker DatabaseEngine for each test.
 
-    DuckDB mode (default): creates a fresh in-memory engine per test.
-    Postgres mode (--postgres): reuses the session-scoped Postgres engine.
+    Reuses one session-scoped engine (file-based DuckDB by default, or Postgres
+    under --postgres). Resets data between tests keeping the DB schema.
+    That saves the schema creation time across 1000s of tests, speeding up our CI.
     """
-    if _use_postgres:
-        assert _postgres_engine is not None
-        yield _postgres_engine
-        with _postgres_engine.session() as session:
-            session.rollback()
-            _truncate_tables(session)
-    else:
-        engine = DatabaseEngine("duckdb:///:memory:", single_threaded=True)
-        yield engine
-        engine.close()
+    engine = _postgres_engine if _use_postgres else _duckdb_engine
+    assert engine is not None
+    yield engine
+    with engine.session() as session:
+        session.rollback()
+        _truncate_tables(session, backend=engine.backend)
 
 
 @pytest.fixture
@@ -157,8 +181,8 @@ def media_test_client(
 
     Media endpoints call ``db_manager.session()`` directly instead of using the
     session dependency. Patch it to yield the per-test ``db_session`` so requests
-    read the data the test creates: the in-memory DuckDB ``StaticPool`` has a
-    single connection, which cannot host two concurrent sessions.
+    read the data the test creates: the DuckDB ``StaticPool`` has a single
+    connection, which cannot host two concurrent sessions.
     """
 
     @contextlib.contextmanager
@@ -505,7 +529,7 @@ def patch_collection(
 ) -> None:
     """Fixture to patch the collection resources.
 
-    Patches get_engine() to return the per-test engine (in-memory DuckDB or
+    Patches get_engine() to return the per-test engine (file-based DuckDB or
     session-scoped Postgres). Table truncation is handled by _db_engine teardown.
     """
     # Create a mock database manager.
@@ -531,3 +555,59 @@ def patch_collection(
 
     # Create test-specific lightly_studio_active_features.
     mocker.patch.object(features, "lightly_studio_active_features", [])
+
+
+def _truncate_tables(session: Session, backend: DatabaseBackend) -> None:
+    """Reset all tables in the database to clear state between tests."""
+    if backend == DatabaseBackend.POSTGRESQL:
+        _truncate_tables_postgres(session)
+    else:
+        _truncate_tables_duckdb(session)
+
+
+def _truncate_tables_postgres(session: Session) -> None:
+    """Reset all tables on Postgres with TRUNCATE ... CASCADE."""
+    for table in reversed(SQLModel.metadata.sorted_tables):
+        session.execute(sqlalchemy.text(f'TRUNCATE TABLE "{table.name}" CASCADE'))
+    session.commit()
+
+
+def _truncate_tables_duckdb(session: Session) -> None:
+    """Reset all tables on DuckDB with ordered DELETEs.
+
+    DuckDB has no TRUNCATE ... CASCADE and validates FK constraints against
+    committed state, so it deletes child-first and commits after each table.
+    Self-referential tables need special handling (see the helper).
+    """
+    for table in reversed(SQLModel.metadata.sorted_tables):
+        if any(fk.column.table is table for fk in table.foreign_keys):
+            _delete_self_referential_table(session, table)
+        else:
+            session.execute(sqlalchemy.text(f'DELETE FROM "{table.name}"'))
+            session.commit()
+
+
+def _delete_self_referential_table(session: Session, table: sqlalchemy.Table) -> None:
+    """Empty a self-referential table by repeatedly deleting its leaf rows.
+
+    DuckDB can't delete a self-referential table in one statement (strict FK checks),
+    and treats UPDATE as delete+insert, so even nulling the FK column does not work.
+    We delete the unreferenced rows round by round until the table is empty.
+    """
+    (pk_column,) = table.primary_key.columns
+    self_ref_columns = [fk.parent.name for fk in table.foreign_keys if fk.column.table is table]
+    parent_keys = ", ".join(f'"{column}"' for column in self_ref_columns)
+    not_null = " OR ".join(f'"{column}" IS NOT NULL' for column in self_ref_columns)
+    delete_leaves = (
+        f'DELETE FROM "{table.name}" WHERE "{pk_column.name}" NOT IN '
+        f'(SELECT {parent_keys} FROM "{table.name}" WHERE {not_null})'
+    )
+    count_rows = f'SELECT COUNT(*) FROM "{table.name}"'
+    # DuckDB reports rowcount as -1, so condition on COUNT(*) instead.
+    remaining = session.execute(sqlalchemy.text(count_rows)).scalar_one()
+    while remaining > 0:
+        session.execute(sqlalchemy.text(delete_leaves))
+        session.commit()
+        # Check that the number of rows is decreasing.
+        previous, remaining = remaining, session.execute(sqlalchemy.text(count_rows)).scalar_one()
+        assert remaining < previous, f'"{table.name}" did not shrink; possible FK cycle'

@@ -47,7 +47,7 @@ async function handleSelectionSuccess(
     selectionResultTagName: string,
     params: UseSubmitCombinationSelectionParams
 ): Promise<void> {
-    toast.success('Selection created successfully');
+    toast.success('Sampling created successfully');
     await params.loadTags();
     const newTag = get(params.tags).find((tag) => tag.name === selectionResultTagName);
     if (newTag) params.setTagSelected(newTag.tag_id, true);

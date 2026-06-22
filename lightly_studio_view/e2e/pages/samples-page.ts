@@ -147,12 +147,12 @@ export class SamplesPage {
         await this.page.getByTestId('menu-trigger').click();
         await this.page.getByTestId('menu-sampling').click();
 
-        await this.page.getByTestId('sampling-dialog-strategy-select').click();
-        await this.page.getByTestId(`sampling-strategy-${strategy}`).click();
+        await this.page.getByTestId('add-strategy-button').click();
+        await this.page.getByTestId(`add-strategy-${strategy}`).click();
 
         if (strategy === 'similarity') {
-            await this.page.getByTestId('sampling-dialog-query-tag-select').click();
-            await this.page.getByTestId(`sampling-query-tag-${queryTagId}`).click();
+            await this.page.getByTestId('similarity-query-tag-select').click();
+            await this.page.getByTestId(`similarity-query-tag-${queryTagId}`).click();
         }
 
         const nSamplesInput = this.page.getByTestId('sampling-dialog-n-samples-input');

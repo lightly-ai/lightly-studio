@@ -13,12 +13,14 @@ from sqlmodel import col
 from sqlmodel.sql.expression import SelectOfScalar
 from typing_extensions import Self, TypeVar
 
-from lightly_studio import db_json
 from lightly_studio.core.dataset_query.field import Field
+from lightly_studio.database import db_json
+from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import SampleMetadataTable
+from lightly_studio.models.sample import SampleTable
 
 T = TypeVar("T", default=ImageTable)
 # Preserves the query type so apply_joins works on both SelectOfScalar (apply)
@@ -197,6 +199,7 @@ class OrderByEvaluationMetricField(OrderByExpression):
         # reference distinct value columns — avoiding ambiguous/duplicate SQL.
         self._run_alias = aliased(EvaluationRunTable)
         self._metric_alias = aliased(EvaluationSampleMetricTable)
+        self._collection_alias = aliased(CollectionTable)
 
     def _order_value_expression(self) -> ColumnElement[Any]:
         """Return the evaluation metric value column from the per-instance alias."""
@@ -205,8 +208,14 @@ class OrderByEvaluationMetricField(OrderByExpression):
     def apply_joins(self, query: SelectT) -> SelectT:
         """Left-outer-join evaluation run and sample-metric tables."""
         query = query.outerjoin(
+            self._collection_alias,
+            col(self._collection_alias.collection_id) == col(SampleTable.collection_id),
+        ).outerjoin(
             self._run_alias,
-            col(self._run_alias.name) == self.evaluation_run_name,
+            and_(
+                col(self._run_alias.name) == self.evaluation_run_name,
+                col(self._run_alias.dataset_id) == col(self._collection_alias.dataset_id),
+            ),
         )
         return query.outerjoin(
             self._metric_alias,

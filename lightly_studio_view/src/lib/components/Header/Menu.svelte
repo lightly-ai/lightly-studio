@@ -122,6 +122,7 @@
         hideSelectionMarker
         itemsAsLinks
         onValueChange={handleValueChange}
+        variant="ghost"
         class="nav-button w-[100px]"
         testId="menu-trigger"
     />

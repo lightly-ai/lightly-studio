@@ -214,6 +214,69 @@ describe('useSamplingCombinationDialog', () => {
         });
     });
 
+    describe('createButtonTooltip', () => {
+        it('returns message about adding a strategy when instances list is empty', () => {
+            instances.set([]);
+            const { createButtonTooltip, nSamplesToSelect, selectionResultTagName } =
+                useSamplingCombinationDialog(defaultParams);
+            nSamplesToSelect.set(10);
+            selectionResultTagName.set('my-tag');
+
+            expect(get(createButtonTooltip)).toBe('Add at least 1 strategy to create a selection.');
+        });
+
+        it('returns message about completing strategy fields when any instance is invalid', () => {
+            instances.set([
+                { id: 'a', type: 'diversity', params: { strength: 1 }, isExpanded: true }
+            ]);
+            vi.mocked(isStrategyInstanceValid).mockReturnValue(false);
+            const { createButtonTooltip, nSamplesToSelect, selectionResultTagName } =
+                useSamplingCombinationDialog(defaultParams);
+            nSamplesToSelect.set(10);
+            selectionResultTagName.set('my-tag');
+
+            expect(get(createButtonTooltip)).toBe(
+                'Complete the required fields in all strategies.'
+            );
+        });
+
+        it('returns message about sample count when nSamplesToSelect is 0', () => {
+            instances.set([
+                { id: 'a', type: 'diversity', params: { strength: 1 }, isExpanded: true }
+            ]);
+            const { createButtonTooltip, nSamplesToSelect, selectionResultTagName } =
+                useSamplingCombinationDialog(defaultParams);
+            nSamplesToSelect.set(0);
+            selectionResultTagName.set('my-tag');
+
+            expect(get(createButtonTooltip)).toBe('Enter a number of samples greater than 0.');
+        });
+
+        it('returns message about tag name when selectionResultTagName is blank', () => {
+            instances.set([
+                { id: 'a', type: 'diversity', params: { strength: 1 }, isExpanded: true }
+            ]);
+            const { createButtonTooltip, nSamplesToSelect, selectionResultTagName } =
+                useSamplingCombinationDialog(defaultParams);
+            nSamplesToSelect.set(10);
+            selectionResultTagName.set('   ');
+
+            expect(get(createButtonTooltip)).toBe('Enter a tag name.');
+        });
+
+        it('returns empty string when form is valid', () => {
+            instances.set([
+                { id: 'a', type: 'diversity', params: { strength: 1 }, isExpanded: true }
+            ]);
+            const { createButtonTooltip, nSamplesToSelect, selectionResultTagName } =
+                useSamplingCombinationDialog(defaultParams);
+            nSamplesToSelect.set(10);
+            selectionResultTagName.set('my-tag');
+
+            expect(get(createButtonTooltip)).toBe('');
+        });
+    });
+
     describe('handleFormSubmit', () => {
         function makeValidForm(hook: ReturnType<typeof useSamplingCombinationDialog>) {
             instances.set([
@@ -303,6 +366,83 @@ describe('useSamplingCombinationDialog', () => {
                     selectionFilter: { sample_filter: { tag_ids: ['t-1'] }, filter_type: 'image' }
                 })
             );
+        });
+    });
+
+    describe('updateAbsolute', () => {
+        it('updates nSamplesToSelect and derives percentageToSelect from filteredSampleCount', () => {
+            filteredSampleCount.set(1000);
+            const { updateAbsolute, nSamplesToSelect, percentageToSelect } =
+                useSamplingCombinationDialog(defaultParams);
+
+            updateAbsolute(100);
+
+            expect(get(nSamplesToSelect)).toBe(100);
+            expect(get(percentageToSelect)).toBe(10);
+        });
+
+        it('rounds percentageToSelect to the nearest integer', () => {
+            filteredSampleCount.set(1000);
+            const { updateAbsolute, percentageToSelect } =
+                useSamplingCombinationDialog(defaultParams);
+
+            updateAbsolute(333);
+
+            expect(get(percentageToSelect)).toBe(33);
+        });
+
+        it('sets percentageToSelect to 0 when filteredSampleCount is 0', () => {
+            filteredSampleCount.set(0);
+            const { updateAbsolute, percentageToSelect } =
+                useSamplingCombinationDialog(defaultParams);
+
+            updateAbsolute(10);
+
+            expect(get(percentageToSelect)).toBe(0);
+        });
+    });
+
+    describe('updatePercentage', () => {
+        it('updates percentageToSelect and derives nSamplesToSelect from filteredSampleCount', () => {
+            filteredSampleCount.set(1000);
+            const { updatePercentage, nSamplesToSelect, percentageToSelect } =
+                useSamplingCombinationDialog(defaultParams);
+
+            updatePercentage(10);
+
+            expect(get(percentageToSelect)).toBe(10);
+            expect(get(nSamplesToSelect)).toBe(100);
+        });
+
+        it('rounds nSamplesToSelect to the nearest integer', () => {
+            filteredSampleCount.set(1000);
+            const { updatePercentage, nSamplesToSelect } =
+                useSamplingCombinationDialog(defaultParams);
+
+            updatePercentage(33);
+
+            expect(get(nSamplesToSelect)).toBe(330);
+        });
+
+        it('sets nSamplesToSelect to 0 when filteredSampleCount is 0', () => {
+            filteredSampleCount.set(0);
+            const { updatePercentage, nSamplesToSelect } =
+                useSamplingCombinationDialog(defaultParams);
+
+            updatePercentage(50);
+
+            expect(get(nSamplesToSelect)).toBe(0);
+        });
+
+        it('allows percentage above 100 without clamping', () => {
+            filteredSampleCount.set(100);
+            const { updatePercentage, nSamplesToSelect, percentageToSelect } =
+                useSamplingCombinationDialog(defaultParams);
+
+            updatePercentage(150);
+
+            expect(get(percentageToSelect)).toBe(150);
+            expect(get(nSamplesToSelect)).toBe(150);
         });
     });
 

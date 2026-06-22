@@ -25,6 +25,7 @@ from lightly_studio.models.evaluation_run import (
 from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
     annotation_resolver,
+    collection_resolver,
     evaluation_run_resolver,
 )
 
@@ -307,12 +308,19 @@ class ImageDatasetEvaluate:
             collection_name=pred_annotation_source,
             task_type=task_type,
         )
+        collection = collection_resolver.get_by_id(
+            session=self.session, collection_id=self.collection_id
+        )
+        if collection is None:
+            raise ValueError(f"Collection {self.collection_id} not found")
+
         evaluation_run = evaluation_run_resolver.create(
             session=self.session,
             evaluation_run_input=EvaluationRunCreate(
                 name=name,
                 gt_annotation_collection_id=gt_collection_id,
                 pred_annotation_collection_id=pred_collection_id,
+                dataset_id=collection.dataset_id,
                 task_type=task_type,
                 config_json=config_json,
             ),

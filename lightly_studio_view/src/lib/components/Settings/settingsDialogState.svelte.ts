@@ -27,6 +27,7 @@ interface SettingsDialogFormState {
     showAnnotationTextLabels: boolean;
     showSampleFilenames: boolean;
     showBoundingBoxesForSegmentation: boolean;
+    enforceColoringByClass: boolean;
 }
 
 interface ShortcutKeyboardEvent {
@@ -51,7 +52,8 @@ export function createSettingsDialogFormState(settings: SettingView): SettingsDi
         gridViewThumbnailQuality: settings.grid_view_thumbnail_quality,
         showAnnotationTextLabels: settings.show_annotation_text_labels,
         showSampleFilenames: settings.show_sample_filenames,
-        showBoundingBoxesForSegmentation: settings.show_bounding_boxes_for_segmentation
+        showBoundingBoxesForSegmentation: settings.show_bounding_boxes_for_segmentation,
+        enforceColoringByClass: settings.enforce_coloring_by_class
     };
 }
 
@@ -67,6 +69,7 @@ export function createSettingsSavePayload(
         show_annotation_text_labels: formState.showAnnotationTextLabels,
         show_sample_filenames: formState.showSampleFilenames,
         show_bounding_boxes_for_segmentation: formState.showBoundingBoxesForSegmentation,
+        enforce_coloring_by_class: formState.enforceColoringByClass,
         key_toolbar_selection: formState.shortcutSettings.keyToolbarSelection,
         key_toolbar_drag: formState.shortcutSettings.keyToolbarDrag,
         key_toolbar_bounding_box: formState.shortcutSettings.keyToolbarBoundingBox,
@@ -115,6 +118,7 @@ export class SettingsDialogState {
     showAnnotationTextLabels = $state(false);
     showSampleFilenames = $state(false);
     showBoundingBoxesForSegmentation = $state(true);
+    enforceColoringByClass = $state(false);
     recordingShortcut: ShortcutSettingKey | null = $state(null);
     isSaving = $state(false);
 
@@ -127,6 +131,7 @@ export class SettingsDialogState {
         this.showAnnotationTextLabels = formState.showAnnotationTextLabels;
         this.showSampleFilenames = formState.showSampleFilenames;
         this.showBoundingBoxesForSegmentation = formState.showBoundingBoxesForSegmentation;
+        this.enforceColoringByClass = formState.enforceColoringByClass;
     }
 
     startRecording(key: ShortcutSettingKey): void {
@@ -154,7 +159,8 @@ export class SettingsDialogState {
             gridViewThumbnailQuality: this.gridViewThumbnailQuality,
             showAnnotationTextLabels: this.showAnnotationTextLabels,
             showSampleFilenames: this.showSampleFilenames,
-            showBoundingBoxesForSegmentation: this.showBoundingBoxesForSegmentation
+            showBoundingBoxesForSegmentation: this.showBoundingBoxesForSegmentation,
+            enforceColoringByClass: this.enforceColoringByClass
         });
     }
 }

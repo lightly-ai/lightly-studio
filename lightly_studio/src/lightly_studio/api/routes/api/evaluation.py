@@ -7,6 +7,7 @@ from typing import Annotated, Literal, Union
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Path
+from lightly_studio.db_manager import SessionDep
 from pydantic import BaseModel, Field
 
 from lightly_studio.api.routes.api.status import (
@@ -14,7 +15,6 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_NOT_IMPLEMENTED,
 )
-from lightly_studio.db_manager import SessionDep
 from lightly_studio.evaluation.image_dataset_evaluate import (
     ClassificationEvaluationConfig,
     EvaluationResult,

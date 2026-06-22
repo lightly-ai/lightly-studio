@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Path
 from pydantic import BaseModel, Field
 
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
-from lightly_studio.db_manager import SessionDep
+from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.group import GroupComponentView, GroupViewsWithCount
 from lightly_studio.resolvers import group_resolver
 from lightly_studio.resolvers.group_resolver.group_filter import GroupFilter

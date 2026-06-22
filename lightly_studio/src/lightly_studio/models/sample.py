@@ -16,14 +16,16 @@ class SampleTagLinkTable(SQLModel, table=True):
     sample_id: Optional[UUID] = Field(
         default=None, foreign_key="sample.sample_id", primary_key=True
     )
-    tag_id: Optional[UUID] = Field(default=None, foreign_key="tag.tag_id", primary_key=True)
+    tag_id: Optional[UUID] = Field(
+        default=None, foreign_key="tag.tag_id", primary_key=True, index=True
+    )
 
 
 class SampleBase(SQLModel):
     """Base class for the Sample model."""
 
     """The collection ID to which the sample belongs."""
-    collection_id: UUID = Field(default=None, foreign_key="collection.collection_id")
+    collection_id: UUID = Field(default=None, foreign_key="collection.collection_id", index=True)
 
 
 class SampleCreate(SampleBase):
@@ -50,6 +52,12 @@ class SampleTable(SampleBase, table=True):
         sa_relationship_kwargs={
             "lazy": "select",
             "foreign_keys": "[AnnotationBaseTable.parent_sample_id]",
+        },
+    )
+    collection: Mapped["CollectionTable"] = Relationship(
+        sa_relationship_kwargs={
+            "lazy": "select",
+            "foreign_keys": "[SampleTable.collection_id]",
         },
     )
     captions: Mapped[list["CaptionTable"]] = Relationship(
@@ -142,6 +150,7 @@ from lightly_studio.models.annotation.annotation_base import (  # noqa: E402
     AnnotationView,
 )
 from lightly_studio.models.caption import CaptionTable, CaptionView  # noqa: E402
+from lightly_studio.models.collection import CollectionTable  # noqa: E402
 from lightly_studio.models.metadata import (  # noqa: E402
     SampleMetadataTable,
     SampleMetadataView,

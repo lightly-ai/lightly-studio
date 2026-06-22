@@ -31,8 +31,6 @@ export { default as SelectableBox } from '$lib/components/SelectableBox/Selectab
 export { SettingsDialog } from '$lib/components/Settings/';
 export { default as TagsMenu } from '$lib/components/TagsMenu/TagsMenu.svelte';
 export { default as UserInfo } from '$lib/components/UserInfo/index.svelte';
-export { default as CreateSamplingDialog } from '$lib/components/Sampling/CreateSamplingDialog.svelte';
-export { default as SamplingCombinationDialog } from '$lib/components/Sampling/SamplingCombinationDialog.svelte';
 export { default as ClassifiersMenu } from '$lib/components/FewShotClassifier/ClassifiersMenu.svelte';
 export { default as CreateClassifierDialog } from '$lib/components/FewShotClassifier/CreateClassifierDialog.svelte';
 export { default as RefineClassifierDialog } from '$lib/components/FewShotClassifier/RefineClassifierDialog.svelte';
@@ -49,6 +47,7 @@ export { default as VideoPlayer } from '$lib/components/VideoPlayer/VideoPlayer.
 export { default as VideoSampleMetadata } from '$lib/components/VideoSampleMetadata/VideoSampleMetadata.svelte';
 export { default as GridHeader } from '$lib/components/GridHeader/GridHeader.svelte';
 export { default as DatasetGridHeader } from '$lib/components/DatasetGridHeader/DatasetGridHeader.svelte';
+export { default as SidePanelTabs } from '$lib/components/SidePanelTabs/SidePanelTabs.svelte';
 export { default as CaptionsItem } from '$lib/components/Captions/CaptionsItem/CaptionsItem.svelte';
 export { default as Typography } from '$lib/components/Typography/Typography.svelte';
 export { default as GroupsGrid } from '$lib/components/GroupsGrid/GroupsGrid.svelte';
@@ -67,3 +66,4 @@ export { default as CollectionSearch } from '$lib/components/CollectionSearch/Co
 export { default as CollectionSearchImage } from '$lib/components/CollectionSearch/CollectionSearchImage/CollectionSearchImage.svelte';
 export { default as CollectionSearchInput } from '$lib/components/CollectionSearch/SearchInput/CollectionSearchInput.svelte';
 export { default as OrderBy } from '$lib/components/OrderBy/OrderBy.svelte';
+export { default as SamplingCombinationDialog } from '$lib/components/Sampling/SamplingCombinationDialog.svelte';

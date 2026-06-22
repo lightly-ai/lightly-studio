@@ -9,7 +9,9 @@ from sqlalchemy import ColumnElement, and_
 from sqlmodel import col
 from typing_extensions import TypeVar
 
+from lightly_studio.core.dataset_query.annotation_expression import AnnotationSourceField
 from lightly_studio.core.dataset_query.boolean_expression import AND
+from lightly_studio.core.dataset_query.field import NullableOrdinalField
 from lightly_studio.core.dataset_query.foreign_field import (
     ForeignComparableField,
     ForeignNumericalField,
@@ -49,7 +51,8 @@ class ObjectDetectionField:
         column=col(AnnotationLabelTable.annotation_label_name),
         relationship=AnnotationBaseTable.annotation_label,
     )
-    # TODO(lukas, 4/2026): add confidence
+    source = AnnotationSourceField()
+    confidence = NullableOrdinalField(col(AnnotationBaseTable.confidence))
 
 
 class ObjectDetectionQuery:

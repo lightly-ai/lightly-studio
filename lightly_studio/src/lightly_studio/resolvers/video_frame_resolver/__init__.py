@@ -14,6 +14,7 @@ from lightly_studio.resolvers.video_frame_resolver.get_by_id import (
     get_by_id,
 )
 from lightly_studio.resolvers.video_frame_resolver.get_sample_ids import (
+    build_sample_ids_query,
     get_sample_ids,
 )
 from lightly_studio.resolvers.video_frame_resolver.get_table_fields_bounds import (
@@ -28,6 +29,7 @@ from lightly_studio.resolvers.video_frame_resolver.video_frame_adjacent_filter i
 
 __all__ = [
     "VideoFrameAdjacentFilter",
+    "build_sample_ids_query",
     "create_many",
     "get_adjacent_video_frames",
     "get_all_by_collection_id",

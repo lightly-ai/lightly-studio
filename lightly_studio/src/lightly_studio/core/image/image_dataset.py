@@ -294,6 +294,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         images_path: PathLike,
         split: str | None = None,
         embed: bool = True,
+        annotation_source: str | None = None,
     ) -> None:
         """Load a dataset from a labelformat object and store in database.
 
@@ -303,6 +304,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             split: Optional split name to tag samples (e.g., 'train', 'val').
                 If provided, all samples will be tagged with this name.
             embed: If True, generate embeddings for the newly added samples.
+            annotation_source: Name of the annotation source to add the annotations
+                to. Reusing the same source name appends to that source. If `None`,
+                a default source is used.
         """
         images_path = Path(images_path).absolute()
 
@@ -311,6 +315,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             root_collection_id=self.collection_id,
             input_labels=input_labels,
             images_path=images_path,
+            collection_name=annotation_source,
         )
 
         _postprocess_created_images(
@@ -326,6 +331,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         data_yaml: PathLike,
         input_split: str | None = None,
         embed: bool = True,
+        annotation_source: str | None = None,
     ) -> None:
         """Load a dataset in YOLO format and store in DB.
 
@@ -334,6 +340,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             input_split: The split to load (e.g., 'train', 'val', 'test').
                 If None, all available splits will be loaded and assigned a corresponding tag.
             embed: If True, generate embeddings for the newly added samples.
+            annotation_source: Name of the annotation source to add the annotations
+                to. Reusing the same source name appends to that source. If `None`,
+                a default source is used.
         """
         data_yaml = Path(data_yaml).absolute()
 
@@ -361,6 +370,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 root_collection_id=self.collection_id,
                 input_labels=label_input,
                 images_path=images_path,
+                collection_name=annotation_source,
             )
 
             # Tag samples with split name
@@ -383,13 +393,14 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             embed=embed,
         )
 
-    def add_samples_from_coco(
+    def add_samples_from_coco(  # noqa: PLR0913
         self,
         annotations_json: PathLike,
         images_path: PathLike,
         annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
         split: str | None = None,
         embed: bool = True,
+        annotation_source: str | None = None,
     ) -> None:
         """Load a dataset in COCO Object Detection format and store in DB.
 
@@ -401,6 +412,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             split: Optional split name to tag samples (e.g., 'train', 'val').
                 If provided, all samples will be tagged with this name.
             embed: If True, generate embeddings for the newly added samples.
+            annotation_source: Name of the annotation source to add the annotations
+                to. Reusing the same source name appends to that source. If `None`,
+                a default source is used.
         """
         images_path = _normalize_input_path(path=images_path)
         fs, fs_path = fsspec.core.url_to_fs(url=annotations_json)
@@ -425,6 +439,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             root_collection_id=self.collection_id,
             input_labels=label_input,
             images_path=images_path,
+            collection_name=annotation_source,
         )
 
         _postprocess_created_images(
@@ -435,13 +450,14 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             embed=embed,
         )
 
-    def add_samples_from_pascal_voc_segmentations(
+    def add_samples_from_pascal_voc_segmentations(  # noqa: PLR0913
         self,
         images_path: PathLike,
         masks_path: PathLike,
         class_id_to_name: Mapping[int, str],
         split: str | None = None,
         embed: bool = True,
+        annotation_source: str | None = None,
     ) -> None:
         """Load a Pascal VOC segmentation dataset and store in DB.
 
@@ -456,6 +472,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             split: Optional split name to tag samples (e.g., 'train', 'val').
                 If provided, all samples will be tagged with this name.
             embed: If True, generate embeddings for the newly added samples.
+            annotation_source: Name of the annotation source to add the annotations
+                to. Reusing the same source name appends to that source. If `None`,
+                a default source is used.
         """
         images_path = _normalize_input_path(path=images_path)
         masks_path = _normalize_input_path(path=masks_path)
@@ -471,6 +490,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             root_collection_id=self.collection_id,
             input_labels=label_input,
             images_path=images_path,
+            collection_name=annotation_source,
         )
 
         _postprocess_created_images(
@@ -487,6 +507,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         images_rel_path: str = "../images",
         split: str | None = None,
         embed: bool = True,
+        annotation_source: str | None = None,
     ) -> None:
         """Load a dataset in Lightly format and store in DB.
 
@@ -496,6 +517,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             split: Optional split name to tag samples (e.g., 'train', 'val').
                 If provided, all samples will be tagged with this name.
             embed: If True, generate embeddings for the newly added samples.
+            annotation_source: Name of the annotation source to add the annotations
+                to. Reusing the same source name appends to that source. If `None`,
+                a default source is used.
         """
         input_folder = Path(input_folder).absolute()
 
@@ -510,6 +534,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             root_collection_id=self.collection_id,
             input_labels=label_input,
             images_path=images_path,
+            collection_name=annotation_source,
         )
 
         _postprocess_created_images(
