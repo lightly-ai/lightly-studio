@@ -111,6 +111,5 @@ def _flush_crop_batch(  # noqa: PLR0913
     for batch_position, crop_index in enumerate(batch_indices):
         embeddings[crop_index] = batch_embeddings[batch_position]
     progress_bar.update(len(batch_tensors))
-    # Clear in place so the caller continues accumulating into the same lists.
     batch_tensors.clear()
     batch_indices.clear()

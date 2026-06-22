@@ -40,10 +40,7 @@ logger = logging.getLogger(__name__)
 # round-trips but higher peak memory. 1024 balances the two.
 EMBEDDING_INSERTION_BATCH_SIZE = 1024
 
-# Number of annotation crops processed per chunk in embed_annotations. Each chunk is
-# queried, embedded, and committed independently to bound peak memory (ORM rows plus the
-# embeddings array) and to make the operation resumable on large datasets. Kept well below
-# PostgreSQL's bind-parameter cap so the per-chunk IN-clause stays valid.
+# Number of annotation crops processed per chunk in embed_annotations.
 ANNOTATION_EMBED_BATCH_SIZE = 2048
 
 
@@ -227,9 +224,6 @@ class EmbeddingManager:
         if not isinstance(model, ImageEmbeddingGenerator):
             raise ValueError("Embedding model not compatible with annotation crops.")
 
-        # Resolve only the lightweight IDs of annotations still needing an embedding, then
-        # process them in chunks. Each chunk queries its own crops, embeds, and commits, so
-        # peak memory stays bounded and a crash resumes from the last committed chunk.
         annotation_sample_ids = _get_unembedded_annotation_ids(
             session=session,
             annotation_collection_id=annotation_collection_id,
