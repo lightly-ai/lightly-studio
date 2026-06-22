@@ -55,7 +55,11 @@
 <Collapsible bind:open>
     <div class="flex items-center gap-2" data-testid="annotation-source-group-header" title={name}>
         {#if showColorMarker}
-            <ColorMarker label={name} enableColorPicker />
+            <ColorMarker
+                label={name}
+                enableColorPicker
+                markerProps={{ 'data-testid': `color-marker-${name}` }}
+            />
         {/if}
         <CollapsibleTrigger class="flex min-w-0 flex-1 items-center justify-between py-1">
             <span class="truncate text-sm font-medium">{name}</span>

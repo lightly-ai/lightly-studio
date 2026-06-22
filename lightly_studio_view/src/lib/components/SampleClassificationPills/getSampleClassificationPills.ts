@@ -1,9 +1,11 @@
 import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
+import { resolveEffectiveColorBySource } from '$lib/utils/resolveEffectiveColorBySource';
 
 interface GetSampleClassificationPillsParams {
     annotations: AnnotationView[];
     selectedCollectionIds: string[];
     collectionIdToName: Record<string, string>;
+    enforceColoringByClass: boolean;
 }
 
 interface CreateSampleClassificationPillParams {
@@ -76,9 +78,13 @@ function dedupeAndSortPills(pills: SampleClassificationPill[]): SampleClassifica
 export function getSampleClassificationPills({
     annotations,
     selectedCollectionIds,
-    collectionIdToName
+    collectionIdToName,
+    enforceColoringByClass
 }: GetSampleClassificationPillsParams): SampleClassificationPill[] {
-    const showSourceColors = selectedCollectionIds.length > 1;
+    const showSourceColors = resolveEffectiveColorBySource({
+        multipleSourcesVisible: selectedCollectionIds.length > 1,
+        enforceColoringByClass
+    });
 
     return dedupeAndSortPills(
         annotations

@@ -8,7 +8,8 @@ const mocks = vi.hoisted(() => ({
     collections: [] as { collection_id: string; name: string }[],
     selectedCollectionIds: [] as string[],
     lastCreatedAnnotationId: null as string | null,
-    isEditingMode: undefined as unknown as { set: (value: boolean) => void }
+    isEditingMode: undefined as unknown as { set: (value: boolean) => void },
+    enforceColoringByClassStore: undefined as unknown as { set: (value: boolean) => void }
 }));
 
 vi.mock('$app/state', () => ({
@@ -40,6 +41,17 @@ vi.mock('$lib/hooks/useGlobalStorage', async () => {
             isEditingMode,
             addReversibleAction: vi.fn()
         })
+    };
+});
+
+vi.mock('$lib/hooks/useSettings', async () => {
+    const { writable } = await import('svelte/store');
+    const enforceColoringByClassStore = writable(false);
+    mocks.enforceColoringByClassStore = enforceColoringByClassStore;
+    return {
+        useSettings: vi.fn(() => ({
+            enforceColoringByClassStore
+        }))
     };
 });
 
@@ -84,6 +96,18 @@ vi.mock('svelte-sonner', () => ({
     toast: { success: vi.fn(), error: vi.fn() }
 }));
 
+vi.mock('$lib/hooks/useCustomLabelColors', async () => {
+    const { writable } = await import('svelte/store');
+    return {
+        useCustomLabelColors: () => ({
+            customLabelColorsStore: writable({}),
+            getCustomColor: () => undefined,
+            setCustomColor: vi.fn(),
+            hasCustomColor: () => false
+        })
+    };
+});
+
 const groundTruthSource = { collection_id: 'source-gt', name: 'Ground truth' };
 const predictionsSource = { collection_id: 'source-pred', name: 'Predictions' };
 
@@ -117,6 +141,7 @@ describe('SampleDetailsClassificationSegment', () => {
         mocks.selectedCollectionIds = [];
         mocks.lastCreatedAnnotationId = null;
         mocks.isEditingMode.set(false);
+        mocks.enforceColoringByClassStore.set(false);
     });
 
     it('renders a flat list without source groups for a single source', () => {
@@ -239,6 +264,38 @@ describe('SampleDetailsClassificationSegment', () => {
 
         expect(screen.getByText('bird')).toBeInTheDocument();
         expect(screen.queryByText(/Confidence:/)).not.toBeInTheDocument();
+    });
+
+    it('shows source group color markers when multiple sources are visible and enforce coloring is disabled', () => {
+        mocks.collections = [groundTruthSource, predictionsSource];
+        mocks.enforceColoringByClassStore.set(false);
+        const annotations = [
+            createClassification('c1', groundTruthSource.collection_id, 'cat'),
+            createClassification('c2', predictionsSource.collection_id, 'zebra')
+        ];
+
+        render(SampleDetailsClassificationSegment, { props: { ...defaultProps, annotations } });
+
+        expect(screen.getByTestId(`color-marker-${groundTruthSource.name}`)).toBeInTheDocument();
+        expect(screen.getByTestId(`color-marker-${predictionsSource.name}`)).toBeInTheDocument();
+    });
+
+    it('hides source group color markers when enforce coloring by class is enabled', () => {
+        mocks.collections = [groundTruthSource, predictionsSource];
+        mocks.enforceColoringByClassStore.set(true);
+        const annotations = [
+            createClassification('c1', groundTruthSource.collection_id, 'cat'),
+            createClassification('c2', predictionsSource.collection_id, 'zebra')
+        ];
+
+        render(SampleDetailsClassificationSegment, { props: { ...defaultProps, annotations } });
+
+        expect(
+            screen.queryByTestId(`color-marker-${groundTruthSource.name}`)
+        ).not.toBeInTheDocument();
+        expect(
+            screen.queryByTestId(`color-marker-${predictionsSource.name}`)
+        ).not.toBeInTheDocument();
     });
 
     it('renders editable rows inside groups with a single add button below', async () => {
