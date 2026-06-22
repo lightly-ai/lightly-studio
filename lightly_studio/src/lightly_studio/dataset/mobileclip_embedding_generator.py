@@ -19,7 +19,8 @@ from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.vendor import mobileclip
 
 from . import file_utils
-from .embedding_generator import ImageEmbeddingGenerator
+from .embedding_generator import ImageCrop, ImageEmbeddingGenerator
+from .image_crop_embedding import embed_image_crops_batched
 
 MODEL_NAME = "mobileclip_s0"
 MOBILECLIP_DOWNLOAD_URL = (
@@ -154,6 +155,33 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
                 progress_bar.update(batch_size)
 
         return embeddings
+
+    def embed_image_crops(
+        self, image_crops: list[ImageCrop], show_progress: bool = True
+    ) -> NDArray[np.float32]:
+        """Embed image crops with MobileCLIP.
+
+        Args:
+            image_crops: A list of image crop definitions to embed.
+            show_progress: Whether to show a progress bar during embedding.
+
+        Returns:
+            A numpy array representing the generated embeddings in the same order
+            as the input crops.
+        """
+        return embed_image_crops_batched(
+            image_crops,
+            embedding_dimension=EMBEDDING_DIMENSION,
+            max_batch_size=MAX_BATCH_SIZE,
+            device=self._device,
+            preprocess=self._preprocess,
+            encode_batch=lambda images_tensor: (
+                self._model.encode_image(images_tensor)  # type: ignore[operator]
+                .cpu()
+                .numpy()
+            ),
+            show_progress=show_progress,
+        )
 
 
 def _get_cached_mobileclip_checkpoint() -> Path:

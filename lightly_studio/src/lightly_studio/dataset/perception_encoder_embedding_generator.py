@@ -20,7 +20,8 @@ from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transforms
 
 from . import file_utils
-from .embedding_generator import ImageEmbeddingGenerator, VideoEmbeddingGenerator
+from .embedding_generator import ImageCrop, ImageEmbeddingGenerator, VideoEmbeddingGenerator
+from .image_crop_embedding import embed_image_crops_batched
 
 MODEL_NAME = "PE-Core-T16-384"
 DEFAULT_VIDEO_CHANNEL = 0
@@ -231,6 +232,31 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
                 progress_bar.update(batch_size)
 
         return embeddings
+
+    def embed_image_crops(
+        self, image_crops: list[ImageCrop], show_progress: bool = True
+    ) -> NDArray[np.float32]:
+        """Embed image crops with Perception Encoder.
+
+        Args:
+            image_crops: A list of image crop definitions to embed.
+            show_progress: Whether to show a progress bar during embedding.
+
+        Returns:
+            A numpy array representing the generated embeddings in the same order
+            as the input crops.
+        """
+        return embed_image_crops_batched(
+            image_crops,
+            embedding_dimension=self._model.output_dim,
+            max_batch_size=MAX_BATCH_SIZE,
+            device=self._device,
+            preprocess=self._preprocess,
+            encode_batch=lambda images_tensor: (
+                self._model.encode_image(images_tensor, normalize=True).cpu().numpy()
+            ),
+            show_progress=show_progress,
+        )
 
     def embed_videos(self, filepaths: list[str]) -> NDArray[np.float32]:
         """Embed videos with Perception Encoder.
