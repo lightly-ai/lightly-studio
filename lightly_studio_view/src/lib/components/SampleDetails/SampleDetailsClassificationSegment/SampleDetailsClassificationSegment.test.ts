@@ -268,6 +268,10 @@ describe('SampleDetailsClassificationSegment', () => {
 
     it('shows source group color markers when multiple sources are visible and enforce coloring is disabled', () => {
         mocks.collections = [groundTruthSource, predictionsSource];
+        mocks.selectedCollectionIds = [
+            groundTruthSource.collection_id,
+            predictionsSource.collection_id
+        ];
         mocks.enforceColoringByClassStore.set(false);
         const annotations = [
             createClassification('c1', groundTruthSource.collection_id, 'cat'),
