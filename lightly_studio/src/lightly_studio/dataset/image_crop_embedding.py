@@ -75,21 +75,21 @@ def embed_image_crops_batched(  # noqa: PLR0913
                     batch_indices.append(index)
                     if len(batch_tensors) >= max_batch_size:
                         _flush_crop_batch(
-                            batch_tensors,
-                            batch_indices,
-                            embeddings,
-                            device,
-                            encode_batch,
-                            progress_bar,
+                            batch_tensors=batch_tensors,
+                            batch_indices=batch_indices,
+                            embeddings=embeddings,
+                            device=device,
+                            encode_batch=encode_batch,
+                            progress_bar=progress_bar,
                         )
 
         _flush_crop_batch(
-            batch_tensors,
-            batch_indices,
-            embeddings,
-            device,
-            encode_batch,
-            progress_bar,
+            batch_tensors=batch_tensors,
+            batch_indices=batch_indices,
+            embeddings=embeddings,
+            device=device,
+            encode_batch=encode_batch,
+            progress_bar=progress_bar,
         )
 
     return embeddings
