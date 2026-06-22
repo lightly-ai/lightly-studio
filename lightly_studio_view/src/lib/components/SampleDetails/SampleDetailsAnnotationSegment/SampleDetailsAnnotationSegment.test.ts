@@ -8,7 +8,8 @@ const mocks = vi.hoisted(() => ({
     collections: [] as { collection_id: string; name: string }[],
     selectedCollectionIds: [] as string[],
     lastCreatedAnnotationId: null as string | null,
-    seedSelectionIfNeeded: vi.fn()
+    seedSelectionIfNeeded: vi.fn(),
+    enforceColoringByClassStore: undefined as unknown as { set: (value: boolean) => void }
 }));
 
 // Replace the heavy per-annotation row with a lightweight stub.
@@ -73,6 +74,17 @@ vi.mock('$lib/hooks/useAnnotationSelection/useAnnotationSelection', () => ({
     useAnnotationSelection: vi.fn(() => ({ selectAnnotation: vi.fn() }))
 }));
 
+vi.mock('$lib/hooks/useSettings', async () => {
+    const { writable } = await import('svelte/store');
+    const enforceColoringByClassStore = writable(false);
+    mocks.enforceColoringByClassStore = enforceColoringByClassStore;
+    return {
+        useSettings: vi.fn(() => ({
+            enforceColoringByClassStore
+        }))
+    };
+});
+
 const groundTruthSource = { collection_id: 'source-gt', name: 'Ground truth' };
 const predictionsSource = { collection_id: 'source-pred', name: 'Predictions' };
 
@@ -110,6 +122,7 @@ describe('SampleDetailsAnnotationSegment', () => {
         mocks.collections = [];
         mocks.selectedCollectionIds = [];
         mocks.lastCreatedAnnotationId = null;
+        mocks.enforceColoringByClassStore.set(false);
     });
 
     it('renders a flat list without source groups when there is a single source', () => {
@@ -389,6 +402,20 @@ describe('SampleDetailsAnnotationSegment', () => {
             expect(getSourceColorMarker(headers[0])).not.toBeInTheDocument();
             expect(getSourceColorMarker(headers[1])).not.toBeInTheDocument();
             expect(getRow('gt-1')).toHaveAttribute('data-color-by-source', 'false');
+        });
+
+        it('uses class colors when enforce coloring by class is enabled, even with multiple visible sources', () => {
+            mocks.enforceColoringByClassStore.set(true);
+
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            // Source color markers must be hidden even though both sources are visible.
+            const headers = screen.getAllByTestId('annotation-source-group-header');
+            expect(getSourceColorMarker(headers[0])).not.toBeInTheDocument();
+            expect(getSourceColorMarker(headers[1])).not.toBeInTheDocument();
+            // Rows receive class-based coloring (colorBySource = false).
+            expect(getRow('gt-1')).toHaveAttribute('data-color-by-source', 'false');
+            expect(getRow('pred-1')).toHaveAttribute('data-color-by-source', 'false');
         });
     });
 });
