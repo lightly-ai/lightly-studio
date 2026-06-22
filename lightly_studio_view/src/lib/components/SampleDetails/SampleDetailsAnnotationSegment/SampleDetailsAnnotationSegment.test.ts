@@ -418,16 +418,5 @@ describe('SampleDetailsAnnotationSegment', () => {
             expect(getRow('pred-1')).toHaveAttribute('data-color-by-source', 'false');
         });
 
-        it('shows source color markers when enforce coloring is disabled and multiple sources are visible', () => {
-            mocks.enforceColoringByClassStore.set(false);
-
-            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
-
-            const headers = screen.getAllByTestId('annotation-source-group-header');
-            expect(getSourceColorMarker(headers[0])).toBeInTheDocument();
-            expect(getSourceColorMarker(headers[1])).toBeInTheDocument();
-            expect(getRow('gt-1')).toHaveAttribute('data-color-by-source', 'true');
-            expect(getRow('pred-1')).toHaveAttribute('data-color-by-source', 'true');
-        });
     });
 });

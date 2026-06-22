@@ -15,7 +15,7 @@
         getColorByLabel,
         resolveEffectiveColorBySource
     } from '$lib/utils';
-    import { useSettings } from '$lib/hooks/useSettings';
+    import { useSettings } from '$lib/hooks';
     import { throttle } from 'lodash-es';
     import BrushToolPopUp from '../BrushToolPopUp/BrushToolPopUp.svelte';
     import { AnnotationSourcePill } from '$lib/components';
