@@ -103,6 +103,7 @@ def _flush_crop_batch(  # noqa: PLR0913
     encode_batch: Callable[[torch.Tensor], NDArray[np.float32]],
     progress_bar: Any,
 ) -> None:
+    """Encode the current crop batch and write results into ``embeddings``."""
     if not batch_tensors:
         return
     images_tensor = torch.stack(batch_tensors).to(device, non_blocking=True)

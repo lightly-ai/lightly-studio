@@ -11,12 +11,12 @@ from lightly_studio.dataset.image_crop_embedding import embed_image_crops_batche
 
 def test_embed_image_crops_batched__empty_input_returns_empty_array() -> None:
     embeddings = embed_image_crops_batched(
-        [],
+        image_crops=[],
         embedding_dimension=4,
         max_batch_size=2,
         device=torch.device("cpu"),
         preprocess=lambda image: torch.tensor([float(image.size[0])]),
-        encode_batch=lambda images_tensor: images_tensor.numpy(),
+        encode_batch=lambda images_tensor: images_tensor.cpu().numpy(),
         show_progress=False,
     )
 
@@ -52,7 +52,7 @@ def test_embed_image_crops_batched__preserves_input_order_across_filepaths(
         ).astype(np.float32)
 
     embeddings = embed_image_crops_batched(
-        image_crops,
+        image_crops=image_crops,
         embedding_dimension=2,
         max_batch_size=3,
         device=torch.device("cpu"),
