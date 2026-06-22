@@ -11,6 +11,7 @@ from lightly_studio.models.query_expr import (
     DatetimeExpr,
     NotExpr,
     QueryExpr,
+    SampleEvaluationMatchExpr,
     StringExpr,
 )
 
@@ -80,6 +81,25 @@ class TestQueryExpr:
         )
         assert isinstance(tree.match_expr, DatetimeExpr)
         assert tree.match_expr.value == datetime(2026, 1, 1, tzinfo=timezone.utc)
+
+    def test_model_validate__sample_evaluation_match_expr(self) -> None:
+        tree = QueryExpr.model_validate(
+            {
+                "match_expr": {
+                    "type": "evaluation_metric_match_expr",
+                    "evaluation_run_name": "cls-eval",
+                    # TODO(lukas 6/2026): this is not a query that will be actually possible.
+                    "subexpr": {
+                        "type": "integer_expr",
+                        "field": {"table": "image", "name": "width"},
+                        "operator": ">=",
+                        "value": 128,
+                    },
+                }
+            }
+        )
+        assert isinstance(tree.match_expr, SampleEvaluationMatchExpr)
+        assert tree.match_expr.evaluation_run_name == "cls-eval"
 
     def test_model_validate__rejects_wrong_value_type(self) -> None:
         """String value is rejected where an integer is expected."""

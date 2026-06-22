@@ -80,6 +80,14 @@ class EqualityFloatExpr(BaseModel):
     value: StrictInt | StrictFloat
 
 
+class SampleEvaluationMatchExpr(BaseModel):
+    """Wrapper node checking whether a sample matches evaluation criteria."""
+
+    type: Literal["evaluation_metric_match_expr"] = "evaluation_metric_match_expr"
+    evaluation_run_name: StrictStr
+    subexpr: MatchExpr
+
+
 class TagsContainsExpr(BaseModel):
     """Leaf node checking if a sample has a specific tag."""
 
@@ -137,6 +145,7 @@ MatchExpr: TypeAlias = Annotated[
         DatetimeExpr,
         OrdinalFloatExpr,
         EqualityFloatExpr,
+        SampleEvaluationMatchExpr,
         TagsContainsExpr,
         ClassificationMatchExpr,
         ObjectDetectionMatchExpr,
@@ -150,6 +159,7 @@ MatchExpr: TypeAlias = Annotated[
 
 
 # Rebuild models with recursive references between them.
+SampleEvaluationMatchExpr.model_rebuild()
 ClassificationMatchExpr.model_rebuild()
 ObjectDetectionMatchExpr.model_rebuild()
 SegmentationMaskMatchExpr.model_rebuild()

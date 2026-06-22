@@ -49,6 +49,7 @@ from lightly_studio.models.query_expr import (
     OrdinalComparisonOperator,
     OrdinalFloatExpr,
     OrExpr,
+    SampleEvaluationMatchExpr,
     SegmentationMaskMatchExpr,
     StringExpr,
     TagsContainsExpr,
@@ -234,7 +235,7 @@ def evaluation_metric_sort_to_order_by(
     return order_by
 
 
-def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 C901
+def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 PLR0912 C901
     """Translate a validated query-language expression to a dataset-query expression."""
     if isinstance(expr, StringExpr):
         return _apply_equality_operator(
@@ -270,22 +271,69 @@ def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 C9
             operator=expr.operator,
             value=expr.value,
         )
-    if isinstance(expr, TagsContainsExpr):
-        accessor: _TagsAccessor = _lookup(mapping=_TAGS_FIELDS, field=expr.field, type_="tags")
-        return accessor.contains(expr.tag_name)
     if isinstance(expr, ClassificationMatchExpr):
         return ClassificationQuery.match(to_match_expression(expr=expr.subexpr))
     if isinstance(expr, ObjectDetectionMatchExpr):
         return ObjectDetectionQuery.match(to_match_expression(expr=expr.subexpr))
     if isinstance(expr, SegmentationMaskMatchExpr):
         return SegmentationMaskQuery.match(to_match_expression(expr=expr.subexpr))
+    if isinstance(expr, SampleEvaluationMatchExpr):
+        raise QueryExprError("evaluation_metric_match_expr is not yet supported")
+    if isinstance(expr, TagsContainsExpr):
+        accessor: _TagsAccessor = _lookup(mapping=_TAGS_FIELDS, field=expr.field, type_="tags")
+        return accessor.contains(expr.tag_name)
     if isinstance(expr, AndExpr):
         return AND(*(to_match_expression(expr=child) for child in expr.children))
     if isinstance(expr, OrExpr):
         return OR(*(to_match_expression(expr=child) for child in expr.children))
     if isinstance(expr, NotExpr):
         return NOT(to_match_expression(expr=expr.child))
-    assert_never(expr)
+    raise RuntimeError("to_match_expression() called with the wrong type")
+
+
+def _to_annotation_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911
+    """Translate a query expression nested inside an annotation match wrapper."""
+    if isinstance(expr, StringExpr):
+        return _apply_equality_operator(
+            field=_lookup(mapping=_STRING_FIELDS, field=expr.field, type_="string"),
+            operator=expr.operator,
+            value=expr.value,
+        )
+    if isinstance(expr, IntegerExpr):
+        return _apply_ordinal_operator(
+            field=_lookup(mapping=_INTEGER_FIELDS, field=expr.field, type_="integer"),
+            operator=expr.operator,
+            value=expr.value,
+        )
+    if isinstance(expr, DatetimeExpr):
+        return _apply_ordinal_operator(
+            field=_lookup(mapping=_DATETIME_FIELDS, field=expr.field, type_="datetime"),
+            operator=expr.operator,
+            value=expr.value,
+        )
+    if isinstance(expr, OrdinalFloatExpr):
+        return _apply_ordinal_operator(
+            field=_lookup(
+                mapping=_ALL_ORDINAL_FLOAT_FIELDS,
+                field=expr.field,
+                type_="ordinal float",
+            ),
+            operator=expr.operator,
+            value=expr.value,
+        )
+    if isinstance(expr, EqualityFloatExpr):
+        return _apply_equality_operator(
+            field=_lookup(mapping=_EQUALITY_FLOAT_FIELDS, field=expr.field, type_="equality float"),
+            operator=expr.operator,
+            value=expr.value,
+        )
+    if isinstance(expr, AndExpr):
+        return AND(*(_to_annotation_match_expression(expr=child) for child in expr.children))
+    if isinstance(expr, OrExpr):
+        return OR(*(_to_annotation_match_expression(expr=child) for child in expr.children))
+    if isinstance(expr, NotExpr):
+        return NOT(_to_annotation_match_expression(expr=expr.child))
+    raise RuntimeError("_to_annotation_match_expression() called with the wrong type")
 
 
 def _apply_equality_operator(

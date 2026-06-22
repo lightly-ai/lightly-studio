@@ -22,6 +22,7 @@ from lightly_studio.models.query_expr import (
     OrdinalComparisonOperator,
     OrdinalFloatExpr,
     OrExpr,
+    SampleEvaluationMatchExpr,
     SegmentationMaskMatchExpr,
     StringExpr,
     TagsContainsExpr,
@@ -170,6 +171,20 @@ def test_to_match_expression__equality_float_unknown_field() -> None:
         value=1.0,
     )
     with pytest.raises(QueryExprError, match="Unknown equality float field"):
+        query_translation.to_match_expression(expr)
+
+
+def test_to_match_expression__sample_evaluation_match_rejected() -> None:
+    expr = SampleEvaluationMatchExpr(
+        evaluation_run_name="run1",
+        # TODO(lukas 6/2026): this is not a query that will be actually possible.
+        subexpr=IntegerExpr(
+            field=FieldRef(table="image", name="width"),
+            operator=OrdinalComparisonOperator.GTE,
+            value=128,
+        ),
+    )
+    with pytest.raises(QueryExprError, match="not yet supported"):
         query_translation.to_match_expression(expr)
 
 
