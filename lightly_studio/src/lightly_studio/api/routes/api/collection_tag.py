@@ -190,7 +190,7 @@ def add_sample_ids_to_tag_id(
 ) -> bool:
     """Add sample_ids to a tag_id."""
     # TODO(LIG-9942): backfill the collection-scope and tag-kind validation that
-    # add_samples_to_tag_by_filter enforces (separate PR — see plan, out of scope here).
+    # add_samples_to_tag_by_filter enforces.
     tag = tag_resolver.get_by_id(session=session, tag_id=tag_id)
     if not tag:
         raise HTTPException(
@@ -203,9 +203,8 @@ def add_sample_ids_to_tag_id(
     return True
 
 
-# A grid filter is self-describing: its ``filter_type`` literal selects both the source
-# table to tag from and the tag kind it is allowed to write. Mirrors the discriminated
-# union in ``services/sample_services/sample_adjacents_service.py``.
+# The ``filter_type`` discriminator selects both the source table to tag from and the
+# allowed tag kind. Same union as in services/sample_services/sample_adjacents_service.py.
 GridFilter = Annotated[
     Union[ImageFilter, VideoFilter, VideoFrameFilter, AnnotationsFilter],
     PydanticField(discriminator="filter_type"),
@@ -215,10 +214,9 @@ GridFilter = Annotated[
 class TagByFilterBody(BaseModel):
     """Body for tagging every sample a grid filter matches.
 
-    ``filter`` is required, not optional: the source table is dispatched on
-    ``filter.filter_type``, so a ``null`` filter would be ambiguous. "Whole
-    collection" is expressed as a typed-but-empty filter (e.g. ``{"filter_type":
-    "image"}`` with no constraints), which the frontend already produces per grid.
+    ``filter`` is required because the source table is dispatched on its
+    ``filter_type``. "Whole collection" is a typed-but-empty filter, e.g.
+    ``{"filter_type": "image"}``.
     """
 
     filter: GridFilter
@@ -228,11 +226,7 @@ def _build_sample_ids_query(
     grid_filter: ImageFilter | VideoFilter | VideoFrameFilter | AnnotationsFilter,
     collection_id: UUID,
 ) -> SelectOfScalar[UUID]:
-    """Dispatch a grid filter to its resolver's ``build_sample_ids_query``.
-
-    The 4-branch dispatch mirrors the frontend's ``useSelectAll.fetchSampleIds``
-    switch; each branch scopes to ``collection_id`` and applies the filter.
-    """
+    """Dispatch a grid filter to its resolver's ``build_sample_ids_query``."""
     if isinstance(grid_filter, ImageFilter):
         return image_resolver.build_sample_ids_query(
             collection_id=collection_id, filters=grid_filter
@@ -270,10 +264,9 @@ def add_samples_to_tag_by_filter(
     tag_id: Annotated[UUID, Path(title="Tag Id")],
     body: TagByFilterBody,
 ) -> bool:
-    """Tag every sample a grid filter matches, entirely inside the DB.
+    """Tag every sample a grid filter matches via a server-side ``INSERT … SELECT``.
 
-    No sample ids cross the wire: the matched ids are inserted via a single
-    server-side ``INSERT … SELECT``. Idempotent on re-run.
+    No sample ids cross the wire. Idempotent on re-run.
     """
     tag = tag_resolver.get_by_id(session=session, tag_id=tag_id)
     if not tag:
@@ -281,8 +274,8 @@ def add_samples_to_tag_by_filter(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail=f"Tag {tag_id} not found, can't add samples.",
         )
-    # The link table carries only sample/tag FKs, so neither the collection scope nor
-    # the tag kind is enforced by the schema; both must be checked here.
+    # The link table carries only sample/tag FKs, so collection scope and tag kind
+    # are not schema-enforced and must be checked here.
     if tag.collection_id != collection_id:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
