@@ -4,14 +4,14 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import SampleDetailsSidePanelAnnotation from '../SampleDetailsSidePanel/SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-    import { useAnnotationCollections, useAnnotationCollectionsFilter } from '$lib/hooks';
+    import { useAnnotationCollections, useAnnotationCollectionsFilter, useSettings } from '$lib/hooks';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { toast } from 'svelte-sonner';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useAnnotationSelection } from '$lib/hooks/useAnnotationSelection/useAnnotationSelection';
-    import { countVisibleSources } from '$lib/utils';
+    import { countVisibleSources, resolveEffectiveColorBySource } from '$lib/utils';
     import {
         areAllAnnotationsHidden,
         computeSeededHiddenIds,
@@ -59,6 +59,7 @@
 
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
     const { selectedCollectionIds, seedSelectionIfNeeded } = useAnnotationCollectionsFilter();
+    const { enforceColoringByClassStore } = useSettings();
 
     const annotationsSort = $derived.by(() => {
         return annotations
@@ -86,11 +87,16 @@
         computeSeededHiddenIds(annotationsSort, $selectedCollectionIds, annotationSources)
     );
 
-    // Annotations are colored by source only while multiple sources are visible,
-    // matching the details canvas. Swatches are shown only when they match the
-    // colors drawn on the image: source markers in the group headers when coloring
-    // by source, label legends in the rows otherwise.
-    const colorBySource = $derived(countVisibleSources(annotationsSort, annotationsIdsToHide) >= 2);
+    // Annotations are colored by source only while multiple sources are visible and class
+    // coloring is not enforced, matching the details canvas. Swatches are shown only when
+    // they match the colors drawn on the image: source markers in the group headers when
+    // coloring by source, label legends in the rows otherwise.
+    const colorBySource = $derived(
+        resolveEffectiveColorBySource({
+            multipleSourcesVisible: countVisibleSources(annotationsSort, annotationsIdsToHide) >= 2,
+            enforceColoringByClass: $enforceColoringByClassStore
+        })
+    );
 
     // Seed the global annotation source stores the first time this collection is shown
     // (e.g. landing directly on the details page via deep link), so annotations are colored
