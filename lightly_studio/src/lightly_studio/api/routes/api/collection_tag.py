@@ -9,7 +9,6 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Field
-from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import (
@@ -29,18 +28,9 @@ from lightly_studio.models.tag import (
     TagTable,
     TagView,
 )
-from lightly_studio.resolvers import (
-    annotation_resolver,
-    image_resolver,
-    tag_resolver,
-    video_frame_resolver,
-    video_resolver,
-)
+from lightly_studio.resolvers import tag_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.grid_filter import GridFilter
-from lightly_studio.resolvers.image_filter import ImageFilter
-from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
-from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 tag_router = APIRouter()
 
@@ -214,28 +204,6 @@ class TagByFilterBody(BaseModel):
     filter: GridFilter
 
 
-def _build_sample_ids_query(
-    grid_filter: GridFilter,
-    collection_id: UUID,
-) -> SelectOfScalar[UUID]:
-    """Dispatch a grid filter to its resolver's ``build_sample_ids_query``."""
-    if isinstance(grid_filter, ImageFilter):
-        return image_resolver.build_sample_ids_query(
-            collection_id=collection_id, filters=grid_filter
-        )
-    if isinstance(grid_filter, VideoFilter):
-        return video_resolver.build_sample_ids_query(
-            collection_id=collection_id, filters=grid_filter
-        )
-    if isinstance(grid_filter, VideoFrameFilter):
-        return video_frame_resolver.build_sample_ids_query(
-            collection_id=collection_id, filters=grid_filter
-        )
-    return annotation_resolver.build_sample_ids_query(
-        collection_id=collection_id, filters=grid_filter
-    )
-
-
 def _expected_tag_kind(
     grid_filter: GridFilter,
 ) -> TagKind:
@@ -283,7 +251,7 @@ def add_samples_to_tag_by_filter(
             ),
         )
 
-    sample_ids_query = _build_sample_ids_query(grid_filter=body.filter, collection_id=collection_id)
+    sample_ids_query = body.filter.build_sample_ids_query(collection_id=collection_id)
     tag_resolver.add_samples_to_tag_from_query(
         session=session, tag_id=tag_id, sample_ids_query=sample_ids_query
     )

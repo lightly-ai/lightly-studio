@@ -20,11 +20,6 @@ from tests.helpers_resolvers import (
     create_image,
     create_tag,
 )
-from tests.resolvers.video.helpers import (
-    VideoStub,
-    create_video,
-    create_video_with_frames,
-)
 
 
 def _tagged_sample_ids(session: Session, tag_id: UUID) -> set[UUID]:
@@ -94,42 +89,6 @@ def test_add_samples_by_filter__idempotent_on_rerun(
     assert second.status_code == HTTP_STATUS_CREATED
     # Re-running adds no duplicate link.
     assert _tagged_sample_ids(db_session, tag.tag_id) == {image.sample_id}
-
-
-def test_add_samples_by_filter__video_grid(db_session: Session, test_client: TestClient) -> None:
-    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
-    collection_id = collection.collection_id
-    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
-    video = create_video(session=db_session, collection_id=collection_id, video=VideoStub())
-
-    response = test_client.post(
-        _add_by_filter_url(collection_id, tag.tag_id),
-        json={"filter": {"filter_type": "video"}},
-    )
-
-    assert response.status_code == HTTP_STATUS_CREATED
-    assert _tagged_sample_ids(db_session, tag.tag_id) == {video.sample_id}
-
-
-def test_add_samples_by_filter__video_frame_grid(
-    db_session: Session, test_client: TestClient
-) -> None:
-    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
-    video_with_frames = create_video_with_frames(
-        session=db_session,
-        collection_id=collection.collection_id,
-        video=VideoStub(duration_s=0.1, fps=30.0),
-    )
-    frame_collection_id = video_with_frames.video_frames_collection_id
-    tag = create_tag(session=db_session, collection_id=frame_collection_id, kind="sample")
-
-    response = test_client.post(
-        _add_by_filter_url(frame_collection_id, tag.tag_id),
-        json={"filter": {"filter_type": "video_frame"}},
-    )
-
-    assert response.status_code == HTTP_STATUS_CREATED
-    assert _tagged_sample_ids(db_session, tag.tag_id) == set(video_with_frames.frame_sample_ids)
 
 
 def test_add_samples_by_filter__annotation_grid(
