@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from uuid import UUID, uuid4
+import uuid
+from uuid import UUID
 
 from fastapi.testclient import TestClient
 from sqlmodel import Session, col, select
@@ -35,7 +36,7 @@ def test_add_samples_by_filter__image_empty_filter_tags_whole_collection(
     )
 
     response = test_client.post(
-        _add_by_filter_url(collection_id, tag.tag_id),
+        f"/api/collections/{collection_id}/tags/{tag.tag_id}/add/samples_by_filter",
         json={"filter": {"filter_type": "image"}},
     )
 
@@ -56,7 +57,7 @@ def test_add_samples_by_filter__image_subset_filter_tags_only_subset(
     )
 
     response = test_client.post(
-        _add_by_filter_url(collection_id, tag.tag_id),
+        f"/api/collections/{collection_id}/tags/{tag.tag_id}/add/samples_by_filter",
         json={"filter": {"filter_type": "image", "width": {"min": 100}}},
     )
 
@@ -72,8 +73,9 @@ def test_add_samples_by_filter__idempotent_on_rerun(
     image = create_image(session=db_session, collection_id=collection_id, file_path_abs="s.png")
     body = {"filter": {"filter_type": "image"}}
 
-    first = test_client.post(_add_by_filter_url(collection_id, tag.tag_id), json=body)
-    second = test_client.post(_add_by_filter_url(collection_id, tag.tag_id), json=body)
+    url = f"/api/collections/{collection_id}/tags/{tag.tag_id}/add/samples_by_filter"
+    first = test_client.post(url, json=body)
+    second = test_client.post(url, json=body)
 
     assert first.status_code == HTTP_STATUS_CREATED
     assert second.status_code == HTTP_STATUS_CREATED
@@ -101,7 +103,7 @@ def test_add_samples_by_filter__annotation_grid(
     tag = create_tag(session=db_session, collection_id=annotation_collection_id, kind="annotation")
 
     response = test_client.post(
-        _add_by_filter_url(annotation_collection_id, tag.tag_id),
+        f"/api/collections/{annotation_collection_id}/tags/{tag.tag_id}/add/samples_by_filter",
         json={"filter": {"filter_type": "annotations"}},
     )
 
@@ -115,7 +117,7 @@ def test_add_samples_by_filter__unknown_tag_returns_404(
     collection_id = create_collection(session=db_session).collection_id
 
     response = test_client.post(
-        _add_by_filter_url(collection_id, uuid4()),
+        f"/api/collections/{collection_id}/tags/{uuid.uuid4()}/add/samples_by_filter",
         json={"filter": {"filter_type": "image"}},
     )
 
@@ -130,7 +132,7 @@ def test_add_samples_by_filter__wrong_collection_returns_404(
 
     # Tag exists, but not in the collection on the path.
     response = test_client.post(
-        _add_by_filter_url(uuid4(), tag.tag_id),
+        f"/api/collections/{uuid.uuid4()}/tags/{tag.tag_id}/add/samples_by_filter",
         json={"filter": {"filter_type": "image"}},
     )
 
@@ -143,7 +145,3 @@ def _tagged_sample_ids(session: Session, tag_id: UUID) -> set[UUID]:
         select(SampleTagLinkTable.sample_id).where(col(SampleTagLinkTable.tag_id) == tag_id)
     ).all()
     return {sample_id for sample_id in linked if sample_id is not None}
-
-
-def _add_by_filter_url(collection_id: UUID, tag_id: UUID) -> str:
-    return f"/api/collections/{collection_id}/tags/{tag_id}/add/samples_by_filter"
