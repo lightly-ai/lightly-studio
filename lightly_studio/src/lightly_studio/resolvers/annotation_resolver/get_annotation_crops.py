@@ -74,9 +74,7 @@ def get_annotation_crops_for_ids(
         resolved_sample_ids.append(annotation.sample_id)
         image_crops.append(image_crop)
 
-    return AnnotationCrops(
-        annotation_sample_ids=resolved_sample_ids, image_crops=image_crops
-    )
+    return AnnotationCrops(annotation_sample_ids=resolved_sample_ids, image_crops=image_crops)
 
 
 def _create_valid_image_crop(
