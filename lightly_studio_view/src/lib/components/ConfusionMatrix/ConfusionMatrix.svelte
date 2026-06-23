@@ -2,7 +2,12 @@
     import { onDestroy } from 'svelte';
     import * as echarts from 'echarts/core';
     import { HeatmapChart } from 'echarts/charts';
-    import { GridComponent, TooltipComponent, VisualMapComponent } from 'echarts/components';
+    import {
+        DataZoomInsideComponent,
+        GridComponent,
+        TooltipComponent,
+        VisualMapComponent
+    } from 'echarts/components';
     import { CanvasRenderer } from 'echarts/renderers';
     import { buildEchartsOption } from './buildEchartsOption';
     import ConfusionMatrixLegend from './ConfusionMatrixLegend.svelte';
@@ -13,15 +18,28 @@
         TooltipComponent,
         VisualMapComponent,
         GridComponent,
+        DataZoomInsideComponent,
         CanvasRenderer
     ]);
 
     interface Props {
         matrix: ConfusionMatrix;
         showLegend?: boolean;
+        /** Enables inside (scroll/pinch) zoom on both axes. */
+        zoomable?: boolean;
+        /** Color intensity multiplier (> 0, default 1). */
+        colorIntensity?: number;
+        /** Map color from log10(count) instead of the raw count (default true). */
+        logScale?: boolean;
     }
 
-    const { matrix, showLegend = false }: Props = $props();
+    const {
+        matrix,
+        showLegend = false,
+        zoomable = false,
+        colorIntensity = 1,
+        logScale = true
+    }: Props = $props();
 
     let container: HTMLDivElement | undefined = $state();
     let chart: echarts.ECharts | null = $state(null);
@@ -48,7 +66,7 @@
 
     $effect(() => {
         if (!chart) return;
-        chart.setOption(buildEchartsOption(matrix), true);
+        chart.setOption(buildEchartsOption(matrix, { zoomable, colorIntensity, logScale }), true);
     });
 
     onDestroy(() => chart?.dispose());
@@ -66,6 +84,6 @@
         data-testid="confusion-matrix"
     ></div>
     {#if showLegend}
-        <ConfusionMatrixLegend {maxCount} />
+        <ConfusionMatrixLegend {maxCount} {logScale} />
     {/if}
 {/if}
