@@ -17,21 +17,25 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
-class AnnotationCrop:
-    """Resolved annotation crop ready for embedding."""
+class AnnotationCrops:
+    """Resolved annotation crops ready for embedding.
 
-    annotation_sample_id: UUID
-    image_crop: ImageCrop
+    ``annotation_sample_ids`` and ``image_crops`` are parallel lists: the crop at index
+    ``i`` belongs to the annotation at index ``i``.
+    """
+
+    annotation_sample_ids: list[UUID]
+    image_crops: list[ImageCrop]
 
 
 def get_annotation_crops_for_ids(
     session: Session,
     annotation_sample_ids: list[UUID],
-) -> list[AnnotationCrop]:
+) -> AnnotationCrops:
     """Build valid image crops for the given object-detection annotation IDs.
 
     Crops whose box does not overlap the source image are skipped with a warning, so the
-    returned list may be shorter than ``annotation_sample_ids``.
+    returned lists may be shorter than ``annotation_sample_ids``.
 
     Args:
         session: Database session for resolver operations.
@@ -51,7 +55,8 @@ def get_annotation_crops_for_ids(
         .order_by(col(ImageTable.file_path_abs))
     ).all()
 
-    annotation_crops: list[AnnotationCrop] = []
+    resolved_sample_ids: list[UUID] = []
+    image_crops: list[ImageCrop] = []
     for annotation, image, object_detection in rows:
         image_crop = _create_valid_image_crop(
             filepath=image.file_path_abs,
@@ -66,11 +71,12 @@ def get_annotation_crops_for_ids(
         if image_crop is None:
             logger.warning("Skipping invalid annotation crop %s.", annotation.sample_id)
             continue
-        annotation_crops.append(
-            AnnotationCrop(annotation_sample_id=annotation.sample_id, image_crop=image_crop)
-        )
+        resolved_sample_ids.append(annotation.sample_id)
+        image_crops.append(image_crop)
 
-    return annotation_crops
+    return AnnotationCrops(
+        annotation_sample_ids=resolved_sample_ids, image_crops=image_crops
+    )
 
 
 def _create_valid_image_crop(

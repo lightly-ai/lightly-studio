@@ -27,7 +27,7 @@ from lightly_studio.resolvers.annotation_resolver.get_all_with_payload import (
     get_all_with_payload,
 )
 from lightly_studio.resolvers.annotation_resolver.get_annotation_crops import (
-    AnnotationCrop,
+    AnnotationCrops,
     get_annotation_crops_for_ids,
 )
 from lightly_studio.resolvers.annotation_resolver.get_by_id import get_by_id, get_by_ids
@@ -52,7 +52,7 @@ from lightly_studio.resolvers.annotation_resolver.update_segmentation_mask impor
 )
 
 __all__ = [
-    "AnnotationCrop",
+    "AnnotationCrops",
     "build_sample_ids_query",
     "create_many",
     "delete_annotation",
