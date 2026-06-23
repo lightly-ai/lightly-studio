@@ -77,6 +77,9 @@ class EmbeddingManager:
         self._models: dict[UUID, EmbeddingGenerator] = {}
         self._model_id_to_collection_id: dict[UUID, UUID] = {}
         self._collection_id_to_default_model_id: dict[UUID, UUID] = {}
+        # Loaded generators cache. A single physical model is held
+        # in memory once and shared across collections.
+        self._generators: dict[SampleType, EmbeddingGenerator] = {}
 
     def register_embedding_model(
         self,
@@ -366,7 +369,7 @@ class EmbeddingManager:
         if dataset is None:
             raise ValueError("Provided collection_id could not be found.")
 
-        embedding_generator = _load_embedding_generator_from_env(sample_type=dataset.sample_type)
+        embedding_generator = self._get_or_load_generator(sample_type=dataset.sample_type)
         if embedding_generator is None:
             return None
 
@@ -379,6 +382,30 @@ class EmbeddingManager:
         )
 
         return embedding_model.embedding_model_id
+
+    def _get_or_load_generator(self, sample_type: SampleType) -> EmbeddingGenerator | None:
+        """Return a generator for the sample type, loading its weights only once.
+
+        Generators are cached by model kind so a single physical model is held in
+        memory once and reused across collections.
+
+        Args:
+            sample_type: The sample type to load a generator for.
+
+        Returns:
+            The cached or newly loaded generator, or None if none can be loaded.
+        """
+        cache_key = _generator_cache_key(sample_type=sample_type)
+        if cache_key is None:
+            return None
+
+        if cache_key not in self._generators:
+            generator = _load_embedding_generator_from_env(sample_type=sample_type)
+            if generator is None:
+                return None
+            self._generators[cache_key] = generator
+
+        return self._generators[cache_key]
 
     def _get_default_or_validate(
         self, collection_id: UUID, embedding_model_id: UUID | None
@@ -445,6 +472,19 @@ def _store_embeddings(
         store_batches(progress_bar)
 
     session.commit()
+
+
+def _generator_cache_key(sample_type: SampleType) -> SampleType | None:
+    """Map a sample type to the key under which its generator is cached.
+
+    Image and annotation samples share the same image generator, so both map to
+    SampleType.IMAGE and reuse a single loaded instance.
+    """
+    if sample_type in (SampleType.IMAGE, SampleType.ANNOTATION):
+        return SampleType.IMAGE
+    if sample_type == SampleType.VIDEO:
+        return SampleType.VIDEO
+    return None
 
 
 def _load_embedding_generator_from_env(sample_type: SampleType) -> EmbeddingGenerator | None:
