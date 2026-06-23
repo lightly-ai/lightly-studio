@@ -141,6 +141,23 @@ describe('buildEchartsOption', () => {
         expect(option.visualMap[1].max).toBe(Math.log10(156) / 2);
     });
 
+    it('clamps the raw-scale max to the min when colorIntensity exceeds maxCount', () => {
+        // maxCount is 1 here, so colorIntensity 2 would push max to 0.5,
+        // below the raw-scale min of 1 and producing a reversed range.
+        const matrix: ConfusionMatrix = {
+            row_labels: ['a'],
+            col_labels: ['a'],
+            counts: [[1]]
+        };
+        const option = buildEchartsOption(matrix, {
+            logScale: false,
+            colorIntensity: 2
+        }) as unknown as BuiltOption;
+        expect(option.visualMap[0].min).toBe(1);
+        expect(option.visualMap[0].max).toBe(1);
+        expect(option.visualMap[1].max).toBe(1);
+    });
+
     it('keeps max at 1 when every cell is empty so visualMap stays valid', () => {
         const option = build(empty);
         expect(option.visualMap[0].max).toBe(1);
