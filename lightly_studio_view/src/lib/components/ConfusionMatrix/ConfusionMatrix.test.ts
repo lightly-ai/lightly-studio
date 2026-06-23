@@ -7,7 +7,8 @@ vi.mock('echarts/core', () => ({
     init: vi.fn(() => ({
         setOption: vi.fn(),
         resize: vi.fn(),
-        dispose: vi.fn()
+        dispose: vi.fn(),
+        on: vi.fn()
     })),
     use: vi.fn()
 }));
@@ -15,7 +16,8 @@ vi.mock('echarts/charts', () => ({ HeatmapChart: {} }));
 vi.mock('echarts/components', () => ({
     TooltipComponent: {},
     VisualMapComponent: {},
-    GridComponent: {}
+    GridComponent: {},
+    DataZoomInsideComponent: {}
 }));
 vi.mock('echarts/renderers', () => ({ CanvasRenderer: {} }));
 
