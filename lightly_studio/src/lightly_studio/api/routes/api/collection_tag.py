@@ -27,6 +27,7 @@ from lightly_studio.models.tag import (
     TagView,
 )
 from lightly_studio.resolvers import tag_resolver
+from lightly_studio.resolvers.grid_filter import GridFilter
 
 tag_router = APIRouter()
 
@@ -167,7 +168,7 @@ class SampleIdsBody(BaseModel):
 def add_sample_ids_to_tag_id(
     session: SessionDep,
     # collection_id is needed for the generator
-    collection_id: Annotated[  # noqa: ARG001
+    collection_id: Annotated[
         UUID,
         Path(title="collection Id", description="The ID of the collection"),
     ],
@@ -176,14 +177,67 @@ def add_sample_ids_to_tag_id(
 ) -> bool:
     """Add sample_ids to a tag_id."""
     tag = tag_resolver.get_by_id(session=session, tag_id=tag_id)
-    if not tag:
+    if tag is None:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail=f"Tag {tag_id} not found, can't add sample_ids.",
         )
+    # Validate the collection id.
+    if tag.collection_id != collection_id:
+        raise HTTPException(
+            status_code=HTTP_STATUS_NOT_FOUND,
+            detail=f"Tag {tag_id} not found in collection {collection_id}.",
+        )
 
     sample_ids = body.sample_ids if body.sample_ids else []
     tag_resolver.add_sample_ids_to_tag_id(session=session, tag_id=tag_id, sample_ids=sample_ids)
+    return True
+
+
+class TagByFilterBody(BaseModel):
+    """Body for tagging every sample a grid filter matches.
+
+    The caller must supply a filter to determine the sample type. The filter
+    itself can have no conditions, e.g. ``{"filter_type": "image"}``.
+    """
+
+    filter: GridFilter
+
+
+@tag_router.post(
+    "/collections/{collection_id}/tags/{tag_id}/add/samples_by_filter",
+    status_code=HTTP_STATUS_CREATED,
+)
+def add_samples_to_tag_by_filter(
+    session: SessionDep,
+    collection_id: Annotated[
+        UUID,
+        Path(title="collection Id", description="The ID of the collection"),
+    ],
+    tag_id: Annotated[UUID, Path(title="Tag Id")],
+    body: TagByFilterBody,
+) -> bool:
+    """Tag every sample a grid filter matches.
+
+    Idempotent on re-run.
+    """
+    tag = tag_resolver.get_by_id(session=session, tag_id=tag_id)
+    if tag is None:
+        raise HTTPException(
+            status_code=HTTP_STATUS_NOT_FOUND,
+            detail=f"Tag {tag_id} not found, can't add samples.",
+        )
+    # Validate the collection id.
+    if tag.collection_id != collection_id:
+        raise HTTPException(
+            status_code=HTTP_STATUS_NOT_FOUND,
+            detail=f"Tag {tag_id} not found in collection {collection_id}.",
+        )
+
+    sample_ids_query = body.filter.build_sample_ids_query(collection_id=collection_id)
+    tag_resolver.add_samples_to_tag_from_query(
+        session=session, tag_id=tag_id, sample_ids_query=sample_ids_query
+    )
     return True
 
 
