@@ -20,7 +20,7 @@ from lightly_studio.vendor import mobileclip
 
 from . import file_utils
 from .embedding_generator import ImageCrop, ImageEmbeddingGenerator
-from .image_crop_embedding import embed_image_crops_batched
+from .image_crop_embedding import EmbeddingContext, embed_image_crops_batched
 
 MODEL_NAME = "mobileclip_s0"
 MOBILECLIP_DOWNLOAD_URL = (
@@ -171,14 +171,16 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
         """
         return embed_image_crops_batched(
             image_crops=image_crops,
-            embedding_dimension=EMBEDDING_DIMENSION,
-            max_batch_size=MAX_BATCH_SIZE,
-            device=self._device,
-            preprocess=self._preprocess,
-            encode_batch=lambda images_tensor: (
-                self._model.encode_image(images_tensor)  # type: ignore[operator]
-                .cpu()
-                .numpy()
+            context=EmbeddingContext(
+                embedding_dimension=EMBEDDING_DIMENSION,
+                max_batch_size=MAX_BATCH_SIZE,
+                device=self._device,
+                preprocess=self._preprocess,
+                encode_batch=lambda images_tensor: (
+                    self._model.encode_image(images_tensor)  # type: ignore[operator]
+                    .cpu()
+                    .numpy()
+                ),
             ),
             show_progress=show_progress,
         )

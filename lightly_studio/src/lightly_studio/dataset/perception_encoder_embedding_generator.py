@@ -21,7 +21,7 @@ from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transfor
 
 from . import file_utils
 from .embedding_generator import ImageCrop, ImageEmbeddingGenerator, VideoEmbeddingGenerator
-from .image_crop_embedding import embed_image_crops_batched
+from .image_crop_embedding import EmbeddingContext, embed_image_crops_batched
 
 MODEL_NAME = "PE-Core-T16-384"
 DEFAULT_VIDEO_CHANNEL = 0
@@ -248,12 +248,14 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
         """
         return embed_image_crops_batched(
             image_crops=image_crops,
-            embedding_dimension=self._model.output_dim,
-            max_batch_size=MAX_BATCH_SIZE,
-            device=self._device,
-            preprocess=self._preprocess,
-            encode_batch=lambda images_tensor: (
-                self._model.encode_image(images_tensor, normalize=True).cpu().numpy()
+            context=EmbeddingContext(
+                embedding_dimension=self._model.output_dim,
+                max_batch_size=MAX_BATCH_SIZE,
+                device=self._device,
+                preprocess=self._preprocess,
+                encode_batch=lambda images_tensor: (
+                    self._model.encode_image(images_tensor, normalize=True).cpu().numpy()
+                ),
             ),
             show_progress=show_progress,
         )

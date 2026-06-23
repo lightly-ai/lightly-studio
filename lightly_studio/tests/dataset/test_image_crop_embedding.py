@@ -6,17 +6,22 @@ from numpy.typing import NDArray
 from PIL import Image
 
 from lightly_studio.dataset.embedding_generator import ImageCrop
-from lightly_studio.dataset.image_crop_embedding import embed_image_crops_batched
+from lightly_studio.dataset.image_crop_embedding import (
+    EmbeddingContext,
+    embed_image_crops_batched,
+)
 
 
 def test_embed_image_crops_batched__empty_input_returns_empty_array() -> None:
     embeddings = embed_image_crops_batched(
         image_crops=[],
-        embedding_dimension=4,
-        max_batch_size=2,
-        device=torch.device("cpu"),
-        preprocess=lambda image: torch.tensor([float(image.size[0])]),
-        encode_batch=lambda images_tensor: images_tensor.cpu().numpy(),
+        context=EmbeddingContext(
+            embedding_dimension=4,
+            max_batch_size=2,
+            device=torch.device("cpu"),
+            preprocess=lambda image: torch.tensor([float(image.size[0])]),
+            encode_batch=lambda images_tensor: images_tensor.cpu().numpy(),
+        ),
         show_progress=False,
     )
 
@@ -44,26 +49,25 @@ def test_embed_image_crops_batched__preserves_input_order_across_filepaths(
 
     def encode_batch(images_tensor: torch.Tensor) -> NDArray[np.float32]:
         encode_calls.append(images_tensor.size(0))
-        return np.column_stack(
-            [
-                images_tensor[:, 0].numpy(),
-                images_tensor[:, 0].numpy() + 1.0,
-            ]
-        ).astype(np.float32)
+        # Each preprocessed crop is its width, so the batch is already the
+        # expected (batch_size, 1) embedding; encode is the identity here.
+        return images_tensor.numpy().astype(np.float32)
 
     embeddings = embed_image_crops_batched(
         image_crops=image_crops,
-        embedding_dimension=2,
-        max_batch_size=3,
-        device=torch.device("cpu"),
-        preprocess=lambda image: torch.tensor([float(image.size[0])]),
-        encode_batch=encode_batch,
+        context=EmbeddingContext(
+            embedding_dimension=1,
+            max_batch_size=3,
+            device=torch.device("cpu"),
+            preprocess=lambda image: torch.tensor([float(image.size[0])]),
+            encode_batch=encode_batch,
+        ),
         show_progress=False,
     )
 
     # Encode order is [a:5, a:7, b:6, b:8]; with max_batch_size=3 the first
     # batch spans both files and the last crop forms a partial final batch.
     assert encode_calls == [3, 1]
-    assert embeddings.shape == (4, 2)
-    # Each embedding's first column equals its crop width, in input order.
+    assert embeddings.shape == (4, 1)
+    # Each embedding equals its crop width, in input order.
     assert embeddings[:, 0].tolist() == [5.0, 6.0, 7.0, 8.0]
