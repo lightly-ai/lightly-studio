@@ -54,6 +54,9 @@ def embed_image_crops_batched(
     if not total_crops:
         return np.empty((0, context.embedding_dimension), dtype=np.float32)
 
+    if context.max_batch_size <= 0:
+        raise ValueError("max_batch_size must be positive.")
+
     crops_by_filepath: dict[str, list[tuple[int, ImageCrop]]] = {}
     for index, image_crop in enumerate(image_crops):
         crops_by_filepath.setdefault(image_crop.filepath, []).append((index, image_crop))
