@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import EvaluationRunConfusionMatrixSection from './EvaluationRunConfusionMatrixSection.svelte';
-import { small3Classes } from '$lib/components/ConfusionMatrix/fixtures';
+import { coco80Classes, small3Classes } from '$lib/components/ConfusionMatrix/fixtures';
 
 const queryState = vi.hoisted(() => ({
     isLoading: false,
@@ -105,5 +105,19 @@ describe('EvaluationRunConfusionMatrixSection', () => {
         expect(screen.queryByTestId('confusion-matrix-loading')).not.toBeInTheDocument();
         expect(screen.queryByTestId('confusion-matrix-error')).not.toBeInTheDocument();
         expect(screen.getByTestId('confusion-matrix')).toBeInTheDocument();
+        // A small matrix stays a plain matrix with no interactive controls.
+        expect(screen.queryByTestId('confusion-matrix-configure')).not.toBeInTheDocument();
+    });
+
+    it('exposes the interactive panel controls for a large matrix', () => {
+        queryState.isLoading = false;
+        queryState.isError = false;
+        queryState.data = coco80Classes;
+        queryState.error = undefined;
+
+        render(EvaluationRunConfusionMatrixSection, { props: defaultProps });
+
+        expect(screen.getByTestId('confusion-matrix-configure')).toBeInTheDocument();
+        expect(screen.getByTestId('confusion-matrix-expand')).toBeInTheDocument();
     });
 });
