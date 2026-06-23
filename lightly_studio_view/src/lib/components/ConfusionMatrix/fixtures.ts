@@ -85,6 +85,49 @@ export const large20Classes: ConfusionMatrix = (() => {
     return matrix(large20RealLabels, counts);
 })();
 
+// prettier-ignore
+const coco80RealLabels = [
+    'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat',
+    'traffic light', 'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog',
+    'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'backpack', 'umbrella',
+    'handbag', 'tie', 'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball', 'kite',
+    'baseball bat', 'baseball glove', 'skateboard', 'surfboard', 'tennis racket', 'bottle',
+    'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple', 'sandwich',
+    'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch',
+    'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop', 'mouse', 'remote',
+    'keyboard', 'cell phone', 'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book',
+    'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush'
+];
+
+/**
+ * COCO-like 80-class fixture for the large-class-count edge case (LIG-9665).
+ * Confusion is concentrated between semantically adjacent labels (|i - j| <= 2)
+ * to mimic real OD confusion clusters (e.g. car/truck/bus, fork/knife/spoon).
+ */
+export const coco80Classes: ConfusionMatrix = (() => {
+    const n = coco80RealLabels.length;
+    const rng = mulberry32(7);
+    const counts: number[][] = [];
+    for (let i = 0; i <= n; i++) {
+        const row: number[] = [];
+        for (let j = 0; j <= n; j++) {
+            if (i === n && j === n) {
+                row.push(0);
+            } else if (i === j && i < n) {
+                row.push(10 + Math.floor(rng() * 300));
+            } else if (i === n || j === n) {
+                row.push(rng() < 0.6 ? Math.floor(rng() * 25) : 0);
+            } else if (Math.abs(i - j) <= 2) {
+                row.push(rng() < 0.5 ? Math.floor(rng() * 40) : 0);
+            } else {
+                row.push(rng() < 0.04 ? Math.floor(rng() * 8) : 0);
+            }
+        }
+        counts.push(row);
+    }
+    return matrix(coco80RealLabels, counts);
+})();
+
 export const empty: ConfusionMatrix = {
     row_labels: [],
     col_labels: [],
