@@ -115,10 +115,9 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
                 uses default VIDEO_EXTENSIONS.
             num_decode_threads: Optional override for the number of FFmpeg decode threads.
                 If omitted, the available CPU cores - 1 (max 16) are used.
-            fps: Optional target frame rate for subsampling. If set, frames are ingested
-                at approximately this rate by keeping a subset of the source frames; each
-                kept frame keeps its original frame_number. If omitted, or greater than or
-                equal to the source frame rate, all frames are kept. Must be greater than 0.
+            fps: Optional target frame rate for subsampling. When set below the source
+                frame rate, only selected frames are kept. frame_number values remain
+                original. Must be greater than 0.
             embed: If True, generate embeddings for the newly added videos.
         """
         if fps is not None and fps <= 0:

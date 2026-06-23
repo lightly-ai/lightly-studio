@@ -95,10 +95,9 @@ def load_into_collection_from_paths(  # noqa: PLR0913
         num_decode_threads: Optional override for the number of FFmpeg decode threads.
             If omitted, the available CPU cores - 1 (max 16) are used.
         show_progress: Whether to display a progress bar and final summary of loading results.
-        fps: Optional target frame rate for subsampling. If set, frames are ingested at
-            approximately this rate by keeping a subset of the source frames; each kept
-            frame keeps its original frame_number. If omitted, or greater than or equal
-            to the source frame rate, all frames are kept. Must be greater than 0.
+        fps: Optional target frame rate for subsampling. When set below the source
+            frame rate, only selected frames are kept. frame_number values remain
+            original. Must be greater than 0.
 
     Returns:
         A tuple containing:
@@ -242,9 +241,6 @@ def load_video_annotations_from_labelformat(  # noqa: PLR0913
         input_labels=input_labels, root_path=root_path, video_paths=video_paths
     )
 
-    # Note: fps subsampling is intentionally not applied here. Annotations are aligned
-    # to frames by frame_number (e.g. obj.boxes[frame_number]) and the frame count is
-    # asserted to match the annotation, so all frames must be kept.
     created_sample_ids, created_video_frame_sample_ids = load_into_collection_from_paths(
         session=session,
         collection_id=collection_id,
