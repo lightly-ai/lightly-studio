@@ -323,7 +323,7 @@ class EmbeddingManager:
             return None
 
         if cache_key not in self._generators:
-            generator = _load_embedding_generator_from_env(sample_type=sample_type)
+            generator = _load_embedding_generator_from_env(sample_type=cache_key)
             if generator is None:
                 return None
             self._generators[cache_key] = generator
