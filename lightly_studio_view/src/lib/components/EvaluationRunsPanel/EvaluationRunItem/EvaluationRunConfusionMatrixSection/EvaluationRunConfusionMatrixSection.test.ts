@@ -94,7 +94,7 @@ describe('EvaluationRunConfusionMatrixSection', () => {
         expect(screen.queryByTestId('evaluation-run-confusion-matrix')).not.toBeInTheDocument();
     });
 
-    it('renders the matrix when data is available', () => {
+    it('renders the panel with controls for a small matrix', () => {
         queryState.isLoading = false;
         queryState.isError = false;
         queryState.data = small3Classes;
@@ -105,11 +105,11 @@ describe('EvaluationRunConfusionMatrixSection', () => {
         expect(screen.queryByTestId('confusion-matrix-loading')).not.toBeInTheDocument();
         expect(screen.queryByTestId('confusion-matrix-error')).not.toBeInTheDocument();
         expect(screen.getByTestId('confusion-matrix')).toBeInTheDocument();
-        // A small matrix stays a plain matrix with no interactive controls.
-        expect(screen.queryByTestId('confusion-matrix-configure')).not.toBeInTheDocument();
+        expect(screen.getByTestId('confusion-matrix-configure')).toBeInTheDocument();
+        expect(screen.getByTestId('confusion-matrix-expand')).toBeInTheDocument();
     });
 
-    it('exposes the interactive panel controls for a large matrix', () => {
+    it('renders the panel with controls for a large matrix', () => {
         queryState.isLoading = false;
         queryState.isError = false;
         queryState.data = coco80Classes;
