@@ -9,24 +9,20 @@ from uuid import UUID
 
 import numpy as np
 from numpy.typing import NDArray
-from sqlmodel import Session, col, select
+from sqlmodel import Session
 from tqdm import tqdm
 
 from lightly_studio.dataset import env
 from lightly_studio.dataset.embedding_generator import (
     EmbeddingGenerator,
-    ImageCrop,
     ImageEmbeddingGenerator,
     VideoEmbeddingGenerator,
 )
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
-from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelTable
-from lightly_studio.models.image import ImageTable
-from lightly_studio.models.sample import SampleTable
-from lightly_studio.models.sample_embedding import SampleEmbeddingCreate, SampleEmbeddingTable
+from lightly_studio.models.sample_embedding import SampleEmbeddingCreate
 from lightly_studio.resolvers import (
+    annotation_resolver,
     collection_resolver,
     embedding_model_resolver,
     image_resolver,
@@ -71,14 +67,6 @@ class TextEmbedQuery:
 
     text: str
     embedding_model_id: UUID | None = None
-
-
-@dataclass(frozen=True)
-class _AnnotationCrop:
-    """Resolved annotation crop ready for embedding."""
-
-    annotation_sample_id: UUID
-    image_crop: ImageCrop
 
 
 class EmbeddingManager:
@@ -225,7 +213,7 @@ class EmbeddingManager:
         if not isinstance(model, ImageEmbeddingGenerator):
             raise ValueError("Embedding model not compatible with annotation crops.")
 
-        annotation_sample_ids = _get_unembedded_annotation_ids(
+        annotation_sample_ids = annotation_resolver.get_unembedded_annotation_ids(
             session=session,
             annotation_collection_id=annotation_collection_id,
             embedding_model_id=model_id,
@@ -250,7 +238,7 @@ class EmbeddingManager:
             for sample_id_chunk in batching.batched(
                 items=annotation_sample_ids, batch_size=ANNOTATION_EMBED_BATCH_SIZE
             ):
-                annotation_crops = _get_annotation_crops_for_ids(
+                annotation_crops = annotation_resolver.get_annotation_crops_for_ids(
                     session=session, annotation_sample_ids=sample_id_chunk
                 )
                 if not annotation_crops:
@@ -461,126 +449,6 @@ def _store_embeddings(
         store_batches(progress_bar)
 
     session.commit()
-
-
-def _get_unembedded_annotation_ids(
-    session: Session,
-    annotation_collection_id: UUID,
-    embedding_model_id: UUID,
-) -> list[UUID]:
-    """Return IDs of object-detection annotations in the collection lacking an embedding.
-
-    Only sample IDs are loaded so the result stays small even for very large collections;
-    the crops themselves are fetched per chunk by ``_get_annotation_crops_for_ids``. Results
-    are ordered by source image path so an image's annotations stay adjacent and tend to land
-    in the same chunk, preserving the single-open-per-image behaviour of crop embedding.
-
-    Args:
-        session: Database session for resolver operations.
-        annotation_collection_id: The annotation collection to scan.
-        embedding_model_id: Model whose existing embeddings mark an annotation as done.
-
-    Returns:
-        Annotation sample IDs that still need an embedding, ordered by image path.
-    """
-    embedded_ids_subquery = select(col(SampleEmbeddingTable.sample_id)).where(
-        col(SampleEmbeddingTable.embedding_model_id) == embedding_model_id
-    )
-    sample_ids = session.exec(
-        select(col(AnnotationBaseTable.sample_id))
-        .join(SampleTable, col(SampleTable.sample_id) == col(AnnotationBaseTable.sample_id))
-        .join(ImageTable, col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id))
-        .where(col(SampleTable.collection_id) == annotation_collection_id)
-        .where(col(AnnotationBaseTable.annotation_type) == AnnotationType.OBJECT_DETECTION)
-        .where(col(AnnotationBaseTable.sample_id).notin_(embedded_ids_subquery))
-        .order_by(col(ImageTable.file_path_abs))
-    ).all()
-    return list(sample_ids)
-
-
-def _get_annotation_crops_for_ids(
-    session: Session,
-    annotation_sample_ids: list[UUID],
-) -> list[_AnnotationCrop]:
-    """Build valid image crops for the given object-detection annotation IDs.
-
-    Crops whose box does not overlap the source image are skipped with a warning, so the
-    returned list may be shorter than ``annotation_sample_ids``.
-
-    Args:
-        session: Database session for resolver operations.
-        annotation_sample_ids: Annotation sample IDs to resolve crops for.
-
-    Returns:
-        Resolved annotation crops ready for embedding.
-    """
-    rows = session.exec(
-        select(AnnotationBaseTable, ImageTable, ObjectDetectionAnnotationTable)
-        .join(
-            ObjectDetectionAnnotationTable,
-            col(ObjectDetectionAnnotationTable.sample_id) == col(AnnotationBaseTable.sample_id),
-        )
-        .join(ImageTable, col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id))
-        .where(col(AnnotationBaseTable.sample_id).in_(annotation_sample_ids))
-        .order_by(col(ImageTable.file_path_abs))
-    ).all()
-
-    annotation_crops: list[_AnnotationCrop] = []
-    for annotation, image, object_detection in rows:
-        image_crop = _create_valid_image_crop(
-            filepath=image.file_path_abs,
-            image_size=(image.width, image.height),
-            box=(
-                object_detection.x,
-                object_detection.y,
-                object_detection.width,
-                object_detection.height,
-            ),
-        )
-        if image_crop is None:
-            logger.warning("Skipping invalid annotation crop %s.", annotation.sample_id)
-            continue
-        annotation_crops.append(
-            _AnnotationCrop(annotation_sample_id=annotation.sample_id, image_crop=image_crop)
-        )
-
-    return annotation_crops
-
-
-def _create_valid_image_crop(
-    filepath: str,
-    image_size: tuple[int, int],
-    box: tuple[int, int, int, int],
-) -> ImageCrop | None:
-    """Clamp an annotation box to the image bounds and return the resulting crop.
-
-    Args:
-        filepath: Absolute path to the source image.
-        image_size: Source image size as ``(width, height)`` in pixels.
-        box: Annotation box as ``(x, y, width, height)`` in pixels, possibly extending
-            outside the image.
-
-    Returns:
-        An ``ImageCrop`` clamped to the image bounds, or ``None`` if the box does not
-        overlap the image (degenerate crop).
-    """
-    image_width, image_height = image_size
-    x, y, width, height = box
-    x_min = max(0, x)
-    y_min = max(0, y)
-    x_max = min(image_width, x + width)
-    y_max = min(image_height, y + height)
-    crop_width = x_max - x_min
-    crop_height = y_max - y_min
-    if crop_width <= 0 or crop_height <= 0:
-        return None
-    return ImageCrop(
-        filepath=filepath,
-        x=x_min,
-        y=y_min,
-        width=crop_width,
-        height=crop_height,
-    )
 
 
 def _load_embedding_generator_from_env(sample_type: SampleType) -> EmbeddingGenerator | None:
