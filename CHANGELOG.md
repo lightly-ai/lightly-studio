@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Sampling dialog now accepts a percentage input alongside the absolute sample count. Editing either field updates the other based on the current    
 filtered sample count.
 - Deduplication strategy is available in the Sampling Dialog in the GUI
+- Improve confusion matrix usability for large numbers of classes
 
 ### Changed
 
