@@ -7,7 +7,7 @@ from typing import Annotated, Literal, Union
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Path
-from lightly_studio.db_manager import SessionDep
+from lightly_studio.database.db_manager import SessionDep
 from pydantic import BaseModel, Field
 
 from lightly_studio.api.routes.api.status import (
