@@ -98,13 +98,16 @@ def load_into_collection_from_paths(  # noqa: PLR0913
         fps: Optional target frame rate for subsampling. If set, frames are ingested at
             approximately this rate by keeping a subset of the source frames; each kept
             frame keeps its original frame_number. If omitted, or greater than or equal
-            to the source frame rate, all frames are kept.
+            to the source frame rate, all frames are kept. Must be greater than 0.
 
     Returns:
         A tuple containing:
             - List of UUIDs of the created video samples
             - List of UUIDs of the created video frame samples
     """
+    if fps is not None and fps <= 0:
+        raise ValueError(f"fps must be greater than 0, got {fps}.")
+
     created_video_sample_ids: list[UUID] = []
     created_video_frame_sample_ids: list[UUID] = []
     video_paths_list = list(video_paths)

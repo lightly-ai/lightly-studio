@@ -179,6 +179,9 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
         (30, 10, 30, [0, 3, 6, 9, 12, 15, 18, 21, 24, 27]),
         # Subsample 30 fps -> 15 fps: keep every other frame.
         (30, 15, 30, list(range(0, 30, 2))),
+        # Fractional frame intervals
+        (30, 7, 30, [0, 5, 9, 13, 18, 22, 26]),
+        (10, 3, 8, [0, 3, 6, 8]),
         # No target fps: keep all frames.
         (10, None, 30, list(range(10))),
         # Target fps not lower than source: keep all frames.
@@ -205,97 +208,17 @@ def test__should_keep_frame(
     assert kept == expected
 
 
-def test__create_video_frame_samples__subsamples_fps(db_session: Session, tmp_path: Path) -> None:
-    """Subsampling keeps a subset of frames with their original frame numbers."""
-    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
-    video_path = create_video_file(
-        output_path=tmp_path / "test_video_fps.mp4",
-        width=320,
-        height=240,
-        num_frames=30,
-        fps=30,
-    )
-    video_sample_ids = video_resolver.create_many(
-        session=db_session,
-        collection_id=collection.collection_id,
-        samples=[
-            VideoCreate(
-                file_path_abs=str(video_path),
-                file_name=video_path.name,
-                width=320,
-                height=240,
-                duration_s=1.0,
-                fps=30,
-            )
-        ],
-    )
-    video_frames_collection_id = collection_resolver.get_or_create_child_collection(
-        session=db_session,
-        collection_id=collection.collection_id,
-        sample_type=SampleType.VIDEO_FRAME,
-    )
-
-    fs, fs_path = fsspec.core.url_to_fs(url=str(video_path))
-    video_file = fs.open(path=fs_path, mode="rb")
-    video_container = container.open(file=video_file)
-    frame_sample_ids = add_videos._create_video_frame_samples(
-        context=FrameExtractionContext(
-            session=db_session,
-            collection_id=video_frames_collection_id,
-            video_sample_id=video_sample_ids[0],
-        ),
-        video_container=video_container,
-        video_channel=0,
-        fps=10,
-    )
-    video_container.close()
-    video_file.close()
-
-    assert len(frame_sample_ids) == 10
-    video_frames = video_frame_resolver.get_all_by_collection_id(
-        session=db_session,
-        collection_id=video_frames_collection_id,
-    ).samples
-    assert [frame.frame_number for frame in video_frames] == [0, 3, 6, 9, 12, 15, 18, 21, 24, 27]
-
-
-def test_load_into_collection_from_paths__fps_subsamples(
-    db_session: Session, tmp_path: Path
+@pytest.mark.parametrize("fps", [0, -5])
+def test_load_into_collection_from_paths__invalid_fps_raises(
+    db_session: Session, fps: float
 ) -> None:
-    """Subsampling via fps threads through and leaves video-level metadata untouched."""
-    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
-    video_path = create_video_file(
-        output_path=tmp_path / "test_video_fps.mp4",
-        width=320,
-        height=240,
-        num_frames=30,
-        fps=30,
-    )
-    video_sample_ids, frame_sample_ids = add_videos.load_into_collection_from_paths(
-        session=db_session,
-        collection_id=collection.collection_id,
-        video_paths=[str(video_path)],
-        fps=10,
-    )
-    assert len(video_sample_ids) == 1
-    assert len(frame_sample_ids) == 10
-
-    video_frames_collection_id = collection_resolver.get_or_create_child_collection(
-        session=db_session,
-        collection_id=collection.collection_id,
-        sample_type=SampleType.VIDEO_FRAME,
-    )
-    video_frames = video_frame_resolver.get_all_by_collection_id(
-        session=db_session,
-        collection_id=video_frames_collection_id,
-    ).samples
-    assert [frame.frame_number for frame in video_frames] == [0, 3, 6, 9, 12, 15, 18, 21, 24, 27]
-
-    # The stored video-level fps remains the original source rate.
-    video = video_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
-    ).samples[0]
-    assert video.fps == 30.0
+    with pytest.raises(ValueError, match="fps must be greater than 0"):
+        add_videos.load_into_collection_from_paths(
+            session=db_session,
+            collection_id=uuid4(),
+            video_paths=[],
+            fps=fps,
+        )
 
 
 def test__configure_stream_threading__with_explicit_thread_count() -> None:

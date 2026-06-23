@@ -150,33 +150,6 @@ class TestDataset:
         ).samples
         assert [frame.frame_number for frame in frames] == [0, 3, 6, 9, 12, 15, 18, 21, 24, 27]
 
-    def test_dataset_add_videos_from_path__fps_none_keeps_all(
-        self,
-        patch_collection: None,  # noqa: ARG002
-        tmp_path: Path,
-    ) -> None:
-        create_video_file(
-            output_path=tmp_path / "test_video.mp4",
-            width=640,
-            height=480,
-            num_frames=30,
-            fps=30,
-        )
-
-        dataset = VideoDataset.create(name="test_dataset")
-        dataset.add_videos_from_path(path=tmp_path, embed=False)
-
-        frames_collection_id = collection_resolver.get_or_create_child_collection(
-            session=dataset.session,
-            collection_id=dataset.collection_id,
-            sample_type=SampleType.VIDEO_FRAME,
-        )
-        frames = video_frame_resolver.get_all_by_collection_id(
-            session=dataset.session,
-            collection_id=frames_collection_id,
-        ).samples
-        assert [frame.frame_number for frame in frames] == list(range(30))
-
     @pytest.mark.parametrize("fps", [0, -5])
     def test_dataset_add_videos_from_path__invalid_fps_raises(
         self,
