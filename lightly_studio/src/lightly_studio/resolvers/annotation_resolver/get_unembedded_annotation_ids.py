@@ -19,10 +19,8 @@ def get_unembedded_annotation_ids(
 ) -> list[UUID]:
     """Return IDs of object-detection annotations in the collection lacking an embedding.
 
-    Only sample IDs are loaded so the result stays small even for very large collections;
-    the crops themselves are fetched per chunk by ``get_annotation_crops_for_ids``. Results
-    are ordered by source image path so an image's annotations stay adjacent and tend to land
-    in the same chunk, preserving the single-open-per-image behaviour of crop embedding.
+    Results are ordered by source image path so an image's annotations stay adjacent and tend to
+    land in the same chunk, preserving the single-open-per-image behaviour of crop embedding.
 
     Args:
         session: Database session for resolver operations.

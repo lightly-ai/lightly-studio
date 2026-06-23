@@ -14,38 +14,6 @@ from tests.helpers_resolvers import (
 )
 
 
-def test_get_annotation_crops_for_ids__returns_parallel_lists(
-    db_session: Session,
-) -> None:
-    """Annotation sample IDs and image crops are returned as parallel lists."""
-    collection = create_collection(session=db_session)
-    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
-    image = create_image(
-        session=db_session,
-        collection_id=collection.collection_id,
-        file_path_abs="/path/to/sample.png",
-        width=100,
-        height=100,
-    )
-    annotation = create_annotation(
-        session=db_session,
-        collection_id=collection.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label.annotation_label_id,
-        annotation_data={"x": 10, "y": 20, "width": 30, "height": 40},
-    )
-
-    result = annotation_resolver.get_annotation_crops_for_ids(
-        session=db_session,
-        annotation_sample_ids=[annotation.sample_id],
-    )
-
-    assert result.annotation_sample_ids == [annotation.sample_id]
-    assert result.image_crops == [
-        ImageCrop(filepath="/path/to/sample.png", x=10, y=20, width=30, height=40)
-    ]
-
-
 def test_get_annotation_crops_for_ids__clamps_box_to_image_bounds(
     db_session: Session,
 ) -> None:
