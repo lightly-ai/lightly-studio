@@ -213,6 +213,66 @@ Run `python example_yolo.py` and open the printed URL to inspect images with the
 </details>
 
 <details>
+<summary><strong>Add custom annotations</strong></summary>
+
+Create a file named `example_custom_annotations.py`:
+
+```python
+import numpy as np
+
+import lightly_studio as ls
+from lightly_studio.core.annotation import (
+    CreateClassification,
+    CreateObjectDetection,
+    CreateSegmentationMask,
+)
+from lightly_studio.core.dataset_query import ImageSampleField
+
+# Download the example dataset (will be skipped if it already exists)
+dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+images_path = f"{dataset_path}/coco_subset_128_images/images"
+
+# Create an image dataset and add the images first.
+dataset = ls.ImageDataset.load_or_create()
+dataset.add_images_from_path(path=images_path)
+
+# Use a query to fetch the sample you want to annotate.
+sample = dataset.query().match(
+    ImageSampleField.file_name == "000000565296.jpg",
+).to_list()[0]
+
+# A binary mask is indexed as [row, column], so its shape is (height, width).
+binary_mask = np.zeros((sample.height, sample.width), dtype=np.uint8)
+binary_mask[160:300, 300:480] = 1
+
+# Add one set of annotations to this sample.
+sample.add_annotations(
+    [
+        CreateClassification(class_name="outdoor"),
+        CreateObjectDetection(
+            class_name="vehicle",
+            x=80,
+            y=120,
+            width=180,
+            height=120,
+        ),
+        CreateSegmentationMask.from_binary_mask(
+            class_name="foreground",
+            binary_mask=binary_mask,
+        ),
+    ],
+    annotation_source="ground_truth",
+)
+
+ls.start_gui()
+```
+
+Run `python example_custom_annotations.py` and open the printed URL to inspect the
+classification, bounding box, and segmentation mask.
+
+</details>
+
+<details>
 <summary><strong>Working with notebooks</strong></summary>
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb)

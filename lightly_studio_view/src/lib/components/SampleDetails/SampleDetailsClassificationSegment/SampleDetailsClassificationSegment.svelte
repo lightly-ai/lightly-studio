@@ -5,7 +5,7 @@
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
-    import { cn, formatConfidence } from '$lib/utils';
+    import { cn, formatConfidence, resolveEffectiveColorBySource } from '$lib/utils';
     import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
@@ -23,6 +23,8 @@
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
+    import { useSettings } from '$lib/hooks';
+    import AnnotationColorLegend from '$lib/components/AnnotationColorLegend/AnnotationColorLegend.svelte';
     import { page } from '$app/state';
     import { Trash2 } from '@lucide/svelte';
     import { toast } from 'svelte-sonner';
@@ -37,6 +39,7 @@
         $props();
 
     const { isEditingMode, addReversibleAction } = useGlobalStorage();
+    const { enforceColoringByClassStore } = useSettings();
 
     const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
     const { createAnnotation } = useCreateAnnotation({ collectionId });
@@ -78,6 +81,15 @@
     // the effect-written `annotationsIdsToHide`); drives the seed and the initial collapse.
     const seededHiddenIds = $derived(
         computeSeededHiddenIds(classificationAnnotations, $selectedCollectionIds, annotationSources)
+    );
+
+    // Color source group headers by source only when multiple sources are visible and class
+    // coloring is not enforced, mirroring the annotation segment and canvas behavior.
+    const colorBySource = $derived(
+        resolveEffectiveColorBySource({
+            multipleSourcesVisible: $selectedCollectionIds.length > 1,
+            enforceColoringByClass: $enforceColoringByClassStore
+        })
     );
 
     const handleDeleteAnnotation = async (annotationId: string) => {
@@ -211,41 +223,52 @@
         data-annotation-id={annotation.sample_id}
     >
         <span class="flex min-w-0 flex-1 flex-col gap-1">
-            <span class="min-w-0 text-sm font-medium">
-                {#if $isEditingMode}
-                    <SelectList
-                        {items}
-                        selectedItem={items.find(
-                            (i) => i.value === getLabelValue(annotation)?.value
-                        )}
-                        name="classification-label"
-                        placeholder="Select or create a class"
-                        className="w-full min-w-0"
-                        contentClassName="w-full min-w-0"
-                        onSelect={async (item) => {
-                            await updateClassificationLabel(annotation, item.value);
-                        }}
-                    >
-                        {#snippet notFound({ inputValue })}
-                            <LabelNotFound label={inputValue} />
-                        {/snippet}
-                    </SelectList>
-                {:else}
-                    <span class="block min-w-0 truncate">
-                        {annotation.annotation_label.annotation_label_name}
-                    </span>
-                    {#if annotation.confidence != null}
-                        {@const formattedConfidence = formatConfidence(annotation.confidence)}
-                        <span class="text-xs text-muted-foreground"
-                            >Confidence: {formattedConfidence}</span
-                        >
-                    {/if}
-                    {#if annotation.object_track_number != null}
-                        <span class="shrink-0 font-mono text-xs opacity-80"
-                            >#{annotation.object_track_number}</span
-                        >
-                    {/if}
+            <span class="flex min-w-0 items-center gap-2 text-sm font-medium">
+                {#if !colorBySource}
+                    <div class="h-4 shrink-0">
+                        <AnnotationColorLegend
+                            labelName={annotation.annotation_label.annotation_label_name}
+                            className="h-4 w-4"
+                            selected={false}
+                        />
+                    </div>
                 {/if}
+                <span class="flex min-w-0 flex-1 flex-col gap-1">
+                    {#if $isEditingMode}
+                        <SelectList
+                            {items}
+                            selectedItem={items.find(
+                                (i) => i.value === getLabelValue(annotation)?.value
+                            )}
+                            name="classification-label"
+                            placeholder="Select or create a class"
+                            className="w-full min-w-0"
+                            contentClassName="w-full min-w-0"
+                            onSelect={async (item) => {
+                                await updateClassificationLabel(annotation, item.value);
+                            }}
+                        >
+                            {#snippet notFound({ inputValue })}
+                                <LabelNotFound label={inputValue} />
+                            {/snippet}
+                        </SelectList>
+                    {:else}
+                        <span class="block min-w-0 truncate">
+                            {annotation.annotation_label.annotation_label_name}
+                        </span>
+                        {#if annotation.confidence != null}
+                            {@const formattedConfidence = formatConfidence(annotation.confidence)}
+                            <span class="text-xs text-muted-foreground"
+                                >Confidence: {formattedConfidence}</span
+                            >
+                        {/if}
+                        {#if annotation.object_track_number != null}
+                            <span class="shrink-0 font-mono text-xs opacity-80"
+                                >#{annotation.object_track_number}</span
+                            >
+                        {/if}
+                    {/if}
+                </span>
             </span>
         </span>
         <div class="flex shrink-0 items-center gap-3">
@@ -280,7 +303,7 @@
                                 seededHiddenIds,
                                 annotationLabelContext.lastCreatedAnnotationId
                             )}
-                            showColorMarker={true}
+                            showColorMarker={colorBySource}
                         >
                             <div class="flex flex-col gap-2">
                                 {#each group.annotations as annotation (annotation.sample_id)}

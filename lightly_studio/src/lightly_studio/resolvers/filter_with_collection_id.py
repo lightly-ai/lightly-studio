@@ -1,33 +1,24 @@
-"""Generic filter type that carries a collection ID alongside filters."""
+"""Filter type that carries a collection ID alongside a video filter."""
 
 from __future__ import annotations
 
-from typing import Generic, Protocol, TypeVar, runtime_checkable
+from typing import Generic, TypeVar
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 from sqlmodel import col
 
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from lightly_studio.type_definitions import QueryType
 
-
-@runtime_checkable
-class FilterProtocol(Protocol):
-    """Structural type for filters that have an apply method."""
-
-    def apply(self, query: QueryType) -> QueryType:
-        """Apply this filter to the query."""
-        ...
-
-
-T = TypeVar("T", bound=FilterProtocol)
+# FilterWithCollectionId is used for SampleAdjacent functionality for videos.
+T = TypeVar("T", VideoFrameFilter, VideoFilter)
 
 
 class FilterWithCollectionId(BaseModel, Generic[T]):
-    """Pairs a collection ID with a filter."""
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    """Pairs a collection ID with a video or video frame filter."""
 
     collection_id: UUID
     filter: T
