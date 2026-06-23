@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
 import { writable } from 'svelte/store';
 import '@testing-library/jest-dom';
 import ImageSizeControl from './ImageSizeControl.svelte';
@@ -66,5 +67,21 @@ describe('ImageSizeControl', () => {
         expect(screen.queryByRole('slider')).not.toBeInTheDocument();
         expect(screen.getByLabelText('Zoom in')).toBeInTheDocument();
         expect(screen.getByLabelText('Zoom out')).toBeInTheDocument();
+    });
+
+    it('shows tooltips on hover over zoom controls', async () => {
+        const user = userEvent.setup();
+        render(ImageSizeControl);
+
+        await user.hover(screen.getByLabelText('Zoom out'));
+        expect(screen.getByRole('tooltip')).toHaveTextContent('Zoom out.');
+
+        await user.unhover(screen.getByLabelText('Zoom out'));
+        await user.hover(screen.getByRole('slider'));
+        expect(screen.getByRole('tooltip')).toHaveTextContent('Adjust thumbnail size.');
+
+        await user.unhover(screen.getByRole('slider'));
+        await user.hover(screen.getByLabelText('Zoom in'));
+        expect(screen.getByRole('tooltip')).toHaveTextContent('Zoom in.');
     });
 });

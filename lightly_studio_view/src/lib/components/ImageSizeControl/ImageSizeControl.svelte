@@ -3,6 +3,7 @@
     import { throttle } from 'lodash-es';
     import { ZoomIn, ZoomOut } from '@lucide/svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { Tooltip } from '$lib/components/ui/tooltip';
 
     interface Props {
         min?: number;
@@ -40,33 +41,39 @@
     class:space-x-2={!compact}
     class:space-x-4={compact}
 >
-    <button
-        onclick={zoomOut}
-        disabled={width >= max}
-        class="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-opacity hover:opacity-70 disabled:cursor-not-allowed disabled:opacity-30"
-        aria-label="Zoom out"
-    >
-        <ZoomOut class="h-4 w-4" />
-    </button>
+    <Tooltip content="Zoom out." position="top">
+        <button
+            onclick={zoomOut}
+            disabled={width >= max}
+            class="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-opacity hover:opacity-70 disabled:cursor-not-allowed disabled:opacity-30"
+            aria-label="Zoom out"
+        >
+            <ZoomOut class="h-4 w-4" />
+        </button>
+    </Tooltip>
 
     {#if !compact}
-        <Slider
-            type="multiple"
-            class="w-full flex-1"
-            value={[sliderValue]}
-            {min}
-            {max}
-            step={1}
-            onValueChange={handleChange}
-        />
+        <Tooltip content="Adjust thumbnail size." position="top" triggerClass="flex flex-1">
+            <Slider
+                type="multiple"
+                class="w-full flex-1"
+                value={[sliderValue]}
+                {min}
+                {max}
+                step={1}
+                onValueChange={handleChange}
+            />
+        </Tooltip>
     {/if}
 
-    <button
-        onclick={zoomIn}
-        disabled={width <= min}
-        class="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-opacity hover:opacity-70 disabled:cursor-not-allowed disabled:opacity-30"
-        aria-label="Zoom in"
-    >
-        <ZoomIn class="h-4 w-4" />
-    </button>
+    <Tooltip content="Zoom in." position="top">
+        <button
+            onclick={zoomIn}
+            disabled={width <= min}
+            class="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-opacity hover:opacity-70 disabled:cursor-not-allowed disabled:opacity-30"
+            aria-label="Zoom in"
+        >
+            <ZoomIn class="h-4 w-4" />
+        </button>
+    </Tooltip>
 </div>
