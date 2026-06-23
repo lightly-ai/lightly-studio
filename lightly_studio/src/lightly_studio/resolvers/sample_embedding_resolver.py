@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 from uuid import UUID
 
-from sqlalchemy import String, cast, func
+from sqlalchemy import func
 from sqlmodel import Session, col, select
 
 from lightly_studio.database import db_vector
@@ -63,11 +63,10 @@ def get_by_sample_ids(
     """
     results: list[SampleEmbeddingTable] = []
     for batch in batching.batched(items=sample_ids):
-        string_ids = [str(id_) for id_ in batch]
         results.extend(
             session.exec(
                 select(SampleEmbeddingTable)
-                .where(cast(SampleEmbeddingTable.sample_id, String).in_(string_ids))
+                .where(col(SampleEmbeddingTable.sample_id).in_(batch))
                 .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
             ).all()
         )
