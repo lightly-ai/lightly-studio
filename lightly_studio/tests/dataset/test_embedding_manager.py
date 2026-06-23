@@ -12,6 +12,7 @@ from sqlmodel import Session, select
 
 from lightly_studio.dataset import embedding_manager
 from lightly_studio.dataset.embedding_generator import (
+    ImageCrop,
     ImageEmbeddingGenerator,
     RandomEmbeddingGenerator,
 )
@@ -89,6 +90,11 @@ def test_register_multiple_models(
 
         def embed_images(
             self, filepaths: list[str], show_progress: bool = True
+        ) -> NDArray[np.float32]:
+            raise NotImplementedError()
+
+        def embed_image_crops(
+            self, image_crops: list[ImageCrop], show_progress: bool = True
         ) -> NDArray[np.float32]:
             raise NotImplementedError()
 
