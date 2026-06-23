@@ -59,7 +59,8 @@ describe('getSampleClassificationPills', () => {
             collectionIdToName: {
                 'collection-1': 'Animals',
                 'collection-2': 'Vehicles'
-            }
+            },
+            enforceColoringByClass: false
         });
 
         expect(pills).toEqual([
@@ -89,7 +90,8 @@ describe('getSampleClassificationPills', () => {
             collectionIdToName: {
                 'collection-1': 'Source A',
                 'collection-2': 'Source B'
-            }
+            },
+            enforceColoringByClass: false
         });
 
         expect(pills).toEqual([
@@ -119,7 +121,8 @@ describe('getSampleClassificationPills', () => {
             collectionIdToName: {
                 'collection-1': 'Source A',
                 'collection-2': 'Source B'
-            }
+            },
+            enforceColoringByClass: false
         });
 
         expect(pills).toEqual([
@@ -160,7 +163,8 @@ describe('getSampleClassificationPills', () => {
             collectionIdToName: {
                 'collection-a': 'Collection A',
                 'collection-b': 'Collection B'
-            }
+            },
+            enforceColoringByClass: false
         });
 
         expect(pills.map((pill) => pill.id)).toEqual([
@@ -181,7 +185,8 @@ describe('getSampleClassificationPills', () => {
             selectedCollectionIds: ['missing-collection', 'collection-2'],
             collectionIdToName: {
                 'collection-2': 'Known Source'
-            }
+            },
+            enforceColoringByClass: false
         });
 
         expect(pills).toEqual([
@@ -195,6 +200,44 @@ describe('getSampleClassificationPills', () => {
         ]);
     });
 
+    it('uses class colors when enforce coloring by class is enabled despite multiple selected sources', () => {
+        const pills = getSampleClassificationPills({
+            annotations: [
+                createAnnotation({
+                    annotationCollectionId: 'collection-1',
+                    annotationLabelName: 'car'
+                }),
+                createAnnotation({
+                    annotationCollectionId: 'collection-2',
+                    annotationLabelName: 'car'
+                }),
+                createAnnotation({
+                    annotationCollectionId: 'collection-1',
+                    annotationLabelName: 'truck'
+                })
+            ],
+            selectedCollectionIds: ['collection-1', 'collection-2'],
+            collectionIdToName: {
+                'collection-1': 'Ground Truth',
+                'collection-2': 'Predictions'
+            },
+            enforceColoringByClass: true
+        });
+
+        // With enforcement on, source colors are suppressed: duplicate labels are
+        // deduped and colorKey uses the class name, not the source name.
+        expect(pills).toEqual([
+            { id: 'car', label: 'car', displayLabel: 'car', colorKey: 'car', title: 'car' },
+            {
+                id: 'truck',
+                label: 'truck',
+                displayLabel: 'truck',
+                colorKey: 'truck',
+                title: 'truck'
+            }
+        ]);
+    });
+
     it('truncates long labels for display', () => {
         const pills = getSampleClassificationPills({
             annotations: [
@@ -204,7 +247,8 @@ describe('getSampleClassificationPills', () => {
                 })
             ],
             selectedCollectionIds: [],
-            collectionIdToName: {}
+            collectionIdToName: {},
+            enforceColoringByClass: false
         });
 
         expect(pills[0]).toMatchObject({

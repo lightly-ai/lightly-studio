@@ -11,6 +11,7 @@
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useSettings } from '$lib/hooks';
     import { cn } from '$lib/utils';
 
     // Not built on SelectList: it has no slot for a custom trigger or per-item colour swatch, and
@@ -30,6 +31,9 @@
     const { context: annotationLabelContext, setAnnotationSource } = useAnnotationLabelContext();
     const { updateLastAnnotationSource } = useGlobalStorage();
     const annotationCollections = useAnnotationCollections(() => ({ collectionId }));
+    const { enforceColoringByClassStore } = useSettings();
+
+    const showColorMarker = $derived(!$enforceColoringByClassStore);
 
     const sourceNames = $derived(annotationCollections.data?.map((c) => c.name) ?? []);
 
@@ -99,7 +103,12 @@
                     data-testid="annotation-source-pill-trigger"
                 >
                     <span class="shrink-0 text-muted-foreground">Adding to</span>
-                    <ColorMarker label={effectiveSource} />
+                    {#if showColorMarker}
+                        <ColorMarker
+                            label={effectiveSource}
+                            markerProps={{ 'data-testid': `color-marker-${effectiveSource}` }}
+                        />
+                    {/if}
                     <span class="min-w-0 truncate font-medium">{effectiveSource}</span>
                     <ChevronsUpDownIcon class="size-3.5 shrink-0 opacity-50" />
                 </button>
@@ -124,7 +133,12 @@
                                 <CheckIcon
                                     class={cn(effectiveSource !== name && 'text-transparent')}
                                 />
-                                <ColorMarker label={name} />
+                                {#if showColorMarker}
+                                    <ColorMarker
+                                        label={name}
+                                        markerProps={{ 'data-testid': `color-marker-${name}` }}
+                                    />
+                                {/if}
                                 <span class="min-w-0 flex-1 truncate">{name}</span>
                             </Command.Item>
                         {/each}

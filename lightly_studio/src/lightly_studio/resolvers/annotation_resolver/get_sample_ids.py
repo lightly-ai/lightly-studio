@@ -4,11 +4,9 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlmodel import Session, col, select
+from sqlmodel import Session
 from sqlmodel.sql.expression import SelectOfScalar
 
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
-from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 
 
@@ -25,11 +23,7 @@ def build_sample_ids_query(
     Returns:
         A query selecting the distinct annotation sample ids matching the filters.
     """
-    query = select(AnnotationBaseTable.sample_id).join(AnnotationBaseTable.sample)
-    query = query.where(col(SampleTable.collection_id) == collection_id)
-    if filters is not None:
-        query = filters.apply(query)
-    return query.distinct()
+    return (filters or AnnotationsFilter()).build_sample_ids_query(collection_id=collection_id)
 
 
 def get_sample_ids(

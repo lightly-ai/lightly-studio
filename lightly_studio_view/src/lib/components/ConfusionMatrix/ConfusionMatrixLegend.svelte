@@ -1,9 +1,10 @@
 <script lang="ts">
     interface Props {
         maxCount: number;
+        logScale?: boolean;
     }
 
-    const { maxCount }: Props = $props();
+    const { maxCount, logScale = true }: Props = $props();
 
     const TP_ALPHAS = [0.15, 0.3, 0.5, 0.7, 0.95];
     const FP_FN_ALPHAS = [0.15, 0.3, 0.5, 0.7, 0.95];
@@ -44,6 +45,7 @@
     </div>
 
     <span class="text-muted-foreground/70">
-        Color intensity scales with cell count. Hover for breakdown.
+        Color intensity scales {logScale ? 'logarithmically' : 'linearly'} with cell count. Hover for
+        breakdown.
     </span>
 </div>

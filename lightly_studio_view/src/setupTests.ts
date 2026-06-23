@@ -42,6 +42,13 @@ class MockResizeObserver implements ResizeObserver {
 
 vi.stubGlobal('ResizeObserver', MockResizeObserver);
 
+// jsdom does not implement scrollIntoView, which bits-ui Command/Select call when
+// navigating items. Provide a no-op so those components can render in tests.
+Object.defineProperty(Element.prototype, 'scrollIntoView', {
+    writable: true,
+    value: vi.fn()
+});
+
 Object.defineProperty(Element.prototype, 'animate', {
     writable: true,
     value: vi.fn().mockImplementation(() => {
