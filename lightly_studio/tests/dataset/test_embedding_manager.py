@@ -359,6 +359,46 @@ def test_load_or_get_default_model(
     mock_load.assert_called_once_with(sample_type=SampleType.IMAGE)  # still only one call
 
 
+def test_load_or_get_default_model__shares_generator_across_collections(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """An annotation child collection reuses the parent's loaded generator.
+
+    The generator weights are loaded once, but each collection still gets its
+    own embedding-model record and id.
+    """
+    image_collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
+    annotation_collection = create_collection(
+        session=db_session,
+        parent_collection_id=image_collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+    manager = EmbeddingManager()
+
+    mock_load = mocker.patch.object(
+        embedding_manager,
+        "_load_embedding_generator_from_env",
+        return_value=RandomEmbeddingGenerator(),
+    )
+
+    image_model_id = manager.load_or_get_default_model(
+        session=db_session, collection_id=image_collection.collection_id
+    )
+    annotation_model_id = manager.load_or_get_default_model(
+        session=db_session, collection_id=annotation_collection.collection_id
+    )
+    assert image_model_id is not None
+    assert annotation_model_id is not None
+
+    # The generator is loaded only once and shared between both collections.
+    mock_load.assert_called_once_with(sample_type=SampleType.IMAGE)
+    assert manager._models[image_model_id] is manager._models[annotation_model_id]
+
+    # Each collection still owns a distinct embedding-model record.
+    assert image_model_id != annotation_model_id
+
+
 def test_load_or_get_default_model__cant_load(
     db_session: Session,
     mocker: MockerFixture,
