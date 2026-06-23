@@ -495,6 +495,7 @@ def _get_annotation_crops_for_ids(
         )
         .join(ImageTable, col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id))
         .where(col(AnnotationBaseTable.sample_id).in_(annotation_sample_ids))
+        .order_by(col(ImageTable.file_path_abs))
     ).all()
 
     annotation_crops: list[_AnnotationCrop] = []
