@@ -128,7 +128,7 @@ class TestDataset:
         )
 
         dataset = VideoDataset.create(name="test_dataset")
-        dataset.add_videos_from_path(path=tmp_path, fps=10, embed=False)
+        dataset.add_videos_from_path(path=tmp_path, target_fps=10, embed=False)
 
         # The video-level fps remains the original source rate.
         videos = video_resolver.get_all_by_collection_id(
@@ -150,16 +150,16 @@ class TestDataset:
         ).samples
         assert [frame.frame_number for frame in frames] == [0, 3, 6, 9, 12, 15, 18, 21, 24, 27]
 
-    @pytest.mark.parametrize("fps", [0, -5])
+    @pytest.mark.parametrize("target_fps", [0, -5])
     def test_dataset_add_videos_from_path__invalid_fps_raises(
         self,
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
-        fps: float,
+        target_fps: float,
     ) -> None:
         dataset = VideoDataset.create(name="test_dataset")
-        with pytest.raises(ValueError, match="fps must be greater than 0"):
-            dataset.add_videos_from_path(path=tmp_path, fps=fps)
+        with pytest.raises(ValueError, match="target_fps must be greater than 0"):
+            dataset.add_videos_from_path(path=tmp_path, target_fps=target_fps)
 
     def test_add_videos_from_youtube_vis__object_detection(
         self,

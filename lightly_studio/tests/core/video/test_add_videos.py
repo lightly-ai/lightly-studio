@@ -208,16 +208,16 @@ def test__should_keep_frame(
     assert kept == expected
 
 
-@pytest.mark.parametrize("fps", [0, -5])
+@pytest.mark.parametrize("target_fps", [0, -5])
 def test_load_into_collection_from_paths__invalid_fps_raises(
-    db_session: Session, fps: float
+    db_session: Session, target_fps: float
 ) -> None:
-    with pytest.raises(ValueError, match="fps must be greater than 0"):
+    with pytest.raises(ValueError, match="target_fps must be greater than 0"):
         add_videos.load_into_collection_from_paths(
             session=db_session,
             collection_id=uuid4(),
             video_paths=[],
-            fps=fps,
+            target_fps=target_fps,
         )
 
 
