@@ -49,6 +49,24 @@ describe('buildEvaluationRunBody', () => {
         expect(body.task_type).toBe('semantic_segmentation');
         expect('config' in body).toBe(false);
     });
+
+    it('uses a provided name over the default, trimming whitespace', () => {
+        const body = buildEvaluationRunBody({
+            ...base,
+            taskType: 'object_detection',
+            name: '  my run  '
+        });
+        expect(body.name).toBe('my run');
+    });
+
+    it('falls back to the default name when the provided name is blank', () => {
+        const body = buildEvaluationRunBody({
+            ...base,
+            taskType: 'object_detection',
+            name: '   '
+        });
+        expect(body.name).toBe('object_detection 2026-06-24 10:15:33');
+    });
 });
 
 describe('defaultEvaluationRunName', () => {

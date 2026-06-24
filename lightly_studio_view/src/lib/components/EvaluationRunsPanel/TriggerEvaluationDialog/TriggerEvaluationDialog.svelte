@@ -1,6 +1,7 @@
 <script lang="ts">
     import * as Dialog from '$lib/components/ui/dialog';
     import { Button } from '$lib/components/ui/button';
+    import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
     import Select from '$lib/components/Select/Select.svelte';
     import { Spinner } from '$lib/components';
@@ -10,6 +11,7 @@
     import {
         buildEvaluationRunBody,
         canSubmitEvaluation,
+        defaultEvaluationRunName,
         sourceMatchesTask,
         type EvaluationTaskType
     } from './TriggerEvaluationDialog.helpers';
@@ -40,6 +42,10 @@
     let predSource = $state<string | undefined>(undefined);
     let iouThreshold = $state(0.5);
     let classwise = $state(true);
+    // Empty means "use the auto-generated default" (shown as the placeholder).
+    let name = $state('');
+
+    const defaultName = $derived(defaultEvaluationRunName(taskType));
 
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
     const sources = $derived(annotationCollectionsQuery.data ?? []);
@@ -81,12 +87,14 @@
                 predSource: predSource!,
                 collectionId,
                 iouThreshold,
-                classwise
+                classwise,
+                name
             })
         );
         if (ok) {
             gtSource = undefined;
             predSource = undefined;
+            name = '';
             onOpenChange(false);
         }
     };
@@ -112,6 +120,16 @@
                             value={taskType}
                             onValueChange={onTaskTypeChange}
                             testId="evaluation-type-select"
+                        />
+                    </div>
+
+                    <div class="grid gap-2">
+                        <Label for="evaluation-run-name" class="text-foreground">Name</Label>
+                        <Input
+                            id="evaluation-run-name"
+                            bind:value={name}
+                            placeholder={defaultName}
+                            data-testid="evaluation-name-input"
                         />
                     </div>
 
