@@ -53,6 +53,11 @@ describe('TriggerEvaluationDialog', () => {
         expect(screen.getByTestId('gt-source-select')).toBeInTheDocument();
         expect(screen.getByTestId('pred-source-select')).toBeInTheDocument();
         expect(screen.getByTestId('evaluation-duration-note')).toBeInTheDocument();
+
+        // Name input defaults to the auto-generated name (shown as placeholder).
+        const nameInput = screen.getByTestId('evaluation-name-input') as HTMLInputElement;
+        expect(nameInput).toHaveValue('');
+        expect(nameInput.placeholder).toMatch(/^object_detection \d{4}-\d{2}-\d{2}/);
     });
 
     it('shows object-detection config fields by default', () => {
