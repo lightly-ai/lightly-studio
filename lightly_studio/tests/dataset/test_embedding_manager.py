@@ -537,11 +537,11 @@ def test_load_or_get_default_model__shares_generator_across_collections(
         return_value=RandomEmbeddingGenerator(),
     )
 
-    image_model_id = manager.load_or_get_default_model(
-        session=db_session, collection_id=image_collection.collection_id
-    )
     annotation_model_id = manager.load_or_get_default_model(
         session=db_session, collection_id=annotation_collection.collection_id
+    )
+    image_model_id = manager.load_or_get_default_model(
+        session=db_session, collection_id=image_collection.collection_id
     )
     assert image_model_id is not None
     assert annotation_model_id is not None
