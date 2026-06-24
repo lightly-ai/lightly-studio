@@ -17,7 +17,7 @@ from tests.helpers_resolvers import (
 )
 
 
-class TestClassificationExpressions:
+class TestClassificationQuery:
     def test_annotation_classification_label__sql(self) -> None:
         query = select(ImageTable).where(
             ClassificationQuery(ClassificationField.class_name == "cat").get()

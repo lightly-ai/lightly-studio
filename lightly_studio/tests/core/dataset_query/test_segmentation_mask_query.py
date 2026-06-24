@@ -17,7 +17,7 @@ from tests.helpers_resolvers import (
 )
 
 
-class TestSegmentationMaskExpressions:
+class TestSegmentationMaskQuery:
     def test_annotation_segmentation_mask_width__sql(self) -> None:
         query = select(ImageTable).where(
             SegmentationMaskQuery(SegmentationMaskField.width <= 100).get()

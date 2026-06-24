@@ -17,7 +17,7 @@ from tests.helpers_resolvers import (
 )
 
 
-class TestObjectDetectionExpressions:
+class TestObjectDetectionQuery:
     def test_annotation_object_detections_width__sql(self) -> None:
         query = select(ImageTable).where(
             ObjectDetectionQuery(ObjectDetectionField.width <= 100).get()
