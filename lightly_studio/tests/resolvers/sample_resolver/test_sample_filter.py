@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 from sqlmodel import Session, col, select
 
+from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionCreate
+from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
+from lightly_studio.models.evaluation_confusion_matrix import ConfusionCell
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.query_expr import (
     EqualityComparisonOperator,
@@ -15,7 +20,11 @@ from lightly_studio.models.query_expr import (
     StringExpr,
 )
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.resolvers import caption_resolver, tag_resolver
+from lightly_studio.resolvers import (
+    caption_resolver,
+    evaluation_annotation_metric_resolver,
+    tag_resolver,
+)
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import Metadata
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
@@ -26,6 +35,9 @@ from tests.helpers_resolvers import (
     create_collection,
     create_images,
     create_tag,
+)
+from tests.resolvers.evaluation_sample_metric_resolver import (
+    helpers as evaluation_sample_metric_helpers,
 )
 
 
@@ -492,3 +504,202 @@ class TestSampleFilter:
 
         assert len(result) == 1
         assert result[0].sample_id == samples[1].sample_id
+
+
+class TestSampleFilterConfusionCell:
+    def test_apply__confusion_cell__returns_only_matching_pairing(
+        self, db_session: Session
+    ) -> None:
+        dataset = create_collection(session=db_session)
+        dataset_id = dataset.collection_id
+        run, _image = evaluation_sample_metric_helpers.create_run_and_image(
+            session=db_session, dataset_collection_id=dataset_id
+        )
+        samples = create_images(
+            db_session=db_session,
+            collection_id=dataset_id,
+            images=[
+                ImageStub(path="car_truck.png"),
+                ImageStub(path="person_person.png"),
+                ImageStub(path="car_person.png"),
+            ],
+        )
+        car = create_annotation_label(
+            session=db_session, root_collection_id=dataset_id, label_name="car"
+        )
+        truck = create_annotation_label(
+            session=db_session, root_collection_id=dataset_id, label_name="truck"
+        )
+        person = create_annotation_label(
+            session=db_session, root_collection_id=dataset_id, label_name="person"
+        )
+        _seed_pair(
+            session=db_session,
+            dataset_id=dataset_id,
+            run_id=run.id,
+            image=samples[0],
+            labels=(car, truck),
+        )
+        _seed_pair(
+            session=db_session,
+            dataset_id=dataset_id,
+            run_id=run.id,
+            image=samples[1],
+            labels=(person, person),
+        )
+        _seed_pair(
+            session=db_session,
+            dataset_id=dataset_id,
+            run_id=run.id,
+            image=samples[2],
+            labels=(car, person),
+        )
+
+        sample_filter = SampleFilter(
+            confusion_cell=ConfusionCell(
+                evaluation_run_id=run.id, gt_label="car", pred_label="truck"
+            )
+        )
+
+        filtered_query = sample_filter.apply(query=select(SampleTable))
+        result = db_session.exec(filtered_query).all()
+
+        assert len(result) == 1
+        assert result[0].sample_id == samples[0].sample_id
+
+    def test_apply__confusion_cell__scopes_to_evaluation_run(self, db_session: Session) -> None:
+        dataset = create_collection(session=db_session)
+        dataset_id = dataset.collection_id
+        run_a, _image_a = evaluation_sample_metric_helpers.create_run_and_image(
+            session=db_session, dataset_collection_id=dataset_id, name="run_a"
+        )
+        run_b, _image_b = evaluation_sample_metric_helpers.create_run_and_image(
+            session=db_session, dataset_collection_id=dataset_id, name="run_b"
+        )
+        samples = create_images(
+            db_session=db_session,
+            collection_id=dataset_id,
+            images=[
+                ImageStub(path="run_a_sample.png"),
+                ImageStub(path="run_b_sample.png"),
+            ],
+        )
+        car = create_annotation_label(
+            session=db_session, root_collection_id=dataset_id, label_name="car"
+        )
+        truck = create_annotation_label(
+            session=db_session, root_collection_id=dataset_id, label_name="truck"
+        )
+        # Same car -> truck pairing recorded in two different runs.
+        _seed_pair(
+            session=db_session,
+            dataset_id=dataset_id,
+            run_id=run_a.id,
+            image=samples[0],
+            labels=(car, truck),
+        )
+        _seed_pair(
+            session=db_session,
+            dataset_id=dataset_id,
+            run_id=run_b.id,
+            image=samples[1],
+            labels=(car, truck),
+        )
+
+        sample_filter = SampleFilter(
+            confusion_cell=ConfusionCell(
+                evaluation_run_id=run_a.id, gt_label="car", pred_label="truck"
+            )
+        )
+
+        filtered_query = sample_filter.apply(query=select(SampleTable))
+        result = db_session.exec(filtered_query).all()
+
+        assert len(result) == 1
+        assert result[0].sample_id == samples[0].sample_id
+
+    def test_apply__confusion_cell__ands_with_other_predicate(self, db_session: Session) -> None:
+        dataset = create_collection(session=db_session)
+        dataset_id = dataset.collection_id
+        run, _image = evaluation_sample_metric_helpers.create_run_and_image(
+            session=db_session, dataset_collection_id=dataset_id
+        )
+        samples = create_images(
+            db_session=db_session,
+            collection_id=dataset_id,
+            images=[
+                ImageStub(path="car_truck_0.png"),
+                ImageStub(path="car_truck_1.png"),
+            ],
+        )
+        car = create_annotation_label(
+            session=db_session, root_collection_id=dataset_id, label_name="car"
+        )
+        truck = create_annotation_label(
+            session=db_session, root_collection_id=dataset_id, label_name="truck"
+        )
+        # Both samples share the car -> truck pairing.
+        _seed_pair(
+            session=db_session,
+            dataset_id=dataset_id,
+            run_id=run.id,
+            image=samples[0],
+            labels=(car, truck),
+        )
+        _seed_pair(
+            session=db_session,
+            dataset_id=dataset_id,
+            run_id=run.id,
+            image=samples[1],
+            labels=(car, truck),
+        )
+
+        # ANDing with a sample_ids predicate narrows the cell to a single sample.
+        sample_filter = SampleFilter(
+            confusion_cell=ConfusionCell(
+                evaluation_run_id=run.id, gt_label="car", pred_label="truck"
+            ),
+            sample_ids=[samples[1].sample_id],
+        )
+
+        filtered_query = sample_filter.apply(query=select(SampleTable))
+        result = db_session.exec(filtered_query).all()
+
+        assert len(result) == 1
+        assert result[0].sample_id == samples[1].sample_id
+
+
+def _seed_pair(
+    session: Session,
+    dataset_id: UUID,
+    run_id: UUID,
+    image: ImageTable,
+    labels: tuple[AnnotationLabelTable, AnnotationLabelTable],
+) -> None:
+    """Attach a gt/pred annotation pair to ``image`` and persist a metric row for it."""
+    gt_label, pred_label = labels
+    gt_annotation = create_annotation(
+        session=session,
+        collection_id=dataset_id,
+        sample_id=image.sample_id,
+        annotation_label_id=gt_label.annotation_label_id,
+    )
+    pred_annotation = create_annotation(
+        session=session,
+        collection_id=dataset_id,
+        sample_id=image.sample_id,
+        annotation_label_id=pred_label.annotation_label_id,
+    )
+    evaluation_annotation_metric_resolver.create_many(
+        session=session,
+        records=[
+            EvaluationAnnotationMetricCreate(
+                evaluation_run_id=run_id,
+                sample_id=image.sample_id,
+                gt_annotation_id=gt_annotation.sample_id,
+                pred_annotation_id=pred_annotation.sample_id,
+                metric_name="iou",
+                value=0.9,
+            )
+        ],
+    )
