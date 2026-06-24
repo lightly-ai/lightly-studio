@@ -35,4 +35,5 @@ src/lib/components/QueryEditor/language/generated
 src/lib/components/QueryEditor/language/monarch.generated.ts
 
 build-chunk-sizes.log
+openapi-ts-error-*.log
 storybook-static

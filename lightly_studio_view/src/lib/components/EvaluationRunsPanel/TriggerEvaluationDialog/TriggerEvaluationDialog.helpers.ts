@@ -10,14 +10,35 @@ interface BuildEvaluationRunBodyParams {
     collectionId: string;
     iouThreshold: number;
     classwise: boolean;
+    /** Reference time for the auto-generated name. Defaults to now. */
+    now?: Date;
 }
+
+const pad = (value: number): string => String(value).padStart(2, '0');
+
+/**
+ * Default run name using the browser's LOCAL time, e.g.
+ * "object_detection 2026-06-24 10:15:33".
+ *
+ * Generated client-side (rather than letting the backend default to UTC) so the
+ * timestamp in the name matches the localized `created_at` shown in the panel.
+ */
+export const defaultEvaluationRunName = (
+    taskType: EvaluationTaskType,
+    now: Date = new Date()
+): string => {
+    const stamp =
+        `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ` +
+        `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    return `${taskType} ${stamp}`;
+};
 
 /**
  * Build the request body for triggering an evaluation run.
  *
  * No filter is sent, so the run evaluates the full dataset. Object-detection
  * runs carry the IoU threshold and class-wise config; the other tasks have no
- * task-specific config.
+ * task-specific config. A local-time default name is included.
  */
 export const buildEvaluationRunBody = (
     params: BuildEvaluationRunBodyParams
@@ -25,7 +46,8 @@ export const buildEvaluationRunBody = (
     const base = {
         gt_annotation_source: params.gtSource,
         pred_annotation_source: params.predSource,
-        collection_id: params.collectionId
+        collection_id: params.collectionId,
+        name: defaultEvaluationRunName(params.taskType, params.now)
     };
     if (params.taskType === 'object_detection') {
         return {

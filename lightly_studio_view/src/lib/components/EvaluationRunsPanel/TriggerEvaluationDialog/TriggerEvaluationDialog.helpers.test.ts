@@ -2,19 +2,22 @@ import { describe, expect, it } from 'vitest';
 import {
     buildEvaluationRunBody,
     canSubmitEvaluation,
+    defaultEvaluationRunName,
     sourceMatchesTask
 } from './TriggerEvaluationDialog.helpers';
 
 describe('buildEvaluationRunBody', () => {
+    const now = new Date(2026, 5, 24, 10, 15, 33); // local time
     const base = {
         gtSource: 'gt',
         predSource: 'pred',
         collectionId: 'collection-1',
         iouThreshold: 0.7,
-        classwise: false
+        classwise: false,
+        now
     };
 
-    it('includes object-detection config for object_detection runs', () => {
+    it('includes object-detection config and a local-time name for object_detection runs', () => {
         const body = buildEvaluationRunBody({ ...base, taskType: 'object_detection' });
 
         expect(body).toEqual({
@@ -22,6 +25,7 @@ describe('buildEvaluationRunBody', () => {
             gt_annotation_source: 'gt',
             pred_annotation_source: 'pred',
             collection_id: 'collection-1',
+            name: 'object_detection 2026-06-24 10:15:33',
             config: { iou_threshold: 0.7, classwise: false }
         });
     });
@@ -33,7 +37,8 @@ describe('buildEvaluationRunBody', () => {
             task_type: 'classification',
             gt_annotation_source: 'gt',
             pred_annotation_source: 'pred',
-            collection_id: 'collection-1'
+            collection_id: 'collection-1',
+            name: 'classification 2026-06-24 10:15:33'
         });
         expect('filter' in body).toBe(false);
     });
@@ -43,6 +48,13 @@ describe('buildEvaluationRunBody', () => {
 
         expect(body.task_type).toBe('semantic_segmentation');
         expect('config' in body).toBe(false);
+    });
+});
+
+describe('defaultEvaluationRunName', () => {
+    it('formats the task type and local time, zero-padded', () => {
+        const name = defaultEvaluationRunName('object_detection', new Date(2026, 0, 5, 9, 3, 7));
+        expect(name).toBe('object_detection 2026-01-05 09:03:07');
     });
 });
 
