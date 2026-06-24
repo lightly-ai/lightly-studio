@@ -25,7 +25,7 @@ class SampleEmbeddingRow(NamedTuple):
     """A sample id paired with its embedding vector.
 
     Lightweight read result for ``get_by_sample_ids``: only the ``sample_id`` and
-    ``embedding`` columns are loaded, never a full ``SampleEmbeddingTable`` ORM object.
+    ``embedding`` columns are loaded, never a full ``SampleEmbeddingTable`` object.
     """
 
     sample_id: UUID
@@ -95,21 +95,22 @@ def _get_by_sample_ids_postgres(
     sample_ids: list[UUID],
     embedding_model_id: UUID,
 ) -> list[SampleEmbeddingRow]:
-    """Load embeddings via a binary psycopg cursor (PostgreSQL only).
+    """Load embeddings with a binary psycopg cursor (PostgreSQL only).
 
-    Decoding pgvector's binary wire format with ``np.frombuffer`` is far faster than
-    parsing its text representation per row.
+    Reading the vectors in pgvector's binary format (via ``np.frombuffer``) is far
+    faster than parsing them from text for each row.
     """
-    # Match the regular query path's auto-flush so pending writes in this session are
-    # visible to the raw cursor (it shares the session's connection and transaction).
+    # Push any pending writes in this session to the database first so the cursor below
+    # sees them (it shares the session's connection and transaction). The normal query
+    # path does this automatically.
     session.flush()
     connection = session.connection().connection
     driver_connection = connection.driver_connection
     if driver_connection is None:  # pragma: no cover - a live session always has one
         raise RuntimeError("PostgreSQL session has no underlying psycopg connection.")
     if not connection.info.get("pgvector_registered"):
-        # Register pgvector once per connection so psycopg decodes ``vector`` columns in
-        # binary rather than parsing their text representation.
+        # Register pgvector once per connection so psycopg decodes ``vector`` columns
+        # from binary instead of parsing them from text.
         pgvector.psycopg.register_vector(driver_connection)
         connection.info["pgvector_registered"] = True
     query = (
@@ -132,8 +133,8 @@ def _get_by_sample_ids_duckdb(
     """Load embeddings via the SQLAlchemy query path (DuckDB).
 
     DuckDB returns the vectors as arrays natively, so selecting just ``sample_id`` and
-    ``embedding`` avoids hydrating full ORM objects. IDs are batched to bound statement
-    size. Output order is normalized by the caller.
+    ``embedding`` avoids creating full ``SampleEmbeddingTable`` objects. IDs are batched
+    to stay under the database's parameter limit.
     """
     rows: list[SampleEmbeddingRow] = []
     for batch in batching.batched(items=sample_ids):
