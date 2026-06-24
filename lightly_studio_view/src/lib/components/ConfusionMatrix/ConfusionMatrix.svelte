@@ -11,7 +11,12 @@
     import { CanvasRenderer } from 'echarts/renderers';
     import { buildEchartsOption } from './buildEchartsOption';
     import ConfusionMatrixLegend from './ConfusionMatrixLegend.svelte';
-    import type { ConfusionMatrix } from './types';
+    import {
+        NO_GROUND_TRUTH_ROW_LABEL,
+        NO_PREDICTION_COL_LABEL,
+        type ConfusionCellSelection,
+        type ConfusionMatrix
+    } from './types';
 
     echarts.use([
         HeatmapChart,
@@ -31,6 +36,11 @@
         colorIntensity?: number;
         /** Map color from log10(count) instead of the raw count (default true). */
         logScale?: boolean;
+        /**
+         * Called when a real class-by-class cell is clicked. Synthetic FP/FN cells
+         * (no ground truth / no prediction) are ignored and never invoke this.
+         */
+        onCellClick?: (cell: ConfusionCellSelection) => void;
     }
 
     const {
@@ -38,8 +48,11 @@
         showLegend = false,
         zoomable = false,
         colorIntensity = 1,
-        logScale = true
+        logScale = true,
+        onCellClick
     }: Props = $props();
+
+    const SENTINEL_LABELS = new Set<string>([NO_GROUND_TRUTH_ROW_LABEL, NO_PREDICTION_COL_LABEL]);
 
     let container: HTMLDivElement | undefined = $state();
     let chart: echarts.ECharts | null = $state(null);
@@ -55,6 +68,14 @@
         if (!container) return;
         const instance = echarts.init(container, null, { renderer: 'canvas' });
         chart = instance;
+        // Cells carry [pred, gt, count, log10(count)]; resolve back to labels and
+        // skip the synthetic FP/FN buckets, which are not class-by-class cells.
+        instance.on('click', (params: { value?: unknown }) => {
+            if (!Array.isArray(params.value)) return;
+            const [predLabel, gtLabel] = params.value as [string, string, number, number];
+            if (SENTINEL_LABELS.has(predLabel) || SENTINEL_LABELS.has(gtLabel)) return;
+            onCellClick?.({ gtLabel, predLabel });
+        });
         const resizeObserver = new ResizeObserver(() => instance.resize());
         resizeObserver.observe(container);
         return () => {
