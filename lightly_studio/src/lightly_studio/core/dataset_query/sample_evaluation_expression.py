@@ -21,18 +21,15 @@ class SampleEvaluationQuery(MatchExpression):
     run_name: str
     criteria: list[MatchExpression]
 
-    def __init__(self, run_name: str, *criteria: MatchExpression):
+    def __init__(self, run_name: str, *criteria: MatchExpression) -> None:
         """Combine multiple sample evaluation criteria into a single expression using AND.
 
         Example:
-            ``SampleEvaluationQuery.match("run1", EvaluationMetricField("miou") < 0.3)``
+            ``SampleEvaluationQuery("run1", EvaluationMetricField("miou") < 0.3)``
 
         Args:
             run_name: The evaluation run name to match metrics against.
             criteria: The evaluation metric criteria to combine.
-
-        Returns:
-            A single match expression for satisfying all criteria.
         """
         self.run_name = run_name
         self.criteria = list(criteria)
