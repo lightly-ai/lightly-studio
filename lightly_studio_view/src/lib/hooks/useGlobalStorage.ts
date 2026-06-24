@@ -21,7 +21,7 @@ const selectedSampleAnnotationCropIds = writable<Record<string, Set<string>>>({}
  * edit invalidates it. `size` lets the tag logic detect a selection that no longer matches.
  * `filter` is the by-filter tag endpoint's payload, so a snapshot can't hold a rejected filter.
  */
-export type SelectAllSnapshot = { filter: TagByFilterBody['filter']; size: number };
+type SelectAllSnapshot = { filter: TagByFilterBody['filter']; size: number };
 
 const selectAllSnapshotByCollection = writable<Record<string, SelectAllSnapshot | null>>({});
 const selectAllAnnotationSnapshotByCollection = writable<Record<string, SelectAllSnapshot | null>>(
@@ -206,11 +206,9 @@ export const useGlobalStorage = () => {
         selectedSampleAnnotationCropIds,
 
         // Select-all snapshots (sample + annotation grids)
-        selectAllSnapshotByCollection,
         getSelectAllSnapshot,
         setSelectAllSnapshot,
         clearSelectAllSnapshot,
-        selectAllAnnotationSnapshotByCollection,
         getSelectAllAnnotationSnapshot,
         setSelectAllAnnotationSnapshot,
         clearSelectAllAnnotationSnapshot,
