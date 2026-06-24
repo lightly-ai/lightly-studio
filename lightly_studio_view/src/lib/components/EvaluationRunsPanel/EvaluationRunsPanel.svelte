@@ -1,9 +1,10 @@
 <script lang="ts">
-    import { ArrowLeft, X } from '@lucide/svelte';
+    import { ArrowLeft, Plus, X } from '@lucide/svelte';
     import Button from '$lib/components/ui/button/button.svelte';
     import { Spinner, Typography } from '$lib/components';
 
     import EvaluationRunItem from './EvaluationRunItem/EvaluationRunItem.svelte';
+    import TriggerEvaluationDialog from './TriggerEvaluationDialog/TriggerEvaluationDialog.svelte';
     import { type EvaluationRunView } from '$lib/api/lightly_studio_local';
 
     interface Props {
@@ -15,9 +16,17 @@
         isLoading?: boolean;
         /** Error message to display in place of the list. Ignored while `isLoading` is true. */
         error?: string;
+        /** Dataset the runs belong to. When set with `collectionId`, enables the trigger dialog. */
+        datasetId?: string;
+        /** Collection (active view) to evaluate on. Required to enable the trigger dialog. */
+        collectionId?: string;
     }
 
-    const { onClose, evaluationRuns, isLoading = false, error }: Props = $props();
+    const { onClose, evaluationRuns, isLoading = false, error, datasetId, collectionId }: Props =
+        $props();
+
+    const canTrigger = $derived(!!datasetId && !!collectionId);
+    let dialogOpen = $state(false);
 
     let expandedRunId = $state<string | null>(null);
     const expandedRun = $derived(
@@ -54,16 +63,30 @@
                 Evaluation Runs
             </Typography>
         </div>
-        <Button
-            variant="ghost"
-            size="icon"
-            onclick={onClose}
-            aria-label="Close evaluation runs panel"
-            class="h-8 w-8"
-            data-testid="evaluation-runs-close-button"
-        >
-            <X class="size-4" />
-        </Button>
+        <div class="flex items-center gap-1">
+            {#if canTrigger}
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onclick={() => (dialogOpen = true)}
+                    aria-label="Start a new evaluation run"
+                    class="h-8 w-8"
+                    data-testid="evaluation-runs-add-button"
+                >
+                    <Plus class="size-4" />
+                </Button>
+            {/if}
+            <Button
+                variant="ghost"
+                size="icon"
+                onclick={onClose}
+                aria-label="Close evaluation runs panel"
+                class="h-8 w-8"
+                data-testid="evaluation-runs-close-button"
+            >
+                <X class="size-4" />
+            </Button>
+        </div>
     </div>
 
     <div class="flex min-h-0 flex-1 flex-col overflow-y-auto dark:[color-scheme:dark]">
@@ -102,4 +125,13 @@
             </ul>
         {/if}
     </div>
+
+    {#if canTrigger}
+        <TriggerEvaluationDialog
+            datasetId={datasetId!}
+            collectionId={collectionId!}
+            open={dialogOpen}
+            onOpenChange={(open) => (dialogOpen = open)}
+        />
+    {/if}
 </div>
