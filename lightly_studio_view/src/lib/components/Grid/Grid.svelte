@@ -5,6 +5,9 @@
     import { cn } from '$lib/utils';
 
     const GRID_GAP = 16;
+    // Compensates for the scrollbar width so the right edge aligns with the
+    // card's p-4 outer padding on the left side.
+    const SCROLLBAR_WIDTH_COMPENSATION = 4;
 
     let viewport: HTMLElement | null = null;
     let clientWidth = $state(0);
@@ -76,10 +79,7 @@
 
         const resizeObserver = new ResizeObserver((entries) => {
             for (const entry of entries) {
-                // contentRect.width excludes the scrollbar, which causes items to stop
-                // GRID_GAP pixels short of the scrollbar — adding 4 compensates enough
-                // to align the right edge with the card's p-4 outer padding on the left.
-                clientWidth = Math.max(entry.contentRect.width + 4, 200);
+                clientWidth = Math.max(entry.contentRect.width + SCROLLBAR_WIDTH_COMPENSATION, 200);
             }
         });
 
