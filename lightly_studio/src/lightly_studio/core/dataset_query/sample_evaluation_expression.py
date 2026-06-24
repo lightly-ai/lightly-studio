@@ -49,14 +49,19 @@ class SampleEvaluationMatchExpression(MatchExpression):
             .correlate(SampleTable)
             .scalar_subquery()
         )
+        # Evaluation run names are unique per dataset, so this resolves at most one run
+        # for the current sample's dataset.
         subquery = (
             select(1)
             .select_from(EvaluationRunTable)
             .where(col(EvaluationRunTable.dataset_id) == sample_dataset_id)
             .where(col(EvaluationRunTable.name) == self.run_name)
         )
+        # A run can cover only a subset of samples. Select only samples evaluated by the run.
         subquery = subquery.where(self._sample_is_part_of_run_expression())
         for criterion in self.criteria:
+            # Apply all the evaluation metric criteria, composed out of
+            # `EvaluationMetricMatchExpression` instances.
             subquery = subquery.where(criterion.get())
         return exists(subquery)
 
@@ -66,5 +71,7 @@ class SampleEvaluationMatchExpression(MatchExpression):
             .select_from(EvaluationSampleMetricTable)
             .where(col(EvaluationSampleMetricTable.evaluation_run_id) == col(EvaluationRunTable.id))
             .where(col(EvaluationSampleMetricTable.sample_id) == col(SampleTable.sample_id))
+            # Keep EvaluationRunTable and SampleTable as outer references so metrics are matched
+            # against the selected run and current sample.
             .correlate(EvaluationRunTable, SampleTable)
         )

@@ -83,5 +83,7 @@ class EvaluationMetricMatchExpression(MatchExpression):
             .where(col(EvaluationSampleMetricTable.sample_id) == col(SampleTable.sample_id))
             .where(col(EvaluationSampleMetricTable.metric_name) == self.metric_name)
             .where(operations[self.operator])
+            # Keep EvaluationRunTable and SampleTable as outer references so metrics are matched
+            # against the selected run and current sample.
             .correlate(EvaluationRunTable, SampleTable)
         )
