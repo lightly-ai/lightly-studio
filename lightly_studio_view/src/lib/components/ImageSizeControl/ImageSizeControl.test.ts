@@ -74,14 +74,14 @@ describe('ImageSizeControl', () => {
         render(ImageSizeControl);
 
         await user.hover(screen.getByLabelText('Zoom out'));
-        expect(screen.getByRole('tooltip')).toHaveTextContent('Zoom out.');
+        expect(screen.getByRole('tooltip')).toHaveTextContent('Decrease thumbnail size');
 
         await user.unhover(screen.getByLabelText('Zoom out'));
         await user.hover(screen.getByRole('slider'));
-        expect(screen.getByRole('tooltip')).toHaveTextContent('Adjust thumbnail size.');
+        expect(screen.getByRole('tooltip')).toHaveTextContent('Adjust thumbnail size');
 
         await user.unhover(screen.getByRole('slider'));
         await user.hover(screen.getByLabelText('Zoom in'));
-        expect(screen.getByRole('tooltip')).toHaveTextContent('Zoom in.');
+        expect(screen.getByRole('tooltip')).toHaveTextContent('Increase thumbnail size');
     });
 });

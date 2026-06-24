@@ -41,7 +41,7 @@
     class:space-x-2={!compact}
     class:space-x-4={compact}
 >
-    <Tooltip content="Zoom out." position="top">
+    <Tooltip content="Decrease thumbnail size" position="top">
         <button
             onclick={zoomOut}
             disabled={width >= max}
@@ -53,7 +53,7 @@
     </Tooltip>
 
     {#if !compact}
-        <Tooltip content="Adjust thumbnail size." position="top" triggerClass="flex flex-1">
+        <Tooltip content="Adjust thumbnail size" position="top" triggerClass="flex flex-1">
             <Slider
                 type="multiple"
                 class="w-full flex-1"
@@ -66,7 +66,7 @@
         </Tooltip>
     {/if}
 
-    <Tooltip content="Zoom in." position="top">
+    <Tooltip content="Increase thumbnail size" position="top">
         <button
             onclick={zoomIn}
             disabled={width <= min}

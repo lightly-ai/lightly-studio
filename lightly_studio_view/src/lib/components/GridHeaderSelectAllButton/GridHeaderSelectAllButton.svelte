@@ -19,10 +19,12 @@
             onDeselectAll();
         }
     };
+
+    const tooltipContent = $derived(checked ? 'Deselect all' : 'Select all');
 </script>
 
 <Tooltip
-    content="Selects all items. Click again to deselect all."
+    content={tooltipContent}
     position="top"
     triggerClass="inline-flex"
 >

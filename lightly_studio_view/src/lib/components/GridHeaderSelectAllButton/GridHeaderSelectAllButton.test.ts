@@ -59,14 +59,21 @@ describe('GridHeaderSelectAllButton', () => {
         expect(props.onSelectAll).toHaveBeenCalledTimes(1);
     });
 
-    it('shows a tooltip on hover', async () => {
+    it('shows a select all tooltip on hover when unchecked', async () => {
         const user = userEvent.setup();
         render(GridHeaderSelectAllButton, { props: buildProps() });
 
         await user.hover(screen.getByTestId('select-all-button'));
 
-        expect(screen.getByRole('tooltip')).toHaveTextContent(
-            'Selects all items. Click again to deselect all.'
-        );
+        expect(screen.getByRole('tooltip')).toHaveTextContent('Select all');
+    });
+
+    it('shows a deselect all tooltip on hover when checked', async () => {
+        const user = userEvent.setup();
+        render(GridHeaderSelectAllButton, { props: buildProps({ checked: true }) });
+
+        await user.hover(screen.getByTestId('select-all-button'));
+
+        expect(screen.getByRole('tooltip')).toHaveTextContent('Deselect all');
     });
 });
