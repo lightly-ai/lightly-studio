@@ -386,8 +386,6 @@ export const useGlobalStorage = () => {
             activePanel.update((p) => togglePanel(p, 'evaluationRuns', show)),
         getRangeSelection,
         setRangeSelectionForCollection: (collectionId: string, selection: Point[] | null) => {
-            // No snapshot invalidation: this sets the embedding-plot range filter, not the
-            // selection, so the snapshot invariant holds. Selection clears go via clearSelectedSamples.
             rangeSelectionBycollection.update((state) => ({
                 ...state,
                 [collectionId]: selection
