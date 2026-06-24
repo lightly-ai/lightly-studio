@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Callable
+from typing import Callable
 from uuid import UUID
 
 import fsspec
@@ -237,14 +237,12 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
         self,
         image_crops: list[ImageCrop],
         show_progress: bool = True,
-        progress_bar: Any | None = None,
     ) -> NDArray[np.float32]:
         """Embed image crops with Perception Encoder.
 
         Args:
             image_crops: A list of image crop definitions to embed.
             show_progress: Whether to show a progress bar during embedding.
-            progress_bar: Optional existing tqdm instance to update instead of creating a new bar.
 
         Returns:
             A numpy array representing the generated embeddings in the same order
@@ -262,7 +260,6 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
                 ),
             ),
             show_progress=show_progress,
-            progress_bar=progress_bar,
         )
 
     def embed_videos(self, filepaths: list[str]) -> NDArray[np.float32]:

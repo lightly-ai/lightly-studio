@@ -107,7 +107,6 @@ def test_register_multiple_models(
             self,
             image_crops: list[ImageCrop],
             show_progress: bool = True,
-            progress_bar: Any | None = None,
         ) -> NDArray[np.float32]:
             raise NotImplementedError()
 

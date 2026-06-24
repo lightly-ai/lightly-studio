@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any
 from uuid import UUID
 
 import numpy as np
@@ -214,10 +213,6 @@ class EmbeddingManager:
             collection_id=annotation_collection_id, embedding_model_id=embedding_model_id
         )
 
-        model = self._models[model_id]
-        if not isinstance(model, ImageEmbeddingGenerator):
-            raise ValueError("Embedding model not compatible with annotation crops.")
-
         annotation_sample_ids = annotation_resolver.get_unembedded_annotation_ids(
             session=session,
             annotation_collection_id=annotation_collection_id,
@@ -228,18 +223,11 @@ class EmbeddingManager:
             return
 
         total_annotations = len(annotation_sample_ids)
-        with (
-            tqdm(
-                total=total_annotations,
-                desc="Generating crop embeddings",
-                unit=" crops",
-            ) as embed_progress,
-            tqdm(
-                total=total_annotations,
-                desc="Storing embeddings",
-                unit=" embeddings",
-            ) as store_progress,
-        ):
+        with tqdm(
+            total=total_annotations,
+            desc="Embedding annotations",
+            unit=" crops",
+        ) as progress:
             for sample_id_chunk in batching.batched(
                 items=annotation_sample_ids, batch_size=ANNOTATION_EMBED_BATCH_SIZE
             ):
@@ -249,10 +237,9 @@ class EmbeddingManager:
                 if not annotation_crops.image_crops:
                     continue
 
-                embeddings = model.embed_image_crops(
+                embeddings = self._models[model_id].embed_image_crops(
                     image_crops=annotation_crops.image_crops,
                     show_progress=False,
-                    progress_bar=embed_progress,
                 )
 
                 _store_embeddings(
@@ -260,8 +247,9 @@ class EmbeddingManager:
                     model_id=model_id,
                     sample_ids=annotation_crops.annotation_sample_ids,
                     embeddings=embeddings,
-                    progress_bar=store_progress,
+                    show_progress=False,
                 )
+                progress.update(len(annotation_crops.annotation_sample_ids))
 
     def compute_image_embedding(
         self,
@@ -425,15 +413,19 @@ def _store_embeddings(
     model_id: UUID,
     sample_ids: list[UUID],
     embeddings: NDArray[np.float32],
-    progress_bar: Any | None = None,
+    show_progress: bool = True,
 ) -> None:
     """Store embeddings in the database.
 
     Insertion is batched to reduce peak memory. All batches are committed together
     so a failure leaves no partially embedded dataset behind.
     """
-
-    def store_batches(progress: Any) -> None:
+    with tqdm(
+        total=len(sample_ids),
+        desc="Storing embeddings",
+        unit=" embeddings",
+        disable=not show_progress,
+    ) as progress:
         for batch in batching.batched(
             items=zip(sample_ids, embeddings), batch_size=EMBEDDING_INSERTION_BATCH_SIZE
         ):
@@ -450,12 +442,6 @@ def _store_embeddings(
             )
 
             progress.update(len(sample_embeddings))
-
-    if progress_bar is None:
-        with tqdm(total=len(sample_ids), desc="Storing embeddings", unit=" embeddings") as progress:
-            store_batches(progress)
-    else:
-        store_batches(progress_bar)
 
     session.commit()
 

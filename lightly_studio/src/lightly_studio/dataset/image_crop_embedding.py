@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from contextlib import AbstractContextManager, nullcontext
 from dataclasses import dataclass
 from typing import Any
 
@@ -36,29 +35,17 @@ class EmbeddingContext:
     encode_batch: Callable[[torch.Tensor], NDArray[np.float32]]
 
 
-class _NoOpProgress:
-    """Progress stand-in that discards updates when progress reporting is disabled."""
-
-    def update(self, _n: int = 1) -> None:
-        return None
-
-
-_NO_OP_PROGRESS = _NoOpProgress()
-
-
 def embed_image_crops_batched(
     image_crops: list[ImageCrop],
     context: EmbeddingContext,
-    show_progress: bool,
-    progress_bar: Any | None = None,
+    show_progress: bool = True,
 ) -> NDArray[np.float32]:
     """Embed image crops, opening each source file once and preserving input order.
 
     Args:
         image_crops: Crop definitions to embed.
         context: Model-specific embedding configuration.
-        show_progress: Whether to show a tqdm progress bar when ``progress_bar`` is not given.
-        progress_bar: Optional existing tqdm instance to update instead of creating a new bar.
+        show_progress: Whether to show a tqdm progress bar during embedding.
 
     Returns:
         Float32 array of shape ``(len(image_crops), embedding_dimension)``.
@@ -79,19 +66,15 @@ def embed_image_crops_batched(
     batch_buffer: torch.Tensor | None = None
     batch_indices: list[int] = []
 
-    progress_context: AbstractContextManager[Any]
-    if progress_bar is not None:
-        progress_context = nullcontext(progress_bar)
-    elif show_progress:
-        progress_context = tqdm(
+    with (
+        tqdm(
             total=total_crops,
             desc="Generating crop embeddings",
             unit=" crops",
-        )
-    else:
-        progress_context = nullcontext(_NO_OP_PROGRESS)
-
-    with progress_context as active_progress_bar, torch.no_grad():
+            disable=not show_progress,
+        ) as progress_bar,
+        torch.no_grad(),
+    ):
         for filepath, indexed_crops in crops_by_filepath.items():
             with fsspec.open(filepath, "rb") as file:
                 image = Image.open(file).convert("RGB")
@@ -118,7 +101,7 @@ def embed_image_crops_batched(
                             batch_indices=batch_indices,
                             embeddings=embeddings,
                             context=context,
-                            progress_bar=active_progress_bar,
+                            progress_bar=progress_bar,
                         )
 
         _flush_crop_batch(
@@ -126,7 +109,7 @@ def embed_image_crops_batched(
             batch_indices=batch_indices,
             embeddings=embeddings,
             context=context,
-            progress_bar=active_progress_bar,
+            progress_bar=progress_bar,
         )
 
     return embeddings

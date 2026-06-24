@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass
-from typing import Any, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 from uuid import UUID
 
 import numpy as np
@@ -83,14 +83,12 @@ class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
         self,
         image_crops: list[ImageCrop],
         show_progress: bool = True,
-        progress_bar: Any | None = None,
     ) -> NDArray[np.float32]:
         """Generate embeddings for image crops.
 
         Args:
             image_crops: A list of image crop definitions to embed.
             show_progress: Whether to show a progress bar during embedding.
-            progress_bar: Optional existing tqdm instance to update instead of creating a new bar.
 
         Returns:
             A numpy array representing the generated embeddings in the same order
@@ -161,11 +159,9 @@ class RandomEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator)
         self,
         image_crops: list[ImageCrop],
         show_progress: bool = True,
-        progress_bar: Any | None = None,
     ) -> NDArray[np.float32]:
         """Generate random embeddings for multiple image crops."""
         _ = show_progress
-        _ = progress_bar
         return np.random.rand(len(image_crops), self._dimension).astype(np.float32)
 
     def embed_videos(self, filepaths: list[str]) -> NDArray[np.float32]:
