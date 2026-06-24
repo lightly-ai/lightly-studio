@@ -24,6 +24,7 @@ describe('useFramesFilter', () => {
             updateFilterParams({ collection_id: 'coll-1' });
 
             expect(get(frameFilter)).toEqual({
+                filter_type: 'video_frame',
                 frame_number: {}
             });
         });
