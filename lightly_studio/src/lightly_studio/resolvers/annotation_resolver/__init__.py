@@ -26,6 +26,10 @@ from lightly_studio.resolvers.annotation_resolver.get_all_by_parent_sample_ids i
 from lightly_studio.resolvers.annotation_resolver.get_all_with_payload import (
     get_all_with_payload,
 )
+from lightly_studio.resolvers.annotation_resolver.get_annotation_crops import (
+    AnnotationCrops,
+    get_annotation_crops_for_ids,
+)
 from lightly_studio.resolvers.annotation_resolver.get_by_id import get_by_id, get_by_ids
 from lightly_studio.resolvers.annotation_resolver.get_by_id_with_payload import (
     get_by_id_with_payload,
@@ -33,6 +37,9 @@ from lightly_studio.resolvers.annotation_resolver.get_by_id_with_payload import 
 from lightly_studio.resolvers.annotation_resolver.get_sample_ids import (
     build_sample_ids_query,
     get_sample_ids,
+)
+from lightly_studio.resolvers.annotation_resolver.get_unembedded_annotation_ids import (
+    get_unembedded_annotation_ids,
 )
 from lightly_studio.resolvers.annotation_resolver.update_annotation_label import (
     update_annotation_label,
@@ -45,6 +52,7 @@ from lightly_studio.resolvers.annotation_resolver.update_segmentation_mask impor
 )
 
 __all__ = [
+    "AnnotationCrops",
     "build_sample_ids_query",
     "create_many",
     "delete_annotation",
@@ -56,10 +64,12 @@ __all__ = [
     "get_all_by_object_track_id",
     "get_all_by_parent_sample_ids",
     "get_all_with_payload",
+    "get_annotation_crops_for_ids",
     "get_by_id",
     "get_by_id_with_payload",
     "get_by_ids",
     "get_sample_ids",
+    "get_unembedded_annotation_ids",
     "update_annotation_label",
     "update_bounding_box",
     "update_segmentation_mask",
