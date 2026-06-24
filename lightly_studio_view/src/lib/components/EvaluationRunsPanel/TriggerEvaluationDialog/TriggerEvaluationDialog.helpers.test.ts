@@ -7,16 +7,17 @@ import {
 } from './TriggerEvaluationDialog.helpers';
 
 describe('buildEvaluationRunBody', () => {
+    const now = new Date(2026, 5, 24, 10, 15, 33); // local time
     const base = {
         gtSource: 'gt',
         predSource: 'pred',
         collectionId: 'collection-1',
         iouThreshold: 0.7,
         classwise: false,
-        name: 'my run'
+        now
     };
 
-    it('includes object-detection config and the given name for object_detection runs', () => {
+    it('includes object-detection config and a local-time name for object_detection runs', () => {
         const body = buildEvaluationRunBody({ ...base, taskType: 'object_detection' });
 
         expect(body).toEqual({
@@ -24,7 +25,7 @@ describe('buildEvaluationRunBody', () => {
             gt_annotation_source: 'gt',
             pred_annotation_source: 'pred',
             collection_id: 'collection-1',
-            name: 'my run',
+            name: 'object_detection 2026-06-24 10:15:33',
             config: { iou_threshold: 0.7, classwise: false }
         });
     });
@@ -37,7 +38,7 @@ describe('buildEvaluationRunBody', () => {
             gt_annotation_source: 'gt',
             pred_annotation_source: 'pred',
             collection_id: 'collection-1',
-            name: 'my run'
+            name: 'classification 2026-06-24 10:15:33'
         });
         expect('filter' in body).toBe(false);
     });

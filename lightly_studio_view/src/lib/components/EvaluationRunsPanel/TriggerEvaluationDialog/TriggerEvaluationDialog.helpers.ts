@@ -10,8 +10,8 @@ interface BuildEvaluationRunBodyParams {
     collectionId: string;
     iouThreshold: number;
     classwise: boolean;
-    /** Display name for the run (caller resolves the default when empty). */
-    name: string;
+    /** Reference time for the auto-generated name. Defaults to now. */
+    now?: Date;
 }
 
 const pad = (value: number): string => String(value).padStart(2, '0');
@@ -38,7 +38,7 @@ export const defaultEvaluationRunName = (
  *
  * No filter is sent, so the run evaluates the full dataset. Object-detection
  * runs carry the IoU threshold and class-wise config; the other tasks have no
- * task-specific config.
+ * task-specific config. A local-time default name is included.
  */
 export const buildEvaluationRunBody = (
     params: BuildEvaluationRunBodyParams
@@ -47,7 +47,7 @@ export const buildEvaluationRunBody = (
         gt_annotation_source: params.gtSource,
         pred_annotation_source: params.predSource,
         collection_id: params.collectionId,
-        name: params.name
+        name: defaultEvaluationRunName(params.taskType, params.now)
     };
     if (params.taskType === 'object_detection') {
         return {

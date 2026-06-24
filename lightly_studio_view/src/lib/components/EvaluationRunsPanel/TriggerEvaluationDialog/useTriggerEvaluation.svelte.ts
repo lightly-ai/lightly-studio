@@ -1,7 +1,6 @@
 import {
     createEvaluationRunMutation,
-    getEvaluationRunsQueryKey,
-    getEvaluationSampleMetricsInfoQueryKey
+    getEvaluationRunsQueryKey
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import type { CreateEvaluationRunData } from '$lib/api/lightly_studio_local/types.gen';
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
@@ -31,14 +30,10 @@ export const useTriggerEvaluation = (getParams: () => UseTriggerEvaluationParams
                 {
                     onSuccess: () => {
                         toast.success('Evaluation started');
-                        const path = { dataset_id: datasetId };
-                        // Refresh the runs list and the per-run metric bounds that
-                        // feed the sort options, so both update without a reload.
                         client.invalidateQueries({
-                            queryKey: getEvaluationRunsQueryKey({ path })
-                        });
-                        client.invalidateQueries({
-                            queryKey: getEvaluationSampleMetricsInfoQueryKey({ path })
+                            queryKey: getEvaluationRunsQueryKey({
+                                path: { dataset_id: datasetId }
+                            })
                         });
                         resolve(true);
                     },
