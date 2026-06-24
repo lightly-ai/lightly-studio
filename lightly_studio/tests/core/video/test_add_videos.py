@@ -172,6 +172,55 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
     video_file.close()
 
 
+@pytest.mark.parametrize(
+    ("num_frames", "target_fps", "original_fps", "expected"),
+    [
+        # Subsample 30 fps -> 10 fps: keep every third frame, original numbers preserved.
+        (30, 10, 30, [0, 3, 6, 9, 12, 15, 18, 21, 24, 27]),
+        # Subsample 30 fps -> 15 fps: keep every other frame.
+        (30, 15, 30, list(range(0, 30, 2))),
+        # Fractional frame intervals
+        (30, 7, 30, [0, 5, 9, 13, 18, 22, 26]),
+        (10, 3, 8, [0, 3, 6, 8]),
+        # No target fps: keep all frames.
+        (10, None, 30, list(range(10))),
+        # Target fps not lower than source: keep all frames.
+        (10, 30, 10, list(range(10))),
+        (10, 10, 10, list(range(10))),
+        # Unknown source fps: keep all frames.
+        (10, 5, 0, list(range(10))),
+    ],
+)
+def test__should_keep_frame(
+    num_frames: int,
+    target_fps: float | None,
+    original_fps: float,
+    expected: list[int],
+) -> None:
+    """The retained frame indices match the expected subsampling pattern."""
+    kept = [
+        decoded_index
+        for decoded_index in range(num_frames)
+        if add_videos._should_keep_frame(
+            decoded_index=decoded_index, target_fps=target_fps, original_fps=original_fps
+        )
+    ]
+    assert kept == expected
+
+
+@pytest.mark.parametrize("target_fps", [0, -5])
+def test_load_into_collection_from_paths__invalid_fps_raises(
+    db_session: Session, target_fps: float
+) -> None:
+    with pytest.raises(ValueError, match="target_fps must be greater than 0"):
+        add_videos.load_into_collection_from_paths(
+            session=db_session,
+            collection_id=uuid4(),
+            video_paths=[],
+            target_fps=target_fps,
+        )
+
+
 def test__configure_stream_threading__with_explicit_thread_count() -> None:
     """Test configuring threading with explicit thread count."""
     video_stream = MagicMock()
