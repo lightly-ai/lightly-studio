@@ -71,6 +71,5 @@ export const getFrameFilter = (params: VideoFrameFilterParams | null): VideoFram
         filters.sample_filter = sampleFilter;
     }
 
-    // `filters` always carries `filter_type` and `frame_number`, so it is never empty here.
     return filters;
 };
