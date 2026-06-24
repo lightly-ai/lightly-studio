@@ -20,7 +20,11 @@
         }
     };
 
-    const tooltipContent = $derived(checked ? 'Deselect all' : 'Select all');
+    const tooltipContent = $derived(
+        checked
+            ? 'Deselect all samples in the current view.'
+            : 'Select all samples in the current view.'
+    );
 </script>
 
 <Tooltip
