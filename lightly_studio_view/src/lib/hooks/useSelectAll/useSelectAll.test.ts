@@ -150,6 +150,21 @@ describe('useSelectAll', () => {
         expect(sampleSnapshot()).toBeNull();
     });
 
+    it('clears a prior snapshot when the next select-all forces the ID path', async () => {
+        // Normal-mode select-all writes a snapshot...
+        imageFilterStore().set({ filter_type: 'image' });
+        await useSelectAll(collectionId, 'images').handleSelectAll();
+        expect(sampleSnapshot()).not.toBeNull();
+
+        // ...a following classifier-mode select-all must not leave the stale snapshot behind
+        // (`setAllSelectedSampleIds` doesn't invalidate it).
+        imageParamsStore().set({ mode: 'classifier' });
+        imageFilterStore().set(null);
+        await useSelectAll(collectionId, 'images').handleSelectAll();
+
+        expect(sampleSnapshot()).toBeNull();
+    });
+
     it('clears the snapshot when a sample is toggled after select-all', async () => {
         imageFilterStore().set({ filter_type: 'image' });
 

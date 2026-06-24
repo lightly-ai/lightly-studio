@@ -29,7 +29,9 @@ export function useSelectAll(collectionId: string, gridType: GridType) {
         setAllSelectedSampleIds,
         setAllSelectedAnnotationCropIds,
         setSelectAllSnapshot,
-        setSelectAllAnnotationSnapshot
+        setSelectAllAnnotationSnapshot,
+        clearSelectAllSnapshot,
+        clearSelectAllAnnotationSnapshot
     } = useGlobalStorage();
     const { imageFilter, filterParams: imageFilterParams } = useImageFilters();
     const { filterParams: videoFilterParams } = useVideoFilters();
@@ -38,67 +40,63 @@ export function useSelectAll(collectionId: string, gridType: GridType) {
 
     let isLoading = false;
 
-    const fetchSampleIds = async (): Promise<string[]> => {
-        switch (gridType) {
-            case 'images':
-                return fetchSampleIdsForImages(collectionId, get(imageFilter));
-            case 'videos':
-                return fetchSampleIdsForVideos(
-                    collectionId,
-                    buildVideoFilter(get(videoFilterParams))
-                );
-            case 'video_frames':
-                return fetchSampleIdsForVideoFrames(
-                    collectionId,
-                    getFrameFilter(get(frameFilterParams))
-                );
-            case 'annotations':
-                return fetchSampleIdsForAnnotations(collectionId, get(annotationFilter));
-            default:
-                return [];
-        }
-    };
-
     /**
-     * Resolve the filter to tag this select-all by. Read synchronously before `fetchSampleIds`, so
-     * the snapshot can't capture a filter the user changed mid-fetch. Returns `null` to force the
-     * ID path. The `as` casts bridge the builders' optional `filter_type` to the required
+     * Resolve this grid's filter once, returning both the ID fetch and the filter to snapshot. The
+     * raw filter is captured synchronously (the `fetchIds` thunk closes over it), so the fetch and
+     * the snapshot can't diverge if the user changes the filter mid-fetch. `snapshotFilter` is
+     * `null` to force the ID path; otherwise an empty filter is normalized to a conditionless typed
+     * one. The `as` casts bridge the builders' optional `filter_type` to the union's required
      * discriminant, sound because every builder stamps it at runtime.
      */
-    const captureSnapshotFilter = (): SnapshotFilter | null => {
+    const resolveGrid = (): {
+        snapshotFilter: SnapshotFilter | null;
+        fetchIds: () => Promise<string[]>;
+    } => {
         switch (gridType) {
             case 'images': {
+                const filter = get(imageFilter);
                 // A null image filter in classifier mode is selection-driven, not "no conditions";
                 // a conditionless filter would tag every image, so force the ID path.
-                if (get(imageFilterParams).mode === 'classifier') {
-                    return null;
-                }
-                return (
-                    (get(imageFilter) as SnapshotFilter | null) ?? {
-                        filter_type: GRID_FILTER_TYPE.images
-                    }
-                );
+                const snapshotFilter =
+                    get(imageFilterParams).mode === 'classifier'
+                        ? null
+                        : ((filter as SnapshotFilter | null) ?? {
+                              filter_type: GRID_FILTER_TYPE.images
+                          });
+                return {
+                    snapshotFilter,
+                    fetchIds: () => fetchSampleIdsForImages(collectionId, filter)
+                };
             }
-            case 'videos':
-                return (
-                    (buildVideoFilter(get(videoFilterParams)) as SnapshotFilter | null) ?? {
+            case 'videos': {
+                const filter = buildVideoFilter(get(videoFilterParams));
+                return {
+                    snapshotFilter: (filter as SnapshotFilter | null) ?? {
                         filter_type: GRID_FILTER_TYPE.videos
-                    }
-                );
-            case 'video_frames':
-                return (
-                    (getFrameFilter(get(frameFilterParams)) as SnapshotFilter | null) ?? {
+                    },
+                    fetchIds: () => fetchSampleIdsForVideos(collectionId, filter)
+                };
+            }
+            case 'video_frames': {
+                const filter = getFrameFilter(get(frameFilterParams));
+                return {
+                    snapshotFilter: (filter as SnapshotFilter | null) ?? {
                         filter_type: GRID_FILTER_TYPE.video_frames
-                    }
-                );
-            case 'annotations':
-                return (
-                    (get(annotationFilter) as SnapshotFilter | undefined) ?? {
+                    },
+                    fetchIds: () => fetchSampleIdsForVideoFrames(collectionId, filter)
+                };
+            }
+            case 'annotations': {
+                const filter = get(annotationFilter);
+                return {
+                    snapshotFilter: (filter as SnapshotFilter | undefined) ?? {
                         filter_type: GRID_FILTER_TYPE.annotations
-                    }
-                );
+                    },
+                    fetchIds: () => fetchSampleIdsForAnnotations(collectionId, filter)
+                };
+            }
             default:
-                return null;
+                return { snapshotFilter: null, fetchIds: () => Promise.resolve([]) };
         }
     };
 
@@ -109,8 +107,8 @@ export function useSelectAll(collectionId: string, gridType: GridType) {
         const toastId = toast.loading('Selecting all samples...');
 
         try {
-            const snapshotFilter = captureSnapshotFilter();
-            const sampleIds = await fetchSampleIds();
+            const { snapshotFilter, fetchIds } = resolveGrid();
+            const sampleIds = await fetchIds();
             const isAnnotation = gridType === 'annotations';
 
             if (isAnnotation) {
@@ -119,15 +117,19 @@ export function useSelectAll(collectionId: string, gridType: GridType) {
                 setAllSelectedSampleIds(collectionId, new Set(sampleIds));
             }
 
-            // Written after `setAll…` (which never invalidates), so only a later manual edit nulls
-            // it. `null` here means "use the ID path" (e.g. classifier mode).
+            // `setAll…` never invalidates, so set or clear the snapshot here explicitly. A `null`
+            // filter (e.g. classifier mode) must *clear* a prior snapshot, not leave it stale — only
+            // a later manual edit invalidates otherwise.
+            const setSnapshot = isAnnotation
+                ? setSelectAllAnnotationSnapshot
+                : setSelectAllSnapshot;
+            const clearSnapshot = isAnnotation
+                ? clearSelectAllAnnotationSnapshot
+                : clearSelectAllSnapshot;
             if (snapshotFilter !== null) {
-                const snapshot = { filter: snapshotFilter, size: sampleIds.length };
-                if (isAnnotation) {
-                    setSelectAllAnnotationSnapshot(collectionId, snapshot);
-                } else {
-                    setSelectAllSnapshot(collectionId, snapshot);
-                }
+                setSnapshot(collectionId, { filter: snapshotFilter, size: sampleIds.length });
+            } else {
+                clearSnapshot(collectionId);
             }
 
             toast.success(`${sampleIds.length} samples selected`, { id: toastId });
