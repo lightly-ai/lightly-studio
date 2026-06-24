@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from sqlmodel import Session, select
 
-from lightly_studio.core.dataset_query.classification_expression import (
-    ClassificationField,
-    ClassificationQuery,
+from lightly_studio.core.dataset_query.segmentation_mask_query import (
+    SegmentationMaskField,
+    SegmentationMaskQuery,
 )
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.image import ImageTable
@@ -17,18 +17,20 @@ from tests.helpers_resolvers import (
 )
 
 
-class TestClassificationExpressions:
-    def test_annotation_classification_label__sql(self) -> None:
+class TestSegmentationMaskExpressions:
+    def test_annotation_segmentation_mask_width__sql(self) -> None:
         query = select(ImageTable).where(
-            ClassificationQuery.match(ClassificationField.class_name == "cat").get()
+            SegmentationMaskQuery(SegmentationMaskField.width <= 100).get()
         )
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
         assert "EXISTS (SELECT 1" in sql
         assert "FROM annotation_base" in sql
-        assert "annotation_type = 'CLASSIFICATION'" in sql
-        assert "annotation_label.annotation_label_name = 'cat'" in sql
+        assert "FROM segmentation_annotation" in sql
+        assert "segmentation_annotation.width <= 100" in sql
 
-    def test_annotation_classification__filters_matching_samples(self, db_session: Session) -> None:
+    def test_annotation_segmentation_mask__filters_matching_samples(
+        self, db_session: Session
+    ) -> None:
         collection = create_collection(session=db_session)
         collection_id = collection.collection_id
         image1 = create_image(
@@ -40,35 +42,47 @@ class TestClassificationExpressions:
         label1 = create_annotation_label(
             session=db_session, root_collection_id=collection_id, label_name="label1"
         )
-        label2 = create_annotation_label(
-            session=db_session, root_collection_id=collection_id, label_name="label2"
-        )
 
         create_annotation(
             session=db_session,
             collection_id=collection_id,
             sample_id=image1.sample_id,
             annotation_label_id=label1.annotation_label_id,
-            annotation_type=AnnotationType.CLASSIFICATION,
+            annotation_type=AnnotationType.SEGMENTATION_MASK,
+            annotation_data={
+                "x": 0,
+                "y": 0,
+                "width": 150,
+                "height": 100,
+                "segmentation_mask": [1, 1, 4],
+            },
         )
         create_annotation(
             session=db_session,
             collection_id=collection_id,
             sample_id=image2.sample_id,
-            annotation_label_id=label2.annotation_label_id,
-            annotation_type=AnnotationType.CLASSIFICATION,
+            annotation_label_id=label1.annotation_label_id,
+            annotation_type=AnnotationType.SEGMENTATION_MASK,
+            annotation_data={"x": 0, "y": 0, "width": 50, "height": 100, "segmentation_mask": [6]},
         )
 
         query = (
             select(ImageTable)
             .join(ImageTable.sample)
             .where(SampleTable.collection_id == collection_id)
-            .where(ClassificationQuery.match(ClassificationField.class_name == "label1").get())
+            .where(
+                SegmentationMaskQuery(
+                    SegmentationMaskField.width > 100,
+                    SegmentationMaskField.height == 100,
+                ).get()
+            )
         )
         results = db_session.exec(query).all()
         assert [image.sample_id for image in results] == [image1.sample_id]
 
-    def test_annotation_classification__with_other_annotations(self, db_session: Session) -> None:
+    def test_annotation_segmentation_mask__with_other_annotations(
+        self, db_session: Session
+    ) -> None:
         collection = create_collection(session=db_session)
         collection_id = collection.collection_id
         image1 = create_image(
@@ -86,7 +100,8 @@ class TestClassificationExpressions:
             collection_id=collection_id,
             sample_id=image1.sample_id,
             annotation_label_id=label1.annotation_label_id,
-            annotation_type=AnnotationType.CLASSIFICATION,
+            annotation_type=AnnotationType.SEGMENTATION_MASK,
+            annotation_data={"x": 0, "y": 0, "width": 150, "height": 100, "segmentation_mask": [8]},
         )
         create_annotation(
             session=db_session,
@@ -94,15 +109,15 @@ class TestClassificationExpressions:
             sample_id=image2.sample_id,
             annotation_label_id=label1.annotation_label_id,
             annotation_type=AnnotationType.OBJECT_DETECTION,
-            annotation_data={"x": 0, "y": 0, "width": 150, "height": 100},
+            annotation_data={"x": 0, "y": 0, "width": 150, "height": 100, "segmentation_mask": [6]},
         )
 
         query = (
             select(ImageTable)
             .join(ImageTable.sample)
             .where(SampleTable.collection_id == collection_id)
-            .where(ClassificationQuery.match().get())
+            .where(SegmentationMaskQuery(SegmentationMaskField.class_name == "label1").get())
         )
         results = db_session.exec(query).all()
-        # There are two annotations but only one of the right type.
+        # There are two annotations with this annotation class but only one of the right type.
         assert [image.sample_id for image in results] == [image1.sample_id]

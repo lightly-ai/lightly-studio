@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from sqlalchemy import ColumnElement, and_
 from sqlmodel import col
 
@@ -31,33 +29,27 @@ class ClassificationField:
     confidence = NullableOrdinalField(col(AnnotationBaseTable.confidence))
 
 
-class ClassificationQuery:
-    """Provides access to classification query operations."""
+class ClassificationQuery(MatchExpression):
+    """Query if a sample has a classification matching a criterion."""
 
-    @staticmethod
-    def match(*criteria: MatchExpression) -> ClassificationMatchExpression:
-        """Combine multiple classification criteria into a single subquery using logical AND.
+    criteria: list[MatchExpression]
+
+    def __init__(self, *criteria: MatchExpression) -> None:
+        """Combine multiple classification criteria into a single expression using AND.
+
+        Example:
+            ``ClassificationQuery(ClassificationField.class_name == "cat")``
 
         Args:
-            criteria: The criteria to combine.
-
-        Returns:
-            A single match expression for satisfying all criteria.
+            criteria: The classification criteria to combine.
         """
-        return ClassificationMatchExpression(criterion=AND(*criteria))
-
-
-@dataclass
-class ClassificationMatchExpression(MatchExpression):
-    """Expression for checking if a sample has a classification matching a criterion."""
-
-    criterion: MatchExpression
+        self.criteria = list(criteria)
 
     def get(self) -> ColumnElement[bool]:
         """Get the classification match expression."""
         return SampleTable.annotations.any(
             and_(
                 col(AnnotationBaseTable.annotation_type) == AnnotationType.CLASSIFICATION,
-                self.criterion.get(),
+                AND(*self.criteria).get(),
             )
         )

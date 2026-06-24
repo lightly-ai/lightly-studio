@@ -2,12 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Optional
-
 from sqlalchemy import ColumnElement, and_
 from sqlmodel import col
-from typing_extensions import TypeVar
 
 from lightly_studio.core.dataset_query.annotation_expression import AnnotationSourceField
 from lightly_studio.core.dataset_query.boolean_expression import AND
@@ -24,8 +20,6 @@ from lightly_studio.models.annotation.annotation_base import (
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.sample import SampleTable
-
-T = TypeVar("T", default=Optional["ObjectDetectionAnnotationTable"])
 
 
 class ObjectDetectionField:
@@ -55,33 +49,27 @@ class ObjectDetectionField:
     confidence = NullableOrdinalField(col(AnnotationBaseTable.confidence))
 
 
-class ObjectDetectionQuery:
-    """Provides access to object detection query operations."""
+class ObjectDetectionQuery(MatchExpression):
+    """Query if a sample has an object detection matching a criterion."""
 
-    @staticmethod
-    def match(*criteria: MatchExpression) -> ObjectDetectionMatchExpression:
-        """Combine multiple object detection criteria into a single subquery using logical AND.
+    criteria: list[MatchExpression]
+
+    def __init__(self, *criteria: MatchExpression) -> None:
+        """Combine multiple object detection criteria into a single expression using AND.
+
+        Example:
+            ``ObjectDetectionQuery(ObjectDetectionField.width <= 100)``
 
         Args:
-            criteria: The criteria to combine.
-
-        Returns:
-            A single match expression for satisfying all criteria.
+            criteria: The object detection criteria to combine.
         """
-        return ObjectDetectionMatchExpression(criterion=AND(*criteria))
-
-
-@dataclass
-class ObjectDetectionMatchExpression(MatchExpression):
-    """Expression for checking if a sample has an object detection matching a criterion."""
-
-    criterion: MatchExpression
+        self.criteria = list(criteria)
 
     def get(self) -> ColumnElement[bool]:
         """Get the object detection match expression."""
         return SampleTable.annotations.any(
             and_(
                 col(AnnotationBaseTable.annotation_type) == AnnotationType.OBJECT_DETECTION,
-                self.criterion.get(),
+                AND(*self.criteria).get(),
             )
         )

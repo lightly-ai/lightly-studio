@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from sqlalchemy import ColumnElement, and_
 from sqlmodel import col
 
@@ -51,33 +49,27 @@ class SegmentationMaskField:
     confidence = NullableOrdinalField(col(AnnotationBaseTable.confidence))
 
 
-class SegmentationMaskQuery:
-    """Provides access to segmentation mask query operations."""
+class SegmentationMaskQuery(MatchExpression):
+    """Query if a sample has a segmentation mask matching a criterion."""
 
-    @staticmethod
-    def match(*criteria: MatchExpression) -> SegmentationMaskMatchExpression:
-        """Combine multiple segmentation mask criteria into a single subquery using logical AND.
+    criteria: list[MatchExpression]
+
+    def __init__(self, *criteria: MatchExpression) -> None:
+        """Combine multiple segmentation mask criteria into a single expression using AND.
+
+        Example:
+            ``SegmentationMaskQuery(SegmentationMaskField.width <= 100)``
 
         Args:
-            criteria: The criteria to combine.
-
-        Returns:
-            A single match expression for satisfying all criteria.
+            criteria: The segmentation mask criteria to combine.
         """
-        return SegmentationMaskMatchExpression(criterion=AND(*criteria))
-
-
-@dataclass
-class SegmentationMaskMatchExpression(MatchExpression):
-    """Expression for checking if a sample has a segmentation mask matching a criterion."""
-
-    criterion: MatchExpression
+        self.criteria = list(criteria)
 
     def get(self) -> ColumnElement[bool]:
         """Get the segmentation mask match expression."""
         return SampleTable.annotations.any(
             and_(
                 col(AnnotationBaseTable.annotation_type) == AnnotationType.SEGMENTATION_MASK,
-                self.criterion.get(),
+                AND(*self.criteria).get(),
             )
         )

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from sqlmodel import Session, select
 
-from lightly_studio.core.dataset_query.object_detection_expression import (
+from lightly_studio.core.dataset_query.object_detection_query import (
     ObjectDetectionField,
     ObjectDetectionQuery,
 )
@@ -20,7 +20,7 @@ from tests.helpers_resolvers import (
 class TestObjectDetectionExpressions:
     def test_annotation_object_detections_width__sql(self) -> None:
         query = select(ImageTable).where(
-            ObjectDetectionQuery.match(ObjectDetectionField.width <= 100).get()
+            ObjectDetectionQuery(ObjectDetectionField.width <= 100).get()
         )
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
         assert "EXISTS (SELECT 1" in sql
@@ -65,7 +65,7 @@ class TestObjectDetectionExpressions:
             .join(ImageTable.sample)
             .where(SampleTable.collection_id == collection_id)
             .where(
-                ObjectDetectionQuery.match(
+                ObjectDetectionQuery(
                     ObjectDetectionField.width > 100, ObjectDetectionField.height == 100
                 ).get()
             )
@@ -105,7 +105,7 @@ class TestObjectDetectionExpressions:
             .join(ImageTable.sample)
             .where(SampleTable.collection_id == collection_id)
             .where(
-                ObjectDetectionQuery.match(
+                ObjectDetectionQuery(
                     ObjectDetectionField.width > 100, ObjectDetectionField.width < 100
                 ).get()
             )
@@ -150,19 +150,19 @@ class TestObjectDetectionExpressions:
             select(ImageTable)
             .join(ImageTable.sample)
             .where(SampleTable.collection_id == collection_id)
-            .where(ObjectDetectionQuery.match(ObjectDetectionField.class_name == "label1").get())
+            .where(ObjectDetectionQuery(ObjectDetectionField.class_name == "label1").get())
         )
         results = db_session.exec(query).all()
         # There are two annotations with this annotation class but only one of the right type.
         assert [image.sample_id for image in results] == [image1.sample_id]
 
         # Repeat almost the same query but now without annotation class filtering. Just an empty
-        # ObjectDetectionQuery.match().
+        # ObjectDetectionQuery().
         query = (
             select(ImageTable)
             .join(ImageTable.sample)
             .where(SampleTable.collection_id == collection_id)
-            .where(ObjectDetectionQuery.match().get())
+            .where(ObjectDetectionQuery().get())
         )
         results = db_session.exec(query).all()
         # There are two annotations but only one of the right type.
