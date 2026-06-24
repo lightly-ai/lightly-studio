@@ -202,6 +202,100 @@ describe('useGlobalStorage', () => {
         });
     });
 
+    describe('Select-all snapshot (sample grid)', () => {
+        const snapshot = { filter: { filter_type: 'image' }, size: 3 };
+
+        it('records the snapshot for a collection', () => {
+            storage.setSelectAllSnapshot(testCollectionId, snapshot);
+            expect(get(storage.getSelectAllSnapshot(testCollectionId))).toEqual(snapshot);
+        });
+
+        it('is null when never set', () => {
+            expect(get(storage.getSelectAllSnapshot(testCollectionId))).toBeNull();
+        });
+
+        it('is invalidated by a per-sample toggle', () => {
+            storage.setSelectAllSnapshot(testCollectionId, snapshot);
+            storage.toggleSampleSelection('sample1', testCollectionId);
+            expect(get(storage.getSelectAllSnapshot(testCollectionId))).toBeNull();
+        });
+
+        it('is invalidated by clearing the selection', () => {
+            storage.setSelectAllSnapshot(testCollectionId, snapshot);
+            storage.clearSelectedSamples(testCollectionId);
+            expect(get(storage.getSelectAllSnapshot(testCollectionId))).toBeNull();
+        });
+
+        it('is invalidated by a range selection', () => {
+            storage.setSelectAllSnapshot(testCollectionId, snapshot);
+            storage.setRangeSelectionForCollection(testCollectionId, null);
+            expect(get(storage.getSelectAllSnapshot(testCollectionId))).toBeNull();
+        });
+
+        it('is NOT invalidated by setAllSelectedSampleIds', () => {
+            storage.setSelectAllSnapshot(testCollectionId, snapshot);
+            storage.setAllSelectedSampleIds(testCollectionId, new Set(['a', 'b']));
+            expect(get(storage.getSelectAllSnapshot(testCollectionId))).toEqual(snapshot);
+        });
+
+        it('is invalidated by clearSelectAllSnapshot', () => {
+            storage.setSelectAllSnapshot(testCollectionId, snapshot);
+            storage.clearSelectAllSnapshot(testCollectionId);
+            expect(get(storage.getSelectAllSnapshot(testCollectionId))).toBeNull();
+        });
+
+        it('is independent per collection', () => {
+            storage.setSelectAllSnapshot(testCollectionId, snapshot);
+            storage.toggleSampleSelection('sample1', testCollectionId2);
+            expect(get(storage.getSelectAllSnapshot(testCollectionId))).toEqual(snapshot);
+            expect(get(storage.getSelectAllSnapshot(testCollectionId2))).toBeNull();
+        });
+    });
+
+    describe('Select-all snapshot (annotation grid)', () => {
+        const snapshot = { filter: { filter_type: 'annotations' }, size: 5 };
+
+        it('records the snapshot for a collection', () => {
+            storage.setSelectAllAnnotationSnapshot(testCollectionId, snapshot);
+            expect(get(storage.getSelectAllAnnotationSnapshot(testCollectionId))).toEqual(snapshot);
+        });
+
+        it('is invalidated by a per-annotation toggle', () => {
+            storage.setSelectAllAnnotationSnapshot(testCollectionId, snapshot);
+            storage.toggleSampleAnnotationCropSelection(testCollectionId, 'annotation1');
+            expect(get(storage.getSelectAllAnnotationSnapshot(testCollectionId))).toBeNull();
+        });
+
+        it('is invalidated by clearing annotation crops', () => {
+            storage.setSelectAllAnnotationSnapshot(testCollectionId, snapshot);
+            storage.clearSelectedSampleAnnotationCrops(testCollectionId);
+            expect(get(storage.getSelectAllAnnotationSnapshot(testCollectionId))).toBeNull();
+        });
+
+        it('is NOT invalidated by setAllSelectedAnnotationCropIds', () => {
+            storage.setSelectAllAnnotationSnapshot(testCollectionId, snapshot);
+            storage.setAllSelectedAnnotationCropIds(testCollectionId, new Set(['a', 'b']));
+            expect(get(storage.getSelectAllAnnotationSnapshot(testCollectionId))).toEqual(snapshot);
+        });
+
+        it('is independent from the sample snapshot store', () => {
+            const sampleSnapshot = { filter: { filter_type: 'image' }, size: 2 };
+            storage.setSelectAllSnapshot(testCollectionId, sampleSnapshot);
+            storage.setSelectAllAnnotationSnapshot(testCollectionId, snapshot);
+
+            // A sample-only mutation must not touch the annotation snapshot.
+            storage.toggleSampleSelection('sample1', testCollectionId);
+            expect(get(storage.getSelectAllSnapshot(testCollectionId))).toBeNull();
+            expect(get(storage.getSelectAllAnnotationSnapshot(testCollectionId))).toEqual(snapshot);
+
+            // An annotation-only mutation must not touch the sample snapshot.
+            storage.setSelectAllSnapshot(testCollectionId, sampleSnapshot);
+            storage.toggleSampleAnnotationCropSelection(testCollectionId, 'annotation1');
+            expect(get(storage.getSelectAllAnnotationSnapshot(testCollectionId))).toBeNull();
+            expect(get(storage.getSelectAllSnapshot(testCollectionId))).toEqual(sampleSnapshot);
+        });
+    });
+
     describe('Last annotation source', () => {
         it('stores the selected source per collection', () => {
             storage.updateLastAnnotationSource(testCollectionId, 'ground_truth');

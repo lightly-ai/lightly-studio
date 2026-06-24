@@ -14,6 +14,30 @@ import type { Point } from 'embedding-atlas/svelte';
 const lastGridType = writable<GridType>('images');
 const selectedSampleIdsByCollection = writable<Record<string, Set<string>>>({});
 const selectedSampleAnnotationCropIds = writable<Record<string, Set<string>>>({});
+
+/**
+ * Snapshot of the filter that produced a select-all, captured at select-all time.
+ * A non-`null` entry means "the current selection is still an unmodified select-all,"
+ * so it can be tagged by filter instead of by materialized IDs. Any per-sample edit
+ * invalidates it (sets it `null`). `size` lets the tag logic backstop against a
+ * selection whose size no longer matches the snapshot.
+ */
+export type SelectAllSnapshot = { filter: unknown; size: number };
+
+const selectAllSnapshotByCollection = writable<Record<string, SelectAllSnapshot | null>>({});
+const selectAllAnnotationSnapshotByCollection = writable<Record<string, SelectAllSnapshot | null>>(
+    {}
+);
+
+/** Drop the sample-grid select-all snapshot for a collection (any manual mutation invalidates it). */
+const invalidateSelectAllSnapshot = (collectionId: string) => {
+    selectAllSnapshotByCollection.update((state) => ({ ...state, [collectionId]: null }));
+};
+
+/** Drop the annotation-grid select-all snapshot for a collection. */
+const invalidateSelectAllAnnotationSnapshot = (collectionId: string) => {
+    selectAllAnnotationSnapshotByCollection.update((state) => ({ ...state, [collectionId]: null }));
+};
 const selectedAnnotationFilterIds = writable<Set<string>>(new Set());
 const filteredAnnotationCount = writable<number>(0);
 const filteredSampleCount = writable<number>(0);
@@ -153,6 +177,28 @@ export const useGlobalStorage = () => {
             ($rangeSelections) => $rangeSelections[collectionId] ?? null
         );
 
+    // Select-all snapshot helpers (sample grid). `null`/absent = not an unmodified select-all.
+    const getSelectAllSnapshot = (collectionId: string) =>
+        derived(selectAllSnapshotByCollection, ($snapshots) => $snapshots[collectionId] ?? null);
+    const setSelectAllSnapshot = (collectionId: string, snapshot: SelectAllSnapshot) => {
+        selectAllSnapshotByCollection.update((state) => ({ ...state, [collectionId]: snapshot }));
+    };
+    const clearSelectAllSnapshot = invalidateSelectAllSnapshot;
+
+    // Select-all snapshot helpers (annotation grid).
+    const getSelectAllAnnotationSnapshot = (collectionId: string) =>
+        derived(
+            selectAllAnnotationSnapshotByCollection,
+            ($snapshots) => $snapshots[collectionId] ?? null
+        );
+    const setSelectAllAnnotationSnapshot = (collectionId: string, snapshot: SelectAllSnapshot) => {
+        selectAllAnnotationSnapshotByCollection.update((state) => ({
+            ...state,
+            [collectionId]: snapshot
+        }));
+    };
+    const clearSelectAllAnnotationSnapshot = invalidateSelectAllAnnotationSnapshot;
+
     return {
         tags,
         textEmbedding,
@@ -161,6 +207,17 @@ export const useGlobalStorage = () => {
         selectedSampleIdsByCollection,
         getSelectedSampleIds,
         selectedSampleAnnotationCropIds,
+
+        // Select-all snapshots (sample + annotation grids)
+        selectAllSnapshotByCollection,
+        getSelectAllSnapshot,
+        setSelectAllSnapshot,
+        clearSelectAllSnapshot,
+        selectAllAnnotationSnapshotByCollection,
+        getSelectAllAnnotationSnapshot,
+        setSelectAllAnnotationSnapshot,
+        clearSelectAllAnnotationSnapshot,
+
         selectedAnnotationFilterIds,
         filteredAnnotationCount,
         filteredSampleCount,
@@ -206,6 +263,7 @@ export const useGlobalStorage = () => {
 
         // Individual sample selection methods
         toggleSampleSelection: (sampleId: string, collection_id: string) => {
+            invalidateSelectAllSnapshot(collection_id);
             selectedSampleIdsByCollection.update((selectedByCollection) => {
                 const selected = selectedByCollection[collection_id] ?? new Set<string>();
                 if (selected.has(sampleId)) {
@@ -220,6 +278,7 @@ export const useGlobalStorage = () => {
             });
         },
         clearSelectedSamples: (collection_id: string) => {
+            invalidateSelectAllSnapshot(collection_id);
             selectedSampleIdsByCollection.update((selectedByCollection) => {
                 return {
                     ...selectedByCollection,
@@ -239,6 +298,7 @@ export const useGlobalStorage = () => {
 
         // Individual sample annotation crop selection methods
         toggleSampleAnnotationCropSelection: (collectionId: string, annotationId: string) => {
+            invalidateSelectAllAnnotationSnapshot(collectionId);
             selectedSampleAnnotationCropIds.update((state) => {
                 const annotations = new Set(state[collectionId] ?? []);
 
@@ -255,6 +315,7 @@ export const useGlobalStorage = () => {
             });
         },
         clearSelectedSampleAnnotationCrops: (collectionId: string) => {
+            invalidateSelectAllAnnotationSnapshot(collectionId);
             selectedSampleAnnotationCropIds.update((state) => {
                 return {
                     ...state,
@@ -328,6 +389,7 @@ export const useGlobalStorage = () => {
             activePanel.update((p) => togglePanel(p, 'evaluationRuns', show)),
         getRangeSelection,
         setRangeSelectionForCollection: (collectionId: string, selection: Point[] | null) => {
+            invalidateSelectAllSnapshot(collectionId);
             rangeSelectionBycollection.update((state) => ({
                 ...state,
                 [collectionId]: selection
