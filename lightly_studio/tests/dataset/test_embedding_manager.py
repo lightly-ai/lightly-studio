@@ -392,26 +392,6 @@ def test_embed_annotations_processes_all_chunks(
     assert len(stored_embeddings) == 3
 
 
-def test_get_default_or_validate_rejects_model_from_other_collection(
-    db_session: Session,
-    collection: CollectionTable,
-) -> None:
-    """A model registered for one collection cannot be used with another."""
-    manager = EmbeddingManager()
-    model_id = manager.register_embedding_model(
-        session=db_session,
-        embedding_generator=RandomEmbeddingGenerator(),
-        collection_id=collection.collection_id,
-        set_as_default=True,
-    ).embedding_model_id
-    other_collection = create_collection(session=db_session)
-
-    with pytest.raises(ValueError, match="is not registered for collection"):
-        manager._get_default_or_validate(
-            collection_id=other_collection.collection_id, embedding_model_id=model_id
-        )
-
-
 def test_get_valid_model_id_without_default_model() -> None:
     """_get_valid_model_id raises when there is no default or explicit ID."""
     manager = EmbeddingManager()

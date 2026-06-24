@@ -81,7 +81,6 @@ class EmbeddingManager:
     def __init__(self) -> None:
         """Initialize the embedding manager."""
         self._models: dict[UUID, EmbeddingGenerator] = {}
-        self._model_id_to_collection_id: dict[UUID, UUID] = {}
         self._collection_id_to_default_model_id: dict[UUID, UUID] = {}
         self._sample_type_to_model_id: dict[SampleType, UUID] = {}
 
@@ -118,7 +117,6 @@ class EmbeddingManager:
 
         # Store the model in our dictionary
         self._models[model_id] = embedding_generator
-        self._model_id_to_collection_id[model_id] = collection_id
 
         # Set as default if requested or if it's the first model
         if set_as_default or collection_id not in self._collection_id_to_default_model_id:
@@ -419,11 +417,6 @@ class EmbeddingManager:
 
         if embedding_model_id not in self._models:
             raise ValueError(f"No embedding model found with ID {embedding_model_id}")
-        if self._model_id_to_collection_id.get(embedding_model_id) != collection_id:
-            raise ValueError(
-                f"Embedding model {embedding_model_id} is not registered for "
-                f"collection {collection_id}."
-            )
         return embedding_model_id
 
 
