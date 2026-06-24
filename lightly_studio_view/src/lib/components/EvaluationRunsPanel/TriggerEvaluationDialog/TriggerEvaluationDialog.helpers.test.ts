@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { buildEvaluationRunBody, canSubmitEvaluation } from './TriggerEvaluationDialog.helpers';
+import {
+    buildEvaluationRunBody,
+    canSubmitEvaluation,
+    sourceMatchesTask
+} from './TriggerEvaluationDialog.helpers';
 
 describe('buildEvaluationRunBody', () => {
     const base = {
@@ -59,5 +63,21 @@ describe('canSubmitEvaluation', () => {
         expect(
             canSubmitEvaluation({ gtSource: 'gt', predSource: 'pred', isSubmitting: true })
         ).toBe(false);
+    });
+});
+
+describe('sourceMatchesTask', () => {
+    it('matches a source whose annotations are all the task type', () => {
+        expect(sourceMatchesTask(['object_detection'], 'object_detection')).toBe(true);
+        expect(sourceMatchesTask(['classification'], 'classification')).toBe(true);
+        expect(sourceMatchesTask(['segmentation_mask'], 'semantic_segmentation')).toBe(true);
+    });
+
+    it('rejects empty, mismatched, or mixed-type sources', () => {
+        expect(sourceMatchesTask([], 'object_detection')).toBe(false);
+        expect(sourceMatchesTask(['classification'], 'object_detection')).toBe(false);
+        expect(sourceMatchesTask(['object_detection', 'classification'], 'object_detection')).toBe(
+            false
+        );
     });
 });

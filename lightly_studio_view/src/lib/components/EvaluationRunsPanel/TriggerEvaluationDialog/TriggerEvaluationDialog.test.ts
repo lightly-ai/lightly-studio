@@ -2,7 +2,11 @@ import { render, screen } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import TriggerEvaluationDialog from './TriggerEvaluationDialog.svelte';
 
-let annotationCollectionsData: { collection_id: string; name: string }[] = [];
+let annotationCollectionsData: {
+    collection_id: string;
+    name: string;
+    annotation_types: string[];
+}[] = [];
 
 vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
     useAnnotationCollections: () => ({ data: annotationCollectionsData })
@@ -32,8 +36,8 @@ const defaultProps = {
 describe('TriggerEvaluationDialog', () => {
     beforeEach(() => {
         annotationCollectionsData = [
-            { collection_id: 'a', name: 'gt' },
-            { collection_id: 'b', name: 'pred' }
+            { collection_id: 'a', name: 'gt', annotation_types: ['object_detection'] },
+            { collection_id: 'b', name: 'pred', annotation_types: ['object_detection'] }
         ];
         triggerMock.mockReset();
         isPending = false;
@@ -61,6 +65,18 @@ describe('TriggerEvaluationDialog', () => {
     it('disables the submit button until distinct sources are selected', () => {
         render(TriggerEvaluationDialog, { props: defaultProps });
 
+        expect(screen.getByTestId('trigger-evaluation-submit')).toBeDisabled();
+    });
+
+    it('shows an empty state and hides source selects when no source matches the eval type', () => {
+        annotationCollectionsData = [
+            { collection_id: 'a', name: 'gt', annotation_types: ['classification'] }
+        ];
+        render(TriggerEvaluationDialog, { props: defaultProps });
+
+        // Default eval type is object_detection; the only source is classification.
+        expect(screen.getByTestId('no-matching-sources-warning')).toBeInTheDocument();
+        expect(screen.queryByTestId('gt-source-select')).not.toBeInTheDocument();
         expect(screen.getByTestId('trigger-evaluation-submit')).toBeDisabled();
     });
 });

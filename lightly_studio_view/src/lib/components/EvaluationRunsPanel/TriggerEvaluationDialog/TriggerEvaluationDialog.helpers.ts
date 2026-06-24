@@ -47,3 +47,24 @@ export const canSubmitEvaluation = (params: {
     !!params.predSource &&
     params.gtSource !== params.predSource &&
     !params.isSubmitting;
+
+/** Annotation type each evaluation task requires its sources to contain. */
+const TASK_TO_ANNOTATION_TYPE: Record<EvaluationTaskType, string> = {
+    object_detection: 'object_detection',
+    classification: 'classification',
+    semantic_segmentation: 'segmentation_mask'
+};
+
+/**
+ * Whether an annotation source can be used for the given evaluation task.
+ *
+ * Mirrors the backend validator: every annotation in the source must be of the
+ * task's expected type (and the source must contain at least one annotation).
+ */
+export const sourceMatchesTask = (
+    annotationTypes: string[],
+    taskType: EvaluationTaskType
+): boolean => {
+    const expected = TASK_TO_ANNOTATION_TYPE[taskType];
+    return annotationTypes.length > 0 && annotationTypes.every((type) => type === expected);
+};
