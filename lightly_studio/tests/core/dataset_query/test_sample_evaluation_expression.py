@@ -66,7 +66,7 @@ def test_sample_evaluation_query__filters_matching_samples(db_session: Session) 
 
     results = (
         DatasetQuery(dataset=dataset, session=db_session)
-        .match(SampleEvaluationQuery.match("run1", EvaluationMetricField("score") > 0.5))
+        .match(SampleEvaluationQuery("run1", EvaluationMetricField("score") > 0.5))
         .to_list()
     )
 
@@ -159,14 +159,14 @@ def test_sample_evaluation_query__scopes_run_name_to_dataset(db_session: Session
 
     results = (
         DatasetQuery(dataset=dataset, session=db_session)
-        .match(SampleEvaluationQuery.match("run1", EvaluationMetricField("score") < 0.5))
+        .match(SampleEvaluationQuery("run1", EvaluationMetricField("score") < 0.5))
         .to_list()
     )
     assert [result.sample_id for result in results] == [image_b.sample_id]
 
     results = (
         DatasetQuery(dataset=dataset, session=db_session)
-        .match(SampleEvaluationQuery.match("run1", NOT(EvaluationMetricField("score") > 0.5)))
+        .match(SampleEvaluationQuery("run1", NOT(EvaluationMetricField("score") > 0.5)))
         .to_list()
     )
     assert [result.sample_id for result in results] == [image_b.sample_id]
@@ -237,7 +237,7 @@ def test_sample_evaluation_query__matches_multiple_metrics(db_session: Session) 
     results = (
         DatasetQuery(dataset=dataset, session=db_session)
         .match(
-            SampleEvaluationQuery.match(
+            SampleEvaluationQuery(
                 "run1",
                 EvaluationMetricField("precision") > 0.5,
                 EvaluationMetricField("recall") > 0.5,
@@ -250,7 +250,7 @@ def test_sample_evaluation_query__matches_multiple_metrics(db_session: Session) 
     results = (
         DatasetQuery(dataset=dataset, session=db_session)
         .match(
-            SampleEvaluationQuery.match(
+            SampleEvaluationQuery(
                 "run1",
                 AND(
                     EvaluationMetricField("precision") > 0.5, EvaluationMetricField("recall") > 0.5
@@ -308,7 +308,7 @@ def test_sample_evaluation_query__matches_run_without_criteria(db_session: Sessi
 
     results = (
         DatasetQuery(dataset=dataset, session=db_session)
-        .match(SampleEvaluationQuery.match(run_name="run1"))
+        .match(SampleEvaluationQuery(run_name="run1"))
         .to_list()
     )
 

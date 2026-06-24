@@ -14,11 +14,14 @@ from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetri
 from lightly_studio.models.sample import SampleTable
 
 
-class SampleEvaluationQuery:
-    """Provides access to sample evaluation query operations."""
+@dataclass
+class SampleEvaluationQuery(MatchExpression):
+    """Query if a sample has evaluation metrics matching a criterion."""
 
-    @staticmethod
-    def match(run_name: str, *criteria: MatchExpression) -> MatchExpression:
+    run_name: str
+    criteria: list[MatchExpression]
+
+    def __init__(self, run_name: str, *criteria: MatchExpression):
         """Combine multiple sample evaluation criteria into a single expression using AND.
 
         Example:
@@ -31,15 +34,8 @@ class SampleEvaluationQuery:
         Returns:
             A single match expression for satisfying all criteria.
         """
-        return SampleEvaluationMatchExpression(run_name=run_name, criteria=list(criteria))
-
-
-@dataclass
-class SampleEvaluationMatchExpression(MatchExpression):
-    """Expression for checking if a sample has evaluation metrics matching a criterion."""
-
-    run_name: str
-    criteria: list[MatchExpression]
+        self.run_name = run_name
+        self.criteria = list(criteria)
 
     def get(self) -> ColumnElement[bool]:
         """Get the sample evaluation match expression."""
