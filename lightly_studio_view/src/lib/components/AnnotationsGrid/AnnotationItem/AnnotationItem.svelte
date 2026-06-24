@@ -4,6 +4,7 @@
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
+    import { useAnnotationClassVisibility } from '$lib/hooks/useAnnotationClassVisibility/useAnnotationClassVisibility';
     import { getColorByLabel } from '$lib/utils';
 
     type Props = {
@@ -32,6 +33,7 @@
 
     const { isHidden } = useHideAnnotations();
     const { customLabelColorsStore } = useCustomLabelColors();
+    const { isClassHidden } = useAnnotationClassVisibility();
 
     if (!annotation.object_detection_details && !annotation.segmentation_details) {
         throw new Error(
@@ -70,6 +72,7 @@
     }
 
     let labelName = annotation.annotation_label.annotation_label_name;
+    const isAnnotationClassHidden = isClassHidden(labelName);
 
     const colorStroke = $derived.by(
         () => $customLabelColorsStore[labelName]?.color ?? getColorByLabel(labelName, 1).color
@@ -103,7 +106,7 @@
     >
         <div
             class="annotation-box"
-            class:invisible={$isHidden}
+            class:invisible={$isHidden || $isAnnotationClassHidden}
             style={`
             left: ${(containerWidth - annotationWidth * scale) / 2}px;
             top: ${(containerHeight - annotationHeight * scale) / 2}px;

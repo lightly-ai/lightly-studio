@@ -8,9 +8,13 @@
     import AnnotationColorLegend from '../AnnotationColorLegend/AnnotationColorLegend.svelte';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import { useSettings } from '$lib/hooks/useSettings';
+    import { useAnnotationClassVisibility } from '$lib/hooks/useAnnotationClassVisibility/useAnnotationClassVisibility';
+    import { Eye, EyeOff } from '@lucide/svelte';
+    import { Tooltip } from '$lib/components/ui/tooltip';
 
     const { selectedCollectionIds } = useAnnotationCollectionsFilter();
     const { enforceColoringByClassStore } = useSettings();
+    const { hiddenClassNamesStore, toggleClassVisibility } = useAnnotationClassVisibility();
 
     const showClassColorLegend = $derived(
         !resolveEffectiveColorBySource({
@@ -19,13 +23,17 @@
         })
     );
 
-    let {
-        annotationFilterRows,
-        onToggleAnnotationFilter
-    }: {
+    interface Props {
         annotationFilterRows: Readable<Annotation[]>;
         onToggleAnnotationFilter: (label: string) => void;
-    } = $props();
+        showVisibilityToggle?: boolean;
+    }
+
+    let {
+        annotationFilterRows,
+        onToggleAnnotationFilter,
+        showVisibilityToggle = false
+    }: Props = $props();
 </script>
 
 <Segment title="Annotation Classes">
@@ -44,7 +52,8 @@
             </p>
         {:else}
             {#each $annotationFilterRows as { label_name, current_count, total_count, selected } (label_name)}
-                <div class="width-full flex items-center space-x-2" title={label_name}>
+                {@const isHidden = $hiddenClassNamesStore.includes(label_name)}
+                <div class="width-full group flex items-center space-x-2" title={label_name}>
                     <Checkbox
                         id={label_name}
                         checked={selected}
@@ -82,6 +91,34 @@
                             >
                         {/if}
                     </Label>
+
+                    {#if showVisibilityToggle}
+                        {#if isHidden}
+                            <Tooltip content="Show annotation class">
+                                <button
+                                    type="button"
+                                    aria-label="Show annotation class {label_name}"
+                                    data-testid="label-visibility-toggle"
+                                    class="flex shrink-0 items-center"
+                                    onclick={() => toggleClassVisibility(label_name)}
+                                >
+                                    <EyeOff class="size-4 text-muted-foreground" />
+                                </button>
+                            </Tooltip>
+                        {:else}
+                            <Tooltip content="Hide annotation class">
+                                <button
+                                    type="button"
+                                    aria-label="Hide annotation class {label_name}"
+                                    data-testid="label-visibility-toggle"
+                                    class="flex shrink-0 items-center opacity-0 group-hover:opacity-100"
+                                    onclick={() => toggleClassVisibility(label_name)}
+                                >
+                                    <Eye class="size-4" />
+                                </button>
+                            </Tooltip>
+                        {/if}
+                    {/if}
                 </div>
             {/each}
         {/if}
