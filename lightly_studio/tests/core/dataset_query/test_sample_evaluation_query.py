@@ -6,7 +6,7 @@ from lightly_studio.core.dataset_query import AND
 from lightly_studio.core.dataset_query.boolean_expression import NOT
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.evaluation_metric_expression import EvaluationMetricField
-from lightly_studio.core.dataset_query.sample_evaluation_expression import SampleEvaluationQuery
+from lightly_studio.core.dataset_query.sample_evaluation_query import SampleEvaluationQuery
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
