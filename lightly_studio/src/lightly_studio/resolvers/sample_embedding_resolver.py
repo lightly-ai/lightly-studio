@@ -6,6 +6,7 @@ import hashlib
 from typing import NamedTuple
 from uuid import UUID
 
+import pgvector.psycopg
 from sqlalchemy import func
 from sqlmodel import Session, col, select
 
@@ -64,14 +65,7 @@ def get_by_sample_ids(
 ) -> list[SampleEmbeddingRow]:
     """Get sample embeddings for the specified sample IDs.
 
-    Output order matches the input order. The result is a lightweight
-    ``SampleEmbeddingRow`` per sample (id + embedding), not a full ORM object.
-
-    On PostgreSQL this reads through a binary psycopg cursor, decoding the
-    high-dimensional vectors via ``np.frombuffer`` instead of parsing their text
-    representation per row, which is dramatically faster when loading embeddings for
-    many samples. DuckDB returns the vectors as arrays natively and uses the regular
-    query path. Callers do not need to distinguish between the two backends.
+    Output order matches the input order.
 
     Args:
         session: The database session.
@@ -79,21 +73,21 @@ def get_by_sample_ids(
         embedding_model_id: The embedding model ID to filter by.
 
     Returns:
-        Embeddings for the provided IDs, in input order, skipping ids without an embedding.
+        List of sample embeddings associated with the provided IDs.
     """
     if not sample_ids:
         return []
     if session.get_bind().dialect.name == "postgresql":
-        rows = _get_by_sample_ids_postgres(
+        results = _get_by_sample_ids_postgres(
             session=session, sample_ids=sample_ids, embedding_model_id=embedding_model_id
         )
     else:
-        rows = _get_by_sample_ids_duckdb(
+        results = _get_by_sample_ids_duckdb(
             session=session, sample_ids=sample_ids, embedding_model_id=embedding_model_id
         )
-    # Return embeddings in the same order as the input IDs.
-    by_id = {row.sample_id: row for row in rows}
-    return [by_id[id_] for id_ in sample_ids if id_ in by_id]
+    # Return embeddings in the same order as the input IDs
+    embedding_map = {embedding.sample_id: embedding for embedding in results}
+    return [embedding_map[id_] for id_ in sample_ids if id_ in embedding_map]
 
 
 def _get_by_sample_ids_postgres(
@@ -104,9 +98,7 @@ def _get_by_sample_ids_postgres(
     """Load embeddings via a binary psycopg cursor (PostgreSQL only).
 
     Decoding pgvector's binary wire format with ``np.frombuffer`` is far faster than
-    parsing its text representation per row. A single ``sample_id = ANY(...)`` array
-    parameter stays under Postgres' bind-parameter limit, so no batching is needed.
-    Output order is normalized by the caller.
+    parsing its text representation per row.
     """
     # Match the regular query path's auto-flush so pending writes in this session are
     # visible to the raw cursor (it shares the session's connection and transaction).
@@ -118,9 +110,7 @@ def _get_by_sample_ids_postgres(
     if not connection.info.get("pgvector_registered"):
         # Register pgvector once per connection so psycopg decodes ``vector`` columns in
         # binary rather than parsing their text representation.
-        from pgvector.psycopg import register_vector  # noqa: PLC0415 -- Postgres-only
-
-        register_vector(driver_connection)
+        pgvector.psycopg.register_vector(driver_connection)
         connection.info["pgvector_registered"] = True
     query = (
         "SELECT sample_id, embedding FROM sample_embedding "
