@@ -52,7 +52,7 @@ class ObjectDetectionField:
 class ObjectDetectionQuery(MatchExpression):
     """Query if a sample has an object detection matching a criterion."""
 
-    criteria: list[MatchExpression]
+    criterion: MatchExpression
 
     def __init__(self, *criteria: MatchExpression) -> None:
         """Combine multiple object detection criteria into a single expression using AND.
@@ -63,13 +63,13 @@ class ObjectDetectionQuery(MatchExpression):
         Args:
             criteria: The object detection criteria to combine.
         """
-        self.criteria = list(criteria)
+        self.criterion = AND(*criteria)
 
     def get(self) -> ColumnElement[bool]:
         """Get the object detection match expression."""
         return SampleTable.annotations.any(
             and_(
                 col(AnnotationBaseTable.annotation_type) == AnnotationType.OBJECT_DETECTION,
-                AND(*self.criteria).get(),
+                self.criterion.get(),
             )
         )

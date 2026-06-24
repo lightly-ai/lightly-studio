@@ -32,7 +32,7 @@ class ClassificationField:
 class ClassificationQuery(MatchExpression):
     """Query if a sample has a classification matching a criterion."""
 
-    criteria: list[MatchExpression]
+    criterion: MatchExpression
 
     def __init__(self, *criteria: MatchExpression) -> None:
         """Combine multiple classification criteria into a single expression using AND.
@@ -43,13 +43,13 @@ class ClassificationQuery(MatchExpression):
         Args:
             criteria: The classification criteria to combine.
         """
-        self.criteria = list(criteria)
+        self.criterion = AND(*criteria)
 
     def get(self) -> ColumnElement[bool]:
         """Get the classification match expression."""
         return SampleTable.annotations.any(
             and_(
                 col(AnnotationBaseTable.annotation_type) == AnnotationType.CLASSIFICATION,
-                AND(*self.criteria).get(),
+                self.criterion.get(),
             )
         )

@@ -52,7 +52,7 @@ class SegmentationMaskField:
 class SegmentationMaskQuery(MatchExpression):
     """Query if a sample has a segmentation mask matching a criterion."""
 
-    criteria: list[MatchExpression]
+    criterion: MatchExpression
 
     def __init__(self, *criteria: MatchExpression) -> None:
         """Combine multiple segmentation mask criteria into a single expression using AND.
@@ -63,13 +63,13 @@ class SegmentationMaskQuery(MatchExpression):
         Args:
             criteria: The segmentation mask criteria to combine.
         """
-        self.criteria = list(criteria)
+        self.criterion = AND(*criteria)
 
     def get(self) -> ColumnElement[bool]:
         """Get the segmentation mask match expression."""
         return SampleTable.annotations.any(
             and_(
                 col(AnnotationBaseTable.annotation_type) == AnnotationType.SEGMENTATION_MASK,
-                AND(*self.criteria).get(),
+                self.criterion.get(),
             )
         )
