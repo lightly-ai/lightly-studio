@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import hashlib
+from typing import NamedTuple
 from uuid import UUID
 
 from sqlalchemy import func
 from sqlmodel import Session, col, select
 
 from lightly_studio.database import db_vector
+from lightly_studio.database.db_vector import Embedding
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
@@ -16,6 +18,17 @@ from lightly_studio.models.sample_embedding import (
 )
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.utils import batching
+
+
+class SampleEmbeddingRow(NamedTuple):
+    """A sample id paired with its embedding vector.
+
+    Lightweight read result for ``get_by_sample_ids``: only the ``sample_id`` and
+    ``embedding`` columns are loaded, never a full ``SampleEmbeddingTable`` ORM object.
+    """
+
+    sample_id: UUID
+    embedding: Embedding
 
 
 def create(session: Session, sample_embedding: SampleEmbeddingCreate) -> SampleEmbeddingTable:
@@ -48,10 +61,17 @@ def get_by_sample_ids(
     session: Session,
     sample_ids: list[UUID],
     embedding_model_id: UUID,
-) -> list[SampleEmbeddingTable]:
+) -> list[SampleEmbeddingRow]:
     """Get sample embeddings for the specified sample IDs.
 
-    Output order matches the input order.
+    Output order matches the input order. The result is a lightweight
+    ``SampleEmbeddingRow`` per sample (id + embedding), not a full ORM object.
+
+    On PostgreSQL this reads through a binary psycopg cursor, decoding the
+    high-dimensional vectors via ``np.frombuffer`` instead of parsing their text
+    representation per row, which is dramatically faster when loading embeddings for
+    many samples. DuckDB returns the vectors as arrays natively and uses the regular
+    query path. Callers do not need to distinguish between the two backends.
 
     Args:
         session: The database session.
@@ -59,20 +79,84 @@ def get_by_sample_ids(
         embedding_model_id: The embedding model ID to filter by.
 
     Returns:
-        List of sample embeddings associated with the provided IDs.
+        Embeddings for the provided IDs, in input order, skipping ids without an embedding.
     """
-    results: list[SampleEmbeddingTable] = []
-    for batch in batching.batched(items=sample_ids):
-        results.extend(
-            session.exec(
-                select(SampleEmbeddingTable)
-                .where(col(SampleEmbeddingTable.sample_id).in_(batch))
-                .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
-            ).all()
+    if not sample_ids:
+        return []
+    if session.get_bind().dialect.name == "postgresql":
+        rows = _get_by_sample_ids_postgres(
+            session=session, sample_ids=sample_ids, embedding_model_id=embedding_model_id
         )
-    # Return embeddings in the same order as the input IDs
-    embedding_map = {embedding.sample_id: embedding for embedding in results}
-    return [embedding_map[id_] for id_ in sample_ids if id_ in embedding_map]
+    else:
+        rows = _get_by_sample_ids_duckdb(
+            session=session, sample_ids=sample_ids, embedding_model_id=embedding_model_id
+        )
+    # Return embeddings in the same order as the input IDs.
+    by_id = {row.sample_id: row for row in rows}
+    return [by_id[id_] for id_ in sample_ids if id_ in by_id]
+
+
+def _get_by_sample_ids_postgres(
+    session: Session,
+    sample_ids: list[UUID],
+    embedding_model_id: UUID,
+) -> list[SampleEmbeddingRow]:
+    """Load embeddings via a binary psycopg cursor (PostgreSQL only).
+
+    Decoding pgvector's binary wire format with ``np.frombuffer`` is far faster than
+    parsing its text representation per row. A single ``sample_id = ANY(...)`` array
+    parameter stays under Postgres' bind-parameter limit, so no batching is needed.
+    Output order is normalized by the caller.
+    """
+    # Match the regular query path's auto-flush so pending writes in this session are
+    # visible to the raw cursor (it shares the session's connection and transaction).
+    session.flush()
+    connection = session.connection().connection
+    driver_connection = connection.driver_connection
+    if driver_connection is None:  # pragma: no cover - a live session always has one
+        raise RuntimeError("PostgreSQL session has no underlying psycopg connection.")
+    if not connection.info.get("pgvector_registered"):
+        # Register pgvector once per connection so psycopg decodes ``vector`` columns in
+        # binary rather than parsing their text representation.
+        from pgvector.psycopg import register_vector  # noqa: PLC0415 -- Postgres-only
+
+        register_vector(driver_connection)
+        connection.info["pgvector_registered"] = True
+    query = (
+        "SELECT sample_id, embedding FROM sample_embedding "
+        "WHERE embedding_model_id = %s AND sample_id = ANY(%s)"
+    )
+    with driver_connection.cursor(binary=True) as cursor:
+        cursor.execute(query, (embedding_model_id, sample_ids))
+        return [
+            SampleEmbeddingRow(sample_id=sample_id, embedding=embedding)
+            for sample_id, embedding in cursor
+        ]
+
+
+def _get_by_sample_ids_duckdb(
+    session: Session,
+    sample_ids: list[UUID],
+    embedding_model_id: UUID,
+) -> list[SampleEmbeddingRow]:
+    """Load embeddings via the SQLAlchemy query path (DuckDB).
+
+    DuckDB returns the vectors as arrays natively, so selecting just ``sample_id`` and
+    ``embedding`` avoids hydrating full ORM objects. IDs are batched to bound statement
+    size. Output order is normalized by the caller.
+    """
+    rows: list[SampleEmbeddingRow] = []
+    for batch in batching.batched(items=sample_ids):
+        results = session.exec(
+            select(SampleEmbeddingTable.sample_id, col(SampleEmbeddingTable.embedding))
+            .where(col(SampleEmbeddingTable.sample_id).in_(batch))
+            .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
+        ).all()
+        rows.extend(
+            SampleEmbeddingRow(sample_id=sample_id, embedding=embedding)
+            for sample_id, embedding in results
+        )
+    return rows
 
 
 def get_all_by_collection_id(
