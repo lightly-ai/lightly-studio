@@ -24,7 +24,6 @@ export const getFrameFilter = (params: VideoFrameFilterParams | null): VideoFram
         return null;
     }
 
-    // `filter_type` discriminates the by-filter tag endpoint's union; it rejects frames without it.
     const filters: VideoFrameFilter = { filter_type: 'video_frame' };
 
     if (params.video_id) {
@@ -72,5 +71,6 @@ export const getFrameFilter = (params: VideoFrameFilterParams | null): VideoFram
         filters.sample_filter = sampleFilter;
     }
 
-    return Object.keys(filters).length > 0 ? filters : null;
+    // `filters` always carries `filter_type` and `frame_number`, so it is never empty here.
+    return filters;
 };
