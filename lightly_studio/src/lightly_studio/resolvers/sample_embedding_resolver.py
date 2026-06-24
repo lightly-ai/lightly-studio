@@ -6,11 +6,11 @@ import hashlib
 from typing import NamedTuple
 from uuid import UUID
 
-import pgvector.psycopg
 from sqlalchemy import func
 from sqlmodel import Session, col, select
 
 from lightly_studio.database import db_vector
+from lightly_studio.database.db_manager import DatabaseBackend
 from lightly_studio.database.db_vector import Embedding
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import (
@@ -77,7 +77,7 @@ def get_by_sample_ids(
     """
     if not sample_ids:
         return []
-    if session.get_bind().dialect.name == "postgresql":
+    if session.get_bind().dialect.name == DatabaseBackend.POSTGRESQL.value:
         results = _get_by_sample_ids_postgres(
             session=session, sample_ids=sample_ids, embedding_model_id=embedding_model_id
         )
@@ -100,24 +100,16 @@ def _get_by_sample_ids_postgres(
     Reading the vectors in pgvector's binary format (via ``np.frombuffer``) is far
     faster than parsing them from text for each row.
     """
-    # Push any pending writes in this session to the database first so the cursor below
-    # sees them (it shares the session's connection and transaction). The normal query
-    # path does this automatically.
+    # Push any pending writes in this session to the database first so the cursor below —
+    # which bypasses SQLAlchemy's result handling — sees them (it shares the session's
+    # connection and transaction). The normal query path does this automatically.
     session.flush()
-    connection = session.connection().connection
-    driver_connection = connection.driver_connection
-    if driver_connection is None:  # pragma: no cover - a live session always has one
-        raise RuntimeError("PostgreSQL session has no underlying psycopg connection.")
-    if not connection.info.get("pgvector_registered"):
-        # Register pgvector once per connection so psycopg decodes ``vector`` columns
-        # from binary instead of parsing them from text.
-        pgvector.psycopg.register_vector(driver_connection)
-        connection.info["pgvector_registered"] = True
+    connection = db_vector.get_pgvector_connection(session)
     query = (
         "SELECT sample_id, embedding FROM sample_embedding "
         "WHERE embedding_model_id = %s AND sample_id = ANY(%s)"
     )
-    with driver_connection.cursor(binary=True) as cursor:
+    with connection.cursor(binary=True) as cursor:
         cursor.execute(query, (embedding_model_id, sample_ids))
         return [
             SampleEmbeddingRow(sample_id=sample_id, embedding=embedding)
