@@ -27,11 +27,7 @@
     );
 </script>
 
-<Tooltip
-    content={tooltipContent}
-    position="top"
-    triggerClass="inline-flex"
->
+<Tooltip content={tooltipContent} position="top" triggerClass="inline-flex">
     <div class="flex h-8 shrink-0 items-center gap-2 px-2">
         <Checkbox
             id="select-all-checkbox"
