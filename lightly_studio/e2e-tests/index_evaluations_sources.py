@@ -10,8 +10,10 @@ Annotations are synthetic, so the only input required is an images folder
 dimensions). Point it at any images you already have via ``EXAMPLES_IMAGES_PATH``
 (defaults to the COCO subset used by ``index_evaluations.py``).
 
-Note: ``cleanup_existing`` defaults to ``False`` so this dataset is added next to
-any existing data. Set it to ``True`` if you want a fresh database.
+Re-running recreates the dataset: by default it resets the local database
+(``EXAMPLES_CLEANUP_DB=true``), since DuckDB has no single-dataset delete. Set
+``EXAMPLES_CLEANUP_DB=false`` to keep existing data — but then the dataset name
+must not already exist.
 """
 
 import random
@@ -37,6 +39,10 @@ IMAGES_PATH = env.path("EXAMPLES_IMAGES_PATH", "datasets/coco_subset_128_images/
 DATASET_NAME = "evaluation_all_sources_dataset"
 CLASS_NAMES = ["cat", "dog", "bird"]
 RANDOM_SEED = 42
+
+# Reset the whole local DB by default so re-runs work (DuckDB has no
+# single-dataset delete). Set EXAMPLES_CLEANUP_DB=false to keep existing data.
+CLEANUP_DB = env.bool("EXAMPLES_CLEANUP_DB", True)
 
 OBJECT_DETECTION_GT_SOURCE = "object_detection_gt"
 OBJECT_DETECTION_PRED_SOURCE = "object_detection_pred"
@@ -70,7 +76,7 @@ def _rectangle_mask(
 
 def main() -> None:
     """Create the dataset, synthesize sources, and launch the UI."""
-    db_manager.connect(db_file="lightly_studio.db", cleanup_existing=False)
+    db_manager.connect(db_file="lightly_studio.db", cleanup_existing=CLEANUP_DB)
 
     dataset = ls.ImageDataset.create(name=DATASET_NAME)
     dataset.add_images_from_path(path=IMAGES_PATH)
