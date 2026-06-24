@@ -6,6 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel
 from sqlalchemy.orm import aliased
 from sqlmodel import col, select
+from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.core.dataset_query import query_translation
 from lightly_studio.database import db_array
@@ -82,7 +83,10 @@ class SampleFilter(BaseModel):
     def _apply_confusion_cell_filter(self, query: QueryType) -> QueryType:
         if self.confusion_cell is None:
             return query
+        sample_ids_subquery = self._build_confusion_cell_subquery(self.confusion_cell)
+        return query.where(col(SampleTable.sample_id).in_(sample_ids_subquery))
 
+    def _build_confusion_cell_subquery(self, confusion_cell: ConfusionCell) -> SelectOfScalar[UUID]:
         # Resolve the cell to its samples with a subquery against the persisted
         # pairing metrics, joining annotation labels by name (unique per dataset),
         # mirroring the tag-filter subquery pattern. This slice handles the
@@ -92,7 +96,7 @@ class SampleFilter(BaseModel):
         gt_label = aliased(AnnotationLabelTable)
         pred_label = aliased(AnnotationLabelTable)
 
-        sample_ids_subquery = (
+        return (
             select(EvaluationAnnotationMetricTable.sample_id)
             .join(
                 gt_annotation,
@@ -114,13 +118,12 @@ class SampleFilter(BaseModel):
             )
             .where(
                 col(EvaluationAnnotationMetricTable.evaluation_run_id)
-                == self.confusion_cell.evaluation_run_id
+                == confusion_cell.evaluation_run_id
             )
-            .where(col(gt_label.annotation_label_name) == self.confusion_cell.gt_label)
-            .where(col(pred_label.annotation_label_name) == self.confusion_cell.pred_label)
+            .where(col(gt_label.annotation_label_name) == confusion_cell.gt_label)
+            .where(col(pred_label.annotation_label_name) == confusion_cell.pred_label)
             .distinct()
         )
-        return query.where(col(SampleTable.sample_id).in_(sample_ids_subquery))
 
     def _apply_metadata_filters(self, query: QueryType) -> QueryType:
         if self.metadata_filters:

@@ -506,42 +506,6 @@ class TestSampleFilter:
         assert result[0].sample_id == samples[1].sample_id
 
 
-def _seed_pair(
-    session: Session,
-    dataset_id: UUID,
-    run_id: UUID,
-    image: ImageTable,
-    labels: tuple[AnnotationLabelTable, AnnotationLabelTable],
-) -> None:
-    """Attach a gt/pred annotation pair to ``image`` and persist a metric row for it."""
-    gt_label, pred_label = labels
-    gt_annotation = create_annotation(
-        session=session,
-        collection_id=dataset_id,
-        sample_id=image.sample_id,
-        annotation_label_id=gt_label.annotation_label_id,
-    )
-    pred_annotation = create_annotation(
-        session=session,
-        collection_id=dataset_id,
-        sample_id=image.sample_id,
-        annotation_label_id=pred_label.annotation_label_id,
-    )
-    evaluation_annotation_metric_resolver.create_many(
-        session=session,
-        records=[
-            EvaluationAnnotationMetricCreate(
-                evaluation_run_id=run_id,
-                sample_id=image.sample_id,
-                gt_annotation_id=gt_annotation.sample_id,
-                pred_annotation_id=pred_annotation.sample_id,
-                metric_name="iou",
-                value=0.9,
-            )
-        ],
-    )
-
-
 class TestSampleFilterConfusionCell:
     def test_apply__confusion_cell__returns_only_matching_pairing(
         self, db_session: Session
@@ -569,9 +533,27 @@ class TestSampleFilterConfusionCell:
         person = create_annotation_label(
             session=db_session, root_collection_id=dataset_id, label_name="person"
         )
-        _seed_pair(db_session, dataset_id, run.id, samples[0], labels=(car, truck))
-        _seed_pair(db_session, dataset_id, run.id, samples[1], labels=(person, person))
-        _seed_pair(db_session, dataset_id, run.id, samples[2], labels=(car, person))
+        _seed_pair(
+            session=db_session,
+            dataset_id=dataset_id,
+            run_id=run.id,
+            image=samples[0],
+            labels=(car, truck),
+        )
+        _seed_pair(
+            session=db_session,
+            dataset_id=dataset_id,
+            run_id=run.id,
+            image=samples[1],
+            labels=(person, person),
+        )
+        _seed_pair(
+            session=db_session,
+            dataset_id=dataset_id,
+            run_id=run.id,
+            image=samples[2],
+            labels=(car, person),
+        )
 
         sample_filter = SampleFilter(
             confusion_cell=ConfusionCell(
@@ -609,8 +591,20 @@ class TestSampleFilterConfusionCell:
             session=db_session, root_collection_id=dataset_id, label_name="truck"
         )
         # Same car -> truck pairing recorded in two different runs.
-        _seed_pair(db_session, dataset_id, run_a.id, samples[0], labels=(car, truck))
-        _seed_pair(db_session, dataset_id, run_b.id, samples[1], labels=(car, truck))
+        _seed_pair(
+            session=db_session,
+            dataset_id=dataset_id,
+            run_id=run_a.id,
+            image=samples[0],
+            labels=(car, truck),
+        )
+        _seed_pair(
+            session=db_session,
+            dataset_id=dataset_id,
+            run_id=run_b.id,
+            image=samples[1],
+            labels=(car, truck),
+        )
 
         sample_filter = SampleFilter(
             confusion_cell=ConfusionCell(
@@ -645,8 +639,20 @@ class TestSampleFilterConfusionCell:
             session=db_session, root_collection_id=dataset_id, label_name="truck"
         )
         # Both samples share the car -> truck pairing.
-        _seed_pair(db_session, dataset_id, run.id, samples[0], labels=(car, truck))
-        _seed_pair(db_session, dataset_id, run.id, samples[1], labels=(car, truck))
+        _seed_pair(
+            session=db_session,
+            dataset_id=dataset_id,
+            run_id=run.id,
+            image=samples[0],
+            labels=(car, truck),
+        )
+        _seed_pair(
+            session=db_session,
+            dataset_id=dataset_id,
+            run_id=run.id,
+            image=samples[1],
+            labels=(car, truck),
+        )
 
         # ANDing with a sample_ids predicate narrows the cell to a single sample.
         sample_filter = SampleFilter(
@@ -661,3 +667,39 @@ class TestSampleFilterConfusionCell:
 
         assert len(result) == 1
         assert result[0].sample_id == samples[1].sample_id
+
+
+def _seed_pair(
+    session: Session,
+    dataset_id: UUID,
+    run_id: UUID,
+    image: ImageTable,
+    labels: tuple[AnnotationLabelTable, AnnotationLabelTable],
+) -> None:
+    """Attach a gt/pred annotation pair to ``image`` and persist a metric row for it."""
+    gt_label, pred_label = labels
+    gt_annotation = create_annotation(
+        session=session,
+        collection_id=dataset_id,
+        sample_id=image.sample_id,
+        annotation_label_id=gt_label.annotation_label_id,
+    )
+    pred_annotation = create_annotation(
+        session=session,
+        collection_id=dataset_id,
+        sample_id=image.sample_id,
+        annotation_label_id=pred_label.annotation_label_id,
+    )
+    evaluation_annotation_metric_resolver.create_many(
+        session=session,
+        records=[
+            EvaluationAnnotationMetricCreate(
+                evaluation_run_id=run_id,
+                sample_id=image.sample_id,
+                gt_annotation_id=gt_annotation.sample_id,
+                pred_annotation_id=pred_annotation.sample_id,
+                metric_name="iou",
+                value=0.9,
+            )
+        ],
+    )
