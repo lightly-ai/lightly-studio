@@ -67,13 +67,23 @@
             return;
         }
 
+        // Observe the actual scroll container rather than the outer viewport div so
+        // that contentRect.width already excludes the scrollbar width when one is
+        // visible. Without this, items would be sized for the full viewport width and
+        // the last column would partially slide under the scrollbar.
+        const scrollView =
+            (viewport.querySelector('.grid-scroll') as HTMLElement | null) ?? viewport;
+
         const resizeObserver = new ResizeObserver((entries) => {
             for (const entry of entries) {
-                clientWidth = Math.max(entry.contentRect.width, 200);
+                // contentRect.width excludes the scrollbar, which causes items to stop
+                // GRID_GAP pixels short of the scrollbar — adding 4 compensates enough
+                // to align the right edge with the card's p-4 outer padding on the left.
+                clientWidth = Math.max(entry.contentRect.width + 4, 200);
             }
         });
 
-        resizeObserver.observe(viewport);
+        resizeObserver.observe(scrollView);
 
         return () => resizeObserver.disconnect();
     });
