@@ -18,7 +18,7 @@ class EvaluationMetricField:  # noqa: PLW1641
     """Queryable per-sample metric field from an evaluation run.
 
     Example:
-        ``SampleEvaluationQuery.match("run1", EvaluationMetricField("miou") < 0.3)``
+        ``SampleEvaluationQuery("run1", EvaluationMetricField("miou") < 0.3)``
     """
 
     def __init__(self, metric_name: str) -> None:
