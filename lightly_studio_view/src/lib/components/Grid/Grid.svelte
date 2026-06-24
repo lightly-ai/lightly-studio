@@ -4,6 +4,7 @@
     import type { HTMLAttributes } from 'svelte/elements';
     import { cn } from '$lib/utils';
 
+    const GRID_SCROLL_CLASS = 'grid-scroll';
     const GRID_GAP = 16;
     // Compensates for the scrollbar width so the right edge aligns with the
     // card's p-4 outer padding on the left side.
@@ -59,7 +60,7 @@
 
     const viewportClassName = $derived(cn('viewport h-full w-full', viewportProps?.class));
 
-    const gridClassName = $derived(cn('grid-scroll', gridProps?.class));
+    const gridClassName = $derived(cn(GRID_SCROLL_CLASS, gridProps?.class));
 
     const resolvedOverScan = $derived(overScan ?? overscan ?? gridProps?.overScan);
 
@@ -75,7 +76,7 @@
         // visible. Without this, items would be sized for the full viewport width and
         // the last column would partially slide under the scrollbar.
         const scrollView =
-            (viewport.querySelector('.grid-scroll') as HTMLElement | null) ?? viewport;
+            (viewport.querySelector(`.${GRID_SCROLL_CLASS}`) as HTMLElement | null) ?? viewport;
 
         const resizeObserver = new ResizeObserver((entries) => {
             for (const entry of entries) {
@@ -170,6 +171,7 @@
         overflow-y: hidden;
     }
 
+    /* Selector must match GRID_SCROLL_CLASS in <script> */
     .viewport :global(.grid-scroll) {
         overflow-x: hidden !important;
     }
