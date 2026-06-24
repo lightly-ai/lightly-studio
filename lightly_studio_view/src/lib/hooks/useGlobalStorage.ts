@@ -8,7 +8,7 @@ import type { MetadataInfo } from '$lib/services/types';
 import type { MetadataBounds } from '$lib/services/types';
 import type { MetadataValues } from '$lib/services/types';
 import { useReversibleActions } from './useReversibleActions';
-import type { CollectionView, SampleType } from '$lib/api/lightly_studio_local';
+import type { CollectionView, SampleType, TagByFilterBody } from '$lib/api/lightly_studio_local';
 import type { Point } from 'embedding-atlas/svelte';
 
 const lastGridType = writable<GridType>('images');
@@ -21,8 +21,11 @@ const selectedSampleAnnotationCropIds = writable<Record<string, Set<string>>>({}
  * so it can be tagged by filter instead of by materialized IDs. Any per-sample edit
  * invalidates it (sets it `null`). `size` lets the tag logic backstop against a
  * selection whose size no longer matches the snapshot.
+ *
+ * `filter` is typed as the by-filter tag endpoint's payload (the discriminated union over the
+ * per-grid filters) so a snapshot can never hold a filter the endpoint cannot accept.
  */
-export type SelectAllSnapshot = { filter: unknown; size: number };
+export type SelectAllSnapshot = { filter: TagByFilterBody['filter']; size: number };
 
 const selectAllSnapshotByCollection = writable<Record<string, SelectAllSnapshot | null>>({});
 const selectAllAnnotationSnapshotByCollection = writable<Record<string, SelectAllSnapshot | null>>(
@@ -389,7 +392,9 @@ export const useGlobalStorage = () => {
             activePanel.update((p) => togglePanel(p, 'evaluationRuns', show)),
         getRangeSelection,
         setRangeSelectionForCollection: (collectionId: string, selection: Point[] | null) => {
-            invalidateSelectAllSnapshot(collectionId);
+            // Note: this updates the embedding-plot range filter, not the selected sample IDs, so
+            // it must NOT invalidate the select-all snapshot — the selection (and thus the snapshot
+            // invariant) is unchanged. Selection clears route through clearSelectedSamples instead.
             rangeSelectionBycollection.update((state) => ({
                 ...state,
                 [collectionId]: selection

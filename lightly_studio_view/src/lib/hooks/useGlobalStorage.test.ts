@@ -1,6 +1,6 @@
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useGlobalStorage } from './useGlobalStorage';
+import { useGlobalStorage, type SelectAllSnapshot } from './useGlobalStorage';
 
 describe('useGlobalStorage', () => {
     let storage: ReturnType<typeof useGlobalStorage>;
@@ -203,7 +203,7 @@ describe('useGlobalStorage', () => {
     });
 
     describe('Select-all snapshot (sample grid)', () => {
-        const snapshot = { filter: { filter_type: 'image' }, size: 3 };
+        const snapshot: SelectAllSnapshot = { filter: { filter_type: 'image' }, size: 3 };
 
         it('records the snapshot for a collection', () => {
             storage.setSelectAllSnapshot(testCollectionId, snapshot);
@@ -226,10 +226,10 @@ describe('useGlobalStorage', () => {
             expect(get(storage.getSelectAllSnapshot(testCollectionId))).toBeNull();
         });
 
-        it('is invalidated by a range selection', () => {
+        it('is NOT invalidated by a range-filter change (not a selection mutation)', () => {
             storage.setSelectAllSnapshot(testCollectionId, snapshot);
             storage.setRangeSelectionForCollection(testCollectionId, null);
-            expect(get(storage.getSelectAllSnapshot(testCollectionId))).toBeNull();
+            expect(get(storage.getSelectAllSnapshot(testCollectionId))).toEqual(snapshot);
         });
 
         it('is NOT invalidated by setAllSelectedSampleIds', () => {
@@ -253,7 +253,7 @@ describe('useGlobalStorage', () => {
     });
 
     describe('Select-all snapshot (annotation grid)', () => {
-        const snapshot = { filter: { filter_type: 'annotations' }, size: 5 };
+        const snapshot: SelectAllSnapshot = { filter: { filter_type: 'annotations' }, size: 5 };
 
         it('records the snapshot for a collection', () => {
             storage.setSelectAllAnnotationSnapshot(testCollectionId, snapshot);
@@ -279,7 +279,7 @@ describe('useGlobalStorage', () => {
         });
 
         it('is independent from the sample snapshot store', () => {
-            const sampleSnapshot = { filter: { filter_type: 'image' }, size: 2 };
+            const sampleSnapshot: SelectAllSnapshot = { filter: { filter_type: 'image' }, size: 2 };
             storage.setSelectAllSnapshot(testCollectionId, sampleSnapshot);
             storage.setSelectAllAnnotationSnapshot(testCollectionId, snapshot);
 
