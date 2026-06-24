@@ -16,14 +16,10 @@ const selectedSampleIdsByCollection = writable<Record<string, Set<string>>>({});
 const selectedSampleAnnotationCropIds = writable<Record<string, Set<string>>>({});
 
 /**
- * Snapshot of the filter that produced a select-all, captured at select-all time.
- * A non-`null` entry means "the current selection is still an unmodified select-all,"
- * so it can be tagged by filter instead of by materialized IDs. Any per-sample edit
- * invalidates it (sets it `null`). `size` lets the tag logic backstop against a
- * selection whose size no longer matches the snapshot.
- *
- * `filter` is typed as the by-filter tag endpoint's payload (the discriminated union over the
- * per-grid filters) so a snapshot can never hold a filter the endpoint cannot accept.
+ * Snapshot of the filter behind a select-all. A non-`null` entry means the selection is still an
+ * unmodified select-all, so it can be tagged by filter instead of materialized IDs; any manual
+ * edit invalidates it. `size` lets the tag logic detect a selection that no longer matches.
+ * `filter` is the by-filter tag endpoint's payload, so a snapshot can't hold a rejected filter.
  */
 export type SelectAllSnapshot = { filter: TagByFilterBody['filter']; size: number };
 
@@ -32,12 +28,10 @@ const selectAllAnnotationSnapshotByCollection = writable<Record<string, SelectAl
     {}
 );
 
-/** Drop the sample-grid select-all snapshot for a collection (any manual mutation invalidates it). */
 const invalidateSelectAllSnapshot = (collectionId: string) => {
     selectAllSnapshotByCollection.update((state) => ({ ...state, [collectionId]: null }));
 };
 
-/** Drop the annotation-grid select-all snapshot for a collection. */
 const invalidateSelectAllAnnotationSnapshot = (collectionId: string) => {
     selectAllAnnotationSnapshotByCollection.update((state) => ({ ...state, [collectionId]: null }));
 };
@@ -180,7 +174,7 @@ export const useGlobalStorage = () => {
             ($rangeSelections) => $rangeSelections[collectionId] ?? null
         );
 
-    // Select-all snapshot helpers (sample grid). `null`/absent = not an unmodified select-all.
+    // Select-all snapshot helpers (sample grid).
     const getSelectAllSnapshot = (collectionId: string) =>
         derived(selectAllSnapshotByCollection, ($snapshots) => $snapshots[collectionId] ?? null);
     const setSelectAllSnapshot = (collectionId: string, snapshot: SelectAllSnapshot) => {
@@ -392,9 +386,8 @@ export const useGlobalStorage = () => {
             activePanel.update((p) => togglePanel(p, 'evaluationRuns', show)),
         getRangeSelection,
         setRangeSelectionForCollection: (collectionId: string, selection: Point[] | null) => {
-            // Note: this updates the embedding-plot range filter, not the selected sample IDs, so
-            // it must NOT invalidate the select-all snapshot — the selection (and thus the snapshot
-            // invariant) is unchanged. Selection clears route through clearSelectedSamples instead.
+            // No snapshot invalidation: this sets the embedding-plot range filter, not the
+            // selection, so the snapshot invariant holds. Selection clears go via clearSelectedSamples.
             rangeSelectionBycollection.update((state) => ({
                 ...state,
                 [collectionId]: selection
