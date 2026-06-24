@@ -10,6 +10,7 @@ from .order_by import (
     OrderByField,
     OrderByMetadataField,
 )
+from .sample_evaluation_query import SampleEvaluationQuery
 from .segmentation_mask_expression import SegmentationMaskField, SegmentationMaskQuery
 from .video_sample_field import VideoSampleField
 
@@ -28,6 +29,7 @@ __all__ = [
     "OrderByExpression",
     "OrderByField",
     "OrderByMetadataField",
+    "SampleEvaluationQuery",
     "SegmentationMaskField",
     "SegmentationMaskQuery",
     "VideoSampleField",

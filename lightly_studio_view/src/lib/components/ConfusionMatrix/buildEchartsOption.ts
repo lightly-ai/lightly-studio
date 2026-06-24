@@ -59,7 +59,12 @@ export function buildEchartsOption(
     // Dimension 3 is log10(count), dimension 2 the raw count.
     const visualMapDimension = logScale ? 3 : 2;
     const visualMapMin = logScale ? 0 : 1;
-    const visualMapMax = (logScale ? logMaxCount : maxCount) / colorIntensity;
+    // Clamp to the min so a high colorIntensity can't push the max below it,
+    // which would produce an invalid/reversed range (e.g. min: 1, max: 0.5).
+    const visualMapMax = Math.max(
+        (logScale ? logMaxCount : maxCount) / colorIntensity,
+        visualMapMin
+    );
 
     const nameGap = 20;
     return {
