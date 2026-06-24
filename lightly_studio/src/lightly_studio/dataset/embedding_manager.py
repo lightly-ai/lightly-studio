@@ -35,6 +35,13 @@ logger = logging.getLogger(__name__)
 # round-trips but higher peak memory. 1024 balances the two.
 EMBEDDING_INSERTION_BATCH_SIZE = 1024
 
+# Mapping of sample types to the generator type used for embedding generation.
+_GENERATOR_SAMPLE_TYPE: dict[SampleType, SampleType] = {
+    SampleType.IMAGE: SampleType.IMAGE,
+    SampleType.ANNOTATION: SampleType.IMAGE,
+    SampleType.VIDEO: SampleType.VIDEO,
+}
+
 
 class EmbeddingManagerProvider:
     """Provider for the EmbeddingManager singleton instance."""
@@ -71,6 +78,7 @@ class EmbeddingManager:
         """Initialize the embedding manager."""
         self._models: dict[UUID, EmbeddingGenerator] = {}
         self._collection_id_to_default_model_id: dict[UUID, UUID] = {}
+        self._sample_type_to_model_id: dict[SampleType, UUID] = {}
 
     def register_embedding_model(
         self,
@@ -280,16 +288,26 @@ class EmbeddingManager:
             UUID of the default embedding model or None if the model cannot be loaded.
         """
         # Return the existing default model ID if available.
-
         if collection_id in self._collection_id_to_default_model_id:
             return self._collection_id_to_default_model_id[collection_id]
 
-        # Load the embedding generator based on sample_type from the env var.
         dataset = collection_resolver.get_by_id(session=session, collection_id=collection_id)
         if dataset is None:
             raise ValueError("Provided collection_id could not be found.")
 
-        embedding_generator = _load_embedding_generator_from_env(sample_type=dataset.sample_type)
+        # Check if a model suitable for this sample type is already registered
+        generator_sample_type = _GENERATOR_SAMPLE_TYPE.get(dataset.sample_type)
+        if generator_sample_type is None:
+            return None
+        existing_model_id = self._sample_type_to_model_id.get(generator_sample_type)
+        embedding_generator: EmbeddingGenerator | None = None
+        if existing_model_id is not None:
+            embedding_generator = self._models[existing_model_id]
+        else:
+            # Load the embedding generator based on sample_type from the env var.
+            embedding_generator = _load_embedding_generator_from_env(
+                sample_type=generator_sample_type
+            )
         if embedding_generator is None:
             return None
 
@@ -300,6 +318,8 @@ class EmbeddingManager:
             embedding_generator=embedding_generator,
             set_as_default=True,
         )
+        # Store the model ID for the sample type to avoid reloading it in the future.
+        self._sample_type_to_model_id[generator_sample_type] = embedding_model.embedding_model_id
 
         return embedding_model.embedding_model_id
 
