@@ -2,9 +2,7 @@ import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useGlobalStorage } from './useGlobalStorage';
 
-type SelectAllSnapshot = Parameters<
-    ReturnType<typeof useGlobalStorage>['setSelectAllSnapshot']
->[1];
+type SelectAllSnapshot = Parameters<ReturnType<typeof useGlobalStorage>['setSelectAllSnapshot']>[1];
 
 describe('useGlobalStorage', () => {
     let storage: ReturnType<typeof useGlobalStorage>;
