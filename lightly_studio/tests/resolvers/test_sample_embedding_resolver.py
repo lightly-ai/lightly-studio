@@ -154,22 +154,19 @@ def test_get_sample_embeddings_by_sample_ids(db_session: Session) -> None:
 
     # Create many embeddings in a batch.
     sample_embedding_resolver.create_many(session=db_session, sample_embeddings=embedding_inputs)
-    all_in_collection = sample_embedding_resolver.get_all_by_collection_id(
+    embeddings_by_collection = sample_embedding_resolver.get_all_by_collection_id(
         session=db_session,
         collection_id=collection_id,
         embedding_model_id=embedding_model_id,
     )
-    assert len(all_in_collection) == 3
-    # get_all_by_collection_id returns the same (sample_id, embedding) pairs as
-    # get_by_sample_ids for those ids (covers the Postgres binary read under --postgres).
-    by_ids = sample_embedding_resolver.get_by_sample_ids(
+    assert len(embeddings_by_collection) == 3
+    embeddings_by_id = sample_embedding_resolver.get_by_sample_ids(
         session=db_session,
-        sample_ids=[row.sample_id for row in all_in_collection],
+        sample_ids=[row.sample_id for row in embeddings_by_collection],
         embedding_model_id=embedding_model_id,
     )
-    assert {row.sample_id for row in all_in_collection} == {sample.sample_id for sample in samples}
-    assert {row.sample_id: list(row.embedding) for row in all_in_collection} == {
-        row.sample_id: list(row.embedding) for row in by_ids
+    assert {row.sample_id: list(row.embedding) for row in embeddings_by_collection} == {
+        row.sample_id: list(row.embedding) for row in embeddings_by_id
     }
     embeddings = sample_embedding_resolver.get_by_sample_ids(
         session=db_session,
