@@ -9,19 +9,7 @@
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import { useSettings } from '$lib/hooks/useSettings';
     import { useAnnotationClassVisibility } from '$lib/hooks';
-    import { Eye, EyeOff } from '@lucide/svelte';
-    import { Tooltip } from '$lib/components/ui/tooltip';
-
-    const { selectedCollectionIds } = useAnnotationCollectionsFilter();
-    const { enforceColoringByClassStore } = useSettings();
-    const { hiddenClassNamesStore, toggleClassVisibility } = useAnnotationClassVisibility();
-
-    const showClassColorLegend = $derived(
-        !resolveEffectiveColorBySource({
-            multipleSourcesVisible: $selectedCollectionIds.length > 1,
-            enforceColoringByClass: $enforceColoringByClassStore
-        })
-    );
+    import LabelVisibilityToggle from './LabelVisibilityToggle/LabelVisibilityToggle.svelte';
 
     interface Props {
         annotationFilterRows: Readable<Annotation[]>;
@@ -34,6 +22,17 @@
         onToggleAnnotationFilter,
         showVisibilityToggle = false
     }: Props = $props();
+
+    const { selectedCollectionIds } = useAnnotationCollectionsFilter();
+    const { enforceColoringByClassStore } = useSettings();
+    const { hiddenClassNamesStore, toggleClassVisibility } = useAnnotationClassVisibility();
+
+    const showClassColorLegend = $derived(
+        !resolveEffectiveColorBySource({
+            multipleSourcesVisible: $selectedCollectionIds.length > 1,
+            enforceColoringByClass: $enforceColoringByClassStore
+        })
+    );
 </script>
 
 <Segment title="Annotation Classes">
@@ -93,31 +92,11 @@
                     </Label>
 
                     {#if showVisibilityToggle}
-                        {#if isHidden}
-                            <Tooltip content="Show annotation class">
-                                <button
-                                    type="button"
-                                    aria-label="Show annotation class {label_name}"
-                                    data-testid="label-visibility-toggle"
-                                    class="flex shrink-0 items-center"
-                                    onclick={() => toggleClassVisibility(label_name)}
-                                >
-                                    <EyeOff class="size-4 text-muted-foreground" />
-                                </button>
-                            </Tooltip>
-                        {:else}
-                            <Tooltip content="Hide annotation class">
-                                <button
-                                    type="button"
-                                    aria-label="Hide annotation class {label_name}"
-                                    data-testid="label-visibility-toggle"
-                                    class="flex shrink-0 items-center opacity-0 group-hover:opacity-100"
-                                    onclick={() => toggleClassVisibility(label_name)}
-                                >
-                                    <Eye class="size-4" />
-                                </button>
-                            </Tooltip>
-                        {/if}
+                        <LabelVisibilityToggle
+                            {isHidden}
+                            labelName={label_name}
+                            {toggleClassVisibility}
+                        />
                     {/if}
                 </div>
             {/each}
