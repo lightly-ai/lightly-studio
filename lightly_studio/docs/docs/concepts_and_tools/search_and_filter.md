@@ -67,13 +67,27 @@ segmentation_mask(class_name = "car" AND width < 100)
 
 ## Query in Python
 
-You can programmatically filter samples by attributes (e.g., image size, tags), sort them, and select subsets. This is useful for creating training/validation splits, finding specific samples, or exporting filtered data.
+You can programmatically filter samples by attributes (e.g., image size, tags) or annotations (object detections, classifications and segmentation masks), sort them, and select subsets. This is useful for creating training/validation splits, finding specific samples, or exporting filtered data.
 
 Create a query object by combining [`match`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.match), [`order_by`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.order_by) and [`slice`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.slice) (or [`[start:end]`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.__getitem__)) calls. The query is composed lazily and executed against the database once it is consumed, e.g. by iterating over it or calling [`add_tag`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.add_tag).
 
-The example below uses the [`ImageSampleField`](../api/dataset_query.md#imagesamplefield) for demonstration, for video datasets, use [`VideoSampleField`](../api/dataset_query.md#videosamplefield) instead.
+The example below uses the [`ImageSampleField`](../api/dataset_query.md#imagesamplefield) for
+sample-level filtering; for video datasets, use
+[`VideoSampleField`](../api/dataset_query.md#videosamplefield) instead. It also uses
+[`ObjectDetectionField`](../api/dataset_query.md#objectdetectionfield) to demonstrate annotation
+filtering. For the other annotation types, see
+[`ClassificationField`](../api/dataset_query.md#classificationfield) and
+[`SegmentationMaskField`](../api/dataset_query.md#segmentationmaskfield).
 ```py
-from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, ImageSampleField
+from lightly_studio.core.dataset_query import (
+    AND,
+    NOT,
+    OR,
+    ImageSampleField,
+    OrderByField,
+    ObjectDetectionField,
+    ObjectDetectionQuery,
+)
 
 # QUERY: Define a lazy query, composed by: match, order_by, slice
 # match: Find all samples that need labeling plus small samples (< 500px) that haven't been reviewed.
@@ -85,6 +99,21 @@ query = dataset.match(
             NOT(ImageSampleField.tags.contains("reviewed"))
         ),
         ImageSampleField.tags.contains("needs-labeling")
+    )
+)
+
+# Samples with at least one confident "person" detection larger than 100 px tall,
+# in an image with 500 px or more width.
+query = dataset.match(
+    AND(
+        ImageSampleField.width >= 500,
+        # Criteria inside annotation filters are combined using AND(..) operator
+        ObjectDetectionQuery(
+            ObjectDetectionField.class_name == "person",
+            ObjectDetectionField.source == "predictions",
+            ObjectDetectionField.confidence >= 0.8,
+            ObjectDetectionField.height >= 100,
+        )
     )
 )
 
@@ -120,7 +149,9 @@ dataset.export(query).to_coco_object_detections()
 ### Reference
 
 The following sections explain the available methods for defining a query in more detail.
-They use the [`ImageSampleField`](../api/dataset_query.md/#imagesamplefield) for demonstration, but the same applies to [`VideoSampleField`](../api/dataset_query.md/#videosamplefield) for video datasets.
+Examples use [`ImageSampleField`](../api/dataset_query.md#imagesamplefield) for sample-level
+filters and the annotation query helpers for annotation-level filters. For video datasets, the
+sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#videosamplefield).
 
 === "`match`"
 
@@ -149,11 +180,64 @@ They use the [`ImageSampleField`](../api/dataset_query.md/#imagesamplefield) for
     query.match(expr)
     ```
 
+    Annotation queries use `ClassificationQuery(...)`, `ObjectDetectionQuery(...)`, and
+    `SegmentationMaskQuery(...)`. Each helper matches a sample when it has at least one
+    annotation of that type that satisfies all passed criteria.
+
+    ```py
+    from lightly_studio.core.dataset_query import (
+        ClassificationField,
+        ClassificationQuery,
+        ObjectDetectionField,
+        ObjectDetectionQuery,
+        SegmentationMaskField,
+        SegmentationMaskQuery,
+    )
+
+    # Classification fields: class_name, source, confidence
+    expr = ClassificationQuery(
+        ClassificationField.class_name == "approved",
+        ClassificationField.source == "ground_truth",
+        ClassificationField.confidence >= 0.9,
+    )
+
+    # Object detection fields: class_name, source, confidence, x, y, width, height
+    expr = ObjectDetectionQuery(
+        ObjectDetectionField.class_name == "person",
+        ObjectDetectionField.source == "predictions",
+        ObjectDetectionField.confidence >= 0.8,
+        ObjectDetectionField.x >= 10,
+        ObjectDetectionField.y >= 20,
+        ObjectDetectionField.width >= 40,
+        ObjectDetectionField.height >= 100,
+    )
+
+    # Segmentation mask fields: class_name, source, confidence, x, y, width, height
+    expr = SegmentationMaskQuery(
+        SegmentationMaskField.class_name == "road",
+        SegmentationMaskField.source == "ground_truth",
+        SegmentationMaskField.confidence >= 0.95,
+        SegmentationMaskField.x >= 0,
+        SegmentationMaskField.y >= 0,
+        SegmentationMaskField.width >= 300,
+        SegmentationMaskField.height >= 80,
+    )
+
+    query.match(expr)
+    ```
+
     The filtering on individual fields can flexibly be combined to create more complex match expression. For this, the boolean operators `AND`, `OR`, and `NOT` are available. Boolean operators can arbitrarily be nested.
 
 
     ```py
-    from lightly_studio.core.dataset_query import AND, OR, NOT, ImageSampleField
+    from lightly_studio.core.dataset_query import (
+        AND,
+        NOT,
+        OR,
+        ImageSampleField,
+        ObjectDetectionField,
+        ObjectDetectionQuery,
+    )
 
     # All samples with images that are between 10 and 20 pixels wide
     expr = AND(
@@ -180,6 +264,15 @@ They use the [`ImageSampleField`](../api/dataset_query.md/#imagesamplefield) for
             NOT(
                 ImageSampleField.tags.contains("dog")
             ),
+        ),
+    )
+
+    # Combine sample and annotation filters, use logical `OR` inside annotation filter
+    expr = AND(
+        ImageSampleField.tags.contains("reviewed"),
+        ObjectDetectionQuery(
+            ObjectDetectionField.class_name == "car",
+            OR(ObjectDetectionField.width >= 80, ObjectDetectionField.height >= 80)
         ),
     )
 
