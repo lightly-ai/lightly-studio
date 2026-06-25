@@ -4,10 +4,16 @@ from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel
+from sqlalchemy.orm import aliased
 from sqlmodel import col, select
+from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.core.dataset_query import query_translation
 from lightly_studio.database import db_array
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.annotation_label import AnnotationLabelTable
+from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
+from lightly_studio.models.evaluation_confusion_matrix import ConfusionCell
 from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.query_expr import QueryExpr
 from lightly_studio.models.sample import SampleTable
@@ -26,6 +32,7 @@ class SampleFilter(BaseModel):
     sample_ids: Optional[list[UUID]] = None
     has_captions: Optional[bool] = None
     annotations_filter: Optional[AnnotationsFilter] = None
+    confusion_cell: Optional[ConfusionCell] = None
 
     # Query expression filter
     #
@@ -41,6 +48,7 @@ class SampleFilter(BaseModel):
         query = self._apply_sample_ids_filter(query)
         query = self._apply_annotation_filters(query)
         query = self._apply_tag_filters(query)
+        query = self._apply_confusion_cell_filter(query)
         query = self._apply_metadata_filters(query)
         query = self._apply_captions_filter(query)
         return self._apply_query_expr_filter(query)
@@ -71,6 +79,51 @@ class SampleFilter(BaseModel):
             .distinct()
         )
         return query.where(col(SampleTable.sample_id).in_(sample_ids_subquery))
+
+    def _apply_confusion_cell_filter(self, query: QueryType) -> QueryType:
+        if self.confusion_cell is None:
+            return query
+        sample_ids_subquery = self._build_confusion_cell_subquery(self.confusion_cell)
+        return query.where(col(SampleTable.sample_id).in_(sample_ids_subquery))
+
+    def _build_confusion_cell_subquery(self, confusion_cell: ConfusionCell) -> SelectOfScalar[UUID]:
+        # Resolve the cell to its samples with a subquery against the persisted
+        # pairing metrics, joining annotation labels by name (unique per dataset),
+        # mirroring the tag-filter subquery pattern. This slice handles the
+        # non-null/non-null case only, so both sides are inner-joined.
+        gt_annotation = aliased(AnnotationBaseTable)
+        pred_annotation = aliased(AnnotationBaseTable)
+        gt_label = aliased(AnnotationLabelTable)
+        pred_label = aliased(AnnotationLabelTable)
+
+        return (
+            select(EvaluationAnnotationMetricTable.sample_id)
+            .join(
+                gt_annotation,
+                col(EvaluationAnnotationMetricTable.gt_annotation_id)
+                == col(gt_annotation.sample_id),
+            )
+            .join(
+                pred_annotation,
+                col(EvaluationAnnotationMetricTable.pred_annotation_id)
+                == col(pred_annotation.sample_id),
+            )
+            .join(
+                gt_label,
+                col(gt_annotation.annotation_label_id) == col(gt_label.annotation_label_id),
+            )
+            .join(
+                pred_label,
+                col(pred_annotation.annotation_label_id) == col(pred_label.annotation_label_id),
+            )
+            .where(
+                col(EvaluationAnnotationMetricTable.evaluation_run_id)
+                == confusion_cell.evaluation_run_id
+            )
+            .where(col(gt_label.annotation_label_name) == confusion_cell.gt_label)
+            .where(col(pred_label.annotation_label_name) == confusion_cell.pred_label)
+            .distinct()
+        )
 
     def _apply_metadata_filters(self, query: QueryType) -> QueryType:
         if self.metadata_filters:

@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import hashlib
+from typing import NamedTuple
 from uuid import UUID
 
-from sqlalchemy import String, cast, func
+from sqlalchemy import func
 from sqlmodel import Session, col, select
 
 from lightly_studio.database import db_vector
+from lightly_studio.database.db_manager import DatabaseBackend
+from lightly_studio.database.db_vector import Embedding
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
@@ -16,6 +19,17 @@ from lightly_studio.models.sample_embedding import (
 )
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.utils import batching
+
+
+class SampleEmbeddingRow(NamedTuple):
+    """A sample id paired with its embedding vector.
+
+    Lightweight read result for ``get_by_sample_ids``: only the ``sample_id`` and
+    ``embedding`` columns are loaded, never a full ``SampleEmbeddingTable`` object.
+    """
+
+    sample_id: UUID
+    embedding: Embedding
 
 
 def create(session: Session, sample_embedding: SampleEmbeddingCreate) -> SampleEmbeddingTable:
@@ -48,7 +62,7 @@ def get_by_sample_ids(
     session: Session,
     sample_ids: list[UUID],
     embedding_model_id: UUID,
-) -> list[SampleEmbeddingTable]:
+) -> list[SampleEmbeddingRow]:
     """Get sample embeddings for the specified sample IDs.
 
     Output order matches the input order.
@@ -61,19 +75,71 @@ def get_by_sample_ids(
     Returns:
         List of sample embeddings associated with the provided IDs.
     """
-    results: list[SampleEmbeddingTable] = []
-    for batch in batching.batched(items=sample_ids):
-        string_ids = [str(id_) for id_ in batch]
-        results.extend(
-            session.exec(
-                select(SampleEmbeddingTable)
-                .where(cast(SampleEmbeddingTable.sample_id, String).in_(string_ids))
-                .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
-            ).all()
+    if not sample_ids:
+        return []
+    if session.get_bind().dialect.name == DatabaseBackend.POSTGRESQL.value:
+        results = _get_by_sample_ids_postgres(
+            session=session, sample_ids=sample_ids, embedding_model_id=embedding_model_id
+        )
+    else:
+        results = _get_by_sample_ids_duckdb(
+            session=session, sample_ids=sample_ids, embedding_model_id=embedding_model_id
         )
     # Return embeddings in the same order as the input IDs
     embedding_map = {embedding.sample_id: embedding for embedding in results}
     return [embedding_map[id_] for id_ in sample_ids if id_ in embedding_map]
+
+
+def _get_by_sample_ids_postgres(
+    session: Session,
+    sample_ids: list[UUID],
+    embedding_model_id: UUID,
+) -> list[SampleEmbeddingRow]:
+    """Load embeddings with a binary psycopg cursor (PostgreSQL only).
+
+    Reading the vectors in pgvector's binary format (via ``np.frombuffer``) is far
+    faster than parsing them from text for each row.
+    """
+    # Push any pending writes in this session to the database first so the cursor below —
+    # which bypasses SQLAlchemy's result handling — sees them (it shares the session's
+    # connection and transaction). The normal query path does this automatically.
+    session.flush()
+    connection = db_vector.get_pgvector_connection(session)
+    query = (
+        "SELECT sample_id, embedding FROM sample_embedding "
+        "WHERE embedding_model_id = %s AND sample_id = ANY(%s)"
+    )
+    with connection.cursor(binary=True) as cursor:
+        cursor.execute(query, (embedding_model_id, sample_ids))
+        return [
+            SampleEmbeddingRow(sample_id=sample_id, embedding=embedding)
+            for sample_id, embedding in cursor
+        ]
+
+
+def _get_by_sample_ids_duckdb(
+    session: Session,
+    sample_ids: list[UUID],
+    embedding_model_id: UUID,
+) -> list[SampleEmbeddingRow]:
+    """Load embeddings via the SQLAlchemy query path (DuckDB).
+
+    DuckDB returns the vectors as arrays natively, so selecting just ``sample_id`` and
+    ``embedding`` avoids creating full ``SampleEmbeddingTable`` objects. IDs are batched
+    to stay under the database's parameter limit.
+    """
+    rows: list[SampleEmbeddingRow] = []
+    for batch in batching.batched(items=sample_ids):
+        results = session.exec(
+            select(SampleEmbeddingTable.sample_id, col(SampleEmbeddingTable.embedding))
+            .where(col(SampleEmbeddingTable.sample_id).in_(batch))
+            .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
+        ).all()
+        rows.extend(
+            SampleEmbeddingRow(sample_id=sample_id, embedding=embedding)
+            for sample_id, embedding in results
+        )
+    return rows
 
 
 def get_all_by_collection_id(

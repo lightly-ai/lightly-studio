@@ -62,6 +62,15 @@ describe('OrderBy', () => {
         expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('Sort by');
     });
 
+    it('shows a tooltip on hover over the sort trigger', async () => {
+        const user = userEvent.setup();
+        render(OrderBy, { props: { datasetId: 'ds1' } });
+
+        await user.hover(screen.getByTestId('sort-by-trigger'));
+
+        expect(screen.getByRole('tooltip')).toHaveTextContent('Sort items by attribute');
+    });
+
     it('shows the selected field label in the trigger', () => {
         mocks.imageSortByValue = [
             {
@@ -91,6 +100,40 @@ describe('OrderBy', () => {
         ];
         render(OrderBy, { props: { datasetId: 'ds1' } });
         expect(screen.getByTestId('sort-direction-button')).not.toBeDisabled();
+    });
+
+    it('shows a sort ascending tooltip on hover over the direction button', async () => {
+        const user = userEvent.setup();
+        mocks.imageSortByValue = [
+            {
+                source: 'image',
+                field_name: 'file_name',
+                direction: SortDirection.ASC,
+                is_numeric: false
+            }
+        ];
+        render(OrderBy, { props: { datasetId: 'ds1' } });
+
+        await user.hover(screen.getByTestId('sort-direction-button'));
+
+        expect(screen.getByRole('tooltip')).toHaveTextContent('Sort ascending');
+    });
+
+    it('shows a sort descending tooltip on hover over the direction button', async () => {
+        const user = userEvent.setup();
+        mocks.imageSortByValue = [
+            {
+                source: 'image',
+                field_name: 'file_name',
+                direction: SortDirection.DESC,
+                is_numeric: false
+            }
+        ];
+        render(OrderBy, { props: { datasetId: 'ds1' } });
+
+        await user.hover(screen.getByTestId('sort-direction-button'));
+
+        expect(screen.getByRole('tooltip')).toHaveTextContent('Sort descending');
     });
 
     it('selects a field and calls updateSortBy with asc direction by default', async () => {
