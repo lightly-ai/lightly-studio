@@ -14,6 +14,9 @@ T_contra = TypeVar("T_contra", contravariant=True)
 
 # The plotting library renders at most this many legend slots, indexed [0, MAX_LEGEND_SLOTS).
 MAX_LEGEND_SLOTS = 256
+# First slot available for colored categories. Slots below it are reserved for the
+# frontend's non-colored categories (0 hidden, 1 filtered-out, 2 unassigned).
+FIRST_COLORED_CATEGORY = 3
 # Number of category names listed inside an "Other" bucket label before truncating with an ellipsis.
 MAX_OTHER_NAMES = 5
 
@@ -54,7 +57,7 @@ class DiscreteColorScale(Generic[T]):
     def from_values(
         cls,
         values: Iterable[T],
-        start_cat: int = 3,
+        start_cat: int = FIRST_COLORED_CATEGORY,
         format_fn: Callable[[T], str] = str,
     ) -> DiscreteColorScale[T]:
         """Build a DiscreteColorScale by assigning a category to each value.
@@ -116,7 +119,7 @@ class DiscreteColorScale(Generic[T]):
     def from_integers(
         cls,
         values: Iterable[int],
-        start_cat: int = 3,
+        start_cat: int = FIRST_COLORED_CATEGORY,
         max_categories: int = 50,
     ) -> DiscreteColorScale[int]:
         """Build a color scale for integer values.
