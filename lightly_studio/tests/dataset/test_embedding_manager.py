@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
 from uuid import UUID, uuid4
 
 import numpy as np
@@ -104,9 +103,7 @@ def test_register_multiple_models(
             raise NotImplementedError()
 
         def embed_image_crops(
-            self,
-            image_crops: list[ImageCrop],
-            show_progress: bool = True,
+            self, image_crops: list[ImageCrop], show_progress: bool = True
         ) -> NDArray[np.float32]:
             raise NotImplementedError()
 

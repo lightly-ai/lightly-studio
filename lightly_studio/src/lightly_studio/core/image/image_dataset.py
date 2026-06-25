@@ -207,12 +207,12 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             collection_name=annotation_source,
         )
         _log_missing_images(annotation_source=annotation_source, missing_paths=missing)
-        if embed_annotations:
-            _generate_embeddings_annotations(
-                session=self.session,
-                root_collection_id=self.collection_id,
-                annotation_collection_name=annotation_source,
-            )
+        _generate_embeddings_annotations(
+            session=self.session,
+            root_collection_id=self.collection_id,
+            annotation_collection_name=annotation_source,
+            embed=embed_annotations,
+        )
 
     def add_annotations_from_coco(
         self,
@@ -274,12 +274,12 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 collection_name=annotation_source,
             )
         _log_missing_images(annotation_source=annotation_source, missing_paths=missing)
-        if embed_annotations:
-            _generate_embeddings_annotations(
-                session=self.session,
-                root_collection_id=self.collection_id,
-                annotation_collection_name=annotation_source,
-            )
+        _generate_embeddings_annotations(
+            session=self.session,
+            root_collection_id=self.collection_id,
+            annotation_collection_name=annotation_source,
+            embed=embed_annotations,
+        )
 
     def add_annotations_from_pascal_voc_segmentations(
         self,
@@ -349,12 +349,12 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             tag=split,
             embed=embed,
         )
-        if embed_annotations:
-            _generate_embeddings_annotations(
-                session=self.session,
-                root_collection_id=self.collection_id,
-                annotation_collection_name=annotation_source,
-            )
+        _generate_embeddings_annotations(
+            session=self.session,
+            root_collection_id=self.collection_id,
+            annotation_collection_name=annotation_source,
+            embed=embed_annotations,
+        )
 
     def add_samples_from_yolo(
         self,
@@ -424,12 +424,12 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             tag=None,
             embed=embed,
         )
-        if embed_annotations:
-            _generate_embeddings_annotations(
-                session=self.session,
-                root_collection_id=self.collection_id,
-                annotation_collection_name=annotation_source,
-            )
+        _generate_embeddings_annotations(
+            session=self.session,
+            root_collection_id=self.collection_id,
+            annotation_collection_name=annotation_source,
+            embed=embed_annotations,
+        )
 
     def add_samples_from_coco(  # noqa: PLR0913
         self,
@@ -489,12 +489,12 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             tag=split,
             embed=embed,
         )
-        if embed_annotations:
-            _generate_embeddings_annotations(
-                session=self.session,
-                root_collection_id=self.collection_id,
-                annotation_collection_name=annotation_source,
-            )
+        _generate_embeddings_annotations(
+            session=self.session,
+            root_collection_id=self.collection_id,
+            annotation_collection_name=annotation_source,
+            embed=embed_annotations,
+        )
 
     def add_samples_from_pascal_voc_segmentations(  # noqa: PLR0913
         self,
@@ -592,12 +592,12 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             tag=split,
             embed=embed,
         )
-        if embed_annotations:
-            _generate_embeddings_annotations(
-                session=self.session,
-                root_collection_id=self.collection_id,
-                annotation_collection_name=annotation_source,
-            )
+        _generate_embeddings_annotations(
+            session=self.session,
+            root_collection_id=self.collection_id,
+            annotation_collection_name=annotation_source,
+            embed=embed_annotations,
+        )
 
     def add_samples_from_coco_caption(
         self,
@@ -733,6 +733,7 @@ def _generate_embeddings_annotations(
     session: Session,
     root_collection_id: UUID,
     annotation_collection_name: str | None,
+    embed: bool,
 ) -> None:
     """Generate and store embeddings for object-detection annotation samples.
 
@@ -742,7 +743,10 @@ def _generate_embeddings_annotations(
             collection should receive embeddings.
         annotation_collection_name: Name of the annotation child collection. If None,
             the default annotation collection name is used.
+        embed: If False, this is a no-op.
     """
+    if not embed:
+        return
     annotation_collection_id = collection_resolver.get_or_create_child_collection(
         session=session,
         collection_id=root_collection_id,

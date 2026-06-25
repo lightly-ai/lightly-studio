@@ -38,14 +38,14 @@ class EmbeddingContext:
 def embed_image_crops_batched(
     image_crops: list[ImageCrop],
     context: EmbeddingContext,
-    show_progress: bool = True,
+    show_progress: bool,
 ) -> NDArray[np.float32]:
     """Embed image crops, opening each source file once and preserving input order.
 
     Args:
         image_crops: Crop definitions to embed.
         context: Model-specific embedding configuration.
-        show_progress: Whether to show a tqdm progress bar during embedding.
+        show_progress: Whether to show a tqdm progress bar.
 
     Returns:
         Float32 array of shape ``(len(image_crops), embedding_dimension)``.

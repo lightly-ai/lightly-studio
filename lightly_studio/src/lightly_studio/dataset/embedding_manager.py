@@ -212,6 +212,9 @@ class EmbeddingManager:
         model_id = self._get_default_or_validate(
             collection_id=annotation_collection_id, embedding_model_id=embedding_model_id
         )
+        model = self._models[model_id]
+        if not isinstance(model, ImageEmbeddingGenerator):
+            raise ValueError("Embedding model not compatible with images.")
 
         annotation_sample_ids = annotation_resolver.get_unembedded_annotation_ids(
             session=session,
@@ -222,9 +225,8 @@ class EmbeddingManager:
             logger.info("No annotation crops to embed.")
             return
 
-        total_annotations = len(annotation_sample_ids)
         with tqdm(
-            total=total_annotations,
+            total=len(annotation_sample_ids),
             desc="Embedding annotations",
             unit=" crops",
         ) as progress:
@@ -237,7 +239,7 @@ class EmbeddingManager:
                 if not annotation_crops.image_crops:
                     continue
 
-                embeddings = self._models[model_id].embed_image_crops(
+                embeddings = model.embed_image_crops(
                     image_crops=annotation_crops.image_crops,
                     show_progress=False,
                 )
@@ -385,7 +387,6 @@ class EmbeddingManager:
 
         return embedding_model.embedding_model_id
 
-
     def _get_default_or_validate(
         self, collection_id: UUID, embedding_model_id: UUID | None
     ) -> UUID:
@@ -444,7 +445,6 @@ def _store_embeddings(
             progress.update(len(sample_embeddings))
 
     session.commit()
-
 
 
 def _load_embedding_generator_from_env(sample_type: SampleType) -> EmbeddingGenerator | None:

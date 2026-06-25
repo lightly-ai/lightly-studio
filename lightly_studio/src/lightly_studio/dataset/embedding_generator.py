@@ -80,9 +80,7 @@ class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
         ...
 
     def embed_image_crops(
-        self,
-        image_crops: list[ImageCrop],
-        show_progress: bool = True,
+        self, image_crops: list[ImageCrop], show_progress: bool = True
     ) -> NDArray[np.float32]:
         """Generate embeddings for image crops.
 
@@ -156,14 +154,12 @@ class RandomEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator)
         return np.random.rand(len(filepaths), self._dimension).astype(np.float32)
 
     def embed_image_crops(
-        self,
-        image_crops: list[ImageCrop],
-        show_progress: bool = True,
+        self, image_crops: list[ImageCrop], show_progress: bool = True
     ) -> NDArray[np.float32]:
         """Generate random embeddings for multiple image crops."""
-        _ = show_progress
+        _ = show_progress  # Not used for random embeddings.
         return np.random.rand(len(image_crops), self._dimension).astype(np.float32)
 
     def embed_videos(self, filepaths: list[str]) -> NDArray[np.float32]:
-        """Generate random embeddings for multiple image samples."""
+        """Generate random embeddings for multiple video samples."""
         return np.random.rand(len(filepaths), self._dimension).astype(np.float32)

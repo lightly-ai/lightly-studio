@@ -157,9 +157,7 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
         return embeddings
 
     def embed_image_crops(
-        self,
-        image_crops: list[ImageCrop],
-        show_progress: bool = True,
+        self, image_crops: list[ImageCrop], show_progress: bool = True
     ) -> NDArray[np.float32]:
         """Embed image crops with MobileCLIP.
 
