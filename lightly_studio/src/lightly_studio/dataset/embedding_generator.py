@@ -161,5 +161,5 @@ class RandomEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator)
         return np.random.rand(len(image_crops), self._dimension).astype(np.float32)
 
     def embed_videos(self, filepaths: list[str]) -> NDArray[np.float32]:
-        """Generate random embeddings for multiple image samples."""
+        """Generate random embeddings for multiple video samples."""
         return np.random.rand(len(filepaths), self._dimension).astype(np.float32)

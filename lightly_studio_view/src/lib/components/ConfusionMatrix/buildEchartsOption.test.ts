@@ -94,7 +94,7 @@ describe('buildEchartsOption', () => {
     });
 
     it('does not treat sentinel/sentinel cells as TP even when row label equals col label', () => {
-        // Force a same-named sentinel row and col to exercise the SENTINEL_LABELS guard.
+        // Force a same-named sentinel row and col to exercise the SENTINELS guard.
         const matrix: ConfusionMatrix = {
             row_labels: [NO_GROUND_TRUTH_ROW_LABEL],
             col_labels: [NO_GROUND_TRUTH_ROW_LABEL],
