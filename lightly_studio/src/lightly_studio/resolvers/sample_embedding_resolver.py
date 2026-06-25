@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import Mapping, Sequence
-from typing import Any, NamedTuple, Union
+from typing import Any, NamedTuple
 from uuid import UUID
 
 from sqlalchemy import func
@@ -155,8 +155,6 @@ def get_all_by_collection_id(
             compile_kwargs={"render_postcompile": True},
         )
         return _read_embedding_rows_binary(session, str(compiled), compiled.params)
-    # DuckDB: stream in chunks (yield_per) so each raw list[float] row is converted to a
-    # compact numpy array and freed per batch, bounding peak memory on large collections.
     streamed = statement.execution_options(yield_per=batching.DEFAULT_BATCH_SIZE)
     return [
         SampleEmbeddingRow(sample_id=sample_id, embedding=embedding)
@@ -227,12 +225,8 @@ def get_embedding_count(session: Session, collection_id: UUID, embedding_model_i
     return session.exec(query).one()
 
 
-# psycopg query parameters: a sequence for ``%s`` placeholders or a mapping for ``%(name)s``.
-_QueryParams = Union[Sequence[Any], Mapping[str, Any]]
-
-
 def _read_embedding_rows_binary(
-    session: Session, sql: str, params: _QueryParams
+    session: Session, sql: str, params: Sequence[Any] | Mapping[str, Any]
 ) -> list[SampleEmbeddingRow]:
     """Run a ``(sample_id, embedding)`` SELECT on a binary psycopg cursor (PostgreSQL).
 
