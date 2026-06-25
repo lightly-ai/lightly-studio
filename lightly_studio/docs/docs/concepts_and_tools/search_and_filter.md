@@ -90,6 +90,7 @@ from lightly_studio.core.dataset_query import (
 )
 
 # QUERY: Define a lazy query, composed by: match, order_by, slice
+
 # match: Find all samples that need labeling plus small samples (< 500px) that haven't been reviewed.
 # For video datasets: use VideoSampleField instead of ImageSampleField.
 query = dataset.match(
@@ -101,9 +102,8 @@ query = dataset.match(
         ImageSampleField.tags.contains("needs-labeling")
     )
 )
-
-# Samples with at least one confident "person" detection larger than 100 px tall,
-# in an image with 500 px or more width.
+# match (with annotations): Samples with at least one confident "person" detection
+# larger than 100 px tall, # in an image with 500 px or more width.
 query = dataset.match(
     AND(
         ImageSampleField.width >= 500,
