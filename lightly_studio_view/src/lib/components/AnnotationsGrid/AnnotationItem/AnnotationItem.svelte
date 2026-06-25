@@ -4,7 +4,7 @@
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
-    import { useAnnotationClassVisibility } from '$lib/hooks/useAnnotationClassVisibility/useAnnotationClassVisibility';
+    import { useAnnotationClassVisibility } from '$lib/hooks';
     import { getColorByLabel } from '$lib/utils';
 
     type Props = {

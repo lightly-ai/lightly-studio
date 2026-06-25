@@ -8,7 +8,7 @@
     import AnnotationColorLegend from '../AnnotationColorLegend/AnnotationColorLegend.svelte';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import { useSettings } from '$lib/hooks/useSettings';
-    import { useAnnotationClassVisibility } from '$lib/hooks/useAnnotationClassVisibility/useAnnotationClassVisibility';
+    import { useAnnotationClassVisibility } from '$lib/hooks';
     import { Eye, EyeOff } from '@lucide/svelte';
     import { Tooltip } from '$lib/components/ui/tooltip';
 
