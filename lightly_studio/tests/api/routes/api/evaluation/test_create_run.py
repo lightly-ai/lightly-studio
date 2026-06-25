@@ -69,7 +69,7 @@ def test_create_evaluation_run__delegates_to_service_and_propagates_result(
     assert kwargs["gt_annotation_source"] == "gt"
     assert kwargs["pred_annotation_source"] == "pred"
     assert kwargs["name"] == "run-1"
-    assert kwargs["filter"] is None
+    assert kwargs["filters"] is None
     assert isinstance(kwargs["config"], ObjectDetectionEvaluationConfig)
     assert kwargs["config"].iou_threshold == 0.7
     assert kwargs["config"].classwise is False

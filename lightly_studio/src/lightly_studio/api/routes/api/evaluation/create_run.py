@@ -123,6 +123,6 @@ def create_evaluation_run(
         gt_annotation_source=request.gt_annotation_source,
         pred_annotation_source=request.pred_annotation_source,
         config=request.config,
-        filter=request.filter,
+        filters=request.filter,
         name=request.name,
     )

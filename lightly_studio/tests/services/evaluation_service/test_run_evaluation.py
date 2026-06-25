@@ -132,7 +132,7 @@ def test_run_evaluation__respects_filter(db_session: Session) -> None:
         gt_annotation_source="gt",
         pred_annotation_source="pred",
         config=ObjectDetectionEvaluationConfig(),
-        filter=ImageFilter.model_validate({"filter_type": "image", "width": {"min": 500}}),
+        filters=ImageFilter.model_validate({"filter_type": "image", "width": {"min": 500}}),
     )
 
     assert result.sample_count == 1

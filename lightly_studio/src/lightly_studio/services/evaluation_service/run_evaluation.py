@@ -9,6 +9,7 @@ and reused by other callers.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Union
 
 from sqlmodel import Session
 
@@ -24,14 +25,14 @@ from lightly_studio.models.evaluation_run import EvaluationTaskType
 from lightly_studio.resolvers import collection_resolver, image_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 
-EvaluationConfig = (
-    ObjectDetectionEvaluationConfig
-    | ClassificationEvaluationConfig
-    | SemanticSegmentationEvaluationConfig
-)
+EvaluationConfig = Union[
+    ObjectDetectionEvaluationConfig,
+    ClassificationEvaluationConfig,
+    SemanticSegmentationEvaluationConfig,
+]
 
 
-def run_evaluation(
+def run_evaluation(  # noqa: PLR0913
     session: Session,
     *,
     collection: CollectionTable,
@@ -39,13 +40,13 @@ def run_evaluation(
     gt_annotation_source: str,
     pred_annotation_source: str,
     config: EvaluationConfig,
-    filter: ImageFilter | None = None,
+    filters: ImageFilter | None = None,
     name: str | None = None,
 ) -> EvaluationResult:
     """Run an evaluation for ``collection`` and persist it.
 
     The task is selected by the concrete type of ``config`` (which also carries
-    the task-specific options). ``filter`` scopes the evaluated samples; when
+    the task-specific options). ``filters`` scopes the evaluated samples; when
     omitted the whole collection is evaluated. ``name`` defaults to
     ``"<task> <UTC timestamp>"`` when not provided.
 
@@ -56,7 +57,7 @@ def run_evaluation(
         gt_annotation_source: Name of the ground-truth annotation source.
         pred_annotation_source: Name of the prediction annotation source.
         config: Task-specific config; its type selects the evaluation task.
-        filter: Optional active-view filter; evaluates all samples if omitted.
+        filters: Optional active-view filter; evaluates all samples if omitted.
         name: Optional run name; auto-generated when omitted.
 
     Returns:
@@ -77,7 +78,7 @@ def run_evaluation(
     sample_ids = image_resolver.get_sample_ids(
         session=session,
         collection_id=collection.collection_id,
-        filters=filter,
+        filters=filters,
     )
     evaluator = ImageDatasetEvaluate(
         session=session,
