@@ -1,0 +1,199 @@
+"""Unit tests for the run_evaluation service (orchestration + validation)."""
+
+from __future__ import annotations
+
+import importlib
+from datetime import datetime, timezone
+from unittest import mock
+
+import pytest
+from sqlmodel import Session
+
+from lightly_studio.evaluation.image_dataset_evaluate import (
+    ClassificationEvaluationConfig,
+    ObjectDetectionEvaluationConfig,
+)
+from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.collection import SampleType
+from lightly_studio.models.evaluation_run import EvaluationTaskType
+from lightly_studio.resolvers import evaluation_run_resolver
+from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.services import evaluation_service
+from tests.api.routes.api.evaluation import helpers
+from tests.helpers_resolvers import create_collection
+
+
+def test_run_evaluation__object_detection(db_session: Session) -> None:
+    root = helpers.create_dataset_with_annotations(db_session)
+
+    result = evaluation_service.run_evaluation(
+        session=db_session,
+        collection=root,
+        task_type=EvaluationTaskType.OBJECT_DETECTION,
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
+        config=ObjectDetectionEvaluationConfig(iou_threshold=0.7, classwise=False),
+        name="run-1",
+    )
+
+    assert result.sample_count == 1
+    assert result.gt_annotation_count == 1
+    assert result.pred_annotation_count == 1
+    runs = evaluation_run_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=root.dataset_id
+    )
+    assert len(runs) == 1
+    assert str(runs[0].id) == str(result.evaluation_run_id)
+    assert runs[0].name == "run-1"
+    assert runs[0].task_type == EvaluationTaskType.OBJECT_DETECTION
+    assert runs[0].config_json == {"iou_threshold": 0.7, "classwise": False}
+
+
+def test_run_evaluation__generates_default_name(db_session: Session) -> None:
+    root = helpers.create_dataset_with_annotations(db_session)
+
+    evaluation_service.run_evaluation(
+        session=db_session,
+        collection=root,
+        task_type=EvaluationTaskType.OBJECT_DETECTION,
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
+        config=ObjectDetectionEvaluationConfig(),
+    )
+
+    runs = evaluation_run_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=root.dataset_id
+    )
+    assert runs[0].name.startswith("object_detection ")
+
+
+def test_run_evaluation__default_names_are_collision_safe(
+    db_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Two triggers for the same task/dataset within the same second: identical
+    # down to the second, differing only in microseconds. Without sub-second
+    # precision both would generate the same default name and the second run
+    # would fail the (name, dataset_id) uniqueness constraint.
+    root = helpers.create_dataset_with_annotations(db_session)
+    same_second = datetime(2026, 6, 25, 12, 0, 0, tzinfo=timezone.utc)
+    times = iter([same_second.replace(microsecond=1000), same_second.replace(microsecond=2000)])
+    run_evaluation_module = importlib.import_module(
+        "lightly_studio.services.evaluation_service.run_evaluation"
+    )
+    monkeypatch.setattr(run_evaluation_module, "datetime", mock.Mock(now=lambda _tz: next(times)))
+
+    for _ in range(2):
+        evaluation_service.run_evaluation(
+            session=db_session,
+            collection=root,
+            task_type=EvaluationTaskType.OBJECT_DETECTION,
+            gt_annotation_source="gt",
+            pred_annotation_source="pred",
+            config=ObjectDetectionEvaluationConfig(),
+        )
+
+    runs = evaluation_run_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=root.dataset_id
+    )
+    assert len(runs) == 2
+    assert len({run.name for run in runs}) == 2
+
+
+def test_run_evaluation__classification(db_session: Session) -> None:
+    root = helpers.create_dataset_with_annotations(
+        db_session, annotation_type=AnnotationType.CLASSIFICATION
+    )
+
+    result = evaluation_service.run_evaluation(
+        session=db_session,
+        collection=root,
+        task_type=EvaluationTaskType.CLASSIFICATION,
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
+        config=ClassificationEvaluationConfig(),
+    )
+
+    assert result.sample_count == 1
+    runs = evaluation_run_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=root.dataset_id
+    )
+    assert runs[0].task_type == EvaluationTaskType.CLASSIFICATION
+
+
+def test_run_evaluation__respects_filter(db_session: Session) -> None:
+    root = helpers.create_dataset_with_annotations(db_session, image_widths=(1920, 100))
+
+    result = evaluation_service.run_evaluation(
+        session=db_session,
+        collection=root,
+        task_type=EvaluationTaskType.OBJECT_DETECTION,
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
+        config=ObjectDetectionEvaluationConfig(),
+        filters=ImageFilter.model_validate({"filter_type": "image", "width": {"min": 500}}),
+    )
+
+    assert result.sample_count == 1
+
+
+def test_run_evaluation__same_source_raises(db_session: Session) -> None:
+    root = helpers.create_dataset_with_annotations(db_session)
+
+    with pytest.raises(ValueError, match="must be different"):
+        evaluation_service.run_evaluation(
+            session=db_session,
+            collection=root,
+            task_type=EvaluationTaskType.OBJECT_DETECTION,
+            gt_annotation_source="gt",
+            pred_annotation_source="gt",
+            config=ObjectDetectionEvaluationConfig(),
+        )
+
+
+def test_run_evaluation__wrong_annotation_type_raises(db_session: Session) -> None:
+    # Sources hold object-detection annotations, but a classification run is requested.
+    root = helpers.create_dataset_with_annotations(db_session)
+
+    with pytest.raises(ValueError, match="classification"):
+        evaluation_service.run_evaluation(
+            session=db_session,
+            collection=root,
+            task_type=EvaluationTaskType.CLASSIFICATION,
+            gt_annotation_source="gt",
+            pred_annotation_source="pred",
+            config=ClassificationEvaluationConfig(),
+        )
+
+
+def test_run_evaluation__unknown_source_raises(db_session: Session) -> None:
+    root = helpers.create_dataset_with_annotations(db_session)
+
+    with pytest.raises(ValueError, match="not found"):
+        evaluation_service.run_evaluation(
+            session=db_session,
+            collection=root,
+            task_type=EvaluationTaskType.OBJECT_DETECTION,
+            gt_annotation_source="nonexistent",
+            pred_annotation_source="pred",
+            config=ObjectDetectionEvaluationConfig(),
+        )
+
+
+def test_run_evaluation__non_image_collection_raises(db_session: Session) -> None:
+    root = create_collection(session=db_session)
+    annotation_collection = create_collection(
+        session=db_session,
+        collection_name="annotations",
+        parent_collection_id=root.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+
+    with pytest.raises(ValueError, match="image collections"):
+        evaluation_service.run_evaluation(
+            session=db_session,
+            collection=annotation_collection,
+            task_type=EvaluationTaskType.OBJECT_DETECTION,
+            gt_annotation_source="gt",
+            pred_annotation_source="pred",
+            config=ObjectDetectionEvaluationConfig(),
+        )
