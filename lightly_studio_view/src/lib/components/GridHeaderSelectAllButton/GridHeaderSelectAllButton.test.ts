@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import '@testing-library/jest-dom';
 import GridHeaderSelectAllButton from './GridHeaderSelectAllButton.svelte';
@@ -56,5 +57,27 @@ describe('GridHeaderSelectAllButton', () => {
         await fireEvent.click(screen.getByText('Select all'));
 
         expect(props.onSelectAll).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows a select all tooltip on hover when unchecked', async () => {
+        const user = userEvent.setup();
+        render(GridHeaderSelectAllButton, { props: buildProps() });
+
+        await user.hover(screen.getByTestId('select-all-button'));
+
+        expect(screen.getByRole('tooltip')).toHaveTextContent(
+            'Select all samples in the current view.'
+        );
+    });
+
+    it('shows a deselect tooltip on hover when checked', async () => {
+        const user = userEvent.setup();
+        render(GridHeaderSelectAllButton, { props: buildProps({ checked: true }) });
+
+        await user.hover(screen.getByTestId('select-all-button'));
+
+        expect(screen.getByRole('tooltip')).toHaveTextContent(
+            'Deselect all samples in the current view.'
+        );
     });
 });
