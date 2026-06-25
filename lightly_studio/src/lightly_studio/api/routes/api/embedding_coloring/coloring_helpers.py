@@ -54,7 +54,7 @@ class DiscreteColorScale(Generic[T]):
     def from_values(
         cls,
         values: Iterable[T],
-        start_cat: int = 2,
+        start_cat: int = 3,
         format_fn: Callable[[T], str] = str,
     ) -> DiscreteColorScale[T]:
         """Build a DiscreteColorScale by assigning a category to each value.
@@ -65,8 +65,8 @@ class DiscreteColorScale(Generic[T]):
 
         The plotting library can render at most ``MAX_LEGEND_SLOTS`` legend
         slots. Categories occupy the slots ``[start_cat, MAX_LEGEND_SLOTS)``;
-        the slots below ``start_cat`` are reserved (e.g. filtered-out and
-        unassigned samples). When the values fit in those slots, each value gets
+        the slots below ``start_cat`` are reserved (e.g. hidden, filtered-out
+        and unassigned samples). When the values fit in those slots, each value gets
         its own category. Otherwise the values that fit are listed individually
         and every remaining value is grouped into a trailing "Other" category in
         the final slot.
@@ -74,8 +74,9 @@ class DiscreteColorScale(Generic[T]):
         Args:
             values: Values to assign color categories to, in the desired order.
                 Values must be unique.
-            start_cat: First category ID to assign. Defaults to 2, reserving
-                0 for filtered-out samples and 1 for unassigned samples.
+            start_cat: First category ID to assign. Defaults to 3, reserving
+                0 for hidden samples, 1 for filtered-out samples and 2 for
+                unassigned samples.
             format_fn: Function to produce a legend label from a value.
                 Defaults to ``str``.
 
@@ -115,7 +116,7 @@ class DiscreteColorScale(Generic[T]):
     def from_integers(
         cls,
         values: Iterable[int],
-        start_cat: int = 2,
+        start_cat: int = 3,
         max_categories: int = 50,
     ) -> DiscreteColorScale[int]:
         """Build a color scale for integer values.
@@ -129,8 +130,9 @@ class DiscreteColorScale(Generic[T]):
 
         Args:
             values: Integer values to build the scale from. Need not be unique.
-            start_cat: First category ID to assign. Defaults to 2, reserving
-                0 for filtered-out samples and 1 for unassigned samples.
+            start_cat: First category ID to assign. Defaults to 3, reserving
+                0 for hidden samples, 1 for filtered-out samples and 2 for
+                unassigned samples.
             max_categories: Maximum number of distinct color categories before
                 bucketing is applied. Defaults to 50.
 

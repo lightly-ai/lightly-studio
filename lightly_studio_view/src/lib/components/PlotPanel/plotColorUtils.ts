@@ -3,8 +3,10 @@ import { getColorByLabel, oklchHueWheelColor } from '$lib/utils';
 const OKLCH_LIGHTNESS = 0.65;
 const OKLCH_CHROMA = 0.3;
 
-const RESERVED_CATEGORY_COUNT = 2;
+const RESERVED_CATEGORY_COUNT = 3;
 
+// Index 0 is the Hidden bucket: transparent so its points are not rendered.
+export const HIDDEN_COLOR = 'rgba(0, 0, 0, 0)';
 export const NOT_FILTERED_COLOR = '#222222';
 export const FILTERED_COLOR = '#FF7220';
 export const UNASSIGNED_COLOR = '#666666';
@@ -46,10 +48,14 @@ function getBaseCategoryColor(
     isColorByActive: boolean = false
 ): string {
     if (category === 0) {
-        return NOT_FILTERED_COLOR;
+        return HIDDEN_COLOR;
     }
 
     if (category === 1) {
+        return NOT_FILTERED_COLOR;
+    }
+
+    if (category === 2) {
         return isColorByActive ? UNASSIGNED_COLOR : FILTERED_COLOR;
     }
 

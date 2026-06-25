@@ -16,7 +16,7 @@ describe('getCategoryBySelection', () => {
         x: new Float32Array([1.0, 2.0, 3.0, 4.0]),
         y: new Float32Array([5.0, 6.0, 7.0, 8.0]),
         fulfils_filter: new Uint8Array([1, 1, 0, 1]),
-        color_categories: [[2, 3], [2], [], [3]],
+        color_categories: [[3, 4], [3], [], [4]],
         sample_id: ['sample1', 'sample2', 'sample3', 'sample4']
     });
 
@@ -66,9 +66,9 @@ describe('getCategoryBySelection', () => {
         vi.mocked(isPointInPolygon).mockReturnValue(false);
 
         const reducer = getCategoryBySelection(mockSelection, mockData);
-        const result = reducer(1, 0);
+        const result = reducer(3, 0);
 
-        expect(result).toBe(0);
+        expect(result).toBe(1);
         expect(isPointInPolygon).toHaveBeenCalledWith(1.0, 5.0, mockSelection);
     });
 
@@ -93,10 +93,10 @@ describe('getCategoryBySelection', () => {
             .mockReturnValueOnce(false); // index 3
 
         const reducer = getCategoryBySelection(mockSelection, mockData);
-        const categories = [1, 1, 1, 1];
+        const categories = [3, 3, 3, 3];
         const result = categories.map(reducer);
 
-        expect(result).toEqual([1, 1, 0, 0]);
+        expect(result).toEqual([3, 3, 1, 1]);
         expect(isPointInPolygon).toHaveBeenCalledTimes(4);
     });
 
@@ -136,9 +136,9 @@ describe('getCategoryBySelection', () => {
         vi.mocked(isPointInPolygon).mockReturnValue(false);
 
         const reducer = getCategoryBySelection([], mockData);
-        const result = reducer(1, 0);
+        const result = reducer(3, 0);
 
-        expect(result).toBe(0);
+        expect(result).toBe(1);
         expect(isPointInPolygon).toHaveBeenCalledWith(1.0, 5.0, []);
     });
 });

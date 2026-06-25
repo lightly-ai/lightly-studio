@@ -1,16 +1,16 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import PlotPanelLegend from './PlotPanelLegend.svelte';
-import { FILTERED_COLOR, NOT_FILTERED_COLOR } from './plotColorUtils';
+import { FILTERED_COLOR, HIDDEN_COLOR, NOT_FILTERED_COLOR } from './plotColorUtils';
 import { getColorByLabel } from '$lib/utils';
 
 describe('PlotPanelLegend', () => {
     it('renders the fixed entries and the custom legend list', () => {
         render(PlotPanelLegend, {
-            categoryColors: [NOT_FILTERED_COLOR, FILTERED_COLOR, 'rgb(255, 0, 136)'],
+            categoryColors: [HIDDEN_COLOR, NOT_FILTERED_COLOR, FILTERED_COLOR, 'rgb(255, 0, 136)'],
             includedLabel: 'No category',
             legendEntries: [
-                { cat: 2, label: 'metadata.split: train', color: 'rgb(255, 0, 136)', hidden: false }
+                { cat: 3, label: 'metadata.split: train', color: 'rgb(255, 0, 136)', hidden: false }
             ]
         });
 
@@ -22,7 +22,7 @@ describe('PlotPanelLegend', () => {
 
     it('defaults to the "Included by filters" label when none is passed', () => {
         render(PlotPanelLegend, {
-            categoryColors: [NOT_FILTERED_COLOR, FILTERED_COLOR]
+            categoryColors: [HIDDEN_COLOR, NOT_FILTERED_COLOR, FILTERED_COLOR]
         });
 
         expect(screen.getByTestId('plot-legend')).toHaveTextContent('Excluded by filters');
@@ -33,28 +33,28 @@ describe('PlotPanelLegend', () => {
         const onToggleCategory = vi.fn();
 
         render(PlotPanelLegend, {
-            categoryColors: [NOT_FILTERED_COLOR, FILTERED_COLOR, 'rgb(255, 0, 136)'],
-            legendEntries: [{ cat: 2, label: 'Train', color: 'rgb(255, 0, 136)', hidden: false }],
+            categoryColors: [HIDDEN_COLOR, NOT_FILTERED_COLOR, FILTERED_COLOR, 'rgb(255, 0, 136)'],
+            legendEntries: [{ cat: 3, label: 'Train', color: 'rgb(255, 0, 136)', hidden: false }],
             onToggleCategory
         });
 
-        await fireEvent.click(screen.getByTestId('plot-legend-entry-2'));
+        await fireEvent.click(screen.getByTestId('plot-legend-entry-3'));
 
-        expect(onToggleCategory).toHaveBeenCalledWith(2);
+        expect(onToggleCategory).toHaveBeenCalledWith(3);
     });
 
     it('calls the double-click handler for custom legend entries', async () => {
         const onDoubleClickCategory = vi.fn();
 
         render(PlotPanelLegend, {
-            categoryColors: [NOT_FILTERED_COLOR, FILTERED_COLOR, 'rgb(255, 0, 136)'],
-            legendEntries: [{ cat: 2, label: 'Train', color: 'rgb(255, 0, 136)', hidden: false }],
+            categoryColors: [HIDDEN_COLOR, NOT_FILTERED_COLOR, FILTERED_COLOR, 'rgb(255, 0, 136)'],
+            legendEntries: [{ cat: 3, label: 'Train', color: 'rgb(255, 0, 136)', hidden: false }],
             onDoubleClickCategory
         });
 
-        await fireEvent.dblClick(screen.getByTestId('plot-legend-entry-2'));
+        await fireEvent.dblClick(screen.getByTestId('plot-legend-entry-3'));
 
-        expect(onDoubleClickCategory).toHaveBeenCalledWith(2);
+        expect(onDoubleClickCategory).toHaveBeenCalledWith(3);
     });
 
     it('renders tag legend entries with getColorByLabel colors', () => {
@@ -63,14 +63,15 @@ describe('PlotPanelLegend', () => {
 
         render(PlotPanelLegend, {
             categoryColors: [
+                HIDDEN_COLOR,
                 NOT_FILTERED_COLOR,
                 FILTERED_COLOR,
                 reviewBatch1Color,
                 reviewBatch2Color
             ],
             legendEntries: [
-                { cat: 2, label: 'review-batch-1', color: reviewBatch1Color, hidden: false },
-                { cat: 3, label: 'review-batch-2', color: reviewBatch2Color, hidden: false }
+                { cat: 3, label: 'review-batch-1', color: reviewBatch1Color, hidden: false },
+                { cat: 4, label: 'review-batch-2', color: reviewBatch2Color, hidden: false }
             ]
         });
 

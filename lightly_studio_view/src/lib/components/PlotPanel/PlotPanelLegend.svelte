@@ -54,11 +54,11 @@
             <span class="my-0.5 w-full shrink-0 border-t border-white/10"></span>
         {/if}
         <span class="flex shrink-0 items-center gap-1.5">
-            <span class="legend-dot" style={`background-color: ${categoryColors[0]}`}></span>
+            <span class="legend-dot" style={`background-color: ${categoryColors[1]}`}></span>
             {excludedLabel}
         </span>
         <span class="flex shrink-0 items-center gap-1.5">
-            <span class="legend-dot" style={`background-color: ${categoryColors[1]}`}></span>
+            <span class="legend-dot" style={`background-color: ${categoryColors[2]}`}></span>
             {includedLabel}
         </span>
     </div>
