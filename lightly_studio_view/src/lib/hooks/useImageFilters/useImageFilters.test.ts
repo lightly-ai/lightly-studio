@@ -68,4 +68,39 @@ describe('useImageFilters', () => {
             expect(get(imageFilter)?.sample_filter?.query_expr).toBeUndefined();
         });
     });
+
+    describe('updateConfusionCell', () => {
+        const cell = {
+            evaluation_run_id: 'run-1',
+            gt_label: 'car',
+            pred_label: 'truck'
+        };
+
+        it('adds confusion_cell alongside an existing sample_ids selection', () => {
+            const { imageFilter, updateFilterParams, updateSampleIds, updateConfusionCell } =
+                useImageFilters();
+            updateFilterParams(normalFilterParams);
+
+            updateSampleIds(['sample-1', 'sample-2']);
+            updateConfusionCell(cell);
+
+            const sampleFilter = get(imageFilter)?.sample_filter;
+            expect(sampleFilter?.sample_ids).toEqual(['sample-1', 'sample-2']);
+            expect(sampleFilter?.confusion_cell).toEqual(cell);
+        });
+
+        it('clears confusion_cell when called with null, leaving sample_ids intact', () => {
+            const { imageFilter, updateFilterParams, updateSampleIds, updateConfusionCell } =
+                useImageFilters();
+            updateFilterParams(normalFilterParams);
+
+            updateSampleIds(['sample-1']);
+            updateConfusionCell(cell);
+            updateConfusionCell(null);
+
+            const sampleFilter = get(imageFilter)?.sample_filter;
+            expect(sampleFilter?.confusion_cell).toBeUndefined();
+            expect(sampleFilter?.sample_ids).toEqual(['sample-1']);
+        });
+    });
 });
