@@ -14,6 +14,12 @@ from tests.helpers_resolvers import create_annotation, create_annotation_label, 
 from tests.resolvers.evaluation_sample_metric_resolver import (
     helpers as evaluation_sample_metric_helpers,
 )
+from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
+    AnnotationMetricStub,
+    SampleMetricStub,
+    create_annotation_metrics,
+    create_sample_metrics,
+)
 
 
 def test_delete_annotation__success(
@@ -102,11 +108,25 @@ def test_delete_annotation__deletes_evaluation_annotation_metrics(
         annotation_label_id=label.annotation_label_id,
     )
 
-    evaluation_sample_metric_helpers.create_evaluation_metrics(
+    create_annotation_metrics(
         db_session,
         run.id,
-        pred_annotation,
-        gt_annotation,
+        [
+            AnnotationMetricStub(
+                sample_id=pred_annotation.parent_sample_id,
+                metric_name="iou",
+                value=0.75,
+                pred_annotation_id=pred_annotation.sample_id,
+                gt_annotation_id=gt_annotation.sample_id,
+            )
+        ],
+    )
+    create_sample_metrics(
+        session=db_session,
+        run_id=run.id,
+        sample_metrics=[
+            SampleMetricStub(sample_id=pred_annotation.parent_sample_id, metrics={"score": 0.5})
+        ],
     )
 
     annotation_resolver.delete_annotation(db_session, gt_annotation.sample_id)
@@ -165,17 +185,47 @@ def test_delete_annotation__preserves_other_run_sample_metrics(
         annotation_label_id=label.annotation_label_id,
     )
 
-    evaluation_sample_metric_helpers.create_evaluation_metrics(
+    create_annotation_metrics(
         db_session,
         run.id,
-        pred_annotation,
-        gt_annotation,
+        [
+            AnnotationMetricStub(
+                sample_id=pred_annotation.parent_sample_id,
+                metric_name="iou",
+                value=0.75,
+                pred_annotation_id=pred_annotation.sample_id,
+                gt_annotation_id=gt_annotation.sample_id,
+            )
+        ],
     )
-    evaluation_sample_metric_helpers.create_evaluation_metrics(
+    create_sample_metrics(
+        session=db_session,
+        run_id=run.id,
+        sample_metrics=[
+            SampleMetricStub(sample_id=pred_annotation.parent_sample_id, metrics={"score": 0.5})
+        ],
+    )
+    create_annotation_metrics(
         db_session,
         other_run.id,
-        other_pred_annotation,
-        other_gt_annotation,
+        [
+            AnnotationMetricStub(
+                sample_id=other_pred_annotation.parent_sample_id,
+                metric_name="iou",
+                value=0.75,
+                pred_annotation_id=other_pred_annotation.sample_id,
+                gt_annotation_id=other_gt_annotation.sample_id,
+            )
+        ],
+    )
+    create_sample_metrics(
+        session=db_session,
+        run_id=other_run.id,
+        sample_metrics=[
+            SampleMetricStub(
+                sample_id=other_pred_annotation.parent_sample_id, metrics={"score": 0.5}
+            )
+        ],
     )
 
     annotation_resolver.delete_annotation(db_session, gt_annotation.sample_id)

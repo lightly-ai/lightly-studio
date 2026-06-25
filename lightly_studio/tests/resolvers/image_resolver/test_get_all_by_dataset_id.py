@@ -38,8 +38,9 @@ from tests.helpers_resolvers import (
     create_tag,
 )
 from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
+    SampleMetricStub,
     create_run_and_image,
-    insert_metrics,
+    create_sample_metrics,
 )
 
 
@@ -845,9 +846,15 @@ def test_get_all_by_collection_id__sort_by_evaluation_metric_asc(db_session: Ses
     )
 
     # score order: b(1) < c(2) < a(3), so ascending sorted sequence is b, c, a
-    insert_metrics(db_session, run.id, image_a.sample_id, {"score": 3.0})
-    insert_metrics(db_session, run.id, image_b.sample_id, {"score": 1.0})
-    insert_metrics(db_session, run.id, image_c.sample_id, {"score": 2.0})
+    create_sample_metrics(
+        session=db_session,
+        run_id=run.id,
+        sample_metrics=[
+            SampleMetricStub(sample_id=image_a.sample_id, metrics={"score": 3.0}),
+            SampleMetricStub(sample_id=image_b.sample_id, metrics={"score": 1.0}),
+            SampleMetricStub(sample_id=image_c.sample_id, metrics={"score": 2.0}),
+        ],
+    )
 
     result = image_resolver.get_all_by_collection_id(
         session=db_session,
@@ -868,17 +875,22 @@ def test_get_all_by_collection_id__sort_by_evaluation_metric_desc(db_session: Se
     collection_id = collection.collection_id
 
     run, image_a = create_run_and_image(session=db_session, dataset_collection_id=collection_id)
-    image_b = create_image(
-        session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
-    )
-    image_c = create_image(
-        session=db_session, collection_id=collection_id, file_path_abs="/images/c.png"
+    [image_b, image_c] = create_images(
+        db_session=db_session,
+        collection_id=collection_id,
+        images=[ImageStub(path="/images/b.png"), ImageStub(path="/images/c.png")],
     )
 
     # score order: b(1) < c(2) < a(3), so descending sorted sequence is a, c, b
-    insert_metrics(db_session, run.id, image_a.sample_id, {"score": 3.0})
-    insert_metrics(db_session, run.id, image_b.sample_id, {"score": 1.0})
-    insert_metrics(db_session, run.id, image_c.sample_id, {"score": 2.0})
+    create_sample_metrics(
+        session=db_session,
+        run_id=run.id,
+        sample_metrics=[
+            SampleMetricStub(sample_id=image_a.sample_id, metrics={"score": 3.0}),
+            SampleMetricStub(sample_id=image_b.sample_id, metrics={"score": 1.0}),
+            SampleMetricStub(sample_id=image_c.sample_id, metrics={"score": 2.0}),
+        ],
+    )
 
     result = image_resolver.get_all_by_collection_id(
         session=db_session,
@@ -909,9 +921,15 @@ def test_get_all_by_collection_id__sort_by_two_evaluation_metrics(db_session: Se
     )
 
     # score ties a and b at 1.0; rank breaks the tie so b precedes a.
-    insert_metrics(db_session, run.id, image_a.sample_id, {"score": 1.0, "rank": 2.0})
-    insert_metrics(db_session, run.id, image_b.sample_id, {"score": 1.0, "rank": 1.0})
-    insert_metrics(db_session, run.id, image_c.sample_id, {"score": 2.0, "rank": 3.0})
+    create_sample_metrics(
+        session=db_session,
+        run_id=run.id,
+        sample_metrics=[
+            SampleMetricStub(sample_id=image_a.sample_id, metrics={"score": 1.0, "rank": 2.0}),
+            SampleMetricStub(sample_id=image_b.sample_id, metrics={"score": 1.0, "rank": 1.0}),
+            SampleMetricStub(sample_id=image_c.sample_id, metrics={"score": 2.0, "rank": 3.0}),
+        ],
+    )
 
     result = image_resolver.get_all_by_collection_id(
         session=db_session,
