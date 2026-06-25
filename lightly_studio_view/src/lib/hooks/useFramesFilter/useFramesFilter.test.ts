@@ -10,9 +10,6 @@ describe('useFramesFilter', () => {
     });
 
     describe('frameFilter store', () => {
-        // Branch-level coverage of the mapping lives in frameFilter.test.ts.
-        // Here we only verify the derived store is wired to getFrameFilter and
-        // re-emits when params change.
         it('derives the filter from params via getFrameFilter', () => {
             const { frameFilter, updateFilterParams } = useFramesFilter();
 
