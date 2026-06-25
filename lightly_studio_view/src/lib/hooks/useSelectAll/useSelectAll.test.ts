@@ -75,7 +75,7 @@ describe('useSelectAll', () => {
 
     beforeEach(() => {
         storage = useGlobalStorage();
-        // Clearing selections also nulls the snapshots (PR-F1), resetting the module singletons.
+        // Reset the module singletons.
         storage.clearSelectedSamples(collectionId);
         storage.clearSelectedSampleAnnotationCrops(collectionId);
 
