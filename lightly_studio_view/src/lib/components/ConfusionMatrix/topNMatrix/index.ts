@@ -1,4 +1,4 @@
-export { OTHER_LABEL, CLASS_SORT_LABELS } from './constants/constants';
+export { OTHER_LABEL, SENTINELS, CLASS_SORT_LABELS } from './constants/constants';
 export { type ClassSortOption } from './types';
 export { getRealClasses } from './getRealClasses/getRealClasses';
 export { rankClassesByConfusion } from './rankClassesByConfusion/rankClassesByConfusion';

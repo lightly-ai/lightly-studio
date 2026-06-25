@@ -31,6 +31,13 @@ are enabled. To skip embedding, pass `embed=False` to the method.
 See the [API reference](../api/dataset.md#lightly_studio.VideoDataset.add_videos_from_path) for
 the full list of arguments.
 
+To ingest fewer frames, pass a `target_fps` to subsample the videos. Retained frames keep their
+original frame numbers, so a 30 fps video loaded with `target_fps=10` stores frames `0, 3, 6, …`:
+
+```python title="Subsample frames to a lower frame rate"
+dataset.add_videos_from_path(path="path/to/videos", target_fps=10)
+```
+
 ### From an Annotation Format
 
 `VideoDataset` can be loaded with annotations from the YouTube-VIS format. Currently, object detection

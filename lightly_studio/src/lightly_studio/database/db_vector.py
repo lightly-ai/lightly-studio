@@ -19,6 +19,7 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.compiler import SQLCompiler
 from sqlalchemy.sql.functions import GenericFunction
 from sqlalchemy.types import TypeDecorator, TypeEngine
+from sqlmodel import Session
 from typing_extensions import TypeAlias
 
 # A single embedding vector. Always 1-D float32 numpy; a batch is a Sequence[Embedding].
@@ -172,3 +173,24 @@ def _compile_vector_element_postgresql(
     """PostgreSQL compilation: (col::real[])[index]."""
     col, index = list(element.clauses)
     return f"({compiler.process(col, **kw)}::real[])[{compiler.process(index, **kw)}]"
+
+
+def get_pgvector_connection(session: Session) -> Any:
+    """Return the session's psycopg connection with pgvector registered.
+
+    Registers pgvector once per connection (cached in ``connection.info``) so ``vector``
+    columns are decoded from their binary wire format via ``np.frombuffer`` instead of
+    parsed from text. PostgreSQL-only; the returned object is the raw DBAPI connection,
+    intended for reads that bypass SQLAlchemy's result handling.
+    """
+    connection = session.connection().connection
+    driver_connection = connection.driver_connection
+    if driver_connection is None:  # pragma: no cover - a live session always has one
+        raise RuntimeError("PostgreSQL session has no underlying psycopg connection.")
+    if not connection.info.get("pgvector_registered"):
+        # pgvector is only needed for PostgreSQL, so import it locally.
+        from pgvector.psycopg import register_vector  # noqa: PLC0415
+
+        register_vector(driver_connection)
+        connection.info["pgvector_registered"] = True
+    return driver_connection
