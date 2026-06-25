@@ -1,16 +1,13 @@
-"""Functions to add samples and their annotations to a dataset in the database."""
+"""Per-run report recording the outcome of every input file during loading."""
 
 from __future__ import annotations
 
+import enum
 import logging
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from uuid import UUID
 
-from sqlmodel import Session
-
-from lightly_studio.resolvers import (
-    sample_resolver,
-)
+from lightly_studio.type_definitions import PathLike
 
 logger = logging.getLogger(__name__)
 
@@ -18,46 +15,79 @@ logger = logging.getLogger(__name__)
 MAX_EXAMPLE_PATHS_TO_SHOW = 5
 
 
-@dataclass
-class LoadingLoggingContext:
-    """Context for the logging while loading data."""
+class FileOutcome(enum.Enum):
+    """The single outcome recorded for each input file of a loading run."""
 
-    n_samples_before_loading: int
-    n_samples_to_be_inserted: int = 0
-    example_paths_not_inserted: list[str] = field(default_factory=list)
-
-    def update_example_paths(self, example_paths_not_inserted: list[str]) -> None:
-        """Update the list of example paths that were not inserted."""
-        if len(self.example_paths_not_inserted) >= MAX_EXAMPLE_PATHS_TO_SHOW:
-            return
-        upper_limit = MAX_EXAMPLE_PATHS_TO_SHOW - len(self.example_paths_not_inserted)
-        self.example_paths_not_inserted.extend(example_paths_not_inserted[:upper_limit])
+    ADDED = "added"
+    ALREADY_PRESENT = "already-present"
+    MISSING = "missing"
+    BROKEN = "broken"
 
 
-def log_loading_results(
-    session: Session,
-    collection_id: UUID,
-    logging_context: LoadingLoggingContext,
-    print_summary: bool,
-) -> None:
-    """Log the results of loading samples into a dataset.
+class AllInputFilesFailedError(RuntimeError):
+    """Raised when every attempted input file failed and none were added.
 
-    If `print_summary` is True, calculates how many samples were successfully inserted and prints
-    a summary message.
-
-    If any paths failed to be inserted, prints examples of those paths as a warning.
+    This is the wrong-path / real-bug case. It is distinct from a run where no file
+    was attempted because everything was already present, which is not an error.
     """
-    if print_summary:
-        n_samples_end = sample_resolver.count_by_collection_id(
-            session=session, collection_id=collection_id
-        )
-        n_samples_inserted = n_samples_end - logging_context.n_samples_before_loading
-        logger.info(
-            f"Added {n_samples_inserted} out of {logging_context.n_samples_to_be_inserted} "
-            "new samples to the dataset."
-        )
-    if logging_context.example_paths_not_inserted:
-        logger.warning(
-            "Examples paths that were not added to the dataset: "
-            f"{', '.join(logging_context.example_paths_not_inserted)}"
-        )
+
+
+@dataclass
+class FileOutcomeReport:
+    """Per-run report recording exactly one outcome per input file.
+
+    Every loading pipeline writes to one report instead of returning per-file values.
+    The report is the single place outcomes are recorded, the all-failed error is
+    decided, and the end-of-run summary is logged.
+    """
+
+    counts: dict[FileOutcome, int] = field(default_factory=lambda: dict.fromkeys(FileOutcome, 0))
+    example_paths: dict[FileOutcome, list[str]] = field(
+        default_factory=lambda: {outcome: [] for outcome in FileOutcome}
+    )
+
+    def record(self, path: PathLike, outcome: FileOutcome) -> None:
+        """Record a single file with one of the four outcomes."""
+        self.counts[outcome] += 1
+        examples = self.example_paths[outcome]
+        if len(examples) < MAX_EXAMPLE_PATHS_TO_SHOW:
+            examples.append(str(path))
+
+    def record_many(self, paths: Iterable[PathLike], outcome: FileOutcome) -> None:
+        """Record multiple files that share the same outcome."""
+        for path in paths:
+            self.record(path, outcome)
+
+    @property
+    def n_attempted(self) -> int:
+        """Number of files that were attempted (added + missing + broken).
+
+        Already-present files are skipped before being attempted, so they do not count.
+        """
+        return sum(self.counts.values()) - self.counts[FileOutcome.ALREADY_PRESENT]
+
+    @property
+    def n_added(self) -> int:
+        """Number of files that were successfully added."""
+        return self.counts[FileOutcome.ADDED]
+
+    def raise_if_all_failed(self) -> None:
+        """Raise if every attempted file failed (0 succeeded of N attempted).
+
+        Does not raise when nothing was attempted (e.g. everything was already present).
+        """
+        if self.n_attempted > 0 and self.n_added == 0:
+            raise AllInputFilesFailedError(
+                f"None of the {self.n_attempted} attempted files could be added to the dataset. "
+                "Check that the input paths are correct and the files are readable."
+            )
+
+    def log_summary(self) -> None:
+        """Log a single end-of-run summary: counts per outcome plus example paths."""
+        summary = ", ".join(f"{self.counts[outcome]} {outcome.value}" for outcome in FileOutcome)
+        logger.info(f"File loading summary: {summary}.")
+
+        for outcome in (FileOutcome.MISSING, FileOutcome.BROKEN, FileOutcome.ALREADY_PRESENT):
+            examples = self.example_paths[outcome]
+            if examples:
+                logger.warning(f"Example {outcome.value} paths: {', '.join(examples)}")

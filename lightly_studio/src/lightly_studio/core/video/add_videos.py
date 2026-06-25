@@ -32,7 +32,8 @@ from labelformat.model.object_detection_track import (
 from sqlmodel import Session
 from tqdm import tqdm
 
-from lightly_studio.core import labelformat_helpers, loading_log
+from lightly_studio.core import labelformat_helpers
+from lightly_studio.core.loading_log import FileOutcome, FileOutcomeReport
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
 )
@@ -43,7 +44,6 @@ from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
     object_track_resolver,
-    sample_resolver,
     video_frame_resolver,
     video_resolver,
 )
@@ -114,13 +114,8 @@ def load_into_collection_from_paths(  # noqa: PLR0913
     file_paths_new, file_paths_exist = video_resolver.filter_new_paths(
         session=session, collection_id=collection_id, file_paths_abs=video_paths_list
     )
-    video_logging_context = loading_log.LoadingLoggingContext(
-        n_samples_to_be_inserted=len(video_paths_list),
-        n_samples_before_loading=sample_resolver.count_by_collection_id(
-            session=session, collection_id=collection_id
-        ),
-    )
-    video_logging_context.update_example_paths(file_paths_exist)
+    report = FileOutcomeReport()
+    report.record_many(file_paths_exist, FileOutcome.ALREADY_PRESENT)
     # Get the video frames collection ID
     video_frames_collection_id = collection_resolver.get_or_create_child_collection(
         session=session, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
@@ -170,6 +165,7 @@ def load_into_collection_from_paths(  # noqa: PLR0913
                     video_container.close()
                     raise (RuntimeError(f"There was an error adding {video_path} to the dataset."))
                 created_video_sample_ids.append(video_sample_ids[0])
+                report.record(video_path, FileOutcome.ADDED)
 
                 # Create video frame samples by parsing all frames
                 extraction_context = FrameExtractionContext(
@@ -195,12 +191,8 @@ def load_into_collection_from_paths(  # noqa: PLR0913
             logger.error(f"Error processing video {video_path}: {e}")
             continue
 
-    loading_log.log_loading_results(
-        session=session,
-        collection_id=collection_id,
-        logging_context=video_logging_context,
-        print_summary=show_progress,
-    )
+    if show_progress:
+        report.log_summary()
 
     return created_video_sample_ids, created_video_frame_sample_ids
 
