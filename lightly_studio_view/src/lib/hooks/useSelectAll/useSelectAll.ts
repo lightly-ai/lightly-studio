@@ -43,9 +43,9 @@ export function useSelectAll(collectionId: string, gridType: GridType) {
      * Resolve this grid's filter once, returning both the ID fetch and the filter to snapshot. The
      * raw filter is captured synchronously (the `fetchIds` thunk closes over it), so the fetch and
      * the snapshot can't diverge if the user changes the filter mid-fetch. `snapshotFilter` is
-     * `null` to force the ID path; otherwise an empty filter is normalized to a conditionless typed
-     * one. The `as` casts bridge the builders' optional `filter_type` to the union's required
-     * discriminant, sound because every builder stamps it at runtime.
+     * `null` to force the ID path; otherwise the builder's filter is spread and stamped with its
+     * `filter_type` discriminant — a `null`/`undefined` filter collapses to a conditionless typed
+     * one, matching everything.
      */
     const resolveGrid = (): {
         snapshotFilter: SnapshotFilter | null;
@@ -56,41 +56,32 @@ export function useSelectAll(collectionId: string, gridType: GridType) {
                 const filter = get(imageFilter);
                 // A null image filter in classifier mode is selection-driven, not "no conditions";
                 // a conditionless filter would tag every image, so force the ID path.
-                const snapshotFilter =
-                    get(imageFilterParams).mode === 'classifier'
-                        ? null
-                        : ((filter as SnapshotFilter | null) ?? {
-                              filter_type: GRID_FILTER_TYPE.images
-                          });
+                const isClassifier = get(imageFilterParams).mode === 'classifier';
                 return {
-                    snapshotFilter,
+                    snapshotFilter: isClassifier
+                        ? null
+                        : { ...filter, filter_type: GRID_FILTER_TYPE.images },
                     fetchIds: () => fetchSampleIdsForImages(collectionId, filter)
                 };
             }
             case 'videos': {
                 const filter = buildVideoFilter(get(videoFilterParams));
                 return {
-                    snapshotFilter: (filter as SnapshotFilter | null) ?? {
-                        filter_type: GRID_FILTER_TYPE.videos
-                    },
+                    snapshotFilter: { ...filter, filter_type: GRID_FILTER_TYPE.videos },
                     fetchIds: () => fetchSampleIdsForVideos(collectionId, filter)
                 };
             }
             case 'video_frames': {
                 const filter = getFrameFilter(get(frameFilterParams));
                 return {
-                    snapshotFilter: (filter as SnapshotFilter | null) ?? {
-                        filter_type: GRID_FILTER_TYPE.video_frames
-                    },
+                    snapshotFilter: { ...filter, filter_type: GRID_FILTER_TYPE.video_frames },
                     fetchIds: () => fetchSampleIdsForVideoFrames(collectionId, filter)
                 };
             }
             case 'annotations': {
                 const filter = get(annotationFilter);
                 return {
-                    snapshotFilter: (filter as SnapshotFilter | undefined) ?? {
-                        filter_type: GRID_FILTER_TYPE.annotations
-                    },
+                    snapshotFilter: { ...filter, filter_type: GRID_FILTER_TYPE.annotations },
                     fetchIds: () => fetchSampleIdsForAnnotations(collectionId, filter)
                 };
             }
