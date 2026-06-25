@@ -76,15 +76,11 @@ def test_run_evaluation__default_names_are_collision_safe(
     # would fail the (name, dataset_id) uniqueness constraint.
     root = helpers.create_dataset_with_annotations(db_session)
     same_second = datetime(2026, 6, 25, 12, 0, 0, tzinfo=timezone.utc)
-    times = iter(
-        [same_second.replace(microsecond=1000), same_second.replace(microsecond=2000)]
-    )
+    times = iter([same_second.replace(microsecond=1000), same_second.replace(microsecond=2000)])
     run_evaluation_module = importlib.import_module(
         "lightly_studio.services.evaluation_service.run_evaluation"
     )
-    monkeypatch.setattr(
-        run_evaluation_module, "datetime", mock.Mock(now=lambda _tz: next(times))
-    )
+    monkeypatch.setattr(run_evaluation_module, "datetime", mock.Mock(now=lambda _tz: next(times)))
 
     for _ in range(2):
         evaluation_service.run_evaluation(

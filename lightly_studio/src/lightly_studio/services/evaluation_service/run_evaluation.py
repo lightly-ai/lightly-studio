@@ -87,9 +87,7 @@ def run_evaluation(  # noqa: PLR0913
         collection_id=root_collection.collection_id,
         sample_ids=sample_ids,
     )
-    run_name = (
-        name or f"{task_type.value} {datetime.now(timezone.utc):%Y-%m-%d %H:%M:%S.%f}"
-    )
+    run_name = name or f"{task_type.value} {datetime.now(timezone.utc):%Y-%m-%d %H:%M:%S.%f}"
 
     if isinstance(config, ObjectDetectionEvaluationConfig):
         return evaluator.object_detection(
