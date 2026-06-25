@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/svelte';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import EvaluationRunConfusionMatrixSection from './EvaluationRunConfusionMatrixSection.svelte';
 import { coco80Classes, small3Classes } from '$lib/components/ConfusionMatrix/fixtures';
 
@@ -10,6 +10,26 @@ const queryState = vi.hoisted(() => ({
     error: undefined as Error | undefined
 }));
 
+const filtersMock = vi.hoisted(() => ({
+    updateConfusionCell: vi.fn()
+}));
+
+const echartsMock = vi.hoisted(() => {
+    let clickHandler: ((params: { value?: unknown }) => void) | undefined;
+    const instance = {
+        setOption: vi.fn(),
+        resize: vi.fn(),
+        dispose: vi.fn(),
+        on: vi.fn((event: string, handler: (params: { value?: unknown }) => void) => {
+            if (event === 'click') clickHandler = handler;
+        })
+    };
+    return {
+        init: vi.fn(() => instance),
+        getClickHandler: () => clickHandler
+    };
+});
+
 vi.mock('$app/state', () => ({
     page: { params: { dataset_id: 'ds-1' } }
 }));
@@ -18,13 +38,12 @@ vi.mock('$lib/hooks', () => ({
     useEvaluationConfusionMatrix: vi.fn(() => queryState)
 }));
 
+vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
+    useImageFilters: vi.fn(() => filtersMock)
+}));
+
 vi.mock('echarts/core', () => ({
-    init: vi.fn(() => ({
-        setOption: vi.fn(),
-        resize: vi.fn(),
-        dispose: vi.fn(),
-        on: vi.fn()
-    })),
+    init: echartsMock.init,
     use: vi.fn()
 }));
 vi.mock('echarts/charts', () => ({ HeatmapChart: {} }));
@@ -47,6 +66,10 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
 const defaultProps = { evaluationRunId: 'run-1' };
 
 describe('EvaluationRunConfusionMatrixSection', () => {
+    beforeEach(() => {
+        filtersMock.updateConfusionCell.mockClear();
+    });
+
     it('shows a spinner while loading', () => {
         queryState.isLoading = true;
         queryState.isError = false;
@@ -120,5 +143,25 @@ describe('EvaluationRunConfusionMatrixSection', () => {
 
         expect(screen.getByTestId('confusion-matrix-configure')).toBeInTheDocument();
         expect(screen.getByTestId('confusion-matrix-expand')).toBeInTheDocument();
+    });
+
+    it('applies a confusion-cell filter (with the run id) when a cell is clicked', () => {
+        queryState.isLoading = false;
+        queryState.isError = false;
+        queryState.data = small3Classes;
+        queryState.error = undefined;
+
+        render(EvaluationRunConfusionMatrixSection, { props: { evaluationRunId: 'run-1' } });
+
+        const handler = echartsMock.getClickHandler();
+        expect(handler).toBeDefined();
+        // Cell values are [pred, gt, count, log10(count)].
+        handler?.({ value: ['dog', 'cat', 3, Math.log10(3)] });
+
+        expect(filtersMock.updateConfusionCell).toHaveBeenCalledWith({
+            evaluation_run_id: 'run-1',
+            gt_label: 'cat',
+            pred_label: 'dog'
+        });
     });
 });
