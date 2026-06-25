@@ -1,6 +1,6 @@
 <script lang="ts">
     import ConfusionMatrix from '../ConfusionMatrix.svelte';
-    import type { ConfusionMatrix as ConfusionMatrixData } from '../types';
+    import type { ConfusionCellSelection, ConfusionMatrix as ConfusionMatrixData } from '../types';
     import ClassSetDialog from '../ClassSetDialog/ClassSetDialog.svelte';
     import type { ClassSetConfig, ColorConfig } from '../ClassSetDialog/types';
     import { buildSubMatrix, getRealClasses } from '../topNMatrix';
@@ -13,9 +13,11 @@
         /** Most-confused classes shown by default. */
         topN?: number;
         showLegend?: boolean;
+        /** Forwarded to the underlying chart; fires on a real class-by-class cell click. */
+        onCellClick?: (cell: ConfusionCellSelection) => void;
     }
 
-    const { matrix, topN = 5, showLegend = false }: Props = $props();
+    const { matrix, topN = 5, showLegend = false, onCellClick }: Props = $props();
 
     let config: ClassSetConfig = $state({
         mode: 'topN',
@@ -50,6 +52,7 @@
     {showLegend}
     colorIntensity={color.intensity}
     logScale={color.logScale}
+    {onCellClick}
 />
 <ClassSetDialog
     bind:open={configDialogOpen}
@@ -58,4 +61,4 @@
     {color}
     onApply={applyConfig}
 />
-<ExpandDialog bind:open={expandOpen} matrix={subMatrix} {color} {showLegend} />
+<ExpandDialog bind:open={expandOpen} matrix={subMatrix} {color} {showLegend} {onCellClick} />

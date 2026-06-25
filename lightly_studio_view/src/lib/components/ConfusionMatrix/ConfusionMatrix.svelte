@@ -11,7 +11,8 @@
     import { CanvasRenderer } from 'echarts/renderers';
     import { buildEchartsOption } from './buildEchartsOption';
     import ConfusionMatrixLegend from './ConfusionMatrixLegend.svelte';
-    import type { ConfusionMatrix } from './types';
+    import { OTHER_LABEL, SENTINELS } from './topNMatrix';
+    import { type ConfusionCellSelection, type ConfusionMatrix } from './types';
 
     echarts.use([
         HeatmapChart,
@@ -31,6 +32,11 @@
         colorIntensity?: number;
         /** Map color from log10(count) instead of the raw count (default true). */
         logScale?: boolean;
+        /**
+         * Called when a real class-by-class cell is clicked. Synthetic FP/FN cells
+         * (no ground truth / no prediction) are ignored and never invoke this.
+         */
+        onCellClick?: (cell: ConfusionCellSelection) => void;
     }
 
     const {
@@ -38,7 +44,8 @@
         showLegend = false,
         zoomable = false,
         colorIntensity = 1,
-        logScale = true
+        logScale = true,
+        onCellClick
     }: Props = $props();
 
     let container: HTMLDivElement | undefined = $state();
@@ -55,6 +62,16 @@
         if (!container) return;
         const instance = echarts.init(container, null, { renderer: 'canvas' });
         chart = instance;
+        // Cells carry [pred, gt, count, log10(count)]; resolve back to labels and
+        // skip the synthetic FP/FN buckets and "(other)" aggregate cells, which
+        // are not real class-by-class cells.
+        instance.on('click', (params: { value?: unknown }) => {
+            if (!Array.isArray(params.value)) return;
+            const [predLabel, gtLabel] = params.value as [string, string, number, number];
+            if (SENTINELS.has(predLabel) || SENTINELS.has(gtLabel)) return;
+            if (predLabel === OTHER_LABEL || gtLabel === OTHER_LABEL) return;
+            onCellClick?.({ gtLabel, predLabel });
+        });
         const resizeObserver = new ResizeObserver(() => instance.resize());
         resizeObserver.observe(container);
         return () => {
