@@ -18,9 +18,7 @@ def test_get_annotation_types_by_collection_ids__distinct_and_sorted(
 ) -> None:
     collection = create_collection(session=db_session)
     sample = create_image(session=db_session, collection_id=collection.collection_id)
-    label = create_annotation_label(
-        session=db_session, root_collection_id=collection.collection_id
-    )
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
 
     # Two object-detection annotations (duplicate type) plus one classification.
     for annotation_type in (
