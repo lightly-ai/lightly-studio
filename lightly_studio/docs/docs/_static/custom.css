@@ -143,10 +143,6 @@
 }
 
 @media screen and (max-width: 76.234375em) {
-  .md-sidebar--primary .md-nav--primary.md-nav--lifted > .md-nav__list > .md-nav__item--active > .md-nav {
-    transform: translateX(100%);
-  }
-
   /* Once a top-level tab is opened, show its section level (and the pages
      underneath) expanded inline, mirroring the desktop left menu. The tab
      panels (level 1) still slide in on tap; only the level-2 section panels are
