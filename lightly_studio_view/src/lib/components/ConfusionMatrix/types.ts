@@ -11,3 +11,11 @@ export interface ConfusionMatrix {
     col_labels: string[];
     counts: number[][];
 }
+
+/** A class-by-class cell resolved from a confusion-matrix click. */
+export interface ConfusionCellSelection {
+    /** Ground-truth label (matrix row). */
+    gtLabel: string;
+    /** Prediction label (matrix column). */
+    predLabel: string;
+}

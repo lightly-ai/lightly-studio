@@ -709,6 +709,7 @@ def test_deep_copy__with_evaluation_runs(db_session: Session) -> None:
         evaluation_run_input=EvaluationRunCreate(
             name="my_eval",
             gt_annotation_collection_id=gt_collection.collection_id,
+            dataset_id=gt_collection.dataset_id,
             pred_annotation_collection_id=pred_collection.collection_id,
             task_type=EvaluationTaskType.OBJECT_DETECTION,
             config_json={"iou_threshold": 0.5},

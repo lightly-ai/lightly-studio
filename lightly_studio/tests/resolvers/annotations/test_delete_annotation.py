@@ -127,10 +127,13 @@ def test_delete_annotation__preserves_other_run_sample_metrics(
     db_session: Session,
 ) -> None:
     """Test deleting an annotation only invalidates sample metrics for affected runs."""
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(session=db_session)
+    run, image = evaluation_sample_metric_helpers.create_run_and_image(
+        session=db_session, name="run1"
+    )
     other_run, _ = evaluation_sample_metric_helpers.create_run_and_image(
         session=db_session,
         dataset_collection_id=image.sample.collection_id,
+        name="run2",
     )
 
     label = create_annotation_label(

@@ -369,6 +369,83 @@ describe('useSamplingCombinationDialog', () => {
         });
     });
 
+    describe('updateAbsolute', () => {
+        it('updates nSamplesToSelect and derives percentageToSelect from filteredSampleCount', () => {
+            filteredSampleCount.set(1000);
+            const { updateAbsolute, nSamplesToSelect, percentageToSelect } =
+                useSamplingCombinationDialog(defaultParams);
+
+            updateAbsolute(100);
+
+            expect(get(nSamplesToSelect)).toBe(100);
+            expect(get(percentageToSelect)).toBe(10);
+        });
+
+        it('rounds percentageToSelect to the nearest integer', () => {
+            filteredSampleCount.set(1000);
+            const { updateAbsolute, percentageToSelect } =
+                useSamplingCombinationDialog(defaultParams);
+
+            updateAbsolute(333);
+
+            expect(get(percentageToSelect)).toBe(33);
+        });
+
+        it('sets percentageToSelect to 0 when filteredSampleCount is 0', () => {
+            filteredSampleCount.set(0);
+            const { updateAbsolute, percentageToSelect } =
+                useSamplingCombinationDialog(defaultParams);
+
+            updateAbsolute(10);
+
+            expect(get(percentageToSelect)).toBe(0);
+        });
+    });
+
+    describe('updatePercentage', () => {
+        it('updates percentageToSelect and derives nSamplesToSelect from filteredSampleCount', () => {
+            filteredSampleCount.set(1000);
+            const { updatePercentage, nSamplesToSelect, percentageToSelect } =
+                useSamplingCombinationDialog(defaultParams);
+
+            updatePercentage(10);
+
+            expect(get(percentageToSelect)).toBe(10);
+            expect(get(nSamplesToSelect)).toBe(100);
+        });
+
+        it('rounds nSamplesToSelect to the nearest integer', () => {
+            filteredSampleCount.set(1000);
+            const { updatePercentage, nSamplesToSelect } =
+                useSamplingCombinationDialog(defaultParams);
+
+            updatePercentage(33);
+
+            expect(get(nSamplesToSelect)).toBe(330);
+        });
+
+        it('sets nSamplesToSelect to 0 when filteredSampleCount is 0', () => {
+            filteredSampleCount.set(0);
+            const { updatePercentage, nSamplesToSelect } =
+                useSamplingCombinationDialog(defaultParams);
+
+            updatePercentage(50);
+
+            expect(get(nSamplesToSelect)).toBe(0);
+        });
+
+        it('allows percentage above 100 without clamping', () => {
+            filteredSampleCount.set(100);
+            const { updatePercentage, nSamplesToSelect, percentageToSelect } =
+                useSamplingCombinationDialog(defaultParams);
+
+            updatePercentage(150);
+
+            expect(get(percentageToSelect)).toBe(150);
+            expect(get(nSamplesToSelect)).toBe(150);
+        });
+    });
+
     describe('resetForm', () => {
         it('calls onSubmitSuccess, resets nSamplesToSelect, and selectionResultTagName after successful submit', async () => {
             submitFn.mockResolvedValue(true);

@@ -9,7 +9,6 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 
-from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.evaluation import (
     classification_metric,
     object_detection_metric,
@@ -26,6 +25,7 @@ from lightly_studio.models.evaluation_run import (
 from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
     annotation_resolver,
+    collection_resolver,
     evaluation_run_resolver,
 )
 
@@ -51,11 +51,13 @@ class EvaluationResult(BaseModel):
     shared across tasks (object detection, classification, segmentation).
 
     Attributes:
+        evaluation_run_id: ID of the persisted evaluation run.
         sample_count: Number of samples included in the evaluation.
         gt_annotation_count: Number of ground truth annotations used.
         pred_annotation_count: Number of prediction annotations used.
     """
 
+    evaluation_run_id: UUID
     sample_count: int
     gt_annotation_count: int
     pred_annotation_count: int
@@ -64,6 +66,7 @@ class EvaluationResult(BaseModel):
     def from_evaluation_data(cls, data: EvaluationData) -> EvaluationResult:
         """Build a result from the prepared evaluation data."""
         return cls(
+            evaluation_run_id=data.evaluation_run_id,
             sample_count=len(data.selected_sample_ids),
             gt_annotation_count=sum(len(v) for v in data.gt_per_sample.values()),
             pred_annotation_count=sum(len(v) for v in data.pred_per_sample.values()),
@@ -91,19 +94,21 @@ class ImageDatasetEvaluate:
     and keeps evaluation-specific logic separate from ``ImageDataset``.
     """
 
-    def __init__(
-        self, session: Session, collection_id: UUID, samples: Iterable[ImageSample]
-    ) -> None:
+    def __init__(self, session: Session, collection_id: UUID, sample_ids: Iterable[UUID]) -> None:
         """Initialize the evaluator facade.
 
         Args:
             session: Database session used by resolver calls.
             collection_id: ID of the collection being evaluated.
-            samples: Samples selected for evaluation.
+            sample_ids: IDs of the samples selected for evaluation.
         """
         self.session = session
         self.collection_id = collection_id
-        self.samples = samples
+        # Materialize once: callers may pass a single-use generator, and the
+        # facade can be reused across task methods (object_detection(),
+        # classification(), ...). Without this, the second call would see an
+        # exhausted iterator and silently evaluate zero samples.
+        self.sample_ids: set[UUID] = set(sample_ids)
 
     def object_detection(
         self,
@@ -228,7 +233,7 @@ class ImageDatasetEvaluate:
             config_json=config_json,
         )
 
-        selected_sample_ids = {sample.sample_id for sample in self.samples}
+        selected_sample_ids = self.sample_ids
         gt_covered_sample_ids = set(
             annotation_collection_coverage_resolver.list_by_collection_id(
                 session=self.session,
@@ -285,7 +290,16 @@ class ImageDatasetEvaluate:
 
         Returns:
             Tuple of (gt_collection_id, pred_collection_id, evaluation_run).
+
+        Raises:
+            ValueError: If the same annotation source is used for both ground
+                truth and predictions.
         """
+        if gt_annotation_source == pred_annotation_source:
+            raise ValueError(
+                "Ground truth and prediction annotation sources must be different, "
+                f"got {gt_annotation_source!r} for both."
+            )
         gt_collection_id = validators.resolve_and_validate_collection(
             session=self.session,
             collection_id=self.collection_id,
@@ -298,12 +312,19 @@ class ImageDatasetEvaluate:
             collection_name=pred_annotation_source,
             task_type=task_type,
         )
+        collection = collection_resolver.get_by_id(
+            session=self.session, collection_id=self.collection_id
+        )
+        if collection is None:
+            raise ValueError(f"Collection {self.collection_id} not found")
+
         evaluation_run = evaluation_run_resolver.create(
             session=self.session,
             evaluation_run_input=EvaluationRunCreate(
                 name=name,
                 gt_annotation_collection_id=gt_collection_id,
                 pred_annotation_collection_id=pred_collection_id,
+                dataset_id=collection.dataset_id,
                 task_type=task_type,
                 config_json=config_json,
             ),

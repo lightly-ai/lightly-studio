@@ -4,6 +4,8 @@ import type { Readable, Writable } from 'svelte/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SampleAnnotations from './index.svelte';
 import { useSettings } from '$lib/hooks/useSettings';
+import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
+import * as utils from '$lib/utils';
 
 type UseSettingsReturn = ReturnType<typeof useSettings>;
 type SettingsStoreValue =
@@ -14,15 +16,19 @@ type ShowBoundingBoxesForSegmentationValue =
         : never;
 type MockedUseSettingsStoreSlice = Pick<
     UseSettingsReturn,
-    'settingsStore' | 'showBoundingBoxesForSegmentationStore'
+    'settingsStore' | 'showBoundingBoxesForSegmentationStore' | 'enforceColoringByClassStore'
 >;
 type MockUseSettingsControls = {
     setShowBoundingBoxesForSegmentation: (value: ShowBoundingBoxesForSegmentationValue) => void;
+    setEnforceColoringByClass: (value: boolean) => void;
 };
 
 const mockUseSettingsControls: MockUseSettingsControls = vi.hoisted(() => ({
     setShowBoundingBoxesForSegmentation: () => {
         throw new Error('showBoundingBoxesForSegmentationStore is not initialized');
+    },
+    setEnforceColoringByClass: () => {
+        throw new Error('enforceColoringByClassStore is not initialized');
     }
 }));
 
@@ -39,6 +45,7 @@ vi.mock('$lib/hooks/useSettings', async () => {
         show_annotation_text_labels: false,
         show_sample_filenames: true,
         show_bounding_boxes_for_segmentation: true,
+        enforce_coloring_by_class: false,
         created_at: new Date('1970-01-01T00:00:00.000Z'),
         updated_at: new Date('1970-01-01T00:00:00.000Z'),
         key_toolbar_selection: 's',
@@ -50,14 +57,19 @@ vi.mock('$lib/hooks/useSettings', async () => {
     });
     const showBoundingBoxesForSegmentationStore =
         writable<ShowBoundingBoxesForSegmentationValue>(true);
+    const enforceColoringByClassStore = writable<boolean>(false);
 
     mockUseSettingsControls.setShowBoundingBoxesForSegmentation = (value) => {
         showBoundingBoxesForSegmentationStore.set(value);
     };
+    mockUseSettingsControls.setEnforceColoringByClass = (value) => {
+        enforceColoringByClassStore.set(value);
+    };
 
     const mockedUseSettingsStoreSlice: MockedUseSettingsStoreSlice = {
         settingsStore,
-        showBoundingBoxesForSegmentationStore
+        showBoundingBoxesForSegmentationStore,
+        enforceColoringByClassStore
     };
 
     return {
@@ -126,6 +138,10 @@ const setShowBoundingBoxesForSegmentation = (value: ShowBoundingBoxesForSegmenta
     mockUseSettingsControls.setShowBoundingBoxesForSegmentation(value);
 };
 
+const setEnforceColoringByClass = (value: boolean) => {
+    mockUseSettingsControls.setEnforceColoringByClass(value);
+};
+
 describe('SampleAnnotations', () => {
     let mockContext: Mock2dContext;
 
@@ -187,6 +203,76 @@ describe('SampleAnnotations', () => {
         await waitFor(() => {
             expect(hasStrokeRectCall(mockContext, 10, 21, 30, 41)).toBe(true);
             expect(hasStrokeRectCall(mockContext, 2, 3, 4, 5)).toBe(true);
+        });
+    });
+
+    describe('enforceColoringByClass setting', () => {
+        const { setSelectedCollectionIds, setCollectionIdToName } =
+            useAnnotationCollectionsFilter();
+
+        const createTwoSourceSample = (): ComponentProps<typeof SampleAnnotations>['sample'] =>
+            ({
+                width: 100,
+                height: 80,
+                annotations: [
+                    {
+                        sample_id: 'obj-src-a',
+                        annotation_collection_id: 'col-a',
+                        annotation_type: 'object_detection',
+                        annotation_label: { annotation_label_name: 'car' },
+                        object_detection_details: { x: 1, y: 1, width: 10, height: 10 }
+                    },
+                    {
+                        sample_id: 'obj-src-b',
+                        annotation_collection_id: 'col-b',
+                        annotation_type: 'object_detection',
+                        annotation_label: { annotation_label_name: 'car' },
+                        object_detection_details: { x: 20, y: 20, width: 10, height: 10 }
+                    }
+                ]
+            }) as ComponentProps<typeof SampleAnnotations>['sample'];
+
+        afterEach(() => {
+            setSelectedCollectionIds([]);
+            setCollectionIdToName({});
+            setEnforceColoringByClass(false);
+        });
+
+        it('colors by source name when multiple sources are selected and enforce is disabled', async () => {
+            const colorByLabelSpy = vi.spyOn(utils, 'getColorByLabel');
+
+            setSelectedCollectionIds(['col-a', 'col-b']);
+            setCollectionIdToName({ 'col-a': 'GroundTruth', 'col-b': 'Predictions' });
+            setEnforceColoringByClass(false);
+
+            render(SampleAnnotations, { props: { sample: createTwoSourceSample() } });
+
+            await waitFor(() => {
+                const calledNames = colorByLabelSpy.mock.calls.map(([name]) => name);
+                expect(calledNames).toContain('GroundTruth');
+                expect(calledNames).toContain('Predictions');
+            });
+
+            colorByLabelSpy.mockRestore();
+        });
+
+        it('colors by class when multiple sources are selected and enforce is enabled', async () => {
+            const colorByLabelSpy = vi.spyOn(utils, 'getColorByLabel');
+
+            setSelectedCollectionIds(['col-a', 'col-b']);
+            setCollectionIdToName({ 'col-a': 'GroundTruth', 'col-b': 'Predictions' });
+            setEnforceColoringByClass(true);
+
+            render(SampleAnnotations, { props: { sample: createTwoSourceSample() } });
+
+            await waitFor(() => {
+                const calledNames = colorByLabelSpy.mock.calls.map(([name]) => name);
+                expect(calledNames).toContain('car');
+                expect(calledNames).not.toContain('GroundTruth');
+                expect(calledNames).not.toContain('Predictions');
+            });
+
+            colorByLabelSpy.mockRestore();
         });
     });
 });

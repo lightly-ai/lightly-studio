@@ -8,7 +8,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel
-from sqlalchemy import JSON, Column
+from sqlalchemy import JSON, Column, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 
@@ -28,6 +28,7 @@ class EvaluationRunBase(SQLModel):
     # Foreign keys to the annotation collections containing Ground Truth and predicted annotations.
     gt_annotation_collection_id: UUID = Field(foreign_key="collection.collection_id", index=True)
     pred_annotation_collection_id: UUID = Field(foreign_key="collection.collection_id", index=True)
+    dataset_id: UUID = Field(foreign_key="dataset.dataset_id", index=True)
 
     task_type: EvaluationTaskType
 
@@ -42,6 +43,9 @@ class EvaluationRunTable(EvaluationRunBase, table=True):
     """One row per evaluation execution."""
 
     __tablename__ = "evaluation_run"
+    __table_args__ = (
+        UniqueConstraint("name", "dataset_id", name="uq_evaluation_run_name_dataset_id"),
+    )
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -57,5 +61,5 @@ class EvaluationRunView(BaseModel):
     name: str
     evaluation_run_configuration: dict[str, Any]
     created_at: datetime
-    gt_annotation_source: str
-    pred_annotation_source: str
+    gt_annotation_source: str | None
+    pred_annotation_source: str | None

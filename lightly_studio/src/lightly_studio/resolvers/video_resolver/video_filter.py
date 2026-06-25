@@ -1,19 +1,21 @@
 """Utility functions for building database queries."""
 
 from typing import Literal, Optional
+from uuid import UUID
 
-from pydantic import BaseModel
 from sqlmodel import col, select
+from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.models.range import FloatRange
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
+from lightly_studio.resolvers.grid_filter_base import GridFilterBase
 from lightly_studio.resolvers.image_filter import FilterDimensions
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.type_definitions import QueryType
 
 
-class VideoFilter(BaseModel):
+class VideoFilter(GridFilterBase):
     """Encapsulates filter parameters for querying videos."""
 
     filter_type: Literal["video"] = "video"
@@ -92,3 +94,6 @@ class VideoFilter(BaseModel):
         )
 
         return query.where(col(VideoTable.sample_id).in_(frame_filtered_video_ids_subquery))
+
+    def _select_sample_ids(self) -> SelectOfScalar[UUID]:
+        return select(VideoTable.sample_id).join(VideoTable.sample)

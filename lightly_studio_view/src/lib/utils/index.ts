@@ -1,4 +1,5 @@
 export * from './triggerDownloadBlob';
+export * from './resolveEffectiveColorBySource';
 export * from './groupAnnotationLabels';
 export * from './countVisibleSources';
 export * from './getColorByLabel';

@@ -1,8 +1,8 @@
-"""Example of how to create a dataset with semantic segmentation annotations."""
+"""Example of how to load Pascal VOC segmentations."""
 
 import json
+from pathlib import Path
 
-import fsspec
 from environs import Env
 
 import lightly_studio as ls
@@ -15,19 +15,20 @@ env.read_env()
 # Cleanup an existing database
 db_manager.connect(cleanup_existing=True)
 
-# Define data paths.
-dataset_uri = env.str("DATASET_URI", "s3://studio-test-datasets-eu/voc2012_10_images").rstrip("/")
-images_path = f"{dataset_uri}/JPEGImages"
-masks_path = f"{dataset_uri}/SegmentationClass"
-class_id_to_name_path = f"{dataset_uri}/class_id_to_name.json"
+# Define data paths
+images_path = env.path("EXAMPLES_PASCALVOC_IMAGES_PATH", "/path/to/your/dataset/images")
+masks_path = env.path("EXAMPLES_PASCALVOC_MASKS_PATH", "/path/to/your/dataset/masks")
 
 # A mapping from class IDs to class names must be provided. We load it from a JSON file,
 # the file is not part of the Pascal VOC format.
-with fsspec.open(class_id_to_name_path, "r") as file:
-    json_dict = json.load(file)
+class_id_to_name_path = env.path(
+    "EXAMPLES_PASCALVOC_CATEGORIES_JSON_PATH",
+    "/path/to/your/dataset/class_id_to_name.json",
+)
+json_dict = json.loads(Path(class_id_to_name_path).read_text())
 class_id_to_name = {int(k): v for k, v in json_dict.items()}
 
-# Create a Dataset and add load samples with semantic segmentation annotations
+# Create a dataset and load Pascal VOC masks as segmentation mask annotations.
 dataset = ls.ImageDataset.create()
 dataset.add_samples_from_pascal_voc_segmentations(
     images_path=images_path,

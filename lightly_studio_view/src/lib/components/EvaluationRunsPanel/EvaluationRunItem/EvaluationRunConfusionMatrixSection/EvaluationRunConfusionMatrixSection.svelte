@@ -1,7 +1,7 @@
 <script lang="ts">
     import { page } from '$app/state';
     import { Spinner, Typography } from '$lib/components';
-    import { ConfusionMatrix } from '$lib/components/ConfusionMatrix';
+    import { ConfusionMatrixPanel } from '$lib/components/ConfusionMatrix';
     import { useEvaluationConfusionMatrix } from '$lib/hooks';
 
     interface Props {
@@ -37,7 +37,7 @@
                 </Typography>
             </div>
         {:else if query.data}
-            <ConfusionMatrix matrix={query.data} showLegend />
+            <ConfusionMatrixPanel matrix={query.data} showLegend />
         {/if}
     </section>
 {/if}

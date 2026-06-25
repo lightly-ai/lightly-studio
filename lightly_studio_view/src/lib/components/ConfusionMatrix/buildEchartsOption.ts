@@ -1,19 +1,40 @@
 import type { EChartsCoreOption } from 'echarts/core';
-import { NO_GROUND_TRUTH_ROW_LABEL, NO_PREDICTION_COL_LABEL, type ConfusionMatrix } from './types';
+import { SENTINELS } from './topNMatrix';
+import { type ConfusionMatrix } from './types';
 
 const TP_COLOR_RAMP: [string, string] = ['rgba(34,197,94,0.15)', 'rgba(34,197,94,0.95)'];
 const FP_FN_COLOR_RAMP: [string, string] = ['rgba(239,68,68,0.15)', 'rgba(239,68,68,0.95)'];
-const SENTINEL_LABELS = new Set<string>([NO_GROUND_TRUTH_ROW_LABEL, NO_PREDICTION_COL_LABEL]);
+
+interface BuildEchartsOptionOptions {
+    /** Enables inside (scroll/pinch) zoom on both axes. */
+    zoomable?: boolean;
+    /**
+     * Color intensity multiplier (> 0, default 1). Values > 1 saturate
+     * cells earlier (more intense); values < 1 keep cells paler.
+     */
+    colorIntensity?: number;
+    /**
+     * Map color from log10(count) instead of the raw count (default true).
+     * Log scaling keeps small counts visible next to huge diagonal cells.
+     */
+    logScale?: boolean;
+}
 
 // TP and FP/FN are split into two series with separate visualMaps so each
 // can use its own color ramp (ECharts can't color cells in a single heatmap
 // series along two scales).
-export function buildEchartsOption(matrix: ConfusionMatrix): EChartsCoreOption {
+export function buildEchartsOption(
+    matrix: ConfusionMatrix,
+    options: BuildEchartsOptionOptions = {}
+): EChartsCoreOption {
     const xLabels = matrix.col_labels;
     const yLabels = [...matrix.row_labels].reverse();
 
-    const tpData: [string, string, number][] = [];
-    const fpFnData: [string, string, number][] = [];
+    // Cells carry [pred, gt, count, log10(count)]. Color maps to the log
+    // dimension so a few huge cells don't wash out all smaller counts;
+    // tooltips still read the raw count.
+    const tpData: [string, string, number, number][] = [];
+    const fpFnData: [string, string, number, number][] = [];
     let maxCount = 1;
 
     for (let i = 0; i < matrix.row_labels.length; i++) {
@@ -23,16 +44,36 @@ export function buildEchartsOption(matrix: ConfusionMatrix): EChartsCoreOption {
             maxCount = Math.max(maxCount, count);
             const rowLabel = matrix.row_labels[i];
             const colLabel = matrix.col_labels[j];
-            const isTrueClassPair =
-                !SENTINEL_LABELS.has(rowLabel) && !SENTINEL_LABELS.has(colLabel);
+            const isTrueClassPair = !SENTINELS.has(rowLabel) && !SENTINELS.has(colLabel);
             const isTp = isTrueClassPair && rowLabel === colLabel;
-            (isTp ? tpData : fpFnData).push([colLabel, rowLabel, count]);
+            (isTp ? tpData : fpFnData).push([colLabel, rowLabel, count, Math.log10(count)]);
         }
     }
+
+    // Falls back to 1 when all counts are <= 1 so the visualMap range stays valid.
+    const logMaxCount = maxCount > 1 ? Math.log10(maxCount) : 1;
+    // Dividing the range by the intensity makes cells hit full color sooner.
+    const colorIntensity = Math.max(options.colorIntensity ?? 1, 0.01);
+    const logScale = options.logScale ?? true;
+    // Dimension 3 is log10(count), dimension 2 the raw count.
+    const visualMapDimension = logScale ? 3 : 2;
+    const visualMapMin = logScale ? 0 : 1;
+    // Clamp to the min so a high colorIntensity can't push the max below it,
+    // which would produce an invalid/reversed range (e.g. min: 1, max: 0.5).
+    const visualMapMax = Math.max(
+        (logScale ? logMaxCount : maxCount) / colorIntensity,
+        visualMapMin
+    );
 
     const nameGap = 20;
     return {
         backgroundColor: 'transparent',
+        ...(options.zoomable && {
+            dataZoom: [
+                { type: 'inside', xAxisIndex: 0 },
+                { type: 'inside', yAxisIndex: 0, orient: 'vertical' }
+            ]
+        }),
         tooltip: {
             trigger: 'item',
             formatter: (params: { value: [string, string, number] }) => {
@@ -68,15 +109,17 @@ export function buildEchartsOption(matrix: ConfusionMatrix): EChartsCoreOption {
         visualMap: [
             {
                 seriesIndex: 0,
-                min: 1,
-                max: maxCount,
+                dimension: visualMapDimension,
+                min: visualMapMin,
+                max: visualMapMax,
                 inRange: { color: TP_COLOR_RAMP },
                 show: false
             },
             {
                 seriesIndex: 1,
-                min: 1,
-                max: maxCount,
+                dimension: visualMapDimension,
+                min: visualMapMin,
+                max: visualMapMax,
                 inRange: { color: FP_FN_COLOR_RAMP },
                 show: false
             }

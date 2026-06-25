@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from uuid import UUID
 
-from sqlalchemy import ColumnElement, Select, exists, select
-from sqlmodel import col
+from sqlalchemy import ColumnElement, exists
+from sqlmodel import col, select
 
 from lightly_studio.core.dataset_query.field_expression import OrdinalOperator
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
+from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.sample import SampleTable
 
@@ -18,18 +18,15 @@ class EvaluationMetricField:  # noqa: PLW1641
     """Queryable per-sample metric field from an evaluation run.
 
     Example:
-        ``EvaluationMetricField(evaluation_run_id=run.id, metric_name="miou") < 0.3``
+        ``SampleEvaluationQuery("run1", EvaluationMetricField("miou") < 0.3)``
     """
 
-    def __init__(self, evaluation_run_id: UUID, metric_name: str) -> None:
+    def __init__(self, metric_name: str) -> None:
         """Initialize a queryable metric reference."""
-        # TODO(lukas 6/2026): consider using the run name instead.
-        self.evaluation_run_id = evaluation_run_id
         self.metric_name = metric_name
 
     def _expression(self, other: float | int, operator: OrdinalOperator) -> MatchExpression:
         return EvaluationMetricMatchExpression(
-            evaluation_run_id=self.evaluation_run_id,
             metric_name=self.metric_name,
             operator=operator,
             value=other,
@@ -64,7 +61,6 @@ class EvaluationMetricField:  # noqa: PLW1641
 class EvaluationMetricMatchExpression(MatchExpression):
     """Correlated EXISTS filter against evaluation sample metrics."""
 
-    evaluation_run_id: UUID
     metric_name: str
     operator: OrdinalOperator
     value: float | int
@@ -80,12 +76,14 @@ class EvaluationMetricMatchExpression(MatchExpression):
             "==": metric_value == self.value,
             "!=": metric_value != self.value,
         }
-        subquery: Select[tuple[int]] = (
+        return exists(
             select(1)
             .select_from(EvaluationSampleMetricTable)
+            .where(col(EvaluationSampleMetricTable.evaluation_run_id) == col(EvaluationRunTable.id))
             .where(col(EvaluationSampleMetricTable.sample_id) == col(SampleTable.sample_id))
-            .where(col(EvaluationSampleMetricTable.evaluation_run_id) == self.evaluation_run_id)
             .where(col(EvaluationSampleMetricTable.metric_name) == self.metric_name)
             .where(operations[self.operator])
+            # Keep EvaluationRunTable and SampleTable as outer references so metrics are matched
+            # against the selected run and current sample.
+            .correlate(EvaluationRunTable, SampleTable)
         )
-        return exists(subquery)

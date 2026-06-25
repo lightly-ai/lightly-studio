@@ -7,7 +7,8 @@ const mocks = vi.hoisted(() => ({
     collections: [] as { collection_id: string; name: string }[],
     selectedCollectionIds: null as unknown as Writable<string[]>,
     setSelectedCollectionIds: vi.fn(),
-    seedSelectionIfNeeded: vi.fn()
+    seedSelectionIfNeeded: vi.fn(),
+    enforceColoringByClassStore: null as unknown as Writable<boolean>
 }));
 
 vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
@@ -29,6 +30,16 @@ vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilte
     };
 });
 
+vi.mock('$lib/hooks/useSettings', async () => {
+    const { writable } = await import('svelte/store');
+    mocks.enforceColoringByClassStore = writable<boolean>(false);
+    return {
+        useSettings: vi.fn(() => ({
+            enforceColoringByClassStore: mocks.enforceColoringByClassStore
+        }))
+    };
+});
+
 describe('AnnotationCollectionsMenu', () => {
     const defaultProps = { collectionId: 'col-1' };
 
@@ -36,6 +47,7 @@ describe('AnnotationCollectionsMenu', () => {
         vi.clearAllMocks();
         mocks.collections = [];
         mocks.selectedCollectionIds.set([]);
+        mocks.enforceColoringByClassStore.set(false);
     });
 
     it('renders nothing when there are no collections', () => {
@@ -94,6 +106,32 @@ describe('AnnotationCollectionsMenu', () => {
         await screen.getAllByRole('checkbox')[0].click();
 
         expect(mocks.setSelectedCollectionIds).toHaveBeenLastCalledWith(['c2']);
+    });
+
+    it('shows color markers when multiple sources are selected and enforce coloring by class is disabled', () => {
+        mocks.collections = [
+            { collection_id: 'c1', name: 'Dogs' },
+            { collection_id: 'c2', name: 'Cats' }
+        ];
+        mocks.selectedCollectionIds.set(['c1', 'c2']);
+        mocks.enforceColoringByClassStore.set(false);
+        render(AnnotationCollectionsMenu, defaultProps);
+
+        expect(screen.getByTestId('color-marker-Dogs')).toBeInTheDocument();
+        expect(screen.getByTestId('color-marker-Cats')).toBeInTheDocument();
+    });
+
+    it('hides color markers when multiple sources are selected and enforce coloring by class is enabled', () => {
+        mocks.collections = [
+            { collection_id: 'c1', name: 'Dogs' },
+            { collection_id: 'c2', name: 'Cats' }
+        ];
+        mocks.selectedCollectionIds.set(['c1', 'c2']);
+        mocks.enforceColoringByClassStore.set(true);
+        render(AnnotationCollectionsMenu, defaultProps);
+
+        expect(screen.queryByTestId('color-marker-Dogs')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('color-marker-Cats')).not.toBeInTheDocument();
     });
 
     it('calls setSelectedCollectionIds with empty array when all collections are deselected', async () => {

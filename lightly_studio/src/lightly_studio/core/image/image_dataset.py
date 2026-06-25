@@ -596,7 +596,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         if query is None:
             query = self.query()
         return ImageDatasetEvaluate(
-            session=self.session, collection_id=self.collection_id, samples=query
+            session=self.session,
+            collection_id=self.collection_id,
+            sample_ids=[sample.sample_id for sample in query],
         )
 
 

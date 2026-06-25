@@ -12,14 +12,14 @@ from typing import Protocol, TypeVar, Union
 from typing_extensions import assert_never
 
 from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
-from lightly_studio.core.dataset_query.classification_expression import (
+from lightly_studio.core.dataset_query.classification_query import (
     ClassificationField,
     ClassificationQuery,
 )
 from lightly_studio.core.dataset_query.field import Field
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
-from lightly_studio.core.dataset_query.object_detection_expression import (
+from lightly_studio.core.dataset_query.object_detection_query import (
     ObjectDetectionField,
     ObjectDetectionQuery,
 )
@@ -29,7 +29,7 @@ from lightly_studio.core.dataset_query.order_by import (
     OrderByField,
     OrderByMetadataField,
 )
-from lightly_studio.core.dataset_query.segmentation_mask_expression import (
+from lightly_studio.core.dataset_query.segmentation_mask_query import (
     SegmentationMaskField,
     SegmentationMaskQuery,
 )
@@ -274,11 +274,11 @@ def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 C9
         accessor: _TagsAccessor = _lookup(mapping=_TAGS_FIELDS, field=expr.field, type_="tags")
         return accessor.contains(expr.tag_name)
     if isinstance(expr, ClassificationMatchExpr):
-        return ClassificationQuery.match(to_match_expression(expr=expr.subexpr))
+        return ClassificationQuery(to_match_expression(expr=expr.subexpr))
     if isinstance(expr, ObjectDetectionMatchExpr):
-        return ObjectDetectionQuery.match(to_match_expression(expr=expr.subexpr))
+        return ObjectDetectionQuery(to_match_expression(expr=expr.subexpr))
     if isinstance(expr, SegmentationMaskMatchExpr):
-        return SegmentationMaskQuery.match(to_match_expression(expr=expr.subexpr))
+        return SegmentationMaskQuery(to_match_expression(expr=expr.subexpr))
     if isinstance(expr, AndExpr):
         return AND(*(to_match_expression(expr=child) for child in expr.children))
     if isinstance(expr, OrExpr):
