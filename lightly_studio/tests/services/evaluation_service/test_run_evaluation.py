@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import importlib
+from datetime import datetime, timezone
+from unittest import mock
+
 import pytest
 from sqlmodel import Session
 
@@ -99,6 +103,42 @@ def test_run_evaluation__generates_default_name(db_session: Session) -> None:
         session=db_session, dataset_id=root.dataset_id
     )
     assert runs[0].name.startswith("object_detection ")
+
+
+def test_run_evaluation__default_names_are_collision_safe(
+    db_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Two triggers for the same task/dataset within the same second: identical
+    # down to the second, differing only in microseconds. Without sub-second
+    # precision both would generate the same default name and the second run
+    # would fail the (name, dataset_id) uniqueness constraint.
+    root = _create_dataset_with_annotations(db_session)
+    same_second = datetime(2026, 6, 25, 12, 0, 0, tzinfo=timezone.utc)
+    times = iter(
+        [same_second.replace(microsecond=1000), same_second.replace(microsecond=2000)]
+    )
+    run_evaluation_module = importlib.import_module(
+        "lightly_studio.services.evaluation_service.run_evaluation"
+    )
+    monkeypatch.setattr(
+        run_evaluation_module, "datetime", mock.Mock(now=lambda _tz: next(times))
+    )
+
+    for _ in range(2):
+        evaluation_service.run_evaluation(
+            session=db_session,
+            collection=root,
+            task_type=EvaluationTaskType.OBJECT_DETECTION,
+            gt_annotation_source="gt",
+            pred_annotation_source="pred",
+            config=ObjectDetectionEvaluationConfig(),
+        )
+
+    runs = evaluation_run_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=root.dataset_id
+    )
+    assert len(runs) == 2
+    assert len({run.name for run in runs}) == 2
 
 
 def test_run_evaluation__classification(db_session: Session) -> None:
