@@ -12,6 +12,7 @@
         useImagesInfinite,
         type ImagesInfiniteParams
     } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
+    import type { NormalModeFilters } from '$lib/hooks/useImagesInfinite/types';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import type { ImageView } from '$lib/api/lightly_studio_local';
@@ -69,10 +70,16 @@
         text_embedding: $textEmbedding?.embedding
     });
 
-    const paramsWithoutSampleIds = (params: ImagesInfiniteParams) => {
+    // sample_ids and confusion_cell are set externally (selection / confusion matrix),
+    // not from this component's filter controls, so they are excluded from the
+    // base-params comparison and merged back below instead of being overwritten.
+    const paramsWithoutExternalFilters = (params: ImagesInfiniteParams) => {
         return {
             ...params,
-            filters: params.mode === 'normal' ? omit(params.filters, ['sample_ids']) : undefined
+            filters:
+                params.mode === 'normal'
+                    ? omit(params.filters, ['sample_ids', 'confusion_cell'])
+                    : undefined
         };
     };
 
@@ -87,7 +94,10 @@
         // Compare parameters excluding sample_ids to detect if other filters have changed
         if (
             currentParams &&
-            isEqual(paramsWithoutSampleIds(baseParams), paramsWithoutSampleIds(currentParams))
+            isEqual(
+                paramsWithoutExternalFilters(baseParams),
+                paramsWithoutExternalFilters(currentParams)
+            )
         ) {
             return;
         }
@@ -96,17 +106,20 @@
         let nextParams = baseParams;
 
         let currentSampleIds: string[] = [];
-        if (currentParams.mode === 'normal' && currentParams.filters?.sample_ids) {
-            currentSampleIds = currentParams.filters.sample_ids;
+        let currentConfusionCell: NormalModeFilters['confusion_cell'];
+        if (currentParams.mode === 'normal') {
+            currentSampleIds = currentParams.filters?.sample_ids ?? [];
+            currentConfusionCell = currentParams.filters?.confusion_cell;
         }
 
-        // Merge the existing sample selection into the new parameters
-        if (currentSampleIds && currentSampleIds.length > 0 && nextParams.mode === 'normal') {
+        // Merge the externally-set selection and confusion cell into the new parameters
+        if (nextParams.mode === 'normal' && (currentSampleIds.length > 0 || currentConfusionCell)) {
             nextParams = {
                 ...nextParams,
                 filters: {
                     ...(nextParams.filters ?? {}),
-                    sample_ids: currentSampleIds
+                    sample_ids: currentSampleIds.length > 0 ? currentSampleIds : undefined,
+                    confusion_cell: currentConfusionCell
                 }
             };
         }
@@ -149,6 +162,10 @@
         isReady = true;
     });
 
+    const confusionCell = $derived(
+        $filterParams.mode === 'normal' ? $filterParams.filters?.confusion_cell : undefined
+    );
+
     const filterHash = $derived.by(() => {
         const parts = [
             $selectedAnnotationFilterIds.join(','),
@@ -158,6 +175,7 @@
             `${$dimensions?.min_height}-${$dimensions?.max_height}`,
             JSON.stringify($metadataValues),
             $textEmbedding?.queryText || '',
+            confusionCell ? JSON.stringify(confusionCell) : '',
             JSON.stringify($imageSortBy)
         ];
 
