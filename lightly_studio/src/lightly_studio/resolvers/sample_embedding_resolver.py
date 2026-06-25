@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import hashlib
-from typing import NamedTuple
+from typing import Any, NamedTuple
 from uuid import UUID
 
 from sqlalchemy import func
@@ -58,6 +58,18 @@ def create_many(
         session.commit()
 
 
+# get_by_sample_ids and get_all_by_collection_id differ only by their input (which samples
+# to load), not by backend. Each picks the backend and then uses a shared
+# backend read path:
+# Postgres: bypassing SQLAlchemy to read binary directly -> around 10x faster
+# DuckDB: using a normal SQLAlchemy session.exec
+#
+#                            PostgreSQL                    DuckDB
+#   get_by_sample_ids        "= ANY" SQL                   batched IN
+#   get_all_by_collection_id compiled SELECT               session.exec
+#   backend read primitive   _read_embedding_rows_binary   ---
+
+
 def get_by_sample_ids(
     session: Session,
     sample_ids: list[UUID],
@@ -77,69 +89,31 @@ def get_by_sample_ids(
     """
     if not sample_ids:
         return []
+    results: list[SampleEmbeddingRow]
     if session.get_bind().dialect.name == DatabaseBackend.POSTGRESQL.value:
-        results = _get_by_sample_ids_postgres(
-            session=session, sample_ids=sample_ids, embedding_model_id=embedding_model_id
+        # A single ``sample_id = ANY(%s)`` array param stays under Postgres' bind-parameter
+        # limit, so no batching is needed.
+        query = (
+            "SELECT sample_id, embedding FROM sample_embedding "
+            "WHERE embedding_model_id = %s AND sample_id = ANY(%s)"
         )
+        results = _read_embedding_rows_binary(session, query, (embedding_model_id, sample_ids))
     else:
-        results = _get_by_sample_ids_duckdb(
-            session=session, sample_ids=sample_ids, embedding_model_id=embedding_model_id
-        )
+        # DuckDB: batch the ids to stay under the statement's parameter limit.
+        results = []
+        for batch in batching.batched(items=sample_ids):
+            statement = (
+                select(SampleEmbeddingTable.sample_id, col(SampleEmbeddingTable.embedding))
+                .where(col(SampleEmbeddingTable.sample_id).in_(batch))
+                .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
+            )
+            results.extend(
+                SampleEmbeddingRow(sample_id=sample_id, embedding=embedding)
+                for sample_id, embedding in session.exec(statement).all()
+            )
     # Return embeddings in the same order as the input IDs
     embedding_map = {embedding.sample_id: embedding for embedding in results}
     return [embedding_map[id_] for id_ in sample_ids if id_ in embedding_map]
-
-
-def _get_by_sample_ids_postgres(
-    session: Session,
-    sample_ids: list[UUID],
-    embedding_model_id: UUID,
-) -> list[SampleEmbeddingRow]:
-    """Load embeddings with a binary psycopg cursor (PostgreSQL only).
-
-    Reading the vectors in pgvector's binary format (via ``np.frombuffer``) is far
-    faster than parsing them from text for each row.
-    """
-    # Push any pending writes in this session to the database first so the cursor below —
-    # which bypasses SQLAlchemy's result handling — sees them (it shares the session's
-    # connection and transaction). The normal query path does this automatically.
-    session.flush()
-    connection = db_vector.get_pgvector_connection(session)
-    query = (
-        "SELECT sample_id, embedding FROM sample_embedding "
-        "WHERE embedding_model_id = %s AND sample_id = ANY(%s)"
-    )
-    with connection.cursor(binary=True) as cursor:
-        cursor.execute(query, (embedding_model_id, sample_ids))
-        return [
-            SampleEmbeddingRow(sample_id=sample_id, embedding=embedding)
-            for sample_id, embedding in cursor
-        ]
-
-
-def _get_by_sample_ids_duckdb(
-    session: Session,
-    sample_ids: list[UUID],
-    embedding_model_id: UUID,
-) -> list[SampleEmbeddingRow]:
-    """Load embeddings via the SQLAlchemy query path (DuckDB).
-
-    DuckDB returns the vectors as arrays natively, so selecting just ``sample_id`` and
-    ``embedding`` avoids creating full ``SampleEmbeddingTable`` objects. IDs are batched
-    to stay under the database's parameter limit.
-    """
-    rows: list[SampleEmbeddingRow] = []
-    for batch in batching.batched(items=sample_ids):
-        results = session.exec(
-            select(SampleEmbeddingTable.sample_id, col(SampleEmbeddingTable.embedding))
-            .where(col(SampleEmbeddingTable.sample_id).in_(batch))
-            .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
-        ).all()
-        rows.extend(
-            SampleEmbeddingRow(sample_id=sample_id, embedding=embedding)
-            for sample_id, embedding in results
-        )
-    return rows
 
 
 def get_all_by_collection_id(
@@ -147,8 +121,13 @@ def get_all_by_collection_id(
     collection_id: UUID,
     embedding_model_id: UUID,
     filters: SampleFilter | None = None,
-) -> list[SampleEmbeddingTable]:
+) -> list[SampleEmbeddingRow]:
     """Get all sample embeddings for samples in a specific collection.
+
+    On PostgreSQL the embeddings are read with a binary psycopg cursor (decoded via
+    ``np.frombuffer``); DuckDB returns them as arrays natively and uses the regular query
+    path. Output is ordered by sample creation time, with ``sample_id`` as a tiebreaker
+    for a deterministic order. Callers do not need to distinguish between backends.
 
     Args:
         session: The database session.
@@ -157,20 +136,28 @@ def get_all_by_collection_id(
         filters: Filters to apply to the samples.
 
     Returns:
-        List of sample embeddings associated with the collection.
+        Embeddings for the collection, ordered by sample creation time.
     """
-    query = (
-        select(SampleEmbeddingTable)
+    statement = (
+        select(SampleEmbeddingTable.sample_id, col(SampleEmbeddingTable.embedding))
         .join(SampleTable, col(SampleEmbeddingTable.sample_id) == col(SampleTable.sample_id))
         .where(SampleTable.collection_id == collection_id)
         .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
-        .order_by(col(SampleTable.created_at).asc())
+        .order_by(col(SampleTable.created_at).asc(), col(SampleEmbeddingTable.sample_id).asc())
     )
     if filters:
-        query = filters.apply(query)
-    # Fetch in chunks so list[float] rows are converted to numpy and freed per batch.
-    query = query.execution_options(yield_per=batching.DEFAULT_BATCH_SIZE)
-    return list(session.exec(query).all())
+        statement = filters.apply(statement)
+    if session.get_bind().dialect.name == DatabaseBackend.POSTGRESQL.value:
+        # Compile to SQL + params and read it on the binary cursor.
+        compiled = statement.compile(
+            dialect=session.get_bind().dialect,
+            compile_kwargs={"render_postcompile": True},
+        )
+        return _read_embedding_rows_binary(session, str(compiled), compiled.params)
+    return [
+        SampleEmbeddingRow(sample_id=sample_id, embedding=embedding)
+        for sample_id, embedding in session.exec(statement).all()
+    ]
 
 
 def get_hash_by_collection_id(
@@ -234,3 +221,25 @@ def get_embedding_count(session: Session, collection_id: UUID, embedding_model_i
         .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
     )
     return session.exec(query).one()
+
+
+def _read_embedding_rows_binary(
+    session: Session, sql: str, params: Any
+) -> list[SampleEmbeddingRow]:
+    """Run a ``(sample_id, embedding)`` SELECT on a binary psycopg cursor (PostgreSQL).
+
+    Reading the vectors in pgvector's binary format (via ``np.frombuffer``) is far faster
+    than parsing them from text for each row. ``params`` is a tuple for ``%s`` placeholders
+    or a dict for ``%(name)s``.
+    """
+    # Push any pending writes in this session to the database first so the cursor below —
+    # which bypasses SQLAlchemy's result handling — sees them (it shares the session's
+    # connection and transaction). The normal query path does this automatically.
+    session.flush()
+    connection = db_vector.get_pgvector_connection(session)
+    with connection.cursor(binary=True) as cursor:
+        cursor.execute(sql, params)
+        return [
+            SampleEmbeddingRow(sample_id=sample_id, embedding=embedding)
+            for sample_id, embedding in cursor
+        ]
