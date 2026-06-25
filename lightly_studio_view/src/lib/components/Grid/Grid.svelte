@@ -4,7 +4,11 @@
     import type { HTMLAttributes } from 'svelte/elements';
     import { cn } from '$lib/utils';
 
+    const GRID_SCROLL_CLASS = 'grid-scroll';
     const GRID_GAP = 16;
+    // Compensates for the scrollbar width so the right edge aligns with the
+    // card's p-4 outer padding on the left side.
+    const SCROLLBAR_WIDTH_COMPENSATION = 4;
 
     let viewport: HTMLElement | null = null;
     let clientWidth = $state(0);
@@ -56,7 +60,7 @@
 
     const viewportClassName = $derived(cn('viewport h-full w-full', viewportProps?.class));
 
-    const gridClassName = $derived(cn('grid-scroll', gridProps?.class));
+    const gridClassName = $derived(cn(GRID_SCROLL_CLASS, gridProps?.class));
 
     const resolvedOverScan = $derived(overScan ?? overscan ?? gridProps?.overScan);
 
@@ -67,13 +71,20 @@
             return;
         }
 
+        // Observe the actual scroll container rather than the outer viewport div so
+        // that contentRect.width already excludes the scrollbar width when one is
+        // visible. Without this, items would be sized for the full viewport width and
+        // the last column would partially slide under the scrollbar.
+        const scrollView =
+            (viewport.querySelector(`.${GRID_SCROLL_CLASS}`) as HTMLElement | null) ?? viewport;
+
         const resizeObserver = new ResizeObserver((entries) => {
             for (const entry of entries) {
-                clientWidth = Math.max(entry.contentRect.width, 200);
+                clientWidth = Math.max(entry.contentRect.width + SCROLLBAR_WIDTH_COMPENSATION, 200);
             }
         });
 
-        resizeObserver.observe(viewport);
+        resizeObserver.observe(scrollView);
 
         return () => resizeObserver.disconnect();
     });
@@ -160,6 +171,7 @@
         overflow-y: hidden;
     }
 
+    /* Selector must match GRID_SCROLL_CLASS in <script> */
     .viewport :global(.grid-scroll) {
         overflow-x: hidden !important;
     }

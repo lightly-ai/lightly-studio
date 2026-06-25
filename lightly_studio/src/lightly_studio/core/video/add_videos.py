@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 import os
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -82,6 +83,7 @@ def load_into_collection_from_paths(  # noqa: PLR0913
     video_channel: int = DEFAULT_VIDEO_CHANNEL,
     num_decode_threads: int | None = None,
     show_progress: bool = True,
+    target_fps: float | None = None,
 ) -> tuple[list[UUID], list[UUID]]:
     """Load video samples from file paths into the dataset using PyAV.
 
@@ -94,12 +96,18 @@ def load_into_collection_from_paths(  # noqa: PLR0913
         num_decode_threads: Optional override for the number of FFmpeg decode threads.
             If omitted, the available CPU cores - 1 (max 16) are used.
         show_progress: Whether to display a progress bar and final summary of loading results.
+        target_fps: Optional target frame rate for subsampling. When set below the source
+            frame rate, only selected frames are kept. frame_number values remain
+            original. Must be greater than 0.
 
     Returns:
         A tuple containing:
             - List of UUIDs of the created video samples
             - List of UUIDs of the created video frame samples
     """
+    if target_fps is not None and target_fps <= 0:
+        raise ValueError(f"target_fps must be greater than 0, got {target_fps}.")
+
     created_video_sample_ids: list[UUID] = []
     created_video_frame_sample_ids: list[UUID] = []
     video_paths_list = list(video_paths)
@@ -174,6 +182,7 @@ def load_into_collection_from_paths(  # noqa: PLR0913
                     video_container=video_container,
                     video_channel=video_channel,
                     num_decode_threads=num_decode_threads,
+                    target_fps=target_fps,
                 )
                 created_video_frame_sample_ids.extend(frame_sample_ids)
 
@@ -321,11 +330,37 @@ def load_video_annotations_from_labelformat(  # noqa: PLR0913
     return created_sample_ids, created_video_frame_sample_ids
 
 
+def _should_keep_frame(decoded_index: int, target_fps: float | None, original_fps: float) -> bool:
+    """Decide whether to keep a frame when subsampling to a lower frame rate.
+
+    Frames are mapped to buckets of size ``original_fps / target_fps`` and the first
+    frame of each bucket is kept, which yields frames spaced approximately at
+    ``target_fps``. All frames are kept when no target fps is given, when the target
+    is not lower than the source rate, or when the source rate is unknown.
+
+    Args:
+        decoded_index: The original index of the frame in the source video.
+        target_fps: The desired target frame rate, or None to keep all frames.
+        original_fps: The source video frame rate (0 if unknown).
+
+    Returns:
+        True if the frame should be persisted.
+    """
+    if target_fps is None or original_fps <= 0.0 or target_fps >= original_fps:
+        return True
+    if decoded_index == 0:
+        return True
+    return math.floor(decoded_index * target_fps / original_fps) != math.floor(
+        (decoded_index - 1) * target_fps / original_fps
+    )
+
+
 def _create_video_frame_samples(
     context: FrameExtractionContext,
     video_container: InputContainer,
     video_channel: int,
     num_decode_threads: int | None = None,
+    target_fps: float | None = None,
 ) -> list[UUID]:
     """Create video frame samples for a video by parsing all frames.
 
@@ -336,6 +371,9 @@ def _create_video_frame_samples(
         video_container: The PyAV container with the opened video.
         video_channel: The video channel from which frames are loaded.
         num_decode_threads: Optional override for FFmpeg decode thread count.
+        target_fps: Optional target frame rate for subsampling. If set and lower than the
+            source frame rate, only a subset of frames is persisted; kept frames retain
+            their original frame_number. If omitted, all frames are persisted.
 
     Returns:
         A list of UUIDs of the created video frame samples.
@@ -347,9 +385,15 @@ def _create_video_frame_samples(
 
     # Get time base for converting PTS to seconds
     time_base = video_stream.time_base if video_stream.time_base else None
+    original_fps = float(video_stream.average_rate) if video_stream.average_rate else 0.0
 
-    # Decode all frames
+    # Decode all frames, persisting only the subset selected by the target fps.
     for decoded_index, frame in enumerate(video_container.decode(video_stream)):
+        if not _should_keep_frame(
+            decoded_index=decoded_index, target_fps=target_fps, original_fps=original_fps
+        ):
+            continue
+
         # Get the presentation timestamp in seconds from the frame
         # Convert frame.pts from time base units to seconds
         if frame.pts is not None and time_base is not None:
