@@ -51,13 +51,15 @@ def test_get_evaluation_runs(
             pred_annotation_collection_id=pred_2_id,
         ),
     ]
-    mocker.patch(
+    get_all_by_dataset_id = mocker.patch(
         "lightly_studio.api.routes.api.evaluation.get_runs.evaluation_run_resolver.get_all_by_dataset_id",
         return_value=mock_runs,
     )
 
-    response = test_client.get(f"/api/datasets/{uuid4()}/evaluation/runs")
+    dataset_id = uuid4()
+    response = test_client.get(f"/api/datasets/{dataset_id}/evaluation/runs")
 
+    assert get_all_by_dataset_id.call_args.kwargs["dataset_id"] == dataset_id
     assert response.status_code == HTTP_STATUS_OK
     data = response.json()
     assert data == [
