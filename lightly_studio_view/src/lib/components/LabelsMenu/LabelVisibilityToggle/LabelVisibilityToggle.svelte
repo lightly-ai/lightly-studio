@@ -29,7 +29,7 @@
             type="button"
             aria-label="Hide annotation class {labelName}"
             data-testid="label-visibility-toggle"
-            class="flex shrink-0 items-center opacity-0 group-hover:opacity-100 focus:opacity-100"
+            class="flex shrink-0 items-center opacity-0 focus:opacity-100 group-hover:opacity-100"
             onclick={() => toggleClassVisibility(labelName)}
         >
             <Eye class="size-4" />
