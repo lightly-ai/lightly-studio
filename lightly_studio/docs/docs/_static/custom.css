@@ -146,6 +146,25 @@
   .md-sidebar--primary .md-nav--primary.md-nav--lifted > .md-nav__list > .md-nav__item--active > .md-nav {
     transform: translateX(100%);
   }
+
+  /* Once a top-level tab is opened, show its section level (and the pages
+     underneath) expanded inline, mirroring the desktop left menu. The tab
+     panels (level 1) still slide in on tap; only the level-2 section panels are
+     flattened from a separate drill-down into a static, always-visible block. */
+  .md-sidebar--primary .md-nav[data-md-level="2"]:not(.md-nav--secondary) {
+    height: auto;
+    opacity: 1;
+    position: static;
+    transform: none;
+    z-index: auto;
+  }
+
+  /* The inline section panels no longer need their slide-in back-button title
+     or the drill-down chevron on the section heading. */
+  .md-sidebar--primary .md-nav[data-md-level="2"] > .md-nav__title,
+  .md-sidebar--primary .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item:has(> .md-nav[data-md-level="2"]) > .md-nav__link > .md-nav__icon {
+    display: none;
+  }
 }
 
 .md-sidebar--primary .md-nav__item--section:has(> .md-nav__container) ~ .md-nav__item--section:has(> .md-nav__container),
