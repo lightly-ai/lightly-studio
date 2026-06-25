@@ -278,6 +278,7 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
     query.match(expr)
     ```
 
+    #### Boolean operators
     The filtering on individual fields can flexibly be combined to create more complex match expression. For this, the boolean operators `AND`, `OR`, and `NOT` are available. Boolean operators can arbitrarily be nested.
 
 
