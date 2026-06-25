@@ -1,7 +1,10 @@
 <script lang="ts">
     import * as Dialog from '$lib/components/ui/dialog';
     import ConfusionMatrix from '../../ConfusionMatrix.svelte';
-    import type { ConfusionMatrix as ConfusionMatrixData } from '../../types';
+    import type {
+        ConfusionCellSelection,
+        ConfusionMatrix as ConfusionMatrixData
+    } from '../../types';
     import type { ColorConfig } from '../../ClassSetDialog/types';
 
     interface Props {
@@ -9,9 +12,10 @@
         matrix: ConfusionMatrixData;
         color: ColorConfig;
         showLegend?: boolean;
+        onCellClick?: (cell: ConfusionCellSelection) => void;
     }
 
-    let { open = $bindable(), matrix, color, showLegend = false }: Props = $props();
+    let { open = $bindable(), matrix, color, showLegend = false, onCellClick }: Props = $props();
 </script>
 
 <Dialog.Root bind:open>
@@ -29,6 +33,7 @@
                 colorIntensity={color.intensity}
                 logScale={color.logScale}
                 zoomable
+                {onCellClick}
             />
         </div>
     </Dialog.Content>
