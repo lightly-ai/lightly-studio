@@ -12,6 +12,13 @@
         members: [ImageSampleField]
         show_if_no_docstring: true
 
+## VideoSampleField
+
+::: lightly_studio.core.dataset_query.video_sample_field
+    options:
+        members: [VideoSampleField]
+        show_if_no_docstring: true
+
 ## ClassificationField
 
 ::: lightly_studio.core.dataset_query.classification_query
@@ -51,9 +58,21 @@
     options:
         members: [SegmentationMaskQuery]
 
-## VideoSampleField
+## SampleEvaluationQuery
 
-::: lightly_studio.core.dataset_query.video_sample_field
+::: lightly_studio.core.dataset_query.sample_evaluation_query
     options:
-        members: [VideoSampleField]
+        members: [SampleEvaluationQuery]
+
+## EvaluationMetricField
+
+::: lightly_studio.core.dataset_query.evaluation_metric_expression
+    options:
+        members: [EvaluationMetricField]
         show_if_no_docstring: true
+
+## OrderByEvaluationMetricField
+
+::: lightly_studio.core.dataset_query.order_by
+    options:
+        members: [OrderByEvaluationMetricField]
