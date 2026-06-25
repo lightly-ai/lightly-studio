@@ -109,9 +109,9 @@ def test_delete_annotation__deletes_evaluation_annotation_metrics(
     )
 
     create_annotation_metrics(
-        db_session,
-        run.id,
-        [
+        session=db_session,
+        run_id=run.id,
+        annotation_metrics=[
             AnnotationMetricStub(
                 sample_id=pred_annotation.parent_sample_id,
                 metric_name="iou",
@@ -186,9 +186,9 @@ def test_delete_annotation__preserves_other_run_sample_metrics(
     )
 
     create_annotation_metrics(
-        db_session,
-        run.id,
-        [
+        session=db_session,
+        run_id=run.id,
+        annotation_metrics=[
             AnnotationMetricStub(
                 sample_id=pred_annotation.parent_sample_id,
                 metric_name="iou",
@@ -206,9 +206,9 @@ def test_delete_annotation__preserves_other_run_sample_metrics(
         ],
     )
     create_annotation_metrics(
-        db_session,
-        other_run.id,
-        [
+        session=db_session,
+        run_id=other_run.id,
+        annotation_metrics=[
             AnnotationMetricStub(
                 sample_id=other_pred_annotation.parent_sample_id,
                 metric_name="iou",
