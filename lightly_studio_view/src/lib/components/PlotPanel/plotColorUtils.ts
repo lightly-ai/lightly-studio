@@ -10,7 +10,6 @@ const OKLCH_CHROMA = 0.3;
 
 const RESERVED_CATEGORY_COUNT = 3;
 
-// Index 0 is the Hidden bucket: transparent so its points are not rendered.
 export const HIDDEN_COLOR = 'rgba(0, 0, 0, 0)';
 export const NOT_FILTERED_COLOR = '#222222';
 export const FILTERED_COLOR = '#FF7220';

@@ -1,6 +1,11 @@
 <script lang="ts">
     import { cn } from '$lib/utils';
-    import { EXCLUDED_BY_FILTERS_LABEL, INCLUDED_BY_FILTERS_LABEL } from './plotCategories';
+    import {
+        EXCLUDED_BY_FILTERS_CATEGORY,
+        EXCLUDED_BY_FILTERS_LABEL,
+        INCLUDED_BY_FILTERS_CATEGORY,
+        INCLUDED_BY_FILTERS_LABEL
+    } from './plotCategories';
 
     interface LegendEntry {
         cat: number;
@@ -54,11 +59,17 @@
             <span class="my-0.5 w-full shrink-0 border-t border-white/10"></span>
         {/if}
         <span class="flex shrink-0 items-center gap-1.5">
-            <span class="legend-dot" style={`background-color: ${categoryColors[1]}`}></span>
+            <span
+                class="legend-dot"
+                style={`background-color: ${categoryColors[EXCLUDED_BY_FILTERS_CATEGORY]}`}
+            ></span>
             {excludedLabel}
         </span>
         <span class="flex shrink-0 items-center gap-1.5">
-            <span class="legend-dot" style={`background-color: ${categoryColors[2]}`}></span>
+            <span
+                class="legend-dot"
+                style={`background-color: ${categoryColors[INCLUDED_BY_FILTERS_CATEGORY]}`}
+            ></span>
             {includedLabel}
         </span>
     </div>
