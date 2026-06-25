@@ -48,7 +48,7 @@ def run_evaluation(  # noqa: PLR0913
     The task is selected by the concrete type of ``config`` (which also carries
     the task-specific options). ``filters`` scopes the evaluated samples; when
     omitted the whole collection is evaluated. ``name`` defaults to
-    ``"<task> <UTC timestamp>"`` (with microsecond precision so concurrent
+    ``"<task_type> <UTC timestamp>"`` (with microsecond precision so concurrent
     triggers don't collide on the ``(name, dataset_id)`` uniqueness constraint)
     when not provided.
 
