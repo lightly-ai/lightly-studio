@@ -9,9 +9,9 @@
         VisualMapComponent
     } from 'echarts/components';
     import { CanvasRenderer } from 'echarts/renderers';
-    import { buildEchartsOption, SENTINEL_LABELS } from './buildEchartsOption';
+    import { buildEchartsOption } from './buildEchartsOption';
     import ConfusionMatrixLegend from './ConfusionMatrixLegend.svelte';
-    import { OTHER_LABEL } from './topNMatrix';
+    import { OTHER_LABEL, SENTINELS } from './topNMatrix';
     import { type ConfusionCellSelection, type ConfusionMatrix } from './types';
 
     echarts.use([
@@ -68,7 +68,7 @@
         instance.on('click', (params: { value?: unknown }) => {
             if (!Array.isArray(params.value)) return;
             const [predLabel, gtLabel] = params.value as [string, string, number, number];
-            if (SENTINEL_LABELS.has(predLabel) || SENTINEL_LABELS.has(gtLabel)) return;
+            if (SENTINELS.has(predLabel) || SENTINELS.has(gtLabel)) return;
             if (predLabel === OTHER_LABEL || gtLabel === OTHER_LABEL) return;
             onCellClick?.({ gtLabel, predLabel });
         });
