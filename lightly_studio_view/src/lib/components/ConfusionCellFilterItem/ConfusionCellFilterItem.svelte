@@ -21,7 +21,7 @@
     <Segment title="Confusion Matrix">
         <FilterChip
             checked={true}
-            title={`Confused: ${$confusionCell.gt_label} → ${$confusionCell.pred_label}`}
+            title={`GT: ${$confusionCell.gt_label} → Pred: ${$confusionCell.pred_label}`}
             checkboxLabel="Confusion cell filter"
             testId="confusion-cell-filter-chip"
             onCheckedChange={(nextChecked) => {

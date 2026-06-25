@@ -58,7 +58,7 @@
         buildVideoFrameAnnotationCountsFilter
     } from '$lib/utils/buildAnnotationCountsFilters';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
-    import ConfusionCellFilterItem from '$lib/components/ConfusionCellFilterItem/ConfusionCellFilterItem.svelte';
+    import ConfusionCellFilterItem from '$lib/components/ConfusionCellFilterItem';
     import { useSelectionSummary } from '$lib/hooks';
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
     import { isInputElement } from '$lib/utils';

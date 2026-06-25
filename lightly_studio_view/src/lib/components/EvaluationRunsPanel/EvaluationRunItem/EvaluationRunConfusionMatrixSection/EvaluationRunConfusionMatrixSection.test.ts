@@ -151,7 +151,7 @@ describe('EvaluationRunConfusionMatrixSection', () => {
         queryState.data = small3Classes;
         queryState.error = undefined;
 
-        render(EvaluationRunConfusionMatrixSection, { props: { evaluationRunId: 'run-1' } });
+        render(EvaluationRunConfusionMatrixSection, { props: defaultProps });
 
         const handler = echartsMock.getClickHandler();
         expect(handler).toBeDefined();

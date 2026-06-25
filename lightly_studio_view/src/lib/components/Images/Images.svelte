@@ -109,7 +109,12 @@
         let currentConfusionCell: NormalModeFilters['confusion_cell'];
         if (currentParams.mode === 'normal') {
             currentSampleIds = currentParams.filters?.sample_ids ?? [];
-            currentConfusionCell = currentParams.filters?.confusion_cell;
+            // Only carry the confusion cell forward within the same collection. The cell
+            // belongs to a specific evaluation run/collection, so when navigating to a
+            // different collection we must drop it to avoid wrongly filtering the new grid.
+            if (currentParams.collection_id === baseParams.collection_id) {
+                currentConfusionCell = currentParams.filters?.confusion_cell;
+            }
         }
 
         // Merge the externally-set selection and confusion cell into the new parameters
