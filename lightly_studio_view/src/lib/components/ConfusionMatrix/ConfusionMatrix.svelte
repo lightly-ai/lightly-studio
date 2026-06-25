@@ -9,14 +9,10 @@
         VisualMapComponent
     } from 'echarts/components';
     import { CanvasRenderer } from 'echarts/renderers';
-    import { buildEchartsOption } from './buildEchartsOption';
+    import { buildEchartsOption, SENTINEL_LABELS } from './buildEchartsOption';
     import ConfusionMatrixLegend from './ConfusionMatrixLegend.svelte';
-    import {
-        NO_GROUND_TRUTH_ROW_LABEL,
-        NO_PREDICTION_COL_LABEL,
-        type ConfusionCellSelection,
-        type ConfusionMatrix
-    } from './types';
+    import { OTHER_LABEL } from './topNMatrix';
+    import { type ConfusionCellSelection, type ConfusionMatrix } from './types';
 
     echarts.use([
         HeatmapChart,
@@ -52,8 +48,6 @@
         onCellClick
     }: Props = $props();
 
-    const SENTINEL_LABELS = new Set<string>([NO_GROUND_TRUTH_ROW_LABEL, NO_PREDICTION_COL_LABEL]);
-
     let container: HTMLDivElement | undefined = $state();
     let chart: echarts.ECharts | null = $state(null);
 
@@ -69,11 +63,13 @@
         const instance = echarts.init(container, null, { renderer: 'canvas' });
         chart = instance;
         // Cells carry [pred, gt, count, log10(count)]; resolve back to labels and
-        // skip the synthetic FP/FN buckets, which are not class-by-class cells.
+        // skip the synthetic FP/FN buckets and "(other)" aggregate cells, which
+        // are not real class-by-class cells.
         instance.on('click', (params: { value?: unknown }) => {
             if (!Array.isArray(params.value)) return;
             const [predLabel, gtLabel] = params.value as [string, string, number, number];
             if (SENTINEL_LABELS.has(predLabel) || SENTINEL_LABELS.has(gtLabel)) return;
+            if (predLabel === OTHER_LABEL || gtLabel === OTHER_LABEL) return;
             onCellClick?.({ gtLabel, predLabel });
         });
         const resizeObserver = new ResizeObserver(() => instance.resize());

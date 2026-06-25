@@ -3,7 +3,11 @@ import { NO_GROUND_TRUTH_ROW_LABEL, NO_PREDICTION_COL_LABEL, type ConfusionMatri
 
 const TP_COLOR_RAMP: [string, string] = ['rgba(34,197,94,0.15)', 'rgba(34,197,94,0.95)'];
 const FP_FN_COLOR_RAMP: [string, string] = ['rgba(239,68,68,0.15)', 'rgba(239,68,68,0.95)'];
-const SENTINEL_LABELS = new Set<string>([NO_GROUND_TRUTH_ROW_LABEL, NO_PREDICTION_COL_LABEL]);
+/** Sentinel no-ground-truth / no-prediction labels that are not real class-by-class cells. */
+export const SENTINEL_LABELS = new Set<string>([
+    NO_GROUND_TRUTH_ROW_LABEL,
+    NO_PREDICTION_COL_LABEL
+]);
 
 interface BuildEchartsOptionOptions {
     /** Enables inside (scroll/pinch) zoom on both axes. */
