@@ -598,7 +598,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         return ImageDatasetEvaluate(
             session=self.session,
             collection_id=self.collection_id,
-            sample_ids=(sample.sample_id for sample in query),
+            sample_ids=[sample.sample_id for sample in query],
         )
 
 
