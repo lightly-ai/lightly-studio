@@ -299,9 +299,11 @@ def test_embed_annotations(
         embedding_model_id=model_id,
     )
 
-    stored_embeddings = db_session.exec(
-        select(SampleEmbeddingTable).where(SampleEmbeddingTable.embedding_model_id == model_id)
-    ).all()
+    stored_embeddings = sample_embedding_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        embedding_model_id=model_id,
+    )
     assert len(stored_embeddings) == 1
 
 
@@ -335,9 +337,11 @@ def test_embed_annotations_is_idempotent(
     manager.embed_annotations(session=db_session, annotation_collection_id=annotation_collection_id)
     manager.embed_annotations(session=db_session, annotation_collection_id=annotation_collection_id)
 
-    stored_embeddings = db_session.exec(
-        select(SampleEmbeddingTable).where(SampleEmbeddingTable.embedding_model_id == model_id)
-    ).all()
+    stored_embeddings = sample_embedding_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        embedding_model_id=model_id,
+    )
     assert len(stored_embeddings) == 1
 
 
@@ -382,9 +386,11 @@ def test_embed_annotations_processes_all_chunks(
         embedding_model_id=model_id,
     )
 
-    stored_embeddings = db_session.exec(
-        select(SampleEmbeddingTable).where(SampleEmbeddingTable.embedding_model_id == model_id)
-    ).all()
+    stored_embeddings = sample_embedding_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        embedding_model_id=model_id,
+    )
     assert len(stored_embeddings) == 3
 
 

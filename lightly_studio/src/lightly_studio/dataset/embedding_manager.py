@@ -236,22 +236,22 @@ class EmbeddingManager:
                 annotation_crops = annotation_resolver.get_annotation_crops_for_ids(
                     session=session, annotation_sample_ids=sample_id_chunk
                 )
-                if not annotation_crops.image_crops:
+                if not annotation_crops:
                     continue
 
                 embeddings = model.embed_image_crops(
-                    image_crops=annotation_crops.image_crops,
+                    image_crops=[crop.image_crop for crop in annotation_crops],
                     show_progress=False,
                 )
 
                 _store_embeddings(
                     session=session,
                     model_id=model_id,
-                    sample_ids=annotation_crops.annotation_sample_ids,
+                    sample_ids=[crop.annotation_sample_id for crop in annotation_crops],
                     embeddings=embeddings,
                     show_progress=False,
                 )
-                progress.update(len(annotation_crops.annotation_sample_ids))
+                progress.update(len(annotation_crops))
 
     def compute_image_embedding(
         self,
