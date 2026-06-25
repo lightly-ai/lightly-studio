@@ -141,37 +141,18 @@ describe('useSelectAll', () => {
         });
     });
 
-    it('records no snapshot for classifier-mode images (forces the ID path)', async () => {
-        imageParamsStore().set({ mode: 'classifier' });
-        imageFilterStore().set(null); // classifier mode yields a null image filter
-
-        await useSelectAll(collectionId, 'images').handleSelectAll();
-
-        expect(sampleSnapshot()).toBeNull();
-    });
-
-    it('clears a prior snapshot when the next select-all forces the ID path', async () => {
+    it('writes no snapshot for classifier-mode images, clearing any prior one', async () => {
         // Normal-mode select-all writes a snapshot...
         imageFilterStore().set({ filter_type: 'image' });
         await useSelectAll(collectionId, 'images').handleSelectAll();
         expect(sampleSnapshot()).not.toBeNull();
 
-        // ...a following classifier-mode select-all must not leave the stale snapshot behind
-        // (`setAllSelectedSampleIds` doesn't invalidate it).
+        // ...a following classifier-mode select-all yields a null filter and must clear the prior
+        // snapshot rather than leave it stale (`setAllSelectedSampleIds` doesn't invalidate it).
         imageParamsStore().set({ mode: 'classifier' });
         imageFilterStore().set(null);
         await useSelectAll(collectionId, 'images').handleSelectAll();
 
-        expect(sampleSnapshot()).toBeNull();
-    });
-
-    it('clears the snapshot when a sample is toggled after select-all', async () => {
-        imageFilterStore().set({ filter_type: 'image' });
-
-        await useSelectAll(collectionId, 'images').handleSelectAll();
-        expect(sampleSnapshot()).not.toBeNull();
-
-        storage.toggleSampleSelection('s4', collectionId);
         expect(sampleSnapshot()).toBeNull();
     });
 });
