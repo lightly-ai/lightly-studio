@@ -16,7 +16,7 @@ class TestFileOutcomeReport:
     def test_process_file__added(self) -> None:
         report = FileOutcomeReport()
 
-        outcome = report.process_file("a.jpg", lambda: FileOutcome.ADDED)
+        outcome = report.process_file(path="a.jpg", operation=lambda: FileOutcome.ADDED)
 
         assert outcome == FileOutcome.ADDED
         assert report.counts[FileOutcome.ADDED] == 1
@@ -25,7 +25,7 @@ class TestFileOutcomeReport:
     def test_process_file__already_present(self) -> None:
         report = FileOutcomeReport()
 
-        outcome = report.process_file("a.jpg", lambda: FileOutcome.ALREADY_PRESENT)
+        outcome = report.process_file(path="a.jpg", operation=lambda: FileOutcome.ALREADY_PRESENT)
 
         assert outcome == FileOutcome.ALREADY_PRESENT
         assert report.counts[FileOutcome.ALREADY_PRESENT] == 1
@@ -36,7 +36,7 @@ class TestFileOutcomeReport:
         def operation() -> FileOutcome:
             raise FileNotFoundError("a.jpg")
 
-        outcome = report.process_file("a.jpg", operation)
+        outcome = report.process_file(path="a.jpg", operation=operation)
 
         assert outcome is None
         assert report.counts[FileOutcome.MISSING] == 1
@@ -48,7 +48,7 @@ class TestFileOutcomeReport:
         def operation() -> FileOutcome:
             raise ValueError("cannot decode image")
 
-        outcome = report.process_file("a.jpg", operation)
+        outcome = report.process_file(path="a.jpg", operation=operation)
 
         assert outcome is None
         assert report.counts[FileOutcome.BROKEN] == 1
@@ -58,7 +58,7 @@ class TestFileOutcomeReport:
         # A bad item is recorded and skipped; no other outcome row is created.
         report = FileOutcomeReport()
 
-        report.process_file("bad.jpg", lambda: (_ for _ in ()).throw(OSError()))
+        report.process_file(path="bad.jpg", operation=lambda: (_ for _ in ()).throw(OSError()))
 
         assert report.counts[FileOutcome.ADDED] == 0
         assert report.counts[FileOutcome.ALREADY_PRESENT] == 0

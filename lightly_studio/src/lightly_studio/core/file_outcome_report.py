@@ -7,9 +7,9 @@ place instead of in N scattered try/except blocks.
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 from collections.abc import Callable
-from dataclasses import dataclass, field
 from enum import Enum
 
 from lightly_studio.errors import AllInputFilesFailedError
@@ -41,7 +41,7 @@ class FileOutcome(Enum):
 _ATTEMPTED_OUTCOMES = (FileOutcome.ADDED, FileOutcome.MISSING, FileOutcome.BROKEN)
 
 
-@dataclass
+@dataclasses.dataclass
 class FileOutcomeReport:
     """Per-run report recording one outcome per file and owning error-handling policy.
 
@@ -55,8 +55,10 @@ class FileOutcomeReport:
         example_paths: Up to `MAX_EXAMPLE_PATHS_PER_OUTCOME` example paths per outcome.
     """
 
-    counts: dict[FileOutcome, int] = field(default_factory=lambda: dict.fromkeys(FileOutcome, 0))
-    example_paths: dict[FileOutcome, list[str]] = field(
+    counts: dict[FileOutcome, int] = dataclasses.field(
+        default_factory=lambda: dict.fromkeys(FileOutcome, 0)
+    )
+    example_paths: dict[FileOutcome, list[str]] = dataclasses.field(
         default_factory=lambda: {outcome: [] for outcome in FileOutcome}
     )
 
