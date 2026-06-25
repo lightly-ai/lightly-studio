@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 filtered sample count.
 - Deduplication strategy is available in the Sampling Dialog in the GUI
 - Improve confusion matrix usability for large numbers of classes
+- Python dataset queries now support classifications, object detections, and segmentation mask annotations.
+- Python dataset queries now model evaluation queries on the sample level.
 
 ### Changed
 
