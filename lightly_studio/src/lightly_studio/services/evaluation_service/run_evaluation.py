@@ -48,7 +48,7 @@ def run_evaluation(  # noqa: PLR0913
     The task is selected by the concrete type of ``config`` (which also carries
     the task-specific options). ``filters`` scopes the evaluated samples; when
     omitted the whole collection is evaluated. ``name`` defaults to
-    ``"<task> <UTC timestamp>"`` (with microsecond precision so concurrent
+    ``"<task_type> <UTC timestamp>"`` (with microsecond precision so concurrent
     triggers don't collide on the ``(name, dataset_id)`` uniqueness constraint)
     when not provided.
 
@@ -87,9 +87,7 @@ def run_evaluation(  # noqa: PLR0913
         collection_id=root_collection.collection_id,
         sample_ids=sample_ids,
     )
-    run_name = (
-        name or f"{task_type.value} {datetime.now(timezone.utc):%Y-%m-%d %H:%M:%S.%f}"
-    )
+    run_name = name or f"{task_type.value} {datetime.now(timezone.utc):%Y-%m-%d %H:%M:%S.%f}"
 
     if isinstance(config, ObjectDetectionEvaluationConfig):
         return evaluator.object_detection(

@@ -5,6 +5,7 @@ import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import { SortDirection } from '$lib/api/lightly_studio_local';
 import type {
     AnnotationsFilter,
+    ConfusionCell,
     ImageFilter,
     QueryExpr,
     SampleFilter
@@ -87,6 +88,11 @@ const imageFilter = derived(
             sampleFilter.tag_ids = tagIds;
         }
 
+        const confusionCell = $filterParams.filters?.confusion_cell;
+        if (confusionCell) {
+            sampleFilter.confusion_cell = confusionCell;
+        }
+
         if ($filterParams.metadata_values) {
             const metadataFilters = createMetadataFilters($filterParams.metadata_values);
             if (metadataFilters.length > 0) {
@@ -145,6 +151,27 @@ export const useImageFilters = () => {
         filterParams.set(newParams);
     };
 
+    // updates only the confusion-matrix cell in the existing filter params
+    const updateConfusionCell = (confusionCell: ConfusionCell | null) => {
+        const params: ImagesInfiniteParams = {
+            ...get(filterParams)
+        };
+
+        if (params.mode !== 'normal') {
+            return;
+        }
+
+        const newParams: ImagesInfiniteParams = {
+            ...params,
+            filters: {
+                ...params.filters,
+                confusion_cell: confusionCell ?? undefined
+            }
+        };
+
+        filterParams.set(newParams);
+    };
+
     const updateSortBy = (sort: SortExpr[] | null) => {
         imageSortBy.set(sort);
     };
@@ -157,6 +184,7 @@ export const useImageFilters = () => {
         updateFilterParams,
         updateQueryExpr,
         updateSampleIds,
+        updateConfusionCell,
         updateSortBy
     };
 };

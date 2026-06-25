@@ -14,55 +14,17 @@ from lightly_studio.evaluation.image_dataset_evaluate import (
     ObjectDetectionEvaluationConfig,
 )
 from lightly_studio.models.annotation.annotation_base import AnnotationType
-from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_run import EvaluationTaskType
 from lightly_studio.resolvers import evaluation_run_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.services import evaluation_service
-from tests.helpers_resolvers import (
-    create_annotation,
-    create_annotation_label,
-    create_collection,
-    create_image,
-)
-
-
-def _create_dataset_with_annotations(
-    db_session: Session,
-    annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
-    image_widths: tuple[int, ...] = (1920,),
-) -> CollectionTable:
-    """Create a root image collection with 'gt'/'pred' annotation sources."""
-    root = create_collection(session=db_session)
-    label = create_annotation_label(session=db_session, root_collection_id=root.collection_id)
-    for source_name in ("gt", "pred"):
-        create_collection(
-            session=db_session,
-            collection_name=source_name,
-            parent_collection_id=root.collection_id,
-            sample_type=SampleType.ANNOTATION,
-        )
-    for index, width in enumerate(image_widths):
-        image = create_image(
-            session=db_session,
-            collection_id=root.collection_id,
-            file_path_abs=f"/path/to/sample_{index}.png",
-            width=width,
-        )
-        for source_name in ("gt", "pred"):
-            create_annotation(
-                session=db_session,
-                collection_id=root.collection_id,
-                sample_id=image.sample_id,
-                annotation_label_id=label.annotation_label_id,
-                annotation_type=annotation_type,
-                annotation_collection_name=source_name,
-            )
-    return root
+from tests.api.routes.api.evaluation import helpers
+from tests.helpers_resolvers import create_collection
 
 
 def test_run_evaluation__object_detection(db_session: Session) -> None:
-    root = _create_dataset_with_annotations(db_session)
+    root = helpers.create_dataset_with_annotations(db_session)
 
     result = evaluation_service.run_evaluation(
         session=db_session,
@@ -88,7 +50,7 @@ def test_run_evaluation__object_detection(db_session: Session) -> None:
 
 
 def test_run_evaluation__generates_default_name(db_session: Session) -> None:
-    root = _create_dataset_with_annotations(db_session)
+    root = helpers.create_dataset_with_annotations(db_session)
 
     evaluation_service.run_evaluation(
         session=db_session,
@@ -112,17 +74,13 @@ def test_run_evaluation__default_names_are_collision_safe(
     # down to the second, differing only in microseconds. Without sub-second
     # precision both would generate the same default name and the second run
     # would fail the (name, dataset_id) uniqueness constraint.
-    root = _create_dataset_with_annotations(db_session)
+    root = helpers.create_dataset_with_annotations(db_session)
     same_second = datetime(2026, 6, 25, 12, 0, 0, tzinfo=timezone.utc)
-    times = iter(
-        [same_second.replace(microsecond=1000), same_second.replace(microsecond=2000)]
-    )
+    times = iter([same_second.replace(microsecond=1000), same_second.replace(microsecond=2000)])
     run_evaluation_module = importlib.import_module(
         "lightly_studio.services.evaluation_service.run_evaluation"
     )
-    monkeypatch.setattr(
-        run_evaluation_module, "datetime", mock.Mock(now=lambda _tz: next(times))
-    )
+    monkeypatch.setattr(run_evaluation_module, "datetime", mock.Mock(now=lambda _tz: next(times)))
 
     for _ in range(2):
         evaluation_service.run_evaluation(
@@ -142,7 +100,7 @@ def test_run_evaluation__default_names_are_collision_safe(
 
 
 def test_run_evaluation__classification(db_session: Session) -> None:
-    root = _create_dataset_with_annotations(
+    root = helpers.create_dataset_with_annotations(
         db_session, annotation_type=AnnotationType.CLASSIFICATION
     )
 
@@ -163,7 +121,7 @@ def test_run_evaluation__classification(db_session: Session) -> None:
 
 
 def test_run_evaluation__respects_filter(db_session: Session) -> None:
-    root = _create_dataset_with_annotations(db_session, image_widths=(1920, 100))
+    root = helpers.create_dataset_with_annotations(db_session, image_widths=(1920, 100))
 
     result = evaluation_service.run_evaluation(
         session=db_session,
@@ -179,7 +137,7 @@ def test_run_evaluation__respects_filter(db_session: Session) -> None:
 
 
 def test_run_evaluation__same_source_raises(db_session: Session) -> None:
-    root = _create_dataset_with_annotations(db_session)
+    root = helpers.create_dataset_with_annotations(db_session)
 
     with pytest.raises(ValueError, match="must be different"):
         evaluation_service.run_evaluation(
@@ -194,7 +152,7 @@ def test_run_evaluation__same_source_raises(db_session: Session) -> None:
 
 def test_run_evaluation__wrong_annotation_type_raises(db_session: Session) -> None:
     # Sources hold object-detection annotations, but a classification run is requested.
-    root = _create_dataset_with_annotations(db_session)
+    root = helpers.create_dataset_with_annotations(db_session)
 
     with pytest.raises(ValueError, match="classification"):
         evaluation_service.run_evaluation(
@@ -208,7 +166,7 @@ def test_run_evaluation__wrong_annotation_type_raises(db_session: Session) -> No
 
 
 def test_run_evaluation__unknown_source_raises(db_session: Session) -> None:
-    root = _create_dataset_with_annotations(db_session)
+    root = helpers.create_dataset_with_annotations(db_session)
 
     with pytest.raises(ValueError, match="not found"):
         evaluation_service.run_evaluation(
