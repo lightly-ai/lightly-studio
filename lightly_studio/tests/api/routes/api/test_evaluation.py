@@ -95,7 +95,7 @@ def test_get_evaluation_sample_metrics_info(test_client: TestClient, mocker: Moc
         ),
     ]
     mocker.patch(
-        "lightly_studio.api.routes.api.evaluation.evaluation_sample_metric_resolver.get_sample_metrics_info_by_dataset_id",
+        "lightly_studio.api.routes.api.evaluation.get_sample_metrics_info.evaluation_sample_metric_resolver.get_sample_metrics_info_by_dataset_id",
         return_value=mock_result,
     )
 
@@ -123,7 +123,7 @@ def test_get_evaluation_sample_metrics_info__empty_response(
 ) -> None:
     dataset_id = uuid4()
     mocker.patch(
-        "lightly_studio.api.routes.api.evaluation.evaluation_sample_metric_resolver.get_sample_metrics_info_by_dataset_id",
+        "lightly_studio.api.routes.api.evaluation.get_sample_metrics_info.evaluation_sample_metric_resolver.get_sample_metrics_info_by_dataset_id",
         return_value=[],
     )
 
@@ -169,7 +169,7 @@ def test_get_evaluation_runs(
         ),
     ]
     mocker.patch(
-        "lightly_studio.api.routes.api.evaluation.evaluation_run_resolver.get_all_by_dataset_id",
+        "lightly_studio.api.routes.api.evaluation.get_runs.evaluation_run_resolver.get_all_by_dataset_id",
         return_value=mock_runs,
     )
 
@@ -202,7 +202,7 @@ def test_get_evaluation_runs__empty_response(
 ) -> None:
     dataset_id = uuid4()
     mocker.patch(
-        "lightly_studio.api.routes.api.evaluation.evaluation_run_resolver.get_all_by_dataset_id",
+        "lightly_studio.api.routes.api.evaluation.get_runs.evaluation_run_resolver.get_all_by_dataset_id",
         return_value=[],
     )
 
@@ -221,7 +221,7 @@ def test_get_evaluation_confusion_matrix(test_client: TestClient, mocker: Mocker
         counts=[[2, 0], [0, 1]],
     )
     mocker.patch(
-        "lightly_studio.api.routes.api.evaluation.evaluation_run_resolver.get_by_id",
+        "lightly_studio.api.routes.api.evaluation.get_confusion_matrix.evaluation_run_resolver.get_by_id",
         return_value=_make_evaluation_run(
             run_id=evaluation_run_id,
             name="run_1",
@@ -230,7 +230,7 @@ def test_get_evaluation_confusion_matrix(test_client: TestClient, mocker: Mocker
         ),
     )
     mock_resolver = mocker.patch(
-        "lightly_studio.api.routes.api.evaluation.evaluation_annotation_metric_resolver.get_confusion_matrix",
+        "lightly_studio.api.routes.api.evaluation.get_confusion_matrix.evaluation_annotation_metric_resolver.get_confusion_matrix",
         return_value=mock_matrix,
     )
 
@@ -332,7 +332,7 @@ def test_get_evaluation_confusion_matrix__empty_matrix(
     dataset_id = uuid4()
     evaluation_run_id = uuid4()
     mocker.patch(
-        "lightly_studio.api.routes.api.evaluation.evaluation_run_resolver.get_by_id",
+        "lightly_studio.api.routes.api.evaluation.get_confusion_matrix.evaluation_run_resolver.get_by_id",
         return_value=_make_evaluation_run(
             run_id=evaluation_run_id,
             name="run_1",
@@ -341,7 +341,7 @@ def test_get_evaluation_confusion_matrix__empty_matrix(
         ),
     )
     mocker.patch(
-        "lightly_studio.api.routes.api.evaluation.evaluation_annotation_metric_resolver.get_confusion_matrix",
+        "lightly_studio.api.routes.api.evaluation.get_confusion_matrix.evaluation_annotation_metric_resolver.get_confusion_matrix",
         return_value=ConfusionMatrix(
             row_labels=[],
             col_labels=[],
@@ -363,7 +363,7 @@ def test_get_evaluation_confusion_matrix__run_not_found(
     dataset_id = uuid4()
     evaluation_run_id = uuid4()
     mocker.patch(
-        "lightly_studio.api.routes.api.evaluation.evaluation_run_resolver.get_by_id",
+        "lightly_studio.api.routes.api.evaluation.get_confusion_matrix.evaluation_run_resolver.get_by_id",
         return_value=None,
     )
 
@@ -380,7 +380,7 @@ def test_get_evaluation_confusion_matrix__unsupported_task_type(
     dataset_id = uuid4()
     evaluation_run_id = uuid4()
     mocker.patch(
-        "lightly_studio.api.routes.api.evaluation.evaluation_run_resolver.get_by_id",
+        "lightly_studio.api.routes.api.evaluation.get_confusion_matrix.evaluation_run_resolver.get_by_id",
         return_value=_make_evaluation_run(
             run_id=evaluation_run_id,
             name="run_1",
@@ -390,7 +390,7 @@ def test_get_evaluation_confusion_matrix__unsupported_task_type(
         ),
     )
     mock_resolver = mocker.patch(
-        "lightly_studio.api.routes.api.evaluation.evaluation_annotation_metric_resolver.get_confusion_matrix",
+        "lightly_studio.api.routes.api.evaluation.get_confusion_matrix.evaluation_annotation_metric_resolver.get_confusion_matrix",
     )
 
     response = test_client.get(
