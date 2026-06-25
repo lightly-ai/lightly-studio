@@ -9,10 +9,12 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { readable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import TagsMenu from './TagsMenu.svelte';
+import type { TagByFilterBody } from '$lib/api/lightly_studio_local';
 import type { TagView } from '$lib/services/types';
 import { toast } from 'svelte-sonner';
 
-type SelectAllSnapshot = { filter: unknown; size: number };
+// Mirror the production snapshot type so a malformed filter fixture fails type-checking.
+type SelectAllSnapshot = { filter: TagByFilterBody['filter']; size: number };
 
 const mocks = vi.hoisted(() => ({
     tags: [] as TagView[],
@@ -130,6 +132,14 @@ describe('TagsMenu', () => {
         });
     });
 
+    // Drive the assign-input combobox to pick an existing tag by name.
+    async function pickExistingTag(query: string, optionLabel: string) {
+        const input = screen.getByPlaceholderText('Assign tag to selection');
+        await fireEvent.focus(input);
+        await fireEvent.input(input, { target: { value: query } });
+        await fireEvent.click(screen.getByRole('button', { name: optionLabel }));
+    }
+
     it('assigns an existing tag to the selected samples', async () => {
         mocks.selectedSampleIdsByCollection = {
             'collection-1': new Set(['sample-1', 'sample-2'])
@@ -142,10 +152,7 @@ describe('TagsMenu', () => {
             }
         });
 
-        const input = screen.getByPlaceholderText('Assign tag to selection');
-        await fireEvent.focus(input);
-        await fireEvent.input(input, { target: { value: 'veh' } });
-        await fireEvent.click(screen.getByRole('button', { name: 'Vehicle' }));
+        await pickExistingTag('veh', 'Vehicle');
 
         await waitFor(() => {
             expect(addSampleIdsToTagId).toHaveBeenCalledWith({
@@ -178,10 +185,7 @@ describe('TagsMenu', () => {
             }
         });
 
-        const input = screen.getByPlaceholderText('Assign tag to selection');
-        await fireEvent.focus(input);
-        await fireEvent.input(input, { target: { value: 'veh' } });
-        await fireEvent.click(screen.getByRole('button', { name: 'Vehicle' }));
+        await pickExistingTag('veh', 'Vehicle');
 
         await waitFor(() => {
             expect(addSamplesToTagByFilter).toHaveBeenCalledWith({
@@ -200,6 +204,7 @@ describe('TagsMenu', () => {
     });
 
     it('tags by the annotation filter when the annotation select-all is unmodified', async () => {
+        mocks.tags = [{ ...sampleTag, kind: 'annotation' }];
         mocks.selectedSampleAnnotationCropIds = {
             'collection-1': new Set(['annotation-1', 'annotation-2'])
         };
@@ -214,10 +219,7 @@ describe('TagsMenu', () => {
             }
         });
 
-        const input = screen.getByPlaceholderText('Assign tag to selection');
-        await fireEvent.focus(input);
-        await fireEvent.input(input, { target: { value: 'veh' } });
-        await fireEvent.click(screen.getByRole('button', { name: 'Vehicle' }));
+        await pickExistingTag('veh', 'Vehicle');
 
         await waitFor(() => {
             expect(addSamplesToTagByFilter).toHaveBeenCalledWith({
@@ -250,10 +252,7 @@ describe('TagsMenu', () => {
             }
         });
 
-        const input = screen.getByPlaceholderText('Assign tag to selection');
-        await fireEvent.focus(input);
-        await fireEvent.input(input, { target: { value: 'veh' } });
-        await fireEvent.click(screen.getByRole('button', { name: 'Vehicle' }));
+        await pickExistingTag('veh', 'Vehicle');
 
         await waitFor(() => {
             expect(addSampleIdsToTagId).toHaveBeenCalledWith({
@@ -337,10 +336,7 @@ describe('TagsMenu', () => {
             }
         });
 
-        const input = screen.getByPlaceholderText('Assign tag to selection');
-        await fireEvent.focus(input);
-        await fireEvent.input(input, { target: { value: 'veh' } });
-        await fireEvent.click(screen.getByRole('button', { name: 'Vehicle' }));
+        await pickExistingTag('veh', 'Vehicle');
 
         await waitFor(() => {
             expect(toast.error).toHaveBeenCalledWith('Failed to assign tag. Please try again.');
