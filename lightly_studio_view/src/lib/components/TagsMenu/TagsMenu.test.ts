@@ -13,7 +13,6 @@ import type { TagByFilterBody } from '$lib/api/lightly_studio_local';
 import type { TagView } from '$lib/services/types';
 import { toast } from 'svelte-sonner';
 
-// Mirror the production snapshot type so a malformed filter fixture fails type-checking.
 type SelectAllSnapshot = { filter: TagByFilterBody['filter']; size: number };
 
 const mocks = vi.hoisted(() => ({
@@ -132,7 +131,6 @@ describe('TagsMenu', () => {
         });
     });
 
-    // Drive the assign-input combobox to pick an existing tag by name.
     async function pickExistingTag(query: string, optionLabel: string) {
         const input = screen.getByPlaceholderText('Assign tag to selection');
         await fireEvent.focus(input);
@@ -240,7 +238,6 @@ describe('TagsMenu', () => {
         mocks.selectedSampleIdsByCollection = {
             'collection-1': new Set(['sample-1', 'sample-2'])
         };
-        // Stale snapshot from a larger select-all; the size backstop forces the ID path.
         mocks.selectAllSnapshotByCollection = {
             'collection-1': { filter: { filter_type: 'image' }, size: 5 }
         };
