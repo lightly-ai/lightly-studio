@@ -53,9 +53,8 @@
     let openActionsTagId = $state<string | null>(null);
     let suppressCloseAutoFocusTagId = $state<string | null>(null);
 
-    // Tag by filter when the selection is still an unmodified select-all (no IDs cross the wire —
-    // avoids a 413 at ~10M samples), else fall back to the materialized-ID path. The snapshot is
-    // keyed by `collection_id`, assuming one active grid (one `filter_type`) per collection.
+    // Tag by filter when the selection is still an unmodified select-all (do not send
+    // a potentially large ID list), else fall back to the ID-list path.
     function assignSelectionToTag(tag_id: string) {
         const snapshot = get(
             tagKind === 'annotation'
