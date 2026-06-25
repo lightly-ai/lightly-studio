@@ -77,7 +77,10 @@ sample-level filtering; for video datasets, use
 [`ObjectDetectionField`](../api/dataset_query.md#objectdetectionfield) to demonstrate annotation
 filtering. For the other annotation types, see
 [`ClassificationField`](../api/dataset_query.md#classificationfield) and
-[`SegmentationMaskField`](../api/dataset_query.md#segmentationmaskfield).
+[`SegmentationMaskField`](../api/dataset_query.md#segmentationmaskfield). For filtering by
+evaluation run metrics, see
+[`SampleEvaluationQuery`](../api/dataset_query.md#sampleevaluationquery) and
+[`EvaluationMetricField`](../api/dataset_query.md#evaluationmetricfield) in the reference below.
 ```py
 from lightly_studio.core.dataset_query import (
     AND,
@@ -103,7 +106,7 @@ query = dataset.match(
     )
 )
 # match (with annotations): Samples with at least one confident "person" detection
-# larger than 100 px tall, # in an image with 500 px or more width.
+# larger than 100 px tall, in an image with 500 px or more width.
 query = dataset.match(
     AND(
         ImageSampleField.width >= 500,
@@ -159,7 +162,12 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
     ```py
     query.match(<expression>)
     ```
-    To create an expression for filtering on certain sample fields, the `ImageSampleField.<field_name> <operator> <value>` syntax can be used. Available field names can be seen in [`ImageSampleField`](../api/dataset_query.md#lightly_studio.core.dataset_query.image_sample_field.ImageSampleField).
+
+    #### Sample queries
+
+    Sample-level queries use the `ImageSampleField.<field_name> <operator> <value>` syntax.
+    Available field names can be seen in
+    [`ImageSampleField`](../api/dataset_query.md#lightly_studio.core.dataset_query.image_sample_field.ImageSampleField).
 
     ```py
     from lightly_studio.core.dataset_query import ImageSampleField
@@ -179,6 +187,8 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
     # Assign any of the previous expressions to a query:
     query.match(expr)
     ```
+
+    #### Annotation queries
 
     Annotation queries use `ClassificationQuery(...)`, `ObjectDetectionQuery(...)`, and
     `SegmentationMaskQuery(...)`. Each helper matches a sample when it has at least one
@@ -223,6 +233,48 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
         SegmentationMaskField.height >= 80,
     )
 
+    # Assign any of the previous expressions to a query:
+    query.match(expr)
+    ```
+
+    #### Sample evaluation queries
+
+    Sample evaluation queries use `SampleEvaluationQuery(...)` together with
+    `EvaluationMetricField(...)` to filter samples by metrics from a specific evaluation run.
+    They match only samples that are part of the named run and satisfy all passed metric
+    criteria.
+
+    ```py
+    from lightly_studio.core.dataset_query import (
+        AND,
+        EvaluationMetricField,
+        ImageSampleField,
+        SampleEvaluationQuery,
+    )
+
+    # Metric operators: <, <=, >, >=, ==, !=
+    expr = SampleEvaluationQuery(
+        "run1",
+        EvaluationMetricField("score") > 0.5,
+    )
+
+    # Multiple metrics inside SampleEvaluationQuery are combined with AND
+    expr = SampleEvaluationQuery(
+        "run1",
+        EvaluationMetricField("precision") > 0.5,
+        EvaluationMetricField("recall") > 0.5,
+    )
+
+    # Evaluation queries can be combined with sample-level filters
+    expr = AND(
+        ImageSampleField.tags.contains("reviewed"),
+        SampleEvaluationQuery(
+            "run1",
+            EvaluationMetricField("score") >= 0.8,
+        ),
+    )
+
+    # Assign any of the previous expressions to a query:
     query.match(expr)
     ```
 
@@ -287,11 +339,18 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
     query.order_by(<expression>)
     ```
 
-    The order expression can be defined by `OrderByField(ImageSampleField.<field_name>).<order_direction>()`.
+    The order expression can be defined by
+    `OrderByField(ImageSampleField.<field_name>).<order_direction>()` for sample fields or
+    `OrderByEvaluationMetricField("<run_name>", "<metric_name>").<order_direction>()` for
+    evaluation metrics.
 
 
     ```py
-    from lightly_studio.core.dataset_query import OrderByField, ImageSampleField
+    from lightly_studio.core.dataset_query import (
+        ImageSampleField,
+        OrderByEvaluationMetricField,
+        OrderByField,
+    )
 
     # Sort the query by the width of the image in ascending order
     expr = OrderByField(ImageSampleField.width)
@@ -299,6 +358,9 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
 
     # Sort the query by the file name in descending order
     expr = OrderByField(ImageSampleField.file_name).desc()
+
+    # Sort the query by an evaluation metric in descending order
+    expr = OrderByEvaluationMetricField("run1", "score").desc()
 
     # Assign any of the previous expressions to a query:
     query.order_by(expr)
