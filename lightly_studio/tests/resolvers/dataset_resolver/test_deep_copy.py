@@ -449,9 +449,10 @@ def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:
 def test_deep_copy__with_evaluation_sample_metrics(db_session: Session) -> None:
     # Arrange
     dataset = create_collection(session=db_session, collection_name="original")
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(
+    run = evaluation_sample_metric_helpers.create_run(
         db_session, dataset_collection_id=dataset.collection_id
     )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
     evaluation_sample_metric_resolver.create_many(
         session=db_session,
         records=[
@@ -767,9 +768,10 @@ def test_deep_copy__with_evaluation_runs(db_session: Session) -> None:
 def test_deep_copy__with_evaluation_annotation_metrics(db_session: Session) -> None:
     # Arrange
     dataset = create_collection(session=db_session, collection_name="original")
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(
+    run = evaluation_sample_metric_helpers.create_run(
         db_session, dataset_collection_id=dataset.collection_id
     )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
     label = create_annotation_label(session=db_session, root_collection_id=dataset.collection_id)
     gt_annotation = create_annotation(
         session=db_session,
