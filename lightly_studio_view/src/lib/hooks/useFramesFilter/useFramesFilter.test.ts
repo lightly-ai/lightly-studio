@@ -10,26 +10,10 @@ describe('useFramesFilter', () => {
     });
 
     describe('frameFilter store', () => {
-        it('returns null when collection_id is missing', () => {
-            const { frameFilter, updateFilterParams } = useFramesFilter();
-
-            updateFilterParams({ collection_id: '' });
-
-            expect(get(frameFilter)).toBeNull();
-        });
-
-        it('derives minimal filter when collection_id is set', () => {
-            const { frameFilter, updateFilterParams } = useFramesFilter();
-
-            updateFilterParams({ collection_id: 'coll-1' });
-
-            expect(get(frameFilter)).toEqual({
-                filter_type: 'video_frame',
-                frame_number: {}
-            });
-        });
-
-        it('reflects frame_bounds and video_id', () => {
+        // Branch-level coverage of the mapping lives in frameFilter.test.ts.
+        // Here we only verify the derived store is wired to getFrameFilter and
+        // re-emits when params change.
+        it('derives the filter from params via getFrameFilter', () => {
             const { frameFilter, updateFilterParams } = useFramesFilter();
 
             updateFilterParams({
@@ -39,6 +23,7 @@ describe('useFramesFilter', () => {
             });
 
             expect(get(frameFilter)).toMatchObject({
+                filter_type: 'video_frame',
                 video_id: 'vid-9',
                 frame_number: { min: 5, max: 10 }
             });
@@ -86,6 +71,25 @@ describe('useFramesFilter', () => {
             expect(get(frameFilter)?.sample_filter).toMatchObject({
                 sample_ids: ['sample-a', 'sample-b'],
                 tag_ids: ['tag-1']
+            });
+        });
+
+        it('preserves video_id and frame_bounds when updating sample_ids', async () => {
+            const { filterParams, updateFilterParams, updateSampleIds } = useFramesFilter();
+
+            updateFilterParams({
+                collection_id: 'coll-1',
+                video_id: 'vid-9',
+                frame_bounds: { frame_number: { min: 5, max: 10 } }
+            });
+
+            updateSampleIds(['sample-a']);
+
+            await waitFor(() => {
+                const params = get(filterParams);
+                expect(params?.video_id).toBe('vid-9');
+                expect(params?.frame_bounds).toEqual({ frame_number: { min: 5, max: 10 } });
+                expect(params?.filters?.sample_ids).toEqual(['sample-a']);
             });
         });
 

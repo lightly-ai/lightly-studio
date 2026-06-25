@@ -13,7 +13,6 @@ import { fetchSampleIdsForVideos } from './fetchSampleIdsForVideos';
 import { fetchSampleIdsForVideoFrames } from './fetchSampleIdsForVideoFrames';
 import { fetchSampleIdsForAnnotations } from './fetchSampleIdsForAnnotations';
 
-/** Payload the by-filter tag endpoint accepts: a `filter_type`-discriminated union of grid filters. */
 type SnapshotFilter = TagByFilterBody['filter'];
 
 /** Discriminator for each by-filter-taggable grid, used to normalize a no-condition select-all. */
