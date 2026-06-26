@@ -19,6 +19,7 @@ filtered sample count.
 - Improve confusion matrix usability for large numbers of classes
 - Python dataset queries now support classifications, object detections, and segmentation mask annotations.
 - Python dataset queries now model evaluation queries on the sample level.
+- Improved performance when tagging all samples in the GUI for large datasets.
 
 ### Changed
 
