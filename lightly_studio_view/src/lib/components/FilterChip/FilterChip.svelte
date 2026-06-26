@@ -36,12 +36,12 @@
                 data-testid={testId ? `${testId}-body` : undefined}
                 {onclick}
             >
-                <div class="truncate text-sm font-medium">{title}</div>
+                <div class="truncate text-sm font-medium" {title}>{title}</div>
                 {#if subtitle}{@render subtitle()}{/if}
             </button>
         {:else}
             <div class="min-w-0 flex-1">
-                <div class="truncate text-sm font-medium">{title}</div>
+                <div class="truncate text-sm font-medium" {title}>{title}</div>
                 {#if subtitle}{@render subtitle()}{/if}
             </div>
         {/if}
