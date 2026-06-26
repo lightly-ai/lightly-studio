@@ -13,8 +13,9 @@ from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests import helpers_resolvers
 from tests.helpers_resolvers import AnnotationDetails
 from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
+    SampleMetricStub,
     create_run_and_image,
-    insert_metrics,
+    create_sample_metrics,
 )
 
 
@@ -408,9 +409,15 @@ def test_get_adjacent_images__sort_by_evaluation_metric(db_session: Session) -> 
     )
 
     # score order: b(1) < c(2) < a(3), so sorted sequence is b, c, a
-    insert_metrics(db_session, run.id, image_a.sample_id, {"score": 3.0})
-    insert_metrics(db_session, run.id, image_b.sample_id, {"score": 1.0})
-    insert_metrics(db_session, run.id, image_c.sample_id, {"score": 2.0})
+    create_sample_metrics(
+        session=db_session,
+        run_id=run.id,
+        sample_metrics=[
+            SampleMetricStub(sample_id=image_a.sample_id, metrics={"score": 3.0}),
+            SampleMetricStub(sample_id=image_b.sample_id, metrics={"score": 1.0}),
+            SampleMetricStub(sample_id=image_c.sample_id, metrics={"score": 2.0}),
+        ],
+    )
 
     result = image_resolver.get_adjacent_images(
         session=db_session,

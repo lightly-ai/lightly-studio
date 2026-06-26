@@ -8,9 +8,27 @@
     import AnnotationColorLegend from '../AnnotationColorLegend/AnnotationColorLegend.svelte';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import { useSettings } from '$lib/hooks/useSettings';
+    import { useAnnotationClassVisibility } from '$lib/hooks';
+    import LabelVisibilityToggle from './LabelVisibilityToggle/LabelVisibilityToggle.svelte';
+
+    interface Props {
+        /** A list of filtered annotations */
+        annotationFilterRows: Readable<Annotation[]>;
+        /** Called when the user toggles an annotation class filter checkbox */
+        onToggleAnnotationFilter: (label: string) => void;
+        /** Whether to show the label visibility toggle */
+        showVisibilityToggle?: boolean;
+    }
+
+    let {
+        annotationFilterRows,
+        onToggleAnnotationFilter,
+        showVisibilityToggle = false
+    }: Props = $props();
 
     const { selectedCollectionIds } = useAnnotationCollectionsFilter();
     const { enforceColoringByClassStore } = useSettings();
+    const { hiddenClassNamesStore, toggleClassVisibility } = useAnnotationClassVisibility();
 
     const showClassColorLegend = $derived(
         !resolveEffectiveColorBySource({
@@ -18,14 +36,6 @@
             enforceColoringByClass: $enforceColoringByClassStore
         })
     );
-
-    let {
-        annotationFilterRows,
-        onToggleAnnotationFilter
-    }: {
-        annotationFilterRows: Readable<Annotation[]>;
-        onToggleAnnotationFilter: (label: string) => void;
-    } = $props();
 </script>
 
 <Segment title="Annotation Classes">
@@ -44,7 +54,8 @@
             </p>
         {:else}
             {#each $annotationFilterRows as { label_name, current_count, total_count, selected } (label_name)}
-                <div class="width-full flex items-center space-x-2" title={label_name}>
+                {@const isHidden = $hiddenClassNamesStore.includes(label_name)}
+                <div class="width-full group flex items-center space-x-2" title={label_name}>
                     <Checkbox
                         id={label_name}
                         checked={selected}
@@ -82,6 +93,14 @@
                             >
                         {/if}
                     </Label>
+
+                    {#if showVisibilityToggle}
+                        <LabelVisibilityToggle
+                            {isHidden}
+                            labelName={label_name}
+                            {toggleClassVisibility}
+                        />
+                    {/if}
                 </div>
             {/each}
         {/if}

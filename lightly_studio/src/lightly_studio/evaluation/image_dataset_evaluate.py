@@ -233,7 +233,7 @@ class ImageDatasetEvaluate:
             config_json=config_json,
         )
 
-        selected_sample_ids = set(self.sample_ids)
+        selected_sample_ids = self.sample_ids
         gt_covered_sample_ids = set(
             annotation_collection_coverage_resolver.list_by_collection_id(
                 session=self.session,
