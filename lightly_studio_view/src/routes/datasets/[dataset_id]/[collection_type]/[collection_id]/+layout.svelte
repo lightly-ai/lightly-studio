@@ -114,6 +114,9 @@
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
     const isVideoDetails = $derived(isVideoDetailsRoute(page.route.id));
     const canSelectAll = $derived(isImages || isVideos || isVideoFrames || isAnnotations);
+    const showAnnotationVisibilityToggle = $derived(
+        isAnnotations || isImages || isVideos || isVideoFrames
+    );
 
     let gridType = $state<GridType>('images');
     let lastCollectionId: string | null = null;
@@ -361,10 +364,7 @@
                             <LabelsMenu
                                 {annotationFilterRows}
                                 onToggleAnnotationFilter={toggleAnnotationFilterSelection}
-                                showVisibilityToggle={isAnnotations ||
-                                    isImages ||
-                                    isVideos ||
-                                    isVideoFrames}
+                                showVisibilityToggle={showAnnotationVisibilityToggle}
                             />
 
                             {#if isImages || isVideos || isVideoFrames}
