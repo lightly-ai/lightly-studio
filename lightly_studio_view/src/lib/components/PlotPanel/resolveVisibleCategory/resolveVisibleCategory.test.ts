@@ -29,4 +29,24 @@ describe('resolveVisibleCategory', () => {
     it('ignores the filter when resolving a hidden fallback', () => {
         expect(resolveVisibleCategory([3, 4, 5], 1, new Set([3, 4]))).toBe(5);
     });
+
+    it('routes to HIDDEN_CATEGORY (0) when filtered out and EXCLUDED is hidden', () => {
+        expect(resolveVisibleCategory([3, 4], 0, new Set([1]))).toBe(0);
+    });
+
+    it('routes to HIDDEN_CATEGORY (0) when the point has no categories and INCLUDED is hidden', () => {
+        expect(resolveVisibleCategory([], 1, new Set([2]))).toBe(0);
+    });
+
+    it('routes to HIDDEN_CATEGORY (0) when all colored categories and INCLUDED are hidden', () => {
+        expect(resolveVisibleCategory([3, 4], 1, new Set([3, 4, 2]))).toBe(0);
+    });
+
+    it('falls back to a visible colored category even when INCLUDED is hidden', () => {
+        expect(resolveVisibleCategory([3, 4], 1, new Set([3, 2]))).toBe(4);
+    });
+
+    it('still returns EXCLUDED (1) when filtered out and EXCLUDED is visible', () => {
+        expect(resolveVisibleCategory([3], 0, new Set([2]))).toBe(1);
+    });
 });
