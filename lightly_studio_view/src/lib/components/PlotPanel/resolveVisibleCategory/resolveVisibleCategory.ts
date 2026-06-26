@@ -6,15 +6,11 @@ import {
 
 /**
  * Resolves the category a point is displayed as, given every category it belongs to in
- * priority order. Hidden categories are skipped so a multi-category point falls back to
- * its next visible category. When the reserved non-categorical row a point would resolve
- * to is itself hidden, the point is routed to HIDDEN_CATEGORY (transparent, not rendered,
- * not selectable):
- * - point does not fulfil the filter -> EXCLUDED_BY_FILTERS_CATEGORY,
- *   or HIDDEN_CATEGORY if that row is hidden
- * - otherwise the first category that is not hidden
- * - otherwise (no categories, or all hidden) -> INCLUDED_BY_FILTERS_CATEGORY (no category),
- *   or HIDDEN_CATEGORY if that row is hidden
+ * priority order. A multi-category point falls back to its next visible category, and a
+ * point whose resolved category is hidden routes to HIDDEN_CATEGORY (not rendered):
+ * - filtered out -> EXCLUDED_BY_FILTERS_CATEGORY
+ * - otherwise the first non-hidden category
+ * - otherwise (no categories, or all hidden) -> INCLUDED_BY_FILTERS_CATEGORY
  *
  * @param colorCategories - All categories the point belongs to, in priority order
  * @param fulfilsFilter - Whether the point passes the active filter (0 = filtered out)
