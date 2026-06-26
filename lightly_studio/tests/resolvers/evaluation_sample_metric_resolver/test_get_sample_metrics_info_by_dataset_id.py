@@ -19,6 +19,7 @@ from tests.helpers_resolvers import create_collection, create_image
 from tests.resolvers.evaluation_sample_metric_resolver import (
     helpers as evaluation_sample_metric_helpers,
 )
+from tests.resolvers.evaluation_sample_metric_resolver.helpers import SampleMetricStub
 
 
 def _create_named_run_and_image(
@@ -60,17 +61,25 @@ def test_get_sample_metrics_info_by_dataset_id(db_session: Session) -> None:
         collection_id=dataset.collection_id,
         file_path_abs="/path/to/sample2.png",
     )
-    evaluation_sample_metric_helpers.insert_metrics(
+    evaluation_sample_metric_helpers.create_sample_metrics(
         session=db_session,
-        evaluation_run_id=run.id,
-        sample_id=image1.sample_id,
-        metrics={"precision": 0.9, "recall": 0.7},
+        run_id=run.id,
+        sample_metrics=[
+            SampleMetricStub(
+                sample_id=image1.sample_id,
+                metrics={"precision": 0.9, "recall": 0.7},
+            )
+        ],
     )
-    evaluation_sample_metric_helpers.insert_metrics(
+    evaluation_sample_metric_helpers.create_sample_metrics(
         session=db_session,
-        evaluation_run_id=run.id,
-        sample_id=image2.sample_id,
-        metrics={"precision": 0.6, "recall": 0.8},
+        run_id=run.id,
+        sample_metrics=[
+            SampleMetricStub(
+                sample_id=image2.sample_id,
+                metrics={"precision": 0.6, "recall": 0.8},
+            )
+        ],
     )
 
     results = evaluation_sample_metric_resolver.get_sample_metrics_info_by_dataset_id(
@@ -96,17 +105,17 @@ def test_get_sample_metrics_info_by_dataset_id__multiple_runs(db_session: Sessio
     run2, image2 = _create_named_run_and_image(
         session=db_session, dataset_collection_id=dataset.collection_id, name="run_2"
     )
-    evaluation_sample_metric_helpers.insert_metrics(
+    evaluation_sample_metric_helpers.create_sample_metrics(
         session=db_session,
-        evaluation_run_id=run1.id,
-        sample_id=image1.sample_id,
-        metrics={"ap": 0.9},
+        run_id=run1.id,
+        sample_metrics=[SampleMetricStub(sample_id=image1.sample_id, metrics={"ap": 0.9})],
     )
-    evaluation_sample_metric_helpers.insert_metrics(
+    evaluation_sample_metric_helpers.create_sample_metrics(
         session=db_session,
-        evaluation_run_id=run2.id,
-        sample_id=image2.sample_id,
-        metrics={"ap": 0.5, "ar": 0.4},
+        run_id=run2.id,
+        sample_metrics=[
+            SampleMetricStub(sample_id=image2.sample_id, metrics={"ap": 0.5, "ar": 0.4})
+        ],
     )
 
     results = evaluation_sample_metric_resolver.get_sample_metrics_info_by_dataset_id(
@@ -142,17 +151,15 @@ def test_get_sample_metrics_info_by_dataset_id__excludes_other_datasets(
     other_run, other_image = evaluation_sample_metric_helpers.create_run_and_image(
         session=db_session, dataset_collection_id=other_dataset.collection_id
     )
-    evaluation_sample_metric_helpers.insert_metrics(
+    evaluation_sample_metric_helpers.create_sample_metrics(
         session=db_session,
-        evaluation_run_id=run.id,
-        sample_id=image.sample_id,
-        metrics={"ap": 0.9},
+        run_id=run.id,
+        sample_metrics=[SampleMetricStub(sample_id=image.sample_id, metrics={"ap": 0.9})],
     )
-    evaluation_sample_metric_helpers.insert_metrics(
+    evaluation_sample_metric_helpers.create_sample_metrics(
         session=db_session,
-        evaluation_run_id=other_run.id,
-        sample_id=other_image.sample_id,
-        metrics={"ap": 0.1},
+        run_id=other_run.id,
+        sample_metrics=[SampleMetricStub(sample_id=other_image.sample_id, metrics={"ap": 0.1})],
     )
 
     results = evaluation_sample_metric_resolver.get_sample_metrics_info_by_dataset_id(

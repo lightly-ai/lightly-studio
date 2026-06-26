@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
 from lightly_studio.models.evaluation_run import (
@@ -20,6 +20,25 @@ from lightly_studio.resolvers import (
     evaluation_sample_metric_resolver,
 )
 from tests.helpers_resolvers import create_collection, create_image
+
+
+@dataclass
+class AnnotationMetricStub:
+    """Helper class to represent an annotation-level evaluation metric."""
+
+    sample_id: UUID
+    metric_name: str
+    value: float
+    pred_annotation_id: UUID | None = None
+    gt_annotation_id: UUID | None = None
+
+
+@dataclass
+class SampleMetricStub:
+    """Helper class to represent a sample-level evaluation metric."""
+
+    sample_id: UUID
+    metrics: dict[str, float]
 
 
 def create_run_and_image(
@@ -53,53 +72,44 @@ def create_run_and_image(
     return run, image
 
 
-def create_evaluation_metrics(
+def create_sample_metrics(
     session: Session,
     run_id: UUID,
-    pred_annotation: AnnotationBaseTable,
-    gt_annotation: AnnotationBaseTable,
+    sample_metrics: list[SampleMetricStub] | None = None,
 ) -> None:
+    sample_metrics = sample_metrics or []
+    evaluation_sample_metric_resolver.create_many(
+        session=session,
+        records=[
+            EvaluationSampleMetricCreate(
+                evaluation_run_id=run_id,
+                sample_id=stub.sample_id,
+                metric_name=metric,
+                value=value,
+            )
+            for stub in sample_metrics
+            for metric, value in stub.metrics.items()
+        ],
+    )
+
+
+def create_annotation_metrics(
+    session: Session,
+    run_id: UUID,
+    annotation_metrics: list[AnnotationMetricStub] | None = None,
+) -> None:
+    annotation_metrics = annotation_metrics or []
     evaluation_annotation_metric_resolver.create_many(
         session=session,
         records=[
             EvaluationAnnotationMetricCreate(
                 evaluation_run_id=run_id,
-                sample_id=pred_annotation.parent_sample_id,
-                pred_annotation_id=pred_annotation.sample_id,
-                gt_annotation_id=gt_annotation.sample_id,
-                metric_name="iou",
-                value=0.75,
+                sample_id=metric.sample_id,
+                pred_annotation_id=metric.pred_annotation_id,
+                gt_annotation_id=metric.gt_annotation_id,
+                metric_name=metric.metric_name,
+                value=metric.value,
             )
-        ],
-    )
-    evaluation_sample_metric_resolver.create_many(
-        session=session,
-        records=[
-            EvaluationSampleMetricCreate(
-                evaluation_run_id=run_id,
-                sample_id=pred_annotation.parent_sample_id,
-                metric_name="score",
-                value=0.5,
-            )
-        ],
-    )
-
-
-def insert_metrics(
-    session: Session,
-    evaluation_run_id: UUID,
-    sample_id: UUID,
-    metrics: dict[str, float],
-) -> None:
-    evaluation_sample_metric_resolver.create_many(
-        session=session,
-        records=[
-            EvaluationSampleMetricCreate(
-                evaluation_run_id=evaluation_run_id,
-                sample_id=sample_id,
-                metric_name=name,
-                value=value,
-            )
-            for name, value in metrics.items()
+            for metric in annotation_metrics
         ],
     )
