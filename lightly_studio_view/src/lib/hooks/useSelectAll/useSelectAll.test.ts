@@ -1,14 +1,21 @@
 import { get, type Writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// `ids` controls the IDs the stubbed fetch modules return.
-const fetchState = vi.hoisted(() => ({ ids: ['s1', 's2', 's3'] }));
+// `ids` controls the IDs the stubbed fetch modules return. `gate`, when set, holds the image fetch
+// in flight until it resolves — letting a test interleave a store mutation with an unfinished fetch.
+const fetchState = vi.hoisted(() => ({
+    ids: ['s1', 's2', 's3'] as string[],
+    gate: null as Promise<void> | null
+}));
 
 vi.mock('svelte-sonner', () => ({
     toast: { loading: vi.fn(), success: vi.fn(), error: vi.fn() }
 }));
 vi.mock('./fetchSampleIdsForImages', () => ({
-    fetchSampleIdsForImages: vi.fn(() => Promise.resolve(fetchState.ids))
+    fetchSampleIdsForImages: vi.fn(async () => {
+        if (fetchState.gate) await fetchState.gate;
+        return fetchState.ids;
+    })
 }));
 vi.mock('./fetchSampleIdsForVideos', () => ({
     fetchSampleIdsForVideos: vi.fn(() => Promise.resolve(fetchState.ids))
@@ -80,6 +87,7 @@ describe('useSelectAll', () => {
         storage.clearSelectedSampleAnnotationCrops(collectionId);
 
         fetchState.ids = ['s1', 's2', 's3'];
+        fetchState.gate = null;
         imageParamsStore().set({ mode: 'normal' });
         imageFilterStore().set(null);
         videoParamsStore().set(null);
@@ -139,6 +147,32 @@ describe('useSelectAll', () => {
             filter: { filter_type: 'annotations' },
             size: 3
         });
+    });
+
+    it('snapshots the filter captured at call time, not one changed mid-fetch', async () => {
+        const originalFilter = {
+            filter_type: 'image',
+            sample_filter: { tag_ids: ['original'] }
+        };
+        imageFilterStore().set(originalFilter);
+
+        // Hold the fetch open so the store can be mutated while it is still in flight.
+        let releaseFetch!: () => void;
+        fetchState.gate = new Promise<void>((resolve) => {
+            releaseFetch = resolve;
+        });
+
+        const pending = useSelectAll(collectionId, 'images').handleSelectAll();
+
+        // The user switches to a different filter before the fetch completes.
+        imageFilterStore().set({ filter_type: 'image', sample_filter: { tag_ids: ['changed'] } });
+
+        releaseFetch();
+        await pending;
+
+        // `resolveGrid` captured the filter synchronously, so the snapshot reflects the original
+        // filter — not the value set mid-fetch.
+        expect(sampleSnapshot()).toEqual({ filter: originalFilter, size: 3 });
     });
 
     it('writes no snapshot for classifier-mode images, clearing any prior one', async () => {
