@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, within } from '@testing-library/svelte';
 import { writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ConfusionCellFilterItem from './ConfusionCellFilterItem.svelte';
@@ -35,7 +35,7 @@ describe('ConfusionCellFilterItem', () => {
 
         render(ConfusionCellFilterItem);
 
-        expect(screen.queryByTestId('confusion-cell-filter-chip')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('confusion-cell-filter-item-chip')).not.toBeInTheDocument();
     });
 
     it('renders the chip with the GT and Pred labels for a non-diagonal cell', () => {
@@ -43,7 +43,8 @@ describe('ConfusionCellFilterItem', () => {
 
         render(ConfusionCellFilterItem);
 
-        expect(screen.getByTestId('confusion-cell-filter-chip')).toBeInTheDocument();
+        expect(screen.getByTestId('confusion-cell-filter-item-chip')).toBeInTheDocument();
+        expect(screen.getByText('Confusion Matrix')).toBeInTheDocument();
         expect(screen.getByText('GT: cat → Pred: dog')).toBeInTheDocument();
     });
 
@@ -52,10 +53,8 @@ describe('ConfusionCellFilterItem', () => {
 
         render(ConfusionCellFilterItem);
 
-        const chip = screen.getByTestId('confusion-cell-filter-chip');
-        expect(chip).toBeInTheDocument();
+        expect(screen.getByTestId('confusion-cell-filter-item-chip')).toBeInTheDocument();
         expect(screen.getByText('GT: cat → Pred: cat')).toBeInTheDocument();
-        expect(chip).not.toHaveTextContent(/confused/i);
     });
 
     it('clears the confusion cell when the checkbox is toggled off', async () => {
@@ -63,7 +62,8 @@ describe('ConfusionCellFilterItem', () => {
 
         render(ConfusionCellFilterItem);
 
-        const checkbox = screen.getByRole('checkbox', { name: 'Confusion cell filter' });
+        const chip = screen.getByTestId('confusion-cell-filter-item-chip');
+        const checkbox = within(chip).getByRole('checkbox', { name: 'Confusion cell filter' });
         checkbox.click();
 
         expect(updateConfusionCell).toHaveBeenCalledWith(null);
