@@ -11,6 +11,8 @@
     } from '$lib/components/Select';
     import * as Tabs from '$lib/components/ui/tabs/index.js';
     import { useTags } from '$lib/hooks/useTags/useTags';
+    import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
+    import AnnotationSourceSelect from '$lib/components/AnnotationSourceSelect/AnnotationSourceSelect.svelte';
     import { exportCollection } from '$lib/services/exportCollection';
     import type { ExportFilter } from '$lib/services/types';
     import { useExportSamplesCount } from './useExportSamplesCount/useExportSamplesCount';
@@ -52,6 +54,20 @@
     };
     const exportTypeTriggerContent = $derived(exportTypeLabels[exportType]);
     let collectionId = page.params.collection_id;
+
+    //
+    // Annotation source selection
+    //
+    const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
+    const annotationSources = $derived(
+        (annotationCollectionsQuery.data ?? []).map((c) => ({ id: c.collection_id, name: c.name }))
+    );
+    let selectedAnnotationCollectionId = $state<string | undefined>(undefined);
+    const annotationCollectionParam = $derived(
+        selectedAnnotationCollectionId
+            ? `&annotation_collection_id=${selectedAnnotationCollectionId}`
+            : ''
+    );
 
     //
     // Sample export
@@ -121,12 +137,16 @@
     //
     // Annotation export
     //
-    const exportAnnotationsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=object_detection_coco`;
+    const exportAnnotationsURL = $derived(
+        `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=object_detection_coco${annotationCollectionParam}`
+    );
 
     //
     // Segmentation mask export
     //
-    const exportSegmentationMaskURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=segmentation_mask_coco`;
+    const exportSegmentationMaskURL = $derived(
+        `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=segmentation_mask_coco${annotationCollectionParam}`
+    );
 
     //
     // YouTube-VIS video Segmentation mask export
@@ -134,7 +154,9 @@
     const exportYoutubeVisSegmentationMaskURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/youtube-vis?ts=${Date.now()}&export_format=youtube_vis_segmentation`;
     // Semantic segmentation export
     //
-    const exportPascalVocURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=pascal_voc`;
+    const exportPascalVocURL = $derived(
+        `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=pascal_voc${annotationCollectionParam}`
+    );
 
     //
     // Caption export
@@ -314,6 +336,17 @@
                             The object detection annotations will be exported in COCO format.
                         </p>
 
+                        {#if annotationSources.length > 1}
+                            <div class="mt-3">
+                                <FormField label="Annotation Source">
+                                    <AnnotationSourceSelect
+                                        sourceOptions={annotationSources}
+                                        bind:selectedSource={selectedAnnotationCollectionId}
+                                    />
+                                </FormField>
+                            </div>
+                        {/if}
+
                         <Button
                             class="relative my-4 w-full"
                             href={exportAnnotationsURL}
@@ -328,6 +361,17 @@
                         <p class="text-sm text-muted-foreground">
                             The segmentation masks will be exported in COCO format.
                         </p>
+
+                        {#if annotationSources.length > 1}
+                            <div class="mt-3">
+                                <FormField label="Annotation Source">
+                                    <AnnotationSourceSelect
+                                        sourceOptions={annotationSources}
+                                        bind:selectedSource={selectedAnnotationCollectionId}
+                                    />
+                                </FormField>
+                            </div>
+                        {/if}
 
                         <Button
                             class="relative my-4 w-full"
@@ -359,6 +403,17 @@
                         <p class="text-sm text-muted-foreground">
                             The semantic segmentations will be exported in PASCAL VOC format.
                         </p>
+
+                        {#if annotationSources.length > 1}
+                            <div class="mt-3">
+                                <FormField label="Annotation Source">
+                                    <AnnotationSourceSelect
+                                        sourceOptions={annotationSources}
+                                        bind:selectedSource={selectedAnnotationCollectionId}
+                                    />
+                                </FormField>
+                            </div>
+                        {/if}
 
                         <Button
                             class="relative my-4 w-full"
