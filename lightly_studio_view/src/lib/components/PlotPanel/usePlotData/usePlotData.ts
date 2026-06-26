@@ -4,9 +4,18 @@ import type { ComponentProps } from 'svelte';
 import type { ArrowData } from '../useArrowData/useArrowData';
 import { getCategoryBySelection } from '../getCategoryBySelection/getCategoryBySelection';
 import { resolveVisibleCategory } from '../resolveVisibleCategory/resolveVisibleCategory';
-import { EXCLUDED_BY_FILTERS_CATEGORY, INCLUDED_BY_FILTERS_CATEGORY } from '../plotCategories';
+import {
+    EXCLUDED_BY_FILTERS_CATEGORY,
+    HIDDEN_CATEGORY,
+    INCLUDED_BY_FILTERS_CATEGORY
+} from '../plotCategories';
 
 type PlotColumn = 'x' | 'y' | 'category';
+
+// A point is never part of a selection when it is filtered out or hidden: both are routed
+// to non-selectable reserved categories and must not contribute sample ids.
+const isUnselectableCategory = (category: number): boolean =>
+    category === EXCLUDED_BY_FILTERS_CATEGORY || category === HIDDEN_CATEGORY;
 
 type UsePlotDataReturn = {
     data: ComponentProps<typeof EmbeddingView>['data'];
@@ -75,9 +84,9 @@ export function usePlotData({
         // Points inside the polygon keep their prevValue; points outside are demoted to EXCLUDED_BY_FILTERS_CATEGORY.
         category = category.map(getCategoryBySelection(rangeSelection, data));
 
-        // Collect selected sample ids: in-polygon included points are not EXCLUDED_BY_FILTERS_CATEGORY.
+        // Collect selected sample ids: in-polygon points that are neither filtered out nor hidden.
         const _ids = category.reduce<string[]>((acc, pointCategory, index) => {
-            if (pointCategory !== EXCLUDED_BY_FILTERS_CATEGORY) {
+            if (!isUnselectableCategory(pointCategory)) {
                 acc.push(sampleIds[index]);
             }
             return acc;
@@ -86,7 +95,7 @@ export function usePlotData({
     } else if (highlightedSampleIds.length > 0) {
         const highlightedSampleIdSet = new Set(highlightedSampleIds);
         category = category.map((pointCategory, index) => {
-            if (pointCategory === EXCLUDED_BY_FILTERS_CATEGORY) {
+            if (isUnselectableCategory(pointCategory)) {
                 return pointCategory;
             }
             return highlightedSampleIdSet.has(sampleIds[index])
