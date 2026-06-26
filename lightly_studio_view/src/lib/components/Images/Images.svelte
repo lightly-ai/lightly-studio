@@ -16,7 +16,8 @@
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import { goto } from '$app/navigation';
-    import { omit, isEqual } from 'lodash-es';
+    import { isEqual } from 'lodash-es';
+    import { mergeExternalFilters, paramsWithoutExternalFilters } from './syncFilterParams';
     import { GridContainer } from '../GridContainer';
     import { Grid } from '../Grid';
     import { GridItem } from '../GridItem';
@@ -69,13 +70,6 @@
         text_embedding: $textEmbedding?.embedding
     });
 
-    const paramsWithoutSampleIds = (params: ImagesInfiniteParams) => {
-        return {
-            ...params,
-            filters: params.mode === 'normal' ? omit(params.filters, ['sample_ids']) : undefined
-        };
-    };
-
     const { filterParams, updateFilterParams, imageQueryExpression, imageSortBy } =
         useImageFilters();
 
@@ -84,35 +78,21 @@
         const baseParams = samplesParams as ImagesInfiniteParams;
         const currentParams = $filterParams;
 
-        // Compare parameters excluding sample_ids to detect if other filters have changed
+        // Compare parameters excluding the externally-set filters (sample_ids /
+        // confusion_cell) to detect if other filters have changed.
         if (
             currentParams &&
-            isEqual(paramsWithoutSampleIds(baseParams), paramsWithoutSampleIds(currentParams))
+            isEqual(
+                paramsWithoutExternalFilters(baseParams),
+                paramsWithoutExternalFilters(currentParams)
+            )
         ) {
             return;
         }
 
-        // Start with the base parameters from the component
-        let nextParams = baseParams;
-
-        let currentSampleIds: string[] = [];
-        if (currentParams.mode === 'normal' && currentParams.filters?.sample_ids) {
-            currentSampleIds = currentParams.filters.sample_ids;
-        }
-
-        // Merge the existing sample selection into the new parameters
-        if (currentSampleIds && currentSampleIds.length > 0 && nextParams.mode === 'normal') {
-            nextParams = {
-                ...nextParams,
-                filters: {
-                    ...(nextParams.filters ?? {}),
-                    sample_ids: currentSampleIds
-                }
-            };
-        }
-
-        // Update the global filter parameters
-        updateFilterParams(nextParams);
+        // Merge the externally-set selection and confusion cell into the new parameters
+        // and update the global filter parameters.
+        updateFilterParams(mergeExternalFilters(baseParams, currentParams));
     });
 
     const { samples: infiniteSamples } = useImagesInfinite(() => ({
@@ -149,6 +129,10 @@
         isReady = true;
     });
 
+    const confusionCell = $derived(
+        $filterParams.mode === 'normal' ? $filterParams.filters?.confusion_cell : undefined
+    );
+
     const filterHash = $derived.by(() => {
         const parts = [
             $selectedAnnotationFilterIds.join(','),
@@ -158,6 +142,7 @@
             `${$dimensions?.min_height}-${$dimensions?.max_height}`,
             JSON.stringify($metadataValues),
             $textEmbedding?.queryText || '',
+            confusionCell ? JSON.stringify(confusionCell) : '',
             JSON.stringify($imageSortBy)
         ];
 
