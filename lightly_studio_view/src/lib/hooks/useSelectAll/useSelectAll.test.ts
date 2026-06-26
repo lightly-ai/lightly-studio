@@ -184,10 +184,7 @@ describe('useSelectAll', () => {
 
         await useSelectAll(collectionId, 'images').handleSelectAll();
 
-        expect(toast.error).toHaveBeenCalledWith(
-            'Failed to select all samples',
-            expect.anything()
-        );
+        expect(toast.error).toHaveBeenCalledWith('Failed to select all samples', expect.anything());
         // A failed fetch must not select samples or leave a snapshot behind.
         expect(get(storage.getSelectedSampleIds(collectionId)).size).toBe(0);
         expect(sampleSnapshot()).toBeNull();
