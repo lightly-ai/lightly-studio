@@ -57,7 +57,9 @@ vi.mock('$lib/hooks/useAnnotationsFilter/useAnnotationsFilter', async () => {
     return { useSelectedAnnotationsFilter: () => ({ annotationFilter }) };
 });
 
+import { toast } from 'svelte-sonner';
 import { useSelectAll } from './useSelectAll';
+import { fetchSampleIdsForImages } from './fetchSampleIdsForImages';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
@@ -81,6 +83,7 @@ describe('useSelectAll', () => {
     const annotationSnapshot = () => get(storage.getSelectAllAnnotationSnapshot(collectionId));
 
     beforeEach(() => {
+        vi.clearAllMocks();
         storage = useGlobalStorage();
         // Reset the module singletons.
         storage.clearSelectedSamples(collectionId);
@@ -173,6 +176,21 @@ describe('useSelectAll', () => {
         // `resolveGrid` captured the filter synchronously, so the snapshot reflects the original
         // filter — not the value set mid-fetch.
         expect(sampleSnapshot()).toEqual({ filter: originalFilter, size: 3 });
+    });
+
+    it('shows an error toast and writes nothing when the fetch fails', async () => {
+        imageFilterStore().set({ filter_type: 'image', sample_filter: { tag_ids: ['t1'] } });
+        vi.mocked(fetchSampleIdsForImages).mockRejectedValueOnce(new Error('network down'));
+
+        await useSelectAll(collectionId, 'images').handleSelectAll();
+
+        expect(toast.error).toHaveBeenCalledWith(
+            'Failed to select all samples',
+            expect.anything()
+        );
+        // A failed fetch must not select samples or leave a snapshot behind.
+        expect(get(storage.getSelectedSampleIds(collectionId)).size).toBe(0);
+        expect(sampleSnapshot()).toBeNull();
     });
 
     it('writes no snapshot for classifier-mode images, clearing any prior one', async () => {
