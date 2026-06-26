@@ -60,10 +60,11 @@ export function resolveScopeLabel(
         return `the currently viewed ${sampleType.replaceAll('_', ' ')}`;
     }
     const typeName = sampleType.replaceAll('_', ' ');
+    const plural = scopeCount === 1 ? typeName : `${typeName}s`;
     if (hasActiveFilter) {
-        return `${scopeCount} filtered ${typeName}s`;
+        return `${scopeCount} filtered ${plural}`;
     }
-    return `all ${scopeCount} ${typeName}s`;
+    return `all ${scopeCount} ${plural}`;
 }
 
 export function resolveContextFilter(

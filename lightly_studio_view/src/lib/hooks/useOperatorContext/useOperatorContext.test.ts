@@ -95,6 +95,15 @@ describe('resolveScopeLabel', () => {
             '12 filtered annotations'
         );
     });
+
+    it('uses singular form when scopeCount is 1', () => {
+        expect(resolveScopeLabel(SampleTypeValues.IMAGE, false, 1, false)).toBe('all 1 image');
+        expect(resolveScopeLabel(SampleTypeValues.VIDEO, false, 1, false)).toBe('all 1 video');
+        expect(resolveScopeLabel(SampleTypeValues.IMAGE, false, 1, true)).toBe('1 filtered image');
+        expect(resolveScopeLabel(SampleTypeValues.VIDEO_FRAME, false, 1, true)).toBe(
+            '1 filtered video frame'
+        );
+    });
 });
 
 describe('resolveContextFilter', () => {
