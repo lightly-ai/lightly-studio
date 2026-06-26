@@ -12,12 +12,12 @@
         useImagesInfinite,
         type ImagesInfiniteParams
     } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
-    import type { NormalModeFilters } from '$lib/hooks/useImagesInfinite/types';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import { goto } from '$app/navigation';
-    import { omit, isEqual } from 'lodash-es';
+    import { isEqual } from 'lodash-es';
+    import { mergeExternalFilters, paramsWithoutExternalFilters } from './syncFilterParams';
     import { GridContainer } from '../GridContainer';
     import { Grid } from '../Grid';
     import { GridItem } from '../GridItem';
@@ -70,19 +70,6 @@
         text_embedding: $textEmbedding?.embedding
     });
 
-    // sample_ids and confusion_cell are set externally (selection / confusion matrix),
-    // not from this component's filter controls, so they are excluded from the
-    // base-params comparison and merged back below instead of being overwritten.
-    const paramsWithoutExternalFilters = (params: ImagesInfiniteParams) => {
-        return {
-            ...params,
-            filters:
-                params.mode === 'normal'
-                    ? omit(params.filters, ['sample_ids', 'confusion_cell'])
-                    : undefined
-        };
-    };
-
     const { filterParams, updateFilterParams, imageQueryExpression, imageSortBy } =
         useImageFilters();
 
@@ -91,7 +78,8 @@
         const baseParams = samplesParams as ImagesInfiniteParams;
         const currentParams = $filterParams;
 
-        // Compare parameters excluding sample_ids to detect if other filters have changed
+        // Compare parameters excluding the externally-set filters (sample_ids /
+        // confusion_cell) to detect if other filters have changed.
         if (
             currentParams &&
             isEqual(
@@ -102,35 +90,9 @@
             return;
         }
 
-        // Start with the base parameters from the component
-        let nextParams = baseParams;
-
-        let currentSampleIds: string[] = [];
-        let currentConfusionCell: NormalModeFilters['confusion_cell'];
-        if (currentParams.mode === 'normal') {
-            currentSampleIds = currentParams.filters?.sample_ids ?? [];
-            // Only carry the confusion cell forward within the same collection. The cell
-            // belongs to a specific evaluation run/collection, so when navigating to a
-            // different collection we must drop it to avoid wrongly filtering the new grid.
-            if (currentParams.collection_id === baseParams.collection_id) {
-                currentConfusionCell = currentParams.filters?.confusion_cell;
-            }
-        }
-
         // Merge the externally-set selection and confusion cell into the new parameters
-        if (nextParams.mode === 'normal' && (currentSampleIds.length > 0 || currentConfusionCell)) {
-            nextParams = {
-                ...nextParams,
-                filters: {
-                    ...(nextParams.filters ?? {}),
-                    sample_ids: currentSampleIds.length > 0 ? currentSampleIds : undefined,
-                    confusion_cell: currentConfusionCell
-                }
-            };
-        }
-
-        // Update the global filter parameters
-        updateFilterParams(nextParams);
+        // and update the global filter parameters.
+        updateFilterParams(mergeExternalFilters(baseParams, currentParams));
     });
 
     const { samples: infiniteSamples } = useImagesInfinite(() => ({
