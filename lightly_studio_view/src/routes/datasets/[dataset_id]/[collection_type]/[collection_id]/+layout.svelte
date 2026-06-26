@@ -361,7 +361,10 @@
                             <LabelsMenu
                                 {annotationFilterRows}
                                 onToggleAnnotationFilter={toggleAnnotationFilterSelection}
-                                showVisibilityToggle={isAnnotations || isImages}
+                                showVisibilityToggle={isAnnotations ||
+                                    isImages ||
+                                    isVideos ||
+                                    isVideoFrames}
                             />
 
                             {#if isImages || isVideos || isVideoFrames}

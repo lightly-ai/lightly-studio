@@ -1,5 +1,6 @@
 <script lang="ts">
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
+    import { useAnnotationClassVisibility } from '$lib/hooks';
     import { useSettings } from '$lib/hooks/useSettings';
     import { type ComponentProps } from 'svelte';
     import SampleAnnotation from '../SampleAnnotation/SampleAnnotation.svelte';
@@ -43,10 +44,18 @@
     } = $props();
 
     const { isHidden } = useHideAnnotations();
+    const { hiddenClassNamesStore } = useAnnotationClassVisibility();
     const { showBoundingBoxesForSegmentationStore } = useSettings();
     const annotations: AnnotationView[] = $derived((sample.sample as SampleView).annotations ?? []);
     const annotationsWithVisuals = $derived(
-        annotations.filter((annotation) => annotation.annotation_type !== 'classification')
+        annotations
+            .filter((annotation) => annotation.annotation_type !== 'classification')
+            .filter(
+                (annotation) =>
+                    !$hiddenClassNamesStore.includes(
+                        annotation.annotation_label.annotation_label_name
+                    )
+            )
     );
 
     // Create a map of annotationId to prerendered data for quick lookup
