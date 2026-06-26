@@ -3,8 +3,11 @@
     import { Tooltip } from '$lib/components/ui/tooltip';
 
     interface Props {
+        /** Whether the annotation class is hidden */
         isHidden: boolean;
+        /** The annotation class name */
         labelName: string;
+        /** Called when the user toggles the annotation class visibility */
         toggleClassVisibility: (labelName: string) => void;
     }
 

@@ -12,8 +12,11 @@
     import LabelVisibilityToggle from './LabelVisibilityToggle/LabelVisibilityToggle.svelte';
 
     interface Props {
+        /** A list of filtered annotations */
         annotationFilterRows: Readable<Annotation[]>;
+        /** Called when the user toggles an annotation class filter checkbox */
         onToggleAnnotationFilter: (label: string) => void;
+        /** Whether to show the label visibility toggle */
         showVisibilityToggle?: boolean;
     }
 
