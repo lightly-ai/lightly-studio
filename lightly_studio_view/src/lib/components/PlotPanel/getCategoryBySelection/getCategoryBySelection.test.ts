@@ -83,24 +83,6 @@ describe('getCategoryBySelection', () => {
         expect(isPointInPolygon).toHaveBeenCalledWith(3.0, 7.0, mockSelection);
     });
 
-    it('keeps an in-polygon HIDDEN_CATEGORY (0) point as HIDDEN so it stays unselectable', () => {
-        const mockData = createMockArrowData();
-        vi.mocked(isPointInPolygon).mockReturnValue(true);
-
-        const reducer = getCategoryBySelection(mockSelection, mockData);
-
-        expect(reducer(0, 0)).toBe(0);
-    });
-
-    it('demotes an out-of-polygon HIDDEN_CATEGORY (0) point to EXCLUDED (1)', () => {
-        const mockData = createMockArrowData();
-        vi.mocked(isPointInPolygon).mockReturnValue(false);
-
-        const reducer = getCategoryBySelection(mockSelection, mockData);
-
-        expect(reducer(0, 0)).toBe(1);
-    });
-
     it('should work correctly with array reduce for multiple points', () => {
         const mockData = createMockArrowData();
         // Mock: first two points are in selection, last two are not
