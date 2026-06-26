@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Generic, cast
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 from typing_extensions import Self, TypeVar
 
@@ -18,7 +18,7 @@ from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.group import GroupTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.models.video import VideoTable
+from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import tag_resolver
 from lightly_studio.sampling.sample import Sampling
 
@@ -282,6 +282,16 @@ class DatasetQuery(Generic[T]):
             for group_table in self.session.exec(group_query):
                 # Calling the constructor of `GroupSample`
                 yield self._sample_class(group_table)  # type: ignore[arg-type]
+        elif self.dataset.sample_type == SampleType.VIDEO_FRAME:
+            video_frame_query: SelectOfScalar[VideoFrameTable] = (
+                select(VideoFrameTable)
+                .join(VideoFrameTable.sample)
+                .where(SampleTable.collection_id == self.dataset.collection_id)
+            )
+            video_frame_query = self._compose_query(video_frame_query)
+            for video_frame_table in self.session.exec(video_frame_query):
+                # Calling the constructor of `VideoFrameSample`
+                yield self._sample_class(video_frame_table)  # type: ignore[arg-type]
         else:
             raise NotImplementedError(
                 f"Iter is not implemented for sample type {self.dataset.sample_type}"
@@ -302,6 +312,13 @@ class DatasetQuery(Generic[T]):
             # Order by ImageSampleField.created_at by default.
             default_order_by = OrderByField(ImageSampleField.created_at)
             query = default_order_by.apply(query)
+        elif self.dataset.sample_type == SampleType.VIDEO_FRAME:
+            # Default to a deterministic order across videos: group by parent video,
+            # then by frame number. Both are columns on the frame table, so no join.
+            query = query.order_by(
+                col(VideoFrameTable.parent_sample_id),
+                col(VideoFrameTable.frame_number),
+            )
 
         # Apply slicing if present
         if self._slice is not None:
