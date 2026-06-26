@@ -12,7 +12,10 @@ vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
     useImageFilters: vi.fn(() => filtersMock)
 }));
 
-const normalParamsWithCell = (gt_label: string, pred_label: string): ImagesInfiniteParams => ({
+const normalParamsWithCell = (
+    gt_label: string | null,
+    pred_label: string | null
+): ImagesInfiniteParams => ({
     collection_id: 'col-1',
     mode: 'normal',
     filters: {
@@ -55,6 +58,24 @@ describe('ConfusionCellFilterItem', () => {
 
         expect(screen.getByTestId('confusion-cell-filter-item-chip')).toBeInTheDocument();
         expect(screen.getByText('GT: cat → Pred: cat')).toBeInTheDocument();
+    });
+
+    it('labels the false-positive bucket (null gt_label) as "Predicted only: <class>"', () => {
+        filterParams.set(normalParamsWithCell(null, 'truck'));
+
+        render(ConfusionCellFilterItem);
+
+        expect(screen.getByTestId('confusion-cell-filter-item-chip')).toBeInTheDocument();
+        expect(screen.getByText('Predicted only: truck')).toBeInTheDocument();
+    });
+
+    it('labels the false-negative bucket (null pred_label) as "Ground truth only: <class>"', () => {
+        filterParams.set(normalParamsWithCell('car', null));
+
+        render(ConfusionCellFilterItem);
+
+        expect(screen.getByTestId('confusion-cell-filter-item-chip')).toBeInTheDocument();
+        expect(screen.getByText('Ground truth only: car')).toBeInTheDocument();
     });
 
     it('clears the confusion cell when the checkbox is toggled off', async () => {
