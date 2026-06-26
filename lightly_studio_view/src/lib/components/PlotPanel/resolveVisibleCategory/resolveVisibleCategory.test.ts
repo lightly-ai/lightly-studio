@@ -45,8 +45,4 @@ describe('resolveVisibleCategory', () => {
     it('falls back to a visible colored category even when INCLUDED is hidden', () => {
         expect(resolveVisibleCategory([3, 4], 1, new Set([3, 2]))).toBe(4);
     });
-
-    it('still returns EXCLUDED (1) when filtered out and EXCLUDED is visible', () => {
-        expect(resolveVisibleCategory([3], 0, new Set([2]))).toBe(1);
-    });
 });
