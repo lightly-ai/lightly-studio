@@ -12,8 +12,7 @@ import {
 
 type PlotColumn = 'x' | 'y' | 'category';
 
-// A point is never part of a selection when it is filtered out or hidden: both are routed
-// to non-selectable reserved categories and must not contribute sample ids.
+// Filtered-out and hidden points land in reserved categories and must never be selected.
 const isUnselectableCategory = (category: number): boolean =>
     category === EXCLUDED_BY_FILTERS_CATEGORY || category === HIDDEN_CATEGORY;
 
@@ -84,7 +83,7 @@ export function usePlotData({
         // Points inside the polygon keep their prevValue; points outside are demoted to EXCLUDED_BY_FILTERS_CATEGORY.
         category = category.map(getCategoryBySelection(rangeSelection, data));
 
-        // Collect selected sample ids: in-polygon points that are neither filtered out nor hidden.
+        // Collect the sample ids of the selectable in-polygon points.
         const _ids = category.reduce<string[]>((acc, pointCategory, index) => {
             if (!isUnselectableCategory(pointCategory)) {
                 acc.push(sampleIds[index]);

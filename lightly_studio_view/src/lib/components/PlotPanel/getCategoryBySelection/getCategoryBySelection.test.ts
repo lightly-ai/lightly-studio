@@ -89,7 +89,6 @@ describe('getCategoryBySelection', () => {
 
         const reducer = getCategoryBySelection(mockSelection, mockData);
 
-        // A hidden point inside the lasso keeps category 0; usePlotData never collects it.
         expect(reducer(0, 0)).toBe(0);
     });
 

@@ -205,10 +205,8 @@ describe('usePlotData', () => {
         });
 
         const data = get(result.data) as { category: Uint8Array };
-        // sample1 is HIDDEN (0) and in-polygon -> stays 0; sample2 keeps its color 3;
-        // sample3/sample4 are outside the polygon -> demoted to EXCLUDED 1.
+        // sample1 hidden+in-lasso stays 0; sample2 keeps color 3; out-of-lasso 3/4 -> EXCLUDED 1.
         expect(Array.from(data.category)).toEqual([0, 3, 1, 1]);
-        // The hidden in-lasso sample1 is excluded; only the visible sample2 is selected.
         expect(get(result.selectedSampleIds)).toEqual(['sample2']);
     });
 
@@ -224,9 +222,8 @@ describe('usePlotData', () => {
         });
 
         const data = get(result.data) as { category: Uint8Array };
-        // sample1 is HIDDEN (0): even though highlighted it stays 0, never selected;
-        // sample2 is highlighted -> keeps color 3; sample3 is HIDDEN -> stays 0;
-        // sample4 is not highlighted -> demoted to EXCLUDED 1.
+        // Highlighted-but-hidden sample1 stays 0; sample2 highlighted keeps 3; sample3 hidden
+        // stays 0; un-highlighted sample4 -> EXCLUDED 1.
         expect(Array.from(data.category)).toEqual([0, 3, 0, 1]);
     });
 
