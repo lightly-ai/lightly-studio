@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
+import uuid
 from pathlib import Path
-from uuid import uuid4
 
 import yaml
 from PIL import Image as PILImage
@@ -737,7 +737,7 @@ def test_to_yolo_object_detections__filters_by_annotation_collection(
         dataset_id=dataset.dataset_id,
         samples=DatasetQuery(dataset=dataset, session=db_session),
         output_folder=output_folder,
-        annotation_collection_id=uuid4(),
+        annotation_collection_id=uuid.uuid4(),
     )
 
     # The annotation belongs to a different collection, so it is filtered out.
