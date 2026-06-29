@@ -98,13 +98,15 @@
 
     const evaluationRunsQuery = useEvaluationRuns(() => ({ datasetId: collection.dataset_id }));
     const evaluationRuns = $derived(evaluationRunsQuery.data ?? []);
-    const hasEvaluationRuns = $derived(evaluationRuns.length > 0);
 
     const parentCollection = $derived.by(() =>
         retrieveParentCollection($collections, collectionId)
     );
 
     const isImages = $derived(isImagesRoute(page.route.id));
+    // Evaluation is currently supported for image collections only. The panel is
+    // reachable even with zero runs so users can trigger the first one from the GUI.
+    const supportsEvaluation = $derived(isImages);
     const isGroups = $derived(isGroupsRoute(page.route.id));
     const isGroupDetails = $derived(isGroupDetailsRoute(page.route.id));
     const isAnnotations = $derived(isAnnotationsRoute(page.route.id));
@@ -308,7 +310,7 @@
     );
 
     const panelIsVisible = $derived(
-        ($activePanel === 'evaluationRuns' && hasEvaluationRuns) ||
+        ($activePanel === 'evaluationRuns' && supportsEvaluation) ||
             ($activePanel === 'embeddingPlot' &&
                 hasMediaWithEmbeddings &&
                 (isImages || isVideos)) ||
@@ -430,7 +432,7 @@
                     {@render paneResizer()}
 
                     <Pane defaultSize={35} minSize={25} class="flex min-h-0 flex-col">
-                        {#if $activePanel === 'evaluationRuns' && hasEvaluationRuns}
+                        {#if $activePanel === 'evaluationRuns' && supportsEvaluation}
                             {#await import('$lib/components/EvaluationRunsPanel/EvaluationRunsPanel.svelte') then { default: EvaluationRunsPanel }}
                                 <EvaluationRunsPanel
                                     onClose={() => setActivePanel('none')}
@@ -456,8 +458,8 @@
                     {@render mainContent()}
                 </div>
             {/if}
-            {#if isCollectionGrid && (isImages || hasMediaWithEmbeddings || hasEvaluationRuns)}
-                <SidePanelTabs {isImages} {hasMediaWithEmbeddings} {hasEvaluationRuns} />
+            {#if isCollectionGrid && (isImages || hasMediaWithEmbeddings)}
+                <SidePanelTabs {isImages} {hasMediaWithEmbeddings} {supportsEvaluation} />
             {/if}
             {#if hasEmbeddings}
                 {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then { default: CreateClassifierDialog }}
