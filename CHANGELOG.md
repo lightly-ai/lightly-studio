@@ -20,6 +20,7 @@ filtered sample count.
 - Python dataset queries now support classifications, object detections, and segmentation mask annotations.
 - Python dataset queries now model evaluation queries on the sample level.
 - Improved performance when tagging all samples in the GUI for large datasets.
+- All embedding plot legend entries (especially e.g. `Excluded by filters`, `No category`, etc.) can be hidden by clicking on them.
 
 ### Changed
 
