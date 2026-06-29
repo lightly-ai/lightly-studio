@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- When multiple annotation sources exist, the export dialog now shows a dropdown to select which source to export annotations from.
 - Annotation classes can now be shown or hidden individually in the grid views using an eye icon toggle in the Annotation Classes sidebar.
 - Python SDK: `target_fps` parameter on `VideoDataset.add_videos_from_path` to subsample frames to a
   lower frame rate. Retained frames keep their original frame numbers.
