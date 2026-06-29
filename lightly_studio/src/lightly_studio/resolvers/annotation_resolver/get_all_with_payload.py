@@ -72,25 +72,22 @@ def get_all_with_payload(
     embedding_model_id, distance_expr = get_distance_expression(
         session=session, collection_id=collection_id, text_embedding=text_embedding
     )
-    has_similarity = distance_expr is not None and embedding_model_id is not None
-    similarity_order_by: list[Any] = []
-    if has_similarity and distance_expr is not None:
+    if distance_expr is not None:
         base_query = apply_similarity_join(
             query=base_query,
             sample_id_column=col(AnnotationBaseTable.sample_id),
             embedding_model_id=embedding_model_id,
         )
-        similarity_order_by = [distance_expr]
 
     # Type is loosened to Any because similarity search appends a distance column,
     # changing the row shape from 2-tuple to 3-tuple.
     annotations_query: Any = base_query.order_by(
-        *similarity_order_by,
+        *([distance_expr] if distance_expr is not None else []),
         *_extra_order_by(sample_type=sample_type),
         col(AnnotationBaseTable.created_at).asc(),
         col(AnnotationBaseTable.sample_id).asc(),
     )
-    if has_similarity and distance_expr is not None:
+    if distance_expr is not None:
         annotations_query = annotations_query.add_columns(distance_expr)
 
     total_count_query = select(func.count()).select_from(base_query.subquery())
@@ -107,7 +104,7 @@ def get_all_with_payload(
 
     annotation_views = []
     for row in rows:
-        if has_similarity:
+        if distance_expr is not None:
             annotation, payload, distance = row
             similarity_score = distance_to_similarity(distance)
         else:
