@@ -210,6 +210,28 @@ describe('usePlotData', () => {
         expect(get(result.selectedSampleIds)).toEqual(['sample2']);
     });
 
+    it('does not select an in-lasso point hidden via the "No category" legend row', () => {
+        const mockData = createMockArrowData();
+        const mockSelection: Point[] = [
+            { x: 0, y: 0 },
+            { x: 2, y: 0 },
+            { x: 2, y: 6 },
+            { x: 0, y: 6 }
+        ];
+
+        const result = usePlotData({
+            arrowData: mockData,
+            rangeSelection: mockSelection,
+            hiddenCategories: new Set([2]) // hide "Included by filters / No category"
+        });
+
+        const data = get(result.data) as { category: Uint8Array };
+        // sample1 is in-lasso but "No category" (2) -> routed to HIDDEN (0); sample2 keeps color 3.
+        expect(Array.from(data.category)).toEqual([0, 3, 1, 1]);
+        // The hidden sample1 must not be committed to the filter, only the visible sample2.
+        expect(get(result.selectedSampleIds)).toEqual(['sample2']);
+    });
+
     it('keeps highlighted-path HIDDEN points hidden rather than demoting them', () => {
         const mockData = createMockArrowData();
         mockData.fulfils_filter = new Uint8Array([0, 1, 0, 1]);

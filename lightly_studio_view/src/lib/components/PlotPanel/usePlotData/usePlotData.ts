@@ -83,10 +83,10 @@ export function usePlotData({
         // Points inside the polygon keep their prevValue; points outside are demoted to Excluded.
         category = category.map(getCategoryBySelection(rangeSelection, data));
 
-        // Collect selectable in-polygon ids before the hide pass, so legend toggles never change
-        // which ids get committed to the filter.
+        // Collect in-polygon ids, skipping points that are filtered out or hidden by a legend
+        // toggle — a point the user cannot see must never be committed to the filter.
         const _ids = category.reduce<string[]>((acc, pointCategory, index) => {
-            if (!isUnselectableCategory(pointCategory)) {
+            if (!isUnselectableCategory(pointCategory) && !hiddenCategories.has(pointCategory)) {
                 acc.push(sampleIds[index]);
             }
             return acc;
