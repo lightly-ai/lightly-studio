@@ -63,6 +63,12 @@
         (annotationCollectionsQuery.data ?? []).map((c) => ({ id: c.collection_id, name: c.name }))
     );
     let selectedAnnotationCollectionId = $state<string | undefined>(undefined);
+
+    $effect(() => {
+        if (annotationSources.length > 1 && selectedAnnotationCollectionId === undefined) {
+            selectedAnnotationCollectionId = annotationSources[0].id;
+        }
+    });
     const annotationCollectionParam = $derived(
         selectedAnnotationCollectionId
             ? `&annotation_collection_id=${selectedAnnotationCollectionId}`

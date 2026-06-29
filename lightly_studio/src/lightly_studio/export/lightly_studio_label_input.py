@@ -79,8 +79,6 @@ class LightlyStudioObjectDetectionInput(LightlyStudioInputBase, ObjectDetectionI
 
     def get_labels(self) -> Iterable[ImageObjectDetection]:
         """Returns the labels for export."""
-        print("Exporting object detection labels...")
-        print(self._annotation_collection_id)
         for idx, sample in enumerate(self._samples):
             yield _sample_to_image_obj_det(
                 sample=sample,
