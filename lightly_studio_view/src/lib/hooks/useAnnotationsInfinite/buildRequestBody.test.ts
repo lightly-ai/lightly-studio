@@ -42,10 +42,7 @@ describe('buildRequestBody', () => {
         });
 
         it('propagates tag_ids', () => {
-            const result = buildRequestBody(
-                { collection_id: 'col-1', tag_ids: ['t1', 't2'] },
-                0
-            );
+            const result = buildRequestBody({ collection_id: 'col-1', tag_ids: ['t1', 't2'] }, 0);
             expect(result.tag_ids).toEqual(['t1', 't2']);
         });
 

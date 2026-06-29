@@ -79,7 +79,9 @@ describe('createAnnotationsInfiniteOptions', () => {
 
         it('returns undefined when nextCursor is null', () => {
             const options = createAnnotationsInfiniteOptions({ collection_id: 'col-1' });
-            expect(options.getNextPageParam?.({ nextCursor: null } as never, [], 0, [])).toBeUndefined();
+            expect(
+                options.getNextPageParam?.({ nextCursor: null } as never, [], 0, [])
+            ).toBeUndefined();
         });
     });
 
@@ -133,7 +135,11 @@ describe('createAnnotationsInfiniteOptions', () => {
         });
 
         it('returns data from readAnnotationsWithPayload response', async () => {
-            const mockData = { data: [{ annotation: { sample_id: 'ann-1' } }], total_count: 1, nextCursor: null };
+            const mockData = {
+                data: [{ annotation: { sample_id: 'ann-1' } }],
+                total_count: 1,
+                nextCursor: null
+            };
             readAnnotationsWithPayloadMock.mockResolvedValue({ data: mockData });
             const options = createAnnotationsInfiniteOptions({ collection_id: 'col-1' });
 

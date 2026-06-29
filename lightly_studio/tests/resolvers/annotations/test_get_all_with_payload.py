@@ -277,7 +277,7 @@ def test_get_all_with_payload__orders_by_text_embedding_similarity(
     assert near_score >= far_score
 
 
-def test_get_all_with_payload__without_embedding_has_no_similarity_score(
+def test_get_all_with_payload__without_embedding_model_has_no_similarity_score(
     db_session: Session,
 ) -> None:
     collection = create_collection(session=db_session)
