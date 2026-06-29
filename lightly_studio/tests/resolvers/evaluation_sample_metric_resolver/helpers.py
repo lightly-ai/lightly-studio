@@ -46,7 +46,7 @@ def create_run(
     dataset_collection_id: UUID | None = None,
     name: str = "test_run",
 ) -> EvaluationRunTable:
-    """Create an evaluation run with gt/pred annotation collections, but no images."""
+    """Create an evaluation run with gt/pred annotation collections."""
     if dataset_collection_id is None:
         dataset_collection_id = create_collection(session=session).collection_id
     dataset_collection = collection_resolver.get_by_id(
