@@ -32,7 +32,13 @@ class LightlyStudioInputBase:
 
     CATEGORY_ID_START = 0
 
-    def __init__(self, session: Session, dataset_id: UUID, samples: Iterable[ImageSample]) -> None:
+    def __init__(
+        self,
+        session: Session,
+        dataset_id: UUID,
+        samples: Iterable[ImageSample],
+        annotation_collection_id: UUID | None = None,
+    ) -> None:
         """Initializes the adapter.
 
         Args:
@@ -40,8 +46,11 @@ class LightlyStudioInputBase:
                 constructor to fetch the labels for the given annotation source.
             dataset_id: The dataset ID for label retrieval.
             samples: Dataset samples.
+            annotation_collection_id: If provided, only annotations belonging to this
+                annotation collection are exported. If None, all annotations are exported.
         """
         self._samples = list(samples)
+        self._annotation_collection_id = annotation_collection_id
         self._label_id_to_category = _build_label_id_to_category(
             session=session,
             dataset_id=dataset_id,
@@ -70,11 +79,14 @@ class LightlyStudioObjectDetectionInput(LightlyStudioInputBase, ObjectDetectionI
 
     def get_labels(self) -> Iterable[ImageObjectDetection]:
         """Returns the labels for export."""
+        print("Exporting object detection labels...")
+        print(self._annotation_collection_id)
         for idx, sample in enumerate(self._samples):
             yield _sample_to_image_obj_det(
                 sample=sample,
                 image_id=idx,
                 label_id_to_category=self._label_id_to_category,
+                annotation_collection_id=self._annotation_collection_id,
             )
 
 
@@ -86,22 +98,29 @@ class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSeg
         sample: ImageSample,
         image_id: int,
         label_id_to_category: dict[UUID, Category],
+        annotation_collection_id: UUID | None = None,
     ) -> ImageInstanceSegmentation:
         # TODO(lukas, 02/2026): We can optimise in the future to filter annotations in a DB query.
         objects = []
         for annotation in sample.sample_table.annotations:
-            if annotation.annotation_type == AnnotationType.SEGMENTATION_MASK:
-                obj = _annotation_to_single_inst_seg(
-                    annotation=annotation,
-                    label_id_to_category=label_id_to_category,
-                    image_width=sample.width,
-                    image_height=sample.height,
-                )
-                # TODO(lukas 3/2026): workaround needed because
-                # annotation.segmentation_details.segmentation_mask can be None.
-                # See lightly_studio/src/lightly_studio/models/annotation/segmentation.py.
-                if obj is not None:
-                    objects.append(obj)
+            if annotation.annotation_type != AnnotationType.SEGMENTATION_MASK:
+                continue
+            if (
+                annotation_collection_id is not None
+                and annotation.annotation_collection_id != annotation_collection_id
+            ):
+                continue
+            obj = _annotation_to_single_inst_seg(
+                annotation=annotation,
+                label_id_to_category=label_id_to_category,
+                image_width=sample.width,
+                image_height=sample.height,
+            )
+            # TODO(lukas 3/2026): workaround needed because
+            # annotation.segmentation_details.segmentation_mask can be None.
+            # See lightly_studio/src/lightly_studio/models/annotation/segmentation.py.
+            if obj is not None:
+                objects.append(obj)
 
         return ImageInstanceSegmentation(
             image=_sample_to_image(sample=sample, image_id=image_id),
@@ -115,6 +134,7 @@ class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSeg
                 sample=sample,
                 image_id=idx,
                 label_id_to_category=self._label_id_to_category,
+                annotation_collection_id=self._annotation_collection_id,
             )
 
 
@@ -132,18 +152,25 @@ class LightlyStudioPascalVOCInstanceSegmentationInput(
         sample: ImageSample,
         image_id: int,
         label_id_to_category: dict[UUID, Category],
+        annotation_collection_id: UUID | None = None,
     ) -> ImageInstanceSegmentation:
         objects = []
         for annotation in sample.sample_table.annotations:
-            if annotation.annotation_type == AnnotationType.SEGMENTATION_MASK:
-                obj = _annotation_to_single_inst_seg(
-                    annotation=annotation,
-                    label_id_to_category=label_id_to_category,
-                    image_width=sample.width,
-                    image_height=sample.height,
-                )
-                if obj is not None:
-                    objects.append(obj)
+            if annotation.annotation_type != AnnotationType.SEGMENTATION_MASK:
+                continue
+            if (
+                annotation_collection_id is not None
+                and annotation.annotation_collection_id != annotation_collection_id
+            ):
+                continue
+            obj = _annotation_to_single_inst_seg(
+                annotation=annotation,
+                label_id_to_category=label_id_to_category,
+                image_width=sample.width,
+                image_height=sample.height,
+            )
+            if obj is not None:
+                objects.append(obj)
 
         return ImageInstanceSegmentation(
             image=_sample_to_image(
@@ -172,6 +199,7 @@ class LightlyStudioPascalVOCInstanceSegmentationInput(
                 sample=sample,
                 image_id=idx,
                 label_id_to_category=self._label_id_to_category,
+                annotation_collection_id=self._annotation_collection_id,
             )
 
 
@@ -210,6 +238,7 @@ def _sample_to_image_obj_det(
     sample: ImageSample,
     image_id: int,
     label_id_to_category: dict[UUID, Category],
+    annotation_collection_id: UUID | None = None,
 ) -> ImageObjectDetection:
     # TODO(Michal, 09/2025): We can optimise in the future to filter annotations in a DB query.
     objects = [
@@ -219,6 +248,10 @@ def _sample_to_image_obj_det(
         )
         for annotation in sample.sample_table.annotations
         if annotation.annotation_type == AnnotationType.OBJECT_DETECTION
+        and (
+            annotation_collection_id is None
+            or annotation.annotation_collection_id == annotation_collection_id
+        )
     ]
     return ImageObjectDetection(
         image=_sample_to_image(sample=sample, image_id=image_id),
