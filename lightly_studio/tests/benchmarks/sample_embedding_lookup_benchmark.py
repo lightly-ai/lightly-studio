@@ -1,22 +1,26 @@
 """Sample-embedding lookup micro-benchmark.
 
-Measures the database code path that LIG-9944 optimizes: loading embeddings for a
-set of samples via ``sample_embedding_resolver.get_by_sample_ids``. It reports
-wall-clock time and peak Python allocation (``tracemalloc``) for each phase, on
-either a temporary DuckDB file (default) or PostgreSQL (``--postgres``).
+Measures the database code paths that LIG-9944 optimizes: loading embeddings for a
+set of samples via ``sample_embedding_resolver.get_by_sample_ids`` and for a whole
+collection via ``get_all_by_collection_id``. It reports wall-clock time and peak
+Python allocation (``tracemalloc``) for each phase, on either a temporary DuckDB file
+(default) or PostgreSQL (``--postgres``). Pick the path with ``--mode``
+(``sample-ids`` | ``collection`` | ``both``; default ``both``).
 
 The original implementation cast the UUID ``sample_id`` column to text before the
 ``IN`` comparison (``sample_id::VARCHAR IN (...)``), which makes the
 ``(sample_id, embedding_model_id)`` primary-key index unusable, so PostgreSQL falls
 back to a sequential scan of the whole ``sample_embedding`` table for every batch.
 
-Two phases expose this:
+Phases:
 
-* ``load_all`` loads embeddings for every sample. IDs are batched 8000 at a time,
-  so with the cast this is N/8000 full-table scans → roughly O(N²).
+* ``load_all`` loads embeddings for every sample via ``get_by_sample_ids``. IDs are
+  batched 8000 at a time, so with the cast this is N/8000 full-table scans → ~O(N²).
 * ``load_subset`` loads embeddings for a small random subset. Under the cast this
   still scans the whole table for a tiny result; with the PK index it is just one
   index seek per requested id. This is the sharpest before/after signal.
+* ``load_collection`` loads every embedding for the collection via
+  ``get_all_by_collection_id`` (a single JOIN read, no per-id round-trip).
 
 The win is primarily a PostgreSQL index effect (DuckDB columnar scans are fast and
 may show little difference), so run the baseline/after comparison with ``--postgres``.
@@ -82,6 +86,7 @@ class BenchmarkConfig:
     insert_batch_size: int
     seed: int
     postgres: bool
+    mode: str
 
 
 @dataclass(frozen=True)
@@ -100,7 +105,7 @@ class PhaseResult:
 
 
 def main() -> None:
-    """Run the load_all and load_subset benchmarks and print a report."""
+    """Run the selected lookup benchmarks and print a report."""
     args = _parse_args()
     config = BenchmarkConfig(
         num_embeddings=args.num_embeddings,
@@ -109,6 +114,7 @@ def main() -> None:
         insert_batch_size=args.insert_batch_size,
         seed=args.seed,
         postgres=args.postgres,
+        mode=args.mode,
     )
     _validate_config(config=config)
 
@@ -117,27 +123,36 @@ def main() -> None:
         db_target = _connect_database(db_path=db_path, use_postgres=config.postgres)
 
         try:
-            sample_ids, embedding_model_id = _setup(config=config)
-            subset_ids = _pick_subset(config=config, sample_ids=sample_ids)
-
-            load_all_result = _run_load_benchmark(
-                name="load_all",
-                sample_ids=sample_ids,
-                embedding_model_id=embedding_model_id,
-            )
-            load_subset_result = _run_load_benchmark(
-                name="load_subset",
-                sample_ids=subset_ids,
-                embedding_model_id=embedding_model_id,
-            )
+            sample_ids, embedding_model_id, collection_id = _setup(config=config)
+            results: list[PhaseResult] = []
+            if config.mode in ("sample-ids", "both"):
+                subset_ids = _pick_subset(config=config, sample_ids=sample_ids)
+                results.append(
+                    _run_load_benchmark(
+                        name="load_all",
+                        sample_ids=sample_ids,
+                        embedding_model_id=embedding_model_id,
+                    )
+                )
+                results.append(
+                    _run_load_benchmark(
+                        name="load_subset",
+                        sample_ids=subset_ids,
+                        embedding_model_id=embedding_model_id,
+                    )
+                )
+            if config.mode in ("collection", "both"):
+                results.append(
+                    _run_collection_load_benchmark(
+                        collection_id=collection_id,
+                        embedding_model_id=embedding_model_id,
+                        expected=config.num_embeddings,
+                    )
+                )
         finally:
             db_manager.close()
 
-    _print_report(
-        config=config,
-        db_target=db_target,
-        results=[load_all_result, load_subset_result],
-    )
+    _print_report(config=config, db_target=db_target, results=results)
 
 
 def _parse_args() -> argparse.Namespace:
@@ -148,6 +163,15 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--subset-size", type=int, default=DEFAULT_SUBSET_SIZE)
     parser.add_argument("--insert-batch-size", type=int, default=DEFAULT_INSERT_BATCH_SIZE)
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
+    parser.add_argument(
+        "--mode",
+        choices=("sample-ids", "collection", "both"),
+        default="both",
+        help=(
+            "Which lookup to benchmark: 'sample-ids' (get_by_sample_ids: load_all + "
+            "load_subset), 'collection' (get_all_by_collection_id), or 'both'."
+        ),
+    )
     parser.add_argument(
         "--postgres",
         action="store_true",
@@ -183,11 +207,11 @@ def _connect_database(db_path: Path, use_postgres: bool) -> str:
     return str(db_path)
 
 
-def _setup(config: BenchmarkConfig) -> tuple[list[UUID], UUID]:
+def _setup(config: BenchmarkConfig) -> tuple[list[UUID], UUID, UUID]:
     """Create the collection, embedding model, samples, and insert their embeddings.
 
     Insertion is part of setup (unmeasured); the benchmark only times the lookup.
-    Returns the created sample ids and the embedding model id.
+    Returns the created sample ids, the embedding model id, and the collection id.
     """
     with db_manager.session() as session:
         collection = collection_resolver.create(
@@ -229,7 +253,7 @@ def _setup(config: BenchmarkConfig) -> tuple[list[UUID], UUID]:
                     session=session, sample_embeddings=sample_embeddings
                 )
                 progress.update(len(sample_embeddings))
-        return sample_ids, embedding_model.embedding_model_id
+        return sample_ids, embedding_model.embedding_model_id, collection.collection_id
 
 
 def _generate_embeddings(config: BenchmarkConfig) -> NDArray[np.float32]:
@@ -273,6 +297,36 @@ def _run_load_benchmark(
     return PhaseResult(name=name, wall_seconds=elapsed, peak_mib=peak_mib, count=len(loaded))
 
 
+def _run_collection_load_benchmark(
+    collection_id: UUID,
+    embedding_model_id: UUID,
+    expected: int,
+) -> PhaseResult:
+    """Load every embedding for the collection via get_all_by_collection_id."""
+    tracemalloc.start()
+    tracemalloc.reset_peak()
+    started = time.perf_counter()
+
+    with db_manager.session() as session:
+        loaded = sample_embedding_resolver.get_all_by_collection_id(
+            session=session,
+            collection_id=collection_id,
+            embedding_model_id=embedding_model_id,
+        )
+        # Touch every vector so the full in-memory representation is realized.
+        for row in loaded:
+            if len(row.embedding) == 0:
+                raise ValueError("Loaded an empty embedding.")
+
+    elapsed = time.perf_counter() - started
+    peak_mib = tracemalloc.get_traced_memory()[1] / _BYTES_PER_MIB
+    tracemalloc.stop()
+    _verify_loaded(name="load_collection", loaded_count=len(loaded), expected=expected)
+    return PhaseResult(
+        name="load_collection", wall_seconds=elapsed, peak_mib=peak_mib, count=len(loaded)
+    )
+
+
 def _verify_loaded(name: str, loaded_count: int, expected: int) -> None:
     """Fail loudly if the lookup did not return one embedding per requested id."""
     if loaded_count != expected:
@@ -289,7 +343,7 @@ def _print_report(
     print("")
     print("Sample embedding lookup benchmark")
     print(
-        f"  backend={backend} db={db_target} "
+        f"  backend={backend} db={db_target} mode={config.mode} "
         f"num_embeddings={config.num_embeddings} dim={config.embedding_dim} "
         f"subset_size={config.subset_size}"
     )

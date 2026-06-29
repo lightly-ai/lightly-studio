@@ -21,6 +21,7 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingCreate
 from lightly_studio.resolvers import (
+    annotation_resolver,
     collection_resolver,
     embedding_model_resolver,
     image_resolver,
@@ -35,6 +36,8 @@ logger = logging.getLogger(__name__)
 # round-trips but higher peak memory. 1024 balances the two.
 EMBEDDING_INSERTION_BATCH_SIZE = 1024
 
+# Number of annotation crops processed per chunk in embed_annotations.
+ANNOTATION_EMBED_BATCH_SIZE = 2048
 # Mapping of sample types to the generator type used for embedding generation.
 _GENERATOR_SAMPLE_TYPE: dict[SampleType, SampleType] = {
     SampleType.IMAGE: SampleType.IMAGE,
@@ -188,6 +191,67 @@ class EmbeddingManager:
             sample_ids=sample_ids,
             embeddings=embeddings,
         )
+
+    def embed_annotations(
+        self,
+        session: Session,
+        annotation_collection_id: UUID,
+        embedding_model_id: UUID | None = None,
+    ) -> None:
+        """Generate and store embeddings for object-detection annotations.
+
+        Args:
+            session: Database session for resolver operations.
+            annotation_collection_id: The annotation collection whose annotation
+                samples should receive embeddings.
+            embedding_model_id: ID of the model to use. Uses default if None.
+
+        Raises:
+            ValueError: If no image-compatible embedding model is registered.
+        """
+        model_id = self._get_default_or_validate(
+            collection_id=annotation_collection_id, embedding_model_id=embedding_model_id
+        )
+        model = self._models[model_id]
+        if not isinstance(model, ImageEmbeddingGenerator):
+            raise ValueError("Embedding model not compatible with images.")
+
+        annotation_sample_ids = annotation_resolver.get_unembedded_annotation_ids(
+            session=session,
+            annotation_collection_id=annotation_collection_id,
+            embedding_model_id=model_id,
+        )
+        if not annotation_sample_ids:
+            logger.info("No annotation crops to embed.")
+            return
+
+        with tqdm(
+            total=len(annotation_sample_ids),
+            desc="Embedding annotations",
+            unit=" crops",
+        ) as progress:
+            for sample_id_chunk in batching.batched(
+                items=annotation_sample_ids, batch_size=ANNOTATION_EMBED_BATCH_SIZE
+            ):
+                annotation_crops = annotation_resolver.get_annotation_crops_for_ids(
+                    session=session, annotation_sample_ids=sample_id_chunk
+                )
+                if not annotation_crops:
+                    continue
+
+                embeddings = model.embed_image_crops(
+                    image_crops=[crop.image_crop for crop in annotation_crops],
+                    show_progress=False,
+                )
+
+                _store_embeddings(
+                    session=session,
+                    model_id=model_id,
+                    sample_ids=[crop.annotation_sample_id for crop in annotation_crops],
+                    embeddings=embeddings,
+                    show_progress=False,
+                )
+                progress.update(len(annotation_crops))
 
     def compute_image_embedding(
         self,
@@ -350,13 +414,19 @@ def _store_embeddings(
     model_id: UUID,
     sample_ids: list[UUID],
     embeddings: NDArray[np.float32],
+    show_progress: bool = True,
 ) -> None:
     """Store embeddings in the database.
 
     Insertion is batched to reduce peak memory. All batches are committed together
     so a failure leaves no partially embedded dataset behind.
     """
-    with tqdm(total=len(sample_ids), desc="Storing embeddings", unit=" embeddings") as progress:
+    with tqdm(
+        total=len(sample_ids),
+        desc="Storing embeddings",
+        unit=" embeddings",
+        disable=not show_progress,
+    ) as progress:
         for batch in batching.batched(
             items=zip(sample_ids, embeddings), batch_size=EMBEDDING_INSERTION_BATCH_SIZE
         ):

@@ -1,5 +1,6 @@
 <script lang="ts">
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
+    import { useAnnotationClassVisibility } from '$lib/hooks';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import { useSettings } from '$lib/hooks/useSettings';
     import { resolveEffectiveColorBySource } from '$lib/utils';
@@ -28,6 +29,7 @@
     } = $props();
 
     const { isHidden } = useHideAnnotations();
+    const { hiddenClassNamesStore } = useAnnotationClassVisibility();
     const { showBoundingBoxesForSegmentationStore, enforceColoringByClassStore } = useSettings();
     const { selectedCollectionIds, collectionIdToName } = useAnnotationCollectionsFilter();
 
@@ -68,6 +70,7 @@
         const showInstanceSegmentationBoundingBoxes = $showBoundingBoxesForSegmentationStore;
         const selectedIds = $selectedCollectionIds;
         const idToName = $collectionIdToName;
+        const hiddenClasses = $hiddenClassNamesStore;
         const colorBySource = resolveEffectiveColorBySource({
             multipleSourcesVisible: selectedIds.length > 1,
             enforceColoringByClass: $enforceColoringByClassStore
@@ -80,6 +83,10 @@
                     selectedIds.includes(annotation.annotation_collection_id)
             )
             .filter((annotation) => annotation.annotation_type !== 'classification')
+            .filter(
+                (annotation) =>
+                    !hiddenClasses.includes(annotation.annotation_label.annotation_label_name)
+            )
             .map((annotation) => {
                 const canvas = mapToCanvasAnnotation(
                     annotation,

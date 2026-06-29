@@ -330,15 +330,13 @@ def test_deep_copy__with_embeddings(db_session: Session) -> None:
     )
     assert copied_samples.total_count == 2
 
-    # Assert - copied embeddings reference the new embedding model
+    # Assert - copied embeddings can be loaded by the copied_model.embedding_model_id
     copied_embeddings = sample_embedding_resolver.get_all_by_collection_id(
         session=db_session,
         collection_id=copied.collection_id,
         embedding_model_id=copied_model.embedding_model_id,
     )
     assert len(copied_embeddings) == 2
-    for emb in copied_embeddings:
-        assert emb.embedding_model_id == copied_model.embedding_model_id
 
     # Assert - embedding vectors are preserved
     copied_vectors = {tuple(emb.embedding) for emb in copied_embeddings}
