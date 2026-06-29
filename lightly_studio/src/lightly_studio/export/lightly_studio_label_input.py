@@ -37,7 +37,7 @@ class LightlyStudioInputBase:
         session: Session,
         dataset_id: UUID,
         samples: Iterable[ImageSample],
-        annotation_collection_id: UUID | None = None,
+        annotation_collection_id: UUID | None,
     ) -> None:
         """Initializes the adapter.
 
@@ -96,7 +96,7 @@ class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSeg
         sample: ImageSample,
         image_id: int,
         label_id_to_category: dict[UUID, Category],
-        annotation_collection_id: UUID | None = None,
+        annotation_collection_id: UUID | None,
     ) -> ImageInstanceSegmentation:
         # TODO(lukas, 02/2026): We can optimise in the future to filter annotations in a DB query.
         objects = []
@@ -147,7 +147,7 @@ class LightlyStudioPascalVOCInstanceSegmentationInput(
         sample: ImageSample,
         image_id: int,
         label_id_to_category: dict[UUID, Category],
-        annotation_collection_id: UUID | None = None,
+        annotation_collection_id: UUID | None,
     ) -> ImageInstanceSegmentation:
         objects = []
         for annotation in sample.sample_table.annotations:
@@ -230,7 +230,7 @@ def _sample_to_image_obj_det(
     sample: ImageSample,
     image_id: int,
     label_id_to_category: dict[UUID, Category],
-    annotation_collection_id: UUID | None = None,
+    annotation_collection_id: UUID | None,
 ) -> ImageObjectDetection:
     # TODO(Michal, 09/2025): We can optimise in the future to filter annotations in a DB query.
     objects = [

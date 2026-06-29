@@ -40,6 +40,7 @@ class TestLightlyStudioLabelInput:
             session=db_session,
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
+            annotation_collection_id=None,
         )
         assert list(label_input.get_categories()) == [
             Category(id=0, name="cat"),
@@ -58,6 +59,7 @@ class TestLightlyStudioLabelInput:
             session=db_session,
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
+            annotation_collection_id=None,
         )
         assert list(label_input.get_categories()) == [
             Category(id=1, name="cat"),
@@ -79,6 +81,7 @@ class TestLightlyStudioLabelInput:
             session=db_session,
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
+            annotation_collection_id=None,
         )
         assert list(label_input.get_categories()) == []
 
@@ -91,6 +94,7 @@ class TestLightlyStudioLabelInput:
             session=db_session,
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
+            annotation_collection_id=None,
         )
         assert list(label_input.get_images()) == [
             Image(id=0, filename="img1", width=100, height=100),
@@ -104,6 +108,7 @@ class TestLightlyStudioLabelInput:
             session=db_session,
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
+            annotation_collection_id=None,
         )
         assert list(label_input.get_images()) == []
 
@@ -116,6 +121,7 @@ class TestLightlyStudioLabelInput:
             session=db_session,
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
+            annotation_collection_id=None,
         )
         labels = list(label_input.get_labels())
 
@@ -164,6 +170,7 @@ class TestLightlyStudioLabelInput:
             session=db_session,
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
+            annotation_collection_id=None,
         )
         labels = list(label_input.get_labels())
 
@@ -312,6 +319,7 @@ class TestLightlyStudioLabelInput:
             session=db_session,
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
+            annotation_collection_id=None,
         )
         labels = list(label_input.get_labels())
 

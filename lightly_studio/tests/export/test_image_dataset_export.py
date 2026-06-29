@@ -347,6 +347,7 @@ class TestImageDatasetExport:
             dataset_id=dataset.dataset_id,
             samples=dataset.query(),
             output_folder=output_folder,
+            annotation_collection_id=None,
         )
 
         class_map_path = output_folder / "class_id_to_name.json"
@@ -403,6 +404,7 @@ class TestImageDatasetExport:
             dataset_id=dataset.dataset_id,
             samples=dataset.query(),
             output_folder=output_folder,
+            annotation_collection_id=None,
         )
 
         class_map_path = output_folder / "class_id_to_name.json"
@@ -451,6 +453,7 @@ class TestImageDatasetExport:
             dataset_id=dataset.dataset_id,
             samples=dataset.query(),
             output_folder=output_folder,
+            annotation_collection_id=None,
         )
 
         class_map_path = output_folder / "class_id_to_name.json"
@@ -498,6 +501,7 @@ class TestImageDatasetExport:
             dataset_id=dataset.dataset_id,
             samples=dataset.query(),
             output_folder=output_folder,
+            annotation_collection_id=None,
         )
 
         class_map_path = output_folder / "class_id_to_name.json"
@@ -549,6 +553,7 @@ class TestImageDatasetExport:
             dataset_id=dataset.dataset_id,
             samples=dataset.query(),
             output_folder=output_folder,
+            annotation_collection_id=None,
         )
 
         class_map_path = output_folder / "class_id_to_name.json"
@@ -582,6 +587,7 @@ def test_to_coco_object_detections(
         dataset_id=dataset.dataset_id,
         samples=DatasetQuery(dataset=dataset, session=db_session),
         output_json=output_json,
+        annotation_collection_id=None,
     )
 
     # Load the generated JSON and verify its content
@@ -624,6 +630,7 @@ def test_to_coco_object_detections__no_annotations(
         dataset_id=dataset.dataset_id,
         samples=DatasetQuery(dataset=dataset, session=db_session),
         output_json=output_json,
+        annotation_collection_id=None,
     )
 
     # Load the generated JSON and verify its content
