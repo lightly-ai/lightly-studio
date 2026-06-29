@@ -215,7 +215,7 @@ def _build_full_dataset(session: Session, name: str) -> UUID:
 
     # evaluation run + sample metric + annotation metric (gt/pred annotations)
     run = evaluation_sample_metric_helpers.create_run(
-        session, dataset_collection_id=root.collection_id
+        session=session, dataset_collection_id=root.collection_id
     )
     eval_image = create_image(session=session, collection_id=root.collection_id)
     evaluation_sample_metric_resolver.create_many(
