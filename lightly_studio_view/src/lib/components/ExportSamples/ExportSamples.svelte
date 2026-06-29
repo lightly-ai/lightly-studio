@@ -376,9 +376,6 @@
                                         bind:selectedSource={selectedAnnotationCollectionId}
                                     />
                                 </FormField>
-                                <p class="mt-2 text-sm text-muted-foreground">
-                                    Select the annotation collection to export from.
-                                </p>
                             </div>
                         {/if}
 
@@ -422,9 +419,6 @@
                                         bind:selectedSource={selectedAnnotationCollectionId}
                                     />
                                 </FormField>
-                                <p class="text-sm text-muted-foreground">
-                                    Select the annotation collection to export from.
-                                </p>
                             </div>
                         {/if}
 
