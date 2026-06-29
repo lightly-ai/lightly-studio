@@ -201,11 +201,10 @@ def test_read_annotations_with_payload(
         collection_id=collection_id,
     )
 
-    response = test_client.get(
+    response = test_client.post(
         f"/api/collections/{annotation_1.sample.collection_id}/annotations/payload",
-        params={
-            "offset": 0,
-            "limit": 1,
+        json={
+            "pagination": {"cursor": 0, "limit": 1},
         },
     )
 
