@@ -64,9 +64,12 @@
     );
     let selectedAnnotationCollectionId = $state<string | undefined>(undefined);
 
+    const effectiveAnnotationCollectionId = $derived(
+        selectedAnnotationCollectionId ?? annotationSources[0]?.id
+    );
     const annotationCollectionParam = $derived(
-        selectedAnnotationCollectionId
-            ? `&annotation_collection_id=${selectedAnnotationCollectionId}`
+        effectiveAnnotationCollectionId
+            ? `&annotation_collection_id=${effectiveAnnotationCollectionId}`
             : ''
     );
 

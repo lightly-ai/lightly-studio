@@ -19,7 +19,13 @@
         id?: string;
     }
 
-    let { sourceOptions, selectedSource = $bindable(), placeholder = 'Select a source...', onSelect, id }: Props = $props();
+    let {
+        sourceOptions,
+        selectedSource = $bindable(),
+        placeholder = 'Select a source...',
+        onSelect,
+        id
+    }: Props = $props();
 
     const items = $derived(
         sourceOptions.map((option) => ({
