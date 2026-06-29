@@ -294,6 +294,7 @@ def test_get_all_with_payload__without_embedding_has_no_similarity_score(
     annotations_page = annotation_resolver.get_all_with_payload(
         session=db_session,
         collection_id=annotation.sample.collection_id,
+        text_embedding=[1.0, 0.0],
     )
 
     assert annotations_page.annotations[0].similarity_score is None
