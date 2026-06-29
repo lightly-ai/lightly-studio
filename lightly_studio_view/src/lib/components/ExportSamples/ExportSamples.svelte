@@ -342,12 +342,10 @@
                                 <FormField label="Annotation Source">
                                     <AnnotationSourceSelect
                                         sourceOptions={annotationSources}
+                                        placeholder="Only annotations from the selected source will be exported"
                                         bind:selectedSource={selectedAnnotationCollectionId}
                                     />
                                 </FormField>
-                                <p class="text-sm text-muted-foreground">
-                                    Select the annotation collection to export from.
-                                </p>
                             </div>
                         {/if}
 
@@ -371,6 +369,7 @@
                                 <FormField label="Annotation Source">
                                     <AnnotationSourceSelect
                                         sourceOptions={annotationSources}
+                                        placeholder="Select an annotation collection to export from (required)"
                                         bind:selectedSource={selectedAnnotationCollectionId}
                                     />
                                 </FormField>
@@ -416,6 +415,7 @@
                                 <FormField label="Annotation Source">
                                     <AnnotationSourceSelect
                                         sourceOptions={annotationSources}
+                                        placeholder="Select an annotation collection to export from (required)"
                                         bind:selectedSource={selectedAnnotationCollectionId}
                                     />
                                 </FormField>

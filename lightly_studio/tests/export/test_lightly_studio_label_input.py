@@ -21,6 +21,7 @@ from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.resolvers import annotation_resolver, collection_resolver
 from tests.helpers_resolvers import (
     ImageStub,
+    create_annotation,
     create_annotation_label,
     create_collection,
     create_image,
@@ -201,37 +202,21 @@ class TestLightlyStudioLabelInput:
         cat_label = create_annotation_label(
             session=db_session, root_collection_id=collection.collection_id, label_name="cat"
         )
-        annotation_resolver.create_many(
+        create_annotation(
             session=db_session,
-            parent_collection_id=collection.collection_id,
-            collection_name="source_1",
-            annotations=[
-                AnnotationCreate(
-                    parent_sample_id=image.sample_id,
-                    annotation_label_id=dog_label.annotation_label_id,
-                    annotation_type=AnnotationType.OBJECT_DETECTION,
-                    x=10,
-                    y=10,
-                    width=10,
-                    height=10,
-                )
-            ],
+            collection_id=collection.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=dog_label.annotation_label_id,
+            annotation_collection_name="source_1",
+            annotation_data={"x": 10, "y": 10, "width": 10, "height": 10},
         )
-        annotation_resolver.create_many(
+        create_annotation(
             session=db_session,
-            parent_collection_id=collection.collection_id,
-            collection_name="source_2",
-            annotations=[
-                AnnotationCreate(
-                    parent_sample_id=image.sample_id,
-                    annotation_label_id=cat_label.annotation_label_id,
-                    annotation_type=AnnotationType.OBJECT_DETECTION,
-                    x=20,
-                    y=20,
-                    width=20,
-                    height=20,
-                )
-            ],
+            collection_id=collection.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=cat_label.annotation_label_id,
+            annotation_collection_name="source_2",
+            annotation_data={"x": 20, "y": 20, "width": 20, "height": 20},
         )
         source_1_id = collection_resolver.get_or_create_child_collection(
             session=db_session,
@@ -283,6 +268,65 @@ class TestLightlyStudioLabelInput:
                     )
                 ],
             )
+        ]
+
+    def test_get_labels__annotation_collection_id_none_with_multiple_sources(
+        self, db_session: Session
+    ) -> None:
+        """Annotations from all collections are exported when annotation_collection_id is None."""
+        collection = create_collection(session=db_session)
+        image = create_image(
+            session=db_session,
+            collection_id=collection.collection_id,
+            file_path_abs="img1",
+            width=100,
+            height=100,
+        )
+        dog_label = create_annotation_label(
+            session=db_session, root_collection_id=collection.collection_id, label_name="dog"
+        )
+        cat_label = create_annotation_label(
+            session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+        )
+        create_annotation(
+            session=db_session,
+            collection_id=collection.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=dog_label.annotation_label_id,
+            annotation_collection_name="source_1",
+            annotation_data={"x": 10, "y": 10, "width": 10, "height": 10},
+        )
+        create_annotation(
+            session=db_session,
+            collection_id=collection.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=cat_label.annotation_label_id,
+            annotation_collection_name="source_2",
+            annotation_data={"x": 20, "y": 20, "width": 20, "height": 20},
+        )
+
+        # cat=id_0, dog=id_1 (categories are sorted alphabetically)
+        label_input = LightlyStudioObjectDetectionInput(
+            session=db_session,
+            dataset_id=collection.dataset_id,
+            samples=DatasetQuery(dataset=collection, session=db_session),
+            annotation_collection_id=None,
+        )
+        labels = list(label_input.get_labels())
+        assert len(labels) == 1
+        assert labels[0].image == Image(id=0, filename="img1", width=100, height=100)
+        # cat=id_0, dog=id_1 (categories are sorted alphabetically)
+        assert sorted(labels[0].objects, key=lambda o: o.category.name) == [
+            SingleObjectDetection(
+                category=Category(id=0, name="cat"),
+                box=BoundingBox(xmin=20, ymin=20, xmax=40, ymax=40),
+                confidence=None,
+            ),
+            SingleObjectDetection(
+                category=Category(id=1, name="dog"),
+                box=BoundingBox(xmin=10, ymin=10, xmax=20, ymax=20),
+                confidence=None,
+            ),
         ]
 
     def test_get_labels__segmentation_mask(self, db_session: Session) -> None:
