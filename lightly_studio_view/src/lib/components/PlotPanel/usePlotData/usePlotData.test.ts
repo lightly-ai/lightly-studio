@@ -9,15 +9,12 @@ vi.mock('embedding-atlas/svelte', () => ({
 }));
 
 vi.mock('../getCategoryBySelection/getCategoryBySelection', () => ({
-    getCategoryBySelection: vi.fn(
-        (selection, _data, outsideCategory = 1) =>
-            (prevValue: number, index: number) => {
-                // Mock implementation: first two points are inside the polygon (keep prevValue),
-                // rest are outside (demoted to outsideCategory, default EXCLUDED_BY_FILTERS = 1).
-                if (!selection) return prevValue;
-                return index < 2 ? prevValue : outsideCategory;
-            }
-    )
+    getCategoryBySelection: vi.fn((selection) => (prevValue: number, index: number) => {
+        // Mock implementation: first two points are inside the polygon (keep prevValue), rest
+        // are outside (demoted to EXCLUDED_BY_FILTERS_CATEGORY = 1).
+        if (!selection) return prevValue;
+        return index < 2 ? prevValue : 1;
+    })
 }));
 
 // Import after mocks are set up
