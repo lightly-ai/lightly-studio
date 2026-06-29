@@ -13,6 +13,7 @@ from lightly_studio.api.routes.api.evaluation.create_run import create_run_route
 from lightly_studio.api.routes.api.evaluation.get_confusion_matrix import (
     get_confusion_matrix_router,
 )
+from lightly_studio.api.routes.api.evaluation.get_matches import get_matches_router
 from lightly_studio.api.routes.api.evaluation.get_runs import get_runs_router
 from lightly_studio.api.routes.api.evaluation.get_sample_metrics_info import (
     get_sample_metrics_info_router,
@@ -23,5 +24,6 @@ evaluation_router.include_router(create_run_router)
 evaluation_router.include_router(get_runs_router)
 evaluation_router.include_router(get_sample_metrics_info_router)
 evaluation_router.include_router(get_confusion_matrix_router)
+evaluation_router.include_router(get_matches_router)
 
 __all__ = ["evaluation_router"]

@@ -59,6 +59,7 @@ class EvaluationRunView(BaseModel):
 
     id: UUID
     name: str
+    task_type: EvaluationTaskType
     evaluation_run_configuration: dict[str, Any]
     created_at: datetime
     gt_annotation_source: str | None

@@ -1,8 +1,12 @@
 <script lang="ts">
+    import { EvaluationTaskType } from '$lib/api/lightly_studio_local';
     import type { EvaluationRunView } from '$lib/api/lightly_studio_local/types.gen';
     import { Typography } from '$lib/components';
     import { formatDate } from '$lib/utils';
-    import { ChevronDown } from '@lucide/svelte';
+    import { routeHelpers } from '$lib/routes';
+    import { goto } from '$app/navigation';
+    import { page } from '$app/state';
+    import { ChevronDown, LayoutGrid } from '@lucide/svelte';
     import { slide } from 'svelte/transition';
     import EvaluationRunConfusionMatrixSection from './EvaluationRunConfusionMatrixSection/EvaluationRunConfusionMatrixSection.svelte';
 
@@ -26,6 +30,20 @@
     };
 
     const configEntries = $derived(Object.entries(run.evaluation_run_configuration ?? {}));
+
+    // Per-box matches (TP/FP/FN) only exist for object detection runs.
+    const supportsMatches = $derived(run.task_type === EvaluationTaskType.OBJECT_DETECTION);
+
+    const viewMatches = () => {
+        goto(
+            routeHelpers.toEvaluationMatches({
+                datasetId: page.params.dataset_id!,
+                collectionType: page.params.collection_type!,
+                collectionId: page.params.collection_id!,
+                evaluationRunId: run.id
+            })
+        );
+    };
 </script>
 
 <li class="rounded-md border border-border bg-background">
@@ -64,6 +82,18 @@
             data-testid="evaluation-run-details"
             transition:slide={{ duration }}
         >
+            {#if supportsMatches}
+                <button
+                    type="button"
+                    class="flex w-full items-center justify-center gap-2 rounded-md border border-border bg-muted px-3 py-2 text-sm font-medium hover:bg-muted/70"
+                    onclick={viewMatches}
+                    data-testid="evaluation-run-view-matches"
+                >
+                    <LayoutGrid class="size-4" />
+                    View matches
+                </button>
+            {/if}
+
             <!-- Configuration -->
             <section>
                 <Typography variant="subtitle2" component="h3" className="mb-2">

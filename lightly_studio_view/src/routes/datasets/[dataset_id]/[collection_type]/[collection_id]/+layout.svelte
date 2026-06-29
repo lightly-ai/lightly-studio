@@ -34,8 +34,10 @@
         isVideosRoute,
         isGroupsRoute,
         isGroupDetailsRoute,
-        isVideoDetailsRoute
+        isVideoDetailsRoute,
+        isEvaluationMatchesRoute
     } from '$lib/routes';
+    import MatchTypeFilterItem from '$lib/components/MatchTypeFilterItem/MatchTypeFilterItem.svelte';
     import type { GridType } from '$lib/types';
     import { useImageAnnotationCounts } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
@@ -114,6 +116,7 @@
     const isVideos = $derived(isVideosRoute(page.route.id));
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
     const isVideoDetails = $derived(isVideoDetailsRoute(page.route.id));
+    const isEvaluationMatches = $derived(isEvaluationMatchesRoute(page.route.id));
     const canSelectAll = $derived(isImages || isVideos || isVideoFrames || isAnnotations);
     const showAnnotationVisibilityToggle = $derived(
         isAnnotations || isImages || isVideos || isVideoFrames
@@ -307,7 +310,7 @@
     });
 
     const isCollectionGrid = $derived(
-        isImages || isAnnotations || isVideos || isVideoFrames || isGroups
+        isImages || isAnnotations || isVideos || isVideoFrames || isGroups || isEvaluationMatches
     );
 
     const panelIsVisible = $derived(
@@ -350,6 +353,10 @@
                                 />
                             {/if}
 
+                            {#if isEvaluationMatches}
+                                <MatchTypeFilterItem />
+                            {/if}
+
                             <div>
                                 <TagsMenu collection_id={collectionId} {gridType} />
                             </div>
@@ -371,7 +378,7 @@
                                 showVisibilityToggle={showAnnotationVisibilityToggle}
                             />
 
-                            {#if isImages || isVideos || isVideoFrames}
+                            {#if isImages || isVideos || isVideoFrames || isEvaluationMatches}
                                 {#key collectionId}
                                     <CombinedMetadataDimensionsFilters {isVideos} {isVideoFrames} />
                                 {/key}
@@ -387,6 +394,7 @@
                         {canSelectAll}
                         isSelectionActive={$selectedCount > 0}
                         {isImages}
+                        {isEvaluationMatches}
                         {hasMediaWithEmbeddings}
                         collectionDatasetId={collection.dataset_id}
                         onSelectAll={selectAllHandle.handleSelectAll}

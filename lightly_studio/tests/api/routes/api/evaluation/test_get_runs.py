@@ -66,6 +66,7 @@ def test_get_evaluation_runs(
         {
             "id": str(run_1_id),
             "name": "run_1",
+            "task_type": "object_detection",
             "evaluation_run_configuration": {"iou_threshold": 0.5, "classwise": True},
             "created_at": "2026-05-18T10:00:00Z",
             "gt_annotation_source": "gt_v1",
@@ -74,6 +75,7 @@ def test_get_evaluation_runs(
         {
             "id": str(run_2_id),
             "name": "run_2",
+            "task_type": "object_detection",
             "evaluation_run_configuration": {},
             "created_at": "2026-05-17T09:30:00Z",
             "gt_annotation_source": "gt_v2",

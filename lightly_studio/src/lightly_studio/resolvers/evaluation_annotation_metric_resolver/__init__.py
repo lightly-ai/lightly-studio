@@ -7,9 +7,13 @@ from lightly_studio.resolvers.evaluation_annotation_metric_resolver.get_all_by_e
 from lightly_studio.resolvers.evaluation_annotation_metric_resolver.get_confusion_matrix import (
     get_confusion_matrix,
 )
+from lightly_studio.resolvers.evaluation_annotation_metric_resolver.get_matches_with_payload import (  # noqa: E501
+    get_matches_with_payload,
+)
 
 __all__ = [
     "create_many",
     "get_all_by_evaluation_run_id",
     "get_confusion_matrix",
+    "get_matches_with_payload",
 ]

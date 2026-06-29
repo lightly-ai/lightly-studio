@@ -42,6 +42,7 @@ const defaultProps = {
     canSelectAll: false,
     isSelectionActive: false,
     isImages: false,
+    isEvaluationMatches: false,
     hasMediaWithEmbeddings: false,
     collectionDatasetId: 'dataset-1',
     onSelectAll: vi.fn().mockResolvedValue(undefined),

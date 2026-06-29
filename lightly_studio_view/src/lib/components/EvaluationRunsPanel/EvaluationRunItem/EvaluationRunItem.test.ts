@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
+import { EvaluationTaskType } from '$lib/api/lightly_studio_local';
 import type { EvaluationRunView } from '$lib/api/lightly_studio_local/types.gen';
 import { formatDate } from '$lib/utils';
 import EvaluationRunItem from './EvaluationRunItem.svelte';
@@ -16,6 +17,7 @@ vi.mock(
 const baseRun: EvaluationRunView = {
     id: 'run-1',
     name: 'Detection eval — v1',
+    task_type: EvaluationTaskType.OBJECT_DETECTION,
     evaluation_run_configuration: {
         iou_threshold: 0.5,
         split: 'val',

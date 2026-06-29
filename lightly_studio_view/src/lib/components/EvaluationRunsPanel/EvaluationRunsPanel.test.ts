@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
+import { EvaluationTaskType } from '$lib/api/lightly_studio_local';
 import type { EvaluationRunView } from '$lib/api/lightly_studio_local/types.gen';
 import EvaluationRunsPanel from './EvaluationRunsPanel.svelte';
 
@@ -17,6 +18,7 @@ const noop = () => {};
 const makeRun = (
     overrides: Partial<EvaluationRunView> & Pick<EvaluationRunView, 'id' | 'name'>
 ): EvaluationRunView => ({
+    task_type: EvaluationTaskType.OBJECT_DETECTION,
     evaluation_run_configuration: {},
     created_at: new Date('2026-01-01T00:00:00Z'),
     gt_annotation_source: 'gt_v1',

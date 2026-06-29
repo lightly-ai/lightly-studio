@@ -66,4 +66,5 @@ export { default as CollectionSearch } from '$lib/components/CollectionSearch/Co
 export { default as CollectionSearchImage } from '$lib/components/CollectionSearch/CollectionSearchImage/CollectionSearchImage.svelte';
 export { default as CollectionSearchInput } from '$lib/components/CollectionSearch/SearchInput/CollectionSearchInput.svelte';
 export { default as OrderBy } from '$lib/components/OrderBy/OrderBy.svelte';
+export { default as MatchOrderBy } from '$lib/components/MatchOrderBy/MatchOrderBy.svelte';
 export { default as SamplingCombinationDialog } from '$lib/components/Sampling/SamplingCombinationDialog.svelte';

@@ -7,6 +7,7 @@
     import type { Collection } from '$lib/services/types';
     import SampleDetailsPanel from './SampleDetailsPanel.svelte';
     import SampleMetadata from '../SampleMetadata/SampleMetadata.svelte';
+    import SampleEvaluationMatchesEntry from './SampleEvaluationMatchesEntry.svelte';
     import SampleDetailsBreadcrumb from './SampleDetailsBreadcrumb/SampleDetailsBreadcrumb.svelte';
     import { page } from '$app/state';
     import type { ImageView } from '$lib/api/lightly_studio_local';
@@ -65,6 +66,7 @@
         {/snippet}
         {#snippet metadataValue()}
             <SampleMetadata sample={sampleImage} />
+            <SampleEvaluationMatchesEntry {sampleId} datasetId={collection.dataset_id} />
         {/snippet}
     </SampleDetailsPanel>
 {/if}

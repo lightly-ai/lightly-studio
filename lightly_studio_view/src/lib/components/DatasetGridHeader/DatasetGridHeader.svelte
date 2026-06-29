@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { CollectionSearch, GridHeader, OrderBy } from '$lib/components';
+    import { CollectionSearch, GridHeader, MatchOrderBy, OrderBy } from '$lib/components';
     import GridHeaderSelectAllButton from '$lib/components/GridHeaderSelectAllButton/GridHeaderSelectAllButton.svelte';
 
     type SearchImage = { name: string; previewUrl: string };
@@ -8,6 +8,7 @@
         canSelectAll: boolean;
         isSelectionActive: boolean;
         isImages: boolean;
+        isEvaluationMatches: boolean;
         hasMediaWithEmbeddings: boolean;
         collectionDatasetId: string;
         onSelectAll: () => Promise<void>;
@@ -25,6 +26,7 @@
         canSelectAll,
         isSelectionActive,
         isImages,
+        isEvaluationMatches,
         hasMediaWithEmbeddings,
         onSelectAll,
         onDeselectAll,
@@ -53,6 +55,8 @@
     {#snippet auxControls()}
         {#if isImages}
             <OrderBy datasetId={collectionDatasetId} />
+        {:else if isEvaluationMatches}
+            <MatchOrderBy />
         {/if}
     {/snippet}
     {#if hasMediaWithEmbeddings}
