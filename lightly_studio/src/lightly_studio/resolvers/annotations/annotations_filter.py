@@ -90,6 +90,7 @@ class AnnotationsFilter(GridFilterBase):
             or self.annotation_label_ids
             or self.tag_ids
             or self.annotation_types
+            or self.sample_ids
         )
 
     def _apply_annotation_filters(
