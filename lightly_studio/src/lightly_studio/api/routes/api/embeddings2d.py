@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from sqlmodel import select
 
 from lightly_studio.api.routes.api.embedding_coloring import ColorBy, build_color_data
+from lightly_studio.api.routes.api.status import HTTP_STATUS_BAD_REQUEST
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelTable
@@ -176,6 +177,6 @@ def _validate_filter_type(
     if collection.sample_type == SampleType.ANNOTATION and isinstance(filters, AnnotationsFilter):
         return
     raise HTTPException(
-        status_code=400,
+        status_code=HTTP_STATUS_BAD_REQUEST,
         detail=f"Invalid filter type for {collection.sample_type.value} collection.",
     )
