@@ -101,24 +101,21 @@ class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSeg
         # TODO(lukas, 02/2026): We can optimise in the future to filter annotations in a DB query.
         objects = []
         for annotation in sample.sample_table.annotations:
-            if annotation.annotation_type != AnnotationType.SEGMENTATION_MASK:
-                continue
-            if (
-                annotation_collection_id is not None
-                and annotation.annotation_collection_id != annotation_collection_id
+            if annotation.annotation_type == AnnotationType.SEGMENTATION_MASK and (
+                annotation_collection_id is None
+                or annotation.annotation_collection_id == annotation_collection_id
             ):
-                continue
-            obj = _annotation_to_single_inst_seg(
-                annotation=annotation,
-                label_id_to_category=label_id_to_category,
-                image_width=sample.width,
-                image_height=sample.height,
-            )
-            # TODO(lukas 3/2026): workaround needed because
-            # annotation.segmentation_details.segmentation_mask can be None.
-            # See lightly_studio/src/lightly_studio/models/annotation/segmentation.py.
-            if obj is not None:
-                objects.append(obj)
+                obj = _annotation_to_single_inst_seg(
+                    annotation=annotation,
+                    label_id_to_category=label_id_to_category,
+                    image_width=sample.width,
+                    image_height=sample.height,
+                )
+                # TODO(lukas 3/2026): workaround needed because
+                # annotation.segmentation_details.segmentation_mask can be None.
+                # See lightly_studio/src/lightly_studio/models/annotation/segmentation.py.
+                if obj is not None:
+                    objects.append(obj)
 
         return ImageInstanceSegmentation(
             image=_sample_to_image(sample=sample, image_id=image_id),
@@ -154,21 +151,18 @@ class LightlyStudioPascalVOCInstanceSegmentationInput(
     ) -> ImageInstanceSegmentation:
         objects = []
         for annotation in sample.sample_table.annotations:
-            if annotation.annotation_type != AnnotationType.SEGMENTATION_MASK:
-                continue
-            if (
-                annotation_collection_id is not None
-                and annotation.annotation_collection_id != annotation_collection_id
+            if annotation.annotation_type == AnnotationType.SEGMENTATION_MASK and (
+                annotation_collection_id is None
+                or annotation.annotation_collection_id == annotation_collection_id
             ):
-                continue
-            obj = _annotation_to_single_inst_seg(
-                annotation=annotation,
-                label_id_to_category=label_id_to_category,
-                image_width=sample.width,
-                image_height=sample.height,
-            )
-            if obj is not None:
-                objects.append(obj)
+                obj = _annotation_to_single_inst_seg(
+                    annotation=annotation,
+                    label_id_to_category=label_id_to_category,
+                    image_width=sample.width,
+                    image_height=sample.height,
+                )
+                if obj is not None:
+                    objects.append(obj)
 
         return ImageInstanceSegmentation(
             image=_sample_to_image(
