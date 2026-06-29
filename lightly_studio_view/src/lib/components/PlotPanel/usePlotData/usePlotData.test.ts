@@ -187,6 +187,46 @@ describe('usePlotData', () => {
         expect(get(result.selectedSampleIds)).toEqual(['sample1', 'sample2']);
     });
 
+    it('does not select an in-lasso point routed to HIDDEN_CATEGORY', () => {
+        const mockData = createMockArrowData();
+        // sample1 and sample3 are filtered out; hiding EXCLUDED routes them to HIDDEN (0).
+        mockData.fulfils_filter = new Uint8Array([0, 1, 0, 1]);
+        const mockSelection: Point[] = [
+            { x: 0, y: 0 },
+            { x: 2, y: 0 },
+            { x: 2, y: 6 },
+            { x: 0, y: 6 }
+        ];
+
+        const result = usePlotData({
+            arrowData: mockData,
+            rangeSelection: mockSelection,
+            hiddenCategories: new Set([1])
+        });
+
+        const data = get(result.data) as { category: Uint8Array };
+        // sample1 hidden+in-lasso stays 0; sample2 keeps color 3; out-of-lasso 3/4 -> EXCLUDED 1.
+        expect(Array.from(data.category)).toEqual([0, 3, 1, 1]);
+        expect(get(result.selectedSampleIds)).toEqual(['sample2']);
+    });
+
+    it('keeps highlighted-path HIDDEN points hidden rather than demoting them', () => {
+        const mockData = createMockArrowData();
+        mockData.fulfils_filter = new Uint8Array([0, 1, 0, 1]);
+
+        const result = usePlotData({
+            arrowData: mockData,
+            rangeSelection: null,
+            highlightedSampleIds: ['sample1', 'sample2'],
+            hiddenCategories: new Set([1])
+        });
+
+        const data = get(result.data) as { category: Uint8Array };
+        // Highlighted-but-hidden sample1 stays 0; sample2 highlighted keeps 3; sample3 hidden
+        // stays 0; un-highlighted sample4 -> EXCLUDED 1.
+        expect(Array.from(data.category)).toEqual([0, 3, 0, 1]);
+    });
+
     it('should preserve highlighted color categories and demote other samples', () => {
         const mockData = createMockArrowData();
 
