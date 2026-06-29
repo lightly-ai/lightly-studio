@@ -79,7 +79,7 @@
                     class="h-8 w-8"
                     data-testid="evaluation-runs-add-button"
                 >
-                    <Plus class="size-4" />
+                    <Plus class="size-4" /> Run evaluation
                 </Button>
             {/if}
             <Button
