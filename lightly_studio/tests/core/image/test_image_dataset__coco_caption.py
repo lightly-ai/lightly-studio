@@ -97,6 +97,45 @@ class TestDataset:
                 images_path=images_path,
             )
 
+    def test_add_samples_from_coco_caption__limit(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        annotations_path = tmp_path / "annotations.json"
+        _get_captions_input(annotations_path=annotations_path)
+        images_path = _create_valid_samples(tmp_path)
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_samples_from_coco_caption(
+            annotations_json=annotations_path,
+            images_path=images_path,
+            limit=1,
+        )
+
+        samples = list(dataset)
+        assert len(samples) == 1
+        assert samples[0].file_name == "image1.jpg"
+
+    @pytest.mark.parametrize("limit", [0, -1])
+    def test_add_samples_from_coco_caption__invalid_limit(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+        limit: int,
+    ) -> None:
+        annotations_path = tmp_path / "annotations.json"
+        _get_captions_input(annotations_path=annotations_path)
+        images_path = _create_valid_samples(tmp_path)
+
+        dataset = ImageDataset.create(name="test_dataset")
+        with pytest.raises(ValueError, match=r"limit must be greater than 0"):
+            dataset.add_samples_from_coco_caption(
+                annotations_json=annotations_path,
+                images_path=images_path,
+                limit=limit,
+            )
+
     def test_add_samples_from_coco_caption__dont_embed(
         self,
         patch_collection: None,  # noqa: ARG002

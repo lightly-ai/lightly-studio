@@ -114,6 +114,38 @@ class TestDataset:
         )
         assert len(embeddings) == 0
 
+    def test_dataset_add_videos_from_path__limit(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        create_video_file(
+            output_path=tmp_path / "test_video_0.mp4", width=640, height=480, num_frames=30, fps=2
+        )
+        create_video_file(
+            output_path=tmp_path / "test_video_1.mp4", width=640, height=480, num_frames=30, fps=2
+        )
+
+        dataset = VideoDataset.create(name="test_dataset")
+        dataset.add_videos_from_path(path=tmp_path, limit=1, embed=False)
+
+        videos = video_resolver.get_all_by_collection_id(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+        ).samples
+        assert len(videos) == 1
+
+    @pytest.mark.parametrize("limit", [0, -1])
+    def test_dataset_add_videos_from_path__invalid_limit_raises(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+        limit: int,
+    ) -> None:
+        dataset = VideoDataset.create(name="test_dataset")
+        with pytest.raises(ValueError, match="limit must be greater than 0"):
+            dataset.add_videos_from_path(path=tmp_path, limit=limit)
+
     def test_dataset_add_videos_from_path__fps_subsamples(
         self,
         patch_collection: None,  # noqa: ARG002
