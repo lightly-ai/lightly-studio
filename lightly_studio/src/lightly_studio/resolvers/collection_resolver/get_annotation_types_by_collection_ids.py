@@ -18,9 +18,6 @@ def get_annotation_types_by_collection_ids(
 ) -> dict[UUID, list[str]]:
     """Return the distinct annotation types present in each annotation collection.
 
-    Annotations belong to a collection through their sample's ``collection_id``
-    (mirrors the join used by the evaluation validators).
-
     Args:
         session: The database session.
         collection_ids: Annotation collection IDs to inspect.
