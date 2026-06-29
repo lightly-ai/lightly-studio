@@ -20,6 +20,7 @@ filtered sample count.
 - Python dataset queries now support classifications, object detections, and segmentation mask annotations.
 - Python dataset queries now model evaluation queries on the sample level.
 - Improved performance when tagging all samples in the GUI for large datasets.
+- Annotation source selection for exports: when multiple annotation collections exist, the export dialog shows a dropdown to choose which collection to export from. The annotation source can also be specified via the Python API using the `annotation_collection_id` parameter.
 
 ### Changed
 
