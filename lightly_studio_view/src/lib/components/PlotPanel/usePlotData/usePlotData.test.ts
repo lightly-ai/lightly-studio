@@ -208,8 +208,7 @@ describe('usePlotData', () => {
         });
 
         const data = get(result.data) as { category: Uint8Array };
-        // sample1 hidden+in-lasso stays 0; sample2 keeps color 3. Out-of-lasso points demote to
-        // the hidden Excluded row, so they route to HIDDEN (0) rather than reappearing grey.
+        // Only sample2 is selectable; the rest are Excluded, then hidden (row 1) -> HIDDEN (0).
         expect(Array.from(data.category)).toEqual([0, 3, 0, 0]);
         expect(get(result.selectedSampleIds)).toEqual(['sample2']);
     });
@@ -226,8 +225,7 @@ describe('usePlotData', () => {
         });
 
         const data = get(result.data) as { category: Uint8Array };
-        // Highlighted-but-hidden sample1 stays 0; sample2 highlighted keeps 3; sample3 hidden
-        // stays 0; un-highlighted sample4 demotes to the hidden Excluded row -> HIDDEN 0.
+        // Only highlighted+passing sample2 keeps its color; the rest are Excluded, then hidden -> 0.
         expect(Array.from(data.category)).toEqual([0, 3, 0, 0]);
     });
 
@@ -243,6 +241,25 @@ describe('usePlotData', () => {
         const data = get(result.data) as { category: Uint8Array };
         // sample2 is highlighted -> keeps 3; sample3 is already EXCLUDED (1) -> stays 1;
         // sample1 and sample4 are not highlighted -> demoted to EXCLUDED 1.
+        expect(Array.from(data.category)).toEqual([1, 3, 1, 1]);
+    });
+
+    it('hides "No category" points by their displayed bucket, not their pre-demotion identity', () => {
+        const mockData = createMockArrowData();
+        // All pass the filter, so demotion is purely highlight-driven; sample1/sample3 have no
+        // annotation (would be "No category" 2 if Included).
+        mockData.fulfils_filter = new Uint8Array([1, 1, 1, 1]);
+
+        const result = usePlotData({
+            arrowData: mockData,
+            rangeSelection: null,
+            highlightedSampleIds: ['sample2'],
+            hiddenCategories: new Set([2]) // hide "No category"
+        });
+
+        const data = get(result.data) as { category: Uint8Array };
+        // Un-highlighted points demote to Excluded and render as Excluded; hiding "No category" (2)
+        // must not touch them. (The pre-fix pipeline produced [0, 3, 0, 0].)
         expect(Array.from(data.category)).toEqual([1, 3, 1, 1]);
     });
 

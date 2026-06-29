@@ -62,15 +62,6 @@ export function usePlotData({
     const colorCategories = data.color_categories as number[][];
     const fulfilsFilter = data.fulfils_filter as ArrayLike<number>;
 
-    // Deselected points demote to the Excluded row and the no-filter fill is the Included row;
-    // route either to HIDDEN when its legend row is hidden so the points vanish, not turn grey.
-    const demotedCategory = hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)
-        ? HIDDEN_CATEGORY
-        : EXCLUDED_BY_FILTERS_CATEGORY;
-    const includedCategory = hiddenCategories.has(INCLUDED_BY_FILTERS_CATEGORY)
-        ? HIDDEN_CATEGORY
-        : INCLUDED_BY_FILTERS_CATEGORY;
-
     // Each point is displayed as its first visible category, so it falls back to the next
     // one when a category is toggled off. Without an active filter every point starts as
     // INCLUDED_BY_FILTERS_CATEGORY so range selection still works.
@@ -84,15 +75,16 @@ export function usePlotData({
             );
         }
     } else {
-        category.fill(includedCategory);
+        category.fill(INCLUDED_BY_FILTERS_CATEGORY);
     }
     const sampleIds = data.sample_id as string[];
 
     if (rangeSelection) {
-        // Points inside the polygon keep their prevValue; points outside are demoted.
-        category = category.map(getCategoryBySelection(rangeSelection, data, demotedCategory));
+        // Points inside the polygon keep their prevValue; points outside are demoted to Excluded.
+        category = category.map(getCategoryBySelection(rangeSelection, data));
 
-        // Collect the sample ids of the selectable in-polygon points.
+        // Collect selectable in-polygon ids before the hide pass, so legend toggles never change
+        // which ids get committed to the filter.
         const _ids = category.reduce<string[]>((acc, pointCategory, index) => {
             if (!isUnselectableCategory(pointCategory)) {
                 acc.push(sampleIds[index]);
@@ -106,8 +98,18 @@ export function usePlotData({
             if (isUnselectableCategory(pointCategory)) {
                 return pointCategory;
             }
-            return highlightedSampleIdSet.has(sampleIds[index]) ? pointCategory : demotedCategory;
+            return highlightedSampleIdSet.has(sampleIds[index])
+                ? pointCategory
+                : EXCLUDED_BY_FILTERS_CATEGORY;
         });
+    }
+
+    // Hide on each point's final category, after demotion — so a hidden toggle removes exactly the
+    // points rendered in that bucket (a demoted point is hidden by Excluded, not its pre-demotion bucket).
+    if (hiddenCategories.size > 0) {
+        category = category.map((pointCategory) =>
+            hiddenCategories.has(pointCategory) ? HIDDEN_CATEGORY : pointCategory
+        );
     }
 
     plotData.set({
