@@ -78,8 +78,7 @@
             $selectedAnnotationFilterIds.length > 0 ? $selectedAnnotationFilterIds : undefined,
         tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
         // Embedding plot lasso selection narrows the grid to the selected annotations.
-        sample_ids:
-            plotSelectedAnnotationIds.length > 0 ? plotSelectedAnnotationIds : undefined,
+        sample_ids: plotSelectedAnnotationIds.length > 0 ? plotSelectedAnnotationIds : undefined,
         // Embedding text search reorders the grid by similarity (shared with images tab).
         text_embedding: $textEmbedding?.embedding ?? undefined
     });

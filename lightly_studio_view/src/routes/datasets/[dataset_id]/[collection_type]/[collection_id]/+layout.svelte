@@ -318,9 +318,7 @@
 
     const panelIsVisible = $derived(
         ($activePanel === 'evaluationRuns' && hasEvaluationRuns) ||
-            ($activePanel === 'embeddingPlot' &&
-                hasMediaWithEmbeddings &&
-                (isImages || isVideos || isAnnotations)) ||
+            ($activePanel === 'embeddingPlot' && hasMediaWithEmbeddings) ||
             ($activePanel === 'queryEditor' && isImages)
     );
 </script>
@@ -450,7 +448,7 @@
                                     error={evaluationRunsQuery.error?.message}
                                 />
                             {/await}
-                        {:else if $activePanel === 'embeddingPlot' && hasMediaWithEmbeddings && (isImages || isVideos || isAnnotations)}
+                        {:else if $activePanel === 'embeddingPlot' && hasMediaWithEmbeddings}
                             {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
                                 <!-- PlotPanel captures collectionId at mount; remount it when
                                      switching collections (e.g. images <-> annotations tab). -->
