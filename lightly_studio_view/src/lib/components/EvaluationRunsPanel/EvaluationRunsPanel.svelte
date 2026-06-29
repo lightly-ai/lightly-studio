@@ -22,8 +22,14 @@
         collectionId?: string;
     }
 
-    const { onClose, evaluationRuns, isLoading = false, error, datasetId, collectionId }: Props =
-        $props();
+    const {
+        onClose,
+        evaluationRuns,
+        isLoading = false,
+        error,
+        datasetId,
+        collectionId
+    }: Props = $props();
 
     const canTrigger = $derived(!!datasetId && !!collectionId);
     let dialogOpen = $state(false);
