@@ -56,7 +56,7 @@
     const prerenderedMap = $derived.by(() => {
         if (!prerenderedAnnotations) return new Map();
         return new Map(
-            prerenderedAnnotations.map((prerendered) => [prerendered.annotationId, prerendered])
+            prerenderedAnnotations.map((prerendered) => [prerendered.sample_id, prerendered])
         );
     });
 </script>

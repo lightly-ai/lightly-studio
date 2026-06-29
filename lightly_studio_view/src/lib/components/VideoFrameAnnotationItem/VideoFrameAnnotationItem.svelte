@@ -13,7 +13,7 @@
 
     export interface PrerenderedAnnotation {
         frameId: string;
-        annotationId: string;
+        sample_id: string;
         dataUrl: string;
         width: number;
         height: number;
