@@ -512,7 +512,7 @@ class TestSampleFilterConfusionCell:
     ) -> None:
         dataset = create_collection(session=db_session)
         dataset_id = dataset.collection_id
-        run, _image = evaluation_sample_metric_helpers.create_run_and_image(
+        run = evaluation_sample_metric_helpers.create_run(
             session=db_session, dataset_collection_id=dataset_id
         )
         samples = create_images(
@@ -570,10 +570,10 @@ class TestSampleFilterConfusionCell:
     def test_apply__confusion_cell__scopes_to_evaluation_run(self, db_session: Session) -> None:
         dataset = create_collection(session=db_session)
         dataset_id = dataset.collection_id
-        run_a, _image_a = evaluation_sample_metric_helpers.create_run_and_image(
+        run_a = evaluation_sample_metric_helpers.create_run(
             session=db_session, dataset_collection_id=dataset_id, name="run_a"
         )
-        run_b, _image_b = evaluation_sample_metric_helpers.create_run_and_image(
+        run_b = evaluation_sample_metric_helpers.create_run(
             session=db_session, dataset_collection_id=dataset_id, name="run_b"
         )
         samples = create_images(
@@ -621,7 +621,7 @@ class TestSampleFilterConfusionCell:
     def test_apply__confusion_cell__ands_with_other_predicate(self, db_session: Session) -> None:
         dataset = create_collection(session=db_session)
         dataset_id = dataset.collection_id
-        run, _image = evaluation_sample_metric_helpers.create_run_and_image(
+        run = evaluation_sample_metric_helpers.create_run(
             session=db_session, dataset_collection_id=dataset_id
         )
         samples = create_images(

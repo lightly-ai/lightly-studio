@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Annotation classes can now be shown or hidden individually in the grid views using an eye icon toggle in the Annotation Classes sidebar.
 - Python SDK: `target_fps` parameter on `VideoDataset.add_videos_from_path` to subsample frames to a
   lower frame rate. Retained frames keep their original frame numbers.
 - Sampling in Browser now supports combining multiple strategies (diversity, typicality, similarity, metadata weighting, class balancing) in a single selection.
@@ -18,6 +19,7 @@ filtered sample count.
 - Improve confusion matrix usability for large numbers of classes
 - Python dataset queries now support classifications, object detections, and segmentation mask annotations.
 - Python dataset queries now model evaluation queries on the sample level.
+- Improved performance when tagging all samples in the GUI for large datasets.
 
 ### Changed
 

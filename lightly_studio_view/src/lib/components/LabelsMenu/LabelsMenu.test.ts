@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
 import { writable, type Writable } from 'svelte/store';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import LabelsMenu from './LabelsMenu.svelte';
@@ -6,7 +7,9 @@ import type { Annotation } from '$lib/types';
 
 const mocks = vi.hoisted(() => ({
     selectedCollectionIds: null as unknown as Writable<string[]>,
-    enforceColoringByClassStore: null as unknown as Writable<boolean>
+    enforceColoringByClassStore: null as unknown as Writable<boolean>,
+    hiddenClassNamesStore: null as unknown as Writable<string[]>,
+    toggleClassVisibility: vi.fn()
 }));
 
 vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter', async () => {
@@ -44,6 +47,27 @@ vi.mock('$lib/hooks/useCustomLabelColors', async () => {
     };
 });
 
+vi.mock('$lib/hooks/useAnnotationClassVisibility/useAnnotationClassVisibility', async () => {
+    const { writable } = await import('svelte/store');
+    mocks.hiddenClassNamesStore = writable<string[]>([]);
+    return {
+        useAnnotationClassVisibility: () => ({
+            hiddenClassNamesStore: mocks.hiddenClassNamesStore,
+            toggleClassVisibility: mocks.toggleClassVisibility,
+            isClassHidden: (label: string) => ({
+                subscribe: (fn: (v: boolean) => void) => {
+                    let hidden: string[] = [];
+                    const unsub = mocks.hiddenClassNamesStore.subscribe((v) => {
+                        hidden = v;
+                        fn(hidden.includes(label));
+                    });
+                    return unsub;
+                }
+            })
+        })
+    };
+});
+
 describe('LabelsMenu', () => {
     const twoLabels = writable<Annotation[]>([
         { label_name: 'car', current_count: 1, total_count: 1, selected: true },
@@ -57,6 +81,8 @@ describe('LabelsMenu', () => {
     beforeEach(() => {
         mocks.selectedCollectionIds.set([]);
         mocks.enforceColoringByClassStore.set(false);
+        mocks.hiddenClassNamesStore.set([]);
+        mocks.toggleClassVisibility.mockReset();
     });
 
     it('shows class color legends when only one source is selected', () => {
@@ -84,5 +110,24 @@ describe('LabelsMenu', () => {
         expect(screen.getAllByTestId('labels-menu-item')).toHaveLength(2);
         expect(screen.getByText('car')).toBeInTheDocument();
         expect(screen.getByText('person')).toBeInTheDocument();
+    });
+
+    it('shows visibility toggle buttons when showVisibilityToggle is true', () => {
+        render(LabelsMenu, { ...defaultProps, showVisibilityToggle: true });
+        expect(screen.getAllByTestId('label-visibility-toggle')).toHaveLength(2);
+    });
+
+    it('calls toggleClassVisibility when visibility button is clicked', async () => {
+        render(LabelsMenu, { ...defaultProps, showVisibilityToggle: true });
+        const [carToggle] = screen.getAllByTestId('label-visibility-toggle');
+        await userEvent.click(carToggle);
+        expect(mocks.toggleClassVisibility).toHaveBeenCalledWith('car');
+    });
+
+    it('shows EyeOff icon for hidden classes', () => {
+        mocks.hiddenClassNamesStore.set(['car']);
+        render(LabelsMenu, { ...defaultProps, showVisibilityToggle: true });
+        expect(screen.getByLabelText('Show annotation class car')).toBeInTheDocument();
+        expect(screen.getByLabelText('Hide annotation class person')).toBeInTheDocument();
     });
 });

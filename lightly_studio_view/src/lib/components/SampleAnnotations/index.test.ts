@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SampleAnnotations from './index.svelte';
 import { useSettings } from '$lib/hooks/useSettings';
 import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
+import { useAnnotationClassVisibility } from '$lib/hooks/useAnnotationClassVisibility/useAnnotationClassVisibility';
 import * as utils from '$lib/utils';
 
 type UseSettingsReturn = ReturnType<typeof useSettings>;
@@ -168,6 +169,8 @@ describe('SampleAnnotations', () => {
                 return mockContext as unknown as CanvasRenderingContext2D;
             }
         );
+
+        useAnnotationClassVisibility().hiddenClassNamesStore.set([]);
     });
 
     afterEach(() => {
@@ -204,6 +207,23 @@ describe('SampleAnnotations', () => {
             expect(hasStrokeRectCall(mockContext, 10, 21, 30, 41)).toBe(true);
             expect(hasStrokeRectCall(mockContext, 2, 3, 4, 5)).toBe(true);
         });
+    });
+
+    it('does not render annotations for hidden classes', async () => {
+        setShowBoundingBoxesForSegmentation(true);
+        useAnnotationClassVisibility().toggleClassVisibility('car');
+
+        render(SampleAnnotations, {
+            props: {
+                sample: createSample()
+            }
+        });
+
+        await waitFor(() => {
+            expect(hasStrokeRectCall(mockContext, 2, 3, 4, 5)).toBe(true);
+        });
+
+        expect(hasStrokeRectCall(mockContext, 10, 21, 30, 41)).toBe(false);
     });
 
     describe('enforceColoringByClass setting', () => {

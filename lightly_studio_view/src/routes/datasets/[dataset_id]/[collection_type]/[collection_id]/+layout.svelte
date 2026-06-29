@@ -58,6 +58,7 @@
         buildVideoFrameAnnotationCountsFilter
     } from '$lib/utils/buildAnnotationCountsFilters';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
+    import ConfusionCellFilterItem from '$lib/components/ConfusionCellFilterItem';
     import { useSelectionSummary } from '$lib/hooks';
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
     import { isInputElement } from '$lib/utils';
@@ -356,11 +357,15 @@
                                 {isImages}
                             />
                             {#if isImages}
+                                <ConfusionCellFilterItem />
+                            {/if}
+                            {#if isImages}
                                 <AnnotationCollectionsMenu {collectionId} />
                             {/if}
                             <LabelsMenu
                                 {annotationFilterRows}
                                 onToggleAnnotationFilter={toggleAnnotationFilterSelection}
+                                showVisibilityToggle={isAnnotations || isImages}
                             />
 
                             {#if isImages || isVideos || isVideoFrames}
