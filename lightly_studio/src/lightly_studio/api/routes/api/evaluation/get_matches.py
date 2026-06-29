@@ -50,12 +50,12 @@ class GetEvaluationMatchesRequest(BaseModel):
         description="Image-level filter (tags, metadata, dimensions, sample ids).",
     )
     sort_field: EvaluationMatchSortField = Field(
-        EvaluationMatchSortField.MATCH_TYPE,
-        description="Primary ordering: group by match type (default) or by IoU.",
+        EvaluationMatchSortField.IOU,
+        description="Primary ordering: by IoU (default) or by prediction confidence.",
     )
     sort_direction: SortDirection = Field(
         SortDirection.desc,
-        description="Direction applied to the IoU ordering.",
+        description="Direction applied to the chosen sort field.",
     )
     pagination: Paginated = Field(default_factory=Paginated)
 

@@ -157,6 +157,7 @@
         >
             <div
                 class="annotation-label flex items-center gap-1 text-xs text-white"
+                class:annotation-label--bottom={box.role === 'Pred'}
                 style={`background-color: ${box.color};`}
             >
                 <span class="font-mono opacity-90">{box.role}</span>
@@ -197,6 +198,14 @@
         padding: 1px 4px;
         white-space: nowrap;
         max-width: 100%;
+    }
+
+    /* Anchor the prediction label below its box so it does not overlap the
+       ground-truth label (the two boxes sit on top of each other for TPs). */
+    .annotation-label--bottom {
+        top: auto;
+        bottom: 0;
+        transform: translate3d(0, 100%, 0);
     }
 
     .badge {

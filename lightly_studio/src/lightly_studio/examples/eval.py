@@ -1,16 +1,18 @@
-import lightly_studio as ls
-
-from lightly_studio.core.annotation import CreateObjectDetection
-from lightly_studio.evaluation.image_dataset_evaluate import ObjectDetectionEvaluationConfig
-from lightly_studio.core.dataset_query.object_detection_query import ObjectDetectionField, ObjectDetectionQuery
 from ultralytics import YOLO
-from lightly_studio.core.dataset_query import (
-        AND,
-        EvaluationMetricField,
-        ImageSampleField,
-        SampleEvaluationQuery,
-    )
 
+import lightly_studio as ls
+from lightly_studio.core.annotation import CreateObjectDetection
+from lightly_studio.core.dataset_query import (
+    AND,
+    EvaluationMetricField,
+    ImageSampleField,
+    SampleEvaluationQuery,
+)
+from lightly_studio.core.dataset_query.object_detection_query import (
+    ObjectDetectionField,
+    ObjectDetectionQuery,
+)
+from lightly_studio.evaluation.image_dataset_evaluate import ObjectDetectionEvaluationConfig
 
 image_path = r"D:\\01_work\\pkg\\dataset_examples\\coco_subset_128_images\\images"
 
@@ -74,6 +76,16 @@ def main():
         pred_annotation_source="yolo26n.pt_prediction",
         config=ObjectDetectionEvaluationConfig(
             iou_threshold=0.5,
+            classwise=True,
+        ),
+    )
+
+    dataset.evaluate().object_detection(
+        name="gt_yolo26n_0.8",
+        gt_annotation_source="ground_truth",
+        pred_annotation_source="yolo26n.pt_prediction",
+        config=ObjectDetectionEvaluationConfig(
+            iou_threshold=0.8,
             classwise=True,
         ),
     )

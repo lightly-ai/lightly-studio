@@ -6,6 +6,7 @@
         type TagTable
     } from '$lib/api/lightly_studio_local';
     import SegmentTags from '$lib/components/SegmentTags/SegmentTags.svelte';
+    import SampleEvaluationMatchesEntry from '../SampleEvaluationMatchesEntry.svelte';
     import SampleDetailsAnnotationSegment from '../SampleDetailsAnnotationSegment/SampleDetailsAnnotationSegment.svelte';
     import SampleDetailsCaptionSegment from '../SampleDetailsCaptionsSegment/SampleDetailsCaptionSegment.svelte';
     import SampleDetailsClassificationSegment from '../SampleDetailsClassificationSegment/SampleDetailsClassificationSegment.svelte';
@@ -22,6 +23,7 @@
         onUpdate: () => void;
         annotationsIdsToHide: Set<string>;
         collectionId: string;
+        datasetId?: string;
         isPanModeEnabled: boolean;
         metadataItem?: Snippet;
     };
@@ -30,6 +32,7 @@
         sample,
         onUpdate,
         collectionId,
+        datasetId,
         isPanModeEnabled,
         metadataItem
     }: Props = $props();
@@ -68,6 +71,9 @@
                     onRefetch={onUpdate}
                 />
             {/key}
+            {#if datasetId}
+                <SampleEvaluationMatchesEntry sampleId={sample.sample_id} {datasetId} />
+            {/if}
             {#if sample.annotations}
                 <SampleDetailsAnnotationSegment
                     bind:annotationsIdsToHide

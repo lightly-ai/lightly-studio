@@ -37,6 +37,7 @@
         refetch,
         handleEscape,
         sample,
+        datasetId,
         metadataValue,
         breadcrumb,
         sidePanelItem,
@@ -57,6 +58,7 @@
         };
         refetch: () => void;
         handleEscape: () => void;
+        datasetId?: string;
         children?: Snippet;
         metadataValue?: Snippet;
         sidePanelItem?: Snippet;
@@ -286,6 +288,7 @@
                         {sample}
                         onUpdate={refetch}
                         {collectionId}
+                        {datasetId}
                         {isPanModeEnabled}
                     >
                         {#snippet metadataItem()}

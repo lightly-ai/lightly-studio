@@ -1,11 +1,13 @@
 <script lang="ts">
-    import type { BreadcrumbLevel } from './types';
+    import type { BreadcrumbLevel, NavigationMenuItem } from './types';
     import { findNavigationPath, buildBreadcrumbLevels } from './utils';
     import { page } from '$app/state';
-    import { LayoutDashboard } from '@lucide/svelte';
-    import { type CollectionView } from '$lib/api/lightly_studio_local';
+    import { LayoutDashboard, LayoutGrid } from '@lucide/svelte';
+    import { EvaluationTaskType, type CollectionView } from '$lib/api/lightly_studio_local';
     import MenuItem from '../MenuItem/MenuItem.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
+    import { routeHelpers } from '$lib/routes';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     const {
         collection
@@ -37,8 +39,33 @@
         currentCollectionId ? findNavigationPath(collection, currentCollectionId) : null
     );
 
+    // Object-detection runs are the only ones with per-box (TP/FP/FN) matches.
+    const evaluationRunsQuery = useEvaluationRuns(() => ({ datasetId: collection.dataset_id }));
+    const evaluationMatchItems: NavigationMenuItem[] = $derived(
+        (evaluationRunsQuery.data ?? [])
+            .filter((run) => run.task_type === EvaluationTaskType.OBJECT_DETECTION)
+            .map((run) => ({
+                title: `Matches: ${run.name}`,
+                id: `evaluation-matches-${run.id}`,
+                icon: LayoutGrid,
+                href: routeHelpers.toEvaluationMatches({
+                    datasetId,
+                    collectionType: page.params.collection_type!,
+                    collectionId: page.params.collection_id!,
+                    evaluationRunId: run.id
+                }),
+                isSelected: page.params.evaluation_run_id === run.id
+            }))
+    );
+
     const breadcrumbLevels: BreadcrumbLevel[] = $derived(
-        buildBreadcrumbLevels(navigationPath, collection, currentCollectionId, datasetId)
+        buildBreadcrumbLevels(
+            navigationPath,
+            collection,
+            currentCollectionId,
+            datasetId,
+            evaluationMatchItems
+        )
     );
 
     const { user } = useAuth();

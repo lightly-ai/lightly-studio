@@ -32,10 +32,11 @@ def test_list_evaluation_matches(
     test_client: TestClient,
 ) -> None:
     dataset = create_collection(session=db_session)
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(
+    run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
         dataset_collection_id=dataset.collection_id,
     )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
     label = create_annotation_label(
         session=db_session,
         root_collection_id=dataset.collection_id,
@@ -97,10 +98,11 @@ def test_list_evaluation_matches__filter_by_match_type(
     test_client: TestClient,
 ) -> None:
     dataset = create_collection(session=db_session)
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(
+    run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
         dataset_collection_id=dataset.collection_id,
     )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
     label = create_annotation_label(
         session=db_session,
         root_collection_id=dataset.collection_id,
@@ -204,10 +206,11 @@ def test_list_evaluation_matches__scopes_to_single_sample(
     test_client: TestClient,
 ) -> None:
     dataset = create_collection(session=db_session)
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(
+    run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
         dataset_collection_id=dataset.collection_id,
     )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
     other_image = create_image(
         session=db_session,
         collection_id=dataset.collection_id,

@@ -24,14 +24,15 @@ from tests.resolvers.evaluation_sample_metric_resolver import (
 )
 
 
-def test_get_matches_with_payload__orders_tp_then_fp_then_fn(
+def test_get_matches_with_payload__orders_by_iou_descending_by_default(
     db_session: Session,
 ) -> None:
     dataset = create_collection(session=db_session)
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(
+    run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
         dataset_collection_id=dataset.collection_id,
     )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
     label = create_annotation_label(
         session=db_session,
         root_collection_id=dataset.collection_id,
@@ -88,24 +89,109 @@ def test_get_matches_with_payload__orders_tp_then_fp_then_fn(
     )
 
     assert result.total_count == 4
+    # Default ordering is by descending IoU; only true positives carry an IoU.
+    assert result.matches[0].match_type == EvaluationMatchType.TP
+    assert result.matches[0].iou == pytest.approx(0.9)
+    assert result.matches[1].match_type == EvaluationMatchType.TP
+    assert result.matches[1].iou == pytest.approx(0.6)
+    # IoU-less rows (FP/FN) are pushed to the end regardless of direction.
+    assert result.matches[2].iou is None
+    assert result.matches[3].iou is None
+    assert {result.matches[2].match_type, result.matches[3].match_type} == {
+        EvaluationMatchType.FP,
+        EvaluationMatchType.FN,
+    }
+    # True positive carries both boxes.
+    assert result.matches[0].gt_annotation is not None
+    assert result.matches[0].pred_annotation is not None
+    # Crop payload is populated from the parent image.
+    assert result.matches[0].parent_sample_data.sample_id == image.sample_id
+
+
+def test_get_matches_with_payload__orders_by_confidence_with_missing_last(
+    db_session: Session,
+) -> None:
+    """Sorting by confidence orders by the prediction score, prediction-less last."""
+    dataset = create_collection(session=db_session)
+    run = evaluation_sample_metric_helpers.create_run(
+        session=db_session,
+        dataset_collection_id=dataset.collection_id,
+    )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=dataset.collection_id,
+    )
+    gt_tp = create_annotation(
+        session=db_session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+    )
+    pred_tp = create_annotation(
+        session=db_session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_data={"confidence": 0.9},
+    )
+    pred_fp = create_annotation(
+        session=db_session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_data={"confidence": 0.4},
+    )
+    gt_fn = create_annotation(
+        session=db_session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+    )
+    evaluation_annotation_metric_resolver.create_many(
+        session=db_session,
+        records=[
+            EvaluationAnnotationMetricCreate(
+                evaluation_run_id=run.id,
+                sample_id=image.sample_id,
+                pred_annotation_id=pred_fp.sample_id,
+            ),
+            EvaluationAnnotationMetricCreate(
+                evaluation_run_id=run.id,
+                sample_id=image.sample_id,
+                pred_annotation_id=pred_tp.sample_id,
+                gt_annotation_id=gt_tp.sample_id,
+                metric_name="iou",
+                value=0.7,
+            ),
+            EvaluationAnnotationMetricCreate(
+                evaluation_run_id=run.id,
+                sample_id=image.sample_id,
+                gt_annotation_id=gt_fn.sample_id,
+            ),
+        ],
+    )
+
+    result = evaluation_annotation_metric_resolver.get_matches_with_payload(
+        session=db_session,
+        evaluation_run_id=run.id,
+        collection_id=dataset.collection_id,
+        sort_field=EvaluationMatchSortField.CONFIDENCE,
+        sort_direction=SortDirection.desc,
+    )
+
+    # Highest-confidence prediction first, then the lower one; the false negative
+    # (no prediction, hence no confidence) is pushed to the end.
     assert [match.match_type for match in result.matches] == [
-        EvaluationMatchType.TP,
         EvaluationMatchType.TP,
         EvaluationMatchType.FP,
         EvaluationMatchType.FN,
     ]
-    # True positives ordered by descending IoU.
-    assert result.matches[0].iou == pytest.approx(0.9)
-    assert result.matches[1].iou == pytest.approx(0.6)
-    # True positive carries both boxes; FP only pred; FN only gt.
-    assert result.matches[0].gt_annotation is not None
     assert result.matches[0].pred_annotation is not None
-    assert result.matches[2].gt_annotation is None
-    assert result.matches[2].pred_annotation is not None
-    assert result.matches[3].gt_annotation is not None
-    assert result.matches[3].pred_annotation is None
-    # Crop payload is populated from the parent image.
-    assert result.matches[0].parent_sample_data.sample_id == image.sample_id
+    assert result.matches[0].pred_annotation.confidence == pytest.approx(0.9)
+    assert result.matches[1].pred_annotation is not None
+    assert result.matches[1].pred_annotation.confidence == pytest.approx(0.4)
+    assert result.matches[2].pred_annotation is None
 
 
 def test_get_matches_with_payload__orders_by_iou_with_missing_last(
@@ -113,10 +199,11 @@ def test_get_matches_with_payload__orders_by_iou_with_missing_last(
 ) -> None:
     """Sorting by IoU ascending puts the worst TP first and IoU-less rows last."""
     dataset = create_collection(session=db_session)
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(
+    run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
         dataset_collection_id=dataset.collection_id,
     )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
     label = create_annotation_label(
         session=db_session,
         root_collection_id=dataset.collection_id,
@@ -180,10 +267,11 @@ def test_get_matches_with_payload__filters_by_match_type(
     db_session: Session,
 ) -> None:
     dataset = create_collection(session=db_session)
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(
+    run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
         dataset_collection_id=dataset.collection_id,
     )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
     label = create_annotation_label(
         session=db_session,
         root_collection_id=dataset.collection_id,
@@ -233,10 +321,11 @@ def test_get_matches_with_payload__filters_by_label_either_side(
 ) -> None:
     """A class-confusion TP is kept when either its GT or pred label matches."""
     dataset = create_collection(session=db_session)
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(
+    run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
         dataset_collection_id=dataset.collection_id,
     )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
     label_a = create_annotation_label(
         session=db_session,
         root_collection_id=dataset.collection_id,
@@ -294,10 +383,11 @@ def test_get_matches_with_payload__scopes_by_image_filter_sample_ids(
     db_session: Session,
 ) -> None:
     dataset = create_collection(session=db_session)
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(
+    run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
         dataset_collection_id=dataset.collection_id,
     )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
     other_image = create_image(
         session=db_session,
         collection_id=dataset.collection_id,
@@ -350,10 +440,11 @@ def test_get_matches_with_payload__paginates(
     db_session: Session,
 ) -> None:
     dataset = create_collection(session=db_session)
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(
+    run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
         dataset_collection_id=dataset.collection_id,
     )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
     label = create_annotation_label(
         session=db_session,
         root_collection_id=dataset.collection_id,

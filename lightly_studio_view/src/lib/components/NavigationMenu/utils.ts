@@ -116,7 +116,9 @@ export function buildBreadcrumbLevels(
     ancestorPath: CollectionView[] | null,
     rootCollection: CollectionView,
     currentCollectionId: string | undefined,
-    datasetId: string
+    datasetId: string,
+    // Evaluation-run match shortcuts surfaced inside the annotation dropdown.
+    evaluationMatchItems: NavigationMenuItem[] = []
 ): BreadcrumbLevel[] {
     if (!ancestorPath) return [];
 
@@ -137,10 +139,16 @@ export function buildBreadcrumbLevels(
 
     return ancestorPath.map((node, index) => {
         const siblings = index === 0 ? [rootCollection] : (ancestorPath[index - 1].children ?? []);
+        const siblingItems = siblings.map(toMenuItem);
+
+        // Annotation levels also expose links to the evaluation-run matches views.
+        if (node.sample_type === SampleType.ANNOTATION) {
+            siblingItems.push(...evaluationMatchItems);
+        }
 
         return {
             selected: toMenuItem(node),
-            siblings: siblings.map((sibling) => toMenuItem(sibling))
+            siblings: siblingItems
         };
     });
 }

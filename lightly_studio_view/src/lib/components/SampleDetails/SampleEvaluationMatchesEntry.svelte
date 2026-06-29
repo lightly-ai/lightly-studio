@@ -2,7 +2,7 @@
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
     import { EvaluationTaskType } from '$lib/api/lightly_studio_local';
-    import { Typography } from '$lib/components';
+    import { Segment } from '$lib/components';
     import { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
     import { routeHelpers } from '$lib/routes';
     import { LayoutGrid } from '@lucide/svelte';
@@ -49,31 +49,26 @@
 </script>
 
 {#if objectDetectionRuns.length > 0}
-    <div
-        class="space-y-2 rounded-md border border-border bg-background p-3"
-        data-testid="sample-evaluation-matches-entry"
-    >
-        <Typography variant="subtitle2">Evaluation matches</Typography>
-        <Typography variant="caption" className="text-muted-foreground">
-            Inspect the TP/FP/FN boxes for this image.
-        </Typography>
-        <select
-            class="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm"
-            bind:value={selectedRunId}
-            data-testid="sample-evaluation-matches-run-select"
-        >
-            {#each objectDetectionRuns as run (run.id)}
-                <option value={run.id}>{run.name}</option>
-            {/each}
-        </select>
-        <button
-            type="button"
-            class="flex w-full items-center justify-center gap-2 rounded-md border border-border bg-muted px-3 py-2 text-sm font-medium hover:bg-muted/70"
-            onclick={viewMatches}
-            data-testid="sample-evaluation-matches-view"
-        >
-            <LayoutGrid class="size-4" />
-            View matches for this image
-        </button>
-    </div>
+    <Segment title="Evaluation matches" icon={LayoutGrid}>
+        <div class="flex flex-col gap-2" data-testid="sample-evaluation-matches-entry">
+            <select
+                class="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm"
+                bind:value={selectedRunId}
+                data-testid="sample-evaluation-matches-run-select"
+            >
+                {#each objectDetectionRuns as run (run.id)}
+                    <option value={run.id}>{run.name}</option>
+                {/each}
+            </select>
+            <button
+                type="button"
+                class="flex w-full items-center justify-center gap-2 rounded-md border border-border bg-muted px-3 py-2 text-sm font-medium hover:bg-muted/70"
+                onclick={viewMatches}
+                data-testid="sample-evaluation-matches-view"
+            >
+                <LayoutGrid class="size-4" />
+                View matches for this image
+            </button>
+        </div>
+    </Segment>
 {/if}

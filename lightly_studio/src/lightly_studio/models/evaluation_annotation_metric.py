@@ -71,14 +71,14 @@ class EvaluationMatchType(str, Enum):
 class EvaluationMatchSortField(str, Enum):
     """Primary ordering applied to a list of evaluation matches.
 
-    - ``match_type``: group by match type (TP, then FP, then FN) and order true
-      positives by IoU within the group. This is the default debugging view.
-    - ``iou``: order purely by IoU (only true positives carry one, so false
-      positives and false negatives are pushed to the end).
+    - ``iou``: order by IoU. Only true positives carry one, so false positives
+      and false negatives are pushed to the end. This is the default view.
+    - ``confidence``: order by the prediction confidence. False negatives have no
+      prediction, so they are pushed to the end.
     """
 
-    MATCH_TYPE = "match_type"
     IOU = "iou"
+    CONFIDENCE = "confidence"
 
 
 class EvaluationMatchView(BaseModel):

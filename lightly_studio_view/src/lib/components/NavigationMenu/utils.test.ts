@@ -198,6 +198,31 @@ describe('buildBreadcrumbLevels', () => {
         expect(levels[1].selected.title).toBe('Annotations');
     });
 
+    it('appends evaluation-match items to annotation levels only', () => {
+        const img = makeCollection('img-1', SampleType.IMAGE);
+        const ann = makeCollection('ann-1', SampleType.ANNOTATION);
+        const root = makeCollection('root', SampleType.IMAGE, [ann]);
+
+        const matchItems = [
+            {
+                title: 'Matches: run-a',
+                id: 'evaluation-matches-run-a',
+                href: '/datasets/dataset-id/image/img-1/evaluation/run-a/matches',
+                isSelected: false
+            }
+        ];
+
+        const levels = buildBreadcrumbLevels([root, ann], root, 'ann-1', 'dataset-id', matchItems);
+
+        // Root (image) level is untouched.
+        expect(levels[0].siblings.map((s) => s.id)).toEqual(['image-root']);
+        // Annotation level surfaces the match shortcut alongside the annotation collection.
+        expect(levels[1].siblings.map((s) => s.id)).toEqual([
+            'annotation-ann-1',
+            'evaluation-matches-run-a'
+        ]);
+    });
+
     it('keeps group_component_name for non-annotation siblings when multiple annotations exist', () => {
         const img = makeCollection('img-1', SampleType.IMAGE, undefined, {
             name: 'img-name',

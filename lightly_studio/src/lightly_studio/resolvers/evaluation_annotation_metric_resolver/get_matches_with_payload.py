@@ -38,7 +38,7 @@ def get_matches_with_payload(  # noqa: PLR0913
     match_types: list[EvaluationMatchType] | None = None,
     annotation_label_ids: list[UUID] | None = None,
     image_filter: ImageFilter | None = None,
-    sort_field: EvaluationMatchSortField = EvaluationMatchSortField.MATCH_TYPE,
+    sort_field: EvaluationMatchSortField = EvaluationMatchSortField.IOU,
     sort_direction: SortDirection = SortDirection.desc,
     pagination: Paginated | None = None,
 ) -> EvaluationMatchesWithCountView:
@@ -57,15 +57,16 @@ def get_matches_with_payload(  # noqa: PLR0913
             truth OR prediction label is in the set (captures class confusion).
         image_filter: Optional image-level filter (tags, metadata, dimensions,
             sample ids) applied to the parent image of each match.
-        sort_field: Primary ordering. ``match_type`` (default) groups by match
-            type then orders by IoU; ``iou`` orders purely by IoU.
-        sort_direction: Direction applied to the IoU ordering.
+        sort_field: Primary ordering. ``iou`` (default) orders by IoU; ``confidence``
+            orders by the prediction confidence. Rows missing the chosen value are
+            always pushed to the end.
+        sort_direction: Direction applied to the chosen sort field.
         pagination: Optional offset/limit pagination.
 
     Returns:
         Matches ordered by the requested field together with the total count and
-        cursor. The default groups by match type (TP, then FP, then FN) and, within
-        true positives, orders by descending IoU.
+        cursor. The default orders by descending IoU, leaving IoU-less matches
+        (false positives and false negatives) at the end.
     """
     gt_annotation = aliased(AnnotationBaseTable)
     pred_annotation = aliased(AnnotationBaseTable)
@@ -132,26 +133,18 @@ def get_matches_with_payload(  # noqa: PLR0913
 
     total_count = session.exec(select(func.count()).select_from(base_query.subquery())).one()
 
-    match_rank = case(
-        (and_(gt_set, pred_set), 0),
-        (and_(pred_set, gt_id.is_(None)), 1),
-        else_=2,
+    # IoU lives on the metric row; confidence on the prediction annotation.
+    sort_col = (
+        col(pred_annotation.confidence)
+        if sort_field == EvaluationMatchSortField.CONFIDENCE
+        else col(EvaluationAnnotationMetricTable.value)
     )
-    value_col = col(EvaluationAnnotationMetricTable.value)
-    value_ordered = (
-        value_col.asc() if sort_direction == SortDirection.asc else value_col.desc()
-    )
+    # Rows lacking the chosen value (FP/FN have no IoU; FN has no prediction, hence
+    # no confidence) are kept at the end regardless of the requested direction.
+    missing_last = case((sort_col.is_(None), 1), else_=0)
+    sort_ordered = sort_col.asc() if sort_direction == SortDirection.asc else sort_col.desc()
     tiebreak = col(EvaluationAnnotationMetricTable.id).asc()
-
-    if sort_field == EvaluationMatchSortField.IOU:
-        # Only true positives carry an IoU; keep IoU-less rows (FP/FN) at the end
-        # regardless of the requested direction.
-        iou_missing = case((value_col.is_(None), 1), else_=0)
-        ordered_query = base_query.order_by(
-            iou_missing, value_ordered, match_rank, tiebreak
-        )
-    else:
-        ordered_query = base_query.order_by(match_rank, value_ordered, tiebreak)
+    ordered_query = base_query.order_by(missing_last, sort_ordered, tiebreak)
 
     if pagination is not None:
         ordered_query = ordered_query.offset(pagination.offset).limit(pagination.limit)
