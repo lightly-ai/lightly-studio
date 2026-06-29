@@ -113,3 +113,8 @@ class AnnotationCollectionView(SQLModel):
 
     collection_id: UUID
     name: str
+    # Distinct annotation type values present in the collection (e.g.
+    # ["object_detection"]). Typed as plain strings to avoid importing
+    # AnnotationType here, which would create a circular import with
+    # annotation_base. Used by the GUI to filter sources by evaluation task.
+    annotation_types: list[str] = Field(default_factory=list)

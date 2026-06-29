@@ -1,10 +1,16 @@
 import { getColorByLabel, oklchHueWheelColor } from '$lib/utils';
+import {
+    EXCLUDED_BY_FILTERS_CATEGORY,
+    HIDDEN_CATEGORY,
+    INCLUDED_BY_FILTERS_CATEGORY
+} from './plotCategories';
 
 const OKLCH_LIGHTNESS = 0.65;
 const OKLCH_CHROMA = 0.3;
 
-const RESERVED_CATEGORY_COUNT = 2;
+const RESERVED_CATEGORY_COUNT = 3;
 
+export const HIDDEN_COLOR = 'rgba(0, 0, 0, 0)';
 export const NOT_FILTERED_COLOR = '#222222';
 export const FILTERED_COLOR = '#FF7220';
 export const UNASSIGNED_COLOR = '#666666';
@@ -45,11 +51,15 @@ function getBaseCategoryColor(
     label: string,
     isColorByActive: boolean = false
 ): string {
-    if (category === 0) {
+    if (category === HIDDEN_CATEGORY) {
+        return HIDDEN_COLOR;
+    }
+
+    if (category === EXCLUDED_BY_FILTERS_CATEGORY) {
         return NOT_FILTERED_COLOR;
     }
 
-    if (category === 1) {
+    if (category === INCLUDED_BY_FILTERS_CATEGORY) {
         return isColorByActive ? UNASSIGNED_COLOR : FILTERED_COLOR;
     }
 

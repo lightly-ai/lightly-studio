@@ -10,9 +10,21 @@ from lightly_studio.resolvers import (
     evaluation_sample_metric_resolver,
 )
 from tests.conftest import AnnotationsTestData
-from tests.helpers_resolvers import create_annotation, create_annotation_label, create_tag
+from tests.helpers_resolvers import (
+    create_annotation,
+    create_annotation_label,
+    create_collection,
+    create_image,
+    create_tag,
+)
 from tests.resolvers.evaluation_sample_metric_resolver import (
     helpers as evaluation_sample_metric_helpers,
+)
+from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
+    AnnotationMetricStub,
+    SampleMetricStub,
+    create_annotation_metrics,
+    create_sample_metrics,
 )
 
 
@@ -86,8 +98,13 @@ def test_delete_annotation__deletes_evaluation_annotation_metrics(
     db_session: Session,
 ) -> None:
     """Test deleting an annotation removes invalidated evaluation rows."""
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(session=db_session)
-    collection_id = image.sample.collection_id
+    dataset = create_collection(session=db_session)
+    run = evaluation_sample_metric_helpers.create_run(
+        session=db_session,
+        dataset_collection_id=dataset.collection_id,
+    )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
+    collection_id = dataset.collection_id
     label = create_annotation_label(session=db_session, root_collection_id=collection_id)
     pred_annotation = create_annotation(
         session=db_session,
@@ -102,11 +119,25 @@ def test_delete_annotation__deletes_evaluation_annotation_metrics(
         annotation_label_id=label.annotation_label_id,
     )
 
-    evaluation_sample_metric_helpers.create_evaluation_metrics(
-        db_session,
-        run.id,
-        pred_annotation,
-        gt_annotation,
+    create_annotation_metrics(
+        session=db_session,
+        run_id=run.id,
+        annotation_metrics=[
+            AnnotationMetricStub(
+                sample_id=pred_annotation.parent_sample_id,
+                metric_name="iou",
+                value=0.75,
+                pred_annotation_id=pred_annotation.sample_id,
+                gt_annotation_id=gt_annotation.sample_id,
+            )
+        ],
+    )
+    create_sample_metrics(
+        session=db_session,
+        run_id=run.id,
+        sample_metrics=[
+            SampleMetricStub(sample_id=pred_annotation.parent_sample_id, metrics={"score": 0.5})
+        ],
     )
 
     annotation_resolver.delete_annotation(db_session, gt_annotation.sample_id)
@@ -127,18 +158,22 @@ def test_delete_annotation__preserves_other_run_sample_metrics(
     db_session: Session,
 ) -> None:
     """Test deleting an annotation only invalidates sample metrics for affected runs."""
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(
-        session=db_session, name="run1"
-    )
-    other_run, _ = evaluation_sample_metric_helpers.create_run_and_image(
+    dataset = create_collection(session=db_session)
+    run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
-        dataset_collection_id=image.sample.collection_id,
+        dataset_collection_id=dataset.collection_id,
+        name="run1",
+    )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
+    other_run = evaluation_sample_metric_helpers.create_run(
+        session=db_session,
+        dataset_collection_id=dataset.collection_id,
         name="run2",
     )
 
     label = create_annotation_label(
         session=db_session,
-        root_collection_id=image.sample.collection_id,
+        root_collection_id=dataset.collection_id,
     )
     pred_annotation = create_annotation(
         session=db_session,
@@ -165,17 +200,47 @@ def test_delete_annotation__preserves_other_run_sample_metrics(
         annotation_label_id=label.annotation_label_id,
     )
 
-    evaluation_sample_metric_helpers.create_evaluation_metrics(
-        db_session,
-        run.id,
-        pred_annotation,
-        gt_annotation,
+    create_annotation_metrics(
+        session=db_session,
+        run_id=run.id,
+        annotation_metrics=[
+            AnnotationMetricStub(
+                sample_id=pred_annotation.parent_sample_id,
+                metric_name="iou",
+                value=0.75,
+                pred_annotation_id=pred_annotation.sample_id,
+                gt_annotation_id=gt_annotation.sample_id,
+            )
+        ],
     )
-    evaluation_sample_metric_helpers.create_evaluation_metrics(
-        db_session,
-        other_run.id,
-        other_pred_annotation,
-        other_gt_annotation,
+    create_sample_metrics(
+        session=db_session,
+        run_id=run.id,
+        sample_metrics=[
+            SampleMetricStub(sample_id=pred_annotation.parent_sample_id, metrics={"score": 0.5})
+        ],
+    )
+    create_annotation_metrics(
+        session=db_session,
+        run_id=other_run.id,
+        annotation_metrics=[
+            AnnotationMetricStub(
+                sample_id=other_pred_annotation.parent_sample_id,
+                metric_name="iou",
+                value=0.75,
+                pred_annotation_id=other_pred_annotation.sample_id,
+                gt_annotation_id=other_gt_annotation.sample_id,
+            )
+        ],
+    )
+    create_sample_metrics(
+        session=db_session,
+        run_id=other_run.id,
+        sample_metrics=[
+            SampleMetricStub(
+                sample_id=other_pred_annotation.parent_sample_id, metrics={"score": 0.5}
+            )
+        ],
     )
 
     annotation_resolver.delete_annotation(db_session, gt_annotation.sample_id)

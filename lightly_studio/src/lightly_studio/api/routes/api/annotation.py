@@ -50,12 +50,28 @@ def read_annotation_collections(
         Path(title="collection Id"),
         Depends(get_and_validate_collection_id),
     ],
-) -> list[CollectionTable]:
-    """List annotation collections under the given parent collection."""
-    return collection_resolver.get_annotation_collections(
+) -> list[AnnotationCollectionView]:
+    """List annotation collections under the given parent collection.
+
+    Each entry includes the distinct annotation types it contains, so the GUI
+    can filter sources to those compatible with a chosen evaluation task.
+    """
+    collections = collection_resolver.get_annotation_collections(
         session=session,
         parent_collection_id=collection.collection_id,
     )
+    types_by_collection_id = collection_resolver.get_annotation_types_by_collection_ids(
+        session=session,
+        collection_ids=[c.collection_id for c in collections],
+    )
+    return [
+        AnnotationCollectionView(
+            collection_id=c.collection_id,
+            name=c.name,
+            annotation_types=types_by_collection_id.get(c.collection_id, []),
+        )
+        for c in collections
+    ]
 
 
 class ReadAnnotationsWithPayloadRequest(BaseModel):

@@ -40,8 +40,8 @@ def test_get_annotation_crops_for_ids__clamps_box_to_image_bounds(
         annotation_sample_ids=[annotation.sample_id],
     )
 
-    assert result.annotation_sample_ids == [annotation.sample_id]
-    assert result.image_crops == [
+    assert [crop.annotation_sample_id for crop in result] == [annotation.sample_id]
+    assert [crop.image_crop for crop in result] == [
         ImageCrop(filepath="/path/to/sample.png", x=0, y=0, width=40, height=100)
     ]
 
@@ -79,21 +79,20 @@ def test_get_annotation_crops_for_ids__skips_invalid_boxes(
         annotation_sample_ids=[valid_annotation.sample_id, invalid_annotation.sample_id],
     )
 
-    assert result.annotation_sample_ids == [valid_annotation.sample_id]
-    assert len(result.image_crops) == 1
+    assert [crop.annotation_sample_id for crop in result] == [valid_annotation.sample_id]
+    assert len(result) == 1
 
 
 def test_get_annotation_crops_for_ids__empty_input(
     db_session: Session,
 ) -> None:
-    """An empty input list returns empty parallel lists."""
+    """An empty input list returns an empty list."""
     result = annotation_resolver.get_annotation_crops_for_ids(
         session=db_session,
         annotation_sample_ids=[],
     )
 
-    assert result.annotation_sample_ids == []
-    assert result.image_crops == []
+    assert result == []
 
 
 def test_get_annotation_crops_for_ids__unknown_ids(
@@ -105,5 +104,4 @@ def test_get_annotation_crops_for_ids__unknown_ids(
         annotation_sample_ids=[uuid4()],
     )
 
-    assert result.annotation_sample_ids == []
-    assert result.image_crops == []
+    assert result == []

@@ -330,15 +330,13 @@ def test_deep_copy__with_embeddings(db_session: Session) -> None:
     )
     assert copied_samples.total_count == 2
 
-    # Assert - copied embeddings reference the new embedding model
+    # Assert - copied embeddings can be loaded by the copied_model.embedding_model_id
     copied_embeddings = sample_embedding_resolver.get_all_by_collection_id(
         session=db_session,
         collection_id=copied.collection_id,
         embedding_model_id=copied_model.embedding_model_id,
     )
     assert len(copied_embeddings) == 2
-    for emb in copied_embeddings:
-        assert emb.embedding_model_id == copied_model.embedding_model_id
 
     # Assert - embedding vectors are preserved
     copied_vectors = {tuple(emb.embedding) for emb in copied_embeddings}
@@ -451,9 +449,10 @@ def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:
 def test_deep_copy__with_evaluation_sample_metrics(db_session: Session) -> None:
     # Arrange
     dataset = create_collection(session=db_session, collection_name="original")
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(
-        db_session, dataset_collection_id=dataset.collection_id
+    run = evaluation_sample_metric_helpers.create_run(
+        session=db_session, dataset_collection_id=dataset.collection_id
     )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
     evaluation_sample_metric_resolver.create_many(
         session=db_session,
         records=[
@@ -769,9 +768,10 @@ def test_deep_copy__with_evaluation_runs(db_session: Session) -> None:
 def test_deep_copy__with_evaluation_annotation_metrics(db_session: Session) -> None:
     # Arrange
     dataset = create_collection(session=db_session, collection_name="original")
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(
-        db_session, dataset_collection_id=dataset.collection_id
+    run = evaluation_sample_metric_helpers.create_run(
+        session=db_session, dataset_collection_id=dataset.collection_id
     )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
     label = create_annotation_label(session=db_session, root_collection_id=dataset.collection_id)
     gt_annotation = create_annotation(
         session=db_session,
