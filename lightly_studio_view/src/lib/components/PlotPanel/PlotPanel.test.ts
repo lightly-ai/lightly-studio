@@ -101,6 +101,11 @@ vi.mock('$lib/hooks/useTags/useTags', () => ({
 vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
     useAnnotationLabels: () => ({ data: [] })
 }));
+vi.mock('$lib/hooks/useAnnotationsFilter/useAnnotationsFilter', () => ({
+    useSelectedAnnotationsFilter: () => ({
+        annotationFilter: writable(undefined)
+    })
+}));
 
 vi.mock('$lib/hooks/useGlobalStorage', () => {
     return {

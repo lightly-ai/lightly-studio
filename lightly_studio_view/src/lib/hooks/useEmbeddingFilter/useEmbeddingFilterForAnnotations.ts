@@ -11,6 +11,10 @@ export function useAnnotationPlotSelection() {
     };
 }
 
+export function clearAnnotationPlotSelection() {
+    annotationPlotSampleIds.set([]);
+}
+
 export function useEmbeddingFilterForAnnotations(
     collectionId: Readable<string>,
     setRangeSelectionForCollection: (collectionId: string, selection: null) => void
