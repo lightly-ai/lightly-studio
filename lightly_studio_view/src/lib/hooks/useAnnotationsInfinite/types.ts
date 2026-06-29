@@ -1,31 +1,13 @@
-export type AnnotationsInfiniteQuery = {
-    annotation_label_ids?: string[];
-    tag_ids?: string[];
-    sample_ids?: string[];
-    text_embedding?: number[];
-    limit?: number;
-};
+import type {
+    ReadAnnotationsWithPayloadData,
+    ReadAnnotationsWithPayloadRequest
+} from '$lib/api/lightly_studio_local';
 
-export type AnnotationsInfiniteProps = {
-    path: {
-        collection_id: string;
-    };
-    query?: AnnotationsInfiniteQuery;
-};
-
-export type AnnotationsInfiniteParams = {
-    collection_id: string;
-} & AnnotationsInfiniteQuery;
+export type AnnotationsInfiniteParams = ReadAnnotationsWithPayloadData['path'] &
+    Omit<ReadAnnotationsWithPayloadRequest, 'pagination'>;
 
 export type AnnotationsInfiniteQueryKey = readonly [
     'readAnnotationsWithPayloadInfinite',
     string,
-    Omit<AnnotationsInfiniteQuery, never>
+    Omit<AnnotationsInfiniteParams, 'collection_id'>
 ];
-
-export const toAnnotationsInfiniteParams = (
-    props: AnnotationsInfiniteProps
-): AnnotationsInfiniteParams => ({
-    collection_id: props.path.collection_id,
-    ...props.query
-});

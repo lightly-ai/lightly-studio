@@ -5,25 +5,23 @@ import { toast } from 'svelte-sonner';
 import { writable } from 'svelte/store';
 import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 import { createAnnotationsInfiniteOptions } from './createAnnotationsInfiniteOptions';
-import { toAnnotationsInfiniteParams, type AnnotationsInfiniteProps } from './types';
+import type { AnnotationsInfiniteParams } from './types';
 
-export type { AnnotationsInfiniteProps, AnnotationsInfiniteQuery } from './types';
+export type { AnnotationsInfiniteParams } from './types';
 
-export const useAnnotationsInfinite = (getProps: () => AnnotationsInfiniteProps) => {
+export const useAnnotationsInfinite = (getParams: () => AnnotationsInfiniteParams) => {
     const isPending = writable(false);
-    const annotations = createInfiniteQuery(() =>
-        createAnnotationsInfiniteOptions(toAnnotationsInfiniteParams(getProps()))
-    );
+    const annotations = createInfiniteQuery(() => createAnnotationsInfiniteOptions(getParams()));
     const client = useQueryClient();
     const refresh = () => {
-        const options = createAnnotationsInfiniteOptions(toAnnotationsInfiniteParams(getProps()));
+        const options = createAnnotationsInfiniteOptions(getParams());
         client.invalidateQueries({ queryKey: options.queryKey });
         client.invalidateQueries({
             queryKey: useImageAnnotationCountsQueryKey
         });
     };
 
-    const collection_id = getProps().path.collection_id;
+    const collection_id = getParams().collection_id;
     const { updateAnnotations } = useUpdateAnnotationsMutation({
         collectionId: collection_id
     });

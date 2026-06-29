@@ -5,8 +5,9 @@ import {
     type AnnotationWithPayloadAndCountView,
     type ReadAnnotationsWithPayloadError
 } from '$lib/api/lightly_studio_local';
-import { buildRequestBody } from './buildRequestBody';
 import type { AnnotationsInfiniteParams, AnnotationsInfiniteQueryKey } from './types';
+
+const DEFAULT_PAGE_LIMIT = 100;
 
 export const createAnnotationsInfiniteOptions = (params: AnnotationsInfiniteParams) => {
     const queryKey: AnnotationsInfiniteQueryKey = [
@@ -16,8 +17,7 @@ export const createAnnotationsInfiniteOptions = (params: AnnotationsInfinitePara
             annotation_label_ids: params.annotation_label_ids,
             tag_ids: params.tag_ids,
             sample_ids: params.sample_ids,
-            text_embedding: params.text_embedding,
-            limit: params.limit
+            text_embedding: params.text_embedding
         }
     ];
 
@@ -32,7 +32,13 @@ export const createAnnotationsInfiniteOptions = (params: AnnotationsInfinitePara
         queryFn: async ({ pageParam = 0, signal }) => {
             const { data } = await readAnnotationsWithPayload({
                 path: { collection_id: params.collection_id },
-                body: buildRequestBody(params, pageParam),
+                body: {
+                    pagination: { cursor: pageParam, limit: DEFAULT_PAGE_LIMIT },
+                    annotation_label_ids: params.annotation_label_ids,
+                    tag_ids: params.tag_ids,
+                    sample_ids: params.sample_ids,
+                    text_embedding: params.text_embedding
+                },
                 signal,
                 throwOnError: true
             });

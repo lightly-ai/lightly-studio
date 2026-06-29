@@ -36,13 +36,9 @@ describe('createAnnotationsInfiniteOptions', () => {
                 annotation_label_ids: ['lbl-1'],
                 tag_ids: ['t1'],
                 sample_ids: ['s1'],
-                text_embedding: [0.1, 0.2],
-                limit: 50
+                text_embedding: [0.1, 0.2]
             };
-            const options = createAnnotationsInfiniteOptions({
-                collection_id: 'col-1',
-                ...filters
-            });
+            const options = createAnnotationsInfiniteOptions({ collection_id: 'col-1', ...filters });
             expect(options.queryKey[2]).toEqual(filters);
         });
 
@@ -96,7 +92,7 @@ describe('createAnnotationsInfiniteOptions', () => {
             );
         });
 
-        it('passes pageParam as cursor in request body', async () => {
+        it('passes pageParam as cursor and uses default limit', async () => {
             const options = createAnnotationsInfiniteOptions({ collection_id: 'col-1' });
 
             await callQueryFn(options, { pageParam: 20, signal: new AbortController().signal });
