@@ -24,7 +24,7 @@ export const getFrameFilter = (params: VideoFrameFilterParams | null): VideoFram
         return null;
     }
 
-    const filters: VideoFrameFilter = {};
+    const filters: VideoFrameFilter = { filter_type: 'video_frame' };
 
     if (params.video_id) {
         filters.video_id = params.video_id;
@@ -71,5 +71,5 @@ export const getFrameFilter = (params: VideoFrameFilterParams | null): VideoFram
         filters.sample_filter = sampleFilter;
     }
 
-    return Object.keys(filters).length > 0 ? filters : null;
+    return filters;
 };
