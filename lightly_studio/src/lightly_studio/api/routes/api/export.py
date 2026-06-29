@@ -37,8 +37,8 @@ def export_collection_annotations(
         Depends(collection_api.get_and_validate_collection_id),
     ],
     session: SessionDep,
+    annotation_collection_id: UUID | None,
     export_format: ExportFormat = ExportFormat.OBJECT_DETECTION_COCO,
-    annotation_collection_id: UUID | None = None,
 ) -> StreamingResponse:
     """Export collection annotations in the selected export format."""
     # Query to export - all samples in the collection.

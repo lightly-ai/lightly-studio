@@ -8,6 +8,7 @@
     import {
         createTag,
         addSampleIdsToTagId,
+        addSamplesToTagByFilter,
         deleteTag,
         renameTag
     } from '$lib/api/lightly_studio_local';
@@ -15,6 +16,7 @@
     import TagRenameInput from './TagRenameInput.svelte';
     import TagActionMenu from './TagActionMenu.svelte';
     import { toast } from 'svelte-sonner';
+    import { get } from 'svelte/store';
 
     let { collection_id, gridType }: Parameters<typeof useTags>[0] & { gridType: GridType } =
         $props();
@@ -25,7 +27,12 @@
         useTags({ collection_id, kind: [tagKind] })
     );
 
-    const { getSelectedSampleIds, selectedSampleAnnotationCropIds } = useGlobalStorage();
+    const {
+        getSelectedSampleIds,
+        selectedSampleAnnotationCropIds,
+        getSelectAllSnapshot,
+        getSelectAllAnnotationSnapshot
+    } = useGlobalStorage();
 
     const selectedSampleIds = $derived(getSelectedSampleIds(collection_id));
     const hasSelection = $derived(
@@ -46,6 +53,27 @@
     let openActionsTagId = $state<string | null>(null);
     let suppressCloseAutoFocusTagId = $state<string | null>(null);
 
+    // Tag by filter when the selection is still an unmodified select-all (do not send
+    // a potentially large ID list), else fall back to the ID-list path.
+    function assignSelectionToTag(tag_id: string) {
+        const snapshot = get(
+            tagKind === 'annotation'
+                ? getSelectAllAnnotationSnapshot(collection_id)
+                : getSelectAllSnapshot(collection_id)
+        );
+        const isUnmodifiedSelectAll = snapshot != null && snapshot.size === selectedIds.size;
+        if (isUnmodifiedSelectAll) {
+            return addSamplesToTagByFilter({
+                path: { collection_id, tag_id },
+                body: { filter: snapshot.filter }
+            });
+        }
+        return addSampleIdsToTagId({
+            path: { collection_id, tag_id },
+            body: { sample_ids: [...selectedIds] }
+        });
+    }
+
     async function handleAssign(name: string) {
         assignBusy = true;
         try {
@@ -53,10 +81,7 @@
                 (t: TagView) => t.name.toLowerCase() === name.toLowerCase()
             );
             if (existingTag) {
-                const response = await addSampleIdsToTagId({
-                    path: { collection_id, tag_id: existingTag.tag_id },
-                    body: { sample_ids: [...selectedIds] }
-                });
+                const response = await assignSelectionToTag(existingTag.tag_id);
                 if (response.error) {
                     toast.error('Failed to assign tag. Please try again.');
                     return;
@@ -70,10 +95,7 @@
                     toast.error('Failed to create tag. Please try again.');
                     return;
                 }
-                const assignResponse = await addSampleIdsToTagId({
-                    path: { collection_id, tag_id: createResponse.data.tag_id },
-                    body: { sample_ids: [...selectedIds] }
-                });
+                const assignResponse = await assignSelectionToTag(createResponse.data.tag_id);
                 if (assignResponse.error) {
                     toast.error('Failed to assign tag. Please try again.');
                     return;

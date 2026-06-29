@@ -65,9 +65,13 @@
         (annotationCollectionsQuery.data ?? []).map((c) => ({ id: c.collection_id, name: c.name }))
     );
     let selectedAnnotationCollectionId = $state<string | undefined>(undefined);
+
+    const effectiveAnnotationCollectionId = $derived(
+        selectedAnnotationCollectionId ?? annotationSources[0]?.id
+    );
     const annotationCollectionParam = $derived(
-        selectedAnnotationCollectionId
-            ? `&annotation_collection_id=${selectedAnnotationCollectionId}`
+        effectiveAnnotationCollectionId
+            ? `&annotation_collection_id=${effectiveAnnotationCollectionId}`
             : ''
     );
 
@@ -351,10 +355,11 @@
                         </p>
 
                         {#if annotationSources.length > 1}
-                            <div class="mt-3">
+                            <div class="mt-6">
                                 <FormField label="Annotation Source">
                                     <AnnotationSourceSelect
                                         sourceOptions={annotationSources}
+                                        placeholder="Only annotations from the selected source will be exported"
                                         bind:selectedSource={selectedAnnotationCollectionId}
                                     />
                                 </FormField>
@@ -404,10 +409,11 @@
                         </p>
 
                         {#if annotationSources.length > 1}
-                            <div class="mt-3">
+                            <div class="mt-6">
                                 <FormField label="Annotation Source">
                                     <AnnotationSourceSelect
                                         sourceOptions={annotationSources}
+                                        placeholder="Select an annotation collection to export from (required)"
                                         bind:selectedSource={selectedAnnotationCollectionId}
                                     />
                                 </FormField>
@@ -446,10 +452,11 @@
                         </p>
 
                         {#if annotationSources.length > 1}
-                            <div class="mt-3">
+                            <div class="mt-6">
                                 <FormField label="Annotation Source">
                                     <AnnotationSourceSelect
                                         sourceOptions={annotationSources}
+                                        placeholder="Select an annotation collection to export from (required)"
                                         bind:selectedSource={selectedAnnotationCollectionId}
                                     />
                                 </FormField>
