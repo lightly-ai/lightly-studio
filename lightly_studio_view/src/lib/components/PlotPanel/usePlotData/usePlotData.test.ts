@@ -9,12 +9,15 @@ vi.mock('embedding-atlas/svelte', () => ({
 }));
 
 vi.mock('../getCategoryBySelection/getCategoryBySelection', () => ({
-    getCategoryBySelection: vi.fn((selection) => (prevValue: number, index: number) => {
-        // Mock implementation: first two points are inside the polygon (keep prevValue), rest
-        // are outside (demoted to EXCLUDED_BY_FILTERS_CATEGORY = 1).
-        if (!selection) return prevValue;
-        return index < 2 ? prevValue : 1;
-    })
+    getCategoryBySelection: vi.fn(
+        (selection, _data, outsideCategory = 1) =>
+            (prevValue: number, index: number) => {
+                // Mock implementation: first two points are inside the polygon (keep prevValue),
+                // rest are outside (demoted to outsideCategory, default EXCLUDED_BY_FILTERS = 1).
+                if (!selection) return prevValue;
+                return index < 2 ? prevValue : outsideCategory;
+            }
+    )
 }));
 
 // Import after mocks are set up
@@ -205,8 +208,9 @@ describe('usePlotData', () => {
         });
 
         const data = get(result.data) as { category: Uint8Array };
-        // sample1 hidden+in-lasso stays 0; sample2 keeps color 3; out-of-lasso 3/4 -> EXCLUDED 1.
-        expect(Array.from(data.category)).toEqual([0, 3, 1, 1]);
+        // sample1 hidden+in-lasso stays 0; sample2 keeps color 3. Out-of-lasso points demote to
+        // the hidden Excluded row, so they route to HIDDEN (0) rather than reappearing grey.
+        expect(Array.from(data.category)).toEqual([0, 3, 0, 0]);
         expect(get(result.selectedSampleIds)).toEqual(['sample2']);
     });
 
@@ -223,8 +227,8 @@ describe('usePlotData', () => {
 
         const data = get(result.data) as { category: Uint8Array };
         // Highlighted-but-hidden sample1 stays 0; sample2 highlighted keeps 3; sample3 hidden
-        // stays 0; un-highlighted sample4 -> EXCLUDED 1.
-        expect(Array.from(data.category)).toEqual([0, 3, 0, 1]);
+        // stays 0; un-highlighted sample4 demotes to the hidden Excluded row -> HIDDEN 0.
+        expect(Array.from(data.category)).toEqual([0, 3, 0, 0]);
     });
 
     it('should preserve highlighted color categories and demote other samples', () => {
@@ -240,6 +244,22 @@ describe('usePlotData', () => {
         // sample2 is highlighted -> keeps 3; sample3 is already EXCLUDED (1) -> stays 1;
         // sample1 and sample4 are not highlighted -> demoted to EXCLUDED 1.
         expect(Array.from(data.category)).toEqual([1, 3, 1, 1]);
+    });
+
+    it('hides all points when "Included by filters" is hidden and there is no active filter', () => {
+        const mockData = createMockArrowData();
+
+        const result = usePlotData({
+            arrowData: mockData,
+            rangeSelection: null,
+            hasActiveFilter: false,
+            hiddenCategories: new Set([2])
+        });
+
+        const data = get(result.data) as { category: Uint8Array };
+        // Without a filter every point is "Included by filters" (2); hiding that row routes
+        // them all to HIDDEN (0) instead of staying visible.
+        expect(Array.from(data.category)).toEqual([0, 0, 0, 0]);
     });
 
     it('should return error store', () => {
