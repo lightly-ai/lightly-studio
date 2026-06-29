@@ -207,9 +207,7 @@
     const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId }));
     const hasEmbeddings = $derived(!!hasEmbeddingsQuery.data);
     const hasMediaWithEmbeddings = $derived((isImages || isVideos) && hasEmbeddings);
-    const hasCollectionSearch = $derived(
-        (isImages || isVideos || isAnnotations) && hasEmbeddings
-    );
+    const hasCollectionSearch = $derived((isImages || isVideos || isAnnotations) && hasEmbeddings);
     const collectionSearchPlaceholder = $derived(
         isAnnotations
             ? 'Search annotations by description or image'
