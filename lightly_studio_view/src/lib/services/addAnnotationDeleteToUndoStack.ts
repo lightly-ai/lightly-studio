@@ -29,12 +29,24 @@ export const addAnnotationDeleteToUndoStack = ({
         parent_sample_id: annotation.parent_sample_id,
         annotation_type: annotation.annotation_type,
         annotation_label_id: label.annotation_label_id,
-        x: annotation.object_detection_details?.x ?? annotation.segmentation_details?.x,
-        y: annotation.object_detection_details?.y ?? annotation.segmentation_details?.y,
-        width: annotation.object_detection_details?.width ?? annotation.segmentation_details?.width,
+        x:
+            annotation.object_detection_details?.x ??
+            annotation.segmentation_details?.x ??
+            annotation.polygon_details?.x,
+        y:
+            annotation.object_detection_details?.y ??
+            annotation.segmentation_details?.y ??
+            annotation.polygon_details?.y,
+        width:
+            annotation.object_detection_details?.width ??
+            annotation.segmentation_details?.width ??
+            annotation.polygon_details?.width,
         height:
-            annotation.object_detection_details?.height ?? annotation.segmentation_details?.height,
-        segmentation_mask: annotation.segmentation_details?.segmentation_mask
+            annotation.object_detection_details?.height ??
+            annotation.segmentation_details?.height ??
+            annotation.polygon_details?.height,
+        segmentation_mask: annotation.segmentation_details?.segmentation_mask,
+        points: annotation.polygon_details?.points
     };
 
     const execute = async () => {

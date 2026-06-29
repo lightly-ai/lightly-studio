@@ -35,9 +35,13 @@
     const { customLabelColorsStore } = useCustomLabelColors();
     const { isClassHidden } = useAnnotationClassVisibility();
 
-    if (!annotation.object_detection_details && !annotation.segmentation_details) {
+    if (
+        !annotation.object_detection_details &&
+        !annotation.segmentation_details &&
+        !annotation.polygon_details
+    ) {
         throw new Error(
-            'Unsupported annotation: Only annotations with object_detection_details or segmentation_details are supported. Please check the annotation data.'
+            'Unsupported annotation: Only annotations with object_detection_details, segmentation_details or polygon_details are supported. Please check the annotation data.'
         );
     }
 
@@ -49,6 +53,8 @@
     } = getBoundingBox(annotation);
 
     const segmentationMask = annotation?.segmentation_details?.segmentation_mask;
+    const polygonPoints = $derived(annotation?.polygon_details?.points ?? []);
+    const polygonPointsSvg = $derived(polygonPoints.map(([x, y]) => `${x},${y}`).join(' '));
     // Calculate values directly without using state
     const scale = $derived(
         Math.min(
@@ -85,6 +91,7 @@
     const opacity = $derived($customLabelColorsStore[labelName]?.alpha ?? 0.4);
 
     const isRLESegmentation = !!segmentationMask;
+    const isPolygonAnnotation = $derived(polygonPoints.length >= 3);
 
     // Calculate values for use in template
     const xOffset = $derived(getXOffset());
@@ -112,8 +119,8 @@
             top: ${(containerHeight - annotationHeight * scale) / 2}px;
             width: ${annotationWidth * scale}px;
             height: ${annotationHeight * scale}px;
-            border-color: ${isRLESegmentation ? 'transparent' : (colorStroke ?? getColorByLabel(labelName).color)};
-            background-color: ${isRLESegmentation ? 'transparent' : (colorFill ?? getColorByLabel(labelName, 0.4).color)};
+            border-color: ${isRLESegmentation || isPolygonAnnotation ? 'transparent' : (colorStroke ?? getColorByLabel(labelName).color)};
+            background-color: ${isRLESegmentation || isPolygonAnnotation ? 'transparent' : (colorFill ?? getColorByLabel(labelName, 0.4).color)};
             border-style: solid;
             
         `}
@@ -140,6 +147,17 @@
                         width={sample.width}
                         {colorFill}
                         {opacity}
+                    />
+                </svg>
+            {:else if isPolygonAnnotation}
+                <svg
+                    viewBox={`${annotationX} ${annotationY} ${annotationWidth} ${annotationHeight}`}
+                >
+                    <polygon
+                        points={polygonPointsSvg}
+                        fill={colorFill ?? getColorByLabel(labelName, 0.4).color}
+                        stroke={colorStroke ?? getColorByLabel(labelName).color}
+                        stroke-width={Math.max(1, 2 / scale)}
                     />
                 </svg>
             {/if}

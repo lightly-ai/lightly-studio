@@ -15,12 +15,18 @@
 <script lang="ts">
     import { onDestroy, onMount } from 'svelte';
     import { useCustomLabelColors, type CustomColor } from '$lib/hooks/useCustomLabelColors';
-    import { getColorByLabel, rgbaFromBytes } from '$lib/utils';
+    import { getColorByLabel } from '$lib/utils';
     import type { BoundingBox } from '$lib/types';
     import {
         acquireMaskRendererWorker,
         releaseMaskRendererWorker
     } from '$lib/workers/maskRendererPool';
+    import {
+        computeStroke,
+        drawBoxesOnContext,
+        drawPolygonsOnContext,
+        type PolygonInput
+    } from '$lib/workers/maskRendererUtils';
 
     type InstanceAnnotation = {
         annotation_type: 'segmentation_mask';
@@ -36,7 +42,26 @@
         segmentation_mask?: undefined;
     };
 
-    type AnnotationCanvasAnnotation = InstanceAnnotation | ObjectDetectionAnnotation;
+    type PolygonDetails = {
+        points: number[][];
+        x?: number | null;
+        y?: number | null;
+        width?: number | null;
+        height?: number | null;
+    };
+
+    type PolygonAnnotation = {
+        annotation_type: 'polygon';
+        annotation_label_name: string;
+        polygon_details: PolygonDetails;
+        segmentation_mask?: undefined;
+        object_detection_details?: undefined;
+    };
+
+    type AnnotationCanvasAnnotation =
+        | InstanceAnnotation
+        | ObjectDetectionAnnotation
+        | PolygonAnnotation;
 
     const {
         sampleId,
@@ -135,9 +160,10 @@
     // Collect mask RLEs and any available bounding boxes in image space.
     const buildRenderPayload = (
         customLabelColors: CustomLabelColorMap
-    ): { masks: MaskPayload[]; boxes: BoxPayload[] } => {
+    ): { masks: MaskPayload[]; boxes: BoxPayload[]; polygons: PolygonInput[] } => {
         const masks: MaskPayload[] = [];
         const boxes: BoxPayload[] = [];
+        const polygons: PolygonInput[] = [];
 
         for (const annotation of annotations) {
             const labelName = annotation.annotation_label_name || 'label';
@@ -161,42 +187,17 @@
                     color: resolveLabelColor(labelName, 1, customLabelColors)
                 });
             }
-        }
 
-        return { masks, boxes };
-    };
-
-    const drawBoxes = (
-        ctx: CanvasRenderingContext2D,
-        boxes: BoxPayload[],
-        canvasWidth: number,
-        canvasHeight: number,
-        stroke: number
-    ) => {
-        if (!boxes.length) {
-            return;
-        }
-
-        ctx.save();
-        ctx.lineWidth = stroke;
-        const clamp = (value: number, min: number, max: number) =>
-            Math.min(Math.max(value, min), max);
-
-        for (const box of boxes) {
-            ctx.strokeStyle = rgbaFromBytes(box.color);
-            const x = clamp(box.x, 0, canvasWidth);
-            const y = clamp(box.y, 0, canvasHeight);
-            const wBox = clamp(box.width, 0, canvasWidth - x);
-            const hBox = clamp(box.height, 0, canvasHeight - y);
-
-            if (wBox === 0 || hBox === 0) {
-                continue;
+            if (annotation.annotation_type === 'polygon') {
+                polygons.push({
+                    points: annotation.polygon_details.points.map(([x, y]) => [x, y] as const),
+                    strokeColor: resolveLabelColor(labelName, 1, customLabelColors),
+                    fillColor: resolveLabelColor(labelName, alpha, customLabelColors)
+                });
             }
-
-            ctx.strokeRect(x, y, wBox, hBox);
         }
 
-        ctx.restore();
+        return { masks, boxes, polygons };
     };
 
     const render = (customLabelColors: CustomLabelColorMap = $customLabelColorsStore) => {
@@ -215,12 +216,13 @@
             }
 
             ctx.clearRect(0, 0, width, height);
-            if (!payload.boxes.length) {
+            if (!payload.boxes.length && !payload.polygons.length) {
                 return;
             }
 
-            const scale = Math.max(scaleX, scaleY) || 1;
-            drawBoxes(ctx, payload.boxes, width, height, 2 / scale);
+            const stroke = computeStroke(scaleX, scaleY);
+            drawBoxesOnContext(ctx, payload.boxes, width, height, stroke);
+            drawPolygonsOnContext(ctx, payload.polygons, stroke);
             return;
         }
 
@@ -261,6 +263,7 @@
             height: h,
             data,
             boxes = [],
+            polygons = [],
             stroke = 2
         } = event.data as {
             canvasId: string;
@@ -268,6 +271,7 @@
             height: number;
             data: Uint8ClampedArray;
             boxes?: BoxPayload[];
+            polygons?: PolygonInput[];
             stroke?: number;
         };
 
@@ -280,30 +284,12 @@
         const imageData = new ImageData(new Uint8ClampedArray(data), w, h);
         ctx.putImageData(imageData, 0, 0);
 
-        if (!boxes.length) {
+        if (!boxes.length && !polygons.length) {
             return;
         }
 
-        ctx.save();
-        ctx.lineWidth = stroke;
-        const clamp = (value: number, min: number, max: number) =>
-            Math.min(Math.max(value, min), max);
-
-        for (const box of boxes) {
-            ctx.strokeStyle = rgbaFromBytes(box.color);
-            const x = clamp(box.x, 0, w);
-            const y = clamp(box.y, 0, h);
-            const wBox = clamp(box.width, 0, w - x);
-            const hBox = clamp(box.height, 0, h - y);
-
-            if (wBox === 0 || hBox === 0) {
-                continue;
-            }
-
-            ctx.strokeRect(x, y, wBox, hBox);
-        }
-
-        ctx.restore();
+        drawBoxesOnContext(ctx, boxes, w, h, stroke);
+        drawPolygonsOnContext(ctx, polygons, stroke);
     };
 
     const setupWorker = () => {

@@ -1,30 +1,81 @@
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
 import {
     isObjectDetectionAnnotation,
+    isPolygonAnnotation,
     isSegmentationMaskAnnotation,
-    type Annotation,
-    type ObjectDetectionAnnotationView
+    type Annotation
 } from '$lib/services/types';
 import type { BoundingBox } from '$lib/types';
 
 export function getBoundingBox(annotation: Annotation): BoundingBox {
-    let boundingBox: ObjectDetectionAnnotationView | null | undefined;
+    let boundingBox: BoundingBox | null = null;
 
     if (isObjectDetectionAnnotation(annotation)) {
-        boundingBox = annotation.object_detection_details;
+        boundingBox = _toBoundingBox(annotation.object_detection_details);
     } else if (isSegmentationMaskAnnotation(annotation)) {
-        boundingBox = annotation.segmentation_details;
+        boundingBox = _toBoundingBox(annotation.segmentation_details);
+    } else if (isPolygonAnnotation(annotation)) {
+        boundingBox =
+            _toBoundingBox(annotation.polygon_details) ??
+            _computeBoundingBoxFromPolygon(annotation.polygon_details?.points ?? []);
     } else {
         throw new Error(
             `Annotation type is not supported for bounding box extraction: ${annotation.annotation_type}`
         );
     }
 
+    if (!boundingBox) {
+        throw new Error(`Annotation ${annotation.sample_id} does not have valid bounding box data.`);
+    }
+
+    return boundingBox;
+}
+
+function _toBoundingBox(
+    boundingBoxLike:
+        | { x?: number | null; y?: number | null; width?: number | null; height?: number | null }
+        | null
+        | undefined
+): BoundingBox | null {
+    if (
+        boundingBoxLike?.x == null ||
+        boundingBoxLike.y == null ||
+        boundingBoxLike.width == null ||
+        boundingBoxLike.height == null
+    ) {
+        return null;
+    }
+
     return {
-        x: Math.round(boundingBox.x),
-        y: Math.round(boundingBox.y),
-        width: Math.round(boundingBox.width),
-        height: Math.round(boundingBox.height)
+        x: Math.round(boundingBoxLike.x),
+        y: Math.round(boundingBoxLike.y),
+        width: Math.round(boundingBoxLike.width),
+        height: Math.round(boundingBoxLike.height)
+    };
+}
+
+function _computeBoundingBoxFromPolygon(points: number[][]): BoundingBox | null {
+    if (points.length < 3) {
+        return null;
+    }
+
+    const coordinates = points.filter((point) => point.length === 2);
+    if (coordinates.length < 3) {
+        return null;
+    }
+
+    const xs = coordinates.map(([x]) => x);
+    const ys = coordinates.map(([, y]) => y);
+    const minX = Math.min(...xs);
+    const minY = Math.min(...ys);
+    const maxX = Math.max(...xs);
+    const maxY = Math.max(...ys);
+
+    return {
+        x: Math.floor(minX),
+        y: Math.floor(minY),
+        width: Math.max(0, Math.ceil(maxX) - Math.floor(minX)),
+        height: Math.max(0, Math.ceil(maxY) - Math.floor(minY))
     };
 }
 

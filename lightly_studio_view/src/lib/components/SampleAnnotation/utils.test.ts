@@ -1,5 +1,6 @@
 import { vi, beforeEach, afterEach } from 'vitest';
 import {
+    getBoundingBox,
     computeBoundingBoxFromMask,
     encodeBinaryMaskToRLE,
     decodeRLEToBinaryMask,
@@ -8,6 +9,30 @@ import {
 } from '$lib/components/SampleAnnotation/utils';
 
 describe('SampleAnnotationUtils', () => {
+    it('extracts a bounding box from a polygon annotation', () => {
+        expect(
+            getBoundingBox({
+                annotation_type: 'polygon',
+                polygon_details: {
+                    points: [
+                        [10, 20],
+                        [30, 20],
+                        [25, 40]
+                    ],
+                    x: 10,
+                    y: 20,
+                    width: 20,
+                    height: 20
+                }
+            } as never)
+        ).toEqual({
+            x: 10,
+            y: 20,
+            width: 20,
+            height: 20
+        });
+    });
+
     it('returns a 1x1 bounding box for a single active pixel', () => {
         const width = 4;
         const height = 3;

@@ -8,6 +8,7 @@ from pytest_mock import MockerFixture
 from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
 from lightly_studio.models.annotation.annotation_base import AnnotationType, AnnotationView
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationView
+from lightly_studio.models.annotation.polygon import PolygonAnnotationView
 from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationView,
 )
@@ -192,6 +193,64 @@ def test_create_annotation_classification(
         parent_sample_id=UUID(str(parent_sample_id)),
         annotation_label=AnnotationView.AnnotationLabel.model_validate(expected_label),
         created_at=result.created_at,
+        tags=[],
+    )
+
+
+def test_create_annotation_polygon(
+    mocker: MockerFixture,
+    collection: CollectionTable,
+    test_client: TestClient,
+    samples: list[ImageTable],
+    annotation_labels: list[AnnotationLabelTable],
+) -> None:
+    expected_label = annotation_labels[0]
+    parent_sample_id = samples[0].sample_id
+
+    spy_create_annotation = mocker.spy(annotations_service, "create_annotation")
+    route = f"/api/collections/{collection.collection_id!s}/annotations"
+
+    response = test_client.post(
+        route,
+        json={
+            "annotation_label_id": str(expected_label.annotation_label_id),
+            "annotation_type": AnnotationType.POLYGON,
+            "collection_id": str(collection.collection_id),
+            "parent_sample_id": str(parent_sample_id),
+            "points": [[10, 20], [30, 20], [25, 45]],
+        },
+    )
+
+    spy_create_annotation.assert_called_once_with(
+        session=mocker.ANY,
+        annotation=AnnotationCreateParams.model_validate(
+            {
+                "annotation_label_id": str(expected_label.annotation_label_id),
+                "annotation_type": AnnotationType.POLYGON,
+                "collection_id": str(collection.collection_id),
+                "parent_sample_id": str(parent_sample_id),
+                "points": [[10, 20], [30, 20], [25, 45]],
+            }
+        ),
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = AnnotationView(**response.json())
+
+    assert result == AnnotationView(
+        annotation_type=AnnotationType.POLYGON,
+        sample_id=result.sample_id,
+        annotation_collection_id=result.annotation_collection_id,
+        parent_sample_id=UUID(str(parent_sample_id)),
+        annotation_label=AnnotationView.AnnotationLabel.model_validate(expected_label),
+        created_at=result.created_at,
+        polygon_details=PolygonAnnotationView(
+            points=[[10.0, 20.0], [30.0, 20.0], [25.0, 45.0]],
+            x=10,
+            y=20,
+            width=20,
+            height=25,
+        ),
         tags=[],
     )
 

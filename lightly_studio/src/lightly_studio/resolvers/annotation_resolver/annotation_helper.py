@@ -19,6 +19,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
+from lightly_studio.models.annotation.polygon import PolygonAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.resolvers import annotation_resolver
 
@@ -70,6 +71,20 @@ def update_annotation_object(
         else None
     )
 
+    polygon_details = annotation_copy.polygon_details
+    polygon = (
+        PolygonAnnotationTable(
+            sample_id=annotation_copy.sample_id,
+            points=polygon_details.points,
+            x=polygon_details.x if polygon_details.x is not None else 0,
+            y=polygon_details.y if polygon_details.y is not None else 0,
+            width=polygon_details.width if polygon_details.width is not None else 0,
+            height=polygon_details.height if polygon_details.height is not None else 0,
+        )
+        if annotation_type == AnnotationType.POLYGON and polygon_details
+        else None
+    )
+
     annotation_resolver.delete_annotation(session, annotation.sample_id, delete_sample=False)
 
     new_annotation = AnnotationBaseTable(
@@ -88,6 +103,9 @@ def update_annotation_object(
 
     if object_detection:
         session.add(object_detection)
+
+    if polygon:
+        session.add(polygon)
 
     session.commit()
     session.flush()

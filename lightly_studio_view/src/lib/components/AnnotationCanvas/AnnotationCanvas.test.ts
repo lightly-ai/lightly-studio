@@ -22,6 +22,12 @@ type Mock2dContext = {
     save: ReturnType<typeof vi.fn>;
     restore: ReturnType<typeof vi.fn>;
     strokeRect: ReturnType<typeof vi.fn>;
+    beginPath: ReturnType<typeof vi.fn>;
+    moveTo: ReturnType<typeof vi.fn>;
+    lineTo: ReturnType<typeof vi.fn>;
+    closePath: ReturnType<typeof vi.fn>;
+    fill: ReturnType<typeof vi.fn>;
+    stroke: ReturnType<typeof vi.fn>;
 };
 
 class MockWorker {
@@ -87,7 +93,13 @@ describe('AnnotationCanvas', () => {
         putImageData: vi.fn(),
         save: vi.fn(),
         restore: vi.fn(),
-        strokeRect: vi.fn()
+        strokeRect: vi.fn(),
+        beginPath: vi.fn(),
+        moveTo: vi.fn(),
+        lineTo: vi.fn(),
+        closePath: vi.fn(),
+        fill: vi.fn(),
+        stroke: vi.fn()
     });
 
     beforeEach(() => {
@@ -187,9 +199,48 @@ describe('AnnotationCanvas', () => {
                 scaleX: 0,
                 scaleY: 0,
                 boxes: [],
+                polygons: [],
                 masks: [expect.objectContaining({ rle: [0, 3, 2] })]
             })
         );
+    });
+
+    it('draws polygons on fallback canvas when there are no masks', async () => {
+        const { container } = render(AnnotationCanvas, {
+            props: {
+                sampleId: 'sample-polygon',
+                width: 100,
+                height: 100,
+                annotations: [
+                    {
+                        annotation_type: 'polygon',
+                        annotation_label_name: 'car',
+                        polygon_details: {
+                            points: [
+                                [10, 10],
+                                [40, 10],
+                                [30, 30]
+                            ]
+                        }
+                    }
+                ]
+            }
+        });
+
+        await tick();
+        const canvas = container.querySelector('canvas');
+        expect(canvas).not.toBeNull();
+        const context = canvasContexts.get(canvas as HTMLCanvasElement);
+        expect(context).toBeDefined();
+
+        expect(MockWorker.instances).toHaveLength(0);
+        expect(context?.beginPath).toHaveBeenCalledTimes(1);
+        expect(context?.moveTo).toHaveBeenCalledWith(10, 10);
+        expect(context?.lineTo).toHaveBeenCalledWith(40, 10);
+        expect(context?.lineTo).toHaveBeenCalledWith(30, 30);
+        expect(context?.closePath).toHaveBeenCalledTimes(1);
+        expect(context?.fill).toHaveBeenCalledTimes(1);
+        expect(context?.stroke).toHaveBeenCalledTimes(1);
     });
 
     it('clears and exits early when there are no drawable annotations', async () => {

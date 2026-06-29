@@ -7,6 +7,7 @@ import type {
     SampleIdsBody as SampleIdsBodyType,
     AnnotationView,
     ObjectDetectionAnnotationView as ObjectDetectionAnnotationViewType,
+    PolygonAnnotationView as PolygonAnnotationViewType,
     SegmentationAnnotationView as SegmentationAnnotationViewType,
     AnnotationLabelTable,
     EmbeddingClassifier,
@@ -26,6 +27,7 @@ export type SampleIdsBody = SampleIdsBodyType;
 export type Annotation = AnnotationView;
 
 export type ObjectDetectionAnnotationView = ObjectDetectionAnnotationViewType;
+export type PolygonAnnotationView = PolygonAnnotationViewType;
 export type SegmentationAnnotationView = SegmentationAnnotationViewType;
 
 export type AnnotationLabel = AnnotationLabelTable;
@@ -42,16 +44,25 @@ export type ClassifierExportType = SaveClassifierToFileData['path']['export_type
 type AnnotationObjectDetection = Annotation & {
     object_detection_details: ObjectDetectionAnnotationView;
     segmentation_details: undefined;
+    polygon_details: undefined;
 };
 
 type AnnotationSegmentation = Annotation & {
     segmentation_details: SegmentationAnnotationView;
     object_detection_details: undefined;
+    polygon_details: undefined;
+};
+
+type AnnotationPolygon = Annotation & {
+    polygon_details: PolygonAnnotationView;
+    object_detection_details: undefined;
+    segmentation_details: undefined;
 };
 
 type ClassificationAnnotation = Annotation & {
     object_detection_details: undefined;
     segmentation_details: undefined;
+    polygon_details: undefined;
 };
 
 // use type guards to narrow down the type of annotation
@@ -65,6 +76,12 @@ export function isSegmentationMaskAnnotation(
     annotation: Annotation | AnnotationSegmentation
 ): annotation is AnnotationSegmentation {
     return annotation.annotation_type === 'segmentation_mask';
+}
+
+export function isPolygonAnnotation(
+    annotation: Annotation | AnnotationPolygon
+): annotation is AnnotationPolygon {
+    return annotation.annotation_type === 'polygon';
 }
 
 export function isClassificationAnnotation(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from uuid import UUID
 
 from sqlmodel import Session
@@ -14,6 +15,7 @@ from lightly_studio.models.annotation.annotation_base import (
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
 )
+from lightly_studio.models.annotation.polygon import PolygonAnnotationTable
 from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationTable,
 )
@@ -55,6 +57,7 @@ def create_many(
     base_annotations = []
     object_detection_annotations = []
     segmentation_annotations = []
+    polygon_annotations = []
     annotation_collection_id = collection_resolver.get_or_create_child_collection(
         session=session,
         collection_id=parent_collection_id,
@@ -80,6 +83,7 @@ def create_many(
         # Set other relationship details to None
         db_base_annotation.segmentation_details = None
         db_base_annotation.object_detection_details = None
+        db_base_annotation.polygon_details = None
 
         base_annotations.append(db_base_annotation)
 
@@ -116,9 +120,23 @@ def create_many(
             )
             segmentation_annotations.append(db_segmentation_mask)
 
+        elif annotation_type == AnnotationType.POLYGON:
+            points = _validate_polygon_points(annotation=annotation_create)
+            x, y, width, height = _bounding_box_from_points(points=points)
+            db_polygon = PolygonAnnotationTable(
+                sample_id=base_annotations[i].sample_id,
+                points=points,
+                x=x,
+                y=y,
+                width=width,
+                height=height,
+            )
+            polygon_annotations.append(db_polygon)
+
     # Bulk save object detection annotations
     session.bulk_save_objects(object_detection_annotations)
     session.bulk_save_objects(segmentation_annotations)
+    session.bulk_save_objects(polygon_annotations)
 
     # Bulk add annotation collection coverage entries.
     annotation_collection_coverage_resolver.add_many(
@@ -142,3 +160,41 @@ def _validate_bbox(annotation: AnnotationCreate, kind: str) -> tuple[int, int, i
         raise ValueError(f"Missing height property for {kind}.")
 
     return (annotation.x, annotation.y, annotation.width, annotation.height)
+
+
+def _validate_polygon_points(annotation: AnnotationCreate) -> list[list[float]]:
+    points = annotation.points
+    if points is None:
+        raise ValueError("Missing points property for polygon.")
+    if len(points) < 3:
+        raise ValueError("Polygon must have at least 3 points.")
+
+    normalized_points: list[list[float]] = []
+    for index, point in enumerate(points):
+        if len(point) != 2:
+            raise ValueError(
+                f"Polygon point at index {index} must contain exactly 2 coordinates."
+            )
+
+        x, y = point
+        if isinstance(x, bool) or not isinstance(x, (int, float)) or not math.isfinite(x):
+            raise ValueError(f"Polygon x coordinate at index {index} must be a finite number.")
+        if isinstance(y, bool) or not isinstance(y, (int, float)) or not math.isfinite(y):
+            raise ValueError(f"Polygon y coordinate at index {index} must be a finite number.")
+
+        normalized_points.append([float(x), float(y)])
+
+    return normalized_points
+
+
+def _bounding_box_from_points(points: list[list[float]]) -> tuple[int, int, int, int]:
+    min_x = min(point[0] for point in points)
+    min_y = min(point[1] for point in points)
+    max_x = max(point[0] for point in points)
+    max_y = max(point[1] for point in points)
+
+    x = math.floor(min_x)
+    y = math.floor(min_y)
+    width = max(0, math.ceil(max_x) - x)
+    height = max(0, math.ceil(max_y) - y)
+    return (x, y, width, height)

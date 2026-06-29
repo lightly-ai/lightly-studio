@@ -2,8 +2,10 @@ from dataclasses import dataclass
 
 import numpy as np
 import pytest
+from pydantic import ValidationError
 
 from lightly_studio.core.annotation.annotation_create import (
+    CreatePolygon,
     CreateSegmentationMask,
 )
 
@@ -121,3 +123,34 @@ def test_create_segmentation_mask_from_rle_mask_square() -> None:
     assert result.width == 2
     assert result.height == 2
     assert result.segmentation_mask == rle_mask
+
+
+def test_create_polygon() -> None:
+    result = CreatePolygon(
+        class_name="car",
+        points=[[10, 20], [30.5, 20], [25, 40]],
+        confidence=0.9,
+    )
+
+    assert result.class_name == "car"
+    assert result.points == [[10.0, 20.0], [30.5, 20.0], [25.0, 40.0]]
+    assert result.confidence == pytest.approx(0.9)
+
+
+def test_create_polygon__rejects_less_than_three_points() -> None:
+    with pytest.raises(ValidationError, match="Polygon must have at least 3 points"):
+        CreatePolygon(class_name="car", points=[[10, 20], [30, 40]])
+
+
+def test_create_polygon__rejects_malformed_points() -> None:
+    with pytest.raises(
+        ValidationError,
+        match="Polygon point at index 1 must contain exactly 2 coordinates",
+    ):
+        CreatePolygon(class_name="car", points=[[10, 20], [30], [40, 50]])
+
+    with pytest.raises(
+        ValidationError,
+        match="Polygon y coordinate at index 1 must be a finite number",
+    ):
+        CreatePolygon(class_name="car", points=[[10, 20], [30, float("inf")], [40, 50]])

@@ -3,6 +3,7 @@ from .annotation_create import (
     CreateAnnotation,
     CreateClassification,
     CreateObjectDetection,
+    CreatePolygon,
     CreateSegmentationMask,
 )
 from .classification import ClassificationAnnotation
@@ -15,6 +16,7 @@ __all__ = [
     "CreateAnnotation",
     "CreateClassification",
     "CreateObjectDetection",
+    "CreatePolygon",
     "CreateSegmentationMask",
     "ObjectDetectionAnnotation",
     "SegmentationMaskAnnotation",

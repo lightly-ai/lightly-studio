@@ -4,5 +4,11 @@ export function shouldShowBoundingBoxForAnnotation(
     annotation: Annotation | undefined,
     showBoundingBoxesForSegmentation: boolean
 ): boolean {
-    return annotation?.annotation_type !== 'segmentation_mask' || showBoundingBoxesForSegmentation;
+    if (!annotation) {
+        return false;
+    }
+    if (annotation.annotation_type === 'segmentation_mask') {
+        return showBoundingBoxesForSegmentation;
+    }
+    return annotation.annotation_type === 'object_detection';
 }

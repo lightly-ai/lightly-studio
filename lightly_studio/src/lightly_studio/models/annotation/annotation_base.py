@@ -15,6 +15,10 @@ from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
     ObjectDetectionAnnotationView,
 )
+from lightly_studio.models.annotation.polygon import (
+    PolygonAnnotationTable,
+    PolygonAnnotationView,
+)
 from lightly_studio.models.annotation.object_track import ObjectTrackTable
 from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationTable,
@@ -43,6 +47,7 @@ class AnnotationType(str, Enum):
     CLASSIFICATION = "classification"
     SEGMENTATION_MASK = "segmentation_mask"
     OBJECT_DETECTION = "object_detection"
+    POLYGON = "polygon"
 
 
 class AnnotationBaseTable(SQLModel, table=True):
@@ -94,6 +99,12 @@ class AnnotationBaseTable(SQLModel, table=True):
         sa_relationship_kwargs={"lazy": "select"},
     )
 
+    # Details about polygons.
+    polygon_details: Mapped[Optional["PolygonAnnotationTable"]] = Relationship(
+        back_populates="annotation_base",
+        sa_relationship_kwargs={"lazy": "select"},
+    )
+
     # The track this annotation belongs to, if any.
     object_track: Mapped[Optional["ObjectTrackTable"]] = Relationship(
         sa_relationship_kwargs={"lazy": "joined"},
@@ -126,6 +137,9 @@ class AnnotationCreate(ABC, SQLModel):
     # Optional properties for segmentation.
     segmentation_mask: Optional[list[int]] = None
 
+    # Optional properties for polygons.
+    points: Optional[list[list[float]]] = None
+
 
 class AnnotationView(BaseModel):
     """Response model for bounding box annotation."""
@@ -153,6 +167,7 @@ class AnnotationView(BaseModel):
 
     object_detection_details: Optional[ObjectDetectionAnnotationView] = None
     segmentation_details: Optional[SegmentationAnnotationView] = None
+    polygon_details: Optional[PolygonAnnotationView] = None
     object_track_id: Optional[UUID] = None
     object_track_number: Optional[int] = None
 
@@ -191,6 +206,15 @@ class AnnotationView(BaseModel):
                 segmentation_mask=annotation.segmentation_details.segmentation_mask,
             )
             if annotation.segmentation_details
+            else None,
+            polygon_details=PolygonAnnotationView(
+                points=annotation.polygon_details.points,
+                x=annotation.polygon_details.x,
+                y=annotation.polygon_details.y,
+                width=annotation.polygon_details.width,
+                height=annotation.polygon_details.height,
+            )
+            if annotation.polygon_details
             else None,
             tags=[
                 cls.AnnotationViewTag(tag_id=t.tag_id, name=t.name) for t in annotation.sample.tags

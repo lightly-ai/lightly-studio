@@ -72,6 +72,7 @@ def _get_load_options() -> LoaderOption:
         selectinload(SampleTable.annotations).options(
             joinedload(AnnotationBaseTable.annotation_label),
             joinedload(AnnotationBaseTable.object_detection_details),
+            joinedload(AnnotationBaseTable.polygon_details),
             joinedload(AnnotationBaseTable.segmentation_details),
             selectinload(AnnotationBaseTable.sample).options(selectinload(SampleTable.tags)),
         ),

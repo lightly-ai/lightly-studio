@@ -55,6 +55,8 @@
     });
 
     const segmentationMask = annotation?.segmentation_details?.segmentation_mask;
+    const polygonPoints = $derived(annotation.polygon_details?.points ?? []);
+    const polygonPointsSvg = $derived(polygonPoints.map(([x, y]) => `${x},${y}`).join(' '));
 
     const annotationId = $derived(annotation.sample_id);
 
@@ -120,7 +122,9 @@
     const showAnnotationLabel = $derived(
         showLabel &&
             (highlight === 'auto' || highlight === 'active') &&
-            (annotation.annotation_type !== 'segmentation_mask' || showBoundingBox)
+            ((annotation.annotation_type !== 'segmentation_mask' &&
+                annotation.annotation_type !== 'polygon') ||
+                showBoundingBox)
     );
 </script>
 
@@ -146,9 +150,18 @@
         />
     {/if}
 
+    {#if polygonPoints.length >= 3}
+        <polygon
+            points={polygonPointsSvg}
+            fill={colorFill}
+            stroke={colorStroke}
+            stroke-width={Math.max(1, 2 / scale)}
+        />
+    {/if}
+
     {#if showBoundingBox}
         <!--Disable resizable rectangle for segmentation masks since we don’t support it yet.-->
-        {#if isResizable && constraintBox && !segmentationMask}
+        {#if isResizable && constraintBox && !segmentationMask && polygonPoints.length === 0}
             <ResizableRectangle
                 bind:bbox={boundingBox}
                 {colorStroke}

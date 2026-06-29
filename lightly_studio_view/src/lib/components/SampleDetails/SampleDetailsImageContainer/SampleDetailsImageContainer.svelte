@@ -9,6 +9,7 @@
     import SampleEraserRect from '../SampleEraserRect/SampleEraserRect.svelte';
     import SampleSegmentationMaskRect from '../SampleSegmentationMaskRect/SampleSegmentationMaskRect.svelte';
     import SampleObjectDetectionRect from '../SampleObjectDetectionRect/SampleObjectDetectionRect.svelte';
+    import SamplePolygonRect from '../SamplePolygonRect/SamplePolygonRect.svelte';
     import { select } from 'd3-selection';
     import {
         countVisibleSources,
@@ -274,7 +275,7 @@
                     />
                 </g>
             {/each}
-            {#if mousePosition && $isEditingMode && (sampleDetailsToolbarContext.status === 'brush' || sampleDetailsToolbarContext.status === 'bounding-box') && !annotationLabelContext.isDrawing && !isHoveringBoundingBox}
+            {#if mousePosition && $isEditingMode && (sampleDetailsToolbarContext.status === 'brush' || sampleDetailsToolbarContext.status === 'bounding-box' || sampleDetailsToolbarContext.status === 'polygon') && !annotationLabelContext.isDrawing && !isHoveringBoundingBox}
                 <!-- Horizontal crosshair line -->
                 <line
                     x1="0"
@@ -336,6 +337,15 @@
                     {drawerStrokeColor}
                     {refetch}
                     onCreateBoundingBoxPendingChange={handlePendingChange}
+                />
+            {:else if sampleDetailsToolbarContext.status === 'polygon' && !annotationLabelContext.isOnAnnotationDetailsView}
+                <SamplePolygonRect
+                    bind:interactionRect
+                    {sample}
+                    {sampleId}
+                    {collectionId}
+                    {drawerStrokeColor}
+                    {refetch}
                 />
             {/if}
         {/if}

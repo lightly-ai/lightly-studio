@@ -6,7 +6,7 @@ import { AnnotationType } from '$lib/api/lightly_studio_local';
 import { BrushMode, ToolbarStatus } from '$lib/contexts/SampleDetailsToolbar.svelte';
 
 const mockSampleDetailsToolbarContext = {
-    status: 'cursor' as 'cursor' | 'bounding-box' | 'brush',
+    status: 'cursor' as 'cursor' | 'bounding-box' | 'brush' | 'polygon',
     brush: {
         mode: 'brush' as 'brush' | 'eraser'
     }
@@ -227,6 +227,37 @@ describe('SampleDetailsToolbar', () => {
 
         expect(mockSampleDetailsToolbarContext.status).toBe('brush');
         expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
+    });
+
+    it('activates polygon tool and sets annotation type', async () => {
+        mockAnnotationLabelContext.annotationLabel = 'car';
+        const { getByLabelText } = render(SampleDetailsToolbar);
+
+        await fireEvent.click(getByLabelText('Polygon Tool'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('polygon');
+        expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.POLYGON);
+        expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
+        expect(mockAnnotationLabelContext.annotationId).toBeNull();
+    });
+
+    it('activates polygon tool via P keyboard shortcut', async () => {
+        mockAnnotationLabelContext.annotationLabel = 'car';
+        render(SampleDetailsToolbar);
+
+        await fireEvent.keyDown(window, { key: 'p' });
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('polygon');
+        expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.POLYGON);
+    });
+
+    it('does not activate polygon tool via P key when in annotation details view', async () => {
+        mockAnnotationLabelContext.isOnAnnotationDetailsView = true;
+        render(SampleDetailsToolbar);
+
+        await fireEvent.keyDown(window, { key: 'p' });
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
     });
 
     it('normalizes non-instance annotation type to segmentation mask when remounting in brush mode', () => {

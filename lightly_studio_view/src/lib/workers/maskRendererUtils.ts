@@ -13,6 +13,14 @@ export type BoundingBoxInput = {
     color: [number, number, number, number]; // RGBA 0-255
 };
 
+export type PolygonInput = {
+    points: ReadonlyArray<readonly [number, number]>;
+    strokeColor: [number, number, number, number];
+    fillColor: [number, number, number, number];
+};
+
+type Drawable2dContext = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+
 export const renderMasks = (width: number, height: number, masks: MaskInput[]) => {
     const pixelData = new Uint8ClampedArray(width * height * 4);
     const maxPixels = width * height;
@@ -54,7 +62,7 @@ export const computeStroke = (scaleX = 1, scaleY = 1) => {
 };
 
 export const drawBoxesOnContext = (
-    ctx: OffscreenCanvasRenderingContext2D,
+    ctx: Drawable2dContext,
     boxes: BoundingBoxInput[],
     width: number,
     height: number,
@@ -79,6 +87,40 @@ export const drawBoxesOnContext = (
         }
 
         ctx.strokeRect(x, y, w, h);
+    }
+
+    ctx.restore();
+};
+
+export const drawPolygonsOnContext = (
+    ctx: Drawable2dContext,
+    polygons: PolygonInput[],
+    stroke: number
+) => {
+    if (!polygons.length) return;
+
+    ctx.save();
+    ctx.lineWidth = stroke;
+
+    for (const polygon of polygons) {
+        if (polygon.points.length < 3) {
+            continue;
+        }
+
+        const [firstX, firstY] = polygon.points[0];
+        ctx.beginPath();
+        ctx.moveTo(firstX, firstY);
+
+        for (let index = 1; index < polygon.points.length; index += 1) {
+            const [x, y] = polygon.points[index];
+            ctx.lineTo(x, y);
+        }
+
+        ctx.closePath();
+        ctx.fillStyle = rgbaFromBytes(polygon.fillColor);
+        ctx.strokeStyle = rgbaFromBytes(polygon.strokeColor);
+        ctx.fill();
+        ctx.stroke();
     }
 
     ctx.restore();

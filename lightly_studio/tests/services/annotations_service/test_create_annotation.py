@@ -112,6 +112,37 @@ def test_create_annotation_classification(
     assert result.object_detection_details is None
 
 
+def test_create_annotation_polygon(
+    db_session: Session,
+    collection: CollectionTable,
+    samples: list[ImageTable],
+    annotation_labels: list[AnnotationLabelTable],
+) -> None:
+    """Test to create polygon annotation."""
+    annotation = AnnotationCreateParams(
+        annotation_label_id=annotation_labels[0].annotation_label_id,
+        annotation_type=AnnotationType.POLYGON,
+        collection_id=collection.collection_id,
+        parent_sample_id=samples[0].sample_id,
+        points=[[10, 15], [35, 20], [25, 45]],
+    )
+    result = create_annotation(session=db_session, annotation=annotation)
+
+    assert isinstance(result, AnnotationBaseTable)
+    assert result.annotation_label_id == annotation.annotation_label_id
+    assert result.annotation_type == annotation.annotation_type
+    assert result.sample.collection_id == collection.children[0].collection_id
+    assert result.parent_sample_id == annotation.parent_sample_id
+    assert result.object_detection_details is None
+    assert result.segmentation_details is None
+    assert result.polygon_details is not None
+    assert result.polygon_details.points == [[10.0, 15.0], [35.0, 20.0], [25.0, 45.0]]
+    assert result.polygon_details.x == 10
+    assert result.polygon_details.y == 15
+    assert result.polygon_details.width == 25
+    assert result.polygon_details.height == 30
+
+
 def test_create_annotation_failure(
     db_session: Session,
     collection_id: UUID,

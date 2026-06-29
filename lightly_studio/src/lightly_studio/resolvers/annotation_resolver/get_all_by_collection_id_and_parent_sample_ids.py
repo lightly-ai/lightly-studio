@@ -24,6 +24,7 @@ def get_all_by_collection_id_and_parent_sample_ids(
     Eagerly loads the type-specific details relationship so callers can iterate
     without triggering N+1 queries:
     - OBJECT_DETECTION: object_detection_details
+    - POLYGON: polygon_details
     - SEGMENTATION_MASK: segmentation_details
     - CLASSIFICATION: no extra load (label_id is on AnnotationBaseTable itself)
 
@@ -52,6 +53,8 @@ def get_all_by_collection_id_and_parent_sample_ids(
     )
     if annotation_type == AnnotationType.OBJECT_DETECTION:
         statement = statement.options(joinedload(AnnotationBaseTable.object_detection_details))
+    elif annotation_type == AnnotationType.POLYGON:
+        statement = statement.options(joinedload(AnnotationBaseTable.polygon_details))
     elif annotation_type == AnnotationType.SEGMENTATION_MASK:
         statement = statement.options(joinedload(AnnotationBaseTable.segmentation_details))
 

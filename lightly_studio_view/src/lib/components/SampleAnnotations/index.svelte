@@ -63,6 +63,14 @@
             } satisfies AnnotationCanvasAnnotation;
         }
 
+        if (annotation.annotation_type === 'polygon' && annotation.polygon_details) {
+            return {
+                annotation_type: 'polygon',
+                annotation_label_name,
+                polygon_details: annotation.polygon_details
+            } satisfies AnnotationCanvasAnnotation;
+        }
+
         return null;
     };
 

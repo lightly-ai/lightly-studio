@@ -56,6 +56,46 @@ def test_segmentation_details(
         assert annotation.segmentation_details.segmentation_mask == [1, 2, 3, 4]
 
 
+def test_polygon_details(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """Test that polygon details are correctly loaded."""
+    image = create_images(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        images=[ImageStub(path="polygon/sample.jpg")],
+    )[0]
+    annotation_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="polygon-label",
+    )
+    create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=annotation_label.annotation_label_id,
+        annotation_type=AnnotationType.POLYGON,
+        annotation_data={"points": [[10, 20], [30, 20], [25, 45]]},
+    )
+
+    annotations = annotation_resolver.get_all(
+        db_session,
+        filters=AnnotationsFilter(annotation_types=[AnnotationType.POLYGON]),
+    ).annotations
+
+    assert annotations
+    assert len(annotations) == 1
+    annotation = annotations[0]
+    assert annotation.polygon_details is not None
+    assert annotation.polygon_details.points == [[10.0, 20.0], [30.0, 20.0], [25.0, 45.0]]
+    assert annotation.polygon_details.x == 10
+    assert annotation.polygon_details.y == 20
+    assert annotation.polygon_details.width == 20
+    assert annotation.polygon_details.height == 25
+
+
 def test_default_ordering_by_file_path_abs(
     db_session: Session, collection: CollectionTable
 ) -> None:

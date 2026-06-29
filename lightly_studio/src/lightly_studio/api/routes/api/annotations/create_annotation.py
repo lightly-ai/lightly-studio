@@ -36,6 +36,7 @@ class AnnotationCreateInput(BaseModel):
     width: int | None = None
     height: int | None = None
     segmentation_mask: list[int] | None = None
+    points: list[list[float]] | None = None
 
 
 @create_annotation_router.post(

@@ -9,6 +9,7 @@
     import BrushToolbarButton from '../BrushToolbarButton/BrushToolbarButton.svelte';
     import CursorToolbarButton from '../CursorToolbarButton/CursorToolbarButton.svelte';
     import DragToolbarButton from '../DragToolbarButton/DragToolbarButton.svelte';
+    import PolygonToolbarButton from '../PolygonToolbarButton/PolygonToolbarButton.svelte';
     import { useSettings } from '$lib/hooks/useSettings';
 
     const { showSegmentationTool = true }: { showSegmentationTool?: boolean } = $props();
@@ -40,6 +41,10 @@
         } else if (key === $settingsStore.key_toolbar_drag) {
             e.preventDefault();
             onClickDrag();
+        } else if (key === 'p') {
+            if (annotationLabelContext.isOnAnnotationDetailsView) return;
+            e.preventDefault();
+            onClickPolygon();
         }
     };
 
@@ -92,7 +97,8 @@
             setBrushMode('brush');
         } else if (
             sampleDetailsToolbarContext.status === 'bounding-box' ||
-            sampleDetailsToolbarContext.status === 'brush'
+            sampleDetailsToolbarContext.status === 'brush' ||
+            sampleDetailsToolbarContext.status === 'polygon'
         ) {
             setLastCreatedAnnotationId(null);
             if (sampleDetailsToolbarContext.status === 'bounding-box') {
@@ -102,6 +108,10 @@
                 setBrushMode('brush');
             } else if (sampleDetailsToolbarContext.status === 'brush') {
                 setAnnotationType(AnnotationType.SEGMENTATION_MASK);
+            } else if (sampleDetailsToolbarContext.status === 'polygon') {
+                if (!annotationLabelContext.isOnAnnotationDetailsView) {
+                    setAnnotationType(AnnotationType.POLYGON);
+                }
             }
         }
         if (sampleDetailsToolbarContext.status === 'drag') {
@@ -132,6 +142,15 @@
         setStatus('brush');
         setAnnotationType(AnnotationType.SEGMENTATION_MASK);
         if (!annotationLabelContext.isOnAnnotationDetailsView) setAnnotationId(null);
+        setLastCreatedAnnotationId(null);
+    };
+
+    const onClickPolygon = () => {
+        if (annotationLabelContext.isOnAnnotationDetailsView) return;
+
+        setStatus('polygon');
+        setAnnotationType(AnnotationType.POLYGON);
+        setAnnotationId(null);
         setLastCreatedAnnotationId(null);
     };
 </script>
@@ -173,6 +192,9 @@
                 action="draw"
             >
                 <BoundingBoxToolbarButton onclick={onClickBoundingBox} />
+            </SampleDetailsToolbarTooltip>
+            <SampleDetailsToolbarTooltip label="Polygon" shortcut="P" action="draw">
+                <PolygonToolbarButton onclick={onClickPolygon} />
             </SampleDetailsToolbarTooltip>
         {/if}
         {#if showSegmentationTool}

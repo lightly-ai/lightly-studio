@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Protocol
 from uuid import UUID
 
@@ -9,7 +10,7 @@ import numpy as np
 from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation
 from labelformat.model.bounding_box import BoundingBox, BoundingBoxFormat
 from numpy.typing import NDArray
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
@@ -201,6 +202,30 @@ class CreateSegmentationMask(CreateAnnotationBase):
         )
 
 
+class CreatePolygon(CreateAnnotationBase):
+    """Input model for creating polygon annotations."""
+
+    points: list[list[float]]
+    """Polygon points as ordered image-space coordinates ``[[x1, y1], [x2, y2], ...]``."""
+
+    @model_validator(mode="after")
+    def _validate_points(self) -> "CreatePolygon":
+        self.points = _validate_polygon_points(points=self.points)
+        return self
+
+    def to_annotation_create(
+        self, session: Session, dataset_id: UUID, parent_sample_id: UUID
+    ) -> AnnotationCreate:
+        """Convert to AnnotationCreate."""
+        return AnnotationCreate(
+            annotation_label_id=self._get_label_id(session=session, dataset_id=dataset_id),
+            annotation_type=AnnotationType.POLYGON,
+            confidence=self.confidence,
+            parent_sample_id=parent_sample_id,
+            points=self.points,
+        )
+
+
 def _segmentation_mask_and_bounding_box(
     binary_mask: NDArray[np.int_],
 ) -> tuple[list[int], list[int]]:
@@ -252,3 +277,26 @@ def _bounding_box_from_rle(segmentation_mask: list[int], sample_2d: Sample2D) ->
     )
     bbox = binary_mask_segmentation.bounding_box.to_format(BoundingBoxFormat.XYWH)
     return [int(v) for v in bbox]
+
+
+def _validate_polygon_points(points: list[list[float]]) -> list[list[float]]:
+    """Validate and normalize polygon points."""
+    if len(points) < 3:
+        raise ValueError("Polygon must have at least 3 points.")
+
+    normalized_points: list[list[float]] = []
+    for index, point in enumerate(points):
+        if len(point) != 2:
+            raise ValueError(
+                f"Polygon point at index {index} must contain exactly 2 coordinates."
+            )
+
+        x, y = point
+        if isinstance(x, bool) or not isinstance(x, (int, float)) or not math.isfinite(x):
+            raise ValueError(f"Polygon x coordinate at index {index} must be a finite number.")
+        if isinstance(y, bool) or not isinstance(y, (int, float)) or not math.isfinite(y):
+            raise ValueError(f"Polygon y coordinate at index {index} must be a finite number.")
+
+        normalized_points.append([float(x), float(y)])
+
+    return normalized_points

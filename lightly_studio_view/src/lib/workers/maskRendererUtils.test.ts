@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 import {
     computeStroke,
     drawBoxesOnContext,
+    drawPolygonsOnContext,
     renderMasks,
-    type BoundingBoxInput
+    type BoundingBoxInput,
+    type PolygonInput
 } from './maskRendererUtils';
 
 describe('maskRendererUtils', () => {
@@ -39,5 +41,52 @@ describe('maskRendererUtils', () => {
     it('computes stroke inversely to scale', () => {
         expect(computeStroke(2, 1)).toBeCloseTo(1);
         expect(computeStroke()).toBeCloseTo(2);
+    });
+
+    it('draws valid polygons and skips invalid ones', () => {
+        const ctx = {
+            save: vi.fn(),
+            restore: vi.fn(),
+            beginPath: vi.fn(),
+            moveTo: vi.fn(),
+            lineTo: vi.fn(),
+            closePath: vi.fn(),
+            fill: vi.fn(),
+            stroke: vi.fn(),
+            lineWidth: 0,
+            fillStyle: '',
+            strokeStyle: ''
+        } as unknown as OffscreenCanvasRenderingContext2D;
+
+        const polygons: PolygonInput[] = [
+            {
+                points: [
+                    [0, 0],
+                    [2, 0]
+                ],
+                strokeColor: [0, 0, 0, 255],
+                fillColor: [0, 0, 0, 64]
+            },
+            {
+                points: [
+                    [1, 1],
+                    [4, 1],
+                    [2, 3]
+                ],
+                strokeColor: [255, 0, 0, 255],
+                fillColor: [255, 0, 0, 64]
+            }
+        ];
+
+        drawPolygonsOnContext(ctx, polygons, 3);
+
+        expect(ctx.beginPath).toHaveBeenCalledTimes(1);
+        expect(ctx.moveTo).toHaveBeenCalledWith(1, 1);
+        expect(ctx.lineTo).toHaveBeenCalledWith(4, 1);
+        expect(ctx.lineTo).toHaveBeenCalledWith(2, 3);
+        expect(ctx.closePath).toHaveBeenCalledTimes(1);
+        expect(ctx.fill).toHaveBeenCalledTimes(1);
+        expect(ctx.stroke).toHaveBeenCalledTimes(1);
+        expect(ctx.lineWidth).toBe(3);
     });
 });

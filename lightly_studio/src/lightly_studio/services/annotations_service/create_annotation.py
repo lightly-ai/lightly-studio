@@ -33,6 +33,7 @@ class AnnotationCreateParams(BaseModel):
     height: int | None = None
 
     segmentation_mask: list[int] | None = None
+    points: list[list[float]] | None = None
 
 
 def create_annotation(session: Session, annotation: AnnotationCreateParams) -> AnnotationBaseTable:

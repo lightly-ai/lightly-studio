@@ -3,8 +3,10 @@
 import {
     type BoundingBoxInput,
     type MaskInput,
+    type PolygonInput,
     computeStroke,
     drawBoxesOnContext,
+    drawPolygonsOnContext,
     renderMasks
 } from './maskRendererUtils';
 
@@ -15,6 +17,7 @@ type RenderMessage = {
     height: number;
     masks: MaskInput[];
     boxes: BoundingBoxInput[];
+    polygons: PolygonInput[];
     scaleX?: number;
     scaleY?: number;
 };
@@ -41,6 +44,7 @@ const handleRender = ({
     height,
     masks,
     boxes,
+    polygons,
     scaleX = 1,
     scaleY = 1
 }: RenderMessage) => {
@@ -57,11 +61,13 @@ const handleRender = ({
         ctx.clearRect(0, 0, width, height);
         ctx.putImageData(imageData, 0, 0);
         drawBoxesOnContext(ctx, boxes, width, height, stroke);
+        drawPolygonsOnContext(ctx, polygons, stroke);
     } else {
         // Fallback path when no OffscreenCanvas context was registered for this canvas id.
-        postMessage({ type: 'image', canvasId, width, height, data: pixelData, boxes, stroke }, [
-            pixelData.buffer
-        ]);
+        postMessage(
+            { type: 'image', canvasId, width, height, data: pixelData, boxes, polygons, stroke },
+            [pixelData.buffer]
+        );
     }
 };
 
