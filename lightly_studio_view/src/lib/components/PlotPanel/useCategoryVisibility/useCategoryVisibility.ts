@@ -33,15 +33,24 @@ export const useCategoryVisibility = (): UseCategoryVisibilityReturn => {
         categories: number[],
         category: number
     ) => {
+        // `categories` is the colored-only isolate universe; anything hidden outside it is a
+        // reserved row whose state must survive isolation.
+        const preservedHiddenCategories = [...currentHiddenCategories].filter(
+            (hiddenCategory) => !categories.includes(hiddenCategory)
+        );
+
         const visibleCategories = categories.filter(
             (visibleCategory) => !currentHiddenCategories.has(visibleCategory)
         );
 
         if (visibleCategories.length === 1 && visibleCategories[0] === category) {
-            return new Set<number>();
+            return new Set<number>(preservedHiddenCategories);
         }
 
-        return new Set(categories.filter((visibleCategory) => visibleCategory !== category));
+        return new Set([
+            ...preservedHiddenCategories,
+            ...categories.filter((visibleCategory) => visibleCategory !== category)
+        ]);
     };
 
     const toggleCategoryVisibility = (category: number) => {

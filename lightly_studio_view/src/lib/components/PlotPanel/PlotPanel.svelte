@@ -17,7 +17,12 @@
     import { useCategoryVisibility } from './useCategoryVisibility/useCategoryVisibility';
     import { isEqual } from 'lodash-es';
     import { getCategoryColors, getCategoryCount, getLegendEntries } from './plotColorUtils';
-    import { INCLUDED_BY_FILTERS_LABEL, NO_CATEGORY_LABEL } from './plotCategories';
+    import {
+        EXCLUDED_BY_FILTERS_CATEGORY,
+        INCLUDED_BY_FILTERS_CATEGORY,
+        INCLUDED_BY_FILTERS_LABEL,
+        NO_CATEGORY_LABEL
+    } from './plotCategories';
     import { page } from '$app/state';
     import { isVideosRoute } from '$lib/routes';
     import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
@@ -337,6 +342,8 @@
                         {categoryColors}
                         {includedLabel}
                         {legendEntries}
+                        excludedHidden={$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)}
+                        includedHidden={$hiddenCategories.has(INCLUDED_BY_FILTERS_CATEGORY)}
                         onToggleCategory={toggleCategoryVisibility}
                         onDoubleClickCategory={(category) => {
                             focusCategoryVisibility(
