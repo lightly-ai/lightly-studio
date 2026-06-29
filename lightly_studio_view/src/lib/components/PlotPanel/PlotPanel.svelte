@@ -122,9 +122,10 @@
     // (most frequent in-filter values win individual slots), so a new legend remaps those indices.
     // Reset hidden categories whenever the legend changes — covering both filter and color-by
     // changes — so a stale toggle can never hide a different category than the user picked.
+    // The reserved rows are stable by index and never remap, so they survive the reset.
     $effect(() => {
         void $colorLegend;
-        resetCategoryVisibility();
+        resetCategoryVisibility([EXCLUDED_BY_FILTERS_CATEGORY, INCLUDED_BY_FILTERS_CATEGORY]);
     });
 
     const hasActiveFilter = $derived(filter !== null || activeSampleIds.length > 0);

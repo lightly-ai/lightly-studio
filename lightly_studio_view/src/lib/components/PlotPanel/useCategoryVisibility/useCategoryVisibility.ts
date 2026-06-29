@@ -4,7 +4,7 @@ interface UseCategoryVisibilityReturn {
     hiddenCategories: Readable<Set<number>>;
     toggleCategoryVisibility: (category: number) => void;
     focusCategoryVisibility: (categories: number[], category: number) => void;
-    resetCategoryVisibility: () => void;
+    resetCategoryVisibility: (preservedCategories?: number[]) => void;
 }
 
 /**
@@ -65,8 +65,15 @@ export const useCategoryVisibility = (): UseCategoryVisibilityReturn => {
         );
     };
 
-    const resetCategoryVisibility = () => {
-        hiddenCategories.set(new Set<number>());
+    const resetCategoryVisibility = (preservedCategories: number[] = []) => {
+        // The legend remaps color slots on refresh, so their hidden state must clear; reserved rows
+        // are stable by index and stay hidden if the caller asks to preserve them.
+        hiddenCategories.update(
+            (currentHiddenCategories) =>
+                new Set<number>(
+                    preservedCategories.filter((category) => currentHiddenCategories.has(category))
+                )
+        );
     };
 
     return {

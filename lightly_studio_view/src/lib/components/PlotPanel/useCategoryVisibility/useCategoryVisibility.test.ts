@@ -50,4 +50,17 @@ describe('useCategoryVisibility', () => {
 
         expect(get(hiddenCategories)).toEqual(new Set());
     });
+
+    it('preserves requested reserved rows on reset while clearing remapped color slots', () => {
+        const { hiddenCategories, resetCategoryVisibility, toggleCategoryVisibility } =
+            useCategoryVisibility();
+
+        toggleCategoryVisibility(1); // reserved row, stable by index
+        toggleCategoryVisibility(4); // color slot, remapped on refresh
+
+        resetCategoryVisibility([1, 2]);
+
+        // Reserved row 1 survives; color slot 4 clears; row 2 was never hidden so it is not added.
+        expect(get(hiddenCategories)).toEqual(new Set([1]));
+    });
 });

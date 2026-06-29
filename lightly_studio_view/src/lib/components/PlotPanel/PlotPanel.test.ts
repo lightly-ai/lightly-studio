@@ -6,6 +6,7 @@ import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
 import { writable, type Writable } from 'svelte/store';
 import { tick } from 'svelte';
 import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
+import { EXCLUDED_BY_FILTERS_CATEGORY, INCLUDED_BY_FILTERS_CATEGORY } from './plotCategories';
 
 let rangeSelectionStore: Writable<Array<{ x: number; y: number }> | null>;
 let selectedSampleIdsStore: Writable<string[]>;
@@ -302,7 +303,7 @@ describe('PlotPanel.svelte', () => {
         });
     });
 
-    it('resets hidden categories when the legend changes', async () => {
+    it('resets remapped categories when the legend changes but preserves the reserved rows', async () => {
         render(PlotPanel);
         await tick();
 
@@ -311,6 +312,10 @@ describe('PlotPanel.svelte', () => {
         colorLegendStore.set(new Map([[3, 'dog']]));
         await tick();
 
-        expect(mockResetCategoryVisibility).toHaveBeenCalled();
+        // Reserved rows are stable by index, so they must survive a legend refresh.
+        expect(mockResetCategoryVisibility).toHaveBeenCalledWith([
+            EXCLUDED_BY_FILTERS_CATEGORY,
+            INCLUDED_BY_FILTERS_CATEGORY
+        ]);
     });
 });
