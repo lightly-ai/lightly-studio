@@ -118,14 +118,21 @@
         resetCategoryVisibility
     } = useCategoryVisibility();
 
-    // Hide-toggles are keyed by color-slot index, but the backend re-ranks slots per request
-    // (most frequent in-filter values win individual slots), so a new legend remaps those indices.
-    // Reset hidden categories whenever the legend changes — covering both filter and color-by
-    // changes — so a stale toggle can never hide a different category than the user picked.
-    // The reserved rows are stable by index and never remap, so they survive the reset.
+    // The backend re-ranks color slots per request, so a stale toggle would hide the wrong slot;
+    // reset hidden categories on every legend change. EXCLUDED keeps its meaning, so it always
+    // survives. INCLUDED is relabeled with the color-by mode, so it survives only a filter-only
+    // change — else a hidden "No category" would empty the plot once all points collapse into it.
+    let previousColorByKey: string | undefined = undefined;
     $effect(() => {
         void $colorLegend;
-        resetCategoryVisibility([EXCLUDED_BY_FILTERS_CATEGORY, INCLUDED_BY_FILTERS_CATEGORY]);
+        const colorByKey = JSON.stringify($colorBy);
+        const colorByChanged = colorByKey !== previousColorByKey;
+        previousColorByKey = colorByKey;
+        resetCategoryVisibility(
+            colorByChanged
+                ? [EXCLUDED_BY_FILTERS_CATEGORY]
+                : [EXCLUDED_BY_FILTERS_CATEGORY, INCLUDED_BY_FILTERS_CATEGORY]
+        );
     });
 
     const hasActiveFilter = $derived(filter !== null || activeSampleIds.length > 0);

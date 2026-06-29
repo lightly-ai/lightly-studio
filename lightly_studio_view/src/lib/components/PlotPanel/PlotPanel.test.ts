@@ -318,4 +318,22 @@ describe('PlotPanel.svelte', () => {
             INCLUDED_BY_FILTERS_CATEGORY
         ]);
     });
+
+    it('drops the "Included by filters / No category" row when the color-by mode changes', async () => {
+        const user = userEvent.setup();
+        render(PlotPanel);
+        await tick();
+
+        // Ignore the resets from mount; assert the one triggered by the color-by change.
+        mockResetCategoryVisibility.mockClear();
+        await user.click(screen.getByTestId('plot-color-by-button'));
+        await user.click(await screen.findByRole('option', { name: 'metadata.split' }));
+        await tick();
+
+        // INCLUDED is relabeled when the color-by mode flips, so its hidden state must not carry
+        // over (it would otherwise hide every point in the relabeled slot). Only EXCLUDED survives.
+        expect(mockResetCategoryVisibility).toHaveBeenLastCalledWith([
+            EXCLUDED_BY_FILTERS_CATEGORY
+        ]);
+    });
 });

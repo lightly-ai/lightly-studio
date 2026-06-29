@@ -104,8 +104,8 @@ export function usePlotData({
         });
     }
 
-    // Hide on each point's final category, after demotion — so a hidden toggle removes exactly the
-    // points rendered in that bucket (a demoted point is hidden by Excluded, not its pre-demotion bucket).
+    // Hide on each point's final category, after demotion: a demoted point is hidden as Excluded,
+    // not its pre-demotion bucket.
     if (hiddenCategories.size > 0) {
         category = category.map((pointCategory) =>
             hiddenCategories.has(pointCategory) ? HIDDEN_CATEGORY : pointCategory

@@ -33,8 +33,7 @@ export const useCategoryVisibility = (): UseCategoryVisibilityReturn => {
         categories: number[],
         category: number
     ) => {
-        // `categories` is the colored-only isolate universe; anything hidden outside it is a
-        // reserved row whose state must survive isolation.
+        // Categories hidden outside the `categories` isolate set are reserved rows; keep them hidden.
         const preservedHiddenCategories = [...currentHiddenCategories].filter(
             (hiddenCategory) => !categories.includes(hiddenCategory)
         );
@@ -66,8 +65,7 @@ export const useCategoryVisibility = (): UseCategoryVisibilityReturn => {
     };
 
     const resetCategoryVisibility = (preservedCategories: number[] = []) => {
-        // The legend remaps color slots on refresh, so their hidden state must clear; reserved rows
-        // are stable by index and stay hidden if the caller asks to preserve them.
+        // Clears remapped color slots; keeps the reserved rows the caller asks to preserve.
         hiddenCategories.update(
             (currentHiddenCategories) =>
                 new Set<number>(
