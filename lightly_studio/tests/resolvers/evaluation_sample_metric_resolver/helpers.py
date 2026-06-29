@@ -13,13 +13,13 @@ from lightly_studio.models.evaluation_run import (
     EvaluationTaskType,
 )
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
-from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import (
+    collection_resolver,
     evaluation_annotation_metric_resolver,
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
 )
-from tests.helpers_resolvers import create_collection, create_image
+from tests.helpers_resolvers import create_collection
 
 
 @dataclass
@@ -41,13 +41,20 @@ class SampleMetricStub:
     metrics: dict[str, float]
 
 
-def create_run_and_image(
+def create_run(
     session: Session,
     dataset_collection_id: UUID | None = None,
     name: str = "test_run",
-) -> tuple[EvaluationRunTable, ImageTable]:
+) -> EvaluationRunTable:
+    """Create an evaluation run with gt/pred annotation collections."""
     if dataset_collection_id is None:
         dataset_collection_id = create_collection(session=session).collection_id
+    dataset_collection = collection_resolver.get_by_id(
+        session=session,
+        collection_id=dataset_collection_id,
+    )
+    if dataset_collection is None:
+        raise ValueError(f"Collection {dataset_collection_id} doesn't exist")
     gt_collection = create_collection(
         session=session,
         sample_type=SampleType.ANNOTATION,
@@ -58,18 +65,16 @@ def create_run_and_image(
         sample_type=SampleType.ANNOTATION,
         parent_collection_id=dataset_collection_id,
     )
-    run = evaluation_run_resolver.create(
+    return evaluation_run_resolver.create(
         session=session,
         evaluation_run_input=EvaluationRunCreate(
             name=name,
             gt_annotation_collection_id=gt_collection.collection_id,
-            dataset_id=gt_collection.dataset_id,
+            dataset_id=dataset_collection.dataset_id,
             pred_annotation_collection_id=pred_collection.collection_id,
             task_type=EvaluationTaskType.OBJECT_DETECTION,
         ),
     )
-    image = create_image(session=session, collection_id=dataset_collection_id)
-    return run, image
 
 
 def create_sample_metrics(
