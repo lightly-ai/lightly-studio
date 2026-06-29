@@ -11,6 +11,7 @@ from labelformat.formats import (
     COCOInstanceSegmentationOutput,
     COCOObjectDetectionOutput,
     PascalVOCSemanticSegmentationOutput,
+    YOLOv8ObjectDetectionOutput,
 )
 from sqlmodel import Session
 
@@ -20,10 +21,13 @@ from lightly_studio.export.lightly_studio_label_input import (
     LightlyStudioInstanceSegmentationInput,
     LightlyStudioObjectDetectionInput,
     LightlyStudioPascalVOCInstanceSegmentationInput,
+    LightlyStudioYOLOObjectDetectionInput,
 )
 from lightly_studio.type_definitions import PathLike
 
 DEFAULT_EXPORT_FILENAME = "coco_export.json"
+YOLO_DATASET_CONFIG_FILENAME = "data.yaml"
+YOLO_DEFAULT_SPLIT = "train"
 
 
 class ImageDatasetExport:
@@ -71,6 +75,24 @@ class ImageDatasetExport:
             dataset_id=self._dataset_id,
             samples=self.samples,
             output_json=Path(output_json),
+            annotation_collection_id=self._annotation_collection_id,
+        )
+
+    def to_yolo_object_detections(self, output_folder: PathLike) -> None:
+        """Exports object detection annotations to YOLO (Ultralytics YOLOv8) format.
+
+        Creates a folder with a ``data.yaml`` dataset config and a ``labels``
+        subfolder containing one ``.txt`` file per image with normalized
+        ``<class_id> <x_center> <y_center> <width> <height>`` rows.
+
+        Args:
+            output_folder: The folder where YOLO files are written.
+        """
+        to_yolo_object_detections(
+            session=self.session,
+            dataset_id=self._dataset_id,
+            samples=self.samples,
+            output_folder=Path(output_folder),
             annotation_collection_id=self._annotation_collection_id,
         )
 
@@ -148,6 +170,41 @@ def to_coco_object_detections(
         annotation_collection_id=annotation_collection_id,
     )
     COCOObjectDetectionOutput(output_file=output_json).save(label_input=export_input)
+
+
+def to_yolo_object_detections(
+    session: Session,
+    dataset_id: UUID,
+    samples: Iterable[ImageSample],
+    output_folder: Path,
+    annotation_collection_id: UUID | None = None,
+) -> None:
+    """Exports object detection annotations to YOLO (Ultralytics YOLOv8) format.
+
+    This function is for internal use. Use `Dataset.export().to_yolo_object_detections()`
+    instead.
+
+    Writes a ``data.yaml`` dataset config and a ``labels`` subfolder with one ``.txt``
+    file per image into ``output_folder``.
+
+    Args:
+        session: The database session.
+        dataset_id: The dataset ID for label retrieval.
+        samples: The samples to export.
+        output_folder: The folder where YOLO files are written.
+        annotation_collection_id: If provided, only annotations from this collection
+            are exported. If None, all annotations are exported.
+    """
+    export_input = LightlyStudioYOLOObjectDetectionInput(
+        session=session,
+        dataset_id=dataset_id,
+        samples=samples,
+        annotation_collection_id=annotation_collection_id,
+    )
+    YOLOv8ObjectDetectionOutput(
+        output_file=output_folder / YOLO_DATASET_CONFIG_FILENAME,
+        output_split=YOLO_DEFAULT_SPLIT,
+    ).save(label_input=export_input)
 
 
 def to_coco_segmentation_masks(
