@@ -137,13 +137,25 @@
 
     const hasActiveFilter = $derived(filter !== null || activeSampleIds.length > 0);
 
+    // Activating a lasso unhides the Excluded category, otherwise out-of-selection points (which
+    // get demoted to Excluded) would vanish and blank out the canvas mid-draw. The legend keeps
+    // showing the user's real toggle state.
+    const effectiveHiddenCategories = $derived.by(() => {
+        if ($rangeSelection === null || !$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)) {
+            return $hiddenCategories;
+        }
+        const next = new Set($hiddenCategories);
+        next.delete(EXCLUDED_BY_FILTERS_CATEGORY);
+        return next;
+    });
+
     let { data: plotData, selectedSampleIds } = $derived(
         usePlotData({
             arrowData: $arrowData,
             rangeSelection: $rangeSelection,
             highlightedSampleIds: activeSampleIds,
             hasActiveFilter: hasActiveFilter,
-            hiddenCategories: $hiddenCategories
+            hiddenCategories: effectiveHiddenCategories
         })
     );
     const categoryCount = $derived.by(() => getCategoryCount($colorLegend));
