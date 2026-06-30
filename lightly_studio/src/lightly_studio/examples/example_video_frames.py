@@ -1,8 +1,8 @@
 """Example of how to query, tag, sample, and export individual video frames.
 
-It opens a video dataset, queries its frames (filtering by frame-level fields and by
-parent-video attributes), tags the matches, runs a sampling strategy on the query, and
-exports the sampled frames as `(video_path_abs, frame_number)` rows to a CSV file.
+It opens a video dataset, queries its frames by frame-level fields, tags the matches,
+runs a sampling strategy on the query, and exports the sampled frames as
+`(frame_number, frame_timestamp_s)` rows to a CSV file.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from pathlib import Path
 from environs import Env
 
 import lightly_studio as ls
-from lightly_studio.core.dataset_query import AND, VideoFrameSampleField
+from lightly_studio.core.dataset_query import VideoFrameSampleField
 from lightly_studio.database import db_manager
 
 env = Env()
@@ -28,19 +28,12 @@ dataset.add_videos_from_path(path=dataset_path, embed=False, target_fps=1)
 frames = dataset.frames()
 print(f"\nTotal frames in dataset: {len(list(frames))}")
 
-# Filtering by a frame-level field (frame_number) and a parent-video field
-# (parent_video.file_name) works
+# Filtering by a frame-level field (frame_number) works
 min_frame_number = 3
-first_video = next(iter(dataset[:1]))
-selected = frames.match(
-    AND(
-        VideoFrameSampleField.frame_number > min_frame_number,
-        VideoFrameSampleField.parent_video.file_name == first_video.file_name,
-    )
-)
+selected = frames.match(VideoFrameSampleField.frame_number > min_frame_number)
 print(
     f"\nFiltering by fields: There are {len(selected.to_list())} frames after frame "
-    f"{min_frame_number} from the first video."
+    f"{min_frame_number}."
 )
 
 # Writing metadata for all frames in a query works
@@ -57,13 +50,13 @@ frames.match(VideoFrameSampleField.frame_number > 1).sampling().metadata_weighti
 )
 print("\nSampled the 5 frames with the highest metadata.score value.")
 
-# Export the sampled frames as (video_path_abs, frame_number) rows to a CSV file.
+# Export the sampled frames as (frame_number, frame_timestamp_s) rows to a CSV file.
 out_csv = Path(tempfile.gettempdir()) / "sampled_video_frames.csv"
 with out_csv.open("w", newline="") as fh:
     writer = csv.writer(fh)
-    writer.writerow(["video_path_abs", "frame_number"])
+    writer.writerow(["frame_number", "frame_timestamp_s"])
     for frame in frames.match(VideoFrameSampleField.tags.contains("sampled")):
-        writer.writerow([frame.parent_video.file_path_abs, frame.frame_number])
+        writer.writerow([frame.frame_number, frame.frame_timestamp_s])
 
 print(f"\nExported sampled frames to {out_csv}")
 print(f"First 3 lines: {list(out_csv.read_text().splitlines())[:3]}")

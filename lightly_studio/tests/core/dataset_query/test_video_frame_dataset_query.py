@@ -76,43 +76,6 @@ class TestVideoFrameDatasetQuery:
         _seed_two_videos(dataset)
         assert len(dataset.frames()[:2].to_list()) == 2
 
-    def test_filter_by_parent_video_attribute(
-        self,
-        patch_collection: None,  # noqa: ARG002
-    ) -> None:
-        dataset = VideoDataset.create(name="ds")
-        _seed_two_videos(dataset)
-        frames = dataset.frames()
-
-        wide = frames.match(VideoFrameSampleField.parent_video.width > 1000).to_list()
-        assert len(wide) == 2  # only video B (1920px) and its 2 frames
-        assert all(frame.parent_video.width == 1920 for frame in wide)
-
-        by_path = (
-            dataset.frames()
-            .match(VideoFrameSampleField.parent_video.file_path_abs == "/data/a.mp4")
-            .to_list()
-        )
-        assert len(by_path) == 3
-        assert all(frame.parent_video.file_path_abs == "/data/a.mp4" for frame in by_path)
-
-    def test_filter_by_parent_video_tag(
-        self,
-        patch_collection: None,  # noqa: ARG002
-    ) -> None:
-        dataset = VideoDataset.create(name="ds")
-        video_a, _video_b = _seed_two_videos(dataset)
-
-        dataset.get_sample(video_a.video_sample_id).add_tag("reviewed")
-
-        reviewed = (
-            dataset.frames()
-            .match(VideoFrameSampleField.parent_video.tags.contains("reviewed"))
-            .to_list()
-        )
-        assert len(reviewed) == 3
-        assert all(frame.parent_video.file_path_abs == "/data/a.mp4" for frame in reviewed)
-
     def test_frame_level_tags(
         self,
         patch_collection: None,  # noqa: ARG002
@@ -120,9 +83,8 @@ class TestVideoFrameDatasetQuery:
         dataset = VideoDataset.create(name="ds")
         _seed_two_videos(dataset)
 
-        dataset.frames().match(
-            VideoFrameSampleField.parent_video.file_path_abs == "/data/a.mp4"
-        ).add_tag("from_a")
+        # video A: frames 1, 2 ; video B: frame 1 => 3 frames
+        dataset.frames().match(VideoFrameSampleField.frame_number > 0).add_tag("tagged")
 
-        tagged = dataset.frames().match(VideoFrameSampleField.tags.contains("from_a")).to_list()
+        tagged = dataset.frames().match(VideoFrameSampleField.tags.contains("tagged")).to_list()
         assert len(tagged) == 3

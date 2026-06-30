@@ -3,12 +3,11 @@ from __future__ import annotations
 import pytest
 
 from lightly_studio.core.video.video_dataset import VideoDataset
-from lightly_studio.core.video.video_sample import VideoSample
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
 
 class TestVideoFrameSample:
-    def test_field_reads_and_parent_video(
+    def test_field_reads(
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
@@ -25,9 +24,3 @@ class TestVideoFrameSample:
         assert frame.frame_timestamp_s == pytest.approx(1 / 3.0)
         assert frame.frame_timestamp_pts == 1
         assert frame.rotation_deg == 0
-
-        parent = frame.parent_video
-        assert isinstance(parent, VideoSample)
-        assert parent.file_path_abs == "/data/a.mp4"
-        assert parent.width == 640
-        assert parent.height == 480
