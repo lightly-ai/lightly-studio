@@ -102,7 +102,11 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         """
         if query is None:
             query = self.query()
-        return ImageDatasetExport(session=self.session, dataset_id=self.dataset_id, samples=query)
+        return ImageDatasetExport(
+            session=self.session,
+            dataset_id=self.dataset_id,
+            samples=query,
+        )
 
     def get_sample(self, sample_id: UUID) -> ImageSample:
         """Get a single sample from the dataset by its ID.

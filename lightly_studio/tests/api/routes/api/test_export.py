@@ -17,7 +17,12 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.collection import SampleType
-from lightly_studio.resolvers import annotation_resolver, object_track_resolver, tag_resolver
+from lightly_studio.resolvers import (
+    annotation_resolver,
+    collection_resolver,
+    object_track_resolver,
+    tag_resolver,
+)
 from tests.helpers_resolvers import (
     ImageStub,
     create_annotation_label,
@@ -61,9 +66,17 @@ def test_export_collection_annotations(
             )
         ],
     )
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
 
     # Call the API.
-    response = test_client.get(f"/api/collections/{collection.collection_id}/export/annotations")
+    response = test_client.get(
+        f"/api/collections/{collection.collection_id}/export/annotations",
+        params={"annotation_collection_id": str(annotation_collection_id)},
+    )
 
     # Check the response.
     assert response.status_code == HTTP_STATUS_OK
@@ -110,10 +123,18 @@ def test_export_collection_segmentation_masks(
             )
         ],
     )
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
 
     response = test_client.get(
         f"/api/collections/{collection.collection_id}/export/annotations",
-        params={"export_format": "segmentation_mask_coco"},
+        params={
+            "export_format": "segmentation_mask_coco",
+            "annotation_collection_id": str(annotation_collection_id),
+        },
     )
 
     assert response.status_code == HTTP_STATUS_OK
@@ -169,10 +190,18 @@ def test_export_collection_pascalvoc_from_segmentation_masks(
             )
         ],
     )
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
 
     response = test_client.get(
         f"/api/collections/{collection.collection_id}/export/annotations",
-        params={"export_format": "pascal_voc"},
+        params={
+            "export_format": "pascal_voc",
+            "annotation_collection_id": str(annotation_collection_id),
+        },
     )
 
     assert response.status_code == HTTP_STATUS_OK

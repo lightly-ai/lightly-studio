@@ -21,6 +21,7 @@
         </span>
     </div>
     <Slider
+<<<<<<< kondrat-lig-9843-trigger-model-evaluation-from-gui-spinner.pr5
         type="multiple"
         class="w-full"
         value={[iouThreshold]}
@@ -28,6 +29,15 @@
         max={1}
         step={0.05}
         onValueChange={(values: number[]) => (iouThreshold = values[0])}
+=======
+        type="single"
+        class="w-full"
+        value={iouThreshold}
+        min={0}
+        max={1}
+        step={0.05}
+        onValueChange={(value: number) => (iouThreshold = value)}
+>>>>>>> kondrat-lig-9843-trigger-model-evaluation-from-gui-spinner.pr4c
         data-testid="iou-threshold-slider"
     />
 </div>
