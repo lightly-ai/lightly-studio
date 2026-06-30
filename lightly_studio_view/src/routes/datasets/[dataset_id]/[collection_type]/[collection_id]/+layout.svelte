@@ -442,6 +442,8 @@
                                     {evaluationRuns}
                                     isLoading={evaluationRunsQuery.isLoading}
                                     error={evaluationRunsQuery.error?.message}
+                                    datasetId={collection.dataset_id}
+                                    {collectionId}
                                 />
                             {/await}
                         {:else if $activePanel === 'embeddingPlot' && hasMediaWithEmbeddings && (isImages || isVideos)}
