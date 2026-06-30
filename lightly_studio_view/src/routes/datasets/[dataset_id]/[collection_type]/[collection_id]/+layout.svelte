@@ -58,6 +58,7 @@
         buildVideoFrameAnnotationCountsFilter
     } from '$lib/utils/buildAnnotationCountsFilters';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
+    import ConfusionCellFilterItem from '$lib/components/ConfusionCellFilterItem';
     import { useSelectionSummary } from '$lib/hooks';
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
     import { isInputElement } from '$lib/utils';
@@ -114,6 +115,9 @@
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
     const isVideoDetails = $derived(isVideoDetailsRoute(page.route.id));
     const canSelectAll = $derived(isImages || isVideos || isVideoFrames || isAnnotations);
+    const showAnnotationVisibilityToggle = $derived(
+        isAnnotations || isImages || isVideos || isVideoFrames
+    );
 
     let gridType = $state<GridType>('images');
     let lastCollectionId: string | null = null;
@@ -356,12 +360,15 @@
                                 {isImages}
                             />
                             {#if isImages}
+                                <ConfusionCellFilterItem />
+                            {/if}
+                            {#if isImages}
                                 <AnnotationCollectionsMenu {collectionId} />
                             {/if}
                             <LabelsMenu
                                 {annotationFilterRows}
                                 onToggleAnnotationFilter={toggleAnnotationFilterSelection}
-                                showVisibilityToggle={isAnnotations || isImages}
+                                showVisibilityToggle={showAnnotationVisibilityToggle}
                             />
 
                             {#if isImages || isVideos || isVideoFrames}

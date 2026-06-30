@@ -10,6 +10,7 @@ from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
     create_collection,
+    create_image,
 )
 from tests.resolvers.evaluation_sample_metric_resolver import (
     helpers as evaluation_sample_metric_helpers,
@@ -18,10 +19,11 @@ from tests.resolvers.evaluation_sample_metric_resolver import (
 
 def test_create_many(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(
+    run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
         dataset_collection_id=dataset.collection_id,
     )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
     label = create_annotation_label(
         session=db_session,
         root_collection_id=dataset.collection_id,
@@ -74,7 +76,7 @@ def test_create_many(db_session: Session) -> None:
 
 
 def test_create_many__empty_list_is_noop(db_session: Session) -> None:
-    run, _ = evaluation_sample_metric_helpers.create_run_and_image(session=db_session)
+    run = evaluation_sample_metric_helpers.create_run(session=db_session)
 
     evaluation_annotation_metric_resolver.create_many(session=db_session, records=[])
 
