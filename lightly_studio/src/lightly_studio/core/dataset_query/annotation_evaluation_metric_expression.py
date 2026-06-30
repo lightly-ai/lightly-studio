@@ -60,7 +60,7 @@ class AnnotationEvaluationMetricMatchExpression(MatchExpression):
     numeric value satisfies the specified comparison operator against a given threshold.
     """
 
-    # TODO(lukas): Validate that this expression is not nested inside AND/OR/NOT combinators.
+    # TODO(lukas 6/2026): Validate that this expression is not nested inside AND/OR/NOT combinators.
     metric_name: str
     operator: OrdinalOperator
     value: float | int
