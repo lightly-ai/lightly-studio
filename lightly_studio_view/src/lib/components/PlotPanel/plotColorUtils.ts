@@ -10,7 +10,7 @@ const OKLCH_CHROMA = 0.3;
 
 const RESERVED_CATEGORY_COUNT = 3;
 
-export const HIDDEN_COLOR = 'rgba(0, 0, 0, 0)';
+export const HIDDEN_COLOR = '#000000';
 export const NOT_FILTERED_COLOR = '#222222';
 export const FILTERED_COLOR = '#FF7220';
 export const UNASSIGNED_COLOR = '#666666';

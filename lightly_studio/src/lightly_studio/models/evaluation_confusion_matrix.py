@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # Row label for predictions with no matching ground truth (false positives).
 NO_GROUND_TRUTH_ROW_LABEL = "(no ground truth)"
@@ -14,23 +14,50 @@ NO_PREDICTION_COL_LABEL = "(no prediction)"
 
 
 class ConfusionCell(BaseModel):
-    """A single class-by-class cell of a confusion matrix for one evaluation run.
+    """A single cell of a confusion matrix for one evaluation run.
 
-    Identifies samples that contain a ground-truth/prediction annotation pairing of
-    the given label combination. Labels are matched by name (unique per dataset), so
-    no annotation-id lookup is needed when resolving the cell to its samples.
+    Identifies samples behind a ground-truth/prediction pairing bucket. Labels are
+    matched by name (unique per dataset), so no annotation-id lookup is needed when
+    resolving the cell to its samples. A ``None`` label selects a synthetic margin
+    bucket instead of a real class:
+
+    - ``gt_label = None`` is the false-positive bucket (prediction with no matching
+      ground truth).
+    - ``pred_label = None`` is the false-negative bucket (ground truth with no
+      matching prediction).
+
+    Both labels ``None`` is meaningless (no pairing to select) and is rejected.
 
     Attributes:
         evaluation_run_id: Evaluation run whose pairing metrics are queried.
-        gt_label: Ground-truth annotation label name (matrix row).
-        pred_label: Prediction annotation label name (matrix column).
+        gt_label: Ground-truth annotation label name (matrix row), or ``None`` for
+            the false-positive bucket.
+        pred_label: Prediction annotation label name (matrix column), or ``None`` for
+            the false-negative bucket.
     """
 
     evaluation_run_id: UUID = Field(
         description="Evaluation run whose pairing metrics define the cell.",
     )
-    gt_label: str = Field(description="Ground-truth annotation label name (matrix row).")
-    pred_label: str = Field(description="Prediction annotation label name (matrix column).")
+    gt_label: str | None = Field(
+        default=None,
+        description="Ground-truth annotation label name (matrix row), "
+        "or null for the false-positive bucket.",
+    )
+    pred_label: str | None = Field(
+        default=None,
+        description="Prediction annotation label name (matrix column), "
+        "or null for the false-negative bucket.",
+    )
+
+    @model_validator(mode="after")
+    def _reject_both_labels_null(self) -> ConfusionCell:  # noqa: N804
+        if self.gt_label is None and self.pred_label is None:
+            raise ValueError(
+                "A confusion cell needs at least one of gt_label or pred_label; "
+                "both null selects no pairing."
+            )
+        return self
 
 
 class ConfusionMatrix(BaseModel):

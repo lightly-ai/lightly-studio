@@ -5,7 +5,6 @@ from __future__ import annotations
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
@@ -30,11 +29,10 @@ def get_annotation_types_by_collection_ids(
     if not collection_ids:
         return {}
 
-    sample = aliased(SampleTable)
     statement = (
-        select(col(sample.collection_id), col(AnnotationBaseTable.annotation_type))
-        .join(sample, AnnotationBaseTable.sample)
-        .where(col(sample.collection_id).in_(collection_ids))
+        select(col(SampleTable.collection_id), col(AnnotationBaseTable.annotation_type))
+        .join(SampleTable, AnnotationBaseTable.sample)
+        .where(col(SampleTable.collection_id).in_(collection_ids))
         .distinct()
     )
 
