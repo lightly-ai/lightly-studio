@@ -131,8 +131,7 @@ class SampleFilter(BaseModel):
                 )
                 .join(
                     pred_label,
-                    col(pred_annotation.annotation_label_id)
-                    == col(pred_label.annotation_label_id),
+                    col(pred_annotation.annotation_label_id) == col(pred_label.annotation_label_id),
                 )
                 .where(col(pred_label.annotation_label_name) == confusion_cell.pred_label)
             )

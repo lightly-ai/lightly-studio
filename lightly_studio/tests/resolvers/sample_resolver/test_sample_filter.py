@@ -773,9 +773,7 @@ class TestSampleFilterConfusionCell:
         )
 
         sample_filter = SampleFilter(
-            confusion_cell=ConfusionCell(
-                evaluation_run_id=run.id, gt_label="car", pred_label=None
-            )
+            confusion_cell=ConfusionCell(evaluation_run_id=run.id, gt_label="car", pred_label=None)
         )
 
         filtered_query = sample_filter.apply(query=select(SampleTable))
