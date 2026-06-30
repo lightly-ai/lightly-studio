@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
     buildEvaluationRunBody,
     canSubmitEvaluation,
-    defaultEvaluationRunName
+    defaultEvaluationRunName,
+    sourceMatchesTask
 } from './TriggerEvaluationDialog.helpers';
 
 describe('buildEvaluationRunBody', () => {
@@ -16,7 +17,7 @@ describe('buildEvaluationRunBody', () => {
         now
     };
 
-    it('includes object-detection config and a default local-time name', () => {
+    it('includes object-detection config and a local-time name for object_detection runs', () => {
         const body = buildEvaluationRunBody({ ...base, taskType: 'object_detection' });
 
         expect(body).toEqual({
@@ -57,6 +58,22 @@ describe('buildEvaluationRunBody', () => {
         });
         expect(body.name).toBe('my run');
     });
+
+    it('falls back to the default name when the provided name is blank', () => {
+        const body = buildEvaluationRunBody({
+            ...base,
+            taskType: 'object_detection',
+            name: '   '
+        });
+        expect(body.name).toBe('object_detection 2026-06-24 10:15:33');
+    });
+});
+
+describe('defaultEvaluationRunName', () => {
+    it('formats the task type and local time, zero-padded', () => {
+        const name = defaultEvaluationRunName('object_detection', new Date(2026, 0, 5, 9, 3, 7));
+        expect(name).toBe('object_detection 2026-01-05 09:03:07');
+    });
 });
 
 describe('canSubmitEvaluation', () => {
@@ -79,9 +96,18 @@ describe('canSubmitEvaluation', () => {
     });
 });
 
-describe('defaultEvaluationRunName', () => {
-    it('formats the task type and local time, zero-padded', () => {
-        const name = defaultEvaluationRunName('object_detection', new Date(2026, 0, 5, 9, 3, 7));
-        expect(name).toBe('object_detection 2026-01-05 09:03:07');
+describe('sourceMatchesTask', () => {
+    it('matches a source whose annotations are all the task type', () => {
+        expect(sourceMatchesTask(['object_detection'], 'object_detection')).toBe(true);
+        expect(sourceMatchesTask(['classification'], 'classification')).toBe(true);
+        expect(sourceMatchesTask(['segmentation_mask'], 'semantic_segmentation')).toBe(true);
+    });
+
+    it('rejects empty, mismatched, or mixed-type sources', () => {
+        expect(sourceMatchesTask([], 'object_detection')).toBe(false);
+        expect(sourceMatchesTask(['classification'], 'object_detection')).toBe(false);
+        expect(sourceMatchesTask(['object_detection', 'classification'], 'object_detection')).toBe(
+            false
+        );
     });
 });
