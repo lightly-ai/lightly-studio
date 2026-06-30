@@ -31,10 +31,10 @@ class TestFileOutcomeReport:
 
     def test_record__example_path_cap(self) -> None:
         report = FileOutcomeReport(max_examples_per_outcome=2)
-        for index in range(5):
+        for index in range(3):
             report.record(path=f"{index}.jpg", outcome=FileOutcome.BROKEN)
 
-        assert report._counts[FileOutcome.BROKEN] == 5
+        assert report._counts[FileOutcome.BROKEN] == 3
         assert report._example_paths[FileOutcome.BROKEN] == ["0.jpg", "1.jpg"]
 
     def test_track__records_added_on_clean_exit(self) -> None:
@@ -115,6 +115,16 @@ class TestFileOutcomeReport:
         report = FileOutcomeReport()
         report.record(path="a.jpg", outcome=FileOutcome.ALREADY_PRESENT)
         report.record(path="b.jpg", outcome=FileOutcome.ALREADY_PRESENT)
+
+        report.raise_if_all_failed()
+
+    def test_raise_if_all_failed__no_raise_when_already_present_and_failed(
+        self,
+    ) -> None:
+        report = FileOutcomeReport()
+        report.record(path="a.jpg", outcome=FileOutcome.ALREADY_PRESENT)
+        report.record(path="b.jpg", outcome=FileOutcome.MISSING)
+        report.record(path="c.jpg", outcome=FileOutcome.BROKEN)
 
         report.raise_if_all_failed()
 
