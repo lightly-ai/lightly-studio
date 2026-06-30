@@ -66,6 +66,7 @@
     import { GRID_IMAGE_SEARCH_DROP_EVENT, type GridItemDragData } from '$lib/components/GridItem';
     import { useSearchEmbedding } from '$lib/hooks/useSearchEmbedding/useSearchEmbedding';
     import { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
+    import { clearAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
     const { data, children } = $props();
     const {
         collection,
@@ -199,6 +200,7 @@
         if (lastCollectionId && lastCollectionId !== collectionId) {
             clearSelectedSamples(lastCollectionId);
             clearSelectedSampleAnnotationCrops(lastCollectionId);
+            clearAnnotationPlotSelection();
         }
 
         gridType = nextGridType;
@@ -211,8 +213,9 @@
 
     const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId }));
     const hasEmbeddings = $derived(!!hasEmbeddingsQuery.data);
-    const hasMediaWithEmbeddings = $derived((isImages || isVideos) && hasEmbeddings);
-    const hasCollectionSearch = $derived((isImages || isVideos || isAnnotations) && hasEmbeddings);
+    const hasMediaWithEmbeddings = $derived(
+        (isImages || isVideos || isAnnotations) && hasEmbeddings
+    );
     const collectionSearchPlaceholder = $derived(
         isAnnotations
             ? 'Search annotations by description or image'
@@ -320,9 +323,7 @@
 
     const panelIsVisible = $derived(
         ($activePanel === 'evaluationRuns' && supportsEvaluation) ||
-            ($activePanel === 'embeddingPlot' &&
-                hasMediaWithEmbeddings &&
-                (isImages || isVideos)) ||
+            ($activePanel === 'embeddingPlot' && hasMediaWithEmbeddings) ||
             ($activePanel === 'queryEditor' && isImages)
     );
 </script>
@@ -366,6 +367,7 @@
                                 {collectionIdStore}
                                 {isVideos}
                                 {isImages}
+                                {isAnnotations}
                             />
                             {#if isImages}
                                 <ConfusionCellFilterItem />
@@ -395,7 +397,7 @@
                         {canSelectAll}
                         isSelectionActive={$selectedCount > 0}
                         {isImages}
-                        hasMediaWithEmbeddings={hasCollectionSearch}
+                        {hasMediaWithEmbeddings}
                         collectionDatasetId={collection.dataset_id}
                         onSelectAll={selectAllHandle.handleSelectAll}
                         onDeselectAll={clearSelection}
@@ -453,9 +455,13 @@
                                     {collectionId}
                                 />
                             {/await}
-                        {:else if $activePanel === 'embeddingPlot' && hasMediaWithEmbeddings && (isImages || isVideos)}
+                        {:else if $activePanel === 'embeddingPlot' && hasMediaWithEmbeddings}
                             {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
-                                <PlotPanel />
+                                <!-- PlotPanel captures collectionId at mount; remount it when
+                                     switching collections (e.g. images <-> annotations tab). -->
+                                {#key collectionId}
+                                    <PlotPanel {collectionId} />
+                                {/key}
                             {/await}
                         {:else if $activePanel === 'queryEditor' && isImages}
                             <QueryEditorPanel onClose={() => setActivePanel('none')} />

@@ -2,6 +2,7 @@
     import { AnnotationsGridItem, SelectableBox } from '$lib/components';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
     import { useSettings } from '$lib/hooks/useSettings';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
@@ -54,6 +55,10 @@
         textEmbedding
     } = useGlobalStorage();
 
+    // The embedding plot lasso selection on the annotations route.
+    const { annotationPlotSampleIds } = useAnnotationPlotSelection();
+    const plotSelectedAnnotationIds = $derived($annotationPlotSampleIds);
+
     afterNavigate(() => {
         clearReversibleActions();
     });
@@ -72,6 +77,8 @@
         annotation_label_ids:
             $selectedAnnotationFilterIds.length > 0 ? $selectedAnnotationFilterIds : undefined,
         tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
+        // Embedding plot lasso selection narrows the grid to the selected annotations.
+        sample_ids: plotSelectedAnnotationIds.length > 0 ? plotSelectedAnnotationIds : undefined,
         // Embedding text search reorders the grid by similarity (shared with images tab).
         text_embedding: $textEmbedding?.embedding ?? undefined
     });
@@ -89,6 +96,7 @@
     let infiniteLoaderIdentifier = $derived(
         $selectedAnnotationFilterIds.join(',') +
             Array.from($tagsSelected).join(',') +
+            plotSelectedAnnotationIds.join(',') +
             ($textEmbedding ? `search:${$textEmbedding.queryText}` : '')
     );
 
