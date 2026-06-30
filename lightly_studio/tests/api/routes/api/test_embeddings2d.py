@@ -244,6 +244,27 @@ def test_get_embeddings2d__with_video_filter(
     assert spy_video_resolver.call_args.kwargs["filters"] == video_filter
 
 
+def test_get_embeddings2d__rejects_mismatched_filter_type(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    """Posting an annotation filter to an image collection returns 400."""
+    collection_id = fill_db_with_samples_and_embeddings(
+        session=db_session,
+        n_samples=3,
+        embedding_model_names=["model_a"],
+        embedding_dimension=EMBEDDING_DIMENSION,
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/embeddings2d/default",
+        json={"filters": {"filter_type": "annotations"}},
+    )
+
+    assert response.status_code == 400
+    assert "Invalid filter type" in response.json()["detail"]
+
+
 """Benchmark for the /embeddings2d/default endpoint.
 Deactivated by default.
 

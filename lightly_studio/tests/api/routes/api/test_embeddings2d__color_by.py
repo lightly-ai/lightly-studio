@@ -11,8 +11,10 @@ from pyarrow import ipc
 from sqlmodel import Session
 
 from lightly_studio.dataset.mobileclip_embedding_generator import EMBEDDING_DIMENSION
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import (
+    collection_resolver,
     image_resolver,
     tag_resolver,
 )
@@ -21,6 +23,10 @@ from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
+    create_collection,
+    create_embedding_model,
+    create_image,
+    create_sample_embedding,
     fill_db_with_samples_and_embeddings,
 )
 
@@ -761,3 +767,92 @@ def test_get_embeddings2d__with_annotation_color_by_and_filter(
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
     assert legend == {"3": "cat"}
+
+
+def test_get_embeddings2d__annotation_collection_color_by_own_label(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    """Annotation-collection samples are colored by the label they carry themselves.
+
+    When the plotted collection is an annotation collection, each sample *is* an
+    annotation rather than an image with child annotations, so coloring must read
+    each annotation's own label.
+    """
+    collection = create_collection(session=db_session)
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+
+    label_cat = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    )
+    label_dog = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="dog"
+    )
+
+    # Three "cat" annotations and two "dog" annotations, all on the same image.
+    # Each annotation is its own sample in the annotation collection.
+    annotation_labels = [
+        label_cat,
+        label_cat,
+        label_cat,
+        label_dog,
+        label_dog,
+    ]
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    embedding_model = create_embedding_model(
+        session=db_session, collection_id=annotation_collection_id
+    )
+    annotations = []
+    for i, label in enumerate(annotation_labels):
+        annotation = create_annotation(
+            session=db_session,
+            collection_id=collection.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=label.annotation_label_id,
+        )
+        create_sample_embedding(
+            session=db_session,
+            sample_id=annotation.sample_id,
+            embedding_model_id=embedding_model.embedding_model_id,
+            embedding=[float(i)] * EMBEDDING_DIMENSION,
+        )
+        annotations.append(annotation)
+
+    response = test_client.post(
+        f"/api/collections/{annotation_collection_id}/embeddings2d/default",
+        json={
+            "filters": {"filter_type": "annotations"},
+            "color_by": {
+                "type": "annotation",
+                "annotation_label_ids": [
+                    str(label_cat.annotation_label_id),
+                    str(label_dog.annotation_label_id),
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 200
+
+    table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
+    sample_ids_payload = table.column("sample_id").to_pylist()
+    color_categories = table.column("color_categories").to_pylist()
+
+    # "cat" is carried by 3 annotations and "dog" by 2, so "cat" ranks first and
+    # takes category 3 while "dog" takes category 4.
+    sample_id_to_colors = dict(zip(sample_ids_payload, color_categories))
+    assert sample_id_to_colors[str(annotations[0].sample_id)] == [3]  # cat
+    assert sample_id_to_colors[str(annotations[1].sample_id)] == [3]  # cat
+    assert sample_id_to_colors[str(annotations[2].sample_id)] == [3]  # cat
+    assert sample_id_to_colors[str(annotations[3].sample_id)] == [4]  # dog
+    assert sample_id_to_colors[str(annotations[4].sample_id)] == [4]  # dog
+
+    legend = json.loads(table.schema.metadata[b"color_legend"])
+    assert legend == {
+        "3": "cat",
+        "4": "dog",
+    }
