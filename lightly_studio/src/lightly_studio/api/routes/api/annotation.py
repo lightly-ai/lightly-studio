@@ -8,7 +8,6 @@ from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from fastapi.params import Query
 from pydantic import BaseModel, Field
-from sqlmodel import select
 
 from lightly_studio.api.routes.api import annotations as annotations_module
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
@@ -164,13 +163,6 @@ def read_annotations_with_payload(
         collection_id=collection_id,
         text_embedding=body.text_embedding,
     )
-    if not embeddings:
-        raise HTTPException(
-            status_code=HTTP_STATUS_NOT_FOUND,
-            detail="No stored embedding found for this annotation.",
-        )
-
-    return [float(value) for value in embeddings[0].embedding]
 
 
 @annotations_router.get(
