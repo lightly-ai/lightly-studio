@@ -37,7 +37,13 @@
 
     let viewport: HTMLElement | null = $state(null);
 
-    const { sampleSize } = useGlobalStorage();
+    const { sampleSize, setfilteredSampleCount } = useGlobalStorage();
+
+    $effect(() => {
+        if (query.isSuccess && query.data?.pages.length > 0) {
+            setfilteredSampleCount(query.data.pages[0].total_count);
+        }
+    });
     let viewportHeight = $state(0);
     let size = $state(0);
     let captionSize = $state(0);
