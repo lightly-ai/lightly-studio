@@ -5,12 +5,10 @@ from __future__ import annotations
 from collections import defaultdict
 from uuid import UUID
 
-from sqlmodel import Session, col, select
+from sqlmodel import Session
 
 from lightly_studio.api.routes.api.embedding_coloring import coloring_helpers
 from lightly_studio.api.routes.api.embedding_coloring.coloring_helpers import DiscreteColorScale
-from lightly_studio.database import db_array
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.resolvers import annotation_label_resolver, annotation_resolver
 
 
@@ -55,11 +53,9 @@ def build_annotation_color_maps(
 
     # When the colored samples are annotations themselves (annotation collection),
     # each sample carries its own label rather than labels of child annotations.
-    own_annotations = session.exec(
-        select(AnnotationBaseTable).where(
-            db_array.in_array(column=col(AnnotationBaseTable.sample_id), values=sample_ids)
-        )
-    ).all()
+    own_annotations = annotation_resolver.get_by_ids(
+        session=session, annotation_ids=sample_ids
+    )
     for ann in own_annotations:
         if ann.annotation_label_id in requested:
             sample_to_labels[ann.sample_id].add(ann.annotation_label_id)
