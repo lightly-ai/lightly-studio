@@ -164,4 +164,42 @@ describe('EvaluationRunConfusionMatrixSection', () => {
             pred_label: 'dog'
         });
     });
+
+    it('maps a false-positive cell (FP row) to a null gt_label', () => {
+        queryState.isLoading = false;
+        queryState.isError = false;
+        queryState.data = small3Classes;
+        queryState.error = undefined;
+
+        render(EvaluationRunConfusionMatrixSection, { props: defaultProps });
+
+        const handler = echartsMock.getClickHandler();
+        // [pred, gt, ...]: spurious "dog" prediction in the "(no ground truth)" row.
+        handler?.({ value: ['dog', '(no ground truth)', 1, 0] });
+
+        expect(filtersMock.updateConfusionCell).toHaveBeenCalledWith({
+            evaluation_run_id: 'run-1',
+            gt_label: null,
+            pred_label: 'dog'
+        });
+    });
+
+    it('maps a false-negative cell (FN column) to a null pred_label', () => {
+        queryState.isLoading = false;
+        queryState.isError = false;
+        queryState.data = small3Classes;
+        queryState.error = undefined;
+
+        render(EvaluationRunConfusionMatrixSection, { props: defaultProps });
+
+        const handler = echartsMock.getClickHandler();
+        // [pred, gt, ...]: missed "cat" ground truth in the "(no prediction)" column.
+        handler?.({ value: ['(no prediction)', 'cat', 1, 0] });
+
+        expect(filtersMock.updateConfusionCell).toHaveBeenCalledWith({
+            evaluation_run_id: 'run-1',
+            gt_label: 'cat',
+            pred_label: null
+        });
+    });
 });
