@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 from sqlmodel import select
 
 from lightly_studio.api.routes.api.embedding_coloring import ColorBy, build_color_data
-from lightly_studio.api.routes.api.status import HTTP_STATUS_BAD_REQUEST
+from lightly_studio.api.routes.api.status import HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_NOT_FOUND
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelTable
@@ -49,7 +49,10 @@ def get_2d_embeddings(
     """Return 2D embeddings serialized as an Arrow stream."""
     collection = session.get(CollectionTable, collection_id)
     if collection is None:
-        raise ValueError(f"Collection {collection_id} not found.")
+        raise HTTPException(
+            status_code=HTTP_STATUS_NOT_FOUND,
+            detail=f"Collection {collection_id} not found.",
+        )
     _validate_filter_type(collection=collection, filters=body.filters)
 
     # TODO(Malte, 09/2025): Support choosing the embedding model via API parameter.

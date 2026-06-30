@@ -17,12 +17,14 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
     AnnotationType,
 )
-from lightly_studio.models.collection import CollectionTable
-from lightly_studio.resolvers import annotation_resolver
+from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.resolvers import annotation_resolver, collection_resolver
 from tests.helpers_resolvers import (
     ImageStub,
+    create_annotation,
     create_annotation_label,
     create_collection,
+    create_image,
     create_images,
 )
 
@@ -39,6 +41,7 @@ class TestLightlyStudioLabelInput:
             session=db_session,
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
+            annotation_collection_id=None,
         )
         assert list(label_input.get_categories()) == [
             Category(id=0, name="cat"),
@@ -57,6 +60,7 @@ class TestLightlyStudioLabelInput:
             session=db_session,
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
+            annotation_collection_id=None,
         )
         assert list(label_input.get_categories()) == [
             Category(id=1, name="cat"),
@@ -78,6 +82,7 @@ class TestLightlyStudioLabelInput:
             session=db_session,
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
+            annotation_collection_id=None,
         )
         assert list(label_input.get_categories()) == []
 
@@ -90,6 +95,7 @@ class TestLightlyStudioLabelInput:
             session=db_session,
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
+            annotation_collection_id=None,
         )
         assert list(label_input.get_images()) == [
             Image(id=0, filename="img1", width=100, height=100),
@@ -103,6 +109,7 @@ class TestLightlyStudioLabelInput:
             session=db_session,
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
+            annotation_collection_id=None,
         )
         assert list(label_input.get_images()) == []
 
@@ -115,6 +122,7 @@ class TestLightlyStudioLabelInput:
             session=db_session,
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
+            annotation_collection_id=None,
         )
         labels = list(label_input.get_labels())
 
@@ -163,6 +171,7 @@ class TestLightlyStudioLabelInput:
             session=db_session,
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
+            annotation_collection_id=None,
         )
         labels = list(label_input.get_labels())
 
@@ -176,6 +185,149 @@ class TestLightlyStudioLabelInput:
             image=Image(id=1, filename="img2", width=200, height=200),
             objects=[],
         )
+
+    def test_get_labels__annotation_collection_id(self, db_session: Session) -> None:
+        """Only annotations from the specified collection are exported."""
+        collection = create_collection(session=db_session)
+        image = create_image(
+            session=db_session,
+            collection_id=collection.collection_id,
+            file_path_abs="img1",
+            width=100,
+            height=100,
+        )
+        dog_label = create_annotation_label(
+            session=db_session, root_collection_id=collection.collection_id, label_name="dog"
+        )
+        cat_label = create_annotation_label(
+            session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+        )
+        create_annotation(
+            session=db_session,
+            collection_id=collection.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=dog_label.annotation_label_id,
+            annotation_collection_name="source_1",
+            annotation_data={"x": 10, "y": 10, "width": 10, "height": 10},
+        )
+        create_annotation(
+            session=db_session,
+            collection_id=collection.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=cat_label.annotation_label_id,
+            annotation_collection_name="source_2",
+            annotation_data={"x": 20, "y": 20, "width": 20, "height": 20},
+        )
+        source_1_id = collection_resolver.get_or_create_child_collection(
+            session=db_session,
+            collection_id=collection.collection_id,
+            sample_type=SampleType.ANNOTATION,
+            name="source_1",
+        )
+        source_2_id = collection_resolver.get_or_create_child_collection(
+            session=db_session,
+            collection_id=collection.collection_id,
+            sample_type=SampleType.ANNOTATION,
+            name="source_2",
+        )
+
+        # cat=id_0, dog=id_1 (categories are sorted alphabetically)
+        label_input_source_1 = LightlyStudioObjectDetectionInput(
+            session=db_session,
+            dataset_id=collection.dataset_id,
+            samples=DatasetQuery(dataset=collection, session=db_session),
+            annotation_collection_id=source_1_id,
+        )
+        assert list(label_input_source_1.get_labels()) == [
+            ImageObjectDetection(
+                image=Image(id=0, filename="img1", width=100, height=100),
+                objects=[
+                    SingleObjectDetection(
+                        category=Category(id=1, name="dog"),
+                        box=BoundingBox(xmin=10, ymin=10, xmax=20, ymax=20),
+                        confidence=None,
+                    )
+                ],
+            )
+        ]
+
+        label_input_source_2 = LightlyStudioObjectDetectionInput(
+            session=db_session,
+            dataset_id=collection.dataset_id,
+            samples=DatasetQuery(dataset=collection, session=db_session),
+            annotation_collection_id=source_2_id,
+        )
+        assert list(label_input_source_2.get_labels()) == [
+            ImageObjectDetection(
+                image=Image(id=0, filename="img1", width=100, height=100),
+                objects=[
+                    SingleObjectDetection(
+                        category=Category(id=0, name="cat"),
+                        box=BoundingBox(xmin=20, ymin=20, xmax=40, ymax=40),
+                        confidence=None,
+                    )
+                ],
+            )
+        ]
+
+    def test_get_labels__annotation_collection_id_none_with_multiple_sources(
+        self, db_session: Session
+    ) -> None:
+        """Annotations from all collections are exported when annotation_collection_id is None."""
+        collection = create_collection(session=db_session)
+        image = create_image(
+            session=db_session,
+            collection_id=collection.collection_id,
+            file_path_abs="img1",
+            width=100,
+            height=100,
+        )
+        dog_label = create_annotation_label(
+            session=db_session, root_collection_id=collection.collection_id, label_name="dog"
+        )
+        cat_label = create_annotation_label(
+            session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+        )
+        create_annotation(
+            session=db_session,
+            collection_id=collection.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=dog_label.annotation_label_id,
+            annotation_collection_name="source_1",
+            annotation_data={"x": 10, "y": 10, "width": 10, "height": 10},
+        )
+        create_annotation(
+            session=db_session,
+            collection_id=collection.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=cat_label.annotation_label_id,
+            annotation_collection_name="source_2",
+            annotation_data={"x": 20, "y": 20, "width": 20, "height": 20},
+        )
+
+        # cat=id_0, dog=id_1 (categories are sorted alphabetically)
+        label_input = LightlyStudioObjectDetectionInput(
+            session=db_session,
+            dataset_id=collection.dataset_id,
+            samples=DatasetQuery(dataset=collection, session=db_session),
+            annotation_collection_id=None,
+        )
+        labels = list(label_input.get_labels())
+        assert len(labels) == 1
+        assert labels[0].image == Image(id=0, filename="img1", width=100, height=100)
+        # cat=id_0, dog=id_1 (categories are sorted alphabetically)
+        assert sorted(labels[0].objects, key=lambda o: o.category.name) == [
+            SingleObjectDetection(
+                category=Category(id=0, name="cat"),
+                box=BoundingBox(xmin=20, ymin=20, xmax=40, ymax=40),
+                confidence=None,
+            ),
+            SingleObjectDetection(
+                category=Category(id=1, name="dog"),
+                box=BoundingBox(xmin=10, ymin=10, xmax=20, ymax=20),
+                confidence=None,
+            ),
+        ]
 
     def test_get_labels__segmentation_mask(self, db_session: Session) -> None:
         """We currently export only object detection annotations, not segmentation mask."""
@@ -211,6 +363,7 @@ class TestLightlyStudioLabelInput:
             session=db_session,
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
+            annotation_collection_id=None,
         )
         labels = list(label_input.get_labels())
 

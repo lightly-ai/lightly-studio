@@ -89,41 +89,58 @@ class SampleFilter(BaseModel):
     def _build_confusion_cell_subquery(self, confusion_cell: ConfusionCell) -> SelectOfScalar[UUID]:
         # Resolve the cell to its samples with a subquery against the persisted
         # pairing metrics, joining annotation labels by name (unique per dataset),
-        # mirroring the tag-filter subquery pattern. This slice handles the
-        # non-null/non-null case only, so both sides are inner-joined.
+        # mirroring the tag-filter subquery pattern. Each side is handled
+        # independently: a real label inner-joins its annotation/label and matches by
+        # name; a null label (synthetic margin bucket) instead requires that side's
+        # annotation id to be NULL (false positive when gt is null, false negative
+        # when pred is null). The model rejects the both-null combination upstream.
         gt_annotation = aliased(AnnotationBaseTable)
         pred_annotation = aliased(AnnotationBaseTable)
         gt_label = aliased(AnnotationLabelTable)
         pred_label = aliased(AnnotationLabelTable)
 
-        return (
-            select(EvaluationAnnotationMetricTable.sample_id)
-            .join(
-                gt_annotation,
-                col(EvaluationAnnotationMetricTable.gt_annotation_id)
-                == col(gt_annotation.sample_id),
-            )
-            .join(
-                pred_annotation,
-                col(EvaluationAnnotationMetricTable.pred_annotation_id)
-                == col(pred_annotation.sample_id),
-            )
-            .join(
-                gt_label,
-                col(gt_annotation.annotation_label_id) == col(gt_label.annotation_label_id),
-            )
-            .join(
-                pred_label,
-                col(pred_annotation.annotation_label_id) == col(pred_label.annotation_label_id),
-            )
-            .where(
-                col(EvaluationAnnotationMetricTable.evaluation_run_id)
-                == confusion_cell.evaluation_run_id
-            )
-            .where(col(gt_label.annotation_label_name) == confusion_cell.gt_label)
-            .where(col(pred_label.annotation_label_name) == confusion_cell.pred_label)
-            .distinct()
+        subquery = select(EvaluationAnnotationMetricTable.sample_id).where(
+            col(EvaluationAnnotationMetricTable.evaluation_run_id)
+            == confusion_cell.evaluation_run_id
         )
+
+        if confusion_cell.gt_label is not None:
+            subquery = (
+                subquery.join(
+                    gt_annotation,
+                    col(EvaluationAnnotationMetricTable.gt_annotation_id)
+                    == col(gt_annotation.sample_id),
+                )
+                .join(
+                    gt_label,
+                    col(gt_annotation.annotation_label_id) == col(gt_label.annotation_label_id),
+                )
+                .where(col(gt_label.annotation_label_name) == confusion_cell.gt_label)
+            )
+        else:
+            subquery = subquery.where(
+                col(EvaluationAnnotationMetricTable.gt_annotation_id).is_(None)
+            )
+
+        if confusion_cell.pred_label is not None:
+            subquery = (
+                subquery.join(
+                    pred_annotation,
+                    col(EvaluationAnnotationMetricTable.pred_annotation_id)
+                    == col(pred_annotation.sample_id),
+                )
+                .join(
+                    pred_label,
+                    col(pred_annotation.annotation_label_id) == col(pred_label.annotation_label_id),
+                )
+                .where(col(pred_label.annotation_label_name) == confusion_cell.pred_label)
+            )
+        else:
+            subquery = subquery.where(
+                col(EvaluationAnnotationMetricTable.pred_annotation_id).is_(None)
+            )
+
+        return subquery.distinct()
 
     def _apply_metadata_filters(self, query: QueryType) -> QueryType:
         if self.metadata_filters:
