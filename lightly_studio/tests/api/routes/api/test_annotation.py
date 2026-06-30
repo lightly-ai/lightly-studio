@@ -351,6 +351,11 @@ def test_read_annotation_embedding__missing_returns_404(
         collection_id=collection.collection_id,
     )
     annotation_collection_id = annotation.sample.collection_id
+    create_embedding_model(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        embedding_dimension=3,
+    )
 
     response = test_client.get(
         f"/api/collections/{annotation_collection_id}/annotations/{annotation.sample_id}/embedding",
