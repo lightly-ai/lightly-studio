@@ -1,20 +1,12 @@
 from __future__ import annotations
 
 import uuid
-from uuid import UUID
 
 import pytest
 from sqlmodel import Session
 
-from lightly_studio.models.collection import SampleType
-from lightly_studio.models.evaluation_run import (
-    EvaluationRunCreate,
-    EvaluationRunTable,
-    EvaluationTaskType,
-)
 from lightly_studio.models.evaluation_sample_metric import EvaluationRunMetricsInfoView
-from lightly_studio.models.image import ImageTable
-from lightly_studio.resolvers import evaluation_run_resolver, evaluation_sample_metric_resolver
+from lightly_studio.resolvers import evaluation_sample_metric_resolver
 from tests.helpers_resolvers import create_collection, create_image
 from tests.resolvers.evaluation_sample_metric_resolver import (
     helpers as evaluation_sample_metric_helpers,
@@ -22,40 +14,12 @@ from tests.resolvers.evaluation_sample_metric_resolver import (
 from tests.resolvers.evaluation_sample_metric_resolver.helpers import SampleMetricStub
 
 
-def _create_named_run_and_image(
-    session: Session,
-    dataset_collection_id: UUID,
-    name: str,
-) -> tuple[EvaluationRunTable, ImageTable]:
-    gt_collection = create_collection(
-        session=session,
-        sample_type=SampleType.ANNOTATION,
-        parent_collection_id=dataset_collection_id,
-    )
-    pred_collection = create_collection(
-        session=session,
-        sample_type=SampleType.ANNOTATION,
-        parent_collection_id=dataset_collection_id,
-    )
-    run = evaluation_run_resolver.create(
-        session=session,
-        evaluation_run_input=EvaluationRunCreate(
-            name=name,
-            gt_annotation_collection_id=gt_collection.collection_id,
-            dataset_id=gt_collection.dataset_id,
-            pred_annotation_collection_id=pred_collection.collection_id,
-            task_type=EvaluationTaskType.OBJECT_DETECTION,
-        ),
-    )
-    image = create_image(session=session, collection_id=dataset_collection_id)
-    return run, image
-
-
 def test_get_sample_metrics_info_by_dataset_id(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
-    run, image1 = evaluation_sample_metric_helpers.create_run_and_image(
+    run = evaluation_sample_metric_helpers.create_run(
         session=db_session, dataset_collection_id=dataset.collection_id
     )
+    image1 = create_image(session=db_session, collection_id=dataset.collection_id)
     image2 = create_image(
         session=db_session,
         collection_id=dataset.collection_id,
@@ -99,11 +63,21 @@ def test_get_sample_metrics_info_by_dataset_id(db_session: Session) -> None:
 
 def test_get_sample_metrics_info_by_dataset_id__multiple_runs(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
-    run1, image1 = _create_named_run_and_image(
+    run1 = evaluation_sample_metric_helpers.create_run(
         session=db_session, dataset_collection_id=dataset.collection_id, name="run_1"
     )
-    run2, image2 = _create_named_run_and_image(
+    image1 = create_image(
+        session=db_session,
+        collection_id=dataset.collection_id,
+        file_path_abs="/path/to/sample1.png",
+    )
+    run2 = evaluation_sample_metric_helpers.create_run(
         session=db_session, dataset_collection_id=dataset.collection_id, name="run_2"
+    )
+    image2 = create_image(
+        session=db_session,
+        collection_id=dataset.collection_id,
+        file_path_abs="/path/to/sample2.png",
     )
     evaluation_sample_metric_helpers.create_sample_metrics(
         session=db_session,
@@ -145,12 +119,14 @@ def test_get_sample_metrics_info_by_dataset_id__excludes_other_datasets(
 ) -> None:
     dataset = create_collection(session=db_session)
     other_dataset = create_collection(session=db_session)
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(
+    run = evaluation_sample_metric_helpers.create_run(
         session=db_session, dataset_collection_id=dataset.collection_id
     )
-    other_run, other_image = evaluation_sample_metric_helpers.create_run_and_image(
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
+    other_run = evaluation_sample_metric_helpers.create_run(
         session=db_session, dataset_collection_id=other_dataset.collection_id
     )
+    other_image = create_image(session=db_session, collection_id=other_dataset.collection_id)
     evaluation_sample_metric_helpers.create_sample_metrics(
         session=db_session,
         run_id=run.id,
@@ -187,7 +163,7 @@ def test_get_sample_metrics_info_by_dataset_id__empty_for_run_without_metrics(
 ) -> None:
     dataset = create_collection(session=db_session)
     # Create a run but add no metrics.
-    evaluation_sample_metric_helpers.create_run_and_image(
+    evaluation_sample_metric_helpers.create_run(
         session=db_session, dataset_collection_id=dataset.collection_id
     )
 

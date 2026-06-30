@@ -317,5 +317,10 @@ def test_read_annotation_collections(
         {
             "collection_id": str(expected_annotation_collection.collection_id),
             "name": expected_annotation_collection.name,
+            "annotation_types": [
+                "classification",
+                "object_detection",
+                "segmentation_mask",
+            ],
         }
     ]

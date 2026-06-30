@@ -4,7 +4,7 @@ interface UseCategoryVisibilityReturn {
     hiddenCategories: Readable<Set<number>>;
     toggleCategoryVisibility: (category: number) => void;
     focusCategoryVisibility: (categories: number[], category: number) => void;
-    resetCategoryVisibility: () => void;
+    resetCategoryVisibility: (preservedCategories?: number[]) => void;
 }
 
 /**
@@ -33,15 +33,23 @@ export const useCategoryVisibility = (): UseCategoryVisibilityReturn => {
         categories: number[],
         category: number
     ) => {
+        // Categories hidden outside the `categories` isolate set are reserved rows; keep them hidden.
+        const preservedHiddenCategories = [...currentHiddenCategories].filter(
+            (hiddenCategory) => !categories.includes(hiddenCategory)
+        );
+
         const visibleCategories = categories.filter(
             (visibleCategory) => !currentHiddenCategories.has(visibleCategory)
         );
 
         if (visibleCategories.length === 1 && visibleCategories[0] === category) {
-            return new Set<number>();
+            return new Set<number>(preservedHiddenCategories);
         }
 
-        return new Set(categories.filter((visibleCategory) => visibleCategory !== category));
+        return new Set([
+            ...preservedHiddenCategories,
+            ...categories.filter((visibleCategory) => visibleCategory !== category)
+        ]);
     };
 
     const toggleCategoryVisibility = (category: number) => {
@@ -56,8 +64,14 @@ export const useCategoryVisibility = (): UseCategoryVisibilityReturn => {
         );
     };
 
-    const resetCategoryVisibility = () => {
-        hiddenCategories.set(new Set<number>());
+    const resetCategoryVisibility = (preservedCategories: number[] = []) => {
+        // Clears remapped color slots; keeps the reserved rows the caller asks to preserve.
+        hiddenCategories.update(
+            (currentHiddenCategories) =>
+                new Set<number>(
+                    preservedCategories.filter((category) => currentHiddenCategories.has(category))
+                )
+        );
     };
 
     return {
