@@ -24,6 +24,7 @@ describe('getFrameFilter', () => {
                 collection_id: 'coll-1'
             })
         ).toEqual({
+            filter_type: 'video_frame',
             frame_number: {}
         });
     });
@@ -41,6 +42,7 @@ describe('getFrameFilter', () => {
         });
 
         expect(filter).toEqual({
+            filter_type: 'video_frame',
             video_id: 'vid-1',
             frame_number: { min: 1, max: 5 },
             sample_filter: {
@@ -69,6 +71,7 @@ describe('getFrameFilter', () => {
         });
 
         expect(filter).toEqual({
+            filter_type: 'video_frame',
             sample_filter: {
                 metadata_filters: [{ key: 'temp', value: 10, op: '>=' }]
             },
