@@ -12,14 +12,14 @@ describe('useAnnotationPlotSelection', () => {
     });
 
     it('stores plot sample IDs in a shared store', () => {
-        const { annotationPlotSampleIds, updateSampleIds } = useAnnotationPlotSelection();
-        updateSampleIds(['a-1', 'a-2']);
+        const { annotationPlotSampleIds, saveSampleIds } = useAnnotationPlotSelection();
+        saveSampleIds(['a-1', 'a-2']);
         expect(get(annotationPlotSampleIds)).toEqual(['a-1', 'a-2']);
     });
 
     it('clearAnnotationPlotSelection resets the store', () => {
-        const { annotationPlotSampleIds, updateSampleIds } = useAnnotationPlotSelection();
-        updateSampleIds(['a-1']);
+        const { annotationPlotSampleIds, saveSampleIds } = useAnnotationPlotSelection();
+        saveSampleIds(['a-1']);
         clearAnnotationPlotSelection();
         expect(get(annotationPlotSampleIds)).toEqual([]);
     });
@@ -36,8 +36,8 @@ describe('useEmbeddingFilterForAnnotations', () => {
     });
 
     it('isVisible is true when plot sample IDs are set', () => {
-        const { updateSampleIds } = useAnnotationPlotSelection();
-        updateSampleIds(['id-1', 'id-2']);
+        const { saveSampleIds } = useAnnotationPlotSelection();
+        saveSampleIds(['id-1', 'id-2']);
 
         const { isVisible, effectiveCount } = useEmbeddingFilterForAnnotations(
             collectionId,
@@ -48,8 +48,8 @@ describe('useEmbeddingFilterForAnnotations', () => {
     });
 
     it('clearFilter clears plot sample IDs and range selection', () => {
-        const { updateSampleIds } = useAnnotationPlotSelection();
-        updateSampleIds(['id-1']);
+        const { saveSampleIds } = useAnnotationPlotSelection();
+        saveSampleIds(['id-1']);
 
         const { clearFilter, effectiveCount } = useEmbeddingFilterForAnnotations(
             collectionId,

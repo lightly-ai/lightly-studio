@@ -48,12 +48,12 @@
     // Use appropriate filter hook based on route
     const imageFilters = useImageFilters();
     const videoFilters = useVideoFilters();
-    const { annotationPlotSampleIds, updateSampleIds: updateAnnotationPlotSampleIds } =
+    const { annotationPlotSampleIds, saveSampleIds: saveAnnotationPlotSampleIds } =
         useAnnotationPlotSelection();
 
     const updateSampleIds = $derived(
         isAnnotations
-            ? updateAnnotationPlotSampleIds
+            ? saveAnnotationPlotSampleIds
             : isVideos
               ? videoFilters.updateSampleIds
               : imageFilters.updateSampleIds
