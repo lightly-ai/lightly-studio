@@ -30,9 +30,7 @@ def get_annotation_types_by_collection_ids(
         return {}
 
     statement = (
-        select(
-            col(SampleTable.collection_id), col(AnnotationBaseTable.annotation_type)
-        )
+        select(col(SampleTable.collection_id), col(AnnotationBaseTable.annotation_type))
         .join(SampleTable, AnnotationBaseTable.sample)
         .where(col(SampleTable.collection_id).in_(collection_ids))
         .distinct()
