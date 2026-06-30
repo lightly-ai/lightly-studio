@@ -18,13 +18,9 @@ class VideoFrameSample(Sample):
     """
 
     frame_number = DBField(col(VideoFrameTable.frame_number))
-    """Frame number within the parent video"""
     frame_timestamp_s = DBField(col(VideoFrameTable.frame_timestamp_s))
-    """Presentation timestamp of the frame in seconds"""
     frame_timestamp_pts = DBField(col(VideoFrameTable.frame_timestamp_pts))
-    """Presentation timestamp of the frame in the video's time_base units"""
     rotation_deg = DBField(col(VideoFrameTable.rotation_deg))
-    """Rotation of the encoded frame in degrees (0, 90, 180, 270)"""
 
     def __init__(self, inner: VideoFrameTable) -> None:
         """Initialize the Sample.

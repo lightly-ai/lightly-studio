@@ -84,9 +84,6 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
     def frames(self) -> VideoFrameDataset:
         """Return a dataset over the individual frames of this dataset's videos.
 
-        Frames live in a child collection populated when videos are added. The child
-        collection is created on first access if it does not yet exist (it is then empty).
-
         Returns:
             A VideoFrameDataset exposing the video frames as queryable samples.
         """

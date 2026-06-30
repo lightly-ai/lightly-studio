@@ -56,9 +56,6 @@ class VideoFrameDataset(Dataset[VideoFrameSample]):
 
         Returns:
             A single VideoFrameSample object.
-
-        Raises:
-            sqlalchemy.exc.NoResultFound: If no frame is found with the given sample_id.
         """
         inner = video_frame_resolver.get_by_id(session=self.session, sample_id=sample_id)
         return VideoFrameSample(inner=inner)
