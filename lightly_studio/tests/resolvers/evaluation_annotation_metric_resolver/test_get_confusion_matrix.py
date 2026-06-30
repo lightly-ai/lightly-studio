@@ -16,6 +16,7 @@ from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
     create_collection,
+    create_image,
 )
 from tests.resolvers.evaluation_sample_metric_resolver import (
     helpers as evaluation_sample_metric_helpers,
@@ -26,7 +27,7 @@ def test_get_confusion_matrix__empty_run(
     db_session: Session,
 ) -> None:
     dataset = create_collection(session=db_session)
-    run, _image = evaluation_sample_metric_helpers.create_run_and_image(
+    run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
         dataset_collection_id=dataset.collection_id,
     )
@@ -43,10 +44,11 @@ def test_get_confusion_matrix__aggregates_tp_fp_fn(
     db_session: Session,
 ) -> None:
     dataset = create_collection(session=db_session)
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(
+    run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
         dataset_collection_id=dataset.collection_id,
     )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
     label_a = create_annotation_label(
         session=db_session,
         root_collection_id=dataset.collection_id,
@@ -138,10 +140,11 @@ def test_get_confusion_matrix__class_only_in_gt(
     synthetic FP row is also present even though it has no entries.
     """
     dataset = create_collection(session=db_session)
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(
+    run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
         dataset_collection_id=dataset.collection_id,
     )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
     label_a = create_annotation_label(
         session=db_session,
         root_collection_id=dataset.collection_id,
@@ -214,10 +217,11 @@ def test_get_confusion_matrix__class_only_in_pred(
     synthetic FN column is also present even though it has no entries.
     """
     dataset = create_collection(session=db_session)
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(
+    run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
         dataset_collection_id=dataset.collection_id,
     )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
     label_a = create_annotation_label(
         session=db_session,
         root_collection_id=dataset.collection_id,
@@ -289,10 +293,11 @@ def test_get_confusion_matrix__no_fp_or_fn_keeps_synthetic_axes(
     that callers can rely on a stable axis layout.
     """
     dataset = create_collection(session=db_session)
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(
+    run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
         dataset_collection_id=dataset.collection_id,
     )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
     label_a = create_annotation_label(
         session=db_session,
         root_collection_id=dataset.collection_id,

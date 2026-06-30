@@ -29,4 +29,10 @@ describe('resolveVisibleCategory', () => {
     it('ignores the filter when resolving a hidden fallback', () => {
         expect(resolveVisibleCategory([3, 4, 5], 1, new Set([3, 4]))).toBe(5);
     });
+
+    it('ignores hidden reserved buckets — usePlotData applies hiding to the final category', () => {
+        expect(resolveVisibleCategory([3, 4], 0, new Set([1]))).toBe(1); // filtered out, EXCLUDED hidden
+        expect(resolveVisibleCategory([], 1, new Set([2]))).toBe(2); // no categories, INCLUDED hidden
+        expect(resolveVisibleCategory([3, 4], 1, new Set([3, 4, 2]))).toBe(2); // all colored hidden
+    });
 });
