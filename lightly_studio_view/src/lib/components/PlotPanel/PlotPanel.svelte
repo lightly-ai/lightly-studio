@@ -33,7 +33,7 @@
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { writable } from 'svelte/store';
 
-    const collectionId = page.params.collection_id;
+    let { collectionId }: { collectionId: string } = $props();
     const { setShowEmbeddingPlot, getRangeSelection, setRangeSelectionForCollection } =
         useGlobalStorage();
     const rangeSelection = getRangeSelection(collectionId);

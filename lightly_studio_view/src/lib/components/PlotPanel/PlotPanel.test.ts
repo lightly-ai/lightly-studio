@@ -167,7 +167,7 @@ describe('PlotPanel.svelte', () => {
             data: null
         });
 
-        render(PlotPanel);
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
 
         const expectedMessage = `Error loading embeddings: ${mockError.message}`;
         const errorMessage = await screen.findByText(expectedMessage);
@@ -188,7 +188,7 @@ describe('PlotPanel.svelte', () => {
             data: null
         });
 
-        render(PlotPanel);
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await fireEvent.keyDown(window, { key: 'Escape' });
 
         expect(mockSetRangeSelectionForCollection).toHaveBeenCalledWith('test-collection-id', null);
@@ -210,7 +210,7 @@ describe('PlotPanel.svelte', () => {
             data: null
         });
 
-        render(PlotPanel);
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await fireEvent.mouseUp(window);
 
         expect(mockUpdateSampleIds).toHaveBeenCalledWith(['sample-1']);
@@ -231,7 +231,7 @@ describe('PlotPanel.svelte', () => {
             data: null
         });
 
-        render(PlotPanel);
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
 
         imageFilterStore.set({
             sample_filter: {
@@ -264,7 +264,7 @@ describe('PlotPanel.svelte', () => {
             sample_id: ['sample-1', 'sample-2', 'sample-3']
         });
 
-        render(PlotPanel);
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await fireEvent.mouseUp(window);
 
         expect(mockUpdateSampleIds).toHaveBeenCalledWith([]);
@@ -275,7 +275,7 @@ describe('PlotPanel.svelte', () => {
     it('passes derived colorBy to useEmbeddings when a metadata field is selected', async () => {
         const user = userEvent.setup();
 
-        render(PlotPanel);
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
 
         expect(useEmbeddings).toHaveBeenLastCalledWith(
             'test-collection-id',
@@ -296,7 +296,7 @@ describe('PlotPanel.svelte', () => {
     it('passes tag_ids colorBy to useEmbeddings when tags type is selected', async () => {
         const user = userEvent.setup();
 
-        render(PlotPanel);
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
 
         await user.click(screen.getByTestId('plot-color-by-button'));
         await user.click(await screen.findByRole('option', { name: 'tags' }));
@@ -309,7 +309,7 @@ describe('PlotPanel.svelte', () => {
     });
 
     it('resets remapped categories when the legend changes but preserves the reserved rows', async () => {
-        render(PlotPanel);
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await tick();
 
         // Ignore the reset that fires on mount; assert the one triggered by the legend change.
@@ -326,7 +326,7 @@ describe('PlotPanel.svelte', () => {
 
     it('drops the "Included by filters / No category" row when the color-by mode changes', async () => {
         const user = userEvent.setup();
-        render(PlotPanel);
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await tick();
 
         // Ignore the resets from mount; assert the one triggered by the color-by change.

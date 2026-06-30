@@ -322,15 +322,8 @@
     );
 
     const panelIsVisible = $derived(
-<<<<<<< horatiu-lig-9846-object-level-embeddings-implementation-of-mvp-7
         ($activePanel === 'evaluationRuns' && hasEvaluationRuns) ||
             ($activePanel === 'embeddingPlot' && hasMediaWithEmbeddings) ||
-=======
-        ($activePanel === 'evaluationRuns' && supportsEvaluation) ||
-            ($activePanel === 'embeddingPlot' &&
-                hasMediaWithEmbeddings &&
-                (isImages || isVideos)) ||
->>>>>>> main
             ($activePanel === 'queryEditor' && isImages)
     );
 </script>
@@ -404,7 +397,7 @@
                         {canSelectAll}
                         isSelectionActive={$selectedCount > 0}
                         {isImages}
-                        hasMediaWithEmbeddings={hasCollectionSearch}
+                        {hasMediaWithEmbeddings}
                         collectionDatasetId={collection.dataset_id}
                         onSelectAll={selectAllHandle.handleSelectAll}
                         onDeselectAll={clearSelection}
@@ -467,7 +460,7 @@
                                 <!-- PlotPanel captures collectionId at mount; remount it when
                                      switching collections (e.g. images <-> annotations tab). -->
                                 {#key collectionId}
-                                    <PlotPanel />
+                                    <PlotPanel {collectionId} />
                                 {/key}
                             {/await}
                         {:else if $activePanel === 'queryEditor' && isImages}
