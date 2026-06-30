@@ -322,7 +322,7 @@
     );
 
     const panelIsVisible = $derived(
-        ($activePanel === 'evaluationRuns' && hasEvaluationRuns) ||
+        ($activePanel === 'evaluationRuns' && supportsEvaluation) ||
             ($activePanel === 'embeddingPlot' && hasMediaWithEmbeddings) ||
             ($activePanel === 'queryEditor' && isImages)
     );
