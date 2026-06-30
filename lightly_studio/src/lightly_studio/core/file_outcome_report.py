@@ -18,9 +18,9 @@ Usage::
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from collections.abc import Iterator
-from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import Enum
 from os import PathLike
@@ -75,10 +75,16 @@ class FileOutcomeReport:
 
     max_examples_per_outcome: int = DEFAULT_MAX_EXAMPLES_PER_OUTCOME
     _counts: dict[FileOutcome, int] = field(
-        default_factory=lambda: dict.fromkeys(FileOutcome, 0)
+        default_factory=lambda: dict.fromkeys(FileOutcome, 0),
+        init=False,
+        repr=False,
+        compare=False,
     )
     _example_paths: dict[FileOutcome, list[str]] = field(
-        default_factory=lambda: {outcome: [] for outcome in FileOutcome}
+        default_factory=lambda: {outcome: [] for outcome in FileOutcome},
+        init=False,
+        repr=False,
+        compare=False,
     )
 
     def record(self, path: str | PathLike[str], outcome: FileOutcome) -> None:
@@ -96,7 +102,7 @@ class FileOutcomeReport:
         if len(examples) < self.max_examples_per_outcome:
             examples.append(str(path))
 
-    @contextmanager
+    @contextlib.contextmanager
     def track(self, path: str | PathLike[str]) -> Iterator[TrackedFile]:
         """Track a single per-item file operation.
 
@@ -135,10 +141,12 @@ class FileOutcomeReport:
                 zero of them succeeded.
         """
         n_added = self._counts[FileOutcome.ADDED]
+        n_already_present = self._counts[FileOutcome.ALREADY_PRESENT]
         n_missing = self._counts[FileOutcome.MISSING]
         n_broken = self._counts[FileOutcome.BROKEN]
         n_attempted = n_added + n_missing + n_broken
-        if n_attempted >= 1 and n_added == 0:
+        n_succeeded = n_added + n_already_present
+        if n_attempted >= 1 and n_succeeded == 0:
             raise AllInputFilesFailedError(
                 f"All {n_attempted} attempted input files failed "
                 f"({n_missing} missing, {n_broken} broken)."
