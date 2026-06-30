@@ -158,9 +158,9 @@ def _keyset_sort_keys(order_by: list[OrderByExpression] | None) -> list[_SortKey
 
     if not has_file_path:
         primary_ascending = (not order_by) or order_by[0].ascending
-        keys.append((col(ImageTable.file_path_abs), primary_ascending))
+        keys.append((cast(ColumnElement[Any], col(ImageTable.file_path_abs)), primary_ascending))
 
-    keys.append((col(ImageTable.sample_id), True))
+    keys.append((cast(ColumnElement[Any], col(ImageTable.sample_id)), True))
     return keys
 
 
@@ -188,7 +188,7 @@ def _fetch_anchor_values(
     sort_keys: list[_SortKey],
 ) -> tuple[Any, ...] | None:
     """Return the current sample's sort-key values, or ``None`` if it is filtered out."""
-    query: Select[Any] = (
+    query: SelectOfScalar[Any] = (
         select(*[column for column, _ in sort_keys])
         .select_from(ImageTable)
         .join(ImageTable.sample)
