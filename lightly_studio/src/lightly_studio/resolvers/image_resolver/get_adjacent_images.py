@@ -118,9 +118,7 @@ def _get_adjacent_images_keyset(
         forward=False,
     )
 
-    total_count = session.exec(
-        select(func.count()).select_from(base_query.subquery())
-    ).one()
+    total_count = session.exec(select(func.count()).select_from(base_query.subquery())).one()
 
     # Position is 1-based: number of rows strictly before the anchor, plus the anchor.
     count_before = session.exec(
