@@ -23,6 +23,7 @@ from tqdm import tqdm
 from lightly_studio.core.image import add_annotations
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.core.loading_log import LoadingLoggingContext, log_loading_results
+from lightly_studio.database.db_analyze import PlannerStatsRefresher
 from lightly_studio.models.caption import CaptionCreate
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import (
@@ -38,6 +39,8 @@ logger = logging.getLogger(__name__)
 # Constants
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
 MAX_EXAMPLE_PATHS_TO_SHOW = 5
+# Tables whose planner statistics the dedup query (filter_new_paths) depends on.
+ANALYZE_TABLES = ["sample", "image"]
 
 
 def load_into_dataset_from_paths(
@@ -59,6 +62,7 @@ def load_into_dataset_from_paths(
     """
     samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
+    stats_refresher = PlannerStatsRefresher(table_names=ANALYZE_TABLES)
 
     logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=sum(1 for _ in image_paths),
@@ -93,7 +97,10 @@ def load_into_dataset_from_paths(
         # Process batch when it reaches SAMPLE_BATCH_SIZE
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
             created_path_to_id, paths_not_inserted = _create_batch_samples(
-                session=session, collection_id=root_collection_id, samples=samples_to_create
+                session=session,
+                collection_id=root_collection_id,
+                samples=samples_to_create,
+                stats_refresher=stats_refresher,
             )
             created_sample_ids.extend(created_path_to_id.values())
             logging_context.update_example_paths(paths_not_inserted)
@@ -102,7 +109,10 @@ def load_into_dataset_from_paths(
     # Handle remaining samples
     if samples_to_create:
         created_path_to_id, paths_not_inserted = _create_batch_samples(
-            session=session, collection_id=root_collection_id, samples=samples_to_create
+            session=session,
+            collection_id=root_collection_id,
+            samples=samples_to_create,
+            stats_refresher=stats_refresher,
         )
         created_sample_ids.extend(created_path_to_id.values())
         logging_context.update_example_paths(paths_not_inserted)
@@ -145,6 +155,7 @@ def load_into_dataset_from_labelformat(
 
     samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
+    stats_refresher = PlannerStatsRefresher(table_names=ANALYZE_TABLES)
 
     # Phase 1: Sample creation
     for image_data in tqdm(input_labels.get_labels(), desc="Processing images", unit=" images"):
@@ -161,7 +172,10 @@ def load_into_dataset_from_labelformat(
 
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
             created_path_to_id, paths_not_inserted = _create_batch_samples(
-                session=session, collection_id=root_collection_id, samples=samples_to_create
+                session=session,
+                collection_id=root_collection_id,
+                samples=samples_to_create,
+                stats_refresher=stats_refresher,
             )
             created_sample_ids.extend(created_path_to_id.values())
             logging_context.update_example_paths(paths_not_inserted)
@@ -169,7 +183,10 @@ def load_into_dataset_from_labelformat(
 
     if samples_to_create:
         created_path_to_id, paths_not_inserted = _create_batch_samples(
-            session=session, collection_id=root_collection_id, samples=samples_to_create
+            session=session,
+            collection_id=root_collection_id,
+            samples=samples_to_create,
+            stats_refresher=stats_refresher,
         )
         created_sample_ids.extend(created_path_to_id.values())
         logging_context.update_example_paths(paths_not_inserted)
@@ -240,6 +257,7 @@ def load_into_dataset_from_coco_captions(
     samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
     path_to_captions: dict[str, list[str]] = {}
+    stats_refresher = PlannerStatsRefresher(table_names=ANALYZE_TABLES)
 
     for image_info in tqdm(images, desc="Processing images", unit=" images"):
         if isinstance(image_info["id"], int):
@@ -261,7 +279,10 @@ def load_into_dataset_from_coco_captions(
 
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
             created_path_to_id, paths_not_inserted = _create_batch_samples(
-                session=session, collection_id=root_collection_id, samples=samples_to_create
+                session=session,
+                collection_id=root_collection_id,
+                samples=samples_to_create,
+                stats_refresher=stats_refresher,
             )
             created_sample_ids.extend(created_path_to_id.values())
             logging_context.update_example_paths(paths_not_inserted)
@@ -276,7 +297,10 @@ def load_into_dataset_from_coco_captions(
 
     if samples_to_create:
         created_path_to_id, paths_not_inserted = _create_batch_samples(
-            session=session, collection_id=root_collection_id, samples=samples_to_create
+            session=session,
+            collection_id=root_collection_id,
+            samples=samples_to_create,
+            stats_refresher=stats_refresher,
         )
         created_sample_ids.extend(created_path_to_id.values())
         logging_context.update_example_paths(paths_not_inserted)
@@ -343,7 +367,10 @@ def tag_samples_by_directory(
 
 
 def _create_batch_samples(
-    session: Session, collection_id: UUID, samples: list[ImageCreate]
+    session: Session,
+    collection_id: UUID,
+    samples: list[ImageCreate],
+    stats_refresher: PlannerStatsRefresher,
 ) -> tuple[dict[str, UUID], list[str]]:
     """Create the batch samples.
 
@@ -351,6 +378,8 @@ def _create_batch_samples(
         session: The database session.
         collection_id: The ID of the collection to create samples in.
         samples: The samples to create.
+        stats_refresher: Tracks inserted rows and refreshes planner statistics so the
+            per-batch dedup query keeps using the ``file_path_abs`` index.
 
     Returns:
         - A mapping from file paths to the created sample IDs for new samples.
@@ -370,6 +399,7 @@ def _create_batch_samples(
     created_sample_ids = image_resolver.create_many(
         session=session, collection_id=collection_id, samples=samples_to_create
     )
+    stats_refresher.record(session=session, n_new_rows=len(created_sample_ids))
 
     # Create a mapping from file path to sample ID for new samples
     file_path_new_to_sample_id = dict(zip(file_paths_new, created_sample_ids))

@@ -26,6 +26,7 @@ from sqlmodel import Session
 
 from lightly_studio.core import labelformat_helpers
 from lightly_studio.core.image import add_annotations, add_images
+from lightly_studio.database.db_analyze import PlannerStatsRefresher
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import image_resolver
 from tests import helpers_resolvers
@@ -309,6 +310,7 @@ def test_load_into_collection_from_coco_captions(db_session: Session, tmp_path: 
 def test_create_batch_samples(db_session: Session) -> None:
     collection = helpers_resolvers.create_collection(db_session)
     collection_id = collection.collection_id
+    stats_refresher = PlannerStatsRefresher(table_names=add_images.ANALYZE_TABLES)
 
     # First batch: two new samples
     batch1 = [
@@ -326,7 +328,10 @@ def test_create_batch_samples(db_session: Session) -> None:
         ),
     ]
     new_path_to_id, existing_paths = add_images._create_batch_samples(
-        session=db_session, collection_id=collection_id, samples=batch1
+        session=db_session,
+        collection_id=collection_id,
+        samples=batch1,
+        stats_refresher=stats_refresher,
     )
     assert len(new_path_to_id) == 2
     assert len(existing_paths) == 0
@@ -363,7 +368,10 @@ def test_create_batch_samples(db_session: Session) -> None:
     ]
 
     new_path_to_id, existing_paths = add_images._create_batch_samples(
-        session=db_session, collection_id=collection_id, samples=batch2
+        session=db_session,
+        collection_id=collection_id,
+        samples=batch2,
+        stats_refresher=stats_refresher,
     )
     assert len(new_path_to_id) == 1
     assert len(existing_paths) == 1

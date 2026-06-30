@@ -32,7 +32,7 @@ class VideoBase(SQLModel):
     file_name: str
 
     """The path of the video."""
-    file_path_abs: str = Field(default=None)
+    file_path_abs: str = Field(default=None, index=True)
 
 
 class VideoCreate(VideoBase):

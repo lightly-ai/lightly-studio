@@ -29,7 +29,7 @@ class ImageBase(SQLModel):
     height: int
 
     """The collection image path."""
-    file_path_abs: str = Field(default=None)
+    file_path_abs: str = Field(default=None, index=True)
 
 
 class ImageCreate(ImageBase):
