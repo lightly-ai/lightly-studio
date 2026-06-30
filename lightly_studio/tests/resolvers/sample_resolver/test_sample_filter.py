@@ -674,7 +674,7 @@ class TestSampleFilterConfusionCell:
         # gt_label=None selects predictions with no matching ground truth.
         dataset = create_collection(session=db_session)
         dataset_id = dataset.collection_id
-        run, _image = evaluation_sample_metric_helpers.create_run_and_image(
+        run = evaluation_sample_metric_helpers.create_run(
             session=db_session, dataset_collection_id=dataset_id
         )
         samples = create_images(
@@ -731,7 +731,7 @@ class TestSampleFilterConfusionCell:
         # pred_label=None selects ground truths with no matching prediction.
         dataset = create_collection(session=db_session)
         dataset_id = dataset.collection_id
-        run, _image = evaluation_sample_metric_helpers.create_run_and_image(
+        run = evaluation_sample_metric_helpers.create_run(
             session=db_session, dataset_collection_id=dataset_id
         )
         samples = create_images(
