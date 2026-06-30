@@ -67,14 +67,10 @@
     });
 
     const queryParams = $derived({
-        path: {
-            collection_id: collection_id
-        },
-        query: {
-            annotation_label_ids:
-                $selectedAnnotationFilterIds.length > 0 ? $selectedAnnotationFilterIds : undefined,
-            tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined
-        }
+        collection_id: collection_id,
+        annotation_label_ids:
+            $selectedAnnotationFilterIds.length > 0 ? $selectedAnnotationFilterIds : undefined,
+        tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined
     });
 
     const {

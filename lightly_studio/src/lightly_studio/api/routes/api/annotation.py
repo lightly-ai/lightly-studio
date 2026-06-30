@@ -74,24 +74,14 @@ def read_annotation_collections(
     ]
 
 
-class AnnotationQueryParamsModel(BaseModel):
-    """Model for all annotation query parameters."""
+class ReadAnnotationsWithPayloadRequest(BaseModel):
+    """Request body for reading annotations with payload."""
 
     pagination: PaginatedWithCursor
     annotation_label_ids: list[UUID] | None = None
     tag_ids: list[UUID] | None = None
-
-
-def _get_annotation_query_params(
-    pagination: Annotated[PaginatedWithCursor, Depends()],
-    annotation_label_ids: Annotated[list[UUID] | None, Query()] = None,
-    tag_ids: Annotated[list[UUID] | None, Query()] = None,
-) -> AnnotationQueryParamsModel:
-    return AnnotationQueryParamsModel(
-        pagination=pagination,
-        annotation_label_ids=annotation_label_ids,
-        tag_ids=tag_ids,
-    )
+    sample_ids: list[UUID] | None = None
+    text_embedding: list[float] | None = None
 
 
 @annotations_router.get(
@@ -144,29 +134,29 @@ def get_annotation_sample_ids(
     )
 
 
-@annotations_router.get(
-    "/annotations/payload",
-)
+@annotations_router.post("/annotations/payload")
 def read_annotations_with_payload(
     collection_id: Annotated[
         UUID, Path(title="collection Id", description="The ID of the collection")
     ],
     session: SessionDep,
-    params: Annotated[AnnotationQueryParamsModel, Depends(_get_annotation_query_params)],
+    body: ReadAnnotationsWithPayloadRequest,
 ) -> AnnotationWithPayloadAndCountView:
-    """Retrieve a list of annotations along with the parent sample data from the database."""
+    """Retrieve annotations with payload and optional similarity or sample filters."""
     return annotation_resolver.get_all_with_payload(
         session=session,
         pagination=Paginated(
-            offset=params.pagination.offset,
-            limit=params.pagination.limit,
+            offset=body.pagination.offset,
+            limit=body.pagination.limit,
         ),
         filters=AnnotationsFilter(
             collection_ids=[collection_id],
-            annotation_label_ids=params.annotation_label_ids,
-            tag_ids=params.tag_ids,
+            annotation_label_ids=body.annotation_label_ids,
+            tag_ids=body.tag_ids,
+            sample_ids=body.sample_ids,
         ),
         collection_id=collection_id,
+        text_embedding=body.text_embedding,
     )
 
 
