@@ -21,13 +21,13 @@
         </span>
     </div>
     <Slider
-        type="multiple"
+        type="single"
         class="w-full"
-        value={[iouThreshold]}
+        value={iouThreshold}
         min={0}
         max={1}
         step={0.05}
-        onValueChange={(values: number[]) => (iouThreshold = values[0])}
+        onValueChange={(value: number) => (iouThreshold = value)}
         data-testid="iou-threshold-slider"
     />
 </div>
