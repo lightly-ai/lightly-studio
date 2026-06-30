@@ -57,6 +57,52 @@ describe('PlotPanelLegend', () => {
         expect(onDoubleClickCategory).toHaveBeenCalledWith(3);
     });
 
+    it('toggles the reserved rows on single click', async () => {
+        const onToggleCategory = vi.fn();
+
+        render(PlotPanelLegend, {
+            categoryColors: [HIDDEN_COLOR, NOT_FILTERED_COLOR, FILTERED_COLOR],
+            onToggleCategory
+        });
+
+        // EXCLUDED_BY_FILTERS_CATEGORY === 1, INCLUDED_BY_FILTERS_CATEGORY === 2.
+        await fireEvent.click(screen.getByTestId('plot-legend-entry-1'));
+        expect(onToggleCategory).toHaveBeenCalledWith(1);
+
+        await fireEvent.click(screen.getByTestId('plot-legend-entry-2'));
+        expect(onToggleCategory).toHaveBeenCalledWith(2);
+    });
+
+    it('does not isolate the reserved rows on double click', async () => {
+        const onDoubleClickCategory = vi.fn();
+
+        render(PlotPanelLegend, {
+            categoryColors: [HIDDEN_COLOR, NOT_FILTERED_COLOR, FILTERED_COLOR],
+            onDoubleClickCategory
+        });
+
+        await fireEvent.dblClick(screen.getByTestId('plot-legend-entry-1'));
+        await fireEvent.dblClick(screen.getByTestId('plot-legend-entry-2'));
+
+        expect(onDoubleClickCategory).not.toHaveBeenCalled();
+    });
+
+    it('dims the reserved rows when hidden', () => {
+        render(PlotPanelLegend, {
+            categoryColors: [HIDDEN_COLOR, NOT_FILTERED_COLOR, FILTERED_COLOR],
+            excludedHidden: true,
+            includedHidden: false
+        });
+
+        const excludedRow = screen.getByTestId('plot-legend-entry-1');
+        const includedRow = screen.getByTestId('plot-legend-entry-2');
+
+        expect(excludedRow).toHaveAttribute('aria-pressed', 'true');
+        expect(excludedRow.className).toContain('opacity-40');
+        expect(includedRow).toHaveAttribute('aria-pressed', 'false');
+        expect(includedRow.className).not.toContain('opacity-40');
+    });
+
     it('renders tag legend entries with getColorByLabel colors', () => {
         const reviewBatch1Color = getColorByLabel('review-batch-1').color;
         const reviewBatch2Color = getColorByLabel('review-batch-2').color;
