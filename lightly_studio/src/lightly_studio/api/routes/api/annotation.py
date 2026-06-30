@@ -8,7 +8,6 @@ from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from fastapi.params import Query
 from pydantic import BaseModel, Field
-from sqlmodel import select
 
 from lightly_studio.api.routes.api import annotations as annotations_module
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
@@ -23,10 +22,10 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationWithPayloadAndCountView,
 )
 from lightly_studio.models.collection import AnnotationCollectionView, CollectionTable
-from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
+    embedding_model_resolver,
     sample_embedding_resolver,
 )
 from lightly_studio.resolvers.annotation_resolver.get_all import (
@@ -182,12 +181,11 @@ def read_annotation_embedding(
     Used for drag-to-search self-similarity: searching with an annotation's own
     stored embedding.
     """
-    embedding_model_id = session.exec(
-        select(EmbeddingModelTable.embedding_model_id)
-        .where(EmbeddingModelTable.collection_id == collection_id)
-        .limit(1)
-    ).first()
-    if embedding_model_id is None:
+    embedding_models = embedding_model_resolver.get_all_by_collection_id(
+        session=session,
+        collection_id=collection_id,
+    )
+    if not embedding_models:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail="No embedding model is registered for this collection.",
@@ -196,7 +194,7 @@ def read_annotation_embedding(
     embeddings = sample_embedding_resolver.get_by_sample_ids(
         session=session,
         sample_ids=[sample_id],
-        embedding_model_id=embedding_model_id,
+        embedding_model_id=embedding_models[0].embedding_model_id,
     )
     if not embeddings:
         raise HTTPException(
