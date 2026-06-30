@@ -6,6 +6,7 @@ import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
 import { writable, type Writable } from 'svelte/store';
 import { tick } from 'svelte';
 import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
+import { EXCLUDED_BY_FILTERS_CATEGORY, INCLUDED_BY_FILTERS_CATEGORY } from './plotCategories';
 
 let rangeSelectionStore: Writable<Array<{ x: number; y: number }> | null>;
 let selectedSampleIdsStore: Writable<string[]>;
@@ -254,7 +255,7 @@ describe('PlotPanel.svelte', () => {
             x: new Float32Array([1, 2, 3]),
             y: new Float32Array([1, 2, 3]),
             fulfils_filter: new Uint8Array([1, 1, 0]),
-            color_categories: [[2], [2], []],
+            color_categories: [[3], [3], []],
             sample_id: ['sample-1', 'sample-2', 'sample-3']
         });
 
@@ -302,15 +303,37 @@ describe('PlotPanel.svelte', () => {
         });
     });
 
-    it('resets hidden categories when the legend changes', async () => {
+    it('resets remapped categories when the legend changes but preserves the reserved rows', async () => {
         render(PlotPanel);
         await tick();
 
         // Ignore the reset that fires on mount; assert the one triggered by the legend change.
         mockResetCategoryVisibility.mockClear();
-        colorLegendStore.set(new Map([[2, 'dog']]));
+        colorLegendStore.set(new Map([[3, 'dog']]));
         await tick();
 
-        expect(mockResetCategoryVisibility).toHaveBeenCalled();
+        // Reserved rows are stable by index, so they must survive a legend refresh.
+        expect(mockResetCategoryVisibility).toHaveBeenCalledWith([
+            EXCLUDED_BY_FILTERS_CATEGORY,
+            INCLUDED_BY_FILTERS_CATEGORY
+        ]);
+    });
+
+    it('drops the "Included by filters / No category" row when the color-by mode changes', async () => {
+        const user = userEvent.setup();
+        render(PlotPanel);
+        await tick();
+
+        // Ignore the resets from mount; assert the one triggered by the color-by change.
+        mockResetCategoryVisibility.mockClear();
+        await user.click(screen.getByTestId('plot-color-by-button'));
+        await user.click(await screen.findByRole('option', { name: 'metadata.split' }));
+        await tick();
+
+        // INCLUDED is relabeled when the color-by mode flips, so its hidden state must not carry
+        // over (it would otherwise hide every point in the relabeled slot). Only EXCLUDED survives.
+        expect(mockResetCategoryVisibility).toHaveBeenLastCalledWith([
+            EXCLUDED_BY_FILTERS_CATEGORY
+        ]);
     });
 });

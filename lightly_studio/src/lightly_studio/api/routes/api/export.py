@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path as PathlibPath
 from tempfile import TemporaryDirectory
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path
 from fastapi.responses import PlainTextResponse, StreamingResponse
@@ -36,6 +37,7 @@ def export_collection_annotations(
         Depends(collection_api.get_and_validate_collection_id),
     ],
     session: SessionDep,
+    annotation_collection_id: UUID | None,
     export_format: ExportFormat = ExportFormat.OBJECT_DETECTION_COCO,
 ) -> StreamingResponse:
     """Export collection annotations in the selected export format."""
@@ -54,6 +56,7 @@ def export_collection_annotations(
                 dataset_id=collection.dataset_id,
                 samples=dataset_query,
                 output_json=output_path,
+                annotation_collection_id=annotation_collection_id,
             )
         except Exception:
             temp_dir.cleanup()
@@ -68,6 +71,7 @@ def export_collection_annotations(
                 dataset_id=collection.dataset_id,
                 samples=dataset_query,
                 output_json=output_path,
+                annotation_collection_id=annotation_collection_id,
             )
         except Exception:
             temp_dir.cleanup()
@@ -82,6 +86,7 @@ def export_collection_annotations(
                 dataset_id=collection.dataset_id,
                 samples=dataset_query,
                 output_folder=output_path,
+                annotation_collection_id=annotation_collection_id,
             )
         except Exception:
             temp_dir.cleanup()
