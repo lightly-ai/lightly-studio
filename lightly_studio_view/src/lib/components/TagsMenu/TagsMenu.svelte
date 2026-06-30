@@ -15,6 +15,10 @@
     import TagAssignInput from './TagAssignInput.svelte';
     import TagRenameInput from './TagRenameInput.svelte';
     import TagActionMenu from './TagActionMenu.svelte';
+    import {
+        matchTaggingCollectionIdsStore,
+        useMatchAnnotationTags
+    } from '$lib/hooks/useMatchAnnotationTags/useMatchAnnotationTags';
     import { toast } from 'svelte-sonner';
     import { get } from 'svelte/store';
 
@@ -22,6 +26,23 @@
         $props();
 
     const tagKind = $derived(gridType === 'annotations' ? 'annotation' : 'sample');
+
+    // In the evaluation matches grid a selection spans the ground-truth and
+    // prediction annotation collections, so tagging is delegated to a dedicated
+    // hook that creates and applies the tag across both. The grid publishes the
+    // collections it covers; a non-empty list means we are in matches mode.
+    const isMatchMode = $derived($matchTaggingCollectionIdsStore.length > 0);
+    const {
+        options: matchTagOptions,
+        hasSelection: matchHasSelection,
+        busy: matchBusy,
+        reloadOptions: reloadMatchTagOptions,
+        assign: assignMatchTag
+    } = useMatchAnnotationTags();
+
+    $effect(() => {
+        if ($matchTaggingCollectionIdsStore.length > 0) void reloadMatchTagOptions();
+    });
 
     const { tags, tagsSelected, tagSelectionToggle, loadTags, clearTagSelected } = $derived(
         useTags({ collection_id, kind: [tagKind] })
@@ -224,11 +245,20 @@
             {/each}
         </div>
 
-        <TagAssignInput
-            options={$tags}
-            busy={assignBusy || !hasSelection}
-            showSelectionHint={!hasSelection}
-            onSelect={handleAssign}
-        />
+        {#if isMatchMode}
+            <TagAssignInput
+                options={$matchTagOptions}
+                busy={$matchBusy || !$matchHasSelection}
+                showSelectionHint={!$matchHasSelection}
+                onSelect={assignMatchTag}
+            />
+        {:else}
+            <TagAssignInput
+                options={$tags}
+                busy={assignBusy || !hasSelection}
+                showSelectionHint={!hasSelection}
+                onSelect={handleAssign}
+            />
+        {/if}
     </div>
 </Segment>

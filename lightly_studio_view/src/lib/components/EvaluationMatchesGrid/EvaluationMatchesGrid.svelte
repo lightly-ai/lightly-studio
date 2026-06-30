@@ -1,10 +1,11 @@
 <script lang="ts">
     import { page } from '$app/state';
     import { goto } from '$app/navigation';
-    import { onMount } from 'svelte';
+    import { onDestroy, onMount } from 'svelte';
     import { toStore } from 'svelte/store';
     import {
         SampleType,
+        type AnnotationView,
         type EvaluationMatchView,
         type ImageFilter,
         type SampleFilter
@@ -23,7 +24,12 @@
     import { useMatchTypeFilter } from '$lib/hooks/useMatchTypeFilter/useMatchTypeFilter';
     import { useMatchSort } from '$lib/hooks/useMatchSort/useMatchSort';
     import { useEvaluationMatchesInfinite } from '$lib/hooks/useEvaluationMatchesInfinite/useEvaluationMatchesInfinite';
+    import {
+        setMatchTaggingCollectionIds,
+        clearMatchTaggingCollectionIds
+    } from '$lib/hooks/useMatchAnnotationTags/useMatchAnnotationTags';
     import { routeHelpers } from '$lib/routes';
+    import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
     import EvaluationMatchItem from './EvaluationMatchItem/EvaluationMatchItem.svelte';
 
     type Props = {
@@ -37,7 +43,12 @@
 
     const { datasetId, collectionId, evaluationRunId, itemWidth, sampleIds }: Props = $props();
 
-    const { getCollectionVersion } = useGlobalStorage();
+    const {
+        getCollectionVersion,
+        selectedSampleAnnotationCropIds,
+        toggleSampleAnnotationCropSelection,
+        clearSelectedSampleAnnotationCrops
+    } = useGlobalStorage();
     let collectionVersion = $state('');
     onMount(async () => {
         collectionVersion = await getCollectionVersion(collectionId);
@@ -112,6 +123,100 @@
         }
     }
 
+    // A match has no id of its own, so identify it by the annotation ids it pairs
+    // (gt for FN, pred for FP, both for TP) — stable across re-renders and unique.
+    function matchKey(match: EvaluationMatchView): string {
+        return `${match.gt_annotation?.sample_id ?? ''}|${match.pred_annotation?.sample_id ?? ''}`;
+    }
+
+    // The annotations a match should be selected/tagged through: a true positive
+    // carries both boxes, a false positive only the prediction, a false negative
+    // only the ground truth.
+    function matchAnnotations(match: EvaluationMatchView): AnnotationView[] {
+        return [match.gt_annotation, match.pred_annotation].filter(
+            (annotation): annotation is AnnotationView => annotation != null
+        );
+    }
+
+    // Ground-truth and prediction annotations live in separate annotation
+    // collections; publish both so the left-panel Tags menu can create and apply
+    // annotation tags across them for the current selection.
+    const annotationCollectionIds = $derived.by(() => {
+        const ids = new Set<string>();
+        for (const match of matches) {
+            if (match.gt_annotation) ids.add(match.gt_annotation.annotation_collection_id);
+            if (match.pred_annotation) ids.add(match.pred_annotation.annotation_collection_id);
+        }
+        return Array.from(ids);
+    });
+
+    // Selection lives in the shared annotation-crop store, keyed by each
+    // annotation's own (ground-truth or prediction) collection — the same store the
+    // annotations grid uses — so the left-panel Tags menu can act on it.
+    function isMatchSelected(match: EvaluationMatchView): boolean {
+        const annotations = matchAnnotations(match);
+        return (
+            annotations.length > 0 &&
+            annotations.every((annotation) =>
+                $selectedSampleAnnotationCropIds[annotation.annotation_collection_id]?.has(
+                    annotation.sample_id
+                )
+            )
+        );
+    }
+
+    function setMatchSelected(match: EvaluationMatchView, selected: boolean) {
+        for (const annotation of matchAnnotations(match)) {
+            const isCurrentlySelected = !!$selectedSampleAnnotationCropIds[
+                annotation.annotation_collection_id
+            ]?.has(annotation.sample_id);
+            if (isCurrentlySelected !== selected) {
+                toggleSampleAnnotationCropSelection(
+                    annotation.annotation_collection_id,
+                    annotation.sample_id
+                );
+            }
+        }
+    }
+
+    let selectionAnchorKey = $state<string | null>(null);
+
+    function handleSelect(event: MouseEvent | KeyboardEvent, index: number) {
+        const selectedKeys = new Set(matches.filter(isMatchSelected).map(matchKey));
+        const keyToMatch = new Map(matches.map((match) => [matchKey(match), match]));
+        selectionAnchorKey = selectRangeByAnchor({
+            sampleIdsInOrder: matches.map(matchKey),
+            selectedSampleIds: selectedKeys,
+            clickedSampleId: matchKey(matches[index]),
+            clickedIndex: index,
+            shiftKey: event.shiftKey,
+            anchorSampleId: selectionAnchorKey,
+            // selectRangeByAnchor only calls this for the clicked item (toggle) or
+            // for not-yet-selected items in a shift range (select), so toggling the
+            // match to its opposite state is correct for both.
+            onSelectSample: (key) => {
+                const match = keyToMatch.get(key);
+                if (match) setMatchSelected(match, !isMatchSelected(match));
+            }
+        });
+    }
+
+    function clearSelection() {
+        for (const collectionId of annotationCollectionIds) {
+            clearSelectedSampleAnnotationCrops(collectionId);
+        }
+        selectionAnchorKey = null;
+    }
+
+    $effect(() => {
+        setMatchTaggingCollectionIds(annotationCollectionIds);
+    });
+
+    onDestroy(() => {
+        clearSelection();
+        clearMatchTaggingCollectionIds();
+    });
+
     // Open the annotation details for the box that produced the match: prefer the
     // prediction (what we usually debug), fall back to ground truth for FN matches.
     // The annotation lives in its own (GT or prediction) annotation collection, so we
@@ -142,6 +247,16 @@
             $sortDirection
         ].join('|')
     );
+
+    // Selecting matches and then changing filters would leave a confusing,
+    // invisible selection behind, so reset it whenever the filter set changes.
+    let lastFilterHash = $state('');
+    $effect(() => {
+        if (filterHash !== lastFilterHash) {
+            lastFilterHash = filterHash;
+            clearSelection();
+        }
+    });
 </script>
 
 <div class="flex h-full min-w-0 flex-1">
@@ -187,9 +302,9 @@
                                     {height}
                                     {style}
                                     dataTestId="evaluation-match-grid-item"
-                                    tag={false}
+                                    isSelected={isMatchSelected(matches[index])}
                                     ariaLabel={`Evaluation match: ${matches[index].match_type}`}
-                                    onSelect={() => undefined}
+                                    onSelect={(event) => handleSelect(event, index)}
                                     ondblclick={() => handleOnDoubleClick(matches[index])}
                                 >
                                     <EvaluationMatchItem
