@@ -28,28 +28,6 @@ DEFAULT_INITIAL_ROWS = 1_000
 DEFAULT_MAX_INTERVAL_ROWS = 250_000
 
 
-def analyze_tables(session: Session, table_names: Sequence[str]) -> None:
-    """Run ``ANALYZE`` on ``table_names`` to refresh PostgreSQL planner statistics.
-
-    No-op on non-PostgreSQL backends. Commits so the refreshed statistics are
-    visible to subsequent queries on the same session.
-
-    ``ANALYZE`` is transaction-safe (unlike ``VACUUM``) and takes only a lightweight
-    ``SHARE UPDATE EXCLUSIVE`` lock, so it does not block concurrent reads or writes.
-
-    Args:
-        session: The database session.
-        table_names: Trusted, internal table names to analyze (not user input).
-    """
-    if not table_names:
-        return
-    bind = session.get_bind()
-    if bind is None or bind.dialect.name != "postgresql":
-        return
-    session.execute(text(f"ANALYZE {', '.join(table_names)}"))
-    session.commit()
-
-
 class PlannerStatsRefresher:
     """Triggers ``ANALYZE`` periodically during a bulk load to keep query plans fast.
 
@@ -79,3 +57,25 @@ class PlannerStatsRefresher:
             analyze_tables(session=session, table_names=self._table_names)
             self._rows_since_analyze = 0
             self._next_threshold = min(self._next_threshold * 2, self._max_interval_rows)
+
+
+def analyze_tables(session: Session, table_names: Sequence[str]) -> None:
+    """Run ``ANALYZE`` on ``table_names`` to refresh PostgreSQL planner statistics.
+
+    No-op on non-PostgreSQL backends. Commits so the refreshed statistics are
+    visible to subsequent queries on the same session.
+
+    ``ANALYZE`` is transaction-safe (unlike ``VACUUM``) and takes only a lightweight
+    ``SHARE UPDATE EXCLUSIVE`` lock, so it does not block concurrent reads or writes.
+
+    Args:
+        session: The database session.
+        table_names: Trusted, internal table names to analyze (not user input).
+    """
+    if not table_names:
+        return
+    bind = session.get_bind()
+    if bind is None or bind.dialect.name != "postgresql":
+        return
+    session.execute(text(f"ANALYZE {', '.join(table_names)}"))
+    session.commit()
