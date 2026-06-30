@@ -9,3 +9,5 @@ export const ANNOTATION_TYPES: Record<Annotation['annotation_type'], string> = {
 } as const;
 
 export const AUTHENTICATION_SESSION_STORAGE_KEY = 'lightlyEnterprise';
+
+export const CUSTOM_LABEL_COLORS_STORAGE_KEY = 'lightlyCustomLabelColors';

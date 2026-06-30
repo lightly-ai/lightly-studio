@@ -1,3 +1,5 @@
+import { browser } from '$app/environment';
+import { CUSTOM_LABEL_COLORS_STORAGE_KEY } from '$lib/constants';
 import { get, writable } from 'svelte/store';
 
 // Type for storing custom colors
@@ -6,8 +8,52 @@ export type CustomColor = {
     alpha: number;
 };
 
-// Initialize the store with an empty object
-const customLabelColorsStore = writable<Record<string, CustomColor>>({});
+type CustomLabelColors = Record<string, CustomColor>;
+
+// Load any previously persisted custom colors so they survive page reloads and
+// navigation between datasets. Returns an empty map when running on the server,
+// when nothing is stored, or when the stored value is corrupt.
+const loadPersistedColors = (): CustomLabelColors => {
+    if (!browser) {
+        return {};
+    }
+
+    try {
+        const storedData = localStorage.getItem(CUSTOM_LABEL_COLORS_STORAGE_KEY);
+        if (!storedData) {
+            return {};
+        }
+        return JSON.parse(storedData) as CustomLabelColors;
+    } catch (error) {
+        console.error(
+            `Failed to parse ${CUSTOM_LABEL_COLORS_STORAGE_KEY} from localStorage:`,
+            error
+        );
+        return {};
+    }
+};
+
+// Persist the custom colors so they are restored on the next load.
+const persistColors = (colors: CustomLabelColors) => {
+    if (!browser) {
+        return;
+    }
+
+    try {
+        localStorage.setItem(CUSTOM_LABEL_COLORS_STORAGE_KEY, JSON.stringify(colors));
+    } catch (error) {
+        console.error(
+            `Failed to persist ${CUSTOM_LABEL_COLORS_STORAGE_KEY} to localStorage:`,
+            error
+        );
+    }
+};
+
+// Initialize the store from persisted data, falling back to an empty object.
+const customLabelColorsStore = writable<CustomLabelColors>(loadPersistedColors());
+
+// Mirror every change back to localStorage so colors persist across datasets.
+customLabelColorsStore.subscribe(persistColors);
 
 // Store for tracking changes to trigger reactivity
 const colorVersion = writable(0);
