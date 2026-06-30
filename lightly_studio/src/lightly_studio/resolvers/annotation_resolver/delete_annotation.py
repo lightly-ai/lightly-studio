@@ -11,6 +11,7 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
 )
+from lightly_studio.models.annotation.polygon import PolygonAnnotationTable
 from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationTable,
 )
@@ -60,6 +61,11 @@ def delete_annotation(
     session.exec(
         delete(SegmentationAnnotationTable).where(
             col(SegmentationAnnotationTable.sample_id) == annotation.sample_id
+        )
+    )
+    session.exec(
+        delete(PolygonAnnotationTable).where(
+            col(PolygonAnnotationTable.sample_id) == annotation.sample_id
         )
     )
     session.commit()
