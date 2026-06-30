@@ -20,9 +20,13 @@
 <div class="mb-1 flex flex-row items-center gap-2">
     <div class="mb-2 flex-1 text-xs text-muted-foreground">
         {#if config.mode === 'topN'}
-            Top {config.n} of {realClassCount} classes · sorted by {CLASS_SORT_LABELS[
-                config.sortBy
-            ].toLowerCase()}
+            {#if config.n < realClassCount}
+                Top {config.n} of {realClassCount} classes
+            {:else}
+                {realClassCount}
+                {realClassCount === 1 ? 'class' : 'classes'}
+            {/if}
+            · sorted by {CLASS_SORT_LABELS[config.sortBy].toLowerCase()}
         {:else}
             Manual selection · {visibleClassCount} of {realClassCount} classes
         {/if}
