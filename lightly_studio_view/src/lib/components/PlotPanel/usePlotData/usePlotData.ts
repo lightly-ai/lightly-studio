@@ -4,9 +4,17 @@ import type { ComponentProps } from 'svelte';
 import type { ArrowData } from '../useArrowData/useArrowData';
 import { getCategoryBySelection } from '../getCategoryBySelection/getCategoryBySelection';
 import { resolveVisibleCategory } from '../resolveVisibleCategory/resolveVisibleCategory';
-import { EXCLUDED_BY_FILTERS_CATEGORY, INCLUDED_BY_FILTERS_CATEGORY } from '../plotCategories';
+import {
+    EXCLUDED_BY_FILTERS_CATEGORY,
+    HIDDEN_CATEGORY,
+    INCLUDED_BY_FILTERS_CATEGORY
+} from '../plotCategories';
 
 type PlotColumn = 'x' | 'y' | 'category';
+
+// Filtered-out and hidden points land in reserved categories and must never be selected.
+const isUnselectableCategory = (category: number): boolean =>
+    category === EXCLUDED_BY_FILTERS_CATEGORY || category === HIDDEN_CATEGORY;
 
 type UsePlotDataReturn = {
     data: ComponentProps<typeof EmbeddingView>['data'];
@@ -72,12 +80,13 @@ export function usePlotData({
     const sampleIds = data.sample_id as string[];
 
     if (rangeSelection) {
-        // Points inside the polygon keep their prevValue; points outside are demoted to EXCLUDED_BY_FILTERS_CATEGORY.
+        // Points inside the polygon keep their prevValue; points outside are demoted to Excluded.
         category = category.map(getCategoryBySelection(rangeSelection, data));
 
-        // Collect selected sample ids: in-polygon included points are not EXCLUDED_BY_FILTERS_CATEGORY.
+        // Collect in-polygon ids, skipping points that are filtered out or hidden by a legend
+        // toggle — a point the user cannot see must never be committed to the filter.
         const _ids = category.reduce<string[]>((acc, pointCategory, index) => {
-            if (pointCategory !== EXCLUDED_BY_FILTERS_CATEGORY) {
+            if (!isUnselectableCategory(pointCategory) && !hiddenCategories.has(pointCategory)) {
                 acc.push(sampleIds[index]);
             }
             return acc;
@@ -86,13 +95,21 @@ export function usePlotData({
     } else if (highlightedSampleIds.length > 0) {
         const highlightedSampleIdSet = new Set(highlightedSampleIds);
         category = category.map((pointCategory, index) => {
-            if (pointCategory === EXCLUDED_BY_FILTERS_CATEGORY) {
+            if (isUnselectableCategory(pointCategory)) {
                 return pointCategory;
             }
             return highlightedSampleIdSet.has(sampleIds[index])
                 ? pointCategory
                 : EXCLUDED_BY_FILTERS_CATEGORY;
         });
+    }
+
+    // Hide on each point's final category, after demotion: a demoted point is hidden as Excluded,
+    // not its pre-demotion bucket.
+    if (hiddenCategories.size > 0) {
+        category = category.map((pointCategory) =>
+            hiddenCategories.has(pointCategory) ? HIDDEN_CATEGORY : pointCategory
+        );
     }
 
     plotData.set({

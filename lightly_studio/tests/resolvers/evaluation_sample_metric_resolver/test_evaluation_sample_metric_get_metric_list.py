@@ -15,9 +15,10 @@ from tests.resolvers.evaluation_sample_metric_resolver import (
 
 def test_get_metric_list_by_evaluation_run_id(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
-    run, image1 = evaluation_sample_metric_helpers.create_run_and_image(
+    run = evaluation_sample_metric_helpers.create_run(
         session=db_session, dataset_collection_id=dataset.collection_id
     )
+    image1 = create_image(session=db_session, collection_id=dataset.collection_id)
     image2 = create_image(
         session=db_session,
         collection_id=dataset.collection_id,
@@ -59,7 +60,11 @@ def test_get_metric_list_by_evaluation_run_id(db_session: Session) -> None:
 
 
 def test_get_metric_list_by_evaluation_run_id__single_sample(db_session: Session) -> None:
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(session=db_session)
+    dataset = create_collection(session=db_session)
+    run = evaluation_sample_metric_helpers.create_run(
+        session=db_session, dataset_collection_id=dataset.collection_id
+    )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
     evaluation_sample_metric_helpers.create_sample_metrics(
         session=db_session,
         run_id=run.id,
@@ -95,11 +100,21 @@ def test_get_metric_list_by_evaluation_run_id__returns_empty_for_unknown_run(
 
 def test_get_metric_list_by_evaluation_run_id__excludes_other_runs(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
-    run1, image1 = evaluation_sample_metric_helpers.create_run_and_image(
+    run1 = evaluation_sample_metric_helpers.create_run(
         session=db_session, dataset_collection_id=dataset.collection_id, name="run1"
     )
-    run2, image2 = evaluation_sample_metric_helpers.create_run_and_image(
+    image1 = create_image(
+        session=db_session,
+        collection_id=dataset.collection_id,
+        file_path_abs="/path/to/sample1.png",
+    )
+    run2 = evaluation_sample_metric_helpers.create_run(
         session=db_session, dataset_collection_id=dataset.collection_id, name="run2"
+    )
+    image2 = create_image(
+        session=db_session,
+        collection_id=dataset.collection_id,
+        file_path_abs="/path/to/sample2.png",
     )
     evaluation_sample_metric_helpers.create_sample_metrics(
         session=db_session,

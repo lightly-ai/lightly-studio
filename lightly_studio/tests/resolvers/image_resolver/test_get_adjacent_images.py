@@ -14,7 +14,7 @@ from tests import helpers_resolvers
 from tests.helpers_resolvers import AnnotationDetails
 from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
     SampleMetricStub,
-    create_run_and_image,
+    create_run,
     create_sample_metrics,
 )
 
@@ -400,7 +400,8 @@ def test_get_adjacent_images__sort_by_evaluation_metric(db_session: Session) -> 
     collection = helpers_resolvers.create_collection(session=db_session)
     collection_id = collection.collection_id
 
-    run, image_a = create_run_and_image(session=db_session, dataset_collection_id=collection_id)
+    run = create_run(session=db_session, dataset_collection_id=collection_id)
+    image_a = helpers_resolvers.create_image(session=db_session, collection_id=collection_id)
     image_b = helpers_resolvers.create_image(
         session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
     )
