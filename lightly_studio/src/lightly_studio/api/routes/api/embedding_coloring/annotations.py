@@ -5,12 +5,10 @@ from __future__ import annotations
 from collections import defaultdict
 from uuid import UUID
 
-from sqlmodel import Session, col, select
+from sqlmodel import Session
 
 from lightly_studio.api.routes.api.embedding_coloring import coloring_helpers
 from lightly_studio.api.routes.api.embedding_coloring.coloring_helpers import DiscreteColorScale
-from lightly_studio.database import db_array
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.resolvers import annotation_label_resolver, annotation_resolver
 
 
