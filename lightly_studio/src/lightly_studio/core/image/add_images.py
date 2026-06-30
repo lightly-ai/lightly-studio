@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import io
 import json
 import logging
+import os
 import posixpath
-from collections import defaultdict
-from collections.abc import Iterable, Mapping
+from collections import defaultdict, deque
+from collections.abc import Iterable, Iterator, Mapping
+from concurrent.futures import ThreadPoolExecutor, Future
 from pathlib import Path
 from uuid import UUID
 
@@ -39,12 +42,92 @@ logger = logging.getLogger(__name__)
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
 MAX_EXAMPLE_PATHS_TO_SHOW = 5
 
+# Number of threads used to read image dimensions. Reading width/height from a
+# (possibly remote) image is network/IO-bound, so dimensions are fetched
+# concurrently. Override with the LIGHTLY_STUDIO_LOADER_WORKERS env var.
+LOADER_WORKERS = max(1, int(os.environ.get("LIGHTLY_STUDIO_LOADER_WORKERS", "64")))
+
+# Bytes fetched from the start of each image to read its dimensions. Image
+# headers (which carry width/height) sit at the very start of the file, so a
+# small prefix is enough and is fetched in a single ranged read. Override with
+# LIGHTLY_STUDIO_HEADER_BYTES.
+HEADER_READ_BYTES = max(1024, int(os.environ.get("LIGHTLY_STUDIO_HEADER_BYTES", str(64 * 1024))))
+
+
+def _dims_from_bytes(data: bytes) -> tuple[int, int] | None:
+    """Parse (width, height) from raw image bytes, or None if not parseable."""
+    try:
+        with PIL.Image.open(io.BytesIO(data)) as image:
+            return image.size
+    except (PIL.UnidentifiedImageError, OSError):
+        return None
+
+
+def _read_image_dims(image_path: str) -> tuple[str, int, int] | None:
+    """Read (path, width, height) for a single image, or None if unreadable.
+
+    Performs a single ranged read of the first ``HEADER_READ_BYTES`` bytes and
+    parses the dimensions from that in-memory prefix — one round-trip per image,
+    no HEAD request and no seek-driven re-reads against the backend. Falls back
+    to reading the whole file only when the prefix is too small to contain the
+    header (rare). Safe to call from worker threads — no database access.
+    """
+    try:
+        fs, rpath = fsspec.core.url_to_fs(image_path)
+        header = fs.cat_file(rpath, start=0, end=HEADER_READ_BYTES)
+        dims = _dims_from_bytes(header)
+        if dims is None:
+            # Prefix didn't cover the header; fetch the full object once.
+            dims = _dims_from_bytes(fs.cat_file(rpath))
+        if dims is None:
+            return None
+    except (FileNotFoundError, OSError, ValueError):
+        return None
+    return (image_path, dims[0], dims[1])
+
+
+def _iter_image_dims(
+    image_paths: Iterable[str], workers: int
+) -> Iterator[tuple[str, int, int]]:
+    """Yield (path, width, height) tuples, reading dimensions concurrently.
+
+    Dimension reads are dispatched to a thread pool while results are consumed on
+    the calling thread (which owns the database session). A bounded sliding
+    window of in-flight futures keeps memory flat regardless of dataset size.
+    Unreadable images are skipped.
+    """
+    if workers <= 1:
+        for image_path in image_paths:
+            result = _read_image_dims(image_path)
+            if result is not None:
+                yield result
+        return
+
+    paths = iter(image_paths)
+    window: deque[Future[tuple[str, int, int] | None]] = deque()
+    max_in_flight = workers * 4
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        for _ in range(max_in_flight):
+            try:
+                window.append(executor.submit(_read_image_dims, next(paths)))
+            except StopIteration:
+                break
+        while window:
+            result = window.popleft().result()
+            try:
+                window.append(executor.submit(_read_image_dims, next(paths)))
+            except StopIteration:
+                pass
+            if result is not None:
+                yield result
+
 
 def load_into_dataset_from_paths(
     session: Session,
     root_collection_id: UUID,
     image_paths: Iterable[str],
     show_progress: bool = True,
+    read_dimensions: bool = True,
 ) -> list[UUID]:
     """Load images from file paths into the dataset.
 
@@ -53,6 +136,11 @@ def load_into_dataset_from_paths(
         root_collection_id: The ID of the dataset to load images into.
         image_paths: An iterable of file paths to the images to load.
         show_progress: Whether to display a progress bar and final summary of loading results.
+        read_dimensions: When True (default), each image's header is read to record its
+            width/height. When False, no per-image read is performed and dimensions are
+            stored as 0; this is dramatically faster for large remote datasets where the
+            images live in cloud storage. The full image path is still recorded, so the
+            real dimensions (and embeddings) can be backfilled later from the path.
 
     Returns:
         A list of UUIDs of the created samples.
@@ -60,27 +148,31 @@ def load_into_dataset_from_paths(
     samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
 
+    image_paths = list(image_paths)
     logging_context = LoadingLoggingContext(
-        n_samples_to_be_inserted=sum(1 for _ in image_paths),
+        n_samples_to_be_inserted=len(image_paths),
         n_samples_before_loading=sample_resolver.count_by_collection_id(
             session=session, collection_id=root_collection_id
         ),
     )
 
-    for image_path in tqdm(
-        image_paths,
+    # When dimensions are requested they are read concurrently (network/IO-bound);
+    # otherwise we skip all per-image reads and use placeholder dimensions. Database
+    # writes stay on this thread, which owns the session.
+    if read_dimensions:
+        dims_iter: Iterator[tuple[str, int, int]] = _iter_image_dims(
+            image_paths, workers=LOADER_WORKERS
+        )
+    else:
+        dims_iter = ((image_path, 0, 0) for image_path in image_paths)
+
+    for image_path, width, height in tqdm(
+        dims_iter,
+        total=len(image_paths),
         desc="Processing images",
         unit=" images",
         disable=not show_progress,
     ):
-        try:
-            with fsspec.open(image_path, "rb") as file:
-                image = PIL.Image.open(file)
-                width, height = image.size
-                image.close()
-        except (FileNotFoundError, PIL.UnidentifiedImageError, OSError):
-            continue
-
         normalized_path = add_annotations.normalize_images_root(image_path)
         sample = ImageCreate(
             file_name=Path(normalized_path).name,

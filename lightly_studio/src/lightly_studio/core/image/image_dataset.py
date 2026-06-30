@@ -132,6 +132,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         allowed_extensions: Iterable[str] | None = None,
         embed: bool = True,
         tag_depth: int = 0,
+        read_dimensions: bool = True,
+        list_workers: int = 1,
     ) -> None:
         """Adding images from the specified path to the dataset.
 
@@ -144,6 +146,13 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 - `tag_depth=0` (default): No automatic tagging is performed.
                 - `tag_depth=1`: Automatically creates a tag for each
                   image based on its parent directory's name.
+            read_dimensions: If True (default), read each image's header to record its
+                width/height. If False, skip all per-image reads and store dimensions as
+                0 — far faster for large remote datasets. The image path is still
+                recorded, so dimensions can be backfilled later.
+            list_workers: Number of concurrent workers used to discover files in cloud
+                storage. When greater than 1, listing is fanned out across name prefixes
+                instead of paginated serially (cloud protocols only).
 
         Raises:
             NotImplementedError: If tag_depth > 1.
@@ -155,7 +164,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             allowed_extensions_set = None
         image_paths = list(
             fsspec_lister.iter_files_from_path(
-                path=str(path), allowed_extensions=allowed_extensions_set
+                path=str(path),
+                allowed_extensions=allowed_extensions_set,
+                list_workers=list_workers,
             )
         )
 
@@ -166,6 +177,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             session=self.session,
             root_collection_id=self.collection_id,
             image_paths=image_paths,
+            read_dimensions=read_dimensions,
         )
 
         if created_sample_ids:
