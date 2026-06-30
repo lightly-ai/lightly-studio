@@ -18,7 +18,12 @@
     import { useCategoryVisibility } from './useCategoryVisibility/useCategoryVisibility';
     import { isEqual } from 'lodash-es';
     import { getCategoryColors, getCategoryCount, getLegendEntries } from './plotColorUtils';
-    import { INCLUDED_BY_FILTERS_LABEL, NO_CATEGORY_LABEL } from './plotCategories';
+    import {
+        EXCLUDED_BY_FILTERS_CATEGORY,
+        INCLUDED_BY_FILTERS_CATEGORY,
+        INCLUDED_BY_FILTERS_LABEL,
+        NO_CATEGORY_LABEL
+    } from './plotCategories';
     import { page } from '$app/state';
     import { isAnnotationsRoute, isVideosRoute } from '$lib/routes';
     import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
@@ -139,16 +144,36 @@
         resetCategoryVisibility
     } = useCategoryVisibility();
 
-    // Hide-toggles are keyed by color-slot index, but the backend re-ranks slots per request
-    // (most frequent in-filter values win individual slots), so a new legend remaps those indices.
-    // Reset hidden categories whenever the legend changes — covering both filter and color-by
-    // changes — so a stale toggle can never hide a different category than the user picked.
+    // The backend re-ranks color slots per request, so a stale toggle would hide the wrong slot;
+    // reset hidden categories on every legend change. EXCLUDED keeps its meaning, so it always
+    // survives. INCLUDED is relabeled with the color-by mode, so it survives only a filter-only
+    // change — else a hidden "No category" would empty the plot once all points collapse into it.
+    let previousColorByKey: string | undefined = undefined;
     $effect(() => {
         void $colorLegend;
-        resetCategoryVisibility();
+        const colorByKey = JSON.stringify($colorBy);
+        const colorByChanged = colorByKey !== previousColorByKey;
+        previousColorByKey = colorByKey;
+        resetCategoryVisibility(
+            colorByChanged
+                ? [EXCLUDED_BY_FILTERS_CATEGORY]
+                : [EXCLUDED_BY_FILTERS_CATEGORY, INCLUDED_BY_FILTERS_CATEGORY]
+        );
     });
 
     const hasActiveFilter = $derived(filter !== null || activeSampleIds.length > 0);
+
+    // Activating a lasso unhides the Excluded category, otherwise out-of-selection points (which
+    // get demoted to Excluded) would vanish and blank out the canvas mid-draw. The legend keeps
+    // showing the user's real toggle state.
+    const effectiveHiddenCategories = $derived.by(() => {
+        if ($rangeSelection === null || !$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)) {
+            return $hiddenCategories;
+        }
+        const next = new Set($hiddenCategories);
+        next.delete(EXCLUDED_BY_FILTERS_CATEGORY);
+        return next;
+    });
 
     let { data: plotData, selectedSampleIds } = $derived(
         usePlotData({
@@ -156,7 +181,7 @@
             rangeSelection: $rangeSelection,
             highlightedSampleIds: activeSampleIds,
             hasActiveFilter: hasActiveFilter,
-            hiddenCategories: $hiddenCategories
+            hiddenCategories: effectiveHiddenCategories
         })
     );
     const categoryCount = $derived.by(() => getCategoryCount($colorLegend));
@@ -364,6 +389,8 @@
                         {categoryColors}
                         {includedLabel}
                         {legendEntries}
+                        excludedHidden={$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)}
+                        includedHidden={$hiddenCategories.has(INCLUDED_BY_FILTERS_CATEGORY)}
                         onToggleCategory={toggleCategoryVisibility}
                         onDoubleClickCategory={(category) => {
                             focusCategoryVisibility(

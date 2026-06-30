@@ -1,16 +1,13 @@
-import {
-    EXCLUDED_BY_FILTERS_CATEGORY,
-    HIDDEN_CATEGORY,
-    INCLUDED_BY_FILTERS_CATEGORY
-} from '../plotCategories';
+import { EXCLUDED_BY_FILTERS_CATEGORY, INCLUDED_BY_FILTERS_CATEGORY } from '../plotCategories';
 
 /**
- * Resolves the category a point is displayed as, given every category it belongs to in
- * priority order. A multi-category point falls back to its next visible category, and a
- * point whose resolved category is hidden routes to HIDDEN_CATEGORY (not rendered):
+ * Resolves the pre-hiding bucket a point is displayed as:
  * - filtered out -> EXCLUDED_BY_FILTERS_CATEGORY
  * - otherwise the first non-hidden category
- * - otherwise (no categories, or all hidden) -> INCLUDED_BY_FILTERS_CATEGORY
+ * - otherwise (no categories, or all hidden) -> INCLUDED_BY_FILTERS_CATEGORY ("No category")
+ *
+ * `hiddenCategories` only skips hidden color slots here; routing a hidden bucket to
+ * HIDDEN_CATEGORY happens in `usePlotData` after demotion, on the final category.
  *
  * @param colorCategories - All categories the point belongs to, in priority order
  * @param fulfilsFilter - Whether the point passes the active filter (0 = filtered out)
@@ -22,9 +19,7 @@ export const resolveVisibleCategory = (
     hiddenCategories: ReadonlySet<number>
 ): number => {
     if (fulfilsFilter === 0) {
-        return hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)
-            ? HIDDEN_CATEGORY
-            : EXCLUDED_BY_FILTERS_CATEGORY;
+        return EXCLUDED_BY_FILTERS_CATEGORY;
     }
 
     for (const category of colorCategories) {
@@ -33,7 +28,5 @@ export const resolveVisibleCategory = (
         }
     }
 
-    return hiddenCategories.has(INCLUDED_BY_FILTERS_CATEGORY)
-        ? HIDDEN_CATEGORY
-        : INCLUDED_BY_FILTERS_CATEGORY;
+    return INCLUDED_BY_FILTERS_CATEGORY;
 };

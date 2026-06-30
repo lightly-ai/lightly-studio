@@ -99,13 +99,15 @@
 
     const evaluationRunsQuery = useEvaluationRuns(() => ({ datasetId: collection.dataset_id }));
     const evaluationRuns = $derived(evaluationRunsQuery.data ?? []);
-    const hasEvaluationRuns = $derived(evaluationRuns.length > 0);
 
     const parentCollection = $derived.by(() =>
         retrieveParentCollection($collections, collectionId)
     );
 
     const isImages = $derived(isImagesRoute(page.route.id));
+    // Evaluation is currently supported for image collections only. The panel is
+    // reachable even with zero runs so users can trigger the first one from the GUI.
+    const supportsEvaluation = $derived(isImages);
     const isGroups = $derived(isGroupsRoute(page.route.id));
     const isGroupDetails = $derived(isGroupDetailsRoute(page.route.id));
     const isAnnotations = $derived(isAnnotationsRoute(page.route.id));
@@ -116,6 +118,9 @@
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
     const isVideoDetails = $derived(isVideoDetailsRoute(page.route.id));
     const canSelectAll = $derived(isImages || isVideos || isVideoFrames || isAnnotations);
+    const showAnnotationVisibilityToggle = $derived(
+        isAnnotations || isImages || isVideos || isVideoFrames
+    );
 
     let gridType = $state<GridType>('images');
     let lastCollectionId: string | null = null;
@@ -317,8 +322,15 @@
     );
 
     const panelIsVisible = $derived(
+<<<<<<< horatiu-lig-9846-object-level-embeddings-implementation-of-mvp-7
         ($activePanel === 'evaluationRuns' && hasEvaluationRuns) ||
             ($activePanel === 'embeddingPlot' && hasMediaWithEmbeddings) ||
+=======
+        ($activePanel === 'evaluationRuns' && supportsEvaluation) ||
+            ($activePanel === 'embeddingPlot' &&
+                hasMediaWithEmbeddings &&
+                (isImages || isVideos)) ||
+>>>>>>> main
             ($activePanel === 'queryEditor' && isImages)
     );
 </script>
@@ -373,7 +385,7 @@
                             <LabelsMenu
                                 {annotationFilterRows}
                                 onToggleAnnotationFilter={toggleAnnotationFilterSelection}
-                                showVisibilityToggle={isAnnotations || isImages}
+                                showVisibilityToggle={showAnnotationVisibilityToggle}
                             />
 
                             {#if isImages || isVideos || isVideoFrames}
@@ -392,7 +404,7 @@
                         {canSelectAll}
                         isSelectionActive={$selectedCount > 0}
                         {isImages}
-                        {hasMediaWithEmbeddings}
+                        hasMediaWithEmbeddings={hasCollectionSearch}
                         collectionDatasetId={collection.dataset_id}
                         onSelectAll={selectAllHandle.handleSelectAll}
                         onDeselectAll={clearSelection}
@@ -439,13 +451,15 @@
                     {@render paneResizer()}
 
                     <Pane defaultSize={35} minSize={25} class="flex min-h-0 flex-col">
-                        {#if $activePanel === 'evaluationRuns' && hasEvaluationRuns}
+                        {#if $activePanel === 'evaluationRuns' && supportsEvaluation}
                             {#await import('$lib/components/EvaluationRunsPanel/EvaluationRunsPanel.svelte') then { default: EvaluationRunsPanel }}
                                 <EvaluationRunsPanel
                                     onClose={() => setActivePanel('none')}
                                     {evaluationRuns}
                                     isLoading={evaluationRunsQuery.isLoading}
                                     error={evaluationRunsQuery.error?.message}
+                                    datasetId={collection.dataset_id}
+                                    {collectionId}
                                 />
                             {/await}
                         {:else if $activePanel === 'embeddingPlot' && hasMediaWithEmbeddings}
@@ -469,8 +483,8 @@
                     {@render mainContent()}
                 </div>
             {/if}
-            {#if isCollectionGrid && (isImages || hasMediaWithEmbeddings || hasEvaluationRuns)}
-                <SidePanelTabs {isImages} {hasMediaWithEmbeddings} {hasEvaluationRuns} />
+            {#if isCollectionGrid && (isImages || hasMediaWithEmbeddings)}
+                <SidePanelTabs {isImages} {hasMediaWithEmbeddings} {supportsEvaluation} />
             {/if}
             {#if hasEmbeddings}
                 {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then { default: CreateClassifierDialog }}

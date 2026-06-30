@@ -23,6 +23,14 @@ describe('AnnotationSourceSelect', () => {
         );
     });
 
+    it('shows a custom placeholder when provided', () => {
+        render(AnnotationSourceSelect, {
+            props: { ...defaultProps, placeholder: 'Pick a source' }
+        });
+
+        expect(screen.getByTestId('annotation-source-trigger')).toHaveTextContent('Pick a source');
+    });
+
     it('shows the currently selected source', () => {
         render(AnnotationSourceSelect, {
             props: { ...defaultProps, selectedSource: 'predictions-id' }

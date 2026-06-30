@@ -29,6 +29,16 @@ describe('PanelHeader', () => {
         expect(screen.getByText(/rest aggregated/)).toBeInTheDocument();
     });
 
+    it('drops the "Top N of" prefix when there are no more classes than N', () => {
+        render(PanelHeader, {
+            props: { ...defaultProps, realClassCount: 3, visibleClassCount: 3 }
+        });
+
+        expect(screen.getByText(/3 classes · sorted by most confused/)).toBeInTheDocument();
+        expect(screen.queryByText(/Top 5/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/rest aggregated/)).not.toBeInTheDocument();
+    });
+
     it('summarizes the manual view', () => {
         render(PanelHeader, {
             props: {
