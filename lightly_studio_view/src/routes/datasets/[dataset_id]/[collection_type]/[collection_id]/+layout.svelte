@@ -212,6 +212,12 @@
     const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId }));
     const hasEmbeddings = $derived(!!hasEmbeddingsQuery.data);
     const hasMediaWithEmbeddings = $derived((isImages || isVideos) && hasEmbeddings);
+    const hasCollectionSearch = $derived((isImages || isVideos || isAnnotations) && hasEmbeddings);
+    const collectionSearchPlaceholder = $derived(
+        isAnnotations
+            ? 'Search annotations by description or image'
+            : 'Search samples by description or image'
+    );
 
     const { metadataValues } = $derived.by(() => useMetadataFilters(collectionId));
     const { dimensionsValues } = useDimensions(collectionIdStore);
@@ -389,12 +395,13 @@
                         {canSelectAll}
                         isSelectionActive={$selectedCount > 0}
                         {isImages}
-                        {hasMediaWithEmbeddings}
+                        hasMediaWithEmbeddings={hasCollectionSearch}
                         collectionDatasetId={collection.dataset_id}
                         onSelectAll={selectAllHandle.handleSelectAll}
                         onDeselectAll={clearSelection}
                         searchImage={$searchImage}
                         searchPending={$searchPending}
+                        searchPlaceholder={collectionSearchPlaceholder}
                         initialQueryText={$textEmbedding?.queryText ?? ''}
                         onSubmitText={search.setText}
                         onSubmitFile={search.setImage}
