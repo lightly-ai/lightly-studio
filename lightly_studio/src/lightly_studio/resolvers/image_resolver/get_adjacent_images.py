@@ -16,10 +16,11 @@ from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import adjacents, similarity_utils
+from lightly_studio.resolvers.adjacents import keyset_seek
 from lightly_studio.resolvers.image_filter import ImageFilter
 
 # A keyset sort key paired with its sort direction (True == ascending).
-_SortKey = tuple[ColumnElement[Any], bool]
+_SortKey = keyset_seek.SortKey
 
 
 def get_adjacent_images(  # noqa: PLR0913
@@ -103,38 +104,12 @@ def _get_adjacent_images_keyset(
 
     base_query = _keyset_sample_id_query(collection_id=collection_id, filters=filters)
 
-    next_sample_id = _seek_neighbor(
+    return keyset_seek.get_adjacent_result(
         session=session,
-        base_query=base_query,
-        sort_keys=sort_keys,
-        anchor=anchor,
-        forward=True,
-    )
-    previous_sample_id = _seek_neighbor(
-        session=session,
-        base_query=base_query,
-        sort_keys=sort_keys,
-        anchor=anchor,
-        forward=False,
-    )
-
-    total_count = session.exec(
-        select(sqlalchemy.func.count()).select_from(base_query.subquery())
-    ).one()
-
-    # Position is 1-based: number of rows strictly before the anchor, plus the anchor.
-    count_before = session.exec(
-        select(sqlalchemy.func.count()).select_from(
-            base_query.where(_keyset_condition(sort_keys, anchor, after=False)).subquery()
-        )
-    ).one()
-
-    return AdjacentResultView(
-        previous_sample_id=previous_sample_id,
         sample_id=sample_id,
-        next_sample_id=next_sample_id,
-        current_sample_position=count_before + 1,
-        total_count=total_count,
+        base_query=base_query,
+        anchor=anchor,
+        sort_keys=sort_keys,
     )
 
 
@@ -202,60 +177,6 @@ def _fetch_anchor_values(
     if row is None:
         return None
     return tuple(row)
-
-
-def _seek_neighbor(
-    session: Session,
-    base_query: SelectOfScalar[UUID],
-    sort_keys: list[_SortKey],
-    anchor: tuple[Any, ...],
-    *,
-    forward: bool,
-) -> UUID | None:
-    """Return the sample_id immediately after (forward) or before the anchor."""
-    condition = _keyset_condition(sort_keys, anchor, after=forward)
-    order_columns = [
-        _directional_column(column, ascending=ascending, forward=forward)
-        for column, ascending in sort_keys
-    ]
-    query = base_query.where(condition).order_by(*order_columns).limit(1)
-    return session.exec(query).first()
-
-
-def _directional_column(
-    column: ColumnElement[Any], *, ascending: bool, forward: bool
-) -> ColumnElement[Any]:
-    """Apply ASC/DESC for the seek direction (reversed when seeking backwards)."""
-    effective_ascending = ascending if forward else not ascending
-    return column.asc() if effective_ascending else column.desc()
-
-
-def _keyset_condition(
-    sort_keys: list[_SortKey],
-    anchor: tuple[Any, ...],
-    *,
-    after: bool,
-) -> ColumnElement[bool]:
-    """Build the lexicographic keyset comparison for rows after/before the anchor.
-
-    For sort keys ``k0, k1, ...`` with anchor values ``v0, v1, ...`` the rows after
-    the anchor are::
-
-        (k0 AFTER v0)
-        OR (k0 == v0 AND k1 AFTER v1)
-        OR ...
-
-    where ``AFTER`` is ``>`` for an ascending key and ``<`` for a descending key
-    (flipped when ``after`` is False). All keys are non-nullable, so no NULL
-    handling is required.
-    """
-    or_terms: list[ColumnElement[bool]] = []
-    for i, (column, ascending) in enumerate(sort_keys):
-        equals_prefix = [sort_keys[j][0] == anchor[j] for j in range(i)]
-        strictly_after = (column > anchor[i]) if ascending else (column < anchor[i])
-        comparison = strictly_after if after else (~strictly_after) & (column != anchor[i])
-        or_terms.append(sqlalchemy.and_(*equals_prefix, comparison))
-    return sqlalchemy.or_(*or_terms)
 
 
 # --------------------------------------------------------------------------------------
