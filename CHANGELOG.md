@@ -22,6 +22,7 @@ filtered sample count.
 - Improved performance when tagging all samples in the GUI for large datasets.
 - Annotation source selection for exports: when multiple annotation collections exist, the export dialog shows a dropdown to choose which collection to export from. The annotation source can also be specified via the Python API using the `annotation_collection_id` parameter.
 - All embedding plot legend entries (especially e.g. `Excluded by filters`, `No category`, etc.) can be hidden by clicking on them.
+- YOLO object detection export: object detection annotations can now be exported in YOLO format from the GUI export dialog, via the Python API (`dataset.export().to_yolo_object_detections(...)`), and via the export API (`export_format=object_detection_yolo`).
 
 ### Changed
 

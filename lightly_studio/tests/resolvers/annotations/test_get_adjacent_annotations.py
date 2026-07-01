@@ -35,25 +35,25 @@ def test_get_adjacent_annotations__orders_by_path(db_session: Session) -> None:
         file_path_abs="/images/c.png",
     )
 
-    annotation_a = helpers_resolvers.create_annotation(
+    annotation_a, annotation_b, annotation_c = helpers_resolvers.create_annotations(
         session=db_session,
         collection_id=collection_id,
-        sample_id=image_a.sample_id,
-        annotation_label_id=label.annotation_label_id,
+        annotations=[
+            helpers_resolvers.AnnotationDetails(
+                sample_id=image_a.sample_id,
+                annotation_label_id=label.annotation_label_id,
+            ),
+            helpers_resolvers.AnnotationDetails(
+                sample_id=image_b.sample_id,
+                annotation_label_id=label.annotation_label_id,
+            ),
+            helpers_resolvers.AnnotationDetails(
+                sample_id=image_c.sample_id,
+                annotation_label_id=label.annotation_label_id,
+            ),
+        ],
     )
     annotation_collection_id = annotation_a.sample.collection_id
-    annotation_b = helpers_resolvers.create_annotation(
-        session=db_session,
-        collection_id=collection_id,
-        sample_id=image_b.sample_id,
-        annotation_label_id=label.annotation_label_id,
-    )
-    annotation_c = helpers_resolvers.create_annotation(
-        session=db_session,
-        collection_id=collection_id,
-        sample_id=image_c.sample_id,
-        annotation_label_id=label.annotation_label_id,
-    )
 
     result = annotation_resolver.get_adjacent_annotations(
         session=db_session,
@@ -137,25 +137,25 @@ def test_get_adjacent_annotations__respects_annotation_filter(db_session: Sessio
         file_path_abs="/images/c.png",
     )
 
-    annotation_a = helpers_resolvers.create_annotation(
+    annotation_a, annotation_b, _ = helpers_resolvers.create_annotations(
         session=db_session,
         collection_id=collection_id,
-        sample_id=image_a.sample_id,
-        annotation_label_id=dog_label.annotation_label_id,
+        annotations=[
+            helpers_resolvers.AnnotationDetails(
+                sample_id=image_a.sample_id,
+                annotation_label_id=dog_label.annotation_label_id,
+            ),
+            helpers_resolvers.AnnotationDetails(
+                sample_id=image_b.sample_id,
+                annotation_label_id=dog_label.annotation_label_id,
+            ),
+            helpers_resolvers.AnnotationDetails(
+                sample_id=image_c.sample_id,
+                annotation_label_id=cat_label.annotation_label_id,
+            ),
+        ],
     )
     annotation_collection_id = annotation_a.sample.collection_id
-    annotation_b = helpers_resolvers.create_annotation(
-        session=db_session,
-        collection_id=collection_id,
-        sample_id=image_b.sample_id,
-        annotation_label_id=dog_label.annotation_label_id,
-    )
-    helpers_resolvers.create_annotation(
-        session=db_session,
-        collection_id=collection_id,
-        sample_id=image_c.sample_id,
-        annotation_label_id=cat_label.annotation_label_id,
-    )
 
     result = annotation_resolver.get_adjacent_annotations(
         session=db_session,
@@ -202,25 +202,25 @@ def test_get_adjacent_annotations__respects_annotation_tags(db_session: Session)
         file_path_abs="/images/c.png",
     )
 
-    annotation_a = helpers_resolvers.create_annotation(
+    annotation_a, annotation_b, annotation_c = helpers_resolvers.create_annotations(
         session=db_session,
         collection_id=collection_id,
-        sample_id=image_a.sample_id,
-        annotation_label_id=dog_label.annotation_label_id,
+        annotations=[
+            helpers_resolvers.AnnotationDetails(
+                sample_id=image_a.sample_id,
+                annotation_label_id=dog_label.annotation_label_id,
+            ),
+            helpers_resolvers.AnnotationDetails(
+                sample_id=image_b.sample_id,
+                annotation_label_id=dog_label.annotation_label_id,
+            ),
+            helpers_resolvers.AnnotationDetails(
+                sample_id=image_c.sample_id,
+                annotation_label_id=dog_label.annotation_label_id,
+            ),
+        ],
     )
     annotation_collection_id = annotation_a.sample.collection_id
-    annotation_b = helpers_resolvers.create_annotation(
-        session=db_session,
-        collection_id=collection_id,
-        sample_id=image_b.sample_id,
-        annotation_label_id=dog_label.annotation_label_id,
-    )
-    annotation_c = helpers_resolvers.create_annotation(
-        session=db_session,
-        collection_id=collection_id,
-        sample_id=image_c.sample_id,
-        annotation_label_id=dog_label.annotation_label_id,
-    )
 
     tag_one = helpers_resolvers.create_tag(
         session=db_session,
@@ -293,25 +293,25 @@ def test_get_adjacent_annotations__respects_sample_tags(db_session: Session) -> 
         file_path_abs="/images/c.png",
     )
 
-    annotation_a = helpers_resolvers.create_annotation(
+    annotation_a, annotation_b, annotation_c = helpers_resolvers.create_annotations(
         session=db_session,
         collection_id=collection_id,
-        sample_id=image_a.sample_id,
-        annotation_label_id=dog_label.annotation_label_id,
+        annotations=[
+            helpers_resolvers.AnnotationDetails(
+                sample_id=image_a.sample_id,
+                annotation_label_id=dog_label.annotation_label_id,
+            ),
+            helpers_resolvers.AnnotationDetails(
+                sample_id=image_b.sample_id,
+                annotation_label_id=dog_label.annotation_label_id,
+            ),
+            helpers_resolvers.AnnotationDetails(
+                sample_id=image_c.sample_id,
+                annotation_label_id=dog_label.annotation_label_id,
+            ),
+        ],
     )
     annotation_collection_id = annotation_a.sample.collection_id
-    annotation_b = helpers_resolvers.create_annotation(
-        session=db_session,
-        collection_id=collection_id,
-        sample_id=image_b.sample_id,
-        annotation_label_id=dog_label.annotation_label_id,
-    )
-    annotation_c = helpers_resolvers.create_annotation(
-        session=db_session,
-        collection_id=collection_id,
-        sample_id=image_c.sample_id,
-        annotation_label_id=dog_label.annotation_label_id,
-    )
 
     sample_tag_one = helpers_resolvers.create_tag(
         session=db_session,

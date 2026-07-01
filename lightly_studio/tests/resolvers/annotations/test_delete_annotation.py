@@ -101,7 +101,7 @@ def test_delete_annotation__deletes_evaluation_annotation_metrics(
     dataset = create_collection(session=db_session)
     run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
-        dataset_collection_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
     )
     image = create_image(session=db_session, collection_id=dataset.collection_id)
     collection_id = dataset.collection_id
@@ -161,13 +161,13 @@ def test_delete_annotation__preserves_other_run_sample_metrics(
     dataset = create_collection(session=db_session)
     run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
-        dataset_collection_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         name="run1",
     )
     image = create_image(session=db_session, collection_id=dataset.collection_id)
     other_run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
-        dataset_collection_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         name="run2",
     )
 

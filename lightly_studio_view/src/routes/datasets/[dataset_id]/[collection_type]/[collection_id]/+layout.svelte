@@ -66,6 +66,7 @@
     import { GRID_IMAGE_SEARCH_DROP_EVENT, type GridItemDragData } from '$lib/components/GridItem';
     import { useSearchEmbedding } from '$lib/hooks/useSearchEmbedding/useSearchEmbedding';
     import { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
+    import { clearAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
     const { data, children } = $props();
     const {
         collection,
@@ -98,13 +99,15 @@
 
     const evaluationRunsQuery = useEvaluationRuns(() => ({ datasetId: collection.dataset_id }));
     const evaluationRuns = $derived(evaluationRunsQuery.data ?? []);
-    const hasEvaluationRuns = $derived(evaluationRuns.length > 0);
 
     const parentCollection = $derived.by(() =>
         retrieveParentCollection($collections, collectionId)
     );
 
     const isImages = $derived(isImagesRoute(page.route.id));
+    // Evaluation is currently supported for image collections only. The panel is
+    // reachable even with zero runs so users can trigger the first one from the GUI.
+    const supportsEvaluation = $derived(isImages);
     const isGroups = $derived(isGroupsRoute(page.route.id));
     const isGroupDetails = $derived(isGroupDetailsRoute(page.route.id));
     const isAnnotations = $derived(isAnnotationsRoute(page.route.id));
@@ -197,6 +200,7 @@
         if (lastCollectionId && lastCollectionId !== collectionId) {
             clearSelectedSamples(lastCollectionId);
             clearSelectedSampleAnnotationCrops(lastCollectionId);
+            clearAnnotationPlotSelection();
         }
 
         gridType = nextGridType;
@@ -209,7 +213,14 @@
 
     const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId }));
     const hasEmbeddings = $derived(!!hasEmbeddingsQuery.data);
-    const hasMediaWithEmbeddings = $derived((isImages || isVideos) && hasEmbeddings);
+    const hasMediaWithEmbeddings = $derived(
+        (isImages || isVideos || isAnnotations) && hasEmbeddings
+    );
+    const collectionSearchPlaceholder = $derived(
+        isAnnotations
+            ? 'Search annotations by description or image'
+            : 'Search samples by description or image'
+    );
 
     const { metadataValues } = $derived.by(() => useMetadataFilters(collectionId));
     const { dimensionsValues } = useDimensions(collectionIdStore);
@@ -311,10 +322,8 @@
     );
 
     const panelIsVisible = $derived(
-        ($activePanel === 'evaluationRuns' && hasEvaluationRuns) ||
-            ($activePanel === 'embeddingPlot' &&
-                hasMediaWithEmbeddings &&
-                (isImages || isVideos)) ||
+        ($activePanel === 'evaluationRuns' && supportsEvaluation) ||
+            ($activePanel === 'embeddingPlot' && hasMediaWithEmbeddings) ||
             ($activePanel === 'queryEditor' && isImages)
     );
 </script>
@@ -358,6 +367,7 @@
                                 {collectionIdStore}
                                 {isVideos}
                                 {isImages}
+                                {isAnnotations}
                             />
                             {#if isImages}
                                 <ConfusionCellFilterItem />
@@ -393,6 +403,7 @@
                         onDeselectAll={clearSelection}
                         searchImage={$searchImage}
                         searchPending={$searchPending}
+                        searchPlaceholder={collectionSearchPlaceholder}
                         initialQueryText={$textEmbedding?.queryText ?? ''}
                         onSubmitText={search.setText}
                         onSubmitFile={search.setImage}
@@ -433,18 +444,24 @@
                     {@render paneResizer()}
 
                     <Pane defaultSize={35} minSize={25} class="flex min-h-0 flex-col">
-                        {#if $activePanel === 'evaluationRuns' && hasEvaluationRuns}
+                        {#if $activePanel === 'evaluationRuns' && supportsEvaluation}
                             {#await import('$lib/components/EvaluationRunsPanel/EvaluationRunsPanel.svelte') then { default: EvaluationRunsPanel }}
                                 <EvaluationRunsPanel
                                     onClose={() => setActivePanel('none')}
                                     {evaluationRuns}
                                     isLoading={evaluationRunsQuery.isLoading}
                                     error={evaluationRunsQuery.error?.message}
+                                    datasetId={collection.dataset_id}
+                                    {collectionId}
                                 />
                             {/await}
-                        {:else if $activePanel === 'embeddingPlot' && hasMediaWithEmbeddings && (isImages || isVideos)}
+                        {:else if $activePanel === 'embeddingPlot' && hasMediaWithEmbeddings}
                             {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
-                                <PlotPanel />
+                                <!-- PlotPanel captures collectionId at mount; remount it when
+                                     switching collections (e.g. images <-> annotations tab). -->
+                                {#key collectionId}
+                                    <PlotPanel {collectionId} />
+                                {/key}
                             {/await}
                         {:else if $activePanel === 'queryEditor' && isImages}
                             <QueryEditorPanel onClose={() => setActivePanel('none')} />
@@ -459,8 +476,8 @@
                     {@render mainContent()}
                 </div>
             {/if}
-            {#if isCollectionGrid && (isImages || hasMediaWithEmbeddings || hasEvaluationRuns)}
-                <SidePanelTabs {isImages} {hasMediaWithEmbeddings} {hasEvaluationRuns} />
+            {#if isCollectionGrid && (isImages || hasMediaWithEmbeddings)}
+                <SidePanelTabs {isImages} {hasMediaWithEmbeddings} {supportsEvaluation} />
             {/if}
             {#if hasEmbeddings}
                 {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then { default: CreateClassifierDialog }}
