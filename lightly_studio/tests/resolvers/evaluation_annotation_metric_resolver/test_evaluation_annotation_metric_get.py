@@ -41,7 +41,7 @@ def test_get_all_by_evaluation_run_id(db_session: Session) -> None:
         sample_id=image.sample_id,
         annotation_label_id=label.annotation_label_id,
     )
-    create_annotation_metrics(
+    [tp_stub] = create_annotation_metrics(
         session=db_session,
         run_id=run.id,
         true_positive_metric_stubs=[
@@ -74,8 +74,8 @@ def test_get_all_by_evaluation_run_id(db_session: Session) -> None:
     assert all(result.sample_id == image.sample_id for result in results)
 
     tp_result = next(r for r in results if r.metric_name == "iou")
-    assert tp_result.gt_annotation_id is not None
-    assert tp_result.pred_annotation_id is not None
+    assert tp_result.gt_annotation_id == tp_stub.gt_annotation_id
+    assert tp_result.pred_annotation_id == tp_stub.pred_annotation_id
     assert tp_result.value == pytest.approx(0.75)
 
 

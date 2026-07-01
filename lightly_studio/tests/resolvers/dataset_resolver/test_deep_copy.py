@@ -835,7 +835,11 @@ def test_deep_copy__with_evaluation_annotation_metrics(db_session: Session) -> N
     original_tp_metric = next(m for m in original_metrics if m.metric_name == "iou")
 
     # Assert - annotation IDs are remapped (not the originals)
-    original_annotation_ids = {original_tp_metric.gt_annotation_id, pred_annotation.sample_id}
+    original_annotation_ids = {
+        original_tp_metric.gt_annotation_id,
+        original_tp_metric.pred_annotation_id,
+        pred_annotation.sample_id,
+    }
     copied_annotation_ids = (
         {m.gt_annotation_id for m in copied_metrics}
         | {m.pred_annotation_id for m in copied_metrics}
