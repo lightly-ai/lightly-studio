@@ -43,34 +43,37 @@ class SampleMetricStub:
 
 def create_run(
     session: Session,
-    dataset_collection_id: UUID | None = None,
+    collection_id: UUID | None = None,
     name: str = "test_run",
 ) -> EvaluationRunTable:
-    """Create an evaluation run with gt/pred annotation collections."""
-    if dataset_collection_id is None:
-        dataset_collection_id = create_collection(session=session).collection_id
-    dataset_collection = collection_resolver.get_by_id(
-        session=session,
-        collection_id=dataset_collection_id,
-    )
-    if dataset_collection is None:
-        raise ValueError(f"Collection {dataset_collection_id} doesn't exist")
+    """Create an evaluation run with ground truth/prediction annotation collections."""
+    if collection_id is not None:
+        collection = collection_resolver.get_by_id(
+            session=session,
+            collection_id=collection_id,
+        )
+        if collection is None:
+            raise RuntimeError(f"Collection {collection_id} doesn't exist")
+    else:
+        collection = create_collection(session=session)
+        collection_id = collection.collection_id
+
     gt_collection = create_collection(
         session=session,
         sample_type=SampleType.ANNOTATION,
-        parent_collection_id=dataset_collection_id,
+        parent_collection_id=collection_id,
     )
     pred_collection = create_collection(
         session=session,
         sample_type=SampleType.ANNOTATION,
-        parent_collection_id=dataset_collection_id,
+        parent_collection_id=collection_id,
     )
     return evaluation_run_resolver.create(
         session=session,
         evaluation_run_input=EvaluationRunCreate(
             name=name,
+            dataset_id=collection.dataset_id,
             gt_annotation_collection_id=gt_collection.collection_id,
-            dataset_id=dataset_collection.dataset_id,
             pred_annotation_collection_id=pred_collection.collection_id,
             task_type=EvaluationTaskType.OBJECT_DETECTION,
         ),
@@ -104,6 +107,10 @@ def create_annotation_metrics(
     annotation_metrics: list[AnnotationMetricStub] | None = None,
 ) -> None:
     annotation_metrics = annotation_metrics or []
+    run = evaluation_run_resolver.get_by_id(session=session, evaluation_id=run_id)
+    if run is None:
+        raise ValueError(f"Evaluation run {run_id} doesn't exist")
+
     evaluation_annotation_metric_resolver.create_many(
         session=session,
         records=[

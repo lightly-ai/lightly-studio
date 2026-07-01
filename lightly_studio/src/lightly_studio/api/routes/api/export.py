@@ -62,6 +62,35 @@ def export_collection_annotations(
             temp_dir.cleanup()
             # Reraise.
             raise
+    elif export_format == ExportFormat.OBJECT_DETECTION_YOLO:
+        output_path = PathlibPath(temp_dir.name) / "yolo"
+
+        try:
+            image_dataset_export.to_yolo_object_detections(
+                session=session,
+                dataset_id=collection.dataset_id,
+                samples=dataset_query,
+                output_folder=output_path,
+                annotation_collection_id=annotation_collection_id,
+            )
+        except Exception:
+            temp_dir.cleanup()
+            # Reraise.
+            raise
+
+        # For YOLO export, the exporter produces a directory (data.yaml + labels/),
+        # so this route streams the folder as a .zip instead of streaming a single file.
+        return StreamingResponse(
+            content=_stream_export_dir(
+                temp_dir=temp_dir,
+                dir_path=output_path,
+            ),
+            media_type="application/zip",
+            headers={
+                "Access-Control-Expose-Headers": "Content-Disposition",
+                "Content-Disposition": f"attachment; filename={output_path.name}.zip",
+            },
+        )
     elif export_format == ExportFormat.SEGMENTATION_MASK_COCO:
         output_path = PathlibPath(temp_dir.name) / "coco_segmentation_mask_export.json"
 

@@ -837,7 +837,7 @@ def test_get_all_by_collection_id__sort_by_evaluation_metric_asc(db_session: Ses
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
-    run = create_run(session=db_session, dataset_collection_id=collection_id)
+    run = create_run(session=db_session, collection_id=collection_id)
     image_a = create_image(session=db_session, collection_id=collection_id)
     image_b = create_image(
         session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
@@ -875,7 +875,7 @@ def test_get_all_by_collection_id__sort_by_evaluation_metric_desc(db_session: Se
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
-    run = create_run(session=db_session, dataset_collection_id=collection_id)
+    run = create_run(session=db_session, collection_id=collection_id)
     image_a = create_image(session=db_session, collection_id=collection_id)
     [image_b, image_c] = create_images(
         db_session=db_session,
@@ -914,7 +914,7 @@ def test_get_all_by_collection_id__sort_by_two_evaluation_metrics(db_session: Se
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
-    run = create_run(session=db_session, dataset_collection_id=collection_id)
+    run = create_run(session=db_session, collection_id=collection_id)
     image_a = create_image(session=db_session, collection_id=collection_id)
     image_b = create_image(
         session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
