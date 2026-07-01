@@ -1,4 +1,4 @@
-"""Generic implementation of filter_new_paths shared by sample sub-types."""
+"""filter_new_paths: split file paths into new vs. already-present for a collection."""
 
 from __future__ import annotations
 
@@ -6,32 +6,41 @@ from uuid import UUID
 
 from sqlmodel import Session, col, select
 
+from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoTable
 from lightly_studio.utils import batching
 
+# Sample sub-type table that stores ``file_path_abs`` for each collection type.
+_TABLE_BY_SAMPLE_TYPE: dict[SampleType, type[ImageTable] | type[VideoTable]] = {
+    SampleType.IMAGE: ImageTable,
+    SampleType.VIDEO: VideoTable,
+}
+
 
 def filter_new_paths(
-    session: Session,
-    collection_id: UUID,
-    file_paths_abs: list[str],
-    model: type[ImageTable] | type[VideoTable],
+    session: Session, collection_id: UUID, file_paths_abs: list[str]
 ) -> tuple[list[str], list[str]]:
     """Return file paths that do not already exist in the given collection and those that do.
+
+    The sample sub-type table (image or video) is derived from the collection's
+    ``sample_type``, so callers only pass the collection.
 
     Args:
         session: The database session.
         collection_id: The collection ID to check for existing paths.
         file_paths_abs: The absolute file paths to filter.
-        model: The sample sub-type table to look the paths up in (e.g. ``ImageTable``
-            or ``VideoTable``). Both expose ``file_path_abs`` and a ``sample_id`` foreign
-            key to ``SampleTable``.
 
     Returns:
         A tuple of (new_paths, existing_paths) where new_paths are file paths
         not yet in the collection and existing_paths are already present.
     """
+    collection = session.get(CollectionTable, collection_id)
+    if collection is None:
+        raise ValueError(f"Collection with id {collection_id} not found.")
+    model = _TABLE_BY_SAMPLE_TYPE[collection.sample_type]
+
     existing_file_paths_abs: set[str] = set()
     for batch in batching.batched(items=file_paths_abs):
         existing_file_paths_abs.update(

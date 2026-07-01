@@ -38,7 +38,7 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.collection import SampleType
-from lightly_studio.models.video import VideoCreate, VideoFrameCreate, VideoTable
+from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
@@ -115,7 +115,6 @@ def load_into_collection_from_paths(  # noqa: PLR0913
         session=session,
         collection_id=collection_id,
         file_paths_abs=video_paths_list,
-        model=VideoTable,
     )
     video_logging_context = loading_log.LoadingLoggingContext(
         n_samples_to_be_inserted=len(video_paths_list),
