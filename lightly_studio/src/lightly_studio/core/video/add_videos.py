@@ -111,8 +111,10 @@ def load_into_collection_from_paths(  # noqa: PLR0913
     created_video_sample_ids: list[UUID] = []
     created_video_frame_sample_ids: list[UUID] = []
     video_paths_list = list(video_paths)
-    file_paths_new, file_paths_exist = video_resolver.filter_new_paths(
-        session=session, collection_id=collection_id, file_paths_abs=video_paths_list
+    file_paths_new, file_paths_exist = sample_resolver.filter_new_paths(
+        session=session,
+        collection_id=collection_id,
+        file_paths_abs=video_paths_list,
     )
     video_logging_context = loading_log.LoadingLoggingContext(
         n_samples_to_be_inserted=len(video_paths_list),
