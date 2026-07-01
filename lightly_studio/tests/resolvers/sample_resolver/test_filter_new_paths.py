@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from uuid import UUID
-
 import pytest
 from sqlmodel import Session
 
@@ -12,31 +9,33 @@ from tests.helpers_resolvers import create_collection, create_image
 from tests.resolvers.video.helpers import VideoStub, create_videos
 
 
-def _create_image(session: Session, collection_id: UUID, file_path_abs: str) -> None:
-    create_image(session=session, collection_id=collection_id, file_path_abs=file_path_abs)
-
-
-def _create_video(session: Session, collection_id: UUID, file_path_abs: str) -> None:
-    create_videos(
-        session=session, collection_id=collection_id, videos=[VideoStub(path=file_path_abs)]
+def test_filter_new_paths__images(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
+    create_image(
+        session=db_session, collection_id=collection.collection_id, file_path_abs="/existing"
     )
 
+    file_paths_new, file_paths_old = sample_resolver.filter_new_paths(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_paths_abs=["/existing", "/new"],
+    )
 
-# (collection sample type, helper that inserts one sample with a given path).
-_SAMPLE_CASES = [
-    pytest.param(SampleType.IMAGE, _create_image, id="image"),
-    pytest.param(SampleType.VIDEO, _create_video, id="video"),
-]
+    assert file_paths_new == ["/new"]
+    assert file_paths_old == ["/existing"]
 
 
-@pytest.mark.parametrize(("sample_type", "create_sample"), _SAMPLE_CASES)
-def test_filter_new_paths_splits_existing_from_new(
+def test_filter_new_paths__videos(
     db_session: Session,
-    sample_type: SampleType,
-    create_sample: Callable[[Session, UUID, str], None],
 ) -> None:
-    collection = create_collection(session=db_session, sample_type=sample_type)
-    create_sample(db_session, collection.collection_id, "/existing")
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    create_videos(
+        session=db_session,
+        collection_id=collection.collection_id,
+        videos=[VideoStub(path="/existing")],
+    )
 
     file_paths_new, file_paths_old = sample_resolver.filter_new_paths(
         session=db_session,

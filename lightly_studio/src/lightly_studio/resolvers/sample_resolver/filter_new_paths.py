@@ -13,9 +13,9 @@ from lightly_studio.models.video import VideoTable
 from lightly_studio.utils import batching
 
 # Sample sub-type table that stores ``file_path_abs`` for each collection type.
-_TABLE_BY_SAMPLE_TYPE: dict[SampleType, type[ImageTable] | type[VideoTable]] = {
-    SampleType.IMAGE: ImageTable,
-    SampleType.VIDEO: VideoTable,
+SAMPLE_TYPE_TO_COLUMN = {
+    SampleType.IMAGE: col(ImageTable.file_path_abs),
+    SampleType.VIDEO: col(VideoTable.file_path_abs),
 }
 
 
@@ -39,22 +39,22 @@ def filter_new_paths(
     collection = session.get(CollectionTable, collection_id)
     if collection is None:
         raise ValueError(f"Collection with id {collection_id} not found.")
-    model = _TABLE_BY_SAMPLE_TYPE.get(collection.sample_type)
-    if model is None:
+    column = SAMPLE_TYPE_TO_COLUMN.get(collection.sample_type)
+    if column is None:
         raise ValueError(
             f"filter_new_paths does not support sample type {collection.sample_type}; "
-            f"supported types are {sorted(t.value for t in _TABLE_BY_SAMPLE_TYPE)}."
+            f"supported types are {sorted(t for t in SAMPLE_TYPE_TO_COLUMN)}."
         )
 
     existing_file_paths_abs: set[str] = set()
     for batch in batching.batched(items=file_paths_abs):
         existing_file_paths_abs.update(
             session.exec(
-                select(col(model.file_path_abs))
+                select(column)
                 .join(SampleTable)
                 .where(
                     col(SampleTable.collection_id) == collection_id,
-                    col(model.file_path_abs).in_(batch),
+                    column.in_(batch),
                 )
             ).all()
         )
