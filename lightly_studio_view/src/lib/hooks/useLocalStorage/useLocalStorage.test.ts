@@ -86,11 +86,16 @@ describe('useLocalStorage', () => {
 
     it('should handle errors when writing to localStorage', () => {
         mockLocalStorage.getItem.mockReturnValueOnce(null);
+
+        const store = useLocalStorage<string>('testKey', 'initial');
+
+        // Construction subscribes synchronously and writes the initial value, so
+        // reset here to isolate the .set() write path from that first write.
+        vi.mocked(console.warn).mockClear();
         mockLocalStorage.setItem.mockImplementationOnce(() => {
             throw new Error('Storage write error');
         });
 
-        const store = useLocalStorage<string>('testKey', 'initial');
         store.set('new value');
 
         expect(console.warn).toHaveBeenCalled();
