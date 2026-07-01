@@ -24,7 +24,7 @@ def test_get_all_by_evaluation_run_id(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
     run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
-        dataset_collection_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
     )
     image = create_image(session=db_session, collection_id=dataset.collection_id)
     label = create_annotation_label(
@@ -92,7 +92,7 @@ def test_get_all_by_evaluation_run_id__returns_empty_for_unknown_run(
 def test_get_all_by_evaluation_run_id__excludes_other_runs(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
     run1 = evaluation_sample_metric_helpers.create_run(
-        session=db_session, dataset_collection_id=dataset.collection_id, name="run1"
+        session=db_session, collection_id=dataset.collection_id, name="run1"
     )
     image1 = create_image(
         session=db_session,
@@ -100,7 +100,7 @@ def test_get_all_by_evaluation_run_id__excludes_other_runs(db_session: Session) 
         file_path_abs="/path/to/run1.png",
     )
     run2 = evaluation_sample_metric_helpers.create_run(
-        session=db_session, dataset_collection_id=dataset.collection_id, name="run2"
+        session=db_session, collection_id=dataset.collection_id, name="run2"
     )
     image2 = create_image(
         session=db_session,

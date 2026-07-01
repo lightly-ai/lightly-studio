@@ -25,8 +25,10 @@ from lightly_studio.resolvers.image_resolver.get_all_by_collection_id import (
 )
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
+    AnnotationDetails,
     create_annotation,
     create_annotation_label,
+    create_annotations,
     create_collection,
     create_image,
 )
@@ -384,23 +386,23 @@ def test_count_image_annotations_by_collection__with_image_filter(
         label_name="cat",
     )
 
-    create_annotation(
+    create_annotations(
         session=db_session,
-        sample_id=image_1.sample_id,
-        annotation_label_id=cat_label.annotation_label_id,
         collection_id=collection_id,
-    )
-    create_annotation(
-        session=db_session,
-        sample_id=image_2.sample_id,
-        annotation_label_id=dog_label.annotation_label_id,
-        collection_id=collection_id,
-    )
-    create_annotation(
-        session=db_session,
-        sample_id=image_3.sample_id,
-        annotation_label_id=dog_label.annotation_label_id,
-        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image_1.sample_id,
+                annotation_label_id=cat_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=image_2.sample_id,
+                annotation_label_id=dog_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=image_3.sample_id,
+                annotation_label_id=dog_label.annotation_label_id,
+            ),
+        ],
     )
 
     response = test_client.post(

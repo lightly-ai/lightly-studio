@@ -7,8 +7,9 @@ from lightly_studio.models.evaluation_annotation_metric import (
 )
 from lightly_studio.resolvers import evaluation_annotation_metric_resolver
 from tests.helpers_resolvers import (
-    create_annotation,
+    AnnotationDetails,
     create_annotation_label,
+    create_annotations,
     create_collection,
     create_image,
 )
@@ -21,30 +22,30 @@ def test_create_many(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
     run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
-        dataset_collection_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
     )
     image = create_image(session=db_session, collection_id=dataset.collection_id)
     label = create_annotation_label(
         session=db_session,
         root_collection_id=dataset.collection_id,
     )
-    pred_annotation = create_annotation(
+    pred_annotation, gt_annotation, unmatched_pred_annotation = create_annotations(
         session=db_session,
         collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label.annotation_label_id,
-    )
-    gt_annotation = create_annotation(
-        session=db_session,
-        collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label.annotation_label_id,
-    )
-    unmatched_pred_annotation = create_annotation(
-        session=db_session,
-        collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label.annotation_label_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image.sample_id,
+                annotation_label_id=label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=image.sample_id,
+                annotation_label_id=label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=image.sample_id,
+                annotation_label_id=label.annotation_label_id,
+            ),
+        ],
     )
 
     evaluation_annotation_metric_resolver.create_many(
