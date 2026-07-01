@@ -88,6 +88,33 @@ class LightlyStudioObjectDetectionInput(LightlyStudioInputBase, ObjectDetectionI
             )
 
 
+class LightlyStudioYOLOObjectDetectionInput(LightlyStudioObjectDetectionInput):
+    """Labelformat adapter for YOLO object detection export.
+
+    Uses relative filenames so the YOLO writer places label files inside the output
+    ``labels`` directory. The base adapter uses absolute paths, which are fine for COCO
+    (stored verbatim as strings) but would break YOLO: the writer joins the filename
+    with the output directory to build each label file path, and an absolute path would
+    escape that directory.
+    """
+
+    def get_images(self) -> Iterable[Image]:
+        """Returns the images for export with relative filenames."""
+        for idx, sample in enumerate(self._samples):
+            yield _sample_to_image(sample=sample, image_id=idx, filename=sample.file_name)
+
+    def get_labels(self) -> Iterable[ImageObjectDetection]:
+        """Returns the labels for export with relative filenames."""
+        for idx, sample in enumerate(self._samples):
+            yield _sample_to_image_obj_det(
+                sample=sample,
+                image_id=idx,
+                label_id_to_category=self._label_id_to_category,
+                annotation_collection_id=self._annotation_collection_id,
+                filename=sample.file_name,
+            )
+
+
 class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSegmentationInput):
     """Labelformat adapter for segmentation mask backed by dataset samples and annotations."""
 
@@ -231,6 +258,7 @@ def _sample_to_image_obj_det(
     image_id: int,
     label_id_to_category: dict[UUID, Category],
     annotation_collection_id: UUID | None,
+    filename: str | None = None,
 ) -> ImageObjectDetection:
     # TODO(Michal, 09/2025): We can optimise in the future to filter annotations in a DB query.
     objects = [
@@ -246,7 +274,7 @@ def _sample_to_image_obj_det(
         )
     ]
     return ImageObjectDetection(
-        image=_sample_to_image(sample=sample, image_id=image_id),
+        image=_sample_to_image(sample=sample, image_id=image_id, filename=filename),
         objects=objects,
     )
 
