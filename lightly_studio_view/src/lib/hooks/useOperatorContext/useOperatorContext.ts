@@ -49,11 +49,22 @@ export function resolveIsDetailPage(routeId: string | null): boolean {
     );
 }
 
-export function resolveScopeLabel(sampleType: SampleType | null, isOnDetailPage: boolean): string {
-    if (sampleType === null) return 'Full collection';
-    return isOnDetailPage
-        ? `Current ${sampleType.replaceAll('_', ' ')}`
-        : `All ${sampleType.replaceAll('_', ' ')}s in the view`;
+export function resolveScopeLabel(
+    sampleType: SampleType | null,
+    isOnDetailPage: boolean,
+    scopeCount: number,
+    hasActiveFilter: boolean
+): string {
+    if (sampleType === null) return 'the entire collection';
+    if (isOnDetailPage) {
+        return `the currently viewed ${sampleType.replaceAll('_', ' ')}`;
+    }
+    const typeName = sampleType.replaceAll('_', ' ');
+    const plural = scopeCount === 1 ? typeName : `${typeName}s`;
+    if (hasActiveFilter) {
+        return `${scopeCount} filtered ${plural}`;
+    }
+    return `all ${scopeCount} ${plural}`;
 }
 
 export function resolveContextFilter(
@@ -94,14 +105,12 @@ export function useOperatorContext(
 
     const isOnDetailPage = derived(routeId, resolveIsDetailPage);
     const currentScope = derived(pageContext, ($p) => $p.sampleType as OperatorScope | null);
-    const scopeLabel = derived(pageContext, ($p) =>
-        resolveScopeLabel($p.sampleType, resolveIsDetailPage($p.routeId))
-    );
 
     const { imageFilter } = useImageFilters();
     const { videoFilter } = useVideoFilters();
     const { frameFilter } = useFramesFilter();
-    const { selectedAnnotationFilterIds } = useGlobalStorage();
+    const { selectedAnnotationFilterIds, filteredSampleCount, filteredAnnotationCount } =
+        useGlobalStorage();
 
     const contextFilter = derived(
         [
@@ -128,6 +137,40 @@ export function useOperatorContext(
                 $annotationFilterIds,
                 $tagsSelected
             )
+    );
+
+    // True only when the user has applied explicit filters — excludes intrinsic route constraints
+    // (e.g. the captions route always sends has_captions:true, which is not a user-applied filter).
+    const hasActiveFilter = derived(
+        [routeId, imageFilter, videoFilter, frameFilter, selectedAnnotationFilterIds, tagsSelected],
+        ([
+            $routeId,
+            $imageFilter,
+            $videoFilter,
+            $frameFilter,
+            $annotationFilterIds,
+            $tagsSelected
+        ]) => {
+            if (isAnnotationsRoute($routeId)) {
+                return $annotationFilterIds.size > 0 || $tagsSelected.size > 0;
+            }
+            if (isImagesRoute($routeId)) return $imageFilter !== null;
+            if (isVideosRoute($routeId)) return $videoFilter !== null;
+            if (isVideoFramesRoute($routeId)) return $frameFilter !== null;
+            return false;
+        }
+    );
+
+    const scopeCount = derived(
+        [routeId, filteredSampleCount, filteredAnnotationCount],
+        ([$routeId, $sampleCount, $annotationCount]) =>
+            isAnnotationsRoute($routeId) ? $annotationCount : $sampleCount
+    );
+
+    const scopeLabel = derived(
+        [pageContext, isOnDetailPage, scopeCount, hasActiveFilter],
+        ([$p, $isDetail, $count, $hasFilter]) =>
+            resolveScopeLabel($p.sampleType, $isDetail, $count, $hasFilter)
     );
 
     return {

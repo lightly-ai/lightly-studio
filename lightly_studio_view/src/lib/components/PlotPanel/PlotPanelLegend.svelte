@@ -18,6 +18,8 @@
         categoryColors: string[];
         excludedLabel?: string;
         includedLabel?: string;
+        excludedHidden?: boolean;
+        includedHidden?: boolean;
         legendEntries?: LegendEntry[];
         onToggleCategory?: (cat: number) => void;
         onDoubleClickCategory?: (cat: number) => void;
@@ -27,10 +29,28 @@
         categoryColors,
         excludedLabel = EXCLUDED_BY_FILTERS_LABEL,
         includedLabel = INCLUDED_BY_FILTERS_LABEL,
+        excludedHidden = false,
+        includedHidden = false,
         legendEntries = [],
         onToggleCategory,
         onDoubleClickCategory
     }: Props = $props();
+
+    // Reserved rows toggle on click but never isolate on double-click (a no-op for a binary row).
+    const reservedRows = $derived([
+        {
+            cat: EXCLUDED_BY_FILTERS_CATEGORY,
+            label: excludedLabel,
+            color: categoryColors[EXCLUDED_BY_FILTERS_CATEGORY],
+            hidden: excludedHidden
+        },
+        {
+            cat: INCLUDED_BY_FILTERS_CATEGORY,
+            label: includedLabel,
+            color: categoryColors[INCLUDED_BY_FILTERS_CATEGORY],
+            hidden: includedHidden
+        }
+    ]);
 </script>
 
 <div
@@ -58,20 +78,22 @@
         {#if legendEntries.length > 0}
             <span class="my-0.5 w-full shrink-0 border-t border-white/10"></span>
         {/if}
-        <span class="flex shrink-0 items-center gap-1.5">
-            <span
-                class="legend-dot"
-                style={`background-color: ${categoryColors[EXCLUDED_BY_FILTERS_CATEGORY]}`}
-            ></span>
-            {excludedLabel}
-        </span>
-        <span class="flex shrink-0 items-center gap-1.5">
-            <span
-                class="legend-dot"
-                style={`background-color: ${categoryColors[INCLUDED_BY_FILTERS_CATEGORY]}`}
-            ></span>
-            {includedLabel}
-        </span>
+        {#each reservedRows as row (row.cat)}
+            <button
+                type="button"
+                class={cn(
+                    'flex w-full shrink-0 cursor-pointer items-center gap-1.5 rounded text-left transition-opacity hover:opacity-80',
+                    row.hidden && 'opacity-40'
+                )}
+                data-testid={`plot-legend-entry-${row.cat}`}
+                aria-pressed={row.hidden}
+                title={row.hidden ? 'Show category' : 'Hide category'}
+                onclick={() => onToggleCategory?.(row.cat)}
+            >
+                <span class="legend-dot shrink-0" style={`background-color: ${row.color}`}></span>
+                <span class="min-w-0 truncate" title={row.label}>{row.label}</span>
+            </button>
+        {/each}
     </div>
 </div>
 

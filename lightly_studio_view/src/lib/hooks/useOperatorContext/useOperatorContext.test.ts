@@ -48,29 +48,61 @@ describe('resolveIsDetailPage', () => {
 });
 
 describe('resolveScopeLabel', () => {
-    it('returns "Full collection" for null sampleType', () => {
-        expect(resolveScopeLabel(null, false)).toBe('Full collection');
-        expect(resolveScopeLabel(null, true)).toBe('Full collection');
+    it('returns entire-collection fragment for null sampleType regardless of count or filter', () => {
+        expect(resolveScopeLabel(null, false, 100, false)).toBe('the entire collection');
+        expect(resolveScopeLabel(null, true, 1, true)).toBe('the entire collection');
     });
 
-    it('returns detail label when isOnDetailPage is true', () => {
-        expect(resolveScopeLabel(SampleTypeValues.IMAGE, true)).toBe('Current image');
-        expect(resolveScopeLabel(SampleTypeValues.VIDEO, true)).toBe('Current video');
-        expect(resolveScopeLabel(SampleTypeValues.VIDEO_FRAME, true)).toBe('Current video frame');
-        expect(resolveScopeLabel(SampleTypeValues.ANNOTATION, true)).toBe('Current annotation');
+    it('returns currently-viewed fragment when isOnDetailPage is true', () => {
+        expect(resolveScopeLabel(SampleTypeValues.IMAGE, true, 1, false)).toBe(
+            'the currently viewed image'
+        );
+        expect(resolveScopeLabel(SampleTypeValues.VIDEO, true, 1, false)).toBe(
+            'the currently viewed video'
+        );
+        expect(resolveScopeLabel(SampleTypeValues.VIDEO_FRAME, true, 1, false)).toBe(
+            'the currently viewed video frame'
+        );
+        expect(resolveScopeLabel(SampleTypeValues.ANNOTATION, true, 1, false)).toBe(
+            'the currently viewed annotation'
+        );
     });
 
-    it('returns collection label when isOnDetailPage is false', () => {
-        expect(resolveScopeLabel(SampleTypeValues.IMAGE, false)).toBe('All images in the view');
-        expect(resolveScopeLabel(SampleTypeValues.VIDEO, false)).toBe('All videos in the view');
-        expect(resolveScopeLabel(SampleTypeValues.VIDEO_FRAME, false)).toBe(
-            'All video frames in the view'
+    it('returns "all {count} {type}s" when no filter is active', () => {
+        expect(resolveScopeLabel(SampleTypeValues.IMAGE, false, 1204, false)).toBe(
+            'all 1204 images'
         );
-        expect(resolveScopeLabel(SampleTypeValues.ANNOTATION, false)).toBe(
-            'All annotations in the view'
+        expect(resolveScopeLabel(SampleTypeValues.VIDEO, false, 42, false)).toBe('all 42 videos');
+        expect(resolveScopeLabel(SampleTypeValues.VIDEO_FRAME, false, 50, false)).toBe(
+            'all 50 video frames'
         );
-        expect(resolveScopeLabel(SampleTypeValues.GROUP, false)).toBe('All groups in the view');
-        expect(resolveScopeLabel(SampleTypeValues.CAPTION, false)).toBe('All captions in the view');
+        expect(resolveScopeLabel(SampleTypeValues.ANNOTATION, false, 30, false)).toBe(
+            'all 30 annotations'
+        );
+        expect(resolveScopeLabel(SampleTypeValues.GROUP, false, 10, false)).toBe('all 10 groups');
+        expect(resolveScopeLabel(SampleTypeValues.CAPTION, false, 5, false)).toBe('all 5 captions');
+    });
+
+    it('returns "{count} filtered {type}s" when a filter is active', () => {
+        expect(resolveScopeLabel(SampleTypeValues.IMAGE, false, 248, true)).toBe(
+            '248 filtered images'
+        );
+        expect(resolveScopeLabel(SampleTypeValues.VIDEO, false, 3, true)).toBe('3 filtered videos');
+        expect(resolveScopeLabel(SampleTypeValues.VIDEO_FRAME, false, 20, true)).toBe(
+            '20 filtered video frames'
+        );
+        expect(resolveScopeLabel(SampleTypeValues.ANNOTATION, false, 12, true)).toBe(
+            '12 filtered annotations'
+        );
+    });
+
+    it('uses singular form when scopeCount is 1', () => {
+        expect(resolveScopeLabel(SampleTypeValues.IMAGE, false, 1, false)).toBe('all 1 image');
+        expect(resolveScopeLabel(SampleTypeValues.VIDEO, false, 1, false)).toBe('all 1 video');
+        expect(resolveScopeLabel(SampleTypeValues.IMAGE, false, 1, true)).toBe('1 filtered image');
+        expect(resolveScopeLabel(SampleTypeValues.VIDEO_FRAME, false, 1, true)).toBe(
+            '1 filtered video frame'
+        );
     });
 });
 

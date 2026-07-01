@@ -80,12 +80,13 @@ export function usePlotData({
     const sampleIds = data.sample_id as string[];
 
     if (rangeSelection) {
-        // Points inside the polygon keep their prevValue; points outside are demoted to EXCLUDED_BY_FILTERS_CATEGORY.
+        // Points inside the polygon keep their prevValue; points outside are demoted to Excluded.
         category = category.map(getCategoryBySelection(rangeSelection, data));
 
-        // Collect the sample ids of the selectable in-polygon points.
+        // Collect in-polygon ids, skipping points that are filtered out or hidden by a legend
+        // toggle — a point the user cannot see must never be committed to the filter.
         const _ids = category.reduce<string[]>((acc, pointCategory, index) => {
-            if (!isUnselectableCategory(pointCategory)) {
+            if (!isUnselectableCategory(pointCategory) && !hiddenCategories.has(pointCategory)) {
                 acc.push(sampleIds[index]);
             }
             return acc;
@@ -101,6 +102,14 @@ export function usePlotData({
                 ? pointCategory
                 : EXCLUDED_BY_FILTERS_CATEGORY;
         });
+    }
+
+    // Hide on each point's final category, after demotion: a demoted point is hidden as Excluded,
+    // not its pre-demotion bucket.
+    if (hiddenCategories.size > 0) {
+        category = category.map((pointCategory) =>
+            hiddenCategories.has(pointCategory) ? HIDDEN_CATEGORY : pointCategory
+        );
     }
 
     plotData.set({
