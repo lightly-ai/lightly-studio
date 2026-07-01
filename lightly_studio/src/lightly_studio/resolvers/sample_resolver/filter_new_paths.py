@@ -39,7 +39,12 @@ def filter_new_paths(
     collection = session.get(CollectionTable, collection_id)
     if collection is None:
         raise ValueError(f"Collection with id {collection_id} not found.")
-    model = _TABLE_BY_SAMPLE_TYPE[collection.sample_type]
+    model = _TABLE_BY_SAMPLE_TYPE.get(collection.sample_type)
+    if model is None:
+        raise ValueError(
+            f"filter_new_paths does not support sample type {collection.sample_type}; "
+            f"supported types are {sorted(t.value for t in _TABLE_BY_SAMPLE_TYPE)}."
+        )
 
     existing_file_paths_abs: set[str] = set()
     for batch in batching.batched(items=file_paths_abs):

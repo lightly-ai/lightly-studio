@@ -84,3 +84,15 @@ def test_filter_new_paths_batches_over_postgres_param_limit(db_session: Session)
 
     assert len(file_paths_new) == 70_000
     assert file_paths_old == []
+
+
+def test_filter_new_paths_rejects_unsupported_sample_type(db_session: Session) -> None:
+    """A collection whose sample type has no path table fails with a clear error."""
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO_FRAME)
+
+    with pytest.raises(ValueError, match="does not support sample type"):
+        sample_resolver.filter_new_paths(
+            session=db_session,
+            collection_id=collection.collection_id,
+            file_paths_abs=["/x"],
+        )
