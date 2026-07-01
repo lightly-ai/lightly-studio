@@ -29,7 +29,7 @@ Usage::
                     dataset.add(path, image)
             except (OSError, PILImage.UnidentifiedImageError) as exc:
                 raise BrokenInputFileError("Could not decode image.") from exc
-    report.raise_if_all_failed()  # raises if every attempted file failed
+    report.raise_if_all_failed()  # Raises if every attempted file failed
     report.log_summary()
 """
 
