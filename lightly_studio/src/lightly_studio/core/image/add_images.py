@@ -24,7 +24,7 @@ from lightly_studio.core.image import add_annotations
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.core.loading_log import LoadingLoggingContext, log_loading_results
 from lightly_studio.models.caption import CaptionCreate
-from lightly_studio.models.image import ImageCreate
+from lightly_studio.models.image import ImageCreate, ImageTable
 from lightly_studio.resolvers import (
     caption_resolver,
     image_resolver,
@@ -359,10 +359,11 @@ def _create_batch_samples(
     file_path_to_sample = {sample.file_path_abs: sample for sample in samples}
 
     # Get the list of new and existing file paths
-    file_paths_new, file_paths_exist = image_resolver.filter_new_paths(
+    file_paths_new, file_paths_exist = sample_resolver.filter_new_paths(
         session=session,
         collection_id=collection_id,
         file_paths_abs=list(file_path_to_sample.keys()),
+        model=ImageTable,
     )
 
     # Create only samples with new file paths
