@@ -22,6 +22,7 @@ filtered sample count.
 - Improved performance when tagging all samples in the GUI for large datasets.
 - Annotation source selection for exports: when multiple annotation collections exist, the export dialog shows a dropdown to choose which collection to export from. The annotation source can also be specified via the Python API using the `annotation_collection_id` parameter.
 - All embedding plot legend entries (especially e.g. `Excluded by filters`, `No category`, etc.) can be hidden by clicking on them.
+- Introduce persisted color information for annotation classes.
 
 ### Changed
 
