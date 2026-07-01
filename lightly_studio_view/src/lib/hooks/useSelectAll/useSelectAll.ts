@@ -8,6 +8,7 @@ import { useVideoFilters, buildVideoFilter } from '$lib/hooks/useVideoFilters/us
 import { useFramesFilter } from '$lib/hooks/useFramesFilter/useFramesFilter';
 import { getFrameFilter } from '$lib/hooks/useFramesFilter/frameFilter';
 import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
+import { useAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
 import { fetchSampleIdsForImages } from './fetchSampleIdsForImages';
 import { fetchSampleIdsForVideos } from './fetchSampleIdsForVideos';
 import { fetchSampleIdsForVideoFrames } from './fetchSampleIdsForVideoFrames';
@@ -36,6 +37,7 @@ export function useSelectAll(collectionId: string, gridType: GridType) {
     const { filterParams: videoFilterParams } = useVideoFilters();
     const { filterParams: frameFilterParams } = useFramesFilter();
     const { annotationFilter } = useSelectedAnnotationsFilter(collectionId);
+    const { annotationPlotSampleIds } = useAnnotationPlotSelection();
 
     let isLoading = false;
 
@@ -79,7 +81,15 @@ export function useSelectAll(collectionId: string, gridType: GridType) {
                 };
             }
             case 'annotations': {
-                const filter = get(annotationFilter);
+                const plotSampleIds = get(annotationPlotSampleIds);
+                const filter =
+                    plotSampleIds.length > 0
+                        ? {
+                              ...get(annotationFilter),
+                              filter_type: GRID_FILTER_TYPE.annotations,
+                              sample_ids: plotSampleIds
+                          }
+                        : get(annotationFilter);
                 return {
                     snapshotFilter: { ...filter, filter_type: GRID_FILTER_TYPE.annotations },
                     fetchIds: () => fetchSampleIdsForAnnotations(collectionId, filter)
