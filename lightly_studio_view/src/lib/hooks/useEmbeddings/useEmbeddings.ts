@@ -1,5 +1,6 @@
 import { get2dEmbeddingsOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import type {
+    AnnotationsFilter,
     GetEmbeddings2dRequest,
     ImageFilter,
     VideoFilter
@@ -11,7 +12,7 @@ type EmbeddingsColorBy = GetEmbeddings2dRequest['color_by'];
 
 export function useEmbeddings(
     collectionId: string,
-    filters: ImageFilter | VideoFilter | null,
+    filters: ImageFilter | VideoFilter | AnnotationsFilter | null,
     colorBy: EmbeddingsColorBy = null
 ) {
     return createQuery(() =>

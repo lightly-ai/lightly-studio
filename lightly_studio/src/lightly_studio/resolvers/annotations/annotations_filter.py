@@ -31,6 +31,9 @@ class AnnotationsFilter(GridFilterBase):
         default=None, description="List of annotation label UUIDs"
     )
     tag_ids: list[UUID] | None = Field(default=None, description="List of tag UUIDs")
+    sample_ids: list[UUID] | None = Field(
+        default=None, description="List of annotation sample UUIDs to restrict to"
+    )
 
     def apply(
         self,
@@ -87,6 +90,7 @@ class AnnotationsFilter(GridFilterBase):
             or self.annotation_label_ids
             or self.tag_ids
             or self.annotation_types
+            or self.sample_ids
         )
 
     def _apply_annotation_filters(
@@ -105,6 +109,15 @@ class AnnotationsFilter(GridFilterBase):
                 db_array.in_array(
                     column=col(annotation_sample.collection_id),
                     values=self.collection_ids,
+                )
+            )
+
+        # Filter by annotation sample ids (e.g. embedding plot selection)
+        if self.sample_ids:
+            query = query.where(
+                db_array.in_array(
+                    column=col(annotation_sample.sample_id),
+                    values=self.sample_ids,
                 )
             )
 
