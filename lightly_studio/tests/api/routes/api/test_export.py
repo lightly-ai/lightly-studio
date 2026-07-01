@@ -6,6 +6,7 @@ import io
 import json
 import zipfile
 
+import yaml
 from fastapi.testclient import TestClient
 from PIL import Image as PILImage
 from sqlmodel import Session
@@ -35,7 +36,7 @@ from tests.helpers_resolvers import (
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
 
-def test_export_collection_annotations(
+def test_export_collection_coco(
     db_session: Session,
     test_client: TestClient,
 ) -> None:
@@ -89,6 +90,67 @@ def test_export_collection_annotations(
 
     # Check the export file name. Quotes are intentionally omitted.
     assert response.headers["Content-Disposition"] == "attachment; filename=coco_export.json"
+
+
+def test_export_collection_yolo(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    # Create a single sample with a single annotation.
+    collection = create_collection(session=db_session)
+    image = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="img1.jpg",
+        width=100,
+        height=100,
+    )
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    )
+    annotation_resolver.create_many(
+        session=db_session,
+        parent_collection_id=collection.collection_id,
+        annotations=[
+            AnnotationCreate(
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+                parent_sample_id=image.sample_id,
+                x=10,
+                y=20,
+                width=30,
+                height=40,
+            )
+        ],
+    )
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+
+    response = test_client.get(
+        f"/api/collections/{collection.collection_id}/export/annotations",
+        params={
+            "export_format": "object_detection_yolo",
+            "annotation_collection_id": str(annotation_collection_id),
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.headers["Content-Disposition"] == "attachment; filename=yolo.zip"
+
+    with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
+        files = set(zip_ref.namelist())
+        assert "yolo/data.yaml" in files
+        assert "yolo/labels/img1.txt" in files
+
+        data_yaml = yaml.safe_load(zip_ref.read("yolo/data.yaml"))
+        assert data_yaml == {"path": ".", "train": "images", "nc": 1, "names": {0: "cat"}}
+
+        # Box (x=10, y=20, w=30, h=40) on a 100x100 image has center (25, 40), so
+        # normalized cx=0.25 cy=0.4 w=0.3 h=0.4.
+        assert zip_ref.read("yolo/labels/img1.txt").decode() == "0 0.25 0.4 0.3 0.4\n"
 
 
 def test_export_collection_segmentation_masks(

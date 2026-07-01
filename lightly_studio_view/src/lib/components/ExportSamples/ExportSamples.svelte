@@ -38,7 +38,8 @@
 
     let exportType = $state<
         | 'samples'
-        | 'object_detections'
+        | 'object_detections_coco'
+        | 'object_detections_yolo'
         | 'segmentation'
         | 'captions'
         | 'youtube_vis_segmentation'
@@ -46,7 +47,8 @@
     >('samples');
     const exportTypeLabels: Record<typeof exportType, string> = {
         samples: 'Image Filenames',
-        object_detections: 'Image Object Detections',
+        object_detections_coco: 'Image Object Detections (COCO)',
+        object_detections_yolo: 'Image Object Detections (YOLO)',
         segmentation: 'Image Segmentation Mask (COCO)',
         semantic_segmentations: 'Image Segmentation Mask (PASCAL VOC)',
         captions: 'Image Captions',
@@ -139,10 +141,17 @@
     };
 
     //
-    // Annotation export
+    // COCO object detection export
     //
-    const exportAnnotationsURL = $derived(
+    const exportObjectDetectionCocoURL = $derived(
         `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=object_detection_coco${annotationCollectionParam}`
+    );
+
+    //
+    // YOLO object detection export
+    //
+    const exportObjectDetectionYoloURL = $derived(
+        `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=object_detection_yolo${annotationCollectionParam}`
     );
 
     //
@@ -207,9 +216,14 @@
                                         >Image Filenames</SelectMenuItem
                                     >
                                     <SelectMenuItem
-                                        value="object_detections"
-                                        label="Image Object Detections"
-                                        >Image Object Detections</SelectMenuItem
+                                        value="object_detections_coco"
+                                        label="Image Object Detections (COCO)"
+                                        >Image Object Detections (COCO)</SelectMenuItem
+                                    >
+                                    <SelectMenuItem
+                                        value="object_detections_yolo"
+                                        label="Image Object Detections (YOLO)"
+                                        >Image Object Detections (YOLO)</SelectMenuItem
                                     >
                                     <SelectMenuItem
                                         value="segmentation"
@@ -334,8 +348,8 @@
                         </Button>
                     </Tabs.Content>
 
-                    <!-- Object Detections tab -->
-                    <Tabs.Content value="object_detections" class="pt-2">
+                    <!-- Object Detections (COCO) tab -->
+                    <Tabs.Content value="object_detections_coco" class="pt-2">
                         <p class="text-sm text-muted-foreground">
                             The object detection annotations will be exported in COCO format.
                         </p>
@@ -354,9 +368,36 @@
 
                         <Button
                             class="relative my-4 w-full"
-                            href={exportAnnotationsURL}
+                            href={exportObjectDetectionCocoURL}
                             target="_blank"
-                            data-testid="submit-button-annotations"
+                            data-testid="submit-button-annotations-coco"
+                        >
+                            Download
+                        </Button>
+                    </Tabs.Content>
+
+                    <!-- Object Detections (YOLO) tab -->
+                    <Tabs.Content value="object_detections_yolo" class="pt-2">
+                        <p class="text-sm text-muted-foreground">
+                            The object detection annotations will be exported in YOLO format.
+                        </p>
+
+                        {#if annotationSources.length > 1}
+                            <div class="mt-3">
+                                <FormField label="Annotation Source">
+                                    <AnnotationSourceSelect
+                                        sourceOptions={annotationSources}
+                                        bind:selectedSource={selectedAnnotationCollectionId}
+                                    />
+                                </FormField>
+                            </div>
+                        {/if}
+
+                        <Button
+                            class="relative my-4 w-full"
+                            href={exportObjectDetectionYoloURL}
+                            target="_blank"
+                            data-testid="submit-button-annotations-yolo"
                         >
                             Download
                         </Button>
