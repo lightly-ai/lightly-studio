@@ -19,7 +19,7 @@ from lightly_studio.resolvers import (
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
 )
-from tests.helpers_resolvers import create_collection
+from tests.helpers_resolvers import create_annotation, create_collection
 
 
 @dataclass
@@ -31,6 +31,47 @@ class AnnotationMetricStub:
     value: float
     pred_annotation_id: UUID | None = None
     gt_annotation_id: UUID | None = None
+
+
+@dataclass
+class TruePositiveMetricStub:
+    """Helper class to create a true-positive annotation metric.
+
+    Creates matching prediction and ground-truth annotations in the evaluation
+    run's annotation collections, then stores a metric that links both.
+    """
+
+    sample_id: UUID
+    metric_name: str
+    value: float
+    gt_annotation_label_id: UUID
+    # Prediction annotation label. If None, assumed to be equal to annotation_label_id.
+    pred_annotation_label_id: UUID | None = None
+
+    def to_annotation_metric_stub(
+        self, session: Session, run: EvaluationRunTable
+    ) -> AnnotationMetricStub:
+        # Note: `test_sample_filter.py` has the `_seed_pair()` helper function almost identical to
+        # the following code block.
+        pred_annotation = create_annotation(
+            session=session,
+            collection_id=run.pred_annotation_collection_id,
+            sample_id=self.sample_id,
+            annotation_label_id=self.pred_annotation_label_id or self.gt_annotation_label_id,
+        )
+        gt_annotation = create_annotation(
+            session=session,
+            collection_id=run.gt_annotation_collection_id,
+            sample_id=self.sample_id,
+            annotation_label_id=self.gt_annotation_label_id,
+        )
+        return AnnotationMetricStub(
+            sample_id=self.sample_id,
+            metric_name=self.metric_name,
+            value=self.value,
+            pred_annotation_id=pred_annotation.sample_id,
+            gt_annotation_id=gt_annotation.sample_id,
+        )
 
 
 @dataclass
@@ -105,11 +146,16 @@ def create_annotation_metrics(
     session: Session,
     run_id: UUID,
     annotation_metrics: list[AnnotationMetricStub] | None = None,
+    true_positive_metric_stubs: list[TruePositiveMetricStub] | None = None,
 ) -> None:
     annotation_metrics = annotation_metrics or []
+    true_positive_metric_stubs = true_positive_metric_stubs or []
     run = evaluation_run_resolver.get_by_id(session=session, evaluation_id=run_id)
     if run is None:
         raise ValueError(f"Evaluation run {run_id} doesn't exist")
+
+    for stub in true_positive_metric_stubs:
+        annotation_metrics.append(stub.to_annotation_metric_stub(session=session, run=run))
 
     evaluation_annotation_metric_resolver.create_many(
         session=session,

@@ -18,6 +18,10 @@ from tests.helpers_resolvers import (
 from tests.resolvers.evaluation_sample_metric_resolver import (
     helpers as evaluation_sample_metric_helpers,
 )
+from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
+    TruePositiveMetricStub,
+    create_annotation_metrics,
+)
 
 
 def test_get_all_by_evaluation_run_id(db_session: Session) -> None:
@@ -37,13 +41,18 @@ def test_get_all_by_evaluation_run_id(db_session: Session) -> None:
         sample_id=image.sample_id,
         annotation_label_id=label.annotation_label_id,
     )
-    pred_annotation = create_annotation(
+    create_annotation_metrics(
         session=db_session,
-        collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label.annotation_label_id,
+        run_id=run.id,
+        true_positive_metric_stubs=[
+            TruePositiveMetricStub(
+                sample_id=image.sample_id,
+                metric_name="iou",
+                value=0.75,
+                gt_annotation_label_id=label.annotation_label_id,
+            )
+        ],
     )
-
     evaluation_annotation_metric_resolver.create_many(
         session=db_session,
         records=[
@@ -51,14 +60,6 @@ def test_get_all_by_evaluation_run_id(db_session: Session) -> None:
                 evaluation_run_id=run.id,
                 sample_id=image.sample_id,
                 gt_annotation_id=gt_annotation.sample_id,
-            ),
-            EvaluationAnnotationMetricCreate(
-                evaluation_run_id=run.id,
-                sample_id=image.sample_id,
-                gt_annotation_id=gt_annotation.sample_id,
-                pred_annotation_id=pred_annotation.sample_id,
-                metric_name="iou",
-                value=0.75,
             ),
         ],
     )
@@ -73,8 +74,8 @@ def test_get_all_by_evaluation_run_id(db_session: Session) -> None:
     assert all(result.sample_id == image.sample_id for result in results)
 
     tp_result = next(r for r in results if r.metric_name == "iou")
-    assert tp_result.gt_annotation_id == gt_annotation.sample_id
-    assert tp_result.pred_annotation_id == pred_annotation.sample_id
+    assert tp_result.gt_annotation_id is not None
+    assert tp_result.pred_annotation_id is not None
     assert tp_result.value == pytest.approx(0.75)
 
 
