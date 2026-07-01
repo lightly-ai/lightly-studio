@@ -20,9 +20,9 @@ from labelformat.model.object_detection import ObjectDetectionInput
 from sqlmodel import Session
 from tqdm import tqdm
 
+from lightly_studio.core.file_outcome_report import FileOutcome, FileOutcomeReport
 from lightly_studio.core.image import add_annotations
 from lightly_studio.core.image.image_sample import ImageSample
-from lightly_studio.core.loading_log import LoadingLoggingContext, log_loading_results
 from lightly_studio.models.caption import CaptionCreate
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import (
@@ -37,7 +37,6 @@ logger = logging.getLogger(__name__)
 
 # Constants
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
-MAX_EXAMPLE_PATHS_TO_SHOW = 5
 
 
 def load_into_dataset_from_paths(
@@ -60,12 +59,7 @@ def load_into_dataset_from_paths(
     samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
 
-    logging_context = LoadingLoggingContext(
-        n_samples_to_be_inserted=sum(1 for _ in image_paths),
-        n_samples_before_loading=sample_resolver.count_by_collection_id(
-            session=session, collection_id=root_collection_id
-        ),
-    )
+    report = FileOutcomeReport()
 
     for image_path in tqdm(
         image_paths,
@@ -96,7 +90,11 @@ def load_into_dataset_from_paths(
                 session=session, collection_id=root_collection_id, samples=samples_to_create
             )
             created_sample_ids.extend(created_path_to_id.values())
-            logging_context.update_example_paths(paths_not_inserted)
+            _record_batch_outcomes(
+                report=report,
+                added_paths=created_path_to_id.keys(),
+                already_present_paths=paths_not_inserted,
+            )
             samples_to_create = []
 
     # Handle remaining samples
@@ -105,14 +103,14 @@ def load_into_dataset_from_paths(
             session=session, collection_id=root_collection_id, samples=samples_to_create
         )
         created_sample_ids.extend(created_path_to_id.values())
-        logging_context.update_example_paths(paths_not_inserted)
+        _record_batch_outcomes(
+            report=report,
+            added_paths=created_path_to_id.keys(),
+            already_present_paths=paths_not_inserted,
+        )
 
-    log_loading_results(
-        session=session,
-        collection_id=root_collection_id,
-        logging_context=logging_context,
-        print_summary=show_progress,
-    )
+    if show_progress:
+        report.log_summary()
     return created_sample_ids
 
 
@@ -136,12 +134,7 @@ def load_into_dataset_from_labelformat(
         A list of UUIDs of the created samples.
     """
     images_root_abs = add_annotations.normalize_images_root(images_root=images_path)
-    logging_context = LoadingLoggingContext(
-        n_samples_to_be_inserted=0,
-        n_samples_before_loading=sample_resolver.count_by_collection_id(
-            session=session, collection_id=root_collection_id
-        ),
-    )
+    report = FileOutcomeReport()
 
     samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
@@ -149,7 +142,6 @@ def load_into_dataset_from_labelformat(
     # Phase 1: Sample creation
     for image_data in tqdm(input_labels.get_labels(), desc="Processing images", unit=" images"):
         image: Image = image_data.image  # type: ignore[attr-defined]
-        logging_context.n_samples_to_be_inserted += 1
 
         sample = ImageCreate(
             file_name=str(image.filename),
@@ -164,7 +156,11 @@ def load_into_dataset_from_labelformat(
                 session=session, collection_id=root_collection_id, samples=samples_to_create
             )
             created_sample_ids.extend(created_path_to_id.values())
-            logging_context.update_example_paths(paths_not_inserted)
+            _record_batch_outcomes(
+                report=report,
+                added_paths=created_path_to_id.keys(),
+                already_present_paths=paths_not_inserted,
+            )
             samples_to_create.clear()
 
     if samples_to_create:
@@ -172,7 +168,11 @@ def load_into_dataset_from_labelformat(
             session=session, collection_id=root_collection_id, samples=samples_to_create
         )
         created_sample_ids.extend(created_path_to_id.values())
-        logging_context.update_example_paths(paths_not_inserted)
+        _record_batch_outcomes(
+            report=report,
+            added_paths=created_path_to_id.keys(),
+            already_present_paths=paths_not_inserted,
+        )
 
     # Phase 2: Annotation creation (only if samples were created)
     if created_sample_ids:
@@ -185,12 +185,7 @@ def load_into_dataset_from_labelformat(
             restrict_to_sample_ids=set(created_sample_ids),
         )
 
-    log_loading_results(
-        session=session,
-        collection_id=root_collection_id,
-        logging_context=logging_context,
-        print_summary=True,
-    )
+    report.log_summary()
     return created_sample_ids
 
 
@@ -230,12 +225,7 @@ def load_into_dataset_from_coco_captions(
             continue
         captions_by_image_id[image_id].append(caption_text)
 
-    logging_context = LoadingLoggingContext(
-        n_samples_to_be_inserted=len(images),
-        n_samples_before_loading=sample_resolver.count_by_collection_id(
-            session=session, collection_id=root_collection_id
-        ),
-    )
+    report = FileOutcomeReport()
 
     samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
@@ -264,7 +254,11 @@ def load_into_dataset_from_coco_captions(
                 session=session, collection_id=root_collection_id, samples=samples_to_create
             )
             created_sample_ids.extend(created_path_to_id.values())
-            logging_context.update_example_paths(paths_not_inserted)
+            _record_batch_outcomes(
+                report=report,
+                added_paths=created_path_to_id.keys(),
+                already_present_paths=paths_not_inserted,
+            )
             _process_batch_captions(
                 session=session,
                 collection_id=root_collection_id,
@@ -279,7 +273,11 @@ def load_into_dataset_from_coco_captions(
             session=session, collection_id=root_collection_id, samples=samples_to_create
         )
         created_sample_ids.extend(created_path_to_id.values())
-        logging_context.update_example_paths(paths_not_inserted)
+        _record_batch_outcomes(
+            report=report,
+            added_paths=created_path_to_id.keys(),
+            already_present_paths=paths_not_inserted,
+        )
         _process_batch_captions(
             session=session,
             collection_id=root_collection_id,
@@ -287,12 +285,7 @@ def load_into_dataset_from_coco_captions(
             path_to_captions=path_to_captions,
         )
 
-    log_loading_results(
-        session=session,
-        collection_id=root_collection_id,
-        logging_context=logging_context,
-        print_summary=True,
-    )
+    report.log_summary()
     return created_sample_ids
 
 
@@ -340,6 +333,24 @@ def tag_samples_by_directory(
             sample_ids=s_ids,
         )
     logger.info(f"Created {len(parent_dir_to_sample_ids)} tags from directories.")
+
+
+def _record_batch_outcomes(
+    report: FileOutcomeReport,
+    added_paths: Iterable[str],
+    already_present_paths: Iterable[str],
+) -> None:
+    """Record the per-file outcomes of a created batch on the report.
+
+    Args:
+        report: The report to record outcomes on.
+        added_paths: File paths of samples that were newly created.
+        already_present_paths: File paths of samples that already existed.
+    """
+    for path in added_paths:
+        report.record(path=path, outcome=FileOutcome.ADDED)
+    for path in already_present_paths:
+        report.record(path=path, outcome=FileOutcome.ALREADY_PRESENT)
 
 
 def _create_batch_samples(
