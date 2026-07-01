@@ -7,12 +7,11 @@ import logging
 import pytest
 
 from lightly_studio.core.file_outcome_report import (
+    AllInputFilesFailedError,
+    AlreadyPresentInputFileError,
+    BrokenInputFileError,
     FileOutcome,
     FileOutcomeReport,
-)
-from lightly_studio.errors import (
-    AllInputFilesFailedError,
-    BrokenInputFileError,
     MissingInputFileError,
 )
 
@@ -45,10 +44,10 @@ class TestFileOutcomeReport:
         assert report._counts[FileOutcome.ADDED] == 1
         assert report._example_paths[FileOutcome.ADDED] == ["a.jpg"]
 
-    def test_track__records_already_present_when_set(self) -> None:
+    def test_track__records_already_present(self) -> None:
         report = FileOutcomeReport()
-        with report.track("a.jpg") as tracked:
-            tracked.outcome = FileOutcome.ALREADY_PRESENT
+        with report.track("a.jpg"):
+            raise AlreadyPresentInputFileError("Some error message")
 
         assert report._counts[FileOutcome.ALREADY_PRESENT] == 1
         assert report._counts[FileOutcome.ADDED] == 0
@@ -56,7 +55,7 @@ class TestFileOutcomeReport:
     def test_track__records_missing(self) -> None:
         report = FileOutcomeReport()
         with report.track("a.jpg"):
-            raise MissingInputFileError("a.jpg")
+            raise MissingInputFileError("Some error message")
 
         assert report._counts[FileOutcome.MISSING] == 1
         assert report._example_paths[FileOutcome.MISSING] == ["a.jpg"]
@@ -64,7 +63,7 @@ class TestFileOutcomeReport:
     def test_track__records_broken(self) -> None:
         report = FileOutcomeReport()
         with report.track("a.jpg"):
-            raise BrokenInputFileError("a.jpg")
+            raise BrokenInputFileError("Some error message")
 
         assert report._counts[FileOutcome.BROKEN] == 1
         assert report._example_paths[FileOutcome.BROKEN] == ["a.jpg"]
