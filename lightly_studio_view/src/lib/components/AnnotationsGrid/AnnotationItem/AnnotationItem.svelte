@@ -6,6 +6,7 @@
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { useAnnotationClassVisibility } from '$lib/hooks';
     import { getColorByLabel } from '$lib/utils';
+    import type { CropWindow } from './renderCropObjectUrl';
 
     type Props = {
         annotation: AnnotationView;
@@ -18,8 +19,9 @@
             url: string;
         };
         selected?: boolean;
-        // Reports the generated crop blob URL so the grid can use it as drag-to-search payload.
-        onCropImageUrlChange?: (annotationId: string, url: string | null) => void;
+        // Reports the crop geometry so the grid can render the drag-to-search preview
+        // lazily (on drag start) instead of eagerly per visible tile. `null` on unmount.
+        onCropWindowChange?: (annotationId: string, window: CropWindow | null) => void;
     };
 
     let {
@@ -29,7 +31,7 @@
         sample,
         showLabel = true,
         selected = false,
-        onCropImageUrlChange
+        onCropWindowChange
     }: Props = $props();
 
     const padding = 20;
@@ -93,69 +95,26 @@
     const xOffset = $derived(getXOffset());
     const yOffset = $derived(getYOffset());
 
-    // Render the visible window (padded bbox crop) into a canvas and use the result as
-    // the <img> source, so the browser's native right-click "Copy image" copies exactly
-    // the crop instead of the whole parent image (see PR #556 for images).
-    let cropImageUrl = $state<string | null>(null);
-
     // Captured by value at init: props are lazy getters, and reading `annotation` during
     // effect cleanup would re-evaluate `annotations[index]` in the grid against an
     // already-shrunken array (crash on filter changes). The id is constant per instance —
     // the {#key} wrapper in the grid remounts this component when it changes.
     const annotationId = annotation.sample_id;
 
+    // Report the crop geometry (not a rendered image) upward. The grid turns it into a
+    // preview blob only when a drag actually starts, so no canvas work happens per tile.
     $effect(() => {
-        const sourceUrl = sample.url;
-        const sampleWidth = sample.width;
-        const sampleHeight = sample.height;
-        const windowWidth = containerWidth / scale;
-        const windowHeight = containerHeight / scale;
-        const windowX = -xOffset / scale;
-        const windowY = -yOffset / scale;
-        if (!sourceUrl) return;
-
-        let cancelled = false;
-        let objectUrl: string | null = null;
-        const imageElement = new Image();
-        // The thumbnail may be served cross-origin (dev server); without this the
-        // canvas would be tainted and toBlob would throw.
-        imageElement.crossOrigin = 'anonymous';
-        imageElement.onload = () => {
-            if (cancelled) return;
-            // The thumbnail can be downscaled relative to the original image size the
-            // crop geometry is expressed in.
-            const resolutionX = imageElement.naturalWidth / sampleWidth;
-            const resolutionY = imageElement.naturalHeight / sampleHeight;
-            const canvas = document.createElement('canvas');
-            canvas.width = Math.max(1, Math.round(windowWidth * resolutionX));
-            canvas.height = Math.max(1, Math.round(windowHeight * resolutionY));
-            const context = canvas.getContext('2d');
-            if (!context) return;
-            context.fillStyle = '#000';
-            context.fillRect(0, 0, canvas.width, canvas.height);
-            context.drawImage(
-                imageElement,
-                -windowX * resolutionX,
-                -windowY * resolutionY,
-                imageElement.naturalWidth,
-                imageElement.naturalHeight
-            );
-            canvas.toBlob((blob) => {
-                if (!blob || cancelled) return;
-                objectUrl = URL.createObjectURL(blob);
-                cropImageUrl = objectUrl;
-                onCropImageUrlChange?.(annotationId, objectUrl);
-            }, 'image/png');
-        };
-        imageElement.src = sourceUrl;
-
-        return () => {
-            cancelled = true;
-            if (objectUrl) {
-                URL.revokeObjectURL(objectUrl);
-                onCropImageUrlChange?.(annotationId, null);
-            }
-        };
+        if (!sample.url) return;
+        onCropWindowChange?.(annotationId, {
+            sourceUrl: sample.url,
+            sampleWidth: sample.width,
+            sampleHeight: sample.height,
+            windowWidth: containerWidth / scale,
+            windowHeight: containerHeight / scale,
+            windowX: -xOffset / scale,
+            windowY: -yOffset / scale
+        });
+        return () => onCropWindowChange?.(annotationId, null);
     });
 </script>
 
@@ -166,27 +125,14 @@
         style={`
         width: ${containerWidth}px;
         height: ${containerHeight}px;
+        background-image: url("${sample.url}");
+        background-position: ${xOffset}px ${yOffset}px;
+        background-size: ${sample.width * scale}px ${sample.height * scale}px;
+        background-repeat: no-repeat;
     `}
     >
-        <!-- Real <img> instead of a CSS background so the browser's native
-             right-click "Copy image" works; the source is the canvas-rendered
-             crop so only the crop gets copied (see PR #556 for images). -->
-        {#if cropImageUrl}
-            <img
-                src={cropImageUrl}
-                alt=""
-                draggable="false"
-                class="crop-image"
-                style={`
-                left: 0;
-                top: 0;
-                width: ${containerWidth}px;
-                height: ${containerHeight}px;
-            `}
-            />
-        {/if}
         <div
-            class="annotation-box pointer-events-none"
+            class="annotation-box"
             class:invisible={$isHidden || $isAnnotationClassHidden}
             style={`
             left: ${(containerWidth - annotationWidth * scale) / 2}px;
@@ -239,11 +185,6 @@
     .crop {
         position: relative;
         overflow: hidden;
-    }
-
-    .crop-image {
-        position: absolute;
-        max-width: none;
     }
 
     .annotation-box {
