@@ -88,6 +88,33 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
     assert samples[0].sample.collection_id == collection.collection_id
 
 
+def test_load_into_collection_from_paths__reload_inserts_no_duplicates(
+    db_session: Session, tmp_path: Path
+) -> None:
+    """Loading the same paths a second time inserts nothing new."""
+    collection = helpers_resolvers.create_collection(db_session)
+    image_paths = [str(tmp_path / "image1.jpg")]
+    PILImage.new("RGB", (100, 100)).save(image_paths[0])
+
+    first_sample_ids = add_images.load_into_dataset_from_paths(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        image_paths=image_paths,
+    )
+    second_sample_ids = add_images.load_into_dataset_from_paths(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        image_paths=image_paths,
+    )
+
+    assert len(first_sample_ids) == 1
+    assert second_sample_ids == []
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    ).samples
+    assert len(samples) == 1
+
+
 def test_load_into_dataset_from_labelformat__calls_get_labels_once(
     db_session: Session, tmp_path: Path
 ) -> None:

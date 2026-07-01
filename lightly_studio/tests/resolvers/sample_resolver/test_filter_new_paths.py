@@ -95,3 +95,69 @@ def test_filter_new_paths_rejects_unsupported_sample_type(db_session: Session) -
             collection_id=collection.collection_id,
             file_paths_abs=["/x"],
         )
+
+
+def test_get_existing_paths__empty_collection(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+
+    existing_paths = sample_resolver.get_existing_paths(
+        session=db_session, collection_id=collection.collection_id
+    )
+
+    assert existing_paths == set()
+
+
+def test_get_existing_paths__images(db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
+    create_image(session=db_session, collection_id=collection.collection_id, file_path_abs="/a.png")
+    create_image(session=db_session, collection_id=collection.collection_id, file_path_abs="/b.png")
+
+    existing_paths = sample_resolver.get_existing_paths(
+        session=db_session, collection_id=collection.collection_id
+    )
+
+    assert existing_paths == {"/a.png", "/b.png"}
+
+
+def test_get_existing_paths__videos(db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    create_videos(
+        session=db_session,
+        collection_id=collection.collection_id,
+        videos=[VideoStub(path="/a.mp4"), VideoStub(path="/b.mp4")],
+    )
+
+    existing_paths = sample_resolver.get_existing_paths(
+        session=db_session, collection_id=collection.collection_id
+    )
+
+    assert existing_paths == {"/a.mp4", "/b.mp4"}
+
+
+def test_get_existing_paths_scopes_to_collection(db_session: Session) -> None:
+    """A path in one collection does not show up as existing in another."""
+    collection_a = create_collection(session=db_session, collection_name="a")
+    collection_b = create_collection(session=db_session, collection_name="b")
+    create_image(
+        session=db_session, collection_id=collection_a.collection_id, file_path_abs="/sample.png"
+    )
+
+    existing_in_a = sample_resolver.get_existing_paths(
+        session=db_session, collection_id=collection_a.collection_id
+    )
+    existing_in_b = sample_resolver.get_existing_paths(
+        session=db_session, collection_id=collection_b.collection_id
+    )
+
+    assert existing_in_a == {"/sample.png"}
+    assert existing_in_b == set()
+
+
+def test_get_existing_paths_rejects_unsupported_sample_type(db_session: Session) -> None:
+    """A collection whose sample type has no path table fails with a clear error."""
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO_FRAME)
+
+    with pytest.raises(ValueError, match="does not support sample type"):
+        sample_resolver.get_existing_paths(
+            session=db_session, collection_id=collection.collection_id
+        )

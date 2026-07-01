@@ -6,7 +6,7 @@ import json
 import logging
 import posixpath
 from collections import defaultdict
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Iterator, Mapping
 from pathlib import Path
 from uuid import UUID
 
@@ -32,6 +32,7 @@ from lightly_studio.resolvers import (
     tag_resolver,
 )
 from lightly_studio.type_definitions import PathLike
+from lightly_studio.utils import batching
 
 logger = logging.getLogger(__name__)
 
@@ -57,9 +58,9 @@ def load_into_dataset_from_paths(
     Returns:
         A list of UUIDs of the created samples.
     """
-    samples_to_create: list[ImageCreate] = []
-    created_sample_ids: list[UUID] = []
-
+    existing_paths = sample_resolver.get_existing_paths(
+        session=session, collection_id=root_collection_id
+    )
     logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=sum(1 for _ in image_paths),
         n_samples_before_loading=sample_resolver.count_by_collection_id(
@@ -67,45 +68,19 @@ def load_into_dataset_from_paths(
         ),
     )
 
-    for image_path in tqdm(
-        image_paths,
-        desc="Processing images",
-        unit=" images",
-        disable=not show_progress,
-    ):
-        try:
-            with fsspec.open(image_path, "rb") as file:
-                image = PIL.Image.open(file)
-                width, height = image.size
-                image.close()
-        except (FileNotFoundError, PIL.UnidentifiedImageError, OSError):
-            continue
-
-        normalized_path = add_annotations.normalize_images_root(image_path)
-        sample = ImageCreate(
-            file_name=Path(normalized_path).name,
-            file_path_abs=normalized_path,
-            width=width,
-            height=height,
-        )
-        samples_to_create.append(sample)
-
-        # Process batch when it reaches SAMPLE_BATCH_SIZE
-        if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
-            created_path_to_id, paths_not_inserted = _create_batch_samples(
-                session=session, collection_id=root_collection_id, samples=samples_to_create
+    new_samples = _iter_new_image_samples(
+        image_paths=image_paths,
+        existing_paths=existing_paths,
+        logging_context=logging_context,
+        show_progress=show_progress,
+    )
+    created_sample_ids: list[UUID] = []
+    for batch in batching.batched(items=new_samples, batch_size=SAMPLE_BATCH_SIZE):
+        created_sample_ids.extend(
+            image_resolver.create_many(
+                session=session, collection_id=root_collection_id, samples=batch
             )
-            created_sample_ids.extend(created_path_to_id.values())
-            logging_context.update_example_paths(paths_not_inserted)
-            samples_to_create = []
-
-    # Handle remaining samples
-    if samples_to_create:
-        created_path_to_id, paths_not_inserted = _create_batch_samples(
-            session=session, collection_id=root_collection_id, samples=samples_to_create
         )
-        created_sample_ids.extend(created_path_to_id.values())
-        logging_context.update_example_paths(paths_not_inserted)
 
     log_loading_results(
         session=session,
@@ -374,6 +349,43 @@ def _create_batch_samples(
     # Create a mapping from file path to sample ID for new samples
     file_path_new_to_sample_id = dict(zip(file_paths_new, created_sample_ids))
     return (file_path_new_to_sample_id, file_paths_exist)
+
+
+def _iter_new_image_samples(
+    image_paths: Iterable[str],
+    existing_paths: set[str],
+    logging_context: LoadingLoggingContext,
+    show_progress: bool,
+) -> Iterator[ImageCreate]:
+    """Yield an ImageCreate for each path not already in existing_paths.
+
+    Skips already-present paths without opening their file. Assumes
+    ``image_paths`` contains no duplicates (true today: callers build it from
+    a filesystem listing) — if that ever changes, duplicates would be
+    inserted as separate rows since there's no DB-level uniqueness check.
+    """
+    for image_path in tqdm(
+        image_paths, desc="Processing images", unit=" images", disable=not show_progress
+    ):
+        normalized_path = add_annotations.normalize_images_root(image_path)
+        if normalized_path in existing_paths:
+            logging_context.update_example_paths([normalized_path])
+            continue
+
+        try:
+            with fsspec.open(image_path, "rb") as file:
+                image = PIL.Image.open(file)
+                width, height = image.size
+                image.close()
+        except (FileNotFoundError, PIL.UnidentifiedImageError, OSError):
+            continue
+
+        yield ImageCreate(
+            file_name=Path(normalized_path).name,
+            file_path_abs=normalized_path,
+            width=width,
+            height=height,
+        )
 
 
 def _process_batch_captions(
