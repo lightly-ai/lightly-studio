@@ -1,10 +1,11 @@
 """Keyset (seek) implementation of adjacency lookup — the fast path.
 
 Instead of sorting the whole collection and scanning it with window functions, we
-read the anchor sample's sort-key values once and then issue small ``LIMIT 1``
-"seek" queries to jump straight to the neighbours. Position and total are answered
-with two ``COUNT`` queries. None of these touch more than the rows they need, so
-the cost is independent of the collection size.
+read the anchor sample's sort-key values once and then delegate to the shared
+``resolvers.adjacents.keyset_seek`` helper, which issues small ``LIMIT 1`` "seek"
+queries to jump straight to the neighbours and two ``COUNT`` queries for the
+position/total. None of these touch more than the rows they need, so the cost is
+independent of the collection size.
 
 This only works for sorts that produce a total, deterministic order over
 non-nullable columns; see ``_dispatch._is_keyset_sortable`` for the eligibility
@@ -16,7 +17,6 @@ from __future__ import annotations
 from typing import Any, cast
 from uuid import UUID
 
-import sqlalchemy
 from sqlalchemy.sql.elements import ColumnElement
 from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
@@ -26,10 +26,11 @@ from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderB
 from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.resolvers.adjacents import keyset_seek
 from lightly_studio.resolvers.image_filter import ImageFilter
 
 # A keyset sort key paired with its sort direction (True == ascending).
-_SortKey = tuple[ColumnElement[Any], bool]
+_SortKey = keyset_seek.SortKey
 
 
 def get_adjacent_images_keyset(
@@ -41,14 +42,9 @@ def get_adjacent_images_keyset(
 ) -> AdjacentResultView | None:
     """Find the previous/next image and the anchor's position via keyset seeks.
 
-    Runs four cheap queries against the (filtered) collection:
-
-    1. Fetch the anchor's sort-key values. Returns ``None`` if the anchor is not
-       part of the filtered collection.
-    2. Seek the first row strictly after the anchor (the next neighbour).
-    3. Seek the first row strictly before the anchor (the previous neighbour).
-    4. Count the total rows and the rows before the anchor to derive the 1-based
-       position.
+    Fetches the anchor's sort-key values (returns ``None`` if the anchor is not
+    part of the filtered collection), then delegates the seek/position/total
+    lookups to ``keyset_seek.get_adjacent_result``.
 
     Args:
         session: Database session.
@@ -75,38 +71,12 @@ def get_adjacent_images_keyset(
 
     base_query = _keyset_sample_id_query(collection_id=collection_id, filters=filters)
 
-    next_sample_id = _seek_neighbor(
+    return keyset_seek.get_adjacent_result(
         session=session,
-        base_query=base_query,
-        sort_keys=sort_keys,
-        anchor=anchor,
-        forward=True,
-    )
-    previous_sample_id = _seek_neighbor(
-        session=session,
-        base_query=base_query,
-        sort_keys=sort_keys,
-        anchor=anchor,
-        forward=False,
-    )
-
-    total_count = session.exec(
-        select(sqlalchemy.func.count()).select_from(base_query.subquery())
-    ).one()
-
-    # Position is 1-based: number of rows strictly before the anchor, plus the anchor.
-    count_before = session.exec(
-        select(sqlalchemy.func.count()).select_from(
-            base_query.where(_keyset_condition(sort_keys, anchor, after=False)).subquery()
-        )
-    ).one()
-
-    return AdjacentResultView(
-        previous_sample_id=previous_sample_id,
         sample_id=sample_id,
-        next_sample_id=next_sample_id,
-        current_sample_position=count_before + 1,
-        total_count=total_count,
+        base_query=base_query,
+        anchor=anchor,
+        sort_keys=sort_keys,
     )
 
 
@@ -178,64 +148,3 @@ def _fetch_anchor_values(
     if row is None:
         return None
     return tuple(row)
-
-
-def _seek_neighbor(
-    session: Session,
-    base_query: SelectOfScalar[UUID],
-    sort_keys: list[_SortKey],
-    anchor: tuple[Any, ...],
-    *,
-    forward: bool,
-) -> UUID | None:
-    """Return the sample_id immediately after (forward) or before the anchor.
-
-    Restricts ``base_query`` to rows on the requested side of the anchor, orders
-    them so the closest neighbour comes first (the sort is reversed when seeking
-    backwards), and takes the first row.
-    """
-    condition = _keyset_condition(sort_keys, anchor, after=forward)
-    order_columns = [
-        _directional_column(column, ascending=ascending, forward=forward)
-        for column, ascending in sort_keys
-    ]
-    query = base_query.where(condition).order_by(*order_columns).limit(1)
-    return session.exec(query).first()
-
-
-def _directional_column(
-    column: ColumnElement[Any], *, ascending: bool, forward: bool
-) -> ColumnElement[Any]:
-    """Apply ASC/DESC for the seek direction (reversed when seeking backwards)."""
-    effective_ascending = ascending if forward else not ascending
-    return column.asc() if effective_ascending else column.desc()
-
-
-def _keyset_condition(
-    sort_keys: list[_SortKey],
-    anchor: tuple[Any, ...],
-    *,
-    after: bool,
-) -> ColumnElement[bool]:
-    """Build the lexicographic keyset comparison for rows after/before the anchor.
-
-    For sort keys ``k0, k1, ...`` with anchor values ``v0, v1, ...`` the rows after
-    the anchor are::
-
-        (k0 AFTER v0)
-        OR (k0 == v0 AND k1 AFTER v1)
-        OR ...
-
-    where ``AFTER`` is ``>`` for an ascending key and ``<`` for a descending key
-    (and flipped for each key when ``after`` is False). All keys are non-nullable,
-    so no NULL handling is required.
-    """
-    or_terms: list[ColumnElement[bool]] = []
-    for i, (column, ascending) in enumerate(sort_keys):
-        equals_prefix = [sort_keys[j][0] == anchor[j] for j in range(i)]
-        # "After" means greater for an ascending key, smaller for a descending key;
-        # seeking backwards (after=False) flips both.
-        seek_greater = ascending if after else not ascending
-        comparison = (column > anchor[i]) if seek_greater else (column < anchor[i])
-        or_terms.append(sqlalchemy.and_(*equals_prefix, comparison))
-    return sqlalchemy.or_(*or_terms)
