@@ -254,7 +254,7 @@ def test_delete_dataset__with_evaluation_sample_metrics(db_session: Session) -> 
     # Arrange
     dataset = create_collection(session=db_session, collection_name="to_delete")
     run = evaluation_sample_metric_helpers.create_run(
-        session=db_session, dataset_collection_id=dataset.collection_id
+        session=db_session, collection_id=dataset.collection_id
     )
     image = create_image(session=db_session, collection_id=dataset.collection_id)
     run_id = run.id  # Capture before delete
@@ -338,7 +338,7 @@ def test_delete_dataset__with_evaluation_annotation_metrics(db_session: Session)
     # Arrange
     dataset = create_collection(session=db_session, collection_name="to_delete")
     run = evaluation_sample_metric_helpers.create_run(
-        session=db_session, dataset_collection_id=dataset.collection_id
+        session=db_session, collection_id=dataset.collection_id
     )
     image = create_image(session=db_session, collection_id=dataset.collection_id)
     run_id = run.id  # Capture before delete

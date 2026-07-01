@@ -13,8 +13,9 @@ from lightly_studio.models.evaluation_confusion_matrix import (
 )
 from lightly_studio.resolvers import evaluation_annotation_metric_resolver
 from tests.helpers_resolvers import (
-    create_annotation,
+    AnnotationDetails,
     create_annotation_label,
+    create_annotations,
     create_collection,
     create_image,
 )
@@ -29,7 +30,7 @@ def test_get_confusion_matrix__empty_run(
     dataset = create_collection(session=db_session)
     run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
-        dataset_collection_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
     )
     matrix = evaluation_annotation_metric_resolver.get_confusion_matrix(
         session=db_session,
@@ -46,9 +47,10 @@ def test_get_confusion_matrix__aggregates_tp_fp_fn(
     dataset = create_collection(session=db_session)
     run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
-        dataset_collection_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
     )
     image = create_image(session=db_session, collection_id=dataset.collection_id)
+    sample_id = image.sample_id
     label_a = create_annotation_label(
         session=db_session,
         root_collection_id=dataset.collection_id,
@@ -59,29 +61,15 @@ def test_get_confusion_matrix__aggregates_tp_fp_fn(
         root_collection_id=dataset.collection_id,
         label_name="class_b",
     )
-    gt_a = create_annotation(
+    [gt_a, gt_b, pred_a, pred_b] = create_annotations(
         session=db_session,
         collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label_a.annotation_label_id,
-    )
-    gt_b = create_annotation(
-        session=db_session,
-        collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label_b.annotation_label_id,
-    )
-    pred_a = create_annotation(
-        session=db_session,
-        collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label_a.annotation_label_id,
-    )
-    pred_b = create_annotation(
-        session=db_session,
-        collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label_b.annotation_label_id,
+        annotations=[
+            AnnotationDetails(sample_id=sample_id, annotation_label_id=label_a.annotation_label_id),
+            AnnotationDetails(sample_id=sample_id, annotation_label_id=label_b.annotation_label_id),
+            AnnotationDetails(sample_id=sample_id, annotation_label_id=label_a.annotation_label_id),
+            AnnotationDetails(sample_id=sample_id, annotation_label_id=label_b.annotation_label_id),
+        ],
     )
 
     evaluation_annotation_metric_resolver.create_many(
@@ -142,7 +130,7 @@ def test_get_confusion_matrix__class_only_in_gt(
     dataset = create_collection(session=db_session)
     run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
-        dataset_collection_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
     )
     image = create_image(session=db_session, collection_id=dataset.collection_id)
     label_a = create_annotation_label(
@@ -155,23 +143,15 @@ def test_get_confusion_matrix__class_only_in_gt(
         root_collection_id=dataset.collection_id,
         label_name="class_b",
     )
-    gt_a = create_annotation(
+    sample_id = image.sample_id
+    [gt_a, gt_b, pred_a] = create_annotations(
         session=db_session,
         collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label_a.annotation_label_id,
-    )
-    gt_b = create_annotation(
-        session=db_session,
-        collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label_b.annotation_label_id,
-    )
-    pred_a = create_annotation(
-        session=db_session,
-        collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label_a.annotation_label_id,
+        annotations=[
+            AnnotationDetails(sample_id=sample_id, annotation_label_id=label_a.annotation_label_id),
+            AnnotationDetails(sample_id=sample_id, annotation_label_id=label_b.annotation_label_id),
+            AnnotationDetails(sample_id=sample_id, annotation_label_id=label_a.annotation_label_id),
+        ],
     )
 
     evaluation_annotation_metric_resolver.create_many(
@@ -219,7 +199,7 @@ def test_get_confusion_matrix__class_only_in_pred(
     dataset = create_collection(session=db_session)
     run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
-        dataset_collection_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
     )
     image = create_image(session=db_session, collection_id=dataset.collection_id)
     label_a = create_annotation_label(
@@ -232,23 +212,15 @@ def test_get_confusion_matrix__class_only_in_pred(
         root_collection_id=dataset.collection_id,
         label_name="class_b",
     )
-    gt_a = create_annotation(
+    sample_id = image.sample_id
+    [gt_a, pred_a, pred_b] = create_annotations(
         session=db_session,
         collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label_a.annotation_label_id,
-    )
-    pred_a = create_annotation(
-        session=db_session,
-        collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label_a.annotation_label_id,
-    )
-    pred_b = create_annotation(
-        session=db_session,
-        collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label_b.annotation_label_id,
+        annotations=[
+            AnnotationDetails(sample_id=sample_id, annotation_label_id=label_a.annotation_label_id),
+            AnnotationDetails(sample_id=sample_id, annotation_label_id=label_a.annotation_label_id),
+            AnnotationDetails(sample_id=sample_id, annotation_label_id=label_b.annotation_label_id),
+        ],
     )
 
     evaluation_annotation_metric_resolver.create_many(
@@ -295,7 +267,7 @@ def test_get_confusion_matrix__no_fp_or_fn_keeps_synthetic_axes(
     dataset = create_collection(session=db_session)
     run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
-        dataset_collection_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
     )
     image = create_image(session=db_session, collection_id=dataset.collection_id)
     label_a = create_annotation_label(
@@ -303,17 +275,14 @@ def test_get_confusion_matrix__no_fp_or_fn_keeps_synthetic_axes(
         root_collection_id=dataset.collection_id,
         label_name="class_a",
     )
-    gt_a = create_annotation(
+    sample_id = image.sample_id
+    [gt_a, pred_a] = create_annotations(
         session=db_session,
         collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label_a.annotation_label_id,
-    )
-    pred_a = create_annotation(
-        session=db_session,
-        collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label_a.annotation_label_id,
+        annotations=[
+            AnnotationDetails(sample_id=sample_id, annotation_label_id=label_a.annotation_label_id),
+            AnnotationDetails(sample_id=sample_id, annotation_label_id=label_a.annotation_label_id),
+        ],
     )
 
     evaluation_annotation_metric_resolver.create_many(
