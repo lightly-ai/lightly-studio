@@ -3,7 +3,7 @@
 Pipeline steps route each per-item file operation through
 `FileOutcomeReport.track`. The body classifies *why* a file ended where it did
 by raising one of the typed signals defined here; the report does pure
-bookkeeping and decides the all-failed raise policy. It has no knowledge of I/O.
+bookkeeping. It has no knowledge of I/O.
 
 Each tracked file ends in exactly one `FileOutcome`:
 
@@ -29,7 +29,6 @@ Usage::
                     dataset.add(path, image)
             except (OSError, PILImage.UnidentifiedImageError) as exc:
                 raise BrokenInputFileError("Could not decode image.") from exc
-    report.raise_if_all_failed()  # raises if every attempted file failed
     report.log_summary()
 """
 
@@ -69,10 +68,6 @@ class BrokenInputFileError(InputFileError):
     """Signal that an input file is present but unreadable/undecodable."""
 
 
-class AllInputFilesFailedError(Exception):
-    """Raised when every attempted input file failed (all missing or broken)."""
-
-
 class FileOutcome(Enum):
     """The outcome of attempting to process a single input file."""
 
@@ -84,7 +79,7 @@ class FileOutcome(Enum):
 
 @dataclass
 class FileOutcomeReport:
-    """Per-run bookkeeping of file outcomes plus the all-failed raise policy.
+    """Per-run bookkeeping of file outcomes.
 
     The report counts how many files ended in each `FileOutcome` and keeps a
     capped list of example paths per outcome for the end-of-run summary. It has
@@ -147,29 +142,6 @@ class FileOutcomeReport:
             self.record(path=path, outcome=FileOutcome.BROKEN)
         else:
             self.record(path=path, outcome=FileOutcome.ADDED)
-
-    def raise_if_all_failed(self) -> None:
-        """Raise if at least one file was attempted and none succeeded.
-
-        A file is "attempted" if it was added, missing, or broken;
-        already-present files are excluded. So a run that only skips
-        already-present files (0 attempted) does not raise.
-
-        Raises:
-            AllInputFilesFailedError: If at least one file was attempted and
-                zero of them succeeded.
-        """
-        n_added = self._counts[FileOutcome.ADDED]
-        n_already_present = self._counts[FileOutcome.ALREADY_PRESENT]
-        n_missing = self._counts[FileOutcome.MISSING]
-        n_broken = self._counts[FileOutcome.BROKEN]
-        n_attempted = n_added + n_missing + n_broken
-        n_succeeded = n_added + n_already_present
-        if n_attempted >= 1 and n_succeeded == 0:
-            raise AllInputFilesFailedError(
-                f"All {n_attempted} attempted input files failed "
-                f"({n_missing} missing, {n_broken} broken)."
-            )
 
     def log_summary(self) -> None:
         """Log a single end-of-run summary of counts and example paths."""
