@@ -110,7 +110,8 @@ disallow_untyped_defs = true
 ignore_missing_imports = false
 exclude = [
     "datasets/",
-    "vendor/"
+    "vendor/",
+    "scripts/download_coco_subset.py",
 ]
 plugins = ["pydantic.mypy"]
 
