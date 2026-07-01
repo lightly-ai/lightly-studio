@@ -31,8 +31,6 @@ class AnnotationMetricStub:
     value: float
     pred_annotation_id: UUID | None = None
     gt_annotation_id: UUID | None = None
-    create_pred_annotation: bool = False
-    create_gt_annotation: bool = False
 
 
 @dataclass
@@ -54,7 +52,8 @@ def create_run(
             session=session,
             collection_id=collection_id,
         )
-        assert collection is not None, f"Collection {collection_id} doesn't exist"
+        if collection is None:
+            raise RuntimeError(f"Collection {collection_id} doesn't exist")
     else:
         collection = create_collection(session=session)
         collection_id = collection.collection_id
