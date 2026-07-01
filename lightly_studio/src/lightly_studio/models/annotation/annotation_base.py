@@ -253,6 +253,8 @@ class AnnotationWithPayloadView(BaseModel):
     parent_sample_type: SampleType
     annotation: AnnotationView
     parent_sample_data: Union[ImageAnnotationView, VideoFrameAnnotationView]
+    # Set when results are ordered by embedding similarity search.
+    similarity_score: Optional[float] = None
 
 
 class AnnotationWithPayloadAndCountView(BaseModel):

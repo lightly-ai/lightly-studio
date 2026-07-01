@@ -2,6 +2,7 @@
     import { AnnotationsGridItem, SelectableBox } from '$lib/components';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
     import { useSettings } from '$lib/hooks/useSettings';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
@@ -50,8 +51,13 @@
         getCollectionVersion,
         setfilteredAnnotationCount,
         addReversibleAction,
-        clearReversibleActions
+        clearReversibleActions,
+        textEmbedding
     } = useGlobalStorage();
+
+    // The embedding plot lasso selection on the annotations route.
+    const { annotationPlotSampleIds } = useAnnotationPlotSelection();
+    const plotSelectedAnnotationIds = $derived($annotationPlotSampleIds);
 
     afterNavigate(() => {
         clearReversibleActions();
@@ -67,14 +73,14 @@
     });
 
     const queryParams = $derived({
-        path: {
-            collection_id: collection_id
-        },
-        query: {
-            annotation_label_ids:
-                $selectedAnnotationFilterIds.length > 0 ? $selectedAnnotationFilterIds : undefined,
-            tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined
-        }
+        collection_id: collection_id,
+        annotation_label_ids:
+            $selectedAnnotationFilterIds.length > 0 ? $selectedAnnotationFilterIds : undefined,
+        tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
+        // Embedding plot lasso selection narrows the grid to the selected annotations.
+        sample_ids: plotSelectedAnnotationIds.length > 0 ? plotSelectedAnnotationIds : undefined,
+        // Embedding text search reorders the grid by similarity (shared with images tab).
+        text_embedding: $textEmbedding?.embedding ?? undefined
     });
 
     const {
@@ -88,7 +94,10 @@
         collectionId: collection_id
     });
     let infiniteLoaderIdentifier = $derived(
-        $selectedAnnotationFilterIds.join(',') + Array.from($tagsSelected).join(',')
+        $selectedAnnotationFilterIds.join(',') +
+            Array.from($tagsSelected).join(',') +
+            plotSelectedAnnotationIds.join(',') +
+            ($textEmbedding ? `search:${$textEmbedding.queryText}` : '')
     );
 
     const filterHash = $derived(infiniteLoaderIdentifier);
