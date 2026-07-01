@@ -71,12 +71,7 @@
     const { data, children } = $props();
     const {
         collection,
-        globalStorage: {
-            textEmbedding,
-            setLastGridType,
-            clearSelectedSamples,
-            clearSelectedSampleAnnotationCrops
-        }
+        globalStorage: { setLastGridType, clearSelectedSamples, clearSelectedSampleAnnotationCrops }
     } = $derived(data);
 
     // The dataset ID actually contains the collection ID.
@@ -95,7 +90,10 @@
         activePanel,
         setActivePanel,
         filteredSampleCount,
-        filteredAnnotationCount
+        filteredAnnotationCount,
+        // Sourced from the stable singleton (not `$derived(data)`) so `search`, created once below,
+        // captures a store reference that never goes stale.
+        textEmbedding
     } = useGlobalStorage();
 
     const evaluationRunsQuery = useEvaluationRuns(() => ({ datasetId: collection.dataset_id }));
@@ -139,9 +137,28 @@
         selectAllHandle.handleSelectAll();
     }
 
-    const search = $derived(useSearchEmbedding({ collectionId, embedding: textEmbedding }));
-    const searchImage = $derived(search.image);
-    const searchPending = $derived(search.isPending);
+    // Instantiate once (not `$derived`) so the active search survives collection changes: the image
+    // and annotation tabs are separate collections, and re-creating the hook per collection would
+    // reset the preview chip. `collectionId` is read lazily via the getter when a request fires.
+    const search = useSearchEmbedding({
+        getCollectionId: () => collectionId,
+        embedding: textEmbedding
+    });
+    const searchImage = search.image;
+    const searchPending = search.isPending;
+
+    // Copy a blob object URL into an independent one the caller owns. Used for annotation crop
+    // previews, whose source URL is owned by the annotation grid tile and revoked when that grid
+    // unmounts (e.g. switching to the images tab). The copy keeps the search chip alive afterwards.
+    async function copyBlobObjectUrl(url: string): Promise<string | undefined> {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) return undefined;
+            return URL.createObjectURL(await response.blob());
+        } catch {
+            return undefined;
+        }
+    }
 
     async function handleGridImageSearchDrop(event: Event) {
         const { url, fileName, annotationSampleId, annotationCollectionId } = (
@@ -149,18 +166,29 @@
         ).detail;
         try {
             if (annotationSampleId) {
-                const { data: storedEmbedding } = await readAnnotationEmbedding({
-                    path: {
-                        collection_id: annotationCollectionId ?? collectionId,
-                        sample_id: annotationSampleId
-                    },
-                    throwOnError: true
-                });
-                search.setEmbedding({
-                    queryText: fileName,
-                    embedding: storedEmbedding,
-                    imagePreview: { name: fileName, previewUrl: url }
-                });
+                // Copy the crop preview up front, while the source URL is still guaranteed valid
+                // (before the awaited embedding request gives the source tile a chance to unmount).
+                const ownedPreviewUrl = await copyBlobObjectUrl(url);
+                try {
+                    const { data: storedEmbedding } = await readAnnotationEmbedding({
+                        path: {
+                            collection_id: annotationCollectionId ?? collectionId,
+                            sample_id: annotationSampleId
+                        },
+                        throwOnError: true
+                    });
+                    search.setEmbedding({
+                        queryText: fileName,
+                        embedding: storedEmbedding,
+                        imagePreview: ownedPreviewUrl
+                            ? { name: fileName, previewUrl: ownedPreviewUrl }
+                            : undefined
+                    });
+                } catch (err) {
+                    // The copied preview never reached the search, so revoke it here to avoid a leak.
+                    if (ownedPreviewUrl) URL.revokeObjectURL(ownedPreviewUrl);
+                    throw err;
+                }
                 return;
             }
 

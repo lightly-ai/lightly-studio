@@ -8,8 +8,8 @@ type UploadSuccessResult = {
 };
 
 type UseImageUploadParams = {
-    /** Target collection id used by the embedding endpoint path. */
-    collectionId: string;
+    /** Returns the target collection id for the embedding endpoint path, read per upload. */
+    getCollectionId: () => string;
     /** Called with a user-facing error message on validation or upload failure. */
     onError: (message: string) => void;
     /** Called after successful upload with file name and embedding vector. */
@@ -35,7 +35,7 @@ type UseImageUploadReturn = {
 
 /** Handles image upload state and embedding retrieval for collection search. */
 export function useImageUpload({
-    collectionId,
+    getCollectionId,
     onError,
     onSuccess,
     maxSizeMb = 50
@@ -81,6 +81,7 @@ export function useImageUpload({
 
         isUploading.set(true);
         try {
+            const collectionId = getCollectionId();
             if (!collectionId) {
                 throw new Error('Collection ID is not available');
             }

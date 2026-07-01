@@ -10,8 +10,13 @@ export type SearchEmbeddingImage = {
 };
 
 interface Params {
-    /** Target collection id used by the embedding endpoints. */
-    collectionId: string;
+    /**
+     * Returns the target collection id for the embedding endpoints, read per request. A getter (not
+     * a value) so the hook can be instantiated once and outlive collection changes (e.g. switching
+     * between the image and annotation tabs, which are separate collections). This keeps the active
+     * search — embedding vector and image/crop preview chip — alive across that navigation.
+     */
+    getCollectionId: () => string;
     /** External writable that receives the resulting embedding. */
     embedding: Writable<TextEmbedding | undefined>;
 }
@@ -39,13 +44,13 @@ interface Return {
     onError: (message: string) => void;
 }
 
-export function useSearchEmbedding({ collectionId, embedding }: Params): Return {
+export function useSearchEmbedding({ getCollectionId, embedding }: Params): Return {
     const onError = (message: string) => {
         toast.error('Error', { description: message });
     };
 
     const upload = useImageUpload({
-        collectionId,
+        getCollectionId,
         onError,
         onSuccess: ({ fileName, embedding: vector }) => {
             embedding.set({ queryText: fileName, embedding: vector });
@@ -53,7 +58,7 @@ export function useSearchEmbedding({ collectionId, embedding }: Params): Return 
     });
 
     const text = useTextEmbedding({
-        collectionId,
+        getCollectionId,
         onError,
         onSuccess: ({ queryText, embedding: vector }) => {
             embedding.set({ queryText, embedding: vector });
@@ -93,8 +98,9 @@ export function useSearchEmbedding({ collectionId, embedding }: Params): Return 
     }) => {
         upload.clear();
         if (imagePreview) {
-            // Preview URL is owned by the annotation tile; do not revoke on clear.
-            upload.setPreview(imagePreview.name, imagePreview.previewUrl, false);
+            // The caller hands over a preview URL the search owns (a copy that outlives the source
+            // tile), so revoke it when the search is cleared or replaced.
+            upload.setPreview(imagePreview.name, imagePreview.previewUrl, true);
         }
         embedding.set({ queryText, embedding: vector });
     };

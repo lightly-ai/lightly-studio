@@ -6,7 +6,10 @@ import {
     type GridItemDragData
 } from '$lib/components/GridItem/GridItem.constants';
 
-export function useGridItemDrag(getDragData: () => GridItemDragData | undefined) {
+export function useGridItemDrag(
+    getDragData: () => GridItemDragData | undefined,
+    onDragStart?: () => void
+) {
     let suppressNextClick = $state(false);
     let pointerStart: { x: number; y: number; id: number } | null = null;
     let capturedPointerElement: HTMLElement | null = null;
@@ -82,6 +85,7 @@ export function useGridItemDrag(getDragData: () => GridItemDragData | undefined)
             isPointerDragging = true;
             suppressNextSelectionClick();
             setBodyDraggingCursor(true);
+            onDragStart?.();
         }
         updateDragPreview(event);
     }

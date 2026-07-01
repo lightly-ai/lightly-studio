@@ -2,11 +2,12 @@
     import { AnnotationsGridItem, SelectableBox } from '$lib/components';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
     import { useSettings } from '$lib/hooks/useSettings';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
-    import { onMount } from 'svelte';
+    import { onDestroy, onMount } from 'svelte';
     import { page } from '$app/state';
     import { useAnnotationsInfinite } from '$lib/hooks/useAnnotationsInfinite/useAnnotationsInfinite';
     import { afterNavigate, goto } from '$app/navigation';
@@ -21,6 +22,8 @@
     import { GridContainer } from '$lib/components/GridContainer';
     import { Grid } from '$lib/components/Grid';
     import { GridItem } from '$lib/components/GridItem';
+    import { buildAnnotationDragData } from './AnnotationsGrid.helpers';
+    import { renderCropObjectUrl, type CropWindow } from './AnnotationItem/renderCropObjectUrl';
 
     type AnnotationsProps = {
         collection_id: string;
@@ -59,16 +62,51 @@
     const { annotationPlotSampleIds } = useAnnotationPlotSelection();
     const plotSelectedAnnotationIds = $derived($annotationPlotSampleIds);
 
-    // Crop blob URLs reported by the tiles, used as the drag-to-search payload
-    // (mirrors the images grid dragData).
-    let cropImageUrlByAnnotationId = $state<Record<string, string>>({});
-    function handleCropImageUrlChange(annotationId: string, url: string | null) {
+    // The text embedding search is shared with the images tab and persists across the tab switch.
+    // Only apply it when this annotation collection actually has embeddings.
+    const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId: collection_id }));
+    const searchEmbedding = $derived(hasEmbeddingsQuery.data ? $textEmbedding : undefined);
+
+    // Drag-to-search crop preview. Tiles report only their crop geometry; the blob is
+    // rendered lazily when a drag starts (not per visible tile), and revoked on unmount.
+    let cropWindowByAnnotationId = $state<Record<string, CropWindow>>({});
+    let cropUrlByAnnotationId = $state<Record<string, string>>({});
+
+    function handleCropWindowChange(annotationId: string, window: CropWindow | null) {
+        if (window) {
+            cropWindowByAnnotationId[annotationId] = window;
+            return;
+        }
+        delete cropWindowByAnnotationId[annotationId];
+        revokeCropUrl(annotationId);
+    }
+
+    function revokeCropUrl(annotationId: string) {
+        const url = cropUrlByAnnotationId[annotationId];
         if (url) {
-            cropImageUrlByAnnotationId[annotationId] = url;
-        } else {
-            delete cropImageUrlByAnnotationId[annotationId];
+            URL.revokeObjectURL(url);
+            delete cropUrlByAnnotationId[annotationId];
         }
     }
+
+    async function handleAnnotationDragStart(annotationId: string) {
+        const window = cropWindowByAnnotationId[annotationId];
+        if (!window) return;
+        revokeCropUrl(annotationId);
+        const url = await renderCropObjectUrl(window, { cancelled: false });
+        // The tile may have unmounted while rendering; drop the blob if so.
+        if (url && cropWindowByAnnotationId[annotationId]) {
+            cropUrlByAnnotationId[annotationId] = url;
+        } else if (url) {
+            URL.revokeObjectURL(url);
+        }
+    }
+
+    onDestroy(() => {
+        for (const url of Object.values(cropUrlByAnnotationId)) {
+            URL.revokeObjectURL(url);
+        }
+    });
 
     afterNavigate(() => {
         clearReversibleActions();
@@ -91,7 +129,7 @@
         // Embedding plot lasso selection narrows the grid to the selected annotations.
         sample_ids: plotSelectedAnnotationIds.length > 0 ? plotSelectedAnnotationIds : undefined,
         // Embedding text search reorders the grid by similarity (shared with images tab).
-        text_embedding: $textEmbedding?.embedding ?? undefined
+        text_embedding: searchEmbedding?.embedding ?? undefined
     });
 
     const {
@@ -108,7 +146,7 @@
         $selectedAnnotationFilterIds.join(',') +
             Array.from($tagsSelected).join(',') +
             plotSelectedAnnotationIds.join(',') +
-            ($textEmbedding ? `search:${$textEmbedding.queryText}` : '')
+            (searchEmbedding ? `search:${searchEmbedding.queryText}` : '')
     );
 
     const filterHash = $derived(infiniteLoaderIdentifier);
@@ -273,21 +311,19 @@
                                     dataTestId="annotation-grid-item"
                                     tag={false}
                                     ariaLabel={`Edit annotation: ${annotations[index].annotation.sample_id}`}
-                                    dragData={cropImageUrlByAnnotationId[
-                                        annotations[index].annotation.sample_id
-                                    ]
-                                        ? {
-                                              url: cropImageUrlByAnnotationId[
-                                                  annotations[index].annotation.sample_id
-                                              ],
-                                              fileName: `${annotations[index].annotation.annotation_label.annotation_label_name}-crop.png`,
-                                              annotationSampleId:
-                                                  annotations[index].annotation.sample_id,
-                                              annotationCollectionId:
-                                                  annotations[index].annotation
-                                                      .annotation_collection_id
-                                          }
-                                        : undefined}
+                                    dragData={buildAnnotationDragData(
+                                        annotations[index].annotation,
+                                        cropWindowByAnnotationId[
+                                            annotations[index].annotation.sample_id
+                                        ],
+                                        cropUrlByAnnotationId[
+                                            annotations[index].annotation.sample_id
+                                        ]
+                                    )}
+                                    onDragStart={() =>
+                                        handleAnnotationDragStart(
+                                            annotations[index].annotation.sample_id
+                                        )}
                                     onSelect={(event) =>
                                         handleGridItemSelect(
                                             event,
@@ -328,7 +364,7 @@
                                             selected={$pickedAnnotationIds[collection_id]?.has(
                                                 annotations[index].annotation.sample_id
                                             )}
-                                            onCropImageUrlChange={handleCropImageUrlChange}
+                                            onCropWindowChange={handleCropWindowChange}
                                         />
                                     </div>
                                 </GridItem>

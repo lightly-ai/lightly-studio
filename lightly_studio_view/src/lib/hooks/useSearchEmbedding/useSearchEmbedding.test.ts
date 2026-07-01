@@ -86,7 +86,7 @@ describe('useSearchEmbedding', () => {
     });
 
     it('setText delegates to useTextEmbedding and writes embedding on success', async () => {
-        const search = useSearchEmbedding({ collectionId: 'collection-id', embedding });
+        const search = useSearchEmbedding({ getCollectionId: () => 'collection-id', embedding });
 
         await search.setText('cat');
 
@@ -98,7 +98,7 @@ describe('useSearchEmbedding', () => {
     });
 
     it('setText clears any active image before embedding', async () => {
-        const search = useSearchEmbedding({ collectionId: 'collection-id', embedding });
+        const search = useSearchEmbedding({ getCollectionId: () => 'collection-id', embedding });
 
         await search.setText('cat');
 
@@ -107,7 +107,7 @@ describe('useSearchEmbedding', () => {
 
     it('setText with empty string clears the embedding store', async () => {
         embedding.set({ queryText: 'old', embedding: [0] });
-        const search = useSearchEmbedding({ collectionId: 'collection-id', embedding });
+        const search = useSearchEmbedding({ getCollectionId: () => 'collection-id', embedding });
 
         await search.setText('');
 
@@ -117,7 +117,7 @@ describe('useSearchEmbedding', () => {
 
     it('setText with whitespace clears the embedding store', async () => {
         embedding.set({ queryText: 'old', embedding: [0] });
-        const search = useSearchEmbedding({ collectionId: 'collection-id', embedding });
+        const search = useSearchEmbedding({ getCollectionId: () => 'collection-id', embedding });
 
         await search.setText('   ');
 
@@ -126,7 +126,7 @@ describe('useSearchEmbedding', () => {
     });
 
     it('routes onError from useTextEmbedding to toast', () => {
-        useSearchEmbedding({ collectionId: 'collection-id', embedding });
+        useSearchEmbedding({ getCollectionId: () => 'collection-id', embedding });
 
         const opts = mocks.useTextEmbeddingOptions as EmbedOptions;
         opts.onError('boom');
@@ -138,7 +138,7 @@ describe('useSearchEmbedding', () => {
     });
 
     it('isPending reflects useTextEmbedding.isEmbedding', () => {
-        const search = useSearchEmbedding({ collectionId: 'collection-id', embedding });
+        const search = useSearchEmbedding({ getCollectionId: () => 'collection-id', embedding });
 
         mocks.isEmbedding.set(true);
         expect(get(search.isPending)).toBe(true);
@@ -148,7 +148,7 @@ describe('useSearchEmbedding', () => {
     });
 
     it('isPending reflects useImageUpload.isUploading', () => {
-        const search = useSearchEmbedding({ collectionId: 'collection-id', embedding });
+        const search = useSearchEmbedding({ getCollectionId: () => 'collection-id', embedding });
 
         mocks.isUploading.set(true);
         expect(get(search.isPending)).toBe(true);
@@ -158,7 +158,7 @@ describe('useSearchEmbedding', () => {
     });
 
     it('setEmbedding writes a precomputed vector and optional preview without uploading', () => {
-        const search = useSearchEmbedding({ collectionId: 'collection-id', embedding });
+        const search = useSearchEmbedding({ getCollectionId: () => 'collection-id', embedding });
 
         search.setEmbedding({
             queryText: 'person-crop.png',
@@ -167,7 +167,7 @@ describe('useSearchEmbedding', () => {
         });
 
         expect(mocks.clearImage).toHaveBeenCalled();
-        expect(mocks.setPreview).toHaveBeenCalledWith('person-crop.png', 'blob:crop', false);
+        expect(mocks.setPreview).toHaveBeenCalledWith('person-crop.png', 'blob:crop', true);
         expect(get(embedding)).toEqual({
             queryText: 'person-crop.png',
             embedding: [1, 0, 0]
@@ -179,7 +179,7 @@ describe('useSearchEmbedding', () => {
         const file = new File(['x'], 'sample.png', { type: 'image/png' });
         mocks.upload.mockResolvedValue(undefined);
 
-        const search = useSearchEmbedding({ collectionId: 'collection-id', embedding });
+        const search = useSearchEmbedding({ getCollectionId: () => 'collection-id', embedding });
 
         await search.setImage(file);
 
@@ -193,7 +193,7 @@ describe('useSearchEmbedding', () => {
     });
 
     it('image store mirrors useImageUpload name + preview', () => {
-        const search = useSearchEmbedding({ collectionId: 'collection-id', embedding });
+        const search = useSearchEmbedding({ getCollectionId: () => 'collection-id', embedding });
 
         expect(get(search.image)).toBeUndefined();
 
@@ -205,7 +205,7 @@ describe('useSearchEmbedding', () => {
 
     it('clear resets embedding and clears image upload state', () => {
         embedding.set({ queryText: 'foo', embedding: [1] });
-        const search = useSearchEmbedding({ collectionId: 'collection-id', embedding });
+        const search = useSearchEmbedding({ getCollectionId: () => 'collection-id', embedding });
 
         search.clear();
 

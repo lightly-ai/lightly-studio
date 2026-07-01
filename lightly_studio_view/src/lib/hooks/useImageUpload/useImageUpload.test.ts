@@ -42,7 +42,7 @@ describe('useImageUpload', () => {
 
     it('rejects oversized images', async () => {
         const upload = useImageUpload({
-            collectionId: 'collection-id',
+            getCollectionId: () => 'collection-id',
             onError,
             onSuccess,
             maxSizeMb: 1
@@ -64,7 +64,7 @@ describe('useImageUpload', () => {
         });
 
         const upload = useImageUpload({
-            collectionId: 'collection-id',
+            getCollectionId: () => 'collection-id',
             onError,
             onSuccess
         });
@@ -103,7 +103,7 @@ describe('useImageUpload', () => {
         });
 
         const upload = useImageUpload({
-            collectionId: 'collection-id',
+            getCollectionId: () => 'collection-id',
             onError,
             onSuccess
         });
@@ -124,7 +124,7 @@ describe('useImageUpload', () => {
         });
 
         const upload = useImageUpload({
-            collectionId: 'collection-id',
+            getCollectionId: () => 'collection-id',
             onError,
             onSuccess
         });
@@ -158,7 +158,7 @@ describe('useImageUpload', () => {
         });
 
         const upload = useImageUpload({
-            collectionId: 'collection-id',
+            getCollectionId: () => 'collection-id',
             onError,
             onSuccess
         });
