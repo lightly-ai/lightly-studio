@@ -37,7 +37,6 @@ vi.mock('$lib/hooks/useCustomLabelColors', async () => {
     return {
         useCustomLabelColors: () => ({
             customLabelColorsStore: writable({}),
-            colorVersion: writable(0),
             getCustomColor: () => undefined,
             setCustomColor: vi.fn(),
             hasCustomColor: () => false,
