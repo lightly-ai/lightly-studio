@@ -223,6 +223,66 @@ describe('buildBreadcrumbLevels', () => {
         ]);
     });
 
+    it('appends the active matches run as a trailing crumb on a matches view', () => {
+        const ann = makeCollection('ann-1', SampleType.ANNOTATION);
+        const root = makeCollection('root', SampleType.IMAGE, [ann]);
+
+        const matchItems = [
+            {
+                title: 'Matches: run-a',
+                id: 'evaluation-matches-run-a',
+                href: '/datasets/dataset-id/image/root/evaluation/run-a/matches',
+                isSelected: true
+            },
+            {
+                title: 'Matches: run-b',
+                id: 'evaluation-matches-run-b',
+                href: '/datasets/dataset-id/image/root/evaluation/run-b/matches',
+                isSelected: false
+            }
+        ];
+
+        const levels = buildBreadcrumbLevels(
+            [root, ann],
+            root,
+            'ann-1',
+            'dataset-id',
+            matchItems,
+            matchItems[0]
+        );
+
+        // Final crumb is the active matches run, with all runs reachable as siblings.
+        const trailing = levels[levels.length - 1];
+        expect(trailing.selected.id).toBe('evaluation-matches-run-a');
+        expect(trailing.selected.isSelected).toBe(true);
+        expect(trailing.siblings.map((s) => s.id)).toEqual([
+            'evaluation-matches-run-a',
+            'evaluation-matches-run-b'
+        ]);
+    });
+
+    it('shows the matches crumb even when the collection path is unresolved', () => {
+        const root = makeCollection('root', SampleType.IMAGE);
+        const activeMatch = {
+            title: 'Matches: run-a',
+            id: 'evaluation-matches-run-a',
+            href: '/datasets/dataset-id/image/root/evaluation/run-a/matches',
+            isSelected: true
+        };
+
+        const levels = buildBreadcrumbLevels(
+            null,
+            root,
+            undefined,
+            'dataset-id',
+            [activeMatch],
+            activeMatch
+        );
+
+        expect(levels).toHaveLength(1);
+        expect(levels[0].selected.id).toBe('evaluation-matches-run-a');
+    });
+
     it('keeps group_component_name for non-annotation siblings when multiple annotations exist', () => {
         const img = makeCollection('img-1', SampleType.IMAGE, undefined, {
             name: 'img-name',

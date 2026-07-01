@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlalchemy import case
 from sqlalchemy.orm import aliased
 from sqlmodel import Session, and_, col, func, or_, select
+from sqlmodel.sql.expression import Select
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation.annotation_base import (
@@ -15,6 +16,7 @@ from lightly_studio.models.annotation.annotation_base import (
     ImageAnnotationView,
     SampleAnnotationView,
 )
+from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.evaluation_annotation_metric import (
     EvaluationAnnotationMetricTable,
     EvaluationMatchesWithCountView,
@@ -22,6 +24,7 @@ from lightly_studio.models.evaluation_annotation_metric import (
     EvaluationMatchType,
     EvaluationMatchView,
 )
+from lightly_studio.models.evaluation_confusion_matrix import ConfusionCell
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sort_direction import SortDirection
 from lightly_studio.resolvers.image_filter import ImageFilter
@@ -30,6 +33,50 @@ from lightly_studio.resolvers.image_filter import ImageFilter
 # no metric. Restricting to these keeps exactly one row per match.
 _IOU_METRIC_NAME = "iou"
 
+# The rows selected by the matches query: one metric row joined to its (optional)
+# ground-truth and prediction annotations and the parent image.
+_MatchesQuery = Select[
+    tuple[EvaluationAnnotationMetricTable, AnnotationBaseTable, AnnotationBaseTable, ImageTable]
+]
+
+
+def _apply_confusion_cell_filter(
+    query: _MatchesQuery,
+    confusion_cell: ConfusionCell,
+    gt_annotation: type[AnnotationBaseTable],
+    pred_annotation: type[AnnotationBaseTable],
+) -> _MatchesQuery:
+    """Keep only the metric rows in the confusion cell's gt/pred label pairing.
+
+    A real label is matched by name against the joined annotation's label (names are
+    unique per dataset); a null label is the synthetic margin bucket, requiring that
+    side's annotation id to be NULL (false positive when gt is null, false negative
+    when pred is null). The model rejects the both-null combination upstream.
+    """
+    if confusion_cell.gt_label is not None:
+        query = query.where(
+            col(gt_annotation.annotation_label_id).in_(
+                select(AnnotationLabelTable.annotation_label_id).where(
+                    col(AnnotationLabelTable.annotation_label_name) == confusion_cell.gt_label
+                )
+            )
+        )
+    else:
+        query = query.where(col(EvaluationAnnotationMetricTable.gt_annotation_id).is_(None))
+
+    if confusion_cell.pred_label is not None:
+        query = query.where(
+            col(pred_annotation.annotation_label_id).in_(
+                select(AnnotationLabelTable.annotation_label_id).where(
+                    col(AnnotationLabelTable.annotation_label_name) == confusion_cell.pred_label
+                )
+            )
+        )
+    else:
+        query = query.where(col(EvaluationAnnotationMetricTable.pred_annotation_id).is_(None))
+
+    return query
+
 
 def get_matches_with_payload(  # noqa: PLR0913
     session: Session,
@@ -37,6 +84,7 @@ def get_matches_with_payload(  # noqa: PLR0913
     collection_id: UUID,
     match_types: list[EvaluationMatchType] | None = None,
     annotation_label_ids: list[UUID] | None = None,
+    confusion_cell: ConfusionCell | None = None,
     image_filter: ImageFilter | None = None,
     sort_field: EvaluationMatchSortField = EvaluationMatchSortField.IOU,
     sort_direction: SortDirection = SortDirection.desc,
@@ -55,6 +103,11 @@ def get_matches_with_payload(  # noqa: PLR0913
         match_types: Optional subset of TP/FP/FN to keep. ``None`` keeps all.
         annotation_label_ids: Optional labels; a match is kept when its ground
             truth OR prediction label is in the set (captures class confusion).
+        confusion_cell: Optional confusion-matrix cell. Keeps only the matches in
+            that exact ground-truth/prediction label pairing; a null label selects
+            the false-positive (no ground truth) or false-negative (no prediction)
+            margin bucket. The cell's own run id is ignored: the query is already
+            scoped to ``evaluation_run_id``.
         image_filter: Optional image-level filter (tags, metadata, dimensions,
             sample ids) applied to the parent image of each match.
         sort_field: Primary ordering. ``iou`` (default) orders by IoU; ``confidence``
@@ -123,6 +176,14 @@ def get_matches_with_payload(  # noqa: PLR0913
                 col(gt_annotation.annotation_label_id).in_(annotation_label_ids),
                 col(pred_annotation.annotation_label_id).in_(annotation_label_ids),
             )
+        )
+
+    if confusion_cell is not None:
+        base_query = _apply_confusion_cell_filter(
+            query=base_query,
+            confusion_cell=confusion_cell,
+            gt_annotation=gt_annotation,
+            pred_annotation=pred_annotation,
         )
 
     if image_filter is not None:

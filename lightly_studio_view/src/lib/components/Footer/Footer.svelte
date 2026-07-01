@@ -2,24 +2,33 @@
     import { BookOpen, Mail } from '@lucide/svelte';
     import { page } from '$app/state';
     import { version, git_sha, is_tagged_commit } from '$lib/version.json';
-    import { isAnnotationsRoute, isVideoFramesRoute, isVideosRoute } from '$lib/routes';
+    import {
+        isAnnotationsRoute,
+        isEvaluationMatchesRoute,
+        isVideoFramesRoute,
+        isVideosRoute
+    } from '$lib/routes';
 
     type FooterProps = {
         totalSamples?: number;
         filteredSamples?: number;
         totalAnnotations?: number;
         filteredAnnotations?: number;
+        filteredMatches?: number;
     };
 
     const {
         totalSamples = 0,
         filteredSamples = 0,
         totalAnnotations = 0,
-        filteredAnnotations = 0
+        filteredAnnotations = 0,
+        filteredMatches = 0
     }: FooterProps = $props();
 
     function getItemType(): string {
-        if (isAnnotationsRoute(page.route.id)) {
+        if (isEvaluationMatchesRoute(page.route.id)) {
+            return 'matches';
+        } else if (isAnnotationsRoute(page.route.id)) {
             return 'annotations';
         } else if (isVideoFramesRoute(page.route.id)) {
             return 'video frames';
@@ -31,10 +40,18 @@
     }
 
     const statsText = $derived.by(() => {
+        const itemType = getItemType();
+
+        // Matches are paired annotations, not collection samples, and the listing
+        // has no separate unfiltered baseline — show how many the filters resolve to.
+        if (isEvaluationMatchesRoute(page.route.id)) {
+            if (!filteredMatches) return '';
+            return `Showing ${filteredMatches.toLocaleString()} ${itemType}`;
+        }
+
         const isAnnotationView = isAnnotationsRoute(page.route.id);
         const total = isAnnotationView ? totalAnnotations : totalSamples;
         const filtered = isAnnotationView ? filteredAnnotations : filteredSamples;
-        const itemType = getItemType();
 
         if (!total) return '';
 

@@ -118,9 +118,18 @@ export function buildBreadcrumbLevels(
     currentCollectionId: string | undefined,
     datasetId: string,
     // Evaluation-run match shortcuts surfaced inside the annotation dropdown.
-    evaluationMatchItems: NavigationMenuItem[] = []
+    evaluationMatchItems: NavigationMenuItem[] = [],
+    // When the active view is an evaluation-matches page, the matches run to show as
+    // a trailing breadcrumb crumb so the top menu reflects where the user is (the
+    // collection hierarchy alone cannot express the matches view). Other runs remain
+    // reachable through its sibling dropdown.
+    activeMatchItem: NavigationMenuItem | null = null
 ): BreadcrumbLevel[] {
-    if (!ancestorPath) return [];
+    if (!ancestorPath) {
+        return activeMatchItem
+            ? [{ selected: activeMatchItem, siblings: evaluationMatchItems }]
+            : [];
+    }
 
     const hasSeveralAnnotationCollections = rootCollection.children
         ? rootCollection.children.filter((c) => c.sample_type === SampleType.ANNOTATION).length > 1
@@ -137,7 +146,7 @@ export function buildBreadcrumbLevels(
                 : c.group_component_name
         );
 
-    return ancestorPath.map((node, index) => {
+    const levels: BreadcrumbLevel[] = ancestorPath.map((node, index) => {
         const siblings = index === 0 ? [rootCollection] : (ancestorPath[index - 1].children ?? []);
         const siblingItems = siblings.map(toMenuItem);
 
@@ -151,4 +160,12 @@ export function buildBreadcrumbLevels(
             siblings: siblingItems
         };
     });
+
+    // On a matches view, append the active run as the final crumb so the breadcrumb
+    // reads e.g. "… › Annotations › Matches: <run>" and clearly shows where we are.
+    if (activeMatchItem) {
+        levels.push({ selected: activeMatchItem, siblings: evaluationMatchItems });
+    }
+
+    return levels;
 }

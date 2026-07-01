@@ -61,8 +61,10 @@
     } from '$lib/utils/buildAnnotationCountsFilters';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
     import ConfusionCellFilterItem from '$lib/components/ConfusionCellFilterItem';
+    import MatchConfusionCellFilterItem from '$lib/components/MatchConfusionCellFilterItem';
     import { useSelectionSummary } from '$lib/hooks';
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
+    import { runMatchSelectAll } from '$lib/hooks/useMatchAnnotationTags/useMatchAnnotationTags';
     import { isInputElement } from '$lib/utils';
     import { shutdownMaskRendererPool } from '$lib/workers/maskRendererPool';
     import { GRID_IMAGE_SEARCH_DROP_EVENT, type GridItemDragData } from '$lib/components/GridItem';
@@ -95,7 +97,8 @@
         activePanel,
         setActivePanel,
         filteredSampleCount,
-        filteredAnnotationCount
+        filteredAnnotationCount,
+        filteredMatchCount
     } = useGlobalStorage();
 
     const evaluationRunsQuery = useEvaluationRuns(() => ({ datasetId: collection.dataset_id }));
@@ -117,7 +120,9 @@
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
     const isVideoDetails = $derived(isVideoDetailsRoute(page.route.id));
     const isEvaluationMatches = $derived(isEvaluationMatchesRoute(page.route.id));
-    const canSelectAll = $derived(isImages || isVideos || isVideoFrames || isAnnotations);
+    const canSelectAll = $derived(
+        isImages || isVideos || isVideoFrames || isAnnotations || isEvaluationMatches
+    );
     const showAnnotationVisibilityToggle = $derived(
         isAnnotations || isImages || isVideos || isVideoFrames
     );
@@ -128,14 +133,26 @@
     // Select-all hook
     let selectAllHandle = $derived(useSelectAll(collectionId, gridType));
 
+    // Matches have no single-collection select-all (a selection spans the
+    // ground-truth and prediction collections), so the matches grid registers its
+    // own handler that this delegates to.
+    async function handleSelectAll() {
+        if (isEvaluationMatches) {
+            await runMatchSelectAll();
+        } else {
+            await selectAllHandle.handleSelectAll();
+        }
+    }
+
     function handleSelectAllKeydown(event: KeyboardEvent) {
         if (isInputElement(event.target) || (event.target as HTMLElement)?.isContentEditable)
             return;
         if (event.key !== 'a' || (!event.ctrlKey && !event.metaKey)) return;
-        if (!isImages && !isVideos && !isVideoFrames && !isAnnotations) return;
+        if (!isImages && !isVideos && !isVideoFrames && !isAnnotations && !isEvaluationMatches)
+            return;
 
         event.preventDefault();
-        selectAllHandle.handleSelectAll();
+        handleSelectAll();
     }
 
     const search = $derived(useSearchEmbedding({ collectionId, embedding: textEmbedding }));
@@ -355,6 +372,7 @@
 
                             {#if isEvaluationMatches}
                                 <MatchTypeFilterItem />
+                                <MatchConfusionCellFilterItem />
                             {/if}
 
                             <div>
@@ -397,7 +415,7 @@
                         {isEvaluationMatches}
                         {hasMediaWithEmbeddings}
                         collectionDatasetId={collection.dataset_id}
-                        onSelectAll={selectAllHandle.handleSelectAll}
+                        onSelectAll={handleSelectAll}
                         onDeselectAll={clearSelection}
                         searchImage={$searchImage}
                         searchPending={$searchPending}
@@ -468,7 +486,12 @@
                 </div>
             {/if}
             {#if isCollectionGrid && (isImages || hasMediaWithEmbeddings || hasEvaluationRuns)}
-                <SidePanelTabs {isImages} {hasMediaWithEmbeddings} {hasEvaluationRuns} />
+                <SidePanelTabs
+                    {isImages}
+                    {isEvaluationMatches}
+                    {hasMediaWithEmbeddings}
+                    {hasEvaluationRuns}
+                />
             {/if}
             {#if hasEmbeddings}
                 {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then { default: CreateClassifierDialog }}
@@ -484,6 +507,7 @@
             filteredSamples={$filteredSampleCount}
             {totalAnnotations}
             filteredAnnotations={$filteredAnnotationCount}
+            filteredMatches={$filteredMatchCount}
         />
     {/if}
 </div>

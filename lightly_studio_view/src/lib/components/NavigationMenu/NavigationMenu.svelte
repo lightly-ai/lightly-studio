@@ -7,7 +7,7 @@
     import MenuItem from '../MenuItem/MenuItem.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
-    import { routeHelpers } from '$lib/routes';
+    import { routeHelpers, isEvaluationMatchesRoute } from '$lib/routes';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     const {
         collection
@@ -58,13 +58,22 @@
             }))
     );
 
+    // The matches run currently being viewed, used to surface it as a trailing
+    // breadcrumb crumb so the top menu shows the user is on an evaluation-matches page.
+    const activeMatchItem = $derived(
+        isEvaluationMatchesRoute(page.route.id)
+            ? (evaluationMatchItems.find((item) => item.isSelected) ?? null)
+            : null
+    );
+
     const breadcrumbLevels: BreadcrumbLevel[] = $derived(
         buildBreadcrumbLevels(
             navigationPath,
             collection,
             currentCollectionId,
             datasetId,
-            evaluationMatchItems
+            evaluationMatchItems,
+            activeMatchItem
         )
     );
 

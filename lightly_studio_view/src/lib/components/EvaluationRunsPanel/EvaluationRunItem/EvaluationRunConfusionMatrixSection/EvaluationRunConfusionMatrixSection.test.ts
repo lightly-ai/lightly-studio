@@ -1,13 +1,29 @@
 import { render, screen } from '@testing-library/svelte';
+import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import EvaluationRunConfusionMatrixSection from './EvaluationRunConfusionMatrixSection.svelte';
 import { coco80Classes, small3Classes } from '$lib/components/ConfusionMatrix/fixtures';
+import { APP_ROUTES } from '$lib/routes';
+import {
+    selectedMatchConfusionCell,
+    clearMatchConfusionCell
+} from '$lib/hooks/useMatchConfusionCell/useMatchConfusionCell';
 
 const queryState = vi.hoisted(() => ({
     isLoading: false,
     isError: false,
     data: undefined as unknown,
     error: undefined as Error | undefined
+}));
+
+// Mutable so individual tests can switch the active route between the images view
+// (where a cell click drives the image filter) and the matches view (where it
+// drives the matches grid). Default to a non-matches route.
+const pageMock = vi.hoisted(() => ({
+    params: { dataset_id: 'ds-1' } as Record<string, string>,
+    route: { id: '/datasets/[dataset_id]/[collection_type]/[collection_id]' } as {
+        id: string | null;
+    }
 }));
 
 const filtersMock = vi.hoisted(() => ({
@@ -31,7 +47,7 @@ const echartsMock = vi.hoisted(() => {
 });
 
 vi.mock('$app/state', () => ({
-    page: { params: { dataset_id: 'ds-1' } }
+    page: pageMock
 }));
 
 vi.mock('$lib/hooks', () => ({
@@ -68,6 +84,8 @@ const defaultProps = { evaluationRunId: 'run-1' };
 describe('EvaluationRunConfusionMatrixSection', () => {
     beforeEach(() => {
         filtersMock.updateConfusionCell.mockClear();
+        pageMock.route.id = '/datasets/[dataset_id]/[collection_type]/[collection_id]';
+        clearMatchConfusionCell();
     });
 
     it('shows a spinner while loading', () => {
@@ -200,6 +218,26 @@ describe('EvaluationRunConfusionMatrixSection', () => {
             evaluation_run_id: 'run-1',
             gt_label: 'cat',
             pred_label: null
+        });
+    });
+
+    it('drives the matches confusion cell (not the image filter) on the matches view', () => {
+        queryState.isLoading = false;
+        queryState.isError = false;
+        queryState.data = small3Classes;
+        queryState.error = undefined;
+        pageMock.route.id = APP_ROUTES.evaluationMatches;
+
+        render(EvaluationRunConfusionMatrixSection, { props: defaultProps });
+
+        const handler = echartsMock.getClickHandler();
+        handler?.({ value: ['dog', 'cat', 3, Math.log10(3)] });
+
+        expect(filtersMock.updateConfusionCell).not.toHaveBeenCalled();
+        expect(get(selectedMatchConfusionCell)).toEqual({
+            evaluation_run_id: 'run-1',
+            gt_label: 'cat',
+            pred_label: 'dog'
         });
     });
 });

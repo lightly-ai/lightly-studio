@@ -9,6 +9,9 @@
     } from '$lib/components/ConfusionMatrix';
     import { useEvaluationConfusionMatrix } from '$lib/hooks';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { useMatchConfusionCell } from '$lib/hooks/useMatchConfusionCell/useMatchConfusionCell';
+    import { isEvaluationMatchesRoute } from '$lib/routes';
+    import type { ConfusionCell } from '$lib/api/lightly_studio_local';
 
     interface Props {
         evaluationRunId: string;
@@ -24,18 +27,25 @@
     }));
 
     const { updateConfusionCell } = useImageFilters();
+    const { set: setMatchConfusionCell } = useMatchConfusionCell();
 
-    // Clicking a cell filters the image grid to the samples behind that bucket. The
-    // chart emits camelCase labels; the API confusion-cell filter uses snake_case and
-    // needs the owning run id. Synthetic axis labels map to null so the backend
-    // resolves the false-positive (no ground truth) and false-negative (no prediction)
-    // margin buckets.
+    // Clicking a cell filters to the samples/matches behind that bucket. The chart
+    // emits camelCase labels; the API confusion-cell filter uses snake_case and needs
+    // the owning run id. Synthetic axis labels map to null so the backend resolves the
+    // false-positive (no ground truth) and false-negative (no prediction) margin
+    // buckets. On the matches view the cell drives the matches grid; everywhere else
+    // it drives the image grid.
     const handleCellClick = (cell: ConfusionCellSelection) => {
-        updateConfusionCell({
+        const confusionCell: ConfusionCell = {
             evaluation_run_id: evaluationRunId,
             gt_label: cell.gtLabel === NO_GROUND_TRUTH_ROW_LABEL ? null : cell.gtLabel,
             pred_label: cell.predLabel === NO_PREDICTION_COL_LABEL ? null : cell.predLabel
-        });
+        };
+        if (isEvaluationMatchesRoute(page.route.id)) {
+            setMatchConfusionCell(confusionCell);
+        } else {
+            updateConfusionCell(confusionCell);
+        }
     };
 </script>
 

@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+from uuid import UUID
+
 import pytest
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.evaluation_annotation_metric import (
     EvaluationAnnotationMetricCreate,
     EvaluationMatchSortField,
     EvaluationMatchType,
+    EvaluationMatchView,
 )
+from lightly_studio.models.evaluation_confusion_matrix import ConfusionCell
 from lightly_studio.models.sort_direction import SortDirection
 from lightly_studio.resolvers import evaluation_annotation_metric_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
@@ -377,6 +382,112 @@ def test_get_matches_with_payload__filters_by_label_either_side(
 
     assert by_gt.total_count == 1
     assert by_pred.total_count == 1
+
+
+def test_get_matches_with_payload__filters_by_confusion_cell(
+    db_session: Session,
+) -> None:
+    """A confusion cell keeps only the matches in its exact gt/pred label pairing.
+
+    Covers all four quadrants: the diagonal (gt == pred), an off-diagonal class
+    confusion (gt != pred), the false-positive margin bucket (null gt), and the
+    false-negative margin bucket (null pred).
+    """
+    dataset = create_collection(session=db_session)
+    run = evaluation_sample_metric_helpers.create_run(
+        session=db_session,
+        dataset_collection_id=dataset.collection_id,
+    )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
+    label_a = create_annotation_label(
+        session=db_session,
+        root_collection_id=dataset.collection_id,
+        label_name="class_a",
+    )
+    label_b = create_annotation_label(
+        session=db_session,
+        root_collection_id=dataset.collection_id,
+        label_name="class_b",
+    )
+
+    def annotation(label_id: UUID) -> AnnotationBaseTable:
+        return create_annotation(
+            session=db_session,
+            collection_id=dataset.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=label_id,
+        )
+
+    gt_diag, pred_diag = annotation(label_a.annotation_label_id), annotation(
+        label_a.annotation_label_id
+    )
+    gt_off, pred_off = annotation(label_a.annotation_label_id), annotation(
+        label_b.annotation_label_id
+    )
+    pred_fp = annotation(label_b.annotation_label_id)
+    gt_fn = annotation(label_a.annotation_label_id)
+
+    evaluation_annotation_metric_resolver.create_many(
+        session=db_session,
+        records=[
+            EvaluationAnnotationMetricCreate(
+                evaluation_run_id=run.id,
+                sample_id=image.sample_id,
+                gt_annotation_id=gt_diag.sample_id,
+                pred_annotation_id=pred_diag.sample_id,
+                metric_name="iou",
+                value=0.9,
+            ),
+            EvaluationAnnotationMetricCreate(
+                evaluation_run_id=run.id,
+                sample_id=image.sample_id,
+                gt_annotation_id=gt_off.sample_id,
+                pred_annotation_id=pred_off.sample_id,
+                metric_name="iou",
+                value=0.7,
+            ),
+            EvaluationAnnotationMetricCreate(
+                evaluation_run_id=run.id,
+                sample_id=image.sample_id,
+                pred_annotation_id=pred_fp.sample_id,
+            ),
+            EvaluationAnnotationMetricCreate(
+                evaluation_run_id=run.id,
+                sample_id=image.sample_id,
+                gt_annotation_id=gt_fn.sample_id,
+            ),
+        ],
+    )
+
+    def matches_for(cell: ConfusionCell) -> list[EvaluationMatchView]:
+        return evaluation_annotation_metric_resolver.get_matches_with_payload(
+            session=db_session,
+            evaluation_run_id=run.id,
+            collection_id=dataset.collection_id,
+            confusion_cell=cell,
+        ).matches
+
+    diagonal = matches_for(
+        ConfusionCell(evaluation_run_id=run.id, gt_label="class_a", pred_label="class_a")
+    )
+    assert [m.match_type for m in diagonal] == [EvaluationMatchType.TP]
+    assert diagonal[0].iou == pytest.approx(0.9)
+
+    off_diagonal = matches_for(
+        ConfusionCell(evaluation_run_id=run.id, gt_label="class_a", pred_label="class_b")
+    )
+    assert [m.match_type for m in off_diagonal] == [EvaluationMatchType.TP]
+    assert off_diagonal[0].iou == pytest.approx(0.7)
+
+    fp_bucket = matches_for(
+        ConfusionCell(evaluation_run_id=run.id, gt_label=None, pred_label="class_b")
+    )
+    assert [m.match_type for m in fp_bucket] == [EvaluationMatchType.FP]
+
+    fn_bucket = matches_for(
+        ConfusionCell(evaluation_run_id=run.id, gt_label="class_a", pred_label=None)
+    )
+    assert [m.match_type for m in fn_bucket] == [EvaluationMatchType.FN]
 
 
 def test_get_matches_with_payload__scopes_by_image_filter_sample_ids(

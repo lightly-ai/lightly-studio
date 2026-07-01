@@ -3,13 +3,15 @@
     import { goto } from '$app/navigation';
     import { onDestroy, onMount } from 'svelte';
     import { toStore } from 'svelte/store';
+    import { toast } from 'svelte-sonner';
     import {
+        listEvaluationMatches,
         SampleType,
-        type AnnotationView,
         type EvaluationMatchView,
         type ImageFilter,
         type SampleFilter
     } from '$lib/api/lightly_studio_local';
+    import { GRID_PAGE_SIZE } from '$lib/constants';
     import { GridContainer } from '$lib/components/GridContainer';
     import { Grid } from '$lib/components/Grid';
     import { GridItem } from '$lib/components/GridItem';
@@ -22,11 +24,18 @@
         useMetadataFilters
     } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import { useMatchTypeFilter } from '$lib/hooks/useMatchTypeFilter/useMatchTypeFilter';
+    import {
+        selectedMatchConfusionCell,
+        clearMatchConfusionCell
+    } from '$lib/hooks/useMatchConfusionCell/useMatchConfusionCell';
     import { useMatchSort } from '$lib/hooks/useMatchSort/useMatchSort';
     import { useEvaluationMatchesInfinite } from '$lib/hooks/useEvaluationMatchesInfinite/useEvaluationMatchesInfinite';
     import {
-        setMatchTaggingCollectionIds,
-        clearMatchTaggingCollectionIds
+        setMatchTaggingContext,
+        clearMatchTaggingContext,
+        setMatchSelectAllHandler,
+        clearMatchSelectAllHandler,
+        matchSelectionId
     } from '$lib/hooks/useMatchAnnotationTags/useMatchAnnotationTags';
     import { routeHelpers } from '$lib/routes';
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
@@ -47,12 +56,19 @@
         getCollectionVersion,
         selectedSampleAnnotationCropIds,
         toggleSampleAnnotationCropSelection,
-        clearSelectedSampleAnnotationCrops
+        clearSelectedSampleAnnotationCrops,
+        setAllSelectedAnnotationCropIds,
+        setfilteredMatchCount
     } = useGlobalStorage();
     let collectionVersion = $state('');
     onMount(async () => {
         collectionVersion = await getCollectionVersion(collectionId);
     });
+
+    // Selection, the selection pill and the select-all control are all keyed to the
+    // route's collection (the same one the images/annotations grids use), so the
+    // matches selection lives there too — as one composite id per match.
+    const selectionCollectionId = $derived(page.params.collection_id!);
 
     const { selectedAnnotationFilterIdsArray } = useSelectedAnnotationsFilter();
     const { tagsSelected } = $derived(useTags({ collection_id: collectionId, kind: ['sample'] }));
@@ -61,6 +77,16 @@
     const { metadataValues } = $derived(useMetadataFilters(collectionId));
     const { selectedMatchTypesArray } = useMatchTypeFilter();
     const { sortField, sortDirection } = useMatchSort();
+
+    // A confusion-matrix cell click (from the Eval side panel) filters this grid to
+    // that gt/pred pairing. The cell carries the run it came from; ignore one from a
+    // different run than the one this grid renders, so expanding another run's matrix
+    // in the panel cannot silently filter the matches in view.
+    const activeConfusionCell = $derived(
+        $selectedMatchConfusionCell?.evaluation_run_id === evaluationRunId
+            ? $selectedMatchConfusionCell
+            : undefined
+    );
 
     const imageFilter = $derived.by((): ImageFilter | undefined => {
         const sampleFilter: SampleFilter = {};
@@ -108,6 +134,7 @@
             $selectedAnnotationFilterIdsArray.length > 0
                 ? $selectedAnnotationFilterIdsArray
                 : undefined,
+        confusionCell: activeConfusionCell ?? undefined,
         imageFilter,
         sortField: $sortField,
         sortDirection: $sortDirection
@@ -116,6 +143,12 @@
     const matches: EvaluationMatchView[] = $derived(
         infiniteMatches.data?.pages.flatMap((p) => p.data) ?? []
     );
+
+    // Feed the footer the number of matches the current filters resolve to (the
+    // total for the query, not just the page that has scrolled into view).
+    $effect(() => {
+        setfilteredMatchCount(infiniteMatches.data?.pages[0]?.total_count ?? 0);
+    });
 
     function handleLoadMore() {
         if (infiniteMatches.hasNextPage) {
@@ -126,95 +159,121 @@
     // A match has no id of its own, so identify it by the annotation ids it pairs
     // (gt for FN, pred for FP, both for TP) — stable across re-renders and unique.
     function matchKey(match: EvaluationMatchView): string {
-        return `${match.gt_annotation?.sample_id ?? ''}|${match.pred_annotation?.sample_id ?? ''}`;
-    }
-
-    // The annotations a match should be selected/tagged through: a true positive
-    // carries both boxes, a false positive only the prediction, a false negative
-    // only the ground truth.
-    function matchAnnotations(match: EvaluationMatchView): AnnotationView[] {
-        return [match.gt_annotation, match.pred_annotation].filter(
-            (annotation): annotation is AnnotationView => annotation != null
-        );
+        return matchSelectionId(match.gt_annotation?.sample_id, match.pred_annotation?.sample_id);
     }
 
     // Ground-truth and prediction annotations live in separate annotation
-    // collections; publish both so the left-panel Tags menu can create and apply
-    // annotation tags across them for the current selection.
-    const annotationCollectionIds = $derived.by(() => {
-        const ids = new Set<string>();
-        for (const match of matches) {
-            if (match.gt_annotation) ids.add(match.gt_annotation.annotation_collection_id);
-            if (match.pred_annotation) ids.add(match.pred_annotation.annotation_collection_id);
-        }
-        return Array.from(ids);
-    });
+    // collections, but every match in a run shares the same two; capture each so a
+    // composite selection id can be split back to the right collection when tagging.
+    const gtCollectionId = $derived(
+        matches.find((match) => match.gt_annotation)?.gt_annotation?.annotation_collection_id ??
+            null
+    );
+    const predCollectionId = $derived(
+        matches.find((match) => match.pred_annotation)?.pred_annotation?.annotation_collection_id ??
+            null
+    );
 
-    // Selection lives in the shared annotation-crop store, keyed by each
-    // annotation's own (ground-truth or prediction) collection — the same store the
-    // annotations grid uses — so the left-panel Tags menu can act on it.
+    // Selection is stored in the shared annotation-crop store under the route's
+    // collection — the same store, pill and select-all the other grids use.
+    const selectedMatchIds = $derived(
+        $selectedSampleAnnotationCropIds[selectionCollectionId] ?? new Set<string>()
+    );
+
     function isMatchSelected(match: EvaluationMatchView): boolean {
-        const annotations = matchAnnotations(match);
-        return (
-            annotations.length > 0 &&
-            annotations.every((annotation) =>
-                $selectedSampleAnnotationCropIds[annotation.annotation_collection_id]?.has(
-                    annotation.sample_id
-                )
-            )
-        );
-    }
-
-    function setMatchSelected(match: EvaluationMatchView, selected: boolean) {
-        for (const annotation of matchAnnotations(match)) {
-            const isCurrentlySelected = !!$selectedSampleAnnotationCropIds[
-                annotation.annotation_collection_id
-            ]?.has(annotation.sample_id);
-            if (isCurrentlySelected !== selected) {
-                toggleSampleAnnotationCropSelection(
-                    annotation.annotation_collection_id,
-                    annotation.sample_id
-                );
-            }
-        }
+        return selectedMatchIds.has(matchKey(match));
     }
 
     let selectionAnchorKey = $state<string | null>(null);
 
     function handleSelect(event: MouseEvent | KeyboardEvent, index: number) {
-        const selectedKeys = new Set(matches.filter(isMatchSelected).map(matchKey));
-        const keyToMatch = new Map(matches.map((match) => [matchKey(match), match]));
         selectionAnchorKey = selectRangeByAnchor({
             sampleIdsInOrder: matches.map(matchKey),
-            selectedSampleIds: selectedKeys,
+            selectedSampleIds: selectedMatchIds,
             clickedSampleId: matchKey(matches[index]),
             clickedIndex: index,
             shiftKey: event.shiftKey,
             anchorSampleId: selectionAnchorKey,
             // selectRangeByAnchor only calls this for the clicked item (toggle) or
-            // for not-yet-selected items in a shift range (select), so toggling the
-            // match to its opposite state is correct for both.
-            onSelectSample: (key) => {
-                const match = keyToMatch.get(key);
-                if (match) setMatchSelected(match, !isMatchSelected(match));
-            }
+            // for not-yet-selected items in a shift range (select), so toggling is
+            // correct for both.
+            onSelectSample: (key) => toggleSampleAnnotationCropSelection(selectionCollectionId, key)
         });
     }
 
     function clearSelection() {
-        for (const collectionId of annotationCollectionIds) {
-            clearSelectedSampleAnnotationCrops(collectionId);
-        }
+        clearSelectedSampleAnnotationCrops(selectionCollectionId);
         selectionAnchorKey = null;
     }
 
+    // Select-all mirrors the other grids: page through every match the current
+    // filters resolve to and select them all. Matches have no dedicated ids
+    // endpoint, so walk the same paginated listing the grid renders.
+    async function selectAllMatches() {
+        const toastId = toast.loading('Selecting all matches...');
+        try {
+            const ids = new Set<string>();
+            let offset = 0;
+            for (;;) {
+                const { data } = await listEvaluationMatches({
+                    path: { dataset_id: datasetId, evaluation_run_id: evaluationRunId },
+                    body: {
+                        collection_id: collectionId,
+                        match_types: $selectedMatchTypesArray.length
+                            ? $selectedMatchTypesArray
+                            : undefined,
+                        annotation_label_ids: $selectedAnnotationFilterIdsArray.length
+                            ? $selectedAnnotationFilterIdsArray
+                            : undefined,
+                        confusion_cell: activeConfusionCell ?? undefined,
+                        image_filter: imageFilter,
+                        sort_field: $sortField,
+                        sort_direction: $sortDirection,
+                        pagination: { offset, limit: GRID_PAGE_SIZE }
+                    },
+                    throwOnError: true
+                });
+                for (const match of data.data) {
+                    ids.add(
+                        matchSelectionId(
+                            match.gt_annotation?.sample_id,
+                            match.pred_annotation?.sample_id
+                        )
+                    );
+                }
+                if (data.nextCursor == null) break;
+                offset = data.nextCursor;
+            }
+            setAllSelectedAnnotationCropIds(selectionCollectionId, ids);
+            toast.success(`${ids.size} matches selected`, { id: toastId });
+        } catch {
+            toast.error('Failed to select all matches', { id: toastId });
+        }
+    }
+
     $effect(() => {
-        setMatchTaggingCollectionIds(annotationCollectionIds);
+        setMatchTaggingContext({ selectionCollectionId, gtCollectionId, predCollectionId });
+    });
+    onMount(() => {
+        setMatchSelectAllHandler(selectAllMatches);
     });
 
     onDestroy(() => {
         clearSelection();
-        clearMatchTaggingCollectionIds();
+        clearMatchTaggingContext();
+        clearMatchSelectAllHandler();
+        clearMatchConfusionCell();
+        setfilteredMatchCount(0);
+    });
+
+    // Switching to a different run while staying on the matches view reuses this
+    // component, so drop a confusion-cell filter left over from the previous run.
+    let lastRunId = $state(evaluationRunId);
+    $effect(() => {
+        if (evaluationRunId !== lastRunId) {
+            lastRunId = evaluationRunId;
+            clearMatchConfusionCell();
+        }
     });
 
     // Open the annotation details for the box that produced the match: prefer the
@@ -243,6 +302,7 @@
             $selectedAnnotationFilterIdsArray.join(','),
             Array.from($tagsSelected).join(','),
             JSON.stringify(imageFilter ?? {}),
+            JSON.stringify(activeConfusionCell ?? {}),
             $sortField,
             $sortDirection
         ].join('|')

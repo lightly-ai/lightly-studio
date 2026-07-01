@@ -19,6 +19,7 @@ from lightly_studio.models.evaluation_annotation_metric import (
     EvaluationMatchSortField,
     EvaluationMatchType,
 )
+from lightly_studio.models.evaluation_confusion_matrix import ConfusionCell
 from lightly_studio.models.evaluation_run import EvaluationTaskType
 from lightly_studio.models.sort_direction import SortDirection
 from lightly_studio.resolvers import (
@@ -44,6 +45,12 @@ class GetEvaluationMatchesRequest(BaseModel):
     annotation_label_ids: list[UUID] | None = Field(
         None,
         description="Keep matches whose ground-truth OR prediction label is in this set.",
+    )
+    confusion_cell: ConfusionCell | None = Field(
+        None,
+        description="Confusion-matrix cell (gt_label/pred_label pairing) to filter "
+        "matches to. A null label selects the false-positive (no ground truth) or "
+        "false-negative (no prediction) margin bucket.",
     )
     image_filter: ImageFilter | None = Field(
         None,
@@ -108,6 +115,7 @@ def list_evaluation_matches(
         collection_id=body.collection_id,
         match_types=body.match_types,
         annotation_label_ids=body.annotation_label_ids,
+        confusion_cell=body.confusion_cell,
         image_filter=body.image_filter,
         sort_field=body.sort_field,
         sort_direction=body.sort_direction,

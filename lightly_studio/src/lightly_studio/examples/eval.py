@@ -16,9 +16,6 @@ from lightly_studio.evaluation.image_dataset_evaluate import ObjectDetectionEval
 
 image_path = r"D:\\01_work\\pkg\\dataset_examples\\coco_subset_128_images\\images"
 
-# we should explore both options - predict using code and predict using plugins in studio
-
-
 def yolo_box_to_annotation(box, class_names: dict[int, str]) -> CreateObjectDetection:
     """Convert a single Ultralytics box to a Lightly object-detection annotation."""
     cls_id = int(box.cls)
@@ -56,7 +53,6 @@ def predict_using_yolo26(
             total_annotations += len(annotations)
     return total_annotations
 
-#do the process simpler  -  not restart a few times for each step
 
 def main():
     ls.db_manager.connect(cleanup_existing=True)

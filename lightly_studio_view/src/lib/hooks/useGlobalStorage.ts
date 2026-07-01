@@ -38,6 +38,7 @@ const invalidateSelectAllAnnotationSnapshot = (collectionId: string) => {
 const selectedAnnotationFilterIds = writable<Set<string>>(new Set());
 const filteredAnnotationCount = writable<number>(0);
 const filteredSampleCount = writable<number>(0);
+const filteredMatchCount = writable<number>(0);
 const filteredFramesCount = writable<number>(0);
 const hideAnnotations = writable<boolean>(false);
 const textEmbedding = writable<TextEmbedding | undefined>(undefined);
@@ -216,6 +217,7 @@ export const useGlobalStorage = () => {
         selectedAnnotationFilterIds,
         filteredAnnotationCount,
         filteredSampleCount,
+        filteredMatchCount,
         collectionVersions,
         hideAnnotations,
         classifiers,
@@ -357,6 +359,9 @@ export const useGlobalStorage = () => {
 
         setfilteredSampleCount: (count: number) => {
             filteredSampleCount.set(count);
+        },
+        setfilteredMatchCount: (count: number) => {
+            filteredMatchCount.set(count);
         },
         setfilteredFramesCount: (count: number) => {
             filteredFramesCount.set(count);

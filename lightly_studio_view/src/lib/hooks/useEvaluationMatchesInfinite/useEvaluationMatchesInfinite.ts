@@ -6,6 +6,7 @@ import {
 } from '@tanstack/svelte-query';
 import {
     listEvaluationMatches,
+    type ConfusionCell,
     type EvaluationMatchesWithCountView,
     type EvaluationMatchSortField,
     type EvaluationMatchType,
@@ -21,6 +22,7 @@ export interface EvaluationMatchesParams {
     collectionId: string;
     matchTypes?: EvaluationMatchType[];
     annotationLabelIds?: string[];
+    confusionCell?: ConfusionCell;
     imageFilter?: ImageFilter;
     sortField?: EvaluationMatchSortField;
     sortDirection?: SortDirection;
@@ -34,6 +36,7 @@ type MatchesQueryKey = [
         collectionId: string;
         matchTypes?: EvaluationMatchType[];
         annotationLabelIds?: string[];
+        confusionCell?: ConfusionCell;
         imageFilter?: ImageFilter;
         sortField?: EvaluationMatchSortField;
         sortDirection?: SortDirection;
@@ -49,6 +52,7 @@ const createEvaluationMatchesInfiniteOptions = (params: EvaluationMatchesParams)
             collectionId: params.collectionId,
             matchTypes: params.matchTypes,
             annotationLabelIds: params.annotationLabelIds,
+            confusionCell: params.confusionCell,
             imageFilter: params.imageFilter,
             sortField: params.sortField,
             sortDirection: params.sortDirection
@@ -75,6 +79,7 @@ const createEvaluationMatchesInfiniteOptions = (params: EvaluationMatchesParams)
                     annotation_label_ids: params.annotationLabelIds?.length
                         ? params.annotationLabelIds
                         : undefined,
+                    confusion_cell: params.confusionCell,
                     image_filter: params.imageFilter,
                     sort_field: params.sortField,
                     sort_direction: params.sortDirection,

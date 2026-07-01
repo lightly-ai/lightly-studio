@@ -15,10 +15,7 @@
     import TagAssignInput from './TagAssignInput.svelte';
     import TagRenameInput from './TagRenameInput.svelte';
     import TagActionMenu from './TagActionMenu.svelte';
-    import {
-        matchTaggingCollectionIdsStore,
-        useMatchAnnotationTags
-    } from '$lib/hooks/useMatchAnnotationTags/useMatchAnnotationTags';
+    import { useMatchAnnotationTags } from '$lib/hooks/useMatchAnnotationTags/useMatchAnnotationTags';
     import { toast } from 'svelte-sonner';
     import { get } from 'svelte/store';
 
@@ -29,10 +26,10 @@
 
     // In the evaluation matches grid a selection spans the ground-truth and
     // prediction annotation collections, so tagging is delegated to a dedicated
-    // hook that creates and applies the tag across both. The grid publishes the
-    // collections it covers; a non-empty list means we are in matches mode.
-    const isMatchMode = $derived($matchTaggingCollectionIdsStore.length > 0);
+    // hook that creates and applies the tag across both. It reports match mode when
+    // a matches grid is mounted.
     const {
+        isMatchMode,
         options: matchTagOptions,
         hasSelection: matchHasSelection,
         busy: matchBusy,
@@ -41,7 +38,7 @@
     } = useMatchAnnotationTags();
 
     $effect(() => {
-        if ($matchTaggingCollectionIdsStore.length > 0) void reloadMatchTagOptions();
+        if ($isMatchMode) void reloadMatchTagOptions();
     });
 
     const { tags, tagsSelected, tagSelectionToggle, loadTags, clearTagSelected } = $derived(
@@ -245,7 +242,7 @@
             {/each}
         </div>
 
-        {#if isMatchMode}
+        {#if $isMatchMode}
             <TagAssignInput
                 options={$matchTagOptions}
                 busy={$matchBusy || !$matchHasSelection}

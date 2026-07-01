@@ -10,25 +10,61 @@ import { useGlobalStorage } from '../useGlobalStorage';
 
 const ANNOTATION_KIND = 'annotation' as const;
 
-// The annotation collections (ground truth + prediction) currently shown in the
-// evaluation matches grid. The grid publishes them here so the left-panel Tags
-// menu knows which collections a tag must be created in and applied to. A match's
-// ground-truth and prediction boxes live in separate annotation collections, so a
-// single tag name is created (find-or-create) once per collection.
-const matchTaggingCollectionIds = writable<string[]>([]);
+/**
+ * Describes the evaluation matches grid that is currently mounted. The grid
+ * publishes this so the shared selection (the same store the images/annotations
+ * grids use, the selection pill, and the select-all control all read) and the
+ * left-panel Tags menu can act on matches.
+ *
+ * Selection is stored under `selectionCollectionId` (the route's collection, which
+ * is what the selection pill and select-all summary are keyed to) as composite
+ * `"<gtSampleId>|<predSampleId>"` ids — one per match. A match's ground-truth and
+ * prediction boxes live in separate annotation collections, so when a tag is
+ * applied the composite id is split and each side is tagged in its own collection.
+ */
+export type MatchTaggingContext = {
+    selectionCollectionId: string;
+    gtCollectionId: string | null;
+    predCollectionId: string | null;
+};
 
-export function setMatchTaggingCollectionIds(ids: string[]): void {
-    matchTaggingCollectionIds.set(ids);
+const matchTaggingContext = writable<MatchTaggingContext | null>(null);
+const matchSelectAllHandler = writable<(() => Promise<void>) | null>(null);
+
+export function setMatchTaggingContext(context: MatchTaggingContext): void {
+    matchTaggingContext.set(context);
 }
 
-export function clearMatchTaggingCollectionIds(): void {
-    matchTaggingCollectionIds.set([]);
+export function clearMatchTaggingContext(): void {
+    matchTaggingContext.set(null);
 }
 
-export const matchTaggingCollectionIdsStore: Readable<string[]> =
-    readonly(matchTaggingCollectionIds);
+export const matchTaggingContextStore: Readable<MatchTaggingContext | null> =
+    readonly(matchTaggingContext);
+
+export function setMatchSelectAllHandler(handler: () => Promise<void>): void {
+    matchSelectAllHandler.set(handler);
+}
+
+export function clearMatchSelectAllHandler(): void {
+    matchSelectAllHandler.set(null);
+}
+
+/** Run the matches grid's registered select-all, if a matches grid is mounted. */
+export async function runMatchSelectAll(): Promise<void> {
+    await get(matchSelectAllHandler)?.();
+}
+
+/** Build a composite selection id from a match's annotation sample ids. */
+export function matchSelectionId(
+    gtSampleId: string | null | undefined,
+    predSampleId: string | null | undefined
+): string {
+    return `${gtSampleId ?? ''}|${predSampleId ?? ''}`;
+}
 
 interface UseMatchAnnotationTagsReturn {
+    isMatchMode: Readable<boolean>;
     options: Readable<TagView[]>;
     hasSelection: Readable<boolean>;
     busy: Readable<boolean>;
@@ -37,15 +73,23 @@ interface UseMatchAnnotationTagsReturn {
 }
 
 /**
- * Adds annotation tags to the annotations behind the currently selected evaluation
- * matches. Selection is read from the shared annotation-crop selection store, where
- * each selected annotation is grouped by the (ground-truth or prediction) collection
- * that owns it, so a true positive's two boxes are tagged in their two collections.
+ * Creates and applies annotation tags to the annotations behind the currently
+ * selected evaluation matches, across the ground-truth and prediction collections.
  */
 export function useMatchAnnotationTags(): UseMatchAnnotationTagsReturn {
     const { selectedSampleAnnotationCropIds } = useGlobalStorage();
     const _busy = writable(false);
     const _tagsByCollection = writable<Record<string, TagView[]>>({});
+
+    const isMatchMode = derived(matchTaggingContext, ($context) => $context != null);
+
+    const collectionIds = derived(matchTaggingContext, ($context) =>
+        $context
+            ? [$context.gtCollectionId, $context.predCollectionId].filter(
+                  (id): id is string => id != null
+              )
+            : []
+    );
 
     async function loadCollectionTags(collectionId: string): Promise<TagView[]> {
         const response = await readTags({ path: { collection_id: collectionId } });
@@ -61,9 +105,10 @@ export function useMatchAnnotationTags(): UseMatchAnnotationTagsReturn {
     }
 
     async function reloadOptions(): Promise<void> {
-        const collectionIds = get(matchTaggingCollectionIds);
         await Promise.all(
-            collectionIds.map((collectionId) => loadCollectionTags(collectionId).catch(() => []))
+            get(collectionIds).map((collectionId) =>
+                loadCollectionTags(collectionId).catch(() => [])
+            )
         );
     }
 
@@ -79,23 +124,15 @@ export function useMatchAnnotationTags(): UseMatchAnnotationTagsReturn {
         return Array.from(byName.values());
     });
 
-    // Selected annotation ids grouped by the collection that owns them, restricted
-    // to the collections of the current matches view.
-    const selectedByCollection = derived(
-        [matchTaggingCollectionIds, selectedSampleAnnotationCropIds],
-        ([$collectionIds, $cropsByCollection]) => {
-            const grouped = new Map<string, Set<string>>();
-            for (const collectionId of $collectionIds) {
-                const crops = $cropsByCollection[collectionId];
-                if (crops && crops.size > 0) {
-                    grouped.set(collectionId, crops);
-                }
-            }
-            return grouped;
-        }
+    const selectedIds = derived(
+        [matchTaggingContext, selectedSampleAnnotationCropIds],
+        ([$context, $cropsByCollection]) =>
+            $context
+                ? ($cropsByCollection[$context.selectionCollectionId] ?? new Set<string>())
+                : new Set<string>()
     );
 
-    const hasSelection = derived(selectedByCollection, ($grouped) => $grouped.size > 0);
+    const hasSelection = derived(selectedIds, ($selectedIds) => $selectedIds.size > 0);
 
     async function ensureTagId(collectionId: string, name: string): Promise<string> {
         const cached =
@@ -120,15 +157,29 @@ export function useMatchAnnotationTags(): UseMatchAnnotationTagsReturn {
 
     async function assign(rawName: string): Promise<void> {
         const name = rawName.trim();
-        if (!name || get(_busy)) return;
+        const context = get(matchTaggingContext);
+        if (!name || !context || get(_busy)) return;
 
-        const groups = get(selectedByCollection);
-        if (groups.size === 0) return;
+        // Split each "<gtSampleId>|<predSampleId>" selection id back into its two
+        // annotations and group the sample ids by the collection that owns them.
+        const sampleIdsByCollection = new Map<string, Set<string>>();
+        const addTo = (collectionId: string | null, sampleId: string) => {
+            if (!collectionId || !sampleId) return;
+            const set = sampleIdsByCollection.get(collectionId) ?? new Set<string>();
+            set.add(sampleId);
+            sampleIdsByCollection.set(collectionId, set);
+        };
+        for (const selectionId of get(selectedIds)) {
+            const [gtSampleId, predSampleId] = selectionId.split('|');
+            addTo(context.gtCollectionId, gtSampleId);
+            addTo(context.predCollectionId, predSampleId);
+        }
+        if (sampleIdsByCollection.size === 0) return;
 
         _busy.set(true);
         let taggedCount = 0;
         try {
-            for (const [collectionId, sampleIds] of groups) {
+            for (const [collectionId, sampleIds] of sampleIdsByCollection) {
                 const tagId = await ensureTagId(collectionId, name);
                 const response = await addSampleIdsToTagId({
                     path: { collection_id: collectionId, tag_id: tagId },
@@ -150,6 +201,7 @@ export function useMatchAnnotationTags(): UseMatchAnnotationTagsReturn {
     }
 
     return {
+        isMatchMode,
         options,
         hasSelection,
         busy: readonly(_busy),
