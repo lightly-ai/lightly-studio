@@ -10,6 +10,32 @@ export type CustomColor = {
 
 type CustomLabelColors = Record<string, CustomColor>;
 
+// Narrow an unknown value to CustomLabelColors. JSON.parse only guarantees valid
+// JSON, so we reject anything that is not a plain record whose values match the
+// { color: string; alpha: number } shape (e.g. arrays or malformed entries).
+const isCustomColor = (value: unknown): value is CustomColor => {
+    return (
+        typeof value === 'object' &&
+        value !== null &&
+        typeof (value as CustomColor).color === 'string' &&
+        typeof (value as CustomColor).alpha === 'number'
+    );
+};
+
+const parseCustomLabelColors = (value: unknown): CustomLabelColors => {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+        return {};
+    }
+
+    const result: CustomLabelColors = {};
+    for (const [label, color] of Object.entries(value)) {
+        if (isCustomColor(color)) {
+            result[label] = color;
+        }
+    }
+    return result;
+};
+
 // Load any previously persisted custom colors so they survive page reloads and
 // navigation between datasets. Returns an empty map when running on the server,
 // when nothing is stored, or when the stored value is corrupt.
@@ -23,7 +49,7 @@ const loadPersistedColors = (): CustomLabelColors => {
         if (!storedData) {
             return {};
         }
-        return JSON.parse(storedData) as CustomLabelColors;
+        return parseCustomLabelColors(JSON.parse(storedData));
     } catch (error) {
         console.error(
             `Failed to parse ${CUSTOM_LABEL_COLORS_STORAGE_KEY} from localStorage:`,
