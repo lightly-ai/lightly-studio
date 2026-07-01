@@ -5,6 +5,7 @@ from sqlmodel import Session
 
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import sample_resolver
+from lightly_studio.resolvers.sample_resolver import path_filter
 from tests.helpers_resolvers import create_collection, create_image
 from tests.resolvers.video.helpers import VideoStub, create_videos
 
@@ -47,7 +48,7 @@ def test_filter_new_paths__videos(
     assert file_paths_old == ["/existing"]
 
 
-def test_filter_new_paths_scopes_to_collection(db_session: Session) -> None:
+def test_filter_new_paths__scopes_to_collection(db_session: Session) -> None:
     """The same path is 'old' in the collection that has it and 'new' in another."""
     collection_a = create_collection(session=db_session, collection_name="a")
     collection_b = create_collection(session=db_session, collection_name="b")
@@ -70,7 +71,7 @@ def test_filter_new_paths_scopes_to_collection(db_session: Session) -> None:
     assert (new_in_b, old_in_b) == (["/sample.png"], [])
 
 
-def test_filter_new_paths_batches_over_postgres_param_limit(db_session: Session) -> None:
+def test_filter_new_paths__batches_over_postgres_param_limit(db_session: Session) -> None:
     """More paths than PostgreSQL's 65,535-parameter cap are handled by internal batching."""
     collection = create_collection(session=db_session)
     file_paths_abs = [f"/p/{i}.png" for i in range(70_000)]
@@ -83,18 +84,6 @@ def test_filter_new_paths_batches_over_postgres_param_limit(db_session: Session)
 
     assert len(file_paths_new) == 70_000
     assert file_paths_old == []
-
-
-def test_filter_new_paths_rejects_unsupported_sample_type(db_session: Session) -> None:
-    """A collection whose sample type has no path table fails with a clear error."""
-    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO_FRAME)
-
-    with pytest.raises(ValueError, match="does not support sample type"):
-        sample_resolver.filter_new_paths(
-            session=db_session,
-            collection_id=collection.collection_id,
-            file_paths_abs=["/x"],
-        )
 
 
 def test_get_existing_paths__empty_collection(db_session: Session) -> None:
@@ -134,7 +123,7 @@ def test_get_existing_paths__videos(db_session: Session) -> None:
     assert existing_paths == {"/a.mp4", "/b.mp4"}
 
 
-def test_get_existing_paths_scopes_to_collection(db_session: Session) -> None:
+def test_get_existing_paths__scopes_to_collection(db_session: Session) -> None:
     """A path in one collection does not show up as existing in another."""
     collection_a = create_collection(session=db_session, collection_name="a")
     collection_b = create_collection(session=db_session, collection_name="b")
@@ -153,11 +142,11 @@ def test_get_existing_paths_scopes_to_collection(db_session: Session) -> None:
     assert existing_in_b == set()
 
 
-def test_get_existing_paths_rejects_unsupported_sample_type(db_session: Session) -> None:
-    """A collection whose sample type has no path table fails with a clear error."""
+def test__resolve_path_column__rejects_unsupported_sample_type(db_session: Session) -> None:
+    """An unsupported sample type fails with a clear error listing types by value."""
     collection = create_collection(session=db_session, sample_type=SampleType.VIDEO_FRAME)
 
-    with pytest.raises(ValueError, match="does not support sample type"):
-        sample_resolver.get_existing_paths(
-            session=db_session, collection_id=collection.collection_id
-        )
+    with pytest.raises(ValueError, match="does not support sample type") as exc_info:
+        path_filter._resolve_path_column(session=db_session, collection_id=collection.collection_id)
+
+    assert "supported types are ['image', 'video']" in str(exc_info.value)

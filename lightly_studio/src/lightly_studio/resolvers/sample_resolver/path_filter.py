@@ -85,6 +85,6 @@ def _resolve_path_column(session: Session, collection_id: UUID) -> Mapped[str]:
     if column is None:
         raise ValueError(
             f"does not support sample type {collection.sample_type}; "
-            f"supported types are {sorted(t for t in SAMPLE_TYPE_TO_COLUMN)}."
+            f"supported types are {sorted(t.value for t in SAMPLE_TYPE_TO_COLUMN)}."
         )
     return column
