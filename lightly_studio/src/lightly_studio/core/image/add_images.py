@@ -62,7 +62,9 @@ def load_into_dataset_from_paths(
     normalized_paths = [
         add_annotations.normalize_images_root(image_path) for image_path in image_paths
     ]
-    existing_paths_set = _get_existing_paths_set(
+    # The set starts with paths already in the database and grows with paths seen in this
+    # call, so both already-present and in-run duplicate paths are skipped before batching.
+    seen_or_existing_paths = _get_existing_paths_set(
         session=session,
         collection_id=root_collection_id,
         file_paths_abs=normalized_paths,
@@ -84,8 +86,8 @@ def load_into_dataset_from_paths(
         unit=" images",
         disable=not show_progress,
     ):
-        # Skip paths that are already in the database (checked before the loop).
-        if normalized_path in existing_paths_set:
+        # Skip paths already in the database or already seen in this call.
+        if normalized_path in seen_or_existing_paths:
             logging_context.update_example_paths([normalized_path])
             continue
 
@@ -103,6 +105,7 @@ def load_into_dataset_from_paths(
             width=width,
             height=height,
         )
+        seen_or_existing_paths.add(normalized_path)
         samples_to_create.append(sample)
 
         # Process batch when it reaches SAMPLE_BATCH_SIZE
@@ -150,8 +153,9 @@ def load_into_dataset_from_labelformat(
     """
     images_root_abs = add_annotations.normalize_images_root(images_root=images_path)
 
-    # Check which paths already exist in the database once, before the processing loop.
-    existing_paths_set = _get_existing_paths_set(
+    # The set starts with paths already in the database and grows with paths seen in this
+    # call, so both already-present and in-run duplicate paths are skipped before batching.
+    seen_or_existing_paths = _get_existing_paths_set(
         session=session,
         collection_id=root_collection_id,
         file_paths_abs=[
@@ -182,11 +186,12 @@ def load_into_dataset_from_labelformat(
             height=image.height,
         )
 
-        # Skip paths already in the database (checked before the loop).
-        if sample.file_path_abs in existing_paths_set:
+        # Skip paths already in the database or already seen in this call.
+        if sample.file_path_abs in seen_or_existing_paths:
             logging_context.update_example_paths([sample.file_path_abs])
             continue
 
+        seen_or_existing_paths.add(sample.file_path_abs)
         samples_to_create.append(sample)
 
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
@@ -258,8 +263,9 @@ def load_into_dataset_from_coco_captions(
             continue
         captions_by_image_id[image_id].append(caption_text)
 
-    # Check which paths already exist in the database once, before the processing loop.
-    existing_paths_set = _get_existing_paths_set(
+    # The set starts with paths already in the database and grows with paths seen in this
+    # call, so both already-present and in-run duplicate paths are skipped before batching.
+    seen_or_existing_paths = _get_existing_paths_set(
         session=session,
         collection_id=root_collection_id,
         file_paths_abs=[
@@ -296,11 +302,12 @@ def load_into_dataset_from_coco_captions(
             height=height,
         )
 
-        # Skip paths already in the database (checked before the loop).
-        if sample.file_path_abs in existing_paths_set:
+        # Skip paths already in the database or already seen in this call.
+        if sample.file_path_abs in seen_or_existing_paths:
             logging_context.update_example_paths([sample.file_path_abs])
             continue
 
+        seen_or_existing_paths.add(sample.file_path_abs)
         samples_to_create.append(sample)
         path_to_captions[sample.file_path_abs] = captions_by_image_id.get(image_id_raw, [])
 
