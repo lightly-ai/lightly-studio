@@ -23,7 +23,8 @@ make format           # prettier --write + eslint --fix
 
 ## Toolchain
 
-- **Node** pinned via [`.nvmrc`](.nvmrc) (`engine-strict` enforces it).
+- **Node** floor enforced by `engine-strict` + `engines` (`>=24`); the exact
+  version (`24.13.1`) is pinned in [`.nvmrc`](.nvmrc) for `nvm`/`make` users.
 - **TypeScript** in `--noEmit` mode — type-checking only; code runs via `tsx`.
 - **ESLint 9** flat config + `typescript-eslint`, with `eslint-config-prettier`
   so formatting is Prettier's job alone.
