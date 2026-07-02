@@ -62,7 +62,7 @@ def load_into_dataset_from_paths(
         session=session, collection_id=root_collection_id
     )
     # TODO (Malte, 07/2026): Remove sum(1 for _ in image_paths), as it exhausts the
-    # iterable. Will be updated anyway in LIG-9953. 
+    # iterable. Will be updated anyway in LIG-9953.
     logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=sum(1 for _ in image_paths),
         n_samples_before_loading=sample_resolver.count_by_collection_id(
