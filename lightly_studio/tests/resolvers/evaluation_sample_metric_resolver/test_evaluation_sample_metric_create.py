@@ -13,7 +13,7 @@ from tests.resolvers.evaluation_sample_metric_resolver import (
 def test_create_many(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
     run = evaluation_sample_metric_helpers.create_run(
-        session=db_session, dataset_collection_id=dataset.collection_id
+        session=db_session, collection_id=dataset.collection_id
     )
     image1 = create_image(session=db_session, collection_id=dataset.collection_id)
     image2 = create_image(

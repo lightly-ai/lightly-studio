@@ -31,9 +31,11 @@ from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsF
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import Metadata
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
+    AnnotationDetails,
     ImageStub,
     create_annotation,
     create_annotation_label,
+    create_annotations,
     create_collection,
     create_images,
     create_tag,
@@ -170,29 +172,27 @@ class TestSampleFilter:
         )
 
         # Add 2 cat and dog annotations to the first sample
-        create_annotation(
+        create_annotations(
             session=db_session,
             collection_id=collection_id,
-            sample_id=samples[0].sample_id,
-            annotation_label_id=cat_label.annotation_label_id,
-        )
-        create_annotation(
-            session=db_session,
-            collection_id=collection_id,
-            sample_id=samples[0].sample_id,
-            annotation_label_id=cat_label.annotation_label_id,
-        )
-        create_annotation(
-            session=db_session,
-            collection_id=collection_id,
-            sample_id=samples[0].sample_id,
-            annotation_label_id=dog_label.annotation_label_id,
-        )
-        create_annotation(
-            session=db_session,
-            collection_id=collection_id,
-            sample_id=samples[0].sample_id,
-            annotation_label_id=dog_label.annotation_label_id,
+            annotations=[
+                AnnotationDetails(
+                    sample_id=samples[0].sample_id,
+                    annotation_label_id=cat_label.annotation_label_id,
+                ),
+                AnnotationDetails(
+                    sample_id=samples[0].sample_id,
+                    annotation_label_id=cat_label.annotation_label_id,
+                ),
+                AnnotationDetails(
+                    sample_id=samples[0].sample_id,
+                    annotation_label_id=dog_label.annotation_label_id,
+                ),
+                AnnotationDetails(
+                    sample_id=samples[0].sample_id,
+                    annotation_label_id=dog_label.annotation_label_id,
+                ),
+            ],
         )
 
         # Create the filter
@@ -515,7 +515,7 @@ class TestSampleFilterConfusionCell:
         dataset = create_collection(session=db_session)
         dataset_id = dataset.collection_id
         run = evaluation_sample_metric_helpers.create_run(
-            session=db_session, dataset_collection_id=dataset_id
+            session=db_session, collection_id=dataset_id
         )
         samples = create_images(
             db_session=db_session,
@@ -573,10 +573,10 @@ class TestSampleFilterConfusionCell:
         dataset = create_collection(session=db_session)
         dataset_id = dataset.collection_id
         run_a = evaluation_sample_metric_helpers.create_run(
-            session=db_session, dataset_collection_id=dataset_id, name="run_a"
+            session=db_session, collection_id=dataset_id, name="run_a"
         )
         run_b = evaluation_sample_metric_helpers.create_run(
-            session=db_session, dataset_collection_id=dataset_id, name="run_b"
+            session=db_session, collection_id=dataset_id, name="run_b"
         )
         samples = create_images(
             db_session=db_session,
@@ -624,7 +624,7 @@ class TestSampleFilterConfusionCell:
         dataset = create_collection(session=db_session)
         dataset_id = dataset.collection_id
         run = evaluation_sample_metric_helpers.create_run(
-            session=db_session, dataset_collection_id=dataset_id
+            session=db_session, collection_id=dataset_id
         )
         samples = create_images(
             db_session=db_session,
@@ -675,7 +675,7 @@ class TestSampleFilterConfusionCell:
         dataset = create_collection(session=db_session)
         dataset_id = dataset.collection_id
         run = evaluation_sample_metric_helpers.create_run(
-            session=db_session, dataset_collection_id=dataset_id
+            session=db_session, collection_id=dataset_id
         )
         samples = create_images(
             db_session=db_session,
@@ -732,7 +732,7 @@ class TestSampleFilterConfusionCell:
         dataset = create_collection(session=db_session)
         dataset_id = dataset.collection_id
         run = evaluation_sample_metric_helpers.create_run(
-            session=db_session, dataset_collection_id=dataset_id
+            session=db_session, collection_id=dataset_id
         )
         samples = create_images(
             db_session=db_session,

@@ -6,7 +6,12 @@ from sqlmodel import Session
 from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import video_resolver
-from tests.helpers_resolvers import create_annotation, create_annotation_label, create_collection
+from tests.helpers_resolvers import (
+    AnnotationDetails,
+    create_annotation_label,
+    create_annotations,
+    create_collection,
+)
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames, create_videos
 
 
@@ -198,26 +203,23 @@ def test_get_fields_bounds(test_client: TestClient, db_session: Session) -> None
         label_name="airplane",
     )
 
-    # Create annotations
-    create_annotation(
+    create_annotations(
         session=db_session,
-        sample_id=video_frame_id_1,
-        annotation_label_id=car_label.annotation_label_id,
         collection_id=collection_id,
-    )
-
-    create_annotation(
-        session=db_session,
-        sample_id=video_frame_id_2,
-        annotation_label_id=car_label.annotation_label_id,
-        collection_id=collection_id,
-    )
-
-    create_annotation(
-        session=db_session,
-        sample_id=video_frame_id_3,
-        annotation_label_id=airplane_label.annotation_label_id,
-        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=video_frame_id_1,
+                annotation_label_id=car_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=video_frame_id_2,
+                annotation_label_id=car_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=video_frame_id_3,
+                annotation_label_id=airplane_label.annotation_label_id,
+            ),
+        ],
     )
 
     response = test_client.post(
@@ -279,24 +281,23 @@ def test_count_video_frame_annotations_by_video_collection(
         label_name="house",
     )
 
-    # Create annotations
-    create_annotation(
+    create_annotations(
         session=db_session,
-        sample_id=video_frame_id,
-        annotation_label_id=car_label.annotation_label_id,
         collection_id=collection_id,
-    )
-    create_annotation(
-        session=db_session,
-        sample_id=video_frame_id_1,
-        annotation_label_id=airplane_label.annotation_label_id,
-        collection_id=collection_id,
-    )
-    create_annotation(
-        session=db_session,
-        sample_id=video_frame_id_1,
-        annotation_label_id=airplane_label.annotation_label_id,
-        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=video_frame_id,
+                annotation_label_id=car_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=video_frame_id_1,
+                annotation_label_id=airplane_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=video_frame_id_1,
+                annotation_label_id=airplane_label.annotation_label_id,
+            ),
+        ],
     )
 
     response = test_client.post(
