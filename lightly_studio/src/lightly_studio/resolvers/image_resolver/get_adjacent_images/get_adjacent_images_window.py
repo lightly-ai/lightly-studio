@@ -4,7 +4,7 @@ This path sorts the whole (filtered) collection and uses ``lag`` / ``lead`` /
 ``row_number`` window functions to read each row's neighbours and position in a
 single pass. It is slower than the keyset path but handles cases the keyset seek
 cannot express: similarity search and sorts over joined, nullable columns
-(metadata, evaluation metrics). See ``_dispatch._is_keyset_sortable``.
+(metadata, evaluation metrics). See ``get_adjacent_images._is_keyset_sortable``.
 """
 
 from __future__ import annotations

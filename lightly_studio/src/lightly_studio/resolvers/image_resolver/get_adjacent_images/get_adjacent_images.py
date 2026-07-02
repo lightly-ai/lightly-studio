@@ -10,7 +10,12 @@ from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderB
 from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.resolvers import similarity_utils
 from lightly_studio.resolvers.image_filter import ImageFilter
-from lightly_studio.resolvers.image_resolver.get_adjacent_images import _keyset, _window
+from lightly_studio.resolvers.image_resolver.get_adjacent_images.get_adjacent_images_keyset import (
+    get_adjacent_images_keyset,
+)
+from lightly_studio.resolvers.image_resolver.get_adjacent_images.get_adjacent_images_window import (
+    get_adjacent_images_window,
+)
 
 
 def get_adjacent_images(  # noqa: PLR0913
@@ -49,7 +54,7 @@ def get_adjacent_images(  # noqa: PLR0913
 
     is_similarity_search = distance_expr is not None or embedding_model_id is not None
     if not is_similarity_search and _is_keyset_sortable(order_by):
-        return _keyset.get_adjacent_images_keyset(
+        return get_adjacent_images_keyset(
             session=session,
             sample_id=sample_id,
             collection_id=collection_id,
@@ -57,7 +62,7 @@ def get_adjacent_images(  # noqa: PLR0913
             order_by=order_by,
         )
 
-    return _window.get_adjacent_images_window(
+    return get_adjacent_images_window(
         session=session,
         sample_id=sample_id,
         collection_id=collection_id,

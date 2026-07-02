@@ -7,8 +7,8 @@ with two ``COUNT`` queries. None of these touch more than the rows they need, so
 the cost is independent of the collection size.
 
 This only works for sorts that produce a total, deterministic order over
-non-nullable columns; see ``_dispatch._is_keyset_sortable`` for the eligibility
-check and ``_window`` for the fallback.
+non-nullable columns; see ``get_adjacent_images._is_keyset_sortable`` for the
+eligibility check and ``get_adjacent_images_window`` for the fallback.
 """
 
 from __future__ import annotations
