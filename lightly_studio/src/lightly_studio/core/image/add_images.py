@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 import json
 import logging
 import posixpath
@@ -132,12 +133,13 @@ def load_into_dataset_from_paths(
     return created_sample_ids
 
 
-def load_into_dataset_from_labelformat(
+def load_into_dataset_from_labelformat(  # noqa: PLR0913
     session: Session,
     root_collection_id: UUID,
     input_labels: ObjectDetectionInput | InstanceSegmentationInput,
     images_path: PathLike,
     collection_name: str | None = None,
+    limit: int | None = None,
 ) -> list[UUID]:
     """Load samples and their annotations from a labelformat input into the dataset.
 
@@ -147,6 +149,7 @@ def load_into_dataset_from_labelformat(
         input_labels: The labelformat input containing images and annotations.
         images_path: The path to the directory containing the images.
         collection_name: Optional name for the annotation collection.
+        limit: Maximum number of samples to load. By default, all samples are loaded.
 
     Returns:
         A list of UUIDs of the created samples.
@@ -175,7 +178,10 @@ def load_into_dataset_from_labelformat(
     created_sample_ids: list[UUID] = []
 
     # Phase 1: Sample creation
-    for image_data in tqdm(input_labels.get_labels(), desc="Processing images", unit=" images"):
+    labels: Iterable[object] = input_labels.get_labels()
+    if limit is not None:
+        labels = itertools.islice(labels, limit)
+    for image_data in tqdm(labels, desc="Processing images", unit=" images"):
         image: Image = image_data.image  # type: ignore[attr-defined]
         logging_context.n_samples_to_be_inserted += 1
 
@@ -232,6 +238,7 @@ def load_into_dataset_from_coco_captions(
     root_collection_id: UUID,
     annotations_json: Path,
     images_path: Path,
+    limit: int | None = None,
 ) -> list[UUID]:
     """Load samples and captions from a COCO captions file into the dataset.
 
@@ -240,6 +247,7 @@ def load_into_dataset_from_coco_captions(
         root_collection_id: Identifier of the root collection that receives the samples.
         annotations_json: Path to the COCO captions annotations file.
         images_path: Directory containing the referenced images.
+        limit: Maximum number of samples to load. By default, all samples are loaded.
 
     Returns:
         The list of newly created sample identifiers.
@@ -247,7 +255,8 @@ def load_into_dataset_from_coco_captions(
     with fsspec.open(str(annotations_json), "r") as file:
         coco_payload = json.load(file)
 
-    images: list[dict[str, object]] = coco_payload.get("images", [])
+    # A slice with limit=None returns the full list.
+    images: list[dict[str, object]] = coco_payload.get("images", [])[:limit]
     annotations: list[dict[str, object]] = coco_payload.get("annotations", [])
 
     captions_by_image_id: dict[int, list[str]] = defaultdict(list)

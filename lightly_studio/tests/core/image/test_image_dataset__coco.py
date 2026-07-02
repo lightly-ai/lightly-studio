@@ -130,6 +130,43 @@ class TestDataset:
         )
         assert len(list(dataset)) == 2
 
+    def test_add_samples_from_coco__limit(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        annotations_path = tmp_path / "annotations.json"
+        annotations_path.write_text(json.dumps(get_coco_annotation_dict_valid()))
+        images_path = _create_valid_samples(tmp_path)
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_samples_from_coco(
+            annotations_json=annotations_path,
+            images_path=images_path,
+            limit=1,
+        )
+
+        samples = list(dataset)
+        assert len(samples) == 1
+        assert samples[0].file_name == "image1.jpg"
+
+    def test_add_samples_from_coco__limit_invalid(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        annotations_path = tmp_path / "annotations.json"
+        annotations_path.write_text(json.dumps(get_coco_annotation_dict_valid()))
+        images_path = _create_valid_samples(tmp_path)
+
+        dataset = ImageDataset.create(name="test_dataset")
+        with pytest.raises(ValueError, match=r"limit must be greater than 0"):
+            dataset.add_samples_from_coco(
+                annotations_json=annotations_path,
+                images_path=images_path,
+                limit=-1,
+            )
+
     def test_add_samples_from_coco__invalid_annotation_arg(
         self,
         patch_collection: None,  # noqa: ARG002

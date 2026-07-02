@@ -114,6 +114,38 @@ class TestDataset:
         )
         assert len(embeddings) == 0
 
+    def test_dataset_add_videos_from_path__limit(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        create_video_file(
+            output_path=tmp_path / "test_video_0.mp4", width=640, height=480, num_frames=30, fps=2
+        )
+        create_video_file(
+            output_path=tmp_path / "test_video_1.mp4", width=640, height=480, num_frames=30, fps=2
+        )
+
+        dataset = VideoDataset.create(name="test_dataset")
+        dataset.add_videos_from_path(path=tmp_path, limit=1, embed=False)
+
+        videos = video_resolver.get_all_by_collection_id(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+        ).samples
+        assert len(videos) == 1
+
+    @pytest.mark.parametrize("limit", [0, -1])
+    def test_dataset_add_videos_from_path__invalid_limit_raises(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+        limit: int,
+    ) -> None:
+        dataset = VideoDataset.create(name="test_dataset")
+        with pytest.raises(ValueError, match="limit must be greater than 0"):
+            dataset.add_videos_from_path(path=tmp_path, limit=limit)
+
     def test_dataset_add_videos_from_path__fps_subsamples(
         self,
         patch_collection: None,  # noqa: ARG002
@@ -224,6 +256,68 @@ class TestDataset:
         all_annotations = annotation_resolver.get_all(dataset.session).annotations
         assert len(all_annotations) == 2
         assert all(a.annotation_type == "object_detection" for a in all_annotations)
+
+    def test_add_videos_from_youtube_vis__limit(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        for video_name in ["video_001", "video_002"]:
+            create_video_file(
+                output_path=tmp_path / f"{video_name}.mp4",
+                width=640,
+                height=480,
+                num_frames=2,
+                fps=1,
+            )
+
+        annotations = {
+            "info": {"description": "Test dataset"},
+            "categories": [{"id": 1, "name": "cat"}],
+            "videos": [
+                {
+                    "id": video_id,
+                    "file_names": [f"{video_name}/00000.jpg", f"{video_name}/00001.jpg"],
+                    "width": 640,
+                    "height": 480,
+                    "length": 2,
+                }
+                for video_id, video_name in [(1, "video_001"), (2, "video_002")]
+            ],
+            "annotations": [
+                {
+                    "id": video_id,
+                    "video_id": video_id,
+                    "category_id": 1,
+                    "bboxes": [[10.0, 20.0, 30.0, 40.0], [15.0, 25.0, 35.0, 45.0]],
+                    "areas": [1200.0, 1575.0],
+                }
+                for video_id in [1, 2]
+            ],
+        }
+        annotations_path = tmp_path / "annotations.json"
+        annotations_path.write_text(json.dumps(annotations))
+
+        dataset = VideoDataset.create(name="test_dataset")
+        dataset.add_videos_from_youtube_vis(
+            annotations_json=annotations_path,
+            videos_path=tmp_path,
+            annotation_type=AnnotationType.OBJECT_DETECTION,
+            embed=False,
+            limit=1,
+        )
+
+        # Only the first video from the annotations file is loaded.
+        videos = video_resolver.get_all_by_collection_id(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+        ).samples
+        assert len(videos) == 1
+        assert videos[0].file_name == "video_001.mp4"
+
+        # Annotations of the video beyond the limit are skipped.
+        all_annotations = annotation_resolver.get_all(dataset.session).annotations
+        assert len(all_annotations) == 2
 
     def test_add_videos_from_youtube_vis__segmentation_mask(
         self,
