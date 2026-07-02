@@ -23,6 +23,7 @@ from tests.resolvers.evaluation_sample_metric_resolver import (
 from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
     AnnotationMetricStub,
     SampleMetricStub,
+    TruePositiveMetricStub,
     create_annotation_metrics,
     create_sample_metrics,
 )
@@ -124,7 +125,7 @@ def test_delete_annotation__deletes_evaluation_annotation_metrics(
         run_id=run.id,
         annotation_metrics=[
             AnnotationMetricStub(
-                sample_id=pred_annotation.parent_sample_id,
+                sample_id=image.sample_id,
                 metric_name="iou",
                 value=0.75,
                 pred_annotation_id=pred_annotation.sample_id,
@@ -135,9 +136,7 @@ def test_delete_annotation__deletes_evaluation_annotation_metrics(
     create_sample_metrics(
         session=db_session,
         run_id=run.id,
-        sample_metrics=[
-            SampleMetricStub(sample_id=pred_annotation.parent_sample_id, metrics={"score": 0.5})
-        ],
+        sample_metrics=[SampleMetricStub(sample_id=image.sample_id, metrics={"score": 0.5})],
     )
 
     annotation_resolver.delete_annotation(db_session, gt_annotation.sample_id)
@@ -187,25 +186,13 @@ def test_delete_annotation__preserves_other_run_sample_metrics(
         sample_id=image.sample_id,
         annotation_label_id=label.annotation_label_id,
     )
-    other_pred_annotation = create_annotation(
-        session=db_session,
-        collection_id=other_run.pred_annotation_collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label.annotation_label_id,
-    )
-    other_gt_annotation = create_annotation(
-        session=db_session,
-        collection_id=other_run.gt_annotation_collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label.annotation_label_id,
-    )
 
     create_annotation_metrics(
         session=db_session,
         run_id=run.id,
         annotation_metrics=[
             AnnotationMetricStub(
-                sample_id=pred_annotation.parent_sample_id,
+                sample_id=image.sample_id,
                 metric_name="iou",
                 value=0.75,
                 pred_annotation_id=pred_annotation.sample_id,
@@ -216,31 +203,24 @@ def test_delete_annotation__preserves_other_run_sample_metrics(
     create_sample_metrics(
         session=db_session,
         run_id=run.id,
-        sample_metrics=[
-            SampleMetricStub(sample_id=pred_annotation.parent_sample_id, metrics={"score": 0.5})
-        ],
+        sample_metrics=[SampleMetricStub(sample_id=image.sample_id, metrics={"score": 0.5})],
     )
     create_annotation_metrics(
         session=db_session,
         run_id=other_run.id,
-        annotation_metrics=[
-            AnnotationMetricStub(
-                sample_id=other_pred_annotation.parent_sample_id,
+        true_positive_metric_stubs=[
+            TruePositiveMetricStub(
+                sample_id=image.sample_id,
                 metric_name="iou",
                 value=0.75,
-                pred_annotation_id=other_pred_annotation.sample_id,
-                gt_annotation_id=other_gt_annotation.sample_id,
+                gt_annotation_label_id=label.annotation_label_id,
             )
         ],
     )
     create_sample_metrics(
         session=db_session,
         run_id=other_run.id,
-        sample_metrics=[
-            SampleMetricStub(
-                sample_id=other_pred_annotation.parent_sample_id, metrics={"score": 0.5}
-            )
-        ],
+        sample_metrics=[SampleMetricStub(sample_id=image.sample_id, metrics={"score": 0.5})],
     )
 
     annotation_resolver.delete_annotation(db_session, gt_annotation.sample_id)
