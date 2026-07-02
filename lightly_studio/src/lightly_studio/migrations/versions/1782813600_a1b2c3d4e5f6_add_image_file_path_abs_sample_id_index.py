@@ -4,7 +4,7 @@ Adds a composite index on ``image(file_path_abs, sample_id)`` to support keyset
 (seek) pagination for the sample-adjacents endpoint. The previous implementation
 computed ``lag``/``lead``/``row_number`` window functions over the entire
 collection on every prev/next click, forcing a full sort/scan. The keyset
-rewrite seeks the next/previous row using this index instead. See LIG-9925.
+rewrite seeks the next/previous row using this index instead.
 
 Revision ID: a1b2c3d4e5f6
 Revises: 4687cea2f49d
