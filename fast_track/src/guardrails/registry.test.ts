@@ -38,6 +38,6 @@ describe('selectGuardrails', () => {
     it('throws when an explicitly named guardrail needs unavailable PR context', () => {
         expect(() =>
             selectGuardrails(all, { hasPrContext: false, guardrailNames: ['pr-check'] })
-        ).toThrow(/need PR context/);
+        ).toThrow(/PR context/);
     });
 });

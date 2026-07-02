@@ -42,7 +42,7 @@ export function selectGuardrails(all: Guardrail[], options: SelectOptions): Guar
             const unavailable = selected.filter((g) => g.needsPrContext).map((g) => g.name);
             if (unavailable.length > 0) {
                 throw new Error(
-                    `Guardrail(s) need PR context, unavailable here: ${unavailable.join(', ')}`
+                    `Unavailable PR context for requested guardrails: ${unavailable.join(', ')}`
                 );
             }
         }
