@@ -1,0 +1,13 @@
+# We use CODEOWNERS to specify protected folders.
+# These locations need a human review (anyone from the GitHub team "@lightly-ai/lightly")
+# and cannot be merged with just a Fast Track approval.
+
+# Catch-all: Temporarily, every PR needs a human review.
+# TODO(Michal, 07/2026): Remove when Fast Track is implemented.
+* @lightly-ai/lightly
+
+# Protected locations.
+/.github/            @lightly-ai/lightly
+/.githooks/          @lightly-ai/lightly
+/ai_guidelines/      @lightly-ai/lightly
+/fast_track/         @lightly-ai/lightly
