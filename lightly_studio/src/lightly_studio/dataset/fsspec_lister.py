@@ -68,7 +68,11 @@ def iter_files_from_path(
 
     Yields:
         File paths as they are discovered, with progress tracking
+
+    Raises:
+        ValueError: If ``limit`` is not None and not greater than 0.
     """
+    validate_limit(limit)
     seen: set[str] = set()
     extensions = allowed_extensions or IMAGE_EXTENSIONS
     with tqdm(desc="Discovering files", unit=" files", dynamic_ncols=True) as pbar:
