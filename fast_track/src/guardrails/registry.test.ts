@@ -34,4 +34,10 @@ describe('selectGuardrails', () => {
             selectGuardrails(all, { hasPrContext: true, guardrailNames: ['typo'] })
         ).toThrow(/Unknown guardrail/);
     });
+
+    it('throws when an explicitly named guardrail needs unavailable PR context', () => {
+        expect(() =>
+            selectGuardrails(all, { hasPrContext: false, guardrailNames: ['pr-check'] })
+        ).toThrow(/need PR context/);
+    });
 });

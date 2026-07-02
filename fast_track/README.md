@@ -6,11 +6,11 @@ thin GitHub workflows will launch it (added in later PRs).
 
 Runs via [`tsx`](https://tsx.is/) — no build step, no compiled artifact.
 
-> **Status:** empty skeleton. This PR ports only the build/lint/test toolchain
-> and pinned Node. There is no guardrail, bot, or workflow yet — those land in
-> subsequent, independently reviewable PRs. `src/dummy.ts` is a placeholder so
-> the package type-checks and has a test to run; it will be removed when real
-> modules arrive.
+> **Status:** early scaffolding. The verdict contract and the guardrail
+> framework — context types, an always-pass dummy guardrail, and the registry +
+> selector — are in place with unit tests. The runner, the git/API context
+> providers, the bot, and the workflows land in subsequent, independently
+> reviewable PRs.
 
 ## Local commands
 

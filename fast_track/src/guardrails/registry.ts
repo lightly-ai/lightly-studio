@@ -14,15 +14,18 @@ export interface SelectOptions {
 /**
  * Choose which guardrails to run from the full set, applying two filters:
  *
- * 1. If `guardrailNames` is given, keep only those (and validate them first —
- *    an unknown name throws, so a typo can't silently drop every check into a
- *    vacuous pass).
+ * 1. If `guardrailNames` is given, keep only those, validating them first — an
+ *    unknown name throws, so a typo can't silently select nothing.
  * 2. If the environment has no PR context, drop guardrails that need the API.
+ *    A guardrail named explicitly in (1) that needs PR context throws rather
+ *    than being silently dropped — an explicit request we can't honour is an
+ *    error, whereas an implicit "run everything" quietly skips it.
  *
  * The result preserves the input order.
  */
 export function selectGuardrails(all: Guardrail[], options: SelectOptions): Guardrail[] {
     let selected = all;
+    const explicit = options.guardrailNames !== undefined;
 
     if (options.guardrailNames) {
         const known = new Set(all.map((g) => g.name));
@@ -35,6 +38,14 @@ export function selectGuardrails(all: Guardrail[], options: SelectOptions): Guar
     }
 
     if (!options.hasPrContext) {
+        if (explicit) {
+            const unavailable = selected.filter((g) => g.needsPrContext).map((g) => g.name);
+            if (unavailable.length > 0) {
+                throw new Error(
+                    `Guardrail(s) need PR context, unavailable here: ${unavailable.join(', ')}`
+                );
+            }
+        }
         selected = selected.filter((g) => !g.needsPrContext);
     }
 
