@@ -14,11 +14,7 @@ export interface GuardrailContext {
     changedFiles(): Promise<ChangedFile[]>;
 }
 
-/**
- * What a guardrail's `run` returns: a {@link GuardrailResult} minus its `name`.
- * The runner supplies the name from the definition, so a guardrail cannot
- * mislabel its own entry in the verdict — it isn't given the chance to.
- */
+/** A guardrail's `run` output; the runner adds the `name` from the definition. */
 export type GuardrailOutcome = Omit<GuardrailResult, 'name'>;
 
 export interface Guardrail {
