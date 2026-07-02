@@ -25,7 +25,7 @@ def get_adjacent_images(  # noqa: PLR0913
 
     Uses a keyset (seek) lookup for the common case — the default ``file_path_abs``
     sort or any sort over plain image columns — so prev/next and the position/total
-    counts avoid the full sort + window scan over the whole collection (LIG-9925).
+    counts avoid the full sort + window scan over the whole collection.
     Similarity search and joined/nullable sorts (metadata, evaluation metrics) fall
     back to the window-function implementation.
 
