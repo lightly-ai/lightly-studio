@@ -147,6 +147,25 @@ class TestImageDataset:
         assert ann.height == 2
         assert ann.segmentation_mask == [0, 6]
 
+    def test_add_samples_from_pascal_voc_segmentations__limit(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        images_path, masks_path, image1_path, _ = _build_pascal_voc_local_paths(tmp_path)
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_samples_from_pascal_voc_segmentations(
+            images_path=images_path,
+            masks_path=masks_path,
+            class_id_to_name={0: "bg", 1: "cat", 2: "dog"},
+            limit=1,
+        )
+
+        samples = list(dataset)
+        assert len(samples) == 1
+        assert samples[0].file_path_abs == str(image1_path)
+
     def test_add_samples_from_pascal_voc_segmentations__embed_split_flags(
         self,
         patch_collection: None,  # noqa: ARG002
