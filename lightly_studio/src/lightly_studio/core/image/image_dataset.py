@@ -189,7 +189,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         input_labels: ObjectDetectionInput | InstanceSegmentationInput,
         images_root: PathLike,
         annotation_source: str,
-        embed_annotations: bool = False,
+        embed_annotations: bool = True,
     ) -> None:
         """Attach annotations from a labelformat input to images already in the dataset.
 
@@ -224,7 +224,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         images_root: PathLike,
         annotation_source: str,
         annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
-        embed_annotations: bool = False,
+        embed_annotations: bool = True,
     ) -> None:
         """Attach COCO annotations to images already in the dataset.
 
@@ -254,7 +254,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         data_yaml: PathLike,
         annotation_source: str,
         input_split: str | None = None,
-        embed_annotations: bool = False,
+        embed_annotations: bool = True,
     ) -> None:
         """Attach YOLO annotations to images already in the dataset.
 
@@ -321,7 +321,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         split: str | None = None,
         embed: bool = True,
         annotation_source: str | None = None,
-        embed_annotations: bool = False,
+        embed_annotations: bool = True,
     ) -> None:
         """Load a dataset from a labelformat object and store in database.
 
@@ -366,7 +366,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         input_split: str | None = None,
         embed: bool = True,
         annotation_source: str | None = None,
-        embed_annotations: bool = False,
+        embed_annotations: bool = True,
     ) -> None:
         """Load a dataset in YOLO format and store in DB.
 
@@ -443,7 +443,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         split: str | None = None,
         embed: bool = True,
         annotation_source: str | None = None,
-        embed_annotations: bool = False,
+        embed_annotations: bool = True,
     ) -> None:
         """Load a dataset in COCO Object Detection format and store in DB.
 
@@ -558,7 +558,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         split: str | None = None,
         embed: bool = True,
         annotation_source: str | None = None,
-        embed_annotations: bool = False,
+        embed_annotations: bool = True,
     ) -> None:
         """Load a dataset in Lightly format and store in DB.
 
