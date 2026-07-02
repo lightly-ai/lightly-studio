@@ -189,7 +189,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         input_labels: ObjectDetectionInput | InstanceSegmentationInput,
         images_root: PathLike,
         annotation_source: str,
-        embed_annotations: bool = False,
+        embed_annotations: bool = True,
     ) -> None:
         """Attach annotations from a labelformat input to images already in the dataset.
 
@@ -201,7 +201,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             input_labels: Labelformat input object (e.g. ``COCOObjectDetectionInput``).
             images_root: Root path used to construct absolute image paths for matching.
             annotation_source: Name of the annotation source.
-            embed_annotations: If True, generate embeddings for object-detection annotations.
+            embed_annotations: If True (default), generate embeddings for object-detection
+                annotations. Set to False to skip.
         """
         missing = add_annotations.add_annotations_from_labelformat(
             session=self.session,
@@ -224,7 +225,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         images_root: PathLike,
         annotation_source: str,
         annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
-        embed_annotations: bool = False,
+        embed_annotations: bool = True,
     ) -> None:
         """Attach COCO annotations to images already in the dataset.
 
@@ -233,7 +234,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             images_root: Root path used for matching image filenames.
             annotation_source: Name of the annotation source.
             annotation_type: ``OBJECT_DETECTION`` or ``SEGMENTATION_MASK``.
-            embed_annotations: If True, generate embeddings for object-detection annotations.
+            embed_annotations: If True (default), generate embeddings for object-detection
+                annotations. Set to False to skip.
         """
         label_input: COCOObjectDetectionInput | COCOInstanceSegmentationInput
         if annotation_type == AnnotationType.OBJECT_DETECTION:
@@ -254,7 +256,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         data_yaml: PathLike,
         annotation_source: str,
         input_split: str | None = None,
-        embed_annotations: bool = False,
+        embed_annotations: bool = True,
     ) -> None:
         """Attach YOLO annotations to images already in the dataset.
 
@@ -262,7 +264,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             data_yaml: Path to the YOLO ``data.yaml`` file.
             annotation_source: Name of the annotation source.
             input_split: Specific split (e.g. ``"train"``). ``None`` loads all splits.
-            embed_annotations: If True, generate embeddings for object-detection annotations.
+            embed_annotations: If True (default), generate embeddings for object-detection
+                annotations. Set to False to skip.
         """
         data_yaml = Path(data_yaml).absolute()
         missing: list[str] = []
@@ -321,7 +324,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         split: str | None = None,
         embed: bool = True,
         annotation_source: str | None = None,
-        embed_annotations: bool = False,
+        embed_annotations: bool = True,
     ) -> None:
         """Load a dataset from a labelformat object and store in database.
 
@@ -334,7 +337,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
-            embed_annotations: If True, generate embeddings for object-detection annotations.
+            embed_annotations: If True (default), generate embeddings for object-detection
+                annotations. Set to False to skip.
         """
         images_path = Path(images_path).absolute()
 
@@ -366,7 +370,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         input_split: str | None = None,
         embed: bool = True,
         annotation_source: str | None = None,
-        embed_annotations: bool = False,
+        embed_annotations: bool = True,
     ) -> None:
         """Load a dataset in YOLO format and store in DB.
 
@@ -378,7 +382,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
-            embed_annotations: If True, generate embeddings for object-detection annotations.
+            embed_annotations: If True (default), generate embeddings for object-detection
+                annotations. Set to False to skip.
         """
         data_yaml = Path(data_yaml).absolute()
 
@@ -443,7 +448,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         split: str | None = None,
         embed: bool = True,
         annotation_source: str | None = None,
-        embed_annotations: bool = False,
+        embed_annotations: bool = True,
     ) -> None:
         """Load a dataset in COCO Object Detection format and store in DB.
 
@@ -458,7 +463,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
-            embed_annotations: If True, generate embeddings for object-detection annotations.
+            embed_annotations: If True (default), generate embeddings for object-detection
+                annotations. Set to False to skip.
         """
         images_path = _normalize_input_path(path=images_path)
         fs, fs_path = fsspec.core.url_to_fs(url=annotations_json)
@@ -558,7 +564,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         split: str | None = None,
         embed: bool = True,
         annotation_source: str | None = None,
-        embed_annotations: bool = False,
+        embed_annotations: bool = True,
     ) -> None:
         """Load a dataset in Lightly format and store in DB.
 
@@ -571,7 +577,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
-            embed_annotations: If True, generate embeddings for object-detection annotations.
+            embed_annotations: If True (default), generate embeddings for object-detection
+                annotations. Set to False to skip.
         """
         input_folder = Path(input_folder).absolute()
 
