@@ -324,8 +324,20 @@
     const panelIsVisible = $derived(
         ($activePanel === 'evaluationRuns' && supportsEvaluation) ||
             ($activePanel === 'embeddingPlot' && hasMediaWithEmbeddings) ||
-            ($activePanel === 'queryEditor' && isImages)
+            ($activePanel === 'queryEditor' && isImages) ||
+            ($activePanel === 'classDistribution' && isImages)
     );
+
+    // Class counts for the distribution panel, from the same annotation-count
+    // query that feeds the labels filter.
+    const classDistributionCounts = $derived.by(() => {
+        const countsData = annotationCounts.data;
+        if (!countsData) return [];
+        return (countsData as { label_name: string; total_count: number }[]).map((item) => ({
+            label: item.label_name,
+            count: Number(item.total_count)
+        }));
+    });
 </script>
 
 <div class="flex-none">
@@ -465,6 +477,13 @@
                             {/await}
                         {:else if $activePanel === 'queryEditor' && isImages}
                             <QueryEditorPanel onClose={() => setActivePanel('none')} />
+                        {:else if $activePanel === 'classDistribution' && isImages}
+                            {#await import('$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte') then { default: DatasetDistributionPanel }}
+                                <DatasetDistributionPanel
+                                    data={classDistributionCounts}
+                                    onClose={() => setActivePanel('none')}
+                                />
+                            {/await}
                         {/if}
                     </Pane>
                 </PaneGroup>
