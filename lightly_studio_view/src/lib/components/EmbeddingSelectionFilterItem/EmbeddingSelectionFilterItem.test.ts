@@ -7,7 +7,8 @@ import EmbeddingSelectionFilterItem from './EmbeddingSelectionFilterItem.svelte'
 const mocks = vi.hoisted(() => ({
     setRangeSelectionForCollection: vi.fn(),
     useEmbeddingFilterForImages: vi.fn(),
-    useEmbeddingFilterForVideos: vi.fn()
+    useEmbeddingFilterForVideos: vi.fn(),
+    useEmbeddingFilterForAnnotations: vi.fn()
 }));
 
 vi.mock('$lib/hooks/useGlobalStorage', () => ({
@@ -24,6 +25,10 @@ vi.mock('$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForVideos', () => ({
     useEmbeddingFilterForVideos: mocks.useEmbeddingFilterForVideos
 }));
 
+vi.mock('$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations', () => ({
+    useEmbeddingFilterForAnnotations: mocks.useEmbeddingFilterForAnnotations
+}));
+
 const imageEffectiveCount = writable(1);
 const imageIsVisible = writable(false);
 const imageSetVisibility = vi.fn();
@@ -33,6 +38,11 @@ const videoEffectiveCount = writable(3);
 const videoIsVisible = writable(false);
 const videoSetVisibility = vi.fn();
 const videoClearFilter = vi.fn();
+
+const annotationsEffectiveCount = writable(0);
+const annotationsIsVisible = writable(false);
+const annotationsSetVisibility = vi.fn();
+const annotationsClearFilter = vi.fn();
 
 describe('EmbeddingSelectionFilterItem', () => {
     beforeEach(() => {
@@ -56,6 +66,13 @@ describe('EmbeddingSelectionFilterItem', () => {
             setVisibility: videoSetVisibility,
             clearFilter: videoClearFilter
         });
+
+        mocks.useEmbeddingFilterForAnnotations.mockReturnValue({
+            effectiveCount: annotationsEffectiveCount,
+            isVisible: annotationsIsVisible,
+            setVisibility: annotationsSetVisibility,
+            clearFilter: annotationsClearFilter
+        });
     });
 
     it('uses image hook only and renders image label in images view', () => {
@@ -68,7 +85,8 @@ describe('EmbeddingSelectionFilterItem', () => {
         });
 
         expect(mocks.useEmbeddingFilterForImages).toHaveBeenCalledOnce();
-        expect(mocks.useEmbeddingFilterForVideos).not.toHaveBeenCalled();
+        expect(mocks.useEmbeddingFilterForVideos).toHaveBeenCalledOnce();
+        expect(mocks.useEmbeddingFilterForAnnotations).toHaveBeenCalledOnce();
         expect(screen.getByTestId('embedding-selection-filter-chip')).toBeInTheDocument();
         expect(screen.getByText('Embedding Plot Filter')).toBeInTheDocument();
         expect(screen.getByText(/1\s*image/i)).toBeInTheDocument();
@@ -84,7 +102,8 @@ describe('EmbeddingSelectionFilterItem', () => {
         });
 
         expect(mocks.useEmbeddingFilterForVideos).toHaveBeenCalledOnce();
-        expect(mocks.useEmbeddingFilterForImages).not.toHaveBeenCalled();
+        expect(mocks.useEmbeddingFilterForImages).toHaveBeenCalledOnce();
+        expect(mocks.useEmbeddingFilterForAnnotations).toHaveBeenCalledOnce();
         expect(screen.getByText(/3\s*videos/i)).toBeInTheDocument();
     });
 

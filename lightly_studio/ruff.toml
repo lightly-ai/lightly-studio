@@ -29,6 +29,7 @@ exclude = [
     "site-packages",
     "vendor",
     "venv",
+    "scripts/download_coco_subset.py",
     # TODO(Michal): Can be removed from the ignore once LightlyStudio 0.4.12 is released,
     # and the offending import is removed from the example notebook.
     "src/lightly_studio/examples/example_notebook.ipynb",

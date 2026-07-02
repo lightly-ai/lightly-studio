@@ -1,6 +1,6 @@
 [project]
 name = "lightly-studio"
-version = "1.0.1"
+version = "1.0.2"
 description = "LightlyStudio is a lightweight, fast, and easy-to-use data exploration tool for data scientists and engineers."
 readme = "USAGE.md"
 requires-python = ">=3.9,<3.15"
@@ -110,7 +110,8 @@ disallow_untyped_defs = true
 ignore_missing_imports = false
 exclude = [
     "datasets/",
-    "vendor/"
+    "vendor/",
+    "scripts/download_coco_subset.py",
 ]
 plugins = ["pydantic.mypy"]
 

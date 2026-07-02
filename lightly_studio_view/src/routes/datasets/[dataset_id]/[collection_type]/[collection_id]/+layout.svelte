@@ -64,17 +64,14 @@
     import { isInputElement } from '$lib/utils';
     import { shutdownMaskRendererPool } from '$lib/workers/maskRendererPool';
     import { GRID_IMAGE_SEARCH_DROP_EVENT, type GridItemDragData } from '$lib/components/GridItem';
+    import { readAnnotationEmbedding } from '$lib/api/lightly_studio_local/sdk.gen';
     import { useSearchEmbedding } from '$lib/hooks/useSearchEmbedding/useSearchEmbedding';
     import { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
+    import { clearAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
     const { data, children } = $props();
     const {
         collection,
-        globalStorage: {
-            textEmbedding,
-            setLastGridType,
-            clearSelectedSamples,
-            clearSelectedSampleAnnotationCrops
-        }
+        globalStorage: { setLastGridType, clearSelectedSamples, clearSelectedSampleAnnotationCrops }
     } = $derived(data);
 
     // The dataset ID actually contains the collection ID.
@@ -93,7 +90,10 @@
         activePanel,
         setActivePanel,
         filteredSampleCount,
-        filteredAnnotationCount
+        filteredAnnotationCount,
+        // Sourced from the stable singleton (not `$derived(data)`) so `search`, created once below,
+        // captures a store reference that never goes stale.
+        textEmbedding
     } = useGlobalStorage();
 
     const evaluationRunsQuery = useEvaluationRuns(() => ({ datasetId: collection.dataset_id }));
@@ -137,13 +137,61 @@
         selectAllHandle.handleSelectAll();
     }
 
-    const search = $derived(useSearchEmbedding({ collectionId, embedding: textEmbedding }));
-    const searchImage = $derived(search.image);
-    const searchPending = $derived(search.isPending);
+    // Instantiate once (not `$derived`) so the active search survives collection changes: the image
+    // and annotation tabs are separate collections, and re-creating the hook per collection would
+    // reset the preview chip. `collectionId` is read lazily via the getter when a request fires.
+    const search = useSearchEmbedding({
+        getCollectionId: () => collectionId,
+        embedding: textEmbedding
+    });
+    const searchImage = search.image;
+    const searchPending = search.isPending;
+
+    // Copy a blob object URL into an independent one the caller owns. Used for annotation crop
+    // previews, whose source URL is owned by the annotation grid tile and revoked when that grid
+    // unmounts (e.g. switching to the images tab). The copy keeps the search chip alive afterwards.
+    async function copyBlobObjectUrl(url: string): Promise<string | undefined> {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) return undefined;
+            return URL.createObjectURL(await response.blob());
+        } catch {
+            return undefined;
+        }
+    }
 
     async function handleGridImageSearchDrop(event: Event) {
-        const { url, fileName } = (event as CustomEvent<GridItemDragData>).detail;
+        const { url, fileName, annotationSampleId, annotationCollectionId } = (
+            event as CustomEvent<GridItemDragData>
+        ).detail;
         try {
+            if (annotationSampleId) {
+                // Copy the crop preview up front, while the source URL is still guaranteed valid
+                // (before the awaited embedding request gives the source tile a chance to unmount).
+                const ownedPreviewUrl = await copyBlobObjectUrl(url);
+                try {
+                    const { data: storedEmbedding } = await readAnnotationEmbedding({
+                        path: {
+                            collection_id: annotationCollectionId ?? collectionId,
+                            sample_id: annotationSampleId
+                        },
+                        throwOnError: true
+                    });
+                    search.setEmbedding({
+                        queryText: fileName,
+                        embedding: storedEmbedding,
+                        imagePreview: ownedPreviewUrl
+                            ? { name: fileName, previewUrl: ownedPreviewUrl }
+                            : undefined
+                    });
+                } catch (err) {
+                    // The copied preview never reached the search, so revoke it here to avoid a leak.
+                    if (ownedPreviewUrl) URL.revokeObjectURL(ownedPreviewUrl);
+                    throw err;
+                }
+                return;
+            }
+
             const response = await fetch(url);
             if (!response.ok) {
                 throw new Error(`Failed to fetch dragged image: ${response.statusText}`);
@@ -199,6 +247,7 @@
         if (lastCollectionId && lastCollectionId !== collectionId) {
             clearSelectedSamples(lastCollectionId);
             clearSelectedSampleAnnotationCrops(lastCollectionId);
+            clearAnnotationPlotSelection();
         }
 
         gridType = nextGridType;
@@ -211,7 +260,14 @@
 
     const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId }));
     const hasEmbeddings = $derived(!!hasEmbeddingsQuery.data);
-    const hasMediaWithEmbeddings = $derived((isImages || isVideos) && hasEmbeddings);
+    const hasMediaWithEmbeddings = $derived(
+        (isImages || isVideos || isAnnotations) && hasEmbeddings
+    );
+    const collectionSearchPlaceholder = $derived(
+        isAnnotations
+            ? 'Search annotations by description or image'
+            : 'Search samples by description or image'
+    );
 
     const { metadataValues } = $derived.by(() => useMetadataFilters(collectionId));
     const { dimensionsValues } = useDimensions(collectionIdStore);
@@ -314,9 +370,7 @@
 
     const panelIsVisible = $derived(
         ($activePanel === 'evaluationRuns' && supportsEvaluation) ||
-            ($activePanel === 'embeddingPlot' &&
-                hasMediaWithEmbeddings &&
-                (isImages || isVideos)) ||
+            ($activePanel === 'embeddingPlot' && hasMediaWithEmbeddings) ||
             ($activePanel === 'queryEditor' && isImages)
     );
 </script>
@@ -360,6 +414,7 @@
                                 {collectionIdStore}
                                 {isVideos}
                                 {isImages}
+                                {isAnnotations}
                             />
                             {#if isImages}
                                 <ConfusionCellFilterItem />
@@ -395,6 +450,7 @@
                         onDeselectAll={clearSelection}
                         searchImage={$searchImage}
                         searchPending={$searchPending}
+                        searchPlaceholder={collectionSearchPlaceholder}
                         initialQueryText={$textEmbedding?.queryText ?? ''}
                         onSubmitText={search.setText}
                         onSubmitFile={search.setImage}
@@ -446,9 +502,13 @@
                                     {collectionId}
                                 />
                             {/await}
-                        {:else if $activePanel === 'embeddingPlot' && hasMediaWithEmbeddings && (isImages || isVideos)}
+                        {:else if $activePanel === 'embeddingPlot' && hasMediaWithEmbeddings}
                             {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
-                                <PlotPanel />
+                                <!-- PlotPanel captures collectionId at mount; remount it when
+                                     switching collections (e.g. images <-> annotations tab). -->
+                                {#key collectionId}
+                                    <PlotPanel {collectionId} />
+                                {/key}
                             {/await}
                         {:else if $activePanel === 'queryEditor' && isImages}
                             <QueryEditorPanel onClose={() => setActivePanel('none')} />

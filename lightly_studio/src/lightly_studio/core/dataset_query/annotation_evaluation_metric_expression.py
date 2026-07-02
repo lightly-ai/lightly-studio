@@ -19,34 +19,36 @@ class AnnotationEvaluationMetricField:  # noqa: PLW1641
         """Initialize a queryable annotation metric reference."""
         self.metric_name = metric_name
 
-    def _expression(self, other: float | int, operator: OrdinalOperator) -> MatchExpression:
+    def _expression(
+        self, other: float | int, operator: OrdinalOperator
+    ) -> AnnotationEvaluationMetricMatchExpression:
         return AnnotationEvaluationMetricMatchExpression(
             metric_name=self.metric_name,
             operator=operator,
             value=other,
         )
 
-    def __gt__(self, other: float | int) -> MatchExpression:
+    def __gt__(self, other: float | int) -> AnnotationEvaluationMetricMatchExpression:
         """Create a greater-than filter."""
         return self._expression(other=other, operator=">")
 
-    def __lt__(self, other: float | int) -> MatchExpression:
+    def __lt__(self, other: float | int) -> AnnotationEvaluationMetricMatchExpression:
         """Create a less-than filter."""
         return self._expression(other=other, operator="<")
 
-    def __ge__(self, other: float | int) -> MatchExpression:
+    def __ge__(self, other: float | int) -> AnnotationEvaluationMetricMatchExpression:
         """Create a greater-than-or-equal filter."""
         return self._expression(other=other, operator=">=")
 
-    def __le__(self, other: float | int) -> MatchExpression:
+    def __le__(self, other: float | int) -> AnnotationEvaluationMetricMatchExpression:
         """Create a less-than-or-equal filter."""
         return self._expression(other=other, operator="<=")
 
-    def __eq__(self, other: float | int) -> MatchExpression:  # type: ignore[override]
+    def __eq__(self, other: float | int) -> AnnotationEvaluationMetricMatchExpression:  # type: ignore[override]
         """Create an equality filter."""
         return self._expression(other=other, operator="==")
 
-    def __ne__(self, other: float | int) -> MatchExpression:  # type: ignore[override]
+    def __ne__(self, other: float | int) -> AnnotationEvaluationMetricMatchExpression:  # type: ignore[override]
         """Create an inequality filter."""
         return self._expression(other=other, operator="!=")
 

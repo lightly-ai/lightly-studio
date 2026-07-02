@@ -1,0 +1,18 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
+        "lib": ["ES2023"],
+        "types": ["node"],
+        "strict": true,
+        "esModuleInterop": true,
+        "forceConsistentCasingInFileNames": true,
+        "resolveJsonModule": true,
+        "skipLibCheck": true,
+        "noEmit": true,
+        "noUncheckedIndexedAccess": true
+    },
+    "include": ["src/**/*.ts", "*.config.ts", "eslint.config.js"],
+    "exclude": ["node_modules"]
+}

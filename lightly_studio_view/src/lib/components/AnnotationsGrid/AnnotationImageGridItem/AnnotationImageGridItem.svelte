@@ -4,6 +4,7 @@
     import { useSettings } from '$lib/hooks/useSettings';
     import { getGridImageURL, getGridThumbnailRequestSize } from '$lib/utils';
     import AnnotationItem from '../AnnotationItem/AnnotationItem.svelte';
+    import type { CropWindow } from '../AnnotationItem/renderCropObjectUrl';
 
     type Props = {
         annotation: AnnotationView;
@@ -13,6 +14,7 @@
         cachedCollectionVersion: string;
         showLabel: boolean;
         selected?: boolean;
+        onCropWindowChange?: (annotationId: string, window: CropWindow | null) => void;
     };
 
     let {
@@ -22,7 +24,8 @@
         image,
         cachedCollectionVersion = '',
         showLabel = true,
-        selected = false
+        selected = false,
+        onCropWindowChange
     }: Props = $props();
 
     const { getCollectionVersion } = useGlobalStorage();
@@ -84,5 +87,6 @@
         {containerWidth}
         {showLabel}
         {selected}
+        {onCropWindowChange}
     />
 {/if}

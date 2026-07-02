@@ -7,8 +7,8 @@ type EmbedSuccessResult = {
 };
 
 type UseTextEmbeddingParams = {
-    /** Target collection id used by the embedding endpoint path. */
-    collectionId: string;
+    /** Returns the target collection id for the embedding endpoint path, read per request. */
+    getCollectionId: () => string;
     /** Called with a user-facing error message on embedding failure. */
     onError: (message: string) => void;
     /** Called after successful embedding with trimmed query text and embedding vector. */
@@ -24,7 +24,7 @@ type UseTextEmbeddingReturn = {
 
 /** Handles text embedding state and request retrieval for collection search. */
 export function useTextEmbedding({
-    collectionId,
+    getCollectionId,
     onError,
     onSuccess
 }: UseTextEmbeddingParams): UseTextEmbeddingReturn {
@@ -41,7 +41,7 @@ export function useTextEmbedding({
         isEmbedding.set(true);
         try {
             const { data, error } = await embedText({
-                path: { collection_id: collectionId },
+                path: { collection_id: getCollectionId() },
                 query: { query_text: trimmed, embedding_model_id: null }
             });
             if (requestId !== latestRequestId) return;
