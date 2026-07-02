@@ -320,7 +320,7 @@ jobs:
 
       # Pin Node from .nvmrc, matching the local Makefile's nvm setup.
       - name: Set Up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: fast_track/.nvmrc
           cache: npm
