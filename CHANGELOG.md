@@ -9,20 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-### Changed
-
-### Deprecated
-
-### Removed
-
-### Fixed
-
-### Security
-
-## \[1.0.2\] - 2026-07-02
-
-### Added
-
 - Annotation classes can now be shown or hidden individually in the grid views using an eye icon toggle in the Annotation Classes sidebar.
 - Python SDK: `target_fps` parameter on `VideoDataset.add_videos_from_path` to subsample frames to a
   lower frame rate. Retained frames keep their original frame numbers.
@@ -37,7 +23,17 @@ filtered sample count.
 - Annotation source selection for exports: when multiple annotation collections exist, the export dialog shows a dropdown to choose which collection to export from. The annotation source can also be specified via the Python API using the `annotation_collection_id` parameter.
 - All embedding plot legend entries (especially e.g. `Excluded by filters`, `No category`, etc.) can be hidden by clicking on them.
 - YOLO object detection export: object detection annotations can now be exported in YOLO format from the GUI export dialog, via the Python API (`dataset.export().to_yolo_object_detections(...)`), and via the export API (`export_format=object_detection_yolo`).
-- Object-level (annotation) embeddings: annotations can now be embedded and searched by text or image similarity and visualized in the embedding plot.
+- Python SDK: `limit` parameter on `ImageDataset.add_samples_from*` methods to index only the first N samples of a dataset.
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
 
 ## \[1.0.1\] - 2026-06-17
 

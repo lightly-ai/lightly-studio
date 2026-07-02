@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 import logging
 import math
 import os
@@ -214,6 +215,7 @@ def load_video_annotations_from_labelformat(  # noqa: PLR0913
     video_paths: Iterable[str],
     input_labels: ObjectDetectionTrackInput | InstanceSegmentationTrackInput,
     input_labels_paths_root: Path | str,
+    limit: int | None = None,
 ) -> tuple[list[UUID], list[UUID]]:
     """Load video frame annotations from a labelformat input into the dataset.
 
@@ -232,6 +234,9 @@ def load_video_annotations_from_labelformat(  # noqa: PLR0913
             Note: This is used for file names from input_labels, that don't have a file extension.
         input_labels: The labelformat input containing video annotations.
         input_labels_paths_root: The root path for the paths in input_labels.
+        limit: If set, load at most this many videos (the first ``limit`` in the order
+            they appear in input_labels). Annotations of videos beyond the limit are
+            skipped. Defaults to None (load all).
 
     Returns:
         A tuple containing:
@@ -241,7 +246,7 @@ def load_video_annotations_from_labelformat(  # noqa: PLR0913
     # TODO (Jonas, 2/2026): Add support for cloud paths.
     root_path = Path(input_labels_paths_root).absolute()
     video_paths_labelformat = _resolve_video_paths_from_labelformat(
-        input_labels=input_labels, root_path=root_path, video_paths=video_paths
+        input_labels=input_labels, root_path=root_path, video_paths=video_paths, limit=limit
     )
 
     created_sample_ids, created_video_frame_sample_ids = load_into_collection_from_paths(
@@ -278,6 +283,9 @@ def load_video_annotations_from_labelformat(  # noqa: PLR0913
         video_path_without_suffix = str((root_path / video_annotation_filename).with_suffix(""))
         video_sample_id = video_path_without_suffix_to_sample_id.get(video_path_without_suffix)
         if video_sample_id is None:
+            if limit is not None:
+                # The video was not loaded because it is beyond the limit.
+                continue
             raise ValueError(
                 f"No matching video ({video_annotation_filename}) for annotations found"
             )
@@ -492,6 +500,7 @@ def _resolve_video_paths_from_labelformat(
     input_labels: ObjectDetectionTrackInput | InstanceSegmentationTrackInput,
     root_path: Path,
     video_paths: Iterable[str],
+    limit: int | None = None,
 ) -> list[str]:
     """Collecting the available video paths for the videos referenced in the input_labels.
 
@@ -502,6 +511,8 @@ def _resolve_video_paths_from_labelformat(
         input_labels: Input containing the required video file paths.
         root_path: The paths for the videos in input_labels are relative to this one.
         video_paths: An iterable of file paths to the videos to load.
+        limit: If set, resolve at most this many videos (the first ``limit`` in the
+            order they appear in input_labels). Defaults to None (resolve all).
 
     Return:
         list of resolved video file paths
@@ -520,7 +531,7 @@ def _resolve_video_paths_from_labelformat(
 
     # Construct the list of resolved video paths.
     video_paths = []
-    for video_annotation in input_labels.get_videos():
+    for video_annotation in itertools.islice(input_labels.get_videos(), limit):
         filename = Path(video_annotation.filename)
         resolved_path: str | None
         if filename.suffix:

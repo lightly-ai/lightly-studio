@@ -85,6 +85,29 @@ class TestDataset:
         assert annotation.annotation_label_name == "dog"
         assert pytest.approx(confidence) == 0.99
 
+    def test_add_samples_from_lightly__limit(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        images_path = tmp_path / "images"
+        preds_path = tmp_path / "predictions"
+        _create_sample_images(
+            image_paths=[
+                images_path / "image1.jpg",
+                images_path / "image2.jpg",
+            ]
+        )
+        preds_path.mkdir(parents=True, exist_ok=True)
+        (preds_path / "image1.json").write_text(json.dumps(_get_lightly_annotation_dict_1()))
+        (preds_path / "image2.json").write_text(json.dumps(_get_lightly_annotation_dict_2()))
+        (preds_path / "schema.json").write_text(json.dumps(_get_lightly_schema_dict()))
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_samples_from_lightly(input_folder=preds_path, limit=1)
+
+        assert len(list(dataset)) == 1
+
 
 def _create_sample_images(image_paths: list[Path]) -> None:
     for image_path in image_paths:

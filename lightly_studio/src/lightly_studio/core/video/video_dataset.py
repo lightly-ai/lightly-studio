@@ -98,13 +98,14 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             raise IndexError(f"No sample found for sample_id: {sample_id}")
         return VideoSample(inner=sample)
 
-    def add_videos_from_path(
+    def add_videos_from_path(  # noqa: PLR0913
         self,
         path: PathLike,
         allowed_extensions: Iterable[str] | None = None,
         num_decode_threads: int | None = None,
         embed: bool = True,
         target_fps: float | None = None,
+        limit: int | None = None,
     ) -> None:
         """Adding video frames from the specified path to the dataset.
 
@@ -119,11 +120,17 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             target_fps: Optional target frame rate for subsampling. When set below the source
                 frame rate, only selected frames are kept. frame_number values remain
                 original. Must be greater than 0.
+            limit: If set, load at most this many videos (the first ``limit`` in discovery
+                order). Useful for debugging, quick tests, or tutorials. Defaults to None
+                (load all).
         """
         if target_fps is not None and target_fps <= 0:
             raise ValueError(f"target_fps must be greater than 0, got {target_fps}.")
+        fsspec_lister.validate_limit(limit)
 
-        video_paths = _collect_video_file_paths(path=path, allowed_extensions=allowed_extensions)
+        video_paths = _collect_video_file_paths(
+            path=path, allowed_extensions=allowed_extensions, limit=limit
+        )
         logger.info(f"Found {len(video_paths)} videos in {path}.")
 
         # Process videos.
@@ -142,13 +149,14 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
                 sample_ids=created_sample_ids,
             )
 
-    def add_videos_from_youtube_vis(
+    def add_videos_from_youtube_vis(  # noqa: PLR0913
         self,
         annotations_json: PathLike,
         videos_path: PathLike,
         allowed_extensions: Iterable[str] | None = None,
         annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
         embed: bool = True,
+        limit: int | None = None,
     ) -> None:
         """Load videos and YouTube-VIS annotations and store them in the database.
 
@@ -162,7 +170,15 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             annotation_type: The type of annotation to be loaded (e.g., 'ObjectDetection',
                 'InstanceSegmentation').
             embed: If True, generate embeddings for the newly added videos.
+            limit: If set, load at most this many videos (the first ``limit`` in the order
+                they appear in the annotations file). Annotations of videos beyond the limit
+                are skipped. Useful for debugging, quick tests, or tutorials. Defaults to
+                None (load all).
+
+        Raises:
+            ValueError: If limit is not None and not greater than 0.
         """
+        fsspec_lister.validate_limit(limit)
         annotations_json = Path(annotations_json).absolute()
 
         if not annotations_json.is_file() or annotations_json.suffix != ".json":
@@ -188,6 +204,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             video_paths=video_paths,
             input_labels=input_labels,
             input_labels_paths_root=videos_path,
+            limit=limit,
         )
 
         if embed:
@@ -232,6 +249,7 @@ def _generate_embeddings_video(
 def _collect_video_file_paths(
     path: PathLike,
     allowed_extensions: Iterable[str] | None = None,
+    limit: int | None = None,
 ) -> list[str]:
     # Collect video file paths.
     if allowed_extensions:
@@ -240,6 +258,6 @@ def _collect_video_file_paths(
         allowed_extensions_set = VIDEO_EXTENSIONS
     return list(
         fsspec_lister.iter_files_from_path(
-            path=str(path), allowed_extensions=allowed_extensions_set
+            path=str(path), allowed_extensions=allowed_extensions_set, limit=limit
         )
     )
