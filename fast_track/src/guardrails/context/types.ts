@@ -14,10 +14,13 @@ export interface GuardrailContext {
     changedFiles(): Promise<ChangedFile[]>;
 }
 
+/** A guardrail's `run` output; the runner adds the `name` from the definition. */
+export type GuardrailOutcome = Omit<GuardrailResult, 'name'>;
+
 export interface Guardrail {
     name: string;
     required: boolean;
     /** True if it needs the PR API (CI only); false runs anywhere. */
     needsPrContext: boolean;
-    run(context: GuardrailContext): Promise<GuardrailResult>;
+    run(context: GuardrailContext): Promise<GuardrailOutcome>;
 }

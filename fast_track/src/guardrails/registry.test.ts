@@ -7,7 +7,7 @@ const guardrail = (name: string, needsPrContext: boolean): Guardrail => ({
     name,
     required: true,
     needsPrContext,
-    run: async () => ({ name, status: 'pass', summary: '' })
+    run: async () => ({ status: 'pass', summary: '' })
 });
 
 const local = guardrail('local-check', false);
