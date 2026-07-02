@@ -8,6 +8,7 @@
     import { getSimilarityColor } from '$lib/utils';
     import AnnotationImageGridItem from '../AnnotationImageGridItem/AnnotationImageGridItem.svelte';
     import AnnotationVideoFrameGridItem from '../AnnotationVideoFrameGridItem/AnnotationVideoFrameGridItem.svelte';
+    import type { CropWindow } from '../AnnotationItem/renderCropObjectUrl';
 
     type Props = {
         annotation: AnnotationWithPayloadView;
@@ -16,6 +17,7 @@
         cachedCollectionVersion: string;
         showLabel: boolean;
         selected?: boolean;
+        onCropWindowChange?: (annotationId: string, window: CropWindow | null) => void;
     };
 
     let {
@@ -24,7 +26,8 @@
         height,
         cachedCollectionVersion = '',
         showLabel = true,
-        selected = false
+        selected = false,
+        onCropWindowChange
     }: Props = $props();
 </script>
 
@@ -37,6 +40,7 @@
         {cachedCollectionVersion}
         {showLabel}
         {selected}
+        {onCropWindowChange}
     />
 {:else if annotationWithPayload.parent_sample_type == SampleType.VIDEO_FRAME || annotationWithPayload.parent_sample_type == SampleType.VIDEO}
     <AnnotationVideoFrameGridItem
