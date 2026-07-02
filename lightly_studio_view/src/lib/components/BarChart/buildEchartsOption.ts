@@ -1,9 +1,10 @@
 import type { EChartsCoreOption } from 'echarts/core';
 import type { CategoryCount } from './types';
 
-// Single accent color (Tailwind blue-500): per-class colors carry no meaning
-// in a count distribution, mirroring FiftyOne's histograms panel.
-const BAR_COLOR = 'rgba(59,130,246,0.85)';
+// Single accent color (the Lightly primary green, --color-lightly-primary #3bd99f):
+// per-class colors carry no meaning in a count distribution, mirroring FiftyOne's
+// histograms panel.
+const BAR_COLOR = 'rgba(59,217,159,0.85)';
 
 const MAX_LABEL_CHARS = 24;
 

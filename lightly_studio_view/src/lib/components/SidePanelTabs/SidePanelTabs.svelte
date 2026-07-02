@@ -113,7 +113,7 @@
                 onclick={() => toggle('distribution')}
             >
                 <ChartColumn class="size-4" />
-                <span>Distrib.</span>
+                <span>Distrib</span>
             </button>
         </Tooltip>
     {/if}
