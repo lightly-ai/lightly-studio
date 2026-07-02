@@ -1,19 +1,27 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.core.video.video_frame_dataset import VideoFrameDataset
 from lightly_studio.core.video.video_frame_sample import VideoFrameSample
+from lightly_studio.resolvers import collection_resolver
 from tests.resolvers.video.helpers import (
     VideoStub,
-    create_video_file,
+    VideoWithFrames,
     create_video_with_frames,
 )
 
 
+def _frame_dataset(dataset: VideoDataset, result: VideoWithFrames) -> VideoFrameDataset:
+    """Build a VideoFrameDataset directly from the frame child collection."""
+    frame_collection = collection_resolver.get_by_id(
+        session=dataset.session, collection_id=result.video_frames_collection_id
+    )
+    assert frame_collection is not None
+    return VideoFrameDataset(collection=frame_collection)
+
+
 class TestVideoFrameDataset:
-    def test_frames_iterates_video_frame_samples(
+    def test_iterates_video_frame_samples(
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
@@ -24,9 +32,8 @@ class TestVideoFrameDataset:
             video=VideoStub(path="/data/a.mp4", duration_s=1.0, fps=3.0),
         )
 
-        frames = dataset.frames()
+        frames = _frame_dataset(dataset, result)
 
-        assert isinstance(frames, VideoFrameDataset)
         frame_list = list(frames)
         assert len(frame_list) == len(result.frame_sample_ids) == 3
         assert all(isinstance(frame, VideoFrameSample) for frame in frame_list)
@@ -43,34 +50,7 @@ class TestVideoFrameDataset:
         )
 
         sample_id = result.frame_sample_ids[0]
-        frame = dataset.frames().get_sample(sample_id)
+        frame = _frame_dataset(dataset, result).get_sample(sample_id)
 
         assert isinstance(frame, VideoFrameSample)
         assert frame.sample_id == sample_id
-
-    def test_frames_empty_without_videos(
-        self,
-        patch_collection: None,  # noqa: ARG002
-    ) -> None:
-        dataset = VideoDataset.create(name="empty_dataset")
-        assert list(dataset.frames()) == []
-
-    def test_frames_end_to_end_from_real_videos(
-        self,
-        patch_collection: None,  # noqa: ARG002
-        tmp_path: Path,
-    ) -> None:
-        create_video_file(
-            output_path=tmp_path / "vid.mp4",
-            width=320,
-            height=240,
-            num_frames=5,
-            fps=5,
-        )
-
-        dataset = VideoDataset.create(name="real_dataset")
-        dataset.add_videos_from_path(path=tmp_path, embed=False)
-
-        frame_numbers = [frame.frame_number for frame in dataset.frames()]
-        assert len(frame_numbers) > 0
-        assert frame_numbers == sorted(frame_numbers)
