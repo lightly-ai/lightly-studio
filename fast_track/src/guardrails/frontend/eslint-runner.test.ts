@@ -86,7 +86,7 @@ describe('runEslint', () => {
 
         await runEslint(['src/a.ts', 'src/b.ts'], 'eslint.config.js');
 
-        const [, args] = mockExecFile.mock.calls[0];
+        const [, args] = mockExecFile.mock.calls[0]!;
         expect(args).toContain('--config');
         expect(args).toContain('eslint.config.js');
         expect(args).toContain('--format');
@@ -100,7 +100,7 @@ describe('runEslint', () => {
 
         await runEslint(['src/a.ts'], 'eslint.config.js', ['--max-warnings', '0']);
 
-        const [, args] = mockExecFile.mock.calls[0];
+        const [, args] = mockExecFile.mock.calls[0]!;
         const extraIndex = args.indexOf('--max-warnings');
         const fileIndex = args.indexOf('src/a.ts');
         expect(extraIndex).toBeGreaterThan(-1);
