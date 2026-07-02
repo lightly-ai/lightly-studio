@@ -17,7 +17,7 @@ export interface GuardrailContext {
 export interface Guardrail {
     name: string;
     required: boolean;
-    /** `local` runs from a plain checkout; `pr-only` needs the API and is skipped locally. */
-    availability: 'local' | 'pr-only';
+    /** True if it needs the PR API (CI only); false runs anywhere. */
+    needsPrContext: boolean;
     run(context: GuardrailContext): Promise<GuardrailResult>;
 }
