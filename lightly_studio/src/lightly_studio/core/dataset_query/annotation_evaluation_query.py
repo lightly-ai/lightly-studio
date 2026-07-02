@@ -7,6 +7,7 @@ from typing import Literal
 
 from sqlalchemy import ColumnElement, exists
 from sqlalchemy.orm import aliased
+from sqlalchemy.sql.selectable import Select
 from sqlmodel import col, select
 
 from lightly_studio.core.dataset_query.annotation_evaluation_metric_expression import (
@@ -20,7 +21,7 @@ from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotat
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.sample import SampleTable
 
-# TODO(lukas 7/2026): more match kinds will be added later
+# TODO(lukas, 07/2026): More match kinds will be added later.
 AnnotationMetricMatchKind = Literal["confusion"]
 
 
@@ -32,11 +33,15 @@ class AnnotationMetricQuery(MatchExpression):
     run_name: str
     gt_label_name: str
     pred_label_name: str
-    criteria: list[MatchExpression]
+    criteria: list[AnnotationEvaluationMetricMatchExpression]
 
     @classmethod
     def confusion(
-        cls, run_name: str, ground_truth: str, prediction: str, *criteria: MatchExpression
+        cls,
+        run_name: str,
+        ground_truth: str,
+        prediction: str,
+        *criteria: AnnotationEvaluationMetricMatchExpression,
     ) -> AnnotationMetricQuery:
         """Match samples by confusion-matrix cell within an evaluation run.
 
@@ -48,8 +53,8 @@ class AnnotationMetricQuery(MatchExpression):
 
         Args:
             run_name: The evaluation run name to match metrics against.
-            ground_truth: Ground-truth label name.
-            prediction: Prediction label name.
+            ground_truth: Ground-truth annotation class name.
+            prediction: Predicted annotation class name.
             criteria: The annotation evaluation metric criteria to combine.
         """
         return cls(
@@ -80,27 +85,34 @@ class AnnotationMetricQuery(MatchExpression):
             return exists(subquery.where(self._matching_metric_exists_expression()))
 
         for criterion in self.criteria:
-            if not isinstance(criterion, AnnotationEvaluationMetricMatchExpression):
-                raise TypeError(
-                    "Criteria must be AnnotationEvaluationMetricMatchExpression instances."
-                )
             subquery = subquery.where(self._matching_metric_exists_expression(criterion))
         return exists(subquery)
 
     def _matching_metric_exists_expression(
-        self, criterion: MatchExpression | None = None
+        self, criterion: AnnotationEvaluationMetricMatchExpression | None = None
     ) -> ColumnElement[bool]:
         if self.match_kind != "confusion":
             raise ValueError(f"Unsupported annotation metric match kind: {self.match_kind}")
 
-        # TODO(lukas 7/2026): This method is close to _build_confusion_cell_subquery() from
-        # SampleFilter, consider joining/sharing code.
+        metric_subquery = self._build_confusion_metric_subquery()
+        if criterion is not None:
+            metric_subquery = metric_subquery.where(criterion.get())
+        return exists(
+            metric_subquery
+            # Keep EvaluationRunTable and SampleTable as outer references so metrics are matched
+            # against the selected run and current sample.
+            .correlate(EvaluationRunTable, SampleTable)
+        )
+
+    def _build_confusion_metric_subquery(self) -> Select[tuple[int]]:
+        # TODO(lukas, 07/2026): This method is close to
+        # _build_confusion_cell_subquery() from SampleFilter, consider joining/sharing code.
         gt_annotation = aliased(AnnotationBaseTable)
         pred_annotation = aliased(AnnotationBaseTable)
         gt_label = aliased(AnnotationLabelTable)
         pred_label = aliased(AnnotationLabelTable)
 
-        metric_subquery = (
+        return (
             select(1)
             .select_from(EvaluationAnnotationMetricTable)
             .join(
@@ -131,12 +143,4 @@ class AnnotationMetricQuery(MatchExpression):
             .where(col(EvaluationAnnotationMetricTable.sample_id) == col(SampleTable.sample_id))
             .where(col(gt_label.annotation_label_name) == self.gt_label_name)
             .where(col(pred_label.annotation_label_name) == self.pred_label_name)
-        )
-        if criterion is not None:
-            metric_subquery = metric_subquery.where(criterion.get())
-        return exists(
-            metric_subquery
-            # Keep EvaluationRunTable and SampleTable as outer references so metrics are matched
-            # against the selected run and current sample.
-            .correlate(EvaluationRunTable, SampleTable)
         )
