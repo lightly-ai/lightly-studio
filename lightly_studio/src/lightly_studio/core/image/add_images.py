@@ -57,31 +57,48 @@ def load_into_dataset_from_paths(
     Returns:
         A list of UUIDs of the created samples.
     """
+    # Normalize all paths up front so the database check can happen once, before the
+    # main processing loop, instead of once per batch.
+    normalized_paths = [
+        add_annotations.normalize_images_root(image_path) for image_path in image_paths
+    ]
+    existing_paths_set = _get_existing_paths_set(
+        session=session,
+        collection_id=root_collection_id,
+        file_paths_abs=normalized_paths,
+    )
+
     samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
 
     logging_context = LoadingLoggingContext(
-        n_samples_to_be_inserted=sum(1 for _ in image_paths),
+        n_samples_to_be_inserted=len(normalized_paths),
         n_samples_before_loading=sample_resolver.count_by_collection_id(
             session=session, collection_id=root_collection_id
         ),
     )
 
-    for image_path in tqdm(
-        image_paths,
+    for normalized_path in tqdm(
+        normalized_paths,
         desc="Processing images",
         unit=" images",
         disable=not show_progress,
     ):
+        # Skip paths that are already in the database (checked before the loop) or that
+        # appear more than once in the input.
+        if normalized_path in existing_paths_set:
+            logging_context.update_example_paths([normalized_path])
+            continue
+        existing_paths_set.add(normalized_path)
+
         try:
-            with fsspec.open(image_path, "rb") as file:
+            with fsspec.open(normalized_path, "rb") as file:
                 image = PIL.Image.open(file)
                 width, height = image.size
                 image.close()
         except (FileNotFoundError, PIL.UnidentifiedImageError, OSError):
             continue
 
-        normalized_path = add_annotations.normalize_images_root(image_path)
         sample = ImageCreate(
             file_name=Path(normalized_path).name,
             file_path_abs=normalized_path,
@@ -92,20 +109,18 @@ def load_into_dataset_from_paths(
 
         # Process batch when it reaches SAMPLE_BATCH_SIZE
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
-            created_path_to_id, paths_not_inserted = _create_batch_samples(
+            created_path_to_id = _create_batch_samples(
                 session=session, collection_id=root_collection_id, samples=samples_to_create
             )
             created_sample_ids.extend(created_path_to_id.values())
-            logging_context.update_example_paths(paths_not_inserted)
             samples_to_create = []
 
     # Handle remaining samples
     if samples_to_create:
-        created_path_to_id, paths_not_inserted = _create_batch_samples(
+        created_path_to_id = _create_batch_samples(
             session=session, collection_id=root_collection_id, samples=samples_to_create
         )
         created_sample_ids.extend(created_path_to_id.values())
-        logging_context.update_example_paths(paths_not_inserted)
 
     log_loading_results(
         session=session,
@@ -136,6 +151,17 @@ def load_into_dataset_from_labelformat(
         A list of UUIDs of the created samples.
     """
     images_root_abs = add_annotations.normalize_images_root(images_root=images_path)
+
+    # Check which paths already exist in the database once, before the processing loop.
+    existing_paths_set = _get_existing_paths_set(
+        session=session,
+        collection_id=root_collection_id,
+        file_paths_abs=[
+            posixpath.join(images_root_abs, str(image.filename))
+            for image in input_labels.get_images()
+        ],
+    )
+
     logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=0,
         n_samples_before_loading=sample_resolver.count_by_collection_id(
@@ -157,22 +183,27 @@ def load_into_dataset_from_labelformat(
             width=image.width,
             height=image.height,
         )
+
+        # Skip paths already in the database (checked before the loop) or duplicated in the input.
+        if sample.file_path_abs in existing_paths_set:
+            logging_context.update_example_paths([sample.file_path_abs])
+            continue
+        existing_paths_set.add(sample.file_path_abs)
+
         samples_to_create.append(sample)
 
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
-            created_path_to_id, paths_not_inserted = _create_batch_samples(
+            created_path_to_id = _create_batch_samples(
                 session=session, collection_id=root_collection_id, samples=samples_to_create
             )
             created_sample_ids.extend(created_path_to_id.values())
-            logging_context.update_example_paths(paths_not_inserted)
             samples_to_create.clear()
 
     if samples_to_create:
-        created_path_to_id, paths_not_inserted = _create_batch_samples(
+        created_path_to_id = _create_batch_samples(
             session=session, collection_id=root_collection_id, samples=samples_to_create
         )
         created_sample_ids.extend(created_path_to_id.values())
-        logging_context.update_example_paths(paths_not_inserted)
 
     # Phase 2: Annotation creation (only if samples were created)
     if created_sample_ids:
@@ -230,6 +261,13 @@ def load_into_dataset_from_coco_captions(
             continue
         captions_by_image_id[image_id].append(caption_text)
 
+    # Check which paths already exist in the database once, before the processing loop.
+    existing_paths_set = _get_existing_paths_set(
+        session=session,
+        collection_id=root_collection_id,
+        file_paths_abs=[str(images_path / str(image_info["file_name"])) for image_info in images],
+    )
+
     logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=len(images),
         n_samples_before_loading=sample_resolver.count_by_collection_id(
@@ -256,15 +294,21 @@ def load_into_dataset_from_coco_captions(
             width=width,
             height=height,
         )
+
+        # Skip paths already in the database (checked before the loop) or duplicated in the input.
+        if sample.file_path_abs in existing_paths_set:
+            logging_context.update_example_paths([sample.file_path_abs])
+            continue
+        existing_paths_set.add(sample.file_path_abs)
+
         samples_to_create.append(sample)
         path_to_captions[sample.file_path_abs] = captions_by_image_id.get(image_id_raw, [])
 
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
-            created_path_to_id, paths_not_inserted = _create_batch_samples(
+            created_path_to_id = _create_batch_samples(
                 session=session, collection_id=root_collection_id, samples=samples_to_create
             )
             created_sample_ids.extend(created_path_to_id.values())
-            logging_context.update_example_paths(paths_not_inserted)
             _process_batch_captions(
                 session=session,
                 collection_id=root_collection_id,
@@ -275,11 +319,10 @@ def load_into_dataset_from_coco_captions(
             path_to_captions.clear()
 
     if samples_to_create:
-        created_path_to_id, paths_not_inserted = _create_batch_samples(
+        created_path_to_id = _create_batch_samples(
             session=session, collection_id=root_collection_id, samples=samples_to_create
         )
         created_sample_ids.extend(created_path_to_id.values())
-        logging_context.update_example_paths(paths_not_inserted)
         _process_batch_captions(
             session=session,
             collection_id=root_collection_id,
@@ -342,10 +385,37 @@ def tag_samples_by_directory(
     logger.info(f"Created {len(parent_dir_to_sample_ids)} tags from directories.")
 
 
+def _get_existing_paths_set(
+    session: Session, collection_id: UUID, file_paths_abs: list[str]
+) -> set[str]:
+    """Return the set of file paths that already exist in the collection.
+
+    The database is queried once, up front, so callers can skip already-present paths in
+    their main processing loop instead of re-checking the database per batch.
+
+    Args:
+        session: The database session.
+        collection_id: The ID of the collection to check for existing paths.
+        file_paths_abs: The absolute file paths to check.
+
+    Returns:
+        The subset of ``file_paths_abs`` that are already present in the collection.
+    """
+    _, existing_paths = sample_resolver.filter_new_paths(
+        session=session,
+        collection_id=collection_id,
+        file_paths_abs=file_paths_abs,
+    )
+    return set(existing_paths)
+
+
 def _create_batch_samples(
     session: Session, collection_id: UUID, samples: list[ImageCreate]
-) -> tuple[dict[str, UUID], list[str]]:
+) -> dict[str, UUID]:
     """Create the batch samples.
+
+    Existence in the database is checked by the caller before the processing loop, so
+    this function creates every sample it is given without filtering.
 
     Args:
         session: The database session.
@@ -353,27 +423,15 @@ def _create_batch_samples(
         samples: The samples to create.
 
     Returns:
-        - A mapping from file paths to the created sample IDs for new samples.
-        - A list of file paths that already existed in the database.
+        A mapping from file paths to the created sample IDs.
     """
-    file_path_to_sample = {sample.file_path_abs: sample for sample in samples}
-
-    # Get the list of new and existing file paths
-    file_paths_new, file_paths_exist = sample_resolver.filter_new_paths(
-        session=session,
-        collection_id=collection_id,
-        file_paths_abs=list(file_path_to_sample.keys()),
-    )
-
-    # Create only samples with new file paths
-    samples_to_create = [file_path_to_sample[file_path_new] for file_path_new in file_paths_new]
     created_sample_ids = image_resolver.create_many(
-        session=session, collection_id=collection_id, samples=samples_to_create
+        session=session, collection_id=collection_id, samples=samples
     )
-
-    # Create a mapping from file path to sample ID for new samples
-    file_path_new_to_sample_id = dict(zip(file_paths_new, created_sample_ids))
-    return (file_path_new_to_sample_id, file_paths_exist)
+    return {
+        sample.file_path_abs: sample_id
+        for sample, sample_id in zip(samples, created_sample_ids)
+    }
 
 
 def _process_batch_captions(

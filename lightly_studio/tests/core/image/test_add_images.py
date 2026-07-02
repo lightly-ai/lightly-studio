@@ -310,8 +310,9 @@ def test_create_batch_samples(db_session: Session) -> None:
     collection = helpers_resolvers.create_collection(db_session)
     collection_id = collection.collection_id
 
-    # First batch: two new samples
-    batch1 = [
+    # Existence in the database is checked by the caller, so _create_batch_samples creates
+    # every sample it is given and returns a mapping from file path to created sample ID.
+    batch = [
         ImageCreate(
             file_path_abs="/path/to/image_0.png",
             file_name="image_0.png",
@@ -325,11 +326,9 @@ def test_create_batch_samples(db_session: Session) -> None:
             height=200,
         ),
     ]
-    new_path_to_id, existing_paths = add_images._create_batch_samples(
-        session=db_session, collection_id=collection_id, samples=batch1
+    new_path_to_id = add_images._create_batch_samples(
+        session=db_session, collection_id=collection_id, samples=batch
     )
-    assert len(new_path_to_id) == 2
-    assert len(existing_paths) == 0
     assert set(new_path_to_id.keys()) == {"/path/to/image_0.png", "/path/to/image_1.png"}
 
     # Check that the sample id mapping matches the database
@@ -343,32 +342,6 @@ def test_create_batch_samples(db_session: Session) -> None:
     assert db_image_0.file_path_abs == "/path/to/image_0.png"
     assert db_image_1 is not None
     assert db_image_1.file_path_abs == "/path/to/image_1.png"
-
-    # Second batch: one existing, one new sample
-    batch2 = [
-        # existing - only file_path_abs matters
-        ImageCreate(
-            file_path_abs="/path/to/image_0.png",
-            file_name="xxx.png",
-            width=999,
-            height=999,
-        ),
-        # new
-        ImageCreate(
-            file_path_abs="/path/to/image_2.png",
-            file_name="image_2.png",
-            width=100,
-            height=200,
-        ),
-    ]
-
-    new_path_to_id, existing_paths = add_images._create_batch_samples(
-        session=db_session, collection_id=collection_id, samples=batch2
-    )
-    assert len(new_path_to_id) == 1
-    assert len(existing_paths) == 1
-    assert list(new_path_to_id.keys()) == ["/path/to/image_2.png"]
-    assert existing_paths == ["/path/to/image_0.png"]
 
 
 def test_create_label_map(db_session: Session) -> None:
