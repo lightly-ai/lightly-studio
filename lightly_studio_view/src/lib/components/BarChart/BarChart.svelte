@@ -14,11 +14,17 @@
         data: CategoryCount[];
         /** Chart height in pixels (default 320). */
         heightPx?: number;
+        /**
+         * Denominator for tooltip percentages. Pass the sum over all
+         * categories when `data` is a subset (e.g. top-N); defaults to the
+         * sum of `data`.
+         */
+        totalCount?: number;
         /** Called with the clicked category. */
         onBarClick?: (item: CategoryCount) => void;
     }
 
-    const { data, heightPx = 320, onBarClick }: Props = $props();
+    const { data, heightPx = 320, totalCount, onBarClick }: Props = $props();
 
     let container: HTMLDivElement | undefined = $state();
     let chart: echarts.ECharts | null = $state(null);
@@ -48,7 +54,7 @@
 
     $effect(() => {
         if (!chart) return;
-        chart.setOption(buildEchartsOption(data), true);
+        chart.setOption(buildEchartsOption(data, { totalCount }), true);
     });
 
     onDestroy(() => chart?.dispose());

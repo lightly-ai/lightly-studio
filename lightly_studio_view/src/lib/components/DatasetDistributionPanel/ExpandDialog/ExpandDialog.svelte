@@ -42,7 +42,7 @@
             testIdPrefix="dataset-distribution-expanded"
         />
         <div class="min-h-0 flex-1 overflow-y-auto dark:[color-scheme:dark]">
-            <BarChart data={visible} heightPx={560} {onBarClick} />
+            <BarChart data={visible} heightPx={560} {totalCount} {onBarClick} />
         </div>
     </Dialog.Content>
 </Dialog.Root>

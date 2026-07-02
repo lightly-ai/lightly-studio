@@ -65,7 +65,7 @@
         />
     {/if}
     <div class="min-h-0 flex-1 overflow-y-auto dark:[color-scheme:dark]">
-        <BarChart data={visible} {onBarClick} />
+        <BarChart data={visible} {totalCount} {onBarClick} />
     </div>
 </div>
 <DistributionConfigDialog

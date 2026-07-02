@@ -12,7 +12,26 @@ export function truncateLabel(label: string): string {
     return label.length > MAX_LABEL_CHARS ? `${label.slice(0, MAX_LABEL_CHARS - 1)}…` : label;
 }
 
-export function buildEchartsOption(data: CategoryCount[]): EChartsCoreOption {
+function formatPercent(ratio: number): string {
+    const percent = ratio * 100;
+    if (percent > 0 && percent < 0.1) return '<0.1%';
+    return `${percent.toFixed(1)}%`;
+}
+
+interface BuildEchartsOptionOptions {
+    /**
+     * Denominator for tooltip percentages. Pass the sum over all categories
+     * when `data` is a subset (e.g. top-N), so percentages stay relative to
+     * the full dataset. Defaults to the sum of `data`.
+     */
+    totalCount?: number;
+}
+
+export function buildEchartsOption(
+    data: CategoryCount[],
+    options: BuildEchartsOptionOptions = {}
+): EChartsCoreOption {
+    const totalCount = options.totalCount ?? data.reduce((sum, item) => sum + item.count, 0);
     return {
         backgroundColor: 'transparent',
         tooltip: {
@@ -20,7 +39,8 @@ export function buildEchartsOption(data: CategoryCount[]): EChartsCoreOption {
             axisPointer: { type: 'shadow' },
             formatter: (params: { name: string; value: number }[]) => {
                 const [{ name, value }] = params;
-                return `<b>${name}</b><br/>Count: <b>${value}</b>`;
+                const percent = totalCount > 0 ? ` (${formatPercent(value / totalCount)})` : '';
+                return `<b>${name}</b><br/>Count: <b>${value}</b>${percent}`;
             }
         },
         grid: { left: 8, right: 8, top: 16, bottom: 8, containLabel: true },
