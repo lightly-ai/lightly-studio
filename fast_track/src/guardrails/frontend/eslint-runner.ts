@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
+import { isExecExitOne } from '../shared/utils.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -45,19 +46,9 @@ export async function runEslint(
         );
         stdout = result.stdout;
     } catch (err: unknown) {
-        if (
-            err !== null &&
-            typeof err === 'object' &&
-            'code' in err &&
-            (err as { code: unknown }).code === 1 &&
-            'stdout' in err &&
-            typeof (err as { stdout: unknown }).stdout === 'string'
-        ) {
-            // ESLint exits 1 when it finds lint errors; stdout still contains the JSON.
-            stdout = (err as { stdout: string }).stdout;
-        } else {
-            throw err;
-        }
+        // ESLint exits 1 when it finds lint errors; stdout still contains the JSON.
+        if (!isExecExitOne(err)) throw err;
+        stdout = err.stdout;
     }
     return JSON.parse(stdout) as EslintFileResult[];
 }

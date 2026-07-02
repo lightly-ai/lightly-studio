@@ -5,7 +5,7 @@ export default [
     {
         files: ['**/*.{js,ts,svelte}'],
         rules: {
-            complexity: ['error', { max: 10 }],
+            complexity: ['error', { max: 10 }]
         }
     }
 ];
