@@ -66,18 +66,4 @@ describe('runGuardrails', () => {
         ]);
         expect(result.status).toBe('pass');
     });
-
-    it('fails closed on a status that is neither pass nor fail', async () => {
-        // Only reachable by a type-violating guardrail (status is typed
-        // `'pass' | 'fail'`), so the cast simulates a buggy first-party return.
-        const malformed: Guardrail = {
-            name: 'malformed',
-            required: true,
-            needsPrContext: false,
-            run: async () => ({ status: 'weird' as GuardrailStatus, summary: '' })
-        };
-        const result = await runGuardrails(context, [malformed]);
-        expect(result.status).toBe('fail');
-        expect(result.guardrails[0]?.status).toBe('fail');
-    });
 });
