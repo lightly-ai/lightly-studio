@@ -54,14 +54,25 @@
         <div class="space-y-3 pt-2">
             <label class="flex items-center justify-between gap-2 text-sm">
                 Number of classes
-                <Input
-                    type="number"
-                    min={1}
-                    max={maxN}
-                    bind:value={draft.n}
-                    class="h-8 w-24"
-                    data-testid="distribution-config-top-n"
-                />
+                <span class="flex items-center gap-1">
+                    <Input
+                        type="number"
+                        min={1}
+                        max={maxN}
+                        bind:value={draft.n}
+                        class="h-8 w-24"
+                        data-testid="distribution-config-top-n"
+                    />
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        class="h-8"
+                        onclick={() => (draft.n = maxN)}
+                        data-testid="distribution-config-all"
+                    >
+                        All
+                    </Button>
+                </span>
             </label>
             <label class="flex items-center justify-between gap-2 text-sm">
                 Sort by

@@ -60,10 +60,11 @@
             visibleClassCount={visible.length}
             {totalCount}
             onConfigure={() => (configDialogOpen = true)}
+            onShowAll={() => (config = { ...config, n: data.length })}
             onExpand={() => (expandOpen = true)}
         />
     {/if}
-    <div class="min-h-0 flex-1 overflow-y-auto">
+    <div class="min-h-0 flex-1 overflow-y-auto dark:[color-scheme:dark]">
         <BarChart data={visible} {onBarClick} />
     </div>
 </div>
@@ -73,4 +74,10 @@
     {config}
     onApply={(next) => (config = next)}
 />
-<ExpandDialog bind:open={expandOpen} data={visible} {onBarClick} />
+<ExpandDialog
+    bind:open={expandOpen}
+    {data}
+    {config}
+    onConfigChange={(next) => (config = next)}
+    {onBarClick}
+/>

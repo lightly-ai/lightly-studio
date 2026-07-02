@@ -325,7 +325,7 @@
         ($activePanel === 'evaluationRuns' && supportsEvaluation) ||
             ($activePanel === 'embeddingPlot' && hasMediaWithEmbeddings) ||
             ($activePanel === 'queryEditor' && isImages) ||
-            ($activePanel === 'classDistribution' && isImages)
+            ($activePanel === 'distribution' && isImages)
     );
 
     // Class counts for the distribution panel, from the same annotation-count
@@ -477,7 +477,7 @@
                             {/await}
                         {:else if $activePanel === 'queryEditor' && isImages}
                             <QueryEditorPanel onClose={() => setActivePanel('none')} />
-                        {:else if $activePanel === 'classDistribution' && isImages}
+                        {:else if $activePanel === 'distribution' && isImages}
                             {#await import('$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte') then { default: DatasetDistributionPanel }}
                                 <DatasetDistributionPanel
                                     data={classDistributionCounts}

@@ -90,6 +90,35 @@ describe('DatasetDistributionPanel', () => {
         );
     });
 
+    it('shows all classes via the header quick action, which then hides itself', async () => {
+        render(DatasetDistributionPanel, { props: { data: longTail, topN: 10 } });
+
+        await fireEvent.click(screen.getByTestId('dataset-distribution-show-all'));
+
+        await waitFor(() =>
+            expect(screen.getByText(/30 classes · sorted by count/)).toBeInTheDocument()
+        );
+        expect(screen.queryByTestId('dataset-distribution-show-all')).not.toBeInTheDocument();
+    });
+
+    it('applies a new top-N from the expanded view and keeps it in sync with the panel', async () => {
+        render(DatasetDistributionPanel, { props: { data: longTail } });
+
+        await fireEvent.click(screen.getByTestId('dataset-distribution-expand'));
+        const configure = await waitFor(() =>
+            screen.getByTestId('dataset-distribution-expanded-configure')
+        );
+        await fireEvent.click(configure);
+        const input = await waitFor(() => screen.getByTestId('distribution-config-top-n'));
+        await fireEvent.input(input, { target: { value: '5' } });
+        await fireEvent.click(screen.getByTestId('distribution-config-apply'));
+
+        // Both the expanded view's header and the panel header reflect the new config.
+        await waitFor(() =>
+            expect(screen.getAllByText(/Top 5 of 30 classes · sorted by count/)).toHaveLength(2)
+        );
+    });
+
     it('renders a close button only when onClose is provided and forwards clicks', async () => {
         const onClose = vi.fn();
         render(DatasetDistributionPanel, { props: { ...defaultProps, onClose } });

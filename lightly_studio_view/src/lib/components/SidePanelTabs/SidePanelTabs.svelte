@@ -95,7 +95,7 @@
     {/if}
     {#if isImages}
         <Tooltip
-            content="View class distribution"
+            content="View dataset distribution"
             position="left"
             triggerClass="w-full"
             class="w-max"
@@ -103,17 +103,17 @@
             <button
                 class={cn(
                     'flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-md p-1.5 text-[10px] font-medium transition-colors',
-                    $activePanel === 'classDistribution'
+                    $activePanel === 'distribution'
                         ? 'bg-primary text-primary-foreground'
                         : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                 )}
-                data-testid="side-panel-tabs-classes"
-                aria-label="Class distribution"
-                aria-pressed={$activePanel === 'classDistribution'}
-                onclick={() => toggle('classDistribution')}
+                data-testid="side-panel-tabs-distribution"
+                aria-label="Distribution"
+                aria-pressed={$activePanel === 'distribution'}
+                onclick={() => toggle('distribution')}
             >
                 <ChartColumn class="size-4" />
-                <span>Classes</span>
+                <span>Distrib.</span>
             </button>
         </Tooltip>
     {/if}

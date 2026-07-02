@@ -59,7 +59,7 @@
         No data to display.
     </div>
 {:else}
-    <div class="w-full overflow-x-auto" data-testid="bar-chart">
+    <div class="w-full overflow-x-auto dark:[color-scheme:dark]" data-testid="bar-chart">
         <div
             bind:this={container}
             style="width: {widthPx}px; min-width: 100%; height: {heightPx}px;"
