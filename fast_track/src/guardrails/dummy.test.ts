@@ -8,6 +8,6 @@ describe('dummyGuardrail', () => {
             baseRef: 'origin/main',
             changedFiles: async () => []
         });
-        expect(result).toEqual({ name: 'dummy', status: 'pass', summary: 'Always passes.' });
+        expect(result).toEqual({ status: 'pass', summary: 'Always passes.' });
     });
 });

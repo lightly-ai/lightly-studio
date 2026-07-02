@@ -5,5 +5,5 @@ export const dummyGuardrail: Guardrail = {
     name: 'dummy',
     required: true,
     needsPrContext: false,
-    run: async () => ({ name: 'dummy', status: 'pass', summary: 'Always passes.' })
+    run: async () => ({ status: 'pass', summary: 'Always passes.' })
 };
