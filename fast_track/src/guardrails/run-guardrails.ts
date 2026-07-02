@@ -35,17 +35,17 @@ export async function runGuardrails(
 }
 
 /**
- * Run one guardrail into a well-formed result. The name always comes from the
- * definition so the breakdown can't be mislabeled, and the status fails closed:
- * a throw, or anything other than `pass`, becomes `fail`.
+ * Run one guardrail into a well-formed result. The name is the definition's —
+ * a {@link GuardrailOutcome} carries none — and the status fails closed: a
+ * throw, or anything other than `pass`, becomes `fail`.
  */
 async function runOne(guardrail: Guardrail, context: GuardrailContext): Promise<GuardrailResult> {
     try {
-        const result = await guardrail.run(context);
+        const outcome = await guardrail.run(context);
         return {
             name: guardrail.name,
-            status: result.status === 'pass' ? 'pass' : 'fail',
-            summary: result.summary
+            status: outcome.status === 'pass' ? 'pass' : 'fail',
+            summary: outcome.summary
         };
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

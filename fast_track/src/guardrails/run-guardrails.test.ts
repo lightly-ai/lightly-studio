@@ -14,7 +14,7 @@ const stub = (name: string, status: GuardrailStatus, required = true): Guardrail
     name,
     required,
     needsPrContext: false,
-    run: async () => ({ name, status, summary: '' })
+    run: async () => ({ status, summary: '' })
 });
 
 /** A guardrail that throws instead of returning a result. */
@@ -46,7 +46,7 @@ describe('runGuardrails', () => {
         expect(result.status).toBe('pass');
     });
 
-    it('reports every guardrail in run order', async () => {
+    it('reports every guardrail in run order, named from the definition', async () => {
         const result = await runGuardrails(context, [stub('a', 'pass'), stub('b', 'fail')]);
         expect(result.guardrails.map((g) => g.name)).toEqual(['a', 'b']);
     });
@@ -67,17 +67,6 @@ describe('runGuardrails', () => {
         expect(result.status).toBe('pass');
     });
 
-    it('labels the breakdown with the definition name, not the self-reported one', async () => {
-        const misnamed: Guardrail = {
-            name: 'real-name',
-            required: true,
-            needsPrContext: false,
-            run: async () => ({ name: 'wrong-name', status: 'pass', summary: '' })
-        };
-        const result = await runGuardrails(context, [misnamed]);
-        expect(result.guardrails[0]?.name).toBe('real-name');
-    });
-
     it('fails closed on a status that is neither pass nor fail', async () => {
         // Only reachable by a type-violating guardrail (status is typed
         // `'pass' | 'fail'`), so the cast simulates a buggy first-party return.
@@ -85,11 +74,7 @@ describe('runGuardrails', () => {
             name: 'malformed',
             required: true,
             needsPrContext: false,
-            run: async () => ({
-                name: 'malformed',
-                status: 'weird' as GuardrailStatus,
-                summary: ''
-            })
+            run: async () => ({ status: 'weird' as GuardrailStatus, summary: '' })
         };
         const result = await runGuardrails(context, [malformed]);
         expect(result.status).toBe('fail');
