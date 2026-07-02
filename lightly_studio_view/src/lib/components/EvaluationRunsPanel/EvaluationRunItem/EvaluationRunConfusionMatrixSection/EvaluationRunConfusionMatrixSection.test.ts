@@ -1,13 +1,8 @@
 import { render, screen } from '@testing-library/svelte';
-import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import EvaluationRunConfusionMatrixSection from './EvaluationRunConfusionMatrixSection.svelte';
 import { coco80Classes, small3Classes } from '$lib/components/ConfusionMatrix/fixtures';
 import { APP_ROUTES } from '$lib/routes';
-import {
-    selectedMatchConfusionCell,
-    clearMatchConfusionCell
-} from '$lib/hooks/useMatchConfusionCell/useMatchConfusionCell';
 
 const queryState = vi.hoisted(() => ({
     isLoading: false,
@@ -18,13 +13,16 @@ const queryState = vi.hoisted(() => ({
 
 // Mutable so individual tests can switch the active route between the images view
 // (where a cell click drives the image filter) and the matches view (where it
-// drives the matches grid). Default to a non-matches route.
+// drives the matches grid via a URL change). Default to a non-matches route.
 const pageMock = vi.hoisted(() => ({
-    params: { dataset_id: 'ds-1' } as Record<string, string>,
+    params: { dataset_id: 'ds-1', evaluation_run_id: 'run-1' } as Record<string, string>,
     route: { id: '/datasets/[dataset_id]/[collection_type]/[collection_id]' } as {
         id: string | null;
-    }
+    },
+    url: new URL('http://localhost/datasets/ds-1/annotation/col/evaluation/run-1/matches')
 }));
+
+const gotoMock = vi.hoisted(() => vi.fn());
 
 const filtersMock = vi.hoisted(() => ({
     updateConfusionCell: vi.fn()
@@ -48,6 +46,10 @@ const echartsMock = vi.hoisted(() => {
 
 vi.mock('$app/state', () => ({
     page: pageMock
+}));
+
+vi.mock('$app/navigation', () => ({
+    goto: gotoMock
 }));
 
 vi.mock('$lib/hooks', () => ({
@@ -84,8 +86,12 @@ const defaultProps = { evaluationRunId: 'run-1' };
 describe('EvaluationRunConfusionMatrixSection', () => {
     beforeEach(() => {
         filtersMock.updateConfusionCell.mockClear();
+        gotoMock.mockClear();
         pageMock.route.id = '/datasets/[dataset_id]/[collection_type]/[collection_id]';
-        clearMatchConfusionCell();
+        pageMock.params = { dataset_id: 'ds-1', evaluation_run_id: 'run-1' };
+        pageMock.url = new URL(
+            'http://localhost/datasets/ds-1/annotation/col/evaluation/run-1/matches'
+        );
     });
 
     it('shows a spinner while loading', () => {
@@ -221,7 +227,7 @@ describe('EvaluationRunConfusionMatrixSection', () => {
         });
     });
 
-    it('drives the matches confusion cell (not the image filter) on the matches view', () => {
+    it('drives the matches confusion cell via a URL change (not the image filter) on the matches view', () => {
         queryState.isLoading = false;
         queryState.isError = false;
         queryState.data = small3Classes;
@@ -234,10 +240,28 @@ describe('EvaluationRunConfusionMatrixSection', () => {
         handler?.({ value: ['dog', 'cat', 3, Math.log10(3)] });
 
         expect(filtersMock.updateConfusionCell).not.toHaveBeenCalled();
-        expect(get(selectedMatchConfusionCell)).toEqual({
-            evaluation_run_id: 'run-1',
-            gt_label: 'cat',
-            pred_label: 'dog'
-        });
+        expect(gotoMock).toHaveBeenCalledTimes(1);
+        const [target, options] = gotoMock.mock.calls[0];
+        const params = new URL(target, 'http://localhost').searchParams;
+        expect(params.get('cc_gt')).toBe('cat');
+        expect(params.get('cc_pred')).toBe('dog');
+        expect(options).toMatchObject({ replaceState: true });
+    });
+
+    it('ignores a matrix cell click for a run other than the one on screen', () => {
+        queryState.isLoading = false;
+        queryState.isError = false;
+        queryState.data = small3Classes;
+        queryState.error = undefined;
+        pageMock.route.id = APP_ROUTES.evaluationMatches;
+        pageMock.params = { dataset_id: 'ds-1', evaluation_run_id: 'other-run' };
+
+        render(EvaluationRunConfusionMatrixSection, { props: defaultProps });
+
+        const handler = echartsMock.getClickHandler();
+        handler?.({ value: ['dog', 'cat', 3, Math.log10(3)] });
+
+        expect(gotoMock).not.toHaveBeenCalled();
+        expect(filtersMock.updateConfusionCell).not.toHaveBeenCalled();
     });
 });

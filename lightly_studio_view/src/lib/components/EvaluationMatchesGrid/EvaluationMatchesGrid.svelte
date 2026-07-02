@@ -7,6 +7,8 @@
     import {
         listEvaluationMatches,
         SampleType,
+        type ConfusionCell,
+        type EvaluationMatchType,
         type EvaluationMatchView,
         type ImageFilter,
         type SampleFilter
@@ -23,11 +25,6 @@
         createMetadataFilters,
         useMetadataFilters
     } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
-    import { useMatchTypeFilter } from '$lib/hooks/useMatchTypeFilter/useMatchTypeFilter';
-    import {
-        selectedMatchConfusionCell,
-        clearMatchConfusionCell
-    } from '$lib/hooks/useMatchConfusionCell/useMatchConfusionCell';
     import { useMatchSort } from '$lib/hooks/useMatchSort/useMatchSort';
     import { useEvaluationMatchesInfinite } from '$lib/hooks/useEvaluationMatchesInfinite/useEvaluationMatchesInfinite';
     import {
@@ -48,9 +45,21 @@
         itemWidth: number;
         // Restricts matches to a single parent image (sample-details entry point).
         sampleIds?: string[];
+        // Filters below are URL-driven (parsed by the matches page). The confusion
+        // cell is already scoped to this run by the page, so no run-id guard here.
+        matchTypes?: EvaluationMatchType[];
+        confusionCell?: ConfusionCell;
     };
 
-    const { datasetId, collectionId, evaluationRunId, itemWidth, sampleIds }: Props = $props();
+    const {
+        datasetId,
+        collectionId,
+        evaluationRunId,
+        itemWidth,
+        sampleIds,
+        matchTypes,
+        confusionCell
+    }: Props = $props();
 
     const {
         getCollectionVersion,
@@ -75,18 +84,7 @@
     const collectionIdStore = toStore(() => collectionId);
     const { dimensionsValues } = useDimensions(collectionIdStore);
     const { metadataValues } = $derived(useMetadataFilters(collectionId));
-    const { selectedMatchTypesArray } = useMatchTypeFilter();
     const { sortField, sortDirection } = useMatchSort();
-
-    // A confusion-matrix cell click (from the Eval side panel) filters this grid to
-    // that gt/pred pairing. The cell carries the run it came from; ignore one from a
-    // different run than the one this grid renders, so expanding another run's matrix
-    // in the panel cannot silently filter the matches in view.
-    const activeConfusionCell = $derived(
-        $selectedMatchConfusionCell?.evaluation_run_id === evaluationRunId
-            ? $selectedMatchConfusionCell
-            : undefined
-    );
 
     const imageFilter = $derived.by((): ImageFilter | undefined => {
         const sampleFilter: SampleFilter = {};
@@ -129,12 +127,12 @@
         datasetId,
         evaluationRunId,
         collectionId,
-        matchTypes: $selectedMatchTypesArray.length > 0 ? $selectedMatchTypesArray : undefined,
+        matchTypes: matchTypes && matchTypes.length > 0 ? matchTypes : undefined,
         annotationLabelIds:
             $selectedAnnotationFilterIdsArray.length > 0
                 ? $selectedAnnotationFilterIdsArray
                 : undefined,
-        confusionCell: activeConfusionCell ?? undefined,
+        confusionCell,
         imageFilter,
         sortField: $sortField,
         sortDirection: $sortDirection
@@ -219,13 +217,11 @@
                     path: { dataset_id: datasetId, evaluation_run_id: evaluationRunId },
                     body: {
                         collection_id: collectionId,
-                        match_types: $selectedMatchTypesArray.length
-                            ? $selectedMatchTypesArray
-                            : undefined,
+                        match_types: matchTypes && matchTypes.length ? matchTypes : undefined,
                         annotation_label_ids: $selectedAnnotationFilterIdsArray.length
                             ? $selectedAnnotationFilterIdsArray
                             : undefined,
-                        confusion_cell: activeConfusionCell ?? undefined,
+                        confusion_cell: confusionCell,
                         image_filter: imageFilter,
                         sort_field: $sortField,
                         sort_direction: $sortDirection,
@@ -262,18 +258,7 @@
         clearSelection();
         clearMatchTaggingContext();
         clearMatchSelectAllHandler();
-        clearMatchConfusionCell();
         setfilteredMatchCount(0);
-    });
-
-    // Switching to a different run while staying on the matches view reuses this
-    // component, so drop a confusion-cell filter left over from the previous run.
-    let lastRunId = $state(evaluationRunId);
-    $effect(() => {
-        if (evaluationRunId !== lastRunId) {
-            lastRunId = evaluationRunId;
-            clearMatchConfusionCell();
-        }
     });
 
     // Open the annotation details for the box that produced the match: prefer the
@@ -298,11 +283,11 @@
 
     const filterHash = $derived(
         [
-            $selectedMatchTypesArray.join(','),
+            (matchTypes ?? []).join(','),
             $selectedAnnotationFilterIdsArray.join(','),
             Array.from($tagsSelected).join(','),
             JSON.stringify(imageFilter ?? {}),
-            JSON.stringify(activeConfusionCell ?? {}),
+            JSON.stringify(confusionCell ?? {}),
             $sortField,
             $sortDirection
         ].join('|')
