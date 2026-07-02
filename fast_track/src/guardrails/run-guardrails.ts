@@ -12,9 +12,9 @@ export interface RunResult {
  * Run the guardrails sequentially and aggregate: `pass` iff every *required*
  * one passed. Pure over {@link GuardrailContext}, so CI and local runs share it.
  *
- * Guardrails run PR-author-controlled code, so: a throwing guardrail is recorded
- * as a `fail` rather than crashing the run, and required-ness is read from the
- * guardrail definition, never the result's self-reported `name`.
+ * Guardrails run PR-author-controlled code, so results are normalized in
+ * {@link runOne} (fail-closed on a throw or a non-`pass` status, name taken from
+ * the definition), and required-ness is read from the guardrail definition.
  */
 export async function runGuardrails(
     context: GuardrailContext,
@@ -34,10 +34,19 @@ export async function runGuardrails(
     return { status, guardrails: results };
 }
 
-/** Convert a thrown error into a `fail` result. */
+/**
+ * Run one guardrail into a well-formed result. The name always comes from the
+ * definition so the breakdown can't be mislabeled, and the status fails closed:
+ * a throw, or anything other than `pass`, becomes `fail`.
+ */
 async function runOne(guardrail: Guardrail, context: GuardrailContext): Promise<GuardrailResult> {
     try {
-        return await guardrail.run(context);
+        const result = await guardrail.run(context);
+        return {
+            name: guardrail.name,
+            status: result.status === 'pass' ? 'pass' : 'fail',
+            summary: result.summary
+        };
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         return {
