@@ -97,7 +97,9 @@ def get_adjacent_images_keyset(
     # Position is 1-based: number of rows strictly before the anchor, plus the anchor.
     count_before = session.exec(
         select(sqlalchemy.func.count()).select_from(
-            base_query.where(_keyset_condition(sort_keys, anchor, after=False)).subquery()
+            base_query.where(
+                _keyset_condition(sort_keys=sort_keys, anchor=anchor, after=False)
+            ).subquery()
         )
     ).one()
 
@@ -193,9 +195,9 @@ def _seek_neighbor(
     them so the closest neighbour comes first (the sort is reversed when seeking
     backwards), and takes the first row.
     """
-    condition = _keyset_condition(sort_keys, anchor, after=forward)
+    condition = _keyset_condition(sort_keys=sort_keys, anchor=anchor, after=forward)
     order_columns = [
-        _directional_column(column, ascending=ascending, forward=forward)
+        _directional_column(column=column, ascending=ascending, forward=forward)
         for column, ascending in sort_keys
     ]
     query = base_query.where(condition).order_by(*order_columns).limit(1)
