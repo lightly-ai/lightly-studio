@@ -431,8 +431,7 @@ def _create_batch_samples(
         session=session, collection_id=collection_id, samples=samples
     )
     return {
-        sample.file_path_abs: sample_id
-        for sample, sample_id in zip(samples, created_sample_ids)
+        sample.file_path_abs: sample_id for sample, sample_id in zip(samples, created_sample_ids)
     }
 
 
