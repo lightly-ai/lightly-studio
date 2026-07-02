@@ -185,7 +185,6 @@ def _seek_neighbor(
     base_query: SelectOfScalar[UUID],
     sort_keys: list[_SortKey],
     anchor: tuple[Any, ...],
-    *,
     forward: bool,
 ) -> UUID | None:
     """Return the sample_id immediately after (forward) or before the anchor.
