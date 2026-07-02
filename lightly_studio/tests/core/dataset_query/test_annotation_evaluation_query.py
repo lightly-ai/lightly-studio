@@ -49,6 +49,7 @@ def test_annotation_metric_query__filters_matching_samples(db_session: Session) 
                 metric_name="score",
                 value=0.2,
                 gt_annotation_label_id=cat_label.annotation_label_id,
+                pred_annotation_label_id=dog_label.annotation_label_id,
             ),
             TruePositiveMetricStub(
                 sample_id=image_b.sample_id,
@@ -95,8 +96,7 @@ def test_annotation_metric_query__scopes_run_name_to_dataset(db_session: Session
         session=db_session, collection_id=other_dataset.collection_id, name="run1"
     )
     other_label = create_annotation_label(
-        session=db_session,
-        root_collection_id=other_dataset.collection_id,
+        session=db_session, root_collection_id=other_dataset.collection_id, label_name="cat"
     )
     create_annotation_metrics(
         session=db_session,
