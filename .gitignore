@@ -15,3 +15,6 @@ dataset_examples_studio
 
 .claude/settings.local.json
 .claude/settings.json
+
+# Top-level tmp dir.
+/tmp/
