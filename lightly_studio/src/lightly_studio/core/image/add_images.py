@@ -149,8 +149,7 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
         input_labels: The labelformat input containing images and annotations.
         images_path: The path to the directory containing the images.
         collection_name: Optional name for the annotation collection.
-        limit: If set, load at most this many samples (the first ``limit`` in the order
-            the input yields them). If None, all samples are loaded.
+        limit: Maximum number of samples to load. By default, all samples are loaded.
 
     Returns:
         A list of UUIDs of the created samples.
@@ -248,8 +247,7 @@ def load_into_dataset_from_coco_captions(
         root_collection_id: Identifier of the root collection that receives the samples.
         annotations_json: Path to the COCO captions annotations file.
         images_path: Directory containing the referenced images.
-        limit: If set, load at most this many samples (the first ``limit`` images listed
-            in the annotations file). If None, all samples are loaded.
+        limit: Maximum number of samples to load. By default, all samples are loaded.
 
     Returns:
         The list of newly created sample identifiers.

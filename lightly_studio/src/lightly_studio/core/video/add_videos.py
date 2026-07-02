@@ -234,9 +234,8 @@ def load_video_annotations_from_labelformat(  # noqa: PLR0913
             Note: This is used for file names from input_labels, that don't have a file extension.
         input_labels: The labelformat input containing video annotations.
         input_labels_paths_root: The root path for the paths in input_labels.
-        limit: If set, load at most this many videos (the first ``limit`` in the order
-            they appear in input_labels). Annotations of videos beyond the limit are
-            skipped. Defaults to None (load all).
+        limit: Maximum number of samples to load. By default, all samples are loaded.
+            Annotations of videos beyond the limit are skipped.
 
     Returns:
         A tuple containing:
@@ -511,8 +510,7 @@ def _resolve_video_paths_from_labelformat(
         input_labels: Input containing the required video file paths.
         root_path: The paths for the videos in input_labels are relative to this one.
         video_paths: An iterable of file paths to the videos to load.
-        limit: If set, resolve at most this many videos (the first ``limit`` in the
-            order they appear in input_labels). Defaults to None (resolve all).
+        limit: Maximum number of videos to resolve. By default, all videos are resolved.
 
     Return:
         list of resolved video file paths

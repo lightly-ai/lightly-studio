@@ -145,9 +145,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 - `tag_depth=0` (default): No automatic tagging is performed.
                 - `tag_depth=1`: Automatically creates a tag for each
                   image based on its parent directory's name.
-            limit: If set, load at most this many images (the first ``limit`` in discovery
-                order). Useful for debugging, quick tests, or tutorials. Defaults to None
-                (load all).
+            limit: Maximum number of samples to load. By default, all samples are loaded.
 
         Raises:
             NotImplementedError: If tag_depth > 1.
@@ -342,8 +340,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
             embed_annotations: If True, generate embeddings for object-detection annotations.
-            limit: If set, load at most this many samples (the first ``limit`` in order).
-                Useful for debugging, quick tests, or tutorials. Defaults to None (load all).
+            limit: Maximum number of samples to load. By default, all samples are loaded.
 
         Raises:
             ValueError: If limit is not None and not greater than 0.
@@ -394,9 +391,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
             embed_annotations: If True, generate embeddings for object-detection annotations.
-            limit: If set, load at most this many samples in total across all processed
-                splits (the first ``limit`` in order). Useful for debugging, quick tests,
-                or tutorials. Defaults to None (load all).
+            limit: Maximum number of samples to load, in total across all processed
+                splits. By default, all samples are loaded.
 
         Raises:
             ValueError: If limit is not None and not greater than 0.
@@ -488,8 +484,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
             embed_annotations: If True, generate embeddings for object-detection annotations.
-            limit: If set, load at most this many samples (the first ``limit`` in order).
-                Useful for debugging, quick tests, or tutorials. Defaults to None (load all).
+            limit: Maximum number of samples to load. By default, all samples are loaded.
 
         Raises:
             ValueError: If limit is not None and not greater than 0.
@@ -562,8 +557,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
-            limit: If set, load at most this many samples (the first ``limit`` in order).
-                Useful for debugging, quick tests, or tutorials. Defaults to None (load all).
+            limit: Maximum number of samples to load. By default, all samples are loaded.
 
         Raises:
             ValueError: If limit is not None and not greater than 0.
@@ -617,8 +611,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
             embed_annotations: If True, generate embeddings for object-detection annotations.
-            limit: If set, load at most this many samples (the first ``limit`` in order).
-                Useful for debugging, quick tests, or tutorials. Defaults to None (load all).
+            limit: Maximum number of samples to load. By default, all samples are loaded.
 
         Raises:
             ValueError: If limit is not None and not greater than 0.
@@ -671,8 +664,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             split: Optional split name to tag samples (e.g., 'train', 'val').
                 If provided, all samples will be tagged with this name.
             embed: If True, generate embeddings for the newly added samples.
-            limit: If set, load at most this many samples (the first ``limit`` in order).
-                Useful for debugging, quick tests, or tutorials. Defaults to None (load all).
+            limit: Maximum number of samples to load. By default, all samples are loaded.
 
         Raises:
             ValueError: If limit is not None and not greater than 0.

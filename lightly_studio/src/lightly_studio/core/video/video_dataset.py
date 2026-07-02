@@ -120,9 +120,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             target_fps: Optional target frame rate for subsampling. When set below the source
                 frame rate, only selected frames are kept. frame_number values remain
                 original. Must be greater than 0.
-            limit: If set, load at most this many videos (the first ``limit`` in discovery
-                order). Useful for debugging, quick tests, or tutorials. Defaults to None
-                (load all).
+            limit: Maximum number of samples to load. By default, all samples are loaded.
         """
         if target_fps is not None and target_fps <= 0:
             raise ValueError(f"target_fps must be greater than 0, got {target_fps}.")
@@ -170,10 +168,8 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             annotation_type: The type of annotation to be loaded (e.g., 'ObjectDetection',
                 'InstanceSegmentation').
             embed: If True, generate embeddings for the newly added videos.
-            limit: If set, load at most this many videos (the first ``limit`` in the order
-                they appear in the annotations file). Annotations of videos beyond the limit
-                are skipped. Useful for debugging, quick tests, or tutorials. Defaults to
-                None (load all).
+            limit: Maximum number of samples to load. By default, all samples are loaded.
+                Annotations of videos beyond the limit are skipped.
 
         Raises:
             ValueError: If limit is not None and not greater than 0.
