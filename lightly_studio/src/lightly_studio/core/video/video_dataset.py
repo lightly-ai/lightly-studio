@@ -170,9 +170,10 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             annotation_type: The type of annotation to be loaded (e.g., 'ObjectDetection',
                 'InstanceSegmentation').
             embed: If True, generate embeddings for the newly added videos.
-            limit: If set, load at most this many videos (the first ``limit`` in discovery
-                order). Useful for debugging, quick tests, or tutorials. Defaults to None
-                (load all).
+            limit: If set, load at most this many videos (the first ``limit`` in the order
+                they appear in the annotations file). Annotations of videos beyond the limit
+                are skipped. Useful for debugging, quick tests, or tutorials. Defaults to
+                None (load all).
 
         Raises:
             ValueError: If limit is not None and not greater than 0.
@@ -193,7 +194,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             raise ValueError(f"Invalid annotation type: {annotation_type}")
 
         video_paths = _collect_video_file_paths(
-            path=videos_path, allowed_extensions=allowed_extensions, limit=limit
+            path=videos_path, allowed_extensions=allowed_extensions
         )
 
         created_sample_ids, _ = add_videos.load_video_annotations_from_labelformat(
@@ -203,6 +204,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             video_paths=video_paths,
             input_labels=input_labels,
             input_labels_paths_root=videos_path,
+            limit=limit,
         )
 
         if embed:
