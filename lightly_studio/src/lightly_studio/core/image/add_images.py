@@ -6,7 +6,7 @@ import json
 import logging
 import posixpath
 from collections import defaultdict
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 from uuid import UUID
 
@@ -84,12 +84,10 @@ def load_into_dataset_from_paths(
         unit=" images",
         disable=not show_progress,
     ):
-        # Skip paths that are already in the database (checked before the loop) or that
-        # appear more than once in the input.
+        # Skip paths that are already in the database (checked before the loop).
         if normalized_path in existing_paths_set:
             logging_context.update_example_paths([normalized_path])
             continue
-        existing_paths_set.add(normalized_path)
 
         try:
             with fsspec.open(normalized_path, "rb") as file:
@@ -184,11 +182,10 @@ def load_into_dataset_from_labelformat(
             height=image.height,
         )
 
-        # Skip paths already in the database (checked before the loop) or duplicated in the input.
+        # Skip paths already in the database (checked before the loop).
         if sample.file_path_abs in existing_paths_set:
             logging_context.update_example_paths([sample.file_path_abs])
             continue
-        existing_paths_set.add(sample.file_path_abs)
 
         samples_to_create.append(sample)
 
@@ -265,7 +262,11 @@ def load_into_dataset_from_coco_captions(
     existing_paths_set = _get_existing_paths_set(
         session=session,
         collection_id=root_collection_id,
-        file_paths_abs=[str(images_path / str(image_info["file_name"])) for image_info in images],
+        file_paths_abs=[
+            str(images_path / str(image_info["file_name"]))
+            for image_info in images
+            if isinstance(image_info["id"], int)
+        ],
     )
 
     logging_context = LoadingLoggingContext(
@@ -295,11 +296,10 @@ def load_into_dataset_from_coco_captions(
             height=height,
         )
 
-        # Skip paths already in the database (checked before the loop) or duplicated in the input.
+        # Skip paths already in the database (checked before the loop).
         if sample.file_path_abs in existing_paths_set:
             logging_context.update_example_paths([sample.file_path_abs])
             continue
-        existing_paths_set.add(sample.file_path_abs)
 
         samples_to_create.append(sample)
         path_to_captions[sample.file_path_abs] = captions_by_image_id.get(image_id_raw, [])
@@ -386,7 +386,7 @@ def tag_samples_by_directory(
 
 
 def _get_existing_paths_set(
-    session: Session, collection_id: UUID, file_paths_abs: list[str]
+    session: Session, collection_id: UUID, file_paths_abs: Sequence[str]
 ) -> set[str]:
     """Return the set of file paths that already exist in the collection.
 
@@ -401,10 +401,12 @@ def _get_existing_paths_set(
     Returns:
         The subset of ``file_paths_abs`` that are already present in the collection.
     """
+    # Deduplicate before querying so duplicate-heavy inputs don't cause avoidable batching.
+    unique_file_paths_abs = list(dict.fromkeys(file_paths_abs))
     _, existing_paths = sample_resolver.filter_new_paths(
         session=session,
         collection_id=collection_id,
-        file_paths_abs=file_paths_abs,
+        file_paths_abs=unique_file_paths_abs,
     )
     return set(existing_paths)
 
