@@ -61,8 +61,10 @@ def load_into_dataset_from_paths(
     existing_paths = sample_resolver.get_existing_paths(
         session=session, collection_id=root_collection_id
     )
+    # TODO (Malte, 07/2026): n_samples_to_be_inserted=0 is wrong, but does not exhaust
+    # the iterator. Will be updated anyway in LIG-9953
     logging_context = LoadingLoggingContext(
-        n_samples_to_be_inserted=sum(1 for _ in image_paths),
+        n_samples_to_be_inserted=0,
         n_samples_before_loading=sample_resolver.count_by_collection_id(
             session=session, collection_id=root_collection_id
         ),
@@ -359,10 +361,7 @@ def _iter_new_image_samples(
 ) -> Iterator[ImageCreate]:
     """Yield an ImageCreate for each path not already in existing_paths.
 
-    Skips already-present paths without opening their file. Assumes
-    ``image_paths`` contains no duplicates (true today: callers build it from
-    a filesystem listing) — if that ever changes, duplicates would be
-    inserted as separate rows since there's no DB-level uniqueness check.
+    Skips already-present paths without opening their file.
     """
     for image_path in tqdm(
         image_paths, desc="Processing images", unit=" images", disable=not show_progress
@@ -371,6 +370,7 @@ def _iter_new_image_samples(
         if normalized_path in existing_paths:
             logging_context.update_example_paths([normalized_path])
             continue
+        existing_paths.add(normalized_path)
 
         try:
             with fsspec.open(image_path, "rb") as file:
