@@ -12,6 +12,11 @@ vi.mock(
     }
 );
 
+vi.mock('./TriggerEvaluationDialog/TriggerEvaluationDialog.svelte', async () => {
+    const module = await import('./TriggerEvaluationDialog/TriggerEvaluationDialog.mock.svelte');
+    return { default: module.default };
+});
+
 const noop = () => {};
 
 const makeRun = (
@@ -29,6 +34,8 @@ type Props = {
     evaluationRuns: EvaluationRunView[];
     isLoading: boolean;
     error?: string;
+    datasetId?: string;
+    collectionId?: string;
 };
 
 const renderPanel = (overrides: Partial<Props> = {}) =>
@@ -135,5 +142,21 @@ describe('EvaluationRunsPanel', () => {
 
         await fireEvent.click(screen.getByTestId('evaluation-runs-close-button'));
         expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('hides the add button when datasetId or collectionId is missing', () => {
+        renderPanel();
+
+        expect(screen.queryByTestId('evaluation-runs-add-button')).not.toBeInTheDocument();
+    });
+
+    it('shows the add button and opens the trigger dialog when ids are provided', async () => {
+        renderPanel({ datasetId: 'dataset-1', collectionId: 'collection-1' });
+
+        const addButton = screen.getByTestId('evaluation-runs-add-button');
+        expect(addButton).toBeInTheDocument();
+
+        await fireEvent.click(addButton);
+        expect(screen.getByTestId('trigger-evaluation-dialog-mock')).toBeInTheDocument();
     });
 });

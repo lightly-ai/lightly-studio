@@ -17,25 +17,24 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
-class AnnotationCrops:
-    """Resolved annotation crops ready for embedding.
+class AnnotationCrop:
+    """A resolved annotation crop ready for embedding.
 
-    ``annotation_sample_ids`` and ``image_crops`` are parallel lists: the crop at index
-    ``i`` belongs to the annotation at index ``i``.
+    Binds an annotation sample to the image crop derived from its box.
     """
 
-    annotation_sample_ids: list[UUID]
-    image_crops: list[ImageCrop]
+    annotation_sample_id: UUID
+    image_crop: ImageCrop
 
 
 def get_annotation_crops_for_ids(
     session: Session,
     annotation_sample_ids: list[UUID],
-) -> AnnotationCrops:
+) -> list[AnnotationCrop]:
     """Build valid image crops for the given object-detection annotation IDs.
 
     Crops whose box does not overlap the source image are skipped with a warning, so the
-    returned lists may be shorter than ``annotation_sample_ids``.
+    returned list may be shorter than ``annotation_sample_ids``.
 
     Args:
         session: Database session for resolver operations.
@@ -55,8 +54,7 @@ def get_annotation_crops_for_ids(
         .order_by(col(ImageTable.file_path_abs))
     ).all()
 
-    resolved_sample_ids: list[UUID] = []
-    image_crops: list[ImageCrop] = []
+    annotation_crops: list[AnnotationCrop] = []
     for annotation, image, object_detection in rows:
         image_crop = _create_valid_image_crop(
             filepath=image.file_path_abs,
@@ -71,10 +69,11 @@ def get_annotation_crops_for_ids(
         if image_crop is None:
             logger.warning("Skipping invalid annotation crop %s.", annotation.sample_id)
             continue
-        resolved_sample_ids.append(annotation.sample_id)
-        image_crops.append(image_crop)
+        annotation_crops.append(
+            AnnotationCrop(annotation_sample_id=annotation.sample_id, image_crop=image_crop)
+        )
 
-    return AnnotationCrops(annotation_sample_ids=resolved_sample_ids, image_crops=image_crops)
+    return annotation_crops
 
 
 def _create_valid_image_crop(

@@ -8,7 +8,8 @@ from sqlmodel import Session
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
 )
-from lightly_studio.resolvers import image_resolver, sample_embedding_resolver
+from lightly_studio.resolvers import image_resolver, sample_embedding_resolver, tag_resolver
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
     ImageStub,
     create_collection,
@@ -16,6 +17,7 @@ from tests.helpers_resolvers import (
     create_image,
     create_images,
     create_sample_embedding,
+    create_tag,
 )
 
 
@@ -154,12 +156,20 @@ def test_get_sample_embeddings_by_sample_ids(db_session: Session) -> None:
 
     # Create many embeddings in a batch.
     sample_embedding_resolver.create_many(session=db_session, sample_embeddings=embedding_inputs)
-    all_in_collection = sample_embedding_resolver.get_all_by_collection_id(
+    embeddings_by_collection = sample_embedding_resolver.get_all_by_collection_id(
         session=db_session,
         collection_id=collection_id,
         embedding_model_id=embedding_model_id,
     )
-    assert len(all_in_collection) == 3
+    assert len(embeddings_by_collection) == 3
+    embeddings_by_id = sample_embedding_resolver.get_by_sample_ids(
+        session=db_session,
+        sample_ids=[row.sample_id for row in embeddings_by_collection],
+        embedding_model_id=embedding_model_id,
+    )
+    assert {row.sample_id: list(row.embedding) for row in embeddings_by_collection} == {
+        row.sample_id: list(row.embedding) for row in embeddings_by_id
+    }
     embeddings = sample_embedding_resolver.get_by_sample_ids(
         session=db_session,
         sample_ids=[samples[0].sample_id],
@@ -182,6 +192,51 @@ def test_get_sample_embeddings_by_sample_ids(db_session: Session) -> None:
         embedding_model_id=embedding_model_id,
     )
     assert len(embeddings) == 0
+
+
+def test_get_all_by_collection_id_with_filter(db_session: Session) -> None:
+    # Create a collection with 3 samples and their embeddings.
+    collection_id = create_collection(session=db_session).collection_id
+    samples = [
+        create_image(
+            session=db_session, collection_id=collection_id, file_path_abs=f"/path/{i}.png"
+        )
+        for i in range(3)
+    ]
+    embedding_model_id = create_embedding_model(
+        session=db_session, collection_id=collection_id
+    ).embedding_model_id
+    sample_embedding_resolver.create_many(
+        session=db_session,
+        sample_embeddings=[
+            SampleEmbeddingCreate(
+                sample_id=sample.sample_id,
+                embedding_model_id=embedding_model_id,
+                embedding=np.array([float(i), float(i + 1), float(i + 2)], dtype=np.float32),
+            )
+            for i, sample in enumerate(samples)
+        ],
+    )
+
+    # Tag the first two samples, then load the collection filtered by that tag.
+    tag = create_tag(session=db_session, collection_id=collection_id)
+    tagged_sample_ids = [samples[0].sample_id, samples[1].sample_id]
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=tag.tag_id, sample_ids=tagged_sample_ids
+    )
+
+    filtered = sample_embedding_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+        filters=SampleFilter(tag_ids=[tag.tag_id]),
+    )
+
+    # Only the tagged samples come back, with their embeddings intact.
+    assert {row.sample_id for row in filtered} == set(tagged_sample_ids)
+    embedding_by_id = {row.sample_id: list(row.embedding) for row in filtered}
+    assert embedding_by_id[samples[0].sample_id] == [0.0, 1.0, 2.0]
+    assert embedding_by_id[samples[1].sample_id] == [1.0, 2.0, 3.0]
 
 
 def test_get_embedding_count(db_session: Session) -> None:

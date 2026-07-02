@@ -1,8 +1,14 @@
 <script lang="ts">
     import { page } from '$app/state';
     import { Spinner, Typography } from '$lib/components';
-    import { ConfusionMatrixPanel } from '$lib/components/ConfusionMatrix';
+    import {
+        ConfusionMatrixPanel,
+        NO_GROUND_TRUTH_ROW_LABEL,
+        NO_PREDICTION_COL_LABEL,
+        type ConfusionCellSelection
+    } from '$lib/components/ConfusionMatrix';
     import { useEvaluationConfusionMatrix } from '$lib/hooks';
+    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 
     interface Props {
         evaluationRunId: string;
@@ -16,6 +22,21 @@
         datasetId,
         evaluationRunId
     }));
+
+    const { updateConfusionCell } = useImageFilters();
+
+    // Clicking a cell filters the image grid to the samples behind that bucket. The
+    // chart emits camelCase labels; the API confusion-cell filter uses snake_case and
+    // needs the owning run id. Synthetic axis labels map to null so the backend
+    // resolves the false-positive (no ground truth) and false-negative (no prediction)
+    // margin buckets.
+    const handleCellClick = (cell: ConfusionCellSelection) => {
+        updateConfusionCell({
+            evaluation_run_id: evaluationRunId,
+            gt_label: cell.gtLabel === NO_GROUND_TRUTH_ROW_LABEL ? null : cell.gtLabel,
+            pred_label: cell.predLabel === NO_PREDICTION_COL_LABEL ? null : cell.predLabel
+        });
+    };
 </script>
 
 {#if query.isLoading || query.isError || query.data}
@@ -37,7 +58,7 @@
                 </Typography>
             </div>
         {:else if query.data}
-            <ConfusionMatrixPanel matrix={query.data} showLegend />
+            <ConfusionMatrixPanel matrix={query.data} showLegend onCellClick={handleCellClick} />
         {/if}
     </section>
 {/if}

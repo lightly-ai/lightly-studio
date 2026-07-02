@@ -4,7 +4,9 @@
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
+    import { useAnnotationClassVisibility } from '$lib/hooks';
     import { getColorByLabel } from '$lib/utils';
+    import type { CropWindow } from './renderCropObjectUrl';
 
     type Props = {
         annotation: AnnotationView;
@@ -17,6 +19,9 @@
             url: string;
         };
         selected?: boolean;
+        // Reports the crop geometry so the grid can render the drag-to-search preview
+        // lazily (on drag start) instead of eagerly per visible tile. `null` on unmount.
+        onCropWindowChange?: (annotationId: string, window: CropWindow | null) => void;
     };
 
     let {
@@ -25,13 +30,15 @@
         containerHeight,
         sample,
         showLabel = true,
-        selected = false
+        selected = false,
+        onCropWindowChange
     }: Props = $props();
 
     const padding = 20;
 
     const { isHidden } = useHideAnnotations();
     const { customLabelColorsStore } = useCustomLabelColors();
+    const { isClassHidden } = useAnnotationClassVisibility();
 
     if (!annotation.object_detection_details && !annotation.segmentation_details) {
         throw new Error(
@@ -70,6 +77,7 @@
     }
 
     let labelName = annotation.annotation_label.annotation_label_name;
+    const isAnnotationClassHidden = isClassHidden(labelName);
 
     const colorStroke = $derived.by(
         () => $customLabelColorsStore[labelName]?.color ?? getColorByLabel(labelName, 1).color
@@ -86,6 +94,28 @@
     // Calculate values for use in template
     const xOffset = $derived(getXOffset());
     const yOffset = $derived(getYOffset());
+
+    // Captured by value at init: props are lazy getters, and reading `annotation` during
+    // effect cleanup would re-evaluate `annotations[index]` in the grid against an
+    // already-shrunken array (crash on filter changes). The id is constant per instance —
+    // the {#key} wrapper in the grid remounts this component when it changes.
+    const annotationId = annotation.sample_id;
+
+    // Report the crop geometry (not a rendered image) upward. The grid turns it into a
+    // preview blob only when a drag actually starts, so no canvas work happens per tile.
+    $effect(() => {
+        if (!sample.url) return;
+        onCropWindowChange?.(annotationId, {
+            sourceUrl: sample.url,
+            sampleWidth: sample.width,
+            sampleHeight: sample.height,
+            windowWidth: containerWidth / scale,
+            windowHeight: containerHeight / scale,
+            windowX: -xOffset / scale,
+            windowY: -yOffset / scale
+        });
+        return () => onCropWindowChange?.(annotationId, null);
+    });
 </script>
 
 {#if sample}
@@ -103,7 +133,7 @@
     >
         <div
             class="annotation-box"
-            class:invisible={$isHidden}
+            class:invisible={$isHidden || $isAnnotationClassHidden}
             style={`
             left: ${(containerWidth - annotationWidth * scale) / 2}px;
             top: ${(containerHeight - annotationHeight * scale) / 2}px;

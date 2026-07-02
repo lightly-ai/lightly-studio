@@ -9,9 +9,9 @@
     interface Props {
         isImages: boolean;
         hasMediaWithEmbeddings: boolean;
-        hasEvaluationRuns: boolean;
+        supportsEvaluation: boolean;
     }
-    const { isImages, hasMediaWithEmbeddings, hasEvaluationRuns }: Props = $props();
+    const { isImages, hasMediaWithEmbeddings, supportsEvaluation }: Props = $props();
 
     const { activePanel, setActivePanel } = useGlobalStorage();
 
@@ -69,7 +69,7 @@
             </button>
         </Tooltip>
     {/if}
-    {#if isImages && hasEvaluationRuns}
+    {#if supportsEvaluation}
         <Tooltip
             content="Review evaluation run results"
             position="left"

@@ -20,6 +20,8 @@ from tests.conftest import AnnotationsTestData, assert_contains_properties
 from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
+    create_collection,
+    create_image,
     get_annotation_by_type,
 )
 from tests.resolvers.evaluation_sample_metric_resolver import (
@@ -209,8 +211,13 @@ def test_update_annotation_label__deletes_evaluation_metrics(
     db_session: Session,
 ) -> None:
     """Test label updates remove invalidated evaluation annotation and sample metrics."""
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(session=db_session)
-    collection_id = image.sample.collection_id
+    dataset = create_collection(session=db_session)
+    run = evaluation_sample_metric_helpers.create_run(
+        session=db_session,
+        collection_id=dataset.collection_id,
+    )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
+    collection_id = dataset.collection_id
     old_label = create_annotation_label(
         session=db_session,
         root_collection_id=collection_id,

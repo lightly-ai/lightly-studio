@@ -2,10 +2,12 @@
     import { AnnotationsGridItem, SelectableBox } from '$lib/components';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
+    import { useAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
     import { useSettings } from '$lib/hooks/useSettings';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
-    import { onMount } from 'svelte';
+    import { onDestroy, onMount } from 'svelte';
     import { page } from '$app/state';
     import { useAnnotationsInfinite } from '$lib/hooks/useAnnotationsInfinite/useAnnotationsInfinite';
     import { afterNavigate, goto } from '$app/navigation';
@@ -20,6 +22,8 @@
     import { GridContainer } from '$lib/components/GridContainer';
     import { Grid } from '$lib/components/Grid';
     import { GridItem } from '$lib/components/GridItem';
+    import { buildAnnotationDragData } from './AnnotationsGrid.helpers';
+    import { renderCropObjectUrl, type CropWindow } from './AnnotationItem/renderCropObjectUrl';
 
     type AnnotationsProps = {
         collection_id: string;
@@ -50,8 +54,59 @@
         getCollectionVersion,
         setfilteredAnnotationCount,
         addReversibleAction,
-        clearReversibleActions
+        clearReversibleActions,
+        textEmbedding
     } = useGlobalStorage();
+
+    // The embedding plot lasso selection on the annotations route.
+    const { annotationPlotSampleIds } = useAnnotationPlotSelection();
+    const plotSelectedAnnotationIds = $derived($annotationPlotSampleIds);
+
+    // The text embedding search is shared with the images tab and persists across the tab switch.
+    // Only apply it when this annotation collection actually has embeddings.
+    const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId: collection_id }));
+    const searchEmbedding = $derived(hasEmbeddingsQuery.data ? $textEmbedding : undefined);
+
+    // Drag-to-search crop preview. Tiles report only their crop geometry; the blob is
+    // rendered lazily when a drag starts (not per visible tile), and revoked on unmount.
+    let cropWindowByAnnotationId = $state<Record<string, CropWindow>>({});
+    let cropUrlByAnnotationId = $state<Record<string, string>>({});
+
+    function handleCropWindowChange(annotationId: string, window: CropWindow | null) {
+        if (window) {
+            cropWindowByAnnotationId[annotationId] = window;
+            return;
+        }
+        delete cropWindowByAnnotationId[annotationId];
+        revokeCropUrl(annotationId);
+    }
+
+    function revokeCropUrl(annotationId: string) {
+        const url = cropUrlByAnnotationId[annotationId];
+        if (url) {
+            URL.revokeObjectURL(url);
+            delete cropUrlByAnnotationId[annotationId];
+        }
+    }
+
+    async function handleAnnotationDragStart(annotationId: string) {
+        const window = cropWindowByAnnotationId[annotationId];
+        if (!window) return;
+        revokeCropUrl(annotationId);
+        const url = await renderCropObjectUrl(window, { cancelled: false });
+        // The tile may have unmounted while rendering; drop the blob if so.
+        if (url && cropWindowByAnnotationId[annotationId]) {
+            cropUrlByAnnotationId[annotationId] = url;
+        } else if (url) {
+            URL.revokeObjectURL(url);
+        }
+    }
+
+    onDestroy(() => {
+        for (const url of Object.values(cropUrlByAnnotationId)) {
+            URL.revokeObjectURL(url);
+        }
+    });
 
     afterNavigate(() => {
         clearReversibleActions();
@@ -67,14 +122,14 @@
     });
 
     const queryParams = $derived({
-        path: {
-            collection_id: collection_id
-        },
-        query: {
-            annotation_label_ids:
-                $selectedAnnotationFilterIds.length > 0 ? $selectedAnnotationFilterIds : undefined,
-            tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined
-        }
+        collection_id: collection_id,
+        annotation_label_ids:
+            $selectedAnnotationFilterIds.length > 0 ? $selectedAnnotationFilterIds : undefined,
+        tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
+        // Embedding plot lasso selection narrows the grid to the selected annotations.
+        sample_ids: plotSelectedAnnotationIds.length > 0 ? plotSelectedAnnotationIds : undefined,
+        // Embedding text search reorders the grid by similarity (shared with images tab).
+        text_embedding: searchEmbedding?.embedding ?? undefined
     });
 
     const {
@@ -88,7 +143,10 @@
         collectionId: collection_id
     });
     let infiniteLoaderIdentifier = $derived(
-        $selectedAnnotationFilterIds.join(',') + Array.from($tagsSelected).join(',')
+        $selectedAnnotationFilterIds.join(',') +
+            Array.from($tagsSelected).join(',') +
+            plotSelectedAnnotationIds.join(',') +
+            (searchEmbedding ? `search:${searchEmbedding.queryText}` : '')
     );
 
     const filterHash = $derived(infiniteLoaderIdentifier);
@@ -253,6 +311,19 @@
                                     dataTestId="annotation-grid-item"
                                     tag={false}
                                     ariaLabel={`Edit annotation: ${annotations[index].annotation.sample_id}`}
+                                    dragData={buildAnnotationDragData(
+                                        annotations[index].annotation,
+                                        cropWindowByAnnotationId[
+                                            annotations[index].annotation.sample_id
+                                        ],
+                                        cropUrlByAnnotationId[
+                                            annotations[index].annotation.sample_id
+                                        ]
+                                    )}
+                                    onDragStart={() =>
+                                        handleAnnotationDragStart(
+                                            annotations[index].annotation.sample_id
+                                        )}
                                     onSelect={(event) =>
                                         handleGridItemSelect(
                                             event,
@@ -293,6 +364,7 @@
                                             selected={$pickedAnnotationIds[collection_id]?.has(
                                                 annotations[index].annotation.sample_id
                                             )}
+                                            onCropWindowChange={handleCropWindowChange}
                                         />
                                     </div>
                                 </GridItem>

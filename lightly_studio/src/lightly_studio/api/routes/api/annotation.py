@@ -22,7 +22,12 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationWithPayloadAndCountView,
 )
 from lightly_studio.models.collection import AnnotationCollectionView, CollectionTable
-from lightly_studio.resolvers import annotation_resolver, collection_resolver
+from lightly_studio.resolvers import (
+    annotation_resolver,
+    collection_resolver,
+    embedding_model_resolver,
+    sample_embedding_resolver,
+)
 from lightly_studio.resolvers.annotation_resolver.get_all import (
     GetAllAnnotationsResult,
 )
@@ -50,32 +55,38 @@ def read_annotation_collections(
         Path(title="collection Id"),
         Depends(get_and_validate_collection_id),
     ],
-) -> list[CollectionTable]:
-    """List annotation collections under the given parent collection."""
-    return collection_resolver.get_annotation_collections(
+) -> list[AnnotationCollectionView]:
+    """List annotation collections under the given parent collection.
+
+    Each entry includes the distinct annotation types it contains, so the GUI
+    can filter sources to those compatible with a chosen evaluation task.
+    """
+    collections = collection_resolver.get_annotation_collections(
         session=session,
         parent_collection_id=collection.collection_id,
     )
+    types_by_collection_id = collection_resolver.get_annotation_types_by_collection_ids(
+        session=session,
+        collection_ids=[c.collection_id for c in collections],
+    )
+    return [
+        AnnotationCollectionView(
+            collection_id=c.collection_id,
+            name=c.name,
+            annotation_types=types_by_collection_id.get(c.collection_id, []),
+        )
+        for c in collections
+    ]
 
 
-class AnnotationQueryParamsModel(BaseModel):
-    """Model for all annotation query parameters."""
+class ReadAnnotationsWithPayloadRequest(BaseModel):
+    """Request body for reading annotations with payload."""
 
     pagination: PaginatedWithCursor
     annotation_label_ids: list[UUID] | None = None
     tag_ids: list[UUID] | None = None
-
-
-def _get_annotation_query_params(
-    pagination: Annotated[PaginatedWithCursor, Depends()],
-    annotation_label_ids: Annotated[list[UUID] | None, Query()] = None,
-    tag_ids: Annotated[list[UUID] | None, Query()] = None,
-) -> AnnotationQueryParamsModel:
-    return AnnotationQueryParamsModel(
-        pagination=pagination,
-        annotation_label_ids=annotation_label_ids,
-        tag_ids=tag_ids,
-    )
+    sample_ids: list[UUID] | None = None
+    text_embedding: list[float] | None = None
 
 
 @annotations_router.get(
@@ -128,30 +139,70 @@ def get_annotation_sample_ids(
     )
 
 
-@annotations_router.get(
-    "/annotations/payload",
-)
+@annotations_router.post("/annotations/payload")
 def read_annotations_with_payload(
     collection_id: Annotated[
         UUID, Path(title="collection Id", description="The ID of the collection")
     ],
     session: SessionDep,
-    params: Annotated[AnnotationQueryParamsModel, Depends(_get_annotation_query_params)],
+    body: ReadAnnotationsWithPayloadRequest,
 ) -> AnnotationWithPayloadAndCountView:
-    """Retrieve a list of annotations along with the parent sample data from the database."""
+    """Retrieve annotations with payload and optional similarity or sample filters."""
     return annotation_resolver.get_all_with_payload(
         session=session,
         pagination=Paginated(
-            offset=params.pagination.offset,
-            limit=params.pagination.limit,
+            offset=body.pagination.offset,
+            limit=body.pagination.limit,
         ),
         filters=AnnotationsFilter(
             collection_ids=[collection_id],
-            annotation_label_ids=params.annotation_label_ids,
-            tag_ids=params.tag_ids,
+            annotation_label_ids=body.annotation_label_ids,
+            tag_ids=body.tag_ids,
+            sample_ids=body.sample_ids,
         ),
         collection_id=collection_id,
+        text_embedding=body.text_embedding,
     )
+
+
+@annotations_router.get(
+    "/annotations/{sample_id}/embedding",
+    response_model=list[float],
+)
+def read_annotation_embedding(
+    collection_id: Annotated[
+        UUID, Path(title="collection Id", description="The ID of the annotation collection")
+    ],
+    sample_id: Annotated[UUID, Path(title="sample Id", description="The annotation sample ID")],
+    session: SessionDep,
+) -> list[float]:
+    """Return the stored embedding vector for a single annotation sample.
+
+    Used for drag-to-search self-similarity: searching with an annotation's own
+    stored embedding.
+    """
+    embedding_models = embedding_model_resolver.get_all_by_collection_id(
+        session=session,
+        collection_id=collection_id,
+    )
+    if not embedding_models:
+        raise HTTPException(
+            status_code=HTTP_STATUS_NOT_FOUND,
+            detail="No embedding model is registered for this collection.",
+        )
+
+    embeddings = sample_embedding_resolver.get_by_sample_ids(
+        session=session,
+        sample_ids=[sample_id],
+        embedding_model_id=embedding_models[0].embedding_model_id,
+    )
+    if not embeddings:
+        raise HTTPException(
+            status_code=HTTP_STATUS_NOT_FOUND,
+            detail="No stored embedding found for this annotation.",
+        )
+
+    return [float(value) for value in embeddings[0].embedding]
 
 
 class AnnotationUpdateInput(BaseModel):

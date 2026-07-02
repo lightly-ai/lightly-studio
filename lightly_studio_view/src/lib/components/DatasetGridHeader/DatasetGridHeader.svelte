@@ -14,6 +14,7 @@
         onDeselectAll: () => void;
         searchImage: SearchImage | undefined;
         searchPending: boolean;
+        searchPlaceholder?: string;
         initialQueryText: string;
         onSubmitText: (text: string) => void;
         onSubmitFile: (file: File) => void | Promise<void>;
@@ -30,6 +31,7 @@
         onDeselectAll,
         searchImage,
         searchPending,
+        searchPlaceholder,
         initialQueryText,
         onSubmitText,
         onSubmitFile,
@@ -60,6 +62,7 @@
             <CollectionSearch
                 image={searchImage}
                 isPending={searchPending}
+                {searchPlaceholder}
                 {initialQueryText}
                 {onSubmitText}
                 {onSubmitFile}

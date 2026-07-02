@@ -12,8 +12,8 @@ from tests.resolvers.evaluation_sample_metric_resolver import (
 
 def test_create_many(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
-    run, _ = evaluation_sample_metric_helpers.create_run_and_image(
-        session=db_session, dataset_collection_id=dataset.collection_id
+    run = evaluation_sample_metric_helpers.create_run(
+        session=db_session, collection_id=dataset.collection_id
     )
     image1 = create_image(session=db_session, collection_id=dataset.collection_id)
     image2 = create_image(
@@ -50,7 +50,7 @@ def test_create_many(db_session: Session) -> None:
 
 
 def test_create_many__empty_list_is_noop(db_session: Session) -> None:
-    run, _ = evaluation_sample_metric_helpers.create_run_and_image(session=db_session)
+    run = evaluation_sample_metric_helpers.create_run(session=db_session)
 
     evaluation_sample_metric_resolver.create_many(session=db_session, records=[])
 

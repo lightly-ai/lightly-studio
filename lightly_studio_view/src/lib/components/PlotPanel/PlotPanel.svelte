@@ -10,6 +10,7 @@
     import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+    import { useAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
     import { useArrowData } from './useArrowData/useArrowData';
     import { usePlotData } from './usePlotData/usePlotData';
     import PlotPanelLegend from './PlotPanelLegend.svelte';
@@ -17,16 +18,22 @@
     import { useCategoryVisibility } from './useCategoryVisibility/useCategoryVisibility';
     import { isEqual } from 'lodash-es';
     import { getCategoryColors, getCategoryCount, getLegendEntries } from './plotColorUtils';
-    import { INCLUDED_BY_FILTERS_LABEL, NO_CATEGORY_LABEL } from './plotCategories';
+    import {
+        EXCLUDED_BY_FILTERS_CATEGORY,
+        INCLUDED_BY_FILTERS_CATEGORY,
+        INCLUDED_BY_FILTERS_LABEL,
+        NO_CATEGORY_LABEL
+    } from './plotCategories';
     import { page } from '$app/state';
-    import { isVideosRoute } from '$lib/routes';
+    import { isAnnotationsRoute, isVideosRoute } from '$lib/routes';
     import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { usePlotColorBy } from './usePlotColorBy/usePlotColorBy';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
+    import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { writable } from 'svelte/store';
 
-    const collectionId = page.params.collection_id;
+    let { collectionId }: { collectionId: string } = $props();
     const { setShowEmbeddingPlot, getRangeSelection, setRangeSelectionForCollection } =
         useGlobalStorage();
     const rangeSelection = getRangeSelection(collectionId);
@@ -40,22 +47,41 @@
 
     // Detect if we're on the videos route
     const isVideos = $derived(isVideosRoute(page.route?.id ?? null));
+    // Detect if we're on the annotations route
+    const isAnnotations = $derived(isAnnotationsRoute(page.route?.id ?? null));
 
     // Use appropriate filter hook based on route
     const imageFilters = useImageFilters();
     const videoFilters = useVideoFilters();
+    const { annotationPlotSampleIds, saveSampleIds: saveAnnotationPlotSampleIds } =
+        useAnnotationPlotSelection();
 
     const updateSampleIds = $derived(
-        isVideos ? videoFilters.updateSampleIds : imageFilters.updateSampleIds
+        isAnnotations
+            ? saveAnnotationPlotSampleIds
+            : isVideos
+              ? videoFilters.updateSampleIds
+              : imageFilters.updateSampleIds
     );
     const imageFilter = $derived(isVideos ? null : imageFilters.imageFilter);
     const videoFilter = $derived(isVideos ? videoFilters.videoFilter : null);
     const activeSampleIds = $derived(
-        (isVideos ? $videoFilter : $imageFilter)?.sample_filter?.sample_ids ?? []
+        isAnnotations
+            ? $annotationPlotSampleIds
+            : ((isVideos ? $videoFilter : $imageFilter)?.sample_filter?.sample_ids ?? [])
     );
+
+    // The active annotation label/tag filter, mirroring what the annotations grid applies.
+    const { annotationFilter: selectedAnnotationsFilter } =
+        useSelectedAnnotationsFilter(collectionId);
 
     // Prepare filter for embeddings API - use VideoFilter for videos, ImageFilter for images
     const filter = $derived.by(() => {
+        // On the annotations route, send the active annotation label/tag filter (or an
+        // empty annotations filter so all points count as included).
+        if (isAnnotations) {
+            return $selectedAnnotationsFilter ?? { filter_type: 'annotations' as const };
+        }
         const currentFilter = isVideos ? $videoFilter : $imageFilter;
         if (!currentFilter) return null;
 
@@ -73,7 +99,12 @@
     });
 
     const { selectedColorByType } = usePlotColorByType(collectionId);
-    const { tags } = useTags({ collection_id: collectionId, kind: ['sample'] });
+    // Annotation samples carry annotation-kind tags. Captured once at mount, like
+    // collectionId above.
+    const { tags } = useTags({
+        collection_id: collectionId,
+        kind: isAnnotationsRoute(page.route?.id ?? null) ? ['annotation'] : ['sample']
+    });
     const annotationLabelsQuery = useAnnotationLabels(() => ({ collectionId }));
     const annotationLabels = writable<{ annotation_label_id: string }[]>([]);
     $effect(() => {
@@ -113,16 +144,36 @@
         resetCategoryVisibility
     } = useCategoryVisibility();
 
-    // Hide-toggles are keyed by color-slot index, but the backend re-ranks slots per request
-    // (most frequent in-filter values win individual slots), so a new legend remaps those indices.
-    // Reset hidden categories whenever the legend changes — covering both filter and color-by
-    // changes — so a stale toggle can never hide a different category than the user picked.
+    // The backend re-ranks color slots per request, so a stale toggle would hide the wrong slot;
+    // reset hidden categories on every legend change. EXCLUDED keeps its meaning, so it always
+    // survives. INCLUDED is relabeled with the color-by mode, so it survives only a filter-only
+    // change — else a hidden "No category" would empty the plot once all points collapse into it.
+    let previousColorByKey: string | undefined = undefined;
     $effect(() => {
         void $colorLegend;
-        resetCategoryVisibility();
+        const colorByKey = JSON.stringify($colorBy);
+        const colorByChanged = colorByKey !== previousColorByKey;
+        previousColorByKey = colorByKey;
+        resetCategoryVisibility(
+            colorByChanged
+                ? [EXCLUDED_BY_FILTERS_CATEGORY]
+                : [EXCLUDED_BY_FILTERS_CATEGORY, INCLUDED_BY_FILTERS_CATEGORY]
+        );
     });
 
     const hasActiveFilter = $derived(filter !== null || activeSampleIds.length > 0);
+
+    // Activating a lasso unhides the Excluded category, otherwise out-of-selection points (which
+    // get demoted to Excluded) would vanish and blank out the canvas mid-draw. The legend keeps
+    // showing the user's real toggle state.
+    const effectiveHiddenCategories = $derived.by(() => {
+        if ($rangeSelection === null || !$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)) {
+            return $hiddenCategories;
+        }
+        const next = new Set($hiddenCategories);
+        next.delete(EXCLUDED_BY_FILTERS_CATEGORY);
+        return next;
+    });
 
     let { data: plotData, selectedSampleIds } = $derived(
         usePlotData({
@@ -130,7 +181,7 @@
             rangeSelection: $rangeSelection,
             highlightedSampleIds: activeSampleIds,
             hasActiveFilter: hasActiveFilter,
-            hiddenCategories: $hiddenCategories
+            hiddenCategories: effectiveHiddenCategories
         })
     );
     const categoryCount = $derived.by(() => getCategoryCount($colorLegend));
@@ -147,8 +198,9 @@
             return;
         }
 
-        const filter = isVideos ? $videoFilter : $imageFilter;
-        const currentSampleIds = filter?.sample_filter?.sample_ids || [];
+        const currentSampleIds = isAnnotations
+            ? $annotationPlotSampleIds
+            : ((isVideos ? $videoFilter : $imageFilter)?.sample_filter?.sample_ids ?? []);
         const selectableCount =
             ($arrowData?.fulfils_filter as Uint8Array | undefined)?.reduce((count, fulfils) => {
                 return fulfils !== 0 ? count + 1 : count;
@@ -337,6 +389,8 @@
                         {categoryColors}
                         {includedLabel}
                         {legendEntries}
+                        excludedHidden={$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)}
+                        includedHidden={$hiddenCategories.has(INCLUDED_BY_FILTERS_CATEGORY)}
                         onToggleCategory={toggleCategoryVisibility}
                         onDoubleClickCategory={(category) => {
                             focusCategoryVisibility(

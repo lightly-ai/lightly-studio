@@ -51,6 +51,13 @@ def build_annotation_color_maps(
         if ann.annotation_label_id in requested:
             sample_to_labels[ann.parent_sample_id].add(ann.annotation_label_id)
 
+    # When the colored samples are annotations themselves (annotation collection),
+    # each sample carries its own label rather than labels of child annotations.
+    own_annotations = annotation_resolver.get_by_ids(session=session, annotation_ids=sample_ids)
+    for ann in own_annotations:
+        if ann.annotation_label_id in requested:
+            sample_to_labels[ann.sample_id].add(ann.annotation_label_id)
+
     ordered_label_ids = coloring_helpers.order_values_by_frequency(
         sample_to_values=sample_to_labels,
         matching_sample_ids=matching_sample_ids,

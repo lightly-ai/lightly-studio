@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from uuid import UUID
+from uuid import UUID, uuid4
 
+import pytest
+from pydantic import ValidationError
 from sqlmodel import Session, col, select
 
 from lightly_studio.models.annotation_label import AnnotationLabelTable
@@ -29,9 +31,11 @@ from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsF
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import Metadata
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
+    AnnotationDetails,
     ImageStub,
     create_annotation,
     create_annotation_label,
+    create_annotations,
     create_collection,
     create_images,
     create_tag,
@@ -168,29 +172,27 @@ class TestSampleFilter:
         )
 
         # Add 2 cat and dog annotations to the first sample
-        create_annotation(
+        create_annotations(
             session=db_session,
             collection_id=collection_id,
-            sample_id=samples[0].sample_id,
-            annotation_label_id=cat_label.annotation_label_id,
-        )
-        create_annotation(
-            session=db_session,
-            collection_id=collection_id,
-            sample_id=samples[0].sample_id,
-            annotation_label_id=cat_label.annotation_label_id,
-        )
-        create_annotation(
-            session=db_session,
-            collection_id=collection_id,
-            sample_id=samples[0].sample_id,
-            annotation_label_id=dog_label.annotation_label_id,
-        )
-        create_annotation(
-            session=db_session,
-            collection_id=collection_id,
-            sample_id=samples[0].sample_id,
-            annotation_label_id=dog_label.annotation_label_id,
+            annotations=[
+                AnnotationDetails(
+                    sample_id=samples[0].sample_id,
+                    annotation_label_id=cat_label.annotation_label_id,
+                ),
+                AnnotationDetails(
+                    sample_id=samples[0].sample_id,
+                    annotation_label_id=cat_label.annotation_label_id,
+                ),
+                AnnotationDetails(
+                    sample_id=samples[0].sample_id,
+                    annotation_label_id=dog_label.annotation_label_id,
+                ),
+                AnnotationDetails(
+                    sample_id=samples[0].sample_id,
+                    annotation_label_id=dog_label.annotation_label_id,
+                ),
+            ],
         )
 
         # Create the filter
@@ -512,8 +514,8 @@ class TestSampleFilterConfusionCell:
     ) -> None:
         dataset = create_collection(session=db_session)
         dataset_id = dataset.collection_id
-        run, _image = evaluation_sample_metric_helpers.create_run_and_image(
-            session=db_session, dataset_collection_id=dataset_id
+        run = evaluation_sample_metric_helpers.create_run(
+            session=db_session, collection_id=dataset_id
         )
         samples = create_images(
             db_session=db_session,
@@ -570,11 +572,11 @@ class TestSampleFilterConfusionCell:
     def test_apply__confusion_cell__scopes_to_evaluation_run(self, db_session: Session) -> None:
         dataset = create_collection(session=db_session)
         dataset_id = dataset.collection_id
-        run_a, _image_a = evaluation_sample_metric_helpers.create_run_and_image(
-            session=db_session, dataset_collection_id=dataset_id, name="run_a"
+        run_a = evaluation_sample_metric_helpers.create_run(
+            session=db_session, collection_id=dataset_id, name="run_a"
         )
-        run_b, _image_b = evaluation_sample_metric_helpers.create_run_and_image(
-            session=db_session, dataset_collection_id=dataset_id, name="run_b"
+        run_b = evaluation_sample_metric_helpers.create_run(
+            session=db_session, collection_id=dataset_id, name="run_b"
         )
         samples = create_images(
             db_session=db_session,
@@ -621,8 +623,8 @@ class TestSampleFilterConfusionCell:
     def test_apply__confusion_cell__ands_with_other_predicate(self, db_session: Session) -> None:
         dataset = create_collection(session=db_session)
         dataset_id = dataset.collection_id
-        run, _image = evaluation_sample_metric_helpers.create_run_and_image(
-            session=db_session, dataset_collection_id=dataset_id
+        run = evaluation_sample_metric_helpers.create_run(
+            session=db_session, collection_id=dataset_id
         )
         samples = create_images(
             db_session=db_session,
@@ -668,6 +670,122 @@ class TestSampleFilterConfusionCell:
         assert len(result) == 1
         assert result[0].sample_id == samples[1].sample_id
 
+    def test_apply__confusion_cell__false_positive_bucket(self, db_session: Session) -> None:
+        # gt_label=None selects predictions with no matching ground truth.
+        dataset = create_collection(session=db_session)
+        dataset_id = dataset.collection_id
+        run = evaluation_sample_metric_helpers.create_run(
+            session=db_session, collection_id=dataset_id
+        )
+        samples = create_images(
+            db_session=db_session,
+            collection_id=dataset_id,
+            images=[
+                ImageStub(path="fp_truck.png"),
+                ImageStub(path="fp_car.png"),
+                ImageStub(path="tp_truck.png"),
+            ],
+        )
+        truck = create_annotation_label(
+            session=db_session, root_collection_id=dataset_id, label_name="truck"
+        )
+        car = create_annotation_label(
+            session=db_session, root_collection_id=dataset_id, label_name="car"
+        )
+        # A spurious truck (FP), a spurious car (FP), and a correctly paired truck (TP).
+        _seed_false_positive(
+            session=db_session,
+            dataset_id=dataset_id,
+            run_id=run.id,
+            image=samples[0],
+            label=truck,
+        )
+        _seed_false_positive(
+            session=db_session,
+            dataset_id=dataset_id,
+            run_id=run.id,
+            image=samples[1],
+            label=car,
+        )
+        _seed_pair(
+            session=db_session,
+            dataset_id=dataset_id,
+            run_id=run.id,
+            image=samples[2],
+            labels=(truck, truck),
+        )
+
+        sample_filter = SampleFilter(
+            confusion_cell=ConfusionCell(
+                evaluation_run_id=run.id, gt_label=None, pred_label="truck"
+            )
+        )
+
+        filtered_query = sample_filter.apply(query=select(SampleTable))
+        result = db_session.exec(filtered_query).all()
+
+        assert len(result) == 1
+        assert result[0].sample_id == samples[0].sample_id
+
+    def test_apply__confusion_cell__false_negative_bucket(self, db_session: Session) -> None:
+        # pred_label=None selects ground truths with no matching prediction.
+        dataset = create_collection(session=db_session)
+        dataset_id = dataset.collection_id
+        run = evaluation_sample_metric_helpers.create_run(
+            session=db_session, collection_id=dataset_id
+        )
+        samples = create_images(
+            db_session=db_session,
+            collection_id=dataset_id,
+            images=[
+                ImageStub(path="fn_car.png"),
+                ImageStub(path="fn_truck.png"),
+                ImageStub(path="tp_car.png"),
+            ],
+        )
+        car = create_annotation_label(
+            session=db_session, root_collection_id=dataset_id, label_name="car"
+        )
+        truck = create_annotation_label(
+            session=db_session, root_collection_id=dataset_id, label_name="truck"
+        )
+        # A missed car (FN), a missed truck (FN), and a correctly paired car (TP).
+        _seed_false_negative(
+            session=db_session,
+            dataset_id=dataset_id,
+            run_id=run.id,
+            image=samples[0],
+            label=car,
+        )
+        _seed_false_negative(
+            session=db_session,
+            dataset_id=dataset_id,
+            run_id=run.id,
+            image=samples[1],
+            label=truck,
+        )
+        _seed_pair(
+            session=db_session,
+            dataset_id=dataset_id,
+            run_id=run.id,
+            image=samples[2],
+            labels=(car, car),
+        )
+
+        sample_filter = SampleFilter(
+            confusion_cell=ConfusionCell(evaluation_run_id=run.id, gt_label="car", pred_label=None)
+        )
+
+        filtered_query = sample_filter.apply(query=select(SampleTable))
+        result = db_session.exec(filtered_query).all()
+
+        assert len(result) == 1
+        assert result[0].sample_id == samples[0].sample_id
+
+    def test_confusion_cell__rejects_both_labels_null(self) -> None:
+        with pytest.raises(ValidationError):
+            ConfusionCell(evaluation_run_id=uuid4(), gt_label=None, pred_label=None)
+
 
 def _seed_pair(
     session: Session,
@@ -700,6 +818,60 @@ def _seed_pair(
                 pred_annotation_id=pred_annotation.sample_id,
                 metric_name="iou",
                 value=0.9,
+            )
+        ],
+    )
+
+
+def _seed_false_positive(
+    session: Session,
+    dataset_id: UUID,
+    run_id: UUID,
+    image: ImageTable,
+    label: AnnotationLabelTable,
+) -> None:
+    """Persist a false-positive metric row (prediction with no matching ground truth)."""
+    pred_annotation = create_annotation(
+        session=session,
+        collection_id=dataset_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+    )
+    evaluation_annotation_metric_resolver.create_many(
+        session=session,
+        records=[
+            EvaluationAnnotationMetricCreate(
+                evaluation_run_id=run_id,
+                sample_id=image.sample_id,
+                gt_annotation_id=None,
+                pred_annotation_id=pred_annotation.sample_id,
+            )
+        ],
+    )
+
+
+def _seed_false_negative(
+    session: Session,
+    dataset_id: UUID,
+    run_id: UUID,
+    image: ImageTable,
+    label: AnnotationLabelTable,
+) -> None:
+    """Persist a false-negative metric row (ground truth with no matching prediction)."""
+    gt_annotation = create_annotation(
+        session=session,
+        collection_id=dataset_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+    )
+    evaluation_annotation_metric_resolver.create_many(
+        session=session,
+        records=[
+            EvaluationAnnotationMetricCreate(
+                evaluation_run_id=run_id,
+                sample_id=image.sample_id,
+                gt_annotation_id=gt_annotation.sample_id,
+                pred_annotation_id=None,
             )
         ],
     )

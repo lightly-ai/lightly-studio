@@ -32,7 +32,13 @@ class LightlyStudioInputBase:
 
     CATEGORY_ID_START = 0
 
-    def __init__(self, session: Session, dataset_id: UUID, samples: Iterable[ImageSample]) -> None:
+    def __init__(
+        self,
+        session: Session,
+        dataset_id: UUID,
+        samples: Iterable[ImageSample],
+        annotation_collection_id: UUID | None,
+    ) -> None:
         """Initializes the adapter.
 
         Args:
@@ -40,8 +46,11 @@ class LightlyStudioInputBase:
                 constructor to fetch the labels for the given annotation source.
             dataset_id: The dataset ID for label retrieval.
             samples: Dataset samples.
+            annotation_collection_id: If provided, only annotations belonging to this
+                annotation collection are exported. If None, all annotations are exported.
         """
         self._samples = list(samples)
+        self._annotation_collection_id = annotation_collection_id
         self._label_id_to_category = _build_label_id_to_category(
             session=session,
             dataset_id=dataset_id,
@@ -75,6 +84,34 @@ class LightlyStudioObjectDetectionInput(LightlyStudioInputBase, ObjectDetectionI
                 sample=sample,
                 image_id=idx,
                 label_id_to_category=self._label_id_to_category,
+                annotation_collection_id=self._annotation_collection_id,
+            )
+
+
+class LightlyStudioYOLOObjectDetectionInput(LightlyStudioObjectDetectionInput):
+    """Labelformat adapter for YOLO object detection export.
+
+    Uses relative filenames so the YOLO writer places label files inside the output
+    ``labels`` directory. The base adapter uses absolute paths, which are fine for COCO
+    (stored verbatim as strings) but would break YOLO: the writer joins the filename
+    with the output directory to build each label file path, and an absolute path would
+    escape that directory.
+    """
+
+    def get_images(self) -> Iterable[Image]:
+        """Returns the images for export with relative filenames."""
+        for idx, sample in enumerate(self._samples):
+            yield _sample_to_image(sample=sample, image_id=idx, filename=sample.file_name)
+
+    def get_labels(self) -> Iterable[ImageObjectDetection]:
+        """Returns the labels for export with relative filenames."""
+        for idx, sample in enumerate(self._samples):
+            yield _sample_to_image_obj_det(
+                sample=sample,
+                image_id=idx,
+                label_id_to_category=self._label_id_to_category,
+                annotation_collection_id=self._annotation_collection_id,
+                filename=sample.file_name,
             )
 
 
@@ -86,11 +123,15 @@ class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSeg
         sample: ImageSample,
         image_id: int,
         label_id_to_category: dict[UUID, Category],
+        annotation_collection_id: UUID | None,
     ) -> ImageInstanceSegmentation:
         # TODO(lukas, 02/2026): We can optimise in the future to filter annotations in a DB query.
         objects = []
         for annotation in sample.sample_table.annotations:
-            if annotation.annotation_type == AnnotationType.SEGMENTATION_MASK:
+            if annotation.annotation_type == AnnotationType.SEGMENTATION_MASK and (
+                annotation_collection_id is None
+                or annotation.annotation_collection_id == annotation_collection_id
+            ):
                 obj = _annotation_to_single_inst_seg(
                     annotation=annotation,
                     label_id_to_category=label_id_to_category,
@@ -115,6 +156,7 @@ class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSeg
                 sample=sample,
                 image_id=idx,
                 label_id_to_category=self._label_id_to_category,
+                annotation_collection_id=self._annotation_collection_id,
             )
 
 
@@ -132,10 +174,14 @@ class LightlyStudioPascalVOCInstanceSegmentationInput(
         sample: ImageSample,
         image_id: int,
         label_id_to_category: dict[UUID, Category],
+        annotation_collection_id: UUID | None,
     ) -> ImageInstanceSegmentation:
         objects = []
         for annotation in sample.sample_table.annotations:
-            if annotation.annotation_type == AnnotationType.SEGMENTATION_MASK:
+            if annotation.annotation_type == AnnotationType.SEGMENTATION_MASK and (
+                annotation_collection_id is None
+                or annotation.annotation_collection_id == annotation_collection_id
+            ):
                 obj = _annotation_to_single_inst_seg(
                     annotation=annotation,
                     label_id_to_category=label_id_to_category,
@@ -172,6 +218,7 @@ class LightlyStudioPascalVOCInstanceSegmentationInput(
                 sample=sample,
                 image_id=idx,
                 label_id_to_category=self._label_id_to_category,
+                annotation_collection_id=self._annotation_collection_id,
             )
 
 
@@ -210,6 +257,8 @@ def _sample_to_image_obj_det(
     sample: ImageSample,
     image_id: int,
     label_id_to_category: dict[UUID, Category],
+    annotation_collection_id: UUID | None,
+    filename: str | None = None,
 ) -> ImageObjectDetection:
     # TODO(Michal, 09/2025): We can optimise in the future to filter annotations in a DB query.
     objects = [
@@ -219,9 +268,13 @@ def _sample_to_image_obj_det(
         )
         for annotation in sample.sample_table.annotations
         if annotation.annotation_type == AnnotationType.OBJECT_DETECTION
+        and (
+            annotation_collection_id is None
+            or annotation.annotation_collection_id == annotation_collection_id
+        )
     ]
     return ImageObjectDetection(
-        image=_sample_to_image(sample=sample, image_id=image_id),
+        image=_sample_to_image(sample=sample, image_id=image_id, filename=filename),
         objects=objects,
     )
 

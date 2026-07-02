@@ -13,18 +13,24 @@ from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
     create_collection,
+    create_image,
 )
 from tests.resolvers.evaluation_sample_metric_resolver import (
     helpers as evaluation_sample_metric_helpers,
+)
+from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
+    TruePositiveMetricStub,
+    create_annotation_metrics,
 )
 
 
 def test_get_all_by_evaluation_run_id(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(
+    run = evaluation_sample_metric_helpers.create_run(
         session=db_session,
-        dataset_collection_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
     )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
     label = create_annotation_label(
         session=db_session,
         root_collection_id=dataset.collection_id,
@@ -35,13 +41,18 @@ def test_get_all_by_evaluation_run_id(db_session: Session) -> None:
         sample_id=image.sample_id,
         annotation_label_id=label.annotation_label_id,
     )
-    pred_annotation = create_annotation(
+    [tp_stub] = create_annotation_metrics(
         session=db_session,
-        collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label.annotation_label_id,
+        run_id=run.id,
+        true_positive_metric_stubs=[
+            TruePositiveMetricStub(
+                sample_id=image.sample_id,
+                metric_name="iou",
+                value=0.75,
+                gt_annotation_label_id=label.annotation_label_id,
+            )
+        ],
     )
-
     evaluation_annotation_metric_resolver.create_many(
         session=db_session,
         records=[
@@ -49,14 +60,6 @@ def test_get_all_by_evaluation_run_id(db_session: Session) -> None:
                 evaluation_run_id=run.id,
                 sample_id=image.sample_id,
                 gt_annotation_id=gt_annotation.sample_id,
-            ),
-            EvaluationAnnotationMetricCreate(
-                evaluation_run_id=run.id,
-                sample_id=image.sample_id,
-                gt_annotation_id=gt_annotation.sample_id,
-                pred_annotation_id=pred_annotation.sample_id,
-                metric_name="iou",
-                value=0.75,
             ),
         ],
     )
@@ -71,8 +74,8 @@ def test_get_all_by_evaluation_run_id(db_session: Session) -> None:
     assert all(result.sample_id == image.sample_id for result in results)
 
     tp_result = next(r for r in results if r.metric_name == "iou")
-    assert tp_result.gt_annotation_id == gt_annotation.sample_id
-    assert tp_result.pred_annotation_id == pred_annotation.sample_id
+    assert tp_result.gt_annotation_id == tp_stub.gt_annotation_id
+    assert tp_result.pred_annotation_id == tp_stub.pred_annotation_id
     assert tp_result.value == pytest.approx(0.75)
 
 
@@ -89,11 +92,21 @@ def test_get_all_by_evaluation_run_id__returns_empty_for_unknown_run(
 
 def test_get_all_by_evaluation_run_id__excludes_other_runs(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
-    run1, image1 = evaluation_sample_metric_helpers.create_run_and_image(
-        session=db_session, dataset_collection_id=dataset.collection_id, name="run1"
+    run1 = evaluation_sample_metric_helpers.create_run(
+        session=db_session, collection_id=dataset.collection_id, name="run1"
     )
-    run2, image2 = evaluation_sample_metric_helpers.create_run_and_image(
-        session=db_session, dataset_collection_id=dataset.collection_id, name="run2"
+    image1 = create_image(
+        session=db_session,
+        collection_id=dataset.collection_id,
+        file_path_abs="/path/to/run1.png",
+    )
+    run2 = evaluation_sample_metric_helpers.create_run(
+        session=db_session, collection_id=dataset.collection_id, name="run2"
+    )
+    image2 = create_image(
+        session=db_session,
+        collection_id=dataset.collection_id,
+        file_path_abs="/path/to/run2.png",
     )
     label = create_annotation_label(
         session=db_session,

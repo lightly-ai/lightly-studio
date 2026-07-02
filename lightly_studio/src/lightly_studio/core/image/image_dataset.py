@@ -35,6 +35,7 @@ from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
+    collection_resolver,
     image_resolver,
     tag_resolver,
 )
@@ -101,7 +102,11 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         """
         if query is None:
             query = self.query()
-        return ImageDatasetExport(session=self.session, dataset_id=self.dataset_id, samples=query)
+        return ImageDatasetExport(
+            session=self.session,
+            dataset_id=self.dataset_id,
+            samples=query,
+        )
 
     def get_sample(self, sample_id: UUID) -> ImageSample:
         """Get a single sample from the dataset by its ID.
@@ -190,6 +195,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         input_labels: ObjectDetectionInput | InstanceSegmentationInput,
         images_root: PathLike,
         annotation_source: str,
+        embed_annotations: bool = False,
     ) -> None:
         """Attach annotations from a labelformat input to images already in the dataset.
 
@@ -201,6 +207,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             input_labels: Labelformat input object (e.g. ``COCOObjectDetectionInput``).
             images_root: Root path used to construct absolute image paths for matching.
             annotation_source: Name of the annotation source.
+            embed_annotations: If True, generate embeddings for object-detection annotations.
         """
         missing = add_annotations.add_annotations_from_labelformat(
             session=self.session,
@@ -210,6 +217,12 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             collection_name=annotation_source,
         )
         _log_missing_images(annotation_source=annotation_source, missing_paths=missing)
+        _generate_embeddings_annotations(
+            session=self.session,
+            root_collection_id=self.collection_id,
+            annotation_collection_name=annotation_source,
+            embed=embed_annotations,
+        )
 
     def add_annotations_from_coco(
         self,
@@ -217,6 +230,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         images_root: PathLike,
         annotation_source: str,
         annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
+        embed_annotations: bool = False,
     ) -> None:
         """Attach COCO annotations to images already in the dataset.
 
@@ -225,6 +239,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             images_root: Root path used for matching image filenames.
             annotation_source: Name of the annotation source.
             annotation_type: ``OBJECT_DETECTION`` or ``SEGMENTATION_MASK``.
+            embed_annotations: If True, generate embeddings for object-detection annotations.
         """
         label_input: COCOObjectDetectionInput | COCOInstanceSegmentationInput
         if annotation_type == AnnotationType.OBJECT_DETECTION:
@@ -234,7 +249,10 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         else:
             raise ValueError(f"Invalid annotation type: {annotation_type}")
         self.add_annotations_from_labelformat(
-            input_labels=label_input, images_root=images_root, annotation_source=annotation_source
+            input_labels=label_input,
+            images_root=images_root,
+            annotation_source=annotation_source,
+            embed_annotations=embed_annotations,
         )
 
     def add_annotations_from_yolo(
@@ -242,6 +260,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         data_yaml: PathLike,
         annotation_source: str,
         input_split: str | None = None,
+        embed_annotations: bool = False,
     ) -> None:
         """Attach YOLO annotations to images already in the dataset.
 
@@ -249,6 +268,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             data_yaml: Path to the YOLO ``data.yaml`` file.
             annotation_source: Name of the annotation source.
             input_split: Specific split (e.g. ``"train"``). ``None`` loads all splits.
+            embed_annotations: If True, generate embeddings for object-detection annotations.
         """
         data_yaml = Path(data_yaml).absolute()
         missing: list[str] = []
@@ -264,6 +284,12 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 collection_name=annotation_source,
             )
         _log_missing_images(annotation_source=annotation_source, missing_paths=missing)
+        _generate_embeddings_annotations(
+            session=self.session,
+            root_collection_id=self.collection_id,
+            annotation_collection_name=annotation_source,
+            embed=embed_annotations,
+        )
 
     def add_annotations_from_pascal_voc_segmentations(
         self,
@@ -301,6 +327,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         split: str | None = None,
         embed: bool = True,
         annotation_source: str | None = None,
+        embed_annotations: bool = False,
         limit: int | None = None,
     ) -> None:
         """Load a dataset from a labelformat object and store in database.
@@ -314,6 +341,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
+            embed_annotations: If True, generate embeddings for object-detection annotations.
             limit: If set, load at most this many samples (the first ``limit`` in order).
                 Useful for debugging, quick tests, or tutorials. Defaults to None (load all).
 
@@ -339,13 +367,20 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             tag=split,
             embed=embed,
         )
+        _generate_embeddings_annotations(
+            session=self.session,
+            root_collection_id=self.collection_id,
+            annotation_collection_name=annotation_source,
+            embed=embed_annotations,
+        )
 
-    def add_samples_from_yolo(
+    def add_samples_from_yolo(  # noqa: PLR0913
         self,
         data_yaml: PathLike,
         input_split: str | None = None,
         embed: bool = True,
         annotation_source: str | None = None,
+        embed_annotations: bool = False,
         limit: int | None = None,
     ) -> None:
         """Load a dataset in YOLO format and store in DB.
@@ -358,6 +393,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
+            embed_annotations: If True, generate embeddings for object-detection annotations.
             limit: If set, load at most this many samples in total across all processed
                 splits (the first ``limit`` in order). Useful for debugging, quick tests,
                 or tutorials. Defaults to None (load all).
@@ -420,6 +456,12 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             tag=None,
             embed=embed,
         )
+        _generate_embeddings_annotations(
+            session=self.session,
+            root_collection_id=self.collection_id,
+            annotation_collection_name=annotation_source,
+            embed=embed_annotations,
+        )
 
     def add_samples_from_coco(  # noqa: PLR0913
         self,
@@ -429,6 +471,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         split: str | None = None,
         embed: bool = True,
         annotation_source: str | None = None,
+        embed_annotations: bool = False,
         limit: int | None = None,
     ) -> None:
         """Load a dataset in COCO Object Detection format and store in DB.
@@ -444,6 +487,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
+            embed_annotations: If True, generate embeddings for object-detection annotations.
             limit: If set, load at most this many samples (the first ``limit`` in order).
                 Useful for debugging, quick tests, or tutorials. Defaults to None (load all).
 
@@ -484,6 +528,12 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             sample_ids=created_sample_ids,
             tag=split,
             embed=embed,
+        )
+        _generate_embeddings_annotations(
+            session=self.session,
+            root_collection_id=self.collection_id,
+            annotation_collection_name=annotation_source,
+            embed=embed_annotations,
         )
 
     def add_samples_from_pascal_voc_segmentations(  # noqa: PLR0913
@@ -552,6 +602,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         split: str | None = None,
         embed: bool = True,
         annotation_source: str | None = None,
+        embed_annotations: bool = False,
         limit: int | None = None,
     ) -> None:
         """Load a dataset in Lightly format and store in DB.
@@ -565,6 +616,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
+            embed_annotations: If True, generate embeddings for object-detection annotations.
             limit: If set, load at most this many samples (the first ``limit`` in order).
                 Useful for debugging, quick tests, or tutorials. Defaults to None (load all).
 
@@ -595,6 +647,12 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             sample_ids=created_sample_ids,
             tag=split,
             embed=embed,
+        )
+        _generate_embeddings_annotations(
+            session=self.session,
+            root_collection_id=self.collection_id,
+            annotation_collection_name=annotation_source,
+            embed=embed_annotations,
         )
 
     def add_samples_from_coco_caption(
@@ -733,6 +791,45 @@ def _generate_embeddings_image(
         session=session,
         collection_id=collection_id,
         sample_ids=sample_ids,
+        embedding_model_id=model_id,
+    )
+
+
+def _generate_embeddings_annotations(
+    session: Session,
+    root_collection_id: UUID,
+    annotation_collection_name: str | None,
+    embed: bool,
+) -> None:
+    """Generate and store embeddings for object-detection annotation samples.
+
+    Args:
+        session: Database session for resolver operations.
+        root_collection_id: The ID of the root collection whose annotation child
+            collection should receive embeddings.
+        annotation_collection_name: Name of the annotation child collection. If None,
+            the default annotation collection name is used.
+        embed: If False, this is a no-op.
+    """
+    if not embed:
+        return
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=session,
+        collection_id=root_collection_id,
+        sample_type=SampleType.ANNOTATION,
+        name=annotation_collection_name,
+    )
+    embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
+    model_id = embedding_manager.load_or_get_default_model(
+        session=session,
+        collection_id=annotation_collection_id,
+    )
+    if model_id is None:
+        logger.warning("No embedding model loaded. Skipping annotation embedding generation.")
+        return
+    embedding_manager.embed_annotations(
+        session=session,
+        annotation_collection_id=annotation_collection_id,
         embedding_model_id=model_id,
     )
 

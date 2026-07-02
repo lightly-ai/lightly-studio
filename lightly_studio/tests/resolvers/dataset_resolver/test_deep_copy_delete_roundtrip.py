@@ -22,10 +22,7 @@ from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
-from lightly_studio.models.evaluation_annotation_metric import (
-    EvaluationAnnotationMetricCreate,
-    EvaluationAnnotationMetricTable,
-)
+from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.evaluation_sample_metric import (
     EvaluationSampleMetricCreate,
@@ -40,7 +37,6 @@ from lightly_studio.models.tag import TagTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import (
     dataset_resolver,
-    evaluation_annotation_metric_resolver,
     evaluation_sample_metric_resolver,
     object_track_resolver,
     tag_resolver,
@@ -57,6 +53,10 @@ from tests.helpers_resolvers import (
 )
 from tests.resolvers.evaluation_sample_metric_resolver import (
     helpers as evaluation_sample_metric_helpers,
+)
+from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
+    TruePositiveMetricStub,
+    create_annotation_metrics,
 )
 
 # Both operations are enterprise-only and PostgreSQL-backed.
@@ -214,9 +214,10 @@ def _build_full_dataset(session: Session, name: str) -> UUID:
     )
 
     # evaluation run + sample metric + annotation metric (gt/pred annotations)
-    run, eval_image = evaluation_sample_metric_helpers.create_run_and_image(
-        session, dataset_collection_id=root.collection_id
+    run = evaluation_sample_metric_helpers.create_run(
+        session=session, collection_id=root.collection_id
     )
+    eval_image = create_image(session=session, collection_id=root.collection_id)
     evaluation_sample_metric_resolver.create_many(
         session=session,
         records=[
@@ -228,28 +229,15 @@ def _build_full_dataset(session: Session, name: str) -> UUID:
             )
         ],
     )
-    gt_annotation = create_annotation(
+    create_annotation_metrics(
         session=session,
-        collection_id=root.collection_id,
-        sample_id=eval_image.sample_id,
-        annotation_label_id=label.annotation_label_id,
-    )
-    pred_annotation = create_annotation(
-        session=session,
-        collection_id=root.collection_id,
-        sample_id=eval_image.sample_id,
-        annotation_label_id=label.annotation_label_id,
-    )
-    evaluation_annotation_metric_resolver.create_many(
-        session=session,
-        records=[
-            EvaluationAnnotationMetricCreate(
-                evaluation_run_id=run.id,
+        run_id=run.id,
+        true_positive_metric_stubs=[
+            TruePositiveMetricStub(
                 sample_id=eval_image.sample_id,
-                gt_annotation_id=gt_annotation.sample_id,
-                pred_annotation_id=pred_annotation.sample_id,
                 metric_name="iou",
                 value=0.8,
+                gt_annotation_label_id=label.annotation_label_id,
             )
         ],
     )

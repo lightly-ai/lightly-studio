@@ -11,6 +11,7 @@ from labelformat.formats import (
     COCOInstanceSegmentationOutput,
     COCOObjectDetectionOutput,
     PascalVOCSemanticSegmentationOutput,
+    YOLOv8ObjectDetectionOutput,
 )
 from sqlmodel import Session
 
@@ -20,10 +21,13 @@ from lightly_studio.export.lightly_studio_label_input import (
     LightlyStudioInstanceSegmentationInput,
     LightlyStudioObjectDetectionInput,
     LightlyStudioPascalVOCInstanceSegmentationInput,
+    LightlyStudioYOLOObjectDetectionInput,
 )
 from lightly_studio.type_definitions import PathLike
 
 DEFAULT_EXPORT_FILENAME = "coco_export.json"
+YOLO_DATASET_CONFIG_FILENAME = "data.yaml"
+YOLO_DEFAULT_SPLIT = "train"
 
 
 class ImageDatasetExport:
@@ -33,7 +37,12 @@ class ImageDatasetExport:
     It allows exporting data in various formats.
     """
 
-    def __init__(self, session: Session, dataset_id: UUID, samples: Iterable[ImageSample]):
+    def __init__(
+        self,
+        session: Session,
+        dataset_id: UUID,
+        samples: Iterable[ImageSample],
+    ):
         """Initializes the ImageDatasetExport object.
 
         Args:
@@ -45,12 +54,18 @@ class ImageDatasetExport:
         self._dataset_id = dataset_id
         self.samples = samples
 
-    def to_coco_object_detections(self, output_json: PathLike | None = None) -> None:
+    def to_coco_object_detections(
+        self,
+        output_json: PathLike | None = None,
+        annotation_collection_id: UUID | None = None,
+    ) -> None:
         """Exports object detection annotations to a COCO format JSON file.
 
         Args:
             output_json: The path to the output COCO JSON file. If not provided,
                 defaults to "coco_export.json" in the current working directory.
+            annotation_collection_id: If provided, only annotations from this collection
+                are exported. If None, all annotations are exported.
 
         Raises:
             ValueError: If the annotation source with the given name does not exist.
@@ -62,6 +77,31 @@ class ImageDatasetExport:
             dataset_id=self._dataset_id,
             samples=self.samples,
             output_json=Path(output_json),
+            annotation_collection_id=annotation_collection_id,
+        )
+
+    def to_yolo_object_detections(
+        self,
+        output_folder: PathLike,
+        annotation_collection_id: UUID | None = None,
+    ) -> None:
+        """Exports object detection annotations to YOLO (Ultralytics YOLOv8) format.
+
+        Creates a folder with a ``data.yaml`` dataset config and a ``labels``
+        subfolder containing one ``.txt`` file per image with normalized
+        ``<class_id> <x_center> <y_center> <width> <height>`` rows.
+
+        Args:
+            output_folder: The folder where YOLO files are written.
+            annotation_collection_id: If provided, only annotations from this collection
+                are exported. If None, all annotations are exported.
+        """
+        to_yolo_object_detections(
+            session=self.session,
+            dataset_id=self._dataset_id,
+            samples=self.samples,
+            output_folder=Path(output_folder),
+            annotation_collection_id=annotation_collection_id,
         )
 
     def to_coco_captions(self, output_json: PathLike | None = None) -> None:
@@ -75,12 +115,18 @@ class ImageDatasetExport:
             output_json = DEFAULT_EXPORT_FILENAME
         to_coco_captions(samples=self.samples, output_json=Path(output_json))
 
-    def to_coco_segmentation_masks(self, output_json: PathLike | None = None) -> None:
+    def to_coco_segmentation_masks(
+        self,
+        output_json: PathLike | None = None,
+        annotation_collection_id: UUID | None = None,
+    ) -> None:
         """Exports segmentation masks to a COCO format JSON file.
 
         Args:
             output_json: The path to the output COCO JSON file. If not provided,
                 defaults to "coco_export.json" in the current working directory.
+            annotation_collection_id: If provided, only annotations from this collection
+                are exported. If None, all annotations are exported.
         """
         if output_json is None:
             output_json = DEFAULT_EXPORT_FILENAME
@@ -89,9 +135,14 @@ class ImageDatasetExport:
             dataset_id=self._dataset_id,
             samples=self.samples,
             output_json=Path(output_json),
+            annotation_collection_id=annotation_collection_id,
         )
 
-    def to_pascalvoc_segmentation_mask(self, output_folder: PathLike) -> None:
+    def to_pascalvoc_segmentation_mask(
+        self,
+        output_folder: PathLike,
+        annotation_collection_id: UUID | None = None,
+    ) -> None:
         """Exports segmentation mask annotations to Pascal VOC format.
 
         Creates a folder with per-pixel class masks (PNG) and a class map (JSON).
@@ -100,12 +151,15 @@ class ImageDatasetExport:
             output_folder: The folder where Pascal VOC segmentation files are
                 written. The folder contains a `SegmentationClass` subfolder
                 with PNG masks and a `class_id_to_name.json` file.
+            annotation_collection_id: If provided, only annotations from this collection
+                are exported. If None, all annotations are exported.
         """
         to_pascalvoc_segmentation_mask(
             session=self.session,
             dataset_id=self._dataset_id,
             samples=self.samples,
             output_folder=Path(output_folder),
+            annotation_collection_id=annotation_collection_id,
         )
 
 
@@ -114,6 +168,7 @@ def to_coco_object_detections(
     dataset_id: UUID,
     samples: Iterable[ImageSample],
     output_json: Path,
+    annotation_collection_id: UUID | None,
 ) -> None:
     """Exports object detection annotations to a COCO format JSON file.
 
@@ -125,13 +180,51 @@ def to_coco_object_detections(
         dataset_id: The dataset ID for label retrieval.
         samples: The samples to export.
         output_json: The path to save the output JSON file.
+        annotation_collection_id: If provided, only annotations from this collection
+            are exported. If None, all annotations are exported.
     """
     export_input = LightlyStudioObjectDetectionInput(
         session=session,
         dataset_id=dataset_id,
         samples=samples,
+        annotation_collection_id=annotation_collection_id,
     )
     COCOObjectDetectionOutput(output_file=output_json).save(label_input=export_input)
+
+
+def to_yolo_object_detections(
+    session: Session,
+    dataset_id: UUID,
+    samples: Iterable[ImageSample],
+    output_folder: Path,
+    annotation_collection_id: UUID | None,
+) -> None:
+    """Exports object detection annotations to YOLO (Ultralytics YOLOv8) format.
+
+    This function is for internal use. Use `Dataset.export().to_yolo_object_detections()`
+    instead.
+
+    Writes a ``data.yaml`` dataset config and a ``labels`` subfolder with one ``.txt``
+    file per image into ``output_folder``.
+
+    Args:
+        session: The database session.
+        dataset_id: The dataset ID for label retrieval.
+        samples: The samples to export.
+        output_folder: The folder where YOLO files are written.
+        annotation_collection_id: If provided, only annotations from this collection
+            are exported. If None, all annotations are exported.
+    """
+    export_input = LightlyStudioYOLOObjectDetectionInput(
+        session=session,
+        dataset_id=dataset_id,
+        samples=samples,
+        annotation_collection_id=annotation_collection_id,
+    )
+    YOLOv8ObjectDetectionOutput(
+        output_file=output_folder / YOLO_DATASET_CONFIG_FILENAME,
+        output_split=YOLO_DEFAULT_SPLIT,
+    ).save(label_input=export_input)
 
 
 def to_coco_segmentation_masks(
@@ -139,6 +232,7 @@ def to_coco_segmentation_masks(
     dataset_id: UUID,
     samples: Iterable[ImageSample],
     output_json: Path,
+    annotation_collection_id: UUID | None,
 ) -> None:
     """Exports segmentation mask annotations to a COCO format JSON file.
 
@@ -150,11 +244,14 @@ def to_coco_segmentation_masks(
         dataset_id: The dataset ID for label retrieval.
         samples: The samples to export.
         output_json: The path to save the output JSON file.
+        annotation_collection_id: If provided, only annotations from this collection
+            are exported. If None, all annotations are exported.
     """
     export_input = LightlyStudioInstanceSegmentationInput(
         session=session,
         dataset_id=dataset_id,
         samples=samples,
+        annotation_collection_id=annotation_collection_id,
     )
     COCOInstanceSegmentationOutput(output_file=output_json).save(label_input=export_input)
 
@@ -164,6 +261,7 @@ def to_pascalvoc_segmentation_mask(
     dataset_id: UUID,
     samples: Iterable[ImageSample],
     output_folder: Path,
+    annotation_collection_id: UUID | None,
 ) -> None:
     """Exports segmentation mask annotations to a Pascal VOC segmentation folder.
 
@@ -175,11 +273,14 @@ def to_pascalvoc_segmentation_mask(
         dataset_id: The dataset ID for label retrieval.
         samples: The samples to export.
         output_folder: The folder where Pascal VOC segmentation files are written.
+        annotation_collection_id: If provided, only annotations from this collection
+            are exported. If None, all annotations are exported.
     """
     export_input = LightlyStudioPascalVOCInstanceSegmentationInput(
         session=session,
         dataset_id=dataset_id,
         samples=samples,
+        annotation_collection_id=annotation_collection_id,
     )
 
     # Keep `background_class_id` unchanged: the label input defines category IDs and
