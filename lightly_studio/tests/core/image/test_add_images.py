@@ -88,6 +88,30 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
     assert samples[0].sample.collection_id == collection.collection_id
 
 
+def test_load_into_collection_from_paths__deduplicates_in_run_duplicates(
+    db_session: Session, tmp_path: Path
+) -> None:
+    # Arrange: the same path appears multiple times in a single load call.
+    collection = helpers_resolvers.create_collection(db_session)
+    image_path = str(tmp_path / "image1.jpg")
+    PILImage.new("RGB", (100, 100)).save(image_path)
+    image_paths = [image_path, image_path, image_path]
+
+    # Act
+    sample_ids = add_images.load_into_dataset_from_paths(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        image_paths=image_paths,
+    )
+
+    # Assert: the duplicated path is only created once.
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    ).samples
+    assert len(samples) == 1
+    assert len(sample_ids) == 1
+
+
 def test_load_into_dataset_from_labelformat__calls_get_labels_once(
     db_session: Session, tmp_path: Path
 ) -> None:
@@ -310,8 +334,9 @@ def test_create_batch_samples(db_session: Session) -> None:
     collection = helpers_resolvers.create_collection(db_session)
     collection_id = collection.collection_id
 
-    # First batch: two new samples
-    batch1 = [
+    # Existence in the database is checked by the caller, so _create_batch_samples creates
+    # every sample it is given and returns a mapping from file path to created sample ID.
+    batch = [
         ImageCreate(
             file_path_abs="/path/to/image_0.png",
             file_name="image_0.png",
@@ -325,11 +350,9 @@ def test_create_batch_samples(db_session: Session) -> None:
             height=200,
         ),
     ]
-    new_path_to_id, existing_paths = add_images._create_batch_samples(
-        session=db_session, collection_id=collection_id, samples=batch1
+    new_path_to_id = add_images._create_batch_samples(
+        session=db_session, collection_id=collection_id, samples=batch
     )
-    assert len(new_path_to_id) == 2
-    assert len(existing_paths) == 0
     assert set(new_path_to_id.keys()) == {"/path/to/image_0.png", "/path/to/image_1.png"}
 
     # Check that the sample id mapping matches the database
@@ -343,32 +366,6 @@ def test_create_batch_samples(db_session: Session) -> None:
     assert db_image_0.file_path_abs == "/path/to/image_0.png"
     assert db_image_1 is not None
     assert db_image_1.file_path_abs == "/path/to/image_1.png"
-
-    # Second batch: one existing, one new sample
-    batch2 = [
-        # existing - only file_path_abs matters
-        ImageCreate(
-            file_path_abs="/path/to/image_0.png",
-            file_name="xxx.png",
-            width=999,
-            height=999,
-        ),
-        # new
-        ImageCreate(
-            file_path_abs="/path/to/image_2.png",
-            file_name="image_2.png",
-            width=100,
-            height=200,
-        ),
-    ]
-
-    new_path_to_id, existing_paths = add_images._create_batch_samples(
-        session=db_session, collection_id=collection_id, samples=batch2
-    )
-    assert len(new_path_to_id) == 1
-    assert len(existing_paths) == 1
-    assert list(new_path_to_id.keys()) == ["/path/to/image_2.png"]
-    assert existing_paths == ["/path/to/image_0.png"]
 
 
 def test_create_label_map(db_session: Session) -> None:
