@@ -25,6 +25,7 @@ jobs:
       backend: ${{ steps.filter.outputs.backend || 'true' }}
       frontend: ${{ steps.filter.outputs.frontend || 'true' }}
       docs: ${{ steps.filter.outputs.docs || 'true' }}
+      fast_track: ${{ steps.filter.outputs.fast_track || 'true' }}
     steps:
       - name: Checkout Code # Needed for merge_group event
         uses: actions/checkout@v6
@@ -56,6 +57,10 @@ jobs:
             docs:
               - '.github/workflows/test_and_release.yml'
               - 'lightly_studio/docs/**'
+            # Self-contained Node package (guardrails + bot); Node-only toolchain.
+            fast_track:
+              - '.github/workflows/test_and_release.yml'
+              - 'fast_track/**'
 
   check-python:
     name: Static Checks Python
@@ -301,6 +306,35 @@ jobs:
         working-directory: lightly_studio/docs
         run: make docs
 
+  check-fast-track:
+    name: Static Checks + Tests Fast Track
+    needs: detect
+    if: needs.detect.outputs.fast_track == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: fast_track
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      # Pin Node from .nvmrc, matching the local Makefile's nvm setup.
+      - name: Set Up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: fast_track/.nvmrc
+          cache: npm
+          cache-dependency-path: fast_track/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Static checks
+        run: npm run static-checks
+
+      - name: Tests
+        run: npm run test
+
   # The single required status check: always runs, so gated jobs can be skipped
   # without stranding the merge queue. Require this in the branch ruleset.
   unit-success:
@@ -313,6 +347,7 @@ jobs:
       - test-backend
       - test-frontend
       - check-docs
+      - check-fast-track
     if: always()
     steps:
       - name: Verify required jobs
@@ -323,6 +358,7 @@ jobs:
           BACKEND_TESTS: ${{ needs.test-backend.result }}
           FRONTEND_TESTS: ${{ needs.test-frontend.result }}
           DOCS: ${{ needs.check-docs.result }}
+          FAST_TRACK: ${{ needs.check-fast-track.result }}
         run: |
           python3 - <<'PY'
           import os
@@ -340,6 +376,7 @@ jobs:
               "Backend tests": os.environ["BACKEND_TESTS"],
               "Frontend tests": os.environ["FRONTEND_TESTS"],
               "Build Docs": os.environ["DOCS"],
+              "Static Checks + Tests Fast Track": os.environ["FAST_TRACK"],
           }
           allowed = {"success", "skipped"}
 
