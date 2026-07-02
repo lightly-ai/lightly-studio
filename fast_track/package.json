@@ -1,0 +1,27 @@
+{
+    "name": "fast_track",
+    "version": "0.0.1",
+    "private": true,
+    "type": "module",
+    "engines": {
+        "node": ">=24"
+    },
+    "scripts": {
+        "check": "tsc --noEmit",
+        "lint": "prettier --check . && eslint .",
+        "format": "prettier --write --cache --log-level warn . && eslint . --fix",
+        "static-checks": "npm run lint && npm run check",
+        "test": "vitest run"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.19.0",
+        "@types/node": "^24.0.0",
+        "eslint": "^9.19.0",
+        "eslint-config-prettier": "^9.1.0",
+        "globals": "^15.14.0",
+        "prettier": "^3.4.2",
+        "typescript": "^5.7.3",
+        "typescript-eslint": "^8.22.0",
+        "vitest": "^3.0.4"
+    }
+}
