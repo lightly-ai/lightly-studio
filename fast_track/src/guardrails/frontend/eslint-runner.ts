@@ -23,8 +23,7 @@ export async function runEslint(relPaths: string[], config: string): Promise<ESL
     const { ESLint: FrontendESLint } = require('eslint') as { ESLint: typeof ESLint };
     const eslint = new FrontendESLint({
         cwd: FRONTEND_ABS,
-        overrideConfigFile: config,
-        errorOnUnmatchedPattern: false // deleted files still appear in changedFiles(); skip them silently
+        overrideConfigFile: config
     });
     return eslint.lintFiles(relPaths);
 }
