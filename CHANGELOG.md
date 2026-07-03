@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Python SDK: `limit` parameter on `ImageDataset.add_samples_from*` methods to index only the first N samples of a dataset.
+
 ### Changed
 
 ### Deprecated

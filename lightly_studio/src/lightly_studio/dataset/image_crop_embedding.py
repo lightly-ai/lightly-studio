@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from dataclasses import dataclass
 from typing import Any
 
 import fsspec
@@ -14,25 +12,7 @@ from PIL import Image
 from tqdm import tqdm
 
 from lightly_studio.dataset.embedding_generator import ImageCrop
-
-
-@dataclass(frozen=True)
-class EmbeddingContext:
-    """Model-specific configuration for batched image-crop embedding.
-
-    Attributes:
-        embedding_dimension: Output embedding dimension.
-        max_batch_size: Maximum crops encoded per model forward pass.
-        device: Torch device for model inference.
-        preprocess: Callable that converts a PIL crop to a model input tensor.
-        encode_batch: Callable that encodes a batch tensor and returns embeddings.
-    """
-
-    embedding_dimension: int
-    max_batch_size: int
-    device: torch.device
-    preprocess: Callable[[Image.Image], torch.Tensor]
-    encode_batch: Callable[[torch.Tensor], NDArray[np.float32]]
+from lightly_studio.dataset.image_embedding import EmbeddingContext
 
 
 def embed_image_crops_batched(

@@ -3,24 +3,19 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Callable
 from uuid import UUID
 
-import fsspec
 import numpy as np
 import torch
 from numpy.typing import NDArray
-from PIL import Image
-from torch.utils.data import DataLoader, Dataset
-from tqdm import tqdm
 
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.vendor import mobileclip
 
-from . import file_utils
+from . import file_utils, image_crop_embedding, image_embedding
 from .embedding_generator import ImageCrop, ImageEmbeddingGenerator
-from .image_crop_embedding import EmbeddingContext, embed_image_crops_batched
+from .image_embedding import EmbeddingContext
 
 MODEL_NAME = "mobileclip_s0"
 MOBILECLIP_DOWNLOAD_URL = (
@@ -28,27 +23,6 @@ MOBILECLIP_DOWNLOAD_URL = (
 )
 MAX_BATCH_SIZE: int = 16
 EMBEDDING_DIMENSION: int = 512
-
-
-# Dataset for efficient batched image loading and preprocessing
-class _ImageFileDataset(Dataset[torch.Tensor]):
-    """Dataset wrapping image file paths and a preprocess function."""
-
-    def __init__(
-        self,
-        filepaths: list[str],
-        preprocess: Callable[[Image.Image], torch.Tensor],
-    ) -> None:
-        self.filepaths = filepaths
-        self.preprocess = preprocess
-
-    def __len__(self) -> int:
-        return len(self.filepaths)
-
-    def __getitem__(self, idx: int) -> torch.Tensor:
-        with fsspec.open(self.filepaths[idx], "rb") as file:
-            image = Image.open(file).convert("RGB")
-            return self.preprocess(image)
 
 
 class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
@@ -120,41 +94,11 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
             A numpy array representing the generated embeddings
             in the same order as the input file paths.
         """
-        total_images = len(filepaths)
-        if not total_images:
-            return np.empty((0, EMBEDDING_DIMENSION), dtype=np.float32)
-
-        dataset = _ImageFileDataset(filepaths, self._preprocess)
-
-        # To avoid issues with db locking and multiprocessing we set the
-        # number of workers to 0 (no multiprocessing). The DataLoader is still
-        # very useful for batching and async prefetching of images.
-        loader = DataLoader(
-            dataset,
-            batch_size=MAX_BATCH_SIZE,
-            num_workers=0,  # must be 0 to avoid multiprocessing issues
+        return image_embedding.embed_image_files_batched(
+            filepaths=filepaths,
+            context=self._embedding_context(),
+            show_progress=show_progress,
         )
-
-        embeddings = np.empty((total_images, EMBEDDING_DIMENSION), dtype=np.float32)
-        position = 0
-        with (
-            tqdm(
-                total=total_images,
-                desc="Generating embeddings",
-                unit=" images",
-                disable=not show_progress,
-            ) as progress_bar,
-            torch.no_grad(),
-        ):
-            for images_tensor in loader:
-                imgs = images_tensor.to(self._device, non_blocking=True)
-                batch_embeddings = self._model.encode_image(imgs).cpu().numpy()  # type: ignore[operator]
-                batch_size = imgs.size(0)
-                embeddings[position : position + batch_size] = batch_embeddings
-                position += batch_size
-                progress_bar.update(batch_size)
-
-        return embeddings
 
     def embed_image_crops(
         self, image_crops: list[ImageCrop], show_progress: bool = True
@@ -169,20 +113,24 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
             A numpy array representing the generated embeddings in the same order
             as the input crops.
         """
-        return embed_image_crops_batched(
+        return image_crop_embedding.embed_image_crops_batched(
             image_crops=image_crops,
-            context=EmbeddingContext(
-                embedding_dimension=EMBEDDING_DIMENSION,
-                max_batch_size=MAX_BATCH_SIZE,
-                device=self._device,
-                preprocess=self._preprocess,
-                encode_batch=lambda images_tensor: (
-                    self._model.encode_image(images_tensor)  # type: ignore[operator]
-                    .cpu()
-                    .numpy()
-                ),
-            ),
+            context=self._embedding_context(),
             show_progress=show_progress,
+        )
+
+    def _embedding_context(self) -> EmbeddingContext:
+        """Build the model-specific configuration for batched image embedding."""
+        return EmbeddingContext(
+            embedding_dimension=EMBEDDING_DIMENSION,
+            max_batch_size=MAX_BATCH_SIZE,
+            device=self._device,
+            preprocess=self._preprocess,
+            encode_batch=lambda images_tensor: (
+                self._model.encode_image(images_tensor)  # type: ignore[operator]
+                .cpu()
+                .numpy()
+            ),
         )
 
 
