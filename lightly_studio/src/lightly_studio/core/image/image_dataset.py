@@ -193,7 +193,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         input_labels: ObjectDetectionInput | InstanceSegmentationInput,
         images_root: PathLike,
         annotation_source: str,
-        embed_annotations: bool = False,
+        embed_annotations: bool = True,
     ) -> None:
         """Attach annotations from a labelformat input to images already in the dataset.
 
@@ -228,7 +228,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         images_root: PathLike,
         annotation_source: str,
         annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
-        embed_annotations: bool = False,
+        embed_annotations: bool = True,
     ) -> None:
         """Attach COCO annotations to images already in the dataset.
 
@@ -258,7 +258,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         data_yaml: PathLike,
         annotation_source: str,
         input_split: str | None = None,
-        embed_annotations: bool = False,
+        embed_annotations: bool = True,
     ) -> None:
         """Attach YOLO annotations to images already in the dataset.
 
@@ -325,7 +325,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         split: str | None = None,
         embed: bool = True,
         annotation_source: str | None = None,
-        embed_annotations: bool = False,
+        embed_annotations: bool = True,
         limit: int | None = None,
     ) -> None:
         """Load a dataset from a labelformat object and store in database.
@@ -377,7 +377,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         input_split: str | None = None,
         embed: bool = True,
         annotation_source: str | None = None,
-        embed_annotations: bool = False,
+        embed_annotations: bool = True,
         limit: int | None = None,
     ) -> None:
         """Load a dataset in YOLO format and store in DB.
@@ -467,7 +467,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         split: str | None = None,
         embed: bool = True,
         annotation_source: str | None = None,
-        embed_annotations: bool = False,
+        embed_annotations: bool = True,
         limit: int | None = None,
     ) -> None:
         """Load a dataset in COCO Object Detection format and store in DB.
@@ -596,7 +596,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         split: str | None = None,
         embed: bool = True,
         annotation_source: str | None = None,
-        embed_annotations: bool = False,
+        embed_annotations: bool = True,
         limit: int | None = None,
     ) -> None:
         """Load a dataset in Lightly format and store in DB.
@@ -805,12 +805,15 @@ def _generate_embeddings_annotations(
     """
     if not embed:
         return
-    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+    # Get annotation collection if it exists. Otherwise skip embedding generation.
+    child_collection_name = annotation_collection_name or SampleType.ANNOTATION.value.lower()
+    annotation_collection_id = collection_resolver.get_by_name(
         session=session,
-        collection_id=root_collection_id,
-        sample_type=SampleType.ANNOTATION,
-        name=annotation_collection_name,
+        name=child_collection_name,
+        parent_collection_id=root_collection_id,
     )
+    if annotation_collection_id is None:
+        return
     embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
     model_id = embedding_manager.load_or_get_default_model(
         session=session,
