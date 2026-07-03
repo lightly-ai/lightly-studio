@@ -1,147 +1,67 @@
-import { execFileSync } from 'node:child_process';
+import { simpleGit } from 'simple-git';
+import type { DiffResult } from 'simple-git';
 
 import type { ChangedFile, GuardrailContext } from './types';
 
 /**
- * Local {@link GuardrailContext} backed by `git`. Diffs `baseRef...HEAD`
- * (three-dot: against the merge-base, matching GitHub's Files-changed view) so
- * a local run judges the same change set as Fast Track Checks does in CI.
+ * Local {@link GuardrailContext} backed by `git` via `simple-git`. Diffs
+ * `baseRef...HEAD` (three-dot: against the merge-base, matching GitHub's
+ * Files-changed view) so a local run judges the same change set as Fast Track
+ * Checks does in CI.
  *
- * Two commands, mirroring how the API separates counts from patch:
- * - `git diff --numstat` for per-file add/delete counts (binaries show as `-`),
- * - `git diff` for the patch text, split per file. Binary and rename-only files
- *   have no hunks, so their `patch` is absent — exactly like the API, which is
- *   why guardrails must tolerate a missing patch.
+ * `diffSummary` is numstat-accurate — it reports exact per-file add/delete
+ * counts (not the scaled `--stat` bar) — which is all a guardrail needs. We
+ * carry no patch text: the git and API providers both expose counts only, so
+ * guardrails never see a diff hunk.
  */
 export class GitGuardrailContext implements GuardrailContext {
     readonly baseRef: string;
+    private readonly git: ReturnType<typeof simpleGit>;
     private cache?: Promise<ChangedFile[]>;
 
     constructor(baseRef: string) {
         this.baseRef = baseRef;
+        // `color.ui=false` keeps a developer's `color.ui=always` from injecting
+        // ANSI into the output simple-git parses. numstat is uncolored anyway,
+        // so this is belt-and-suspenders, not load-bearing.
+        this.git = simpleGit({ config: ['color.ui=false'] });
     }
 
     async changedFiles(): Promise<ChangedFile[]> {
         // Memoize: a run may consult the diff from several guardrails, but the
         // committed diff is fixed for the duration of one judgement. `async` so a
         // git failure surfaces as a rejected promise, not a synchronous throw.
-        this.cache ??= (async () => this.diff())();
+        this.cache ??= (async () => {
+            const summary = await this.git.diffSummary([`${this.baseRef}...HEAD`]);
+            return toChangedFiles(summary.files);
+        })();
         return this.cache;
     }
-
-    private diff(): ChangedFile[] {
-        const range = `${this.baseRef}...HEAD`;
-        const numstat = this.git(['diff', '--numstat', range]);
-        const patchText = this.git(['diff', range]);
-        return mergeChangedFiles(parseNumstat(numstat), splitPatches(patchText));
-    }
-
-    private git(args: string[]): string {
-        // Pin the output format against the developer's global git config:
-        // `-c color.ui=false` strips ANSI that `color.ui=always` would inject,
-        // `--no-ext-diff` ignores diff.external/GIT_EXTERNAL_DIFF. Both would
-        // otherwise corrupt the numstat/patch text we parse.
-        // 256 MiB: large enough for any realistic PR diff; git resolves the repo
-        // root itself, so the working directory doesn't matter.
-        return execFileSync('git', ['-c', 'color.ui=false', ...args, '--no-ext-diff'], {
-            encoding: 'utf8',
-            maxBuffer: 256 * 1024 * 1024
-        });
-    }
-}
-
-interface NumstatEntry {
-    path: string;
-    additions: number;
-    deletions: number;
 }
 
 /**
- * Parse `git diff --numstat` output: `<additions>\t<deletions>\t<path>` per
- * line. Binary files report `-` for both counts, which we normalise to 0.
- * Renames appear as `{old => new}` or `old => new` in the path; we keep the new
- * path so it lines up with the patch's b-side.
+ * Map a {@link DiffResult}'s files to {@link ChangedFile}s. Binary files carry
+ * no line counts (simple-git reports `binary: true` with byte sizes instead),
+ * so they normalise to 0/0. Rename entries name both sides; we keep the new
+ * path so it lines up with the post-change tree.
  */
-export function parseNumstat(output: string): NumstatEntry[] {
-    const entries: NumstatEntry[] = [];
-    for (const line of output.split('\n')) {
-        if (line.trim() === '') continue;
-        const match = /^(-|\d+)\t(-|\d+)\t(.+)$/.exec(line);
-        if (!match) continue;
-        const [, additions, deletions, rawPath] = match;
-        entries.push({
-            path: renameTarget(rawPath!),
-            additions: additions === '-' ? 0 : Number(additions),
-            deletions: deletions === '-' ? 0 : Number(deletions)
-        });
-    }
-    return entries;
+export function toChangedFiles(files: DiffResult['files']): ChangedFile[] {
+    return files.map((file) => ({
+        path: renameTarget(file.file),
+        additions: file.binary ? 0 : file.insertions,
+        deletions: file.binary ? 0 : file.deletions
+    }));
 }
 
 /**
- * Resolve a numstat path to the post-rename path. Git writes renames two ways:
- * `src/{old => new}/f.ts` (shared prefix/suffix) or `old.ts => new.ts` (whole
- * path). Both collapse to the new path; a plain path is returned unchanged.
+ * Resolve a diff path to its post-rename form. Git (and simple-git) write
+ * renames two ways: `src/{old => new}/f.ts` (shared prefix/suffix) or
+ * `old.ts => new.ts` (whole path). Both collapse to the new path; a plain path
+ * is returned unchanged.
  */
-function renameTarget(rawPath: string): string {
+export function renameTarget(rawPath: string): string {
     const braced = rawPath.replace(/\{.*? => (.*?)\}/g, '$1').replace(/\/{2,}/g, '/');
     if (braced !== rawPath) return braced;
     const arrow = rawPath.indexOf(' => ');
     return arrow === -1 ? rawPath : rawPath.slice(arrow + ' => '.length);
-}
-
-/**
- * Split a full `git diff` into per-file patches keyed by the file's b-side
- * path. The stored patch is the hunk portion (from the first `@@` line), which
- * is what the API's `patch` field carries. Sections with no hunks — binary
- * files and pure renames — are omitted, so lookups for them miss and the
- * guardrail sees no patch.
- */
-export function splitPatches(diff: string): Map<string, string> {
-    const patches = new Map<string, string>();
-    // Break before each `diff --git` header. The lookahead keeps the header
-    // with its section; the leading '' (before the first header) is dropped.
-    for (const section of diff.split(/^(?=diff --git )/m)) {
-        if (!section.startsWith('diff --git ')) continue;
-        const path = patchPath(section);
-        const hunks = extractHunks(section);
-        if (path !== undefined && hunks !== undefined) {
-            patches.set(path, hunks);
-        }
-    }
-    return patches;
-}
-
-/** The b-side path from a `diff --git a/<path> b/<path>` header line. */
-function patchPath(section: string): string | undefined {
-    const header = section.slice(0, section.indexOf('\n'));
-    const match = /^diff --git a\/.+ b\/(.+)$/.exec(header);
-    return match ? match[1] : undefined;
-}
-
-/** The patch body from the first `@@` hunk header onward, or undefined if none. */
-function extractHunks(section: string): string | undefined {
-    const match = /^@@ /m.exec(section);
-    if (!match) return undefined;
-    return section.slice(match.index).replace(/\n+$/, '');
-}
-
-/**
- * Join numstat entries (the authoritative file list + counts) with the patch
- * map. Numstat drives the result, so every changed file appears even when its
- * patch is absent.
- */
-export function mergeChangedFiles(
-    entries: NumstatEntry[],
-    patches: Map<string, string>
-): ChangedFile[] {
-    return entries.map((entry) => {
-        const patch = patches.get(entry.path);
-        return {
-            path: entry.path,
-            additions: entry.additions,
-            deletions: entry.deletions,
-            ...(patch !== undefined ? { patch } : {})
-        };
-    });
 }

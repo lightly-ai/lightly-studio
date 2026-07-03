@@ -15,6 +15,9 @@
         "guardrails": "tsx src/guardrails/run-guardrails.ts",
         "list-guardrails": "tsx src/guardrails/run-guardrails.ts --list"
     },
+    "dependencies": {
+        "simple-git": "^3.36.0"
+    },
     "devDependencies": {
         "@eslint/js": "^9.19.0",
         "@types/node": "^24.0.0",

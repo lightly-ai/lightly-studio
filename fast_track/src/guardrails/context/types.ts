@@ -4,13 +4,14 @@ export interface ChangedFile {
     path: string;
     additions: number;
     deletions: number;
-    /** Absent for large/binary files (the API omits it), so guardrails must tolerate that. */
-    patch?: string;
 }
 
-/** Backed by git locally and the API in CI. */
+/**
+ * Backed by git locally and the API in CI. Exposes only the changed files;
+ * how each provider decides what "changed" means (a base ref for git, the PR
+ * event for the API) is a provider detail, not part of this contract.
+ */
 export interface GuardrailContext {
-    baseRef: string;
     changedFiles(): Promise<ChangedFile[]>;
 }
 

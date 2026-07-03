@@ -5,7 +5,6 @@ import type { Guardrail, GuardrailContext } from './context/types';
 import { runGuardrails } from './run-guardrails';
 
 const context: GuardrailContext = {
-    baseRef: 'origin/main',
     changedFiles: async () => []
 };
 
