@@ -313,10 +313,11 @@ class DatasetQuery(Generic[T]):
             default_order_by = OrderByField(ImageSampleField.created_at)
             query = default_order_by.apply(query)
         elif self.dataset.sample_type == SampleType.VIDEO_FRAME:
-            # Default to a deterministic order across videos: group by parent video,
-            # then by frame number. Both are columns on the frame table, so no join.
-            query = query.order_by(
-                col(VideoFrameTable.parent_sample_id),
+            # Match get_all_by_collection_id: order by parent-video path, then frame
+            # number. parent_sample_id is a random UUID (unstable across re-imports),
+            # so join the parent video and sort by its path for a stable order.
+            query = query.join(VideoFrameTable.video).order_by(
+                col(VideoTable.file_path_abs),
                 col(VideoFrameTable.frame_number),
             )
 
