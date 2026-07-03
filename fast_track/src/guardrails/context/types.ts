@@ -6,13 +6,8 @@ export interface ChangedFile {
     deletions: number;
 }
 
-/**
- * Backed by git locally and the API in CI. Exposes changed-file counts plus the
- * base ref — the escape hatch for a guardrail that needs its own diff hunks, so
- * no context carries patch text most guardrails never read.
- */
+/** Backed by git locally and the API in CI. */
 export interface GuardrailContext {
-    /** Ref the change set is diffed against (three-dot / merge-base). */
     baseRef: string;
     changedFiles(): Promise<ChangedFile[]>;
 }
