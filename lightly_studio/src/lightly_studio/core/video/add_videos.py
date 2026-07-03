@@ -207,8 +207,7 @@ def load_into_collection_from_paths(  # noqa: PLR0913
                 logger.error(f"Error processing video {video_path}: {e}")
                 continue
 
-    if show_progress:
-        report.log_summary()
+    report.log_summary()
 
     return created_video_sample_ids, created_video_frame_sample_ids
 

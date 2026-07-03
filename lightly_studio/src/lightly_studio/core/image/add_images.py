@@ -121,8 +121,7 @@ def load_into_dataset_from_paths(
         )
         created_sample_ids.extend(created_path_to_id.values())
 
-    if show_progress:
-        report.log_summary()
+    report.log_summary()
     return created_sample_ids
 
 
