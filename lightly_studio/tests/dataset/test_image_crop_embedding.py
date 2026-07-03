@@ -1,5 +1,5 @@
+import uuid
 from pathlib import Path
-from uuid import uuid4
 
 import numpy as np
 import torch
@@ -28,7 +28,7 @@ def test_embed_image_crops_batched__empty_input_returns_empty_array() -> None:
     assert result.keys == []
 
 
-def test_embed_image_crops_batched__preserves_input_order_across_filepaths(
+def test_embed_image_crops_batched__returns_keys_in_embedding_row_order(
     tmp_path: Path,
 ) -> None:
     image_a_path = tmp_path / "image_a.png"
@@ -39,7 +39,7 @@ def test_embed_image_crops_batched__preserves_input_order_across_filepaths(
     # Crops are interleaved across two files, each with a distinct width. The
     # helper groups crops by filepath before encoding, so the encode order
     # (a, a, b, b) differs from the input order.
-    key_0, key_1, key_2, key_3 = uuid4(), uuid4(), uuid4(), uuid4()
+    key_0, key_1, key_2, key_3 = uuid.uuid4(), uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
     keyed_crops = [
         (key_0, ImageCrop(filepath=str(image_a_path), x=0, y=0, width=5, height=10)),
         (key_1, ImageCrop(filepath=str(image_b_path), x=0, y=0, width=6, height=10)),
@@ -70,6 +70,6 @@ def test_embed_image_crops_batched__preserves_input_order_across_filepaths(
     # batch spans both files and the last crop forms a partial final batch.
     assert encode_calls == [3, 1]
     assert result.embeddings.shape == (4, 1)
-    # keys follow the encode order, tagging each row with its sample id.
+    # Keys follow the encode order, tagging each row with its sample id.
     assert result.keys == [key_0, key_2, key_1, key_3]
     assert result.embeddings[:, 0].tolist() == [5.0, 7.0, 6.0, 8.0]
