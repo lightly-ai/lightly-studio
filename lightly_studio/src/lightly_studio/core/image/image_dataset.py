@@ -317,6 +317,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             input_labels=label_input,
             images_root=images_root,
             annotation_source=annotation_source,
+            embed_annotations=False,
         )
 
     def add_samples_from_labelformat(  # noqa: PLR0913
