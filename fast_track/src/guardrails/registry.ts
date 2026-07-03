@@ -25,7 +25,7 @@ export interface SelectOptions {
  */
 export function selectGuardrails(all: Guardrail[], options: SelectOptions): Guardrail[] {
     let selected = all;
-    const explicit = options.guardrailNames !== undefined;
+    const hasExplicitGuardrails = options.guardrailNames !== undefined;
 
     if (options.guardrailNames) {
         const known = new Set(all.map((g) => g.name));
@@ -38,7 +38,7 @@ export function selectGuardrails(all: Guardrail[], options: SelectOptions): Guar
     }
 
     if (!options.hasPrContext) {
-        if (explicit) {
+        if (hasExplicitGuardrails) {
             const unavailable = selected.filter((g) => g.needsPrContext).map((g) => g.name);
             if (unavailable.length > 0) {
                 throw new Error(
