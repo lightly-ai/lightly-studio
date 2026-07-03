@@ -57,10 +57,8 @@ async function runOne(guardrail: Guardrail, context: GuardrailContext): Promise<
 }
 
 // --- Local CLI -------------------------------------------------------------
-//
-// Judges the current branch's committed changes against a base ref from a plain checkout — no
-// `@actions/*`, no GitHub API. The CI entry point that writes the verdict
-// artifact lands in a later PR.
+// Judges the branch's committed changes from a plain checkout — no GitHub API.
+// The CI entry that writes the verdict artifact lands in a later PR.
 
 /** Base ref to diff against; overridable so stacked branches can pick their base. */
 const DEFAULT_BASE_REF = 'origin/main';
@@ -112,8 +110,7 @@ async function main(argv: string[], env: NodeJS.ProcessEnv): Promise<number> {
     return status === 'pass' ? 0 : 1;
 }
 
-// `import.meta.url` is this module's URL; `argv[1]` is the entry script. Equal
-// only when this file was run directly, never when it was imported.
+// Run only when invoked directly, not when imported.
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
     main(process.argv.slice(2), process.env)
         .then((code) => process.exit(code))
