@@ -88,6 +88,55 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
     assert samples[0].sample.collection_id == collection.collection_id
 
 
+def test_load_into_dataset_from_paths__records_missing_broken_already_present_outcomes(
+    db_session: Session, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    # Arrange: a folder mixing a good, a missing, a broken and an already-present file.
+    collection = helpers_resolvers.create_collection(db_session)
+
+    good_path = tmp_path / "good.jpg"
+    PILImage.new("RGB", (100, 100)).save(str(good_path))
+
+    broken_path = tmp_path / "broken.jpg"
+    broken_path.write_bytes(b"not a real image")
+
+    missing_path = tmp_path / "missing.jpg"
+
+    already_present_path = tmp_path / "already_present.jpg"
+    PILImage.new("RGB", (100, 100)).save(str(already_present_path))
+    helpers_resolvers.create_images(
+        db_session,
+        collection.collection_id,
+        [ImageStub(path=str(already_present_path.absolute().as_posix()))],
+    )
+
+    # Act
+    with caplog.at_level("INFO"):
+        sample_ids = add_images.load_into_dataset_from_paths(
+            session=db_session,
+            root_collection_id=collection.collection_id,
+            image_paths=[
+                str(good_path),
+                str(missing_path),
+                str(broken_path),
+                str(already_present_path),
+            ],
+        )
+
+    # Assert: only the good file is added.
+    assert len(sample_ids) == 1
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    ).samples
+    assert {sample.file_name for sample in samples} == {"already_present.jpg", "good.jpg"}
+
+    # Assert: the end-of-run summary records one outcome per file.
+    assert "added=1" in caplog.text
+    assert "already_present=1" in caplog.text
+    assert "missing=1" in caplog.text
+    assert "broken=1" in caplog.text
+
+
 def test_load_into_collection_from_paths__deduplicates_in_run_duplicates(
     db_session: Session, tmp_path: Path
 ) -> None:
