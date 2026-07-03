@@ -1,7 +1,7 @@
 import type { DiffResult } from 'simple-git';
 import { describe, expect, it } from 'vitest';
 
-import { renameTarget, toChangedFiles } from './git-context';
+import { GitGuardrailContext, renameTarget, toChangedFiles } from './git-context';
 
 type DiffFiles = DiffResult['files'];
 
@@ -44,6 +44,13 @@ describe('toChangedFiles', () => {
 
     it('returns an empty list for no changes', () => {
         expect(toChangedFiles([])).toEqual([]);
+    });
+});
+
+describe('GitGuardrailContext', () => {
+    it('rejects an empty base ref (would diff against nothing)', () => {
+        expect(() => new GitGuardrailContext('')).toThrow(/must not be empty/);
+        expect(() => new GitGuardrailContext('   ')).toThrow(/must not be empty/);
     });
 });
 

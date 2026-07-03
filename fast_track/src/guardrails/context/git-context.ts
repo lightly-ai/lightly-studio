@@ -14,9 +14,21 @@ export class GitGuardrailContext implements GuardrailContext {
     private cache?: Promise<ChangedFile[]>;
 
     constructor(baseRef: string) {
+        // An empty ref would make the range `...HEAD` — a valid but empty diff,
+        // silently judging nothing. Reject it here rather than pass vacuously.
+        if (baseRef.trim() === '') throw new Error('baseRef must not be empty');
         this.baseRef = baseRef;
         // color.ui=false: don't let a dev's `color.ui=always` colour parsed output.
         this.git = simpleGit({ config: ['color.ui=false'] });
+    }
+
+    /** Throw if the base ref does not resolve to a commit (e.g. a typo'd branch). */
+    async assertBaseRefResolves(): Promise<void> {
+        try {
+            await this.git.revparse(['--verify', `${this.baseRef}^{commit}`]);
+        } catch {
+            throw new Error(`baseRef does not resolve to a commit: ${this.baseRef}`);
+        }
     }
 
     async changedFiles(): Promise<ChangedFile[]> {
