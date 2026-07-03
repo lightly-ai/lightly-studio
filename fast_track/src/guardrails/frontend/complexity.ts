@@ -1,0 +1,34 @@
+import { extname } from 'node:path';
+import type { ESLint } from 'eslint';
+import type { Guardrail, GuardrailContext, GuardrailOutcome } from '../context/types';
+import { FRONTEND_PREFIX, repoRelPath, runEslint } from './eslint-runner';
+
+const EXTENSIONS = new Set(['.js', '.ts', '.svelte']);
+const ESLINT_CONFIG = 'eslint.complexity.config.js';
+
+export const frontendComplexityGuardrail: Guardrail = {
+    name: 'frontend/complexity',
+    required: true,
+    needsPrContext: false,
+    async run(ctx: GuardrailContext): Promise<GuardrailOutcome> {
+        const files = (await ctx.changedFiles()).filter(
+            (f) => f.path.startsWith(FRONTEND_PREFIX) && EXTENSIONS.has(extname(f.path))
+        );
+
+        if (files.length === 0) {
+            return { status: 'pass', summary: '0 file(s) checked.' };
+        }
+
+        const relPaths = files.map((f) => f.path.slice(FRONTEND_PREFIX.length));
+        const results: ESLint.LintResult[] = await runEslint(relPaths, ESLINT_CONFIG);
+        const violations = results.flatMap((file) =>
+            file.messages.map((msg) => `${repoRelPath(file.filePath)}:${msg.line} — ${msg.message}`)
+        );
+
+        if (violations.length === 0) {
+            return { status: 'pass', summary: `${files.length} file(s) checked, no violations.` };
+        }
+
+        return { status: 'fail', summary: violations.join('\n') };
+    }
+};
