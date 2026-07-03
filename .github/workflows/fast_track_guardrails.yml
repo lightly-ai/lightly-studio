@@ -1,8 +1,7 @@
 name: Fast Track Guardrails
 
-# The judging half: run guardrails on each non-draft PR and publish the verdict as
-# an artifact for the bot. Read-only, takes no action (design §2). Must NOT be a
-# required status check — requiring it would block every non-fast-track PR.
+# Run Fast Track guardrails on each non-draft PR and publish the verdict as
+# an artifact for the bot. NOT a required status check — else would block every non-fast-track PR.
 on:
   pull_request:
     # labeled/unlabeled so toggling the opt-out label re-evaluates.
@@ -28,6 +27,9 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
+        # Runs untrusted PR code and never pushes — keep the token out of git config.
+        with:
+          persist-credentials: false
 
       # Pin Node from .nvmrc, matching the local Makefile's nvm setup.
       - name: Set Up Node
