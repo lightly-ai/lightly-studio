@@ -6,10 +6,8 @@ from numpy.typing import NDArray
 from PIL import Image
 
 from lightly_studio.dataset.embedding_generator import ImageCrop
-from lightly_studio.dataset.image_crop_embedding import (
-    EmbeddingContext,
-    embed_image_crops_batched,
-)
+from lightly_studio.dataset.image_crop_embedding import embed_image_crops_batched
+from lightly_studio.dataset.image_embedding import EmbeddingContext
 
 
 def test_embed_image_crops_batched__empty_input_returns_empty_array() -> None:
