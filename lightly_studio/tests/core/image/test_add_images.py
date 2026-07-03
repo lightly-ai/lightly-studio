@@ -91,24 +91,32 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
 def test_load_into_dataset_from_paths__records_missing_broken_already_present_outcomes(
     db_session: Session, tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
-    # Arrange: a folder mixing a good, a missing, a broken and an already-present file.
+    # Arrange: a folder mixing good / already-present / missing / broken files. Each outcome
+    # gets a distinct count so a mix-up between two outcomes cannot pass the assertions.
     collection = helpers_resolvers.create_collection(db_session)
 
-    good_path = tmp_path / "good.jpg"
-    PILImage.new("RGB", (100, 100)).save(str(good_path))
+    # 1 good file -> added=1.
+    good_paths = [tmp_path / "good0.jpg"]
+    for path in good_paths:
+        PILImage.new("RGB", (100, 100)).save(str(path))
 
-    broken_path = tmp_path / "broken.jpg"
-    broken_path.write_bytes(b"not a real image")
-
-    missing_path = tmp_path / "missing.jpg"
-
-    already_present_path = tmp_path / "already_present.jpg"
-    PILImage.new("RGB", (100, 100)).save(str(already_present_path))
+    # 2 already-present files: created on disk and pre-inserted into the database.
+    already_present_paths = [tmp_path / "present0.jpg", tmp_path / "present1.jpg"]
+    for path in already_present_paths:
+        PILImage.new("RGB", (100, 100)).save(str(path))
     helpers_resolvers.create_images(
         db_session,
         collection.collection_id,
-        [ImageStub(path=str(already_present_path.absolute().as_posix()))],
+        [ImageStub(path=str(path.absolute().as_posix())) for path in already_present_paths],
     )
+
+    # 3 missing files: never created on disk.
+    missing_paths = [tmp_path / f"missing{i}.jpg" for i in range(3)]
+
+    # 4 broken files: present on disk but not decodable.
+    broken_paths = [tmp_path / f"broken{i}.jpg" for i in range(4)]
+    for path in broken_paths:
+        path.write_bytes(b"not a real image")
 
     # Act
     with caplog.at_level("INFO"):
@@ -116,25 +124,23 @@ def test_load_into_dataset_from_paths__records_missing_broken_already_present_ou
             session=db_session,
             root_collection_id=collection.collection_id,
             image_paths=[
-                str(good_path),
-                str(missing_path),
-                str(broken_path),
-                str(already_present_path),
+                str(path)
+                for path in good_paths + already_present_paths + missing_paths + broken_paths
             ],
         )
 
-    # Assert: only the good file is added.
-    assert len(sample_ids) == 1
+    # Assert: only the good files are added.
+    assert len(sample_ids) == len(good_paths)
     samples = image_resolver.get_all_by_collection_id(
         session=db_session, collection_id=collection.collection_id
     ).samples
-    assert {sample.file_name for sample in samples} == {"already_present.jpg", "good.jpg"}
+    assert {sample.file_name for sample in samples} == {"good0.jpg", "present0.jpg", "present1.jpg"}
 
-    # Assert: the end-of-run summary records one outcome per file.
+    # Assert: the end-of-run summary records the distinct per-outcome counts.
     assert "added=1" in caplog.text
-    assert "already_present=1" in caplog.text
-    assert "missing=1" in caplog.text
-    assert "broken=1" in caplog.text
+    assert "already_present=2" in caplog.text
+    assert "missing=3" in caplog.text
+    assert "broken=4" in caplog.text
 
 
 def test_load_into_collection_from_paths__deduplicates_in_run_duplicates(
