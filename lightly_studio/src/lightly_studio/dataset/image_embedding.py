@@ -81,6 +81,9 @@ def embed_image_files_batched(
     if not total_images:
         return np.empty((0, context.embedding_dimension), dtype=np.float32)
 
+    if context.max_batch_size <= 0:
+        raise ValueError("max_batch_size must be positive.")
+
     dataset = _ImageFileDataset(filepaths, context.preprocess)
 
     # To avoid issues with db locking and multiprocessing we set the number of

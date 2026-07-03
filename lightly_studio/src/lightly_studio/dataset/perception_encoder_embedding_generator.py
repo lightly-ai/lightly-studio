@@ -19,10 +19,9 @@ from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transforms
 
-from . import file_utils
+from . import file_utils, image_crop_embedding, image_embedding
 from .embedding_generator import ImageCrop, ImageEmbeddingGenerator, VideoEmbeddingGenerator
-from .image_crop_embedding import embed_image_crops_batched
-from .image_embedding import EmbeddingContext, embed_image_files_batched
+from .image_embedding import EmbeddingContext
 
 MODEL_NAME = "PE-Core-T16-384"
 DEFAULT_VIDEO_CHANNEL = 0
@@ -174,7 +173,7 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             A numpy array representing the generated embeddings
             in the same order as the input file paths.
         """
-        return embed_image_files_batched(
+        return image_embedding.embed_image_files_batched(
             filepaths=filepaths,
             context=self._embedding_context(),
             show_progress=show_progress,
@@ -193,7 +192,7 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             A numpy array representing the generated embeddings in the same order
             as the input crops.
         """
-        return embed_image_crops_batched(
+        return image_crop_embedding.embed_image_crops_batched(
             image_crops=image_crops,
             context=self._embedding_context(),
             show_progress=show_progress,

@@ -4,14 +4,12 @@ import numpy as np
 import torch
 from PIL import Image
 
-from lightly_studio.dataset.image_embedding import (
-    EmbeddingContext,
-    embed_image_files_batched,
-)
+from lightly_studio.dataset import image_embedding
+from lightly_studio.dataset.image_embedding import EmbeddingContext
 
 
 def test_embed_image_files_batched__empty_input_returns_empty_array() -> None:
-    embeddings = embed_image_files_batched(
+    embeddings = image_embedding.embed_image_files_batched(
         filepaths=[],
         context=EmbeddingContext(
             embedding_dimension=4,
@@ -36,7 +34,7 @@ def test_embed_image_files_batched__preserves_input_order(tmp_path: Path) -> Non
         Image.new("RGB", (width, 10), color=(255, 0, 0)).save(path)
         filepaths.append(str(path))
 
-    embeddings = embed_image_files_batched(
+    embeddings = image_embedding.embed_image_files_batched(
         filepaths=filepaths,
         context=EmbeddingContext(
             embedding_dimension=1,
