@@ -8,8 +8,9 @@ crop-specific path lives in ``image_crop_embedding.py`` and reuses the same
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from uuid import UUID
 
 import fsspec
 import numpy as np
@@ -18,6 +19,8 @@ from numpy.typing import NDArray
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
+
+from lightly_studio.dataset.embedding_generator import BatchedEmbeddingResult
 
 
 @dataclass(frozen=True)
@@ -63,27 +66,35 @@ class _ImageFileDataset(Dataset[torch.Tensor]):
 
 
 def embed_image_files_batched(
-    filepaths: list[str],
+    keyed_filepaths: Sequence[tuple[UUID, str]],
     context: EmbeddingContext,
     show_progress: bool,
-) -> NDArray[np.float32]:
+) -> BatchedEmbeddingResult:
     """Embed image files in batches, preserving input order.
 
+    Each embedding is tagged with the sample id paired with its filepath, so
+    callers map results back by identity rather than by position.
+
     Args:
-        filepaths: Paths of the images to embed.
+        keyed_filepaths: ``(sample_id, filepath)`` pairs to embed.
         context: Model-specific embedding configuration.
         show_progress: Whether to show a tqdm progress bar.
 
     Returns:
-        Float32 array of shape ``(len(filepaths), embedding_dimension)``.
+        Embeddings for the embedded files, keyed by sample id.
     """
-    total_images = len(filepaths)
+    total_images = len(keyed_filepaths)
     if not total_images:
-        return np.empty((0, context.embedding_dimension), dtype=np.float32)
+        return BatchedEmbeddingResult(
+            embeddings=np.empty((0, context.embedding_dimension), dtype=np.float32),
+            keys=[],
+        )
 
     if context.max_batch_size <= 0:
         raise ValueError("max_batch_size must be positive.")
 
+    keys = [key for key, _ in keyed_filepaths]
+    filepaths = [filepath for _, filepath in keyed_filepaths]
     dataset = _ImageFileDataset(filepaths, context.preprocess)
 
     # To avoid issues with db locking and multiprocessing we set the number of
@@ -114,4 +125,4 @@ def embed_image_files_batched(
             position += batch_size
             progress_bar.update(batch_size)
 
-    return embeddings
+    return BatchedEmbeddingResult(embeddings=embeddings, keys=keys)

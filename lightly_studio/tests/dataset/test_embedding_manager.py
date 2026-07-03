@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from uuid import UUID, uuid4
 
-import numpy as np
 import pytest
-from numpy.typing import NDArray
 from pytest_mock import MockerFixture
 from sqlmodel import Session, select
 
 from lightly_studio.dataset import embedding_manager
 from lightly_studio.dataset.embedding_generator import (
+    BatchedEmbeddingResult,
     ImageCrop,
     ImageEmbeddingGenerator,
     RandomEmbeddingGenerator,
@@ -98,13 +98,17 @@ def test_register_multiple_models(
             raise NotImplementedError()
 
         def embed_images(
-            self, filepaths: list[str], show_progress: bool = True
-        ) -> NDArray[np.float32]:
+            self,
+            keyed_filepaths: Sequence[tuple[UUID, str]],
+            show_progress: bool = True,
+        ) -> BatchedEmbeddingResult:
             raise NotImplementedError()
 
         def embed_image_crops(
-            self, image_crops: list[ImageCrop], show_progress: bool = True
-        ) -> NDArray[np.float32]:
+            self,
+            keyed_crops: Sequence[tuple[UUID, ImageCrop]],
+            show_progress: bool = True,
+        ) -> BatchedEmbeddingResult:
             raise NotImplementedError()
 
     model_id2 = embedding_manager.register_embedding_model(

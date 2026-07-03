@@ -45,7 +45,8 @@ class TestPerceptionEncoderEmbeddingGenerator:
     def test_embed_images(self) -> None:
         perception_encoder = PerceptionEncoderEmbeddingGenerator()
         cat_image_path = FIXTURES_DIR / "cat.jpg"
-        embeddings = perception_encoder.embed_images([str(cat_image_path)])
+        result = perception_encoder.embed_images([(uuid.uuid4(), str(cat_image_path))])
+        embeddings = result.embeddings
 
         assert len(embeddings) == 1
         cat_embedding = embeddings[0]
@@ -61,9 +62,9 @@ class TestPerceptionEncoderEmbeddingGenerator:
 
     def test_embed_image_crops__empty_input(self) -> None:
         perception_encoder = PerceptionEncoderEmbeddingGenerator()
-        embeddings = perception_encoder.embed_image_crops([])
+        result = perception_encoder.embed_image_crops([])
 
-        assert embeddings.shape == (0, 512)
+        assert result.embeddings.shape == (0, 512)
 
     def test_embed_image_crops__full_image_crop_matches_embed_images(self) -> None:
         perception_encoder = PerceptionEncoderEmbeddingGenerator()
@@ -72,8 +73,12 @@ class TestPerceptionEncoderEmbeddingGenerator:
             width, height = image.size
 
         full_crop = ImageCrop(filepath=str(cat_image_path), x=0, y=0, width=width, height=height)
-        crop_embeddings = perception_encoder.embed_image_crops([full_crop])
-        image_embeddings = perception_encoder.embed_images([str(cat_image_path)])
+        crop_embeddings = perception_encoder.embed_image_crops(
+            [(uuid.uuid4(), full_crop)]
+        ).embeddings
+        image_embeddings = perception_encoder.embed_images(
+            [(uuid.uuid4(), str(cat_image_path))]
+        ).embeddings
 
         assert crop_embeddings.shape == (1, 512)
         # A crop covering the entire image is preprocessed and encoded identically
@@ -119,7 +124,9 @@ class TestPerceptionEncoderEmbeddingGenerator:
 
         # Embed image.
         cat_image_path = FIXTURES_DIR / "cat.jpg"
-        cat_image_emb = torch.tensor(perception_encoder.embed_images([str(cat_image_path)])[0])
+        cat_image_emb = torch.tensor(
+            perception_encoder.embed_images([(uuid.uuid4(), str(cat_image_path))]).embeddings[0]
+        )
         cat_image_emb /= cat_image_emb.norm(dim=-1, keepdim=True)
 
         # Compute softmax similarity as in perception_encoder repo example.

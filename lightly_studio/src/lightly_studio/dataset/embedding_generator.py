@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 from uuid import UUID
@@ -22,6 +23,24 @@ class ImageCrop:
     y: int
     width: int
     height: int
+
+
+@dataclass(frozen=True)
+class BatchedEmbeddingResult:
+    """Embeddings for the successfully embedded inputs, keyed by sample id.
+
+    Broken inputs are skipped per-item instead of aborting the batch, so this
+    may cover fewer inputs than were passed. ``keys[i]`` is the sample id of the
+    input that produced ``embeddings[i]`` — the id travels with the data through
+    batching and skipping, so callers never re-align by position.
+
+    Attributes:
+        embeddings: Float32 array of shape ``(len(keys), dimension)``.
+        keys: Sample id for each embedding row, in row order.
+    """
+
+    embeddings: NDArray[np.float32]
+    keys: list[UUID]
 
 
 @runtime_checkable
@@ -64,33 +83,43 @@ class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
     for creating embeddings.
     """
 
-    def embed_images(self, filepaths: list[str], show_progress: bool = True) -> NDArray[np.float32]:
+    def embed_images(
+        self,
+        keyed_filepaths: Sequence[tuple[UUID, str]],
+        show_progress: bool = True,
+    ) -> BatchedEmbeddingResult:
         """Generate embeddings for multiple image samples.
 
         TODO(Michal, 04/2025): Use DatasetLoader as input instead.
 
+        Each embedding is tagged with the sample id paired with its filepath, so
+        callers map results back by identity rather than by position.
+
         Args:
-            filepaths: A list of file paths to the images to embed.
+            keyed_filepaths: ``(sample_id, filepath)`` pairs to embed.
             show_progress: Whether to show a progress bar during embedding.
 
         Returns:
-            A numpy array representing the generated embeddings
-            in the same order as the input file paths.
+            Embeddings for the embedded inputs, keyed by sample id.
         """
         ...
 
     def embed_image_crops(
-        self, image_crops: list[ImageCrop], show_progress: bool = True
-    ) -> NDArray[np.float32]:
+        self,
+        keyed_crops: Sequence[tuple[UUID, ImageCrop]],
+        show_progress: bool = True,
+    ) -> BatchedEmbeddingResult:
         """Generate embeddings for image crops.
 
+        Each embedding is tagged with the sample id paired with its crop, so
+        callers map results back by identity rather than by position.
+
         Args:
-            image_crops: A list of image crop definitions to embed.
+            keyed_crops: ``(sample_id, crop)`` pairs to embed.
             show_progress: Whether to show a progress bar during embedding.
 
         Returns:
-            A numpy array representing the generated embeddings in the same order
-            as the input crops.
+            Embeddings for the embedded crops, keyed by sample id.
         """
         ...
 
@@ -148,17 +177,27 @@ class RandomEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator)
         """Generate a random embedding for a text sample."""
         return [random.random() for _ in range(self._dimension)]
 
-    def embed_images(self, filepaths: list[str], show_progress: bool = True) -> NDArray[np.float32]:
+    def embed_images(
+        self,
+        keyed_filepaths: Sequence[tuple[UUID, str]],
+        show_progress: bool = True,
+    ) -> BatchedEmbeddingResult:
         """Generate random embeddings for multiple image samples."""
         _ = show_progress  # Not used for random embeddings.
-        return np.random.rand(len(filepaths), self._dimension).astype(np.float32)
+        keys = [key for key, _ in keyed_filepaths]
+        embeddings = np.random.rand(len(keys), self._dimension).astype(np.float32)
+        return BatchedEmbeddingResult(embeddings=embeddings, keys=keys)
 
     def embed_image_crops(
-        self, image_crops: list[ImageCrop], show_progress: bool = True
-    ) -> NDArray[np.float32]:
+        self,
+        keyed_crops: Sequence[tuple[UUID, ImageCrop]],
+        show_progress: bool = True,
+    ) -> BatchedEmbeddingResult:
         """Generate random embeddings for multiple image crops."""
         _ = show_progress  # Not used for random embeddings.
-        return np.random.rand(len(image_crops), self._dimension).astype(np.float32)
+        keys = [key for key, _ in keyed_crops]
+        embeddings = np.random.rand(len(keys), self._dimension).astype(np.float32)
+        return BatchedEmbeddingResult(embeddings=embeddings, keys=keys)
 
     def embed_videos(self, filepaths: list[str]) -> NDArray[np.float32]:
         """Generate random embeddings for multiple video samples."""

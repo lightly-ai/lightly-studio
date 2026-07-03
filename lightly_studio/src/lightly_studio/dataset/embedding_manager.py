@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import numpy as np
 from numpy.typing import NDArray
@@ -179,17 +179,19 @@ class EmbeddingManager:
             )
         }
 
-        # Extract filepaths in the same order as sample_ids.
-        filepaths = [sample_id_to_filepath[sample_id] for sample_id in sample_ids]
-
-        # Generate embeddings for the samples.
-        embeddings = model.embed_images(filepaths=filepaths)
+        # Pair each sample id with its filepath so the id travels through
+        # embedding and the result comes back keyed by sample id, without the
+        # caller re-aligning embeddings to samples by position.
+        keyed_filepaths = [
+            (sample_id, sample_id_to_filepath[sample_id]) for sample_id in sample_ids
+        ]
+        result = model.embed_images(keyed_filepaths=keyed_filepaths)
 
         _store_embeddings(
             session=session,
             model_id=model_id,
-            sample_ids=sample_ids,
-            embeddings=embeddings,
+            sample_ids=result.keys,
+            embeddings=result.embeddings,
         )
 
     def embed_annotations(
@@ -239,16 +241,21 @@ class EmbeddingManager:
                 if not annotation_crops:
                     continue
 
-                embeddings = model.embed_image_crops(
-                    image_crops=[crop.image_crop for crop in annotation_crops],
+                # Pair each annotation sample id with its crop so the id travels
+                # through embedding and the result comes back keyed by sample id.
+                keyed_crops = [
+                    (crop.annotation_sample_id, crop.image_crop) for crop in annotation_crops
+                ]
+                result = model.embed_image_crops(
+                    keyed_crops=keyed_crops,
                     show_progress=False,
                 )
 
                 _store_embeddings(
                     session=session,
                     model_id=model_id,
-                    sample_ids=[crop.annotation_sample_id for crop in annotation_crops],
-                    embeddings=embeddings,
+                    sample_ids=result.keys,
+                    embeddings=result.embeddings,
                     show_progress=False,
                 )
                 progress.update(len(annotation_crops))
@@ -282,12 +289,13 @@ class EmbeddingManager:
         if not isinstance(model, ImageEmbeddingGenerator):
             raise ValueError("Embedding model not compatible with images.")
 
-        # Generate embedding for the image without progress bar.
-        embeddings = model.embed_images(filepaths=[filepath], show_progress=False)
+        # Generate embedding for the image without progress bar. The key is
+        # unused here (single item); a throwaway id pairs with the filepath.
+        result = model.embed_images(keyed_filepaths=[(uuid4(), filepath)], show_progress=False)
 
         # Return the single embedding as a list of floats.
-        result: list[float] = embeddings[0].tolist()
-        return result
+        embedding: list[float] = result.embeddings[0].tolist()
+        return embedding
 
     def embed_videos(
         self,

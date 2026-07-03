@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Callable
 from uuid import UUID
@@ -20,7 +21,12 @@ from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transforms
 
 from . import file_utils, image_crop_embedding, image_embedding
-from .embedding_generator import ImageCrop, ImageEmbeddingGenerator, VideoEmbeddingGenerator
+from .embedding_generator import (
+    BatchedEmbeddingResult,
+    ImageCrop,
+    ImageEmbeddingGenerator,
+    VideoEmbeddingGenerator,
+)
 from .image_embedding import EmbeddingContext
 
 MODEL_NAME = "PE-Core-T16-384"
@@ -162,38 +168,42 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             embedding_list: list[float] = embedding.cpu().numpy().flatten().tolist()
         return embedding_list
 
-    def embed_images(self, filepaths: list[str], show_progress: bool = True) -> NDArray[np.float32]:
+    def embed_images(
+        self,
+        keyed_filepaths: Sequence[tuple[UUID, str]],
+        show_progress: bool = True,
+    ) -> BatchedEmbeddingResult:
         """Embed images with Perception Encoder.
 
         Args:
-            filepaths: A list of file paths to the images to embed.
+            keyed_filepaths: ``(sample_id, filepath)`` pairs to embed.
             show_progress: Whether to show a progress bar during embedding.
 
         Returns:
-            A numpy array representing the generated embeddings
-            in the same order as the input file paths.
+            Embeddings for the embedded files, keyed by sample id.
         """
         return image_embedding.embed_image_files_batched(
-            filepaths=filepaths,
+            keyed_filepaths=keyed_filepaths,
             context=self._embedding_context(),
             show_progress=show_progress,
         )
 
     def embed_image_crops(
-        self, image_crops: list[ImageCrop], show_progress: bool = True
-    ) -> NDArray[np.float32]:
+        self,
+        keyed_crops: Sequence[tuple[UUID, ImageCrop]],
+        show_progress: bool = True,
+    ) -> BatchedEmbeddingResult:
         """Embed image crops with Perception Encoder.
 
         Args:
-            image_crops: A list of image crop definitions to embed.
+            keyed_crops: ``(sample_id, crop)`` pairs to embed.
             show_progress: Whether to show a progress bar during embedding.
 
         Returns:
-            A numpy array representing the generated embeddings in the same order
-            as the input crops.
+            Embeddings for the embedded crops, keyed by sample id.
         """
         return image_crop_embedding.embed_image_crops_batched(
-            image_crops=image_crops,
+            keyed_crops=keyed_crops,
             context=self._embedding_context(),
             show_progress=show_progress,
         )
