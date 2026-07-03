@@ -40,6 +40,14 @@ describe('frontendComplexityGuardrail', () => {
         expect(result.summary).toContain('1 file(s) checked, no violations');
     });
 
+    it('passes when a deleted frontend file is in changedFiles', async () => {
+        vi.mocked(runEslint).mockResolvedValueOnce([]);
+        const result = await frontendComplexityGuardrail.run(
+            makeCtx([{ path: 'lightly_studio_view/src/deleted.ts', additions: 0, deletions: 10 }])
+        );
+        expect(result.status).toBe('pass');
+    });
+
     it('fails when ESLint reports an error-level violation', async () => {
         vi.mocked(runEslint).mockResolvedValueOnce([
             {
