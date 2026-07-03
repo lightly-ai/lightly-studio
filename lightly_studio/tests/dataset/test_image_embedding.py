@@ -1,0 +1,50 @@
+from pathlib import Path
+
+import numpy as np
+import torch
+from PIL import Image
+
+from lightly_studio.dataset import image_embedding
+from lightly_studio.dataset.image_embedding import EmbeddingContext
+
+
+def test_embed_image_files_batched__empty_input_returns_empty_array() -> None:
+    embeddings = image_embedding.embed_image_files_batched(
+        filepaths=[],
+        context=EmbeddingContext(
+            embedding_dimension=4,
+            max_batch_size=2,
+            device=torch.device("cpu"),
+            preprocess=lambda image: torch.tensor([float(image.size[0])]),
+            encode_batch=lambda images_tensor: images_tensor.cpu().numpy(),
+        ),
+        show_progress=False,
+    )
+
+    assert embeddings.shape == (0, 4)
+
+
+def test_embed_image_files_batched__preserves_input_order(tmp_path: Path) -> None:
+    # Each image has a distinct width, and preprocess encodes an image as its
+    # width, so the embeddings must come back in input order across batches.
+    widths = [5, 6, 7]
+    filepaths = []
+    for index, width in enumerate(widths):
+        path = tmp_path / f"image_{index}.png"
+        Image.new("RGB", (width, 10), color=(255, 0, 0)).save(path)
+        filepaths.append(str(path))
+
+    embeddings = image_embedding.embed_image_files_batched(
+        filepaths=filepaths,
+        context=EmbeddingContext(
+            embedding_dimension=1,
+            max_batch_size=2,
+            device=torch.device("cpu"),
+            preprocess=lambda image: torch.tensor([float(image.size[0])]),
+            encode_batch=lambda images_tensor: images_tensor.numpy().astype(np.float32),
+        ),
+        show_progress=False,
+    )
+
+    assert embeddings.shape == (3, 1)
+    assert embeddings[:, 0].tolist() == [float(width) for width in widths]
