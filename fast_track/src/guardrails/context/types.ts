@@ -1,4 +1,12 @@
+import type { getOctokit } from '@actions/github';
+
 import type { GuardrailResult } from '../../shared/verdict';
+
+/**
+ * The hydrated Octokit client `@actions/github` produces. `type`-only: erased at
+ * runtime, so referencing it never loads `@actions/*` on the local git path.
+ */
+export type Octokit = ReturnType<typeof getOctokit>;
 
 export interface ChangedFile {
     path: string;
@@ -12,6 +20,8 @@ export interface ChangedFile {
 export interface GuardrailContext {
     baseRef: string;
     changedFiles(): Promise<ChangedFile[]>;
+    /** Present only in CI (set by the API-backed context); a `pr-only` guardrail reaches the API through it. */
+    octokit?: Octokit;
 }
 
 /** A guardrail's `run` output; the runner adds the `name` from the definition. */
