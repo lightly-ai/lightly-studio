@@ -267,11 +267,16 @@ def test_embed_images_with_incompatible_generator(
         )
 
 
+@pytest.mark.parametrize(
+    "annotation_type",
+    [AnnotationType.OBJECT_DETECTION, AnnotationType.SEGMENTATION_MASK],
+)
 def test_embed_annotations(
     db_session: Session,
     collection: CollectionTable,
+    annotation_type: AnnotationType,
 ) -> None:
-    """embed_annotations stores one embedding per object-detection annotation."""
+    """embed_annotations stores one embedding per croppable annotation, per type."""
     image = create_image(session=db_session, collection_id=collection.collection_id)
     label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
     create_annotation(
@@ -279,48 +284,7 @@ def test_embed_annotations(
         collection_id=collection.collection_id,
         sample_id=image.sample_id,
         annotation_label_id=label.annotation_label_id,
-    )
-    annotation_collection_id = collection_resolver.get_or_create_child_collection(
-        session=db_session,
-        collection_id=collection.collection_id,
-        sample_type=SampleType.ANNOTATION,
-    )
-
-    manager = EmbeddingManager()
-    model_id = manager.register_embedding_model(
-        session=db_session,
-        embedding_generator=RandomEmbeddingGenerator(),
-        collection_id=annotation_collection_id,
-        set_as_default=True,
-    ).embedding_model_id
-
-    manager.embed_annotations(
-        session=db_session,
-        annotation_collection_id=annotation_collection_id,
-        embedding_model_id=model_id,
-    )
-
-    stored_embeddings = sample_embedding_resolver.get_all_by_collection_id(
-        session=db_session,
-        collection_id=annotation_collection_id,
-        embedding_model_id=model_id,
-    )
-    assert len(stored_embeddings) == 1
-
-
-def test_embed_annotations__embeds_segmentation_crops_by_default(
-    db_session: Session,
-    collection: CollectionTable,
-) -> None:
-    """Segmentation-mask crops are embedded by default, alongside object detection."""
-    image = create_image(session=db_session, collection_id=collection.collection_id)
-    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
-    create_annotation(
-        session=db_session,
-        collection_id=collection.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label.annotation_label_id,
-        annotation_type=AnnotationType.SEGMENTATION_MASK,
+        annotation_type=annotation_type,
     )
     annotation_collection_id = collection_resolver.get_or_create_child_collection(
         session=db_session,

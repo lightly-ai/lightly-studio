@@ -70,6 +70,8 @@ def get_annotation_crops_for_ids(
 
     annotation_crops: list[AnnotationCrop] = []
     for annotation, image, object_detection, segmentation in rows:
+        # An annotation has a detail row in exactly one table, set by its type in
+        # create_many, so at most one of these joins matches.
         box_source = object_detection or segmentation
         if box_source is None:
             logger.warning(
