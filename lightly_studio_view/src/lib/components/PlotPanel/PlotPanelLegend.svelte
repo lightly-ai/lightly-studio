@@ -88,6 +88,7 @@
             canScrollUp && !canScrollDown && 'legend-fade-top',
             !canScrollUp && canScrollDown && 'legend-fade-bottom'
         )}
+        data-testid="plot-legend-scroll"
         bind:this={scrollContainer}
         onscroll={updateScrollCues}
     >
