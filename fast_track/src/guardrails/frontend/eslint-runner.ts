@@ -1,7 +1,7 @@
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ESLint } from 'eslint';
+import type { ESLint } from 'eslint';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
