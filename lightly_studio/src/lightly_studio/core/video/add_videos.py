@@ -33,7 +33,11 @@ from labelformat.model.object_detection_track import (
 from sqlmodel import Session
 from tqdm import tqdm
 
-from lightly_studio.core import labelformat_helpers, loading_log
+from lightly_studio.core import labelformat_helpers
+from lightly_studio.core.file_outcome_report import (
+    AlreadyPresentInputFileError,
+    FileOutcomeReport,
+)
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
 )
@@ -112,98 +116,98 @@ def load_into_collection_from_paths(  # noqa: PLR0913
     created_video_sample_ids: list[UUID] = []
     created_video_frame_sample_ids: list[UUID] = []
     video_paths_list = list(video_paths)
-    file_paths_new, file_paths_exist = sample_resolver.filter_new_paths(
+    # The set starts with paths already in the database and grows with paths seen in this
+    # call, so both already-present and in-run duplicate paths are skipped.
+    _, existing_paths = sample_resolver.filter_new_paths(
         session=session,
         collection_id=collection_id,
         file_paths_abs=video_paths_list,
     )
-    video_logging_context = loading_log.LoadingLoggingContext(
-        n_samples_to_be_inserted=len(video_paths_list),
-        n_samples_before_loading=sample_resolver.count_by_collection_id(
-            session=session, collection_id=collection_id
-        ),
-    )
-    video_logging_context.update_example_paths(file_paths_exist)
+    seen_or_existing_paths = set(existing_paths)
+    report = FileOutcomeReport()
     # Get the video frames collection ID
     video_frames_collection_id = collection_resolver.get_or_create_child_collection(
         session=session, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
     )
 
     for video_path in tqdm(
-        file_paths_new,
+        video_paths_list,
         desc="Loading frames from videos",
         unit=" video",
         disable=not show_progress,
     ):
-        try:
-            # Open video and extract metadata
-            fs, fs_path = fsspec.core.url_to_fs(url=video_path)
-            video_file = fs.open(path=fs_path, mode="rb")
+        with report.track(path=video_path):
+            # Skip paths already in the database or already seen in this call.
+            if video_path in seen_or_existing_paths:
+                raise AlreadyPresentInputFileError()
+            seen_or_existing_paths.add(video_path)
+
             try:
-                # Open video container for reading (returns InputContainer)
-                video_container = container.open(file=video_file)
-                video_stream = video_container.streams.video[video_channel]
+                # Open video and extract metadata
+                fs, fs_path = fsspec.core.url_to_fs(url=video_path)
+                video_file = fs.open(path=fs_path, mode="rb")
+                try:
+                    # Open video container for reading (returns InputContainer)
+                    video_container = container.open(file=video_file)
+                    video_stream = video_container.streams.video[video_channel]
 
-                # Get video metadata
-                framerate = float(video_stream.average_rate) or 0.0
-                video_width = video_stream.width or 0
-                video_height = video_stream.height or 0
-                if video_stream.duration and video_stream.time_base:
-                    video_duration = float(video_stream.duration * video_stream.time_base)
-                else:
-                    video_duration = None
+                    # Get video metadata
+                    framerate = float(video_stream.average_rate) or 0.0
+                    video_width = video_stream.width or 0
+                    video_height = video_stream.height or 0
+                    if video_stream.duration and video_stream.time_base:
+                        video_duration = float(video_stream.duration * video_stream.time_base)
+                    else:
+                        video_duration = None
 
-                # Create video sample
-                video_sample_ids = video_resolver.create_many(
-                    session=session,
-                    collection_id=collection_id,
-                    samples=[
-                        VideoCreate(
-                            file_path_abs=video_path,
-                            width=video_width,
-                            height=video_height,
-                            duration_s=video_duration,
-                            fps=framerate,
-                            file_name=Path(video_path).name,
+                    # Create video sample
+                    video_sample_ids = video_resolver.create_many(
+                        session=session,
+                        collection_id=collection_id,
+                        samples=[
+                            VideoCreate(
+                                file_path_abs=video_path,
+                                width=video_width,
+                                height=video_height,
+                                duration_s=video_duration,
+                                fps=framerate,
+                                file_name=Path(video_path).name,
+                            )
+                        ],
+                    )
+
+                    if len(video_sample_ids) != 1:
+                        video_container.close()
+                        raise RuntimeError(
+                            f"There was an error adding {video_path} to the dataset."
                         )
-                    ],
-                )
+                    created_video_sample_ids.append(video_sample_ids[0])
 
-                if len(video_sample_ids) != 1:
+                    # Create video frame samples by parsing all frames
+                    extraction_context = FrameExtractionContext(
+                        session=session,
+                        collection_id=video_frames_collection_id,
+                        video_sample_id=video_sample_ids[0],
+                    )
+                    frame_sample_ids = _create_video_frame_samples(
+                        context=extraction_context,
+                        video_container=video_container,
+                        video_channel=video_channel,
+                        num_decode_threads=num_decode_threads,
+                        target_fps=target_fps,
+                    )
+                    created_video_frame_sample_ids.extend(frame_sample_ids)
+
                     video_container.close()
-                    raise (RuntimeError(f"There was an error adding {video_path} to the dataset."))
-                created_video_sample_ids.append(video_sample_ids[0])
+                finally:
+                    # Ensure file is closed even if container operations fail
+                    video_file.close()
 
-                # Create video frame samples by parsing all frames
-                extraction_context = FrameExtractionContext(
-                    session=session,
-                    collection_id=video_frames_collection_id,
-                    video_sample_id=video_sample_ids[0],
-                )
-                frame_sample_ids = _create_video_frame_samples(
-                    context=extraction_context,
-                    video_container=video_container,
-                    video_channel=video_channel,
-                    num_decode_threads=num_decode_threads,
-                    target_fps=target_fps,
-                )
-                created_video_frame_sample_ids.extend(frame_sample_ids)
+            except (FileNotFoundError, OSError, IndexError, FFmpegError) as e:
+                logger.error(f"Error processing video {video_path}: {e}")
+                continue
 
-                video_container.close()
-            finally:
-                # Ensure file is closed even if container operations fail
-                video_file.close()
-
-        except (FileNotFoundError, OSError, IndexError, FFmpegError) as e:
-            logger.error(f"Error processing video {video_path}: {e}")
-            continue
-
-    loading_log.log_loading_results(
-        session=session,
-        collection_id=collection_id,
-        logging_context=video_logging_context,
-        print_summary=show_progress,
-    )
+    report.log_summary()
 
     return created_video_sample_ids, created_video_frame_sample_ids
 
