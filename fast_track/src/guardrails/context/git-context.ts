@@ -16,8 +16,10 @@ export class GitGuardrailContext implements GuardrailContext {
     constructor(baseRef: string) {
         // An empty ref would make the range `...HEAD` — a valid but empty diff,
         // silently judging nothing. Reject it here rather than pass vacuously.
-        if (baseRef.trim() === '') throw new Error('baseRef must not be empty');
-        this.baseRef = baseRef;
+        const trimmed = baseRef.trim();
+        if (trimmed === '') throw new Error('baseRef must not be empty');
+        // Trimmed: a CI-supplied BASE_REF can carry stray whitespace.
+        this.baseRef = trimmed;
         // color.ui=false: don't let a dev's `color.ui=always` colour parsed output.
         this.git = simpleGit({ config: ['color.ui=false'] });
     }
