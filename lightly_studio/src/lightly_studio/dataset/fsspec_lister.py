@@ -5,6 +5,7 @@ Handles local and remote paths, directories, and glob patterns.
 
 from __future__ import annotations
 
+import itertools
 import logging
 from collections.abc import Iterator
 from typing import Any
@@ -36,7 +37,22 @@ IMAGE_EXTENSIONS = {
 }
 
 
-def iter_files_from_path(path: str, allowed_extensions: set[str] | None = None) -> Iterator[str]:
+def validate_limit(limit: int | None) -> None:
+    """Validate a ``limit`` argument passed to a dataset loader.
+
+    Args:
+        limit: Maximum number of samples to load, or None for no limit.
+
+    Raises:
+        ValueError: If ``limit`` is not None and not greater than 0.
+    """
+    if limit is not None and limit <= 0:
+        raise ValueError(f"limit must be greater than 0, got {limit}.")
+
+
+def iter_files_from_path(
+    path: str, allowed_extensions: set[str] | None = None, limit: int | None = None
+) -> Iterator[str]:
     """List all files from a single path, handling directories, globs, and individual files.
 
     Args:
@@ -47,10 +63,16 @@ def iter_files_from_path(path: str, allowed_extensions: set[str] | None = None) 
             - Remote path (s3://, gcs://, etc.)
         allowed_extensions: Optional set of allowed file extensions (e.g., {".jpg", ".png"}).
             If None, uses default IMAGE_EXTENSIONS.
+        limit: If set, stop after yielding this many files (the first ``limit`` in
+            discovery order). If None, yields all discovered files.
 
     Yields:
         File paths as they are discovered, with progress tracking
+
+    Raises:
+        ValueError: If ``limit`` is not None and not greater than 0.
     """
+    validate_limit(limit)
     seen: set[str] = set()
     extensions = allowed_extensions or IMAGE_EXTENSIONS
     with tqdm(desc="Discovering files", unit=" files", dynamic_ncols=True) as pbar:
@@ -58,7 +80,10 @@ def iter_files_from_path(path: str, allowed_extensions: set[str] | None = None) 
         if not cleaned_path:
             return
         fs = _get_filesystem(cleaned_path)
-        yield from _process_single_path_streaming(fs, cleaned_path, seen, pbar, extensions)
+        files = _process_single_path_streaming(fs, cleaned_path, seen, pbar, extensions)
+        if limit is not None:
+            files = itertools.islice(files, limit)
+        yield from files
 
 
 def _process_single_path_streaming(

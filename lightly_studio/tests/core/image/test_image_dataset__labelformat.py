@@ -162,6 +162,35 @@ class TestDataset:
         assert samples[1].file_name == "020.jpg"
         assert annotation.annotation_label_name == "cat"
 
+    def test_from_labelformat__limit(
+        self,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        label_input = _get_input_multi()  # two images
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_samples_from_labelformat(
+            input_labels=label_input,
+            images_path="/fake/path/images",
+            limit=1,
+        )
+
+        assert len(list(dataset)) == 1
+
+    @pytest.mark.parametrize("limit", [0, -1])
+    def test_from_labelformat__invalid_limit(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        limit: int,
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        with pytest.raises(ValueError, match=r"limit must be greater than 0"):
+            dataset.add_samples_from_labelformat(
+                input_labels=_get_input(),
+                images_path="/fake/path/images",
+                limit=limit,
+            )
+
     def test_from_labelformat__dont_embed(
         self,
         patch_collection: None,  # noqa: ARG002

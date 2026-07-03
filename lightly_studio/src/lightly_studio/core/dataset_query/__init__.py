@@ -1,4 +1,5 @@
 from .annotation_evaluation_metric_expression import AnnotationEvaluationMetricField
+from .annotation_evaluation_query import AnnotationMetricQuery
 from .boolean_expression import AND, NOT, OR
 from .classification_query import ClassificationField, ClassificationQuery
 from .dataset_query import DatasetQuery
@@ -20,6 +21,7 @@ __all__ = [
     "NOT",
     "OR",
     "AnnotationEvaluationMetricField",
+    "AnnotationMetricQuery",
     "ClassificationField",
     "ClassificationQuery",
     "DatasetQuery",
