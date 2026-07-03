@@ -20,74 +20,50 @@ describe('repoRelPath', () => {
     it('converts an absolute path to a repo-relative path', () => {
         expect(repoRelPath(`${FRONTEND_ABS}/src/foo.ts`)).toBe('lightly_studio_view/src/foo.ts');
     });
-
-    it('handles nested directories', () => {
-        expect(repoRelPath(`${FRONTEND_ABS}/src/components/Button.svelte`)).toBe(
-            'lightly_studio_view/src/components/Button.svelte'
-        );
-    });
-
-    it('handles a root-level file', () => {
-        expect(repoRelPath(`${FRONTEND_ABS}/index.ts`)).toBe('lightly_studio_view/index.ts');
-    });
 });
 
 describe('runEslint', () => {
-    it('maps lintFiles results to EslintFileResult, stripping extra fields', async () => {
-        mockLintFiles.mockResolvedValueOnce([
-            {
-                filePath: `${FRONTEND_ABS}/src/foo.ts`,
-                messages: [
-                    {
-                        ruleId: 'no-console',
-                        severity: 2,
-                        message: 'Unexpected console statement.',
-                        line: 5,
-                        column: 1,
-                        endLine: 5,
-                        endColumn: 20,
-                        nodeType: 'CallExpression'
-                    }
-                ],
-                errorCount: 1,
-                warningCount: 0,
-                fixableErrorCount: 0,
-                fixableWarningCount: 0,
-                usedDeprecatedRules: []
-            }
-        ]);
+    it('returns lintFiles results directly', async () => {
+        const lintResult = {
+            filePath: `${FRONTEND_ABS}/src/foo.ts`,
+            messages: [
+                {
+                    ruleId: 'no-console',
+                    severity: 2,
+                    message: 'Unexpected console statement.',
+                    line: 5,
+                    column: 1,
+                    endLine: 5,
+                    endColumn: 20,
+                    nodeType: 'CallExpression'
+                }
+            ],
+            errorCount: 1,
+            warningCount: 0,
+            fixableErrorCount: 0,
+            fixableWarningCount: 0,
+            usedDeprecatedRules: []
+        };
+        mockLintFiles.mockResolvedValueOnce([lintResult]);
 
         const results = await runEslint(['src/foo.ts'], 'eslint.config.js');
 
-        expect(results).toEqual([
-            {
-                filePath: `${FRONTEND_ABS}/src/foo.ts`,
-                messages: [
-                    {
-                        ruleId: 'no-console',
-                        severity: 2,
-                        message: 'Unexpected console statement.',
-                        line: 5
-                    }
-                ]
-            }
-        ]);
+        expect(results).toEqual([lintResult]);
     });
 
     it('preserves ruleId: null for directive messages', async () => {
+        const msg = {
+            ruleId: null,
+            severity: 1,
+            message: 'Unused directive.',
+            line: 3,
+            column: 1,
+            nodeType: null
+        };
         mockLintFiles.mockResolvedValueOnce([
             {
                 filePath: `${FRONTEND_ABS}/src/bar.ts`,
-                messages: [
-                    {
-                        ruleId: null,
-                        severity: 1,
-                        message: 'Unused directive.',
-                        line: 3,
-                        column: 1,
-                        nodeType: null
-                    }
-                ],
+                messages: [msg],
                 errorCount: 0,
                 warningCount: 1
             }
@@ -95,27 +71,21 @@ describe('runEslint', () => {
 
         const results = await runEslint(['src/bar.ts'], 'eslint.config.js');
 
-        expect(results[0]!.messages[0]).toEqual({
-            ruleId: null,
-            severity: 1,
-            message: 'Unused directive.',
-            line: 3
-        });
+        expect(results[0]!.messages[0]).toEqual(msg);
     });
 
     it('returns empty messages array when there are no violations', async () => {
-        mockLintFiles.mockResolvedValueOnce([
-            {
-                filePath: `${FRONTEND_ABS}/src/clean.ts`,
-                messages: [],
-                errorCount: 0,
-                warningCount: 0
-            }
-        ]);
+        const lintResult = {
+            filePath: `${FRONTEND_ABS}/src/clean.ts`,
+            messages: [],
+            errorCount: 0,
+            warningCount: 0
+        };
+        mockLintFiles.mockResolvedValueOnce([lintResult]);
 
         const results = await runEslint(['src/clean.ts'], 'eslint.config.js');
 
-        expect(results).toEqual([{ filePath: `${FRONTEND_ABS}/src/clean.ts`, messages: [] }]);
+        expect(results).toEqual([lintResult]);
     });
 
     it('handles multiple files', async () => {

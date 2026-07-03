@@ -14,37 +14,15 @@ export const FRONTEND_PREFIX = FRONTEND_DIR + '/';
 const require = createRequire(FRONTEND_ABS + '/package.json');
 const { ESLint: FrontendESLint } = require('eslint') as { ESLint: typeof ESLint };
 
-export interface EslintMessage {
-    ruleId: string | null;
-    severity: number;
-    message: string;
-    line: number;
-}
-
-export interface EslintFileResult {
-    filePath: string;
-    messages: EslintMessage[];
-}
-
 // Converts an absolute ESLint file path to a repo-relative path (e.g. lightly_studio_view/src/foo.ts).
 export function repoRelPath(absPath: string): string {
     return FRONTEND_DIR + '/' + absPath.slice(FRONTEND_ABS.length + 1);
 }
 
-export async function runEslint(relPaths: string[], config: string): Promise<EslintFileResult[]> {
+export async function runEslint(relPaths: string[], config: string): Promise<ESLint.LintResult[]> {
     const eslint = new FrontendESLint({
         cwd: FRONTEND_ABS,
         overrideConfigFile: config
     });
-
-    const results = await eslint.lintFiles(relPaths);
-    return results.map((r) => ({
-        filePath: r.filePath,
-        messages: r.messages.map((m) => ({
-            ruleId: m.ruleId,
-            severity: m.severity,
-            message: m.message,
-            line: m.line
-        }))
-    }));
+    return eslint.lintFiles(relPaths);
 }
