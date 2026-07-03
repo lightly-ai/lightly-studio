@@ -23,7 +23,9 @@ from tqdm import tqdm
 
 from lightly_studio.core.file_outcome_report import (
     AlreadyPresentInputFileError,
+    BrokenInputFileError,
     FileOutcomeReport,
+    MissingInputFileError,
 )
 from lightly_studio.core.image import add_annotations
 from lightly_studio.core.image.image_sample import ImageSample
@@ -59,6 +61,10 @@ def load_into_dataset_from_paths(
 
     Returns:
         A list of UUIDs of the created samples.
+
+    Raises:
+        AllInputFilesFailedError: If at least one file was attempted and every
+            attempted file was missing or broken.
     """
     # Normalize all paths up front so the database check can happen once, before the
     # main processing loop, instead of once per batch.
@@ -89,13 +95,21 @@ def load_into_dataset_from_paths(
             if normalized_path in seen_or_existing_paths:
                 raise AlreadyPresentInputFileError()
 
+            # Detect a missing path proactively: FileNotFoundError is unreliable across
+            # fsspec backends and is a subclass of OSError, which we treat as broken.
+            fs, fs_path = fsspec.core.url_to_fs(normalized_path)
+            if not fs.exists(fs_path):
+                raise MissingInputFileError(normalized_path)
+
+            # Translate a failed header read into a broken-file signal at this I/O
+            # boundary; any other exception propagates rather than being recorded.
             try:
-                with fsspec.open(normalized_path, "rb") as file:
+                with fs.open(fs_path, "rb") as file:
                     image = PIL.Image.open(file)
                     width, height = image.size
                     image.close()
-            except (FileNotFoundError, PIL.UnidentifiedImageError, OSError):
-                continue
+            except (PIL.UnidentifiedImageError, OSError) as e:
+                raise BrokenInputFileError(normalized_path) from e
 
             sample = ImageCreate(
                 file_name=Path(normalized_path).name,
@@ -122,6 +136,7 @@ def load_into_dataset_from_paths(
         created_sample_ids.extend(created_path_to_id.values())
 
     report.log_summary()
+    report.raise_if_all_failed()
     return created_sample_ids
 
 

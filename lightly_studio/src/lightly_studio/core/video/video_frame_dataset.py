@@ -11,14 +11,30 @@ from lightly_studio.resolvers import video_frame_resolver
 
 
 class VideoFrameDataset(Dataset[VideoFrameSample]):
-    """Dataset over the individual frames of a video dataset.
+    """Video frame dataset.
 
-    Exposes each video frame as a `VideoFrameSample`. Like any dataset, it can be
-    iterated over or sliced:
+    It is not created or loaded directly. It is obtained from a `VideoDataset` via
+    `video_dataset.frames()` and exposes the individual video frames as queryable
+    `VideoFrameSample` objects.
+
+    The dataset frames can be accessed directly by iterating over it or slicing it:
     ```python
+    from lightly_studio import VideoDataset
+
+    frames = VideoDataset.load("my_dataset").frames()
     first_ten_frames = frames[:10]
     for frame in frames:
         print(frame.frame_number, frame.frame_timestamp_s)
+    ```
+
+    For filtering or ordering frames first, use the query interface:
+    ```python
+    from lightly_studio.core.dataset_query import VideoFrameSampleField
+
+    frames = VideoDataset.load("my_dataset").frames()
+    query = frames.match(VideoFrameSampleField.frame_number > 10)
+    for frame in query:
+        ...
     ```
     """
 
