@@ -194,6 +194,59 @@ class TestDataset:
         assert len(samples) == 1
         assert len(samples[0].sample_table.embeddings) == 0
 
+    def test_dataset_add_images_from_path__limit(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        images_path = tmp_path / "my_dataset"
+        images_path.mkdir()
+        created = [
+            images_path / "image1.jpg",
+            images_path / "image2.png",
+            images_path / "image3.bmp",
+            images_path / "image4.tif",
+        ]
+        _create_sample_images(created)
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_images_from_path(path=images_path, limit=2)
+
+        samples = dataset.query().to_list()
+        assert len(samples) == 2
+        # The loaded files are a subset of the available files.
+        assert {s.file_name for s in samples} <= {p.name for p in created}
+
+    def test_dataset_add_images_from_path__limit_larger_than_total(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        images_path = tmp_path / "my_dataset"
+        images_path.mkdir()
+        _create_sample_images(
+            [
+                images_path / "image1.jpg",
+                images_path / "image2.png",
+            ]
+        )
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_images_from_path(path=images_path, limit=10)
+
+        assert len(list(dataset)) == 2
+
+    @pytest.mark.parametrize("limit", [0, -1])
+    def test_dataset_add_images_from_path__invalid_limit(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+        limit: int,
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        with pytest.raises(ValueError, match=r"limit must be greater than 0"):
+            dataset.add_images_from_path(path=tmp_path, limit=limit)
+
     def test_add_images_from_path_calls_tag_samples_by_directory(
         self,
         patch_collection: None,  # noqa: ARG002

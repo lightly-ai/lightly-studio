@@ -18,7 +18,7 @@ from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.group import GroupTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.models.video import VideoTable
+from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import tag_resolver
 from lightly_studio.sampling.sample import Sampling
 
@@ -282,6 +282,16 @@ class DatasetQuery(Generic[T]):
             for group_table in self.session.exec(group_query):
                 # Calling the constructor of `GroupSample`
                 yield self._sample_class(group_table)  # type: ignore[arg-type]
+        elif self.dataset.sample_type == SampleType.VIDEO_FRAME:
+            video_frame_query: SelectOfScalar[VideoFrameTable] = (
+                select(VideoFrameTable)
+                .join(VideoFrameTable.sample)
+                .where(SampleTable.collection_id == self.dataset.collection_id)
+            )
+            video_frame_query = self._compose_query(video_frame_query)
+            for video_frame_table in self.session.exec(video_frame_query):
+                # Calling the constructor of `VideoFrameSample`
+                yield self._sample_class(video_frame_table)  # type: ignore[arg-type]
         else:
             raise NotImplementedError(
                 f"Iter is not implemented for sample type {self.dataset.sample_type}"

@@ -185,6 +185,41 @@ class TestDataset:
         assert samples[2].tags == {"val"}
         assert samples[3].tags == {"val"}
 
+    def test_add_samples_from_yolo__limit_across_splits(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        """``limit`` caps the total number of samples across all processed splits."""
+        yaml_path = tmp_path / "data.yaml"
+        yaml_path.write_text(yaml.dump(get_yolo_yaml_dict_valid()))
+
+        # Two images per split (train + val) => 4 available in total.
+        _create_images(tmp_path / "train" / "images")
+        _create_labels(tmp_path / "train" / "labels")
+        _create_images(tmp_path / "val" / "images")
+        _create_labels(tmp_path / "val" / "labels")
+
+        dataset = ImageDataset.create(name="test_dataset")
+        # limit=3 should load both train images, then only one val image.
+        dataset.add_samples_from_yolo(data_yaml=yaml_path, limit=3)
+
+        assert len(list(dataset)) == 3
+
+    @pytest.mark.parametrize("limit", [0, -1])
+    def test_add_samples_from_yolo__invalid_limit(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+        limit: int,
+    ) -> None:
+        yaml_path = tmp_path / "data.yaml"
+        yaml_path.write_text(yaml.dump(get_yolo_yaml_dict_valid()))
+
+        dataset = ImageDataset.create(name="test_dataset")
+        with pytest.raises(ValueError, match=r"limit must be greater than 0"):
+            dataset.add_samples_from_yolo(data_yaml=yaml_path, input_split="train", limit=limit)
+
     # TODO(Jonas 9/25): We might want a warning here --> since folder does not exist
     def test_add_samples_from_yolo__labels_folder_non_exist(
         self,
