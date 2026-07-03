@@ -5,6 +5,7 @@ import type {
     ImageFilter,
     VideoFrameFilter,
     VideoFilter,
+    OperatorContextRequest,
     OperatorScope,
     SampleType
 } from '$lib/api/lightly_studio_local';
@@ -32,13 +33,7 @@ export type PageContext = {
     sampleType: SampleType | null;
 };
 
-export type OperatorContextFilter =
-    | ImageFilter
-    | VideoFrameFilter
-    | VideoFilter
-    | AnnotationsFilter
-    | SampleFilter
-    | undefined;
+export type OperatorContextFilter = OperatorContextRequest['context_filter'];
 
 export function resolveIsDetailPage(routeId: string | null): boolean {
     return (
@@ -76,24 +71,34 @@ export function resolveContextFilter(
     tagsSelected: Set<string>
 ): OperatorContextFilter {
     if (isAnnotationDetailsRoute(routeId) && annotationId) {
-        return { sample_ids: [annotationId] } satisfies SampleFilter;
+        return { filter_type: 'sample', sample_ids: [annotationId] } satisfies SampleFilter;
     }
     if (resolveIsDetailPage(routeId) && sampleId) {
-        return { sample_ids: [sampleId] } satisfies SampleFilter;
+        return { filter_type: 'sample', sample_ids: [sampleId] } satisfies SampleFilter;
     }
     if (isAnnotationsRoute(routeId)) {
         const labelIds = Array.from(annotationFilterIds);
         const tagIds = Array.from(tagsSelected);
         const filter: AnnotationsFilter = {
+            filter_type: 'annotations',
             ...(labelIds.length > 0 && { annotation_label_ids: labelIds }),
             ...(tagIds.length > 0 && { tag_ids: tagIds })
         };
-        return Object.keys(filter).length > 0 ? filter : undefined;
+        return Object.keys(filter).length > 1
+            ? { ...filter, filter_type: 'annotations' }
+            : undefined;
     }
-    if (isCaptionsRoute(routeId)) return { has_captions: true } satisfies SampleFilter;
-    if (isImagesRoute(routeId)) return imageFilter ?? undefined;
-    if (isVideosRoute(routeId)) return videoFilter ?? undefined;
-    if (isVideoFramesRoute(routeId)) return frameFilter ?? undefined;
+    if (isCaptionsRoute(routeId))
+        return { filter_type: 'sample', has_captions: true } satisfies SampleFilter;
+    // The filter hooks already stamp `filter_type`, but the generated model types
+    // mark it optional (it has a backend default); re-assert it so the value fits
+    // the discriminated union.
+    if (isImagesRoute(routeId))
+        return imageFilter ? { ...imageFilter, filter_type: 'image' } : undefined;
+    if (isVideosRoute(routeId))
+        return videoFilter ? { ...videoFilter, filter_type: 'video' } : undefined;
+    if (isVideoFramesRoute(routeId))
+        return frameFilter ? { ...frameFilter, filter_type: 'video_frame' } : undefined;
     return undefined;
 }
 
