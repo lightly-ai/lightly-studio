@@ -1,8 +1,9 @@
 import type { Guardrail } from './context/types';
 import { dummyGuardrail } from './dummy';
+import { backendComplexityGuardrail } from './backend/complexity';
 
 /** The guardrail registry. */
-export const guardrails: Guardrail[] = [dummyGuardrail];
+export const guardrails: Guardrail[] = [dummyGuardrail, backendComplexityGuardrail];
 
 export interface SelectOptions {
     /** False locally, true in CI. */
