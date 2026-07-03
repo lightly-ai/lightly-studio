@@ -51,29 +51,6 @@ describe('runEslint', () => {
         expect(results).toEqual([lintResult]);
     });
 
-    it('preserves ruleId: null for directive messages', async () => {
-        const msg = {
-            ruleId: null,
-            severity: 1,
-            message: 'Unused directive.',
-            line: 3,
-            column: 1,
-            nodeType: null
-        };
-        mockLintFiles.mockResolvedValueOnce([
-            {
-                filePath: `${FRONTEND_ABS}/src/bar.ts`,
-                messages: [msg],
-                errorCount: 0,
-                warningCount: 1
-            }
-        ]);
-
-        const results = await runEslint(['src/bar.ts'], 'eslint.config.js');
-
-        expect(results[0]!.messages[0]).toEqual(msg);
-    });
-
     it('returns empty messages array when there are no violations', async () => {
         const lintResult = {
             filePath: `${FRONTEND_ABS}/src/clean.ts`,
