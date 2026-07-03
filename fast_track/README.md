@@ -8,10 +8,10 @@ Runs via [`tsx`](https://tsx.is/) — no build step, no compiled artifact.
 
 > **Status:** early scaffolding. The verdict contract, the guardrail framework
 > (context types, an always-pass dummy guardrail, the registry + selector), the
-> runner, and the local git-backed context provider are in place with unit
-> tests — `make run-guardrails` runs the guardrails against your branch's
-> committed changes. The API context provider, the bot, and the two workflows land in subsequent,
-> independently reviewable PRs.
+> runner, the local git-backed context provider, and the API-backed context
+> provider are in place with unit tests — `make run-guardrails` runs the
+> guardrails against your branch's committed changes. The bot and the two
+> workflows land in subsequent, independently reviewable PRs.
 
 ## Local commands
 

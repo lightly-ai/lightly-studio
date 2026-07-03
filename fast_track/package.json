@@ -16,6 +16,7 @@
         "list-guardrails": "tsx src/guardrails/cli.ts --list"
     },
     "dependencies": {
+        "@actions/github": "^6.0.1",
         "simple-git": "^3.36.0"
     },
     "devDependencies": {
