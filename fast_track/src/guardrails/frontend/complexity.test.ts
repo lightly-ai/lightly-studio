@@ -52,7 +52,9 @@ describe('frontendComplexityGuardrail', () => {
         vi.mocked(runEslint).mockResolvedValueOnce([
             {
                 filePath: `${FRONTEND_ABS}/src/foo.ts`,
-                messages: [{ ruleId: 'complexity', severity: 1, message: 'Somewhat complex.', line: 5 }]
+                messages: [
+                    { ruleId: 'complexity', severity: 1, message: 'Somewhat complex.', line: 5 }
+                ]
             }
         ] as unknown as ESLint.LintResult[]);
         const result = await frontendComplexityGuardrail.run(makeCtx());
