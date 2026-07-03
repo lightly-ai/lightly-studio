@@ -12,12 +12,22 @@ from labelformat.model.object_detection import (
     ImageObjectDetection,
     SingleObjectDetection,
 )
+from pytest_mock import MockerFixture
 from sqlmodel import select
 
 from lightly_studio import ImageDataset
+from lightly_studio.core.image import add_images
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.image import ImageTable
+
+
+@pytest.fixture(autouse=True)
+def _assume_referenced_files_exist(mocker: MockerFixture) -> None:
+    # These tests use synthetic image paths that do not exist on disk and cover annotation
+    # ingest, not the missing-file detection. Treat every referenced file as present so the
+    # samples are created; missing-file recording is covered in test_add_images.py.
+    mocker.patch.object(add_images, "_file_exists", return_value=True)
 
 
 class TestDataset:

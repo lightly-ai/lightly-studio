@@ -97,19 +97,19 @@ def load_into_dataset_from_paths(
 
             # Detect a missing path proactively: FileNotFoundError is unreliable across
             # fsspec backends and is a subclass of OSError, which we treat as broken.
-            fs, fs_path = fsspec.core.url_to_fs(normalized_path)
-            if not fs.exists(fs_path):
-                raise MissingInputFileError(normalized_path)
+            if not _file_exists(normalized_path):
+                raise MissingInputFileError()
 
             # Translate a failed header read into a broken-file signal at this I/O
             # boundary; any other exception propagates rather than being recorded.
+            fs, fs_path = fsspec.core.url_to_fs(normalized_path)
             try:
                 with fs.open(fs_path, "rb") as file:
                     image = PIL.Image.open(file)
                     width, height = image.size
                     image.close()
             except (PIL.UnidentifiedImageError, OSError) as e:
-                raise BrokenInputFileError(normalized_path) from e
+                raise BrokenInputFileError() from e
 
             sample = ImageCreate(
                 file_name=Path(normalized_path).name,
@@ -160,6 +160,12 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
 
     Returns:
         A list of UUIDs of the created samples.
+
+    Notes:
+        Image dimensions come from the annotation metadata and the file is never
+        opened here, so a broken file cannot be detected on this path; that is
+        deferred to the embedding step. Only a missing referenced path is
+        classified as a failure (recorded as ``MISSING``).
     """
     images_root_abs = add_annotations.normalize_images_root(images_root=images_path)
 
@@ -197,6 +203,12 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
             # Skip paths already in the database or already seen in this call.
             if sample.file_path_abs in seen_or_existing_paths:
                 raise AlreadyPresentInputFileError()
+
+            # Missing is the only failure classifiable here (see the docstring):
+            # detect it proactively because FileNotFoundError is unreliable across
+            # fsspec backends and is a subclass of OSError.
+            if not _file_exists(sample.file_path_abs):
+                raise MissingInputFileError()
 
             seen_or_existing_paths.add(sample.file_path_abs)
             samples_to_create.append(sample)
@@ -247,26 +259,21 @@ def load_into_dataset_from_coco_captions(
 
     Returns:
         The list of newly created sample identifiers.
+
+    Notes:
+        Image dimensions come from the annotation metadata and the file is never
+        opened here, so a broken file cannot be detected on this path; that is
+        deferred to the embedding step. Only a missing referenced path is
+        classified as a failure (recorded as ``MISSING``).
     """
     with fsspec.open(str(annotations_json), "r") as file:
         coco_payload = json.load(file)
 
     # A slice with limit=None returns the full list.
     images: list[dict[str, object]] = coco_payload.get("images", [])[:limit]
-    annotations: list[dict[str, object]] = coco_payload.get("annotations", [])
-
-    captions_by_image_id: dict[int, list[str]] = defaultdict(list)
-    for annotation in annotations:
-        image_id = annotation["image_id"]
-        caption = annotation["caption"]
-        if not isinstance(image_id, int):
-            continue
-        if not isinstance(caption, str):
-            continue
-        caption_text = caption.strip()
-        if not caption_text:
-            continue
-        captions_by_image_id[image_id].append(caption_text)
+    captions_by_image_id = _group_captions_by_image_id(
+        annotations=coco_payload.get("annotations", [])
+    )
 
     # The set starts with paths already in the database and grows with paths seen in this
     # call, so both already-present and in-run duplicate paths are skipped before batching.
@@ -306,6 +313,12 @@ def load_into_dataset_from_coco_captions(
             # Skip paths already in the database or already seen in this call.
             if sample.file_path_abs in seen_or_existing_paths:
                 raise AlreadyPresentInputFileError()
+
+            # Missing is the only failure classifiable here (see the docstring):
+            # detect it proactively because FileNotFoundError is unreliable across
+            # fsspec backends and is a subclass of OSError.
+            if not _file_exists(sample.file_path_abs):
+                raise MissingInputFileError()
 
             seen_or_existing_paths.add(sample.file_path_abs)
             samples_to_create.append(sample)
@@ -385,6 +398,49 @@ def tag_samples_by_directory(
             sample_ids=s_ids,
         )
     logger.info(f"Created {len(parent_dir_to_sample_ids)} tags from directories.")
+
+
+def _group_captions_by_image_id(
+    annotations: list[dict[str, object]],
+) -> dict[int, list[str]]:
+    """Group non-empty COCO caption strings by their image id.
+
+    Args:
+        annotations: The ``annotations`` entries from a COCO captions payload.
+
+    Returns:
+        A mapping from image id to its list of non-empty caption strings.
+    """
+    captions_by_image_id: dict[int, list[str]] = defaultdict(list)
+    for annotation in annotations:
+        image_id = annotation["image_id"]
+        caption = annotation["caption"]
+        if not isinstance(image_id, int):
+            continue
+        if not isinstance(caption, str):
+            continue
+        caption_text = caption.strip()
+        if not caption_text:
+            continue
+        captions_by_image_id[image_id].append(caption_text)
+    return captions_by_image_id
+
+
+def _file_exists(path: str) -> bool:
+    """Return whether ``path`` resolves to an existing file on its fsspec backend.
+
+    Shared by the ingest paths to classify a missing input file, so the
+    existence check stays consistent across path, labelformat, and COCO-caption
+    ingest.
+
+    Args:
+        path: The absolute file path to check.
+
+    Returns:
+        ``True`` if the path exists, ``False`` otherwise.
+    """
+    fs, fs_path = fsspec.core.url_to_fs(path)
+    return bool(fs.exists(fs_path))
 
 
 def _get_existing_paths_set(
