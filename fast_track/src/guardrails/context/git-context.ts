@@ -23,7 +23,7 @@ export class GitGuardrailContext implements GuardrailContext {
 
     changedFiles(): Promise<ChangedFile[]> {
         // Memoize: a run may consult the diff from several guardrails, but the
-        // working tree is fixed for the duration of one judgement.
+        // committed diff is fixed for the duration of one judgement.
         this.cache ??= Promise.resolve(this.diff());
         return this.cache;
     }

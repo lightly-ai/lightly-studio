@@ -58,7 +58,7 @@ async function runOne(guardrail: Guardrail, context: GuardrailContext): Promise<
 
 // --- Local CLI -------------------------------------------------------------
 //
-// Judges the working tree against a base ref from a plain checkout — no
+// Judges the current branch's committed changes against a base ref from a plain checkout — no
 // `@actions/*`, no GitHub API. The CI entry point that writes the verdict
 // artifact lands in a later PR.
 

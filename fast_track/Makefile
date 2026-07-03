@@ -29,8 +29,9 @@ format:
 test:
 	$(call with_nvm,npm run test)
 
-# Run the guardrails against the working tree (diffed vs BASE_REF, default
-# origin/main) via tsx — the first target where the loop actually executes.
+# Run the guardrails against the current branch's committed changes (HEAD
+# diffed vs BASE_REF, default origin/main) via tsx — the first target where the
+# loop actually executes.
 .PHONY: run-guardrails
 run-guardrails:
 	$(call with_nvm,npm run guardrails)
