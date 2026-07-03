@@ -98,7 +98,7 @@ class TestDataset:
         image_folder_path = "/fake/path/images"
         label_input = _get_input(filename="image.jpg")
 
-        caplog.set_level(logging.INFO, logger="lightly_studio.core.loading_log")
+        caplog.set_level(logging.INFO, logger="lightly_studio.core.file_outcome_report")
 
         dataset = ImageDataset.create(name=dataset_name)
         dataset.add_samples_from_labelformat(
@@ -125,8 +125,8 @@ class TestDataset:
         assert len(list(dataset)) == 2
 
         log_text = caplog.text
-        assert "Added 0 out of 1 new samples to the dataset." in log_text
-        assert "Examples paths that were not added to the dataset:" in log_text
+        assert "added=0, already_present=1" in log_text
+        assert "Example already_present paths:" in log_text
         assert "/fake/path/images/image.jpg" in log_text
 
     def test_from_labelformat__annotations_synced_images(
@@ -161,6 +161,35 @@ class TestDataset:
         annotation = samples[1].sample_table.annotations[0].annotation_label
         assert samples[1].file_name == "020.jpg"
         assert annotation.annotation_label_name == "cat"
+
+    def test_from_labelformat__limit(
+        self,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        label_input = _get_input_multi()  # two images
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_samples_from_labelformat(
+            input_labels=label_input,
+            images_path="/fake/path/images",
+            limit=1,
+        )
+
+        assert len(list(dataset)) == 1
+
+    @pytest.mark.parametrize("limit", [0, -1])
+    def test_from_labelformat__invalid_limit(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        limit: int,
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        with pytest.raises(ValueError, match=r"limit must be greater than 0"):
+            dataset.add_samples_from_labelformat(
+                input_labels=_get_input(),
+                images_path="/fake/path/images",
+                limit=limit,
+            )
 
     def test_from_labelformat__dont_embed(
         self,

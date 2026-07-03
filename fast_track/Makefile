@@ -1,8 +1,5 @@
 # Fast Track guardrails + bot. Runs via tsx (no build artifact). Mirrors the
 # lightly_studio_view toolchain (minus Svelte/Vite). See README.md.
-#
-# This package is currently an empty skeleton (no logic). Guardrail/bot targets
-# arrive in later PRs.
 
 # Wrap a command in an nvm-provisioned shell so the pinned Node (.nvmrc) is used.
 define with_nvm

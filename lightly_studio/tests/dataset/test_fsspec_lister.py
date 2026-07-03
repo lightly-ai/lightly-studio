@@ -224,6 +224,27 @@ class TestFsspecLister:
         result = list(fsspec_lister.iter_files_from_path("s3://test/images/empty_dir"))
         assert len(result) == 0
 
+    def test_get_file_list_from_s3__limit(self, s3_bucket: str, mock_fsspec_s3fs: None) -> None:  # noqa: ARG002
+        # The directory holds 5 files; limit caps how many are yielded.
+        result = list(fsspec_lister.iter_files_from_path("s3://test/images/", limit=2))
+        assert len(result) == 2
+
+    def test_get_file_list_from_s3__limit_larger_than_total(
+        self,
+        s3_bucket: str,  # noqa: ARG002
+        mock_fsspec_s3fs: None,  # noqa: ARG002
+    ) -> None:
+        result = list(fsspec_lister.iter_files_from_path("s3://test/images/", limit=100))
+        assert len(result) == 5
+
+    def test_get_file_list_from_s3__limit_invalid(
+        self,
+        s3_bucket: str,  # noqa: ARG002
+        mock_fsspec_s3fs: None,  # noqa: ARG002
+    ) -> None:
+        with pytest.raises(ValueError, match=r"limit must be greater than 0"):
+            list(fsspec_lister.iter_files_from_path("s3://test/images/", limit=0))
+
     def test_get_file_list_from_s3__single_file_read(
         self,
         s3_bucket: str,  # noqa: ARG002
@@ -235,3 +256,15 @@ class TestFsspecLister:
         with fsspec.open(result[0], "rb") as file:
             content = file.read()
             assert content == b"fake_bmp_content"
+
+
+@pytest.mark.parametrize("limit", [None, 1, 100])
+def test_validate_limit(limit: int | None) -> None:
+    # Should not raise.
+    fsspec_lister.validate_limit(limit)
+
+
+@pytest.mark.parametrize("limit", [0, -1, -100])
+def test_validate_limit__invalid(limit: int) -> None:
+    with pytest.raises(ValueError, match=r"limit must be greater than 0"):
+        fsspec_lister.validate_limit(limit)
