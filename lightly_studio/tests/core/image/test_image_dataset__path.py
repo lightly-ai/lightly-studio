@@ -8,6 +8,7 @@ from PIL import Image
 from pytest_mock import MockerFixture as Mocker
 
 from lightly_studio import ImageDataset
+from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
 from lightly_studio.core.image import add_images
 
 
@@ -92,7 +93,10 @@ class TestDataset:
         image_path.write_text("corrupt data")
 
         dataset = ImageDataset.create(name="test_dataset")
-        dataset.add_images_from_path(path=images_path)
+        # The only file is broken, so every attempted file failed and the run raises loudly
+        # instead of silently adding nothing.
+        with pytest.raises(AllInputFilesFailedError):
+            dataset.add_images_from_path(path=images_path)
         assert len(list(dataset)) == 0
 
     def test_dataset_add_images_from_path__recursion(
