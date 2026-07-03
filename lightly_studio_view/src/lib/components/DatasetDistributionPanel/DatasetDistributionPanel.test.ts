@@ -119,6 +119,24 @@ describe('DatasetDistributionPanel', () => {
         );
     });
 
+    it('toggles the chart orientation from the header', async () => {
+        render(DatasetDistributionPanel, { props: defaultProps });
+
+        expect(
+            (echartsMock.instance.setOption.mock.lastCall?.[0] as { yAxis: { type: string } }).yAxis
+                .type
+        ).toBe('value');
+
+        await fireEvent.click(screen.getByTestId('dataset-distribution-toggle-orientation'));
+
+        await waitFor(() =>
+            expect(
+                (echartsMock.instance.setOption.mock.lastCall?.[0] as { yAxis: { type: string } })
+                    .yAxis.type
+            ).toBe('category')
+        );
+    });
+
     it('renders a close button only when onClose is provided and forwards clicks', async () => {
         const onClose = vi.fn();
         render(DatasetDistributionPanel, { props: { ...defaultProps, onClose } });

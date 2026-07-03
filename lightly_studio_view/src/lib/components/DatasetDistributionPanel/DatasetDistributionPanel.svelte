@@ -23,7 +23,7 @@
 
     const { data, title = 'Class distribution', topN = 20, onClose, onBarClick }: Props = $props();
 
-    let config: DistributionConfig = $state({ n: topN, sortBy: 'count' });
+    let config: DistributionConfig = $state({ n: topN, sortBy: 'count', orientation: 'vertical' });
     let configDialogOpen = $state(false);
     let expandOpen = $state(false);
 
@@ -61,11 +61,16 @@
             {totalCount}
             onConfigure={() => (configDialogOpen = true)}
             onShowAll={() => (config = { ...config, n: data.length })}
+            onToggleOrientation={() =>
+                (config = {
+                    ...config,
+                    orientation: config.orientation === 'horizontal' ? 'vertical' : 'horizontal'
+                })}
             onExpand={() => (expandOpen = true)}
         />
     {/if}
     <div class="min-h-0 flex-1 overflow-y-auto dark:[color-scheme:dark]">
-        <BarChart data={visible} {totalCount} {onBarClick} />
+        <BarChart data={visible} orientation={config.orientation} {totalCount} {onBarClick} />
     </div>
 </div>
 <DistributionConfigDialog

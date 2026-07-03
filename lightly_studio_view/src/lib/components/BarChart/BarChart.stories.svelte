@@ -24,3 +24,15 @@
 <Story name="Single class" args={{ data: singleClass }} />
 
 <Story name="Empty" args={{ data: empty }} />
+
+<Story name="Horizontal (5 classes)" args={{ data: balanced, orientation: 'horizontal' }} />
+
+<Story
+    name="Horizontal long-tail (30 classes, vertical scroll)"
+    args={{ data: longTail, orientation: 'horizontal' }}
+/>
+
+<Story
+    name="Horizontal long labels"
+    args={{ data: longLabels, orientation: 'horizontal' }}
+/>

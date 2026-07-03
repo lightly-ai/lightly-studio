@@ -39,10 +39,21 @@
             {totalCount}
             onConfigure={() => (configDialogOpen = true)}
             onShowAll={() => onConfigChange({ ...config, n: data.length })}
+            onToggleOrientation={() =>
+                onConfigChange({
+                    ...config,
+                    orientation: config.orientation === 'horizontal' ? 'vertical' : 'horizontal'
+                })}
             testIdPrefix="dataset-distribution-expanded"
         />
         <div class="min-h-0 flex-1 overflow-y-auto dark:[color-scheme:dark]">
-            <BarChart data={visible} heightPx={560} {totalCount} {onBarClick} />
+            <BarChart
+                data={visible}
+                orientation={config.orientation}
+                heightPx={560}
+                {totalCount}
+                {onBarClick}
+            />
         </div>
     </Dialog.Content>
 </Dialog.Root>

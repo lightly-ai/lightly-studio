@@ -19,6 +19,9 @@ function formatPercent(ratio: number): string {
     return `${percent.toFixed(1)}%`;
 }
 
+/** Bar layout: 'vertical' bars grow upward, 'horizontal' bars grow rightward. */
+export type BarChartOrientation = 'vertical' | 'horizontal';
+
 interface BuildEchartsOptionOptions {
     /**
      * Denominator for tooltip percentages. Pass the sum over all categories
@@ -26,6 +29,8 @@ interface BuildEchartsOptionOptions {
      * the full dataset. Defaults to the sum of `data`.
      */
     totalCount?: number;
+    /** Bar orientation (default 'vertical'). */
+    orientation?: BarChartOrientation;
 }
 
 export function buildEchartsOption(
@@ -33,6 +38,36 @@ export function buildEchartsOption(
     options: BuildEchartsOptionOptions = {}
 ): EChartsCoreOption {
     const totalCount = options.totalCount ?? data.reduce((sum, item) => sum + item.count, 0);
+    const orientation = options.orientation ?? 'vertical';
+    const isHorizontal = orientation === 'horizontal';
+
+    const labels = data.map((item) => item.label);
+
+    const categoryAxis = {
+        type: 'category' as const,
+        data: labels,
+        axisLabel: {
+            // Vertical layout rotates long labels so they don't overflow the
+            // canvas edge (echarts containLabel ignores rotation); horizontal
+            // layout has room for flat labels down the left gutter.
+            rotate: isHorizontal ? 0 : 60,
+            interval: 0,
+            color: '#9ca3af',
+            fontSize: 12,
+            formatter: truncateLabel
+        },
+        axisLine: { lineStyle: { color: '#374151' } },
+        axisTick: { alignWithLabel: true },
+        // Keep the highest bar at the top when horizontal (data is pre-sorted).
+        inverse: isHorizontal
+    };
+
+    const valueAxis = {
+        type: 'value' as const,
+        axisLabel: { color: '#9ca3af', fontSize: 12 },
+        splitLine: { lineStyle: { color: '#374151' } }
+    };
+
     return {
         backgroundColor: 'transparent',
         tooltip: {
@@ -45,26 +80,8 @@ export function buildEchartsOption(
             }
         },
         grid: { left: 8, right: 8, top: 16, bottom: 8, containLabel: true },
-        xAxis: {
-            type: 'category',
-            data: data.map((item) => item.label),
-            axisLabel: {
-                // Steep rotation keeps long rotated labels from overflowing the
-                // left canvas edge (echarts containLabel ignores rotation).
-                rotate: 60,
-                interval: 0,
-                color: '#9ca3af',
-                fontSize: 12,
-                formatter: truncateLabel
-            },
-            axisLine: { lineStyle: { color: '#374151' } },
-            axisTick: { alignWithLabel: true }
-        },
-        yAxis: {
-            type: 'value',
-            axisLabel: { color: '#9ca3af', fontSize: 12 },
-            splitLine: { lineStyle: { color: '#374151' } }
-        },
+        xAxis: isHorizontal ? valueAxis : categoryAxis,
+        yAxis: isHorizontal ? categoryAxis : valueAxis,
         series: [
             {
                 type: 'bar',

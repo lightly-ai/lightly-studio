@@ -4,16 +4,18 @@
     import { BarChart as EchartsBarChart } from 'echarts/charts';
     import { GridComponent, TooltipComponent } from 'echarts/components';
     import { CanvasRenderer } from 'echarts/renderers';
-    import { buildEchartsOption } from './buildEchartsOption';
+    import { buildEchartsOption, type BarChartOrientation } from './buildEchartsOption';
     import type { CategoryCount } from './types';
 
     echarts.use([EchartsBarChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
     interface Props {
-        /** Categories rendered left-to-right in the given order. */
+        /** Categories rendered in the given order. */
         data: CategoryCount[];
-        /** Chart height in pixels (default 320). */
+        /** Chart height in pixels (default 320). Ignored when horizontal (height grows with bar count). */
         heightPx?: number;
+        /** Bar orientation (default 'vertical'). */
+        orientation?: BarChartOrientation;
         /**
          * Denominator for tooltip percentages. Pass the sum over all
          * categories when `data` is a subset (e.g. top-N); defaults to the
@@ -24,15 +26,25 @@
         onBarClick?: (item: CategoryCount) => void;
     }
 
-    const { data, heightPx = 320, totalCount, onBarClick }: Props = $props();
+    const {
+        data,
+        heightPx = 320,
+        orientation = 'vertical',
+        totalCount,
+        onBarClick
+    }: Props = $props();
 
     let container: HTMLDivElement | undefined = $state();
     let chart: echarts.ECharts | null = $state(null);
 
-    // Fixed per-bar width so many categories overflow into horizontal scroll
-    // instead of squeezing bars into unreadability (same pattern as FiftyOne's
-    // histograms panel). 60px covers the y-axis gutter.
-    const widthPx = $derived(data.length * 28 + 60);
+    const isHorizontal = $derived(orientation === 'horizontal');
+
+    // Fixed per-bar extent so many categories overflow into scroll instead of
+    // squeezing bars into unreadability (same pattern as FiftyOne's histograms
+    // panel). Vertical bars scroll horizontally; horizontal bars scroll
+    // vertically. The +60px/+40px covers the axis gutters.
+    const widthPx = $derived(isHorizontal ? undefined : data.length * 28 + 60);
+    const chartHeightPx = $derived(isHorizontal ? data.length * 28 + 40 : heightPx);
 
     $effect(() => {
         if (!container) return;
@@ -54,7 +66,7 @@
 
     $effect(() => {
         if (!chart) return;
-        chart.setOption(buildEchartsOption(data, { totalCount }), true);
+        chart.setOption(buildEchartsOption(data, { totalCount, orientation }), true);
     });
 
     onDestroy(() => chart?.dispose());
@@ -65,10 +77,15 @@
         No data to display.
     </div>
 {:else}
-    <div class="w-full overflow-x-auto dark:[color-scheme:dark]" data-testid="bar-chart">
+    <div
+        class="w-full dark:[color-scheme:dark] {isHorizontal ? 'overflow-y-auto' : 'overflow-x-auto'}"
+        data-testid="bar-chart"
+    >
         <div
             bind:this={container}
-            style="width: {widthPx}px; min-width: 100%; height: {heightPx}px;"
+            style={isHorizontal
+                ? `width: 100%; height: ${chartHeightPx}px;`
+                : `width: ${widthPx}px; min-width: 100%; height: ${chartHeightPx}px;`}
         ></div>
     </div>
 {/if}

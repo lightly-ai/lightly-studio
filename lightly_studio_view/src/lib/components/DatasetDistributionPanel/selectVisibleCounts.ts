@@ -7,7 +7,7 @@ import type { DistributionConfig } from './types';
  */
 export function selectVisibleCounts(
     data: CategoryCount[],
-    config: DistributionConfig
+    config: Pick<DistributionConfig, 'n' | 'sortBy'>
 ): CategoryCount[] {
     const sorted = [...data].sort((a, b) =>
         config.sortBy === 'count'

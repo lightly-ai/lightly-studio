@@ -27,6 +27,21 @@ describe('buildEchartsOption', () => {
         expect(option.series[0].data).toEqual(balanced.map((item) => item.count));
     });
 
+    it('puts categories on the value axis when horizontal, keeping the bar series', () => {
+        const option = buildEchartsOption(balanced, { orientation: 'horizontal' }) as {
+            xAxis: { type: string };
+            yAxis: { type: string; data: string[]; inverse: boolean };
+            series: [{ type: string; data: number[] }];
+        };
+
+        expect(option.xAxis.type).toBe('value');
+        expect(option.yAxis.type).toBe('category');
+        expect(option.yAxis.data).toEqual(balanced.map((item) => item.label));
+        // Highest bar (first, pre-sorted) stays at the top.
+        expect(option.yAxis.inverse).toBe(true);
+        expect(option.series[0].data).toEqual(balanced.map((item) => item.count));
+    });
+
     const getFormatter = (option: unknown) =>
         (
             option as {

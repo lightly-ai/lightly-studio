@@ -1,5 +1,10 @@
 <script lang="ts">
-    import { Maximize2 as Maximize2Icon, Settings as SettingsIcon } from '@lucide/svelte';
+    import {
+        Maximize2 as Maximize2Icon,
+        Settings as SettingsIcon,
+        BarChart3 as BarChart3Icon,
+        BarChartHorizontal as BarChartHorizontalIcon
+    } from '@lucide/svelte';
     import { Button } from '$lib/components';
     import { DISTRIBUTION_SORT_LABELS, type DistributionConfig } from '../types';
 
@@ -11,6 +16,8 @@
         onConfigure: () => void;
         /** Quick action showing all classes; rendered only while a subset is visible. */
         onShowAll?: () => void;
+        /** Toggles between vertical and horizontal bar layouts. */
+        onToggleOrientation?: () => void;
         /** Renders the expand button only when provided (omit inside the expanded view). */
         onExpand?: () => void;
         /** Prefix for button test ids, to disambiguate panel vs. expanded view. */
@@ -24,6 +31,7 @@
         totalCount,
         onConfigure,
         onShowAll,
+        onToggleOrientation,
         onExpand,
         testIdPrefix = 'dataset-distribution'
     }: Props = $props();
@@ -51,6 +59,21 @@
             </button>
         {/if}
     </div>
+    {#if onToggleOrientation}
+        <Button
+            variant="ghost"
+            icon={config.orientation === 'horizontal' ? BarChart3Icon : BarChartHorizontalIcon}
+            ariaLabel={config.orientation === 'horizontal'
+                ? 'Switch to vertical bars'
+                : 'Switch to horizontal bars'}
+            buttonProps={{
+                size: 'sm',
+                class: 'h-8 w-8 p-0',
+                onclick: onToggleOrientation,
+                'data-testid': `${testIdPrefix}-toggle-orientation`
+            }}
+        />
+    {/if}
     <Button
         variant="ghost"
         icon={SettingsIcon}
