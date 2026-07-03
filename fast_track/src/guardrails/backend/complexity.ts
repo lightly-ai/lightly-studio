@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import type { Guardrail, GuardrailContext, GuardrailOutcome } from '../context/types';
-import { REPO_ROOT, RUFF_BIN } from './shared';
+import { REPO_ROOT, BACKEND_DIR } from './shared';
 import { extractStdoutOrThrow } from '../shared/utils';
 
 const execFileAsync = promisify(execFile);
@@ -22,9 +22,18 @@ async function runLinter(paths: string[]): Promise<RuffViolation[]> {
     let stdout: string;
     try {
         const result = await execFileAsync(
-            RUFF_BIN,
-            ['check', '--select', COMPLEXITY_RULE, '--output-format', 'json', ...paths],
-            { cwd: REPO_ROOT }
+            'uv',
+            [
+                'run',
+                'ruff',
+                'check',
+                '--select',
+                COMPLEXITY_RULE,
+                '--output-format',
+                'json',
+                ...paths
+            ],
+            { cwd: BACKEND_DIR }
         );
         stdout = result.stdout;
     } catch (err: unknown) {
@@ -58,7 +67,9 @@ export const backendComplexityGuardrail: Guardrail = {
             };
         }
 
-        const violations = (await runLinter(existingFiles.map((f) => f.path))).map(
+        const violations = (
+            await runLinter(existingFiles.map((f) => resolve(REPO_ROOT, f.path)))
+        ).map(
             (entry) =>
                 `${relative(REPO_ROOT, entry.filename)}:${entry.location.row} — ${entry.message}`
         );
