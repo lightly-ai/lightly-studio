@@ -24,12 +24,9 @@ make run-guardrails   # run the guardrails against the current branch
 make list-guardrails  # print the guardrail registry
 ```
 
-`make run-guardrails` diffs `BASE_REF...HEAD` (default `BASE_REF=origin/main`,
-three-dot to match GitHub's Files-changed view) and prints a per-guardrail
-verdict, exiting non-zero on a fail. `GUARDRAILS=a,b` runs only a named subset.
-
-It judges **committed** changes only — uncommitted edits are not in the diff, so
-commit before running to see a verdict for your latest work.
+`make run-guardrails` diffs `BASE_REF...HEAD` (three-dot, matching GitHub's
+Files-changed view; default `origin/main`) and exits non-zero on a fail. It sees
+**committed** changes only, so commit before running.
 
 ```bash
 # Run only selected guardrails (comma-separated; an unknown name errors out).
