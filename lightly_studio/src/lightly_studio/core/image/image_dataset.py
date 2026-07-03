@@ -753,12 +753,15 @@ def _generate_embeddings_annotations(
     """
     if not embed:
         return
-    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+    # Get annotation collection if it exists. Otherwise skip embedding generation.
+    child_collection_name = annotation_collection_name or SampleType.ANNOTATION.value.lower()
+    annotation_collection_id = collection_resolver.get_by_name(
         session=session,
-        collection_id=root_collection_id,
-        sample_type=SampleType.ANNOTATION,
-        name=annotation_collection_name,
+        name=child_collection_name,
+        parent_collection_id=root_collection_id,
     )
+    if annotation_collection_id is None:
+        return
     embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
     model_id = embedding_manager.load_or_get_default_model(
         session=session,

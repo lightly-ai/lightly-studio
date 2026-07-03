@@ -189,6 +189,30 @@ class TestDataset:
         )
         assert len(result.annotations) == 1
 
+    def test_add_annotations_from_coco__no_matching_images_creates_no_annotation_source(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        # With embed_annotations defaulting to True, an import that matches no images (e.g. a
+        # wrong images_root) must not leave behind an empty annotation source via the embed path.
+        dataset, _ = _setup_dataset_with_images(tmp_path, ["image1.jpg"])
+        annotations_path = tmp_path / "annotations.json"
+        annotations_path.write_text(json.dumps(_coco_dict_with(["image1.jpg"])))
+
+        dataset.add_annotations_from_coco(
+            annotations_json=annotations_path,
+            images_root=tmp_path / "wrong_root",
+            annotation_source="gt",
+        )
+
+        assert (
+            collection_resolver.get_by_name(
+                session=dataset.session, name="gt", parent_collection_id=dataset.collection_id
+            )
+            is None
+        )
+
     def test_add_annotations_from_coco__segmentation_mask_annotation_type(
         self,
         patch_collection: None,  # noqa: ARG002
