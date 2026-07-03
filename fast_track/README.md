@@ -31,6 +31,14 @@ verdict, exiting non-zero on a fail. `GUARDRAILS=a,b` runs only a named subset.
 It judges **committed** changes only — uncommitted edits are not in the diff, so
 commit before running to see a verdict for your latest work.
 
+```bash
+# Run only selected guardrails (comma-separated; an unknown name errors out).
+GUARDRAILS=dummy make run-guardrails
+
+# Diff against a different base (e.g. the parent branch of a stacked PR).
+BASE_REF=origin/develop make run-guardrails
+```
+
 ## Toolchain
 
 - **Node** floor enforced by `engine-strict` + `engines` (`>=24`); the exact
