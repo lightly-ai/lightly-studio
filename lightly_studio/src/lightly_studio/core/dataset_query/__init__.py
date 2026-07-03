@@ -14,6 +14,7 @@ from .order_by import (
 )
 from .sample_evaluation_query import SampleEvaluationQuery
 from .segmentation_mask_query import SegmentationMaskField, SegmentationMaskQuery
+from .video_frame_sample_field import VideoFrameSampleField
 from .video_sample_field import VideoSampleField
 
 __all__ = [
@@ -36,5 +37,6 @@ __all__ = [
     "SampleEvaluationQuery",
     "SegmentationMaskField",
     "SegmentationMaskQuery",
+    "VideoFrameSampleField",
     "VideoSampleField",
 ]
