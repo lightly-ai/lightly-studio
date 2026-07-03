@@ -61,6 +61,10 @@ def load_into_dataset_from_paths(
 
     Returns:
         A list of UUIDs of the created samples.
+
+    Raises:
+        AllInputFilesFailedError: If at least one file was attempted and every
+            attempted file was missing or broken.
     """
     # Normalize all paths up front so the database check can happen once, before the
     # main processing loop, instead of once per batch.
