@@ -5,6 +5,7 @@ import { FRONTEND_PREFIX, repoRelPath, runEslint } from './eslint-runner';
 
 const EXTENSIONS = new Set(['.js', '.ts', '.svelte']);
 const ESLINT_CONFIG = 'eslint.complexity.config.js';
+const ESLINT_ERROR_SEVERITY = 2;
 
 export const frontendComplexityGuardrail: Guardrail = {
     name: 'frontend/complexity',
@@ -22,7 +23,9 @@ export const frontendComplexityGuardrail: Guardrail = {
         const relPaths = files.map((f) => f.path.slice(FRONTEND_PREFIX.length));
         const results: ESLint.LintResult[] = await runEslint(relPaths, ESLINT_CONFIG);
         const violations = results.flatMap((file) =>
-            file.messages.map((msg) => `${repoRelPath(file.filePath)}:${msg.line} — ${msg.message}`)
+            file.messages
+                .filter((msg) => msg.severity === ESLINT_ERROR_SEVERITY)
+                .map((msg) => `${repoRelPath(file.filePath)}:${msg.line} — ${msg.message}`)
         );
 
         if (violations.length === 0) {

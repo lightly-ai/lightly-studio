@@ -48,6 +48,18 @@ describe('frontendComplexityGuardrail', () => {
         expect(result.status).toBe('pass');
     });
 
+    it('passes when ESLint reports only warning-level messages', async () => {
+        vi.mocked(runEslint).mockResolvedValueOnce([
+            {
+                filePath: `${FRONTEND_ABS}/src/foo.ts`,
+                messages: [{ ruleId: 'complexity', severity: 1, message: 'Somewhat complex.', line: 5 }]
+            }
+        ] as unknown as ESLint.LintResult[]);
+        const result = await frontendComplexityGuardrail.run(makeCtx());
+        expect(result.status).toBe('pass');
+        expect(result.summary).toContain('no violations');
+    });
+
     it('fails when ESLint reports an error-level violation', async () => {
         vi.mocked(runEslint).mockResolvedValueOnce([
             {
