@@ -21,10 +21,11 @@ export class GitGuardrailContext implements GuardrailContext {
         this.baseRef = baseRef;
     }
 
-    changedFiles(): Promise<ChangedFile[]> {
+    async changedFiles(): Promise<ChangedFile[]> {
         // Memoize: a run may consult the diff from several guardrails, but the
-        // committed diff is fixed for the duration of one judgement.
-        this.cache ??= Promise.resolve(this.diff());
+        // committed diff is fixed for the duration of one judgement. `async` so a
+        // git failure surfaces as a rejected promise, not a synchronous throw.
+        this.cache ??= (async () => this.diff())();
         return this.cache;
     }
 
@@ -36,9 +37,16 @@ export class GitGuardrailContext implements GuardrailContext {
     }
 
     private git(args: string[]): string {
+        // Pin the output format against the developer's global git config:
+        // `-c color.ui=false` strips ANSI that `color.ui=always` would inject,
+        // `--no-ext-diff` ignores diff.external/GIT_EXTERNAL_DIFF. Both would
+        // otherwise corrupt the numstat/patch text we parse.
         // 256 MiB: large enough for any realistic PR diff; git resolves the repo
         // root itself, so the working directory doesn't matter.
-        return execFileSync('git', args, { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
+        return execFileSync('git', ['-c', 'color.ui=false', ...args, '--no-ext-diff'], {
+            encoding: 'utf8',
+            maxBuffer: 256 * 1024 * 1024
+        });
     }
 }
 
