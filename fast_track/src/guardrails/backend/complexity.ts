@@ -10,6 +10,8 @@ const execFileAsync = promisify(execFile);
 const BACKEND_PREFIX = 'lightly_studio/';
 const NAME = 'backend/complexity';
 const COMPLEXITY_RULE = 'C901';
+const LINTER_TIMEOUT_MS = 60_000;
+const LINTER_MAX_BUFFER = 10 * 1024 * 1024;
 
 interface RuffViolation {
     code: string;
@@ -33,7 +35,7 @@ async function runLinter(paths: string[]): Promise<RuffViolation[]> {
                 'json',
                 ...paths
             ],
-            { cwd: BACKEND_DIR }
+            { cwd: BACKEND_DIR, timeout: LINTER_TIMEOUT_MS, maxBuffer: LINTER_MAX_BUFFER }
         );
         stdout = result.stdout;
     } catch (err: unknown) {
