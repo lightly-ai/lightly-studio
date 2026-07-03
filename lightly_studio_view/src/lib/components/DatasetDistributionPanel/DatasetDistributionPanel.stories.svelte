@@ -17,6 +17,7 @@
     import { GripVertical } from '@lucide/svelte';
     import { Pane, PaneGroup, PaneResizer } from 'paneforge';
     import { balanced, empty, longLabels, longTail, many80Classes } from '../BarChart/fixtures';
+    import { exampleSources } from './sourceFixtures';
 </script>
 
 {#snippet sidePanel(args)}
@@ -41,6 +42,15 @@
 <Story name="Empty" args={{ data: empty }} template={sidePanel} />
 
 <Story name="With close button" args={{ data: balanced, onClose: () => {} }} template={sidePanel} />
+
+<!-- Prototype: one panel, multiple sources. Switch between class labels, tags,
+     metadata keys (secondary key picker), and eval via the Source selector —
+     shows how the same UI/UX generalises beyond class labels. -->
+<Story
+    name="Multi-source (class / tags / metadata / eval)"
+    args={{ sources: exampleSources, title: 'Distribution', onClose: () => {} }}
+    template={sidePanel}
+/>
 
 <!-- Mirrors the PaneGroup structure of the collection +layout.svelte: main
      content pane + resizer + side panel pane, so the panel can be reviewed

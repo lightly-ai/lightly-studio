@@ -13,12 +13,21 @@
         data: CategoryCount[];
         /** The applied view config, shared with the panel. */
         config: DistributionConfig;
+        /** Noun for the header summary (e.g. 'annotations', 'samples'). */
+        valueNoun?: string;
         /** Invoked when the user applies a new config from the expanded view. */
         onConfigChange: (config: DistributionConfig) => void;
         onBarClick?: (item: CategoryCount) => void;
     }
 
-    let { open = $bindable(), data, config, onConfigChange, onBarClick }: Props = $props();
+    let {
+        open = $bindable(),
+        data,
+        config,
+        valueNoun = 'annotations',
+        onConfigChange,
+        onBarClick
+    }: Props = $props();
 
     let configDialogOpen = $state(false);
 
@@ -37,6 +46,7 @@
             classCount={data.length}
             visibleClassCount={visible.length}
             {totalCount}
+            {valueNoun}
             onConfigure={() => (configDialogOpen = true)}
             onShowAll={() => onConfigChange({ ...config, n: data.length })}
             onToggleOrientation={() =>

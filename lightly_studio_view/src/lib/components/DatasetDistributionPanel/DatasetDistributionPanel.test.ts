@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import DatasetDistributionPanel from './DatasetDistributionPanel.svelte';
 import { balanced, empty, longTail } from '../BarChart/fixtures';
+import type { DistributionSource } from './types';
 
 const echartsMock = vi.hoisted(() => {
     const instance = {
@@ -135,6 +136,40 @@ describe('DatasetDistributionPanel', () => {
                     .yAxis.type
             ).toBe('category')
         );
+    });
+
+    it('shows the source selector and switches the charted data between sources', async () => {
+        const sources: DistributionSource[] = [
+            {
+                id: 'class',
+                label: 'Class labels',
+                data: [{ label: 'car', count: 10 }],
+                valueNoun: 'annotations'
+            },
+            {
+                id: 'tags',
+                label: 'Tags',
+                data: [{ label: 'reviewed', count: 42 }],
+                valueNoun: 'samples'
+            }
+        ];
+        render(DatasetDistributionPanel, { props: { sources } });
+
+        // Default source is the first one (class labels).
+        expect(screen.getByText(/1 class · sorted by count · 10 annotations/)).toBeInTheDocument();
+
+        // The source selector is present; a single-source panel would not show it.
+        expect(screen.getByTestId('dataset-distribution-source-select')).toBeInTheDocument();
+
+        const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+            xAxis: { data: string[] };
+        };
+        expect(option.xAxis.data).toEqual(['car']);
+    });
+
+    it('omits the source selector when only one source is available', () => {
+        render(DatasetDistributionPanel, { props: defaultProps });
+        expect(screen.queryByTestId('dataset-distribution-source-select')).not.toBeInTheDocument();
     });
 
     it('renders a close button only when onClose is provided and forwards clicks', async () => {
