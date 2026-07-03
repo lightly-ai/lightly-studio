@@ -1,2 +1,5 @@
 node_modules/
 *.tsbuildinfo
+
+# Verdict artifact written by `npm run checks` (Fast Track Checks).
+verdict.json

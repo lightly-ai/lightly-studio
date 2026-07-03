@@ -1,0 +1,62 @@
+name: Fast Track Checks
+
+# Judges only. Runs the guardrails on every non-draft PR event with a READ-ONLY
+# token and publishes a machine-readable verdict as an artifact for the Fast
+# Track Bot to act on. Holds no privileged credential — the token that can
+# approve lives only in the Bot's base-repo context (design §2, §3).
+#
+# Deliberately NOT a required status check: requiring it would block every
+# non-fast-track PR (design §4).
+
+on:
+  pull_request:
+    # `labeled`/`unlabeled` are included so adding/removing the opt-out label
+    # (Stage C5) re-evaluates the PR.
+    types: [opened, ready_for_review, synchronize, reopened, labeled, unlabeled]
+
+# Only the latest push per PR needs judging; cancel superseded runs.
+concurrency:
+  group: fast-track-checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+# Read-only everywhere. No write scope is granted to any job in this workflow.
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  checks:
+    name: Run guardrails
+    # Skip drafts: the Bot no-ops without a verdict, so there is nothing to do.
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: fast_track
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      # Pin Node from .nvmrc, matching the local Makefile's nvm setup.
+      - name: Set Up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: fast_track/.nvmrc
+          cache: npm
+          cache-dependency-path: fast_track/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run guardrails and publish verdict
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: npm run checks
+
+      - name: Upload verdict
+        uses: actions/upload-artifact@v4
+        with:
+          name: fast-track-verdict
+          path: fast_track/verdict.json
+          if-no-files-found: error
+          retention-days: 7
