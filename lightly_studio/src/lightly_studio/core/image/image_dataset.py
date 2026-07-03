@@ -150,6 +150,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         Raises:
             NotImplementedError: If tag_depth > 1.
             ValueError: If limit is not None and not greater than 0.
+            AllInputFilesFailedError: If every image in the path is missing or broken.
         """
         fsspec_lister.validate_limit(limit)
         # Collect image file paths.

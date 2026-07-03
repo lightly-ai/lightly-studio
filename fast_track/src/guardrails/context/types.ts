@@ -4,8 +4,6 @@ export interface ChangedFile {
     path: string;
     additions: number;
     deletions: number;
-    /** Absent for large/binary files (the API omits it), so guardrails must tolerate that. */
-    patch?: string;
 }
 
 /** Backed by git locally and the API in CI. */

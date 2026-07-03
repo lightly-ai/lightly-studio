@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Generic, cast
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 from typing_extensions import Self, TypeVar
 
@@ -312,6 +312,11 @@ class DatasetQuery(Generic[T]):
             # Order by ImageSampleField.created_at by default.
             default_order_by = OrderByField(ImageSampleField.created_at)
             query = default_order_by.apply(query)
+        elif self.dataset.sample_type == SampleType.VIDEO_FRAME:
+            query = query.join(VideoFrameTable.video).order_by(
+                col(VideoTable.file_path_abs),
+                col(VideoFrameTable.frame_number),
+            )
 
         # Apply slicing if present
         if self._slice is not None:
