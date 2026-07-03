@@ -13,7 +13,8 @@
         "static-checks": "npm run lint && npm run check",
         "test": "vitest run",
         "guardrails": "tsx src/guardrails/cli.ts",
-        "list-guardrails": "tsx src/guardrails/cli.ts --list"
+        "list-guardrails": "tsx src/guardrails/cli.ts --list",
+        "guardrails-ci": "tsx src/guardrails/ci.ts"
     },
     "dependencies": {
         "@actions/github": "^6.0.1",

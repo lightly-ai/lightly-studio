@@ -2,16 +2,19 @@
 
 TypeScript package for the Fast Track Bot: **guardrails** that judge a PR and
 produce a machine-readable verdict, and a **bot** that acts on that verdict. Two
-thin GitHub workflows will launch it (added in later PRs).
+thin GitHub workflows launch it.
 
 Runs via [`tsx`](https://tsx.is/) — no build step, no compiled artifact.
 
-> **Status:** early scaffolding. The verdict contract, the guardrail framework
-> (context types, an always-pass dummy guardrail, the registry + selector), the
-> runner, the local git-backed context provider, and the API-backed context
-> provider are in place with unit tests — `make run-guardrails` runs the
-> guardrails against your branch's committed changes. The bot and the two
-> workflows land in subsequent, independently reviewable PRs.
+> **Status:** the judging half is live. The verdict contract, the guardrail
+> framework (context types, an always-pass dummy guardrail, the registry +
+> selector), the runner, and both context providers (local git + CI API) are in
+> place with unit tests. The **Fast Track Guardrails** workflow
+> (`.github/workflows/fast_track_guardrails.yml`) runs on every non-draft PR: its
+> CI entry (`src/guardrails/ci.ts`) judges the PR via the read-only GitHub API
+> and uploads a `verdict.json` artifact. Locally, `make run-guardrails` runs the
+> guardrails against your branch's committed changes. The bot (which reads the
+> verdict and approves) lands in subsequent, independently reviewable PRs.
 
 ## Local commands
 
