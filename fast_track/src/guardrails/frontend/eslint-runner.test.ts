@@ -1,109 +1,133 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { vi, describe, expect, it } from 'vitest';
 
-vi.mock('node:child_process', () => ({
-    execFile: vi.fn()
-}));
+const mockLintFiles = vi.fn();
 
-import { execFile } from 'node:child_process';
-import { FRONTEND_ABS, FRONTEND_DIR, repoRelPath, runEslint } from './eslint-runner';
+// createRequire is called at module init time to load ESLint from the frontend package.
+// Mocking node:module (hoisted by vitest) lets us intercept that before eslint-runner loads.
+vi.mock('node:module', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('node:module')>();
+    return {
+        ...actual,
+        createRequire: () => () => ({
+            ESLint: vi.fn().mockImplementation(() => ({ lintFiles: mockLintFiles }))
+        })
+    };
+});
 
-const mockExecFile = execFile as unknown as ReturnType<typeof vi.fn>;
-
-type ExecCallback = (err: Error | null, result?: { stdout: string }) => void;
-
-const succeed = (stdout: string) =>
-    mockExecFile.mockImplementation(
-        (_cmd: unknown, _args: unknown, _opts: unknown, cb: ExecCallback) => {
-            cb(null, { stdout });
-        }
-    );
-
-const failWith = (err: Error) =>
-    mockExecFile.mockImplementation(
-        (_cmd: unknown, _args: unknown, _opts: unknown, cb: ExecCallback) => {
-            cb(err);
-        }
-    );
-
-beforeEach(() => vi.clearAllMocks());
+import { runEslint, repoRelPath, FRONTEND_ABS } from './eslint-runner';
 
 describe('repoRelPath', () => {
-    it('converts an absolute ESLint path to a repo-relative path', () => {
-        expect(repoRelPath(FRONTEND_ABS + '/src/foo.ts')).toBe(FRONTEND_DIR + '/src/foo.ts');
+    it('converts an absolute path to a repo-relative path', () => {
+        expect(repoRelPath(`${FRONTEND_ABS}/src/foo.ts`)).toBe('lightly_studio_view/src/foo.ts');
     });
 
-    it('handles deeply nested paths', () => {
-        expect(repoRelPath(FRONTEND_ABS + '/src/lib/bar/baz.ts')).toBe(
-            FRONTEND_DIR + '/src/lib/bar/baz.ts'
+    it('handles nested directories', () => {
+        expect(repoRelPath(`${FRONTEND_ABS}/src/components/Button.svelte`)).toBe(
+            'lightly_studio_view/src/components/Button.svelte'
         );
+    });
+
+    it('handles a root-level file', () => {
+        expect(repoRelPath(`${FRONTEND_ABS}/index.ts`)).toBe('lightly_studio_view/index.ts');
     });
 });
 
 describe('runEslint', () => {
-    const sampleResults = [{ filePath: '/abs/path/src/foo.ts', messages: [] }];
+    it('maps lintFiles results to EslintFileResult, stripping extra fields', async () => {
+        mockLintFiles.mockResolvedValueOnce([
+            {
+                filePath: `${FRONTEND_ABS}/src/foo.ts`,
+                messages: [
+                    {
+                        ruleId: 'no-console',
+                        severity: 2,
+                        message: 'Unexpected console statement.',
+                        line: 5,
+                        column: 1,
+                        endLine: 5,
+                        endColumn: 20,
+                        nodeType: 'CallExpression'
+                    }
+                ],
+                errorCount: 1,
+                warningCount: 0,
+                fixableErrorCount: 0,
+                fixableWarningCount: 0,
+                usedDeprecatedRules: []
+            }
+        ]);
 
-    it('returns parsed JSON when ESLint exits cleanly', async () => {
-        succeed(JSON.stringify(sampleResults));
+        const results = await runEslint(['src/foo.ts'], 'eslint.config.js');
 
-        const result = await runEslint(['src/foo.ts'], 'eslint.config.js');
-
-        expect(result).toEqual(sampleResults);
+        expect(results).toEqual([
+            {
+                filePath: `${FRONTEND_ABS}/src/foo.ts`,
+                messages: [
+                    {
+                        ruleId: 'no-console',
+                        severity: 2,
+                        message: 'Unexpected console statement.',
+                        line: 5
+                    }
+                ]
+            }
+        ]);
     });
 
-    it('returns parsed JSON when ESLint exits with code 1 (lint errors found)', async () => {
-        failWith(
-            Object.assign(new Error('ESLint found errors'), {
-                code: 1,
-                stdout: JSON.stringify(sampleResults)
-            })
-        );
+    it('preserves ruleId: null for directive messages', async () => {
+        mockLintFiles.mockResolvedValueOnce([
+            {
+                filePath: `${FRONTEND_ABS}/src/bar.ts`,
+                messages: [
+                    {
+                        ruleId: null,
+                        severity: 1,
+                        message: 'Unused directive.',
+                        line: 3,
+                        column: 1,
+                        nodeType: null
+                    }
+                ],
+                errorCount: 0,
+                warningCount: 1
+            }
+        ]);
 
-        const result = await runEslint(['src/foo.ts'], 'eslint.config.js');
+        const results = await runEslint(['src/bar.ts'], 'eslint.config.js');
 
-        expect(result).toEqual(sampleResults);
+        expect(results[0]!.messages[0]).toEqual({
+            ruleId: null,
+            severity: 1,
+            message: 'Unused directive.',
+            line: 3
+        });
     });
 
-    it('rethrows when ESLint exits with a non-1 error code', async () => {
-        failWith(Object.assign(new Error('fatal error'), { code: 2 }));
+    it('returns empty messages array when there are no violations', async () => {
+        mockLintFiles.mockResolvedValueOnce([
+            {
+                filePath: `${FRONTEND_ABS}/src/clean.ts`,
+                messages: [],
+                errorCount: 0,
+                warningCount: 0
+            }
+        ]);
 
-        await expect(runEslint(['src/foo.ts'], 'eslint.config.js')).rejects.toThrow('fatal error');
+        const results = await runEslint(['src/clean.ts'], 'eslint.config.js');
+
+        expect(results).toEqual([{ filePath: `${FRONTEND_ABS}/src/clean.ts`, messages: [] }]);
     });
 
-    it('rethrows when the error has code 1 but stdout is not a string', async () => {
-        failWith(Object.assign(new Error('no stdout'), { code: 1 }));
+    it('handles multiple files', async () => {
+        mockLintFiles.mockResolvedValueOnce([
+            { filePath: `${FRONTEND_ABS}/src/a.ts`, messages: [], errorCount: 0, warningCount: 0 },
+            { filePath: `${FRONTEND_ABS}/src/b.ts`, messages: [], errorCount: 0, warningCount: 0 }
+        ]);
 
-        await expect(runEslint(['src/foo.ts'], 'eslint.config.js')).rejects.toThrow('no stdout');
-    });
+        const results = await runEslint(['src/a.ts', 'src/b.ts'], 'eslint.config.js');
 
-    it('rethrows when the error has no code property', async () => {
-        failWith(new Error('spawn failed'));
-
-        await expect(runEslint(['src/foo.ts'], 'eslint.config.js')).rejects.toThrow('spawn failed');
-    });
-
-    it('passes --config, --format json, and file paths to ESLint', async () => {
-        succeed('[]');
-
-        await runEslint(['src/a.ts', 'src/b.ts'], 'eslint.config.js');
-
-        const [, args] = mockExecFile.mock.calls[0]!;
-        expect(args).toContain('--config');
-        expect(args).toContain('eslint.config.js');
-        expect(args).toContain('--format');
-        expect(args).toContain('json');
-        expect(args).toContain('src/a.ts');
-        expect(args).toContain('src/b.ts');
-    });
-
-    it('inserts extra args between the fixed flags and the file list', async () => {
-        succeed('[]');
-
-        await runEslint(['src/a.ts'], 'eslint.config.js', ['--max-warnings', '0']);
-
-        const [, args] = mockExecFile.mock.calls[0]!;
-        const extraIndex = args.indexOf('--max-warnings');
-        const fileIndex = args.indexOf('src/a.ts');
-        expect(extraIndex).toBeGreaterThan(-1);
-        expect(extraIndex).toBeLessThan(fileIndex);
+        expect(results).toHaveLength(2);
+        expect(results[0]!.filePath).toBe(`${FRONTEND_ABS}/src/a.ts`);
+        expect(results[1]!.filePath).toBe(`${FRONTEND_ABS}/src/b.ts`);
     });
 });

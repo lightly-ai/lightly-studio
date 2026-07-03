@@ -1,10 +1,7 @@
-import { execFile } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
-import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
-import { isExecExitOne } from '../shared/utils.js';
-
-const execFileAsync = promisify(execFile);
+import { ESLint } from 'eslint';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -13,7 +10,9 @@ export const FRONTEND_DIR = 'lightly_studio_view';
 export const FRONTEND_ABS = resolve(__dirname, '../../../..', FRONTEND_DIR);
 export const FRONTEND_PREFIX = FRONTEND_DIR + '/';
 
-const MAX_BUFFER = 32 * 1024 * 1024;
+// Load ESLint from the frontend package so its config plugins resolve correctly.
+const require = createRequire(FRONTEND_ABS + '/package.json');
+const { ESLint: FrontendESLint } = require('eslint') as { ESLint: typeof ESLint };
 
 export interface EslintMessage {
     ruleId: string | null;
@@ -32,23 +31,20 @@ export function repoRelPath(absPath: string): string {
     return FRONTEND_DIR + '/' + absPath.slice(FRONTEND_ABS.length + 1);
 }
 
-export async function runEslint(
-    relPaths: string[],
-    config: string,
-    extraArgs: string[] = []
-): Promise<EslintFileResult[]> {
-    let stdout: string;
-    try {
-        const result = await execFileAsync(
-            'node_modules/.bin/eslint',
-            ['--config', config, '--format', 'json', ...extraArgs, ...relPaths],
-            { cwd: FRONTEND_ABS, maxBuffer: MAX_BUFFER }
-        );
-        stdout = result.stdout;
-    } catch (err: unknown) {
-        // ESLint exits 1 when it finds lint errors; stdout still contains the JSON.
-        if (!isExecExitOne(err)) throw err;
-        stdout = err.stdout;
-    }
-    return JSON.parse(stdout) as EslintFileResult[];
+export async function runEslint(relPaths: string[], config: string): Promise<EslintFileResult[]> {
+    const eslint = new FrontendESLint({
+        cwd: FRONTEND_ABS,
+        overrideConfigFile: config
+    });
+
+    const results = await eslint.lintFiles(relPaths);
+    return results.map((r) => ({
+        filePath: r.filePath,
+        messages: r.messages.map((m) => ({
+            ruleId: m.ruleId,
+            severity: m.severity,
+            message: m.message,
+            line: m.line
+        }))
+    }));
 }
