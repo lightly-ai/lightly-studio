@@ -132,6 +132,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         allowed_extensions: Iterable[str] | None = None,
         embed: bool = True,
         tag_depth: int = 0,
+        limit: int | None = None,
     ) -> None:
         """Adding images from the specified path to the dataset.
 
@@ -144,10 +145,13 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 - `tag_depth=0` (default): No automatic tagging is performed.
                 - `tag_depth=1`: Automatically creates a tag for each
                   image based on its parent directory's name.
+            limit: Maximum number of samples to load. By default, all samples are loaded.
 
         Raises:
             NotImplementedError: If tag_depth > 1.
+            ValueError: If limit is not None and not greater than 0.
         """
+        fsspec_lister.validate_limit(limit)
         # Collect image file paths.
         if allowed_extensions:
             allowed_extensions_set = {ext.lower() for ext in allowed_extensions}
@@ -155,7 +159,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             allowed_extensions_set = None
         image_paths = list(
             fsspec_lister.iter_files_from_path(
-                path=str(path), allowed_extensions=allowed_extensions_set
+                path=str(path), allowed_extensions=allowed_extensions_set, limit=limit
             )
         )
 
@@ -322,6 +326,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         embed: bool = True,
         annotation_source: str | None = None,
         embed_annotations: bool = False,
+        limit: int | None = None,
     ) -> None:
         """Load a dataset from a labelformat object and store in database.
 
@@ -335,7 +340,12 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
             embed_annotations: If True, generate embeddings for object-detection annotations.
+            limit: Maximum number of samples to load. By default, all samples are loaded.
+
+        Raises:
+            ValueError: If limit is not None and not greater than 0.
         """
+        fsspec_lister.validate_limit(limit)
         images_path = Path(images_path).absolute()
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
@@ -344,6 +354,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             input_labels=input_labels,
             images_path=images_path,
             collection_name=annotation_source,
+            limit=limit,
         )
 
         _postprocess_created_images(
@@ -360,13 +371,14 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             embed=embed_annotations,
         )
 
-    def add_samples_from_yolo(
+    def add_samples_from_yolo(  # noqa: PLR0913
         self,
         data_yaml: PathLike,
         input_split: str | None = None,
         embed: bool = True,
         annotation_source: str | None = None,
         embed_annotations: bool = False,
+        limit: int | None = None,
     ) -> None:
         """Load a dataset in YOLO format and store in DB.
 
@@ -379,7 +391,13 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
             embed_annotations: If True, generate embeddings for object-detection annotations.
+            limit: Maximum number of samples to load, in total across all processed
+                splits. By default, all samples are loaded.
+
+        Raises:
+            ValueError: If limit is not None and not greater than 0.
         """
+        fsspec_lister.validate_limit(limit)
         data_yaml = Path(data_yaml).absolute()
 
         if not data_yaml.is_file() or data_yaml.suffix != ".yaml":
@@ -391,9 +409,12 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         )
 
         all_created_sample_ids = []
+        remaining = limit
 
         # Process each split
         for split in splits_to_process:
+            if remaining is not None and remaining <= 0:
+                break
             # Load the dataset using labelformat.
             label_input = YOLOv8ObjectDetectionInput(
                 input_file=data_yaml,
@@ -407,6 +428,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 input_labels=label_input,
                 images_path=images_path,
                 collection_name=annotation_source,
+                limit=remaining,
             )
 
             # Tag samples with split name
@@ -419,6 +441,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             )
 
             all_created_sample_ids.extend(created_sample_ids)
+            if remaining is not None:
+                remaining -= len(created_sample_ids)
 
         # Generate embeddings for all samples at once
         _postprocess_created_images(
@@ -444,6 +468,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         embed: bool = True,
         annotation_source: str | None = None,
         embed_annotations: bool = False,
+        limit: int | None = None,
     ) -> None:
         """Load a dataset in COCO Object Detection format and store in DB.
 
@@ -459,7 +484,12 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
             embed_annotations: If True, generate embeddings for object-detection annotations.
+            limit: Maximum number of samples to load. By default, all samples are loaded.
+
+        Raises:
+            ValueError: If limit is not None and not greater than 0.
         """
+        fsspec_lister.validate_limit(limit)
         images_path = _normalize_input_path(path=images_path)
         fs, fs_path = fsspec.core.url_to_fs(url=annotations_json)
         if not fs.isfile(fs_path) or not str(annotations_json).endswith(".json"):
@@ -484,6 +514,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             input_labels=label_input,
             images_path=images_path,
             collection_name=annotation_source,
+            limit=limit,
         )
 
         _postprocess_created_images(
@@ -508,6 +539,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         split: str | None = None,
         embed: bool = True,
         annotation_source: str | None = None,
+        limit: int | None = None,
     ) -> None:
         """Load a Pascal VOC segmentation dataset and store in DB.
 
@@ -525,7 +557,12 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
+            limit: Maximum number of samples to load. By default, all samples are loaded.
+
+        Raises:
+            ValueError: If limit is not None and not greater than 0.
         """
+        fsspec_lister.validate_limit(limit)
         images_path = _normalize_input_path(path=images_path)
         masks_path = _normalize_input_path(path=masks_path)
 
@@ -541,6 +578,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             input_labels=label_input,
             images_path=images_path,
             collection_name=annotation_source,
+            limit=limit,
         )
 
         _postprocess_created_images(
@@ -559,6 +597,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         embed: bool = True,
         annotation_source: str | None = None,
         embed_annotations: bool = False,
+        limit: int | None = None,
     ) -> None:
         """Load a dataset in Lightly format and store in DB.
 
@@ -572,7 +611,12 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
             embed_annotations: If True, generate embeddings for object-detection annotations.
+            limit: Maximum number of samples to load. By default, all samples are loaded.
+
+        Raises:
+            ValueError: If limit is not None and not greater than 0.
         """
+        fsspec_lister.validate_limit(limit)
         input_folder = Path(input_folder).absolute()
 
         # Load the dataset using labelformat.
@@ -587,6 +631,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             input_labels=label_input,
             images_path=images_path,
             collection_name=annotation_source,
+            limit=limit,
         )
 
         _postprocess_created_images(
@@ -609,6 +654,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         images_path: PathLike,
         split: str | None = None,
         embed: bool = True,
+        limit: int | None = None,
     ) -> None:
         """Load a dataset in COCO caption format and store in DB.
 
@@ -618,7 +664,12 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             split: Optional split name to tag samples (e.g., 'train', 'val').
                 If provided, all samples will be tagged with this name.
             embed: If True, generate embeddings for the newly added samples.
+            limit: Maximum number of samples to load. By default, all samples are loaded.
+
+        Raises:
+            ValueError: If limit is not None and not greater than 0.
         """
+        fsspec_lister.validate_limit(limit)
         annotations_json = Path(annotations_json).absolute()
         images_path = Path(images_path).absolute()
 
@@ -630,6 +681,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             root_collection_id=self.collection_id,
             annotations_json=annotations_json,
             images_path=images_path,
+            limit=limit,
         )
 
         _postprocess_created_images(
