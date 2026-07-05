@@ -17,6 +17,10 @@ export type SlicResult = {
     width: number;
     height: number;
     boundaries: Uint8Array;
+    /** CSR pixel-index buffers; prefer these in hot paths. */
+    pixelIndexes: Uint32Array;
+    segmentOffsets: Uint32Array;
+    /** Materialized lazily on first access — avoid in hot paths. */
     labelPixelIndexes: number[][];
     originalWidth: number;
     originalHeight: number;
@@ -159,7 +163,13 @@ const toSlicResult = (
     width: segmentation.width,
     height: segmentation.height,
     boundaries: segmentation.boundaries,
-    labelPixelIndexes: segmentation.labelPixelIndexes,
+    pixelIndexes: segmentation.pixelIndexes,
+    segmentOffsets: segmentation.segmentOffsets,
+    // Delegate instead of copying so the package's lazy materialization is
+    // only triggered if something actually reads labelPixelIndexes.
+    get labelPixelIndexes() {
+        return segmentation.labelPixelIndexes;
+    },
     level,
     originalWidth: prepared.originalWidth,
     originalHeight: prepared.originalHeight,
