@@ -80,7 +80,11 @@ vi.mock('@tanstack/svelte-query', () => ({
 }));
 
 vi.mock('$lib/api/lightly_studio_local/@tanstack/svelte-query.gen', () => ({
-    getAnnotationOptions: ({ path }: { path: { annotation_id: string; collection_id: string } }) => ({
+    getAnnotationOptions: ({
+        path
+    }: {
+        path: { annotation_id: string; collection_id: string };
+    }) => ({
         queryKey: ['annotation', path.collection_id, path.annotation_id]
     }),
     readAnnotationLabelsOptions: ({ path }: { path: { collection_id: string } }) => ({
@@ -91,23 +95,25 @@ vi.mock('$lib/api/lightly_studio_local/@tanstack/svelte-query.gen', () => ({
     })
 }));
 
-vi.mock('$lib/hooks/useAnnotationCounts/useAnnotationCounts', () => ({
-    useAnnotationCountsQueryKey: ['annotation-counts']
+vi.mock('$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts', () => ({
+    useImageAnnotationCountsQueryKey: ['annotation-counts']
 }));
 
 vi.mock('$lib/components/SampleAnnotation/utils', () => ({
     decodeRLEToBinaryMask: vi.fn(() => new Uint8Array([0, 0, 0])),
     getImageCoordsFromMouse: getImageCoordsFromMouseMock,
-    interpolateLineBetweenPoints: vi.fn((from: { x: number; y: number }, to: { x: number; y: number }) => {
-        const points = [{ x: from.x, y: from.y }];
+    interpolateLineBetweenPoints: vi.fn(
+        (from: { x: number; y: number }, to: { x: number; y: number }) => {
+            const points = [{ x: from.x, y: from.y }];
 
-        if (Math.abs(to.x - from.x) > 1) {
-            points.push({ x: 1, y: from.y });
+            if (Math.abs(to.x - from.x) > 1) {
+                points.push({ x: 1, y: from.y });
+            }
+
+            points.push({ x: to.x, y: to.y });
+            return points;
         }
-
-        points.push({ x: to.x, y: to.y });
-        return points;
-    })
+    )
 }));
 
 vi.mock(
@@ -141,10 +147,24 @@ vi.mock('$lib/hooks/useAnnotation/useAnnotation', () => ({
 }));
 
 vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
-    useAnnotationLabels: () =>
-        writable({
-            data: []
-        })
+    useAnnotationLabels: () => ({
+        data: []
+    })
+}));
+
+vi.mock('$lib/hooks/useDeleteAnnotation/useDeleteAnnotation', () => ({
+    useDeleteAnnotation: () => ({
+        deleteAnnotation: vi.fn()
+    })
+}));
+
+vi.mock('$lib/hooks/useSelectClassDialog/useSelectClassDialog', () => ({
+    useSelectClassDialog: () => ({
+        open: writable(false),
+        requestLabel: vi.fn(async () => null),
+        handleConfirm: vi.fn(),
+        handleCancel: vi.fn()
+    })
 }));
 
 vi.mock('$lib/hooks/useCollection/useCollection', () => ({
@@ -153,8 +173,8 @@ vi.mock('$lib/hooks/useCollection/useCollection', () => ({
     })
 }));
 
-vi.mock('$lib/hooks/useInstanceSegmentationBrush', () => ({
-    useInstanceSegmentationBrush: () => ({
+vi.mock('$lib/hooks/useSegmentationMaskBrush', () => ({
+    useSegmentationMaskBrush: () => ({
         finishBrush: finishBrushMock
     })
 }));
@@ -196,7 +216,9 @@ describe('SampleSlicRect', () => {
         maskToColoredDataUrlMock.mockClear();
         invalidateQueriesMock.mockClear();
         setQueryDataMock.mockClear();
-        getImageCoordsFromMouseMock.mockImplementation(() => queuedPoints.shift() ?? { x: 0, y: 0 });
+        getImageCoordsFromMouseMock.mockImplementation(
+            () => queuedPoints.shift() ?? { x: 0, y: 0 }
+        );
         getLabelAtPointMock.mockImplementation((_, x: number) =>
             Math.max(0, Math.min(2, Math.round(x)))
         );
@@ -533,7 +555,7 @@ describe('SampleSlicRect', () => {
             const persistedAnnotation = {
                 sample_id: 'created-annotation',
                 parent_sample_id: 'sample-cache',
-                annotation_type: 'instance_segmentation',
+                annotation_type: 'segmentation_mask',
                 annotation_label: {
                     annotation_label_name: 'DEFAULT'
                 },
@@ -619,7 +641,8 @@ describe('SampleSlicRect', () => {
                     {
                         sample_id: 'created-annotation',
                         parent_sample_id: 'sample-cache',
-                        annotation_type: 'instance_segmentation',
+                        annotation_collection_id: 'collection-1',
+                        annotation_type: 'segmentation_mask',
                         annotation_label: {
                             annotation_label_name: 'DEFAULT'
                         },

@@ -15,7 +15,5 @@
         focus:outline-none
                 ${isActive ? 'bg-black/40' : 'hover:bg-black/20'}`}
 >
-    <Bot
-        class={`size-4 transition-colors ${isActive ? 'text-primary' : ''} hover:text-primary`}
-    />
+    <Bot class={`size-4 transition-colors ${isActive ? 'text-primary' : ''} hover:text-primary`} />
 </button>

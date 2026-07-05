@@ -1,5 +1,9 @@
 <script lang="ts">
-    import type { AnnotationUpdateInput, AnnotationView, ImageView } from '$lib/api/lightly_studio_local';
+    import type {
+        AnnotationUpdateInput,
+        AnnotationView,
+        ImageView
+    } from '$lib/api/lightly_studio_local';
     import {
         getAnnotationOptions,
         readAnnotationLabelsOptions,
@@ -15,7 +19,10 @@
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-    import { useInstanceSegmentationBrush } from '$lib/hooks/useInstanceSegmentationBrush';
+    import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
+    import { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
+    import { useSegmentationMaskBrush } from '$lib/hooks/useSegmentationMaskBrush';
+    import SelectClassDialog from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
     import {
         createSlicMaskForLabels,
         extractCellMask,
@@ -23,12 +30,12 @@
         loadSuperpixelsForImage,
         maskToColoredDataUrl,
         upsampleCellMask,
-        type SlicResult,
+        type SlicResult
     } from '$lib/utils/slic';
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { page } from '$app/state';
     import { useQueryClient } from '@tanstack/svelte-query';
-    import { useAnnotationCountsQueryKey } from '$lib/hooks/useAnnotationCounts/useAnnotationCounts';
+    import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
 
     type SampleSlicRectProps = {
@@ -55,8 +62,15 @@
         refetch
     }: SampleSlicRectProps = $props();
 
-    const labels = useAnnotationLabels({ collectionId });
+    const labels = useAnnotationLabels(() => ({ collectionId }));
     const queryClient = useQueryClient();
+    const { deleteAnnotation } = useDeleteAnnotation({ collectionId });
+    const {
+        open: selectClassDialogOpen,
+        requestLabel,
+        handleConfirm: handleSelectClassDialogConfirm,
+        handleCancel: handleSelectClassDialogCancel
+    } = useSelectClassDialog();
     const datasetId = $derived(page.params.dataset_id!);
     const { refetch: refetchRootCollection } = $derived.by(() =>
         useCollectionWithChildren({ collectionId: datasetId })
@@ -66,7 +80,8 @@
         setAnnotationId,
         setIsDrawing
     } = useAnnotationLabelContext();
-    const { context: sampleDetailsToolbarContext, setSlicStatus } = useSampleDetailsToolbarContext();
+    const { context: sampleDetailsToolbarContext, setSlicStatus } =
+        useSampleDetailsToolbarContext();
 
     const activeAnnotationId = $derived.by(() => {
         if (annotationLabelContext.annotationId) return annotationLabelContext.annotationId;
@@ -77,22 +92,21 @@
 
         return null;
     });
-    const annotationApi = $derived.by(() => {
-        if (!activeAnnotationId) return null;
-
-        return useAnnotation({
-            collectionId,
-            annotationId: activeAnnotationId
-        });
-    });
+    const annotationApi = useAnnotation(() => ({
+        collectionId,
+        annotationId: activeAnnotationId ?? '',
+        enabled: !!activeAnnotationId
+    }));
     const brushApi = $derived.by(() =>
-        useInstanceSegmentationBrush({
+        useSegmentationMaskBrush({
             collectionId,
+            datasetId,
             sampleId,
             sample,
             annotations: sample.annotations,
-            segmentationMode: 'instance',
             refetch,
+            deleteAnnotation,
+            requestLabel,
             onAnnotationCreated: () => {
                 if (sample.annotations.length === 0) {
                     refetchRootCollection();
@@ -123,23 +137,26 @@
     let upsampledMaskCache = new Map<number, Uint8Array>();
 
     const parsedColor = $derived(parseColor(drawerStrokeColor));
-    const boundaryColor = $derived([
-        parsedColor.r,
-        parsedColor.g,
-        parsedColor.b,
-        170
-    ] as [number, number, number, number]);
-    const hoverColor = $derived([
-        parsedColor.r,
-        parsedColor.g,
-        parsedColor.b,
-        85
-    ] as [number, number, number, number]);
+    const boundaryColor = $derived([parsedColor.r, parsedColor.g, parsedColor.b, 170] as [
+        number,
+        number,
+        number,
+        number
+    ]);
+    const hoverColor = $derived([parsedColor.r, parsedColor.g, parsedColor.b, 85] as [
+        number,
+        number,
+        number,
+        number
+    ]);
     const updateAnnotation = async (input: AnnotationUpdateInput) => {
-        await annotationApi?.updateAnnotation(input);
+        await annotationApi.updateAnnotation(input);
     };
 
-    const areMasksEqual = (left: number[] | null | undefined, right: number[] | null | undefined) => {
+    const areMasksEqual = (
+        left: number[] | null | undefined,
+        right: number[] | null | undefined
+    ) => {
         if (!left || !right) return false;
         if (left.length !== right.length) return false;
 
@@ -167,7 +184,12 @@
         }).queryKey;
 
         queryClient.setQueryData(imageQueryKey, (current: ImageView | undefined) => {
-            if (!current || current.annotations.some((annotation) => annotation.sample_id === persistedAnnotation.sample_id)) {
+            if (
+                !current ||
+                current.annotations.some(
+                    (annotation) => annotation.sample_id === persistedAnnotation.sample_id
+                )
+            ) {
                 return current;
             }
 
@@ -188,7 +210,7 @@
                 queryKey: annotationLabelsQueryKey
             }),
             queryClient.invalidateQueries({
-                queryKey: useAnnotationCountsQueryKey
+                queryKey: useImageAnnotationCountsQueryKey
             })
         ]);
 
@@ -274,7 +296,12 @@
             throw new Error('Cannot build hover mask without SLIC result');
         }
 
-        const hoverMask = extractCellMask(slicResult.labels, slicResult.width, slicResult.height, labelId);
+        const hoverMask = extractCellMask(
+            slicResult.labels,
+            slicResult.width,
+            slicResult.height,
+            labelId
+        );
         const dataUrl = maskToColoredDataUrl(
             hoverMask,
             slicResult.width,
@@ -326,14 +353,14 @@
         hoverMaskDataUrl = getHoverMaskDataUrl(nextLabel);
     };
 
-    const processStrokePoint = (
-        point: { x: number; y: number } | null
-    ) => {
+    const processStrokePoint = (point: { x: number; y: number } | null) => {
         const currentMask = localMask;
         if (!point || !slicResult || !currentMask) return;
 
         const points =
-            lastStrokePoint === null ? [point] : interpolateLineBetweenPoints(lastStrokePoint, point);
+            lastStrokePoint === null
+                ? [point]
+                : interpolateLineBetweenPoints(lastStrokePoint, point);
         let nextTouchedLabels = new Set(strokeTouchedLabels);
         let nextStrokeMode = strokeMode;
         let didChangeStroke = false;
@@ -379,7 +406,7 @@
             const persistedAnnotation = await brushApi.finishBrush(
                 new Uint8Array(localMask),
                 resolveSelectedAnnotation(),
-                $labels.data ?? [],
+                labels.data ?? [],
                 updateAnnotation,
                 annotationLabelContext.lockedAnnotationIds,
                 {
@@ -438,7 +465,9 @@
         }
 
         const selectedAnnotation = activeAnnotationId
-            ? (sample.annotations.find((annotation) => annotation.sample_id === activeAnnotationId) ?? null)
+            ? (sample.annotations.find(
+                  (annotation) => annotation.sample_id === activeAnnotationId
+              ) ?? null)
             : null;
         if (
             selectedAnnotation?.sample_id === localAnnotation?.sample_id &&
@@ -516,8 +545,8 @@
         if (
             !slicResult ||
             isPersisting ||
-            targetAnnotation &&
-            annotationLabelContext.isAnnotationLocked?.(targetAnnotation.sample_id)
+            (targetAnnotation &&
+                annotationLabelContext.isAnnotationLocked?.(targetAnnotation.sample_id))
         ) {
             event.currentTarget?.releasePointerCapture?.(event.pointerId);
             return;
@@ -578,4 +607,11 @@
 
         void persistStroke();
     }}
+/>
+
+<SelectClassDialog
+    bind:open={$selectClassDialogOpen}
+    labels={labels.data?.map((l) => l.annotation_label_name ?? '').filter(Boolean) ?? []}
+    onConfirm={handleSelectClassDialogConfirm}
+    onCancel={handleSelectClassDialogCancel}
 />

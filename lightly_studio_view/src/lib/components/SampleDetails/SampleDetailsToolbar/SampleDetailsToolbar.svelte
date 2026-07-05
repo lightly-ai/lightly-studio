@@ -82,7 +82,7 @@
         context: sampleDetailsToolbarContext,
         setBrushMode,
         setStatus
-        } = useSampleDetailsToolbarContext();
+    } = useSampleDetailsToolbarContext();
 
     $effect(() => {
         // Reset annotation label and type when switching to cursor tool

@@ -1,5 +1,8 @@
 <script lang="ts">
-    import { useSampleDetailsToolbarContext, type SlicLevel } from '$lib/contexts/SampleDetailsToolbar.svelte';
+    import {
+        useSampleDetailsToolbarContext,
+        type SlicLevel
+    } from '$lib/contexts/SampleDetailsToolbar.svelte';
 
     const { context: sampleDetailsToolbarContext, setSlicLevel } = useSampleDetailsToolbarContext();
 
@@ -42,9 +45,11 @@
                     <button
                         type="button"
                         class={`min-w-0 rounded px-2 py-1 text-center text-xs transition
-                            ${sampleDetailsToolbarContext.slic.level === level
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-background text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+                            ${
+                                sampleDetailsToolbarContext.slic.level === level
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'bg-background text-muted-foreground hover:bg-accent hover:text-foreground'
+                            }`}
                         onclick={() => setSlicLevel(level)}
                     >
                         {levelLabels[level]}
@@ -55,7 +60,9 @@
 
         <div class="flex items-center justify-between gap-2 text-xs">
             <span class="text-muted-foreground">Status</span>
-            <span class="font-medium text-foreground">{sampleDetailsToolbarContext.slic.status}</span>
+            <span class="font-medium text-foreground"
+                >{sampleDetailsToolbarContext.slic.status}</span
+            >
         </div>
     </div>
 </div>

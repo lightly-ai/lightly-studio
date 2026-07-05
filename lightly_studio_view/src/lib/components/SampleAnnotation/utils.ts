@@ -33,10 +33,7 @@ export const hasRenderableBoundingBox = (annotation: AnnotationView) => {
         return annotation.object_detection_details != null;
     }
 
-    if (
-        annotation.annotation_type === 'instance_segmentation' ||
-        annotation.annotation_type === 'semantic_segmentation'
-    ) {
+    if (annotation.annotation_type === 'segmentation_mask') {
         return annotation.segmentation_details != null;
     }
 
@@ -66,7 +63,8 @@ export const getAnnotations = (annotations: AnnotationView[]) => {
     return annotations
         .filter(
             (annotation) =>
-                annotation.annotation_type !== 'classification' && hasRenderableBoundingBox(annotation)
+                annotation.annotation_type !== 'classification' &&
+                hasRenderableBoundingBox(annotation)
         )
         .sort(sortByAnnotationArea);
 };

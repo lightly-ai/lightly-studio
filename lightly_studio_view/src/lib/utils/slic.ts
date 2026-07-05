@@ -58,9 +58,7 @@ const stripTrailingSlash = (value: string) => value.replace(/\/+$/, '');
 const rgbToLab = (r: number, g: number, b: number) => {
     const normalize = (value: number) => {
         const channel = value / 255;
-        return channel <= 0.04045
-            ? channel / 12.92
-            : Math.pow((channel + 0.055) / 1.055, 2.4);
+        return channel <= 0.04045 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
     };
 
     const rr = normalize(r);
@@ -231,7 +229,8 @@ export const computeSuperpixels = (
                     const dy = y - centerY;
                     const colorDistance = dl * dl + da * da + db * db;
                     const spatialDistance = dx * dx + dy * dy;
-                    const distance = colorDistance + spatialDistance * spatialWeight * spatialWeight;
+                    const distance =
+                        colorDistance + spatialDistance * spatialWeight * spatialWeight;
 
                     if (distance < distances[idx]) {
                         distances[idx] = distance;
@@ -284,7 +283,7 @@ export const computeSuperpixels = (
     };
 };
 
-const computeLabelCentroids = (labels: Int32Array, width: number, height: number) => {
+const computeLabelCentroids = (labels: Int32Array, width: number) => {
     const maxLabel = getMaxLabel(labels);
     const sumsX = new Float32Array(maxLabel + 1);
     const sumsY = new Float32Array(maxLabel + 1);
@@ -333,7 +332,7 @@ export const deriveMergedLevel = ({
     height: number;
     targetSegments: number;
 }) => {
-    const { sumsX, sumsY, counts } = computeLabelCentroids(sourceLabels, width, height);
+    const { sumsX, sumsY, counts } = computeLabelCentroids(sourceLabels, width);
     const coarseStep = computeStep(width, height, targetSegments);
     const gridWidth = Math.max(1, Math.ceil(width / coarseStep));
     const gridHeight = Math.max(1, Math.ceil(height / coarseStep));
@@ -464,10 +463,7 @@ export const forEachOriginalPixelRangeForLabel = (
     }
 };
 
-export const createSlicMaskForLabels = (
-    result: SlicResult,
-    labelIds: Iterable<number>
-) => {
+export const createSlicMaskForLabels = (result: SlicResult, labelIds: Iterable<number>) => {
     const mask = new Uint8Array(result.width * result.height);
 
     for (const labelId of labelIds) {
@@ -521,10 +517,7 @@ export const maskToColoredDataUrl = (
 
 export const resolveSlicImageUrl = (
     imageUrl: string,
-    {
-        isDev = dev,
-        samplesUrl = PUBLIC_SAMPLES_URL
-    }: { isDev?: boolean; samplesUrl?: string } = {}
+    { isDev = dev, samplesUrl = PUBLIC_SAMPLES_URL }: { isDev?: boolean; samplesUrl?: string } = {}
 ) => {
     if (!isDev) {
         return imageUrl;
@@ -547,7 +540,8 @@ export const prepareImageForSlic = async (
     const image = await new Promise<HTMLImageElement>((resolve, reject) => {
         const img = new Image();
         img.onload = () => resolve(img);
-        img.onerror = () => reject(new Error(`Failed to decode image for SLIC: ${resolvedImageUrl}`));
+        img.onerror = () =>
+            reject(new Error(`Failed to decode image for SLIC: ${resolvedImageUrl}`));
         img.crossOrigin = 'anonymous';
         img.src = resolvedImageUrl;
     });
