@@ -148,7 +148,7 @@ def load_into_collection_from_paths(  # noqa: PLR0913
             # fsspec backends and is a subclass of OSError, which we treat as broken.
             fs, fs_path = fsspec.core.url_to_fs(url=video_path)
             if not fs.exists(fs_path):
-                raise MissingInputFileError(video_path)
+                raise MissingInputFileError()
 
             video_file = fs.open(path=fs_path, mode="rb")
             try:
@@ -168,7 +168,7 @@ def load_into_collection_from_paths(  # noqa: PLR0913
                     else:
                         video_duration = None
                 except (OSError, IndexError, FFmpegError) as e:
-                    raise BrokenInputFileError(video_path) from e
+                    raise BrokenInputFileError() from e
 
                 # Create video sample
                 video_sample_ids = video_resolver.create_many(
