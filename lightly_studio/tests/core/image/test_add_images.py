@@ -725,9 +725,7 @@ def _get_labelformat_input_obj_det(
     Returns:
         A LabelformatObjectDetectionInput object for testing.
     """
-    return _get_labelformat_input_obj_det_multi(
-        filenames=[filename], category_names=category_names
-    )
+    return _get_labelformat_input_obj_det_multi(filenames=[filename], category_names=category_names)
 
 
 def _get_labelformat_input_obj_det_multi(
