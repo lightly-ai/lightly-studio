@@ -14,6 +14,78 @@ from tests import helpers_resolvers
 from tests.helpers_resolvers import ImageStub
 
 
+def test_get_sample_ids_in_region(db_session: Session) -> None:
+    collection_id, sample_ids = _setup_collection_with_coordinates(
+        session=db_session,
+        coordinates=[(1.0, 1.0), (5.0, 5.0), (100.0, 100.0)],
+    )
+
+    selected = embedding_region_resolver.get_sample_ids_in_region(
+        session=db_session,
+        collection_id=collection_id,
+        region=_square(x_min=0, y_min=0, x_max=10, y_max=10),
+    )
+
+    assert set(selected) == {sample_ids[0], sample_ids[1]}
+
+
+def test_get_sample_ids_in_region__empty_region(db_session: Session) -> None:
+    collection_id, _ = _setup_collection_with_coordinates(
+        session=db_session,
+        coordinates=[(1.0, 1.0), (5.0, 5.0)],
+    )
+
+    selected = embedding_region_resolver.get_sample_ids_in_region(
+        session=db_session,
+        collection_id=collection_id,
+        region=_square(x_min=50, y_min=50, x_max=60, y_max=60),
+    )
+
+    assert selected == []
+
+
+def test_get_sample_ids_in_region__no_embedding_model(db_session: Session) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
+
+    selected = embedding_region_resolver.get_sample_ids_in_region(
+        session=db_session,
+        collection_id=collection.collection_id,
+        region=_square(x_min=0, y_min=0, x_max=10, y_max=10),
+    )
+
+    assert selected == []
+
+
+def test_points_in_polygon() -> None:
+    region = _square(x_min=0, y_min=0, x_max=10, y_max=10)
+    x = np.array([5, 15, -1, 9.9, 5], dtype=np.float32)
+    y = np.array([5, 5, 5, 9.9, 20], dtype=np.float32)
+
+    mask = embedding_region_resolver._points_in_polygon(x=x, y=y, region=region)
+
+    assert mask.tolist() == [True, False, False, True, False]
+
+
+def test_points_in_polygon__concave() -> None:
+    # An arrow-shaped concave polygon with a notch at the top center.
+    region = EmbeddingRegion(
+        polygon=[
+            Point2D(x=0, y=0),
+            Point2D(x=10, y=0),
+            Point2D(x=10, y=10),
+            Point2D(x=5, y=4),
+            Point2D(x=0, y=10),
+        ]
+    )
+    # (5, 8) sits in the notch (outside); (5, 2) is well inside.
+    x = np.array([5, 5, 1], dtype=np.float32)
+    y = np.array([8, 2, 1], dtype=np.float32)
+
+    mask = embedding_region_resolver._points_in_polygon(x=x, y=y, region=region)
+
+    assert mask.tolist() == [False, True, True]
+
+
 def _square(x_min: float, y_min: float, x_max: float, y_max: float) -> EmbeddingRegion:
     return EmbeddingRegion(
         polygon=[
@@ -84,74 +156,3 @@ def _setup_collection_with_coordinates(
     # coordinate. ``_seed_2d_coordinates`` seeds by sample id, so its own (hash-ordered)
     # return value need not match the coordinate order.
     return collection.collection_id, [image.sample_id for image in images]
-
-
-class TestPointsInPolygon:
-    def test_square_selects_only_inside_points(self) -> None:
-        region = _square(x_min=0, y_min=0, x_max=10, y_max=10)
-        x = np.array([5, 15, -1, 9.9, 5], dtype=np.float32)
-        y = np.array([5, 5, 5, 9.9, 20], dtype=np.float32)
-
-        mask = embedding_region_resolver._points_in_polygon(x=x, y=y, region=region)
-
-        assert mask.tolist() == [True, False, False, True, False]
-
-    def test_concave_polygon(self) -> None:
-        # An arrow-shaped concave polygon with a notch at the top center.
-        region = EmbeddingRegion(
-            polygon=[
-                Point2D(x=0, y=0),
-                Point2D(x=10, y=0),
-                Point2D(x=10, y=10),
-                Point2D(x=5, y=4),
-                Point2D(x=0, y=10),
-            ]
-        )
-        # (5, 8) sits in the notch (outside); (5, 2) is well inside.
-        x = np.array([5, 5, 1], dtype=np.float32)
-        y = np.array([8, 2, 1], dtype=np.float32)
-
-        mask = embedding_region_resolver._points_in_polygon(x=x, y=y, region=region)
-
-        assert mask.tolist() == [False, True, True]
-
-
-class TestGetSampleIdsInRegion:
-    def test_selects_points_inside_region(self, db_session: Session) -> None:
-        collection_id, sample_ids = _setup_collection_with_coordinates(
-            session=db_session,
-            coordinates=[(1.0, 1.0), (5.0, 5.0), (100.0, 100.0)],
-        )
-
-        selected = embedding_region_resolver.get_sample_ids_in_region(
-            session=db_session,
-            collection_id=collection_id,
-            region=_square(x_min=0, y_min=0, x_max=10, y_max=10),
-        )
-
-        assert set(selected) == {sample_ids[0], sample_ids[1]}
-
-    def test_empty_region_selects_nothing(self, db_session: Session) -> None:
-        collection_id, _ = _setup_collection_with_coordinates(
-            session=db_session,
-            coordinates=[(1.0, 1.0), (5.0, 5.0)],
-        )
-
-        selected = embedding_region_resolver.get_sample_ids_in_region(
-            session=db_session,
-            collection_id=collection_id,
-            region=_square(x_min=50, y_min=50, x_max=60, y_max=60),
-        )
-
-        assert selected == []
-
-    def test_no_embedding_model_returns_empty(self, db_session: Session) -> None:
-        collection = helpers_resolvers.create_collection(session=db_session)
-
-        selected = embedding_region_resolver.get_sample_ids_in_region(
-            session=db_session,
-            collection_id=collection.collection_id,
-            region=_square(x_min=0, y_min=0, x_max=10, y_max=10),
-        )
-
-        assert selected == []
