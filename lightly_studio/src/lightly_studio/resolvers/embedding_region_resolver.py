@@ -18,6 +18,30 @@ from sqlmodel import Session, select
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.embedding_region import EmbeddingRegion
 from lightly_studio.resolvers import twodim_embedding_resolver
+from lightly_studio.resolvers.image_filter import ImageFilter
+
+
+def resolve_embedding_region(
+    session: Session,
+    collection_id: UUID,
+    filters: ImageFilter | None,
+) -> None:
+    """Resolve any embedding region on an image ``filters`` to concrete sample ids, in place.
+
+    No-op unless the filter carries a ``sample_filter.embedding_region``. Safe to call more
+    than once. Must run before ``filters.apply(...)`` because the point-in-polygon test needs
+    a database session that ``apply`` cannot access.
+    """
+    sample_filter = filters.sample_filter if filters is not None else None
+    if sample_filter is None or sample_filter.embedding_region is None:
+        return
+
+    sample_ids = get_sample_ids_in_region(
+        session=session,
+        collection_id=collection_id,
+        region=sample_filter.embedding_region,
+    )
+    sample_filter.set_resolved_region_sample_ids(sample_ids)
 
 
 def get_sample_ids_in_region(

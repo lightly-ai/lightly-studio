@@ -10,6 +10,7 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.resolvers import embedding_region_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 
 
@@ -24,6 +25,9 @@ def count_image_annotations_by_collection(
     label name and counted for total and filtered.
     Returns a list of (label_name, current_count, total_count) tuples.
     """
+    embedding_region_resolver.resolve_embedding_region(
+        session=session, collection_id=collection_id, filters=image_filter
+    )
     total_counts = _get_total_counts(session=session, collection_id=collection_id)
     current_counts = _get_current_counts(
         session=session,

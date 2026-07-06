@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlmodel import Session
 from sqlmodel.sql.expression import SelectOfScalar
 
+from lightly_studio.resolvers import embedding_region_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 
 
@@ -41,5 +42,8 @@ def get_sample_ids(
     Returns:
         List of sample ids matching the given filters.
     """
+    embedding_region_resolver.resolve_embedding_region(
+        session=session, collection_id=collection_id, filters=filters
+    )
     query = build_sample_ids_query(collection_id=collection_id, filters=filters)
     return set(session.exec(query).all())

@@ -10,6 +10,8 @@ from sqlmodel import Session
 from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
 from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
 from lightly_studio.resolvers import embedding_region_resolver, sample_embedding_resolver
+from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests import helpers_resolvers
 from tests.helpers_resolvers import ImageStub
 
@@ -152,3 +154,38 @@ class TestGetSampleIdsInRegion:
         )
 
         assert selected == []
+
+
+class TestResolveEmbeddingRegion:
+    def test_populates_resolved_sample_ids(self, db_session: Session) -> None:
+        collection_id, sample_ids = _setup_collection_with_coordinates(
+            session=db_session,
+            coordinates=[(1.0, 1.0), (100.0, 100.0)],
+        )
+        sample_filter = SampleFilter(embedding_region=_square(0, 0, 10, 10))
+        filters = ImageFilter(sample_filter=sample_filter)
+
+        embedding_region_resolver.resolve_embedding_region(
+            session=db_session, collection_id=collection_id, filters=filters
+        )
+
+        assert sample_filter._resolved_region_sample_ids == [sample_ids[0]]
+
+    def test_no_region_is_noop(self, db_session: Session) -> None:
+        collection = helpers_resolvers.create_collection(session=db_session)
+        sample_filter = SampleFilter()
+        filters = ImageFilter(sample_filter=sample_filter)
+
+        embedding_region_resolver.resolve_embedding_region(
+            session=db_session, collection_id=collection.collection_id, filters=filters
+        )
+
+        assert sample_filter._resolved_region_sample_ids is None
+
+    def test_none_filters_is_noop(self, db_session: Session) -> None:
+        collection = helpers_resolvers.create_collection(session=db_session)
+
+        # Should not raise.
+        embedding_region_resolver.resolve_embedding_region(
+            session=db_session, collection_id=collection.collection_id, filters=None
+        )
