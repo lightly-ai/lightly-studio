@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Literal
 from uuid import UUID
 
+import sqlalchemy
 from pydantic import Field, PrivateAttr
-from sqlalchemy import false
 from sqlalchemy.orm import Mapped, aliased
 from sqlmodel import col, select
 from sqlmodel.sql.expression import SelectOfScalar
@@ -150,7 +150,7 @@ class AnnotationsFilter(GridFilterBase):
                 )
             if not self._resolved_region_sample_ids:
                 # An empty region encloses no points and must match nothing (not everything).
-                query = query.where(false())
+                query = query.where(sqlalchemy.false())
             else:
                 query = query.where(
                     db_array.in_array(
