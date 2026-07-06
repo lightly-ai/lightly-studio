@@ -46,7 +46,7 @@ nav:
       - AWS S3: enterprise/cloud_storage/aws.md
   - Tutorials:
     - tutorials/index.md
-    - "Tutorial 1: Prepare a YOLO Traffic CCTV Dataset": tutorials/yolo-traffic-cctv-object-detection.md
+    - "Tutorial 1: Curate a Traffic CCTV Dataset for YOLO Training": tutorials/yolo-traffic-cctv-object-detection.md
   - Dataset Setup:
     - Data Types:
       - Image Dataset: dataset_setup/image_dataset.md

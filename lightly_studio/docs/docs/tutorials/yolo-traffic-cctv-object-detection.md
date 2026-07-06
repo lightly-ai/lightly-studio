@@ -1,22 +1,27 @@
-# Prepare a YOLO Traffic CCTV Dataset
+# Curate a Traffic CCTV Dataset for YOLO Training
 
-!!! note "Draft tutorial placeholder"
-    This tutorial page is a placeholder for the first LightlyStudio tutorial. Media assets and final editorial polish will be added in a later pass.
+In this tutorial, you learn how to turn a folder of raw, unlabeled images into a curated, annotated dataset ready for YOLO object detection training. All using LightlyStudio's GUI and a few short Python scripts.
 
-In this tutorial, we prepare a YOLO dataset for detecting objects in traffic CCTV images. We start from the `justjuu/traffic-accident-cctv-object-detection` dataset on Hugging Face, which contains CCTV images for traffic safety and surveillance use cases.
+We use the [justjuu/traffic-accident-cctv-object-detection dataset from Hugging Face](https://huggingface.co/datasets/justjuu/traffic-accident-cctv-object-detection), but treat it as an unannotated folder of CCTV images, ignoring its existing labels. This lets us follow a realistic workflow that starts from raw, unlabeled data.
 
-For this tutorial, we use only the images and treat them as an unannotated dataset. We do not use the existing annotations from the dataset. This lets us follow a realistic workflow where you start with a folder of raw images and need to prepare it for object detection model training.
+You will:
 
-We will use LightlyStudio to explore the data, curate useful samples, create and review object labels, export the final dataset in YOLO format, and run a short YOLO training job to verify the export.
+- Explore the dataset with the embedding plot and tag outliers.
+- Filter and deduplicate the dataset to remove irrelevant and near-duplicate images.
+- Auto-label the images with a YOLO inference plugin, then review and correct the generated annotations.
+- Split the curated dataset into training and test sets and export it in YOLO format.
+- Train and evaluate a YOLO model on the exported dataset.
 
-!!! todo "Media placeholder"
-    Add introductory media for the tutorial.
+![LightlyStudio YOLO curation tutorial initial screen](https://storage.googleapis.com/lightly-public/studio/tutorials/prepare-a-yolo-dataset/final-screen.jpg){ width="100%" }
 
 ## Prerequisites
 
 To follow this tutorial, make sure you have:
 
-- Python 3.10 or newer.
+- Python 3.10 or newer
+- Enough disk space for LightlyStudio, the YOLO plugin and the dataset (~200MB)
+- You run on a Windows, Linux or MacOS device
+- A GPU is not required
 
 ## Installation
 
@@ -25,17 +30,17 @@ To follow this tutorial, make sure you have:
 To install LightlyStudio you can run the following Python pip command:
 
 ```bash
-pip install "git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdirectory=plugins/yolo_object_detection/"
+pip install lightly-studio
 ```
 
-### Install the YOLO Inference Plugin
+### Install the YOLO inference plugin
 
 There are two ways to bring model predictions into LightlyStudio for pre-labeling or auto-labeling.
 
 - Add YOLO predictions directly in the Python script used to load the dataset.
 - Use a plugin to run the model directly from the LightlyStudio GUI.
 
-In this tutorial, we use the YOLO inference plugin. Install the plugin before starting the LightlyStudio GUI.
+In this tutorial, we use the YOLO inference plugin.
 
 Run:
 
@@ -70,7 +75,7 @@ dataset.add_images_from_path(
 # In order to use plugins we need to register them
 operator_registry.register(YoloObjectDetectionOperator())
 
-# This will start the GUI and block the script from existing
+# This will start the GUI and block the script from exiting
 ls.start_gui()
 ```
 
@@ -105,82 +110,76 @@ Let's tag these outliers so we can easily exclude them or review them later. For
 
 Next, select promising clusters in the embedding plot and inspect the corresponding images. When you find samples that are suitable for training, tag them so they can be exported or reviewed later as part of your training subset.
 
-!!! todo "Media placeholder"
-    Add `Screenshot 2026-06-25 at 09.26.40.png`.
+<video loop muted playsinline controls style="width: 100%;">
+  <source src="https://storage.googleapis.com/lightly-public/studio/tutorials/prepare-a-yolo-dataset/embedding-based-curation.mp4" type="video/mp4">
+</video>
 
-## Refine the selection with a deduplication sampling
+!!! tip
+    The bottom left of the GUI shows how many images are currently displayed based on the active filters and tags. Use it to keep track of how many samples remain in your selection as you tag and filter the dataset.
 
-This dataset contains several visually similar images. Removing near-duplicates can help reduce redundancy in the training set and improve the quality of the YOLO model.
+## Filter out outliers and deduplicate the dataset
 
-After tagging relevant examples in the previous step, use deduplication sampling to identify duplicate or near-duplicate images based on their embedding distance.
+After tagging outliers in the embedding plot, use the Query Filter together with deduplication sampling to narrow the dataset down to a clean, non-redundant set of training candidates.
 
-First, filter the dataset by the tag you created earlier, for example `vehicles`. Then open **Menu > Sampling** and run deduplication sampling.
+First, open the query editor on the right side of LightlyStudio and enter a query that excludes the outlier tag you created in the previous step. For example:
 
-!!! todo "Media placeholder"
-    Add `Screen Recording 2026-06-25 at 09.34.50.gif`.
-
-## Using Query Filter to tag suitable samples
-
-After identifying outliers and duplicate samples, use the Query Filter to quickly select the remaining images and tag them as valid samples.
-
-Open the query editor on the right side of the LightlyStudio and enter a query that excludes the tags you created in the previous steps. For example:
-
-```text
-NOT "empty" IN tags AND NOT "duplicate" IN tags
+```python
+NOT "no-accident" IN tags
 ```
 
-Update the tag names in the query to match the tags you used during data curation. For example, replace `"empty"` or `"duplicate"` with your own tag names if they are different.
+Update the tag name in the query to match the tag you used to mark outliers. Click **Apply** to filter the dataset down to the active view.
 
-!!! todo "Media placeholder"
-    Add `create_valid_samples.gif`.
+Next, open **Menu > Sampling** and run deduplication sampling on the active view. Deduplication sampling looks at the embedding distance between the filtered images and removes near-duplicates, so the resulting set does not contain many highly similar images.
 
-Click **Apply** to filter the dataset. Then press **CMD + A** on macOS or **CTRL + A** on Windows/Linux to select all visible samples, and create a new tag for them, such as `valid samples`.
+<video loop muted playsinline controls style="width: 100%;">
+  <source src="https://storage.googleapis.com/lightly-public/studio/tutorials/prepare-a-yolo-dataset/query-filter-and-deduplication.mp4" type="video/mp4">
+</video>
 
-This tag represents the curated set of valid, non-duplicate samples. You can use these samples later to create your training and test sets.
+Configure the sampling step to reduce the active view down to a smaller, diverse subset, for example 20 images out of the filtered set. Select the resulting samples and create a new tag for them, such as `deduplicated`.
 
-## Using the YOLO Plugin
+You can use these samples later to create your training and test sets.
 
-Once you have finished curating the dataset, select the images you want to process or apply filters to define the active view. Then open the operator menu and choose the YOLO object detection plugin.
+## Using the YOLO plugin
 
-The plugin runs on the selected samples or on the images in the active view, depending on how it is launched. After the plugin finishes, review the generated annotations and adjust them if needed before exporting the training data.
+Once you have finished curating the dataset, select the images you want to process or apply filters to define the active view. The plugin runs on the selected samples or on the images in the active view, depending on how it is launched.
 
-!!! todo "Media placeholder"
-    Add `Screen Recording 2026-06-25 at 10.09.09.gif`.
+1. Open the menu on the top right and click **Plugins**.
+2. Click **YOLO Object Detection**.
+3. Pick a model, set the confidence threshold, and optionally name the annotation source, for example `yolov8-prediction`.
+4. Click **Execute** to run the plugin.
+
+Running predictions on around 120 images takes about 20 seconds on an Apple MacBook. Once it finishes, the predictions appear in the GUI.
+
+<video loop muted playsinline controls style="width: 100%;">
+  <source src="https://storage.googleapis.com/lightly-public/studio/tutorials/prepare-a-yolo-dataset/yolo-predictions-using-plugin-and-label-qa.mp4" type="video/mp4">
+</video>
 
 ### Review and correct annotations
 
-Some samples may not be annotated accurately, especially when the image quality is low, the objects are small, or the scene is difficult to interpret.
+Not every prediction is accurate, especially for small objects, low image quality, or difficult scenes. There are two ways to review and fix annotations in LightlyStudio:
 
-Review the generated annotations manually and check whether the bounding boxes and labels are correct. If needed, adjust the annotations by fixing incorrect boxes, adding missing objects, removing false detections, or correcting class labels.
-
-!!! todo "Media placeholder"
-    Add `improve_annotation.gif`.
-
-Improving the annotation quality helps create a more reliable training dataset and can improve the performance of the final YOLO model.
-
-You can also use the left filter panel to filter images by annotation class. This makes it easier to inspect groups of images with the same label and identify possible labeling mistakes, such as vehicles assigned to the wrong class or objects that should have been labeled differently.
-
-!!! todo "Media placeholder"
-    Add `Screenshot 2026-06-25 at 10.51.03.png`.
+1. **Tag images with bad annotations in the grid view.** Scroll through the grid, select images with faulty annotations, and tag them for later review. Adjust the grid's preview size to control how many images you see at once. This approach is recommended if a separate labeling team will correct the flagged annotations.
+2. **Edit annotations directly in the annotation view.** For object detection, switch to the annotation view, which shows each annotation as a cropped-out image. This makes it easy to skim through many objects at once. Combine it with the class filter in the left panel to look at one class at a time — a grid of objects from a single class makes outliers, such as wrong classes or bad bounding boxes, much easier to spot. This approach is recommended if you are doing the QA yourself.
 
 ## Split the dataset into training and test sets
 
 LightlyStudio provides smart sampling tools that can help you create a diverse training set.
 
-First, use the left filter panel to select the valid samples you tagged in the previous step. Then open the sampling dialog again and choose diversity sampling.
+First, use the left filter panel to select the deduplicated samples you tagged in the previous step. Then open the sampling dialog again and choose diversity sampling.
 
-Configure the sampling step to select 80% of the valid samples and assign them a new tag, such as `train`.
+Configure the sampling step to select 80% of the deduplicated samples and assign them a new tag, such as `train`.
 
-!!! todo "Media placeholder"
-    Add `diversity.gif`.
+<video loop muted playsinline controls style="width: 100%;">
+  <source src="https://storage.googleapis.com/lightly-public/studio/tutorials/prepare-a-yolo-dataset/train-test-split.mp4" type="video/mp4">
+</video>
 
-After creating the training split, use the Query Filter to select the remaining valid samples that were not tagged as training samples. For example:
+After creating the training split, use the Query Filter to select the remaining deduplicated samples that were not tagged as training samples. For example:
 
 ```bash
-"valid samples" IN tags AND NOT "train" IN tags
+"deduplicated" IN tags AND NOT "train" IN tags
 ```
 
-Update the tag names in the query to match the tags you created in your project. Click **Apply**, select all visible samples with **CMD + A** on macOS or **CTRL + A** on Windows/Linux, and create a new tag, such as `test`.
+Update the tag names in the query to match the tags you created in your project. Click **Apply**, then click **Select all** to select all visible samples, and create a new tag, such as `test`.
 
 ## Export in YOLO format
 
@@ -212,7 +211,7 @@ Exported samples with tag 'test' to test_yolo/
 
 You can use these exported directories to train and evaluate your YOLO object detection model.
 
-## Evaluate the YOLO model
+## Train and evaluate the YOLO model
 
 After exporting the dataset, run a short YOLO training and evaluation job to verify that the exported files can be used by a training pipeline.
 
@@ -349,7 +348,7 @@ The exact values will depend on the dataset size, selected classes, annotation q
 
 In this tutorial, we prepared a YOLO object detection dataset from raw traffic CCTV images using LightlyStudio.
 
-We started by loading the images into LightlyStudio and using the embedding plot to explore the dataset. Then, we identified outliers, removed near-duplicate samples, and used Query Filters to tag valid images for the dataset. After curating the samples, we used the YOLO inference plugin to generate initial annotations and manually reviewed them to improve annotation quality.
+We started by loading the images into LightlyStudio and using the embedding plot to explore the dataset. Then, we tagged outliers, used the Query Filter together with deduplication sampling to remove near-duplicate samples, and ran the YOLO inference plugin to generate initial annotations. Finally, we reviewed and corrected the generated annotations to improve their quality.
 
 Next, we split the curated samples into training and test sets, exported both splits in YOLO format, and ran a short Ultralytics training and evaluation job to verify that the exported dataset could be used by a standard YOLO training pipeline.
 
