@@ -3,12 +3,12 @@
 The frontend sends the lasso/rectangle geometry (a handful of vertices, a few KB) instead
 of the full list of selected sample ids. The backend reproduces the exact selection by
 running point-in-polygon over the cached 2D projection, so the request body stays
-constant-size regardless of how many points are selected (see LIG-9903).
+constant-size regardless of how many points are selected.
 """
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 # A polygon needs at least three vertices to enclose any area.
 _MIN_POLYGON_VERTICES = 3
@@ -30,13 +30,9 @@ class EmbeddingRegion(BaseModel):
     before the point-in-polygon test.
     """
 
+    # Declaring the constraint on the field (not a custom validator) keeps runtime validation,
+    # the generated OpenAPI schema (`minItems`), and generated clients in sync.
     polygon: list[Point2D] = Field(
-        description="Ordered polygon vertices in embedding-plot data space (>= 3 vertices)."
+        min_length=_MIN_POLYGON_VERTICES,
+        description="Ordered polygon vertices in embedding-plot data space (>= 3 vertices).",
     )
-
-    @field_validator("polygon")
-    @classmethod
-    def _validate_polygon(cls, polygon: list[Point2D]) -> list[Point2D]:
-        if len(polygon) < _MIN_POLYGON_VERTICES:
-            raise ValueError("An embedding region polygon must have at least 3 vertices.")
-        return polygon
