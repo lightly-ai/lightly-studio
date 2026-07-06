@@ -1,7 +1,10 @@
 import type { GuardrailResult } from '../../shared/verdict';
 
+export type FileStatus = 'added' | 'deleted' | 'modified' | 'renamed' | 'copied';
+
 export interface ChangedFile {
     path: string;
+    status: FileStatus;
     additions: number;
     deletions: number;
 }

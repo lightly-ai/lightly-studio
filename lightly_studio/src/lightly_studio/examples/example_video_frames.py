@@ -2,7 +2,8 @@
 
 It opens a video dataset, queries its frames by frame-level fields, tags the matches,
 runs a sampling strategy on the query, and exports the sampled frames as
-`(frame_number, frame_timestamp_s)` rows to a CSV file.
+`(video_path_abs, frame_number)` rows to a CSV file (the video path comes from each
+frame's parent video).
 """
 
 from __future__ import annotations
@@ -50,13 +51,14 @@ frames.match(VideoFrameSampleField.frame_number > 1).sampling().metadata_weighti
 )
 print("\nSampled the 5 frames with the highest metadata.score value.")
 
-# Export the sampled frames as (frame_number, frame_timestamp_s) rows to a CSV file.
+# Export the sampled frames as (video_path_abs, frame_number) rows to a CSV file.
+# The video path is read from each frame's parent video.
 out_csv = Path(tempfile.gettempdir()) / "sampled_video_frames.csv"
 with out_csv.open("w", newline="") as fh:
     writer = csv.writer(fh)
-    writer.writerow(["frame_number", "frame_timestamp_s"])
+    writer.writerow(["video_path_abs", "frame_number"])
     for frame in frames.match(VideoFrameSampleField.tags.contains("sampled")):
-        writer.writerow([frame.frame_number, frame.frame_timestamp_s])
+        writer.writerow([frame.parent_video.file_path_abs, frame.frame_number])
 
 print(f"\nExported sampled frames to {out_csv}")
 print(f"First 3 lines: {list(out_csv.read_text().splitlines())[:3]}")
