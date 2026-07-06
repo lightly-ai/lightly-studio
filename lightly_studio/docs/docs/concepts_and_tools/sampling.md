@@ -31,9 +31,7 @@ dataset.match(ImageSampleField.width >= 1920).sampling().diverse(
 )
 ```
 
-See [Search and Filter](search_and_filter.md#query-in-python) for more filtering options.
-
-Video frames can be sampled the same way through `VideoDataset.frames()`:
+Videos can be filtered and sampled using `VideoDataset.match(...).sampling()` and video frames can be sampled through `VideoDataset.frames().match(...).sampling()`:
 
 ```py
 import lightly_studio as ls
@@ -51,6 +49,8 @@ frames.match(VideoFrameSampleField.frame_number > 1).sampling().metadata_weighti
     metadata_key="score",
 )
 ```
+
+See [Search and Filter](search_and_filter.md#query-in-python) for more filtering options.
 
 ### Sampling Strategies
 
