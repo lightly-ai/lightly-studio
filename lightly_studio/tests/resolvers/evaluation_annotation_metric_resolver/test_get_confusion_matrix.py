@@ -285,8 +285,7 @@ def test_get_confusion_matrix__no_fp_or_fn_keeps_synthetic_axes(
         true_positive_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=image.sample_id,
-                metric_name="iou",
-                value=0.9,
+                metrics={"iou": 0.9},
                 gt_annotation_label_id=label_a.annotation_label_id,
             )
         ],

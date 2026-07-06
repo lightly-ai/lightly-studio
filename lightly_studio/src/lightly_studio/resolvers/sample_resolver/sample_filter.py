@@ -1,6 +1,6 @@
 """SampleFilter class."""
 
-from typing import Optional
+from typing import Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -27,6 +27,7 @@ from lightly_studio.type_definitions import QueryType
 class SampleFilter(BaseModel):
     """Encapsulates filter parameters for querying samples."""
 
+    filter_type: Literal["sample"] = "sample"
     tag_ids: Optional[list[UUID]] = None
     metadata_filters: Optional[list[MetadataFilter]] = None
     sample_ids: Optional[list[UUID]] = None
