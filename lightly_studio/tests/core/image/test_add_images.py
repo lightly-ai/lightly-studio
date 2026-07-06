@@ -716,10 +716,27 @@ def test_tag_samples_by_directory__file_url_normalization(
 def _get_labelformat_input_obj_det(
     filename: str = "image.jpg", category_names: list[str] | None = None
 ) -> LabelformatObjectDetectionInput:
-    """Creates a LabelformatObjectDetectionInput for testing.
+    """Creates a LabelformatObjectDetectionInput referencing a single image.
 
     Args:
         filename: The name of the image file.
+        category_names: The names of the categories. Default: ["dog", "cat"].
+
+    Returns:
+        A LabelformatObjectDetectionInput object for testing.
+    """
+    return _get_labelformat_input_obj_det_multi(
+        filenames=[filename], category_names=category_names
+    )
+
+
+def _get_labelformat_input_obj_det_multi(
+    filenames: list[str], category_names: list[str] | None = None
+) -> LabelformatObjectDetectionInput:
+    """Creates a LabelformatObjectDetectionInput referencing multiple images.
+
+    Args:
+        filenames: The names of the image files, one image per filename.
         category_names: The names of the categories. Default: ["dog", "cat"].
 
     Returns:
@@ -731,33 +748,6 @@ def _get_labelformat_input_obj_det(
     categories = [
         Category(id=i, name=category_name) for i, category_name in enumerate(category_names)
     ]
-    image = Image(id=0, filename=filename, width=100, height=200)
-    objects = [
-        SingleObjectDetection(
-            category=categories[0],
-            box=BoundingBox(xmin=10.0, ymin=20.0, xmax=30.0, ymax=40.0),
-        ),
-    ]
-
-    return LabelformatObjectDetectionInput(
-        categories=categories,
-        images=[image],
-        labels=[ImageObjectDetection(image=image, objects=objects)],
-    )
-
-
-def _get_labelformat_input_obj_det_multi(
-    filenames: list[str],
-) -> LabelformatObjectDetectionInput:
-    """Creates a LabelformatObjectDetectionInput referencing multiple images.
-
-    Args:
-        filenames: The names of the image files, one image per filename.
-
-    Returns:
-        A LabelformatObjectDetectionInput object for testing.
-    """
-    categories = [Category(id=0, name="dog")]
     images = [
         Image(id=i, filename=filename, width=100, height=200)
         for i, filename in enumerate(filenames)
