@@ -3,8 +3,8 @@
 from typing import Literal, Optional
 from uuid import UUID
 
+import sqlalchemy
 from pydantic import BaseModel, PrivateAttr
-from sqlalchemy import false
 from sqlalchemy.orm import aliased
 from sqlmodel import col, select
 from sqlmodel.sql.expression import SelectOfScalar
@@ -92,7 +92,7 @@ class SampleFilter(BaseModel):
             )
         # An empty region encloses no points and must match nothing (not everything).
         if not self._resolved_region_sample_ids:
-            return query.where(false())
+            return query.where(sqlalchemy.false())
         return query.where(
             db_array.in_array(
                 column=col(SampleTable.sample_id), values=self._resolved_region_sample_ids

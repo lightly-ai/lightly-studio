@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Literal
 from uuid import UUID
 
+import sqlalchemy
 from pydantic import Field, PrivateAttr
-from sqlalchemy import false
 from sqlalchemy.orm import Mapped, aliased
 from sqlmodel import col, select
 from sqlmodel.sql.expression import SelectOfScalar
@@ -142,22 +142,7 @@ class AnnotationsFilter(GridFilterBase):
             )
 
         # Filter by embedding-plot region selection, resolved server-side to sample ids.
-        if self.embedding_region is not None:
-            if self._resolved_region_sample_ids is None:
-                raise RuntimeError(
-                    "embedding_region must be resolved with set_resolved_region_sample_ids() "
-                    "before the filter is applied."
-                )
-            if not self._resolved_region_sample_ids:
-                # An empty region encloses no points and must match nothing (not everything).
-                query = query.where(false())
-            else:
-                query = query.where(
-                    db_array.in_array(
-                        column=col(annotation_sample.sample_id),
-                        values=self._resolved_region_sample_ids,
-                    )
-                )
+        query = self._apply_embedding_region_filter(query, annotation_sample=annotation_sample)
 
         # Filter by annotation label
         if self.annotation_label_ids:
@@ -181,6 +166,29 @@ class AnnotationsFilter(GridFilterBase):
             query = query.where(col(AnnotationBaseTable.annotation_type).in_(self.annotation_types))
 
         return query
+
+    def _apply_embedding_region_filter(
+        self,
+        query: QueryType,
+        annotation_sample: type[SampleTable],
+    ) -> QueryType:
+        """Filter by the embedding-plot region selection, resolved server-side to sample ids."""
+        if self.embedding_region is None:
+            return query
+        if self._resolved_region_sample_ids is None:
+            raise RuntimeError(
+                "embedding_region must be resolved with set_resolved_region_sample_ids() "
+                "before the filter is applied."
+            )
+        # An empty region encloses no points and must match nothing (not everything).
+        if not self._resolved_region_sample_ids:
+            return query.where(sqlalchemy.false())
+        return query.where(
+            db_array.in_array(
+                column=col(annotation_sample.sample_id),
+                values=self._resolved_region_sample_ids,
+            )
+        )
 
     def _select_sample_ids(self) -> SelectOfScalar[UUID]:
         return select(AnnotationBaseTable.sample_id).join(AnnotationBaseTable.sample)
