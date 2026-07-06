@@ -1,12 +1,13 @@
-import { simpleGit } from 'simple-git';
+import { DiffNameStatus, simpleGit } from 'simple-git';
 import type { DiffResult } from 'simple-git';
 
-import type { ChangedFile, GuardrailContext } from './types';
+import type { ChangedFile, FileStatus, GuardrailContext } from './types';
 
 /**
  * Local {@link GuardrailContext} backed by `simple-git`. Diffs `baseRef...HEAD`
- * (three-dot, matching GitHub's Files-changed view). `diffSummary` gives exact
- * per-file line counts — all a guardrail needs; no patch text is carried.
+ * (three-dot, matching GitHub's Files-changed view). `diffSummary --name-status`
+ * gives the status and destination path for each file in one call; line counts
+ * are not provided by that format and default to 0.
  */
 export class GitGuardrailContext implements GuardrailContext {
     readonly baseRef: string;
@@ -36,33 +37,38 @@ export class GitGuardrailContext implements GuardrailContext {
     async changedFiles(): Promise<ChangedFile[]> {
         // Memoize: the committed diff is fixed for one run, read by many guardrails.
         this.cache ??= (async () => {
-            const summary = await this.git.diffSummary([`${this.baseRef}...HEAD`]);
-            return toChangedFiles(summary.files);
+            const summary = await this.git.diffSummary(['--name-status', `${this.baseRef}...HEAD`]);
+            return summary.files.map(toChangedFile);
         })();
         return this.cache;
     }
 }
 
 /**
- * Map `diffSummary` files to {@link ChangedFile}s. Binary files have no line
- * counts (simple-git reports byte sizes), so they become 0/0; renames keep the
- * new path.
+ * Map a `diffSummary --name-status` file entry to a {@link ChangedFile}.
+ * For renames and copies `file` is already the destination path — no path
+ * rewriting needed. Line counts default to 0 (not provided by `--name-status`).
  */
-export function toChangedFiles(files: DiffResult['files']): ChangedFile[] {
-    return files.map((file) => ({
-        path: renameTarget(file.file),
+export function toChangedFile(file: DiffResult['files'][number]): ChangedFile {
+    return {
+        path: file.file,
+        status: 'status' in file ? toFileStatus(file.status) : 'modified',
         additions: file.binary ? 0 : file.insertions,
         deletions: file.binary ? 0 : file.deletions
-    }));
+    };
 }
 
-/**
- * Post-rename path. Git writes renames as `src/{old => new}/f.ts` (shared
- * prefix) or `old.ts => new.ts` (whole path); a plain path passes through.
- */
-export function renameTarget(rawPath: string): string {
-    const braced = rawPath.replace(/\{.*? => (.*?)\}/g, '$1').replace(/\/{2,}/g, '/');
-    if (braced !== rawPath) return braced;
-    const arrow = rawPath.indexOf(' => ');
-    return arrow === -1 ? rawPath : rawPath.slice(arrow + ' => '.length);
+function toFileStatus(status: DiffNameStatus | undefined): FileStatus {
+    switch (status) {
+        case DiffNameStatus.ADDED:
+            return 'added';
+        case DiffNameStatus.DELETED:
+            return 'deleted';
+        case DiffNameStatus.RENAMED:
+            return 'renamed';
+        case DiffNameStatus.COPIED:
+            return 'copied';
+        default:
+            return 'modified';
+    }
 }
