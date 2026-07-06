@@ -95,44 +95,13 @@ def embed_image_files_batched(
     Returns:
         Float32 array of shape ``(len(filepaths), embedding_dimension)``.
     """
-    total_images = len(filepaths)
-    if not total_images:
-        return np.empty((0, context.embedding_dimension), dtype=np.float32)
-
-    if context.max_batch_size <= 0:
-        raise ValueError("max_batch_size must be positive.")
-
-    dataset = _ImageFileDataset(filepaths, context.preprocess)
-
-    # To avoid issues with db locking and multiprocessing we set the number of
-    # workers to 0 (no multiprocessing). The DataLoader is still very useful for
-    # batching and async prefetching of images.
-    loader = DataLoader(
-        dataset,
-        batch_size=context.max_batch_size,
-        num_workers=0,  # must be 0 to avoid multiprocessing issues
+    return _embed_dataset_batched(
+        _ImageFileDataset(filepaths, context.preprocess),
+        context,
+        show_progress,
+        progress_desc="Generating embeddings",
+        progress_unit=" images",
     )
-
-    embeddings = np.empty((total_images, context.embedding_dimension), dtype=np.float32)
-    position = 0
-    with (
-        tqdm(
-            total=total_images,
-            desc="Generating embeddings",
-            unit=" images",
-            disable=not show_progress,
-        ) as progress_bar,
-        torch.no_grad(),
-    ):
-        for images_tensor in loader:
-            imgs = images_tensor.to(context.device, non_blocking=True)
-            batch_embeddings = context.encode_batch(imgs)
-            batch_size = imgs.size(0)
-            embeddings[position : position + batch_size] = batch_embeddings
-            position += batch_size
-            progress_bar.update(batch_size)
-
-    return embeddings
 
 
 def embed_pil_images_batched(
@@ -150,17 +119,37 @@ def embed_pil_images_batched(
     Returns:
         Float32 array of shape ``(len(images), embedding_dimension)``.
     """
-    total_images = len(images)
+    return _embed_dataset_batched(
+        _PILImageDataset(images, context.preprocess),
+        context,
+        show_progress,
+        progress_desc="Generating frame embeddings",
+        progress_unit=" frames",
+    )
+
+
+def _embed_dataset_batched(
+    dataset: Dataset[torch.Tensor],
+    context: EmbeddingContext,
+    show_progress: bool,
+    progress_desc: str,
+    progress_unit: str,
+) -> NDArray[np.float32]:
+    """Embed items from a preprocessed image dataset in batches, preserving order."""
+    total_images = len(dataset)
     if not total_images:
         return np.empty((0, context.embedding_dimension), dtype=np.float32)
 
     if context.max_batch_size <= 0:
         raise ValueError("max_batch_size must be positive.")
 
+    # To avoid issues with db locking and multiprocessing we set the number of
+    # workers to 0 (no multiprocessing). The DataLoader is still very useful for
+    # batching and async prefetching of images.
     loader = DataLoader(
-        _PILImageDataset(images, context.preprocess),
+        dataset,
         batch_size=context.max_batch_size,
-        num_workers=0,
+        num_workers=0,  # must be 0 to avoid multiprocessing issues
     )
 
     embeddings = np.empty((total_images, context.embedding_dimension), dtype=np.float32)
@@ -168,8 +157,8 @@ def embed_pil_images_batched(
     with (
         tqdm(
             total=total_images,
-            desc="Generating frame embeddings",
-            unit=" frames",
+            desc=progress_desc,
+            unit=progress_unit,
             disable=not show_progress,
         ) as progress_bar,
         torch.no_grad(),
