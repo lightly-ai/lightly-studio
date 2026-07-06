@@ -11,6 +11,7 @@ from PIL import Image
 from pytest_mock import MockerFixture
 
 from lightly_studio import ImageDataset
+from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
 from lightly_studio.core.image import add_images
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
@@ -386,12 +387,14 @@ class TestDataset:
         images_path = tmp_path / "images"
 
         dataset = ImageDataset.create(name="test_dataset")
-        dataset.add_samples_from_coco(
-            annotations_json=annotations_path,
-            images_path=images_path,
-            annotation_type=AnnotationType.OBJECT_DETECTION,
-        )
-        # The images directory does not exist, so every referenced file is missing and skipped.
+        # The images directory does not exist, so every referenced file is missing and the
+        # run raises loudly instead of silently adding nothing.
+        with pytest.raises(AllInputFilesFailedError):
+            dataset.add_samples_from_coco(
+                annotations_json=annotations_path,
+                images_path=images_path,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+            )
         assert len(list(dataset)) == 0
 
     def test_add_samples_from_coco__annotations_json_no_file(
