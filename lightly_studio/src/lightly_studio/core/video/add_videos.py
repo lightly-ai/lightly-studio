@@ -291,12 +291,14 @@ def load_video_annotations_from_labelformat(  # noqa: PLR0913
         video_path_without_suffix = str((root_path / video_annotation_filename).with_suffix(""))
         video_sample_id = video_path_without_suffix_to_sample_id.get(video_path_without_suffix)
         if video_sample_id is None:
-            if limit is not None:
-                # The video was not loaded because it is beyond the limit.
-                continue
-            raise ValueError(
-                f"No matching video ({video_annotation_filename}) for annotations found"
+            # The video was not created: it is beyond the limit, or the per-run report
+            # already recorded it as missing/broken/already-present. Skip its annotations
+            # rather than crashing the run, in line with tolerate-don't-crash handling.
+            logger.warning(
+                f"Skipping annotations for video '{video_annotation_filename}': "
+                "no matching loaded video found."
             )
+            continue
 
         video_with_frames = video_resolver.get_by_id(session=session, sample_id=video_sample_id)
         if video_with_frames is None:

@@ -686,6 +686,58 @@ def test_load_video_annotations_from_labelformat__raises_on_missing_video(
         )
 
 
+def test_load_video_annotations_from_labelformat__skips_annotations_for_broken_video(
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    # Arrange: a good video plus a broken one, each referenced by annotations. The broken
+    # video is recorded by the per-run report and never created, so its annotations must be
+    # skipped instead of crashing the run.
+    create_video_file(
+        output_path=tmp_path / "good.mp4",
+        width=640,
+        height=480,
+        num_frames=2,
+        fps=2,
+    )
+    (tmp_path / "broken.mp4").write_bytes(b"not a real video")
+
+    categories = [Category(id=0, name="cat")]
+    good_annotation = _get_object_detection_track(
+        filename="good.mp4",
+        number_of_frames=2,
+        categories=categories,
+        boxes_by_object=[[[1.0, 2.0, 3.0, 4.0], None]],
+    )
+    broken_annotation = _get_object_detection_track(
+        filename="broken.mp4",
+        number_of_frames=2,
+        categories=categories,
+        boxes_by_object=[[[5.0, 6.0, 7.0, 8.0], None]],
+    )
+    input_labels = _ObjectDetectionTrackInput(
+        categories=categories,
+        video_annotations=[good_annotation, broken_annotation],
+    )
+
+    # Act: no exception is raised even though the broken video was not created.
+    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+    created_video_sample_ids, _ = add_videos.load_video_annotations_from_labelformat(
+        session=db_session,
+        collection_id=collection.collection_id,
+        dataset_id=collection.dataset_id,
+        video_paths=[str(tmp_path / "good.mp4"), str(tmp_path / "broken.mp4")],
+        input_labels=input_labels,
+        input_labels_paths_root=tmp_path,
+    )
+
+    # Assert: only the good video is created, and only its annotation is added.
+    assert len(created_video_sample_ids) == 1
+    annotations = annotation_resolver.get_all(db_session).annotations
+    assert len(annotations) == 1
+    assert annotations[0].annotation_label.annotation_label_name == "cat"
+
+
 def test_process_video_annotations_object_detection() -> None:
     # Arrange
     frame_number_to_id = {0: uuid4(), 1: uuid4()}
