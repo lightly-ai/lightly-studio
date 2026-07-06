@@ -39,7 +39,7 @@ from lightly_studio.resolvers import (
     video_resolver,
 )
 from tests.helpers_resolvers import create_collection
-from tests.resolvers.video.helpers import create_video_file
+from tests.resolvers.video.helpers import VideoStub, create_video_file, create_videos
 
 
 def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) -> None:
@@ -97,6 +97,65 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
         collection_id=collection_hierarchy[1].collection_id,
     ).samples
     assert len(video_frames) == 60
+
+
+def test_load_into_collection_from_paths__records_missing_broken_already_present_outcomes(
+    db_session: Session, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    # Arrange: a folder mixing good / already-present / missing / broken videos. Each outcome
+    # gets a distinct count so a mix-up between two outcomes cannot pass the assertions.
+    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+
+    # 1 good video -> added=1.
+    good_paths = [
+        create_video_file(output_path=tmp_path / "good0.mp4", num_frames=2, fps=1),
+    ]
+
+    # 2 already-present videos: created on disk and pre-inserted into the database.
+    already_present_paths = [tmp_path / "present0.mp4", tmp_path / "present1.mp4"]
+    for path in already_present_paths:
+        create_video_file(output_path=path, num_frames=2, fps=1)
+    create_videos(
+        db_session,
+        collection.collection_id,
+        [VideoStub(path=str(path)) for path in already_present_paths],
+    )
+
+    # 3 missing videos: never created on disk.
+    missing_paths = [tmp_path / f"missing{i}.mp4" for i in range(3)]
+
+    # 4 broken videos: present on disk but not decodable.
+    broken_paths = [tmp_path / f"broken{i}.mp4" for i in range(4)]
+    for path in broken_paths:
+        path.write_bytes(b"not a real video")
+
+    # Act
+    with caplog.at_level("INFO"):
+        video_sample_ids, _ = add_videos.load_into_collection_from_paths(
+            session=db_session,
+            collection_id=collection.collection_id,
+            video_paths=[
+                str(path)
+                for path in good_paths + already_present_paths + missing_paths + broken_paths
+            ],
+        )
+
+    # Assert: only the good video is added.
+    assert len(video_sample_ids) == len(good_paths)
+    videos = video_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    ).samples
+    assert {video.file_name for video in videos} == {
+        "good0.mp4",
+        "present0.mp4",
+        "present1.mp4",
+    }
+
+    # Assert: the end-of-run summary records the distinct per-outcome counts.
+    assert "added=1" in caplog.text
+    assert "already_present=2" in caplog.text
+    assert "missing=3" in caplog.text
+    assert "broken=4" in caplog.text
 
 
 def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> None:
