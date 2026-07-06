@@ -161,6 +161,10 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
     Returns:
         A list of UUIDs of the created samples.
 
+    Raises:
+        AllInputFilesFailedError: If at least one file was attempted and every
+            attempted file was missing.
+
     Notes:
         Image dimensions come from the annotation metadata and the file is never
         opened here, so a broken file cannot be detected on this path; that is
@@ -238,6 +242,7 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
         )
 
     report.log_summary()
+    report.raise_if_all_failed()
     return created_sample_ids
 
 
@@ -259,6 +264,10 @@ def load_into_dataset_from_coco_captions(
 
     Returns:
         The list of newly created sample identifiers.
+
+    Raises:
+        AllInputFilesFailedError: If at least one file was attempted and every
+            attempted file was missing.
 
     Notes:
         Image dimensions come from the annotation metadata and the file is never
@@ -351,6 +360,7 @@ def load_into_dataset_from_coco_captions(
         )
 
     report.log_summary()
+    report.raise_if_all_failed()
     return created_sample_ids
 
 
