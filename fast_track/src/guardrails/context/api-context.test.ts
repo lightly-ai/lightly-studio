@@ -26,12 +26,19 @@ function fakeOctokit(files: ReturnType<typeof listedFile>[]) {
 }
 
 describe('toChangedFile', () => {
-    it('keeps counts and drops the rest', () => {
+    it('keeps path, status, and counts, dropping the rest', () => {
         expect(toChangedFile(listedFile('src/foo.ts', 12, 3))).toEqual({
             path: 'src/foo.ts',
+            status: 'modified',
             additions: 12,
             deletions: 3
         });
+    });
+
+    it("normalises GitHub's 'removed' status to 'deleted'", () => {
+        expect(
+            toChangedFile({ filename: 'src/foo.ts', status: 'removed', additions: 0, deletions: 5 })
+        ).toEqual({ path: 'src/foo.ts', status: 'deleted', additions: 0, deletions: 5 });
     });
 });
 
@@ -64,8 +71,8 @@ describe('ApiGuardrailContext', () => {
         });
 
         expect(await context.changedFiles()).toEqual([
-            { path: 'a.ts', additions: 1, deletions: 0 },
-            { path: 'b.ts', additions: 0, deletions: 5 }
+            { path: 'a.ts', status: 'modified', additions: 1, deletions: 0 },
+            { path: 'b.ts', status: 'modified', additions: 0, deletions: 5 }
         ]);
         expect(paginateCalls).toEqual([
             {

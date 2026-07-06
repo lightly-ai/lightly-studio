@@ -1,6 +1,6 @@
 import { vi, describe, expect, it } from 'vitest';
 import type { ESLint } from 'eslint';
-import type { GuardrailContext } from '../context/types';
+import type { ChangedFile, GuardrailContext } from '../context/types';
 import { frontendComplexityGuardrail } from './complexity';
 import { FRONTEND_ABS } from './eslint-runner';
 
@@ -17,9 +17,14 @@ vi.mock('./eslint-runner', async (importOriginal) => {
 const { runEslint } = await import('./eslint-runner');
 const { existsSync } = await import('node:fs');
 
-const frontendFile = { path: 'lightly_studio_view/src/foo.ts', additions: 5, deletions: 0 };
+const frontendFile = {
+    path: 'lightly_studio_view/src/foo.ts',
+    status: 'modified' as const,
+    additions: 5,
+    deletions: 0
+};
 
-function makeCtx(files = [frontendFile]): GuardrailContext {
+function makeCtx(files: ChangedFile[] = [frontendFile]): GuardrailContext {
     return { baseRef: 'origin/main', changedFiles: async () => files };
 }
 
@@ -31,7 +36,14 @@ describe('frontendComplexityGuardrail', () => {
 
     it('passes immediately when no frontend files changed', async () => {
         const result = await frontendComplexityGuardrail.run(
-            makeCtx([{ path: 'lightly_studio/src/model.py', additions: 5, deletions: 0 }])
+            makeCtx([
+                {
+                    path: 'lightly_studio/src/model.py',
+                    status: 'modified',
+                    additions: 5,
+                    deletions: 0
+                }
+            ])
         );
         expect(result.status).toBe('pass');
         expect(result.summary).toContain('0 file(s)');
@@ -40,7 +52,14 @@ describe('frontendComplexityGuardrail', () => {
     it('passes when all changed frontend files are deleted', async () => {
         vi.mocked(existsSync).mockReturnValueOnce(false);
         const result = await frontendComplexityGuardrail.run(
-            makeCtx([{ path: 'lightly_studio_view/src/deleted.ts', additions: 0, deletions: 10 }])
+            makeCtx([
+                {
+                    path: 'lightly_studio_view/src/deleted.ts',
+                    status: 'deleted',
+                    additions: 0,
+                    deletions: 10
+                }
+            ])
         );
         expect(result.status).toBe('pass');
         expect(result.summary).toBe('All changed frontend files were deleted.');
@@ -53,8 +72,18 @@ describe('frontendComplexityGuardrail', () => {
         ] as unknown as ESLint.LintResult[]);
         const result = await frontendComplexityGuardrail.run(
             makeCtx([
-                { path: 'lightly_studio_view/src/foo.ts', additions: 5, deletions: 0 },
-                { path: 'lightly_studio_view/src/deleted.ts', additions: 0, deletions: 10 }
+                {
+                    path: 'lightly_studio_view/src/foo.ts',
+                    status: 'modified',
+                    additions: 5,
+                    deletions: 0
+                },
+                {
+                    path: 'lightly_studio_view/src/deleted.ts',
+                    status: 'deleted',
+                    additions: 0,
+                    deletions: 10
+                }
             ])
         );
         expect(result.status).toBe('pass');
