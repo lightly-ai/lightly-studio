@@ -16,6 +16,7 @@ from sqlmodel import Session
 
 from lightly_studio.models.embedding_region import EmbeddingRegion
 from lightly_studio.resolvers import embedding_model_resolver, twodim_embedding_resolver
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
 
 
