@@ -12,7 +12,7 @@ Open the dialog from the `Menu` button in the top-right corner and select `Sampl
 
 ## Sampling in Python
 
-Each strategy is configured directly from a [`DatasetQuery`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery) via [`sampling()`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.sampling). The sampled items are stored under the tag passed as `sampling_result_tag_name`, so you can filter or export them later. `sampling_result_tag_name` must be a tag name that does not yet exist in the dataset.
+Each strategy is configured directly from a [`DatasetQuery`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery) via [`sampling()`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.sampling). This works for image datasets, video datasets, and video-frame datasets returned by [`VideoDataset.frames()`](../api/dataset.md#lightly_studio.VideoDataset.frames). The sampled items are stored under the tag passed as `sampling_result_tag_name`, so you can filter or export them later. `sampling_result_tag_name` must be a tag name that does not yet exist in the dataset.
 
 ### Filtering before sampling
 
@@ -32,6 +32,25 @@ dataset.match(ImageSampleField.width >= 1920).sampling().diverse(
 ```
 
 See [Search and Filter](search_and_filter.md#query-in-python) for more filtering options.
+
+Video frames can be sampled the same way through `VideoDataset.frames()`:
+
+```py
+import lightly_studio as ls
+from lightly_studio.core.dataset_query import VideoFrameSampleField
+
+dataset = ls.VideoDataset.load("my_video_dataset")
+frames = dataset.frames()
+
+for frame in frames.match(VideoFrameSampleField.frame_number > 1):
+    frame.metadata["score"] = float(frame.frame_number)
+
+frames.match(VideoFrameSampleField.frame_number > 1).sampling().metadata_weighting(
+    n_samples_to_select=5,
+    sampling_result_tag_name="sampled_frames",
+    metadata_key="score",
+)
+```
 
 ### Sampling Strategies
 
