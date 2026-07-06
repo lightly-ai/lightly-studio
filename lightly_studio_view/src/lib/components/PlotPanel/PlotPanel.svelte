@@ -11,6 +11,10 @@
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { useAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
+    import {
+        clearPlotSelectionCount,
+        setPlotSelectionCount
+    } from '$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection';
     import { useArrowData } from './useArrowData/useArrowData';
     import { usePlotData } from './usePlotData/usePlotData';
     import PlotPanelLegend from './PlotPanelLegend.svelte';
@@ -53,30 +57,35 @@
     // Use appropriate filter hook based on route
     const imageFilters = useImageFilters();
     const videoFilters = useVideoFilters();
-    const { annotationPlotSampleIds, saveSampleIds: saveAnnotationPlotSampleIds } =
+    const { annotationPlotRegion, saveRegion: saveAnnotationPlotRegion } =
         useAnnotationPlotSelection();
 
-    const updateSampleIds = $derived(
-        isAnnotations
-            ? saveAnnotationPlotSampleIds
-            : isVideos
-              ? videoFilters.updateSampleIds
-              : imageFilters.updateSampleIds
-    );
+    // Videos still commit resolved sample ids client-side.
+    const updateSampleIds = $derived(videoFilters.updateSampleIds);
     const imageFilter = $derived(isVideos ? null : imageFilters.imageFilter);
     const videoFilter = $derived(isVideos ? videoFilters.videoFilter : null);
     const activeSampleIds = $derived(
-        isAnnotations
-            ? $annotationPlotSampleIds
-            : ((isVideos ? $videoFilter : $imageFilter)?.sample_filter?.sample_ids ?? [])
+        isVideos ? ($videoFilter?.sample_filter?.sample_ids ?? []) : []
     );
 
-    // Images send the lasso/rectangle as geometry (embedding_region) instead of the full list
-    // of selected sample ids, so the request body stays small at scale (see LIG-9903). Videos
-    // and annotations keep committing resolved sample ids for now.
-    const isRegionMode = $derived(!isAnnotations && !isVideos);
+    // Images and annotations send the lasso/rectangle as geometry (embedding_region) instead
+    // of the full list of selected sample ids, so the request body stays small at scale (see
+    // LIG-9903). Videos still commit resolved sample ids for now.
+    const isRegionMode = $derived(!isVideos);
+    // Commit the drawn polygon to the right store for the active tab.
+    const commitRegion = (region: { polygon: Point[] } | null) => {
+        if (isAnnotations) {
+            saveAnnotationPlotRegion(region);
+        } else {
+            imageFilters.updateEmbeddingRegion(region);
+        }
+    };
     const committedRegionPolygon = $derived(
-        isRegionMode ? ($imageFilter?.sample_filter?.embedding_region?.polygon ?? null) : null
+        isAnnotations
+            ? ($annotationPlotRegion?.polygon ?? null)
+            : isRegionMode
+              ? ($imageFilter?.sample_filter?.embedding_region?.polygon ?? null)
+              : null
     );
 
     // The active annotation label/tag filter, mirroring what the annotations grid applies.
@@ -225,19 +234,21 @@
         if (isRegionMode) {
             if (isEmptySelection || isFullSelection) {
                 if (committedRegionPolygon !== null) {
-                    imageFilters.updateEmbeddingRegion(null);
+                    commitRegion(null);
                 }
+                clearPlotSelectionCount(collectionId);
             } else {
-                imageFilters.updateEmbeddingRegion({ polygon: drawnPolygon });
+                commitRegion({ polygon: drawnPolygon });
+                // Propagate the client-computed in-polygon count so the sidebar filter chip
+                // can show how many items are selected (the ids stay on the client).
+                setPlotSelectionCount(collectionId, $selectedSampleIds.length);
             }
             setRangeSelection(null);
             return;
         }
 
-        // Videos and annotations still commit the resolved sample ids client-side.
-        const currentSampleIds = isAnnotations
-            ? $annotationPlotSampleIds
-            : ($videoFilter?.sample_filter?.sample_ids ?? []);
+        // Videos still commit the resolved sample ids client-side.
+        const currentSampleIds = $videoFilter?.sample_filter?.sample_ids ?? [];
 
         if (isEmptySelection || isFullSelection) {
             if (currentSampleIds.length > 0) {
@@ -324,7 +335,8 @@
     const clearSelection = () => {
         setRangeSelection(null);
         if (isRegionMode) {
-            imageFilters.updateEmbeddingRegion(null);
+            commitRegion(null);
+            clearPlotSelectionCount(collectionId);
         } else {
             updateSampleIds([]);
         }

@@ -37,7 +37,7 @@ export function useSelectAll(collectionId: string, gridType: GridType) {
     const { filterParams: videoFilterParams } = useVideoFilters();
     const { filterParams: frameFilterParams } = useFramesFilter();
     const { annotationFilter } = useSelectedAnnotationsFilter(collectionId);
-    const { annotationPlotSampleIds } = useAnnotationPlotSelection();
+    const { annotationPlotRegion } = useAnnotationPlotSelection();
 
     let isLoading = false;
 
@@ -81,13 +81,15 @@ export function useSelectAll(collectionId: string, gridType: GridType) {
                 };
             }
             case 'annotations': {
-                const plotSampleIds = get(annotationPlotSampleIds);
+                // The plot selection is geometry; the backend resolves it to sample ids when
+                // fetching / tagging, so select-all also carries the region, not a list.
+                const plotRegion = get(annotationPlotRegion);
                 const filter =
-                    plotSampleIds.length > 0
+                    plotRegion !== null
                         ? {
                               ...get(annotationFilter),
                               filter_type: GRID_FILTER_TYPE.annotations,
-                              sample_ids: plotSampleIds
+                              embedding_region: plotRegion
                           }
                         : get(annotationFilter);
                 return {
