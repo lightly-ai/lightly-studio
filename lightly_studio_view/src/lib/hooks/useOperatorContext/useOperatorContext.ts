@@ -79,20 +79,15 @@ export function resolveContextFilter(
     if (isAnnotationsRoute(routeId)) {
         const labelIds = Array.from(annotationFilterIds);
         const tagIds = Array.from(tagsSelected);
-        const filter: AnnotationsFilter = {
+        if (labelIds.length === 0 && tagIds.length === 0) return undefined;
+        return {
             filter_type: 'annotations',
             ...(labelIds.length > 0 && { annotation_label_ids: labelIds }),
             ...(tagIds.length > 0 && { tag_ids: tagIds })
-        };
-        return Object.keys(filter).length > 1
-            ? { ...filter, filter_type: 'annotations' }
-            : undefined;
+        } satisfies AnnotationsFilter;
     }
     if (isCaptionsRoute(routeId))
         return { filter_type: 'sample', has_captions: true } satisfies SampleFilter;
-    // The filter hooks already stamp `filter_type`, but the generated model types
-    // mark it optional (it has a backend default); re-assert it so the value fits
-    // the discriminated union.
     if (isImagesRoute(routeId))
         return imageFilter ? { ...imageFilter, filter_type: 'image' } : undefined;
     if (isVideosRoute(routeId))
