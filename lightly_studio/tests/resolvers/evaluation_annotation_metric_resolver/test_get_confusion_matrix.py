@@ -166,7 +166,8 @@ def test_get_confusion_matrix__class_only_in_gt(
                 sample_id=image.sample_id,
                 pred_annotation_id=pred_a.sample_id,
                 gt_annotation_id=gt_a.sample_id,
-                metrics={"iou": 0.9},
+                metric_name="iou",
+                value=0.9,
             ),
             EvaluationAnnotationMetricCreate(
                 evaluation_run_id=run.id,
@@ -234,7 +235,8 @@ def test_get_confusion_matrix__class_only_in_pred(
                 sample_id=image.sample_id,
                 pred_annotation_id=pred_a.sample_id,
                 gt_annotation_id=gt_a.sample_id,
-                metrics={"iou": 0.9},
+                metric_name="iou",
+                value=0.9,
             ),
             EvaluationAnnotationMetricCreate(
                 evaluation_run_id=run.id,
