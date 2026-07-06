@@ -39,8 +39,8 @@ export class GitGuardrailContext implements GuardrailContext {
         this.cache ??= (async () => {
             const range = `${this.baseRef}...HEAD`;
             const [nameStatus, stat] = await Promise.all([
-                this.git.diffSummary(['--name-status', range]),
-                this.git.diffSummary([range])
+                this.git.diffSummary(['--name-status', '-M', '-C', range]),
+                this.git.diffSummary(['-M', '-C', range])
             ]);
 
             // name-status gives the correct destination path for renames/copies.
