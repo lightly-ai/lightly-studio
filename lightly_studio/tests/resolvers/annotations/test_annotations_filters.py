@@ -15,6 +15,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
     AnnotationType,
 )
+from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
 from lightly_studio.resolvers import annotation_resolver
 from lightly_studio.resolvers import annotation_resolver as annotations_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import (
@@ -202,6 +203,63 @@ def test_combined_filters(
     ).annotations
     assert len(filtered_annotations) == 1
     assert filtered_annotations[0].sample_id == annotation1.sample_id
+
+
+def test_filter_by_embedding_region__resolved_ids(
+    db_session: Session,
+    filter_test_data: tuple[AnnotationBaseTable, AnnotationBaseTable],
+) -> None:
+    """A resolved embedding region restricts annotations to the enclosed sample ids."""
+    annotation1, _ = filter_test_data
+
+    region_filter = AnnotationsFilter(embedding_region=_square_region())
+    # The resolver would populate this from the cached 2D projection.
+    region_filter.set_resolved_region_sample_ids([annotation1.sample_id])
+
+    filtered_annotations = annotations_resolver.get_all(
+        session=db_session, filters=region_filter
+    ).annotations
+
+    assert len(filtered_annotations) == 1
+    assert filtered_annotations[0].sample_id == annotation1.sample_id
+
+
+def test_filter_by_embedding_region__empty_matches_nothing(
+    db_session: Session,
+    filter_test_data: tuple[AnnotationBaseTable, AnnotationBaseTable],  # noqa: ARG001
+) -> None:
+    """An empty resolved region must return no annotations, not all of them."""
+    # The fixture seeds annotations, so an empty result proves the region excluded them
+    # rather than the collection simply being empty.
+    assert annotations_resolver.get_all(session=db_session).annotations
+
+    region_filter = AnnotationsFilter(embedding_region=_square_region())
+    region_filter.set_resolved_region_sample_ids([])
+
+    filtered_annotations = annotations_resolver.get_all(
+        session=db_session, filters=region_filter
+    ).annotations
+
+    assert filtered_annotations == []
+
+
+def test_filter_by_embedding_region__unresolved_raises(db_session: Session) -> None:
+    """Applying an unresolved embedding region is a programming error."""
+    region_filter = AnnotationsFilter(embedding_region=_square_region())
+
+    with pytest.raises(RuntimeError, match="must be resolved"):
+        annotations_resolver.get_all(session=db_session, filters=region_filter)
+
+
+def _square_region() -> EmbeddingRegion:
+    return EmbeddingRegion(
+        polygon=[
+            Point2D(x=0, y=0),
+            Point2D(x=1, y=0),
+            Point2D(x=1, y=1),
+            Point2D(x=0, y=1),
+        ]
+    )
 
 
 def _count_sample_joins(query: SelectOfScalar[UUID]) -> int:

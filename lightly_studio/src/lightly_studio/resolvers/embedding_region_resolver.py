@@ -18,6 +18,7 @@ from sqlmodel import Session, select
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.embedding_region import EmbeddingRegion
 from lightly_studio.resolvers import twodim_embedding_resolver
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
 
 
@@ -26,7 +27,7 @@ def resolve_embedding_region(
     collection_id: UUID,
     filters: ImageFilter | None,
 ) -> None:
-    """Resolve any embedding region on ``filters`` to concrete sample ids, in place.
+    """Resolve any embedding region on an image ``filters`` to concrete sample ids, in place.
 
     No-op unless the filter carries a ``sample_filter.embedding_region``. Safe to call more
     than once. Must run before ``filters.apply(...)`` because the point-in-polygon test needs
@@ -42,6 +43,28 @@ def resolve_embedding_region(
         region=sample_filter.embedding_region,
     )
     sample_filter.set_resolved_region_sample_ids(sample_ids)
+
+
+def resolve_annotation_embedding_region(
+    session: Session,
+    collection_id: UUID,
+    filters: AnnotationsFilter | None,
+) -> None:
+    """Resolve any embedding region on an annotation ``filters`` to sample ids, in place.
+
+    Mirrors :func:`resolve_embedding_region` for the annotation grid: the region is tested
+    against the annotation collection's cached 2D projection, so the resolved ids are
+    annotation sample ids. No-op unless ``filters.embedding_region`` is set.
+    """
+    if filters is None or filters.embedding_region is None:
+        return
+
+    sample_ids = get_sample_ids_in_region(
+        session=session,
+        collection_id=collection_id,
+        region=filters.embedding_region,
+    )
+    filters.set_resolved_region_sample_ids(sample_ids)
 
 
 def get_sample_ids_in_region(

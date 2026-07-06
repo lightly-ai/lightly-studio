@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import numpy as np
 from sqlmodel import Session
@@ -10,6 +10,7 @@ from sqlmodel import Session
 from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
 from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
 from lightly_studio.resolvers import embedding_region_resolver, sample_embedding_resolver
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests import helpers_resolvers
@@ -189,3 +190,27 @@ class TestResolveEmbeddingRegion:
         embedding_region_resolver.resolve_embedding_region(
             session=db_session, collection_id=collection.collection_id, filters=None
         )
+
+
+class TestResolveAnnotationEmbeddingRegion:
+    def test_populates_resolved_sample_ids(self, db_session: Session) -> None:
+        collection_id, sample_ids = _setup_collection_with_coordinates(
+            session=db_session,
+            coordinates=[(1.0, 1.0), (100.0, 100.0)],
+        )
+        filters = AnnotationsFilter(embedding_region=_square(0, 0, 10, 10))
+
+        embedding_region_resolver.resolve_annotation_embedding_region(
+            session=db_session, collection_id=collection_id, filters=filters
+        )
+
+        assert filters._resolved_region_sample_ids == [sample_ids[0]]
+
+    def test_no_region_is_noop(self, db_session: Session) -> None:
+        filters = AnnotationsFilter()
+
+        embedding_region_resolver.resolve_annotation_embedding_region(
+            session=db_session, collection_id=uuid4(), filters=filters
+        )
+
+        assert filters._resolved_region_sample_ids is None
