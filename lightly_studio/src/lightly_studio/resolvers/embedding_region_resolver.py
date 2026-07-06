@@ -59,11 +59,11 @@ def _points_in_polygon(
     that a region selected in the plot maps to the same set of samples on the server:
     https://github.com/lightly-ai/lightly-studio/blob/7c44af936d1193a0fcedf91644bf91f5c9e9ef55/lightly_studio_view/src/lib/components/PlotPanel/isPointInPolygon/isPointInPolygon.ts#L18-L49
     """
-    vertices_x = np.asarray([vertex.x for vertex in region.polygon], dtype=np.float64)
-    vertices_y = np.asarray([vertex.y for vertex in region.polygon], dtype=np.float64)
+    vertices_x = np.asarray([vertex.x for vertex in region.polygon], dtype=np.float32)
+    vertices_y = np.asarray([vertex.y for vertex in region.polygon], dtype=np.float32)
 
-    px = np.asarray(x, dtype=np.float64)
-    py = np.asarray(y, dtype=np.float64)
+    px = np.asarray(x, dtype=np.float32)
+    py = np.asarray(y, dtype=np.float32)
 
     inside = np.zeros(px.shape, dtype=np.bool_)
 
