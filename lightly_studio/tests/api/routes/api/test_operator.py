@@ -21,6 +21,7 @@ from lightly_studio.plugins.operator_context import ExecutionContext, OperatorSc
 from lightly_studio.plugins.operator_registry import OperatorRegistry
 from lightly_studio.plugins.parameter import BaseParameter, BoolParameter, StringParameter
 from lightly_studio.resolvers.image_filter import FilterDimensions, ImageFilter
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests import helpers_resolvers
 
 
@@ -295,7 +296,7 @@ def test_execute_operator__filter_is_passed_through(
             "parameters": {},
             "context": {
                 "collection_id": str(collection_id),
-                "context_filter": {"width": {"min": 100, "max": 200}},
+                "context_filter": {"filter_type": "image", "width": {"min": 100, "max": 200}},
             },
         },
     )
@@ -303,6 +304,38 @@ def test_execute_operator__filter_is_passed_through(
     assert response.status_code == HTTP_STATUS_OK
     assert operator.captured_context is not None
     assert operator.captured_context.context_filter == expected_filter
+
+
+def test_execute_operator__sample_ids_filter_resolves_to_sample_filter(
+    test_client: TestClient,
+    collection_id: UUID,
+    isolated_operator_registry: OperatorRegistry,
+) -> None:
+    """A detail-view payload (bare ``sample_ids``) must resolve to SampleFilter.
+
+    Regression guard: ``sample_ids`` is structurally valid for both SampleFilter
+    and AnnotationsFilter. The ``filter_type`` discriminator must route it to
+    SampleFilter rather than letting union declaration order decide.
+    """
+    operator = ImageScopeOperator()
+    isolated_operator_registry.register(operator)
+    operator_id = _get_operator_id_by_name(isolated_operator_registry, "image-only")
+
+    sample_id = uuid4()
+    response = test_client.post(
+        f"/api/operators/{operator_id}/execute",
+        json={
+            "parameters": {},
+            "context": {
+                "collection_id": str(collection_id),
+                "context_filter": {"filter_type": "sample", "sample_ids": [str(sample_id)]},
+            },
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert operator.captured_context is not None
+    assert operator.captured_context.context_filter == SampleFilter(sample_ids=[sample_id])
 
 
 @dataclass
