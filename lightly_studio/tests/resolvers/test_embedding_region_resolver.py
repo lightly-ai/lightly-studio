@@ -85,7 +85,7 @@ def _setup_collection_with_coordinates(
 
 class TestPointsInPolygon:
     def test_square_selects_only_inside_points(self) -> None:
-        region = _square(0, 0, 10, 10)
+        region = _square(x_min=0, y_min=0, x_max=10, y_max=10)
         x = np.array([5, 15, -1, 9.9, 5], dtype=np.float32)
         y = np.array([5, 5, 5, 9.9, 20], dtype=np.float32)
 
@@ -123,7 +123,7 @@ class TestGetSampleIdsInRegion:
         selected = embedding_region_resolver.get_sample_ids_in_region(
             session=db_session,
             collection_id=collection_id,
-            region=_square(0, 0, 10, 10),
+            region=_square(x_min=0, y_min=0, x_max=10, y_max=10),
         )
 
         assert set(selected) == {sample_ids[0], sample_ids[1]}
@@ -137,7 +137,7 @@ class TestGetSampleIdsInRegion:
         selected = embedding_region_resolver.get_sample_ids_in_region(
             session=db_session,
             collection_id=collection_id,
-            region=_square(50, 50, 60, 60),
+            region=_square(x_min=50, y_min=50, x_max=60, y_max=60),
         )
 
         assert selected == []
@@ -148,7 +148,7 @@ class TestGetSampleIdsInRegion:
         selected = embedding_region_resolver.get_sample_ids_in_region(
             session=db_session,
             collection_id=collection.collection_id,
-            region=_square(0, 0, 10, 10),
+            region=_square(x_min=0, y_min=0, x_max=10, y_max=10),
         )
 
         assert selected == []
