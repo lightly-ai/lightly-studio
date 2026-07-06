@@ -69,7 +69,8 @@ export class GitGuardrailContext implements GuardrailContext {
 
 /**
  * Parse a raw unified diff (from `git diff`) into a Map of path → patch.
- * Deleted files (`+++ /dev/null`) are omitted — they have no added content.
+ * Modified/added/renamed files are keyed by the destination path (`+++ b/<path>`).
+ * Deleted files (`+++ /dev/null`) are keyed by the source path (`--- a/<path>`).
  */
 export function parsePatchesByFile(raw: string): Map<string, string> {
     const map = new Map<string, string>();
@@ -77,9 +78,17 @@ export function parsePatchesByFile(raw: string): Map<string, string> {
     const chunks = raw.split(/^(?=diff --git )/m);
     for (const chunk of chunks) {
         if (!chunk) continue;
-        // '+++ b/<path>' is the destination file; '+++ /dev/null' means deleted — skip.
-        const match = chunk.match(/^\+\+\+ b\/(.+)$/m);
-        if (match?.[1]) map.set(match[1].trim(), chunk);
+        // '+++ b/<path>' is the destination file for modified/added/renamed files.
+        const destMatch = chunk.match(/^\+\+\+ b\/(.+)$/m);
+        if (destMatch?.[1]) {
+            map.set(destMatch[1].trim(), chunk);
+            continue;
+        }
+        // '+++ /dev/null' means deleted — fall back to '--- a/<path>' for the key.
+        if (/^\+\+\+ \/dev\/null/m.test(chunk)) {
+            const srcMatch = chunk.match(/^--- a\/(.+)$/m);
+            if (srcMatch?.[1]) map.set(srcMatch[1].trim(), chunk);
+        }
     }
     return map;
 }

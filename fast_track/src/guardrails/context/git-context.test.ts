@@ -206,7 +206,7 @@ describe('parsePatchesByFile', () => {
         );
     });
 
-    it('omits deleted files (+++ /dev/null)', () => {
+    it('includes deleted files keyed by the source path (--- a/...)', () => {
         const raw = [
             'diff --git a/gone.ts b/gone.ts',
             '--- a/gone.ts',
@@ -216,7 +216,21 @@ describe('parsePatchesByFile', () => {
             '-line2'
         ].join('\n');
 
-        expect(parsePatchesByFile(raw)).toEqual(new Map());
+        expect(parsePatchesByFile(raw)).toEqual(
+            new Map([
+                [
+                    'gone.ts',
+                    [
+                        'diff --git a/gone.ts b/gone.ts',
+                        '--- a/gone.ts',
+                        '+++ /dev/null',
+                        '@@ -1,2 +0,0 @@',
+                        '-line1',
+                        '-line2'
+                    ].join('\n')
+                ]
+            ])
+        );
     });
 });
 
