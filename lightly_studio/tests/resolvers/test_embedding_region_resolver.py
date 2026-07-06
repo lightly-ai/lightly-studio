@@ -74,13 +74,16 @@ def _setup_collection_with_coordinates(
     coordinates_by_sample = {
         image.sample_id: coordinate for image, coordinate in zip(images, coordinates)
     }
-    ordered_sample_ids = _seed_2d_coordinates(
+    _seed_2d_coordinates(
         session=session,
         collection_id=collection.collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
         coordinates=coordinates_by_sample,
     )
-    return collection.collection_id, ordered_sample_ids
+    # Return sample ids in the same order as ``coordinates`` so callers can index by
+    # coordinate. ``_seed_2d_coordinates`` seeds by sample id, so its own (hash-ordered)
+    # return value need not match the coordinate order.
+    return collection.collection_id, [image.sample_id for image in images]
 
 
 class TestPointsInPolygon:
