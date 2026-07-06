@@ -58,12 +58,11 @@ function mockExecFileWith(error: Error | null): void {
     });
 }
 
-// Sets up the three existsSync calls for a full successful run:
-//   1. source file exists on disk (coverage-base)
-//   2. .test.ts candidate exists (findFrontendTestFile)
-//   3. coverage JSON was produced (runTests)
-function setupHappyPath(coverageData: object = FULL_COVERAGE_DATA): void {
-    mockExistsSync.mockReturnValueOnce(true).mockReturnValueOnce(true).mockReturnValueOnce(true);
+// Sets up the two existsSync calls for a full successful run:
+//   1. .test.ts candidate exists (findFrontendTestFile)
+//   2. coverage JSON was produced (runTests)
+function setupSuccessfulRun(coverageData: object = FULL_COVERAGE_DATA): void {
+    mockExistsSync.mockReturnValueOnce(true).mockReturnValueOnce(true);
     mockExecFileWith(null);
     mockReadFileSync.mockReturnValue(JSON.stringify(coverageData));
 }
@@ -223,7 +222,7 @@ describe('frontendCoverageGuardrail – filterFiles', () => {
     });
 
     it('includes regular .ts files in the frontend src directory', async () => {
-        setupHappyPath();
+        setupSuccessfulRun();
         const result = await frontendCoverageGuardrail.run(makeCtx([FRONTEND_FILE]));
         expect(result.summary).not.toContain('0 file(s) checked');
     });
@@ -231,9 +230,7 @@ describe('frontendCoverageGuardrail – filterFiles', () => {
 
 describe('frontendCoverageGuardrail – findTestFile', () => {
     it('fails when no test file candidate exists on disk', async () => {
-        mockExistsSync
-            .mockReturnValueOnce(true) // source file exists
-            .mockReturnValue(false); // all test file candidates missing
+        mockExistsSync.mockReturnValue(false); // all test file candidates missing
         const result = await frontendCoverageGuardrail.run(makeCtx([FRONTEND_FILE]));
         expect(result.status).toBe('fail');
         expect(result.summary).toContain('no test file found');
@@ -241,7 +238,7 @@ describe('frontendCoverageGuardrail – findTestFile', () => {
     });
 
     it('uses the first matching candidate (.test.ts)', async () => {
-        setupHappyPath();
+        setupSuccessfulRun();
         await frontendCoverageGuardrail.run(makeCtx([FRONTEND_FILE]));
         const paths = mockExistsSync.mock.calls.map(([p]) => p as string);
         expect(paths.some((p) => p.endsWith('foo.test.ts'))).toBe(true);
@@ -249,7 +246,6 @@ describe('frontendCoverageGuardrail – findTestFile', () => {
 
     it('skips candidates that do not exist and uses the next match (.spec.ts)', async () => {
         mockExistsSync
-            .mockReturnValueOnce(true) // source file exists
             .mockReturnValueOnce(false) // foo.test.ts not found
             .mockReturnValueOnce(false) // foo.test.js not found
             .mockReturnValueOnce(true) // foo.spec.ts found
@@ -268,7 +264,6 @@ describe('frontendCoverageGuardrail – findTestFile', () => {
 describe('frontendCoverageGuardrail – runTests', () => {
     it('fails when vitest does not produce a coverage file', async () => {
         mockExistsSync
-            .mockReturnValueOnce(true) // source file exists
             .mockReturnValueOnce(true) // test file candidate exists
             .mockReturnValueOnce(false); // coverage JSON not produced
         mockExecFileWith(null);
@@ -280,7 +275,7 @@ describe('frontendCoverageGuardrail – runTests', () => {
     });
 
     it('invokes vitest via npm run test:unit from lightly_studio_view', async () => {
-        setupHappyPath();
+        setupSuccessfulRun();
         await frontendCoverageGuardrail.run(makeCtx([FRONTEND_FILE]));
         const [cmd, args] = mockExecFile.mock.calls[0]! as [string, string[]];
         expect(cmd).toBe('npm');
@@ -289,7 +284,6 @@ describe('frontendCoverageGuardrail – runTests', () => {
 
     it('still reads coverage when vitest exits non-zero', async () => {
         mockExistsSync
-            .mockReturnValueOnce(true) // source file exists
             .mockReturnValueOnce(true) // test file candidate exists
             .mockReturnValueOnce(true); // coverage JSON written despite failure
         mockExecFileWith(new Error('Tests failed'));
@@ -303,13 +297,13 @@ describe('frontendCoverageGuardrail – runTests', () => {
 
 describe('frontendCoverageGuardrail – parseCoverageRatio', () => {
     it('auto-passes when coverage data contains no entry for the source file', async () => {
-        setupHappyPath({ [`${FRONTEND_ABS}/src/lib/other.ts`]: { statementMap: {}, s: {} } });
+        setupSuccessfulRun({ [`${FRONTEND_ABS}/src/lib/other.ts`]: { statementMap: {}, s: {} } });
         const result = await frontendCoverageGuardrail.run(makeCtx([FRONTEND_FILE]));
         expect(result.status).toBe('pass');
     });
 
     it('passes when coverage matches via the FRONTEND_PREFIX suffix of the absolute path', async () => {
-        setupHappyPath(FULL_COVERAGE_DATA);
+        setupSuccessfulRun(FULL_COVERAGE_DATA);
         const result = await frontendCoverageGuardrail.run(makeCtx([FRONTEND_FILE]));
         expect(result.status).toBe('pass');
         expect(result.summary).toContain('[PASS]');
@@ -327,7 +321,7 @@ describe('frontendCoverageGuardrail – parseCoverageRatio', () => {
                 s: { '0': 1, '1': 0, '2': 0 } // 1/3 ≈ 33%
             }
         };
-        setupHappyPath(lowCoverageData);
+        setupSuccessfulRun(lowCoverageData);
         const result = await frontendCoverageGuardrail.run(makeCtx([FRONTEND_FILE]));
         expect(result.status).toBe('fail');
         expect(result.summary).toContain('[FAIL]');
