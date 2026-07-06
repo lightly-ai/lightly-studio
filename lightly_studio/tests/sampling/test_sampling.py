@@ -70,7 +70,6 @@ class TestSampling:
             video=VideoStub(path="/data/b.mp4", duration_s=1.0, fps=2.0),
         )
         frames = dataset.frames()
-        query = frames.query()
         embedding_model = helpers_resolvers.create_embedding_model(
             session=dataset.session,
             collection_id=frames.collection_id,
