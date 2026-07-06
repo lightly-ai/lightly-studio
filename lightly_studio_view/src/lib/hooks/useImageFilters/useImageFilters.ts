@@ -6,6 +6,7 @@ import { SortDirection } from '$lib/api/lightly_studio_local';
 import type {
     AnnotationsFilter,
     ConfusionCell,
+    EmbeddingRegion,
     ImageFilter,
     QueryExpr,
     SampleFilter
@@ -73,6 +74,15 @@ const imageFilter = derived(
         const sampleIds = $filterParams.filters?.sample_ids;
         if (sampleIds && sampleIds.length > 0) {
             sampleFilter.sample_ids = sampleIds;
+        }
+
+        // Embedding-plot lasso/rectangle selections are sent as geometry (a few KB) rather
+        // than the full list of selected sample ids, so the request body stays constant-size
+        // regardless of selection size (see LIG-9903). The backend resolves the polygon to
+        // sample ids server-side.
+        const embeddingRegion = $filterParams.filters?.embedding_region;
+        if (embeddingRegion) {
+            sampleFilter.embedding_region = embeddingRegion;
         }
 
         const annotationLabelIds = $filterParams.filters?.annotation_label_ids;
@@ -151,6 +161,27 @@ export const useImageFilters = () => {
         filterParams.set(newParams);
     };
 
+    // updates only the embedding-plot region selection in the existing filter params
+    const updateEmbeddingRegion = (embeddingRegion: EmbeddingRegion | null) => {
+        const params: ImagesInfiniteParams = {
+            ...get(filterParams)
+        };
+
+        if (params.mode !== 'normal') {
+            return;
+        }
+
+        const newParams: ImagesInfiniteParams = {
+            ...params,
+            filters: {
+                ...params.filters,
+                embedding_region: embeddingRegion ?? undefined
+            }
+        };
+
+        filterParams.set(newParams);
+    };
+
     // updates only the confusion-matrix cell in the existing filter params
     const updateConfusionCell = (confusionCell: ConfusionCell | null) => {
         const params: ImagesInfiniteParams = {
@@ -184,6 +215,7 @@ export const useImageFilters = () => {
         updateFilterParams,
         updateQueryExpr,
         updateSampleIds,
+        updateEmbeddingRegion,
         updateConfusionCell,
         updateSortBy
     };
