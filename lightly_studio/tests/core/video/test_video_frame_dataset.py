@@ -71,6 +71,8 @@ class TestVideoFrameDataset:
         dataset = VideoDataset.create(name="real_dataset")
         dataset.add_videos_from_path(path=tmp_path, embed=False)
 
-        frame_numbers = [frame.frame_number for frame in dataset.frames()]
-        assert len(frame_numbers) > 0
+        frame_list = list(dataset.frames())
+        assert len(frame_list) > 0
+        frame_numbers = [frame.frame_number for frame in frame_list]
         assert frame_numbers == sorted(frame_numbers)
+        assert all(frame.parent_video.file_name == "vid.mp4" for frame in frame_list)

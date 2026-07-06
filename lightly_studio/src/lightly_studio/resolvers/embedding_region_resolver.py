@@ -2,7 +2,7 @@
 
 The frontend sends the lasso/rectangle geometry (a handful of vertices) instead of the full
 list of selected sample ids, keeping the request body constant-size regardless of selection
-size (see LIG-9903). Here we reproduce the exact client-side selection server-side: load the
+size. Here we reproduce the exact client-side selection server-side: load the
 cached, deterministic 2D projection the user lassoed over and run a vectorized point-in-polygon
 test, then feed the resulting ids into the existing ``= ANY(...)`` filter path.
 """
@@ -13,11 +13,10 @@ from uuid import UUID
 
 import numpy as np
 from numpy.typing import NDArray
-from sqlmodel import Session, select
+from sqlmodel import Session
 
-from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.embedding_region import EmbeddingRegion
-from lightly_studio.resolvers import twodim_embedding_resolver
+from lightly_studio.resolvers import embedding_model_resolver, twodim_embedding_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 
 
@@ -50,14 +49,14 @@ def get_sample_ids_in_region(
     region: EmbeddingRegion,
 ) -> list[UUID]:
     """Return the sample ids whose cached 2D coordinates fall inside ``region``."""
-    # Mirror the embeddings2d endpoint: use the collection's first embedding model.
+    # Resolve against the same deterministic default model as embeddings2d.get_2d_embeddings,
+    # so the region is tested against the exact projection the user lassoed over.
     # TODO(Kondrat, 07/2026): Select the embedding model via API parameter once supported,
     # matching embeddings2d.get_2d_embeddings.
-    embedding_model = session.exec(
-        select(EmbeddingModelTable)
-        .where(EmbeddingModelTable.collection_id == collection_id)
-        .limit(1)
-    ).first()
+    embedding_model = embedding_model_resolver.get_default_by_collection_id(
+        session=session,
+        collection_id=collection_id,
+    )
     if embedding_model is None:
         return []
 

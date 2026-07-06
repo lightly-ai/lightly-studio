@@ -11,15 +11,14 @@ import pyarrow as pa
 from fastapi import APIRouter, HTTPException, Path, Response
 from pyarrow import ipc
 from pydantic import BaseModel, Field
-from sqlmodel import select
 
 from lightly_studio.api.routes.api.embedding_coloring import ColorBy, build_color_data
 from lightly_studio.api.routes.api.status import HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_NOT_FOUND
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.collection import CollectionTable, SampleType
-from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.resolvers import (
     annotation_resolver,
+    embedding_model_resolver,
     image_resolver,
     twodim_embedding_resolver,
     video_resolver,
@@ -56,11 +55,10 @@ def get_2d_embeddings(
     _validate_filter_type(collection=collection, filters=body.filters)
 
     # TODO(Malte, 09/2025): Support choosing the embedding model via API parameter.
-    embedding_model = session.exec(
-        select(EmbeddingModelTable)
-        .where(EmbeddingModelTable.collection_id == collection_id)
-        .limit(1)
-    ).first()
+    embedding_model = embedding_model_resolver.get_default_by_collection_id(
+        session=session,
+        collection_id=collection_id,
+    )
     if embedding_model is None:
         raise ValueError("No embedding model configured.")
 
