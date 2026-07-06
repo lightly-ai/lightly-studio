@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The left filter panel can now be collapsed to a narrow icon rail to reclaim horizontal space. The collapsed/expanded state is remembered for the session.
+
 ### Deprecated
 
 ### Removed

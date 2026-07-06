@@ -4,6 +4,7 @@
     import {
         CombinedMetadataDimensionsFilters,
         DatasetGridHeader,
+        FilterPanel,
         Footer,
         LabelsMenu,
         SelectionPill,
@@ -12,7 +13,7 @@
     import QueryEditorPanel from '$lib/components/QueryEditorPanel/QueryEditorPanel.svelte';
     import { SidePanelTabs } from '$lib/components';
     import Separator from '$lib/components/ui/separator/separator.svelte';
-    import { GripVertical, SlidersHorizontal } from '@lucide/svelte';
+    import { GripVertical } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
     import { toStore } from 'svelte/store';
     import { Header } from '$lib/components';
@@ -386,56 +387,45 @@
     {:else}
         <div class="flex min-h-0 flex-1 space-x-4 px-4">
             {#if isCollectionGrid}
-                <div class="flex h-full min-h-0 w-80 flex-col">
-                    <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
-                        <div
-                            class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
-                        >
-                            <h2 class="flex items-center space-x-2 py-2 text-lg font-semibold">
-                                <SlidersHorizontal class="size-5" />
-                                <span>Filters</span>
-                            </h2>
+                <FilterPanel>
+                    {#if isImages}
+                        <QueryControl
+                            onOpen={() => {
+                                setActivePanel(
+                                    $activePanel === 'queryEditor' ? 'none' : 'queryEditor'
+                                );
+                            }}
+                        />
+                    {/if}
 
-                            {#if isImages}
-                                <QueryControl
-                                    onOpen={() => {
-                                        setActivePanel(
-                                            $activePanel === 'queryEditor' ? 'none' : 'queryEditor'
-                                        );
-                                    }}
-                                />
-                            {/if}
-
-                            <div>
-                                <TagsMenu collection_id={collectionId} {gridType} />
-                            </div>
-
-                            <EmbeddingSelectionFilterItem
-                                {collectionIdStore}
-                                {isVideos}
-                                {isImages}
-                                {isAnnotations}
-                            />
-                            {#if isImages}
-                                <ConfusionCellFilterItem />
-                            {/if}
-                            {#if isImages}
-                                <AnnotationCollectionsMenu {collectionId} />
-                            {/if}
-                            <LabelsMenu
-                                {annotationFilterRows}
-                                onToggleAnnotationFilter={toggleAnnotationFilterSelection}
-                                showVisibilityToggle={showAnnotationVisibilityToggle}
-                            />
-
-                            {#if isImages || isVideos || isVideoFrames}
-                                {#key collectionId}
-                                    <CombinedMetadataDimensionsFilters {isVideos} {isVideoFrames} />
-                                {/key}
-                            {/if}
-                        </div>
+                    <div>
+                        <TagsMenu collection_id={collectionId} {gridType} />
                     </div>
-                </div>
+
+                    <EmbeddingSelectionFilterItem
+                        {collectionIdStore}
+                        {isVideos}
+                        {isImages}
+                        {isAnnotations}
+                    />
+                    {#if isImages}
+                        <ConfusionCellFilterItem />
+                    {/if}
+                    {#if isImages}
+                        <AnnotationCollectionsMenu {collectionId} />
+                    {/if}
+                    <LabelsMenu
+                        {annotationFilterRows}
+                        onToggleAnnotationFilter={toggleAnnotationFilterSelection}
+                        showVisibilityToggle={showAnnotationVisibilityToggle}
+                    />
+
+                    {#if isImages || isVideos || isVideoFrames}
+                        {#key collectionId}
+                            <CombinedMetadataDimensionsFilters {isVideos} {isVideoFrames} />
+                        {/key}
+                    {/if}
+                </FilterPanel>
             {/if}
 
             {#snippet mainContent()}
