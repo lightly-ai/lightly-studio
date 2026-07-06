@@ -39,6 +39,24 @@ class EmbeddingContext:
     encode_batch: Callable[[torch.Tensor], NDArray[np.float32]]
 
 
+class _PILImageDataset(Dataset[torch.Tensor]):
+    """Dataset wrapping in-memory PIL images and a preprocess function."""
+
+    def __init__(
+        self,
+        images: list[Image.Image],
+        preprocess: Callable[[Image.Image], torch.Tensor],
+    ) -> None:
+        self.images = images
+        self.preprocess = preprocess
+
+    def __len__(self) -> int:
+        return len(self.images)
+
+    def __getitem__(self, idx: int) -> torch.Tensor:
+        return self.preprocess(self.images[idx])
+
+
 class _ImageFileDataset(Dataset[torch.Tensor]):
     """Dataset wrapping image file paths and a preprocess function.
 
@@ -102,6 +120,56 @@ def embed_image_files_batched(
             total=total_images,
             desc="Generating embeddings",
             unit=" images",
+            disable=not show_progress,
+        ) as progress_bar,
+        torch.no_grad(),
+    ):
+        for images_tensor in loader:
+            imgs = images_tensor.to(context.device, non_blocking=True)
+            batch_embeddings = context.encode_batch(imgs)
+            batch_size = imgs.size(0)
+            embeddings[position : position + batch_size] = batch_embeddings
+            position += batch_size
+            progress_bar.update(batch_size)
+
+    return embeddings
+
+
+def embed_pil_images_batched(
+    images: list[Image.Image],
+    context: EmbeddingContext,
+    show_progress: bool,
+) -> NDArray[np.float32]:
+    """Embed in-memory PIL images in batches, preserving input order.
+
+    Args:
+        images: PIL images to embed.
+        context: Model-specific embedding configuration.
+        show_progress: Whether to show a tqdm progress bar.
+
+    Returns:
+        Float32 array of shape ``(len(images), embedding_dimension)``.
+    """
+    total_images = len(images)
+    if not total_images:
+        return np.empty((0, context.embedding_dimension), dtype=np.float32)
+
+    if context.max_batch_size <= 0:
+        raise ValueError("max_batch_size must be positive.")
+
+    loader = DataLoader(
+        _PILImageDataset(images, context.preprocess),
+        batch_size=context.max_batch_size,
+        num_workers=0,
+    )
+
+    embeddings = np.empty((total_images, context.embedding_dimension), dtype=np.float32)
+    position = 0
+    with (
+        tqdm(
+            total=total_images,
+            desc="Generating frame embeddings",
+            unit=" frames",
             disable=not show_progress,
         ) as progress_bar,
         torch.no_grad(),

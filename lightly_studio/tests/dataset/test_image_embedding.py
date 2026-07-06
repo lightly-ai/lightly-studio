@@ -48,3 +48,39 @@ def test_embed_image_files_batched__preserves_input_order(tmp_path: Path) -> Non
 
     assert embeddings.shape == (3, 1)
     assert embeddings[:, 0].tolist() == [float(width) for width in widths]
+
+
+def test_embed_pil_images_batched__empty_input_returns_empty_array() -> None:
+    embeddings = image_embedding.embed_pil_images_batched(
+        images=[],
+        context=EmbeddingContext(
+            embedding_dimension=4,
+            max_batch_size=2,
+            device=torch.device("cpu"),
+            preprocess=lambda image: torch.tensor([float(image.size[0])]),
+            encode_batch=lambda images_tensor: images_tensor.cpu().numpy(),
+        ),
+        show_progress=False,
+    )
+
+    assert embeddings.shape == (0, 4)
+
+
+def test_embed_pil_images_batched__preserves_input_order() -> None:
+    widths = [5, 6, 7]
+    images = [Image.new("RGB", (width, 10), color=(255, 0, 0)) for width in widths]
+
+    embeddings = image_embedding.embed_pil_images_batched(
+        images=images,
+        context=EmbeddingContext(
+            embedding_dimension=1,
+            max_batch_size=2,
+            device=torch.device("cpu"),
+            preprocess=lambda image: torch.tensor([float(image.size[0])]),
+            encode_batch=lambda images_tensor: images_tensor.numpy().astype(np.float32),
+        ),
+        show_progress=False,
+    )
+
+    assert embeddings.shape == (3, 1)
+    assert embeddings[:, 0].tolist() == [float(width) for width in widths]
