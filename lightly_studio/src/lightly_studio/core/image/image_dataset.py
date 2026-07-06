@@ -206,7 +206,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             input_labels: Labelformat input object (e.g. ``COCOObjectDetectionInput``).
             images_root: Root path used to construct absolute image paths for matching.
             annotation_source: Name of the annotation source.
-            embed_annotations: If True, generate embeddings for object-detection annotations.
+            embed_annotations: If True, generate embeddings for the annotation crops.
         """
         missing = add_annotations.add_annotations_from_labelformat(
             session=self.session,
@@ -238,7 +238,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             images_root: Root path used for matching image filenames.
             annotation_source: Name of the annotation source.
             annotation_type: ``OBJECT_DETECTION`` or ``SEGMENTATION_MASK``.
-            embed_annotations: If True, generate embeddings for object-detection annotations.
+            embed_annotations: If True, generate embeddings for the annotation crops.
         """
         label_input: COCOObjectDetectionInput | COCOInstanceSegmentationInput
         if annotation_type == AnnotationType.OBJECT_DETECTION:
@@ -267,7 +267,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             data_yaml: Path to the YOLO ``data.yaml`` file.
             annotation_source: Name of the annotation source.
             input_split: Specific split (e.g. ``"train"``). ``None`` loads all splits.
-            embed_annotations: If True, generate embeddings for object-detection annotations.
+            embed_annotations: If True, generate embeddings for the annotation crops.
         """
         data_yaml = Path(data_yaml).absolute()
         missing: list[str] = []
@@ -317,6 +317,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             input_labels=label_input,
             images_root=images_root,
             annotation_source=annotation_source,
+            embed_annotations=False,
         )
 
     def add_samples_from_labelformat(  # noqa: PLR0913
@@ -340,7 +341,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
-            embed_annotations: If True, generate embeddings for object-detection annotations.
+            embed_annotations: If True, generate embeddings for the annotation crops.
             limit: Maximum number of samples to load. By default, all samples are loaded.
 
         Raises:
@@ -391,7 +392,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
-            embed_annotations: If True, generate embeddings for object-detection annotations.
+            embed_annotations: If True, generate embeddings for the annotation crops.
             limit: Maximum number of samples to load, in total across all processed
                 splits. By default, all samples are loaded.
 
@@ -484,7 +485,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
-            embed_annotations: If True, generate embeddings for object-detection annotations.
+            embed_annotations: If True, generate embeddings for the annotation crops.
             limit: Maximum number of samples to load. By default, all samples are loaded.
 
         Raises:
@@ -611,7 +612,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
-            embed_annotations: If True, generate embeddings for object-detection annotations.
+            embed_annotations: If True, generate embeddings for the annotation crops.
             limit: Maximum number of samples to load. By default, all samples are loaded.
 
         Raises:
@@ -794,7 +795,9 @@ def _generate_embeddings_annotations(
     annotation_collection_name: str | None,
     embed: bool,
 ) -> None:
-    """Generate and store embeddings for object-detection annotation samples.
+    """Generate and store embeddings for annotation crops.
+
+    Object-detection and segmentation-mask annotations are both embedded.
 
     Args:
         session: Database session for resolver operations.

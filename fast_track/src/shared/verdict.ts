@@ -1,7 +1,7 @@
 /**
- * The verdict contract between Fast Track Checks and the Fast Track Bot: Checks
- * serializes a {@link Verdict} to JSON, the Bot reads it back. This JSON is the
- * wire format, so field names are snake_case with no serialization layer.
+ * The verdict contract between the Fast Track Guardrails and the Fast Track Bot:
+ * the Guardrails serialize a {@link Verdict} to JSON, the Bot reads it back. This
+ * JSON is the wire format, so field names are snake_case with no serialization layer.
  */
 
 export type GuardrailStatus = 'pass' | 'fail';
