@@ -64,8 +64,13 @@ export class ApiGuardrailContext implements GuardrailContext {
 export function toChangedFile(file: ListedFile): ChangedFile {
     return {
         path: file.filename,
-        status: file.status as FileStatus,
+        status: toFileStatus(file.status),
         additions: file.additions,
         deletions: file.deletions
     };
+}
+
+/** GitHub's API uses 'removed' for deleted files; normalise to the shared FileStatus value. */
+function toFileStatus(status: string): FileStatus {
+    return status === 'removed' ? 'deleted' : (status as FileStatus);
 }

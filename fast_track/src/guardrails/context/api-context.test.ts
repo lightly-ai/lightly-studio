@@ -34,6 +34,12 @@ describe('toChangedFile', () => {
             deletions: 3
         });
     });
+
+    it("normalises GitHub's 'removed' status to 'deleted'", () => {
+        expect(
+            toChangedFile({ filename: 'src/foo.ts', status: 'removed', additions: 0, deletions: 5 })
+        ).toEqual({ path: 'src/foo.ts', status: 'deleted', additions: 0, deletions: 5 });
+    });
 });
 
 describe('ApiGuardrailContext', () => {
