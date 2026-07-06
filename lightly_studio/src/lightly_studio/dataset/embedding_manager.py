@@ -198,7 +198,9 @@ class EmbeddingManager:
         annotation_collection_id: UUID,
         embedding_model_id: UUID | None = None,
     ) -> None:
-        """Generate and store embeddings for object-detection annotations.
+        """Generate and store embeddings for annotation crops.
+
+        Object-detection and segmentation-mask annotations are both embedded.
 
         Args:
             session: Database session for resolver operations.
