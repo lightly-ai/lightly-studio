@@ -22,6 +22,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationWithPayloadAndCountView,
 )
 from lightly_studio.models.collection import AnnotationCollectionView, CollectionTable
+from lightly_studio.models.embedding_region import EmbeddingRegion
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
@@ -86,6 +87,9 @@ class ReadAnnotationsWithPayloadRequest(BaseModel):
     annotation_label_ids: list[UUID] | None = None
     tag_ids: list[UUID] | None = None
     sample_ids: list[UUID] | None = None
+    # Embedding-plot lasso/rectangle selection sent as geometry (a few KB) instead of the full
+    # list of selected annotation sample ids; resolved to sample ids server-side (LIG-9903).
+    embedding_region: EmbeddingRegion | None = None
     text_embedding: list[float] | None = None
 
 
@@ -159,6 +163,7 @@ def read_annotations_with_payload(
             annotation_label_ids=body.annotation_label_ids,
             tag_ids=body.tag_ids,
             sample_ids=body.sample_ids,
+            embedding_region=body.embedding_region,
         ),
         collection_id=collection_id,
         text_embedding=body.text_embedding,
