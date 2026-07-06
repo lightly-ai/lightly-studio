@@ -88,6 +88,61 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
     assert samples[0].sample.collection_id == collection.collection_id
 
 
+def test_load_into_dataset_from_paths__records_missing_broken_already_present_outcomes(
+    db_session: Session, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    # Arrange: a folder mixing good / already-present / missing / broken files. Each outcome
+    # gets a distinct count so a mix-up between two outcomes cannot pass the assertions.
+    collection = helpers_resolvers.create_collection(db_session)
+
+    # 1 good file -> added=1.
+    good_paths = [tmp_path / "good0.jpg"]
+    for path in good_paths:
+        PILImage.new("RGB", (100, 100)).save(str(path))
+
+    # 2 already-present files: created on disk and pre-inserted into the database.
+    already_present_paths = [tmp_path / "present0.jpg", tmp_path / "present1.jpg"]
+    for path in already_present_paths:
+        PILImage.new("RGB", (100, 100)).save(str(path))
+    helpers_resolvers.create_images(
+        db_session,
+        collection.collection_id,
+        [ImageStub(path=str(path.absolute().as_posix())) for path in already_present_paths],
+    )
+
+    # 3 missing files: never created on disk.
+    missing_paths = [tmp_path / f"missing{i}.jpg" for i in range(3)]
+
+    # 4 broken files: present on disk but not decodable.
+    broken_paths = [tmp_path / f"broken{i}.jpg" for i in range(4)]
+    for path in broken_paths:
+        path.write_bytes(b"not a real image")
+
+    # Act
+    with caplog.at_level("INFO"):
+        sample_ids = add_images.load_into_dataset_from_paths(
+            session=db_session,
+            root_collection_id=collection.collection_id,
+            image_paths=[
+                str(path)
+                for path in good_paths + already_present_paths + missing_paths + broken_paths
+            ],
+        )
+
+    # Assert: only the good files are added.
+    assert len(sample_ids) == len(good_paths)
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    ).samples
+    assert {sample.file_name for sample in samples} == {"good0.jpg", "present0.jpg", "present1.jpg"}
+
+    # Assert: the end-of-run summary records the distinct per-outcome counts.
+    assert "added=1" in caplog.text
+    assert "already_present=2" in caplog.text
+    assert "missing=3" in caplog.text
+    assert "broken=4" in caplog.text
+
+
 def test_load_into_collection_from_paths__deduplicates_in_run_duplicates(
     db_session: Session, tmp_path: Path
 ) -> None:
