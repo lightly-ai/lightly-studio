@@ -291,9 +291,9 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
     )
 
     expr = AnnotationMetricQuery.confusion(
-        run_name="run1",
-        ground_truth="cat",
-        prediction="dog",
+        "run1",
+        "cat",
+        "dog",
         AnnotationEvaluationMetricField("iou") > 0.3,
     )
 

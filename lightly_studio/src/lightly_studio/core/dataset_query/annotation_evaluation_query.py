@@ -36,9 +36,9 @@ class AnnotationMetricQuery(MatchExpression):
     Example:
         ```python
         AnnotationMetricQuery.confusion(
-            run_name="run1",
-            ground_truth="cat",
-            prediction="dog",
+            "run1",
+            "cat",
+            "dog",
             AnnotationEvaluationMetricField("iou") > 0.3,
         )
         ```
