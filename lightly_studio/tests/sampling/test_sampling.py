@@ -86,7 +86,7 @@ class TestSampling:
 
         spy_sampling_via_db = mocker.spy(sampling_file, "sampling_via_database")
 
-        query.sampling().diverse(
+        frames.query().sampling().diverse(
             n_samples_to_select=2,
             sampling_result_tag_name="diverse_frames",
         )
