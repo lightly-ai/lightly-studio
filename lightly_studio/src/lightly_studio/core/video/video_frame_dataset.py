@@ -24,7 +24,7 @@ class VideoFrameDataset(Dataset[VideoFrameSample]):
     frames = VideoDataset.load("my_dataset").frames()
     first_ten_frames = frames[:10]
     for frame in frames:
-        print(frame.frame_number, frame.frame_timestamp_s)
+        print(frame.frame_number, frame.parent_video.file_name)
     ```
 
     For filtering or ordering frames first, use the query interface:

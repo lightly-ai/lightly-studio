@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Generic, cast
 
+from sqlalchemy.orm import joinedload
 from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 from typing_extensions import Self, TypeVar
@@ -287,6 +288,9 @@ class DatasetQuery(Generic[T]):
                 select(VideoFrameTable)
                 .join(VideoFrameTable.sample)
                 .where(SampleTable.collection_id == self.dataset.collection_id)
+                # Eager-load the parent video so VideoFrameSample.parent_video does not
+                # trigger a query per frame (many-to-one, so no row multiplication).
+                .options(joinedload(VideoFrameTable.video))
             )
             video_frame_query = self._compose_query(video_frame_query)
             for video_frame_table in self.session.exec(video_frame_query):
