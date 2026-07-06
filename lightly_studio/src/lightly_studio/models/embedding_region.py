@@ -3,7 +3,7 @@
 The frontend sends the lasso/rectangle geometry (a handful of vertices, a few KB) instead
 of the full list of selected sample ids. The backend reproduces the exact selection by
 running point-in-polygon over the cached 2D projection, so the request body stays
-constant-size regardless of how many points are selected (see LIG-9903).
+constant-size regardless of how many points are selected.
 """
 
 from __future__ import annotations

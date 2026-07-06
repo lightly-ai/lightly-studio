@@ -2,7 +2,7 @@
 
 The frontend sends the lasso/rectangle geometry (a handful of vertices) instead of the full
 list of selected sample ids, keeping the request body constant-size regardless of selection
-size (see LIG-9903). Here we reproduce the exact client-side selection server-side: load the
+size. Here we reproduce the exact client-side selection server-side: load the
 cached, deterministic 2D projection the user lassoed over and run a vectorized point-in-polygon
 test, then feed the resulting ids into the existing ``= ANY(...)`` filter path.
 """
