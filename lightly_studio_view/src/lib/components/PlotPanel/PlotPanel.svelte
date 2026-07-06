@@ -11,6 +11,10 @@
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { useAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
+    import {
+        clearPlotSelectionCount,
+        setPlotSelectionCount
+    } from '$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection';
     import { useArrowData } from './useArrowData/useArrowData';
     import { usePlotData } from './usePlotData/usePlotData';
     import PlotPanelLegend from './PlotPanelLegend.svelte';
@@ -53,22 +57,35 @@
     // Use appropriate filter hook based on route
     const imageFilters = useImageFilters();
     const videoFilters = useVideoFilters();
-    const { annotationPlotSampleIds, saveSampleIds: saveAnnotationPlotSampleIds } =
+    const { annotationPlotRegion, saveRegion: saveAnnotationPlotRegion } =
         useAnnotationPlotSelection();
 
-    const updateSampleIds = $derived(
-        isAnnotations
-            ? saveAnnotationPlotSampleIds
-            : isVideos
-              ? videoFilters.updateSampleIds
-              : imageFilters.updateSampleIds
-    );
+    // Videos still commit resolved sample ids client-side.
+    const updateSampleIds = $derived(videoFilters.updateSampleIds);
     const imageFilter = $derived(isVideos ? null : imageFilters.imageFilter);
     const videoFilter = $derived(isVideos ? videoFilters.videoFilter : null);
     const activeSampleIds = $derived(
+        isVideos ? ($videoFilter?.sample_filter?.sample_ids ?? []) : []
+    );
+
+    // Images and annotations send the lasso/rectangle as geometry (embedding_region) instead
+    // of the full list of selected sample ids, so the request body stays small at scale (see
+    // LIG-9903). Videos still commit resolved sample ids for now.
+    const isRegionMode = $derived(!isVideos);
+    // Commit the drawn polygon to the right store for the active tab.
+    const commitRegion = (region: { polygon: Point[] } | null) => {
+        if (isAnnotations) {
+            saveAnnotationPlotRegion(region);
+        } else {
+            imageFilters.updateEmbeddingRegion(region);
+        }
+    };
+    const committedRegionPolygon = $derived(
         isAnnotations
-            ? $annotationPlotSampleIds
-            : ((isVideos ? $videoFilter : $imageFilter)?.sample_filter?.sample_ids ?? [])
+            ? ($annotationPlotRegion?.polygon ?? null)
+            : isRegionMode
+              ? ($imageFilter?.sample_filter?.embedding_region?.polygon ?? null)
+              : null
     );
 
     // The active annotation label/tag filter, mirroring what the annotations grid applies.
@@ -93,7 +110,10 @@
             ...currentFilter,
             sample_filter: {
                 ...currentFilter.sample_filter,
-                sample_ids: []
+                sample_ids: [],
+                // The plot renders every point and only marks which fulfil the filter, so the
+                // lasso selection itself must not restrict the returned points.
+                embedding_region: undefined
             }
         };
     });
@@ -175,10 +195,13 @@
         return next;
     });
 
+    // While drawing, highlight the in-progress polygon; once committed (region mode) keep
+    // highlighting the stored region so the selection stays visible without the lasso outline.
+    const highlightSelection = $derived($rangeSelection ?? committedRegionPolygon);
     let { data: plotData, selectedSampleIds } = $derived(
         usePlotData({
             arrowData: $arrowData,
-            rangeSelection: $rangeSelection,
+            rangeSelection: highlightSelection,
             highlightedSampleIds: activeSampleIds,
             hasActiveFilter: hasActiveFilter,
             hiddenCategories: effectiveHiddenCategories
@@ -193,28 +216,41 @@
         getLegendEntries($colorLegend, $hiddenCategories, useLabelColors)
     );
     const handleMouseUp = () => {
-        const hadRangeSelection = $rangeSelection !== null;
-        if (!hadRangeSelection) {
+        const drawnPolygon = $rangeSelection;
+        if (drawnPolygon === null) {
             return;
         }
 
-        const currentSampleIds = isAnnotations
-            ? $annotationPlotSampleIds
-            : ((isVideos ? $videoFilter : $imageFilter)?.sample_filter?.sample_ids ?? []);
         const selectableCount =
             ($arrowData?.fulfils_filter as Uint8Array | undefined)?.reduce((count, fulfils) => {
                 return fulfils !== 0 ? count + 1 : count;
             }, 0) ?? null;
+        // An empty selection is a cleared selection; a full selection is equivalent to no
+        // selection at all. In both cases we drop the selection instead of committing it.
+        const isEmptySelection = $selectedSampleIds.length === 0;
+        const isFullSelection =
+            selectableCount !== null && $selectedSampleIds.length === selectableCount;
 
-        if ($selectedSampleIds.length === 0) {
-            if (currentSampleIds.length > 0) {
-                updateSampleIds([]);
+        if (isRegionMode) {
+            if (isEmptySelection || isFullSelection) {
+                if (committedRegionPolygon !== null) {
+                    commitRegion(null);
+                }
+                clearPlotSelectionCount(collectionId);
+            } else {
+                commitRegion({ polygon: drawnPolygon });
+                // Propagate the client-computed in-polygon count so the sidebar filter chip
+                // can show how many items are selected (the ids stay on the client).
+                setPlotSelectionCount(collectionId, $selectedSampleIds.length);
             }
             setRangeSelection(null);
             return;
         }
 
-        if (selectableCount !== null && $selectedSampleIds.length === selectableCount) {
+        // Videos still commit the resolved sample ids client-side.
+        const currentSampleIds = $videoFilter?.sample_filter?.sample_ids ?? [];
+
+        if (isEmptySelection || isFullSelection) {
             if (currentSampleIds.length > 0) {
                 updateSampleIds([]);
             }
@@ -298,9 +334,16 @@
 
     const clearSelection = () => {
         setRangeSelection(null);
-        updateSampleIds([]);
+        if (isRegionMode) {
+            commitRegion(null);
+            clearPlotSelectionCount(collectionId);
+        } else {
+            updateSampleIds([]);
+        }
     };
-    const hasActiveSelection = $derived($rangeSelection !== null || activeSampleIds.length > 0);
+    const hasActiveSelection = $derived(
+        $rangeSelection !== null || activeSampleIds.length > 0 || committedRegionPolygon !== null
+    );
 
     const onWindowKeyDown = (event: KeyboardEvent) => {
         if (event.key !== 'Escape') {
