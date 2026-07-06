@@ -39,6 +39,14 @@ class EmbeddingContext:
     encode_batch: Callable[[torch.Tensor], NDArray[np.float32]]
 
 
+@dataclass(frozen=True)
+class _EmbeddingProgress:
+    """tqdm label configuration for batched embedding."""
+
+    desc: str
+    unit: str
+
+
 class _PILImageDataset(Dataset[torch.Tensor]):
     """Dataset wrapping in-memory PIL images and a preprocess function."""
 
@@ -97,10 +105,10 @@ def embed_image_files_batched(
     """
     return _embed_dataset_batched(
         _ImageFileDataset(filepaths, context.preprocess),
+        len(filepaths),
         context,
         show_progress,
-        progress_desc="Generating embeddings",
-        progress_unit=" images",
+        _EmbeddingProgress(desc="Generating embeddings", unit=" images"),
     )
 
 
@@ -121,22 +129,21 @@ def embed_pil_images_batched(
     """
     return _embed_dataset_batched(
         _PILImageDataset(images, context.preprocess),
+        len(images),
         context,
         show_progress,
-        progress_desc="Generating frame embeddings",
-        progress_unit=" frames",
+        _EmbeddingProgress(desc="Generating frame embeddings", unit=" frames"),
     )
 
 
 def _embed_dataset_batched(
     dataset: Dataset[torch.Tensor],
+    total_images: int,
     context: EmbeddingContext,
     show_progress: bool,
-    progress_desc: str,
-    progress_unit: str,
+    progress: _EmbeddingProgress,
 ) -> NDArray[np.float32]:
     """Embed items from a preprocessed image dataset in batches, preserving order."""
-    total_images = len(dataset)
     if not total_images:
         return np.empty((0, context.embedding_dimension), dtype=np.float32)
 
@@ -157,8 +164,8 @@ def _embed_dataset_batched(
     with (
         tqdm(
             total=total_images,
-            desc=progress_desc,
-            unit=progress_unit,
+            desc=progress.desc,
+            unit=progress.unit,
             disable=not show_progress,
         ) as progress_bar,
         torch.no_grad(),
