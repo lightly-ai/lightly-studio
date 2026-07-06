@@ -1,7 +1,7 @@
 import { vi, describe, expect, it } from 'vitest';
 import { resolve } from 'node:path';
 import type { ChildProcess } from 'node:child_process';
-import type { GuardrailContext } from '../context/types';
+import type { ChangedFile, GuardrailContext } from '../context/types';
 import { backendComplexityGuardrail } from './complexity';
 import { REPO_ROOT } from './shared';
 
@@ -20,9 +20,14 @@ vi.mock('node:fs', async (importOriginal) => {
 const { execFile } = await import('node:child_process');
 const { existsSync } = await import('node:fs');
 
-const backendFile = { path: 'lightly_studio/src/model.py', additions: 5, deletions: 0 };
+const backendFile: ChangedFile = {
+    path: 'lightly_studio/src/model.py',
+    status: 'modified',
+    additions: 5,
+    deletions: 0
+};
 
-function makeCtx(files = [backendFile]): GuardrailContext {
+function makeCtx(files: ChangedFile[] = [backendFile]): GuardrailContext {
     return { baseRef: 'origin/main', changedFiles: async () => files };
 }
 
@@ -34,7 +39,14 @@ describe('backendComplexityGuardrail', () => {
 
     it('passes immediately when no backend files changed', async () => {
         const result = await backendComplexityGuardrail.run(
-            makeCtx([{ path: 'lightly_studio_view/src/foo.ts', additions: 5, deletions: 0 }])
+            makeCtx([
+                {
+                    path: 'lightly_studio_view/src/foo.ts',
+                    status: 'modified',
+                    additions: 5,
+                    deletions: 0
+                }
+            ])
         );
         expect(result.status).toBe('pass');
         expect(result.summary).toContain('0 file(s)');
