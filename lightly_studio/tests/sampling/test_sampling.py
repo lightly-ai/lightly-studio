@@ -76,8 +76,7 @@ class TestSampling:
             collection_id=frames.collection_id,
             embedding_model_name="embedding_model_1",
         )
-        filtered_frames = query.to_list()
-        for i, frame in enumerate(filtered_frames):
+        for i, frame in enumerate(frames):
             helpers_resolvers.create_sample_embedding(
                 session=dataset.session,
                 sample_id=frame.sample_id,
@@ -92,7 +91,7 @@ class TestSampling:
             sampling_result_tag_name="diverse_frames",
         )
 
-        expected_sample_ids = [frame.sample_id for frame in filtered_frames]
+        expected_sample_ids = [frame.sample_id for frame in frames]
         spy_sampling_via_db.assert_called_once_with(
             session=dataset.session,
             config=SamplingConfig(
