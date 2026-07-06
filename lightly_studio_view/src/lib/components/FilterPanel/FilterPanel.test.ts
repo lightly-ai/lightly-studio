@@ -29,7 +29,7 @@ describe('FilterPanel', () => {
         renderPanel();
 
         expect(screen.getByTestId('filter-content')).toBeInTheDocument();
-        expect(screen.getByText('Filters')).toBeInTheDocument();
+        expect(screen.getByTestId('filter-panel-body')).not.toHaveClass('hidden');
         expect(screen.getByTestId('filter-panel-collapse')).toBeInTheDocument();
         expect(screen.queryByTestId('filter-panel-expand')).not.toBeInTheDocument();
     });
@@ -39,13 +39,16 @@ describe('FilterPanel', () => {
 
         await fireEvent.click(screen.getByTestId('filter-panel-collapse'));
 
-        expect(screen.queryByTestId('filter-content')).not.toBeInTheDocument();
+        // Children stay mounted (so their init effects keep running) but the body is hidden.
+        // Tailwind classes carry no styles in jsdom, so assert the hidden toggle directly.
+        expect(screen.getByTestId('filter-content')).toBeInTheDocument();
+        expect(screen.getByTestId('filter-panel-body')).toHaveClass('hidden');
         const expandButton = screen.getByTestId('filter-panel-expand');
         expect(expandButton).toBeInTheDocument();
 
         await fireEvent.click(expandButton);
 
-        expect(screen.getByTestId('filter-content')).toBeInTheDocument();
+        expect(screen.getByTestId('filter-panel-body')).not.toHaveClass('hidden');
         expect(screen.queryByTestId('filter-panel-expand')).not.toBeInTheDocument();
     });
 
@@ -76,6 +79,8 @@ describe('FilterPanel', () => {
         });
 
         expect(screen.getByTestId('filter-panel-expand')).toBeInTheDocument();
-        expect(screen.queryByTestId('filter-content')).not.toBeInTheDocument();
+        // Children remain mounted (init effects run on load) but the body starts hidden.
+        expect(screen.getByTestId('filter-content')).toBeInTheDocument();
+        expect(screen.getByTestId('filter-panel-body')).toHaveClass('hidden');
     });
 });
