@@ -1,12 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { ChangedFile, GuardrailContext } from '../context/types';
-
-vi.mock('node:fs', () => ({ existsSync: vi.fn(() => true) }));
-
-import { existsSync } from 'node:fs';
 import { createCoverageGuardrail } from './coverage-base';
-
-const mockExistsSync = vi.mocked(existsSync);
 
 // Minimal patch that adds lines 1–3.
 const PATCH = '@@ -0,0 +1,3 @@\n+line 1\n+line 2\n+line 3\n';
@@ -48,10 +42,6 @@ const FILE: ChangedFile = {
 };
 
 describe('createCoverageGuardrail', () => {
-    beforeEach(() => {
-        mockExistsSync.mockReturnValue(true);
-    });
-
     it('is required and runs locally', () => {
         const g = createCoverageGuardrail(makeConfig());
         expect(g.required).toBe(true);
@@ -65,10 +55,10 @@ describe('createCoverageGuardrail', () => {
         expect(result.summary).toContain('0 file(s) checked');
     });
 
-    it('passes immediately when all filtered files are missing from disk', async () => {
-        mockExistsSync.mockReturnValue(false);
+    it('passes immediately when all filtered files are deleted', async () => {
+        const deletedFile: ChangedFile = { ...FILE, status: 'deleted' };
         const g = createCoverageGuardrail(makeConfig());
-        const result = await g.run(makeCtx([FILE]));
+        const result = await g.run(makeCtx([deletedFile]));
         expect(result.status).toBe('pass');
         expect(result.summary).toContain('0 file(s) checked');
     });

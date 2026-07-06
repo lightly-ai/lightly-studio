@@ -1,13 +1,6 @@
-import { existsSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { extractAddedLines, pct } from './utils';
 import type { ChangedFile, Guardrail, GuardrailContext } from '../context/types';
 import type { GuardrailResult } from '../../shared/verdict';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-// fast_track/src/guardrails/shared -> fast_track/src/guardrails -> fast_track/src -> fast_track -> repo root
-const REPO_ROOT = resolve(__dirname, '../../../..');
 
 const MIN_COVERAGE = 0.8;
 const MIN_COVERAGE_PCT = `${(MIN_COVERAGE * 100).toFixed(0)}%`;
@@ -104,9 +97,7 @@ export function createCoverageGuardrail<TCoverage>(config: CoverageConfig<TCover
 
         async run(ctx: GuardrailContext): Promise<GuardrailResult> {
             const files = await ctx.changedFiles();
-            const sourceFiles = config
-                .filterFiles(files)
-                .filter((f) => existsSync(resolve(REPO_ROOT, f.path)));
+            const sourceFiles = config.filterFiles(files).filter((f) => f.status !== 'deleted');
 
             if (sourceFiles.length === 0) {
                 return { name: config.name, status: 'pass', summary: '0 file(s) checked.' };
