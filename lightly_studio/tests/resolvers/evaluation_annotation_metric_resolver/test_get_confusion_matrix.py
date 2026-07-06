@@ -84,8 +84,7 @@ def test_get_confusion_matrix__aggregates_tp_fp_fn(
                 sample_id=image.sample_id,
                 pred_annotation_id=pred_a.sample_id,
                 gt_annotation_id=gt_a.sample_id,
-                metric_name="iou",
-                value=0.9,
+                metrics={"iou": 0.9},
             ),
             EvaluationAnnotationMetricCreate(
                 evaluation_run_id=run.id,
@@ -166,8 +165,7 @@ def test_get_confusion_matrix__class_only_in_gt(
                 sample_id=image.sample_id,
                 pred_annotation_id=pred_a.sample_id,
                 gt_annotation_id=gt_a.sample_id,
-                metric_name="iou",
-                value=0.9,
+                metrics={"iou": 0.9},
             ),
             EvaluationAnnotationMetricCreate(
                 evaluation_run_id=run.id,
@@ -235,8 +233,7 @@ def test_get_confusion_matrix__class_only_in_pred(
                 sample_id=image.sample_id,
                 pred_annotation_id=pred_a.sample_id,
                 gt_annotation_id=gt_a.sample_id,
-                metric_name="iou",
-                value=0.9,
+                metrics={"iou": 0.9},
             ),
             EvaluationAnnotationMetricCreate(
                 evaluation_run_id=run.id,
@@ -285,8 +282,7 @@ def test_get_confusion_matrix__no_fp_or_fn_keeps_synthetic_axes(
         true_positive_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=image.sample_id,
-                metric_name="iou",
-                value=0.9,
+                metrics={"iou": 0.9},
                 gt_annotation_label_id=label_a.annotation_label_id,
             )
         ],
