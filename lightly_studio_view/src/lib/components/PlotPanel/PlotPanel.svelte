@@ -11,6 +11,10 @@
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { useAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
+    import {
+        clearPlotSelectionCount,
+        setPlotSelectionCount
+    } from '$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection';
     import { useArrowData } from './useArrowData/useArrowData';
     import { usePlotData } from './usePlotData/usePlotData';
     import PlotPanelLegend from './PlotPanelLegend.svelte';
@@ -49,6 +53,8 @@
     const isVideos = $derived(isVideosRoute(page.route?.id ?? null));
     // Detect if we're on the annotations route
     const isAnnotations = $derived(isAnnotationsRoute(page.route?.id ?? null));
+    // Everything that isn't videos or annotations is the images grid.
+    const isImages = $derived(!isVideos && !isAnnotations);
 
     // Use appropriate filter hook based on route
     const imageFilters = useImageFilters();
@@ -93,7 +99,10 @@
             ...currentFilter,
             sample_filter: {
                 ...currentFilter.sample_filter,
-                sample_ids: []
+                sample_ids: [],
+                // The lasso only scopes the grid, not the plot: the plot shows every point and
+                // highlights the in-selection ones, so drop the region from this request.
+                embedding_region: undefined
             }
         };
     });
@@ -192,37 +201,51 @@
     const legendEntries = $derived.by(() =>
         getLegendEntries($colorLegend, $hiddenCategories, useLabelColors)
     );
+    // Images send the lasso to the backend as region geometry rather than a resolved sample-id
+    // list; the sidebar chip reads the selected count from the plot-propagated
+    // count store, and clearing removes the region entirely.
+    const commitImageRegion = (polygon: Point[], count: number) => {
+        imageFilters.updateEmbeddingRegion({ polygon });
+        setPlotSelectionCount(collectionId, count);
+    };
+    const clearImageRegion = () => {
+        imageFilters.updateEmbeddingRegion(null);
+        clearPlotSelectionCount(collectionId);
+    };
+
     const handleMouseUp = () => {
-        const hadRangeSelection = $rangeSelection !== null;
-        if (!hadRangeSelection) {
+        if ($rangeSelection === null) {
+            return;
+        }
+        const polygon = $rangeSelection;
+
+        const selectableCount =
+            ($arrowData?.fulfils_filter as Uint8Array | undefined)?.reduce((count, fulfils) => {
+                return fulfils !== 0 ? count + 1 : count;
+            }, 0) ?? null;
+        const selectedCount = $selectedSampleIds.length;
+        // Selecting nothing, or every selectable point, is equivalent to no filter at all.
+        const selectsNothingOrEverything =
+            selectedCount === 0 || (selectableCount !== null && selectedCount === selectableCount);
+
+        if (isImages) {
+            if (selectsNothingOrEverything) {
+                clearImageRegion();
+            } else {
+                commitImageRegion(polygon, selectedCount);
+            }
+            setRangeSelection(null);
             return;
         }
 
         const currentSampleIds = isAnnotations
             ? $annotationPlotSampleIds
-            : ((isVideos ? $videoFilter : $imageFilter)?.sample_filter?.sample_ids ?? []);
-        const selectableCount =
-            ($arrowData?.fulfils_filter as Uint8Array | undefined)?.reduce((count, fulfils) => {
-                return fulfils !== 0 ? count + 1 : count;
-            }, 0) ?? null;
-
-        if ($selectedSampleIds.length === 0) {
+            : ($videoFilter?.sample_filter?.sample_ids ?? []);
+        if (selectsNothingOrEverything) {
             if (currentSampleIds.length > 0) {
                 updateSampleIds([]);
             }
-            setRangeSelection(null);
-            return;
-        }
-
-        if (selectableCount !== null && $selectedSampleIds.length === selectableCount) {
-            if (currentSampleIds.length > 0) {
-                updateSampleIds([]);
-            }
-            setRangeSelection(null);
-            return;
-        }
-
-        if (!isEqual($selectedSampleIds, currentSampleIds)) {
+        } else if (!isEqual($selectedSampleIds, currentSampleIds)) {
             updateSampleIds($selectedSampleIds);
         }
         setRangeSelection(null);
@@ -298,9 +321,19 @@
 
     const clearSelection = () => {
         setRangeSelection(null);
-        updateSampleIds([]);
+        if (isImages) {
+            clearImageRegion();
+        } else {
+            updateSampleIds([]);
+        }
     };
-    const hasActiveSelection = $derived($rangeSelection !== null || activeSampleIds.length > 0);
+    // Images track their committed selection as a region on the filter, not as sample ids.
+    const imageRegionSelected = $derived(
+        isImages && ($imageFilter?.sample_filter?.embedding_region ?? null) !== null
+    );
+    const hasActiveSelection = $derived(
+        $rangeSelection !== null || activeSampleIds.length > 0 || imageRegionSelected
+    );
 
     const onWindowKeyDown = (event: KeyboardEvent) => {
         if (event.key !== 'Escape') {

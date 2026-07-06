@@ -25,6 +25,9 @@ const tagsStore = writable([
 const mockSetShowEmbeddingPlot = vi.fn();
 const mockSetRangeSelectionForCollection = vi.fn();
 const mockUpdateSampleIds = vi.fn();
+const mockUpdateEmbeddingRegion = vi.fn();
+const mockSetPlotSelectionCount = vi.fn();
+const mockClearPlotSelectionCount = vi.fn();
 
 class ResizeObserverMock {
     observe() {}
@@ -86,8 +89,13 @@ vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
         filterParams: writable({ mode: 'normal', filters: {} }),
         imageFilter: imageFilterStore,
         updateFilterParams: vi.fn(),
-        updateSampleIds: mockUpdateSampleIds
+        updateSampleIds: mockUpdateSampleIds,
+        updateEmbeddingRegion: mockUpdateEmbeddingRegion
     })
+}));
+vi.mock('$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection', () => ({
+    setPlotSelectionCount: (...args: [string, number]) => mockSetPlotSelectionCount(...args),
+    clearPlotSelectionCount: (...args: [string]) => mockClearPlotSelectionCount(...args)
 }));
 vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
     useMetadataFilters: () => ({
@@ -192,16 +200,20 @@ describe('PlotPanel.svelte', () => {
         await fireEvent.keyDown(window, { key: 'Escape' });
 
         expect(mockSetRangeSelectionForCollection).toHaveBeenCalledWith('test-collection-id', null);
-        expect(mockUpdateSampleIds).toHaveBeenCalledWith([]);
+        // Images clear the region geometry, not a sample-id list.
+        expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith(null);
+        expect(mockClearPlotSelectionCount).toHaveBeenCalledWith('test-collection-id');
+        expect(mockUpdateSampleIds).not.toHaveBeenCalled();
     });
 
-    it('should clear range selection geometry after applying mouse selection', async () => {
-        rangeSelectionStore = writable([
+    it('should send the lasso as region geometry after applying mouse selection', async () => {
+        const polygon = [
             { x: 0, y: 0 },
             { x: 1, y: 0 },
             { x: 1, y: 1 },
             { x: 0, y: 1 }
-        ]);
+        ];
+        rangeSelectionStore = writable(polygon);
         selectedSampleIdsStore = writable(['sample-1']);
         (useEmbeddings as vi.Mock).mockReturnValue({
             isError: false,
@@ -213,7 +225,9 @@ describe('PlotPanel.svelte', () => {
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await fireEvent.mouseUp(window);
 
-        expect(mockUpdateSampleIds).toHaveBeenCalledWith(['sample-1']);
+        expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith({ polygon });
+        expect(mockSetPlotSelectionCount).toHaveBeenCalledWith('test-collection-id', 1);
+        expect(mockUpdateSampleIds).not.toHaveBeenCalled();
         expect(mockSetRangeSelectionForCollection).toHaveBeenCalledWith('test-collection-id', null);
     });
 
@@ -245,9 +259,10 @@ describe('PlotPanel.svelte', () => {
         await tick();
         expect(mockSetRangeSelectionForCollection).not.toHaveBeenCalled();
         expect(mockUpdateSampleIds).not.toHaveBeenCalled();
+        expect(mockUpdateEmbeddingRegion).not.toHaveBeenCalled();
     });
 
-    it('should clear sample_ids when selecting all selectable points', async () => {
+    it('should clear the region when selecting all selectable points', async () => {
         rangeSelectionStore = writable([
             { x: 0, y: 0 },
             { x: 1, y: 0 },
@@ -267,8 +282,10 @@ describe('PlotPanel.svelte', () => {
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await fireEvent.mouseUp(window);
 
-        expect(mockUpdateSampleIds).toHaveBeenCalledWith([]);
-        expect(mockUpdateSampleIds).not.toHaveBeenCalledWith(['sample-1', 'sample-2']);
+        // Selecting every selectable point is equivalent to no filter, so the region is cleared.
+        expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith(null);
+        expect(mockClearPlotSelectionCount).toHaveBeenCalledWith('test-collection-id');
+        expect(mockSetPlotSelectionCount).not.toHaveBeenCalled();
         expect(mockSetRangeSelectionForCollection).toHaveBeenCalledWith('test-collection-id', null);
     });
 
