@@ -38,15 +38,18 @@ export class GitGuardrailContext implements GuardrailContext {
         // Memoize: the committed diff is fixed for one run, read by many guardrails.
         this.cache ??= (async () => {
             const range = `${this.baseRef}...HEAD`;
-            const [nameStatus, stat] = await Promise.all([
+            const [nameStatus, stat, rawPatch] = await Promise.all([
                 this.git.diffSummary(['--name-status', '-M', '-C', range]),
-                this.git.diffSummary(['-M', '-C', range])
+                this.git.diffSummary(['-M', '-C', range]),
+                this.git.diff(['-M', '-C', range])
             ]);
 
             // name-status gives the correct destination path for renames/copies.
             const statusByPath = new Map(
                 nameStatus.files.map((f) => [f.file, toChangedFile(f).status])
             );
+
+            const patchByPath = parsePatchesByFile(rawPatch);
 
             // stat gives line counts; renames use brace notation — resolve to destination.
             return stat.files.map((file) => {
@@ -55,12 +58,30 @@ export class GitGuardrailContext implements GuardrailContext {
                     path,
                     status: statusByPath.get(path) ?? 'modified',
                     additions: file.binary ? 0 : file.insertions,
-                    deletions: file.binary ? 0 : file.deletions
+                    deletions: file.binary ? 0 : file.deletions,
+                    patch: patchByPath.get(path)
                 };
             });
         })();
         return this.cache;
     }
+}
+
+/**
+ * Parse a raw unified diff (from `git diff`) into a Map of path → patch.
+ * Deleted files (`+++ /dev/null`) are omitted — they have no added content.
+ */
+export function parsePatchesByFile(raw: string): Map<string, string> {
+    const map = new Map<string, string>();
+    // Each file section begins with 'diff --git a/... b/...'
+    const chunks = raw.split(/^(?=diff --git )/m);
+    for (const chunk of chunks) {
+        if (!chunk) continue;
+        // '+++ b/<path>' is the destination file; '+++ /dev/null' means deleted — skip.
+        const match = chunk.match(/^\+\+\+ b\/(.+)$/m);
+        if (match?.[1]) map.set(match[1].trim(), chunk);
+    }
+    return map;
 }
 
 /**
