@@ -1,10 +1,9 @@
-"""Resolve an embedding-plot region selection to the sample ids it encloses.
+"""Resolve an embedding-plot region (a polygon of 2D vertices) to the sample ids it encloses.
 
-The frontend sends the lasso/rectangle geometry (a handful of vertices) instead of the full
-list of selected sample ids, keeping the request body constant-size regardless of selection
-size. Here we reproduce the exact client-side selection server-side: load the
-cached, deterministic 2D projection the user lassoed over and run a vectorized point-in-polygon
-test, then feed the resulting ids into the existing ``= ANY(...)`` filter path.
+Given a polygon and a collection, load the cached, deterministic 2D projection of that
+collection's embeddings and return the ids of the samples whose coordinates fall inside the
+polygon. Taking the geometry (a handful of vertices) rather than an explicit id list keeps the
+input constant-size regardless of how many samples the region covers.
 """
 
 from __future__ import annotations
@@ -55,9 +54,10 @@ def _points_in_polygon(
 ) -> NDArray[np.bool_]:
     """Vectorized even-odd ray-casting point-in-polygon test.
 
-    Matches the frontend's ``isPointInPolygon`` (ray cast to the right, edges counted when
-    exactly one endpoint is strictly above the point's y) so the server selects exactly the
-    points the user saw highlighted.
+    A ray is cast to the right (+x); an edge is counted when exactly one endpoint is strictly
+    above the point's y. This intentionally reproduces the frontend's ``isPointInPolygon`` so
+    that a region selected in the plot maps to the same set of samples on the server:
+    https://github.com/lightly-ai/lightly-studio/blob/7c44af936d1193a0fcedf91644bf91f5c9e9ef55/lightly_studio_view/src/lib/components/PlotPanel/isPointInPolygon/isPointInPolygon.ts#L18-L49
     """
     vertices_x = np.asarray([vertex.x for vertex in region.polygon], dtype=np.float64)
     vertices_y = np.asarray([vertex.y for vertex in region.polygon], dtype=np.float64)
