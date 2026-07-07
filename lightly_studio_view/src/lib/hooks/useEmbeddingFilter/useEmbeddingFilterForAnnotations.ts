@@ -1,6 +1,7 @@
 import { writable, type Readable } from 'svelte/store';
 import type { EmbeddingRegion } from '$lib/api/lightly_studio_local';
 import { useRegionFilterVisibility } from './useRegionFilterVisibility';
+import { clearPlotSelectionCount } from './useEmbeddingPlotSelection';
 
 // For images the lasso selection lives inside the image filter store; annotations have no such
 // store, so we keep the plot region here at module scope. The plot (writer) and the grid
@@ -15,8 +16,12 @@ export function useAnnotationPlotSelection() {
     };
 }
 
-export function clearAnnotationPlotSelection() {
+// Clears the shared annotation plot region and the plot-selection count for `collectionId`.
+// The region store is global, but the count is per-collection, so leaving it set would keep the
+// Embedding Plot Filter chip visible after switching away from and back to the collection.
+export function clearAnnotationPlotSelection(collectionId: string) {
     annotationPlotRegion.set(null);
+    clearPlotSelectionCount(collectionId);
 }
 
 // Adapts the local annotation region selection to the shared region-based visibility, so the

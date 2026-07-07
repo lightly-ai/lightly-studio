@@ -6,7 +6,11 @@ import {
     useAnnotationPlotSelection,
     useEmbeddingFilterForAnnotations
 } from './useEmbeddingFilterForAnnotations';
-import { clearPlotSelectionCount, setPlotSelectionCount } from './useEmbeddingPlotSelection';
+import {
+    clearPlotSelectionCount,
+    getPlotSelectionCount,
+    setPlotSelectionCount
+} from './useEmbeddingPlotSelection';
 
 const region: EmbeddingRegion = {
     polygon: [
@@ -18,7 +22,7 @@ const region: EmbeddingRegion = {
 
 describe('useAnnotationPlotSelection', () => {
     beforeEach(() => {
-        clearAnnotationPlotSelection();
+        clearAnnotationPlotSelection('coll-1');
     });
 
     it('stores the plot region in a shared store', () => {
@@ -30,8 +34,17 @@ describe('useAnnotationPlotSelection', () => {
     it('clearAnnotationPlotSelection resets the store', () => {
         const { annotationPlotRegion, saveRegion } = useAnnotationPlotSelection();
         saveRegion(region);
-        clearAnnotationPlotSelection();
+        clearAnnotationPlotSelection('coll-1');
         expect(get(annotationPlotRegion)).toBeNull();
+    });
+
+    it('clearAnnotationPlotSelection also clears the plot-selection count', () => {
+        const collectionId = writable('coll-1');
+        setPlotSelectionCount('coll-1', 5);
+
+        clearAnnotationPlotSelection('coll-1');
+
+        expect(get(getPlotSelectionCount(collectionId))).toBe(0);
     });
 });
 
@@ -41,7 +54,7 @@ describe('useEmbeddingFilterForAnnotations', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        clearAnnotationPlotSelection();
+        clearAnnotationPlotSelection('coll-1');
         clearPlotSelectionCount('coll-1');
         collectionId.set('coll-1');
     });

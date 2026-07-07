@@ -78,12 +78,16 @@ vi.mock('./useCategoryVisibility/useCategoryVisibility', () => ({
         resetCategoryVisibility: mockResetCategoryVisibility
     })
 }));
+const usePlotDataSpy = vi.hoisted(() => vi.fn());
 vi.mock('./usePlotData/usePlotData', () => ({
-    usePlotData: () => ({
-        data: writable(undefined),
-        selectedSampleIds: selectedSampleIdsStore,
-        error: writable(undefined)
-    })
+    usePlotData: (args: unknown) => {
+        usePlotDataSpy(args);
+        return {
+            data: writable(undefined),
+            selectedSampleIds: selectedSampleIdsStore,
+            error: writable(undefined)
+        };
+    }
 }));
 vi.mock('$lib/hooks/useVideoFilters/useVideoFilters', () => ({
     useVideoFilters: () => ({
@@ -153,7 +157,7 @@ describe('PlotPanel.svelte', () => {
         vi.resetAllMocks();
         vi.stubGlobal('ResizeObserver', ResizeObserverMock);
         routeState.id = IMAGES_ROUTE;
-        clearAnnotationPlotSelection();
+        clearAnnotationPlotSelection('test-collection-id');
         usePlotColorByType('test-collection-id').clearSelectedColorByType();
         rangeSelectionStore = writable(null);
         selectedSampleIdsStore = writable([]);
@@ -324,6 +328,27 @@ describe('PlotPanel.svelte', () => {
         // The image filter path must stay untouched on the annotations route.
         expect(mockUpdateEmbeddingRegion).not.toHaveBeenCalled();
         expect(mockSetRangeSelectionForCollection).toHaveBeenCalledWith('test-collection-id', null);
+    });
+
+    it('highlights the committed annotation region after the live selection clears', async () => {
+        routeState.id = ANNOTATIONS_ROUTE;
+        const polygon = [
+            { x: 0, y: 0 },
+            { x: 1, y: 0 },
+            { x: 1, y: 1 },
+            { x: 0, y: 1 }
+        ];
+        // The selection is already committed: no live rangeSelection, region in the shared store.
+        rangeSelectionStore = writable(null);
+        useAnnotationPlotSelection().saveRegion({ polygon });
+
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        await tick();
+
+        // The plot must re-derive the highlight from the committed region so the selected
+        // annotations stay highlighted instead of collapsing to "all included".
+        const lastArgs = usePlotDataSpy.mock.calls.at(-1)?.[0];
+        expect(lastArgs?.highlightRegion).toEqual(polygon);
     });
 
     it('passes derived colorBy to useEmbeddings when a metadata field is selected', async () => {

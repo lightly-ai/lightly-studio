@@ -165,19 +165,24 @@
 
     const hasActiveFilter = $derived(filter !== null || activeSampleIds.length > 0);
 
-    // Images commit the lasso as region geometry on the filter, not as sample ids. After the
+    // Images and annotations commit the lasso as region geometry, not as sample ids. After the
     // selection is committed the live rangeSelection is cleared, so the plot re-derives the
-    // highlight from the stored polygon to keep reflecting the actually selected points.
-    const imageHighlightRegion = $derived(
-        isImages ? ($imageFilter?.sample_filter?.embedding_region?.polygon ?? null) : null
+    // highlight from the stored polygon to keep reflecting the actually selected points. Images
+    // keep the region on the image filter store; annotations in the shared plot region store.
+    const committedHighlightRegion = $derived(
+        isImages
+            ? ($imageFilter?.sample_filter?.embedding_region?.polygon ?? null)
+            : isAnnotations
+              ? ($annotationPlotRegion?.polygon ?? null)
+              : null
     );
 
-    // Activating a lasso (or a committed image region) unhides the Excluded category, otherwise
+    // Activating a lasso (or a committed region) unhides the Excluded category, otherwise
     // out-of-selection points (which get demoted to Excluded) would vanish and blank out the
     // canvas. The legend keeps showing the user's real toggle state.
     const effectiveHiddenCategories = $derived.by(() => {
         const hasSelectionHighlight =
-            $rangeSelection !== null || imageHighlightRegion !== null;
+            $rangeSelection !== null || committedHighlightRegion !== null;
         if (!hasSelectionHighlight || !$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)) {
             return $hiddenCategories;
         }
@@ -190,7 +195,7 @@
         usePlotData({
             arrowData: $arrowData,
             rangeSelection: $rangeSelection,
-            highlightRegion: imageHighlightRegion,
+            highlightRegion: committedHighlightRegion,
             highlightedSampleIds: activeSampleIds,
             hasActiveFilter: hasActiveFilter,
             hiddenCategories: effectiveHiddenCategories
