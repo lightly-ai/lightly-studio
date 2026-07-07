@@ -96,10 +96,13 @@ class AnnotationBaseTable(SQLModel, table=True):
     )
 
     # Optional temporal bounds for this annotation's sample.
+    # Eager (selectin) so temporal spans are batch-loaded for all annotations in one extra
+    # query, avoiding an N+1 per annotation when serializing lists (grid, details). selectin
+    # (vs joined) issues a separate query and does not alter the annotation query's row order.
     temporal_span_details: Mapped[Optional["TemporalSpanTable"]] = Relationship(
         sa_relationship_kwargs={
             "primaryjoin": "AnnotationBaseTable.sample_id == foreign(TemporalSpanTable.sample_id)",
-            "lazy": "select",
+            "lazy": "selectin",
             "uselist": False,
         },
     )
