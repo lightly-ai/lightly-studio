@@ -53,11 +53,7 @@ class SampleFilter(BaseModel):
     query_expr: Optional[QueryExpr] = None
 
     def apply(self, query: QueryType) -> QueryType:
-        """Apply the filters to the given query.
-
-        Note: ``embedding_region`` is not applied here; it is resolved and applied by the
-        resolver via ``embedding_region_resolver.apply_region_sample_ids``.
-        """
+        """Apply the filters to the given query."""
         query = self._apply_sample_ids_filter(query)
         query = self._apply_annotation_filters(query)
         query = self._apply_tag_filters(query)
