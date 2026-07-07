@@ -212,9 +212,11 @@ def test_filter_by_embedding_region__resolved_ids(
     """A resolved embedding region restricts annotations to the enclosed sample ids."""
     annotation1, _ = filter_test_data
 
-    region_filter = AnnotationsFilter(embedding_region=_square_region())
-    # The resolver would populate this from the cached 2D projection.
-    region_filter.set_resolved_region_sample_ids([annotation1.sample_id])
+    # The resolver would populate ``region_sample_ids`` from the cached 2D projection.
+    region_filter = AnnotationsFilter(
+        embedding_region=_square_region(),
+        region_sample_ids=[annotation1.sample_id],
+    )
 
     filtered_annotations = annotations_resolver.get_all(
         session=db_session, filters=region_filter
@@ -233,8 +235,10 @@ def test_filter_by_embedding_region__empty_matches_nothing(
     # rather than the collection simply being empty.
     assert annotations_resolver.get_all(session=db_session).annotations
 
-    region_filter = AnnotationsFilter(embedding_region=_square_region())
-    region_filter.set_resolved_region_sample_ids([])
+    region_filter = AnnotationsFilter(
+        embedding_region=_square_region(),
+        region_sample_ids=[],
+    )
 
     filtered_annotations = annotations_resolver.get_all(
         session=db_session, filters=region_filter
@@ -243,12 +247,19 @@ def test_filter_by_embedding_region__empty_matches_nothing(
     assert filtered_annotations == []
 
 
-def test_filter_by_embedding_region__unresolved_raises(db_session: Session) -> None:
-    """Applying an unresolved embedding region is a programming error."""
-    region_filter = AnnotationsFilter(embedding_region=_square_region())
+def test_filter_by_embedding_region__unresolved_applies_no_restriction(
+    db_session: Session,
+    filter_test_data: tuple[AnnotationBaseTable, AnnotationBaseTable],  # noqa: ARG001
+) -> None:
+    """An unresolved region (``region_sample_ids`` still ``None``) applies no restriction."""
+    all_annotations = annotations_resolver.get_all(session=db_session).annotations
 
-    with pytest.raises(RuntimeError, match="must be resolved"):
-        annotations_resolver.get_all(session=db_session, filters=region_filter)
+    region_filter = AnnotationsFilter(embedding_region=_square_region())
+    filtered_annotations = annotations_resolver.get_all(
+        session=db_session, filters=region_filter
+    ).annotations
+
+    assert len(filtered_annotations) == len(all_annotations)
 
 
 def _square_region() -> EmbeddingRegion:

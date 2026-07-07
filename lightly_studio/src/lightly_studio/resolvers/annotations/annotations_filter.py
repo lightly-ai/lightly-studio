@@ -6,7 +6,7 @@ from typing import Literal
 from uuid import UUID
 
 import sqlalchemy
-from pydantic import Field, PrivateAttr
+from pydantic import Field
 from sqlalchemy.orm import Mapped, aliased
 from sqlmodel import col, select
 from sqlmodel.sql.expression import SelectOfScalar
@@ -38,21 +38,14 @@ class AnnotationsFilter(GridFilterBase):
     )
     # Lasso/rectangle selection from the embedding plot, sent as geometry (a few KB) instead
     # of the full list of selected annotation sample ids (see LIG-9903). It is resolved to
-    # concrete sample ids server-side via point-in-polygon over the cached 2D projection; the
-    # resolver must call `set_resolved_region_sample_ids` before this filter is applied.
+    # concrete sample ids server-side via point-in-polygon over the cached 2D projection.
     embedding_region: EmbeddingRegion | None = None
 
-    # Sample ids the `embedding_region` resolves to, populated server-side. `None` means the
-    # region has not been resolved yet; an empty list means the region encloses no points.
-    _resolved_region_sample_ids: list[UUID] | None = PrivateAttr(default=None)
-
-    def set_resolved_region_sample_ids(self, sample_ids: list[UUID]) -> None:
-        """Store the annotation sample ids that ``embedding_region`` resolves to.
-
-        Called by the region resolver before the filter is applied, since the point-in-polygon
-        test needs a database session that ``apply`` does not have access to.
-        """
-        self._resolved_region_sample_ids = sample_ids
+    # Annotation sample ids enclosed by ``embedding_region``, resolved server-side before the query
+    # is built (the point-in-polygon test needs a session that ``apply`` cannot access). ``None``
+    # means no region restriction; an empty list matches nothing, since an empty region encloses no
+    # points. Populated by ``embedding_region_resolver.resolve_annotation_embedding_region``.
+    region_sample_ids: list[UUID] | None = None
 
     def apply(
         self,
@@ -110,7 +103,7 @@ class AnnotationsFilter(GridFilterBase):
             or self.tag_ids
             or self.annotation_types
             or self.sample_ids
-            or self.embedding_region is not None
+            or self.region_sample_ids is not None
         )
 
     def _apply_annotation_filters(
@@ -142,7 +135,7 @@ class AnnotationsFilter(GridFilterBase):
             )
 
         # Filter by embedding-plot region selection, resolved server-side to sample ids.
-        query = self._apply_embedding_region_filter(query, annotation_sample=annotation_sample)
+        query = self._apply_region_sample_ids_filter(query, annotation_sample=annotation_sample)
 
         # Filter by annotation label
         if self.annotation_label_ids:
@@ -167,26 +160,21 @@ class AnnotationsFilter(GridFilterBase):
 
         return query
 
-    def _apply_embedding_region_filter(
+    def _apply_region_sample_ids_filter(
         self,
         query: QueryType,
         annotation_sample: type[SampleTable],
     ) -> QueryType:
         """Filter by the embedding-plot region selection, resolved server-side to sample ids."""
-        if self.embedding_region is None:
+        if self.region_sample_ids is None:
             return query
-        if self._resolved_region_sample_ids is None:
-            raise RuntimeError(
-                "embedding_region must be resolved with set_resolved_region_sample_ids() "
-                "before the filter is applied."
-            )
         # An empty region encloses no points and must match nothing (not everything).
-        if not self._resolved_region_sample_ids:
+        if not self.region_sample_ids:
             return query.where(sqlalchemy.false())
         return query.where(
             db_array.in_array(
                 column=col(annotation_sample.sample_id),
-                values=self._resolved_region_sample_ids,
+                values=self.region_sample_ids,
             )
         )
 

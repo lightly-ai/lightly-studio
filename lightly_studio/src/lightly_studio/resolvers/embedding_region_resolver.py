@@ -17,27 +17,6 @@ from sqlmodel import Session
 from lightly_studio.models.embedding_region import EmbeddingRegion
 from lightly_studio.resolvers import embedding_model_resolver, twodim_embedding_resolver
 
-def resolve_annotation_embedding_region(
-    session: Session,
-    collection_id: UUID,
-    filters: AnnotationsFilter | None,
-) -> None:
-    """Resolve any embedding region on an annotation ``filters`` to sample ids, in place.
-
-    Mirrors :func:`resolve_embedding_region` for the annotation grid: the region is tested
-    against the annotation collection's cached 2D projection, so the resolved ids are
-    annotation sample ids. No-op unless ``filters.embedding_region`` is set.
-    """
-    if filters is None or filters.embedding_region is None:
-        return
-
-    sample_ids = get_sample_ids_in_region(
-        session=session,
-        collection_id=collection_id,
-        region=filters.embedding_region,
-    )
-    filters.set_resolved_region_sample_ids(sample_ids)
-
 
 def get_sample_ids_in_region(
     session: Session,
