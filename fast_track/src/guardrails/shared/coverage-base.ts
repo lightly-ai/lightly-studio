@@ -5,7 +5,7 @@ import type { GuardrailResult } from '../../shared/verdict';
 const MIN_COVERAGE = 0.8;
 const MIN_COVERAGE_PCT = `${(MIN_COVERAGE * 100).toFixed(0)}%`;
 
-interface CoverageConfig<TCoverage> {
+export interface CoverageConfig<TCoverage> {
     name: string;
     filterFiles(files: ChangedFile[]): ChangedFile[];
     findTestFile(sourcePath: string): Promise<string | undefined>;
@@ -97,7 +97,9 @@ export function createCoverageGuardrail<TCoverage>(config: CoverageConfig<TCover
 
         async run(ctx: GuardrailContext): Promise<GuardrailResult> {
             const files = await ctx.changedFiles();
-            const sourceFiles = config.filterFiles(files).filter((f) => f.status !== 'deleted');
+            const sourceFiles = config
+                .filterFiles(files)
+                .filter((f) => f.status !== 'deleted' && f.patch !== undefined);
 
             if (sourceFiles.length === 0) {
                 return { name: config.name, status: 'pass', summary: '0 file(s) checked.' };
