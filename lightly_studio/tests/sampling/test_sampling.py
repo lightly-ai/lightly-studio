@@ -6,6 +6,7 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
@@ -20,6 +21,7 @@ from lightly_studio.sampling.sampling_config import (
 )
 from tests import helpers_resolvers
 from tests.helpers_resolvers import AnnotationDetails
+from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 from tests.sampling import helpers_sampling
 
 
@@ -46,6 +48,55 @@ class TestSampling:
                 collection_id=collection_id,
                 n_samples_to_select=3,
                 sampling_result_tag_name="diverse_sampling",
+                strategies=[EmbeddingDiversityStrategy(embedding_model_name=None)],
+            ),
+            input_sample_ids=expected_sample_ids,
+        )
+
+    def test_diverse__embedding_model_name_unspecified__video_frames(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        mocker: MockerFixture,
+    ) -> None:
+        dataset = VideoDataset.create(name="video_dataset")
+        create_video_with_frames(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            video=VideoStub(path="/data/a.mp4", duration_s=1.0, fps=3.0),
+        )
+        create_video_with_frames(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            video=VideoStub(path="/data/b.mp4", duration_s=1.0, fps=2.0),
+        )
+        frames = dataset.frames()
+        embedding_model = helpers_resolvers.create_embedding_model(
+            session=dataset.session,
+            collection_id=frames.collection_id,
+            embedding_model_name="embedding_model_1",
+        )
+        for i, frame in enumerate(frames):
+            helpers_resolvers.create_sample_embedding(
+                session=dataset.session,
+                sample_id=frame.sample_id,
+                embedding_model_id=embedding_model.embedding_model_id,
+                embedding=[i, i],
+            )
+
+        spy_sampling_via_db = mocker.spy(sampling_file, "sampling_via_database")
+
+        frames.query().sampling().diverse(
+            n_samples_to_select=2,
+            sampling_result_tag_name="diverse_frames",
+        )
+
+        expected_sample_ids = [frame.sample_id for frame in frames]
+        spy_sampling_via_db.assert_called_once_with(
+            session=dataset.session,
+            config=SamplingConfig(
+                collection_id=frames.collection_id,
+                n_samples_to_select=2,
+                sampling_result_tag_name="diverse_frames",
                 strategies=[EmbeddingDiversityStrategy(embedding_model_name=None)],
             ),
             input_sample_ids=expected_sample_ids,
@@ -165,6 +216,51 @@ class TestSampling:
         )
         spy_mundig_add_weighting.assert_called_once_with(
             self=mocker.ANY, weights=[16.0, 50.0, 35.0], strength=1.0
+        )
+
+    def test_metadata_weighting__video_frames(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        mocker: MockerFixture,
+    ) -> None:
+        dataset = VideoDataset.create(name="video_dataset")
+        create_video_with_frames(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            video=VideoStub(path="/data/a.mp4", duration_s=1.0, fps=3.0),
+        )
+        create_video_with_frames(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            video=VideoStub(path="/data/b.mp4", duration_s=1.0, fps=2.0),
+        )
+        frames = dataset.frames()
+        query = frames.query()
+        for frame in frames:
+            frame.metadata["score"] = float(frame.frame_number)
+
+        spy_sampling_via_db = mocker.spy(sampling_file, "sampling_via_database")
+        spy_mundig_add_weighting = mocker.spy(Mundig, "add_weighting")
+
+        query.sampling().metadata_weighting(
+            n_samples_to_select=2,
+            metadata_key="score",
+            sampling_result_tag_name="weighted_frames",
+        )
+
+        expected_sample_ids = [frame.sample_id for frame in frames]
+        spy_sampling_via_db.assert_called_once_with(
+            session=dataset.session,
+            config=SamplingConfig(
+                collection_id=frames.collection_id,
+                n_samples_to_select=2,
+                sampling_result_tag_name="weighted_frames",
+                strategies=[MetadataWeightingStrategy(metadata_key="score")],
+            ),
+            input_sample_ids=expected_sample_ids,
+        )
+        spy_mundig_add_weighting.assert_called_once_with(
+            self=mocker.ANY, weights=[0.0, 1.0, 2.0, 0.0, 1.0], strength=1.0
         )
 
     def test_multi_strategies(self, db_session: Session, mocker: MockerFixture) -> None:

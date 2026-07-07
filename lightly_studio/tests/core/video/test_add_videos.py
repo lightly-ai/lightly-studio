@@ -39,7 +39,7 @@ from lightly_studio.resolvers import (
     video_resolver,
 )
 from tests.helpers_resolvers import create_collection
-from tests.resolvers.video.helpers import create_video_file
+from tests.resolvers.video.helpers import VideoStub, create_video_file, create_videos
 
 
 def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) -> None:
@@ -97,6 +97,65 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
         collection_id=collection_hierarchy[1].collection_id,
     ).samples
     assert len(video_frames) == 60
+
+
+def test_load_into_collection_from_paths__records_missing_broken_already_present_outcomes(
+    db_session: Session, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    # Arrange: a folder mixing good / already-present / missing / broken videos. Each outcome
+    # gets a distinct count so a mix-up between two outcomes cannot pass the assertions.
+    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+
+    # 1 good video -> added=1.
+    good_paths = [
+        create_video_file(output_path=tmp_path / "good0.mp4", num_frames=2, fps=1),
+    ]
+
+    # 2 already-present videos: created on disk and pre-inserted into the database.
+    already_present_paths = [tmp_path / "present0.mp4", tmp_path / "present1.mp4"]
+    for path in already_present_paths:
+        create_video_file(output_path=path, num_frames=2, fps=1)
+    create_videos(
+        db_session,
+        collection.collection_id,
+        [VideoStub(path=str(path)) for path in already_present_paths],
+    )
+
+    # 3 missing videos: never created on disk.
+    missing_paths = [tmp_path / f"missing{i}.mp4" for i in range(3)]
+
+    # 4 broken videos: present on disk but not decodable.
+    broken_paths = [tmp_path / f"broken{i}.mp4" for i in range(4)]
+    for path in broken_paths:
+        path.write_bytes(b"not a real video")
+
+    # Act
+    with caplog.at_level("INFO"):
+        video_sample_ids, _ = add_videos.load_into_collection_from_paths(
+            session=db_session,
+            collection_id=collection.collection_id,
+            video_paths=[
+                str(path)
+                for path in good_paths + already_present_paths + missing_paths + broken_paths
+            ],
+        )
+
+    # Assert: only the good video is added.
+    assert len(video_sample_ids) == len(good_paths)
+    videos = video_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    ).samples
+    assert {video.file_name for video in videos} == {
+        "good0.mp4",
+        "present0.mp4",
+        "present1.mp4",
+    }
+
+    # Assert: the end-of-run summary records the distinct per-outcome counts.
+    assert "added=1" in caplog.text
+    assert "already_present=2" in caplog.text
+    assert "missing=3" in caplog.text
+    assert "broken=4" in caplog.text
 
 
 def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> None:
@@ -625,6 +684,58 @@ def test_load_video_annotations_from_labelformat__raises_on_missing_video(
             input_labels=input_labels,
             input_labels_paths_root=tmp_path,
         )
+
+
+def test_load_video_annotations_from_labelformat__skips_annotations_for_broken_video(
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    # Arrange: a good video plus a broken one, each referenced by annotations. The broken
+    # video is recorded by the per-run report and never created, so its annotations must be
+    # skipped instead of crashing the run.
+    create_video_file(
+        output_path=tmp_path / "good.mp4",
+        width=640,
+        height=480,
+        num_frames=2,
+        fps=2,
+    )
+    (tmp_path / "broken.mp4").write_bytes(b"not a real video")
+
+    categories = [Category(id=0, name="cat")]
+    good_annotation = _get_object_detection_track(
+        filename="good.mp4",
+        number_of_frames=2,
+        categories=categories,
+        boxes_by_object=[[[1.0, 2.0, 3.0, 4.0], None]],
+    )
+    broken_annotation = _get_object_detection_track(
+        filename="broken.mp4",
+        number_of_frames=2,
+        categories=categories,
+        boxes_by_object=[[[5.0, 6.0, 7.0, 8.0], None]],
+    )
+    input_labels = _ObjectDetectionTrackInput(
+        categories=categories,
+        video_annotations=[good_annotation, broken_annotation],
+    )
+
+    # Act: no exception is raised even though the broken video was not created.
+    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+    created_video_sample_ids, _ = add_videos.load_video_annotations_from_labelformat(
+        session=db_session,
+        collection_id=collection.collection_id,
+        dataset_id=collection.dataset_id,
+        video_paths=[str(tmp_path / "good.mp4"), str(tmp_path / "broken.mp4")],
+        input_labels=input_labels,
+        input_labels_paths_root=tmp_path,
+    )
+
+    # Assert: only the good video is created, and only its annotation is added.
+    assert len(created_video_sample_ids) == 1
+    annotations = annotation_resolver.get_all(db_session).annotations
+    assert len(annotations) == 1
+    assert annotations[0].annotation_label.annotation_label_name == "cat"
 
 
 def test_process_video_annotations_object_detection() -> None:

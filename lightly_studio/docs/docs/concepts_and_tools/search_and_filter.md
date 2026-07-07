@@ -23,6 +23,10 @@ The screen recording below shows the search both by text query "dog" and by past
 !!! note "Search requires embeddings"
     Search is available only when embeddings were generated during data loading.
 
+Search works the same way in the `Annotations` view, where it finds similar objects using
+object-level embeddings. See
+[Object-level embeddings](annotations.md#object-level-embeddings) for details.
+
 ## Filter in GUI
 
 The left sidebar combines the most common ways to narrow down the visible samples:
@@ -275,6 +279,27 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
     )
 
     # Assign any of the previous expressions to a query:
+    query.match(expr)
+    ```
+
+    #### Annotation evaluation queries
+
+    Filtering samples by annotation evaluation results from a specific [evaluation run](evaluation.md), can be realized via `AnnotationMetricQuery.confusion(...)` together with `AnnotationEvaluationMetricField(...)`. In the below example we filter for samples where `cat` got confused as a `dog` by the model, and the IOU is higher than 0.3.
+
+    ```py
+    from lightly_studio.core.dataset_query import (
+        AnnotationEvaluationMetricField,
+        AnnotationMetricQuery,
+    )
+
+    expr = AnnotationMetricQuery.confusion(
+        "run1",
+        "cat",
+        "dog",
+        AnnotationEvaluationMetricField("iou") > 0.3,
+    )
+
+    # Assign the expression to a query:
     query.match(expr)
     ```
 

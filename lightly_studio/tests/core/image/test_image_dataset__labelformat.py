@@ -12,12 +12,19 @@ from labelformat.model.object_detection import (
     ImageObjectDetection,
     SingleObjectDetection,
 )
+from pytest_mock import MockerFixture
 from sqlmodel import select
 
 from lightly_studio import ImageDataset
+from lightly_studio.core.image import add_images
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.image import ImageTable
+
+
+@pytest.fixture
+def assume_referenced_files_exist(mocker: MockerFixture) -> None:
+    mocker.patch.object(add_images, "_file_exists", return_value=True)
 
 
 class TestDataset:
@@ -25,6 +32,7 @@ class TestDataset:
     def test_from_labelformat(
         self,
         patch_collection: None,  # noqa: ARG002
+        assume_referenced_files_exist: None,  # noqa: ARG002
         with_confidence: bool,
     ) -> None:
         # Arrange
@@ -91,6 +99,7 @@ class TestDataset:
     def test_from_labelformat__duplication(
         self,
         patch_collection: None,  # noqa: ARG002
+        assume_referenced_files_exist: None,  # noqa: ARG002
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         # Arrange
@@ -132,6 +141,7 @@ class TestDataset:
     def test_from_labelformat__annotations_synced_images(
         self,
         patch_collection: None,  # noqa: ARG002
+        assume_referenced_files_exist: None,  # noqa: ARG002
     ) -> None:
         # This test is to ensure that the images and annotations stay in sync while loading.
         # In the past, the image file paths got processed separately causing non matching pairs
@@ -165,6 +175,7 @@ class TestDataset:
     def test_from_labelformat__limit(
         self,
         patch_collection: None,  # noqa: ARG002
+        assume_referenced_files_exist: None,  # noqa: ARG002
     ) -> None:
         label_input = _get_input_multi()  # two images
 
@@ -194,6 +205,7 @@ class TestDataset:
     def test_from_labelformat__dont_embed(
         self,
         patch_collection: None,  # noqa: ARG002
+        assume_referenced_files_exist: None,  # noqa: ARG002
     ) -> None:
         dataset_name = "test_dataset"
         image_folder_path = "/fake/path/images"
