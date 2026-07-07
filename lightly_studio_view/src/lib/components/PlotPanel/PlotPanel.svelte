@@ -181,8 +181,7 @@
     // out-of-selection points (which get demoted to Excluded) would vanish and blank out the
     // canvas. The legend keeps showing the user's real toggle state.
     const effectiveHiddenCategories = $derived.by(() => {
-        const hasSelectionHighlight =
-            $rangeSelection !== null || committedHighlightRegion !== null;
+        const hasSelectionHighlight = $rangeSelection !== null || committedHighlightRegion !== null;
         if (!hasSelectionHighlight || !$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)) {
             return $hiddenCategories;
         }

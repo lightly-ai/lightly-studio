@@ -146,7 +146,13 @@ describe('createAnnotationsInfiniteOptions', () => {
         });
 
         it('passes the embedding region geometry to readAnnotationsWithPayload body', async () => {
-            const embedding_region = { polygon: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }] };
+            const embedding_region = {
+                polygon: [
+                    { x: 0, y: 0 },
+                    { x: 1, y: 0 },
+                    { x: 1, y: 1 }
+                ]
+            };
             const options = createAnnotationsInfiniteOptions({
                 collection_id: 'col-1',
                 embedding_region
