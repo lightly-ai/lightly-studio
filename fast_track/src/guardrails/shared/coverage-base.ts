@@ -106,8 +106,17 @@ export function createCoverageGuardrail<TCoverage>(config: CoverageConfig<TCover
             }
 
             const addedLinesByFile = buildAddedLinesMap(sourceFiles);
+            const checkableFiles = sourceFiles.filter((f) => {
+                const lines = addedLinesByFile.get(f.path);
+                return lines !== undefined && lines.size > 0;
+            });
+
+            if (checkableFiles.length === 0) {
+                return { name: config.name, status: 'pass', summary: '0 file(s) checked.' };
+            }
+
             const { pairs, failures: pairFailures } = await resolvePairs(
-                sourceFiles,
+                checkableFiles,
                 config.findTestFile
             );
             const coverageData = await runCoverage(pairs, config.runTests);

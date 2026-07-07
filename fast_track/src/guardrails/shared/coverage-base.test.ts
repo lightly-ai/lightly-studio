@@ -105,6 +105,25 @@ describe('createCoverageGuardrail', () => {
         expect(result.summary).not.toContain('no_patch.py');
     });
 
+    it('does not fail when a deletion-only patch file has no test file', async () => {
+        const deletionOnlyFile: ChangedFile = {
+            path: 'src/lightly_studio/deleted_lines.py',
+            status: 'modified',
+            additions: 0,
+            deletions: 3,
+            patch: '@@ -1,3 +1,0 @@\n-line 1\n-line 2\n-line 3\n'
+        };
+        const g = createCoverageGuardrail(
+            makeConfig({
+                findTestFile: async (p) =>
+                    p.includes('deleted_lines') ? undefined : 'tests/test_foo.py'
+            })
+        );
+        const result = await g.run(makeCtx([deletionOnlyFile, FILE]));
+        expect(result.status).toBe('pass');
+        expect(result.summary).not.toContain('no test file found');
+    });
+
     it('fails when no test file is found', async () => {
         const g = createCoverageGuardrail(makeConfig({ findTestFile: async () => undefined }));
         const result = await g.run(makeCtx([FILE]));
