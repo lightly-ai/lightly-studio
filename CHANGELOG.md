@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Embedding plot legend is now compact and scrollable, and the WebGPU fallback message is no longer shown.
+
 ### Deprecated
 
 ### Removed

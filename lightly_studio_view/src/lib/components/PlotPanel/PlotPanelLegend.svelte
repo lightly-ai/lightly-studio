@@ -36,6 +36,30 @@
         onDoubleClickCategory
     }: Props = $props();
 
+    // Fade the clipped edge(s) of the list so users see the legend is scrollable.
+    let scrollContainer: HTMLDivElement | null = $state(null);
+    let canScrollUp = $state(false);
+    let canScrollDown = $state(false);
+
+    const updateScrollCues = () => {
+        if (!scrollContainer) return;
+        const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+        canScrollUp = scrollTop > 0;
+        // Tolerate sub-pixel rounding at the end of the scroll range.
+        canScrollDown = scrollTop + clientHeight < scrollHeight - 1;
+    };
+
+    $effect(() => {
+        if (!scrollContainer) return;
+        // Re-evaluate when entries change, not just on scroll/resize.
+        void legendEntries;
+        updateScrollCues();
+
+        const resizeObserver = new ResizeObserver(updateScrollCues);
+        resizeObserver.observe(scrollContainer);
+        return () => resizeObserver.disconnect();
+    });
+
     // Reserved rows toggle on click but never isolate on double-click (a no-op for a binary row).
     const reservedRows = $derived([
         {
@@ -54,10 +78,20 @@
 </script>
 
 <div
-    class="absolute bottom-1 left-3 flex max-h-[calc(100%-0.5rem)] max-w-48 flex-col items-start gap-1 overflow-hidden rounded-md border border-white/10 bg-black/60 px-2 py-1 text-xs text-muted-foreground backdrop-blur-sm"
+    class="absolute bottom-1 left-3 flex max-h-[40%] max-w-48 flex-col items-start gap-1 overflow-hidden rounded-md border border-white/10 bg-black/60 px-2 py-1 text-xs text-muted-foreground backdrop-blur-sm"
     data-testid="plot-legend"
 >
-    <div class="flex w-full flex-col gap-1 overflow-y-auto dark:[color-scheme:dark]">
+    <div
+        class={cn(
+            'flex w-full flex-col gap-1 overflow-y-auto dark:[color-scheme:dark]',
+            canScrollUp && canScrollDown && 'legend-fade-both',
+            canScrollUp && !canScrollDown && 'legend-fade-top',
+            !canScrollUp && canScrollDown && 'legend-fade-bottom'
+        )}
+        data-testid="plot-legend-scroll"
+        bind:this={scrollContainer}
+        onscroll={updateScrollCues}
+    >
         {#each legendEntries.toSorted( (a, b) => a.label.localeCompare(b.label) ) as entry (entry.cat)}
             <button
                 type="button"
@@ -103,5 +137,20 @@
         height: 0.75rem;
         width: 0.75rem;
         border-radius: 9999px;
+    }
+    .legend-fade-bottom {
+        mask-image: linear-gradient(to bottom, black calc(100% - 1.5rem), transparent);
+    }
+    .legend-fade-top {
+        mask-image: linear-gradient(to bottom, transparent, black 1.5rem);
+    }
+    .legend-fade-both {
+        mask-image: linear-gradient(
+            to bottom,
+            transparent,
+            black 1.5rem,
+            black calc(100% - 1.5rem),
+            transparent
+        );
     }
 </style>
