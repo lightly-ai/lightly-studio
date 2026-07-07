@@ -10,7 +10,6 @@ from sqlmodel import Session, col, select
 
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionCreate
-from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
 from lightly_studio.models.evaluation_confusion_matrix import ConfusionCell
 from lightly_studio.models.image import ImageTable
@@ -96,57 +95,6 @@ class TestSampleFilter:
         # Should only return one sample
         assert len(result) == 1
         assert result[0].sample_id == filtered_sample_id
-
-    def test_apply__embedding_region__resolved_ids(self, db_session: Session) -> None:
-        collection = create_collection(session=db_session)
-        samples = create_images(
-            db_session=db_session,
-            collection_id=collection.collection_id,
-            images=[
-                ImageStub(path="sample_0.png"),
-                ImageStub(path="sample_1.png"),
-            ],
-        )
-        region = EmbeddingRegion(
-            polygon=[Point2D(x=0, y=0), Point2D(x=1, y=0), Point2D(x=1, y=1), Point2D(x=0, y=1)]
-        )
-        sample_filter = SampleFilter(embedding_region=region)
-        # The resolver would populate this from the cached 2D projection.
-        sample_filter.set_resolved_region_sample_ids([samples[0].sample_id])
-
-        filtered_query = sample_filter.apply(query=select(SampleTable))
-        result = db_session.exec(filtered_query).all()
-
-        assert len(result) == 1
-        assert result[0].sample_id == samples[0].sample_id
-
-    def test_apply__embedding_region__empty_matches_nothing(self, db_session: Session) -> None:
-        collection = create_collection(session=db_session)
-        create_images(
-            db_session=db_session,
-            collection_id=collection.collection_id,
-            images=[ImageStub(path="sample_0.png"), ImageStub(path="sample_1.png")],
-        )
-        region = EmbeddingRegion(
-            polygon=[Point2D(x=0, y=0), Point2D(x=1, y=0), Point2D(x=1, y=1), Point2D(x=0, y=1)]
-        )
-        sample_filter = SampleFilter(embedding_region=region)
-        # An empty region encloses no points and must return nothing, not everything.
-        sample_filter.set_resolved_region_sample_ids([])
-
-        filtered_query = sample_filter.apply(query=select(SampleTable))
-        result = db_session.exec(filtered_query).all()
-
-        assert result == []
-
-    def test_apply__embedding_region__unresolved_raises(self) -> None:
-        region = EmbeddingRegion(
-            polygon=[Point2D(x=0, y=0), Point2D(x=1, y=0), Point2D(x=1, y=1), Point2D(x=0, y=1)]
-        )
-        sample_filter = SampleFilter(embedding_region=region)
-
-        with pytest.raises(RuntimeError, match="must be resolved"):
-            sample_filter.apply(query=select(SampleTable))
 
     def test_apply__annotations_filter__image_sample(self, db_session: Session) -> None:
         # Create samples

@@ -98,9 +98,9 @@ def get_all_by_collection_id(  # noqa: PLR0913
     order_by: list[OrderByExpression] | None = None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Retrieve samples for a specific collection with optional filtering."""
-    # Resolve any embedding-plot region selection to concrete sample ids before the filter
-    # is applied (the point-in-polygon test needs the session, which `apply` lacks).
-    embedding_region_resolver.resolve_embedding_region(
+    # Resolve any embedding-plot region selection to concrete sample ids before the query is
+    # built (the point-in-polygon test needs the session, which `apply` lacks).
+    region_sample_ids = embedding_region_resolver.get_region_sample_ids(
         session=session, collection_id=collection_id, filters=filters
     )
 
@@ -119,6 +119,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
             pagination=pagination,
             filters=filters,
             sample_ids=sample_ids,
+            region_sample_ids=region_sample_ids,
         )
     return _get_all_without_similarity(
         session=session,
@@ -127,6 +128,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
         filters=filters,
         sample_ids=sample_ids,
         order_by=order_by,
+        region_sample_ids=region_sample_ids,
     )
 
 
@@ -138,6 +140,7 @@ def _get_all_with_similarity(  # noqa: PLR0913
     pagination: Paginated | None,
     filters: ImageFilter | None,
     sample_ids: list[UUID] | None,
+    region_sample_ids: list[UUID] | None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Get samples with similarity search - returns (ImageTable, float) tuples."""
     load_options = _get_load_options()
@@ -169,6 +172,13 @@ def _get_all_with_similarity(  # noqa: PLR0913
     if filters:
         samples_query = filters.apply(samples_query)
         total_count_query = filters.apply(total_count_query)
+
+    samples_query = embedding_region_resolver.apply_region_sample_ids(
+        samples_query, region_sample_ids
+    )
+    total_count_query = embedding_region_resolver.apply_region_sample_ids(
+        total_count_query, region_sample_ids
+    )
 
     # TODO(Michal, 06/2025): Consider adding sample_ids to the filters.
     if sample_ids:
@@ -206,6 +216,7 @@ def _get_all_without_similarity(  # noqa: PLR0913
     filters: ImageFilter | None,
     sample_ids: list[UUID] | None,
     order_by: list[OrderByExpression] | None,
+    region_sample_ids: list[UUID] | None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Get samples without similarity search.
 
@@ -233,6 +244,13 @@ def _get_all_without_similarity(  # noqa: PLR0913
     if filters:
         samples_query = filters.apply(samples_query)
         total_count_query = filters.apply(total_count_query)
+
+    samples_query = embedding_region_resolver.apply_region_sample_ids(
+        samples_query, region_sample_ids
+    )
+    total_count_query = embedding_region_resolver.apply_region_sample_ids(
+        total_count_query, region_sample_ids
+    )
 
     # TODO(Michal, 06/2025): Consider adding sample_ids to the filters.
     if sample_ids:

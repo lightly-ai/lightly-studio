@@ -11,35 +11,57 @@ from __future__ import annotations
 from uuid import UUID
 
 import numpy as np
+import sqlalchemy
 from numpy.typing import NDArray
-from sqlmodel import Session
+from sqlmodel import Session, col
 
+from lightly_studio.database import db_array
 from lightly_studio.models.embedding_region import EmbeddingRegion
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import embedding_model_resolver, twodim_embedding_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.type_definitions import QueryType
 
 
-def resolve_embedding_region(
+def get_region_sample_ids(
     session: Session,
     collection_id: UUID,
     filters: ImageFilter | None,
-) -> None:
-    """Resolve any embedding region on an image ``filters`` to concrete sample ids, in place.
+) -> list[UUID] | None:
+    """Resolve an image ``filters`` embedding region to the sample ids it encloses.
 
-    No-op unless the filter carries a ``sample_filter.embedding_region``. Safe to call more
-    than once. Must run before ``filters.apply(...)`` because the point-in-polygon test needs
-    a database session that ``apply`` cannot access.
+    Returns ``None`` when the filter carries no ``sample_filter.embedding_region`` (no region
+    filtering); otherwise the enclosed sample ids, which may be empty when the region encloses
+    no points. Must run before the query is built because the point-in-polygon test needs a
+    database session that ``ImageFilter.apply`` cannot access.
     """
     sample_filter = filters.sample_filter if filters is not None else None
     if sample_filter is None or sample_filter.embedding_region is None:
-        return
+        return None
 
-    sample_ids = get_sample_ids_in_region(
+    return get_sample_ids_in_region(
         session=session,
         collection_id=collection_id,
         region=sample_filter.embedding_region,
     )
-    sample_filter.set_resolved_region_sample_ids(sample_ids)
+
+
+def apply_region_sample_ids(
+    query: QueryType,
+    region_sample_ids: list[UUID] | None,
+) -> QueryType:
+    """Restrict ``query`` to the ids ``get_region_sample_ids`` resolved.
+
+    ``None`` applies no restriction (no region). An empty list matches nothing, since an empty
+    region encloses no points (rather than everything).
+    """
+    if region_sample_ids is None:
+        return query
+    if not region_sample_ids:
+        return query.where(sqlalchemy.false())
+    return query.where(
+        db_array.in_array(column=col(SampleTable.sample_id), values=region_sample_ids)
+    )
 
 
 def get_sample_ids_in_region(

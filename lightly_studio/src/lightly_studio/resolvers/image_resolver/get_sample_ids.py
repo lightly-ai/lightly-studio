@@ -42,8 +42,9 @@ def get_sample_ids(
     Returns:
         List of sample ids matching the given filters.
     """
-    embedding_region_resolver.resolve_embedding_region(
+    region_sample_ids = embedding_region_resolver.get_region_sample_ids(
         session=session, collection_id=collection_id, filters=filters
     )
     query = build_sample_ids_query(collection_id=collection_id, filters=filters)
+    query = embedding_region_resolver.apply_region_sample_ids(query, region_sample_ids)
     return set(session.exec(query).all())
