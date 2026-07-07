@@ -83,7 +83,9 @@ describe('createCoverageGuardrail', () => {
             additions: 3,
             deletions: 0
         };
-        const findTestFile = vi.fn<(path: string) => Promise<string | undefined>>(async () => 'tests/test_foo.py');
+        const findTestFile = vi.fn<(path: string) => Promise<string | undefined>>(
+            async () => 'tests/test_foo.py'
+        );
         const g = createCoverageGuardrail(makeConfig({ findTestFile }));
         await g.run(makeCtx([noPatchFile]));
         expect(findTestFile).not.toHaveBeenCalled();

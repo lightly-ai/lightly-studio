@@ -7,15 +7,19 @@ export function pct(ratio: number): string {
 export function extractAddedLines(patch: string): Set<number> {
     const added = new Set<number>();
     let newLine = 0;
+    let inHunk = false;
 
     for (const line of patch.split('\n')) {
         const hunkMatch = line.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
         if (hunkMatch) {
             newLine = parseInt(hunkMatch[1] ?? '0', 10);
+            inHunk = true;
             continue;
         }
         // Skip file-level diff headers (+++, ---, diff, index, new mode, old mode).
-        if (/^(\+\+\+|---|diff |index |new |old )/.test(line)) continue;
+        // Only apply before the first hunk; inside a hunk these patterns can appear
+        // as legitimate added-line content (e.g. an added line whose text starts with +++).
+        if (!inHunk && /^(\+\+\+|---|diff |index |new |old )/.test(line)) continue;
 
         if (line.startsWith('+')) {
             added.add(newLine);
