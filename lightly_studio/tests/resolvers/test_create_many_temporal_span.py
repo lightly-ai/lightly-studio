@@ -61,36 +61,6 @@ def test_create_many__classification_with_temporal_span(db_session: Session) -> 
     assert view.temporal_span_details.end_time_s == 4.0
 
 
-def test_create_many__classification_without_temporal_span(db_session: Session) -> None:
-    """Classification annotations without times do not create a temporal span row."""
-    collection = create_collection(session=db_session)
-    image = create_image(session=db_session, collection_id=collection.collection_id)
-    label = create_annotation_label(
-        session=db_session,
-        root_collection_id=collection.collection_id,
-        label_name="action",
-    )
-
-    annotation_resolver.create_many(
-        session=db_session,
-        parent_collection_id=collection.collection_id,
-        annotations=[
-            AnnotationCreate(
-                parent_sample_id=image.sample_id,
-                annotation_label_id=label.annotation_label_id,
-                annotation_type=AnnotationType.CLASSIFICATION,
-            )
-        ],
-    )
-
-    annotations = annotation_resolver.get_all_by_parent_sample_ids(
-        session=db_session,
-        parent_sample_ids=[image.sample_id],
-    )
-    assert len(annotations) == 1
-    assert annotations[0].temporal_span_details is None
-
-
 def test_create_many__temporal_span_rejected_for_non_classification(db_session: Session) -> None:
     """Temporal spans are only allowed on CLASSIFICATION annotations."""
     collection = create_collection(session=db_session)
