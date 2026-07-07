@@ -235,8 +235,7 @@ def _build_full_dataset(session: Session, name: str) -> UUID:
         true_positive_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=eval_image.sample_id,
-                metric_name="iou",
-                value=0.8,
+                metrics={"iou": 0.8},
                 gt_annotation_label_id=label.annotation_label_id,
             )
         ],

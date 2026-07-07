@@ -26,7 +26,7 @@ class OperatorContextRequest(BaseModel):
     collection_id: UUID
     """The collection_id the operator shall be executed on."""
 
-    context_filter: AnyFilter = None
+    context_filter: AnyFilter | None = None
     """The filter for the provided collection."""
 
 
