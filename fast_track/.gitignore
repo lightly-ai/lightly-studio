@@ -1,2 +1,5 @@
 node_modules/
 *.tsbuildinfo
+
+# Verdict artifact written by the CI entry (src/guardrails/ci.ts).
+verdict.json

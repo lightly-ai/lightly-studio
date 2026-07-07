@@ -13,7 +13,21 @@ from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotat
 
 
 class AnnotationEvaluationMetricField:  # noqa: PLW1641
-    """Queryable annotation metric field for matching samples within an evaluation run."""
+    """Queryable annotation metric field for annotation-level evaluation results.
+
+    Use this field inside :meth:`AnnotationMetricQuery.confusion` to filter samples by
+    persisted annotation metrics such as IoU.
+
+    Example:
+        ```python
+        AnnotationMetricQuery.confusion(
+            "run1",
+            "cat",
+            "dog",
+            AnnotationEvaluationMetricField("iou") > 0.3,
+        )
+        ```
+    """
 
     def __init__(self, metric_name: str) -> None:
         """Initialize a queryable annotation metric reference."""

@@ -17,13 +17,14 @@ from lightly_studio.core.dataset import BaseSampleDataset
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.video import add_videos
 from lightly_studio.core.video.add_videos import VIDEO_EXTENSIONS
+from lightly_studio.core.video.video_frame_dataset import VideoFrameDataset
 from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.export.video_dataset_export import VideoDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
-from lightly_studio.resolvers import video_resolver
+from lightly_studio.resolvers import collection_resolver, video_resolver
 from lightly_studio.type_definitions import PathLike
 
 logger = logging.getLogger(__name__)
@@ -79,6 +80,23 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         if query is None:
             query = self.query()
         return VideoDatasetExport(session=self.session, samples=query)
+
+    def frames(self) -> VideoFrameDataset:
+        """Return a dataset over the individual frames of this dataset's videos.
+
+        Returns:
+            A VideoFrameDataset exposing the video frames as queryable samples.
+        """
+        frame_collection_id = collection_resolver.get_or_create_child_collection(
+            session=self.session,
+            collection_id=self.collection_id,
+            sample_type=SampleType.VIDEO_FRAME,
+        )
+        frame_collection = collection_resolver.get_by_id(
+            session=self.session, collection_id=frame_collection_id
+        )
+        assert frame_collection is not None
+        return VideoFrameDataset(collection=frame_collection)
 
     def get_sample(self, sample_id: UUID) -> VideoSample:
         """Get a single sample from the dataset by its ID.

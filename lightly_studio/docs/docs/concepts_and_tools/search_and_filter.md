@@ -278,6 +278,27 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
     query.match(expr)
     ```
 
+    #### Annotation evaluation queries
+
+    Filtering samples by annotation evaluation results from a specific [evaluation run](evaluation.md), can be realized via `AnnotationMetricQuery.confusion(...)` together with `AnnotationEvaluationMetricField(...)`. In the below example we filter for samples where `cat` got confused as a `dog` by the model, and the IOU is higher than 0.3.
+
+    ```py
+    from lightly_studio.core.dataset_query import (
+        AnnotationEvaluationMetricField,
+        AnnotationMetricQuery,
+    )
+
+    expr = AnnotationMetricQuery.confusion(
+        "run1",
+        "cat",
+        "dog",
+        AnnotationEvaluationMetricField("iou") > 0.3,
+    )
+
+    # Assign the expression to a query:
+    query.match(expr)
+    ```
+
     #### Boolean operators
     The filtering on individual fields can flexibly be combined to create more complex match expression. For this, the boolean operators `AND`, `OR`, and `NOT` are available. Boolean operators can arbitrarily be nested.
 

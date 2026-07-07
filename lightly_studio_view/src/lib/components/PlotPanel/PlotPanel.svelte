@@ -451,4 +451,11 @@
         height: 25px !important;
         line-height: 25px !important;
     }
+    /* Hide the library's status message slot (e.g. "WebGPU is unavailable. Falling back
+       to WebGL.") while keeping the selection tools, scale, and point count visible. */
+    :global(
+        .embedding-view div[style*='bottom: 0px'][style*='position: absolute'] > div:first-child
+    ) {
+        display: none !important;
+    }
 </style>
