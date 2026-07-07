@@ -4,9 +4,9 @@ from typing import Literal, Optional
 from uuid import UUID
 
 import sqlalchemy
-from pydantic import BaseModel
+from pydantic import BaseModel, PrivateAttr
 from sqlalchemy.orm import aliased
-from sqlmodel import col, select
+from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.core.dataset_query import query_translation
@@ -36,13 +36,16 @@ class SampleFilter(BaseModel):
     has_captions: Optional[bool] = None
     annotations_filter: Optional[AnnotationsFilter] = None
     confusion_cell: Optional[ConfusionCell] = None
+    # Lasso/rectangle selection from the embedding plot, sent as geometry rather than an explicit
+    # id list (see LIG-9903). Resolved to concrete sample ids by ``resolve_embedding_region``
+    # before the filter is applied, since the point-in-polygon test needs a database session that
+    # ``apply`` does not have access to.
     embedding_region: Optional[EmbeddingRegion] = None
 
-    # Sample ids enclosed by ``embedding_region``, resolved server-side before the query is built
-    # (the point-in-polygon test needs a session that ``apply`` cannot access). ``None`` means no
-    # region restriction; an empty list matches nothing, since an empty region encloses no points.
-    # Populated by ``embedding_region_resolver.resolve_region_sample_ids``.
-    region_sample_ids: Optional[list[UUID]] = None
+    # Sample ids ``embedding_region`` resolves to, populated by ``resolve_embedding_region``.
+    # ``None`` means "not resolved yet"; an empty list means the region encloses no points. Kept
+    # private so it never enters the request/response schema (unlike a client-settable field).
+    _region_sample_ids: Optional[list[UUID]] = PrivateAttr(default=None)
 
     # Query expression filter
     #
@@ -53,15 +56,33 @@ class SampleFilter(BaseModel):
     # before applying this filter.
     query_expr: Optional[QueryExpr] = None
 
+    def resolve_embedding_region(self, session: Session, collection_id: UUID) -> None:
+        """Resolve ``embedding_region`` to concrete sample ids, stored on the filter.
+
+        Must be called before ``apply`` whenever a region is set: the point-in-polygon test needs a
+        database session that ``apply`` does not have access to. No-op when no region is set.
+        """
+        if self.embedding_region is None:
+            return
+        # Imported locally to break a cycle: embedding_region_resolver -> twodim_embedding_resolver
+        # -> sample_embedding_resolver -> sample_filter (this module).
+        from lightly_studio.resolvers import embedding_region_resolver  # noqa: PLC0415
+
+        self._region_sample_ids = embedding_region_resolver.get_sample_ids_in_region(
+            session=session,
+            collection_id=collection_id,
+            region=self.embedding_region,
+        )
+
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
         query = self._apply_sample_ids_filter(query)
+        query = self._apply_embedding_region_filter(query)
         query = self._apply_annotation_filters(query)
         query = self._apply_tag_filters(query)
         query = self._apply_confusion_cell_filter(query)
         query = self._apply_metadata_filters(query)
         query = self._apply_captions_filter(query)
-        query = self._apply_region_sample_ids_filter(query)
         return self._apply_query_expr_filter(query)
 
     def _apply_sample_ids_filter(self, query: QueryType) -> QueryType:
@@ -70,6 +91,20 @@ class SampleFilter(BaseModel):
                 db_array.in_array(column=col(SampleTable.sample_id), values=self.sample_ids)
             )
         return query
+
+    def _apply_embedding_region_filter(self, query: QueryType) -> QueryType:
+        if self.embedding_region is None:
+            return query
+        if self._region_sample_ids is None:
+            raise RuntimeError(
+                "embedding_region must be resolved with resolve_embedding_region() before apply()."
+            )
+        # An empty region encloses no points and must match nothing (not everything).
+        if not self._region_sample_ids:
+            return query.where(sqlalchemy.false())
+        return query.where(
+            db_array.in_array(column=col(SampleTable.sample_id), values=self._region_sample_ids)
+        )
 
     def _apply_annotation_filters(self, query: QueryType) -> QueryType:
         if self.annotations_filter is None:
@@ -169,15 +204,6 @@ class SampleFilter(BaseModel):
         if self.has_captions:
             return query.where(col(SampleTable.captions).any())
         return query.where(~col(SampleTable.captions).any())
-
-    def _apply_region_sample_ids_filter(self, query: QueryType) -> QueryType:
-        if self.region_sample_ids is None:
-            return query
-        if not self.region_sample_ids:
-            return query.where(sqlalchemy.false())
-        return query.where(
-            db_array.in_array(column=col(SampleTable.sample_id), values=self.region_sample_ids)
-        )
 
     def _apply_query_expr_filter(self, query: QueryType) -> QueryType:
         if self.query_expr is None:

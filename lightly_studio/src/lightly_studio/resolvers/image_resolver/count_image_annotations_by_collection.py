@@ -10,7 +10,6 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.resolvers import embedding_region_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 
 
@@ -25,14 +24,11 @@ def count_image_annotations_by_collection(
     label name and counted for total and filtered.
     Returns a list of (label_name, current_count, total_count) tuples.
     """
-    # Resolve any embedding-plot region selection to concrete sample ids on the filter before the
-    # query is built (the point-in-polygon test needs the session, which `apply` lacks).
-    sample_filter = image_filter.sample_filter if image_filter is not None else None
-    if sample_filter is not None and sample_filter.embedding_region is not None:
-        sample_filter.region_sample_ids = embedding_region_resolver.get_sample_ids_in_region(
-            session=session,
-            collection_id=collection_id,
-            region=sample_filter.embedding_region,
+    # Resolve any embedding-plot region selection to concrete sample ids before the query is built
+    # (the point-in-polygon test needs the session, which `apply` lacks).
+    if image_filter is not None and image_filter.sample_filter is not None:
+        image_filter.sample_filter.resolve_embedding_region(
+            session=session, collection_id=collection_id
         )
     total_counts = _get_total_counts(session=session, collection_id=collection_id)
     current_counts = _get_current_counts(
