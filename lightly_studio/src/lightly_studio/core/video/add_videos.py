@@ -36,7 +36,9 @@ from tqdm import tqdm
 from lightly_studio.core import labelformat_helpers
 from lightly_studio.core.file_outcome_report import (
     AlreadyPresentInputFileError,
+    BrokenInputFileError,
     FileOutcomeReport,
+    MissingInputFileError,
 )
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
@@ -142,10 +144,16 @@ def load_into_collection_from_paths(  # noqa: PLR0913
                 raise AlreadyPresentInputFileError()
             seen_or_existing_paths.add(video_path)
 
+            # Detect a missing path proactively: FileNotFoundError is unreliable across
+            # fsspec backends and is a subclass of OSError, which we treat as broken.
+            fs, fs_path = fsspec.core.url_to_fs(url=video_path)
+            if not fs.exists(fs_path):
+                raise MissingInputFileError()
+
+            video_file = fs.open(path=fs_path, mode="rb")
             try:
-                # Open video and extract metadata
-                fs, fs_path = fsspec.core.url_to_fs(url=video_path)
-                video_file = fs.open(path=fs_path, mode="rb")
+                # Translate a failed open/header read into a broken-file signal at this
+                # I/O boundary; any other exception propagates rather than being recorded.
                 try:
                     # Open video container for reading (returns InputContainer)
                     video_container = container.open(file=video_file)
@@ -159,55 +167,52 @@ def load_into_collection_from_paths(  # noqa: PLR0913
                         video_duration = float(video_stream.duration * video_stream.time_base)
                     else:
                         video_duration = None
+                except (OSError, IndexError, FFmpegError) as e:
+                    raise BrokenInputFileError() from e
 
-                    # Create video sample
-                    video_sample_ids = video_resolver.create_many(
-                        session=session,
-                        collection_id=collection_id,
-                        samples=[
-                            VideoCreate(
-                                file_path_abs=video_path,
-                                width=video_width,
-                                height=video_height,
-                                duration_s=video_duration,
-                                fps=framerate,
-                                file_name=Path(video_path).name,
-                            )
-                        ],
-                    )
-
-                    if len(video_sample_ids) != 1:
-                        video_container.close()
-                        raise RuntimeError(
-                            f"There was an error adding {video_path} to the dataset."
+                # Create video sample
+                video_sample_ids = video_resolver.create_many(
+                    session=session,
+                    collection_id=collection_id,
+                    samples=[
+                        VideoCreate(
+                            file_path_abs=video_path,
+                            width=video_width,
+                            height=video_height,
+                            duration_s=video_duration,
+                            fps=framerate,
+                            file_name=Path(video_path).name,
                         )
-                    created_video_sample_ids.append(video_sample_ids[0])
+                    ],
+                )
 
-                    # Create video frame samples by parsing all frames
-                    extraction_context = FrameExtractionContext(
-                        session=session,
-                        collection_id=video_frames_collection_id,
-                        video_sample_id=video_sample_ids[0],
-                    )
-                    frame_sample_ids = _create_video_frame_samples(
-                        context=extraction_context,
-                        video_container=video_container,
-                        video_channel=video_channel,
-                        num_decode_threads=num_decode_threads,
-                        target_fps=target_fps,
-                    )
-                    created_video_frame_sample_ids.extend(frame_sample_ids)
-
+                if len(video_sample_ids) != 1:
                     video_container.close()
-                finally:
-                    # Ensure file is closed even if container operations fail
-                    video_file.close()
+                    raise RuntimeError(f"There was an error adding {video_path} to the dataset.")
+                created_video_sample_ids.append(video_sample_ids[0])
 
-            except (FileNotFoundError, OSError, IndexError, FFmpegError) as e:
-                logger.error(f"Error processing video {video_path}: {e}")
-                continue
+                # Create video frame samples by parsing all frames
+                extraction_context = FrameExtractionContext(
+                    session=session,
+                    collection_id=video_frames_collection_id,
+                    video_sample_id=video_sample_ids[0],
+                )
+                frame_sample_ids = _create_video_frame_samples(
+                    context=extraction_context,
+                    video_container=video_container,
+                    video_channel=video_channel,
+                    num_decode_threads=num_decode_threads,
+                    target_fps=target_fps,
+                )
+                created_video_frame_sample_ids.extend(frame_sample_ids)
+
+                video_container.close()
+            finally:
+                # Ensure file is closed even if container operations fail
+                video_file.close()
 
     report.log_summary()
+    report.raise_if_all_failed()
 
     return created_video_sample_ids, created_video_frame_sample_ids
 
@@ -286,12 +291,14 @@ def load_video_annotations_from_labelformat(  # noqa: PLR0913
         video_path_without_suffix = str((root_path / video_annotation_filename).with_suffix(""))
         video_sample_id = video_path_without_suffix_to_sample_id.get(video_path_without_suffix)
         if video_sample_id is None:
-            if limit is not None:
-                # The video was not loaded because it is beyond the limit.
-                continue
-            raise ValueError(
-                f"No matching video ({video_annotation_filename}) for annotations found"
+            # The video was not created: it is beyond the limit, or the per-run report
+            # already recorded it as missing/broken/already-present. Skip its annotations
+            # rather than crashing the run, in line with tolerate-don't-crash handling.
+            logger.warning(
+                f"Skipping annotations for video '{video_annotation_filename}': "
+                "no matching loaded video found."
             )
+            continue
 
         video_with_frames = video_resolver.get_by_id(session=session, sample_id=video_sample_id)
         if video_with_frames is None:
