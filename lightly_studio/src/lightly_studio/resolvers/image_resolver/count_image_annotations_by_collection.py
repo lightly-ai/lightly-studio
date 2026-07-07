@@ -25,15 +25,20 @@ def count_image_annotations_by_collection(
     label name and counted for total and filtered.
     Returns a list of (label_name, current_count, total_count) tuples.
     """
-    region_sample_ids = embedding_region_resolver.get_region_sample_ids(
-        session=session, collection_id=collection_id, filters=image_filter
-    )
+    # Resolve any embedding-plot region selection to concrete sample ids on the filter before the
+    # query is built (the point-in-polygon test needs the session, which `apply` lacks).
+    sample_filter = image_filter.sample_filter if image_filter is not None else None
+    if sample_filter is not None and sample_filter.embedding_region is not None:
+        sample_filter.region_sample_ids = embedding_region_resolver.get_sample_ids_in_region(
+            session=session,
+            collection_id=collection_id,
+            region=sample_filter.embedding_region,
+        )
     total_counts = _get_total_counts(session=session, collection_id=collection_id)
     current_counts = _get_current_counts(
         session=session,
         collection_id=collection_id,
         image_filter=image_filter,
-        region_sample_ids=region_sample_ids,
     )
 
     return [
@@ -74,7 +79,6 @@ def _get_current_counts(
     session: Session,
     collection_id: UUID,
     image_filter: ImageFilter | None,
-    region_sample_ids: list[UUID] | None,
 ) -> dict[str, int]:
     """Returns filtered annotation counts per label for the collection."""
     filtered_query = (
@@ -100,10 +104,6 @@ def _get_current_counts(
 
     if image_filter is not None:
         filtered_query = image_filter.apply(filtered_query)
-
-    filtered_query = embedding_region_resolver.apply_region_sample_ids(
-        filtered_query, region_sample_ids
-    )
 
     # Group by label name and sort
     filtered_query = filtered_query.group_by(AnnotationLabelTable.annotation_label_name).order_by(

@@ -5,14 +5,11 @@ from __future__ import annotations
 from uuid import UUID
 
 import numpy as np
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
-from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
 from lightly_studio.resolvers import embedding_region_resolver, sample_embedding_resolver
-from lightly_studio.resolvers.image_filter import ImageFilter
-from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests import helpers_resolvers
 from tests.helpers_resolvers import ImageStub
 
@@ -57,80 +54,6 @@ def test_get_sample_ids_in_region__no_embedding_model(db_session: Session) -> No
     )
 
     assert selected == []
-
-
-def test_get_region_sample_ids__no_region_returns_none(db_session: Session) -> None:
-    collection_id, _ = _setup_collection_with_coordinates(
-        session=db_session,
-        coordinates=[(1.0, 1.0)],
-    )
-    filters = ImageFilter(sample_filter=SampleFilter())
-
-    assert (
-        embedding_region_resolver.get_region_sample_ids(
-            session=db_session, collection_id=collection_id, filters=filters
-        )
-        is None
-    )
-
-
-def test_get_region_sample_ids__resolves_enclosed_ids(db_session: Session) -> None:
-    collection_id, sample_ids = _setup_collection_with_coordinates(
-        session=db_session,
-        coordinates=[(1.0, 1.0), (100.0, 100.0)],
-    )
-    filters = ImageFilter(
-        sample_filter=SampleFilter(embedding_region=_square(x_min=0, y_min=0, x_max=10, y_max=10))
-    )
-
-    resolved = embedding_region_resolver.get_region_sample_ids(
-        session=db_session, collection_id=collection_id, filters=filters
-    )
-
-    assert resolved == [sample_ids[0]]
-
-
-def test_apply_region_sample_ids__none_applies_no_restriction(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session)
-    samples = helpers_resolvers.create_images(
-        db_session=db_session,
-        collection_id=collection.collection_id,
-        images=[ImageStub(path="sample_0.png"), ImageStub(path="sample_1.png")],
-    )
-
-    query = embedding_region_resolver.apply_region_sample_ids(select(SampleTable), None)
-    result = db_session.exec(query).all()
-
-    assert {sample.sample_id for sample in result} == {sample.sample_id for sample in samples}
-
-
-def test_apply_region_sample_ids__empty_matches_nothing(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session)
-    helpers_resolvers.create_images(
-        db_session=db_session,
-        collection_id=collection.collection_id,
-        images=[ImageStub(path="sample_0.png")],
-    )
-
-    query = embedding_region_resolver.apply_region_sample_ids(select(SampleTable), [])
-
-    assert db_session.exec(query).all() == []
-
-
-def test_apply_region_sample_ids__restricts_to_ids(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session)
-    samples = helpers_resolvers.create_images(
-        db_session=db_session,
-        collection_id=collection.collection_id,
-        images=[ImageStub(path="sample_0.png"), ImageStub(path="sample_1.png")],
-    )
-
-    query = embedding_region_resolver.apply_region_sample_ids(
-        select(SampleTable), [samples[0].sample_id]
-    )
-    result = db_session.exec(query).all()
-
-    assert [sample.sample_id for sample in result] == [samples[0].sample_id]
 
 
 def test_points_in_polygon() -> None:
