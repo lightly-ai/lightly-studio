@@ -23,6 +23,10 @@ The screen recording below shows the search both by text query "dog" and by past
 !!! note "Search requires embeddings"
     Search is available only when embeddings were generated during data loading.
 
+Search works the same way in the `Annotations` view, where it finds similar objects using
+object-level embeddings. See
+[Object-level embeddings](annotations.md#object-level-embeddings) for details.
+
 ## Filter in GUI
 
 The left sidebar combines the most common ways to narrow down the visible samples:
