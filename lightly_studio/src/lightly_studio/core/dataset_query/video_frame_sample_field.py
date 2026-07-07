@@ -27,9 +27,10 @@ class _ParentVideoTagsContainsExpression(MatchExpression):
 
     def get(self) -> ColumnElement[bool]:
         """Return a correlated EXISTS over the parent video's tags."""
-        return VideoFrameTable.video.has(
-            VideoTable.sample.has(SampleTable.tags.any(col(TagTable.name) == self.tag_name))
+        video_has_tag = VideoTable.sample.has(
+            SampleTable.tags.any(col(TagTable.name) == self.tag_name)
         )
+        return VideoFrameTable.video.has(video_has_tag)
 
 
 class _ParentVideoTagsAccessor:
@@ -47,12 +48,20 @@ class _ParentVideoField:
     relationship, so filtering by these does not require joining the video table.
     """
 
-    file_path_abs = ForeignComparableField(col(VideoTable.file_path_abs), VideoFrameTable.video)
-    file_name = ForeignComparableField(col(VideoTable.file_name), VideoFrameTable.video)
-    width = ForeignNumericalField(col(VideoTable.width), VideoFrameTable.video)
-    height = ForeignNumericalField(col(VideoTable.height), VideoFrameTable.video)
-    fps = ForeignNumericalField(col(VideoTable.fps), VideoFrameTable.video)
-    duration_s = ForeignComparableField(col(VideoTable.duration_s), VideoFrameTable.video)
+    file_path_abs = ForeignComparableField(
+        column=col(VideoTable.file_path_abs), relationship=VideoFrameTable.video
+    )
+    file_name = ForeignComparableField(
+        column=col(VideoTable.file_name), relationship=VideoFrameTable.video
+    )
+    width = ForeignNumericalField(column=col(VideoTable.width), relationship=VideoFrameTable.video)
+    height = ForeignNumericalField(
+        column=col(VideoTable.height), relationship=VideoFrameTable.video
+    )
+    fps = ForeignNumericalField(column=col(VideoTable.fps), relationship=VideoFrameTable.video)
+    duration_s = ForeignComparableField(
+        column=col(VideoTable.duration_s), relationship=VideoFrameTable.video
+    )
 
     tags = _ParentVideoTagsAccessor()
 
