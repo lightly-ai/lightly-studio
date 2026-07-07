@@ -35,12 +35,6 @@ class SampleFilter(BaseModel):
     has_captions: Optional[bool] = None
     annotations_filter: Optional[AnnotationsFilter] = None
     confusion_cell: Optional[ConfusionCell] = None
-
-    # Lasso/rectangle selection from the embedding plot, sent as geometry (a few KB) instead
-    # of the full list of selected sample ids (see LIG-9903). It is input only: the resolver
-    # resolves it to concrete sample ids server-side (point-in-polygon over the cached 2D
-    # projection) and applies them via `embedding_region_resolver.apply_region_sample_ids`,
-    # since the resolution needs a database session that `apply` does not have.
     embedding_region: Optional[EmbeddingRegion] = None
 
     # Query expression filter
