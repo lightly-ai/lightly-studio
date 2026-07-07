@@ -84,7 +84,7 @@ Replace `<plugin_name>` with the folder name of the plugin you want to install:
     pip install "git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdirectory=plugins/<plugin_name>/"
     ```
 
-Once installed, register the plugin through the Python API and it will appear in the GUI automatically.
+Once installed, the plugin is auto-registered and will appear in the GUI automatically.
 
 To remove a plugin, uninstall its package with `uv pip uninstall` or `pip uninstall`,
 using the package name defined in the plugin's `pyproject.toml` (typically matching the
