@@ -59,7 +59,6 @@ The `load_dataset.py` script below indexes the images and computes embeddings. T
 
 ```python title="load_dataset.py"
 import lightly_studio as ls
-from lightly_studio.plugins.operator_registry import operator_registry
 from lightly_plugins_yolo_object_detection.operator import YoloObjectDetectionOperator
 
 # This is only needed if you want to download and use the example dataset
@@ -71,9 +70,6 @@ dataset = ls.ImageDataset.create()
 dataset.add_images_from_path(
     path=f"{dataset_path}/traffic-accident-cctv/train"
 )
-
-# In order to use plugins we need to register them
-operator_registry.register(YoloObjectDetectionOperator())
 
 # This will start the GUI and block the script from exiting
 ls.start_gui()
