@@ -3,6 +3,7 @@
 from typing import Literal, Optional
 from uuid import UUID
 
+import sqlalchemy
 from pydantic import BaseModel
 from sqlalchemy.orm import aliased
 from sqlmodel import col, select
@@ -12,6 +13,7 @@ from lightly_studio.core.dataset_query import query_translation
 from lightly_studio.database import db_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
+from lightly_studio.models.embedding_region import EmbeddingRegion
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
 from lightly_studio.models.evaluation_confusion_matrix import ConfusionCell
 from lightly_studio.models.metadata import SampleMetadataTable
@@ -34,6 +36,13 @@ class SampleFilter(BaseModel):
     has_captions: Optional[bool] = None
     annotations_filter: Optional[AnnotationsFilter] = None
     confusion_cell: Optional[ConfusionCell] = None
+    embedding_region: Optional[EmbeddingRegion] = None
+
+    # Sample ids enclosed by ``embedding_region``, resolved server-side before the query is built
+    # (the point-in-polygon test needs a session that ``apply`` cannot access). ``None`` means no
+    # region restriction; an empty list matches nothing, since an empty region encloses no points.
+    # Populated by ``embedding_region_resolver.resolve_region_sample_ids``.
+    region_sample_ids: Optional[list[UUID]] = None
 
     # Query expression filter
     #
@@ -52,6 +61,7 @@ class SampleFilter(BaseModel):
         query = self._apply_confusion_cell_filter(query)
         query = self._apply_metadata_filters(query)
         query = self._apply_captions_filter(query)
+        query = self._apply_region_sample_ids_filter(query)
         return self._apply_query_expr_filter(query)
 
     def _apply_sample_ids_filter(self, query: QueryType) -> QueryType:
@@ -159,6 +169,15 @@ class SampleFilter(BaseModel):
         if self.has_captions:
             return query.where(col(SampleTable.captions).any())
         return query.where(~col(SampleTable.captions).any())
+
+    def _apply_region_sample_ids_filter(self, query: QueryType) -> QueryType:
+        if self.region_sample_ids is None:
+            return query
+        if not self.region_sample_ids:
+            return query.where(sqlalchemy.false())
+        return query.where(
+            db_array.in_array(column=col(SampleTable.sample_id), values=self.region_sample_ids)
+        )
 
     def _apply_query_expr_filter(self, query: QueryType) -> QueryType:
         if self.query_expr is None:

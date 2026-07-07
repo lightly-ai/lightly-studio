@@ -1,7 +1,7 @@
 """Example of how to query, tag, sample, and export individual video frames.
 
-It opens a video dataset, queries its frames by frame-level fields, tags the matches,
-runs a sampling strategy on the query, and exports the sampled frames as
+It opens a video dataset, queries its frames by frame-level and parent-video fields, runs
+a sampling strategy on the query, and exports the sampled frames as
 `(video_path_abs, frame_number)` rows to a CSV file (the video path comes from each
 frame's parent video).
 """
@@ -15,7 +15,7 @@ from pathlib import Path
 from environs import Env
 
 import lightly_studio as ls
-from lightly_studio.core.dataset_query import VideoFrameSampleField
+from lightly_studio.core.dataset_query import AND, VideoFrameSampleField
 from lightly_studio.database import db_manager
 
 env = Env()
@@ -29,12 +29,19 @@ dataset.add_videos_from_path(path=dataset_path, embed=False, target_fps=1)
 frames = dataset.frames()
 print(f"\nTotal frames in dataset: {len(list(frames))}")
 
-# Filtering by a frame-level field (frame_number) works
+# Filtering combines a frame-level field (frame_number) with a parent-video field
+# (parent_video.file_name) in a single query.
 min_frame_number = 3
-selected = frames.match(VideoFrameSampleField.frame_number > min_frame_number)
+first_video = next(iter(dataset[:1]))
+selected = frames.match(
+    AND(
+        VideoFrameSampleField.frame_number > min_frame_number,
+        VideoFrameSampleField.parent_video.file_name == first_video.file_name,
+    )
+)
 print(
     f"\nFiltering by fields: There are {len(selected.to_list())} frames after frame "
-    f"{min_frame_number}."
+    f"{min_frame_number} from the first video."
 )
 
 # Writing metadata for all frames in a query works

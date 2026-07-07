@@ -19,5 +19,4 @@ unlabeled data to a trained and evaluated model.
     <!-- TODO: add a thumbnail screenshot, e.g. of the confusion matrix or evaluation panel -->
 
     Compare predictions against ground truth, use the confusion matrix and embeddings to find failure patterns, and export issues for relabeling.
-
 </div>

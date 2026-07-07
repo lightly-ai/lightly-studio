@@ -474,6 +474,52 @@ class TestSampleFilter:
             samples[2].sample_id,
         }
 
+    def test_apply__region_sample_ids__none_applies_no_restriction(
+        self, db_session: Session
+    ) -> None:
+        collection = create_collection(session=db_session)
+        samples = create_images(
+            db_session=db_session,
+            collection_id=collection.collection_id,
+            images=[ImageStub(path="sample_0.png"), ImageStub(path="sample_1.png")],
+        )
+
+        sample_filter = SampleFilter(region_sample_ids=None)
+        filtered_query = sample_filter.apply(query=select(SampleTable))
+        result = db_session.exec(filtered_query).all()
+
+        assert {sample.sample_id for sample in result} == {
+            samples[0].sample_id,
+            samples[1].sample_id,
+        }
+
+    def test_apply__region_sample_ids__empty_matches_nothing(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
+        create_images(
+            db_session=db_session,
+            collection_id=collection.collection_id,
+            images=[ImageStub(path="sample_0.png")],
+        )
+
+        sample_filter = SampleFilter(region_sample_ids=[])
+        filtered_query = sample_filter.apply(query=select(SampleTable))
+
+        assert db_session.exec(filtered_query).all() == []
+
+    def test_apply__region_sample_ids__restricts_to_ids(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
+        samples = create_images(
+            db_session=db_session,
+            collection_id=collection.collection_id,
+            images=[ImageStub(path="sample_0.png"), ImageStub(path="sample_1.png")],
+        )
+
+        sample_filter = SampleFilter(region_sample_ids=[samples[0].sample_id])
+        filtered_query = sample_filter.apply(query=select(SampleTable))
+        result = db_session.exec(filtered_query).all()
+
+        assert [sample.sample_id for sample in result] == [samples[0].sample_id]
+
     def test_apply__combination_with_query_expr(self, db_session: Session) -> None:
         collection = create_collection(session=db_session)
         samples = create_images(
