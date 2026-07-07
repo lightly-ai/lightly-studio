@@ -46,15 +46,13 @@ def test_annotation_metric_query__filters_matching_samples(db_session: Session) 
         true_positive_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=image_a.sample_id,
-                metric_name="score",
-                value=0.2,
+                metrics={"score": 0.2},
                 gt_annotation_label_id=cat_label.annotation_label_id,
                 pred_annotation_label_id=dog_label.annotation_label_id,
             ),
             TruePositiveMetricStub(
                 sample_id=image_b.sample_id,
-                metric_name="score",
-                value=0.9,
+                metrics={"score": 0.9},
                 gt_annotation_label_id=cat_label.annotation_label_id,
                 pred_annotation_label_id=dog_label.annotation_label_id,
             ),
@@ -104,14 +102,12 @@ def test_annotation_metric_query__scopes_run_name_to_dataset(db_session: Session
         true_positive_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=image_a.sample_id,
-                metric_name="score",
-                value=0.9,
+                metrics={"score": 0.9},
                 gt_annotation_label_id=cat_label.annotation_label_id,
             ),
             TruePositiveMetricStub(
                 sample_id=image_b.sample_id,
-                metric_name="score",
-                value=0.1,
+                metrics={"score": 0.1},
                 gt_annotation_label_id=cat_label.annotation_label_id,
             ),
         ],
@@ -122,8 +118,7 @@ def test_annotation_metric_query__scopes_run_name_to_dataset(db_session: Session
         true_positive_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=other_image.sample_id,
-                metric_name="score",
-                value=0.0,
+                metrics={"score": 0.0},
                 gt_annotation_label_id=other_label.annotation_label_id,
             ),
         ],
@@ -158,27 +153,13 @@ def test_annotation_metric_query__matches_multiple_metrics(db_session: Session) 
         true_positive_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=image_a.sample_id,
-                metric_name="precision",
-                value=0.9,
                 gt_annotation_label_id=cat_label.annotation_label_id,
-            ),
-            TruePositiveMetricStub(
-                sample_id=image_a.sample_id,
-                metric_name="recall",
-                value=0.3,
-                gt_annotation_label_id=cat_label.annotation_label_id,
+                metrics={"precision": 0.9, "recall": 0.3},
             ),
             TruePositiveMetricStub(
                 sample_id=image_b.sample_id,
-                metric_name="precision",
-                value=0.9,
                 gt_annotation_label_id=cat_label.annotation_label_id,
-            ),
-            TruePositiveMetricStub(
-                sample_id=image_b.sample_id,
-                metric_name="recall",
-                value=0.8,
-                gt_annotation_label_id=cat_label.annotation_label_id,
+                metrics={"precision": 0.9, "recall": 0.8},
             ),
         ],
     )
@@ -193,6 +174,49 @@ def test_annotation_metric_query__matches_multiple_metrics(db_session: Session) 
         )
     )
     assert [result.sample_id for result in results] == [image_b.sample_id]
+
+
+def test_annotation_metric_query__does_not_mix_criteria_across_annotation_pairs(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/a.jpg",
+    )
+    run = create_run(session=db_session, collection_id=collection.collection_id, name="run1")
+    cat_label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    )
+    create_annotation_metrics(
+        session=db_session,
+        run_id=run.id,
+        true_positive_metric_stubs=[
+            TruePositiveMetricStub(
+                sample_id=image.sample_id,
+                gt_annotation_label_id=cat_label.annotation_label_id,
+                metrics={"precision": 0.9, "recall": 0.3},
+            ),
+            TruePositiveMetricStub(
+                sample_id=image.sample_id,
+                gt_annotation_label_id=cat_label.annotation_label_id,
+                metrics={"precision": 0.3, "recall": 0.9},
+            ),
+        ],
+    )
+
+    results = DatasetQuery(dataset=collection, session=db_session).match(
+        AnnotationMetricQuery.confusion(
+            "run1",
+            "cat",
+            "cat",
+            AnnotationEvaluationMetricField("precision") > 0.5,
+            AnnotationEvaluationMetricField("recall") > 0.5,
+        )
+    )
+
+    assert [result.sample_id for result in results] == []
 
 
 def test_annotation_metric_query__matches_run_without_criteria(
@@ -219,8 +243,7 @@ def test_annotation_metric_query__matches_run_without_criteria(
         true_positive_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=image_a.sample_id,
-                metric_name="score",
-                value=0.2,
+                metrics={"score": 0.2},
                 gt_annotation_label_id=cat_label.annotation_label_id,
             ),
         ],
@@ -259,8 +282,7 @@ def test_annotation_metric_query__matches_off_diagonal_confusion_cell(
         true_positive_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=image.sample_id,
-                metric_name="score",
-                value=0.8,
+                metrics={"score": 0.8},
                 gt_annotation_label_id=cat_label.annotation_label_id,
                 pred_annotation_label_id=dog_label.annotation_label_id,
             ),

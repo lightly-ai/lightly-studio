@@ -20,6 +20,7 @@ from lightly_studio.dataset.embedding_manager import (
     EmbeddingManager,
     TextEmbedQuery,
 )
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
 from lightly_studio.models.image import ImageTable
@@ -266,11 +267,16 @@ def test_embed_images_with_incompatible_generator(
         )
 
 
+@pytest.mark.parametrize(
+    "annotation_type",
+    [AnnotationType.OBJECT_DETECTION, AnnotationType.SEGMENTATION_MASK],
+)
 def test_embed_annotations(
     db_session: Session,
     collection: CollectionTable,
+    annotation_type: AnnotationType,
 ) -> None:
-    """embed_annotations stores one embedding per object-detection annotation."""
+    """embed_annotations stores one embedding per croppable annotation, per type."""
     image = create_image(session=db_session, collection_id=collection.collection_id)
     label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
     create_annotation(
@@ -278,6 +284,7 @@ def test_embed_annotations(
         collection_id=collection.collection_id,
         sample_id=image.sample_id,
         annotation_label_id=label.annotation_label_id,
+        annotation_type=annotation_type,
     )
     annotation_collection_id = collection_resolver.get_or_create_child_collection(
         session=db_session,

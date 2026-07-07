@@ -211,8 +211,7 @@ def test_delete_annotation__preserves_other_run_sample_metrics(
         true_positive_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=image.sample_id,
-                metric_name="iou",
-                value=0.75,
+                metrics={"iou": 0.75},
                 gt_annotation_label_id=label.annotation_label_id,
             )
         ],

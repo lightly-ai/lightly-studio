@@ -38,19 +38,21 @@ class TruePositiveMetricStub:
     """Helper class to create a true-positive annotation metric.
 
     Creates matching prediction and ground-truth annotations in the evaluation
-    run's annotation collections, then stores a metric that links both.
+    run's annotation collections, then stores metric rows that link both.
     """
 
     sample_id: UUID
-    metric_name: str
-    value: float
+    metrics: dict[str, float]
     gt_annotation_label_id: UUID
     # Prediction annotation label. If None, assumed to be equal to annotation_label_id.
     pred_annotation_label_id: UUID | None = None
 
+    def metric_items(self) -> list[tuple[str, float]]:
+        return list(self.metrics.items())
+
     def to_annotation_metric_stub(
         self, session: Session, run: EvaluationRunTable
-    ) -> AnnotationMetricStub:
+    ) -> list[AnnotationMetricStub]:
         pred_collection = collection_resolver.get_by_id(
             session=session, collection_id=run.pred_annotation_collection_id
         )
@@ -81,13 +83,16 @@ class TruePositiveMetricStub:
             annotation_label_id=self.gt_annotation_label_id,
             annotation_collection_name=gt_collection.name,
         )
-        return AnnotationMetricStub(
-            sample_id=self.sample_id,
-            metric_name=self.metric_name,
-            value=self.value,
-            pred_annotation_id=pred_annotation.sample_id,
-            gt_annotation_id=gt_annotation.sample_id,
-        )
+        return [
+            AnnotationMetricStub(
+                sample_id=self.sample_id,
+                metric_name=metric_name,
+                value=value,
+                pred_annotation_id=pred_annotation.sample_id,
+                gt_annotation_id=gt_annotation.sample_id,
+            )
+            for metric_name, value in self.metric_items()
+        ]
 
 
 @dataclass
@@ -171,7 +176,7 @@ def create_annotation_metrics(
         raise ValueError(f"Evaluation run {run_id} doesn't exist")
 
     for stub in true_positive_metric_stubs:
-        annotation_metrics_to_create.append(
+        annotation_metrics_to_create.extend(
             stub.to_annotation_metric_stub(session=session, run=run)
         )
 

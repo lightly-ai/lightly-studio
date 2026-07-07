@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+import pytest
 from sqlmodel import Session
 
 from lightly_studio.dataset.embedding_generator import ImageCrop
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.resolvers import annotation_resolver
 from tests.helpers_resolvers import (
     create_annotation,
@@ -14,10 +16,15 @@ from tests.helpers_resolvers import (
 )
 
 
+@pytest.mark.parametrize(
+    "annotation_type",
+    [AnnotationType.OBJECT_DETECTION, AnnotationType.SEGMENTATION_MASK],
+)
 def test_get_annotation_crops_for_ids__clamps_box_to_image_bounds(
     db_session: Session,
+    annotation_type: AnnotationType,
 ) -> None:
-    """Boxes extending outside the image are clamped to valid crop coordinates."""
+    """Boxes extending outside the image are clamped, for either detail table."""
     collection = create_collection(session=db_session)
     label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
     image = create_image(
@@ -32,6 +39,7 @@ def test_get_annotation_crops_for_ids__clamps_box_to_image_bounds(
         collection_id=collection.collection_id,
         sample_id=image.sample_id,
         annotation_label_id=label.annotation_label_id,
+        annotation_type=annotation_type,
         annotation_data={"x": -10, "y": -5, "width": 50, "height": 120},
     )
 
