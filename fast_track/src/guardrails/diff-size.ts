@@ -1,6 +1,7 @@
 import type { Guardrail, GuardrailContext, GuardrailOutcome } from './context/types';
 
 const NAME = 'diff-size';
+// Hard cap of 200 added lines plus a 15-line buffer for minor overruns (e.g. boilerplate).
 export const MAX_ADDED_LOC = 215;
 
 /**
