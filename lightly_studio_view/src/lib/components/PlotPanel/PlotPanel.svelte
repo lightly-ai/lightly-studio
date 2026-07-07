@@ -172,11 +172,20 @@
 
     const hasActiveFilter = $derived(filter !== null || activeSampleIds.length > 0);
 
-    // Activating a lasso unhides the Excluded category, otherwise out-of-selection points (which
-    // get demoted to Excluded) would vanish and blank out the canvas mid-draw. The legend keeps
-    // showing the user's real toggle state.
+    // Images commit the lasso as region geometry on the filter, not as sample ids. After the
+    // selection is committed the live rangeSelection is cleared, so the plot re-derives the
+    // highlight from the stored polygon to keep reflecting the actually selected points.
+    const imageHighlightRegion = $derived(
+        isImages ? ($imageFilter?.sample_filter?.embedding_region?.polygon ?? null) : null
+    );
+
+    // Activating a lasso (or a committed image region) unhides the Excluded category, otherwise
+    // out-of-selection points (which get demoted to Excluded) would vanish and blank out the
+    // canvas. The legend keeps showing the user's real toggle state.
     const effectiveHiddenCategories = $derived.by(() => {
-        if ($rangeSelection === null || !$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)) {
+        const hasSelectionHighlight =
+            $rangeSelection !== null || imageHighlightRegion !== null;
+        if (!hasSelectionHighlight || !$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)) {
             return $hiddenCategories;
         }
         const next = new Set($hiddenCategories);
@@ -188,6 +197,7 @@
         usePlotData({
             arrowData: $arrowData,
             rangeSelection: $rangeSelection,
+            highlightRegion: imageHighlightRegion,
             highlightedSampleIds: activeSampleIds,
             hasActiveFilter: hasActiveFilter,
             hiddenCategories: effectiveHiddenCategories
