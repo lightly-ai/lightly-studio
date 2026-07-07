@@ -19,6 +19,8 @@ from lightly_studio.models.tag import TagTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 
 
+# TODO(Malte, 07/2026): Generalize into a reusable foreign-tags accessor (mirroring
+# ForeignComparableField / ForeignNumericalField) instead of a video-frame-specific class.
 @dataclass
 class _ParentVideoTagsContainsExpression(MatchExpression):
     """Expression checking whether a frame's parent video has a given tag."""
@@ -26,7 +28,7 @@ class _ParentVideoTagsContainsExpression(MatchExpression):
     tag_name: str
 
     def get(self) -> ColumnElement[bool]:
-        """Return a correlated EXISTS over the parent video's tags."""
+        """Match frames whose parent video has the given tag."""
         video_has_tag = VideoTable.sample.has(
             SampleTable.tags.any(col(TagTable.name) == self.tag_name)
         )
@@ -44,8 +46,8 @@ class _ParentVideoTagsAccessor:
 class _ParentVideoField:
     """Parent-video fields for filtering frames by video-level attributes and tags.
 
-    Each field builds a correlated `EXISTS` over the `VideoFrameTable.video`
-    relationship, so filtering by these does not require joining the video table.
+    Each field filters frames through the `VideoFrameTable.video` relationship, so it
+    adds no join to the frame query.
     """
 
     file_path_abs = ForeignComparableField(

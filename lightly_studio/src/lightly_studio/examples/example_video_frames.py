@@ -1,7 +1,7 @@
 """Example of how to query, tag, sample, and export individual video frames.
 
-It opens a video dataset, queries its frames by frame-level and parent-video fields, tags
-the matches, runs a sampling strategy on the query, and exports the sampled frames as
+It opens a video dataset, queries its frames by frame-level and parent-video fields, runs
+a sampling strategy on the query, and exports the sampled frames as
 `(video_path_abs, frame_number)` rows to a CSV file (the video path comes from each
 frame's parent video).
 """
