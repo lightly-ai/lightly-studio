@@ -64,7 +64,7 @@ from lightly_plugins_yolo_object_detection.operator import YoloObjectDetectionOp
 # This is only needed if you want to download and use the example dataset
 dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
 
-dataset = ls.ImageDataset.create()
+dataset = ls.ImageDataset.create(name="cctv")
 
 # Make sure the path is pointing to the correct folder
 dataset.add_images_from_path(
@@ -187,7 +187,7 @@ LightlyStudio supports exporting annotations through the GUI or the Python API. 
 import lightly_studio as ls
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 
-dataset = ls.ImageDataset.load(name="cctv_1")
+dataset = ls.ImageDataset.load(name="cctv")
 
 # Tags to export
 tags_to_export = ["train", "test"]
@@ -221,9 +221,10 @@ pip install ultralytics
 
 Then create a Python script, for example `train_yolo.py`.
 
-In this example, the images are stored in the original dataset folder, while the YOLO labels are split into `train_yolo` and `test_yolo`. The script creates symbolic links to the corresponding images inside each split, builds a combined `data.yaml` file, trains a YOLO model, and evaluates it on the test split.
+In this example, the images are stored in the original dataset folder, while the YOLO labels are split into `train_yolo` and `test_yolo`. The script copies the corresponding images into each split, builds a combined `data.yaml` file, trains a YOLO model, and evaluates it on the test split.
 
 ```python title="train_yolo.py"
+import shutil
 from pathlib import Path
 from ultralytics import YOLO
 import yaml
@@ -241,7 +242,7 @@ def find_image(stem):
         return candidate
     return None
 
-def link_images_for_split(split_dir: Path):
+def copy_images_for_split(split_dir: Path):
     labels_dir = split_dir / "labels"
     images_out = split_dir / "images"
     images_out.mkdir(exist_ok=True)
@@ -252,14 +253,14 @@ def link_images_for_split(split_dir: Path):
         if image_file is None:
             print(f"  [!] No image found for {label_file.name}, skipping")
             continue
-        (images_out / image_file.name).symlink_to(image_file.resolve())
+        shutil.copy2(image_file, images_out / image_file.name)
         count += 1
 
-    print(f"{split_dir}: linked {count} images")
+    print(f"{split_dir}: copied {count} images")
 
-print("Linking images into each split...")
-link_images_for_split(train_yolo_dir)
-link_images_for_split(test_yolo_dir)
+print("Copying images into each split...")
+copy_images_for_split(train_yolo_dir)
+copy_images_for_split(test_yolo_dir)
 
 with open(train_yolo_dir / "data.yaml") as f:
     existing_config = yaml.safe_load(f)
