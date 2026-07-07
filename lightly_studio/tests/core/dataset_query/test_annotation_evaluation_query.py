@@ -290,7 +290,7 @@ def test_annotation_metric_query__matches_off_diagonal_confusion_cell(
     )
 
     results = DatasetQuery(dataset=collection, session=db_session).match(
-        AnnotationMetricQuery.confusion("run1", "cat", "dog")
+        AnnotationMetricQuery.confusion(run_name="run1", ground_truth="cat", prediction="dog")
     )
 
     assert [result.sample_id for result in results] == [image.sample_id]

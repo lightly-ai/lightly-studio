@@ -280,7 +280,7 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
 
     #### Annotation evaluation queries
 
-    Filtering samples by annotation evaluation results from a specific [evaluation run](evaluation.md), can be realized via `AnnotationMetricQuery.confusion(...)` together with `AnnotationEvaluationMetricField(...)`. In the below example we filter for samples where 'cat' got confused as a 'dog' by the model, and the iou is higher than '0.3'.
+    Filtering samples by annotation evaluation results from a specific [evaluation run](evaluation.md), can be realized via `AnnotationMetricQuery.confusion(...)` together with `AnnotationEvaluationMetricField(...)`. In the below example we filter for samples where `cat` got confused as a `dog` by the model, and the IOU is higher than 0.3.
 
     ```py
     from lightly_studio.core.dataset_query import (
