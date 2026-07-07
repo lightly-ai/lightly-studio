@@ -50,7 +50,7 @@ src/
         useData.test.ts
 ```
 
-- Use `.svelte.ts` files for component logic and state machines.
+- Use `.svelte.ts` files for component logic, state machines, and hooks that use TanStack Query (since v6 uses runes internally).
 - Use barrel exports (`index.ts`) to define a module's public API. Import from module level, not deep paths:
 
 ```typescript
@@ -164,30 +164,35 @@ import { page } from "$app/state";
 page.params.sampleId; // no $ prefix needed
 ```
 
-**Hooks and reactivity** - do not pass `$derived` values to hooks. Pass stable values via SvelteKit's page load function or stores:
+**Hooks and reactivity** - for hooks that wrap TanStack Query, accept a **getter function (thunk)** for reactive parameters. TanStack Query v6 uses thunks for reactivity — do not pass Svelte stores or `$derived` values:
 
 ```typescript
-// +page.ts
-import type { PageLoad } from './$types';
-
-export const load: PageLoad = async ({ params, url }) => {
-  return {
-    groupId: url.searchParams.get('group_id') ?? undefined,
-    params
-  };
+// Hook definition (useFrames.svelte.ts — must be .svelte.ts for TanStack v6)
+export const useFrames = (
+  getParams: () => { video_frame_collection_id: string; filter: VideoFrameFilter }
+) => {
+  const query = createInfiniteQuery(() => {
+    const { video_frame_collection_id, filter } = getParams();
+    return {
+      ...getAllFramesInfiniteOptions({
+        path: { video_frame_collection_id },
+        body: { filter }
+      }),
+      getNextPageParam: (lastPage) => lastPage.nextCursor || undefined
+    };
+  });
+  return { query };
 };
 
-// +page.svelte
-<script lang="ts">
-  import type { PageData } from './$types';
-  import { useVideo } from '$lib/hooks/useVideo';
-
-  const { data }: { data: PageData } = $props();
-  const { video } = useVideo({ sampleId: data.params.sample_id });
-</script>
+// Consumer (+page.svelte)
+const { query } = useFrames(() => ({
+  video_frame_collection_id: collectionId,
+  filter: currentFilter
+}));
+// query is a reactive proxy — access query.isSuccess, query.data directly (no $ prefix)
 ```
 
-If you need reactive parameters in a hook, pass Svelte stores (`writable`/`derived`), not `$derived` rune values.
+For non-TanStack hooks with static parameters, pass values via SvelteKit's page load function or direct props.
 
 ## State management & hooks
 
@@ -198,36 +203,9 @@ Generic hooks go in `src/lib/hooks`; component-specific hooks go in the componen
 
 For data fetching and API work:
 
-- Use hooks for client-side data fetching unless there is a specific reason to introduce a service.
-- Implement proper error handling for data fetching operations.
+- Use [TanStack Query](https://tanstack.com/query/latest/docs/framework/svelte/overview) for all data fetching. TanStack Query v6 is runes-based — hooks that call `createQuery`/`createInfiniteQuery` must be `.svelte.ts` files.
+- The query result is a **reactive proxy** (not a Svelte store). Access properties like `query.isSuccess`, `query.data` directly — no `$` prefix needed.
 - Implement proper request handling and response formatting in API routes.
-
-**Hook pattern example:**
-
-```typescript
-import { writable } from 'svelte/store';
-
-export function useUsers() {
-  const isLoading = writable(false);
-  const users = writable<User[]>([]);
-  const error = writable<Error | null>(null);
-
-  async function fetchUsers() {
-    isLoading.set(true);
-    try {
-      const response = await fetch("/api/users");
-      const data = await response.json();
-      users.set(data);
-    } catch (err) {
-      error.set(err instanceof Error ? err : new Error(String(err)));
-    } finally {
-      isLoading.set(false);
-    }
-  }
-
-  return { data: users, isLoading, error, fetchUsers };
-}
-```
 
 **Store-based hook example** ([playground](https://svelte.dev/playground/hello-world?version=5.32.1#H4sIAAAAAAAAE3WRwW6DMBBEf2W1qhSioqS9koBU9TNKD8TZVFZhjex1kwr53yvjhkCVXjisZ2aHtwNy0xEW6B29Gs9CFujSdH1LmONJt-SweBtQvvuoigPMr56Xvt-4L2olzg6No3tzZViIxWGBe6es7gXahj_KGsXVWNUMAKC73liBAWY1Apys6WC12d6GG3GrXc3JpAy76FHxLQfNylJHLBCgnAVl613N-23aXUXz_uBFDINh1Wr1WQ7ZGsrqFpAtw2-vMaKA4WHcEWJO8lY1Y45CF8FCrKeQ_8No0X2J6e_TjNTE42y1NIeWJhqJ69aJsZRQJAxjQSgnw559dyBbZU_rUUWXMfHkWYk2vOADQ_rb9J0kMx5XRcLuWTa-PzZCWaZGdAoe4TkuioJwPdCUZMmRjOvuRTmS1HJhtiTe8p3z5rM4CLuaw_IS7zlKo9uz5iMWp6Z1FH4Aaa7hNOYCAAA=)):
 

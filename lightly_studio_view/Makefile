@@ -26,6 +26,19 @@ else
 	PUBLIC_POSTHOG_KEY=$${PUBLIC_POSTHOG_KEY} npm run build'
 endif
 
+# Fast build: skips npm ci, nvm install, and langium generate.
+# Assumes node_modules and generated language files are up to date.
+.PHONY: build-dirty
+build-dirty:
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "$$env:PUBLIC_POSTHOG_KEY='$(PUBLIC_POSTHOG_KEY)'; npm run build-dirty"
+else
+	bash -c 'export NVM_DIR="$${HOME}/.nvm"; \
+	[ -s "$$NVM_DIR/nvm.sh" ] && . "$$NVM_DIR/nvm.sh"; \
+	nvm use; \
+	PUBLIC_POSTHOG_KEY=$${PUBLIC_POSTHOG_KEY} npm run build-dirty'
+endif
+
 .PHONY: static-checks
 static-checks:
 ifeq ($(OS),Windows_NT)

@@ -2,7 +2,12 @@
     import { BookOpen, Mail } from '@lucide/svelte';
     import { page } from '$app/state';
     import { version, git_sha, is_tagged_commit } from '$lib/version.json';
-    import { isAnnotationsRoute, isVideoFramesRoute, isVideosRoute } from '$lib/routes';
+    import {
+        isAnnotationsRoute,
+        isCaptionsRoute,
+        isVideoFramesRoute,
+        isVideosRoute
+    } from '$lib/routes';
 
     type FooterProps = {
         totalSamples?: number;
@@ -25,6 +30,8 @@
             return 'video frames';
         } else if (isVideosRoute(page.route.id)) {
             return 'videos';
+        } else if (isCaptionsRoute(page.route.id)) {
+            return 'captions';
         } else {
             return 'images';
         }

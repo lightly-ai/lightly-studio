@@ -10,7 +10,7 @@ from fastapi import APIRouter, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from lightly_studio.db_manager import SessionDep
+from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.few_shot_classifier.classifier import (
     ExportType,
 )

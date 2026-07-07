@@ -14,6 +14,7 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
+from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
@@ -30,8 +31,10 @@ from lightly_studio.resolvers import (
 )
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from tests.helpers_resolvers import (
+    AnnotationDetails,
     create_annotation,
     create_annotation_label,
+    create_annotations,
     create_collection,
     create_embedding_model,
     create_image,
@@ -40,6 +43,13 @@ from tests.helpers_resolvers import (
 from tests.resolvers.evaluation_sample_metric_resolver import (
     helpers as evaluation_sample_metric_helpers,
 )
+from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
+    TruePositiveMetricStub,
+    create_annotation_metrics,
+)
+
+# Deep copying is enterprise-only and PostgreSQL-backed; skip on the default DuckDB run.
+pytestmark = pytest.mark.postgres_only
 
 
 def test_deep_copy__empty_collection(db_session: Session) -> None:
@@ -324,15 +334,13 @@ def test_deep_copy__with_embeddings(db_session: Session) -> None:
     )
     assert copied_samples.total_count == 2
 
-    # Assert - copied embeddings reference the new embedding model
+    # Assert - copied embeddings can be loaded by the copied_model.embedding_model_id
     copied_embeddings = sample_embedding_resolver.get_all_by_collection_id(
         session=db_session,
         collection_id=copied.collection_id,
         embedding_model_id=copied_model.embedding_model_id,
     )
     assert len(copied_embeddings) == 2
-    for emb in copied_embeddings:
-        assert emb.embedding_model_id == copied_model.embedding_model_id
 
     # Assert - embedding vectors are preserved
     copied_vectors = {tuple(emb.embedding) for emb in copied_embeddings}
@@ -357,34 +365,35 @@ def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:
         session=db_session, root_collection_id=original.collection_id, label_name="test"
     )
 
-    create_annotation(
+    create_annotations(
         session=db_session,
         collection_id=original.collection_id,
-        sample_id=img.sample_id,
-        annotation_label_id=label.annotation_label_id,
-        annotation_type=AnnotationType.CLASSIFICATION,
-    )
-    create_annotation(
-        session=db_session,
-        collection_id=original.collection_id,
-        sample_id=img.sample_id,
-        annotation_label_id=label.annotation_label_id,
-        annotation_type=AnnotationType.OBJECT_DETECTION,
-        annotation_data={"x": 10, "y": 20, "width": 30, "height": 40},
-    )
-    create_annotation(
-        session=db_session,
-        collection_id=original.collection_id,
-        sample_id=img.sample_id,
-        annotation_label_id=label.annotation_label_id,
-        annotation_type=AnnotationType.SEGMENTATION_MASK,
-        annotation_data={
-            "x": 2,
-            "y": 4,
-            "width": 6,
-            "height": 8,
-            "segmentation_mask": [1, 0, 0, 1],
-        },
+        annotations=[
+            AnnotationDetails(
+                sample_id=img.sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+            ),
+            AnnotationDetails(
+                sample_id=img.sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+                x=10,
+                y=20,
+                width=30,
+                height=40,
+            ),
+            AnnotationDetails(
+                sample_id=img.sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.SEGMENTATION_MASK,
+                x=2,
+                y=4,
+                width=6,
+                height=8,
+                segmentation_mask=[1, 0, 0, 1],
+            ),
+        ],
     )
 
     embedding_model = create_embedding_model(
@@ -445,9 +454,10 @@ def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:
 def test_deep_copy__with_evaluation_sample_metrics(db_session: Session) -> None:
     # Arrange
     dataset = create_collection(session=db_session, collection_name="original")
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(
-        db_session, dataset_collection_id=dataset.collection_id
+    run = evaluation_sample_metric_helpers.create_run(
+        session=db_session, collection_id=dataset.collection_id
     )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
     evaluation_sample_metric_resolver.create_many(
         session=db_session,
         records=[
@@ -530,40 +540,36 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
         tracks=[ObjectTrackCreate(object_track_number=7, dataset_id=original.dataset_id)],
     )
 
-    classification = create_annotation(
+    classification, obj_detection, instance_seg = create_annotations(
         session=db_session,
         collection_id=original.collection_id,
-        sample_id=img.sample_id,
-        annotation_label_id=label.annotation_label_id,
-        annotation_type=AnnotationType.CLASSIFICATION,
-    )
-    obj_detection = create_annotation(
-        session=db_session,
-        collection_id=original.collection_id,
-        sample_id=img.sample_id,
-        annotation_label_id=label.annotation_label_id,
-        annotation_type=AnnotationType.OBJECT_DETECTION,
-        annotation_data={
-            "x": 10,
-            "y": 20,
-            "width": 30,
-            "height": 40,
-            "object_track_id": original_track_id,
-        },
-    )
-    instance_seg = create_annotation(
-        session=db_session,
-        collection_id=original.collection_id,
-        sample_id=img.sample_id,
-        annotation_label_id=label.annotation_label_id,
-        annotation_type=AnnotationType.SEGMENTATION_MASK,
-        annotation_data={
-            "x": 2,
-            "y": 4,
-            "width": 6,
-            "height": 8,
-            "segmentation_mask": [1, 0, 0, 1],
-        },
+        annotations=[
+            AnnotationDetails(
+                sample_id=img.sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+            ),
+            AnnotationDetails(
+                sample_id=img.sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+                x=10,
+                y=20,
+                width=30,
+                height=40,
+                object_track_id=original_track_id,
+            ),
+            AnnotationDetails(
+                sample_id=img.sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.SEGMENTATION_MASK,
+                x=2,
+                y=4,
+                width=6,
+                height=8,
+                segmentation_mask=[1, 0, 0, 1],
+            ),
+        ],
     )
 
     original_sample_ids = {
@@ -627,6 +633,62 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
     assert is_detail.segmentation_mask == [1, 0, 0, 1]
 
 
+@pytest.mark.skip(reason="On an M4 Pro, it takes 47s for duckdb and 38s for postgres.")
+def test_deep_copy__exceeds_postgres_param_limit(db_session: Session) -> None:
+    # More samples than PostgreSQL's 65,535-parameter cap, so the in-memory id lists that
+    # deep_copy feeds into its membership queries overflow an expanding IN clause.
+    n_samples = 70_000
+    original = create_collection(session=db_session, collection_name="original")
+    sample_ids = image_resolver.create_many(
+        session=db_session,
+        collection_id=original.collection_id,
+        samples=[
+            ImageCreate(
+                file_path_abs=f"/sample_{i}.png",
+                file_name=f"sample_{i}.png",
+                width=640,
+                height=480,
+            )
+            for i in range(n_samples)
+        ],
+    )
+    label = create_annotation_label(session=db_session, root_collection_id=original.collection_id)
+    create_annotations(
+        session=db_session,
+        collection_id=original.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+            )
+            for sample_id in sample_ids
+        ],
+    )
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=original.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert - copied collection is distinct and holds all images.
+    assert copied.collection_id != original.collection_id
+    copied_samples = sample_resolver.get_filtered_samples(
+        session=db_session,
+        collection_id=copied.collection_id,
+    )
+    assert copied_samples.total_count == n_samples
+
+    # Assert - all annotations were copied into the new annotation child collection.
+    copied_annotations = annotation_resolver.get_all(
+        session=db_session,
+        filters=AnnotationsFilter(collection_ids=[copied.children[0].collection_id]),
+    )
+    assert copied_annotations.total_count == n_samples
+
+
 def test_deep_copy__with_evaluation_runs(db_session: Session) -> None:
     # Arrange
     original = create_collection(session=db_session, collection_name="original")
@@ -647,6 +709,7 @@ def test_deep_copy__with_evaluation_runs(db_session: Session) -> None:
         evaluation_run_input=EvaluationRunCreate(
             name="my_eval",
             gt_annotation_collection_id=gt_collection.collection_id,
+            dataset_id=gt_collection.dataset_id,
             pred_annotation_collection_id=pred_collection.collection_id,
             task_type=EvaluationTaskType.OBJECT_DETECTION,
             config_json={"iou_threshold": 0.5},
@@ -706,34 +769,31 @@ def test_deep_copy__with_evaluation_runs(db_session: Session) -> None:
 def test_deep_copy__with_evaluation_annotation_metrics(db_session: Session) -> None:
     # Arrange
     dataset = create_collection(session=db_session, collection_name="original")
-    run, image = evaluation_sample_metric_helpers.create_run_and_image(
-        db_session, dataset_collection_id=dataset.collection_id
+    run = evaluation_sample_metric_helpers.create_run(
+        session=db_session, collection_id=dataset.collection_id
     )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
     label = create_annotation_label(session=db_session, root_collection_id=dataset.collection_id)
-    gt_annotation = create_annotation(
-        session=db_session,
-        collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label.annotation_label_id,
-    )
     pred_annotation = create_annotation(
         session=db_session,
         collection_id=dataset.collection_id,
         sample_id=image.sample_id,
         annotation_label_id=label.annotation_label_id,
     )
+    create_annotation_metrics(
+        session=db_session,
+        run_id=run.id,
+        true_positive_metric_stubs=[
+            TruePositiveMetricStub(
+                sample_id=image.sample_id,
+                metrics={"iou": 0.8},
+                gt_annotation_label_id=label.annotation_label_id,
+            )
+        ],
+    )
     evaluation_annotation_metric_resolver.create_many(
         session=db_session,
         records=[
-            # TP: both annotation IDs set, with a metric value
-            EvaluationAnnotationMetricCreate(
-                evaluation_run_id=run.id,
-                sample_id=image.sample_id,
-                gt_annotation_id=gt_annotation.sample_id,
-                pred_annotation_id=pred_annotation.sample_id,
-                metric_name="iou",
-                value=0.8,
-            ),
             # FP: only pred set
             EvaluationAnnotationMetricCreate(
                 evaluation_run_id=run.id,
@@ -766,8 +826,19 @@ def test_deep_copy__with_evaluation_annotation_metrics(db_session: Session) -> N
     )
     assert len(copied_metrics) == 2
 
+    original_metrics = evaluation_annotation_metric_resolver.get_all_by_evaluation_run_id(
+        session=db_session,
+        evaluation_run_id=run.id,
+    )
+    assert len(original_metrics) == 2
+    original_tp_metric = next(m for m in original_metrics if m.metric_name == "iou")
+
     # Assert - annotation IDs are remapped (not the originals)
-    original_annotation_ids = {gt_annotation.sample_id, pred_annotation.sample_id}
+    original_annotation_ids = {
+        original_tp_metric.gt_annotation_id,
+        original_tp_metric.pred_annotation_id,
+        pred_annotation.sample_id,
+    }
     copied_annotation_ids = (
         {m.gt_annotation_id for m in copied_metrics}
         | {m.pred_annotation_id for m in copied_metrics}
@@ -790,8 +861,4 @@ def test_deep_copy__with_evaluation_annotation_metrics(db_session: Session) -> N
     assert fp_metric.pred_annotation_id is not None
 
     # Assert - original run metrics are untouched
-    original_metrics = evaluation_annotation_metric_resolver.get_all_by_evaluation_run_id(
-        session=db_session,
-        evaluation_run_id=run.id,
-    )
     assert len(original_metrics) == 2

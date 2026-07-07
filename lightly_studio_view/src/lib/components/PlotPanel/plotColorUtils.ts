@@ -1,11 +1,19 @@
-import { getColorByLabel } from '$lib/utils';
+import { getColorByLabel, oklchHueWheelColor } from '$lib/utils';
+import {
+    EXCLUDED_BY_FILTERS_CATEGORY,
+    HIDDEN_CATEGORY,
+    INCLUDED_BY_FILTERS_CATEGORY
+} from './plotCategories';
 
-const HSL_SATURATION = 70;
-const HSL_LIGHTNESS = 55;
-const RESERVED_CATEGORY_COUNT = 2;
+const OKLCH_LIGHTNESS = 0.65;
+const OKLCH_CHROMA = 0.3;
 
-export const NOT_FILTERED_COLOR = '#9CA3AF';
-export const FILTERED_COLOR = '#F59E0B';
+const RESERVED_CATEGORY_COUNT = 3;
+
+export const HIDDEN_COLOR = '#000000';
+export const NOT_FILTERED_COLOR = '#222222';
+export const FILTERED_COLOR = '#FF7220';
+export const UNASSIGNED_COLOR = '#666666';
 
 interface LegendEntry {
     cat: number;
@@ -22,27 +30,37 @@ function getMaxCategoryFromLegend(colorLegend?: ReadonlyMap<number, string> | nu
     return Math.max(...colorLegend.keys());
 }
 
-function getDiscreteHslColor(index: number, total: number): string {
-    if (total <= 1) {
-        return 'hsl(220, 70%, 55%)';
-    }
-
-    const hue = Math.round((index * 360) / total) % 360;
-    return `hsl(${hue}, ${HSL_SATURATION}%, ${HSL_LIGHTNESS}%)`;
+function getDiscreteOklchColor(index: number, total: number): string {
+    const { r, g, b } = oklchHueWheelColor({
+        index,
+        count: total,
+        lightness: OKLCH_LIGHTNESS,
+        chroma: OKLCH_CHROMA
+    });
+    return `rgb(${r}, ${g}, ${b})`;
 }
 
 function getDiscreteCategoryColor(category: number, categoryCount: number): string {
     const totalColoredCategories = Math.max(1, categoryCount - RESERVED_CATEGORY_COUNT);
-    return getDiscreteHslColor(category - RESERVED_CATEGORY_COUNT, totalColoredCategories);
+    return getDiscreteOklchColor(category - RESERVED_CATEGORY_COUNT, totalColoredCategories);
 }
 
-function getBaseCategoryColor(category: number, categoryCount: number, label: string): string {
-    if (category === 0) {
+function getBaseCategoryColor(
+    category: number,
+    categoryCount: number,
+    label: string,
+    isColorByActive: boolean = false
+): string {
+    if (category === HIDDEN_CATEGORY) {
+        return HIDDEN_COLOR;
+    }
+
+    if (category === EXCLUDED_BY_FILTERS_CATEGORY) {
         return NOT_FILTERED_COLOR;
     }
 
-    if (category === 1) {
-        return FILTERED_COLOR;
+    if (category === INCLUDED_BY_FILTERS_CATEGORY) {
+        return isColorByActive ? UNASSIGNED_COLOR : FILTERED_COLOR;
     }
 
     if (label) {
@@ -58,17 +76,13 @@ export function getCategoryCount(colorLegend?: ReadonlyMap<number, string> | nul
 
 export function getCategoryColors(
     colorLegend?: ReadonlyMap<number, string> | null,
-    hiddenCategories: ReadonlySet<number> = new Set(),
-    useLabelColors: boolean = false
+    useLabelColors: boolean = false,
+    isColorByActive: boolean = false
 ): string[] {
     const categoryCount = getCategoryCount(colorLegend);
     return Array.from({ length: categoryCount }, (_, category) => {
-        if (hiddenCategories.has(category)) {
-            return FILTERED_COLOR;
-        }
-
         const label = useLabelColors ? (colorLegend?.get(category) ?? '') : '';
-        return getBaseCategoryColor(category, categoryCount, label);
+        return getBaseCategoryColor(category, categoryCount, label, isColorByActive);
     });
 }
 

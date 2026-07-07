@@ -45,3 +45,24 @@ def test_get_sample_ids_with_video_id_filter(db_session: Session) -> None:
         filters=VideoFrameFilter(video_id=video1.video_sample_id),
     )
     assert filtered_ids == set(video1.frame_sample_ids)
+
+
+def test_build_sample_ids_query(db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+
+    video1 = create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="/path/to/video1.mp4", duration_s=1.0, fps=1),
+    )
+    create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="/path/to/video2.mp4", duration_s=1.0, fps=1),
+    )
+
+    query = video_frame_resolver.build_sample_ids_query(
+        collection_id=video1.video_frames_collection_id,
+        filters=VideoFrameFilter(video_id=video1.video_sample_id),
+    )
+    assert set(db_session.exec(query).all()) == set(video1.frame_sample_ids)

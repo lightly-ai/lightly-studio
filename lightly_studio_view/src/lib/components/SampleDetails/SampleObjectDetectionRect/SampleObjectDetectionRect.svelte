@@ -1,5 +1,6 @@
 <script lang="ts">
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
+    import { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
     import type { BoundingBox } from '$lib/types';
@@ -17,6 +18,7 @@
     import { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
     import ResizableRectangle from '$lib/components/ResizableRectangle/ResizableRectangle.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
+    import SelectClassDialog from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import type { PendingChange } from '../pendingChange';
 
@@ -51,6 +53,14 @@
     let temporaryBbox = $state<BoundingBox | null>(null);
     let shouldDisableInteraction = $state(false);
     const labels = useAnnotationLabels(() => ({ collectionId }));
+
+    const {
+        open: showSelectClassDialog,
+        requestLabel,
+        handleConfirm: handleClassSelected,
+        handleCancel: handleClassDialogCancel
+    } = useSelectClassDialog();
+
     const { createLabel } = useCreateLabel({ collectionId });
     const { createAnnotation } = useCreateAnnotation({
         collectionId
@@ -58,7 +68,7 @@
     const { deleteAnnotation } = useDeleteAnnotation({
         collectionId
     });
-    const { addReversibleAction } = useGlobalStorage();
+    const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
 
     const {
         startPending: startCreateBoundingBoxPending,
@@ -169,17 +179,27 @@
         const pendingOperation = startCreateBoundingBoxPending();
 
         try {
-            let label =
-                labels.data?.find(
-                    (label) =>
-                        label.annotation_label_name === annotationLabelContext.annotationLabel
-                ) ?? labels.data?.find((label) => label.annotation_label_name === 'DEFAULT');
+            let selectedLabelName = annotationLabelContext.annotationLabel;
+            if (!selectedLabelName) {
+                const result = await requestLabel();
+                if (!result?.label) {
+                    toast.error('Please select a class before creating an annotation');
+                    return;
+                }
+                selectedLabelName = result.label;
+                setAnnotationLabel(selectedLabelName);
+                updateLastAnnotationLabel(collectionId, selectedLabelName);
+            }
 
-            // Create an default label if it does not exist yet
+            let label = labels.data?.find(
+                (label) => label.annotation_label_name === selectedLabelName
+            );
+
+            // Create label if it does not exist yet
             if (!label) {
                 label = await createLabel({
                     dataset_id: datasetId,
-                    annotation_label_name: 'DEFAULT'
+                    annotation_label_name: selectedLabelName
                 });
             }
 
@@ -190,7 +210,8 @@
                 y: Math.round(y),
                 width: Math.round(width),
                 height: Math.round(height),
-                annotation_label_id: label.annotation_label_id!
+                annotation_label_id: label.annotation_label_id!,
+                annotation_collection_name: annotationLabelContext.annotationSource ?? undefined
             });
 
             if (sample.annotations.length == 0) {
@@ -229,7 +250,8 @@
         setLastCreatedAnnotationId,
         setAnnotationId,
         setIsDrawing,
-        setCurrentBoundingBox
+        setCurrentBoundingBox,
+        setAnnotationLabel
     } = useAnnotationLabelContext();
 
     const interactionPointerEvents = $derived(shouldDisableInteraction ? 'none' : 'all');
@@ -309,6 +331,7 @@
 
     onDestroy(() => {
         resetCreateBoundingBoxPending();
+        handleClassDialogCancel();
         detachSvgListeners?.();
     });
 
@@ -334,4 +357,11 @@
     cursor={'crosshair'}
     pointerEvents={interactionPointerEvents}
     {sample}
+/>
+
+<SelectClassDialog
+    bind:open={$showSelectClassDialog}
+    labels={labels.data?.map((l) => l.annotation_label_name ?? '').filter(Boolean) ?? []}
+    onConfirm={handleClassSelected}
+    onCancel={handleClassDialogCancel}
 />

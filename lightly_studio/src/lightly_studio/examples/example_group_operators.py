@@ -10,7 +10,7 @@ from environs import Env
 from sqlmodel import Session
 
 import lightly_studio as ls
-from lightly_studio import db_manager
+from lightly_studio.database import db_manager
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
 from lightly_studio.plugins.operator_context import ExecutionContext, OperatorScope
 from lightly_studio.plugins.operator_registry import operator_registry

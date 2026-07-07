@@ -22,7 +22,12 @@ Explore [LightlyStudio on GitHub](https://github.com/lightly-ai/lightly-studio).
 Learn more in our [documentation](https://docs.lightly.ai/studio).
 
 <p align="center">
-  <img alt="LightlyStudio Overview" src="https://storage.googleapis.com/lightly-public/studio/studio_overview.gif" width="70%">
-  <br/>
-  <em>Curate, Annotate, and Manage Your Data in LightlyStudio.</em>
+  <video
+    src="https://github.com/user-attachments/assets/012974ce-1040-40f9-9f7e-41a45c56bf1c"
+    width="70%"
+    controls
+    loop
+    muted
+  ></video>
+  <br>
 </p>

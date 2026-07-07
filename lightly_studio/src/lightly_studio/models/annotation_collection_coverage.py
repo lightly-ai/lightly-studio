@@ -20,4 +20,4 @@ class AnnotationCollectionCoverageTable(SQLModel, table=True):
     __tablename__ = "annotation_collection_coverage"
 
     annotation_collection_id: UUID = Field(foreign_key="collection.collection_id", primary_key=True)
-    parent_sample_id: UUID = Field(foreign_key="sample.sample_id", primary_key=True)
+    parent_sample_id: UUID = Field(foreign_key="sample.sample_id", primary_key=True, index=True)

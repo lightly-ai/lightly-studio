@@ -9,6 +9,7 @@ Guidelines are stored in the `ai_guidelines` folder.
 - [Frontend](./ai_guidelines/frontend.md): Architecture overview. We use TypeScript with SvelteKit.
 - [Backend](./ai_guidelines/backend.md): Architecture overview. We use Python with FastAPI and SQLModel.
 - [Python](./ai_guidelines/python.md): Python-specific style guidelines.
+- [Glossary](./ai_guidelines/glossary.md): Terminology and naming conventions.
 - [Contributing](./CONTRIBUTING.md): Contribution guidelines, including development setup and testing instructions.
 
 ## Validation
@@ -40,6 +41,6 @@ and make as many of them as necessary. Use succinct language in the comments.
 - Make sure the PR follows guidelines in the `ai_guidelines` folder.
 
 Exceptions from the guidelines:
-- We allow direct function imports from `tests.helpers_resolvers` and `tests.resolvers.video.helpers` in Python
+- We allow direct function imports from `tests.helpers_resolvers`, `tests.resolvers.video.helpers`, and `tests.resolvers.evaluation_sample_metric_resolver.helpers` in Python
 
 

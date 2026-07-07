@@ -17,9 +17,28 @@ describe('enrichWithSchemaDocs', () => {
     it('enriches known field with scope/type metadata when docs are missing', async () => {
         const { enrichWithSchemaDocs } = await import('./completionAdapterEnrichWithSchemaDocs');
         const result = enrichWithSchemaDocs({ label: 'fps' } as never, 'video');
-        expect(result.detail).toBe('(field) Video.fps: float');
+        expect(result.detail).toBe('Video.fps: float');
         expect(result.documentation).toEqual({
             value: 'Frames per second. Equality only (`=`, `!=`).'
+        });
+    });
+
+    it('enriches annotation source and confidence fields in annotation scopes', async () => {
+        const { enrichWithSchemaDocs } = await import('./completionAdapterEnrichWithSchemaDocs');
+
+        const sourceResult = enrichWithSchemaDocs({ label: 'source' } as never, 'classification');
+        expect(sourceResult.detail).toBe('Classification.source: string');
+        expect(sourceResult.documentation).toEqual({
+            value: 'Annotation source collection name.'
+        });
+
+        const confidenceResult = enrichWithSchemaDocs(
+            { label: 'confidence' } as never,
+            'object_detection'
+        );
+        expect(confidenceResult.detail).toBe('ObjectDetection.confidence: float');
+        expect(confidenceResult.documentation).toEqual({
+            value: 'Detection confidence score.'
         });
     });
 

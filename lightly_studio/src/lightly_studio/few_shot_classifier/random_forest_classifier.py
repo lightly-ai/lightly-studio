@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import pickle
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,6 +19,8 @@ from sklearn.tree import (  # type: ignore[import-untyped]
 )
 from sklearn.utils import validation  # type: ignore[import-untyped]
 from typing_extensions import assert_never
+
+from lightly_studio.database.db_vector import Embedding
 
 from .classifier import AnnotatedEmbedding, ExportType, FewShotClassifier
 
@@ -146,15 +149,14 @@ class RandomForest(FewShotClassifier):
         # Train the RandomForestClassifier.
         self._model.fit(embeddings_np, labels_encoded)
 
-    def predict(self, embeddings: list[list[float]]) -> list[list[float]]:
+    def predict(self, embeddings: Sequence[Embedding]) -> list[list[float]]:
         """Predicts the classification scores for a list of embeddings.
 
         Args:
-            embeddings: A list of embeddings, where each embedding is a list of
-            floats.
+            embeddings: One embedding per sample.
 
         Returns:
-            A list of lists, where each inner list represents the probability
+            One inner list per sample. Each inner list represents the probability
             distribution over classes for the corresponding input embedding.
             Each value in the inner list corresponds to the likelihood of the
             embedding belonging to a specific class.
@@ -368,7 +370,7 @@ def load_lightly_random_forest(path: Path | None, buffer: io.BytesIO | None) -> 
 
 
 def predict_with_lightly_random_forest(
-    model: RandomForestExport, embeddings: list[list[float]]
+    model: RandomForestExport, embeddings: Sequence[Embedding]
 ) -> list[list[float]]:
     """Predicts the classification scores for a list of embeddings.
 
@@ -471,7 +473,7 @@ def _export_single_tree(
     return ExportedTree(inner_nodes=inner_nodes, leaf_nodes=leaf_nodes)
 
 
-def _predict_tree_probs(tree: ExportedTree, embedding: list[float]) -> list[float]:
+def _predict_tree_probs(tree: ExportedTree, embedding: Embedding) -> list[float]:
     """Predicts class probabilities for an embedding using a single tree.
 
     Args:

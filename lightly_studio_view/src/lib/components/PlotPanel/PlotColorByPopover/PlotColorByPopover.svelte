@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Palette } from '@lucide/svelte';
-    import * as Select from '$lib/components/ui/select';
+    import { Select, SelectMenuItem } from '$lib/components/Select';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import { usePlotColorByType } from './usePlotColorByType/usePlotColorByType';
 
@@ -9,11 +9,17 @@
         selectedKey: string | null;
         onSelectedKeyChange: (key: string | null) => void;
         withTags: boolean;
+        withAnnotationLabels: boolean;
     }
 
     const supportedTypes = new Set(['string', 'boolean']);
 
-    let { collectionId, selectedKey, onSelectedKeyChange, withTags }: Props = $props();
+    // Sentinel value for the explicit "no coloring" option. Kept distinct from
+    // both the numeric option indices and the empty-string deselect signal.
+    const NO_COLOR_BY = 'no_color_by';
+
+    let { collectionId, selectedKey, onSelectedKeyChange, withTags, withAnnotationLabels }: Props =
+        $props();
 
     const { metadataInfo } = useMetadataFilters(collectionId);
     const { selectedColorByType, setSelectedColorByType, clearSelectedColorByType } =
@@ -23,27 +29,36 @@
         ($metadataInfo ?? []).filter((field) => supportedTypes.has(field.type))
     );
 
-    const colorByOptions = $derived.by(() => {
-        const tagsOption = withTags ? [{ value: 'tags', label: 'tags' }] : [];
-        const metadataOptions = colorableFields.map((field) => ({
-            value: field.name,
-            label: `metadata.${field.name}`
+    type ColorByOption =
+        | { type: 'tags'; label: string }
+        | { type: 'annotation_label'; label: string }
+        | { type: 'metadata'; label: string; fieldName: string };
+
+    const colorByOptions = $derived.by((): ColorByOption[] => {
+        const tagsOption: ColorByOption[] = withTags ? [{ type: 'tags', label: 'tags' }] : [];
+        const annotationLabelsOption: ColorByOption[] = withAnnotationLabels
+            ? [{ type: 'annotation_label', label: 'annotations' }]
+            : [];
+        const metadataOptions: ColorByOption[] = colorableFields.map((field) => ({
+            type: 'metadata',
+            label: `metadata.${field.name}`,
+            fieldName: field.name
         }));
 
-        return [...tagsOption, ...metadataOptions];
+        return [...tagsOption, ...annotationLabelsOption, ...metadataOptions];
     });
 
-    const isSelectDisabled = $derived(colorByOptions.length === 0 && !selectedKey);
     const selectValue = $derived.by(() => {
-        if (selectedKey) {
-            return selectedKey;
-        }
-        return $selectedColorByType ?? '';
+        const idx = colorByOptions.findIndex((opt) => {
+            if (opt.type === 'metadata') {
+                return opt.fieldName === selectedKey;
+            }
+            return !selectedKey && opt.type === $selectedColorByType;
+        });
+        return idx >= 0 ? String(idx) : NO_COLOR_BY;
     });
+
     const triggerLabel = $derived.by(() => {
-        if (isSelectDisabled) {
-            return 'Nothing to color by';
-        }
         if (selectedKey) {
             return `metadata.${selectedKey}`;
         }
@@ -57,39 +72,48 @@
     });
 
     const handleValueChange = (value: string) => {
-        if (value === '') {
+        if (value === '' || value === NO_COLOR_BY) {
             clearSelectedColorByType();
             onSelectedKeyChange(null);
             return;
         }
 
-        if (value === 'tags') {
-            setSelectedColorByType(value);
-            onSelectedKeyChange(null);
-            return;
-        }
+        const option = colorByOptions[Number(value)];
+        if (!option) return;
 
-        setSelectedColorByType('metadata');
-        onSelectedKeyChange(value);
+        if (option.type === 'tags') {
+            setSelectedColorByType('tags');
+            onSelectedKeyChange(null);
+        } else if (option.type === 'annotation_label') {
+            setSelectedColorByType('annotation_label');
+            onSelectedKeyChange(null);
+        } else {
+            setSelectedColorByType('metadata');
+            onSelectedKeyChange(option.fieldName);
+        }
     };
 </script>
 
-<Select.Root type="single" value={selectValue} allowDeselect onValueChange={handleValueChange}>
-    <Select.Trigger
-        class="h-8 w-48 gap-2 px-2.5"
-        data-testid="plot-color-by-button"
-        disabled={isSelectDisabled}
-    >
-        <div class="flex min-w-0 items-center gap-2">
-            <Palette class="h-4 w-4 shrink-0" />
-            <span class="truncate">{triggerLabel}</span>
-        </div>
-    </Select.Trigger>
-    <Select.Content class="max-h-64" data-testid="plot-color-by-options">
-        {#each colorByOptions as option (option.value)}
-            <Select.Item value={option.value} label={option.label}>
-                {option.label}
-            </Select.Item>
-        {/each}
-    </Select.Content>
-</Select.Root>
+<Select
+    icon={Palette}
+    {triggerLabel}
+    value={selectValue}
+    allowDeselect
+    onValueChange={handleValueChange}
+    size="xs"
+    class="w-48"
+    testId="plot-color-by-button"
+>
+    {#snippet children()}
+        {#if colorByOptions.length === 0}
+            <p class="px-2 py-1.5 text-sm text-muted-foreground">Nothing to color by</p>
+        {:else}
+            <SelectMenuItem value={NO_COLOR_BY} label="No coloring">No coloring</SelectMenuItem>
+            {#each colorByOptions as option, i (option.type === 'metadata' ? `metadata:${option.fieldName}` : `type:${option.type}`)}
+                <SelectMenuItem value={String(i)} label={option.label}>
+                    {option.label}
+                </SelectMenuItem>
+            {/each}
+        {/if}
+    {/snippet}
+</Select>

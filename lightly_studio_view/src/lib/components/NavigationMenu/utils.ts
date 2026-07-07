@@ -42,7 +42,7 @@ export function getMenuItem(
             };
         case SampleType.ANNOTATION:
             return {
-                title: groupComponentName || 'Annotations',
+                title: groupComponentName ? `Annotations: ${groupComponentName}` : 'Annotations',
                 id: elementId,
                 icon: ComponentIcon,
                 href: routeHelpers.toAnnotations(datasetId, collectionType, collectionId),
@@ -120,13 +120,19 @@ export function buildBreadcrumbLevels(
 ): BreadcrumbLevel[] {
     if (!ancestorPath) return [];
 
+    const hasSeveralAnnotationCollections = rootCollection.children
+        ? rootCollection.children.filter((c) => c.sample_type === SampleType.ANNOTATION).length > 1
+        : false;
     const toMenuItem = (c: CollectionView): NavigationMenuItem =>
         getMenuItem(
             datasetId,
             currentCollectionId,
             c.collection_id,
             c.sample_type,
-            c.group_component_name
+            // For annotation collections, show the collection name to distinguish them if there are several; otherwise, use the group component name or a generic title.
+            c.sample_type === SampleType.ANNOTATION && hasSeveralAnnotationCollections
+                ? c.name
+                : c.group_component_name
         );
 
     return ancestorPath.map((node, index) => {

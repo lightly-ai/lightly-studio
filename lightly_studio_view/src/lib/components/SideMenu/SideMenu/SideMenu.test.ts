@@ -67,6 +67,31 @@ describe('SideMenu', () => {
         expect(onChangeSelectedItems).toHaveBeenCalledWith([]);
     });
 
+    it('reflects the controlled selectedItemsIds prop', () => {
+        render(SideMenu, {
+            items,
+            selectedItemsIds: ['1'],
+            onChangeSelectedItems: vi.fn(),
+            containerProps: { 'data-testid': testId }
+        });
+        const [first, second] = screen.getAllByRole('checkbox');
+        expect(first).toBeChecked();
+        expect(second).not.toBeChecked();
+    });
+
+    it('computes the next selection from the controlled value when toggling', async () => {
+        const onChangeSelectedItems = vi.fn();
+        render(SideMenu, {
+            items,
+            selectedItemsIds: ['1'],
+            onChangeSelectedItems,
+            containerProps: { 'data-testid': testId }
+        });
+        const [, second] = screen.getAllByRole('checkbox');
+        await second.click();
+        expect(onChangeSelectedItems).toHaveBeenCalledWith(['1', '2']);
+    });
+
     it('merges containerProps.class with default classes', () => {
         render(SideMenu, {
             items,

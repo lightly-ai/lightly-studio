@@ -5,7 +5,8 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Generic, cast
 
-from sqlmodel import Session, select
+from sqlalchemy.orm import joinedload
+from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 from typing_extensions import Self, TypeVar
 
@@ -18,9 +19,9 @@ from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.group import GroupTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.models.video import VideoTable
+from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import tag_resolver
-from lightly_studio.selection.select import Selection
+from lightly_studio.sampling.sample import Sampling
 
 _SliceType = slice  # to avoid shadowing built-in slice in type annotations
 
@@ -108,16 +109,16 @@ class DatasetQuery(Generic[T]):
     query.add_tag('my_tag')
     ```
 
-    ## Selecting a subset of samples using smart selection
-    A Selection interface can be created from the current query results. It will only
-    select the samples matching the current query at the time of calling selection().
+    ## Selecting a subset of samples using sampling
+    A Sampling interface can be created from the current query results. It will only
+    select the samples matching the current query at the time of calling sampling().
     ```python
     # Choosing 100 diverse samples from the 'cat' tag.
     # Save them under the tag name "diverse_cats".
-    selection = dataset.query().match(
+    sampling = dataset.query().match(
         ImageSampleField.tags.contains('cat')
-    ).selection()
-    selection.diverse(100, "diverse_cats")
+    ).sampling()
+    sampling.diverse(100, "diverse_cats")
     ```
 
     ## Exporting the query results
@@ -282,6 +283,19 @@ class DatasetQuery(Generic[T]):
             for group_table in self.session.exec(group_query):
                 # Calling the constructor of `GroupSample`
                 yield self._sample_class(group_table)  # type: ignore[arg-type]
+        elif self.dataset.sample_type == SampleType.VIDEO_FRAME:
+            video_frame_query: SelectOfScalar[VideoFrameTable] = (
+                select(VideoFrameTable)
+                .join(VideoFrameTable.sample)
+                .where(SampleTable.collection_id == self.dataset.collection_id)
+                # Eager-load the parent video so VideoFrameSample.parent_video does not
+                # trigger a query per frame (many-to-one, so no row multiplication).
+                .options(joinedload(VideoFrameTable.video))
+            )
+            video_frame_query = self._compose_query(video_frame_query)
+            for video_frame_table in self.session.exec(video_frame_query):
+                # Calling the constructor of `VideoFrameSample`
+                yield self._sample_class(video_frame_table)  # type: ignore[arg-type]
         else:
             raise NotImplementedError(
                 f"Iter is not implemented for sample type {self.dataset.sample_type}"
@@ -302,6 +316,11 @@ class DatasetQuery(Generic[T]):
             # Order by ImageSampleField.created_at by default.
             default_order_by = OrderByField(ImageSampleField.created_at)
             query = default_order_by.apply(query)
+        elif self.dataset.sample_type == SampleType.VIDEO_FRAME:
+            query = query.join(VideoFrameTable.video).order_by(
+                col(VideoTable.file_path_abs),
+                col(VideoFrameTable.frame_number),
+            )
 
         # Apply slicing if present
         if self._slice is not None:
@@ -344,18 +363,18 @@ class DatasetQuery(Generic[T]):
             session=self.session, tag_id=tag.tag_id, sample_ids=sample_ids
         )
 
-    def selection(self) -> Selection:
-        """Selection interface for this query.
+    def sampling(self) -> Sampling:
+        """Sampling interface for this query.
 
-        The returned Selection snapshots the current query results immediately.
+        The returned Sampling snapshots the current query results immediately.
         Mutating the query after calling this method will therefore not affect
-        the samples used by that Selection instance.
+        the samples used by that Sampling instance.
 
         Returns:
-            Selection interface operating on the current query result snapshot.
+            Sampling interface operating on the current query result snapshot.
         """
         input_sample_ids = (sample.sample_id for sample in self)
-        return Selection(
+        return Sampling(
             dataset_id=self.dataset.collection_id,
             session=self.session,
             input_sample_ids=input_sample_ids,

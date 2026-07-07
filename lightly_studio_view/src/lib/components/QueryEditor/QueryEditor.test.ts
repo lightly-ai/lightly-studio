@@ -47,7 +47,7 @@ describe('QueryEditor', () => {
             queryExpr: {
                 match_expr: {
                     type: 'string_expr',
-                    field: { table: 'object_detection', name: 'label' },
+                    field: { table: 'object_detection', name: 'class_name' },
                     operator: '==',
                     value: 'cat'
                 }
@@ -78,20 +78,6 @@ describe('QueryEditor', () => {
         expect(screen.getByRole('button', { name: 'Apply' })).toBeInTheDocument();
     });
 
-    it('disables the Apply button when the editor value has not been modified', () => {
-        render(QueryEditor, { props: { value: 'query', onSave: vi.fn() } });
-
-        expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
-    });
-
-    it('enables the Apply button after the editor value is modified', async () => {
-        render(QueryEditor, { props: { value: 'query', onSave: vi.fn() } });
-
-        await simulateUserEdit('query changed');
-
-        expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
-    });
-
     it('disables the Apply button again when the editor value matches the original', async () => {
         render(QueryEditor, { props: { value: 'query', onSave: vi.fn() } });
 
@@ -120,6 +106,44 @@ describe('QueryEditor', () => {
             'Failed to translate query: unexpected token (line 1, column 5)'
         );
         expect(onSave).not.toHaveBeenCalled();
+    });
+
+    it('enables Apply on first open, disables after applying, and stays disabled when reopened', async () => {
+        const onSave = vi.fn();
+        const parsed = {
+            status: 'ok',
+            queryExpr: {
+                match_expr: {
+                    type: 'string_expr',
+                    field: { table: 'object_detection', name: 'class_name' },
+                    operator: '==',
+                    value: 'cat'
+                }
+            }
+        } as QueryExprTranslationResult;
+        translateQuery.mockReturnValue(parsed);
+
+        // 1. First open — no value prop, shows default example, Apply is enabled
+        const { unmount: unmount } = render(QueryEditor, {
+            props: { onSave }
+        });
+        expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
+
+        // 2. User edits the query
+        await simulateUserEdit('width < 1000');
+        expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
+
+        // 3. User clicks Apply — Apply becomes disabled
+        await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+        expect(onSave).toHaveBeenCalledWith('width < 1000', parsed);
+        expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
+
+        // 4. Simulate "reopen": unmount and re-render with the applied value
+        unmount();
+        render(QueryEditor, {
+            props: { value: 'width < 1000', onSave }
+        });
+        expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
     });
 
     it('disables the Apply button when readOnly is true even after modification', async () => {

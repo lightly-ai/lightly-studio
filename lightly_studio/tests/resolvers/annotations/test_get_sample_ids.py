@@ -88,3 +88,31 @@ def test_get_sample_ids_with_label_filter(db_session: Session) -> None:
         ),
     )
     assert filtered_ids == {annotation.sample_id}
+
+
+def test_build_sample_ids_query(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    sample = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/sample.png",
+    )
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+    )
+    annotation = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=sample.sample_id,
+        annotation_label_id=label.annotation_label_id,
+    )
+
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+
+    query = annotation_resolver.build_sample_ids_query(collection_id=annotation_collection_id)
+    assert set(db_session.exec(query).all()) == {annotation.sample_id}

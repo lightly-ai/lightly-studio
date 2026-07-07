@@ -1,5 +1,6 @@
 import { get2dEmbeddingsOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import type {
+    AnnotationsFilter,
     GetEmbeddings2dRequest,
     ImageFilter,
     VideoFilter
@@ -14,11 +15,12 @@ type EmbeddingsReferenceLabelNames = GetEmbeddings2dRequest['reference_label_nam
 
 export function useEmbeddings(
     collectionId: string,
-    filters: ImageFilter | VideoFilter | null,
+    filters: ImageFilter | VideoFilter | AnnotationsFilter | null,
     colorBy: EmbeddingsColorBy = null,
     nlpAxes: EmbeddingsNlpAxes = null,
     pcaAxes: EmbeddingsPcaAxes = null,
     referenceLabelNames: EmbeddingsReferenceLabelNames = null
+
 ) {
     return createQuery(() =>
         get2dEmbeddingsOptions({

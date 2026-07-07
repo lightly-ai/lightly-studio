@@ -5,7 +5,7 @@
     import { Label } from '$lib/components/ui/label';
     import { useCreateClassifiersPanel } from '$lib/hooks/useClassifiers/useCreateClassifiersPanel';
     import { useClassifiers } from '$lib/hooks/useClassifiers/useClassifiers';
-    import { Alert } from '$lib/components/index.js';
+    import { Alert, Button } from '$lib/components';
     import ClassifierSamplesGrid from './ClassifierSamplesGrid.svelte';
     import { Network as NetworkIcon } from '@lucide/svelte';
     import { handleCreateClassifierClose } from './classifierDialogHelpers';
@@ -107,24 +107,28 @@
             </div>
 
             <Dialog.Footer class="flex flex-nowrap gap-4">
-                <button
-                    type="button"
-                    class="inline-flex h-10 flex-shrink-0 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
-                    onclick={handleClose}
-                    disabled={isSubmitting}
-                    data-testid="classifier-dialog-cancel"
+                <Button
+                    variant="outline"
+                    buttonProps={{
+                        onclick: handleClose,
+                        disabled: isSubmitting,
+                        'data-testid': 'classifier-dialog-cancel',
+                        class: 'shrink-0'
+                    }}
                 >
                     Cancel
-                </button>
-                <button
-                    type="button"
-                    class="inline-flex h-10 flex-shrink-0 items-center justify-center whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
-                    onclick={handleFormSubmit}
-                    disabled={!isFormValid || isSubmitting}
-                    data-testid="classifier-dialog-submit"
+                </Button>
+                <Button
+                    isPending={isSubmitting}
+                    buttonProps={{
+                        onclick: handleFormSubmit,
+                        disabled: !isFormValid || isSubmitting,
+                        'data-testid': 'classifier-dialog-submit',
+                        class: 'shrink-0'
+                    }}
                 >
                     {isSubmitting ? 'Creating...' : 'Create Classifier'}
-                </button>
+                </Button>
             </Dialog.Footer>
         </Dialog.Content>
     </Dialog.Portal>

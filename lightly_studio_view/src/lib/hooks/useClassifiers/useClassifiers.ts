@@ -75,18 +75,17 @@ interface UseClassifiersReturn {
     ) => void;
 }
 
-const { classifiers: classifiersData } = useGlobalStorage();
-
-const {
-    classifierSamples,
-    setClassifierSamples,
-    clearClassifierSamples,
-    classifierSelectedSampleIds,
-    clearClassifierSelectedSamples,
-    toggleClassifierSampleSelection
-} = useClassifierState();
-
 export function useClassifiers(): UseClassifiersReturn {
+    const { classifiers: classifiersData } = useGlobalStorage();
+    const {
+        classifierSamples,
+        setClassifierSamples,
+        clearClassifierSamples,
+        classifierSelectedSampleIds,
+        clearClassifierSelectedSamples,
+        toggleClassifierSampleSelection
+    } = useClassifierState();
+
     // Use the utility functions
     const utils = useClassifierUtils();
     const error = writable<Error | null>(null);
@@ -242,7 +241,7 @@ export function useClassifiers(): UseClassifiersReturn {
                     // Show toast for each classifier run
                     toast.success(
                         `Classifier "${classifier.classifier_name}" completed successfully. ` +
-                            `New labels added: ${generatedLabels.join(', ')}. ` +
+                            `New annotation classes added: ${generatedLabels.join(', ')}. ` +
                             `Annotations have been added to your collection.`,
                         {
                             duration: 10000

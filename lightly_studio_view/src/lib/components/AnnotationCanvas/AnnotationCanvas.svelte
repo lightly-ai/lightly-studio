@@ -15,7 +15,7 @@
 <script lang="ts">
     import { onDestroy, onMount } from 'svelte';
     import { useCustomLabelColors, type CustomColor } from '$lib/hooks/useCustomLabelColors';
-    import { getColorByLabel } from '$lib/utils';
+    import { getColorByLabel, rgbaFromBytes } from '$lib/utils';
     import type { BoundingBox } from '$lib/types';
     import {
         acquireMaskRendererWorker,
@@ -183,9 +183,7 @@
             Math.min(Math.max(value, min), max);
 
         for (const box of boxes) {
-            ctx.strokeStyle = `rgba(${box.color[0]}, ${box.color[1]}, ${box.color[2]}, ${
-                box.color[3] / 255
-            })`;
+            ctx.strokeStyle = rgbaFromBytes(box.color);
             const x = clamp(box.x, 0, canvasWidth);
             const y = clamp(box.y, 0, canvasHeight);
             const wBox = clamp(box.width, 0, canvasWidth - x);
@@ -292,9 +290,7 @@
             Math.min(Math.max(value, min), max);
 
         for (const box of boxes) {
-            ctx.strokeStyle = `rgba(${box.color[0]}, ${box.color[1]}, ${box.color[2]}, ${
-                box.color[3] / 255
-            })`;
+            ctx.strokeStyle = rgbaFromBytes(box.color);
             const x = clamp(box.x, 0, w);
             const y = clamp(box.y, 0, h);
             const wBox = clamp(box.width, 0, w - x);

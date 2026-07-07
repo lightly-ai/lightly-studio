@@ -16,6 +16,7 @@ from lightly_studio.resolvers import collection_resolver
 TASK_TO_ANNOTATION_TYPE: dict[EvaluationTaskType, AnnotationType] = {
     EvaluationTaskType.OBJECT_DETECTION: AnnotationType.OBJECT_DETECTION,
     EvaluationTaskType.CLASSIFICATION: AnnotationType.CLASSIFICATION,
+    EvaluationTaskType.SEMANTIC_SEGMENTATION: AnnotationType.SEGMENTATION_MASK,
 }
 
 
@@ -59,7 +60,7 @@ def resolve_and_validate_collection(
         name=collection_name,
     )
     if resolved_id is None:
-        raise ValueError(f"Collection {collection_name!r} not found.")
+        raise ValueError(f"Annotation source {collection_name!r} not found.")
     _validate_annotation_collection(session=session, collection_id=resolved_id)
     _validate_collection_annotation_type(
         session=session,

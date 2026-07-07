@@ -24,12 +24,19 @@ The `ls.VideoDataset.create()` method call is lightweight and initializes an emp
 
 The `add_videos_from_path(...)` method accepts a path to a file or a folder. If the path is a folder,
 it will recursively search for videos in it. A remote path like `s3://my-bucket/my-folder` is also
-supported, see [Using Cloud Storage](../advanced/cloud_storage.md) for more details.
+supported, see [Using Cloud Storage](cloud_storage.md) for more details.
 
 Videos are automatically embedded so that embedding plot and video search
 are enabled. To skip embedding, pass `embed=False` to the method.
 See the [API reference](../api/dataset.md#lightly_studio.VideoDataset.add_videos_from_path) for
 the full list of arguments.
+
+To ingest fewer frames, pass a `target_fps` to subsample the videos. Retained frames keep their
+original frame numbers, so a 30 fps video loaded with `target_fps=10` stores frames `0, 3, 6, …`:
+
+```python title="Subsample frames to a lower frame rate"
+dataset.add_videos_from_path(path="path/to/videos", target_fps=10)
+```
 
 ### From an Annotation Format
 
@@ -122,7 +129,7 @@ and segmentation mask annotations are supported. See
 
     </details>
 
-### From a Pre-Existing Dataset
+### From an Existing Dataset
 
 Once a dataset is populated, the data is stored in a database. It can be loaded later as follows
 to skip indexing and embedding it again:
@@ -168,7 +175,7 @@ via the navigation bar at the top.
 The Videos page shows a grid of video thumbnails. From here, you can perform multiple actions:
 
 - Hover with a mouse over a video to see a quick playback preview.
-- Use the left panel to filter the videos by tags, annotation labels or metadata (width, height, duration).
+- Use the left panel to filter the videos by tags, annotations or metadata (width, height, duration).
 - Use the search bar to do similarity search by text or another video from the dataset.
 - Use the `Show Embeddings` button to explore the data in embedding space.
 - Use the `Menu` dropdown for further actions like plugins, sampling, classification, export and more.
@@ -188,7 +195,7 @@ to the frame detail view of the currently shown frame.
 ### Frame Grid View
 
 The Frames page shows a grid of individual video frames extracted from all videos.
-You can use the left panel to filter frames by tags, annotation labels or metadata.
+You can use the left panel to filter frames by tags, annotations or metadata.
 
 ![Video Frame Grid](https://storage.googleapis.com/lightly-public/studio/video_dataset_frame_grid.png){ width="100%" }
 
@@ -261,4 +268,4 @@ on dedicated pages.
 
 ### Querying the Dataset
 
-Use [Dataset Query in Python](../concepts_and_tools/search_and_filter.md#query-in-python) when you need reusable subsets in code for filtering, sorting, slicing, export, or selection. Video query expressions use `VideoSampleField`.
+Use [Dataset Query in Python](../concepts_and_tools/search_and_filter.md#query-in-python) when you need reusable subsets in code for filtering, sorting, slicing, export, or sampling. Video query expressions use `VideoSampleField`.

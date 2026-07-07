@@ -8,12 +8,33 @@ import type { MetadataInfo } from '$lib/services/types';
 import type { MetadataBounds } from '$lib/services/types';
 import type { MetadataValues } from '$lib/services/types';
 import { useReversibleActions } from './useReversibleActions';
-import type { CollectionView, SampleType } from '$lib/api/lightly_studio_local';
+import type { CollectionView, SampleType, TagByFilterBody } from '$lib/api/lightly_studio_local';
 import type { Point } from 'embedding-atlas/svelte';
 
 const lastGridType = writable<GridType>('images');
 const selectedSampleIdsByCollection = writable<Record<string, Set<string>>>({});
 const selectedSampleAnnotationCropIds = writable<Record<string, Set<string>>>({});
+
+/**
+ * Snapshot of the filter behind a select-all. A non-`null` entry means the selection is still an
+ * unmodified select-all, so it can be tagged by filter instead of materialized IDs; any manual
+ * edit invalidates it. `size` lets the tag logic detect a selection that no longer matches.
+ * `filter` is the by-filter tag endpoint's payload, so a snapshot can't hold a rejected filter.
+ */
+type SelectAllSnapshot = { filter: TagByFilterBody['filter']; size: number };
+
+const selectAllSnapshotByCollection = writable<Record<string, SelectAllSnapshot | null>>({});
+const selectAllAnnotationSnapshotByCollection = writable<Record<string, SelectAllSnapshot | null>>(
+    {}
+);
+
+const invalidateSelectAllSnapshot = (collectionId: string) => {
+    selectAllSnapshotByCollection.update((state) => ({ ...state, [collectionId]: null }));
+};
+
+const invalidateSelectAllAnnotationSnapshot = (collectionId: string) => {
+    selectAllAnnotationSnapshotByCollection.update((state) => ({ ...state, [collectionId]: null }));
+};
 const selectedAnnotationFilterIds = writable<Set<string>>(new Set());
 const filteredAnnotationCount = writable<number>(0);
 const filteredSampleCount = writable<number>(0);
@@ -37,6 +58,12 @@ const metadataInfo = useSessionStorage<MetadataInfo[]>('lightlyStudio_metadata_i
 // Store the most recently selected annotation label.
 const lastAnnotationLabel = useSessionStorage<Record<string, string>>(
     'lightlyStudio_last_annotation_label',
+    {}
+);
+
+// Store the most recently selected annotation source.
+const lastAnnotationSource = useSessionStorage<Record<string, string>>(
+    'lightlyStudio_last_annotation_source',
     {}
 );
 
@@ -76,8 +103,17 @@ export type TextEmbedding = {
     queryText: string;
 };
 
-const showPlot = writable<boolean>(false);
-const showEvaluationRuns = writable<boolean>(false);
+export type PanelType = 'none' | 'embeddingPlot' | 'evaluationRuns' | 'queryEditor';
+
+const activePanel = writable<PanelType>('none');
+const showEmbeddingPlot = derived(activePanel, ($p) => $p === 'embeddingPlot');
+const showEvaluationRuns = derived(activePanel, ($p) => $p === 'evaluationRuns');
+
+/** Toggle a panel on or off, leaving unrelated panels untouched. */
+function togglePanel(current: PanelType, target: PanelType, show: boolean): PanelType {
+    if (show) return target;
+    return current === target ? 'none' : current;
+}
 const rangeSelectionBycollection = writable<Record<string, Point[] | null>>({});
 
 // Rewrite the hook to return values and methods
@@ -138,6 +174,28 @@ export const useGlobalStorage = () => {
             ($rangeSelections) => $rangeSelections[collectionId] ?? null
         );
 
+    // Select-all snapshot helpers (sample grid).
+    const getSelectAllSnapshot = (collectionId: string) =>
+        derived(selectAllSnapshotByCollection, ($snapshots) => $snapshots[collectionId] ?? null);
+    const setSelectAllSnapshot = (collectionId: string, snapshot: SelectAllSnapshot) => {
+        selectAllSnapshotByCollection.update((state) => ({ ...state, [collectionId]: snapshot }));
+    };
+    const clearSelectAllSnapshot = invalidateSelectAllSnapshot;
+
+    // Select-all snapshot helpers (annotation grid).
+    const getSelectAllAnnotationSnapshot = (collectionId: string) =>
+        derived(
+            selectAllAnnotationSnapshotByCollection,
+            ($snapshots) => $snapshots[collectionId] ?? null
+        );
+    const setSelectAllAnnotationSnapshot = (collectionId: string, snapshot: SelectAllSnapshot) => {
+        selectAllAnnotationSnapshotByCollection.update((state) => ({
+            ...state,
+            [collectionId]: snapshot
+        }));
+    };
+    const clearSelectAllAnnotationSnapshot = invalidateSelectAllAnnotationSnapshot;
+
     return {
         tags,
         textEmbedding,
@@ -146,6 +204,15 @@ export const useGlobalStorage = () => {
         selectedSampleIdsByCollection,
         getSelectedSampleIds,
         selectedSampleAnnotationCropIds,
+
+        // Select-all snapshots (sample + annotation grids)
+        getSelectAllSnapshot,
+        setSelectAllSnapshot,
+        clearSelectAllSnapshot,
+        getSelectAllAnnotationSnapshot,
+        setSelectAllAnnotationSnapshot,
+        clearSelectAllAnnotationSnapshot,
+
         selectedAnnotationFilterIds,
         filteredAnnotationCount,
         filteredSampleCount,
@@ -191,6 +258,7 @@ export const useGlobalStorage = () => {
 
         // Individual sample selection methods
         toggleSampleSelection: (sampleId: string, collection_id: string) => {
+            invalidateSelectAllSnapshot(collection_id);
             selectedSampleIdsByCollection.update((selectedByCollection) => {
                 const selected = selectedByCollection[collection_id] ?? new Set<string>();
                 if (selected.has(sampleId)) {
@@ -205,6 +273,7 @@ export const useGlobalStorage = () => {
             });
         },
         clearSelectedSamples: (collection_id: string) => {
+            invalidateSelectAllSnapshot(collection_id);
             selectedSampleIdsByCollection.update((selectedByCollection) => {
                 return {
                     ...selectedByCollection,
@@ -224,6 +293,7 @@ export const useGlobalStorage = () => {
 
         // Individual sample annotation crop selection methods
         toggleSampleAnnotationCropSelection: (collectionId: string, annotationId: string) => {
+            invalidateSelectAllAnnotationSnapshot(collectionId);
             selectedSampleAnnotationCropIds.update((state) => {
                 const annotations = new Set(state[collectionId] ?? []);
 
@@ -240,6 +310,7 @@ export const useGlobalStorage = () => {
             });
         },
         clearSelectedSampleAnnotationCrops: (collectionId: string) => {
+            invalidateSelectAllAnnotationSnapshot(collectionId);
             selectedSampleAnnotationCropIds.update((state) => {
                 return {
                     ...state,
@@ -303,20 +374,14 @@ export const useGlobalStorage = () => {
 
         isEditingMode,
         setIsEditingMode,
-        showPlot,
-        setShowPlot: (show: boolean) => {
-            showPlot.set(show);
-            if (show) {
-                showEvaluationRuns.set(false);
-            }
-        },
+        activePanel,
+        setActivePanel: (panel: PanelType) => activePanel.set(panel),
+        showEmbeddingPlot,
+        setShowEmbeddingPlot: (show: boolean) =>
+            activePanel.update((p) => togglePanel(p, 'embeddingPlot', show)),
         showEvaluationRuns,
-        setShowEvaluationRuns: (show: boolean) => {
-            showEvaluationRuns.set(show);
-            if (show) {
-                showPlot.set(false);
-            }
-        },
+        setShowEvaluationRuns: (show: boolean) =>
+            activePanel.update((p) => togglePanel(p, 'evaluationRuns', show)),
         getRangeSelection,
         setRangeSelectionForCollection: (collectionId: string, selection: Point[] | null) => {
             rangeSelectionBycollection.update((state) => ({
@@ -336,6 +401,13 @@ export const useGlobalStorage = () => {
         updateLastAnnotationLabel: (collectionId: string, label: string) => {
             lastAnnotationLabel.update((value) => {
                 value[collectionId] = label;
+                return value;
+            });
+        },
+        lastAnnotationSource,
+        updateLastAnnotationSource: (collectionId: string, source: string) => {
+            lastAnnotationSource.update((value) => {
+                value[collectionId] = source;
                 return value;
             });
         },

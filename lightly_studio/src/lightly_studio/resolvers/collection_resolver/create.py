@@ -33,7 +33,18 @@ def create(session: Session, collection: CollectionCreate) -> CollectionTable:
         parent_collection_id=collection.parent_collection_id,
     )
     if existing:
-        raise ValueError(f"Collection with name '{collection.name}' already exists.")
+        if collection.parent_collection_id is None:
+            raise ValueError(
+                f"A dataset named '{collection.name}' already exists. Dataset names must "
+                f"be unique. To open it instead of creating a new one, use "
+                f"`load(name='{collection.name}')` or `load_or_create(name='{collection.name}')`. "
+                f"To create a separate dataset, choose a different name."
+            )
+        raise ValueError(
+            f"A collection named '{collection.name}' already exists under the same parent "
+            f"collection. Collection names must be unique within their parent. Choose a "
+            f"different name."
+        )
 
     db_dataset: DatasetTable | None = None
     if collection.parent_collection_id is None:

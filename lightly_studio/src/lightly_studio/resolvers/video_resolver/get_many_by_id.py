@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlmodel import Session, col, select
 
 from lightly_studio.models.video import VideoTable
+from lightly_studio.utils import batching
 
 
 def get_many_by_id(session: Session, sample_ids: list[UUID]) -> list[VideoTable]:
@@ -14,9 +15,11 @@ def get_many_by_id(session: Session, sample_ids: list[UUID]) -> list[VideoTable]
 
     Output order matches the input order.
     """
-    results = session.exec(
-        select(VideoTable).where(col(VideoTable.sample_id).in_(sample_ids))
-    ).all()
+    results: list[VideoTable] = []
+    for batch in batching.batched(items=sample_ids):
+        results.extend(
+            session.exec(select(VideoTable).where(col(VideoTable.sample_id).in_(batch))).all()
+        )
     # Return samples in the same order as the input IDs
     sample_map = {sample.sample_id: sample for sample in results}
     return [sample_map[id_] for id_ in sample_ids if id_ in sample_map]

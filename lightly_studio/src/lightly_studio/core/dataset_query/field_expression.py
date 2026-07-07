@@ -14,6 +14,7 @@ from lightly_studio.core.dataset_query.match_expression import MatchExpression
 if TYPE_CHECKING:
     from lightly_studio.core.dataset_query.field import (
         ComparableField,
+        NullableOrdinalField,
         OrdinalField,
     )
 
@@ -36,7 +37,7 @@ OrdinalOperator = Literal[">", "<", "==", ">=", "<=", "!="]
 class OrdinalFieldExpression(MatchExpression, Generic[T]):
     """Generic expression for ordinal field comparisons."""
 
-    field: OrdinalField[T]
+    field: OrdinalField[T] | NullableOrdinalField[T]
     operator: OrdinalOperator
     value: T
 
@@ -45,7 +46,7 @@ class OrdinalFieldExpression(MatchExpression, Generic[T]):
         table_property = self.field.get_sqlmodel_field()
         operations: dict[
             OrdinalOperator,
-            Callable[[Mapped[T], T], ColumnElement[bool]],
+            Callable[[Mapped[T] | Mapped[T | None], T], ColumnElement[bool]],
         ] = {
             "<": lambda tp, v: tp < v,
             "<=": lambda tp, v: tp <= v,

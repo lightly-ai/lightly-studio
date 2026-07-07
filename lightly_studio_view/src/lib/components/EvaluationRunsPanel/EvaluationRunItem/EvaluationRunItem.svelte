@@ -4,6 +4,7 @@
     import { formatDate } from '$lib/utils';
     import { ChevronDown } from '@lucide/svelte';
     import { slide } from 'svelte/transition';
+    import EvaluationRunConfusionMatrixSection from './EvaluationRunConfusionMatrixSection/EvaluationRunConfusionMatrixSection.svelte';
 
     const duration = 300; // in ms
 
@@ -32,7 +33,7 @@
         type="button"
         class="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-muted/50"
         onclick={onToggle}
-        data-testid="evaluation-run-item"
+        data-testid={`evaluation-run-item-${run.name}`}
         aria-expanded={expanded}
     >
         <div class="min-w-0 flex-1">
@@ -56,12 +57,14 @@
             style={`transform: ${expanded ? 'rotate(0deg)' : 'rotate(-90deg)'}`}
         />
     </button>
+
     {#if expanded}
         <div
-            class="border-t border-border px-3 py-3"
+            class="space-y-5 border-t border-border px-3 py-3"
             data-testid="evaluation-run-details"
             transition:slide={{ duration }}
         >
+            <!-- Configuration -->
             <section>
                 <Typography variant="subtitle2" component="h3" className="mb-2">
                     Configuration
@@ -90,6 +93,38 @@
                     </dl>
                 {/if}
             </section>
+
+            <section data-testid="evaluation-run-annotation-sources">
+                <Typography variant="subtitle2" component="h3" className="mb-2">
+                    Annotation sources
+                </Typography>
+                <div class="flex flex-wrap gap-2">
+                    <div class="flex flex-col gap-0.5">
+                        <Typography variant="caption" className="text-muted-foreground">
+                            Ground truth
+                        </Typography>
+                        <span
+                            class="rounded-md border border-border bg-muted px-2 py-0.5 text-sm"
+                            data-testid="evaluation-run-gt-annotation-source"
+                        >
+                            {run.gt_annotation_source}
+                        </span>
+                    </div>
+                    <div class="flex flex-col gap-0.5">
+                        <Typography variant="caption" className="text-muted-foreground">
+                            Predictions
+                        </Typography>
+                        <span
+                            class="rounded-md border border-border bg-muted px-2 py-0.5 text-sm"
+                            data-testid="evaluation-run-prediction-annotation-source"
+                        >
+                            {run.pred_annotation_source}
+                        </span>
+                    </div>
+                </div>
+            </section>
+
+            <EvaluationRunConfusionMatrixSection evaluationRunId={run.id} />
         </div>
     {/if}
 </li>

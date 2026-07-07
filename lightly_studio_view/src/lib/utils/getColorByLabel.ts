@@ -1,96 +1,61 @@
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
+import { hexToRgb, oklchHueWheelColor } from './colorConvert';
+import { getColorPair } from './getColorPair';
+
+// 32 perceptually-uniform colors: the union of two equal-hue OKLCH wheels. Each
+// wheel fixes lightness and chroma and sweeps 16 evenly-spaced hues, so colors
+// within a wheel differ only in hue, while the two wheels differ in
+// brightness/saturation. The second wheel is rotated by half a hue step so its
+// hues fall in the first wheel's gaps, spreading all 32 hues evenly around the
+// circle. Generated rather than hand-tuned to keep the spec explicit.
+const COLORS_PER_WHEEL = 16;
+const HUE_STEP = 360 / COLORS_PER_WHEEL;
+const WHEELS: Array<{ lightness: number; chroma: number; hueOffset: number }> = [
+    { lightness: 0.65, chroma: 0.3, hueOffset: 0 },
+    { lightness: 0.8, chroma: 0.22, hueOffset: HUE_STEP / 2 }
+];
+const COLOR_PALETTE: Array<[number, number, number]> = WHEELS.flatMap(
+    ({ lightness, chroma, hueOffset }) =>
+        Array.from({ length: COLORS_PER_WHEEL }, (_, i) => {
+            const { r, g, b } = oklchHueWheelColor({
+                index: i,
+                count: COLORS_PER_WHEEL,
+                lightness,
+                chroma,
+                hueOffset
+            });
+            return [r, g, b] as [number, number, number];
+        })
+);
+
+// FNV-1a 32-bit hash. Mixes each byte into all 32 bits, so the result distributes
+// well even when reduced modulo a power-of-two table length.
+const fnv1aHash = (value: string) => {
+    let hash = 0x811c9dc5; // FNV-1a 32-bit offset basis
+    for (let i = 0; i < value.length; i++) {
+        hash ^= value.charCodeAt(i);
+        hash = Math.imul(hash, 0x01000193); // FNV-1a 32-bit prime
+    }
+    return hash >>> 0; // coerce to unsigned 32-bit
+};
 
 export const getColorByLabel = (label: string, alpha: number = 1) => {
-    // Clamp alpha between 0 and 1
     alpha = Math.max(0, Math.min(alpha, 1));
 
-    // Check if there's a custom color for this label
     const { getCustomColor, hasCustomColor } = useCustomLabelColors();
 
     if (hasCustomColor(label)) {
         const customColor = getCustomColor(label);
         if (customColor) {
-            // Apply the requested alpha to the custom color
-            const hexToRgba = (hex: string, alpha: number) => {
-                const r = parseInt(hex.slice(1, 3), 16);
-                const g = parseInt(hex.slice(3, 5), 16);
-                const b = parseInt(hex.slice(5, 7), 16);
-                return {
-                    color: `rgba(${r}, ${g}, ${b}, ${alpha})`,
-                    contrastColor: `rgba(${255 - r}, ${255 - g}, ${255 - b}, ${alpha})`
-                };
-            };
-
-            // Apply the requested alpha, but respect the custom alpha
-            return hexToRgba(customColor.color, customColor.alpha * alpha);
+            // Apply the requested alpha, but respect the custom alpha.
+            return getColorPair(hexToRgb(customColor.color), customColor.alpha * alpha);
         }
     }
 
-    // Define a set of colors for common cases
-    const colorPalette = [
-        'rgba(255, 0, 0, alpha)', // Red
-        'rgba(0, 255, 0, alpha)', // Green
-        'rgba(0, 0, 255, alpha)', // Blue
-        'rgba(255, 255, 0, alpha)', // Yellow
-        'rgba(255, 0, 255, alpha)', // Magenta
-        'rgba(0, 255, 255, alpha)', // Cyan
-        'rgba(128, 0, 0, alpha)', // Maroon
-        'rgba(0, 128, 0, alpha)', // Dark Green
-        'rgba(0, 0, 128, alpha)', // Navy
-        'rgba(128, 128, 0, alpha)', // Olive
-        'rgba(128, 0, 128, alpha)', // Purple
-        'rgba(0, 128, 128, alpha)', // Teal
-        'rgba(192, 192, 192, alpha)', // Silver
-        'rgba(128, 128, 128, alpha)', // Gray
-        'rgba(255, 165, 0, alpha)', // Orange
-        'rgba(255, 20, 147, alpha)', // Deep Pink
-        'rgba(75, 0, 130, alpha)', // Indigo
-        'rgba(255, 105, 180, alpha)', // Hot Pink
-        'rgba(0, 255, 127, alpha)', // Spring Green
-        'rgba(255, 215, 0, alpha)', // Gold
-        'rgba(255, 69, 0, alpha)' // Red-Orange
-    ];
+    // Hash the label deterministically into the palette so a given label always maps
+    // to the same color across sessions.
+    const index = fnv1aHash(label) % COLOR_PALETTE.length;
+    const [r, g, b] = COLOR_PALETTE[index];
 
-    // Convert input to a number if it's a string
-    let index: number;
-    const maxColorPaletteIndex = colorPalette.length - 1;
-
-    // Simple hash function to convert string to number
-    index = Array.from(label).reduce((hash, char) => (hash << 5) - hash + char.charCodeAt(0), 0);
-    // Make sure it's positive and map it to a reasonable range
-    index = (Math.abs(index) % maxColorPaletteIndex) + 1;
-
-    if (index >= 1 && index <= maxColorPaletteIndex) {
-        return {
-            color: colorPalette[index - 1].replace('alpha', alpha.toString()),
-            contrastColor: `rgba(${255 - Math.round(parseInt(colorPalette[index - 1].split(',')[0].split('(')[1]) * (alpha / 255))}, ${255 - Math.round(parseInt(colorPalette[index - 1].split(',')[1]))}, ${255 - Math.round(parseInt(colorPalette[index - 1].split(',')[2]))}, ${alpha})`
-        };
-    }
-
-    // Existing color generation logic for indices greater than 20
-    const r = (index * 30 + 20) % 256; // Red component with offset
-    const g = (index * 60 + 100) % 256; // Green component with offset
-    const b = (index * 90 + 150) % 256; // Blue component with offset
-
-    // Adjust to ensure saturation
-    const maxColor = Math.max(r, g, b);
-    const minColor = Math.min(r, g, b);
-    const delta = maxColor - minColor;
-
-    if (delta === 0) {
-        // If all colors are equal, return a bright color
-        return {
-            color: `rgba(255, 255, 255, ${alpha})`, // White as a fallback
-            contrastColor: `rgba(0, 0, 0, ${alpha})` // Black as contrast
-        };
-    }
-
-    // Scale the colors to increase saturation
-    const scale = 255 / maxColor;
-    const generatedColor = `rgba(${Math.round(r * scale)}, ${Math.round(g * scale)}, ${Math.round(b * scale)}, ${alpha})`;
-
-    // Calculate contrast color (inverting the RGB values)
-    const contrastColor = `rgba(${255 - Math.round(r * scale)}, ${255 - Math.round(g * scale)}, ${255 - Math.round(b * scale)}, ${alpha})`;
-
-    return { color: generatedColor, contrastColor: contrastColor };
+    return getColorPair({ r, g, b }, alpha);
 };

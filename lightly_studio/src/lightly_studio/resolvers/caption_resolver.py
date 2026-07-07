@@ -11,6 +11,7 @@ from lightly_studio.models.caption import CaptionCreate, CaptionTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleCreate
 from lightly_studio.resolvers import collection_resolver, sample_resolver
+from lightly_studio.utils import batching
 
 
 class CaptionCreateHelper(CaptionCreate):
@@ -66,9 +67,11 @@ def create_many(
 
 def get_by_ids(session: Session, sample_ids: Sequence[UUID]) -> list[CaptionTable]:
     """Retrieve captions by IDs."""
-    results = session.exec(
-        select(CaptionTable).where(col(CaptionTable.sample_id).in_(set(sample_ids)))
-    ).all()
+    results: list[CaptionTable] = []
+    for batch in batching.batched(items=set(sample_ids)):
+        results.extend(
+            session.exec(select(CaptionTable).where(col(CaptionTable.sample_id).in_(batch))).all()
+        )
     # Return samples in the same order as the input IDs
     caption_map = {caption.sample_id: caption for caption in results}
     return [caption_map[id_] for id_ in sample_ids if id_ in caption_map]

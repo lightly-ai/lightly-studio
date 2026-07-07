@@ -67,7 +67,11 @@ export class SampleDetailsPage {
     }
 
     getAnnotationBoxByLabel(label: string) {
-        return this.page.locator(`[data-testid="selectable-svg-group"] [data-label="${label}"]`);
+        // Match `data-annotation-label` (always rendered), not the `data-label` text overlay that
+        // only appears when the "show annotation text labels" setting is on.
+        return this.page.locator(
+            `[data-testid="selectable-svg-group"] [data-annotation-label="${label}"] [data-testid="annotation_box"]`
+        );
     }
 
     async setLabel(label: string) {

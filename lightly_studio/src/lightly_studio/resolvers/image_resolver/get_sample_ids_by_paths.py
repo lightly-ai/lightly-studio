@@ -9,6 +9,7 @@ from sqlmodel import Session, col, select
 
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.utils import batching
 
 
 def get_sample_ids_by_paths(
@@ -27,16 +28,15 @@ def get_sample_ids_by_paths(
         A mapping from file_path_abs to sample_id for paths that exist in the collection.
         Paths not found in the collection are omitted from the result.
     """
-    if not file_paths_abs:
-        return {}
-
-    query = (
-        select(col(ImageTable.file_path_abs), col(ImageTable.sample_id))
-        .join(SampleTable)
-        .where(
-            col(SampleTable.collection_id) == collection_id,
-            col(ImageTable.file_path_abs).in_(file_paths_abs),
+    path_to_sample_id: dict[str, UUID] = {}
+    for batch in batching.batched(items=file_paths_abs):
+        query = (
+            select(col(ImageTable.file_path_abs), col(ImageTable.sample_id))
+            .join(SampleTable)
+            .where(
+                col(SampleTable.collection_id) == collection_id,
+                col(ImageTable.file_path_abs).in_(batch),
+            )
         )
-    )
-    results = session.exec(query).all()
-    return dict(results)
+        path_to_sample_id.update(session.exec(query).all())
+    return path_to_sample_id

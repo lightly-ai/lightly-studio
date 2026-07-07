@@ -40,7 +40,8 @@ const withNormalFilters = (
             ...(base.filters?.sample_filter ?? {}),
             annotations_filter: getAnnotationsFilter(filters),
             tag_ids: filters.tag_ids?.length ? filters.tag_ids : undefined,
-            sample_ids: filters.sample_ids?.length ? filters.sample_ids : undefined
+            sample_ids: filters.sample_ids?.length ? filters.sample_ids : undefined,
+            confusion_cell: filters.confusion_cell ?? undefined
         },
         // TODO(Malte, 10/2025): Share the width/height mapping with useImageFilters to avoid drift.
         width: filters.dimensions

@@ -32,7 +32,7 @@
     <Label for={name}>
         {name}
         {#if required}
-            <span class="text-destructive">*</span>
+            <span class="text-destructive-text">*</span>
         {/if}
     </Label>
 
@@ -56,6 +56,6 @@
         </p>
     {/if}
     {#if required && isMissing}
-        <p class="text-sm text-destructive">This field is required.</p>
+        <p class="text-sm text-destructive-text">This field is required.</p>
     {/if}
 </div>

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pytest
 from pydantic_core._pydantic_core import ValidationError
 from sqlmodel import Session
@@ -19,6 +21,9 @@ from lightly_studio.resolvers.image_filter import (
     FilterDimensions,
     ImageFilter,
 )
+from lightly_studio.resolvers.image_resolver.get_all_by_collection_id import (
+    _coerce_order_value,
+)
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
     AnnotationDetails,
@@ -33,8 +38,9 @@ from tests.helpers_resolvers import (
     create_tag,
 )
 from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
-    create_run_and_image,
-    insert_metrics,
+    SampleMetricStub,
+    create_run,
+    create_sample_metrics,
 )
 
 
@@ -494,6 +500,82 @@ def test_get_all_by_collection_id_with_embedding_sort(
     assert result.samples[2].sample_id == image2.sample_id
 
 
+def test_get_all_by_collection_id__similarity_pagination_with_tied_distances(
+    db_session: Session,
+) -> None:
+    """Pagination must not duplicate or skip samples when all distances are equal."""
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_name="tied-embeddings-model",
+        embedding_dimension=2,
+    )
+    image_a = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/images/a.png",
+    )
+    image_b = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/images/b.png",
+    )
+    image_c = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/images/c.png",
+    )
+    # Identical embeddings → all distances to the query are equal (tied).
+    identical_embedding = [1.0, 0.0]
+    create_sample_embedding(
+        session=db_session,
+        sample_id=image_a.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=identical_embedding,
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=image_b.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=identical_embedding,
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=image_c.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=identical_embedding,
+    )
+
+    page1 = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        text_embedding=[1.0, 0.0],
+        pagination=Paginated(offset=0, limit=2),
+    )
+    page2 = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        text_embedding=[1.0, 0.0],
+        pagination=Paginated(offset=2, limit=2),
+    )
+
+    page1_ids = [s.sample_id for s in page1.samples]
+    page2_ids = [s.sample_id for s in page2.samples]
+
+    # No duplicates across pages.
+    assert len(set(page1_ids) & set(page2_ids)) == 0
+    # All three samples are covered exactly once.
+    assert sorted(page1_ids + page2_ids) == sorted(
+        [image_a.sample_id, image_b.sample_id, image_c.sample_id]
+    )
+    # file_path_abs tiebreaker → page 1 is a, b; page 2 is c.
+    assert page1_ids == [image_a.sample_id, image_b.sample_id]
+    assert page2_ids == [image_c.sample_id]
+
+
 def test_get_all_by_collection_id__returns_total_count(db_session: Session) -> None:
     """Test that get_all_by_collection_id returns correct total_count with pagination."""
     collection = create_collection(session=db_session)
@@ -700,127 +782,6 @@ def test_get_all_by_collection_id__sort_by_file_name_desc(db_session: Session) -
     assert [s.file_name for s in result.samples] == ["c.png", "b.png", "a.png"]
 
 
-def test_get_all_by_collection_id__with_similarity_and_order_by(db_session: Session) -> None:
-    collection = create_collection(session=db_session)
-    collection_id = collection.collection_id
-
-    embedding_model = create_embedding_model(
-        session=db_session,
-        collection_id=collection_id,
-        embedding_model_name="example_embedding_model",
-        embedding_dimension=2,
-    )
-
-    image_b = create_image(
-        session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
-    )
-    image_c = create_image(
-        session=db_session, collection_id=collection_id, file_path_abs="/images/c.png"
-    )
-    image_a = create_image(
-        session=db_session, collection_id=collection_id, file_path_abs="/images/a.png"
-    )
-
-    create_sample_embedding(
-        session=db_session,
-        sample_id=image_a.sample_id,
-        embedding=[1.0, 0.0],
-        embedding_model_id=embedding_model.embedding_model_id,
-    )
-    create_sample_embedding(
-        session=db_session,
-        sample_id=image_b.sample_id,
-        embedding=[1.0, 0.0],
-        embedding_model_id=embedding_model.embedding_model_id,
-    )
-    create_sample_embedding(
-        session=db_session,
-        sample_id=image_c.sample_id,
-        embedding=[-1.0, 0.0],
-        embedding_model_id=embedding_model.embedding_model_id,
-    )
-
-    result = image_resolver.get_all_by_collection_id(
-        session=db_session,
-        collection_id=collection_id,
-        text_embedding=[1.0, 0.0],
-        order_by=[OrderByField(ImageSampleField.file_name)],
-    )
-
-    assert len(result.samples) == 3
-    # image_a and image_b are tied by similarity; file_name asc places a before b
-    assert result.samples[0].file_name == "a.png"
-    assert result.samples[1].file_name == "b.png"
-    assert result.samples[2].file_name == "c.png"
-
-
-def test_get_all_by_collection_id__similarity_is_tiebreaker_when_order_by_values_equal(
-    db_session: Session,
-) -> None:
-    collection = create_collection(session=db_session)
-    collection_id = collection.collection_id
-
-    embedding_model = create_embedding_model(
-        session=db_session,
-        collection_id=collection_id,
-        embedding_model_name="example_embedding_model",
-        embedding_dimension=2,
-    )
-
-    # image_a and image_b share the same width but differ in similarity to the query
-    image_a = create_image(
-        session=db_session,
-        collection_id=collection_id,
-        file_path_abs="/images/a.png",
-        width=100,
-    )
-    image_b = create_image(
-        session=db_session,
-        collection_id=collection_id,
-        file_path_abs="/images/b.png",
-        width=100,
-    )
-    image_c = create_image(
-        session=db_session,
-        collection_id=collection_id,
-        file_path_abs="/images/c.png",
-        width=200,
-    )
-
-    create_sample_embedding(
-        session=db_session,
-        sample_id=image_a.sample_id,
-        embedding=[1.0, 0.0],
-        embedding_model_id=embedding_model.embedding_model_id,
-    )
-    create_sample_embedding(
-        session=db_session,
-        sample_id=image_b.sample_id,
-        embedding=[-1.0, 0.0],
-        embedding_model_id=embedding_model.embedding_model_id,
-    )
-    create_sample_embedding(
-        session=db_session,
-        sample_id=image_c.sample_id,
-        embedding=[0.0, 1.0],
-        embedding_model_id=embedding_model.embedding_model_id,
-    )
-
-    result = image_resolver.get_all_by_collection_id(
-        session=db_session,
-        collection_id=collection_id,
-        text_embedding=[1.0, 0.0],
-        order_by=[OrderByField(ImageSampleField.width)],
-    )
-
-    assert len(result.samples) == 3
-    # width is the primary sort: image_a (100) and image_b (100) are tied, image_c (200) is last.
-    # similarity distance breaks the tie: image_a is closest → image_a before image_b.
-    assert result.samples[0].sample_id == image_a.sample_id
-    assert result.samples[1].sample_id == image_b.sample_id
-    assert result.samples[2].sample_id == image_c.sample_id
-
-
 def test_get_all_by_collection_id__sort_by_metadata_field_asc(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
@@ -851,6 +812,7 @@ def test_get_all_by_collection_id__sort_by_metadata_field_asc(db_session: Sessio
     )
 
     assert [s.file_name for s in result.samples] == ["b.png", "c.png", "a.png"]
+    assert result.order_values == [1.0, 2.0, 3.0]
 
 
 def test_get_all_by_collection_id__sort_by_width_asc(db_session: Session) -> None:
@@ -868,13 +830,15 @@ def test_get_all_by_collection_id__sort_by_width_asc(db_session: Session) -> Non
     )
 
     assert [s.width for s in result.samples] == [100, 200, 300]
+    assert result.order_values == [100.0, 200.0, 300.0]
 
 
 def test_get_all_by_collection_id__sort_by_evaluation_metric_asc(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
-    run, image_a = create_run_and_image(session=db_session, dataset_collection_id=collection_id)
+    run = create_run(session=db_session, collection_id=collection_id)
+    image_a = create_image(session=db_session, collection_id=collection_id)
     image_b = create_image(
         session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
     )
@@ -883,9 +847,15 @@ def test_get_all_by_collection_id__sort_by_evaluation_metric_asc(db_session: Ses
     )
 
     # score order: b(1) < c(2) < a(3), so ascending sorted sequence is b, c, a
-    insert_metrics(db_session, run.id, image_a.sample_id, {"score": 3.0})
-    insert_metrics(db_session, run.id, image_b.sample_id, {"score": 1.0})
-    insert_metrics(db_session, run.id, image_c.sample_id, {"score": 2.0})
+    create_sample_metrics(
+        session=db_session,
+        run_id=run.id,
+        sample_metrics=[
+            SampleMetricStub(sample_id=image_a.sample_id, metrics={"score": 3.0}),
+            SampleMetricStub(sample_id=image_b.sample_id, metrics={"score": 1.0}),
+            SampleMetricStub(sample_id=image_c.sample_id, metrics={"score": 2.0}),
+        ],
+    )
 
     result = image_resolver.get_all_by_collection_id(
         session=db_session,
@@ -898,24 +868,31 @@ def test_get_all_by_collection_id__sort_by_evaluation_metric_asc(db_session: Ses
         image_c.sample_id,
         image_a.sample_id,
     ]
+    assert result.order_values == [1.0, 2.0, 3.0]
 
 
 def test_get_all_by_collection_id__sort_by_evaluation_metric_desc(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
-    run, image_a = create_run_and_image(session=db_session, dataset_collection_id=collection_id)
-    image_b = create_image(
-        session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
-    )
-    image_c = create_image(
-        session=db_session, collection_id=collection_id, file_path_abs="/images/c.png"
+    run = create_run(session=db_session, collection_id=collection_id)
+    image_a = create_image(session=db_session, collection_id=collection_id)
+    [image_b, image_c] = create_images(
+        db_session=db_session,
+        collection_id=collection_id,
+        images=[ImageStub(path="/images/b.png"), ImageStub(path="/images/c.png")],
     )
 
     # score order: b(1) < c(2) < a(3), so descending sorted sequence is a, c, b
-    insert_metrics(db_session, run.id, image_a.sample_id, {"score": 3.0})
-    insert_metrics(db_session, run.id, image_b.sample_id, {"score": 1.0})
-    insert_metrics(db_session, run.id, image_c.sample_id, {"score": 2.0})
+    create_sample_metrics(
+        session=db_session,
+        run_id=run.id,
+        sample_metrics=[
+            SampleMetricStub(sample_id=image_a.sample_id, metrics={"score": 3.0}),
+            SampleMetricStub(sample_id=image_b.sample_id, metrics={"score": 1.0}),
+            SampleMetricStub(sample_id=image_c.sample_id, metrics={"score": 2.0}),
+        ],
+    )
 
     result = image_resolver.get_all_by_collection_id(
         session=db_session,
@@ -928,6 +905,50 @@ def test_get_all_by_collection_id__sort_by_evaluation_metric_desc(db_session: Se
         image_c.sample_id,
         image_b.sample_id,
     ]
+    assert result.order_values == [3.0, 2.0, 1.0]
+
+
+def test_get_all_by_collection_id__sort_by_two_evaluation_metrics(db_session: Session) -> None:
+    # Each OrderByEvaluationMetricField owns per-instance table aliases, so both joins must be
+    # applied; the second metric breaks ties left by the first. order_values reflects the primary.
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    run = create_run(session=db_session, collection_id=collection_id)
+    image_a = create_image(session=db_session, collection_id=collection_id)
+    image_b = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
+    )
+    image_c = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/c.png"
+    )
+
+    # score ties a and b at 1.0; rank breaks the tie so b precedes a.
+    create_sample_metrics(
+        session=db_session,
+        run_id=run.id,
+        sample_metrics=[
+            SampleMetricStub(sample_id=image_a.sample_id, metrics={"score": 1.0, "rank": 2.0}),
+            SampleMetricStub(sample_id=image_b.sample_id, metrics={"score": 1.0, "rank": 1.0}),
+            SampleMetricStub(sample_id=image_c.sample_id, metrics={"score": 2.0, "rank": 3.0}),
+        ],
+    )
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        order_by=[
+            OrderByEvaluationMetricField("test_run", "score"),
+            OrderByEvaluationMetricField("test_run", "rank"),
+        ],
+    )
+
+    assert [s.sample_id for s in result.samples] == [
+        image_b.sample_id,
+        image_a.sample_id,
+        image_c.sample_id,
+    ]
+    assert result.order_values == [1.0, 1.0, 2.0]
 
 
 def test_get_all_by_collection_id__sort_by_height_asc_is_reverse_of_desc(
@@ -965,3 +986,20 @@ def test_get_all_by_collection_id__sort_by_height_asc_is_reverse_of_desc(
     desc_paths = [s.file_path_abs for s in result_desc.samples]
 
     assert asc_paths == list(reversed(desc_paths))
+    assert result_asc.order_values == [100.0, 200.0, 200.0, 300.0]
+    assert result_desc.order_values == [300.0, 200.0, 200.0, 100.0]
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (None, None),
+        (True, None),
+        (False, None),
+        (1, 1.0),
+        (1.5, 1.5),
+        ("text", None),
+    ],
+)
+def test_coerce_order_value(value: object, expected: float | None) -> None:
+    assert _coerce_order_value(value) == expected

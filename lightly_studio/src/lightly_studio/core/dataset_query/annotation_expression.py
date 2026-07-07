@@ -7,14 +7,16 @@ from typing import Generic, TypeVar
 
 from sqlalchemy import ColumnElement
 from sqlalchemy.orm import Mapped
+from sqlmodel import col
 
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.sample import SampleTable
 
 T = TypeVar("T")
 
 
-# Ignore PLW1641 because `==` and `!=` create query conditions here, so these
-# classes do not need normal hash behavior.
 @dataclass
 class RelationshipMatchExpression(MatchExpression, Generic[T]):
     """Evaluates a match expression against a related table using the SQLAlchemy `.has()` operator.
@@ -51,3 +53,32 @@ class RelationshipMatchExpression(MatchExpression, Generic[T]):
     def get(self) -> ColumnElement[bool]:
         """Get the relationship match expression."""
         return self.relationship.has(self.criterion.get())
+
+
+# Ignore PLW1641 because `==` and `!=` create query conditions here, so these
+# classes do not need normal hash behavior.
+class AnnotationSourceField:  # noqa: PLW1641
+    """Queryable annotation source field."""
+
+    def __eq__(self, other: str) -> MatchExpression:  # type: ignore[override]
+        """Return a match expression for a source name equality check."""
+        return AnnotationSourceMatchExpression(source_name=other)
+
+    def __ne__(self, other: str) -> MatchExpression:  # type: ignore[override]
+        """Return a match expression for a source name inequality check."""
+        return AnnotationSourceMatchExpression(source_name=other, negate=True)
+
+
+@dataclass
+class AnnotationSourceMatchExpression(MatchExpression):
+    """Evaluates an annotation source comparison against the owning collection."""
+
+    source_name: str
+    negate: bool = False
+
+    def get(self) -> ColumnElement[bool]:
+        """Get the annotation source match expression."""
+        expr = AnnotationBaseTable.sample.has(
+            SampleTable.collection.has(col(CollectionTable.name) == self.source_name)
+        )
+        return ~expr if self.negate else expr

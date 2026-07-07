@@ -20,6 +20,9 @@
         setIsChangingBrushSize
     } = useAnnotationLabelContext();
 
+    // Strokes save on pointerup; "Finish" only deselects the active annotation.
+    const canFinish = $derived(Boolean(annotationLabelContext.annotationId));
+
     const normalizeShortcut = (key: string): string => (key.length === 1 ? key.toLowerCase() : key);
 
     const MIN_BRUSH_SIZE = 1;
@@ -156,9 +159,11 @@
                 <button
                     class="w-full translate-y-1 rounded bg-primary p-1 text-center text-accent-foreground
          transition-all duration-300 ease-out
-         animate-in fade-in hover:bg-primary/90"
+         animate-in fade-in hover:bg-primary/90
+         disabled:pointer-events-none disabled:opacity-50"
                     type="button"
                     aria-label="Finish"
+                    disabled={!canFinish}
                     onclick={() => {
                         setAnnotationId(null);
                         setLastCreatedAnnotationId(null);

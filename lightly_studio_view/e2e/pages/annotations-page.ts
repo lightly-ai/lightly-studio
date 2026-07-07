@@ -13,7 +13,12 @@ export class AnnotationsPage {
             timeout: 10000
         });
 
-        await this.page.getByTestId('navigation-menu-annotations').click();
+        const menuButton = this.page.getByTestId('navigation-menu-annotations');
+        const tag = await menuButton.evaluate((el) => el.tagName);
+        await menuButton.click();
+        if (tag !== 'A') {
+            await this.page.getByTestId('navigation-dropdown-annotations').click();
+        }
         await expect(this.page.getByTestId('annotations-grid')).toBeVisible({
             timeout: 10000
         });

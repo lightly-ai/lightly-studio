@@ -41,7 +41,7 @@ Ready-to-use plugins are available in the [`lightly-studio-plugins`](https://git
         - Scope: single image or images in the current view
         - Input: text prompt
         - Output: segmentation masks
-        - Labels: the prompt text is used as the annotation class name
+        - Annotation class: the prompt text is used as the annotation class name
         - Requirement: Hugging Face access to `facebook/sam3`
         - Maintainer: Lightly
         - Install:
@@ -58,7 +58,7 @@ Ready-to-use plugins are available in the [`lightly-studio-plugins`](https://git
         - Scope: single image or images in the current view
         - Input: LightlyTrain model name or local path to a LightlyTrain checkpoint
         - Output: object detection annotations
-        - Labels: class labels are read from the loaded model and created in the
+        - Annotation classes: annotation classes are read from the loaded model and created in the
           dataset if they do not exist yet
         - Recommended models:
           `dinov3/convnext-large-ltdetr-coco` for best performance,
@@ -84,7 +84,7 @@ Replace `<plugin_name>` with the folder name of the plugin you want to install:
     pip install "git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdirectory=plugins/<plugin_name>/"
     ```
 
-Once installed, register the plugin through the Python API and it will appear in the GUI automatically.
+Once installed, the plugin is auto-registered and will appear in the GUI automatically.
 
 To remove a plugin, uninstall its package with `uv pip uninstall` or `pip uninstall`,
 using the package name defined in the plugin's `pyproject.toml` (typically matching the
@@ -116,12 +116,12 @@ The LightlyStudio operator plugin makes it possible to call a python function in
 
 ### Operator Plugin
 
-An operator plugin is defined by the following attributes of the [`BaseOperator`](../../api/plugin/#lightly_studio.plugins.base_operator.BaseOperator) schema:
+An operator plugin is defined by the following attributes of the [`BaseOperator`](../api/plugin.md#lightly_studio.plugins.base_operator.BaseOperator) schema:
 
 - name: The name of the operator that will also be used in the GUI.
 - description: A detailed description of what the operator does.
-- parameters: A list of inputs exposed in the GUI. Supported parameter types are documented under [`Parameter`](../../api/plugin/#parameter)
-- supported_scopes: A list of [`OperatorScope`](../../api/plugin/#lightly_studio.plugins.operator_context.OperatorScope) values that determine where the operator should appear in the GUI. In most cases, you will use one of these:
+- parameters: A list of inputs exposed in the GUI. Supported parameter types are documented under [`Parameter`](../api/plugin.md#parameter)
+- supported_scopes: A list of [`OperatorScope`](../api/plugin.md#lightly_studio.plugins.operator_context.OperatorScope) values that determine where the operator should appear in the GUI. In most cases, you will use one of these:
   - `ROOT` for dataset-level operators
   - `IMAGE` for image collections
   - `VIDEO_FRAME` for video frame collections

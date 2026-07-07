@@ -18,7 +18,8 @@
         sample,
         toggleAnnotationSelection,
         highlight = 'auto',
-        scale = 1
+        scale = 1,
+        colorBySource
     }: {
         sampleId: string;
         collectionId: string;
@@ -32,6 +33,7 @@
         toggleAnnotationSelection: (annotationId: string) => void;
         highlight?: 'active' | 'disabled' | 'auto';
         scale: number;
+        colorBySource?: boolean;
     } = $props();
     const { addReversibleAction } = useGlobalStorage();
     const { showAnnotationTextLabelsStore, showBoundingBoxesForSegmentationStore } = useSettings();
@@ -83,7 +85,7 @@
         >
             <SampleAnnotation
                 {annotation}
-                showLabel={$showAnnotationTextLabelsStore}
+                showLabel={$showAnnotationTextLabelsStore || colorBySource}
                 {showBoundingBox}
                 imageWidth={sample.width}
                 constraintBox={{
@@ -96,6 +98,7 @@
                 {onBoundingBoxChanged}
                 {highlight}
                 {scale}
+                {colorBySource}
             />
         </SelectableSvgGroup>
     {/key}

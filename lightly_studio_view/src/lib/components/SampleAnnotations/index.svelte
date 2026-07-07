@@ -1,7 +1,9 @@
 <script lang="ts">
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
+    import { useAnnotationClassVisibility } from '$lib/hooks';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import { useSettings } from '$lib/hooks/useSettings';
+    import { resolveEffectiveColorBySource } from '$lib/utils';
     import { onMount, type ComponentProps } from 'svelte';
     import type { AnnotationView } from '$lib/api/lightly_studio_local';
     import { AnnotationCanvas } from '$lib/components';
@@ -27,7 +29,8 @@
     } = $props();
 
     const { isHidden } = useHideAnnotations();
-    const { showBoundingBoxesForSegmentationStore } = useSettings();
+    const { hiddenClassNamesStore } = useAnnotationClassVisibility();
+    const { showBoundingBoxesForSegmentationStore, enforceColoringByClassStore } = useSettings();
     const { selectedCollectionIds, collectionIdToName } = useAnnotationCollectionsFilter();
 
     // Normalize backend annotation variants into the smaller canvas render contract.
@@ -67,6 +70,11 @@
         const showInstanceSegmentationBoundingBoxes = $showBoundingBoxesForSegmentationStore;
         const selectedIds = $selectedCollectionIds;
         const idToName = $collectionIdToName;
+        const hiddenClasses = $hiddenClassNamesStore;
+        const colorBySource = resolveEffectiveColorBySource({
+            multipleSourcesVisible: selectedIds.length > 1,
+            enforceColoringByClass: $enforceColoringByClassStore
+        });
 
         return sample.annotations
             .filter(
@@ -75,13 +83,17 @@
                     selectedIds.includes(annotation.annotation_collection_id)
             )
             .filter((annotation) => annotation.annotation_type !== 'classification')
+            .filter(
+                (annotation) =>
+                    !hiddenClasses.includes(annotation.annotation_label.annotation_label_name)
+            )
             .map((annotation) => {
                 const canvas = mapToCanvasAnnotation(
                     annotation,
                     showInstanceSegmentationBoundingBoxes
                 );
                 if (!canvas) return null;
-                if (selectedIds.length > 1) {
+                if (colorBySource) {
                     const collectionName = idToName[annotation.annotation_collection_id];
                     if (collectionName) return { ...canvas, annotation_label_name: collectionName };
                 }

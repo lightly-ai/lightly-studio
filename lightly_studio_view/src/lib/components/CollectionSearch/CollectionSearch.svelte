@@ -17,6 +17,7 @@
         image: ImageState | undefined;
         isPending?: boolean;
         initialQueryText?: string;
+        searchPlaceholder?: string;
         onSubmitText: (text: string) => void;
         onSubmitFile: (file: File) => void | Promise<void>;
         onClear: () => void;
@@ -27,6 +28,7 @@
         image,
         isPending = false,
         initialQueryText = '',
+        searchPlaceholder = 'Search samples by description or image',
         onSubmitText,
         onSubmitFile,
         onClear,
@@ -102,7 +104,7 @@
             disabled={isPending}
             showOutline={$dragOver}
             inputProps={{
-                placeholder: 'Search samples by description or image',
+                placeholder: searchPlaceholder,
                 onkeydown: onKeyDown,
                 onpaste: handlePaste
             }}

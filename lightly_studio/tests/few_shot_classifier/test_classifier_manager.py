@@ -91,9 +91,15 @@ class TestClassifierManager:
             few_shot_classifier.classifier_manager,
             "_create_annotated_embeddings",
             return_value=[
-                AnnotatedEmbedding(embedding=[0.1, 0.2, 0.3], annotation="class1"),
-                AnnotatedEmbedding(embedding=[0.4, 0.5, 0.6], annotation="class1"),
-                AnnotatedEmbedding(embedding=[0.7, 0.8, 0.9], annotation="class2"),
+                AnnotatedEmbedding(
+                    embedding=np.array([0.1, 0.2, 0.3], dtype=np.float32), annotation="class1"
+                ),
+                AnnotatedEmbedding(
+                    embedding=np.array([0.4, 0.5, 0.6], dtype=np.float32), annotation="class1"
+                ),
+                AnnotatedEmbedding(
+                    embedding=np.array([0.7, 0.8, 0.9], dtype=np.float32), annotation="class2"
+                ),
             ],
         )
         # Create input data with two classes.
@@ -148,7 +154,11 @@ class TestClassifierManager:
         mocker.patch.object(
             few_shot_classifier.classifier_manager,
             "_create_annotated_embeddings",
-            return_value=[AnnotatedEmbedding(embedding=[0.1, 0.2, 0.3], annotation="class1")],
+            return_value=[
+                AnnotatedEmbedding(
+                    embedding=np.array([0.1, 0.2, 0.3], dtype=np.float32), annotation="class1"
+                )
+            ],
         )
         # Create input data with two classes.
         input_clases = ["class1"]
@@ -188,9 +198,15 @@ class TestClassifierManager:
             few_shot_classifier.classifier_manager,
             "_create_annotated_embeddings",
             return_value=[
-                AnnotatedEmbedding(embedding=[0.1, 0.2, 0.3], annotation="class1"),
-                AnnotatedEmbedding(embedding=[0.4, 0.5, 0.6], annotation="class1"),
-                AnnotatedEmbedding(embedding=[0.7, 0.8, 0.9], annotation="class2"),
+                AnnotatedEmbedding(
+                    embedding=np.array([0.1, 0.2, 0.3], dtype=np.float32), annotation="class1"
+                ),
+                AnnotatedEmbedding(
+                    embedding=np.array([0.4, 0.5, 0.6], dtype=np.float32), annotation="class1"
+                ),
+                AnnotatedEmbedding(
+                    embedding=np.array([0.7, 0.8, 0.9], dtype=np.float32), annotation="class2"
+                ),
             ],
         )
         # Create input data with two classes
@@ -315,7 +331,9 @@ class TestClassifierManager:
             few_shot_classifier.classifier_manager,
             "_create_annotated_embeddings",
             return_value=[
-                AnnotatedEmbedding(embedding=[0.1, 0.2, 0.3], annotation="cat"),
+                AnnotatedEmbedding(
+                    embedding=np.array([0.1, 0.2, 0.3], dtype=np.float32), annotation="cat"
+                ),
             ],
         )
 
@@ -371,8 +389,12 @@ class TestClassifierManager:
             few_shot_classifier.classifier_manager,
             "_create_annotated_embeddings",
             return_value=[
-                AnnotatedEmbedding(embedding=[0.1, 0.2, 0.3], annotation="cat"),
-                AnnotatedEmbedding(embedding=[0.4, 0.5, 0.6], annotation="dog"),
+                AnnotatedEmbedding(
+                    embedding=np.array([0.1, 0.2, 0.3], dtype=np.float32), annotation="cat"
+                ),
+                AnnotatedEmbedding(
+                    embedding=np.array([0.4, 0.5, 0.6], dtype=np.float32), annotation="dog"
+                ),
             ],
         )
         input_classes = ["cat", "dog"]
@@ -479,12 +501,24 @@ class TestClassifierManager:
             few_shot_classifier.classifier_manager,
             "_create_annotated_embeddings",
             return_value=[
-                AnnotatedEmbedding(embedding=[1.0, 1.0, 1.0], annotation="positive"),
-                AnnotatedEmbedding(embedding=[1.0, 0.9, 0.8], annotation="positive"),
-                AnnotatedEmbedding(embedding=[0.9, 0.9, 0.8], annotation="positive"),
-                AnnotatedEmbedding(embedding=[0.1, 0.1, 0.1], annotation="negative"),
-                AnnotatedEmbedding(embedding=[0.1, 0.1, 0.2], annotation="negative"),
-                AnnotatedEmbedding(embedding=[0.1, 0.3, 0.1], annotation="negative"),
+                AnnotatedEmbedding(
+                    embedding=np.array([1.0, 1.0, 1.0], dtype=np.float32), annotation="positive"
+                ),
+                AnnotatedEmbedding(
+                    embedding=np.array([1.0, 0.9, 0.8], dtype=np.float32), annotation="positive"
+                ),
+                AnnotatedEmbedding(
+                    embedding=np.array([0.9, 0.9, 0.8], dtype=np.float32), annotation="positive"
+                ),
+                AnnotatedEmbedding(
+                    embedding=np.array([0.1, 0.1, 0.1], dtype=np.float32), annotation="negative"
+                ),
+                AnnotatedEmbedding(
+                    embedding=np.array([0.1, 0.1, 0.2], dtype=np.float32), annotation="negative"
+                ),
+                AnnotatedEmbedding(
+                    embedding=np.array([0.1, 0.3, 0.1], dtype=np.float32), annotation="negative"
+                ),
             ],
         )
         # Create input data with two classes.
@@ -545,10 +579,18 @@ class TestClassifierManager:
             few_shot_classifier.classifier_manager,
             "_create_annotated_embeddings",
             return_value=[
-                AnnotatedEmbedding(embedding=[1.0, 1.0, 1.0], annotation="positive"),
-                AnnotatedEmbedding(embedding=[1.0, 0.9, 0.8], annotation="positive"),
-                AnnotatedEmbedding(embedding=[0.1, 0.1, 0.2], annotation="negative"),
-                AnnotatedEmbedding(embedding=[0.1, 0.3, 0.1], annotation="negative"),
+                AnnotatedEmbedding(
+                    embedding=np.array([1.0, 1.0, 1.0], dtype=np.float32), annotation="positive"
+                ),
+                AnnotatedEmbedding(
+                    embedding=np.array([1.0, 0.9, 0.8], dtype=np.float32), annotation="positive"
+                ),
+                AnnotatedEmbedding(
+                    embedding=np.array([0.1, 0.1, 0.2], dtype=np.float32), annotation="negative"
+                ),
+                AnnotatedEmbedding(
+                    embedding=np.array([0.1, 0.3, 0.1], dtype=np.float32), annotation="negative"
+                ),
             ],
         )
         # Create input data with two classes.
@@ -577,14 +619,16 @@ class TestClassifierManager:
         # low confidence.
         input_embeddings = [
             SampleEmbeddingTable(
-                sample_id=UUID("a94d6af9-91c1-48b0-b5bf-d26aec3aa661"), embedding=[0.2, 0.2, 0.2]
+                sample_id=UUID("a94d6af9-91c1-48b0-b5bf-d26aec3aa661"),
+                embedding=np.array([0.2, 0.2, 0.2], dtype=np.float32),
             )
             for _ in range(20)
         ]
         # Add 1 sample that will provide high confidence.
         input_embeddings.append(
             SampleEmbeddingTable(
-                sample_id=UUID("2d47e105-7e9c-4a65-a11c-c7da447e2de6"), embedding=[0.95, 0.95, 0.95]
+                sample_id=UUID("2d47e105-7e9c-4a65-a11c-c7da447e2de6"),
+                embedding=np.array([0.95, 0.95, 0.95], dtype=np.float32),
             )
         )
         mocker.patch.object(
@@ -627,7 +671,11 @@ class TestClassifierManager:
         mocker.patch.object(
             few_shot_classifier.classifier_manager,
             "_create_annotated_embeddings",
-            return_value=[AnnotatedEmbedding(embedding=[0.1, 0.2, 0.3], annotation="class1")],
+            return_value=[
+                AnnotatedEmbedding(
+                    embedding=np.array([0.1, 0.2, 0.3], dtype=np.float32), annotation="class1"
+                )
+            ],
         )
         collection_id = uuid4()
         input_clases = ["class1"]
@@ -665,7 +713,10 @@ class TestClassifierManager:
             few_shot_classifier.classifier_manager,
             "_create_annotated_embeddings",
             return_value=[
-                AnnotatedEmbedding(embedding=[0.1, 0.2, 0.3], annotation="another_class")
+                AnnotatedEmbedding(
+                    embedding=np.array([0.1, 0.2, 0.3], dtype=np.float32),
+                    annotation="another_class",
+                )
             ],
         )
         classifier_manager.train_classifier(
@@ -723,7 +774,7 @@ class TestClassifierManager:
             sample_embeddings=[
                 SampleEmbeddingCreate(
                     sample_id=sample.sample_id,
-                    embedding=[0.1, 0.2, 0.3],
+                    embedding=np.array([0.1, 0.2, 0.3], dtype=np.float32),
                     embedding_model_id=embedding_model.embedding_model_id,
                 )
                 for sample in samples

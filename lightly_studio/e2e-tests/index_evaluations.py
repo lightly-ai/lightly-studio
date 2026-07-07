@@ -1,17 +1,16 @@
 """End-to-end demonstration of object detection evaluation and the UI."""
 
 import lightly_studio as ls
-from lightly_studio import db_manager
 from lightly_studio.core.dataset_query import ImageSampleField
+from lightly_studio.database import db_manager
 from lightly_studio.evaluation.image_dataset_evaluate import ObjectDetectionEvaluationConfig
 
-IMAGES_PATH = "dataset_examples/coco_subset_128_images/images"
-GT_ANNOTATIONS_JSON = "dataset_examples/coco_subset_128_images/instances_train2017.json"
-PRED_ANNOTATIONS_JSON = "dataset_examples/coco_subset_128_images/predictions_train2017.json"
+IMAGES_PATH = "datasets/coco_subset_128_images/images"
+ANNOTATIONS_JSON = "datasets/coco_subset_128_images/instances_train2017.json"
 
 DATASET_NAME = "evaluation_example_dataset"
-GT_COLLECTION_NAME = "Ground truth"
-PRED_COLLECTION_NAME = "Predictions"
+GT_ANNOTATION_SOURCE = "COCO annotations"
+PRED_ANNOTATION_SOURCE = "YOLOv8-m inferences"
 
 TAGGED_SAMPLES_EVALUATION_NAME = "evaluation-example-tagged-samples"
 ALL_SAMPLES_EVALUATION_NAME = "evaluation-example-all-samples"
@@ -23,16 +22,16 @@ db_manager.connect(db_file="lightly_studio.db", cleanup_existing=True)
 dataset = ls.ImageDataset.create(name=DATASET_NAME)
 dataset.add_images_from_path(path=IMAGES_PATH)
 
-# Add ground truth and prediction annotation collections
+# Add predictions from two different annotation sources.
 dataset.add_annotations_from_coco(
-    annotations_json=GT_ANNOTATIONS_JSON,
+    annotations_json=ANNOTATIONS_JSON,
     images_root=IMAGES_PATH,
-    name=GT_COLLECTION_NAME,
+    annotation_source=GT_ANNOTATION_SOURCE,
 )
 dataset.add_annotations_from_coco(
-    annotations_json=PRED_ANNOTATIONS_JSON,
+    annotations_json=ANNOTATIONS_JSON,
     images_root=IMAGES_PATH,
-    name=PRED_COLLECTION_NAME,
+    annotation_source=PRED_ANNOTATION_SOURCE,
 )
 
 # Tag a subset of samples to demonstrate evaluating a query
@@ -48,16 +47,16 @@ evaluation_config = ObjectDetectionEvaluationConfig(
 # Evaluate only the tagged samples
 dataset.evaluate(query=tagged_evaluation_query).object_detection(
     name=TAGGED_SAMPLES_EVALUATION_NAME,
-    gt_collection_name=GT_COLLECTION_NAME,
-    pred_collection_name=PRED_COLLECTION_NAME,
+    gt_annotation_source=GT_ANNOTATION_SOURCE,
+    pred_annotation_source=PRED_ANNOTATION_SOURCE,
     config=evaluation_config,
 )
 
 # Evaluate all samples
 dataset.evaluate().object_detection(
     name=ALL_SAMPLES_EVALUATION_NAME,
-    gt_collection_name=GT_COLLECTION_NAME,
-    pred_collection_name=PRED_COLLECTION_NAME,
+    gt_annotation_source=GT_ANNOTATION_SOURCE,
+    pred_annotation_source=PRED_ANNOTATION_SOURCE,
     config=evaluation_config,
 )
 

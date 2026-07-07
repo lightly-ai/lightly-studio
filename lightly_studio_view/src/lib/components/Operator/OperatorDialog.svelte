@@ -26,6 +26,7 @@
     import type { SampleType } from '$lib/api/lightly_studio_local';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { useQueryClient } from '@tanstack/svelte-query';
+    import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
 
     interface Props {
         operatorMetadata: RegisteredOperatorMetadata | null;
@@ -55,15 +56,13 @@
     );
 
     const queryClient = useQueryClient();
+    const { setPluginExecuting } = useOperatorsDialog();
 
     const collectionId = $page.params.collection_id;
 
     const { tagsSelected } = useTags({ collection_id: collectionId, kind: ['annotation'] });
 
-    const { isOnDetailPage, scopeLabel, contextFilter } = useOperatorContext(
-        pageContext,
-        tagsSelected
-    );
+    const { scopeLabel, contextFilter } = useOperatorContext(pageContext, tagsSelected);
 
     function resetExecutionState() {
         executionError = undefined;
@@ -123,6 +122,7 @@
         }
 
         isExecuting = true;
+        setPluginExecuting(true);
         executionError = undefined;
         executionSuccess = undefined;
 
@@ -157,6 +157,7 @@
             toast.error('Operator execution failed', { description: message });
         } finally {
             isExecuting = false;
+            setPluginExecuting(false);
         }
     }
 
@@ -180,20 +181,10 @@
             <Dialog.Title>
                 {operator?.name || operatorMetadata?.name || 'Operator'}
             </Dialog.Title>
-            <Dialog.Description>
-                Configure the parameters for this operator and click Execute to run it.
+            <Dialog.Description class="text-foreground">
+                Configure the parameters for this operator and click Execute to run it on
+                <strong class="font-semibold text-primary">{$scopeLabel}</strong>.
             </Dialog.Description>
-            <div class="mt-1 flex items-center gap-2 text-sm">
-                <span class="text-muted-foreground">Scope:</span>
-                <span
-                    class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
-                    {$isOnDetailPage
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-secondary text-secondary-foreground'}"
-                >
-                    {$scopeLabel}
-                </span>
-            </div>
         </Dialog.Header>
 
         {#if isLoadingParameters}
@@ -205,7 +196,7 @@
             </div>
         {:else if loadError}
             <div
-                class="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive"
+                class="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive-text"
             >
                 {loadError}
             </div>
@@ -235,7 +226,7 @@
                 {/if}
 
                 {#if executionError}
-                    <div class="text-sm text-destructive">Error: {executionError}</div>
+                    <div class="text-sm text-destructive-text">Error: {executionError}</div>
                 {/if}
                 {#if executionSuccess}
                     <div class="text-sm text-emerald-600">{executionSuccess}</div>

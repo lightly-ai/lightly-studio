@@ -19,7 +19,7 @@ describe('ColorMarker', () => {
     });
 
     it('gets correct color based on label', () => {
-        const mockedColorByLabel = vi.spyOn(utils, 'computeColorByKey');
+        const mockedColorByLabel = vi.spyOn(utils, 'getColorByLabel');
         render(ColorMarker, {
             props
         });
@@ -30,7 +30,7 @@ describe('ColorMarker', () => {
     });
 
     it('uses the correct color', () => {
-        type Color = ReturnType<typeof utils.computeColorByKey>;
+        type Color = ReturnType<typeof utils.getColorByLabel>;
         const colorBorder: Color = {
             color: 'rgba(255, 0, 0, 1)',
             contrastColor: 'rgba(255, 255, 255, 1)'
@@ -39,7 +39,7 @@ describe('ColorMarker', () => {
             color: 'rgba(0, 255, 0, 0.35)',
             contrastColor: 'rgba(0, 0, 0, 0.35)'
         };
-        vi.spyOn(utils, 'computeColorByKey')
+        vi.spyOn(utils, 'getColorByLabel')
             .mockReturnValueOnce(colorBG)
             .mockReturnValueOnce(colorBorder);
         render(ColorMarker, {

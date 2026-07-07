@@ -70,8 +70,8 @@ def test_object_detection_evaluation(
 
     result = dataset.evaluate().object_detection(
         name="run-1",
-        gt_collection_name="gt",
-        pred_collection_name="pred",
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
         config=ObjectDetectionEvaluationConfig(iou_threshold=0.5),
     )
     assert result.sample_count == 1
@@ -140,8 +140,8 @@ def test_object_detection_evaluation__raises_on_wrong_annotation_type(
     with pytest.raises(ValueError, match="object_detection"):
         dataset.evaluate().object_detection(
             name="run-1",
-            gt_collection_name="gt",
-            pred_collection_name="pred",
+            gt_annotation_source="gt",
+            pred_annotation_source="pred",
         )
 
 
@@ -187,8 +187,8 @@ def test_object_detection_evaluation__filters_to_samples_covered_by_both_collect
 
     result = dataset.evaluate().object_detection(
         name="run-1",
-        gt_collection_name="gt",
-        pred_collection_name="pred",
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
     )
     assert result.sample_count == 1
     assert result.gt_annotation_count == 1
@@ -247,7 +247,7 @@ def test_classification_evaluation(
     )
     image = create_image(session=dataset.session, collection_id=dataset.collection_id)
     _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
-    create_annotation(
+    gt_annotation = create_annotation(
         session=dataset.session,
         collection_id=dataset.collection_id,
         sample_id=image.sample_id,
@@ -255,7 +255,7 @@ def test_classification_evaluation(
         annotation_type=AnnotationType.CLASSIFICATION,
         annotation_collection_name="gt",
     )
-    create_annotation(
+    pred_annotation = create_annotation(
         session=dataset.session,
         collection_id=dataset.collection_id,
         sample_id=image.sample_id,
@@ -267,8 +267,8 @@ def test_classification_evaluation(
 
     result = dataset.evaluate().classification(
         name="run-1",
-        gt_collection_name="gt",
-        pred_collection_name="pred",
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
         config=ClassificationEvaluationConfig(),
     )
     assert result.sample_count == 1
@@ -291,6 +291,74 @@ def test_classification_evaluation(
     assert {(metric.sample_id, metric.metric_name): metric.value for metric in sample_metrics} == {
         (image.sample_id, "disagreement"): expected_disagreement,
     }
+
+    annotation_metrics = evaluation_annotation_metric_resolver.get_all_by_evaluation_run_id(
+        session=dataset.session,
+        evaluation_run_id=evaluation_runs[0].id,
+    )
+    assert len(annotation_metrics) == 1
+    assert annotation_metrics[0].sample_id == image.sample_id
+    assert annotation_metrics[0].gt_annotation_id == gt_annotation.sample_id
+    assert annotation_metrics[0].pred_annotation_id == pred_annotation.sample_id
+    assert annotation_metrics[0].metric_name == "disagreement"
+    assert annotation_metrics[0].value == expected_disagreement
+
+
+def test_classification_evaluation__persists_confusion_matrix_pairings(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Persists one GT/pred pairing per sample for confusion matrix aggregation."""
+    dataset = ImageDataset.create(name="test_dataset")
+    gt_label = create_annotation_label(
+        session=dataset.session,
+        root_collection_id=dataset.collection_id,
+        label_name="cat",
+    )
+    pred_label = create_annotation_label(
+        session=dataset.session,
+        root_collection_id=dataset.collection_id,
+        label_name="dog",
+    )
+    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
+    gt_annotation = create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=gt_label.annotation_label_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+        annotation_collection_name="gt",
+    )
+    pred_annotation = create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=pred_label.annotation_label_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+        annotation_data={"confidence": 0.75},
+        annotation_collection_name="pred",
+    )
+
+    dataset.evaluate().classification(
+        name="run-1",
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
+    )
+
+    evaluation_runs = evaluation_run_resolver.get_all_by_dataset_id(
+        session=dataset.session,
+        dataset_id=dataset.dataset_id,
+    )
+    annotation_metrics = evaluation_annotation_metric_resolver.get_all_by_evaluation_run_id(
+        session=dataset.session,
+        evaluation_run_id=evaluation_runs[0].id,
+    )
+
+    assert len(annotation_metrics) == 1
+    assert annotation_metrics[0].gt_annotation_id == gt_annotation.sample_id
+    assert annotation_metrics[0].pred_annotation_id == pred_annotation.sample_id
+    assert annotation_metrics[0].metric_name == "disagreement"
+    assert annotation_metrics[0].value == 0.75
 
 
 @pytest.mark.parametrize(
@@ -336,8 +404,8 @@ def test_classification_evaluation__raises_on_multiple_annotations(
     with pytest.raises(ValueError, match=f"exactly 1 {kind} annotation"):
         dataset.evaluate().classification(
             name="run-1",
-            gt_collection_name="gt",
-            pred_collection_name="pred",
+            gt_annotation_source="gt",
+            pred_annotation_source="pred",
         )
 
 
@@ -363,8 +431,98 @@ def test_classification_evaluation__raises_on_wrong_annotation_type(
     with pytest.raises(ValueError, match="classification"):
         dataset.evaluate().classification(
             name="run-1",
-            gt_collection_name="gt",
-            pred_collection_name="pred",
+            gt_annotation_source="gt",
+            pred_annotation_source="pred",
+        )
+
+
+def test_segmentation_evaluation(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Creates an evaluation run for semantic segmentation and persists per-image metrics."""
+    dataset = ImageDataset.create(name="test_dataset")
+    dog_label = create_annotation_label(
+        session=dataset.session,
+        root_collection_id=dataset.collection_id,
+        label_name="dog",
+    )
+    image = create_image(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        width=4,
+        height=3,
+    )
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
+    mask_data = {
+        "x": 0,
+        "y": 0,
+        "width": 4,
+        "height": 3,
+        "segmentation_mask": [0, 4, 4, 4],
+    }
+    for collection_name in ("gt", "pred"):
+        create_annotation(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=dog_label.annotation_label_id,
+            annotation_type=AnnotationType.SEGMENTATION_MASK,
+            annotation_data=mask_data,
+            annotation_collection_name=collection_name,
+        )
+
+    result = dataset.evaluate().semantic_segmentation(
+        name="seg-run-1",
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
+    )
+    assert result.sample_count == 1
+    assert result.gt_annotation_count == 1
+    assert result.pred_annotation_count == 1
+
+    evaluation_runs = evaluation_run_resolver.get_all_by_dataset_id(
+        session=dataset.session,
+        dataset_id=dataset.dataset_id,
+    )
+    assert len(evaluation_runs) == 1
+    assert evaluation_runs[0].name == "seg-run-1"
+    assert evaluation_runs[0].task_type == EvaluationTaskType.SEMANTIC_SEGMENTATION
+
+    sample_metrics = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
+        session=dataset.session,
+        evaluation_run_id=evaluation_runs[0].id,
+    )
+    assert len(sample_metrics) == 1
+    metric = sample_metrics[0]
+    assert metric.sample_id == image.sample_id
+    assert metric.metric_name == "miou"
+    assert metric.value == pytest.approx(1.0)
+
+
+def test_segmentation_evaluation__raises_on_wrong_annotation_type(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Raises ValueError when a collection contains non-segmentation annotations."""
+    dataset = ImageDataset.create(name="test_dataset")
+    label = create_annotation_label(
+        session=dataset.session, root_collection_id=dataset.collection_id
+    )
+    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
+        annotation_collection_name="gt",
+    )
+
+    with pytest.raises(ValueError, match="segmentation_mask"):
+        dataset.evaluate().semantic_segmentation(
+            name="seg-run-1",
+            gt_annotation_source="gt",
+            pred_annotation_source="pred",
         )
 
 

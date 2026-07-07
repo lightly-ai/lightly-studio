@@ -5,10 +5,9 @@ from __future__ import annotations
 from collections.abc import Iterable
 from uuid import UUID
 
-from sqlalchemy import insert
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import Session, select
 
+from lightly_studio.database import db_insert
 from lightly_studio.models.annotation_collection_coverage import (
     AnnotationCollectionCoverageTable,
 )
@@ -42,18 +41,9 @@ def add_many(
         }
         for sample_id in ids
     ]
-
-    # Use database-level conflict handling (idempotent across both Postgres and DuckDB).
-    dialect_name = session.get_bind().dialect.name if session.get_bind() else None
-    if dialect_name == "postgresql":
-        session.exec(
-            pg_insert(AnnotationCollectionCoverageTable).values(rows).on_conflict_do_nothing()
-        )
-    else:
-        # DuckDB and SQLite: use OR IGNORE prefix.
-        session.exec(
-            insert(AnnotationCollectionCoverageTable).values(rows).prefix_with("OR IGNORE")
-        )
+    db_insert.insert_ignoring_conflicts(
+        session=session, table=AnnotationCollectionCoverageTable, rows=rows
+    )
     session.flush()
 
 

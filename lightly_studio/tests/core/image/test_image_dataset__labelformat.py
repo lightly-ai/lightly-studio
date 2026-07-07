@@ -12,12 +12,19 @@ from labelformat.model.object_detection import (
     ImageObjectDetection,
     SingleObjectDetection,
 )
+from pytest_mock import MockerFixture
 from sqlmodel import select
 
 from lightly_studio import ImageDataset
+from lightly_studio.core.image import add_images
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.image import ImageTable
+
+
+@pytest.fixture
+def assume_referenced_files_exist(mocker: MockerFixture) -> None:
+    mocker.patch.object(add_images, "_file_exists", return_value=True)
 
 
 class TestDataset:
@@ -25,6 +32,7 @@ class TestDataset:
     def test_from_labelformat(
         self,
         patch_collection: None,  # noqa: ARG002
+        assume_referenced_files_exist: None,  # noqa: ARG002
         with_confidence: bool,
     ) -> None:
         # Arrange
@@ -91,6 +99,7 @@ class TestDataset:
     def test_from_labelformat__duplication(
         self,
         patch_collection: None,  # noqa: ARG002
+        assume_referenced_files_exist: None,  # noqa: ARG002
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         # Arrange
@@ -98,7 +107,7 @@ class TestDataset:
         image_folder_path = "/fake/path/images"
         label_input = _get_input(filename="image.jpg")
 
-        caplog.set_level(logging.INFO, logger="lightly_studio.core.loading_log")
+        caplog.set_level(logging.INFO, logger="lightly_studio.core.file_outcome_report")
 
         dataset = ImageDataset.create(name=dataset_name)
         dataset.add_samples_from_labelformat(
@@ -125,13 +134,14 @@ class TestDataset:
         assert len(list(dataset)) == 2
 
         log_text = caplog.text
-        assert "Added 0 out of 1 new samples to the dataset." in log_text
-        assert "Examples paths that were not added to the dataset:" in log_text
+        assert "added=0, already_present=1" in log_text
+        assert "Example already_present paths:" in log_text
         assert "/fake/path/images/image.jpg" in log_text
 
     def test_from_labelformat__annotations_synced_images(
         self,
         patch_collection: None,  # noqa: ARG002
+        assume_referenced_files_exist: None,  # noqa: ARG002
     ) -> None:
         # This test is to ensure that the images and annotations stay in sync while loading.
         # In the past, the image file paths got processed separately causing non matching pairs
@@ -162,9 +172,40 @@ class TestDataset:
         assert samples[1].file_name == "020.jpg"
         assert annotation.annotation_label_name == "cat"
 
+    def test_from_labelformat__limit(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        assume_referenced_files_exist: None,  # noqa: ARG002
+    ) -> None:
+        label_input = _get_input_multi()  # two images
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_samples_from_labelformat(
+            input_labels=label_input,
+            images_path="/fake/path/images",
+            limit=1,
+        )
+
+        assert len(list(dataset)) == 1
+
+    @pytest.mark.parametrize("limit", [0, -1])
+    def test_from_labelformat__invalid_limit(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        limit: int,
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        with pytest.raises(ValueError, match=r"limit must be greater than 0"):
+            dataset.add_samples_from_labelformat(
+                input_labels=_get_input(),
+                images_path="/fake/path/images",
+                limit=limit,
+            )
+
     def test_from_labelformat__dont_embed(
         self,
         patch_collection: None,  # noqa: ARG002
+        assume_referenced_files_exist: None,  # noqa: ARG002
     ) -> None:
         dataset_name = "test_dataset"
         image_folder_path = "/fake/path/images"

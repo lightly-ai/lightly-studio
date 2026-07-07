@@ -1,4 +1,7 @@
 export { default as Alert } from '$lib/components/Alert/index.svelte';
+export { default as Button } from '$lib/components/Button/Button.svelte';
+export { Select } from '$lib/components/Select';
+export type { SelectItem, SelectSize } from '$lib/components/Select';
 export { default as AnnotationsGrid } from '$lib/components/AnnotationsGrid/AnnotationsGrid.svelte';
 export { default as AnnotationsGridItem } from '$lib/components/AnnotationsGrid/AnnotationsGridItem/AnnotationsGridItem.svelte';
 export { default as Card } from '$lib/components/Card/Card.svelte';
@@ -20,13 +23,14 @@ export { default as AnnotationCanvas } from '$lib/components/AnnotationCanvas/An
 export { default as SampleAnnotations } from '$lib/components/SampleAnnotations/index.svelte';
 export { default as ImageDetails } from '$lib/components/SampleDetails/ImageDetails.svelte';
 export { default as SampleDetailsSidePanel } from '$lib/components/SampleDetails/SampleDetailsSidePanel/SampleDetailsSidePanel.svelte';
+export { default as SampleDetailsAnnotationSourceGroup } from '$lib/components/SampleDetails/SampleDetailsAnnotationSourceGroup/SampleDetailsAnnotationSourceGroup.svelte';
+export { default as AnnotationSourcePill } from '$lib/components/AnnotationSourcePill/AnnotationSourcePill.svelte';
 export { default as SampleImage } from '$lib/components/SampleImage/index.svelte';
 export { default as Images } from '$lib/components/Images/Images.svelte';
 export { default as SelectableBox } from '$lib/components/SelectableBox/SelectableBox.svelte';
 export { SettingsDialog } from '$lib/components/Settings/';
 export { default as TagsMenu } from '$lib/components/TagsMenu/TagsMenu.svelte';
 export { default as UserInfo } from '$lib/components/UserInfo/index.svelte';
-export { default as CreateSelectionDialog } from '$lib/components/Selection/CreateSelectionDialog.svelte';
 export { default as ClassifiersMenu } from '$lib/components/FewShotClassifier/ClassifiersMenu.svelte';
 export { default as CreateClassifierDialog } from '$lib/components/FewShotClassifier/CreateClassifierDialog.svelte';
 export { default as RefineClassifierDialog } from '$lib/components/FewShotClassifier/RefineClassifierDialog.svelte';
@@ -43,6 +47,7 @@ export { default as VideoPlayer } from '$lib/components/VideoPlayer/VideoPlayer.
 export { default as VideoSampleMetadata } from '$lib/components/VideoSampleMetadata/VideoSampleMetadata.svelte';
 export { default as GridHeader } from '$lib/components/GridHeader/GridHeader.svelte';
 export { default as DatasetGridHeader } from '$lib/components/DatasetGridHeader/DatasetGridHeader.svelte';
+export { default as SidePanelTabs } from '$lib/components/SidePanelTabs/SidePanelTabs.svelte';
 export { default as CaptionsItem } from '$lib/components/Captions/CaptionsItem/CaptionsItem.svelte';
 export { default as Typography } from '$lib/components/Typography/Typography.svelte';
 export { default as GroupsGrid } from '$lib/components/GroupsGrid/GroupsGrid.svelte';
@@ -61,3 +66,4 @@ export { default as CollectionSearch } from '$lib/components/CollectionSearch/Co
 export { default as CollectionSearchImage } from '$lib/components/CollectionSearch/CollectionSearchImage/CollectionSearchImage.svelte';
 export { default as CollectionSearchInput } from '$lib/components/CollectionSearch/SearchInput/CollectionSearchInput.svelte';
 export { default as OrderBy } from '$lib/components/OrderBy/OrderBy.svelte';
+export { default as SamplingCombinationDialog } from '$lib/components/Sampling/SamplingCombinationDialog.svelte';

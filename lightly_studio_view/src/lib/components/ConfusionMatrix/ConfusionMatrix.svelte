@@ -9,9 +9,15 @@
         VisualMapComponent
     } from 'echarts/components';
     import { CanvasRenderer } from 'echarts/renderers';
-    import { buildEchartsOption, unifyLabels } from './buildEchartsOption';
+    import { buildEchartsOption } from './buildEchartsOption';
     import ConfusionMatrixLegend from './ConfusionMatrixLegend.svelte';
-    import type { ConfusionMatrix } from './types';
+    import { OTHER_LABEL } from './topNMatrix';
+    import {
+        NO_GROUND_TRUTH_ROW_LABEL,
+        NO_PREDICTION_COL_LABEL,
+        type ConfusionCellSelection,
+        type ConfusionMatrix
+    } from './types';
 
     echarts.use([
         HeatmapChart,
@@ -25,15 +31,35 @@
     interface Props {
         matrix: ConfusionMatrix;
         showLegend?: boolean;
+        /** Enables inside (scroll/pinch) zoom on both axes. */
+        zoomable?: boolean;
+        /** Color intensity multiplier (> 0, default 1). */
+        colorIntensity?: number;
+        /** Map color from log10(count) instead of the raw count (default true). */
+        logScale?: boolean;
+        /**
+         * Called when a clickable cell is selected: a real class-by-class cell, a
+         * false-positive cell (synthetic "(no ground truth)" row × real class), or a
+         * false-negative cell (real class × synthetic "(no prediction)" column). The
+         * synthetic FP×FN corner and "(other)" aggregate cells are ignored.
+         */
+        onCellClick?: (cell: ConfusionCellSelection) => void;
     }
 
-    const { matrix, showLegend = false }: Props = $props();
+    const {
+        matrix,
+        showLegend = false,
+        zoomable = false,
+        colorIntensity = 1,
+        logScale = true,
+        onCellClick
+    }: Props = $props();
 
     let container: HTMLDivElement | undefined = $state();
     let chart: echarts.ECharts | null = $state(null);
 
-    const rowCount = $derived(unifyLabels(matrix.row_labels, matrix.col_labels).length);
-    const heightPx = $derived(Math.max(320, rowCount * 48 + 180));
+    // 320px floor keeps small matrices readable; 18px per row + 210px for axis/grid margins
+    const heightPx = $derived(Math.max(320, matrix.row_labels.length * 18 + 210));
 
     const maxCount = $derived(
         Math.max(1, ...matrix.counts.flatMap((row) => row).filter((n) => n > 0))
@@ -43,6 +69,19 @@
         if (!container) return;
         const instance = echarts.init(container, null, { renderer: 'canvas' });
         chart = instance;
+        // Cells carry [pred, gt, count, log10(count)]; resolve back to labels. Real
+        // class cells, the FP row × real class, and a real class × FN column are all
+        // clickable. Skip the "(other)" aggregates and the FP×FN corner, which pairs
+        // two synthetic axes and selects no class.
+        instance.on('click', (params: { value?: unknown }) => {
+            if (!Array.isArray(params.value)) return;
+            const [predLabel, gtLabel] = params.value as [string, string, number, number];
+            if (predLabel === OTHER_LABEL || gtLabel === OTHER_LABEL) return;
+            const isFpRow = gtLabel === NO_GROUND_TRUTH_ROW_LABEL;
+            const isFnCol = predLabel === NO_PREDICTION_COL_LABEL;
+            if (isFpRow && isFnCol) return;
+            onCellClick?.({ gtLabel, predLabel });
+        });
         const resizeObserver = new ResizeObserver(() => instance.resize());
         resizeObserver.observe(container);
         return () => {
@@ -54,7 +93,7 @@
 
     $effect(() => {
         if (!chart) return;
-        chart.setOption(buildEchartsOption(matrix), true);
+        chart.setOption(buildEchartsOption(matrix, { zoomable, colorIntensity, logScale }), true);
     });
 
     onDestroy(() => chart?.dispose());
@@ -72,6 +111,6 @@
         data-testid="confusion-matrix"
     ></div>
     {#if showLegend}
-        <ConfusionMatrixLegend {maxCount} />
+        <ConfusionMatrixLegend {maxCount} {logScale} />
     {/if}
 {/if}

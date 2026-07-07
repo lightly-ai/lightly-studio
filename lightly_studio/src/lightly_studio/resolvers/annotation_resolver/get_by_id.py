@@ -10,6 +10,7 @@ from sqlmodel import Session, col, select
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
 )
+from lightly_studio.utils import batching
 
 
 def get_by_id(session: Session, annotation_id: UUID) -> AnnotationBaseTable | None:
@@ -31,9 +32,13 @@ def get_by_ids(session: Session, annotation_ids: Sequence[UUID]) -> Sequence[Ann
     Returns:
         A list of annotations matching the provided IDs.
     """
-    results = session.exec(
-        select(AnnotationBaseTable).where(col(AnnotationBaseTable.sample_id).in_(annotation_ids))
-    ).all()
+    results: list[AnnotationBaseTable] = []
+    for batch in batching.batched(items=annotation_ids):
+        results.extend(
+            session.exec(
+                select(AnnotationBaseTable).where(col(AnnotationBaseTable.sample_id).in_(batch))
+            ).all()
+        )
 
     annotation_map = {annotation.sample_id: annotation for annotation in results}
     return [annotation_map[id_] for id_ in annotation_ids if id_ in annotation_map]

@@ -1,7 +1,7 @@
 <script lang="ts">
     import Segment from '$lib/components/Segment/Segment.svelte';
     import { isClassificationAnnotation } from '$lib/services/types';
-    import { formatInteger } from '$lib/utils';
+    import { formatConfidence, formatInteger } from '$lib/utils';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import { ANNOTATION_TYPES } from '$lib/constants';
     import { page } from '$app/state';
@@ -52,6 +52,18 @@
                     value: formatInteger(Math.round(width)) + 'px'
                 },
                 ...annotationsMetadata
+            ];
+        }
+
+        const formattedConfidence = formatConfidence(annotation.confidence);
+        if (formattedConfidence != null) {
+            annotationsMetadata = [
+                ...annotationsMetadata,
+                {
+                    id: 'confidence',
+                    label: 'Confidence:',
+                    value: formattedConfidence
+                }
             ];
         }
 

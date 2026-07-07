@@ -22,7 +22,7 @@ export function enrichWithSchemaDocs<Scope extends keyof typeof SCOPES>(
     if (field) {
         return {
             ...item,
-            detail: `(field) ${SCOPES[scope].title}.${field.name}: ${field.type}`,
+            detail: `${SCOPES[scope].title}.${field.name}: ${field.type}`,
             documentation: { value: field.description }
         };
     }

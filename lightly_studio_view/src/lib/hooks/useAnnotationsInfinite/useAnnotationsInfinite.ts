@@ -1,32 +1,27 @@
-import { readAnnotationsWithPayloadInfiniteOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
+import type { AnnotationUpdateInput } from '$lib/api/lightly_studio_local';
 import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
 import { toast } from 'svelte-sonner';
-import type { AnnotationUpdateInput } from '$lib/api/lightly_studio_local';
 import { writable } from 'svelte/store';
 import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
+import { createAnnotationsInfiniteOptions } from './createAnnotationsInfiniteOptions';
+import type { AnnotationsInfiniteParams } from './types';
 
-export const useAnnotationsInfinite = (
-    getProps: () => Parameters<typeof readAnnotationsWithPayloadInfiniteOptions>[0]
-) => {
+export type { AnnotationsInfiniteParams } from './types';
+
+export const useAnnotationsInfinite = (getParams: () => AnnotationsInfiniteParams) => {
     const isPending = writable(false);
-    const annotations = createInfiniteQuery(() => ({
-        ...readAnnotationsWithPayloadInfiniteOptions(getProps()),
-        getNextPageParam: (lastPage) => {
-            return lastPage.nextCursor || undefined;
-        }
-    }));
+    const annotations = createInfiniteQuery(() => createAnnotationsInfiniteOptions(getParams()));
     const client = useQueryClient();
     const refresh = () => {
-        const options = readAnnotationsWithPayloadInfiniteOptions(getProps());
+        const options = createAnnotationsInfiniteOptions(getParams());
         client.invalidateQueries({ queryKey: options.queryKey });
         client.invalidateQueries({
             queryKey: useImageAnnotationCountsQueryKey
         });
     };
 
-    // collection_id is stable (from route), evaluate once at construction
-    const collection_id = getProps().path.collection_id;
+    const collection_id = getParams().collection_id;
     const { updateAnnotations } = useUpdateAnnotationsMutation({
         collectionId: collection_id
     });

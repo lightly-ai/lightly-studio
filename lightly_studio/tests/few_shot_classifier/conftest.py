@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+import numpy as np
 import pytest
 from pytest_mock import MockerFixture
 from sqlmodel import Session
@@ -27,15 +28,24 @@ from lightly_studio.resolvers import embedding_model_resolver
 def fine_tuning_embeddings() -> list[SampleEmbeddingTable]:
     """Create test embeddings."""
     high_values = [
-        SampleEmbeddingTable(sample_id=uuid4(), embedding=[0.95, 0.95, 0.95]) for _ in range(12)
+        SampleEmbeddingTable(
+            sample_id=uuid4(), embedding=np.array([0.95, 0.95, 0.95], dtype=np.float32)
+        )
+        for _ in range(12)
     ]
 
     mid_values = [
-        SampleEmbeddingTable(sample_id=uuid4(), embedding=[0.4, 0.4, 0.4]) for _ in range(10)
+        SampleEmbeddingTable(
+            sample_id=uuid4(), embedding=np.array([0.4, 0.4, 0.4], dtype=np.float32)
+        )
+        for _ in range(10)
     ]
 
     low_values = [
-        SampleEmbeddingTable(sample_id=uuid4(), embedding=[0.2, 0.2, 0.2]) for _ in range(10)
+        SampleEmbeddingTable(
+            sample_id=uuid4(), embedding=np.array([0.2, 0.2, 0.2], dtype=np.float32)
+        )
+        for _ in range(10)
     ]
 
     return high_values + mid_values + low_values
@@ -76,7 +86,11 @@ def classifier(
     mocker.patch.object(
         few_shot_classifier.classifier_manager,
         "_create_annotated_embeddings",
-        return_value=[AnnotatedEmbedding(embedding=[0.1, 0.2, 0.3], annotation="class1")],
+        return_value=[
+            AnnotatedEmbedding(
+                embedding=np.array([0.1, 0.2, 0.3], dtype=np.float32), annotation="class1"
+            )
+        ],
     )
     input_clases = ["class1"]
     # Create a classifier.

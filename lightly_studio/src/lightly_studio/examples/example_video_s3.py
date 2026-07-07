@@ -3,8 +3,8 @@
 from environs import Env
 
 import lightly_studio as ls
-from lightly_studio import db_manager
 from lightly_studio.core.video.video_dataset import VideoDataset
+from lightly_studio.database import db_manager
 
 # Read environment variables
 env = Env()

@@ -40,3 +40,31 @@ def test_get_sample_ids(db_session: Session) -> None:
         ),
     )
     assert filtered_sample_ids == {created_images[1].sample_id}
+
+
+def test_build_sample_ids_query(db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
+    other_collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
+
+    created_images = create_images(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        images=[
+            ImageStub(path="/path/to/small.jpg", width=100, height=100),
+            ImageStub(path="/path/to/large.jpg", width=800, height=800),
+        ],
+    )
+    create_images(
+        db_session=db_session,
+        collection_id=other_collection.collection_id,
+        images=[ImageStub(path="/path/to/other.jpg", width=800, height=800)],
+    )
+
+    query = image_resolver.build_sample_ids_query(collection_id=collection.collection_id)
+    assert set(db_session.exec(query).all()) == {img.sample_id for img in created_images}
+
+    filtered_query = image_resolver.build_sample_ids_query(
+        collection_id=collection.collection_id,
+        filters=ImageFilter(width=FilterDimensions(min=500)),
+    )
+    assert set(db_session.exec(filtered_query).all()) == {created_images[1].sample_id}

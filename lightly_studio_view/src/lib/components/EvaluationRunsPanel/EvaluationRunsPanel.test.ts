@@ -3,13 +3,39 @@ import { describe, expect, it, vi } from 'vitest';
 import type { EvaluationRunView } from '$lib/api/lightly_studio_local/types.gen';
 import EvaluationRunsPanel from './EvaluationRunsPanel.svelte';
 
+vi.mock(
+    './EvaluationRunItem/EvaluationRunConfusionMatrixSection/EvaluationRunConfusionMatrixSection.svelte',
+    async () => {
+        const module =
+            await import('./EvaluationRunItem/EvaluationRunConfusionMatrixSection/EvaluationRunConfusionMatrixSection.mock.svelte');
+        return { default: module.default };
+    }
+);
+
+vi.mock('./TriggerEvaluationDialog/TriggerEvaluationDialog.svelte', async () => {
+    const module = await import('./TriggerEvaluationDialog/TriggerEvaluationDialog.mock.svelte');
+    return { default: module.default };
+});
+
 const noop = () => {};
+
+const makeRun = (
+    overrides: Partial<EvaluationRunView> & Pick<EvaluationRunView, 'id' | 'name'>
+): EvaluationRunView => ({
+    evaluation_run_configuration: {},
+    created_at: new Date('2026-01-01T00:00:00Z'),
+    gt_annotation_source: 'gt_v1',
+    pred_annotation_source: 'pred_v1',
+    ...overrides
+});
 
 type Props = {
     onClose: () => void;
     evaluationRuns: EvaluationRunView[];
     isLoading: boolean;
     error?: string;
+    datasetId?: string;
+    collectionId?: string;
 };
 
 const renderPanel = (overrides: Partial<Props> = {}) =>
@@ -47,85 +73,66 @@ describe('EvaluationRunsPanel', () => {
 
     it('renders one item per run', () => {
         const runs: EvaluationRunView[] = [
-            {
-                id: 'run-a',
-                name: 'Run A',
-                evaluation_run_configuration: {},
-                created_at: new Date('2026-01-01T00:00:00Z')
-            },
-            {
-                id: 'run-b',
-                name: 'Run B',
-                evaluation_run_configuration: {},
-                created_at: new Date('2026-02-01T00:00:00Z')
-            }
+            makeRun({ id: 'run-a', name: 'Run A' }),
+            makeRun({ id: 'run-b', name: 'Run B' })
         ];
         renderPanel({ evaluationRuns: runs });
 
-        const items = screen.getAllByTestId('evaluation-run-item');
-        expect(items).toHaveLength(2);
+        expect(screen.getByTestId('evaluation-run-item-Run A')).toBeInTheDocument();
+        expect(screen.getByTestId('evaluation-run-item-Run B')).toBeInTheDocument();
         expect(screen.getByText('Run A')).toBeInTheDocument();
         expect(screen.getByText('Run B')).toBeInTheDocument();
     });
 
     it('shows only the expanded run and collapses it on a second click', async () => {
         const runs: EvaluationRunView[] = [
-            {
+            makeRun({
                 id: 'run-a',
                 name: 'Run A',
-                evaluation_run_configuration: { iou_threshold: 0.5 },
-                created_at: new Date('2026-01-01T00:00:00Z')
-            },
-            {
+                evaluation_run_configuration: { iou_threshold: 0.5 }
+            }),
+            makeRun({
                 id: 'run-b',
                 name: 'Run B',
-                evaluation_run_configuration: { iou_threshold: 0.75 },
-                created_at: new Date('2026-02-01T00:00:00Z')
-            }
+                evaluation_run_configuration: { iou_threshold: 0.75 }
+            })
         ];
         renderPanel({ evaluationRuns: runs });
 
-        const [itemA] = screen.getAllByTestId('evaluation-run-item');
+        const itemA = screen.getByTestId('evaluation-run-item-Run A');
 
         await fireEvent.click(itemA);
-        const items = screen.getAllByTestId('evaluation-run-item');
-        expect(items).toHaveLength(1);
-        expect(items[0]).toHaveAttribute('aria-expanded', 'true');
+        expect(screen.getByTestId('evaluation-run-item-Run A')).toHaveAttribute(
+            'aria-expanded',
+            'true'
+        );
         expect(screen.getAllByTestId('evaluation-run-details')).toHaveLength(1);
         expect(screen.queryByText('Run B')).not.toBeInTheDocument();
 
-        await fireEvent.click(items[0]);
+        await fireEvent.click(screen.getByTestId('evaluation-run-item-Run A'));
         expect(screen.queryByTestId('evaluation-run-details')).not.toBeInTheDocument();
-        expect(screen.getAllByTestId('evaluation-run-item')).toHaveLength(2);
+        expect(screen.getByTestId('evaluation-run-item-Run A')).toBeInTheDocument();
+        expect(screen.getByTestId('evaluation-run-item-Run B')).toBeInTheDocument();
         expect(screen.getByText('Run B')).toBeInTheDocument();
     });
 
     it('renders a back button when a run is expanded and collapses on click', async () => {
         const runs: EvaluationRunView[] = [
-            {
-                id: 'run-a',
-                name: 'Run A',
-                evaluation_run_configuration: {},
-                created_at: new Date('2026-01-01T00:00:00Z')
-            },
-            {
-                id: 'run-b',
-                name: 'Run B',
-                evaluation_run_configuration: {},
-                created_at: new Date('2026-02-01T00:00:00Z')
-            }
+            makeRun({ id: 'run-a', name: 'Run A' }),
+            makeRun({ id: 'run-b', name: 'Run B' })
         ];
         renderPanel({ evaluationRuns: runs });
 
         expect(screen.queryByTestId('evaluation-runs-back-button')).not.toBeInTheDocument();
 
-        await fireEvent.click(screen.getAllByTestId('evaluation-run-item')[0]);
+        await fireEvent.click(screen.getByTestId('evaluation-run-item-Run A'));
         const backButton = screen.getByTestId('evaluation-runs-back-button');
         expect(backButton).toBeInTheDocument();
 
         await fireEvent.click(backButton);
         expect(screen.queryByTestId('evaluation-runs-back-button')).not.toBeInTheDocument();
-        expect(screen.getAllByTestId('evaluation-run-item')).toHaveLength(2);
+        expect(screen.getByTestId('evaluation-run-item-Run A')).toBeInTheDocument();
+        expect(screen.getByTestId('evaluation-run-item-Run B')).toBeInTheDocument();
         expect(screen.queryByTestId('evaluation-run-details')).not.toBeInTheDocument();
     });
 
@@ -135,5 +142,21 @@ describe('EvaluationRunsPanel', () => {
 
         await fireEvent.click(screen.getByTestId('evaluation-runs-close-button'));
         expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('hides the add button when datasetId or collectionId is missing', () => {
+        renderPanel();
+
+        expect(screen.queryByTestId('evaluation-runs-add-button')).not.toBeInTheDocument();
+    });
+
+    it('shows the add button and opens the trigger dialog when ids are provided', async () => {
+        renderPanel({ datasetId: 'dataset-1', collectionId: 'collection-1' });
+
+        const addButton = screen.getByTestId('evaluation-runs-add-button');
+        expect(addButton).toBeInTheDocument();
+
+        await fireEvent.click(addButton);
+        expect(screen.getByTestId('trigger-evaluation-dialog-mock')).toBeInTheDocument();
     });
 });

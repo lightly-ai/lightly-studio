@@ -32,7 +32,7 @@ class TestRandomForestClassifier:
         annotated_embeddings = [
             AnnotatedEmbedding(
                 # 512-dimensional embedding
-                embedding=[uniform(0.0, 1.0) for _ in range(512)],
+                embedding=np.array([uniform(0.0, 1.0) for _ in range(512)], dtype=np.float32),
                 # Binary labels (0 or 1)
                 annotation=str(randint(0, 1)),
             )
@@ -59,23 +59,23 @@ class TestRandomForestClassifier:
         # Step 1: Define embeddings for training
         annotated_embeddings = [
             AnnotatedEmbedding(
-                embedding=[0.1, 0.2],
+                embedding=np.array([0.1, 0.2], dtype=np.float32),
                 annotation="cat",
             ),
             AnnotatedEmbedding(
-                embedding=[0.11, 0.12],
+                embedding=np.array([0.11, 0.12], dtype=np.float32),
                 annotation="cat",
             ),
             AnnotatedEmbedding(
-                embedding=[0.12, 0.22],
+                embedding=np.array([0.12, 0.22], dtype=np.float32),
                 annotation="cat",
             ),
             AnnotatedEmbedding(
-                embedding=[0.91, 0.92],
+                embedding=np.array([0.91, 0.92], dtype=np.float32),
                 annotation="dog",
             ),
             AnnotatedEmbedding(
-                embedding=[1.0, 0.92],
+                embedding=np.array([1.0, 0.92], dtype=np.float32),
                 annotation="dog",
             ),
         ]
@@ -83,8 +83,8 @@ class TestRandomForestClassifier:
         classifier.train(annotated_embeddings)
 
         test_embeddings = [
-            [0.15, 0.25],
-            [0.99, 0.8],
+            np.array([0.15, 0.25], dtype=np.float32),
+            np.array([0.99, 0.8], dtype=np.float32),
         ]
         predictions = classifier.predict(test_embeddings)
         assert len(predictions) == len(test_embeddings)
@@ -109,15 +109,15 @@ class TestRandomForestClassifier:
         # Step 1: Define embeddings for training
         annotated_embeddings = [
             AnnotatedEmbedding(
-                embedding=[0.1, 0.2],
+                embedding=np.array([0.1, 0.2], dtype=np.float32),
                 annotation="cat",
             ),
             AnnotatedEmbedding(
-                embedding=[0.11, 0.12],
+                embedding=np.array([0.11, 0.12], dtype=np.float32),
                 annotation="cat",
             ),
             AnnotatedEmbedding(
-                embedding=[0.12, 0.22],
+                embedding=np.array([0.12, 0.22], dtype=np.float32),
                 annotation="cat",
             ),
         ]
@@ -125,8 +125,8 @@ class TestRandomForestClassifier:
         classifier.train(annotated_embeddings)
 
         test_embeddings = [
-            [0.15, 0.25],
-            [0.99, 0.8],
+            np.array([0.15, 0.25], dtype=np.float32),
+            np.array([0.99, 0.8], dtype=np.float32),
         ]
         predictions = classifier.predict(test_embeddings)
         assert len(predictions) == len(test_embeddings)
@@ -162,11 +162,11 @@ class TestRandomForestClassifier:
         # Step 1: Define embeddings for training
         annotated_embeddings = [
             AnnotatedEmbedding(
-                embedding=[0.1, 0.2],
+                embedding=np.array([0.1, 0.2], dtype=np.float32),
                 annotation="cat",
             ),
             AnnotatedEmbedding(
-                embedding=[0.11, 0.12],
+                embedding=np.array([0.11, 0.12], dtype=np.float32),
                 annotation="dog",
             ),
         ]
@@ -194,29 +194,29 @@ class TestRandomForestClassifier:
         # Define embeddings for training
         annotated_embeddings = [
             AnnotatedEmbedding(
-                embedding=[0.1, 0.2],
+                embedding=np.array([0.1, 0.2], dtype=np.float32),
                 annotation="cat",
             ),
             AnnotatedEmbedding(
-                embedding=[0.11, 0.12],
+                embedding=np.array([0.11, 0.12], dtype=np.float32),
                 annotation="cat",
             ),
             AnnotatedEmbedding(
-                embedding=[0.12, 0.22],
+                embedding=np.array([0.12, 0.22], dtype=np.float32),
                 annotation="cat",
             ),
             AnnotatedEmbedding(
-                embedding=[0.91, 0.92],
+                embedding=np.array([0.91, 0.92], dtype=np.float32),
                 annotation="dog",
             ),
             AnnotatedEmbedding(
-                embedding=[1.0, 0.92],
+                embedding=np.array([1.0, 0.92], dtype=np.float32),
                 annotation="dog",
             ),
         ]
         test_embeddings = [
-            [0.15, 0.25],
-            [0.99, 0.8],
+            np.array([0.15, 0.25], dtype=np.float32),
+            np.array([0.99, 0.8], dtype=np.float32),
         ]
 
         classes = ["cat", "snake", "bird", "dog"]
@@ -261,17 +261,11 @@ class TestRandomForestClassifier:
         # Step 1: Define embeddings for training
         annotated_embeddings = [
             AnnotatedEmbedding(
-                embedding=[
-                    0.1,
-                    0.2,
-                    0.3,
-                    0.4,
-                    0.5,
-                ],
+                embedding=np.array([0.1, 0.2, 0.3, 0.4, 0.5], dtype=np.float32),
                 annotation="0",  # Class 0
             ),
             AnnotatedEmbedding(
-                embedding=[1.0, 0.9, 0.8, 0.7, 0.6],
+                embedding=np.array([1.0, 0.9, 0.8, 0.7, 0.6], dtype=np.float32),
                 annotation="1",  # Class 1
             ),
         ]
@@ -285,8 +279,8 @@ class TestRandomForestClassifier:
             buffer=None,
         )
         test_embeddings = [
-            [0.15, 0.25, 0.35, 0.145, 0.155],
-            [0.9, 0.8, 0.7, 0.6, 0.6],
+            np.array([0.15, 0.25, 0.35, 0.145, 0.155], dtype=np.float32),
+            np.array([0.9, 0.8, 0.7, 0.6, 0.6], dtype=np.float32),
         ]
         predictions = classifier.predict(test_embeddings)
         predictions_exported_model = loaded_classifier.predict(test_embeddings)
@@ -310,11 +304,11 @@ class TestRandomForestClassifier:
         # Step 1: Define embeddings for training
         annotated_embeddings = [
             AnnotatedEmbedding(
-                embedding=[0.1, 0.2, 0.3, 0.4, 0.5],
+                embedding=np.array([0.1, 0.2, 0.3, 0.4, 0.5], dtype=np.float32),
                 annotation="0",  # Class 0
             ),
             AnnotatedEmbedding(
-                embedding=[1.0, 0.9, 0.8, 0.7, 0.6],
+                embedding=np.array([1.0, 0.9, 0.8, 0.7, 0.6], dtype=np.float32),
                 annotation="1",  # Class 1
             ),
         ]
@@ -324,8 +318,8 @@ class TestRandomForestClassifier:
         classifier.export(export_path, export_type="lightly")
 
         test_embeddings = [
-            [0.15, 0.25, 0.35, 0.145, 0.155],
-            [0.9, 0.8, 0.7, 0.6, 0.6],
+            np.array([0.15, 0.25, 0.35, 0.145, 0.155], dtype=np.float32),
+            np.array([0.9, 0.8, 0.7, 0.6, 0.6], dtype=np.float32),
         ]
         exported_classifier = load_lightly_random_forest(path=export_path, buffer=None)
 
@@ -365,7 +359,7 @@ class TestRandomForestClassifier:
         export_path = Path(tmp_path / "test_model_lightly.pkl")
         classifier.export(export_path, export_type="lightly")
 
-        test_embeddings = [rng.random(n_features).tolist() for _ in range(1000)]
+        test_embeddings = [rng.random(n_features).astype(np.float32) for _ in range(1000)]
         exported_classifier = load_lightly_random_forest(path=export_path, buffer=None)
 
         predictions = classifier.predict(test_embeddings)
@@ -386,19 +380,19 @@ class TestRandomForestClassifier:
         # Create training data
         annotated_embeddings = [
             AnnotatedEmbedding(
-                embedding=[0.1, 0.2, 0.3, 0.4, 0.5],
+                embedding=np.array([0.1, 0.2, 0.3, 0.4, 0.5], dtype=np.float32),
                 annotation="0",
             ),
             AnnotatedEmbedding(
-                embedding=[1.0, 0.9, 0.8, 0.7, 0.6],
+                embedding=np.array([1.0, 0.9, 0.8, 0.7, 0.6], dtype=np.float32),
                 annotation="1",
             ),
         ]
 
         classifier.train(annotated_embeddings)
         test_embeddings = [
-            [0.15, 0.25, 0.35, 0.145, 0.155],
-            [0.9, 0.8, 0.7, 0.6, 0.6],
+            np.array([0.15, 0.25, 0.35, 0.145, 0.155], dtype=np.float32),
+            np.array([0.9, 0.8, 0.7, 0.6, 0.6], dtype=np.float32),
         ]
 
         # Test sklearn export format.

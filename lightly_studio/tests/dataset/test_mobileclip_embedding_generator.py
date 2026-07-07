@@ -5,7 +5,9 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from PIL import Image
 
+from lightly_studio.dataset.embedding_generator import ImageCrop
 from lightly_studio.dataset.mobileclip_embedding_generator import (
     MobileCLIPEmbeddingGenerator,
 )
@@ -54,6 +56,27 @@ class TestMobileCLIPEmbeddingGenerator:
         assert np.isclose(cat_embedding_normed[1], 0.0563, atol=1e-4)
         assert np.isclose(cat_embedding_normed[2], -0.0272, atol=1e-4)
         assert np.isclose(cat_embedding_normed[3], 0.0319, atol=1e-4)
+
+    def test_embed_image_crops__empty_input(self) -> None:
+        mobileclip = MobileCLIPEmbeddingGenerator()
+        embeddings = mobileclip.embed_image_crops([])
+
+        assert embeddings.shape == (0, 512)
+
+    def test_embed_image_crops__full_image_crop_matches_embed_images(self) -> None:
+        mobileclip = MobileCLIPEmbeddingGenerator()
+        cat_image_path = FIXTURES_DIR / "cat.jpg"
+        with Image.open(cat_image_path) as image:
+            width, height = image.size
+
+        full_crop = ImageCrop(filepath=str(cat_image_path), x=0, y=0, width=width, height=height)
+        crop_embeddings = mobileclip.embed_image_crops([full_crop])
+        image_embeddings = mobileclip.embed_images([str(cat_image_path)])
+
+        assert crop_embeddings.shape == (1, 512)
+        # A crop covering the entire image is preprocessed and encoded identically
+        # to the full image, so the embeddings must match.
+        assert np.allclose(crop_embeddings[0], image_embeddings[0], atol=1e-4)
 
     def test_classification(self) -> None:
         """End-to-end test for embedding consistency.

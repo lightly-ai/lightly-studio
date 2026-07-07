@@ -2,10 +2,14 @@
 # TODO(Michal, 11/2025): Move to image_resolver once CollectionTable.get_samples() is removed.
 
 from typing import Literal, Optional
+from uuid import UUID
 
 from pydantic import BaseModel
+from sqlmodel import select
+from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.models.image import ImageTable
+from lightly_studio.resolvers.grid_filter_base import GridFilterBase
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.type_definitions import QueryType
 
@@ -17,7 +21,7 @@ class FilterDimensions(BaseModel):
     max: Optional[int] = None
 
 
-class ImageFilter(BaseModel):
+class ImageFilter(GridFilterBase):
     """Encapsulates filter parameters for querying samples."""
 
     filter_type: Literal["image"] = "image"
@@ -49,3 +53,6 @@ class ImageFilter(BaseModel):
             if self.height.max is not None:
                 query = query.where(ImageTable.height <= self.height.max)
         return query
+
+    def _select_sample_ids(self) -> SelectOfScalar[UUID]:
+        return select(ImageTable.sample_id).join(ImageTable.sample)

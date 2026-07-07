@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 from uuid import UUID
 
@@ -10,6 +11,17 @@ import numpy as np
 from numpy.typing import NDArray
 
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
+
+
+@dataclass(frozen=True)
+class ImageCrop:
+    """Image crop to embed."""
+
+    filepath: str
+    x: int
+    y: int
+    width: int
+    height: int
 
 
 @runtime_checkable
@@ -64,6 +76,21 @@ class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
         Returns:
             A numpy array representing the generated embeddings
             in the same order as the input file paths.
+        """
+        ...
+
+    def embed_image_crops(
+        self, image_crops: list[ImageCrop], show_progress: bool = True
+    ) -> NDArray[np.float32]:
+        """Generate embeddings for image crops.
+
+        Args:
+            image_crops: A list of image crop definitions to embed.
+            show_progress: Whether to show a progress bar during embedding.
+
+        Returns:
+            A numpy array representing the generated embeddings in the same order
+            as the input crops.
         """
         ...
 
@@ -126,6 +153,13 @@ class RandomEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator)
         _ = show_progress  # Not used for random embeddings.
         return np.random.rand(len(filepaths), self._dimension).astype(np.float32)
 
+    def embed_image_crops(
+        self, image_crops: list[ImageCrop], show_progress: bool = True
+    ) -> NDArray[np.float32]:
+        """Generate random embeddings for multiple image crops."""
+        _ = show_progress  # Not used for random embeddings.
+        return np.random.rand(len(image_crops), self._dimension).astype(np.float32)
+
     def embed_videos(self, filepaths: list[str]) -> NDArray[np.float32]:
-        """Generate random embeddings for multiple image samples."""
+        """Generate random embeddings for multiple video samples."""
         return np.random.rand(len(filepaths), self._dimension).astype(np.float32)

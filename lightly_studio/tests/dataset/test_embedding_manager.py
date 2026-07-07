@@ -12,6 +12,7 @@ from sqlmodel import Session, select
 
 from lightly_studio.dataset import embedding_manager
 from lightly_studio.dataset.embedding_generator import (
+    ImageCrop,
     ImageEmbeddingGenerator,
     RandomEmbeddingGenerator,
 )
@@ -19,12 +20,22 @@ from lightly_studio.dataset.embedding_manager import (
     EmbeddingManager,
     TextEmbedQuery,
 )
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
-from lightly_studio.resolvers import embedding_model_resolver
-from tests.helpers_resolvers import create_collection
+from lightly_studio.resolvers import (
+    collection_resolver,
+    embedding_model_resolver,
+    sample_embedding_resolver,
+)
+from tests.helpers_resolvers import (
+    create_annotation,
+    create_annotation_label,
+    create_collection,
+    create_image,
+)
 from tests.resolvers.video.helpers import VideoStub, create_videos
 
 
@@ -89,6 +100,11 @@ def test_register_multiple_models(
 
         def embed_images(
             self, filepaths: list[str], show_progress: bool = True
+        ) -> NDArray[np.float32]:
+            raise NotImplementedError()
+
+        def embed_image_crops(
+            self, image_crops: list[ImageCrop], show_progress: bool = True
         ) -> NDArray[np.float32]:
             raise NotImplementedError()
 
@@ -197,11 +213,16 @@ def test_embed_images(
     db_session: Session,
     collection: CollectionTable,
     samples: list[ImageTable],
+    mocker: MockerFixture,
 ) -> None:
     """Test generating and storing image embeddings."""
+    # Use a small batch size so the 10 samples span multiple insertion batches.
+    mocker.patch.object(embedding_manager, "EMBEDDING_INSERTION_BATCH_SIZE", 4)
+    create_many_spy = mocker.spy(sample_embedding_resolver, "create_many")
+
     # Register model
-    embedding_manager = EmbeddingManager()
-    model_id = embedding_manager.register_embedding_model(
+    manager = EmbeddingManager()
+    model_id = manager.register_embedding_model(
         session=db_session,
         embedding_generator=RandomEmbeddingGenerator(),
         collection_id=collection.collection_id,
@@ -210,9 +231,12 @@ def test_embed_images(
 
     # Generate embeddings for samples
     sample_ids = [sample.sample_id for sample in samples]
-    embedding_manager.embed_images(
+    manager.embed_images(
         session=db_session, collection_id=collection.collection_id, sample_ids=sample_ids
     )
+
+    # 10 samples -> 3 batches with sizes 4, 4, and 2
+    assert create_many_spy.call_count == 3
 
     # Verify embeddings were stored in the database
     stored_embeddings = db_session.exec(
@@ -241,6 +265,140 @@ def test_embed_images_with_incompatible_generator(
         manager.embed_images(
             session=db_session, collection_id=collection.collection_id, sample_ids=[uuid4()]
         )
+
+
+@pytest.mark.parametrize(
+    "annotation_type",
+    [AnnotationType.OBJECT_DETECTION, AnnotationType.SEGMENTATION_MASK],
+)
+def test_embed_annotations(
+    db_session: Session,
+    collection: CollectionTable,
+    annotation_type: AnnotationType,
+) -> None:
+    """embed_annotations stores one embedding per croppable annotation, per type."""
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+    create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=annotation_type,
+    )
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+
+    manager = EmbeddingManager()
+    model_id = manager.register_embedding_model(
+        session=db_session,
+        embedding_generator=RandomEmbeddingGenerator(),
+        collection_id=annotation_collection_id,
+        set_as_default=True,
+    ).embedding_model_id
+
+    manager.embed_annotations(
+        session=db_session,
+        annotation_collection_id=annotation_collection_id,
+        embedding_model_id=model_id,
+    )
+
+    stored_embeddings = sample_embedding_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        embedding_model_id=model_id,
+    )
+    assert len(stored_embeddings) == 1
+
+
+def test_embed_annotations_is_idempotent(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """Re-running embed_annotations does not duplicate embeddings."""
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+    create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+    )
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+
+    manager = EmbeddingManager()
+    model_id = manager.register_embedding_model(
+        session=db_session,
+        embedding_generator=RandomEmbeddingGenerator(),
+        collection_id=annotation_collection_id,
+        set_as_default=True,
+    ).embedding_model_id
+
+    manager.embed_annotations(session=db_session, annotation_collection_id=annotation_collection_id)
+    manager.embed_annotations(session=db_session, annotation_collection_id=annotation_collection_id)
+
+    stored_embeddings = sample_embedding_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        embedding_model_id=model_id,
+    )
+    assert len(stored_embeddings) == 1
+
+
+def test_embed_annotations_processes_all_chunks(
+    db_session: Session,
+    collection: CollectionTable,
+    mocker: MockerFixture,
+) -> None:
+    """All annotations are embedded even when they span multiple chunks."""
+    # Force several chunks.
+    mocker.patch.object(embedding_manager, "ANNOTATION_EMBED_BATCH_SIZE", 2)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+    for index in range(3):
+        image = create_image(
+            session=db_session,
+            collection_id=collection.collection_id,
+            file_path_abs=f"/path/to/sample_{index}.png",
+        )
+        create_annotation(
+            session=db_session,
+            collection_id=collection.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=label.annotation_label_id,
+        )
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+
+    manager = EmbeddingManager()
+    model_id = manager.register_embedding_model(
+        session=db_session,
+        embedding_generator=RandomEmbeddingGenerator(),
+        collection_id=annotation_collection_id,
+        set_as_default=True,
+    ).embedding_model_id
+
+    manager.embed_annotations(
+        session=db_session,
+        annotation_collection_id=annotation_collection_id,
+        embedding_model_id=model_id,
+    )
+
+    stored_embeddings = sample_embedding_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        embedding_model_id=model_id,
+    )
+    assert len(stored_embeddings) == 3
 
 
 def test_get_valid_model_id_without_default_model() -> None:
@@ -343,6 +501,46 @@ def test_load_or_get_default_model(
     )
     assert model_id == second_id
     mock_load.assert_called_once_with(sample_type=SampleType.IMAGE)  # still only one call
+
+
+def test_load_or_get_default_model__shares_generator_across_collections(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """An annotation child collection reuses the parent's loaded generator.
+
+    The generator weights are loaded once, but each collection still gets its
+    own embedding-model record and id.
+    """
+    image_collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
+    annotation_collection = create_collection(
+        session=db_session,
+        parent_collection_id=image_collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+    manager = EmbeddingManager()
+
+    mock_load = mocker.patch.object(
+        embedding_manager,
+        "_load_embedding_generator_from_env",
+        return_value=RandomEmbeddingGenerator(),
+    )
+
+    annotation_model_id = manager.load_or_get_default_model(
+        session=db_session, collection_id=annotation_collection.collection_id
+    )
+    image_model_id = manager.load_or_get_default_model(
+        session=db_session, collection_id=image_collection.collection_id
+    )
+    assert image_model_id is not None
+    assert annotation_model_id is not None
+
+    # The generator is loaded only once and shared between both collections.
+    mock_load.assert_called_once_with(sample_type=SampleType.IMAGE)
+    assert manager._models[image_model_id] is manager._models[annotation_model_id]
+
+    # Each collection still owns a distinct embedding-model record.
+    assert image_model_id != annotation_model_id
 
 
 def test_load_or_get_default_model__cant_load(

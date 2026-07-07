@@ -24,6 +24,7 @@ def test_get_settings_creates_default_settings(
     assert settings.show_annotation_text_labels is False
     assert settings.show_sample_filenames is False
     assert settings.show_bounding_boxes_for_segmentation is True
+    assert settings.enforce_coloring_by_class is False
     assert settings.key_toolbar_brush == "r"
     assert settings.key_toolbar_eraser == "x"
 
@@ -48,6 +49,7 @@ def test_set_settings_updates_grid_view_rendering(
         show_annotation_text_labels=current_settings.show_annotation_text_labels,
         show_sample_filenames=False,
         show_bounding_boxes_for_segmentation=False,
+        enforce_coloring_by_class=True,
         key_toolbar_selection="d",
         key_toolbar_drag="s",
         key_toolbar_bounding_box="m",
@@ -68,6 +70,7 @@ def test_set_settings_updates_grid_view_rendering(
         updated_settings.show_annotation_text_labels == current_settings.show_annotation_text_labels
     )
     assert updated_settings.show_bounding_boxes_for_segmentation is False
+    assert updated_settings.enforce_coloring_by_class is True
     assert updated_settings.key_toolbar_selection == "d"
     assert updated_settings.key_toolbar_drag == "s"
     assert updated_settings.key_toolbar_bounding_box == "m"
@@ -83,5 +86,6 @@ def test_set_settings_updates_grid_view_rendering(
     assert settings.key_go_back == current_settings.key_go_back
     assert settings.show_annotation_text_labels == current_settings.show_annotation_text_labels
     assert settings.show_bounding_boxes_for_segmentation is False
+    assert settings.enforce_coloring_by_class is True
     assert settings.key_toolbar_brush == "r"
     assert settings.key_toolbar_eraser == "x"

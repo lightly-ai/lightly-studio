@@ -131,7 +131,7 @@ describe('useVideoFrameAnnotations', () => {
         expect(frame1Data).toEqual([
             {
                 frameId: 'frame-1',
-                annotationId: 'annotation-1',
+                sample_id: 'annotation-1',
                 dataUrl: 'data:image/png;base64,mockDataUrl',
                 width: 1920,
                 height: 100

@@ -3,7 +3,7 @@
     import Badge from './badge.svelte';
 
     const { Story } = defineMeta({
-        title: 'Components/UI/Badge',
+        title: 'Components/Primitives/Badge',
         component: Badge,
         tags: ['autodocs'],
         argTypes: {

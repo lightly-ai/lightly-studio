@@ -3,9 +3,16 @@
     import FormField from '$lib/components/FormField/FormField.svelte';
     import { Checkbox } from '$lib/components';
     import { Button } from '$lib/components/ui';
-    import * as Select from '$lib/components/ui/select/index.js';
+    import {
+        Select,
+        SelectMenuItem,
+        SelectMenuGroup,
+        SelectMenuGroupHeading
+    } from '$lib/components/Select';
     import * as Tabs from '$lib/components/ui/tabs/index.js';
     import { useTags } from '$lib/hooks/useTags/useTags';
+    import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
+    import AnnotationSourceSelect from '$lib/components/AnnotationSourceSelect/AnnotationSourceSelect.svelte';
     import { exportCollection } from '$lib/services/exportCollection';
     import type { ExportFilter } from '$lib/services/types';
     import { useExportSamplesCount } from './useExportSamplesCount/useExportSamplesCount';
@@ -31,7 +38,8 @@
 
     let exportType = $state<
         | 'samples'
-        | 'object_detections'
+        | 'object_detections_coco'
+        | 'object_detections_yolo'
         | 'segmentation'
         | 'captions'
         | 'youtube_vis_segmentation'
@@ -39,7 +47,8 @@
     >('samples');
     const exportTypeLabels: Record<typeof exportType, string> = {
         samples: 'Image Filenames',
-        object_detections: 'Image Object Detections',
+        object_detections_coco: 'Image Object Detections (COCO)',
+        object_detections_yolo: 'Image Object Detections (YOLO)',
         segmentation: 'Image Segmentation Mask (COCO)',
         semantic_segmentations: 'Image Segmentation Mask (PASCAL VOC)',
         captions: 'Image Captions',
@@ -47,6 +56,24 @@
     };
     const exportTypeTriggerContent = $derived(exportTypeLabels[exportType]);
     let collectionId = page.params.collection_id;
+
+    //
+    // Annotation source selection
+    //
+    const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
+    const annotationSources = $derived(
+        (annotationCollectionsQuery.data ?? []).map((c) => ({ id: c.collection_id, name: c.name }))
+    );
+    let selectedAnnotationCollectionId = $state<string | undefined>(undefined);
+
+    const effectiveAnnotationCollectionId = $derived(
+        selectedAnnotationCollectionId ?? annotationSources[0]?.id
+    );
+    const annotationCollectionParam = $derived(
+        effectiveAnnotationCollectionId
+            ? `&annotation_collection_id=${effectiveAnnotationCollectionId}`
+            : ''
+    );
 
     //
     // Sample export
@@ -114,14 +141,25 @@
     };
 
     //
-    // Annotation export
+    // COCO object detection export
     //
-    const exportAnnotationsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=object_detection_coco`;
+    const exportObjectDetectionCocoURL = $derived(
+        `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=object_detection_coco${annotationCollectionParam}`
+    );
+
+    //
+    // YOLO object detection export
+    //
+    const exportObjectDetectionYoloURL = $derived(
+        `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=object_detection_yolo${annotationCollectionParam}`
+    );
 
     //
     // Segmentation mask export
     //
-    const exportSegmentationMaskURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=segmentation_mask_coco`;
+    const exportSegmentationMaskURL = $derived(
+        `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=segmentation_mask_coco${annotationCollectionParam}`
+    );
 
     //
     // YouTube-VIS video Segmentation mask export
@@ -129,7 +167,9 @@
     const exportYoutubeVisSegmentationMaskURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/youtube-vis?ts=${Date.now()}&export_format=youtube_vis_segmentation`;
     // Semantic segmentation export
     //
-    const exportPascalVocURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=pascal_voc`;
+    const exportPascalVocURL = $derived(
+        `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=pascal_voc${annotationCollectionParam}`
+    );
 
     //
     // Caption export
@@ -157,59 +197,67 @@
                 <Tabs.Root bind:value={exportType} class="w-full">
                     <!-- TODO(lukas 3/2026): Consider constructing this by iterating over exportTypeLabels-->
                     <FormField label="Export Type">
-                        <Select.Root type="single" bind:value={exportType}>
-                            <Select.Trigger class="w-full" data-testid="export-type-select">
-                                {exportTypeTriggerContent}
-                            </Select.Trigger>
-                            <Select.Content>
+                        <Select
+                            value={exportType}
+                            triggerLabel={exportTypeTriggerContent}
+                            class="w-full"
+                            testId="export-type-select"
+                            onValueChange={(v) => (exportType = v as typeof exportType)}
+                        >
+                            {#snippet children()}
                                 {#if isVideoCollection}
-                                    <Select.Item
+                                    <SelectMenuItem
                                         value="youtube_vis_segmentation"
                                         label="YouTube-VIS Video Segmentation Masks"
-                                        >YouTube-VIS Video Segmentation Masks</Select.Item
+                                        >YouTube-VIS Video Segmentation Masks</SelectMenuItem
                                     >
                                 {:else}
-                                    <Select.Item value="samples" label="Image Filenames"
-                                        >Image Filenames</Select.Item
+                                    <SelectMenuItem value="samples" label="Image Filenames"
+                                        >Image Filenames</SelectMenuItem
                                     >
-                                    <Select.Item
-                                        value="object_detections"
-                                        label="Image Object Detections"
-                                        >Image Object Detections</Select.Item
+                                    <SelectMenuItem
+                                        value="object_detections_coco"
+                                        label="Image Object Detections (COCO)"
+                                        >Image Object Detections (COCO)</SelectMenuItem
                                     >
-                                    <Select.Item
+                                    <SelectMenuItem
+                                        value="object_detections_yolo"
+                                        label="Image Object Detections (YOLO)"
+                                        >Image Object Detections (YOLO)</SelectMenuItem
+                                    >
+                                    <SelectMenuItem
                                         value="segmentation"
                                         label="Image Segmentation Mask (COCO)"
-                                        >Image Segmentation Mask (COCO)</Select.Item
+                                        >Image Segmentation Mask (COCO)</SelectMenuItem
                                     >
-                                    <Select.Item
+                                    <SelectMenuItem
                                         value="semantic_segmentations"
                                         label="Image Segmentation Mask (PASCAL VOC)"
-                                        >Image Segmentation Mask (PASCAL VOC)</Select.Item
+                                        >Image Segmentation Mask (PASCAL VOC)</SelectMenuItem
                                     >
-                                    <Select.Item value="captions" label="Image Captions"
-                                        >Image Captions</Select.Item
+                                    <SelectMenuItem value="captions" label="Image Captions"
+                                        >Image Captions</SelectMenuItem
                                     >
                                 {/if}
-                            </Select.Content>
-                        </Select.Root>
+                            {/snippet}
+                        </Select>
                     </FormField>
 
                     <!-- Samples tab -->
 
                     <Tabs.Content value="samples" class="pt-2">
                         <FormField label="Tag">
-                            <Select.Root
-                                type="single"
-                                name="tagIdToExport"
-                                bind:value={tagIdToExport}
+                            <Select
+                                value={tagIdToExport}
+                                triggerLabel={triggerContent}
+                                class="w-full"
+                                onValueChange={(v) => (tagIdToExport = v)}
                             >
-                                <Select.Trigger class="w-full">
-                                    {triggerContent}
-                                </Select.Trigger>
-                                <Select.Content>
-                                    <Select.Group>
-                                        <Select.GroupHeading>Annotation tags</Select.GroupHeading>
+                                {#snippet children()}
+                                    <SelectMenuGroup>
+                                        <SelectMenuGroupHeading
+                                            >Annotation tags</SelectMenuGroupHeading
+                                        >
                                         {#if $tags.filter((tag) => tag.kind === 'annotation').length === 0}
                                             <div
                                                 class="py-1.5 pl-8 pr-2 text-sm italic text-muted-foreground"
@@ -218,13 +266,13 @@
                                             </div>
                                         {/if}
                                         {#each $tags.filter((tag) => tag.kind === 'annotation') as annotationTag}
-                                            <Select.Item
+                                            <SelectMenuItem
                                                 value={annotationTag.tag_id}
                                                 label={annotationTag.name}
-                                                >{annotationTag.name}</Select.Item
+                                                >{annotationTag.name}</SelectMenuItem
                                             >
                                         {/each}
-                                        <Select.GroupHeading>Sample tags</Select.GroupHeading>
+                                        <SelectMenuGroupHeading>Sample tags</SelectMenuGroupHeading>
                                         {#if $tags.filter((tag) => tag.kind === 'sample').length === 0}
                                             <div
                                                 class="py-1.5 pl-8 pr-2 text-sm italic text-muted-foreground"
@@ -233,14 +281,15 @@
                                             </div>
                                         {/if}
                                         {#each $tags.filter((tag) => tag.kind === 'sample') as sampleTag}
-                                            <Select.Item
+                                            <SelectMenuItem
                                                 value={sampleTag.tag_id}
-                                                label={sampleTag.name}>{sampleTag.name}</Select.Item
+                                                label={sampleTag.name}
+                                                >{sampleTag.name}</SelectMenuItem
                                             >
                                         {/each}
-                                    </Select.Group>
-                                </Select.Content>
-                            </Select.Root>
+                                    </SelectMenuGroup>
+                                {/snippet}
+                            </Select>
                         </FormField>
 
                         <div class="my-4">
@@ -299,17 +348,56 @@
                         </Button>
                     </Tabs.Content>
 
-                    <!-- Object Detections tab -->
-                    <Tabs.Content value="object_detections" class="pt-2">
+                    <!-- Object Detections (COCO) tab -->
+                    <Tabs.Content value="object_detections_coco" class="pt-2">
                         <p class="text-sm text-muted-foreground">
                             The object detection annotations will be exported in COCO format.
                         </p>
 
+                        {#if annotationSources.length > 1}
+                            <div class="mt-6">
+                                <FormField label="Annotation Source">
+                                    <AnnotationSourceSelect
+                                        sourceOptions={annotationSources}
+                                        placeholder="Only annotations from the selected source will be exported"
+                                        bind:selectedSource={selectedAnnotationCollectionId}
+                                    />
+                                </FormField>
+                            </div>
+                        {/if}
+
                         <Button
                             class="relative my-4 w-full"
-                            href={exportAnnotationsURL}
+                            href={exportObjectDetectionCocoURL}
                             target="_blank"
-                            data-testid="submit-button-annotations"
+                            data-testid="submit-button-annotations-coco"
+                        >
+                            Download
+                        </Button>
+                    </Tabs.Content>
+
+                    <!-- Object Detections (YOLO) tab -->
+                    <Tabs.Content value="object_detections_yolo" class="pt-2">
+                        <p class="text-sm text-muted-foreground">
+                            The object detection annotations will be exported in YOLO format.
+                        </p>
+
+                        {#if annotationSources.length > 1}
+                            <div class="mt-3">
+                                <FormField label="Annotation Source">
+                                    <AnnotationSourceSelect
+                                        sourceOptions={annotationSources}
+                                        bind:selectedSource={selectedAnnotationCollectionId}
+                                    />
+                                </FormField>
+                            </div>
+                        {/if}
+
+                        <Button
+                            class="relative my-4 w-full"
+                            href={exportObjectDetectionYoloURL}
+                            target="_blank"
+                            data-testid="submit-button-annotations-yolo"
                         >
                             Download
                         </Button>
@@ -319,6 +407,18 @@
                         <p class="text-sm text-muted-foreground">
                             The segmentation masks will be exported in COCO format.
                         </p>
+
+                        {#if annotationSources.length > 1}
+                            <div class="mt-6">
+                                <FormField label="Annotation Source">
+                                    <AnnotationSourceSelect
+                                        sourceOptions={annotationSources}
+                                        placeholder="Select an annotation collection to export from (required)"
+                                        bind:selectedSource={selectedAnnotationCollectionId}
+                                    />
+                                </FormField>
+                            </div>
+                        {/if}
 
                         <Button
                             class="relative my-4 w-full"
@@ -350,6 +450,18 @@
                         <p class="text-sm text-muted-foreground">
                             The semantic segmentations will be exported in PASCAL VOC format.
                         </p>
+
+                        {#if annotationSources.length > 1}
+                            <div class="mt-6">
+                                <FormField label="Annotation Source">
+                                    <AnnotationSourceSelect
+                                        sourceOptions={annotationSources}
+                                        placeholder="Select an annotation collection to export from (required)"
+                                        bind:selectedSource={selectedAnnotationCollectionId}
+                                    />
+                                </FormField>
+                            </div>
+                        {/if}
 
                         <Button
                             class="relative my-4 w-full"

@@ -24,7 +24,7 @@ The `ls.ImageDataset.create()` method call is lightweight and initializes an emp
 
 The `add_images_from_path(...)` method accepts a path to a file or a folder. If the path is a folder,
 it will recursively search for images in it. A remote path like `s3://my-bucket/my-folder` is also
-supported, see [Using Cloud Storage](../advanced/cloud_storage.md) for more details.
+supported, see [Using Cloud Storage](cloud_storage.md) for more details.
 
 Added images are automatically embedded so that embedding plot and image search are enabled.
 To skip embedding, pass `embed=False` to the method.
@@ -253,6 +253,64 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
 
     </details>
 
+=== "Custom Annotations"
+
+    ```python
+    import numpy as np
+
+    import lightly_studio as ls
+    from lightly_studio.core.annotation import (
+        CreateClassification,
+        CreateObjectDetection,
+        CreateSegmentationMask,
+    )
+    from lightly_studio.core.dataset_query import ImageSampleField
+
+    # Download the example dataset (will be skipped if it already exists)
+    dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+    images_path = f"{dataset_path}/coco_subset_128_images/images"
+
+    # Create an image dataset and add the images first.
+    dataset = ls.ImageDataset.create()
+    dataset.add_images_from_path(path=images_path)
+
+    # Use a query to fetch the sample you want to annotate.
+    sample = dataset.query().match(
+        ImageSampleField.file_name == "000000565296.jpg",
+    ).to_list()[0]
+
+    # A binary mask is indexed as [row, column], so its shape is (height, width).
+    binary_mask = np.zeros((sample.height, sample.width), dtype=np.uint8)
+    binary_mask[160:300, 300:480] = 1
+
+    # Add one set of annotations to this sample.
+    sample.add_annotations(
+        [
+            CreateClassification(class_name="outdoor"),
+            CreateObjectDetection(
+                class_name="vehicle",
+                x=80,
+                y=120,
+                width=180,
+                height=120,
+            ),
+            CreateSegmentationMask.from_binary_mask(
+                class_name="foreground",
+                binary_mask=binary_mask,
+            ),
+        ],
+        annotation_source="ground_truth",
+    )
+
+    ls.start_gui()
+    ```
+
+    Bounding boxes use pixel coordinates with `x` and `y` at the top-left corner.
+    Segmentation masks can be created from a binary mask with shape `(height, width)`. Class names
+    are added to the dataset automatically the first time they are used. The `annotation_source`
+    groups annotations, for example as `ground_truth` or model outputs. To annotate multiple
+    samples, iterate over a query and call `sample.add_annotations(...)` for each sample.
+
 === "Lightly Object Detections"
 
     ```python
@@ -324,7 +382,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
 Moreover, you can write an adapter to load images with annotations from a custom format, see the
 [TODO](../todo) for details. -->
 
-### From a Pre-Existing Dataset
+### From an Existing Dataset
 
 Once a dataset is populated, the data is stored in a database. It can be loaded later as follows
 to skip indexing and embedding it again:
@@ -353,9 +411,9 @@ GUI displays only a single dataset.
 
 When images are already in the dataset, the `add_annotations_from_*` methods attach
 annotations without re-loading the images. Each call stores its annotations under a named
-collection, so multiple sources (e.g. ground truth and model predictions) can be queried
-and compared independently. Re-running with the same `name` appends to that collection;
-a new `name` creates a new collection.
+annotation source, so multiple sources (e.g. ground truth and model predictions) can be queried
+and compared independently. Re-running with the same `annotation_source` appends to that annotation source;
+a new `annotation_source` creates a new annotation source.
 
 ```python title="Attach annotations from multiple sources"
 import lightly_studio as ls
@@ -371,14 +429,14 @@ dataset.add_images_from_path(path=images_path)
 dataset.add_annotations_from_coco(
     annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
     images_root=images_path,
-    name="ground_truth",
+    annotation_source="ground_truth",
 )
 
 # Attach predictions from a model (paths are illustrative).
 dataset.add_annotations_from_coco(
     annotations_json="/path/to/model_A_predictions.json",
     images_root=images_path,
-    name="model_A",
+    annotation_source="model_A",
 )
 ```
 
@@ -403,21 +461,21 @@ started from a Python script by calling `ls.start_gui()`.
 
 The main view shows a grid of images in your dataset. From here, you can perform multiple actions:
 
-- Use the left panel to filter the images by tags, annotation labels or metadata.
+- Use the left panel to filter the images by tags, annotations or metadata.
 - Use the search bar to do similarity search by text or an image.
 - Use the `Show Embeddings` button to explore the data in embedding space.
 - Use the `Menu` dropdown for further actions like plugins, sampling, classification, export and more.
 
 Refer to dedicated pages in this documentation on every feature for more details.
 
-![Image Dataset Grid](https://storage.googleapis.com/lightly-public/studio/image_dataset_grid.png){ width="100%" }
+![Image Dataset Grid](https://storage.googleapis.com/lightly-public/studio/docs/image_dataset_grid_v1.0.0.png){ width="100%" }
 
 ### Detail View
 
 Double-clicking on an image opens the image detail view. Here you can annotate the image,
 add captions or view metadata.
 
-![Image Detail View](https://storage.googleapis.com/lightly-public/studio/image_dataset_detail.png){ width="100%" }
+![Image Detail View](https://storage.googleapis.com/lightly-public/studio/docs/image_dataset_detail_v1.0.0.png){ width="100%" }
 
 
 ## Image Dataset in the Python API
@@ -473,7 +531,7 @@ print(image.metadata["my_key"])
 from lightly_studio.core.annotation import CreateObjectDetection
 image.add_annotation(
     CreateObjectDetection(
-        label="dog",
+        class_name="dog",
         x=10,
         y=20,
         width=30,
@@ -482,7 +540,7 @@ image.add_annotation(
     )
 )
 for annotation in image.annotations:
-    print(annotation.label)
+    print(annotation.class_name)
 ```
 
 <!-- TODO(Michal, 03/2026)
@@ -492,4 +550,4 @@ on dedicated pages.
 
 ### Querying the Dataset
 
-Use [Dataset Query in Python](../concepts_and_tools/search_and_filter.md#query-in-python) when you need reusable subsets in code for filtering, sorting, slicing, export, or selection. Image query expressions use `ImageSampleField`.
+Use [Dataset Query in Python](../concepts_and_tools/search_and_filter.md#query-in-python) when you need reusable subsets in code for filtering, sorting, slicing, export, or sampling. Image query expressions use `ImageSampleField`.

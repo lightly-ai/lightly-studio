@@ -5,7 +5,12 @@ from lightly_studio.resolvers import video_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
-from tests.helpers_resolvers import create_annotation, create_annotation_label, create_collection
+from tests.helpers_resolvers import (
+    AnnotationDetails,
+    create_annotation_label,
+    create_annotations,
+    create_collection,
+)
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
 
@@ -57,30 +62,27 @@ def test_count_video_frame_annotations_by_video_collection_without_filter(
         label_name="house",
     )
 
-    # Create annotations
-    create_annotation(
+    create_annotations(
         session=db_session,
-        sample_id=video_frame_id,
-        annotation_label_id=car_label.annotation_label_id,
         collection_id=collection_id,
-    )
-    create_annotation(
-        session=db_session,
-        sample_id=video_frame_id_1,
-        annotation_label_id=airplane_label.annotation_label_id,
-        collection_id=collection_id,
-    )
-    create_annotation(
-        session=db_session,
-        sample_id=video_frame_id_1,
-        annotation_label_id=airplane_label.annotation_label_id,
-        collection_id=collection_id,
-    )
-    create_annotation(
-        session=db_session,
-        sample_id=video_frame_id_2,
-        annotation_label_id=airplane_label.annotation_label_id,
-        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=video_frame_id,
+                annotation_label_id=car_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=video_frame_id_1,
+                annotation_label_id=airplane_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=video_frame_id_1,
+                annotation_label_id=airplane_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=video_frame_id_2,
+                annotation_label_id=airplane_label.annotation_label_id,
+            ),
+        ],
     )
 
     annotations = video_resolver.count_video_frame_annotations_by_video_collection(
@@ -147,30 +149,27 @@ def test_count_video_frame_annotations_by_video_collection_with_annotation_filte
         label_name="house",
     )
 
-    # Create annotations
-    create_annotation(
+    create_annotations(
         session=db_session,
-        sample_id=video_frame_id,
-        annotation_label_id=car_label.annotation_label_id,
         collection_id=collection_id,
-    )
-    create_annotation(
-        session=db_session,
-        sample_id=video_frame_id_1,
-        annotation_label_id=airplane_label.annotation_label_id,
-        collection_id=collection_id,
-    )
-    create_annotation(
-        session=db_session,
-        sample_id=video_frame_id_1,
-        annotation_label_id=airplane_label.annotation_label_id,
-        collection_id=collection_id,
-    )
-    create_annotation(
-        session=db_session,
-        sample_id=video_frame_id_2,
-        annotation_label_id=airplane_label.annotation_label_id,
-        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=video_frame_id,
+                annotation_label_id=car_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=video_frame_id_1,
+                annotation_label_id=airplane_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=video_frame_id_1,
+                annotation_label_id=airplane_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=video_frame_id_2,
+                annotation_label_id=airplane_label.annotation_label_id,
+            ),
+        ],
     )
 
     annotations = video_resolver.count_video_frame_annotations_by_video_collection(

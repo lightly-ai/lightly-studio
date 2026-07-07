@@ -102,6 +102,10 @@ test('brush stays effective across keyboard navigation while creating masks on 3
     await samplesPage.doubleClickFirstSample();
     await sampleDetailsPage.pageIsReady();
     const collectionId = getCollectionIdFromUrl(page);
+
+    // Set the last used annotation label in session storage, then reload so the Svelte store
+    // re-initialises from session storage and SampleDetailsPanel.onMount correctly
+    // populates annotationLabelContext.annotationLabel.
     await page.evaluate(
         ({ key, collectionId, labelName }) => {
             const raw = sessionStorage.getItem(key);
@@ -115,6 +119,8 @@ test('brush stays effective across keyboard navigation while creating masks on 3
             labelName: cocoDataset.labels.person.name
         }
     );
+    await page.reload();
+    await sampleDetailsPage.pageIsReady();
 
     await sampleDetailsPage.clickEditButton();
 

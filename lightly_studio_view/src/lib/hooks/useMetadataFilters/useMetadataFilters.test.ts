@@ -12,24 +12,28 @@ vi.mock('$lib/hooks/useSessionStorage/useSessionStorage', () => ({
 }));
 
 // Mock the svelte store
-vi.mock('svelte/store', () => ({
-    get: vi.fn((store) => {
-        // Mock the metadataBounds store
-        if (store && typeof store === 'object' && 'subscribe' in store) {
-            return {
-                temperature: { min: 0, max: 100 },
-                humidity: { min: 0, max: 100 },
-                pressure: { min: 900, max: 1100 }
-            };
-        }
-        return {};
-    }),
-    writable: vi.fn(() => ({
-        subscribe: vi.fn(),
-        set: vi.fn(),
-        update: vi.fn()
-    }))
-}));
+vi.mock('svelte/store', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('svelte/store')>();
+    return {
+        ...actual,
+        get: vi.fn((store) => {
+            // Mock the metadataBounds store
+            if (store && typeof store === 'object' && 'subscribe' in store) {
+                return {
+                    temperature: { min: 0, max: 100 },
+                    humidity: { min: 0, max: 100 },
+                    pressure: { min: 900, max: 1100 }
+                };
+            }
+            return {};
+        }),
+        writable: vi.fn(() => ({
+            subscribe: vi.fn(),
+            set: vi.fn(),
+            update: vi.fn()
+        }))
+    };
+});
 
 describe('createMetadataFilters', () => {
     it('should create filters for metadata values that are not at full range', () => {

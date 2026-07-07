@@ -15,6 +15,14 @@ export const formatFloat2 = (num: number): string => {
     return formatFloat(num, 2);
 };
 
+export const formatConfidence = (confidence?: number | null): string | null => {
+    if (confidence == null) {
+        return null;
+    }
+
+    return formatFloat2(confidence);
+};
+
 /**
  * Format a metadata value for display
  * @param value - The metadata value to format

@@ -14,8 +14,8 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
 )
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.dataset import embedding_utils
-from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.collection import (
     CollectionCreate,
     CollectionOverviewView,

@@ -16,6 +16,9 @@ from lightly_studio.resolvers.collection_resolver.get_all import get_all
 from lightly_studio.resolvers.collection_resolver.get_annotation_collections import (
     get_annotation_collections,
 )
+from lightly_studio.resolvers.collection_resolver.get_annotation_types_by_collection_ids import (
+    get_annotation_types_by_collection_ids,
+)
 from lightly_studio.resolvers.collection_resolver.get_by_id import get_by_id
 from lightly_studio.resolvers.collection_resolver.get_by_name import get_by_name
 from lightly_studio.resolvers.collection_resolver.get_collection import (
@@ -29,6 +32,9 @@ from lightly_studio.resolvers.collection_resolver.get_collections_overview impor
 )
 from lightly_studio.resolvers.collection_resolver.get_group_components import (
     get_group_components,
+)
+from lightly_studio.resolvers.collection_resolver.get_names_by_ids import (
+    get_names_by_ids,
 )
 from lightly_studio.resolvers.collection_resolver.get_or_create_child_collection import (
     get_or_create_child_collection,
@@ -49,12 +55,14 @@ __all__ = [
     "export",
     "get_all",
     "get_annotation_collections",
+    "get_annotation_types_by_collection_ids",
     "get_by_id",
     "get_by_name",
     "get_collection_details",
     "get_collections_overview",
     "get_filtered_samples_count",
     "get_group_components",
+    "get_names_by_ids",
     "get_or_create_child_collection",
     "get_parent_collection_by_sample_id",
     "get_parent_collection_id",

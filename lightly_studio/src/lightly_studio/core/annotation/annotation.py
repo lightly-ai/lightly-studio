@@ -40,6 +40,11 @@ class Annotation:
         return self.annotation_base.confidence
 
     @property
-    def label(self) -> str:
-        """Annotation label name."""
+    def class_name(self) -> str:
+        """Annotation class name."""
         return self.annotation_base.annotation_label.annotation_label_name
+
+    @property
+    def annotation_source(self) -> str:
+        """Name of the annotation source this annotation belongs to."""
+        return self.annotation_base.sample.collection.name

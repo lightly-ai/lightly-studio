@@ -1,16 +1,18 @@
 <script lang="ts">
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
-    import { getColorByLabel } from '$lib/utils';
+    import { getColorByLabel, rgbaToHex } from '$lib/utils';
     import { ColorPicker } from '../ui/color-picker';
 
     const {
         labelName,
         className,
-        selected = false
+        selected = false,
+        testId
     }: {
         labelName: string;
         className: string;
         selected: boolean;
+        testId?: string;
     } = $props();
 
     const { setCustomColor, getCustomColor, hasCustomColor, customLabelColorsStore } =
@@ -26,22 +28,7 @@
             return customColor?.color || '#ff0000';
         }
 
-        // Extract a color from the default algorithm
-        const defaultColor = getColorByLabel(label, 1).color;
-        // Try to convert rgba to hex
-        try {
-            const rgba = defaultColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-            if (rgba) {
-                const r = parseInt(rgba[1]);
-                const g = parseInt(rgba[2]);
-                const b = parseInt(rgba[3]);
-                return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
-            }
-        } catch (e) {
-            console.error('Error converting rgba to hex', e);
-        }
-
-        return '#ff0000'; // Default fallback
+        return rgbaToHex(getColorByLabel(label, 1).color) ?? '#ff0000';
     }
 
     function getInitialAlpha(label: string) {
@@ -67,7 +54,7 @@
     });
 </script>
 
-<div class="color-picker-container">
+<div class="color-picker-container" data-testid={testId}>
     <ColorPicker
         initialColor={getInitialColor(labelName)}
         initialAlpha={getInitialAlpha(labelName)}

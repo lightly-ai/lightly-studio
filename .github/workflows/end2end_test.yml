@@ -5,6 +5,7 @@ on:
     branches:
       - main
   pull_request:
+  merge_group:
   workflow_dispatch:
 
 
@@ -27,13 +28,13 @@ jobs:
       file-hash: ${{ steps.file-hash.outputs.hash }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: recursive
 
       # Authenticate to download dev versions of lightly-mundig.
       - name: Authenticate with GCP
-        uses: 'google-github-actions/auth@v2'
+        uses: 'google-github-actions/auth@v3'
         with:
           project_id: boris-250909
           credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
@@ -55,7 +56,7 @@ jobs:
 
       - name: Cache build
         id: cache-build
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           lookup-only: true
           path: &cache-build-path |
@@ -65,7 +66,7 @@ jobs:
 
       - name: Cache Playwright browsers
         id: cache-playwright-browsers
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: &cache-playwright-browsers-path ~/.cache/ms-playwright
           key: &cache-playwright-browsers-key >-
@@ -76,7 +77,7 @@ jobs:
 
       - name: Cache example dataset
         id: cache-example-dataset
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           # No need to download a cached version in cache preparation step
           lookup-only: true
@@ -88,19 +89,19 @@ jobs:
       ### Setup steps for the workflow ###
       - name: Set Up Python
         if: steps.cache-build.outputs.cache-hit != 'true'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.9"
 
       - name: Set Up Uv
         if: steps.cache-build.outputs.cache-hit != 'true'
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v8.1.0
         with:
           version: "0.8.17"
           enable-cache: true
 
       - name: Set Up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: 'lightly_studio_view/.nvmrc'
           cache: 'npm'
@@ -158,16 +159,26 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: General
+          - name: General 1 of 2
             index_script: index_general.py
             playwright_project: general
-            success_marker: .e2e-success-general
-            success_key: e2e-success-general
-            artifact_name: Playwright Report (General)
+            shard: "1/2"
+            success_marker: .e2e-success-general-1
+            success_key: e2e-success-general-1
+            artifact_name: Playwright Report (General 1)
+            postgres: false
+          - name: General 2 of 2
+            index_script: index_general.py
+            playwright_project: general
+            shard: "2/2"
+            success_marker: .e2e-success-general-2
+            success_key: e2e-success-general-2
+            artifact_name: Playwright Report (General 2)
             postgres: false
           - name: Videos
             index_script: index_video.py
             playwright_project: videos
+            shard: "1/1"
             success_marker: .e2e-success-videos
             success_key: e2e-success-videos
             artifact_name: Playwright Report (Videos)
@@ -175,20 +186,39 @@ jobs:
           - name: Groups
             index_script: index_groups.py
             playwright_project: groups
+            shard: "1/1"
             success_marker: .e2e-success-groups
             success_key: e2e-success-groups
             artifact_name: Playwright Report (Groups)
             postgres: false
-          - name: General Postgres
+          - name: Evaluations
+            index_script: index_evaluations.py
+            playwright_project: evaluations
+            shard: "1/1"
+            success_marker: .e2e-success-evaluations
+            success_key: e2e-success-evaluations
+            artifact_name: Playwright Report (Evaluations)
+            postgres: false
+          - name: General Postgres 1 of 2
             index_script: index_general.py
             playwright_project: general
-            success_marker: .e2e-success-general-postgres
-            success_key: e2e-success-general-postgres
-            artifact_name: Playwright Report (General Postgres)
+            shard: "1/2"
+            success_marker: .e2e-success-general-postgres-1
+            success_key: e2e-success-general-postgres-1
+            artifact_name: Playwright Report (General Postgres 1)
+            postgres: true
+          - name: General Postgres 2 of 2
+            index_script: index_general.py
+            playwright_project: general
+            shard: "2/2"
+            success_marker: .e2e-success-general-postgres-2
+            success_key: e2e-success-general-postgres-2
+            artifact_name: Playwright Report (General Postgres 2)
             postgres: true
           - name: Videos Postgres
             index_script: index_video.py
             playwright_project: videos
+            shard: "1/1"
             success_marker: .e2e-success-videos-postgres
             success_key: e2e-success-videos-postgres
             artifact_name: Playwright Report (Videos Postgres)
@@ -211,20 +241,20 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: recursive
 
       # Authenticate to download dev versions of lightly-mundig.
       - name: Authenticate with GCP
-        uses: 'google-github-actions/auth@v2'
+        uses: 'google-github-actions/auth@v3'
         with:
           project_id: boris-250909
           credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
 
       - name: Check e2e success cache
         id: cache-success
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           lookup-only: true
           path: ${{ matrix.success_marker }}
@@ -235,7 +265,7 @@ jobs:
       - name: Cache build
         if: steps.cache-success.outputs.cache-hit != 'true'
         id: cache-build
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           fail-on-cache-miss: true
           path: *cache-build-path
@@ -244,7 +274,7 @@ jobs:
       - name: Cache Playwright browsers
         if: steps.cache-success.outputs.cache-hit != 'true'
         id: cache-playwright-browsers
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           fail-on-cache-miss: true
           path: *cache-playwright-browsers-path
@@ -253,7 +283,7 @@ jobs:
       - name: Cache example dataset
         if: steps.cache-success.outputs.cache-hit != 'true'
         id: cache-example-dataset
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           fail-on-cache-miss: true
           path: *cache-example-dataset-path
@@ -263,20 +293,20 @@ jobs:
 
       - name: Set Up Python
         if: steps.cache-success.outputs.cache-hit != 'true'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.9"
 
       - name: Set Up Uv
         if: steps.cache-success.outputs.cache-hit != 'true'
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v8.1.0
         with:
           version: "0.8.17"
           enable-cache: true
 
       - name: Set Up Node.js
         if: steps.cache-success.outputs.cache-hit != 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: 'lightly_studio_view/.nvmrc'
           cache: 'npm'
@@ -344,8 +374,13 @@ jobs:
       - name: Run end-to-end tests for indexed dataset
         if: steps.cache-success.outputs.cache-hit != 'true'
         working-directory: lightly_studio_view
-        run: npx playwright test --reporter=html --trace=on --project=${{ matrix.playwright_project }}
-        timeout-minutes: 10
+        run: >-
+          npx playwright test
+          --reporter=html
+          --trace=on
+          --project=${{ matrix.playwright_project }}
+          --shard=${{ matrix.shard }}
+        timeout-minutes: 6
 
       - name: Generate performance summary
         if: steps.cache-success.outputs.cache-hit != 'true' && (matrix.playwright_project == 'general' || matrix.playwright_project == 'videos')
@@ -376,11 +411,12 @@ jobs:
 
       - name: Upload performance metrics
         if: steps.cache-success.outputs.cache-hit != 'true' && (matrix.playwright_project == 'general' || matrix.playwright_project == 'videos')
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: performance-metrics-${{ matrix.name }}
           path: lightly_studio_view/performance-metrics.json
-          if-no-files-found: warn
+          # Only the shard running the performance test produces this file.
+          if-no-files-found: ignore
 
       - name: Create e2e success marker
         if: steps.cache-success.outputs.cache-hit != 'true'
@@ -388,7 +424,7 @@ jobs:
 
       - name: Save e2e success marker
         if: steps.cache-success.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: ${{ matrix.success_marker }}
           key: ${{ matrix.success_key }}-${{ needs.prepare-caches.outputs.file-hash }}
@@ -415,7 +451,7 @@ jobs:
           fi
 
       - name: Upload backend server log after failure
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: failure() && steps.cache-success.outputs.cache-hit != 'true'
         with:
           name: Backend Server Log (${{ matrix.name }})
@@ -424,7 +460,7 @@ jobs:
           retention-days: 5
 
       - name: Upload Playwright report after failure
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: failure() && steps.cache-success.outputs.cache-hit != 'true'
         with:
           name: ${{ matrix.artifact_name }}

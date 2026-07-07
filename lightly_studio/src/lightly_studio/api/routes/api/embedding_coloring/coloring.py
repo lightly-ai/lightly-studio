@@ -50,8 +50,8 @@ def build_color_data(
     collection_id: UUID,
     color_by: ColorBy | None,
     sample_ids: list[UUID],
-    fulfils_filter: list[int],
-) -> tuple[list[int], dict[int, str]]:
+    matching_sample_ids: set[UUID] | None,
+) -> tuple[list[list[int]], dict[int, str]]:
     """Build color categories and a legend for embedding coloring.
 
     Args:
@@ -59,19 +59,23 @@ def build_color_data(
         collection_id: Collection whose samples are being colored.
         color_by: Coloring configuration to apply to the samples.
         sample_ids: Sample IDs in the same order as the returned color categories.
-        fulfils_filter: Per-sample filter categories used as the fallback coloring.
+        matching_sample_ids: Sample IDs matching the active filter. Values are
+            prioritized by their frequency among these samples so the legend
+            reflects the filtered view. ``None`` means no filter is active (all
+            samples are counted).
 
     Returns:
         A tuple of `(color_categories, color_legend)` for the provided samples. The
-        length of `color_categories` is the number of samples. The `color_legend` is a mapping
-        from color ID to a human-readable string.
+        length of `color_categories` is the number of samples; each entry is the
+        list of that sample's color categories, sorted ascending. The `color_legend`
+        is a mapping from color ID to a human-readable string.
     """
     if isinstance(color_by, TagColorBy):
         return tags.build_tag_color_maps(
             session=session,
             tag_ids=color_by.tag_ids,
             sample_ids=sample_ids,
-            fulfils_filter=fulfils_filter,
+            matching_sample_ids=matching_sample_ids,
         )
 
     if isinstance(color_by, MetadataFieldColorBy):
@@ -80,7 +84,7 @@ def build_color_data(
             collection_id=collection_id,
             key=color_by.key,
             sample_ids=sample_ids,
-            fulfils_filter=fulfils_filter,
+            matching_sample_ids=matching_sample_ids,
         )
 
     if isinstance(color_by, AnnotationColorBy):
@@ -88,11 +92,11 @@ def build_color_data(
             session=session,
             annotation_label_ids=color_by.annotation_label_ids,
             sample_ids=sample_ids,
-            fulfils_filter=fulfils_filter,
+            matching_sample_ids=matching_sample_ids,
         )
 
     # Static check that all ColorBy variants are handled above.
     if color_by is not None:
         assert_never(color_by)
 
-    return list(fulfils_filter), {}
+    return [[] for _ in sample_ids], {}

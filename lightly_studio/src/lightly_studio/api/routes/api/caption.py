@@ -9,7 +9,7 @@ from fastapi import APIRouter, Body, HTTPException, Path
 from pydantic import BaseModel
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
-from lightly_studio.db_manager import SessionDep
+from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.caption import CaptionCreate, CaptionTable, CaptionView
 from lightly_studio.resolvers import caption_resolver, sample_resolver
 

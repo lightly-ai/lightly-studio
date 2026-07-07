@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
-from lightly_studio.db_manager import SessionDep
+from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.plugins import operator_context
 from lightly_studio.plugins.base_operator import OperatorResult, OperatorStatus
 from lightly_studio.plugins.operator_context import AnyFilter, ExecutionContext
@@ -26,7 +26,7 @@ class OperatorContextRequest(BaseModel):
     collection_id: UUID
     """The collection_id the operator shall be executed on."""
 
-    context_filter: AnyFilter = None
+    context_filter: AnyFilter | None = None
     """The filter for the provided collection."""
 
 

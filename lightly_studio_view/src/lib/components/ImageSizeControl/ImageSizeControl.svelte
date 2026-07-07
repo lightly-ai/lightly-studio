@@ -3,7 +3,15 @@
     import { throttle } from 'lodash-es';
     import { ZoomIn, ZoomOut } from '@lucide/svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    const { min = 1, max = 12 } = $props();
+    import { Tooltip } from '$lib/components/ui/tooltip';
+
+    interface Props {
+        min?: number;
+        max?: number;
+        compact?: boolean;
+    }
+
+    const { min = 1, max = 16, compact = false }: Props = $props();
 
     const { updateSampleSize, sampleSize } = useGlobalStorage();
 
@@ -27,32 +35,45 @@
     }
 </script>
 
-<div class="flex w-48 shrink-0 items-center space-x-2 text-diffuse-foreground">
-    <button
-        onclick={zoomOut}
-        disabled={width >= max}
-        class="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-opacity hover:opacity-70 disabled:cursor-not-allowed disabled:opacity-30"
-        aria-label="Zoom out"
-    >
-        <ZoomOut class="h-4 w-4" />
-    </button>
+<div
+    class="flex shrink-0 items-center text-diffuse-foreground"
+    class:w-36={!compact}
+    class:space-x-2={!compact}
+    class:space-x-4={compact}
+>
+    <Tooltip content="Decrease thumbnail size" position="top">
+        <button
+            onclick={zoomOut}
+            disabled={width >= max}
+            class="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-opacity hover:opacity-70 disabled:cursor-not-allowed disabled:opacity-30"
+            aria-label="Zoom out"
+        >
+            <ZoomOut class="h-4 w-4" />
+        </button>
+    </Tooltip>
 
-    <Slider
-        type="multiple"
-        class="w-full flex-1"
-        value={[sliderValue]}
-        {min}
-        {max}
-        step={1}
-        onValueChange={handleChange}
-    />
+    {#if !compact}
+        <Tooltip content="Adjust thumbnail size" position="top" triggerClass="flex flex-1">
+            <Slider
+                type="multiple"
+                class="w-full flex-1"
+                value={[sliderValue]}
+                {min}
+                {max}
+                step={1}
+                onValueChange={handleChange}
+            />
+        </Tooltip>
+    {/if}
 
-    <button
-        onclick={zoomIn}
-        disabled={width <= min}
-        class="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-opacity hover:opacity-70 disabled:cursor-not-allowed disabled:opacity-30"
-        aria-label="Zoom in"
-    >
-        <ZoomIn class="h-4 w-4" />
-    </button>
+    <Tooltip content="Increase thumbnail size" position="top">
+        <button
+            onclick={zoomIn}
+            disabled={width <= min}
+            class="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-opacity hover:opacity-70 disabled:cursor-not-allowed disabled:opacity-30"
+            aria-label="Zoom in"
+        >
+            <ZoomIn class="h-4 w-4" />
+        </button>
+    </Tooltip>
 </div>

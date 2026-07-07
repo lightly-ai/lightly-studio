@@ -6,6 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 from pydantic import Field as PydanticField
+from sqlalchemy import Index
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -29,7 +30,7 @@ class ImageBase(SQLModel):
     height: int
 
     """The collection image path."""
-    file_path_abs: str = Field(default=None)
+    file_path_abs: str
 
 
 class ImageCreate(ImageBase):
@@ -40,6 +41,10 @@ class ImageTable(ImageBase, table=True):
     """This class defines the Image model."""
 
     __tablename__ = "image"
+    # Composite index on the default adjacency sort key (``file_path_abs``) plus the
+    # unique ``sample_id`` tiebreaker. Enables keyset seek for prev/next adjacency and
+    # ordered counts without a full sort/window over the collection. See LIG-9925.
+    __table_args__ = (Index("ix_image_file_path_abs_sample_id", "file_path_abs", "sample_id"),)
     sample_id: UUID = Field(foreign_key="sample.sample_id", primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
     updated_at: datetime = Field(
@@ -81,12 +86,23 @@ class ImageView(BaseModel):
     metadata_dict: Optional["SampleMetadataView"] = None
     captions: list[CaptionView] = []
     similarity_score: Optional[float] = None
+    order_value: Optional[float] = None
 
     @classmethod
     def from_image_table(
-        cls, image: "ImageTable", similarity_score: Optional[float] = None
+        cls,
+        image: "ImageTable",
+        similarity_score: Optional[float] = None,
+        order_value: Optional[float] = None,
     ) -> "ImageView":
-        """Convert an ImageTable to an ImageView."""
+        """Convert an ImageTable to an ImageView.
+
+        Args:
+            image: The image row to convert.
+            similarity_score: Similarity to a text/embedding query, when search is active.
+            order_value: Primary sort value for the current grid sort, when provided by the
+                resolver. Mutually exclusive with ``similarity_score`` for the grid overlay.
+        """
         return cls(
             file_name=image.file_name,
             file_path_abs=image.file_path_abs,
@@ -113,6 +129,7 @@ class ImageView(BaseModel):
             height=image.height,
             sample=SampleView.model_validate(image.sample),
             similarity_score=similarity_score,
+            order_value=order_value,
         )
 
 

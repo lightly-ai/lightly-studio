@@ -192,7 +192,7 @@ def test_get_video_frames_count_annotation_views_without_annotations_filter(
     video_frame_collection_id = video_frames_data.video_frames_collection_id
     (video_frame_id, video_frame_id_1) = video_frames_data.frame_sample_ids[0:2]
 
-    # Create annotations labels
+    # Create annotation classes
     car_label = create_annotation_label(
         session=db_session,
         root_collection_id=collection_id,

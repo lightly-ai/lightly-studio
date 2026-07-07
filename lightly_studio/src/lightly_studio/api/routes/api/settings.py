@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from lightly_studio.db_manager import SessionDep
+from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.settings import SettingView
 from lightly_studio.resolvers import settings_resolver
 

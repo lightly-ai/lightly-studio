@@ -1,16 +1,20 @@
 <script lang="ts">
     import { SortDirection } from '$lib/api/lightly_studio_local';
     import { useOrderBy } from '$lib/hooks/useOrderBy/useOrderBy';
-    import * as Popover from '$lib/components/ui/popover/index.js';
+    import { useGlobalStorage } from '$lib/hooks';
+    import { Select, type SelectItem } from '$lib/components/Select';
     import { Button } from '$lib/components/ui/button';
+    import { Tooltip } from '$lib/components/ui/tooltip';
     import { ArrowDown, ArrowUp } from '@lucide/svelte';
-    import { cn } from '$lib/utils/shadcn';
 
     interface Props {
         datasetId: string;
     }
 
     const { datasetId }: Props = $props();
+
+    const { textEmbedding } = useGlobalStorage();
+    const isSimilaritySearchActive = $derived(!!$textEmbedding);
 
     const {
         allSortFields,
@@ -26,59 +30,69 @@
         return () => dispose();
     });
 
-    let open = $state(false);
+    const selectValue = $derived.by(() => {
+        const idx = $allSortFields.findIndex((field) => $isFieldSelected(field));
+        return idx >= 0 ? String(idx) : '';
+    });
+
+    const sortItems = $derived<SelectItem[]>(
+        $allSortFields.map((field, i) => ({
+            value: String(i),
+            label: field.label,
+            testId:
+                field.source === 'evaluation_metric'
+                    ? `sort-field-${field.evaluation_run_name}-${field.metric_name}`
+                    : `sort-field-${field.value}`
+        }))
+    );
+
+    const handleValueChange = (value: string) => {
+        if (value === '') {
+            const idx = $allSortFields.findIndex((field) => $isFieldSelected(field));
+            if (idx >= 0) handleFieldClick($allSortFields[idx]);
+            return;
+        }
+        const field = $allSortFields[Number(value)];
+        if (field) handleFieldClick(field);
+    };
+
+    const directionTooltip = $derived(
+        $selectedDirection === SortDirection.DESC ? 'Sort descending' : 'Sort ascending'
+    );
 </script>
 
 <div class="flex items-center gap-1">
-    <Popover.Root bind:open>
-        <Popover.Trigger>
-            <Button
-                variant="outline"
-                size="sm"
-                class="h-8 min-w-20 justify-start gap-1 text-left text-xs font-normal"
-                data-testid="sort-by-trigger"
-            >
-                {$selectedLabel ?? 'Sort by'}
-            </Button>
-        </Popover.Trigger>
-        <Popover.Content class="min-w-20 p-1" align="start">
-            <div class="max-h-64 overflow-y-auto dark:[color-scheme:dark]">
-                {#each $allSortFields as field}
-                    <button
-                        class={cn(
-                            'flex w-full items-center justify-start rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground',
-                            $isFieldSelected(field) && 'bg-accent text-accent-foreground'
-                        )}
-                        onclick={() => {
-                            handleFieldClick(field);
-                            open = false;
-                        }}
-                        data-testid={field.source === 'evaluation_metric'
-                            ? `sort-field-${field.evaluation_run_name}-${field.metric_name}`
-                            : `sort-field-${field.value}`}
-                    >
-                        {field.label}
-                    </button>
-                {/each}
-            </div>
-        </Popover.Content>
-    </Popover.Root>
+    <Tooltip content="Sort items by attribute" position="top" triggerClass="inline-flex">
+        <Select
+            items={sortItems}
+            value={selectValue}
+            triggerLabel={$selectedLabel ?? undefined}
+            allowDeselect
+            onValueChange={handleValueChange}
+            disabled={isSimilaritySearchActive}
+            placeholder="Sort by"
+            size="xs"
+            variant="ghost"
+            class="w-[100px] min-w-20"
+            testId="sort-by-trigger"
+        />
+    </Tooltip>
 
-    <Button
-        variant={$selectedLabel ? 'secondary' : 'ghost'}
-        size="icon"
-        class="h-8 w-8"
-        disabled={!$selectedLabel}
-        onclick={toggleDirection}
-        data-testid="sort-direction-button"
-        aria-label={$selectedDirection === SortDirection.DESC
-            ? 'Sort descending'
-            : 'Sort ascending'}
-    >
-        {#if $selectedDirection === SortDirection.DESC}
-            <ArrowDown class="size-4" />
-        {:else}
-            <ArrowUp class="size-4" />
-        {/if}
-    </Button>
+    <Tooltip content={directionTooltip} position="top">
+        <Button
+            variant="ghost"
+            size="icon"
+            disabled={!$selectedLabel || isSimilaritySearchActive}
+            onclick={toggleDirection}
+            class="size-auto p-0 hover:bg-transparent [&>svg]:text-foreground [&>svg]:hover:text-muted-foreground"
+            data-testid="sort-direction-button"
+            aria-label={directionTooltip}
+        >
+            {#if $selectedDirection === SortDirection.DESC}
+                <ArrowDown class="size-4" />
+            {:else}
+                <ArrowUp class="size-4" />
+            {/if}
+        </Button>
+    </Tooltip>
 </div>

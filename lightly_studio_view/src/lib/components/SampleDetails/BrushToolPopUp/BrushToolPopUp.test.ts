@@ -200,13 +200,24 @@ describe('BrushTool component', () => {
     });
 
     it('completes the editing by click', async () => {
+        mockAnnotationLabelContext.annotationId = 'annotation-1';
         const { container } = render(BrushTool);
 
         const finishButton = getByLabelText(container, 'Finish');
+        expect(finishButton).toBeEnabled();
+
         await fireEvent.click(finishButton);
 
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
         expect(mockAnnotationLabelContext.lastCreatedAnnotationId).toBeNull();
+    });
+
+    it('disables the Finish button when no annotation is active', () => {
+        const { container } = render(BrushTool);
+
+        const finishButton = getByLabelText(container, 'Finish');
+
+        expect(finishButton).toBeDisabled();
     });
 
     it('hides the Finish button on annotation details view', async () => {

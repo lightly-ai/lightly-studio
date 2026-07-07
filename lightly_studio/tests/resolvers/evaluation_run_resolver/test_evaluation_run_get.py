@@ -94,6 +94,7 @@ def _create_evaluation_run(
         evaluation_run_input=EvaluationRunCreate(
             name=name,
             gt_annotation_collection_id=gt_collection.collection_id,
+            dataset_id=gt_collection.dataset_id,
             pred_annotation_collection_id=pred_collection.collection_id,
             task_type=EvaluationTaskType.OBJECT_DETECTION,
         ),

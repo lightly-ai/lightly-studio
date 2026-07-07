@@ -7,7 +7,7 @@ from uuid import UUID
 from sqlalchemy import func
 from sqlmodel import Session, col, select
 
-from lightly_studio import db_json
+from lightly_studio.database import db_json
 from lightly_studio.models.metadata import (
     MetadataInfoView,
     SampleMetadataTable,

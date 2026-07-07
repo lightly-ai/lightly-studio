@@ -4,6 +4,15 @@ import type { EvaluationRunView } from '$lib/api/lightly_studio_local/types.gen'
 import { formatDate } from '$lib/utils';
 import EvaluationRunItem from './EvaluationRunItem.svelte';
 
+vi.mock(
+    './EvaluationRunConfusionMatrixSection/EvaluationRunConfusionMatrixSection.svelte',
+    async () => {
+        const module =
+            await import('./EvaluationRunConfusionMatrixSection/EvaluationRunConfusionMatrixSection.mock.svelte');
+        return { default: module.default };
+    }
+);
+
 const baseRun: EvaluationRunView = {
     id: 'run-1',
     name: 'Detection eval — v1',
@@ -12,7 +21,9 @@ const baseRun: EvaluationRunView = {
         split: 'val',
         classwise: true
     },
-    created_at: new Date('2026-01-15T10:30:00Z')
+    created_at: new Date('2026-01-15T10:30:00Z'),
+    gt_annotation_source: 'ground_truth_v1',
+    pred_annotation_source: 'predictions_v2'
 };
 
 const defaultProps = {
@@ -20,6 +31,7 @@ const defaultProps = {
     expanded: false,
     onToggle: vi.fn()
 };
+const baseRunItemTestId = `evaluation-run-item-${baseRun.name}`;
 
 describe('EvaluationRunItem', () => {
     it('renders the run name and creation date', () => {
@@ -29,7 +41,7 @@ describe('EvaluationRunItem', () => {
         expect(screen.getByTestId('evaluation-run-date')).toHaveTextContent(
             formatDate(baseRun.created_at)
         );
-        expect(screen.getByTestId('evaluation-run-item')).toHaveAttribute('aria-expanded', 'false');
+        expect(screen.getByTestId(baseRunItemTestId)).toHaveAttribute('aria-expanded', 'false');
     });
 
     it('hides configuration details when collapsed', () => {
@@ -49,7 +61,7 @@ describe('EvaluationRunItem', () => {
         expect(details).toHaveTextContent('val');
         expect(details).toHaveTextContent('classwise');
         expect(details).toHaveTextContent('true');
-        expect(screen.getByTestId('evaluation-run-item')).toHaveAttribute('aria-expanded', 'true');
+        expect(screen.getByTestId(baseRunItemTestId)).toHaveAttribute('aria-expanded', 'true');
     });
 
     it('shows a placeholder when configuration is empty', () => {
@@ -76,7 +88,19 @@ describe('EvaluationRunItem', () => {
         const onToggle = vi.fn();
         render(EvaluationRunItem, { props: { ...defaultProps, onToggle } });
 
-        await fireEvent.click(screen.getByTestId('evaluation-run-item'));
+        await fireEvent.click(screen.getByTestId(baseRunItemTestId));
         expect(onToggle).toHaveBeenCalledOnce();
+    });
+
+    it('renders the GT and prediction annotation sources when expanded', () => {
+        render(EvaluationRunItem, { props: { ...defaultProps, expanded: true } });
+
+        expect(screen.getByTestId('evaluation-run-annotation-sources')).toBeInTheDocument();
+        expect(screen.getByTestId('evaluation-run-gt-annotation-source')).toHaveTextContent(
+            'ground_truth_v1'
+        );
+        expect(screen.getByTestId('evaluation-run-prediction-annotation-source')).toHaveTextContent(
+            'predictions_v2'
+        );
     });
 });

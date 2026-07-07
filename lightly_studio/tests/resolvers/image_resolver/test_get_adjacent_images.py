@@ -13,8 +13,9 @@ from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests import helpers_resolvers
 from tests.helpers_resolvers import AnnotationDetails
 from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
-    create_run_and_image,
-    insert_metrics,
+    SampleMetricStub,
+    create_run,
+    create_sample_metrics,
 )
 
 
@@ -291,136 +292,6 @@ def test_get_adjacent_images__sort_by_file_name_desc(db_session: Session) -> Non
     assert result.next_sample_id == image_a.sample_id
 
 
-def test_get_adjacent_images__with_similarity_and_order_by(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session)
-    collection_id = collection.collection_id
-
-    embedding_model = helpers_resolvers.create_embedding_model(
-        session=db_session,
-        collection_id=collection_id,
-        embedding_model_name="embedding-for-adjacency-order",
-        embedding_dimension=2,
-    )
-
-    image_c = helpers_resolvers.create_image(
-        session=db_session,
-        collection_id=collection_id,
-        file_path_abs="/images/c.png",
-    )
-    image_a = helpers_resolvers.create_image(
-        session=db_session,
-        collection_id=collection_id,
-        file_path_abs="/images/a.png",
-    )
-    image_b = helpers_resolvers.create_image(
-        session=db_session,
-        collection_id=collection_id,
-        file_path_abs="/images/b.png",
-    )
-
-    helpers_resolvers.create_sample_embedding(
-        session=db_session,
-        sample_id=image_a.sample_id,
-        embedding_model_id=embedding_model.embedding_model_id,
-        embedding=[1.0, 0.0],
-    )
-    helpers_resolvers.create_sample_embedding(
-        session=db_session,
-        sample_id=image_b.sample_id,
-        embedding_model_id=embedding_model.embedding_model_id,
-        embedding=[1.0, 0.0],
-    )
-    helpers_resolvers.create_sample_embedding(
-        session=db_session,
-        sample_id=image_c.sample_id,
-        embedding_model_id=embedding_model.embedding_model_id,
-        embedding=[-1.0, 0.0],
-    )
-
-    # With query [1.0, 0.0]: image_a and image_b are tied (same embedding),
-    # order_by file_name asc places image_a before image_b, image_c is last.
-    result = image_resolver.get_adjacent_images(
-        session=db_session,
-        sample_id=image_b.sample_id,
-        collection_id=collection_id,
-        text_embedding=[1.0, 0.0],
-        order_by=[OrderByField(ImageSampleField.file_name)],
-    )
-
-    assert result is not None
-    assert result.previous_sample_id == image_a.sample_id
-    assert result.sample_id == image_b.sample_id
-    assert result.next_sample_id == image_c.sample_id
-
-
-def test_get_adjacent_images__similarity_is_tiebreaker_when_order_by_values_equal(
-    db_session: Session,
-) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session)
-    collection_id = collection.collection_id
-
-    embedding_model = helpers_resolvers.create_embedding_model(
-        session=db_session,
-        collection_id=collection_id,
-        embedding_model_name="embedding-tiebreaker",
-        embedding_dimension=2,
-    )
-
-    # image_a and image_b share the same width but differ in similarity to the query
-    image_a = helpers_resolvers.create_image(
-        session=db_session,
-        collection_id=collection_id,
-        file_path_abs="/images/a.png",
-        width=100,
-    )
-    image_b = helpers_resolvers.create_image(
-        session=db_session,
-        collection_id=collection_id,
-        file_path_abs="/images/b.png",
-        width=100,
-    )
-    image_c = helpers_resolvers.create_image(
-        session=db_session,
-        collection_id=collection_id,
-        file_path_abs="/images/c.png",
-        width=200,
-    )
-
-    helpers_resolvers.create_sample_embedding(
-        session=db_session,
-        sample_id=image_a.sample_id,
-        embedding_model_id=embedding_model.embedding_model_id,
-        embedding=[1.0, 0.0],
-    )
-    helpers_resolvers.create_sample_embedding(
-        session=db_session,
-        sample_id=image_b.sample_id,
-        embedding_model_id=embedding_model.embedding_model_id,
-        embedding=[-1.0, 0.0],
-    )
-    helpers_resolvers.create_sample_embedding(
-        session=db_session,
-        sample_id=image_c.sample_id,
-        embedding_model_id=embedding_model.embedding_model_id,
-        embedding=[0.0, 1.0],
-    )
-
-    # Sorted order: image_a (100, close), image_b (100, far), image_c (200)
-    # image_b's previous is image_a, next is image_c.
-    result = image_resolver.get_adjacent_images(
-        session=db_session,
-        sample_id=image_b.sample_id,
-        collection_id=collection_id,
-        text_embedding=[1.0, 0.0],
-        order_by=[OrderByField(ImageSampleField.width)],
-    )
-
-    assert result is not None
-    assert result.previous_sample_id == image_a.sample_id
-    assert result.sample_id == image_b.sample_id
-    assert result.next_sample_id == image_c.sample_id
-
-
 def test_get_adjacent_images__sort_by_width_desc_with_duplicate_values(db_session: Session) -> None:
     collection = helpers_resolvers.create_collection(session=db_session)
     collection_id = collection.collection_id
@@ -529,7 +400,8 @@ def test_get_adjacent_images__sort_by_evaluation_metric(db_session: Session) -> 
     collection = helpers_resolvers.create_collection(session=db_session)
     collection_id = collection.collection_id
 
-    run, image_a = create_run_and_image(session=db_session, dataset_collection_id=collection_id)
+    run = create_run(session=db_session, collection_id=collection_id)
+    image_a = helpers_resolvers.create_image(session=db_session, collection_id=collection_id)
     image_b = helpers_resolvers.create_image(
         session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
     )
@@ -538,9 +410,15 @@ def test_get_adjacent_images__sort_by_evaluation_metric(db_session: Session) -> 
     )
 
     # score order: b(1) < c(2) < a(3), so sorted sequence is b, c, a
-    insert_metrics(db_session, run.id, image_a.sample_id, {"score": 3.0})
-    insert_metrics(db_session, run.id, image_b.sample_id, {"score": 1.0})
-    insert_metrics(db_session, run.id, image_c.sample_id, {"score": 2.0})
+    create_sample_metrics(
+        session=db_session,
+        run_id=run.id,
+        sample_metrics=[
+            SampleMetricStub(sample_id=image_a.sample_id, metrics={"score": 3.0}),
+            SampleMetricStub(sample_id=image_b.sample_id, metrics={"score": 1.0}),
+            SampleMetricStub(sample_id=image_c.sample_id, metrics={"score": 2.0}),
+        ],
+    )
 
     result = image_resolver.get_adjacent_images(
         session=db_session,

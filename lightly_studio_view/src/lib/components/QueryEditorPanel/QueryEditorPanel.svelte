@@ -1,12 +1,20 @@
 <script lang="ts">
     import type { ComponentProps } from 'svelte';
+    import { X } from '@lucide/svelte';
     import QueryEditor from '$lib/components/QueryEditor/QueryEditor.svelte';
+    import { Button } from '$lib/components/ui/button';
     import Typography from '$lib/components/Typography/Typography.svelte';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 
+    interface Props {
+        /** Invoked when the user clicks the close button in the panel header. */
+        onClose: () => void;
+    }
+
     type OnSaveHandler = ComponentProps<typeof QueryEditor>['onSave'];
 
-    const { updateQueryExpr } = useImageFilters();
+    const { onClose }: Props = $props();
+    const { imageQueryExpression, updateQueryExpr } = useImageFilters();
 
     const handleQueryEditorValueChange: OnSaveHandler = (value, parsed) => {
         if (!parsed) {
@@ -24,8 +32,21 @@
 
 <div class="flex h-full min-w-0 flex-1 flex-col rounded-[1vw] bg-card p-4">
     <div class="mb-3 min-w-0">
-        <Typography variant="h5" component="h2" className="text-foreground">Query Filter</Typography
-        >
+        <div class="flex items-center justify-between">
+            <Typography variant="h5" component="h2" className="text-foreground"
+                >Query Filter</Typography
+            >
+            <Button
+                variant="ghost"
+                size="icon"
+                onclick={onClose}
+                aria-label="Close query filter panel"
+                class="h-8 w-8"
+                data-testid="query-editor-close-button"
+            >
+                <X class="size-4" />
+            </Button>
+        </div>
         <Typography
             variant="body2"
             component="div"
@@ -44,8 +65,12 @@
                     <code>object_detection(…)</code>, <code>classification(…)</code>
                 </li>
             </ul>
-            <p>Tip: Completion hints will show as you type a space or a left parenthesis.</p>
+            <p>Tip: Completion hints will appear as you type a space or a left parenthesis.</p>
         </Typography>
     </div>
-    <QueryEditor height="100%" onSave={handleQueryEditorValueChange} />
+    <QueryEditor
+        height="100%"
+        value={$imageQueryExpression?.query_expr_str}
+        onSave={handleQueryEditorValueChange}
+    />
 </div>

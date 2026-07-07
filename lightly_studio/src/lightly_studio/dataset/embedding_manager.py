@@ -6,7 +6,10 @@ import logging
 from dataclasses import dataclass
 from uuid import UUID
 
+import numpy as np
+from numpy.typing import NDArray
 from sqlmodel import Session
+from tqdm import tqdm
 
 from lightly_studio.dataset import env
 from lightly_studio.dataset.embedding_generator import (
@@ -18,14 +21,29 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingCreate
 from lightly_studio.resolvers import (
+    annotation_resolver,
     collection_resolver,
     embedding_model_resolver,
     image_resolver,
     sample_embedding_resolver,
     video_resolver,
 )
+from lightly_studio.utils import batching
 
 logger = logging.getLogger(__name__)
+
+# Number of embeddings inserted per database round-trip. Larger batches mean fewer
+# round-trips but higher peak memory. 1024 balances the two.
+EMBEDDING_INSERTION_BATCH_SIZE = 1024
+
+# Number of annotation crops processed per chunk in embed_annotations.
+ANNOTATION_EMBED_BATCH_SIZE = 2048
+# Mapping of sample types to the generator type used for embedding generation.
+_GENERATOR_SAMPLE_TYPE: dict[SampleType, SampleType] = {
+    SampleType.IMAGE: SampleType.IMAGE,
+    SampleType.ANNOTATION: SampleType.IMAGE,
+    SampleType.VIDEO: SampleType.VIDEO,
+}
 
 
 class EmbeddingManagerProvider:
@@ -63,6 +81,7 @@ class EmbeddingManager:
         """Initialize the embedding manager."""
         self._models: dict[UUID, EmbeddingGenerator] = {}
         self._collection_id_to_default_model_id: dict[UUID, UUID] = {}
+        self._sample_type_to_model_id: dict[SampleType, UUID] = {}
 
     def register_embedding_model(
         self,
@@ -166,18 +185,75 @@ class EmbeddingManager:
         # Generate embeddings for the samples.
         embeddings = model.embed_images(filepaths=filepaths)
 
-        # Convert to SampleEmbeddingCreate objects.
-        sample_embeddings = [
-            SampleEmbeddingCreate(
-                sample_id=sample_id,
-                embedding_model_id=model_id,
-                embedding=embedding,
-            )
-            for sample_id, embedding in zip(sample_ids, embeddings)
-        ]
+        _store_embeddings(
+            session=session,
+            model_id=model_id,
+            sample_ids=sample_ids,
+            embeddings=embeddings,
+        )
 
-        # Store the embeddings in the database.
-        sample_embedding_resolver.create_many(session=session, sample_embeddings=sample_embeddings)
+    def embed_annotations(
+        self,
+        session: Session,
+        annotation_collection_id: UUID,
+        embedding_model_id: UUID | None = None,
+    ) -> None:
+        """Generate and store embeddings for annotation crops.
+
+        Object-detection and segmentation-mask annotations are both embedded.
+
+        Args:
+            session: Database session for resolver operations.
+            annotation_collection_id: The annotation collection whose annotation
+                samples should receive embeddings.
+            embedding_model_id: ID of the model to use. Uses default if None.
+
+        Raises:
+            ValueError: If no image-compatible embedding model is registered.
+        """
+        model_id = self._get_default_or_validate(
+            collection_id=annotation_collection_id, embedding_model_id=embedding_model_id
+        )
+        model = self._models[model_id]
+        if not isinstance(model, ImageEmbeddingGenerator):
+            raise ValueError("Embedding model not compatible with images.")
+
+        annotation_sample_ids = annotation_resolver.get_unembedded_annotation_ids(
+            session=session,
+            annotation_collection_id=annotation_collection_id,
+            embedding_model_id=model_id,
+        )
+        if not annotation_sample_ids:
+            logger.info("No annotation crops to embed.")
+            return
+
+        with tqdm(
+            total=len(annotation_sample_ids),
+            desc="Embedding annotations",
+            unit=" crops",
+        ) as progress:
+            for sample_id_chunk in batching.batched(
+                items=annotation_sample_ids, batch_size=ANNOTATION_EMBED_BATCH_SIZE
+            ):
+                annotation_crops = annotation_resolver.get_annotation_crops_for_ids(
+                    session=session, annotation_sample_ids=sample_id_chunk
+                )
+                if not annotation_crops:
+                    continue
+
+                embeddings = model.embed_image_crops(
+                    image_crops=[crop.image_crop for crop in annotation_crops],
+                    show_progress=False,
+                )
+
+                _store_embeddings(
+                    session=session,
+                    model_id=model_id,
+                    sample_ids=[crop.annotation_sample_id for crop in annotation_crops],
+                    embeddings=embeddings,
+                    show_progress=False,
+                )
+                progress.update(len(annotation_crops))
 
     def compute_image_embedding(
         self,
@@ -256,18 +332,12 @@ class EmbeddingManager:
         # Generate embeddings for the samples.
         embeddings = model.embed_videos(filepaths=filepaths)
 
-        # Convert to SampleEmbeddingCreate objects.
-        sample_embeddings = [
-            SampleEmbeddingCreate(
-                sample_id=sample_id,
-                embedding_model_id=model_id,
-                embedding=embedding,
-            )
-            for sample_id, embedding in zip(sample_ids, embeddings)
-        ]
-
-        # Store the embeddings in the database.
-        sample_embedding_resolver.create_many(session=session, sample_embeddings=sample_embeddings)
+        _store_embeddings(
+            session=session,
+            model_id=model_id,
+            sample_ids=sample_ids,
+            embeddings=embeddings,
+        )
 
     def load_or_get_default_model(
         self,
@@ -284,16 +354,26 @@ class EmbeddingManager:
             UUID of the default embedding model or None if the model cannot be loaded.
         """
         # Return the existing default model ID if available.
-
         if collection_id in self._collection_id_to_default_model_id:
             return self._collection_id_to_default_model_id[collection_id]
 
-        # Load the embedding generator based on sample_type from the env var.
         dataset = collection_resolver.get_by_id(session=session, collection_id=collection_id)
         if dataset is None:
             raise ValueError("Provided collection_id could not be found.")
 
-        embedding_generator = _load_embedding_generator_from_env(sample_type=dataset.sample_type)
+        # Check if a model suitable for this sample type is already registered
+        generator_sample_type = _GENERATOR_SAMPLE_TYPE.get(dataset.sample_type)
+        if generator_sample_type is None:
+            return None
+        existing_model_id = self._sample_type_to_model_id.get(generator_sample_type)
+        embedding_generator: EmbeddingGenerator | None = None
+        if existing_model_id is not None:
+            embedding_generator = self._models[existing_model_id]
+        else:
+            # Load the embedding generator based on sample_type from the env var.
+            embedding_generator = _load_embedding_generator_from_env(
+                sample_type=generator_sample_type
+            )
         if embedding_generator is None:
             return None
 
@@ -304,6 +384,8 @@ class EmbeddingManager:
             embedding_generator=embedding_generator,
             set_as_default=True,
         )
+        # Store the model ID for the sample type to avoid reloading it in the future.
+        self._sample_type_to_model_id[generator_sample_type] = embedding_model.embedding_model_id
 
         return embedding_model.embedding_model_id
 
@@ -327,6 +409,44 @@ class EmbeddingManager:
         if embedding_model_id not in self._models:
             raise ValueError(f"No embedding model found with ID {embedding_model_id}")
         return embedding_model_id
+
+
+def _store_embeddings(
+    session: Session,
+    model_id: UUID,
+    sample_ids: list[UUID],
+    embeddings: NDArray[np.float32],
+    show_progress: bool = True,
+) -> None:
+    """Store embeddings in the database.
+
+    Insertion is batched to reduce peak memory. All batches are committed together
+    so a failure leaves no partially embedded dataset behind.
+    """
+    with tqdm(
+        total=len(sample_ids),
+        desc="Storing embeddings",
+        unit=" embeddings",
+        disable=not show_progress,
+    ) as progress:
+        for batch in batching.batched(
+            items=zip(sample_ids, embeddings), batch_size=EMBEDDING_INSERTION_BATCH_SIZE
+        ):
+            sample_embeddings = [
+                SampleEmbeddingCreate(
+                    sample_id=sample_id,
+                    embedding_model_id=model_id,
+                    embedding=embedding,
+                )
+                for sample_id, embedding in batch
+            ]
+            sample_embedding_resolver.create_many(
+                session=session, sample_embeddings=sample_embeddings, commit=False
+            )
+
+            progress.update(len(sample_embeddings))
+
+    session.commit()
 
 
 def _load_embedding_generator_from_env(sample_type: SampleType) -> EmbeddingGenerator | None:

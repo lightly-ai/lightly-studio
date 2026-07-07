@@ -12,8 +12,9 @@ from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsF
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
-    create_annotation,
+    AnnotationDetails,
     create_annotation_label,
+    create_annotations,
     create_collection,
     create_image,
 )
@@ -53,23 +54,23 @@ def test_data(db_session: Session) -> _TestData:
         label_name="cat",
     )
 
-    create_annotation(
+    create_annotations(
         session=db_session,
-        sample_id=image1.sample_id,
-        annotation_label_id=dog_label.annotation_label_id,
         collection_id=collection_id,
-    )
-    create_annotation(
-        session=db_session,
-        sample_id=image2.sample_id,
-        annotation_label_id=dog_label.annotation_label_id,
-        collection_id=collection_id,
-    )
-    create_annotation(
-        session=db_session,
-        sample_id=image1.sample_id,
-        annotation_label_id=cat_label.annotation_label_id,
-        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image1.sample_id,
+                annotation_label_id=dog_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=image2.sample_id,
+                annotation_label_id=dog_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=image1.sample_id,
+                annotation_label_id=cat_label.annotation_label_id,
+            ),
+        ],
     )
 
     return _TestData(collection=collection, dog_label=dog_label, cat_label=cat_label)

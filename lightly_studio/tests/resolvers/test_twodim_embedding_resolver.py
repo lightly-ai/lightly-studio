@@ -12,13 +12,16 @@ from tests.helpers_resolvers import (
 
 
 def test__calculate_2d_embeddings__1_sample() -> None:
-    embedding_values = [[0.1, 0.2, 0.3]]
+    embedding_values = [np.array([0.1, 0.2, 0.3], dtype=np.float32)]
     projected = twodim_embedding_resolver._calculate_2d_embeddings(embedding_values)
     assert projected == [(0.0, 0.0)]
 
 
 def test__calculate_2d_embeddings__2_samples() -> None:
-    embedding_values = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
+    embedding_values = [
+        np.array([0.1, 0.2, 0.3], dtype=np.float32),
+        np.array([0.4, 0.5, 0.6], dtype=np.float32),
+    ]
     projected = twodim_embedding_resolver._calculate_2d_embeddings(embedding_values)
     assert projected == [(0.0, 0.0), (1.0, 1.0)]
 

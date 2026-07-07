@@ -5,9 +5,10 @@ from time import perf_counter
 
 from environs import Env
 
-from lightly_studio import db_manager
+import lightly_studio as ls
 from lightly_studio.core.dataset_query import ImageSampleField
 from lightly_studio.core.image.image_dataset import ImageDataset
+from lightly_studio.database import db_manager
 from lightly_studio.evaluation.image_dataset_evaluate import ObjectDetectionEvaluationConfig
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.resolvers import (
@@ -16,11 +17,11 @@ from lightly_studio.resolvers import (
 )
 
 DATASET_NAME = "evaluation_example_dataset"
-GT_COLLECTION_NAME = "gt"
-PRED_COLLECTION_NAME = "pred"
+GT_ANNOTATION_SOURCE = "ground_truth"
+PRED_ANNOTATION_SOURCE = "predictions"
 
-TAGGED_SAMPLES_EVALUATION_NAME = "evaluation-example-tagged-samples"
-ALL_SAMPLES_EVALUATION_NAME = "evaluation-example-all-samples"
+TAGGED_SAMPLES_EVALUATION_NAME = "eval-tagged-samples"
+ALL_SAMPLES_EVALUATION_NAME = "eval-all-samples"
 
 
 def get_evaluation_run(dataset: ImageDataset, name: str) -> EvaluationRunTable:
@@ -95,13 +96,13 @@ def main() -> None:
     dataset.add_annotations_from_coco(
         annotations_json=gt_annotations_json,
         images_root=images_path,
-        name=GT_COLLECTION_NAME,
+        annotation_source=GT_ANNOTATION_SOURCE,
     )
     # Add Pred annotations
     dataset.add_annotations_from_coco(
         annotations_json=pred_annotations_json,
         images_root=images_path,
-        name=PRED_COLLECTION_NAME,
+        annotation_source=PRED_ANNOTATION_SOURCE,
     )
     # Add tag to tagged samples
     tag_name = "evaluated_samples"
@@ -113,8 +114,8 @@ def main() -> None:
     start_time = perf_counter()
     evaluation_result = dataset.evaluate(query=tagged_evaluation_query).object_detection(
         name=TAGGED_SAMPLES_EVALUATION_NAME,
-        gt_collection_name=GT_COLLECTION_NAME,
-        pred_collection_name=PRED_COLLECTION_NAME,
+        gt_annotation_source=GT_ANNOTATION_SOURCE,
+        pred_annotation_source=PRED_ANNOTATION_SOURCE,
         config=evaluation_config,
     )
     print(
@@ -129,8 +130,8 @@ def main() -> None:
     start_time = perf_counter()
     evaluation_result = dataset.evaluate().object_detection(
         name=ALL_SAMPLES_EVALUATION_NAME,
-        gt_collection_name=GT_COLLECTION_NAME,
-        pred_collection_name=PRED_COLLECTION_NAME,
+        gt_annotation_source=GT_ANNOTATION_SOURCE,
+        pred_annotation_source=PRED_ANNOTATION_SOURCE,
         config=evaluation_config,
     )
     print(
@@ -140,6 +141,8 @@ def main() -> None:
         f"{evaluation_result.pred_annotation_count} prediction annotations"
     )
     print_evaluation_metrics(dataset=dataset, name=ALL_SAMPLES_EVALUATION_NAME)
+
+    ls.start_gui()
 
 
 if __name__ == "__main__":

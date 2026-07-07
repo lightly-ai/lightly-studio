@@ -17,13 +17,14 @@ from lightly_studio.core.dataset import BaseSampleDataset
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.video import add_videos
 from lightly_studio.core.video.add_videos import VIDEO_EXTENSIONS
+from lightly_studio.core.video.video_frame_dataset import VideoFrameDataset
 from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.export.video_dataset_export import VideoDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
-from lightly_studio.resolvers import video_resolver
+from lightly_studio.resolvers import collection_resolver, video_resolver
 from lightly_studio.type_definitions import PathLike
 
 logger = logging.getLogger(__name__)
@@ -80,6 +81,23 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             query = self.query()
         return VideoDatasetExport(session=self.session, samples=query)
 
+    def frames(self) -> VideoFrameDataset:
+        """Return a dataset over the individual frames of this dataset's videos.
+
+        Returns:
+            A VideoFrameDataset exposing the video frames as queryable samples.
+        """
+        frame_collection_id = collection_resolver.get_or_create_child_collection(
+            session=self.session,
+            collection_id=self.collection_id,
+            sample_type=SampleType.VIDEO_FRAME,
+        )
+        frame_collection = collection_resolver.get_by_id(
+            session=self.session, collection_id=frame_collection_id
+        )
+        assert frame_collection is not None
+        return VideoFrameDataset(collection=frame_collection)
+
     def get_sample(self, sample_id: UUID) -> VideoSample:
         """Get a single sample from the dataset by its ID.
 
@@ -98,12 +116,14 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             raise IndexError(f"No sample found for sample_id: {sample_id}")
         return VideoSample(inner=sample)
 
-    def add_videos_from_path(
+    def add_videos_from_path(  # noqa: PLR0913
         self,
         path: PathLike,
         allowed_extensions: Iterable[str] | None = None,
         num_decode_threads: int | None = None,
         embed: bool = True,
+        target_fps: float | None = None,
+        limit: int | None = None,
     ) -> None:
         """Adding video frames from the specified path to the dataset.
 
@@ -115,8 +135,18 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             num_decode_threads: Optional override for the number of FFmpeg decode threads.
                 If omitted, the available CPU cores - 1 (max 16) are used.
             embed: If True, generate embeddings for the newly added videos.
+            target_fps: Optional target frame rate for subsampling. When set below the source
+                frame rate, only selected frames are kept. frame_number values remain
+                original. Must be greater than 0.
+            limit: Maximum number of samples to load. By default, all samples are loaded.
         """
-        video_paths = _collect_video_file_paths(path=path, allowed_extensions=allowed_extensions)
+        if target_fps is not None and target_fps <= 0:
+            raise ValueError(f"target_fps must be greater than 0, got {target_fps}.")
+        fsspec_lister.validate_limit(limit)
+
+        video_paths = _collect_video_file_paths(
+            path=path, allowed_extensions=allowed_extensions, limit=limit
+        )
         logger.info(f"Found {len(video_paths)} videos in {path}.")
 
         # Process videos.
@@ -125,6 +155,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             collection_id=self.collection_id,
             video_paths=video_paths,
             num_decode_threads=num_decode_threads,
+            target_fps=target_fps,
         )
 
         if embed:
@@ -134,13 +165,14 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
                 sample_ids=created_sample_ids,
             )
 
-    def add_videos_from_youtube_vis(
+    def add_videos_from_youtube_vis(  # noqa: PLR0913
         self,
         annotations_json: PathLike,
         videos_path: PathLike,
         allowed_extensions: Iterable[str] | None = None,
         annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
         embed: bool = True,
+        limit: int | None = None,
     ) -> None:
         """Load videos and YouTube-VIS annotations and store them in the database.
 
@@ -154,7 +186,13 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             annotation_type: The type of annotation to be loaded (e.g., 'ObjectDetection',
                 'InstanceSegmentation').
             embed: If True, generate embeddings for the newly added videos.
+            limit: Maximum number of samples to load. By default, all samples are loaded.
+                Annotations of videos beyond the limit are skipped.
+
+        Raises:
+            ValueError: If limit is not None and not greater than 0.
         """
+        fsspec_lister.validate_limit(limit)
         annotations_json = Path(annotations_json).absolute()
 
         if not annotations_json.is_file() or annotations_json.suffix != ".json":
@@ -180,6 +218,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             video_paths=video_paths,
             input_labels=input_labels,
             input_labels_paths_root=videos_path,
+            limit=limit,
         )
 
         if embed:
@@ -224,6 +263,7 @@ def _generate_embeddings_video(
 def _collect_video_file_paths(
     path: PathLike,
     allowed_extensions: Iterable[str] | None = None,
+    limit: int | None = None,
 ) -> list[str]:
     # Collect video file paths.
     if allowed_extensions:
@@ -232,6 +272,6 @@ def _collect_video_file_paths(
         allowed_extensions_set = VIDEO_EXTENSIONS
     return list(
         fsspec_lister.iter_files_from_path(
-            path=str(path), allowed_extensions=allowed_extensions_set
+            path=str(path), allowed_extensions=allowed_extensions_set, limit=limit
         )
     )

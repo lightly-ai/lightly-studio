@@ -101,7 +101,7 @@ written in Markdown (MyST flavor). For more information regarding formatting, se
 ## Development Environment Setup
 
 ### Requirements
-- Python **3.9+**
+- Python **3.9+** (3.10 recommended)
 - Uv version **0.8.17+**
 - Node.js **22.11+**
 - Access to **Google Cloud Platform** (request permissions from @IgorSusmelj)

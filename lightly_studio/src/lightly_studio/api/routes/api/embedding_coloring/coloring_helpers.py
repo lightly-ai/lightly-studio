@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+from collections import Counter
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Generic, Protocol, TypeVar
@@ -9,6 +11,14 @@ from uuid import UUID
 
 T = TypeVar("T")
 T_contra = TypeVar("T_contra", contravariant=True)
+
+# The plotting library renders at most this many legend slots, indexed [0, MAX_LEGEND_SLOTS).
+MAX_LEGEND_SLOTS = 256
+# First slot available for colored categories. Slots below it are reserved for the
+# frontend's non-colored categories (0 hidden, 1 filtered-out, 2 unassigned).
+FIRST_COLORED_CATEGORY = 3
+# Number of category names listed inside an "Other" bucket label before truncating with an ellipsis.
+MAX_OTHER_NAMES = 5
 
 
 class ColorScale(Protocol[T_contra]):
@@ -47,7 +57,7 @@ class DiscreteColorScale(Generic[T]):
     def from_values(
         cls,
         values: Iterable[T],
-        start_cat: int = 2,
+        start_cat: int = FIRST_COLORED_CATEGORY,
         format_fn: Callable[[T], str] = str,
     ) -> DiscreteColorScale[T]:
         """Build a DiscreteColorScale by assigning a category to each value.
@@ -56,83 +66,179 @@ class DiscreteColorScale(Generic[T]):
         providing them in the desired sequence (e.g. sorted alphabetically or
         in priority order).
 
+        The plotting library can render at most ``MAX_LEGEND_SLOTS`` legend
+        slots. Categories occupy the slots ``[start_cat, MAX_LEGEND_SLOTS)``;
+        the slots below ``start_cat`` are reserved (e.g. hidden, filtered-out
+        and unassigned samples). When the values fit in those slots, each value gets
+        its own category. Otherwise the values that fit are listed individually
+        and every remaining value is grouped into a trailing "Other" category in
+        the final slot.
+
         Args:
             values: Values to assign color categories to, in the desired order.
                 Values must be unique.
-            start_cat: First category ID to assign. Defaults to 2, reserving
-                0 for filtered-out samples and 1 for unassigned samples.
+            start_cat: First category ID to assign. Defaults to 3, reserving
+                0 for hidden samples, 1 for filtered-out samples and 2 for
+                unassigned samples.
             format_fn: Function to produce a legend label from a value.
                 Defaults to ``str``.
 
         Returns:
-            A DiscreteColorScale with one category per value.
+            A DiscreteColorScale with one category per value, or — when the
+            values exceed the available slots — one category per value that fits
+            plus a final "Other" category grouping the remainder.
         """
         value_list = list(values)
         assert len(set(value_list)) == len(value_list), "Color legend values must be unique"
 
+        # Slots [start_cat, MAX_LEGEND_SLOTS) are available for categories.
+        max_individual = MAX_LEGEND_SLOTS - start_cat
+
         lookup: dict[T, int] = {}
         legend: dict[int, str] = {}
-        for i, value in enumerate(value_list):
+
+        # When values overflow the slots, reserve the final slot for an "Other"
+        # bucket; otherwise every value gets its own slot.
+        fits = len(value_list) <= max_individual
+        individual = value_list if fits else value_list[: max_individual - 1]
+        for i, value in enumerate(individual):
             cat = start_cat + i
             lookup[value] = cat
             legend[cat] = format_fn(value)
+
+        if not fits:
+            other = value_list[max_individual - 1 :]
+            other_cat = start_cat + max_individual - 1
+            for value in other:
+                lookup[value] = other_cat
+            legend[other_cat] = _format_other_label(other, format_fn)
+
         return cls(_lookup=lookup, legend=legend)
+
+    @classmethod
+    def from_integers(
+        cls,
+        values: Iterable[int],
+        start_cat: int = FIRST_COLORED_CATEGORY,
+        max_categories: int = 50,
+    ) -> DiscreteColorScale[int]:
+        """Build a color scale for integer values.
+
+        When the number of unique values is at most ``max_categories``, each
+        unique value gets its own category. Otherwise the range [min, max] is
+        split into at most ``max_categories`` equal-width buckets and each value
+        is mapped to the bucket that contains it.
+
+        In both cases categories are ordered numerically (smallest value first).
+
+        Args:
+            values: Integer values to build the scale from. Need not be unique.
+            start_cat: First category ID to assign. Defaults to 3, reserving
+                0 for hidden samples, 1 for filtered-out samples and 2 for
+                unassigned samples.
+            max_categories: Maximum number of distinct color categories before
+                bucketing is applied. Defaults to 50.
+
+        Returns:
+            A DiscreteColorScale mapping each integer to a color category.
+        """
+        unique_values = sorted(set(values))
+
+        if len(unique_values) <= max_categories:
+            return DiscreteColorScale.from_values(values=unique_values, start_cat=start_cat)
+
+        min_val = unique_values[0]
+        max_val = unique_values[-1]
+        value_range = max_val - min_val
+        raw_width = value_range / max_categories
+        magnitude = 10 ** math.floor(math.log10(raw_width)) if raw_width >= 1 else 1
+        bucket_width = math.ceil(raw_width / magnitude) * magnitude
+
+        num_buckets = math.ceil((value_range + 1) / bucket_width)
+
+        def _bucket_idx(value: int) -> int:
+            return min((value - min_val) // bucket_width, num_buckets - 1)
+
+        def _label(bucket_start: int) -> str:
+            if bucket_width == 1:
+                return str(bucket_start)
+            return f"{bucket_start}-{bucket_start + bucket_width - 1}"
+
+        legend: dict[int, str] = {
+            start_cat + i: _label(min_val + i * bucket_width) for i in range(num_buckets)
+        }
+        lookup: dict[int, int] = {v: start_cat + _bucket_idx(v) for v in unique_values}
+
+        return DiscreteColorScale[int](_lookup=lookup, legend=legend)
 
 
 def assign_color_categories(
     sample_ids: Sequence[UUID],
-    fulfils_filter: Sequence[int],
-    sample_to_value: Mapping[UUID, T],
+    sample_to_values: Mapping[UUID, Iterable[T]],
     scale: ColorScale[T],
-) -> tuple[list[int], dict[int, str]]:
-    """Return color categories and a legend for the given samples.
+) -> tuple[list[list[int]], dict[int, str]]:
+    """Return per-sample color category list and a legend for the given samples.
+
+    Each sample maps to the color categories of its values, sorted by color
+    category. A sample with no value (or no value that maps to a category) maps
+    to an empty list.
 
     Args:
         sample_ids: Sample IDs.
-        fulfils_filter: Binary indicator per sample. 0 means filtered out.
-        sample_to_value: Mapping from sample ID to a value.
+        sample_to_values: Mapping from sample ID to the values it carries.
         scale: Color scale used to map values to categories.
 
     Returns:
-        A tuple of `(color_categories, legend)`. Category 0 means filtered
-        out and 1 means unassigned (missing or unmapped value).
+        A tuple of `(color_categories, legend)`. Each per-sample list holds the
+        sample's color categories, sorted ascending.
     """
-    color_categories: list[int] = []
-    for i, sid in enumerate(sample_ids):
-        if fulfils_filter[i] == 0:
-            cat = 0
-        elif sid in sample_to_value:
-            mapped = scale.value_to_category(sample_to_value[sid])
-            cat = mapped if mapped is not None else 1
-        else:
-            cat = 1
-        color_categories.append(cat)
+    color_categories: list[list[int]] = []
+    for sid in sample_ids:
+        values = sample_to_values.get(sid, ())
+        categories = [scale.value_to_category(value) for value in values]
+        categories_not_none = [c for c in categories if c is not None]
+        color_categories.append(sorted(categories_not_none))
 
-    legend = {0: "Filtered out", 1: "Unassigned", **scale.legend}
-    return color_categories, legend
+    return color_categories, scale.legend
 
 
-def first_match_per_sample(
-    sample_to_candidates: Mapping[UUID, Iterable[T]],
-    priority_order: Sequence[T],
-) -> dict[UUID, T]:
-    """Map each sample to the first matching value from a priority-ordered list.
+def order_values_by_frequency(
+    sample_to_values: Mapping[UUID, Iterable[T]],
+    matching_sample_ids: set[UUID] | None,
+    format_fn: Callable[[T], str] = str,
+) -> list[T]:
+    """Distinct values among matching samples, ordered by descending frequency.
 
-    Samples with no match are omitted from the result.
+    Counting only the samples in ``matching_sample_ids`` (all samples when it is
+    ``None``) makes the result *filter-aware*. When the values are later split
+    into a fixed number of legend slots, this ordering ensures the values most
+    common among the matching samples each get a dedicated category, while the
+    less common ones are merged into a single "Other" category. Values that never
+    occur in a matching sample are omitted entirely, which hides categories with
+    zero samples after filtering.
 
     Args:
-        sample_to_candidates: Mapping from sample ID to the set (or any
-            iterable) of candidate values the sample carries.
-        priority_order: Values in priority order — the first match wins.
+        sample_to_values: Mapping from sample ID to the values it carries.
+        matching_sample_ids: Sample IDs to count. ``None`` counts every sample
+            in ``sample_to_values``.
+        format_fn: Function producing the label used to break frequency ties,
+            keeping the ordering deterministic. Defaults to ``str``.
 
     Returns:
-        A mapping from sample ID to the winning value.
+        Distinct values sorted by ``(-count, format_fn(value))``.
     """
-    result: dict[UUID, T] = {}
-    for sid, candidates in sample_to_candidates.items():
-        candidate_set = candidates if isinstance(candidates, set) else set(candidates)
-        for value in priority_order:
-            if value in candidate_set:
-                result[sid] = value
-                break
-    return result
+    counts: Counter[T] = Counter()
+    for sample_id, values in sample_to_values.items():
+        if matching_sample_ids is not None and sample_id not in matching_sample_ids:
+            continue
+        counts.update(set(values))
+
+    return sorted(counts, key=lambda value: (-counts[value], format_fn(value)))
+
+
+def _format_other_label(values: Sequence[T], format_fn: Callable[[T], str]) -> str:
+    """Build the legend label for an "Other" bucket, e.g. ``Other (class1, class2, …)``."""
+    names = [format_fn(value) for value in values[:MAX_OTHER_NAMES]]
+    if len(values) > MAX_OTHER_NAMES:
+        names.append("…")
+    return f"Other ({', '.join(names)})"

@@ -14,10 +14,10 @@
     } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
-    import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import { goto } from '$app/navigation';
-    import { omit, isEqual } from 'lodash-es';
+    import { isEqual } from 'lodash-es';
+    import { mergeExternalFilters, paramsWithoutExternalFilters } from './syncFilterParams';
     import { GridContainer } from '../GridContainer';
     import { Grid } from '../Grid';
     import { GridItem } from '../GridItem';
@@ -38,7 +38,6 @@
 
     const { selectedAnnotationFilterIdsArray: selectedAnnotationFilterIds } =
         useSelectedAnnotationsFilter();
-    const { selectedCollectionIds } = useAnnotationCollectionsFilter();
 
     const { tagsSelected } = useTags({
         collection_id,
@@ -64,20 +63,12 @@
             annotation_label_ids: $selectedAnnotationFilterIds?.length
                 ? $selectedAnnotationFilterIds
                 : undefined,
-            collection_ids: $selectedCollectionIds.length ? $selectedCollectionIds : undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
             dimensions: $dimensions ?? undefined
         },
         metadata_values: $metadataValues,
         text_embedding: $textEmbedding?.embedding
     });
-
-    const paramsWithoutSampleIds = (params: ImagesInfiniteParams) => {
-        return {
-            ...params,
-            filters: params.mode === 'normal' ? omit(params.filters, ['sample_ids']) : undefined
-        };
-    };
 
     const { filterParams, updateFilterParams, imageQueryExpression, imageSortBy } =
         useImageFilters();
@@ -87,42 +78,28 @@
         const baseParams = samplesParams as ImagesInfiniteParams;
         const currentParams = $filterParams;
 
-        // Compare parameters excluding sample_ids to detect if other filters have changed
+        // Compare parameters excluding the externally-set filters (sample_ids /
+        // confusion_cell) to detect if other filters have changed.
         if (
             currentParams &&
-            isEqual(paramsWithoutSampleIds(baseParams), paramsWithoutSampleIds(currentParams))
+            isEqual(
+                paramsWithoutExternalFilters(baseParams),
+                paramsWithoutExternalFilters(currentParams)
+            )
         ) {
             return;
         }
 
-        // Start with the base parameters from the component
-        let nextParams = baseParams;
-
-        let currentSampleIds: string[] = [];
-        if (currentParams.mode === 'normal' && currentParams.filters?.sample_ids) {
-            currentSampleIds = currentParams.filters.sample_ids;
-        }
-
-        // Merge the existing sample selection into the new parameters
-        if (currentSampleIds && currentSampleIds.length > 0 && nextParams.mode === 'normal') {
-            nextParams = {
-                ...nextParams,
-                filters: {
-                    ...(nextParams.filters ?? {}),
-                    sample_ids: currentSampleIds
-                }
-            };
-        }
-
-        // Update the global filter parameters
-        updateFilterParams(nextParams);
+        // Merge the externally-set selection and confusion cell into the new parameters
+        // and update the global filter parameters.
+        updateFilterParams(mergeExternalFilters(baseParams, currentParams));
     });
 
     const { samples: infiniteSamples } = useImagesInfinite(() => ({
         ...$filterParams,
         collection_id: collection_id,
         query_expr: $imageQueryExpression?.query_expr,
-        sort_by: $imageSortBy ?? undefined
+        sort_by: $textEmbedding ? undefined : ($imageSortBy ?? undefined)
     }));
     // Derived list of samples from TanStack infinite query
     const samples: ImageView[] = $derived(
@@ -152,6 +129,10 @@
         isReady = true;
     });
 
+    const confusionCell = $derived(
+        $filterParams.mode === 'normal' ? $filterParams.filters?.confusion_cell : undefined
+    );
+
     const filterHash = $derived.by(() => {
         const parts = [
             $selectedAnnotationFilterIds.join(','),
@@ -161,8 +142,8 @@
             `${$dimensions?.min_height}-${$dimensions?.max_height}`,
             JSON.stringify($metadataValues),
             $textEmbedding?.queryText || '',
-            JSON.stringify($imageSortBy),
-            $selectedCollectionIds.join(',')
+            confusionCell ? JSON.stringify(confusionCell) : '',
+            JSON.stringify($imageSortBy)
         ];
 
         return parts.filter(Boolean).join('|');

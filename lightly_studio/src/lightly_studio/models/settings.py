@@ -56,6 +56,10 @@ class SettingBase(SQLModel):
         description="Controls whether to show annotation bounding boxes for segmentation",
     )
 
+    enforce_coloring_by_class: bool = Field(
+        description="Controls whether annotations are always colored by class",
+    )
+
     # Toolbar shortcuts
     key_toolbar_selection: str = Field(
         description="Key to activate the selection tool in the toolbar",
@@ -103,6 +107,9 @@ class SettingDefaults(SettingBase):
     )
     show_bounding_boxes_for_segmentation: bool = Field(
         default=True,
+    )
+    enforce_coloring_by_class: bool = Field(
+        default=False,
     )
     key_toolbar_selection: str = Field(
         default="s",

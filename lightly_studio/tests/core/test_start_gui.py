@@ -10,10 +10,11 @@ import pytest
 from PIL import Image
 from pytest_mock import MockerFixture
 
-from lightly_studio import ImageDataset, db_manager
+from lightly_studio import ImageDataset
 from lightly_studio.api.server import Server
 from lightly_studio.core import start_gui as start_gui_module
 from lightly_studio.core.start_gui import start_gui
+from lightly_studio.database import db_manager
 from lightly_studio.models.collection import CollectionCreate, SampleType
 from lightly_studio.resolvers import collection_resolver
 

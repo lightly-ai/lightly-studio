@@ -25,7 +25,7 @@
 
 <Collapsible bind:open>
     <CollapsibleTrigger class="w-full">
-        <h2 class="py-2 text-lg font-semibold">
+        <h2 class="py-2 text-base font-semibold">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2">
                     {#if Icon}

@@ -5,7 +5,12 @@ from lightly_studio.resolvers import video_frame_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
-from tests.helpers_resolvers import create_annotation, create_annotation_label, create_collection
+from tests.helpers_resolvers import (
+    AnnotationDetails,
+    create_annotation_label,
+    create_annotations,
+    create_collection,
+)
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
 
@@ -29,24 +34,23 @@ def test_get_video_frames_count_annotation_views_without_filter(db_session: Sess
         session=db_session, root_collection_id=collection.collection_id, label_name="house"
     )
 
-    # Create annotations
-    create_annotation(
+    create_annotations(
         session=db_session,
-        sample_id=video_frames_data.frame_sample_ids[0],
-        annotation_label_id=car_label.annotation_label_id,
         collection_id=video_frames_data.video_frames_collection_id,
-    )
-    create_annotation(
-        session=db_session,
-        sample_id=video_frames_data.frame_sample_ids[1],
-        annotation_label_id=airplane_label.annotation_label_id,
-        collection_id=video_frames_data.video_frames_collection_id,
-    )
-    create_annotation(
-        session=db_session,
-        sample_id=video_frames_data.frame_sample_ids[1],
-        annotation_label_id=airplane_label.annotation_label_id,
-        collection_id=video_frames_data.video_frames_collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=video_frames_data.frame_sample_ids[0],
+                annotation_label_id=car_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=video_frames_data.frame_sample_ids[1],
+                annotation_label_id=airplane_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=video_frames_data.frame_sample_ids[1],
+                annotation_label_id=airplane_label.annotation_label_id,
+            ),
+        ],
     )
 
     annotations = video_frame_resolver.get_video_frames_count_annotation_views(
@@ -87,24 +91,23 @@ def test_get_video_frames_count_annotation_views_without_annotations_filter(
         session=db_session, root_collection_id=collection.collection_id, label_name="house"
     )
 
-    # Create annotations
-    create_annotation(
+    create_annotations(
         session=db_session,
-        sample_id=video_frames_data.frame_sample_ids[0],
-        annotation_label_id=car_label.annotation_label_id,
         collection_id=video_frames_data.video_frames_collection_id,
-    )
-    create_annotation(
-        session=db_session,
-        sample_id=video_frames_data.frame_sample_ids[1],
-        annotation_label_id=airplane_label.annotation_label_id,
-        collection_id=video_frames_data.video_frames_collection_id,
-    )
-    create_annotation(
-        session=db_session,
-        sample_id=video_frames_data.frame_sample_ids[1],
-        annotation_label_id=airplane_label.annotation_label_id,
-        collection_id=video_frames_data.video_frames_collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=video_frames_data.frame_sample_ids[0],
+                annotation_label_id=car_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=video_frames_data.frame_sample_ids[1],
+                annotation_label_id=airplane_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=video_frames_data.frame_sample_ids[1],
+                annotation_label_id=airplane_label.annotation_label_id,
+            ),
+        ],
     )
 
     annotations = video_frame_resolver.get_video_frames_count_annotation_views(

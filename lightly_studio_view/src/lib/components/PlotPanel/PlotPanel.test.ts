@@ -6,19 +6,23 @@ import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
 import { writable, type Writable } from 'svelte/store';
 import { tick } from 'svelte';
 import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
+import { EXCLUDED_BY_FILTERS_CATEGORY, INCLUDED_BY_FILTERS_CATEGORY } from './plotCategories';
 
 let rangeSelectionStore: Writable<Array<{ x: number; y: number }> | null>;
 let selectedSampleIdsStore: Writable<string[]>;
 let imageFilterStore: Writable<Record<string, unknown>>;
 let arrowDataStore: Writable<Record<string, unknown> | undefined>;
+let colorLegendStore: Writable<Map<number, string>>;
 let metadataInfoStore: Writable<Array<{ name: string; type: string }>>;
+
+const mockResetCategoryVisibility = vi.fn();
 
 const tagsStore = writable([
     { tag_id: 'tag-a', name: 'alpha', kind: 'sample' },
     { tag_id: 'tag-b', name: 'beta', kind: 'sample' }
 ]);
 
-const mockSetShowPlot = vi.fn();
+const mockSetShowEmbeddingPlot = vi.fn();
 const mockSetRangeSelectionForCollection = vi.fn();
 const mockUpdateSampleIds = vi.fn();
 
@@ -52,8 +56,16 @@ vi.mock('$lib/hooks/useEmbeddings/useEmbeddings');
 vi.mock('./useArrowData/useArrowData', () => ({
     useArrowData: () => ({
         data: arrowDataStore,
-        colorLegend: writable(new Map([[1, 'Filtered']])),
+        colorLegend: colorLegendStore,
         error: writable(null)
+    })
+}));
+vi.mock('./useCategoryVisibility/useCategoryVisibility', () => ({
+    useCategoryVisibility: () => ({
+        hiddenCategories: writable(new Set<number>()),
+        toggleCategoryVisibility: vi.fn(),
+        focusCategoryVisibility: vi.fn(),
+        resetCategoryVisibility: mockResetCategoryVisibility
     })
 }));
 vi.mock('./usePlotData/usePlotData', () => ({
@@ -87,11 +99,19 @@ vi.mock('$lib/hooks/useTags/useTags', () => ({
         tags: tagsStore
     })
 }));
+vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
+    useAnnotationLabels: () => ({ data: [] })
+}));
+vi.mock('$lib/hooks/useAnnotationsFilter/useAnnotationsFilter', () => ({
+    useSelectedAnnotationsFilter: () => ({
+        annotationFilter: writable(undefined)
+    })
+}));
 
 vi.mock('$lib/hooks/useGlobalStorage', () => {
     return {
         useGlobalStorage: () => ({
-            setShowPlot: mockSetShowPlot,
+            setShowEmbeddingPlot: mockSetShowEmbeddingPlot,
             getRangeSelection: vi.fn(() => rangeSelectionStore),
             setRangeSelectionForCollection: mockSetRangeSelectionForCollection
         })
@@ -122,6 +142,7 @@ describe('PlotPanel.svelte', () => {
         selectedSampleIdsStore = writable([]);
         imageFilterStore = writable({ sample_filter: { sample_ids: [] } });
         arrowDataStore = writable(undefined);
+        colorLegendStore = writable(new Map());
         metadataInfoStore = writable([{ name: 'split', type: 'string' }]);
         tagsStore.set([
             { tag_id: 'tag-a', name: 'alpha', kind: 'sample' },
@@ -146,7 +167,7 @@ describe('PlotPanel.svelte', () => {
             data: null
         });
 
-        render(PlotPanel);
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
 
         const expectedMessage = `Error loading embeddings: ${mockError.message}`;
         const errorMessage = await screen.findByText(expectedMessage);
@@ -167,7 +188,7 @@ describe('PlotPanel.svelte', () => {
             data: null
         });
 
-        render(PlotPanel);
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await fireEvent.keyDown(window, { key: 'Escape' });
 
         expect(mockSetRangeSelectionForCollection).toHaveBeenCalledWith('test-collection-id', null);
@@ -189,7 +210,7 @@ describe('PlotPanel.svelte', () => {
             data: null
         });
 
-        render(PlotPanel);
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await fireEvent.mouseUp(window);
 
         expect(mockUpdateSampleIds).toHaveBeenCalledWith(['sample-1']);
@@ -210,7 +231,7 @@ describe('PlotPanel.svelte', () => {
             data: null
         });
 
-        render(PlotPanel);
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
 
         imageFilterStore.set({
             sample_filter: {
@@ -239,11 +260,11 @@ describe('PlotPanel.svelte', () => {
             x: new Float32Array([1, 2, 3]),
             y: new Float32Array([1, 2, 3]),
             fulfils_filter: new Uint8Array([1, 1, 0]),
-            color_category: new Uint8Array([1, 1, 0]),
+            color_categories: [[3], [3], []],
             sample_id: ['sample-1', 'sample-2', 'sample-3']
         });
 
-        render(PlotPanel);
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await fireEvent.mouseUp(window);
 
         expect(mockUpdateSampleIds).toHaveBeenCalledWith([]);
@@ -254,7 +275,7 @@ describe('PlotPanel.svelte', () => {
     it('passes derived colorBy to useEmbeddings when a metadata field is selected', async () => {
         const user = userEvent.setup();
 
-        render(PlotPanel);
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
 
         expect(useEmbeddings).toHaveBeenLastCalledWith(
             'test-collection-id',
@@ -275,7 +296,7 @@ describe('PlotPanel.svelte', () => {
     it('passes tag_ids colorBy to useEmbeddings when tags type is selected', async () => {
         const user = userEvent.setup();
 
-        render(PlotPanel);
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
 
         await user.click(screen.getByTestId('plot-color-by-button'));
         await user.click(await screen.findByRole('option', { name: 'tags' }));
@@ -285,5 +306,39 @@ describe('PlotPanel.svelte', () => {
             type: 'tag',
             tag_ids: ['tag-a', 'tag-b']
         });
+    });
+
+    it('resets remapped categories when the legend changes but preserves the reserved rows', async () => {
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        await tick();
+
+        // Ignore the reset that fires on mount; assert the one triggered by the legend change.
+        mockResetCategoryVisibility.mockClear();
+        colorLegendStore.set(new Map([[3, 'dog']]));
+        await tick();
+
+        // Reserved rows are stable by index, so they must survive a legend refresh.
+        expect(mockResetCategoryVisibility).toHaveBeenCalledWith([
+            EXCLUDED_BY_FILTERS_CATEGORY,
+            INCLUDED_BY_FILTERS_CATEGORY
+        ]);
+    });
+
+    it('drops the "Included by filters / No category" row when the color-by mode changes', async () => {
+        const user = userEvent.setup();
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        await tick();
+
+        // Ignore the resets from mount; assert the one triggered by the color-by change.
+        mockResetCategoryVisibility.mockClear();
+        await user.click(screen.getByTestId('plot-color-by-button'));
+        await user.click(await screen.findByRole('option', { name: 'metadata.split' }));
+        await tick();
+
+        // INCLUDED is relabeled when the color-by mode flips, so its hidden state must not carry
+        // over (it would otherwise hide every point in the relabeled slot). Only EXCLUDED survives.
+        expect(mockResetCategoryVisibility).toHaveBeenLastCalledWith([
+            EXCLUDED_BY_FILTERS_CATEGORY
+        ]);
     });
 });

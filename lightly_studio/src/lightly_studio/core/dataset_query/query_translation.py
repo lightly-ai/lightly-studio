@@ -12,14 +12,14 @@ from typing import Protocol, TypeVar, Union
 from typing_extensions import assert_never
 
 from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
-from lightly_studio.core.dataset_query.classification_expression import (
+from lightly_studio.core.dataset_query.classification_query import (
     ClassificationField,
     ClassificationQuery,
 )
 from lightly_studio.core.dataset_query.field import Field
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
-from lightly_studio.core.dataset_query.object_detection_expression import (
+from lightly_studio.core.dataset_query.object_detection_query import (
     ObjectDetectionField,
     ObjectDetectionQuery,
 )
@@ -29,7 +29,7 @@ from lightly_studio.core.dataset_query.order_by import (
     OrderByField,
     OrderByMetadataField,
 )
-from lightly_studio.core.dataset_query.segmentation_mask_expression import (
+from lightly_studio.core.dataset_query.segmentation_mask_query import (
     SegmentationMaskField,
     SegmentationMaskQuery,
 )
@@ -91,9 +91,12 @@ _STRING_FIELDS: dict[tuple[str, str], _EqualityField[str]] = {
     ("image", "file_path_abs"): ImageSampleField.file_path_abs,
     ("video", "file_name"): VideoSampleField.file_name,
     ("video", "file_path_abs"): VideoSampleField.file_path_abs,
-    ("classification", "label"): ClassificationField.label,
-    ("object_detection", "label"): ObjectDetectionField.label,
-    ("segmentation_mask", "label"): SegmentationMaskField.label,
+    ("classification", "class_name"): ClassificationField.class_name,
+    ("classification", "source"): ClassificationField.source,
+    ("object_detection", "class_name"): ObjectDetectionField.class_name,
+    ("object_detection", "source"): ObjectDetectionField.source,
+    ("segmentation_mask", "class_name"): SegmentationMaskField.class_name,
+    ("segmentation_mask", "source"): SegmentationMaskField.source,
 }
 
 _INTEGER_FIELDS: dict[tuple[str, str], _OrdinalField[int]] = {
@@ -117,6 +120,20 @@ _DATETIME_FIELDS: dict[tuple[str, str], _OrdinalField[datetime]] = {
 
 _ORDINAL_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
     ("video", "fps"): VideoSampleField.fps,
+}
+
+# Annotation confidence is stored in a nullable column, but still supports
+# ordinal numeric comparisons in the query language.
+_ORDINAL_NULLABLE_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
+    ("classification", "confidence"): ClassificationField.confidence,
+    ("object_detection", "confidence"): ObjectDetectionField.confidence,
+    ("segmentation_mask", "confidence"): SegmentationMaskField.confidence,
+}
+# We can merge ordinal fields with nullable, as NULL values fail any comparison in SQL, so it just
+# works as expected.
+_ALL_ORDINAL_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
+    **_ORDINAL_FLOAT_FIELDS,
+    **_ORDINAL_NULLABLE_FLOAT_FIELDS,
 }
 
 _EQUALITY_FLOAT_FIELDS: dict[tuple[str, str], _EqualityField[Number]] = {
@@ -239,7 +256,11 @@ def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 C9
         )
     if isinstance(expr, OrdinalFloatExpr):
         return _apply_ordinal_operator(
-            field=_lookup(mapping=_ORDINAL_FLOAT_FIELDS, field=expr.field, type_="ordinal float"),
+            field=_lookup(
+                mapping=_ALL_ORDINAL_FLOAT_FIELDS,
+                field=expr.field,
+                type_="ordinal float",
+            ),
             operator=expr.operator,
             value=expr.value,
         )
@@ -253,11 +274,11 @@ def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 C9
         accessor: _TagsAccessor = _lookup(mapping=_TAGS_FIELDS, field=expr.field, type_="tags")
         return accessor.contains(expr.tag_name)
     if isinstance(expr, ClassificationMatchExpr):
-        return ClassificationQuery.match(to_match_expression(expr=expr.subexpr))
+        return ClassificationQuery(to_match_expression(expr=expr.subexpr))
     if isinstance(expr, ObjectDetectionMatchExpr):
-        return ObjectDetectionQuery.match(to_match_expression(expr=expr.subexpr))
+        return ObjectDetectionQuery(to_match_expression(expr=expr.subexpr))
     if isinstance(expr, SegmentationMaskMatchExpr):
-        return SegmentationMaskQuery.match(to_match_expression(expr=expr.subexpr))
+        return SegmentationMaskQuery(to_match_expression(expr=expr.subexpr))
     if isinstance(expr, AndExpr):
         return AND(*(to_match_expression(expr=child) for child in expr.children))
     if isinstance(expr, OrExpr):

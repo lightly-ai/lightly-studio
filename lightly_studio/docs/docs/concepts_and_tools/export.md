@@ -10,6 +10,7 @@ The following export formats are supported:
 |---|---|---|
 | Sample Filenames | Absolute file paths of selected samples | TXT |
 | COCO Object Detection | Bounding box annotations | JSON |
+| YOLO Object Detection | Bounding box annotations | TXT labels + `data.yaml` (zipped) |
 | COCO Segmentation Mask | Segmentation masks with bounding boxes | JSON |
 | COCO Captions | Image captions | JSON |
 | Pascal VOC Semantic Segmentation | Per-pixel class masks | PNG masks + class map |
@@ -24,8 +25,9 @@ and select `Export`. The dialog shows a dropdown with all available formats for 
 
 ### Exporting annotations
 
-For annotation formats (`Image Object Detections`, `Image Segmentation Mask (COCO)`,
-`Image Segmentation Mask (PASCAL VOC)`, `Image Captions`, `YouTube-VIS Video Segmentation Masks`),
+For annotation formats (`Image Object Detections (COCO)`, `Image Object Detections (YOLO)`,
+`Image Segmentation Mask (COCO)`, `Image Segmentation Mask (PASCAL VOC)`, `Image Captions`,
+`YouTube-VIS Video Segmentation Masks`),
 select the format and click `Download`. A zip file is created if the export includes multiple files.
 The export includes all samples in the dataset.
 
@@ -53,6 +55,7 @@ import lightly_studio as ls
 # Image dataset export
 dataset = ls.ImageDataset.load()
 dataset.export().to_coco_object_detections("detections.json")
+dataset.export().to_yolo_object_detections("yolo_output_dir/")
 dataset.export().to_coco_segmentation_masks("segmentations.json")
 dataset.export().to_coco_captions("captions.json")
 dataset.export().to_pascalvoc_segmentation_mask("pascalvoc_output_dir/")

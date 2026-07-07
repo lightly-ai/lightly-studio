@@ -13,7 +13,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
 )
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
-from lightly_studio.db_manager import SessionDep
+from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.sample import SampleViewsWithCount
 from lightly_studio.resolvers import (

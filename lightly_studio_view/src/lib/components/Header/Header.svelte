@@ -1,10 +1,10 @@
 <script lang="ts">
     import { Logo } from '$lib/components';
+    import { Button } from '$lib/components';
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useSettings } from '$lib/hooks/useSettings';
     import { isInputElement } from '$lib/utils';
     import { Pencil, Check, Undo2 } from '@lucide/svelte';
-    import Button from '../ui/button/button.svelte';
     import { page } from '$app/state';
     import NavigationMenu from '../NavigationMenu/NavigationMenu.svelte';
     import { isImagesRoute, isVideosRoute } from '$lib/routes';
@@ -84,37 +84,41 @@
                 {#if hasMinimumRole(user?.role, 'labeler')}
                     {#if $isEditingMode}
                         <Button
-                            data-testid="header-reverse-action-button"
-                            variant="outline"
-                            class="nav-button flex items-center space-x-2"
-                            title={$reversibleActions[0]
-                                ? $reversibleActions[0].description
-                                : 'No action to undo'}
-                            disabled={$reversibleActions.length === 0}
-                            onclick={executeUndoAction}
+                            icon={Undo2}
+                            buttonProps={{
+                                onclick: executeUndoAction,
+                                disabled: $reversibleActions.length === 0,
+                                title: $reversibleActions[0]
+                                    ? $reversibleActions[0].description
+                                    : 'No action to undo',
+                                'data-testid': 'header-reverse-action-button',
+                                class: 'nav-button'
+                            }}
                         >
-                            <Undo2 class="size-4" />
-                            <span>Undo</span>
+                            Undo
                         </Button>
                         <Button
-                            data-testid="header-editing-mode-button"
-                            class="nav-button flex items-center space-x-2"
-                            onclick={() => setIsEditingMode(false)}
-                            title="Finish Editing"
+                            icon={Check}
+                            buttonProps={{
+                                onclick: () => setIsEditingMode(false),
+                                title: 'Finish Editing',
+                                'data-testid': 'header-editing-mode-button',
+                                class: 'nav-button'
+                            }}
                         >
-                            <Check class="size-4" />
-                            <span>Finish Editing</span>
+                            Finish Editing
                         </Button>
                     {:else}
                         <Button
-                            data-testid="header-editing-mode-button"
-                            variant="outline"
-                            class="nav-button flex items-center space-x-2"
-                            onclick={() => setIsEditingMode(true)}
-                            title="Edit Annotations"
+                            icon={Pencil}
+                            buttonProps={{
+                                onclick: () => setIsEditingMode(true),
+                                title: 'Edit annotations',
+                                'data-testid': 'header-editing-mode-button',
+                                class: 'nav-button'
+                            }}
                         >
-                            <Pencil class="size-4" />
-                            <span>Edit Annotations</span>
+                            Edit annotations
                         </Button>
                     {/if}
                 {/if}

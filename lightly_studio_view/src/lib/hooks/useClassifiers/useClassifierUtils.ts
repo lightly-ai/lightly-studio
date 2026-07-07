@@ -33,10 +33,10 @@ interface UseClassifierUtilsReturn {
     clearClassifiersSelected: () => void;
 }
 
-const { getSelectedSampleIds } = useGlobalStorage();
 const classifiersSelected = writable<Set<string>>(new Set());
 
 export function useClassifierUtils(): UseClassifierUtilsReturn {
+    const { getSelectedSampleIds } = useGlobalStorage();
     const error = writable<Error | null>(null);
     const isLoading = writable(false);
 

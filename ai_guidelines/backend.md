@@ -58,6 +58,14 @@ Thin endpoints may call resolvers directly. Services are mainly for cross-entity
 - The app lifespan also initializes and shuts down plugins, then closes the database engine cleanly.
 - Python API classes in `core/` use a long-lived `db_manager.persistent_session()`. Currently this is a design limitation, causing issues with DuckDB's single-writer model.
 
+### DuckDB
+
+Schema is created with `SQLModel.metadata.create_all()` on startup.
+
+### PostgreSQL and Alembic
+
+See [DB Migrations](../lightly_studio/MIGRATIONS.md) for full details on Alembic setup, startup behavior, adding schema changes, and validation.
+
 ## Build and generated artifacts
 
 - The Python package is built from `lightly_studio/pyproject.toml` with `uv build`.

@@ -10,16 +10,21 @@
     import SampleSegmentationMaskRect from '../SampleSegmentationMaskRect/SampleSegmentationMaskRect.svelte';
     import SampleObjectDetectionRect from '../SampleObjectDetectionRect/SampleObjectDetectionRect.svelte';
     import { select } from 'd3-selection';
-    import { getColorByLabel } from '$lib/utils';
+    import {
+        countVisibleSources,
+        getColorByLabel,
+        resolveEffectiveColorBySource
+    } from '$lib/utils';
+    import { useSettings } from '$lib/hooks';
     import { throttle } from 'lodash-es';
     import BrushToolPopUp from '../BrushToolPopUp/BrushToolPopUp.svelte';
+    import { AnnotationSourcePill } from '$lib/components';
     import SampleDetailsToolbar from '../SampleDetailsToolbar/SampleDetailsToolbar.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import { onDestroy, onMount } from 'svelte';
     import { usePendingState } from '../usePendingState';
-    import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -58,7 +63,7 @@
 
     const { isEditingMode, imageBrightness, imageContrast } = useGlobalStorage();
     const { isHidden } = useHideAnnotations();
-    const { selectedCollectionIds } = useAnnotationCollectionsFilter();
+    const { enforceColoringByClassStore } = useSettings();
 
     let resetZoomTransform: (() => void) | undefined = $state();
     let mousePosition = $state<{ x: number; y: number } | null>(null);
@@ -67,20 +72,27 @@
     const { isPending, handlePendingChange } = usePendingState();
 
     let sampleId = $derived(sample.sampleId);
+    // The local hidden set is the single source of truth for visibility on the
+    // details page; the grid's annotation source filter only seeds it.
     const actualAnnotationsToShow = $derived.by(() => {
         return sample.annotations
             .filter((annotation) => !hideAnnotationsIds.has(annotation.sample_id))
-            .filter(
-                (annotation) =>
-                    $selectedCollectionIds.length === 0 ||
-                    $selectedCollectionIds.includes(annotation.annotation_collection_id)
-            )
             .sort((a, b) => {
                 if (a.sample_id === annotationLabelContext.annotationId) return 1;
                 if (b.sample_id === annotationLabelContext.annotationId) return -1;
                 return 0;
             });
     });
+
+    // Color boxes by source only while annotations from multiple sources are visible and
+    // class coloring is not enforced, mirroring the side panel.
+    const colorBySource = $derived(
+        resolveEffectiveColorBySource({
+            multipleSourcesVisible:
+                countVisibleSources(sample.annotations, hideAnnotationsIds) >= 2,
+            enforceColoringByClass: $enforceColoringByClassStore
+        })
+    );
 
     const drawerStrokeColor = $derived(
         annotationLabel !== 'default' && annotationLabel
@@ -209,6 +221,11 @@
         {/if}
     {/snippet}
     {#snippet zoomPanelContent()}
+        {#if $isEditingMode && !annotationLabelContext.isOnAnnotationDetailsView}
+            <div class="mb-1">
+                <AnnotationSourcePill {collectionId} />
+            </div>
+        {/if}
         {#if shouldShowBrushToolPopup}
             <BrushToolPopUp />
         {/if}
@@ -250,6 +267,7 @@
                         {toggleAnnotationSelection}
                         {sample}
                         {scale}
+                        {colorBySource}
                         highlight={annotationLabelContext.isDrawing
                             ? 'disabled'
                             : determineHighlightForAnnotation(annotation.sample_id)}

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import itertools
 import logging
+import math
 import os
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -31,7 +33,13 @@ from labelformat.model.object_detection_track import (
 from sqlmodel import Session
 from tqdm import tqdm
 
-from lightly_studio.core import labelformat_helpers, loading_log
+from lightly_studio.core import labelformat_helpers
+from lightly_studio.core.file_outcome_report import (
+    AlreadyPresentInputFileError,
+    BrokenInputFileError,
+    FileOutcomeReport,
+    MissingInputFileError,
+)
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
 )
@@ -82,6 +90,7 @@ def load_into_collection_from_paths(  # noqa: PLR0913
     video_channel: int = DEFAULT_VIDEO_CHANNEL,
     num_decode_threads: int | None = None,
     show_progress: bool = True,
+    target_fps: float | None = None,
 ) -> tuple[list[UUID], list[UUID]]:
     """Load video samples from file paths into the dataset using PyAV.
 
@@ -94,53 +103,72 @@ def load_into_collection_from_paths(  # noqa: PLR0913
         num_decode_threads: Optional override for the number of FFmpeg decode threads.
             If omitted, the available CPU cores - 1 (max 16) are used.
         show_progress: Whether to display a progress bar and final summary of loading results.
+        target_fps: Optional target frame rate for subsampling. When set below the source
+            frame rate, only selected frames are kept. frame_number values remain
+            original. Must be greater than 0.
 
     Returns:
         A tuple containing:
             - List of UUIDs of the created video samples
             - List of UUIDs of the created video frame samples
     """
+    if target_fps is not None and target_fps <= 0:
+        raise ValueError(f"target_fps must be greater than 0, got {target_fps}.")
+
     created_video_sample_ids: list[UUID] = []
     created_video_frame_sample_ids: list[UUID] = []
     video_paths_list = list(video_paths)
-    file_paths_new, file_paths_exist = video_resolver.filter_new_paths(
-        session=session, collection_id=collection_id, file_paths_abs=video_paths_list
+    # The set starts with paths already in the database and grows with paths seen in this
+    # call, so both already-present and in-run duplicate paths are skipped.
+    _, existing_paths = sample_resolver.filter_new_paths(
+        session=session,
+        collection_id=collection_id,
+        file_paths_abs=video_paths_list,
     )
-    video_logging_context = loading_log.LoadingLoggingContext(
-        n_samples_to_be_inserted=len(video_paths_list),
-        n_samples_before_loading=sample_resolver.count_by_collection_id(
-            session=session, collection_id=collection_id
-        ),
-    )
-    video_logging_context.update_example_paths(file_paths_exist)
+    seen_or_existing_paths = set(existing_paths)
+    report = FileOutcomeReport()
     # Get the video frames collection ID
     video_frames_collection_id = collection_resolver.get_or_create_child_collection(
         session=session, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
     )
 
     for video_path in tqdm(
-        file_paths_new,
+        video_paths_list,
         desc="Loading frames from videos",
         unit=" video",
         disable=not show_progress,
     ):
-        try:
-            # Open video and extract metadata
+        with report.track(path=video_path):
+            # Skip paths already in the database or already seen in this call.
+            if video_path in seen_or_existing_paths:
+                raise AlreadyPresentInputFileError()
+            seen_or_existing_paths.add(video_path)
+
+            # Detect a missing path proactively: FileNotFoundError is unreliable across
+            # fsspec backends and is a subclass of OSError, which we treat as broken.
             fs, fs_path = fsspec.core.url_to_fs(url=video_path)
+            if not fs.exists(fs_path):
+                raise MissingInputFileError()
+
             video_file = fs.open(path=fs_path, mode="rb")
             try:
-                # Open video container for reading (returns InputContainer)
-                video_container = container.open(file=video_file)
-                video_stream = video_container.streams.video[video_channel]
+                # Translate a failed open/header read into a broken-file signal at this
+                # I/O boundary; any other exception propagates rather than being recorded.
+                try:
+                    # Open video container for reading (returns InputContainer)
+                    video_container = container.open(file=video_file)
+                    video_stream = video_container.streams.video[video_channel]
 
-                # Get video metadata
-                framerate = float(video_stream.average_rate) or 0.0
-                video_width = video_stream.width or 0
-                video_height = video_stream.height or 0
-                if video_stream.duration and video_stream.time_base:
-                    video_duration = float(video_stream.duration * video_stream.time_base)
-                else:
-                    video_duration = None
+                    # Get video metadata
+                    framerate = float(video_stream.average_rate) or 0.0
+                    video_width = video_stream.width or 0
+                    video_height = video_stream.height or 0
+                    if video_stream.duration and video_stream.time_base:
+                        video_duration = float(video_stream.duration * video_stream.time_base)
+                    else:
+                        video_duration = None
+                except (OSError, IndexError, FFmpegError) as e:
+                    raise BrokenInputFileError() from e
 
                 # Create video sample
                 video_sample_ids = video_resolver.create_many(
@@ -160,7 +188,7 @@ def load_into_collection_from_paths(  # noqa: PLR0913
 
                 if len(video_sample_ids) != 1:
                     video_container.close()
-                    raise (RuntimeError(f"There was an error adding {video_path} to the dataset."))
+                    raise RuntimeError(f"There was an error adding {video_path} to the dataset.")
                 created_video_sample_ids.append(video_sample_ids[0])
 
                 # Create video frame samples by parsing all frames
@@ -174,6 +202,7 @@ def load_into_collection_from_paths(  # noqa: PLR0913
                     video_container=video_container,
                     video_channel=video_channel,
                     num_decode_threads=num_decode_threads,
+                    target_fps=target_fps,
                 )
                 created_video_frame_sample_ids.extend(frame_sample_ids)
 
@@ -182,16 +211,8 @@ def load_into_collection_from_paths(  # noqa: PLR0913
                 # Ensure file is closed even if container operations fail
                 video_file.close()
 
-        except (FileNotFoundError, OSError, IndexError, FFmpegError) as e:
-            logger.error(f"Error processing video {video_path}: {e}")
-            continue
-
-    loading_log.log_loading_results(
-        session=session,
-        collection_id=collection_id,
-        logging_context=video_logging_context,
-        print_summary=show_progress,
-    )
+    report.log_summary()
+    report.raise_if_all_failed()
 
     return created_video_sample_ids, created_video_frame_sample_ids
 
@@ -203,6 +224,7 @@ def load_video_annotations_from_labelformat(  # noqa: PLR0913
     video_paths: Iterable[str],
     input_labels: ObjectDetectionTrackInput | InstanceSegmentationTrackInput,
     input_labels_paths_root: Path | str,
+    limit: int | None = None,
 ) -> tuple[list[UUID], list[UUID]]:
     """Load video frame annotations from a labelformat input into the dataset.
 
@@ -221,6 +243,8 @@ def load_video_annotations_from_labelformat(  # noqa: PLR0913
             Note: This is used for file names from input_labels, that don't have a file extension.
         input_labels: The labelformat input containing video annotations.
         input_labels_paths_root: The root path for the paths in input_labels.
+        limit: Maximum number of samples to load. By default, all samples are loaded.
+            Annotations of videos beyond the limit are skipped.
 
     Returns:
         A tuple containing:
@@ -230,7 +254,7 @@ def load_video_annotations_from_labelformat(  # noqa: PLR0913
     # TODO (Jonas, 2/2026): Add support for cloud paths.
     root_path = Path(input_labels_paths_root).absolute()
     video_paths_labelformat = _resolve_video_paths_from_labelformat(
-        input_labels=input_labels, root_path=root_path, video_paths=video_paths
+        input_labels=input_labels, root_path=root_path, video_paths=video_paths, limit=limit
     )
 
     created_sample_ids, created_video_frame_sample_ids = load_into_collection_from_paths(
@@ -267,9 +291,14 @@ def load_video_annotations_from_labelformat(  # noqa: PLR0913
         video_path_without_suffix = str((root_path / video_annotation_filename).with_suffix(""))
         video_sample_id = video_path_without_suffix_to_sample_id.get(video_path_without_suffix)
         if video_sample_id is None:
-            raise ValueError(
-                f"No matching video ({video_annotation_filename}) for annotations found"
+            # The video was not created: it is beyond the limit, or the per-run report
+            # already recorded it as missing/broken/already-present. Skip its annotations
+            # rather than crashing the run, in line with tolerate-don't-crash handling.
+            logger.warning(
+                f"Skipping annotations for video '{video_annotation_filename}': "
+                "no matching loaded video found."
             )
+            continue
 
         video_with_frames = video_resolver.get_by_id(session=session, sample_id=video_sample_id)
         if video_with_frames is None:
@@ -321,11 +350,37 @@ def load_video_annotations_from_labelformat(  # noqa: PLR0913
     return created_sample_ids, created_video_frame_sample_ids
 
 
+def _should_keep_frame(decoded_index: int, target_fps: float | None, original_fps: float) -> bool:
+    """Decide whether to keep a frame when subsampling to a lower frame rate.
+
+    Frames are mapped to buckets of size ``original_fps / target_fps`` and the first
+    frame of each bucket is kept, which yields frames spaced approximately at
+    ``target_fps``. All frames are kept when no target fps is given, when the target
+    is not lower than the source rate, or when the source rate is unknown.
+
+    Args:
+        decoded_index: The original index of the frame in the source video.
+        target_fps: The desired target frame rate, or None to keep all frames.
+        original_fps: The source video frame rate (0 if unknown).
+
+    Returns:
+        True if the frame should be persisted.
+    """
+    if target_fps is None or original_fps <= 0.0 or target_fps >= original_fps:
+        return True
+    if decoded_index == 0:
+        return True
+    return math.floor(decoded_index * target_fps / original_fps) != math.floor(
+        (decoded_index - 1) * target_fps / original_fps
+    )
+
+
 def _create_video_frame_samples(
     context: FrameExtractionContext,
     video_container: InputContainer,
     video_channel: int,
     num_decode_threads: int | None = None,
+    target_fps: float | None = None,
 ) -> list[UUID]:
     """Create video frame samples for a video by parsing all frames.
 
@@ -336,6 +391,9 @@ def _create_video_frame_samples(
         video_container: The PyAV container with the opened video.
         video_channel: The video channel from which frames are loaded.
         num_decode_threads: Optional override for FFmpeg decode thread count.
+        target_fps: Optional target frame rate for subsampling. If set and lower than the
+            source frame rate, only a subset of frames is persisted; kept frames retain
+            their original frame_number. If omitted, all frames are persisted.
 
     Returns:
         A list of UUIDs of the created video frame samples.
@@ -347,9 +405,15 @@ def _create_video_frame_samples(
 
     # Get time base for converting PTS to seconds
     time_base = video_stream.time_base if video_stream.time_base else None
+    original_fps = float(video_stream.average_rate) if video_stream.average_rate else 0.0
 
-    # Decode all frames
+    # Decode all frames, persisting only the subset selected by the target fps.
     for decoded_index, frame in enumerate(video_container.decode(video_stream)):
+        if not _should_keep_frame(
+            decoded_index=decoded_index, target_fps=target_fps, original_fps=original_fps
+        ):
+            continue
+
         # Get the presentation timestamp in seconds from the frame
         # Convert frame.pts from time base units to seconds
         if frame.pts is not None and time_base is not None:
@@ -446,6 +510,7 @@ def _resolve_video_paths_from_labelformat(
     input_labels: ObjectDetectionTrackInput | InstanceSegmentationTrackInput,
     root_path: Path,
     video_paths: Iterable[str],
+    limit: int | None = None,
 ) -> list[str]:
     """Collecting the available video paths for the videos referenced in the input_labels.
 
@@ -456,6 +521,7 @@ def _resolve_video_paths_from_labelformat(
         input_labels: Input containing the required video file paths.
         root_path: The paths for the videos in input_labels are relative to this one.
         video_paths: An iterable of file paths to the videos to load.
+        limit: Maximum number of videos to resolve. By default, all videos are resolved.
 
     Return:
         list of resolved video file paths
@@ -474,7 +540,7 @@ def _resolve_video_paths_from_labelformat(
 
     # Construct the list of resolved video paths.
     video_paths = []
-    for video_annotation in input_labels.get_videos():
+    for video_annotation in itertools.islice(input_labels.get_videos(), limit):
         filename = Path(video_annotation.filename)
         resolved_path: str | None
         if filename.suffix:

@@ -12,7 +12,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRoute
 from sqlmodel import Session
 
-from lightly_studio import db_manager
 from lightly_studio.api.middleware import RequestTimingMiddleware
 from lightly_studio.api.routes import (
     healthz,
@@ -40,7 +39,7 @@ from lightly_studio.api.routes.api import (
     metadata,
     operator,
     sample,
-    selection,
+    sampling,
     settings,
     text_embedding,
     version,
@@ -49,6 +48,7 @@ from lightly_studio.api.routes.api import (
 from lightly_studio.api.routes.api.exceptions import (
     register_exception_handlers,
 )
+from lightly_studio.database import db_manager
 from lightly_studio.dataset.env import (
     LIGHTLY_STUDIO_DEBUG,
     LIGHTLY_STUDIO_REQUEST_TIMING_ENABLED,
@@ -151,7 +151,7 @@ api_router.include_router(embeddings2d.embeddings2d_router)
 api_router.include_router(features.features_router)
 api_router.include_router(evaluation.evaluation_router)
 api_router.include_router(metadata.metadata_router)
-api_router.include_router(selection.selection_router)
+api_router.include_router(sampling.sampling_router)
 api_router.include_router(operator.operator_router)
 api_router.include_router(frame.frame_router)
 api_router.include_router(video.video_router)

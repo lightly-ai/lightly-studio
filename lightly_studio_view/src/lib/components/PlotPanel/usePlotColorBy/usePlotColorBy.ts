@@ -7,6 +7,7 @@ type ColorBy = GetEmbeddings2dRequest['color_by'];
 interface UsePlotColorByParams {
     selectedColorByType: Readable<PlotColorByType | null>;
     tags: Readable<{ tag_id: string }[]>;
+    annotationLabels: Readable<{ annotation_label_id: string }[]>;
 }
 
 interface UsePlotColorByReturn {
@@ -17,19 +18,29 @@ interface UsePlotColorByReturn {
 
 export function usePlotColorBy({
     selectedColorByType,
-    tags
+    tags,
+    annotationLabels
 }: UsePlotColorByParams): UsePlotColorByReturn {
     const selectedColorByKey = writable<string | null>(null);
 
     const colorBy = derived(
-        [selectedColorByType, selectedColorByKey, tags],
-        ([$selectedColorByType, $selectedColorByKey, $tags]): ColorBy => {
+        [selectedColorByType, selectedColorByKey, tags, annotationLabels],
+        ([$selectedColorByType, $selectedColorByKey, $tags, $annotationLabels]): ColorBy => {
             if ($selectedColorByType === 'metadata' && $selectedColorByKey) {
                 return { type: 'metadata_field', key: $selectedColorByKey };
             }
 
             if ($selectedColorByType === 'tags') {
                 return { type: 'tag', tag_ids: $tags.map((tag) => tag.tag_id) };
+            }
+
+            if ($selectedColorByType === 'annotation_label') {
+                return {
+                    type: 'annotation',
+                    annotation_label_ids: $annotationLabels.map(
+                        (label) => label.annotation_label_id
+                    )
+                };
             }
 
             return null;

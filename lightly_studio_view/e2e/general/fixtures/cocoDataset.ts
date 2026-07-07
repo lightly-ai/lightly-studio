@@ -25,7 +25,8 @@ export const cocoDataset = {
     firstSampleName: '000000001732.jpg',
 
     /** Expected filenames for export */
-    annotationExportFilename: 'coco_export.json',
+    cocoExportFilename: 'coco_export.json',
+    yoloExportFilename: 'yolo.zip',
     segmentationMasksExportFilename: 'coco_segmentation_mask_export.json',
     captionExportFilename: 'coco_captions_export.json',
 

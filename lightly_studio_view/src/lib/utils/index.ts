@@ -1,5 +1,7 @@
 export * from './triggerDownloadBlob';
+export * from './resolveEffectiveColorBySource';
 export * from './groupAnnotationLabels';
+export * from './countVisibleSources';
 export * from './getColorByLabel';
 export * from './getSimilarityColor';
 export * from './formatter';
@@ -20,4 +22,13 @@ export { getVideoURLById } from './getVideoURLById/getVideoURLById';
 export { getURL } from './getURL/getURL';
 export { fetchCollection } from './fetchCollection';
 export { fetchCollectionHierarchy } from './fetchCollectionHierarchy';
-export { computeColorByKey } from './computeColorByKey';
+export {
+    hexToRgb,
+    hexToRgba,
+    rgbaToHex,
+    rgbaFromBytes,
+    withAlpha,
+    stripAlpha,
+    oklchToRgb,
+    oklchHueWheelColor
+} from './colorConvert';

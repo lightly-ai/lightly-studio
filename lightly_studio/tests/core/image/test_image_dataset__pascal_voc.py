@@ -104,12 +104,12 @@ class TestImageDataset:
         )  # Embeddings should be generated
 
         # First sample
-        annotations = sorted(samples[0].annotations, key=lambda ann: ann.label)
+        annotations = sorted(samples[0].annotations, key=lambda ann: ann.class_name)
 
         # Verify the first annotation
         ann = annotations[0]
         assert isinstance(ann, SegmentationMaskAnnotation)
-        assert ann.label == "bg"
+        assert ann.class_name == "bg"
         assert ann.x == 0
         assert ann.y == 0
         assert ann.width == 4
@@ -119,7 +119,7 @@ class TestImageDataset:
         # Verify the second annotation
         ann = annotations[1]
         assert isinstance(ann, SegmentationMaskAnnotation)
-        assert ann.label == "cat"
+        assert ann.class_name == "cat"
         assert ann.x == 0
         assert ann.y == 0
         assert ann.width == 2
@@ -129,7 +129,7 @@ class TestImageDataset:
         # Verify the third annotation
         ann = annotations[2]
         assert isinstance(ann, SegmentationMaskAnnotation)
-        assert ann.label == "dog"
+        assert ann.class_name == "dog"
         assert ann.x == 2
         assert ann.y == 1
         assert ann.width == 2
@@ -140,12 +140,31 @@ class TestImageDataset:
         assert len(samples[1].annotations) == 1
         ann = samples[1].annotations[0]
         assert isinstance(ann, SegmentationMaskAnnotation)
-        assert ann.label == "bg"
+        assert ann.class_name == "bg"
         assert ann.x == 0
         assert ann.y == 0
         assert ann.width == 3
         assert ann.height == 2
         assert ann.segmentation_mask == [0, 6]
+
+    def test_add_samples_from_pascal_voc_segmentations__limit(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        images_path, masks_path, image1_path, _ = _build_pascal_voc_local_paths(tmp_path)
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_samples_from_pascal_voc_segmentations(
+            images_path=images_path,
+            masks_path=masks_path,
+            class_id_to_name={0: "bg", 1: "cat", 2: "dog"},
+            limit=1,
+        )
+
+        samples = list(dataset)
+        assert len(samples) == 1
+        assert samples[0].file_path_abs == str(image1_path)
 
     def test_add_samples_from_pascal_voc_segmentations__embed_split_flags(
         self,

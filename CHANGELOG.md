@@ -9,11 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Sample selection respects the current image or video filters.
-- Added sort-by support via GUI.
-- Added similarity selection option.
+- Python SDK: `limit` parameter on `ImageDataset.add_samples_from*` methods to index only the first N samples of a dataset.
 
 ### Changed
+
+- Embedding plot legend is now compact and scrollable, and the WebGPU fallback message is no longer shown.
 
 ### Deprecated
 
@@ -23,11 +23,112 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## \[1.0.2\] - 2026-07-02
+
+### Added
+
+- Annotation classes can now be shown or hidden individually in the grid views using an eye icon toggle in the Annotation Classes sidebar.
+- Python SDK: `target_fps` parameter on `VideoDataset.add_videos_from_path` to subsample frames to a
+  lower frame rate. Retained frames keep their original frame numbers.
+- Sampling in Browser now supports combining multiple strategies (diversity, typicality, similarity, metadata weighting, class balancing) in a single selection.
+- Sampling dialog now accepts a percentage input alongside the absolute sample count. Editing either field updates the other based on the current    
+filtered sample count.
+- Deduplication strategy is available in the Sampling Dialog in the GUI
+- Improve confusion matrix usability for large numbers of classes
+- Python dataset queries now support classifications, object detections, and segmentation mask annotations.
+- Python dataset queries now model evaluation queries on the sample level.
+- Improved performance when tagging all samples in the GUI for large datasets.
+- Annotation source selection for exports: when multiple annotation collections exist, the export dialog shows a dropdown to choose which collection to export from. The annotation source can also be specified via the Python API using the `annotation_collection_id` parameter.
+- All embedding plot legend entries (especially e.g. `Excluded by filters`, `No category`, etc.) can be hidden by clicking on them.
+- YOLO object detection export: object detection annotations can now be exported in YOLO format from the GUI export dialog, via the Python API (`dataset.export().to_yolo_object_detections(...)`), and via the export API (`export_format=object_detection_yolo`).
+- Object-level (annotation) embeddings: annotations can now be embedded and searched by text or image similarity and visualized in the embedding plot.
+
+## \[1.0.1\] - 2026-06-17
+
+### Added
+
+- Show plugin description and a link to documentation when no plugins are available.
+- When sorting the image grid by a numeric field, the field value is now shown as an overlay on each sample.
+- Query editor now supports annotation `source` and `confidence` fields in queries.
+- Panel toggles (Embeddings, Query, Evaluation) moved to a right-rail icon menu beside the collection grid.
+- Python SDK: `annotation_source` parameter on `ImageDataset.add_samples_from*` methods and
+  `Sample.add_annotation` / `add_annotations` to import or add annotations to a named source.
+- Python SDK: `Annotation.annotation_source` property to read the annotation source name.
+- Python SDK: `Sampling.deduplicate` method to select a deduplicated subset based on embedding distance.
+
+### Changed
+
+- The embedding plot legend now reflects the active filter: categories with no
+  matching samples are hidden. When there are more values than fit in the
+  legend, the least frequent values are merged into a single "Other" category.
+
+### Fixed
+
+- Fixed embedding rendering for users without WebGPU by updating `embedding-atlas` from `0.10.0` to `0.21.0`.
+- The query filter is now applied consistently across features that use the image filter, such as the embedding plot, sampling, and select-all.
+- Brush tool's `Finish` button gives better visual feedback when an annotation can be finished.
+
+## \[1.0.0\] - 2026-06-05
+
+### Added
+
+- Show confusion matrix in evaluation results for classification.
+- Enable picker for annotation source menu
+- Embedding plot: added a "No coloring" option to the "Color by" dropdown to disable coloring.
+- Show ground truth and prediction annotation sources in run details panel
+- Image details view: annotations are now grouped by annotation source.
+- Image details view: annotation source visibility can be toggled.
+- Image details view: pick the target annotation source for new annotations from an on-canvas selector.
+
+### Changed
+
+- Header menu: show collection name in Annotations entries
+- Embedding plot coloring now supports multiple categories per sample, resolving issues with toggling visibility of categories in the legend.
+- Made annotation and plot colors more distinguishable.
+- General UI improvements.
+
+### Fixed
+
+- Embedding plot: when a coloring has more categories than the legend can display, the extra
+  categories are now grouped into an "Other" entry instead of exceeding the available legend slots.
+- Grid top bar no longer overflows its container or covers the grid when a side panel is open;
+  it now shrinks with the available width and wraps onto a second line when too narrow.
+- Fixed operations on large datasets (more than ~65,535 samples) failing on PostgreSQL with
+  `number of parameters must be between 0 and 65535`.
+- Fixed cascaded delete for annotations linked by calculated metrics.
+- Grid annotation source selection now persists when navigating to image details and back.
+
+## \[1.0.0rc1\] - 2026-05-28
+
+### Added
+
+- Sample selection respects the current image or video filters.
+- Added sort-by support via GUI.
+- Added similarity selection option.
+- Show confusion matrix in evaluation results for object detection.
+- Added option to select annotation source for class balancing.
+- Added query editor for advanced filtering with custom queries.
+- Added Model Evaluation:
+    - Users can manage annotations from different sources, e.g. ground truth and predictions.
+    - Users can evaluate per sample metrics for object detection, classification and semantic segmentation
+    - Users can sort the image grid by the sample metrics: finding errors quickly.
+    - Users can display confusion matrix to find error patterns.
+
+### Changed
+
+- Renamed the annotation class field `label` to `class_name` across the Python SDK and query language. Breaking change.
+- Renamed the `collection_name` and `name` arguments to `annotation_source`. Breaking change.
+- Renamed selection to sampling. Breaking change.
+
+### Fixed
+
+- Fixed hovering over breadcrumb links on detail pages (annotations, video frames) triggering unwanted navigation.
+
 ## \[0.4.14\] - 2026-05-18
 
 ### Added
 
-- Added `ImageDataset.add_annotations_from_coco`, `add_annotations_from_yolo`, and `add_annotations_from_labelformat` methods to attach named annotation collections to images already in the dataset. Re-using the same `name` appends; a new `name` creates a new collection. Enables ingesting ground truth and predictions from multiple sources side-by-side.
+- Added `ImageDataset.add_annotations_from_coco`, `add_annotations_from_yolo`, and `add_annotations_from_labelformat` methods to attach annotations to images already in the dataset. Re-using the same `annotation_source` appends; a new `annotation_source` creates a new annotation source. Enables ingesting ground truth and predictions from multiple sources side-by-side.
 - Added `lt_train_script` to the Python API (`lightly_studio.lt_train_script`) to generate a LightlyTrain object detection script from split tags. The helper exports train/val COCO annotation files via `dataset.export(...).to_coco_object_detections(...)` and writes `train_object_detection.py` with the exported paths.
 - Image samples can be sorted in the grid using image attributes and metadata.
 - Added drag-and-drop from the image grid into the image search area.

@@ -3,13 +3,15 @@
 from . import setup_logging  # noqa: F401 I001
 
 # Import db_manager for SQLModel to discover db models.
-from lightly_studio import db_manager  # noqa: F401
+from lightly_studio.database import db_manager  # noqa: F401
 
 # Import utils to expose utility functions at the package level.
 from lightly_studio import utils  # noqa: F401
 
 from lightly_studio.core.image.image_dataset import ImageDataset
 from lightly_studio.core.video.video_dataset import VideoDataset
+from lightly_studio.core.video.video_frame_dataset import VideoFrameDataset
+from lightly_studio.core.video.video_frame_sample import VideoFrameSample
 from lightly_studio.core.group.group_dataset import GroupDataset
 from lightly_studio.core.image.create_image import CreateImage
 from lightly_studio.core.video.create_video import CreateVideo
@@ -34,6 +36,8 @@ __all__ = [
     "ImageDataset",
     "SampleType",
     "VideoDataset",
+    "VideoFrameDataset",
+    "VideoFrameSample",
     "connect",
     "lt_train_script",
     "start_gui",

@@ -9,7 +9,9 @@ const { mutateMock, embedImageFromFileMutationMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('$lib/api/lightly_studio_local/@tanstack/svelte-query.gen', () => ({
-    embedImageFromFileMutation: embedImageFromFileMutationMock
+    embedImageFromFileMutation: embedImageFromFileMutationMock,
+    countImageAnnotationsByCollectionOptions: vi.fn(() => ({})),
+    countImageAnnotationsByCollectionQueryKey: vi.fn(() => [])
 }));
 
 vi.mock('@tanstack/svelte-query', () => ({
@@ -40,7 +42,7 @@ describe('useImageUpload', () => {
 
     it('rejects oversized images', async () => {
         const upload = useImageUpload({
-            collectionId: 'collection-id',
+            getCollectionId: () => 'collection-id',
             onError,
             onSuccess,
             maxSizeMb: 1
@@ -62,7 +64,7 @@ describe('useImageUpload', () => {
         });
 
         const upload = useImageUpload({
-            collectionId: 'collection-id',
+            getCollectionId: () => 'collection-id',
             onError,
             onSuccess
         });
@@ -101,7 +103,7 @@ describe('useImageUpload', () => {
         });
 
         const upload = useImageUpload({
-            collectionId: 'collection-id',
+            getCollectionId: () => 'collection-id',
             onError,
             onSuccess
         });
@@ -122,7 +124,7 @@ describe('useImageUpload', () => {
         });
 
         const upload = useImageUpload({
-            collectionId: 'collection-id',
+            getCollectionId: () => 'collection-id',
             onError,
             onSuccess
         });
@@ -156,7 +158,7 @@ describe('useImageUpload', () => {
         });
 
         const upload = useImageUpload({
-            collectionId: 'collection-id',
+            getCollectionId: () => 'collection-id',
             onError,
             onSuccess
         });

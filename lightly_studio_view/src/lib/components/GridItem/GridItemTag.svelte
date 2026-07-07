@@ -7,7 +7,7 @@
 
     const { user } = useAuth();
 
-    const shouldRenderTag = $derived(isSelected && hasMinimumRole(user?.role, 'labeler'));
+    const shouldRenderTag = $derived(hasMinimumRole(user?.role, 'labeler'));
 </script>
 
 {#if shouldRenderTag}
@@ -16,6 +16,6 @@
         data-testid="grid-item-tag"
         inert
     >
-        <SelectableBox onSelect={() => undefined} isSelected={true} />
+        <SelectableBox onSelect={() => undefined} {isSelected} />
     </div>
 {/if}

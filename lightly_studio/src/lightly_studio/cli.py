@@ -7,7 +7,7 @@ from importlib import metadata
 import click
 
 import lightly_studio
-from lightly_studio import db_manager
+from lightly_studio.database import db_manager
 
 
 @click.group()

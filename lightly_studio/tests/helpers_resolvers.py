@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
+import numpy as np
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import (
@@ -250,7 +251,10 @@ class AnnotationDetails:
 
 
 def create_annotations(
-    session: Session, collection_id: UUID, annotations: list[AnnotationDetails]
+    session: Session,
+    collection_id: UUID,
+    annotations: list[AnnotationDetails],
+    collection_name: str | None = None,
 ) -> list[AnnotationBaseTable]:
     """Create annotations.
 
@@ -258,6 +262,7 @@ def create_annotations(
         session: Database session.
         collection_id: ID of the collection.
         annotations: List of AnnotationDetails objects to create.
+        collection_name: Optional name of the annotation collection to create.
 
     Returns:
         List of AnnotationBaseTable objects.
@@ -281,6 +286,7 @@ def create_annotations(
         session=session,
         parent_collection_id=collection_id,
         annotations=annotations_to_create,
+        collection_name=collection_name,
     )
     return list(annotation_resolver.get_by_ids(session=session, annotation_ids=annotation_ids))
 
@@ -318,7 +324,7 @@ def create_sample_embedding(
         sample_embedding=SampleEmbeddingCreate(
             sample_id=sample_id,
             embedding_model_id=embedding_model_id,
-            embedding=embedding,
+            embedding=np.asarray(embedding, dtype=np.float32),
         ),
     )
 

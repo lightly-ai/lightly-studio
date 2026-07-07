@@ -1,3 +1,5 @@
+import uuid
+
 from sqlmodel import Session
 
 from lightly_studio.resolvers import (
@@ -35,3 +37,9 @@ def test_get_many_by_id(
     assert len(samples) == 2
     assert samples[0].file_name == "sample1.png"
     assert samples[1].file_name == "sample2.png"
+
+
+def test_get_many_by_id__exceeds_postgres_param_limit(db_session: Session) -> None:
+    # More ids than PostgreSQL's 65,535-parameter cap.
+    sample_ids = [uuid.uuid4() for _ in range(70_000)]
+    assert image_resolver.get_many_by_id(session=db_session, sample_ids=sample_ids) == []

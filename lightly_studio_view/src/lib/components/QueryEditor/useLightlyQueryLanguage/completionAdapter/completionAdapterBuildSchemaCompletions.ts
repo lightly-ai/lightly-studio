@@ -14,7 +14,7 @@ export function buildSchemaCompletions<Scope extends keyof typeof SCOPES>(
         items.push({
             label: field.name,
             kind: monaco.languages.CompletionItemKind.Field,
-            detail: `(field) ${title}.${field.name}: ${field.type}`,
+            detail: `${title}.${field.name}: ${field.type}`,
             documentation: { value: field.description },
             insertText: field.name,
             range

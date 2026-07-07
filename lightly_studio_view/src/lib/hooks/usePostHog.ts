@@ -5,6 +5,7 @@ import {
     PUBLIC_POSTHOG_DEV_KEY,
     PUBLIC_POSTHOG_HOST
 } from '$env/static/public';
+import { version } from '$lib/version.json';
 
 let initialized = false;
 
@@ -39,6 +40,7 @@ export const usePostHog = () => {
             capture_pageleave: true,
             capture_exceptions: true
         });
+        posthog.register({ app_version: version });
 
         initialized = true;
     };

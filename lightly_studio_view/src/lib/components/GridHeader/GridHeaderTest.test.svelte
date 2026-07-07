@@ -32,4 +32,11 @@
             Extra Controls
         {/snippet}
     </GridHeader>
+{:else if testCase === 'compact-probe'}
+    <GridHeader>
+        Main Content
+        {#snippet auxControls(compact)}
+            <span data-testid="compact-state">{compact ? 'compact' : 'full'}</span>
+        {/snippet}
+    </GridHeader>
 {/if}

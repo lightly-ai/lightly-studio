@@ -13,25 +13,25 @@ test.describe('Export Annotations', () => {
 
         // Switch to the correct export type
         await page.getByTestId('export-type-select').click();
-        await page.getByRole('option', { name: 'Image Object Detections' }).click();
-        await expect(page.getByTestId('submit-button-annotations')).toHaveAttribute(
+        await page.getByRole('option', { name: 'Image Object Detections (COCO)' }).click();
+        await expect(page.getByTestId('submit-button-annotations-coco')).toHaveAttribute(
             'href',
             /\/api\/collections\/.*\/export\/annotations\?ts=\d+/
         );
 
         // Remove target to avoid popup and keep navigation in the same page context
         await page
-            .getByTestId('submit-button-annotations')
+            .getByTestId('submit-button-annotations-coco')
             .evaluate((el: HTMLAnchorElement) => el.removeAttribute('target'));
 
         // Click and wait for the download event deterministically
         const [download] = await Promise.all([
             page.waitForEvent('download'),
-            page.getByTestId('submit-button-annotations').click()
+            page.getByTestId('submit-button-annotations-coco').click()
         ]);
 
         // Verify the suggested filename from headers
-        expect(download.suggestedFilename()).toBe(cocoDataset.annotationExportFilename);
+        expect(download.suggestedFilename()).toBe(cocoDataset.cocoExportFilename);
 
         // Read downloaded file contents (acceptDownloads is enabled)
         const filePath = await download.path();
@@ -63,5 +63,36 @@ test.describe('Export Annotations', () => {
         // TODO(Michal, 10/2025): Currently we export only object detections, but the test collection
         // has segmentation masks. Update the test to expect more than 0 annotations later.
         expect(data.annotations.length).toEqual(0);
+    });
+
+    test('Download annotations export YOLO zip', async ({ page }) => {
+        await gotoFirstPage(page);
+
+        // Open the Export side panel from the header
+        await page.getByTestId('menu-trigger').click();
+        await page.getByTestId('menu-export').click();
+        await expect(page.getByRole('heading', { name: 'Export' })).toBeVisible();
+
+        // Switch to the YOLO export type
+        await page.getByTestId('export-type-select').click();
+        await page.getByRole('option', { name: 'Image Object Detections (YOLO)' }).click();
+        await expect(page.getByTestId('submit-button-annotations-yolo')).toHaveAttribute(
+            'href',
+            /\/api\/collections\/.*\/export\/annotations\?ts=\d+&export_format=object_detection_yolo/
+        );
+
+        // Remove target to avoid popup and keep navigation in the same page context
+        await page
+            .getByTestId('submit-button-annotations-yolo')
+            .evaluate((el: HTMLAnchorElement) => el.removeAttribute('target'));
+
+        // Click and wait for the download event deterministically
+        const [download] = await Promise.all([
+            page.waitForEvent('download'),
+            page.getByTestId('submit-button-annotations-yolo').click()
+        ]);
+
+        // Verify the suggested filename from headers
+        expect(download.suggestedFilename()).toBe(cocoDataset.yoloExportFilename);
     });
 });

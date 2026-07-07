@@ -2,8 +2,9 @@ from uuid import uuid4
 
 import pytest
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import tag_resolver
 from tests.helpers_resolvers import create_collection, create_image, create_tag
@@ -14,6 +15,19 @@ def test_create_tag(db_session: Session) -> None:
     collection_id = collection.collection_id
     tag = create_tag(session=db_session, collection_id=collection_id, tag_name="example_tag")
     assert tag.name == "example_tag"
+
+
+def test_remove_sample_ids_from_tag_id__exceeds_postgres_param_limit(db_session: Session) -> None:
+    # More sample ids than PostgreSQL's 65,535-parameter cap.
+    collection_id = create_collection(session=db_session).collection_id
+    tag = create_tag(session=db_session, collection_id=collection_id, tag_name="t")
+    sample_ids = [uuid4() for _ in range(70_000)]
+
+    result = tag_resolver.remove_sample_ids_from_tag_id(
+        session=db_session, tag_id=tag.tag_id, sample_ids=sample_ids
+    )
+
+    assert result is not None
 
 
 def test_create_tag__unique_tag_name(db_session: Session) -> None:
@@ -442,6 +456,36 @@ def test_add_and_remove_sample_ids_to_tag_id(
     tag_1_samples_sorted = sorted(tag_1.samples, key=lambda s: s.sample_id)
     tag_2_samples_sorted = sorted(tag_2.samples, key=lambda s: s.sample_id)
     assert tag_1_samples_sorted == tag_2_samples_sorted
+
+
+def test_add_samples_to_tag_from_query__tags_only_query_matches(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
+    images = [
+        create_image(session=db_session, collection_id=collection_id, file_path_abs=f"s{i}.png")
+        for i in range(4)
+    ]
+    wanted = {images[0].sample_id, images[2].sample_id}
+
+    query = select(SampleTable.sample_id).where(col(SampleTable.sample_id).in_(wanted))
+    result = tag_resolver.add_samples_to_tag_from_query(
+        session=db_session, tag_id=tag.tag_id, sample_ids_query=query
+    )
+
+    # Exactly the query's matches are linked (correct sample/tag wiring, no over-tagging).
+    assert result is not None
+    assert {sample.sample_id for sample in tag.samples} == wanted
+
+
+def test_add_samples_to_tag_from_query__unknown_tag_returns_none(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+
+    query = select(SampleTable.sample_id).where(col(SampleTable.collection_id) == collection_id)
+    result = tag_resolver.add_samples_to_tag_from_query(
+        session=db_session, tag_id=uuid4(), sample_ids_query=query
+    )
+
+    assert result is None
 
 
 def test_add_and_remove_sample_ids_to_tag_id__twice_same_sample_ids(

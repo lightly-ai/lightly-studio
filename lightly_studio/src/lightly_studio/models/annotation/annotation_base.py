@@ -38,7 +38,7 @@ else:
 
 
 class AnnotationType(str, Enum):
-    """The type of annotation task."""
+    """The type of annotations."""
 
     CLASSIFICATION = "classification"
     SEGMENTATION_MASK = "segmentation_mask"
@@ -54,13 +54,15 @@ class AnnotationBaseTable(SQLModel, table=True):
 
     sample_id: UUID = Field(foreign_key="sample.sample_id", primary_key=True)
     annotation_type: AnnotationType
-    annotation_label_id: UUID = Field(foreign_key="annotation_label.annotation_label_id")
+    annotation_label_id: UUID = Field(
+        foreign_key="annotation_label.annotation_label_id", index=True
+    )
 
     confidence: Optional[float] = None
-    parent_sample_id: UUID = Field(foreign_key="sample.sample_id")
+    parent_sample_id: UUID = Field(foreign_key="sample.sample_id", index=True)
 
     object_track_id: Optional[UUID] = Field(
-        default=None, foreign_key="object_track.object_track_id"
+        default=None, foreign_key="object_track.object_track_id", index=True
     )
 
     annotation_label: Mapped["AnnotationLabelTable"] = Relationship(
@@ -251,6 +253,8 @@ class AnnotationWithPayloadView(BaseModel):
     parent_sample_type: SampleType
     annotation: AnnotationView
     parent_sample_data: Union[ImageAnnotationView, VideoFrameAnnotationView]
+    # Set when results are ordered by embedding similarity search.
+    similarity_score: Optional[float] = None
 
 
 class AnnotationWithPayloadAndCountView(BaseModel):

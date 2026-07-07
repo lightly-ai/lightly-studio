@@ -9,20 +9,33 @@ from uuid import UUID
 
 import numpy as np
 import pyarrow as pa
-from fastapi import APIRouter, Depends, Path, Response
+from fastapi import APIRouter, Depends, HTTPException, Path, Response
+
 from pyarrow import ipc
 from pydantic import BaseModel, Field
-from sqlmodel import select
 
+from lightly_studio.api.routes.api.embedding_coloring import ColorBy, build_color_data
 from lightly_studio.api.routes.api.embedding_coloring import ColorBy, build_color_data
 from lightly_studio.dataset.embedding_manager import (
     EmbeddingManager,
     EmbeddingManagerProvider,
     TextEmbedQuery,
 )
-from lightly_studio.db_manager import SessionDep
+from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
+from lightly_studio.resolvers import (
+    annotation_resolver,
+    embedding_model_resolver,
+    image_resolver,
+    twodim_embedding_resolver,
+    video_resolver,
+)
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.models.embedding_model import EmbeddingModelTable
-from lightly_studio.resolvers import image_resolver, twodim_embedding_resolver, video_resolver
+from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.api.routes.api.status import HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_NOT_FOUND
+from lightly_studio.database.db_manager import SessionDep
+
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
@@ -62,7 +75,7 @@ class PcaAxes(BaseModel):
 class GetEmbeddings2DRequest(BaseModel):
     """Request body for retrieving 2D embeddings."""
 
-    filters: ImageFilter | VideoFilter = Field(
+    filters: ImageFilter | VideoFilter | AnnotationsFilter = Field(
         description="Filter parameters identifying matching samples"
     )
     color_by: ColorBy | None = None
@@ -79,12 +92,19 @@ def get_2d_embeddings(
     embedding_manager: EmbeddingManagerDep,
 ) -> Response:
     """Return 2D embeddings serialized as an Arrow stream."""
+    collection = session.get(CollectionTable, collection_id)
+    if collection is None:
+        raise HTTPException(
+            status_code=HTTP_STATUS_NOT_FOUND,
+            detail=f"Collection {collection_id} not found.",
+        )
+    _validate_filter_type(collection=collection, filters=body.filters)
+
     # TODO(Malte, 09/2025): Support choosing the embedding model via API parameter.
-    embedding_model = session.exec(
-        select(EmbeddingModelTable)
-        .where(EmbeddingModelTable.collection_id == collection_id)
-        .limit(1)
-    ).first()
+    embedding_model = embedding_model_resolver.get_default_by_collection_id(
+        session=session,
+        collection_id=collection_id,
+    )
     if embedding_model is None:
         raise ValueError("No embedding model configured.")
 
@@ -184,7 +204,7 @@ def get_2d_embeddings(
         collection_id=collection_id,
         color_by=color_by,
         sample_ids=sample_ids,
-        fulfils_filter=fulfils_filter,
+        matching_sample_ids=matching_sample_ids,
     )
 
     schema = pa.schema(
@@ -192,7 +212,7 @@ def get_2d_embeddings(
             pa.field("x", pa.float32()),
             pa.field("y", pa.float32()),
             pa.field("fulfils_filter", pa.uint8()),
-            pa.field("color_category", pa.uint8()),
+            pa.field("color_categories", pa.list_(pa.uint8())),
             pa.field("sample_id", pa.string()),
         ],
         metadata={
@@ -205,7 +225,7 @@ def get_2d_embeddings(
             "x": pa.array(x_array, type=pa.float32()),
             "y": pa.array(y_array, type=pa.float32()),
             "fulfils_filter": pa.array(fulfils_filter, type=pa.uint8()),
-            "color_category": pa.array(color_categories, type=pa.uint8()),
+            "color_categories": pa.array(color_categories, type=pa.list_(pa.uint8())),
             "sample_id": pa.array([str(sample_id) for sample_id in sample_ids], type=pa.string()),
         },
         schema=schema,
@@ -267,7 +287,7 @@ def _project_text_axis(
 def _get_matching_sample_ids(
     session: SessionDep,
     collection_id: UUID,
-    filters: ImageFilter | VideoFilter,
+    filters: ImageFilter | VideoFilter | AnnotationsFilter,
 ) -> set[UUID]:
     """Get the set of sample IDs that match the given filters.
 
@@ -279,6 +299,14 @@ def _get_matching_sample_ids(
     Returns:
         Set of sample IDs that match the filters.
     """
+    if isinstance(filters, AnnotationsFilter):
+        return set(
+            annotation_resolver.get_sample_ids(
+                session=session,
+                collection_id=collection_id,
+                filters=filters,
+            )
+        )
     if isinstance(filters, VideoFilter):
         return video_resolver.get_sample_ids(
             session=session,
@@ -290,4 +318,20 @@ def _get_matching_sample_ids(
         session=session,
         collection_id=collection_id,
         filters=filters,
+    )
+
+
+def _validate_filter_type(
+    collection: CollectionTable,
+    filters: ImageFilter | VideoFilter | AnnotationsFilter,
+) -> None:
+    if collection.sample_type == SampleType.IMAGE and isinstance(filters, ImageFilter):
+        return
+    if collection.sample_type == SampleType.VIDEO and isinstance(filters, VideoFilter):
+        return
+    if collection.sample_type == SampleType.ANNOTATION and isinstance(filters, AnnotationsFilter):
+        return
+    raise HTTPException(
+        status_code=HTTP_STATUS_BAD_REQUEST,
+        detail=f"Invalid filter type for {collection.sample_type.value} collection.",
     )

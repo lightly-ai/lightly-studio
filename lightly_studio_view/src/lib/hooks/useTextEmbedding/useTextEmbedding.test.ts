@@ -13,7 +13,7 @@ vi.mock('$lib/api/lightly_studio_local', () => ({
 const setup = () => {
     const onError = vi.fn();
     const onSuccess = vi.fn();
-    const text = useTextEmbedding({ collectionId: 'collection-id', onError, onSuccess });
+    const text = useTextEmbedding({ getCollectionId: () => 'collection-id', onError, onSuccess });
     return { text, onError, onSuccess };
 };
 

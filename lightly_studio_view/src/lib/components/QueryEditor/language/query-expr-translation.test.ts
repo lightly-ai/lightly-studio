@@ -102,6 +102,13 @@ const int = (table: string, name: string, operator: OrdOp, value: number): Match
     value
 });
 
+const float = (table: string, name: string, operator: OrdOp, value: number): MatchExpr => ({
+    type: 'ordinal_float_expr',
+    field: { table, name },
+    operator,
+    value
+});
+
 const str = (table: string, name: string, operator: EqOp, value: string): MatchExpr => ({
     type: 'string_expr',
     field: { table, name },
@@ -204,9 +211,9 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
 
     /* Object detection expression */
     {
-        name: 'object detection label',
-        source: 'object_detection(label = "cat")',
-        expected: query(objectDetection(str('object_detection', 'label', '==', 'cat')))
+        name: 'object detection class_name',
+        source: 'object_detection(class_name = "cat")',
+        expected: query(objectDetection(str('object_detection', 'class_name', '==', 'cat')))
     },
     {
         name: 'object detection x inequality',
@@ -228,17 +235,47 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
         source: 'object_detection(height <= 120)',
         expected: query(objectDetection(int('object_detection', 'height', '<=', 120)))
     },
+    {
+        name: 'object detection confidence greater than',
+        source: 'object_detection(confidence > 0.5)',
+        expected: query(objectDetection(float('object_detection', 'confidence', '>', 0.5)))
+    },
+    {
+        name: 'object detection annotation source equality',
+        source: 'object_detection(source = "predictions")',
+        expected: query(objectDetection(str('object_detection', 'source', '==', 'predictions')))
+    },
 
     /* Classification expression */
     {
-        name: 'classification label',
-        source: 'classification(label = "cat")',
-        expected: query(classification(str('classification', 'label', '==', 'cat')))
+        name: 'classification class_name',
+        source: 'classification(class_name = "cat")',
+        expected: query(classification(str('classification', 'class_name', '==', 'cat')))
     },
     {
-        name: 'segmentation label',
-        source: 'segmentation_mask(label = "cat")',
-        expected: query(segmentationMask(str('segmentation_mask', 'label', '==', 'cat')))
+        name: 'classification annotation source equality',
+        source: 'classification(source = "ground_truth")',
+        expected: query(classification(str('classification', 'source', '==', 'ground_truth')))
+    },
+    {
+        name: 'classification confidence greater than',
+        source: 'classification(confidence > 0.9)',
+        expected: query(classification(float('classification', 'confidence', '>', 0.9)))
+    },
+    {
+        name: 'segmentation class_name',
+        source: 'segmentation_mask(class_name = "cat")',
+        expected: query(segmentationMask(str('segmentation_mask', 'class_name', '==', 'cat')))
+    },
+    {
+        name: 'segmentation confidence greater than',
+        source: 'segmentation_mask(confidence > 0.9)',
+        expected: query(segmentationMask(float('segmentation_mask', 'confidence', '>', 0.9)))
+    },
+    {
+        name: 'segmentation annotation source equality',
+        source: 'segmentation_mask(source = "predictions")',
+        expected: query(segmentationMask(str('segmentation_mask', 'source', '==', 'predictions')))
     },
     {
         name: 'segmentation x inequality',
@@ -286,11 +323,11 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
     /* Boolean operators in subexpressions */
     {
         name: 'object detection boolean expression',
-        source: 'object_detection(label = "cat" AND width >= 50 AND height >= 40)',
+        source: 'object_detection(class_name = "cat" AND width >= 50 AND height >= 40)',
         expected: query(
             objectDetection(
                 and(
-                    str('object_detection', 'label', '==', 'cat'),
+                    str('object_detection', 'class_name', '==', 'cat'),
                     int('object_detection', 'width', '>=', 50),
                     int('object_detection', 'height', '>=', 40)
                 )
@@ -299,28 +336,30 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
     },
     {
         name: 'object detection alternatives',
-        source: 'object_detection(label = "cat" OR label = "dog")',
+        source: 'object_detection(class_name = "cat" OR class_name = "dog")',
         expected: query(
             objectDetection(
                 or(
-                    str('object_detection', 'label', '==', 'cat'),
-                    str('object_detection', 'label', '==', 'dog')
+                    str('object_detection', 'class_name', '==', 'cat'),
+                    str('object_detection', 'class_name', '==', 'dog')
                 )
             )
         )
     },
     {
         name: 'object detection negation',
-        source: 'object_detection(NOT label = "background")',
-        expected: query(objectDetection(not(str('object_detection', 'label', '==', 'background'))))
+        source: 'object_detection(NOT class_name = "background")',
+        expected: query(
+            objectDetection(not(str('object_detection', 'class_name', '==', 'background')))
+        )
     },
     {
         name: 'segmentation boolean expression',
-        source: 'segmentation_mask(label = "cat" AND width >= 50 AND height >= 40)',
+        source: 'segmentation_mask(class_name = "cat" AND width >= 50 AND height >= 40)',
         expected: query(
             segmentationMask(
                 and(
-                    str('segmentation_mask', 'label', '==', 'cat'),
+                    str('segmentation_mask', 'class_name', '==', 'cat'),
                     int('segmentation_mask', 'width', '>=', 50),
                     int('segmentation_mask', 'height', '>=', 40)
                 )
@@ -341,12 +380,12 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
     },
     {
         name: 'multiline whitespace',
-        source: 'height > 400\nAND "reviewed" IN tags\nAND object_detection(label = "cat")',
+        source: 'height > 400\nAND "reviewed" IN tags\nAND object_detection(class_name = "cat")',
         expected: query(
             and(
                 int('image', 'height', '>', 400),
                 tagsContains('image', 'reviewed'),
-                objectDetection(str('object_detection', 'label', '==', 'cat'))
+                objectDetection(str('object_detection', 'class_name', '==', 'cat'))
             )
         )
     },
@@ -361,7 +400,7 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
     /* Complex queries */
     {
         name: 'complex reviewed large cat image',
-        source: 'height > 400 AND width >= 640 AND "reviewed" IN tags AND object_detection(label = "cat" AND width > 80 AND height > 80)',
+        source: 'height > 400 AND width >= 640 AND "reviewed" IN tags AND object_detection(class_name = "cat" AND width > 80 AND height > 80)',
         expected: query(
             and(
                 int('image', 'height', '>', 400),
@@ -369,7 +408,7 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
                 tagsContains('image', 'reviewed'),
                 objectDetection(
                     and(
-                        str('object_detection', 'label', '==', 'cat'),
+                        str('object_detection', 'class_name', '==', 'cat'),
                         int('object_detection', 'width', '>', 80),
                         int('object_detection', 'height', '>', 80)
                     )
@@ -379,7 +418,7 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
     },
     {
         name: 'complex dataset curation query',
-        source: '(file_path_abs != "/datasets/archive/bad.jpg" AND created_at >= "2025-01-01T00:00:00Z") AND ("training" IN tags OR "validation" IN tags) AND object_detection((label = "cat" OR label = "dog") AND NOT (x < 5 OR y < 5))',
+        source: '(file_path_abs != "/datasets/archive/bad.jpg" AND created_at >= "2025-01-01T00:00:00Z") AND ("training" IN tags OR "validation" IN tags) AND object_detection((class_name = "cat" OR class_name = "dog") AND NOT (x < 5 OR y < 5))',
         expected: query(
             and(
                 and(
@@ -390,8 +429,8 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
                 objectDetection(
                     and(
                         or(
-                            str('object_detection', 'label', '==', 'cat'),
-                            str('object_detection', 'label', '==', 'dog')
+                            str('object_detection', 'class_name', '==', 'cat'),
+                            str('object_detection', 'class_name', '==', 'dog')
                         ),
                         not(
                             or(

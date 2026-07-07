@@ -17,6 +17,7 @@
         dataSampleName,
         dataIndex,
         dragData,
+        onDragStart,
         onSelect,
         ondblclick
     }: {
@@ -32,11 +33,16 @@
         dataSampleName?: string;
         dataIndex?: number;
         dragData?: GridItemDragData;
+        /** Fires once when a drag actually begins (past the movement threshold). */
+        onDragStart?: () => void;
         onSelect?: (event: MouseEvent | KeyboardEvent) => void;
         ondblclick?: (event: MouseEvent) => void;
     } = $props();
 
-    const drag = useGridItemDrag(() => dragData);
+    const drag = useGridItemDrag(
+        () => dragData,
+        () => onDragStart?.()
+    );
 
     function formatSize(value: string | number): string {
         return typeof value === 'number' ? `${value}px` : value;

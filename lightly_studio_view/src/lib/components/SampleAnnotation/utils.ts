@@ -121,12 +121,6 @@ export const encodeBinaryMaskToRLE = (mask: Uint8Array): number[] => {
     return rle;
 };
 
-export const withAlpha = (color: string, alpha: number) =>
-    color.replace(/rgba?\(([^)]+)\)/, (_, c) => {
-        const [r, g, b] = c.split(',').map(Number);
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    });
-
 export const applyBrushToMask = (
     mask: Uint8Array,
     imageWidth: number,

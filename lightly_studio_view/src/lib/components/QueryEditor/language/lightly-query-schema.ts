@@ -60,7 +60,21 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
         title: 'ObjectDetection',
         description: 'Detected object inside an image. Used inside `object_detection(...)`.',
         fields: [
-            { name: 'label', type: 'string', description: 'Class label of the detection.' },
+            {
+                name: 'class_name',
+                type: 'string',
+                description: 'Annotation class of the detection.'
+            },
+            {
+                name: 'source',
+                type: 'string',
+                description: 'Annotation source collection name.'
+            },
+            {
+                name: 'confidence',
+                type: 'float',
+                description: 'Detection confidence score.'
+            },
             { name: 'x', type: 'int', description: 'Top-left X coordinate of the bounding box.' },
             { name: 'y', type: 'int', description: 'Top-left Y coordinate of the bounding box.' },
             { name: 'width', type: 'int', description: 'Bounding box width in pixels.' },
@@ -72,7 +86,21 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
         title: 'Classification',
         description: 'Classification annotation on an image. Used inside `classification(...)`.',
         fields: [
-            { name: 'label', type: 'string', description: 'Class label of the classification.' }
+            {
+                name: 'class_name',
+                type: 'string',
+                description: 'Annotation class of the classification.'
+            },
+            {
+                name: 'source',
+                type: 'string',
+                description: 'Annotation source collection name.'
+            },
+            {
+                name: 'confidence',
+                type: 'float',
+                description: 'Classification confidence score.'
+            }
         ]
     },
     segmentation_mask: {
@@ -81,7 +109,21 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
         description:
             'Segmentation mask annotation on an image. Used inside `segmentation_mask(...)`.',
         fields: [
-            { name: 'label', type: 'string', description: 'Class label of the segmentation mask.' },
+            {
+                name: 'class_name',
+                type: 'string',
+                description: 'Annotation class of the segmentation mask.'
+            },
+            {
+                name: 'source',
+                type: 'string',
+                description: 'Annotation source collection name.'
+            },
+            {
+                name: 'confidence',
+                type: 'float',
+                description: 'Segmentation confidence score.'
+            },
             { name: 'x', type: 'int', description: 'Top-left X coordinate of the mask bounds.' },
             { name: 'y', type: 'int', description: 'Top-left Y coordinate of the mask bounds.' },
             { name: 'width', type: 'int', description: 'Mask width in pixels.' },
@@ -108,17 +150,17 @@ export const TOP_LEVEL_KEYWORDS: KeywordDoc[] = [
     {
         name: 'object_detection',
         description: 'Filter on detections inside an image.',
-        insertText: 'object_detection(${1:condition})'
+        insertText: 'object_detection(${1:class_name = "..."})'
     },
     {
         name: 'classification',
         description: 'Filter on the image classification annotation.',
-        insertText: 'classification(${1:label = "..."})'
+        insertText: 'classification(${1:class_name = "..."})'
     },
     {
         name: 'segmentation_mask',
         description: 'Filter on segmentation mask annotations inside an image.',
-        insertText: 'segmentation_mask(${1:label = "..."})'
+        insertText: 'segmentation_mask(${1:class_name = "..."})'
     }
 ];
 

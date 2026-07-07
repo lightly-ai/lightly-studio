@@ -15,7 +15,7 @@ class CaptionTable(SQLModel, table=True):
     __tablename__ = "caption"
 
     sample_id: UUID = Field(foreign_key="sample.sample_id", primary_key=True)
-    parent_sample_id: UUID = Field(foreign_key="sample.sample_id")
+    parent_sample_id: UUID = Field(foreign_key="sample.sample_id", index=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
     text: str
 

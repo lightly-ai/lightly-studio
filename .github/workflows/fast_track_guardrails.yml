@@ -1,0 +1,57 @@
+name: Fast Track Guardrails
+
+# Run Fast Track guardrails on each non-draft PR and publish the verdict as
+# an artifact for the bot. NOT a required status check — else would block every non-fast-track PR.
+on:
+  pull_request:
+    # labeled/unlabeled so toggling the opt-out label re-evaluates.
+    types: [opened, ready_for_review, synchronize, reopened, labeled, unlabeled]
+
+# Judge only the latest push per PR ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  guardrails:
+    name: Fast Track Guardrails
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: fast_track
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        # Runs untrusted PR code and never pushes — keep the token out of git config.
+        with:
+          persist-credentials: false
+
+      # Pin Node from .nvmrc, matching the local Makefile's nvm setup.
+      - name: Set Up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: fast_track/.nvmrc
+          cache: npm
+          cache-dependency-path: fast_track/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Writes fast_track/verdict.json. Non-zero exit = the run crashed, not a fail verdict.
+      - name: Run Fast Track Guardrails
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: npm run guardrails-ci
+
+      # JS action, so defaults.run.working-directory doesn't apply — path is repo-root-relative.
+      - name: Upload verdict
+        uses: actions/upload-artifact@v4
+        with:
+          name: fast-track-verdict
+          path: fast_track/verdict.json
+          if-no-files-found: error
