@@ -31,8 +31,7 @@ def count_image_annotations_by_collection(
 
     When ``annotation_type`` is provided, both the total and filtered counts are
     restricted to annotations of that type (e.g. only CLASSIFICATION or only
-    OBJECT_DETECTION). When it is not provided, counts include all types and the
-    behaviour is unchanged.
+    OBJECT_DETECTION).
     """
     # Resolve any embedding-plot region selection to concrete sample ids on the filter before the
     # query is built (the point-in-polygon test needs the session, which `apply` lacks).

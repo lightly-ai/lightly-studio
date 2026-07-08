@@ -35,8 +35,7 @@ def count_video_frame_annotations_by_video_collection(
 
     When ``annotation_type`` is provided, both the total and filtered counts are
     restricted to annotations of that type (e.g. only CLASSIFICATION or only
-    OBJECT_DETECTION). When it is not provided, counts include all types and the
-    behaviour is unchanged.
+    OBJECT_DETECTION).
     """
     unfiltered_query = (
         _build_base_query(
