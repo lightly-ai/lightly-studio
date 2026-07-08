@@ -47,8 +47,6 @@ def update_bounding_box(
         raise ValueError(f"Annotation with ID {annotation_id} not found.")
 
     try:
-        # TODO(Malte, 07/2026): Replace eager deletion with explicit evaluation invalidation
-        # once evaluation results can be recomputed or marked stale independently from updates.
         delete_evaluation_metrics(
             session=session,
             annotation_ids=[annotation.sample_id],
