@@ -34,7 +34,11 @@ type RawCoverage = Record<string, IstanbulFileCoverage>;
 // using the project's *.test.ts / *.spec.ts naming convention.
 function findFrontendTestFile(repoRelative: string): string | undefined {
     const relToFrontend = repoRelative.slice(FRONTEND_PREFIX.length); // src/lib/foo.ts
-    const withoutExt = relToFrontend.replace(/\.(ts|js|svelte)$/, '');
+    let withoutExt = relToFrontend.replace(/\.(ts|js|svelte)$/, '');
+    // Strip .svelte suffix from rune module stems (foo.svelte.ts → foo)
+    withoutExt = withoutExt.replace(/\.svelte$/, '');
+    // Strip SvelteKit + prefix from basename (+page → page)
+    withoutExt = withoutExt.replace(/(^|\/)\+/, '$1');
     const candidates = [
         `${withoutExt}.test.ts`,
         `${withoutExt}.test.js`,
