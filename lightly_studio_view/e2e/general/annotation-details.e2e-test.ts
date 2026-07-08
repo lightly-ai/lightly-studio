@@ -227,8 +227,8 @@ test('user can delete annotation and navigate to next annotation', async ({
     // Delete the annotation, asserting the backend returned 200.
     await annotationDetailsPage.deleteCurrentAnnotation();
 
-    await annotationDetailsPage.waitForNavigation();
     await expect(page).not.toHaveURL(annotationUrlBeforeDelete);
+    await annotationDetailsPage.waitForNavigation();
 
     await annotationDetailsPage.clickEditLabelButton();
 
