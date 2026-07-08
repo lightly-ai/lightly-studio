@@ -67,8 +67,6 @@ def get_all_with_payload(
     base_query = _build_base_query(sample_type=sample_type)
 
     if filters:
-        # Resolve any embedding-plot region selection to concrete annotation sample ids
-        # before applying the filter (the point-in-polygon test needs the session).
         if filters.embedding_region is not None:
             filters.region_sample_ids = embedding_region_resolver.get_sample_ids_in_region(
                 session=session,

@@ -42,8 +42,6 @@ def get_sample_ids(
     Returns:
         Set of annotation sample ids matching the given filters.
     """
-    # Resolve any embedding-plot region selection to concrete annotation sample ids on the filter
-    # before the query is built (the point-in-polygon test needs the session, which `apply` lacks).
     if filters is not None and filters.embedding_region is not None:
         filters.region_sample_ids = embedding_region_resolver.get_sample_ids_in_region(
             session=session,
