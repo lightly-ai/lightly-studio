@@ -13,7 +13,11 @@ from lightly_studio.core.annotation.object_detection import ObjectDetectionAnnot
 from lightly_studio.core.annotation.segmentation_mask import SegmentationMaskAnnotation
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.models.annotation.annotation_base import AnnotationType
-from lightly_studio.resolvers import image_resolver
+from lightly_studio.resolvers import (
+    embedding_model_resolver,
+    image_resolver,
+    sample_embedding_resolver,
+)
 from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
@@ -641,3 +645,42 @@ class TestImageSample:
 
         # Verify it's gone.
         assert len(image.annotations) == 0
+
+    def test_set_embedding(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
+        image_table = create_image(
+            session=db_session,
+            collection_id=collection.collection_id,
+        )
+        sample = ImageSample(inner=image_table)
+
+        sample.set_embedding([0.1, 0.2, 0.3])
+
+        models = embedding_model_resolver.get_all_by_collection_id(
+            session=db_session, collection_id=collection.collection_id
+        )
+        assert len(models) == 1
+        assert models[0].name == "custom"
+        assert models[0].embedding_dimension == 3
+
+        rows = sample_embedding_resolver.get_by_sample_ids(
+            session=db_session,
+            sample_ids=[sample.sample_id],
+            embedding_model_id=models[0].embedding_model_id,
+        )
+        assert len(rows) == 1
+        assert list(rows[0].embedding) == pytest.approx([0.1, 0.2, 0.3])
+
+        # Setting a new vector under the same name updates the row in place.
+        sample.set_embedding([0.4, 0.5, 0.6])
+        models = embedding_model_resolver.get_all_by_collection_id(
+            session=db_session, collection_id=collection.collection_id
+        )
+        assert len(models) == 1
+        rows = sample_embedding_resolver.get_by_sample_ids(
+            session=db_session,
+            sample_ids=[sample.sample_id],
+            embedding_model_id=models[0].embedding_model_id,
+        )
+        assert len(rows) == 1
+        assert list(rows[0].embedding) == pytest.approx([0.4, 0.5, 0.6])
