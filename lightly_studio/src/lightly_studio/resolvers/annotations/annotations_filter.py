@@ -36,15 +36,7 @@ class AnnotationsFilter(GridFilterBase):
     sample_ids: list[UUID] | None = Field(
         default=None, description="List of annotation sample UUIDs to restrict to"
     )
-    # Lasso/rectangle selection from the embedding plot, sent as geometry (a few KB) instead
-    # of the full list of selected annotation sample ids (see LIG-9903). It is resolved to
-    # concrete sample ids server-side via point-in-polygon over the cached 2D projection.
     embedding_region: EmbeddingRegion | None = None
-
-    # Annotation sample ids enclosed by ``embedding_region``, resolved server-side before the query
-    # is built (the point-in-polygon test needs a session that ``apply`` cannot access). ``None``
-    # means no region restriction; an empty list matches nothing, since an empty region encloses no
-    # points. Populated by ``embedding_region_resolver.resolve_annotation_embedding_region``.
     region_sample_ids: list[UUID] | None = None
 
     def apply(
