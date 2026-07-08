@@ -7,16 +7,13 @@ from pathlib import Path
 from uuid import UUID
 
 from labelformat.formats import ActivityNetTemporalClassificationInput
-from labelformat.model.temporal_classification import TemporalClassificationInput
 from sqlmodel import Session
 from tqdm import tqdm
 
+from lightly_studio.core import labelformat_helpers
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
-from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.resolvers import (
-    annotation_label_resolver,
     annotation_resolver,
-    collection_resolver,
     video_resolver,
 )
 from lightly_studio.type_definitions import PathLike
@@ -31,7 +28,6 @@ def add_annotations_from_activitynet(
     root_collection_id: UUID,
     annotations_json: PathLike,
     collection_name: str | None = None,
-    restrict_to_sample_ids: set[UUID] | None = None,
 ) -> list[str]:
     """Add ActivityNet-style event annotations to videos already in a collection.
 
@@ -41,21 +37,20 @@ def add_annotations_from_activitynet(
         annotations_json: Path to an ActivityNet-style JSON file.
         collection_name: Optional name for the annotation source. If ``None``, a default
             name is used.
-        restrict_to_sample_ids: When provided, only annotate videos whose resolved
-            sample ID is in this set.
 
     Returns:
         A list of video IDs from the JSON that had no matching video in the collection.
     """
-    input_labels = _load_activitynet_input(annotations_json=annotations_json)
+    input_labels = ActivityNetTemporalClassificationInput(input_file=Path(annotations_json))
     stem_to_sample_id = video_resolver.get_sample_ids_by_stems(
         session=session,
         collection_id=root_collection_id,
     )
-    collection = collection_resolver.get_by_id(session=session, collection_id=root_collection_id)
-    if collection is None:
-        raise ValueError(f"Collection {root_collection_id} doesn't exist")
-    dataset_id = collection.dataset_id
+    label_map = labelformat_helpers.create_label_map(
+        session=session,
+        root_collection_id=root_collection_id,
+        input_labels=input_labels,
+    )
 
     missing_video_ids: list[str] = []
     annotations_to_create: list[AnnotationCreate] = []
@@ -67,28 +62,11 @@ def add_annotations_from_activitynet(
         if video_sample_id is None:
             missing_video_ids.append(video_label.video_id)
             continue
-        if restrict_to_sample_ids is not None and video_sample_id not in restrict_to_sample_ids:
-            continue
 
         for event in video_label.events:
-            label_name = event.category.name
-            label = annotation_label_resolver.get_by_label_name(
-                session=session,
-                dataset_id=dataset_id,
-                label_name=label_name,
-            )
-            if label is None:
-                label = annotation_label_resolver.create(
-                    session=session,
-                    label=AnnotationLabelCreate(
-                        dataset_id=dataset_id,
-                        annotation_label_name=label_name,
-                    ),
-                )
-
             annotations_to_create.append(
                 AnnotationCreate(
-                    annotation_label_id=label.annotation_label_id,
+                    annotation_label_id=label_map[event.category.id],
                     annotation_type=AnnotationType.CLASSIFICATION,
                     confidence=event.confidence,
                     parent_sample_id=video_sample_id,
@@ -121,10 +99,3 @@ def add_annotations_from_activitynet(
         )
 
     return missing_video_ids
-
-
-def _load_activitynet_input(annotations_json: PathLike) -> TemporalClassificationInput:
-    if isinstance(annotations_json, (str, Path)):
-        return ActivityNetTemporalClassificationInput(input_file=Path(annotations_json))
-
-    raise TypeError("annotations_json must be a path to an ActivityNet JSON file.")
