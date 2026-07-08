@@ -95,7 +95,6 @@ class AnnotationBaseTable(SQLModel, table=True):
         sa_relationship_kwargs={"lazy": "select"},
     )
 
-
     # Optional temporal bounds for this annotation's sample.
     temporal_span_details: Mapped[Optional["TemporalSpanTable"]] = Relationship(
         sa_relationship_kwargs={

@@ -74,7 +74,6 @@ def _get_image_annotation_by_id(
                 ImageTable.height,  # type: ignore[arg-type]
                 ImageTable.width,  # type: ignore[arg-type]
             ),
-            joinedload(AnnotationBaseTable.temporal_span_details),
         )
         .where(col(AnnotationBaseTable.sample_id) == sample_id)
     )
@@ -114,7 +113,6 @@ def _get_video_frame_annotation_by_id(
                 VideoTable.width,  # type: ignore[arg-type]
                 VideoTable.file_path_abs,  # type: ignore[arg-type]
             ),
-            joinedload(AnnotationBaseTable.temporal_span_details),
         )
         .where(col(AnnotationBaseTable.sample_id) == sample_id)
     )

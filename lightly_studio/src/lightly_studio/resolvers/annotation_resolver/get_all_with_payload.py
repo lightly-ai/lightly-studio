@@ -150,7 +150,6 @@ def _build_base_query(
                 joinedload(ImageTable.sample).load_only(
                     SampleTable.collection_id,  # type: ignore[arg-type]
                 ),
-                joinedload(AnnotationBaseTable.temporal_span_details),
             )
         )
 
@@ -169,7 +168,6 @@ def _build_base_query(
                     VideoTable.width,  # type: ignore[arg-type]
                     VideoTable.file_path_abs,  # type: ignore[arg-type]
                 ),
-                joinedload(AnnotationBaseTable.temporal_span_details),
             )
         )
 
