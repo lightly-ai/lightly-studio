@@ -1,3 +1,8 @@
+from __future__ import annotations
+
+from uuid import UUID
+
+import pytest
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
@@ -195,9 +200,8 @@ def test_count_video_frame_annotations_by_video_collection_with_annotation_filte
     assert annotations[1].current_count == 0
 
 
-def test_count_video_frame_annotations_by_video_collection_filters_by_annotation_type(
-    db_session: Session,
-) -> None:
+@pytest.fixture
+def typed_collection_id(db_session: Session) -> UUID:
     collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     collection_id = collection.collection_id
 
@@ -236,31 +240,28 @@ def test_count_video_frame_annotations_by_video_collection_filters_by_annotation
         ],
     )
 
-    # Without the filter both types are counted.
-    all_annotations = video_resolver.count_video_frame_annotations_by_video_collection(
-        session=db_session,
-        collection_id=collection_id,
-    )
-    assert {a.label_name for a in all_annotations} == {"scene", "car"}
+    return collection_id
 
-    # Classification only isolates the classification label.
-    classification_annotations = video_resolver.count_video_frame_annotations_by_video_collection(
-        session=db_session,
-        collection_id=collection_id,
-        annotation_type=AnnotationType.CLASSIFICATION,
-    )
-    assert len(classification_annotations) == 1
-    assert classification_annotations[0].label_name == "scene"
-    assert classification_annotations[0].total_count == 1
-    assert classification_annotations[0].current_count == 1
 
-    # Object detection only isolates the detection label.
-    detection_annotations = video_resolver.count_video_frame_annotations_by_video_collection(
+@pytest.mark.parametrize(
+    ("annotation_type", "expected_counts"),
+    [
+        (None, {"scene": (1, 1), "car": (1, 1)}),
+        (AnnotationType.CLASSIFICATION, {"scene": (1, 1)}),
+        (AnnotationType.OBJECT_DETECTION, {"car": (1, 1)}),
+    ],
+)
+def test_count_video_frame_annotations_by_video_collection_filters_by_annotation_type(
+    db_session: Session,
+    typed_collection_id: UUID,
+    annotation_type: AnnotationType | None,
+    expected_counts: dict[str, tuple[int, int]],
+) -> None:
+    annotations = video_resolver.count_video_frame_annotations_by_video_collection(
         session=db_session,
-        collection_id=collection_id,
-        annotation_type=AnnotationType.OBJECT_DETECTION,
+        collection_id=typed_collection_id,
+        annotation_type=annotation_type,
     )
-    assert len(detection_annotations) == 1
-    assert detection_annotations[0].label_name == "car"
-    assert detection_annotations[0].total_count == 1
-    assert detection_annotations[0].current_count == 1
+
+    counts = {a.label_name: (a.total_count, a.current_count) for a in annotations}
+    assert counts == expected_counts

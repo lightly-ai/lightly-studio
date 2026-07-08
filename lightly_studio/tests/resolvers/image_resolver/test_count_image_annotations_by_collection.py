@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from uuid import UUID
 
 import pytest
 from sqlmodel import Session
@@ -134,9 +135,8 @@ def test_count_image_annotations_by_collection_with_filtering(
     assert filtered_dict["cat"] == (1, 1)
 
 
-def test_count_image_annotations_by_collection_filters_by_annotation_type(
-    db_session: Session,
-) -> None:
+@pytest.fixture
+def typed_collection_id(db_session: Session) -> UUID:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
@@ -174,30 +174,28 @@ def test_count_image_annotations_by_collection_filters_by_annotation_type(
         ],
     )
 
-    # Without the filter both types are counted.
-    all_counts = image_resolver.count_image_annotations_by_collection(
-        session=db_session,
-        collection_id=collection_id,
-    )
-    all_dict = {label: (current, total) for label, current, total in all_counts}
-    assert all_dict == {"scene": (1, 1), "dog": (1, 1)}
+    return collection_id
 
-    # Classification only isolates the classification label.
-    classification_counts = image_resolver.count_image_annotations_by_collection(
-        session=db_session,
-        collection_id=collection_id,
-        annotation_type=AnnotationType.CLASSIFICATION,
-    )
-    classification_dict = {
-        label: (current, total) for label, current, total in classification_counts
-    }
-    assert classification_dict == {"scene": (1, 1)}
 
-    # Object detection only isolates the detection label.
-    detection_counts = image_resolver.count_image_annotations_by_collection(
+@pytest.mark.parametrize(
+    ("annotation_type", "expected_counts"),
+    [
+        (None, {"scene": (1, 1), "dog": (1, 1)}),
+        (AnnotationType.CLASSIFICATION, {"scene": (1, 1)}),
+        (AnnotationType.OBJECT_DETECTION, {"dog": (1, 1)}),
+    ],
+)
+def test_count_image_annotations_by_collection_filters_by_annotation_type(
+    db_session: Session,
+    typed_collection_id: UUID,
+    annotation_type: AnnotationType | None,
+    expected_counts: dict[str, tuple[int, int]],
+) -> None:
+    counts = image_resolver.count_image_annotations_by_collection(
         session=db_session,
-        collection_id=collection_id,
-        annotation_type=AnnotationType.OBJECT_DETECTION,
+        collection_id=typed_collection_id,
+        annotation_type=annotation_type,
     )
-    detection_dict = {label: (current, total) for label, current, total in detection_counts}
-    assert detection_dict == {"dog": (1, 1)}
+
+    counts_dict = {label: (current, total) for label, current, total in counts}
+    assert counts_dict == expected_counts
