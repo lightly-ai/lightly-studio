@@ -14,21 +14,12 @@ from lightly_studio.type_definitions import QueryType
 
 
 class RegionSampleIdsFilter(BaseModel):
-    """Mixin adding embedding-region sample-id filtering to a filter.
-
-    ``region_sample_ids`` holds the sample ids enclosed by an embedding-plot
-    region, resolved server-side before the query is built (the point-in-polygon
-    test needs a session that ``apply`` cannot access). ``None`` means no region
-    restriction; an empty list matches nothing, since an empty region encloses no
-    points.
-    """
+    """Mixin adding embedding-region sample-id filtering to a filter."""
 
     embedding_region: EmbeddingRegion | None = None
 
-    # Sample ids enclosed by ``embedding_region``, resolved server-side before the query is built
-    # (the point-in-polygon test needs a session that ``apply`` cannot access). ``None`` means no
-    # region restriction; an empty list matches nothing, since an empty region encloses no points.
-    # Populated by ``embedding_region_resolver.resolve_region_sample_ids``.
+    # Sample ids enclosed by ``embedding_region``, resolved server-side.
+    # ``None`` means no region filter; an empty list matches nothing.
     region_sample_ids: list[UUID] | None = None
 
     def _apply_region_sample_ids_filter(
