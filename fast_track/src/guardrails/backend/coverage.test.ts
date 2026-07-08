@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { filterBackendFiles, parseCoverageRatio } from './coverage';
+import { filterBackendFiles, matchesTestFile, parseCoverageRatio } from './coverage';
 import type { ChangedFile } from '../context/types';
 
 describe('filterBackendFiles', () => {
@@ -117,6 +117,31 @@ describe('filterBackendFiles', () => {
         const result = filterBackendFiles(files);
         expect(result).toHaveLength(1);
         expect(result[0]!.path).toBe('lightly_studio/src/lightly_studio/service.py');
+    });
+});
+
+describe('matchesTestFile', () => {
+    const prefix = 'test_image_dataset';
+
+    it('matches exact test file', () => {
+        expect(matchesTestFile('test_image_dataset.py', prefix)).toBe(true);
+    });
+
+    it('matches double-underscore suffix variant', () => {
+        expect(matchesTestFile('test_image_dataset__yolo.py', prefix)).toBe(true);
+        expect(matchesTestFile('test_image_dataset__coco.py', prefix)).toBe(true);
+    });
+
+    it('matches single-underscore suffix variant', () => {
+        expect(matchesTestFile('test_image_dataset_export.py', prefix)).toBe(true);
+    });
+
+    it('does not match unrelated test file', () => {
+        expect(matchesTestFile('test_image.py', prefix)).toBe(false);
+    });
+
+    it('does not match non-.py file', () => {
+        expect(matchesTestFile('test_image_dataset.ts', prefix)).toBe(false);
     });
 });
 

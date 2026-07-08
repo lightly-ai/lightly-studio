@@ -61,12 +61,12 @@ export const backendCoverageGuardrail: Guardrail = createCoverageGuardrail<Cover
         const testsDir = resolve(LIGHTLY_STUDIO_ABS, 'tests');
         if (!existsSync(testsDir)) return undefined;
 
-        const targetName = `test_${sourceName}.py`;
+        const prefix = `test_${sourceName}`;
         const entries = await readdir(testsDir, { recursive: true, withFileTypes: true });
         const candidates: string[] = [];
 
         for (const entry of entries) {
-            if (!entry.isFile() || entry.name !== targetName) continue;
+            if (!entry.isFile() || !matchesTestFile(entry.name, prefix)) continue;
             const fullPath = resolve(entry.parentPath, entry.name);
             candidates.push(relative(REPO_ROOT, fullPath));
         }
@@ -141,6 +141,13 @@ function isExcluded(path: string): boolean {
         name === 'conftest.py' ||
         name === '__init__.py'
     );
+}
+
+// Matches test_<sourceName>.py and variants like test_<sourceName>_foo.py or test_<sourceName>__bar.py.
+export function matchesTestFile(name: string, prefix: string): boolean {
+    if (!name.startsWith(prefix) || !name.endsWith('.py')) return false;
+    const afterPrefix = name.slice(prefix.length);
+    return afterPrefix === '.py' || afterPrefix.startsWith('_');
 }
 
 function subpathOverlap(sourcePath: string, testPath: string): number {
