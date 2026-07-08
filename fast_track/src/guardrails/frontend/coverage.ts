@@ -10,6 +10,7 @@ const execFileAsync = promisify(execFile);
 const SRC_PREFIX = FRONTEND_PREFIX + 'src/';
 
 const IGNORE_SUFFIXES = ['.test.ts', '.test.js', '.spec.ts', '.spec.js', '.d.ts'];
+const SOURCE_SUFFIXES = ['.ts', '.js', '.svelte'];
 const MAX_BUFFER = 32 * 1024 * 1024;
 const COVERAGE_JSON = 'coverage/coverage-final.json';
 
@@ -67,7 +68,10 @@ export const frontendCoverageGuardrail: Guardrail = createCoverageGuardrail<RawC
 
     filterFiles(files: ChangedFile[]): ChangedFile[] {
         return files.filter(
-            (f) => f.path.startsWith(SRC_PREFIX) && !IGNORE_SUFFIXES.some((s) => f.path.endsWith(s))
+            (f) =>
+                f.path.startsWith(SRC_PREFIX) &&
+                SOURCE_SUFFIXES.some((s) => f.path.endsWith(s)) &&
+                !IGNORE_SUFFIXES.some((s) => f.path.endsWith(s))
         );
     },
 

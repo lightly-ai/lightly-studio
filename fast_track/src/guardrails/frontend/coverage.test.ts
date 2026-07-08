@@ -221,6 +221,28 @@ describe('frontendCoverageGuardrail – filterFiles', () => {
         expect(result.summary).toContain('0 file(s) checked');
     });
 
+    it('filters out non-source files (.css, .svg)', async () => {
+        const nonSourceFiles: ChangedFile[] = [
+            {
+                path: `${FRONTEND_PREFIX}src/app.css`,
+                status: 'modified',
+                additions: 3,
+                deletions: 0,
+                patch: PATCH
+            },
+            {
+                path: `${FRONTEND_PREFIX}src/assets/logo.svg`,
+                status: 'modified',
+                additions: 3,
+                deletions: 0,
+                patch: PATCH
+            }
+        ];
+        const result = await frontendCoverageGuardrail.run(makeCtx(nonSourceFiles));
+        expect(result.status).toBe('pass');
+        expect(result.summary).toContain('0 file(s) checked');
+    });
+
     it('includes regular .ts files in the frontend src directory', async () => {
         setupSuccessfulRun();
         const result = await frontendCoverageGuardrail.run(makeCtx([FRONTEND_FILE]));
