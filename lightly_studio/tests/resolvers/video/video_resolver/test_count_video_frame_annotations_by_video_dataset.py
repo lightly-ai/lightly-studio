@@ -1,5 +1,6 @@
 from sqlmodel import Session
 
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import video_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
@@ -192,3 +193,74 @@ def test_count_video_frame_annotations_by_video_collection_with_annotation_filte
     assert annotations[1].label_name == "car"
     assert annotations[1].total_count == 1
     assert annotations[1].current_count == 0
+
+
+def test_count_video_frame_annotations_by_video_collection_filters_by_annotation_type(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection_id = collection.collection_id
+
+    video_frames_data = create_video_with_frames(
+        session=db_session,
+        collection_id=collection_id,
+        video=VideoStub(path="/path/to/sample1.mp4"),
+    )
+    video_frame_id = video_frames_data.frame_sample_ids[0]
+
+    scene_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection_id,
+        label_name="scene",
+    )
+    car_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection_id,
+        label_name="car",
+    )
+
+    create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=video_frame_id,
+                annotation_label_id=scene_label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+            ),
+            AnnotationDetails(
+                sample_id=video_frame_id,
+                annotation_label_id=car_label.annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+            ),
+        ],
+    )
+
+    # Without the filter both types are counted.
+    all_annotations = video_resolver.count_video_frame_annotations_by_video_collection(
+        session=db_session,
+        collection_id=collection_id,
+    )
+    assert {a.label_name for a in all_annotations} == {"scene", "car"}
+
+    # Classification only isolates the classification label.
+    classification_annotations = video_resolver.count_video_frame_annotations_by_video_collection(
+        session=db_session,
+        collection_id=collection_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+    )
+    assert len(classification_annotations) == 1
+    assert classification_annotations[0].label_name == "scene"
+    assert classification_annotations[0].total_count == 1
+    assert classification_annotations[0].current_count == 1
+
+    # Object detection only isolates the detection label.
+    detection_annotations = video_resolver.count_video_frame_annotations_by_video_collection(
+        session=db_session,
+        collection_id=collection_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
+    )
+    assert len(detection_annotations) == 1
+    assert detection_annotations[0].label_name == "car"
+    assert detection_annotations[0].total_count == 1
+    assert detection_annotations[0].current_count == 1
