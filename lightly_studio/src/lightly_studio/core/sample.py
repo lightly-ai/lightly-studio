@@ -3,22 +3,27 @@
 from __future__ import annotations
 
 from abc import ABC
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from typing import Any, cast
 from uuid import UUID
 
+import numpy as np
 from sqlalchemy.orm import object_session
 from sqlmodel import Session
 
 from lightly_studio.core.annotation import CreateAnnotation
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.caption import CaptionCreate
+from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample_embedding import SampleEmbeddingCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
     caption_resolver,
     collection_resolver,
+    embedding_model_resolver,
     metadata_resolver,
+    sample_embedding_resolver,
     tag_resolver,
 )
 
@@ -304,6 +309,40 @@ class Sample(ABC):
             parent_collection_id=self.collection_id,
             annotations=annotation_creates,
             collection_name=annotation_source,
+        )
+
+    def set_embedding(
+        self, embedding: Sequence[float], embedding_model_name: str = "custom"
+    ) -> None:
+        """Set a custom embedding vector for this sample.
+
+        This lets you plug in your own model's embeddings instead of relying on the
+        built-in embedding pipeline. Note that samples embedded this way are not
+        compatible with text-based search: only the embedding plot, image-based
+        similarity, and sampling strategies read these vectors.
+
+        Args:
+            embedding: The embedding vector.
+            embedding_model_name: Name to group these vectors under. Samples that
+                share a name must always use vectors of the same length.
+        """
+        session = self.get_object_session()
+        model = embedding_model_resolver.get_or_create(
+            session=session,
+            embedding_model=EmbeddingModelCreate(
+                name=embedding_model_name,
+                embedding_model_hash=f"custom:{embedding_model_name}:{len(embedding)}",
+                embedding_dimension=len(embedding),
+                collection_id=self.collection_id,
+            ),
+        )
+        sample_embedding_resolver.upsert(
+            session=session,
+            sample_embedding=SampleEmbeddingCreate(
+                sample_id=self.sample_id,
+                embedding_model_id=model.embedding_model_id,
+                embedding=np.asarray(embedding, dtype=np.float32),
+            ),
         )
 
     def delete_annotation(self, annotation: Annotation) -> None:
