@@ -219,13 +219,12 @@ test('user can delete annotation and navigate to next annotation', async ({
 }) => {
     await annotationsPage.startEditing();
 
-    // Open an annotation. Wait for navigation to settle before capturing the URL,
-    // otherwise we capture the grid URL and the later assertion passes trivially.
+    // Open an annotation.
     await annotationsPage.clickAnnotation(5);
     await annotationDetailsPage.waitForNavigation();
     const annotationUrlBeforeDelete = page.url();
 
-    // Delete the annotation, asserting the backend returned 200 (not just that the UI moved).
+    // Delete the annotation, asserting the backend returned 200.
     await annotationDetailsPage.deleteCurrentAnnotation();
 
     await annotationDetailsPage.waitForNavigation();

@@ -81,14 +81,12 @@ def delete_annotation(
                 col(SampleTagLinkTable.sample_id) == annotation_sample_id
             )
         )
-        # Explicitly delete embeddings before the sample. The sample_id column is part of
-        # SampleEmbeddingTable's primary key, so the ORM cannot null it out via the default
-        # relationship cascade when the sample is deleted.
-        # session.exec(
-        #     delete(SampleEmbeddingTable).where(
-        #         col(SampleEmbeddingTable.sample_id) == annotation_sample_id
-        #     )
-        # )
+        # Explicitly delete embeddings before the sample.
+        session.exec(
+            delete(SampleEmbeddingTable).where(
+                col(SampleEmbeddingTable.sample_id) == annotation_sample_id
+            )
+        )
         session.commit()
 
         annotation_sample = session.get(SampleTable, annotation_sample_id)

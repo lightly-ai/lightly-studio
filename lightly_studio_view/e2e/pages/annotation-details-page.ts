@@ -55,8 +55,7 @@ export class AnnotationDetailsPage {
         await this.getAnnotationDeleteButton().click();
 
         // Assert the backend actually deleted the annotation. A failed delete
-        // returns a non-200 status, so requiring 200 here makes the test fail
-        // instead of silently passing when only the UI navigates.
+        // returns a non-200 status.
         const responsePromise = this.page.waitForResponse(
             (response) =>
                 response.request().method() === 'DELETE' &&
