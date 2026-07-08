@@ -13,6 +13,10 @@ interface UseSamplingCombinationDialogParams {
     onSubmitSuccess: () => void;
 }
 
+function computePercentage(count: number, total: number): number {
+    return total > 0 ? Math.round((count / total) * 100) : 0;
+}
+
 export function useSamplingCombinationDialog({
     getCollectionId,
     getIsVideoCollection,
@@ -35,27 +39,43 @@ export function useSamplingCombinationDialog({
         closeSelectionDialog: closeSamplingDialog
     });
 
-    const nSamplesToSelect = writable<number>(10);
-    const percentageToSelect = derived([nSamplesToSelect, filteredSampleCount], ([$n, $total]) =>
-        $total > 0 ? Math.round(($n / $total) * 100) : 0
+    const nSamplesToSelect = writable<number | null>(10);
+    // Writable rather than derived so the user-entered percentage value is preserved
+    // when filteredSampleCount changes in the background (e.g. from a grid refetch).
+    const percentageToSelect = writable<number | null>(
+        computePercentage(10, get(filteredSampleCount))
     );
     const selectionResultTagName = writable('');
 
     function updateAbsolute(count: number) {
-        nSamplesToSelect.set(Number.isFinite(count) ? count : 0);
+        if (!Number.isFinite(count)) {
+            nSamplesToSelect.set(null);
+            percentageToSelect.set(null);
+            return;
+        }
+        nSamplesToSelect.set(count);
+        percentageToSelect.set(computePercentage(count, get(filteredSampleCount)));
     }
 
     function updatePercentage(percentage: number) {
+        if (!Number.isFinite(percentage)) {
+            nSamplesToSelect.set(null);
+            percentageToSelect.set(null);
+            return;
+        }
         const total = get(filteredSampleCount);
         const result = total > 0 ? Math.round((percentage / 100) * total) : 0;
-        nSamplesToSelect.set(Number.isFinite(result) ? result : 0);
+        nSamplesToSelect.set(result);
+        // Preserve the exact value the user typed instead of re-deriving it from the
+        // rounded count.
+        percentageToSelect.set(percentage);
     }
 
     const noSamples = derived(filteredSampleCount, ($count) => $count === 0);
 
     const notEnoughSamples = derived(
         [filteredSampleCount, nSamplesToSelect],
-        ([$count, $n]) => $count > 0 && $n > $count
+        ([$count, $n]) => $count > 0 && $n !== null && $n > $count
     );
 
     const sampleCountLabel = derived(
@@ -68,6 +88,7 @@ export function useSamplingCombinationDialog({
         ([$instances, $n, $name]) =>
             $instances.length > 0 &&
             $instances.every(isStrategyInstanceValid) &&
+            $n !== null &&
             $n > 0 &&
             $name.trim().length > 0
     );
@@ -78,7 +99,7 @@ export function useSamplingCombinationDialog({
             if ($instances.length === 0) return 'Add at least 1 strategy to create a selection.';
             if (!$instances.every(isStrategyInstanceValid))
                 return 'Complete the required fields in all strategies.';
-            if ($n <= 0) return 'Enter a number of samples greater than 0.';
+            if ($n === null || $n <= 0) return 'Enter a number of samples greater than 0.';
             if ($name.trim().length === 0) return 'Enter a tag name.';
             return '';
         }
@@ -87,6 +108,7 @@ export function useSamplingCombinationDialog({
     function resetForm() {
         onSubmitSuccess();
         nSamplesToSelect.set(10);
+        percentageToSelect.set(computePercentage(10, get(filteredSampleCount)));
         selectionResultTagName.set('');
     }
 
@@ -95,7 +117,7 @@ export function useSamplingCombinationDialog({
             collectionId: getCollectionId(),
             isVideoCollection: getIsVideoCollection(),
             instances: get(instances),
-            nSamplesToSelect: get(nSamplesToSelect),
+            nSamplesToSelect: get(nSamplesToSelect) ?? 0,
             selectionResultTagName: get(selectionResultTagName),
             selectionFilter: buildSelectionFilter()
         });
