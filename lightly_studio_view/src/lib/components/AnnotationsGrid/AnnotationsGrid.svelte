@@ -58,9 +58,10 @@
         textEmbedding
     } = useGlobalStorage();
 
-    // The embedding plot lasso selection on the annotations route.
-    const { annotationPlotSampleIds } = useAnnotationPlotSelection();
-    const plotSelectedAnnotationIds = $derived($annotationPlotSampleIds);
+    // The embedding plot lasso selection on the annotations route, kept as geometry and sent
+    // to the backend instead of a resolved sample-id list (see LIG-9903).
+    const { annotationPlotRegion } = useAnnotationPlotSelection();
+    const plotSelectedRegion = $derived($annotationPlotRegion);
 
     // The text embedding search is shared with the images tab and persists across the tab switch.
     // Only apply it when this annotation collection actually has embeddings.
@@ -126,8 +127,8 @@
         annotation_label_ids:
             $selectedAnnotationFilterIds.length > 0 ? $selectedAnnotationFilterIds : undefined,
         tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
-        // Embedding plot lasso selection narrows the grid to the selected annotations.
-        sample_ids: plotSelectedAnnotationIds.length > 0 ? plotSelectedAnnotationIds : undefined,
+        // Embedding plot lasso selection narrows the grid to annotations inside the region.
+        embedding_region: plotSelectedRegion ?? undefined,
         // Embedding text search reorders the grid by similarity (shared with images tab).
         text_embedding: searchEmbedding?.embedding ?? undefined
     });
@@ -145,7 +146,7 @@
     let infiniteLoaderIdentifier = $derived(
         $selectedAnnotationFilterIds.join(',') +
             Array.from($tagsSelected).join(',') +
-            plotSelectedAnnotationIds.join(',') +
+            (plotSelectedRegion ? JSON.stringify(plotSelectedRegion) : '') +
             (searchEmbedding ? `search:${searchEmbedding.queryText}` : '')
     );
 
