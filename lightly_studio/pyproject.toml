@@ -34,7 +34,7 @@ dependencies = [
     # Unreleased and released labelformat versions can be referenced with this syntax:
     # - "labelformat @ git+https://github.com/lightly-ai/labelformat.git@325a20b"
     # - "labelformat>=0.1.9"
-    "labelformat>=0.1.16",
+    "labelformat @ git+https://github.com/lightly-ai/labelformat.git@adeaf09cd10ec1b6f105da6886c00370fd894103",
     "tqdm>=4.65.0",
     "eval-type-backport>=0.2.2",
     "xxhash>=3.5.0",
