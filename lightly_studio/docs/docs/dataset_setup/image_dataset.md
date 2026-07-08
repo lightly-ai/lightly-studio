@@ -29,6 +29,26 @@ supported, see [Using Cloud Storage](cloud_storage.md) for more details.
 Added images are automatically embedded so that embedding plot and image search are enabled.
 To skip embedding, pass `embed=False` to the method.
 
+!!! tip "Bring your own embeddings"
+    Instead of the built-in embedding model, you can provide precomputed embeddings from your
+    own model with `sample.set_embedding(...)`, see
+    [`example_custom_embeddings.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_custom_embeddings.py).
+    This enables the embedding plot and embedding-based sampling for image and video samples, but
+    not text-based search, since there is no text encoder for a custom embedding space. Load the
+    dataset with `embed=False` and set every sample's embedding before starting the GUI, so the
+    built-in model is never registered as the collection's default.
+
+    `embed=False` only skips image-level embeddings. If you also import annotations through one
+    of the bulk methods (`add_samples_from_coco`, `add_samples_from_yolo`,
+    `add_samples_from_labelformat`, `add_annotations_from_coco`, `add_annotations_from_yolo`, ...),
+    they compute annotation crop embeddings under a separate `embed_annotations` argument
+    (also `True` by default) — pass `embed_annotations=False` too if you want to avoid that.
+    Attaching annotations one by one with `sample.add_annotation(...)`/`add_annotations(...)`
+    never computes crop embeddings, regardless of any flag.
+
+    Custom embeddings via `sample.set_embedding(...)` currently only work on image/video
+    samples, not on annotation crops — there is no equivalent method on `Annotation` yet.
+
 The method supports additional arguments, e.g. you can pass `tag_depth=1` to add the image parent
 folder name as a tag to each sample. See the [API reference](../api/dataset.md#lightly_studio.ImageDataset.add_images_from_path) for full details.
 
