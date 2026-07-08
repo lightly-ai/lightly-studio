@@ -27,27 +27,8 @@ it will recursively search for images in it. A remote path like `s3://my-bucket/
 supported, see [Using Cloud Storage](cloud_storage.md) for more details.
 
 Added images are automatically embedded so that embedding plot and image search are enabled.
-To skip embedding, pass `embed=False` to the method.
-
-!!! tip "Bring your own embeddings"
-    Instead of the built-in embedding model, you can provide precomputed embeddings from your
-    own model with `sample.set_embedding(...)`, see
-    [`example_custom_embeddings.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_custom_embeddings.py).
-    This enables the embedding plot and embedding-based sampling for image and video samples, but
-    not text-based search, since there is no text encoder for a custom embedding space. Load the
-    dataset with `embed=False` and set every sample's embedding before starting the GUI, so the
-    built-in model is never registered as the collection's default.
-
-    `embed=False` only skips image-level embeddings. If you also import annotations through one
-    of the bulk methods (`add_samples_from_coco`, `add_samples_from_yolo`,
-    `add_samples_from_labelformat`, `add_annotations_from_coco`, `add_annotations_from_yolo`, ...),
-    they compute annotation crop embeddings under a separate `embed_annotations` argument
-    (also `True` by default) — pass `embed_annotations=False` too if you want to avoid that.
-    Attaching annotations one by one with `sample.add_annotation(...)`/`add_annotations(...)`
-    never computes crop embeddings, regardless of any flag.
-
-    Custom embeddings via `sample.set_embedding(...)` currently only work on image/video
-    samples, not on annotation crops — there is no equivalent method on `Annotation` yet.
+To skip embedding, pass `embed=False` to the method. See [Custom Embeddings](#custom-embeddings)
+below if you want to provide your own embeddings instead of the built-in model.
 
 The method supports additional arguments, e.g. you can pass `tag_depth=1` to add the image parent
 folder name as a tag to each sample. See the [API reference](../api/dataset.md#lightly_studio.ImageDataset.add_images_from_path) for full details.
@@ -464,6 +445,64 @@ If the input is a COCO prediction file, LightlyStudio reads the `score` field of
 and stores it as annotation confidence.
 
 See the [API reference](../api/dataset.md#lightly_studio.ImageDataset) for `add_annotations_from_coco`, `add_annotations_from_yolo`, and `add_annotations_from_labelformat`.
+
+### Custom Embeddings
+
+Instead of the built-in embedding model, you can provide precomputed embeddings from your own
+model with `sample.set_embedding(...)`. This enables the embedding plot and embedding-based
+sampling for image and video samples.
+
+```python title="Add custom embeddings" hl_lines="9 15"
+import numpy as np
+from PIL import Image
+
+import lightly_studio as ls
+
+dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+
+# Skip the built-in embedding model.
+dataset = ls.ImageDataset.create()
+dataset.add_images_from_path(
+    path=f"{dataset_path}/coco_subset_128_images/images", embed=False
+)
+
+
+def compute_custom_embedding(file_path: str) -> list[float]:
+    """Stand-in for your own model: the mean RGB color of the image."""
+    with Image.open(file_path) as image:
+        pixels = np.asarray(image.convert("RGB"), dtype=np.float32)
+    return pixels.mean(axis=(0, 1)).tolist()
+
+
+# Set every sample's embedding before starting the GUI.
+for sample in dataset:
+    sample.set_embedding(compute_custom_embedding(sample.file_path_abs))
+
+ls.start_gui()
+```
+
+See the full runnable version in
+[`example_custom_embeddings.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_custom_embeddings.py).
+
+There are a few limitations to be aware of:
+
+- **No text-based search.** Custom embeddings do not support text-based search, since there is
+  no text encoder for a custom embedding space. The search bar is hidden automatically as long as
+  you follow the ordering below.
+- **Order matters.** Load the dataset with `embed=False` and set every sample's embedding
+  *before* starting the GUI or otherwise triggering a lookup of the collection's default
+  embedding model (for example, opening the collection in the GUI). Otherwise the built-in model
+  may get registered as the collection's default first, which breaks the embedding plot.
+- **`embed=False` only skips image-level embeddings.** If you also import annotations through
+  one of the bulk methods (`add_samples_from_coco`, `add_samples_from_yolo`,
+  `add_samples_from_labelformat`, `add_annotations_from_coco`, `add_annotations_from_yolo`, ...),
+  they compute annotation crop embeddings under a separate `embed_annotations` argument (also
+  `True` by default) — pass `embed_annotations=False` too if you want to avoid that. Attaching
+  annotations one by one with `sample.add_annotation(...)`/`add_annotations(...)` never computes
+  crop embeddings, regardless of any flag.
+- **Image and video samples only.** Custom embeddings via `sample.set_embedding(...)` currently
+  only work on image/video samples, not on annotation crops — there is no equivalent method on
+  `Annotation` yet.
 
 ## Image Dataset in the GUI
 
