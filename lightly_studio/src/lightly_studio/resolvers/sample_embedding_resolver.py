@@ -42,6 +42,26 @@ def create(session: Session, sample_embedding: SampleEmbeddingCreate) -> SampleE
     return db_sample_embedding
 
 
+def upsert(session: Session, sample_embedding: SampleEmbeddingCreate) -> SampleEmbeddingTable:
+    """Create a sample embedding, or update it in place if one already exists.
+
+    Existing rows are looked up by the ``(sample_id, embedding_model_id)`` primary key, so
+    callers can safely call this repeatedly (e.g. re-running an ingestion script) without
+    hitting a primary key conflict.
+    """
+    existing = session.get(
+        SampleEmbeddingTable,
+        (sample_embedding.sample_id, sample_embedding.embedding_model_id),
+    )
+    if existing is None:
+        return create(session=session, sample_embedding=sample_embedding)
+    existing.embedding = sample_embedding.embedding
+    session.add(existing)
+    session.commit()
+    session.refresh(existing)
+    return existing
+
+
 def create_many(
     session: Session, sample_embeddings: list[SampleEmbeddingCreate], commit: bool = True
 ) -> None:
