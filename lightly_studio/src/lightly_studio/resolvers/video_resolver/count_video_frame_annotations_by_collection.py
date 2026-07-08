@@ -92,7 +92,7 @@ def _build_base_query(
     count_column_name: str,
     annotation_type: Optional[AnnotationType] = None,
 ) -> Select[tuple[Any, int]]:
-    query = (
+    query: Select[tuple[Any, int]] = (
         select(
             col(AnnotationBaseTable.annotation_label_id).label("label_id"),
             func.count(func.distinct(VideoTable.sample_id)).label(count_column_name),
