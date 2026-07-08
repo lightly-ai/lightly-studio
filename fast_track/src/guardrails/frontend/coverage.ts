@@ -84,8 +84,13 @@ export const frontendCoverageGuardrail: Guardrail = createCoverageGuardrail<RawC
                 ['run', 'test:unit', '--', 'run', '--coverage', ...testFiles, ...coverageIncludes],
                 { cwd: FRONTEND_ABS, maxBuffer: MAX_BUFFER }
             );
-        } catch {
+        } catch (err) {
             // vitest exits non-zero when tests fail; coverage file is still produced.
+            // Re-throw system-level errors (e.g. npm not on PATH, cwd not found):
+            // those have a string code (e.g. 'ENOENT'), whereas non-zero exits have a numeric code.
+            if (typeof (err as NodeJS.ErrnoException).code === 'string') {
+                throw err;
+            }
         }
         const coveragePath = resolve(FRONTEND_ABS, COVERAGE_JSON);
         if (!existsSync(coveragePath)) return null;
