@@ -117,7 +117,7 @@ class AnnotationsFilter(GridFilterBase):
                 )
             )
 
-        # Filter by annotation sample ids (e.g. manual selection)
+        # Filter by annotation sample ids (e.g. embedding plot selection)
         if self.sample_ids:
             query = query.where(
                 db_array.in_array(
