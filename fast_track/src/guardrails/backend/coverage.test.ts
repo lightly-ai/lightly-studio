@@ -1,6 +1,86 @@
-import { describe, expect, it } from 'vitest';
-import { filterBackendFiles, matchesTestFile, parseCoverageRatio } from './coverage';
-import type { ChangedFile } from '../context/types';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mockExecFile = vi.hoisted(() => vi.fn());
+
+vi.mock('node:fs', () => ({
+    existsSync: vi.fn(),
+    readFileSync: vi.fn(),
+    rmSync: vi.fn()
+}));
+
+vi.mock('node:fs/promises', () => ({
+    readdir: vi.fn()
+}));
+
+vi.mock('node:child_process', () => ({
+    execFile: mockExecFile
+}));
+
+import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { readdir } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import {
+    backendCoverageGuardrail,
+    filterBackendFiles,
+    matchesTestFile,
+    parseCoverageRatio
+} from './coverage';
+import { REPO_ROOT } from './shared';
+import type { ChangedFile, GuardrailContext } from '../context/types';
+
+const mockExistsSync = vi.mocked(existsSync);
+const mockReadFileSync = vi.mocked(readFileSync);
+const mockRmSync = vi.mocked(rmSync);
+const mockReaddir = vi.mocked(readdir);
+
+const LIGHTLY_STUDIO_ABS = resolve(REPO_ROOT, 'lightly_studio');
+const TESTS_DIR = resolve(LIGHTLY_STUDIO_ABS, 'tests');
+const COVERAGE_PATH = resolve(LIGHTLY_STUDIO_ABS, 'coverage.json');
+
+const PATCH = '@@ -0,0 +1,3 @@\n+line 1\n+line 2\n+line 3\n';
+
+const BACKEND_FILE: ChangedFile = {
+    path: 'lightly_studio/src/lightly_studio/service.py',
+    status: 'modified',
+    additions: 3,
+    deletions: 0,
+    patch: PATCH
+};
+
+const COVERAGE_KEY = 'src/lightly_studio/service.py';
+
+const FULL_COVERAGE_DATA = {
+    files: {
+        [COVERAGE_KEY]: {
+            executed_lines: [1, 2, 3],
+            missing_lines: []
+        }
+    }
+};
+
+function makeCtx(files: ChangedFile[]): GuardrailContext {
+    return { baseRef: 'origin/main', changedFiles: async () => files };
+}
+
+function mockExecFileWith(error: Error | null): void {
+    mockExecFile.mockImplementation((...args: unknown[]) => {
+        (args[args.length - 1] as (err: Error | null, stdout: string, stderr: string) => void)(
+            error,
+            '',
+            ''
+        );
+    });
+}
+
+function setupTestFileFound(): void {
+    mockReaddir.mockResolvedValue([
+        { isFile: () => true, name: 'test_service.py', parentPath: TESTS_DIR }
+    ] as never);
+}
+
+beforeEach(() => {
+    vi.resetAllMocks();
+});
 
 describe('filterBackendFiles', () => {
     it('keeps .py files under the backend prefix', () => {
@@ -222,5 +302,154 @@ describe('parseCoverageRatio', () => {
         // Only lines 1–4 were added; lines 10–12 should not affect the ratio
         const result = parseCoverageRatio(data, sourcePath, new Set([1, 2, 3, 4]));
         expect(result).toBe(0.5);
+    });
+});
+
+describe('backendCoverageGuardrail – runTests', () => {
+    it('deletes stale coverage.json before running pytest', async () => {
+        mockExistsSync
+            .mockReturnValueOnce(true) // testsDir exists (findTestFile)
+            .mockReturnValueOnce(true) // stale coveragePath exists → rmSync
+            .mockReturnValueOnce(true); // coveragePath exists after run
+        setupTestFileFound();
+        mockExecFileWith(null);
+        mockReadFileSync.mockReturnValue(JSON.stringify(FULL_COVERAGE_DATA));
+
+        await backendCoverageGuardrail.run(makeCtx([BACKEND_FILE]));
+
+        expect(mockRmSync).toHaveBeenCalledOnce();
+        expect(mockRmSync).toHaveBeenCalledWith(COVERAGE_PATH);
+    });
+
+    it('does not delete coverage.json when none exists before the run', async () => {
+        mockExistsSync
+            .mockReturnValueOnce(true) // testsDir exists
+            .mockReturnValueOnce(false) // no stale coverage file
+            .mockReturnValueOnce(true); // coverage written after run
+        setupTestFileFound();
+        mockExecFileWith(null);
+        mockReadFileSync.mockReturnValue(JSON.stringify(FULL_COVERAGE_DATA));
+
+        await backendCoverageGuardrail.run(makeCtx([BACKEND_FILE]));
+
+        expect(mockRmSync).not.toHaveBeenCalled();
+    });
+
+    it('reads coverage.json written by pytest even when tests fail', async () => {
+        mockExistsSync
+            .mockReturnValueOnce(true) // testsDir exists
+            .mockReturnValueOnce(false) // no stale file
+            .mockReturnValueOnce(true) // coverage exists in catch block
+            .mockReturnValueOnce(true); // coverage exists after catch
+        setupTestFileFound();
+        mockExecFileWith(new Error('Tests failed'));
+        mockReadFileSync.mockReturnValue(JSON.stringify(FULL_COVERAGE_DATA));
+
+        const result = await backendCoverageGuardrail.run(makeCtx([BACKEND_FILE]));
+
+        expect(result.status).toBe('pass');
+        expect(mockReadFileSync).toHaveBeenCalled();
+    });
+
+    it('re-throws error when pytest fails without writing coverage.json', async () => {
+        mockExistsSync
+            .mockReturnValueOnce(true) // testsDir exists
+            .mockReturnValueOnce(false) // no stale file
+            .mockReturnValueOnce(false); // no coverage in catch → re-throw
+        setupTestFileFound();
+        mockExecFileWith(new Error('uv: command not found'));
+
+        await expect(backendCoverageGuardrail.run(makeCtx([BACKEND_FILE]))).rejects.toThrow(
+            'uv: command not found'
+        );
+    });
+
+    it('passes when all added lines are covered', async () => {
+        mockExistsSync
+            .mockReturnValueOnce(true)
+            .mockReturnValueOnce(false)
+            .mockReturnValueOnce(true);
+        setupTestFileFound();
+        mockExecFileWith(null);
+        mockReadFileSync.mockReturnValue(JSON.stringify(FULL_COVERAGE_DATA));
+
+        const result = await backendCoverageGuardrail.run(makeCtx([BACKEND_FILE]));
+
+        expect(result.status).toBe('pass');
+        expect(result.summary).toContain('[PASS]');
+        expect(result.summary).toContain(BACKEND_FILE.path);
+    });
+
+    it('fails when added-line coverage is below 80%', async () => {
+        const lowCoverageData = {
+            files: {
+                [COVERAGE_KEY]: {
+                    executed_lines: [1],
+                    missing_lines: [2, 3] // 1/3 ≈ 33%
+                }
+            }
+        };
+        mockExistsSync
+            .mockReturnValueOnce(true)
+            .mockReturnValueOnce(false)
+            .mockReturnValueOnce(true);
+        setupTestFileFound();
+        mockExecFileWith(null);
+        mockReadFileSync.mockReturnValue(JSON.stringify(lowCoverageData));
+
+        const result = await backendCoverageGuardrail.run(makeCtx([BACKEND_FILE]));
+
+        expect(result.status).toBe('fail');
+        expect(result.summary).toContain('[FAIL]');
+        expect(result.summary).toContain(BACKEND_FILE.path);
+    });
+
+    it('auto-passes when pytest produces no entry for the source file', async () => {
+        const unrelatedCoverageData = {
+            files: {
+                'src/lightly_studio/other.py': {
+                    executed_lines: [1],
+                    missing_lines: []
+                }
+            }
+        };
+        mockExistsSync
+            .mockReturnValueOnce(true)
+            .mockReturnValueOnce(false)
+            .mockReturnValueOnce(true);
+        setupTestFileFound();
+        mockExecFileWith(null);
+        mockReadFileSync.mockReturnValue(JSON.stringify(unrelatedCoverageData));
+
+        const result = await backendCoverageGuardrail.run(makeCtx([BACKEND_FILE]));
+
+        expect(result.status).toBe('pass');
+    });
+
+    it('fails when no test file is found for a changed source file', async () => {
+        mockExistsSync.mockReturnValueOnce(true); // testsDir exists
+        mockReaddir.mockResolvedValue([]); // no matching test files
+
+        const result = await backendCoverageGuardrail.run(makeCtx([BACKEND_FILE]));
+
+        expect(result.status).toBe('fail');
+        expect(result.summary).toContain('no test file found');
+        expect(result.summary).toContain(BACKEND_FILE.path);
+    });
+
+    it('passes immediately when no backend source files changed', async () => {
+        const result = await backendCoverageGuardrail.run(
+            makeCtx([
+                {
+                    path: 'lightly_studio_view/src/lib/foo.ts',
+                    status: 'modified',
+                    additions: 3,
+                    deletions: 0,
+                    patch: PATCH
+                }
+            ])
+        );
+        expect(result.status).toBe('pass');
+        expect(result.summary).toContain('0 file(s) checked');
     });
 });

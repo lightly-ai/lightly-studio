@@ -1,5 +1,5 @@
 import { readdir } from 'node:fs/promises';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { execFile } from 'node:child_process';
 import { basename, relative, resolve } from 'node:path';
 import { promisify } from 'node:util';
@@ -99,6 +99,9 @@ export const backendCoverageGuardrail: Guardrail = createCoverageGuardrail<Cover
         ];
         const covArgs = covDirs.map((d) => `--cov=${d}`);
         const coveragePath = resolve(LIGHTLY_STUDIO_ABS, COVERAGE_FILE);
+
+        // Remove any stale report so we only ever parse the file produced by this run.
+        if (existsSync(coveragePath)) rmSync(coveragePath);
 
         try {
             await execFileAsync(
