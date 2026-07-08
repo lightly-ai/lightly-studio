@@ -41,7 +41,10 @@ const withNormalFilters = (
             annotations_filter: getAnnotationsFilter(filters),
             tag_ids: filters.tag_ids?.length ? filters.tag_ids : undefined,
             sample_ids: filters.sample_ids?.length ? filters.sample_ids : undefined,
-            confusion_cell: filters.confusion_cell ?? undefined
+            confusion_cell: filters.confusion_cell ?? undefined,
+            // Lasso/rectangle selection sent as geometry; the backend resolves it to sample
+            // ids server-side so the request body stays small at scale (see LIG-9903).
+            embedding_region: filters.embedding_region ?? undefined
         },
         // TODO(Malte, 10/2025): Share the width/height mapping with useImageFilters to avoid drift.
         width: filters.dimensions

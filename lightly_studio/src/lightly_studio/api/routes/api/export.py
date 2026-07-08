@@ -43,6 +43,11 @@ def export_collection_annotations(
     """Export collection annotations in the selected export format."""
     # Query to export - all samples in the collection.
     dataset_query = DatasetQuery(dataset=collection, session=session)
+    exporter = image_dataset_export.ImageDatasetExport(
+        session=session,
+        dataset_id=collection.dataset_id,
+        samples=dataset_query,
+    )
 
     # Create the export in a temporary directory. We cannot use a context manager
     # because the directory should be deleted only after the file has finished streaming.
@@ -51,10 +56,7 @@ def export_collection_annotations(
     if export_format == ExportFormat.OBJECT_DETECTION_COCO:
         output_path = PathlibPath(temp_dir.name) / "coco_export.json"
         try:
-            image_dataset_export.to_coco_object_detections(
-                session=session,
-                dataset_id=collection.dataset_id,
-                samples=dataset_query,
+            exporter.to_coco_object_detections(
                 output_json=output_path,
                 annotation_collection_id=annotation_collection_id,
             )
@@ -66,10 +68,7 @@ def export_collection_annotations(
         output_path = PathlibPath(temp_dir.name) / "yolo"
 
         try:
-            image_dataset_export.to_yolo_object_detections(
-                session=session,
-                dataset_id=collection.dataset_id,
-                samples=dataset_query,
+            exporter.to_yolo_object_detections(
                 output_folder=output_path,
                 annotation_collection_id=annotation_collection_id,
             )
@@ -95,10 +94,7 @@ def export_collection_annotations(
         output_path = PathlibPath(temp_dir.name) / "coco_segmentation_mask_export.json"
 
         try:
-            image_dataset_export.to_coco_segmentation_masks(
-                session=session,
-                dataset_id=collection.dataset_id,
-                samples=dataset_query,
+            exporter.to_coco_segmentation_masks(
                 output_json=output_path,
                 annotation_collection_id=annotation_collection_id,
             )
@@ -110,10 +106,7 @@ def export_collection_annotations(
         output_path = PathlibPath(temp_dir.name) / "pascalvoc"
 
         try:
-            image_dataset_export.to_pascalvoc_segmentation_mask(
-                session=session,
-                dataset_id=collection.dataset_id,
-                samples=dataset_query,
+            exporter.to_pascalvoc_segmentation_mask(
                 output_folder=output_path,
                 annotation_collection_id=annotation_collection_id,
             )
@@ -173,10 +166,11 @@ def export_collection_captions(
     output_path = PathlibPath(temp_dir.name) / "coco_captions_export.json"
 
     try:
-        image_dataset_export.to_coco_captions(
+        image_dataset_export.ImageDatasetExport(
+            session=session,
+            dataset_id=collection.dataset_id,
             samples=dataset_query,
-            output_json=output_path,
-        )
+        ).to_coco_captions(output_json=output_path)
     except Exception:
         temp_dir.cleanup()
         # Reraise.
