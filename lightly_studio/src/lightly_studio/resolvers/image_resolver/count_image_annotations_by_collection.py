@@ -6,7 +6,10 @@ from uuid import UUID
 
 from sqlmodel import Session, col, func, select
 
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.annotation.annotation_base import (
+    AnnotationBaseTable,
+    AnnotationType,
+)
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
@@ -18,12 +21,17 @@ def count_image_annotations_by_collection(
     session: Session,
     collection_id: UUID,
     image_filter: ImageFilter | None = None,
+    annotation_type: AnnotationType | None = None,
 ) -> list[tuple[str, int, int]]:
     """Count annotations for a specific image collection.
 
     Annotations for a specific collection are grouped by annotation
     label name and counted for total and filtered.
     Returns a list of (label_name, current_count, total_count) tuples.
+
+    When ``annotation_type`` is provided, both the total and filtered counts are
+    restricted to annotations of that type (e.g. only CLASSIFICATION or only
+    OBJECT_DETECTION).
     """
     # Resolve any embedding-plot region selection to concrete sample ids on the filter before the
     # query is built (the point-in-polygon test needs the session, which `apply` lacks).
@@ -34,11 +42,16 @@ def count_image_annotations_by_collection(
             collection_id=collection_id,
             region=sample_filter.embedding_region,
         )
-    total_counts = _get_total_counts(session=session, collection_id=collection_id)
+    total_counts = _get_total_counts(
+        session=session,
+        collection_id=collection_id,
+        annotation_type=annotation_type,
+    )
     current_counts = _get_current_counts(
         session=session,
         collection_id=collection_id,
         image_filter=image_filter,
+        annotation_type=annotation_type,
     )
 
     return [
@@ -47,7 +60,11 @@ def count_image_annotations_by_collection(
     ]
 
 
-def _get_total_counts(session: Session, collection_id: UUID) -> dict[str, int]:
+def _get_total_counts(
+    session: Session,
+    collection_id: UUID,
+    annotation_type: AnnotationType | None = None,
+) -> dict[str, int]:
     """Returns total annotation counts per label for the collection."""
     total_counts_query = (
         select(
@@ -68,9 +85,16 @@ def _get_total_counts(session: Session, collection_id: UUID) -> dict[str, int]:
             col(SampleTable.sample_id) == col(ImageTable.sample_id),
         )
         .where(SampleTable.collection_id == collection_id)
-        .group_by(AnnotationLabelTable.annotation_label_name)
-        .order_by(col(AnnotationLabelTable.annotation_label_name).asc())
     )
+
+    if annotation_type is not None:
+        total_counts_query = total_counts_query.where(
+            col(AnnotationBaseTable.annotation_type) == annotation_type
+        )
+
+    total_counts_query = total_counts_query.group_by(
+        AnnotationLabelTable.annotation_label_name
+    ).order_by(col(AnnotationLabelTable.annotation_label_name).asc())
 
     return {row[0]: row[1] for row in session.exec(total_counts_query).all()}
 
@@ -79,6 +103,7 @@ def _get_current_counts(
     session: Session,
     collection_id: UUID,
     image_filter: ImageFilter | None,
+    annotation_type: AnnotationType | None = None,
 ) -> dict[str, int]:
     """Returns filtered annotation counts per label for the collection."""
     filtered_query = (
@@ -101,6 +126,11 @@ def _get_current_counts(
         )
         .where(SampleTable.collection_id == collection_id)
     )
+
+    if annotation_type is not None:
+        filtered_query = filtered_query.where(
+            col(AnnotationBaseTable.annotation_type) == annotation_type
+        )
 
     if image_filter is not None:
         filtered_query = image_filter.apply(filtered_query)
