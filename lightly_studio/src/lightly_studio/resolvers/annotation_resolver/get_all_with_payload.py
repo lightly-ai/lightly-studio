@@ -24,7 +24,7 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
-from lightly_studio.resolvers import collection_resolver
+from lightly_studio.resolvers import collection_resolver, embedding_region_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
@@ -67,6 +67,12 @@ def get_all_with_payload(
     base_query = _build_base_query(sample_type=sample_type)
 
     if filters:
+        if filters.embedding_region is not None:
+            filters.region_sample_ids = embedding_region_resolver.get_sample_ids_in_region(
+                session=session,
+                collection_id=collection_id,
+                region=filters.embedding_region,
+            )
         base_query = filters.apply(base_query)
 
     embedding_model_id, distance_expr = get_distance_expression(

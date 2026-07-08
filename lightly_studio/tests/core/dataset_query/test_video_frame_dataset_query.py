@@ -41,3 +41,31 @@ class TestVideoFrameDatasetQuery:
     ) -> None:
         frame_numbers = [frame.frame_number for frame in dataset.frames().order_by(order_by_field)]
         assert frame_numbers == sorted(frame_numbers, reverse=reverse)
+
+    def test_filter_by_parent_video_attribute(self, dataset: VideoDataset) -> None:
+        frames = dataset.frames()
+
+        # Comparable field: only video A's 3 frames (0, 1, 2).
+        by_path = frames.match(
+            VideoFrameSampleField.parent_video.file_path_abs == "/data/a.mp4"
+        ).to_list()
+        assert len(by_path) == 3
+        assert all(frame.parent_video.file_path_abs == "/data/a.mp4" for frame in by_path)
+
+        # Numerical field: video A has fps 3.0, video B fps 2.0 => only A's 3 frames.
+        by_fps = dataset.frames().match(VideoFrameSampleField.parent_video.fps > 2.5).to_list()
+        assert len(by_fps) == 3
+        assert all(frame.parent_video.file_path_abs == "/data/a.mp4" for frame in by_fps)
+
+    def test_filter_by_parent_video_tag(self, dataset: VideoDataset) -> None:
+        for video in dataset.query():
+            if video.file_path_abs == "/data/a.mp4":
+                video.add_tag("reviewed")
+
+        reviewed = (
+            dataset.frames()
+            .match(VideoFrameSampleField.parent_video.tags.contains("reviewed"))
+            .to_list()
+        )
+        assert len(reviewed) == 3
+        assert all(frame.parent_video.file_path_abs == "/data/a.mp4" for frame in reviewed)

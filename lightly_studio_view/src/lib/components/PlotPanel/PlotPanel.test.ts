@@ -3,7 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import PlotPanel from './PlotPanel.svelte';
 import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
-import { writable, type Writable } from 'svelte/store';
+import { get, writable, type Writable } from 'svelte/store';
+import {
+    clearAnnotationPlotSelection,
+    useAnnotationPlotSelection
+} from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
 import { tick } from 'svelte';
 import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
 import { EXCLUDED_BY_FILTERS_CATEGORY, INCLUDED_BY_FILTERS_CATEGORY } from './plotCategories';
@@ -25,6 +29,9 @@ const tagsStore = writable([
 const mockSetShowEmbeddingPlot = vi.fn();
 const mockSetRangeSelectionForCollection = vi.fn();
 const mockUpdateSampleIds = vi.fn();
+const mockUpdateEmbeddingRegion = vi.fn();
+const mockSetPlotSelectionCount = vi.fn();
+const mockClearPlotSelectionCount = vi.fn();
 
 class ResizeObserverMock {
     observe() {}
@@ -39,12 +46,15 @@ const originalResizeObserver = globalThis.ResizeObserver;
 
 vi.stubGlobal('ResizeObserver', ResizeObserverMock);
 
+const IMAGES_ROUTE = '/datasets/[dataset_id]/[collection_type]/[collection_id]/images';
+const ANNOTATIONS_ROUTE = '/datasets/[dataset_id]/[collection_type]/[collection_id]/annotations';
+// Route is read per-render, so tests set `routeState.id` before rendering to pick a grid type.
+const routeState = vi.hoisted(() => ({ id: '' }));
+
 vi.mock('$app/state', () => ({
     page: {
         params: { collection_id: 'test-collection-id' },
-        route: {
-            id: '/datasets/[dataset_id]/[collection_type]/[collection_id]/images'
-        }
+        route: routeState
     }
 }));
 
@@ -68,12 +78,16 @@ vi.mock('./useCategoryVisibility/useCategoryVisibility', () => ({
         resetCategoryVisibility: mockResetCategoryVisibility
     })
 }));
+const usePlotDataSpy = vi.hoisted(() => vi.fn());
 vi.mock('./usePlotData/usePlotData', () => ({
-    usePlotData: () => ({
-        data: writable(undefined),
-        selectedSampleIds: selectedSampleIdsStore,
-        error: writable(undefined)
-    })
+    usePlotData: (args: unknown) => {
+        usePlotDataSpy(args);
+        return {
+            data: writable(undefined),
+            selectedSampleIds: selectedSampleIdsStore,
+            error: writable(undefined)
+        };
+    }
 }));
 vi.mock('$lib/hooks/useVideoFilters/useVideoFilters', () => ({
     useVideoFilters: () => ({
@@ -86,8 +100,13 @@ vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
         filterParams: writable({ mode: 'normal', filters: {} }),
         imageFilter: imageFilterStore,
         updateFilterParams: vi.fn(),
-        updateSampleIds: mockUpdateSampleIds
+        updateSampleIds: mockUpdateSampleIds,
+        updateEmbeddingRegion: mockUpdateEmbeddingRegion
     })
+}));
+vi.mock('$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection', () => ({
+    setPlotSelectionCount: (...args: [string, number]) => mockSetPlotSelectionCount(...args),
+    clearPlotSelectionCount: (...args: [string]) => mockClearPlotSelectionCount(...args)
 }));
 vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
     useMetadataFilters: () => ({
@@ -137,6 +156,8 @@ describe('PlotPanel.svelte', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         vi.stubGlobal('ResizeObserver', ResizeObserverMock);
+        routeState.id = IMAGES_ROUTE;
+        clearAnnotationPlotSelection('test-collection-id');
         usePlotColorByType('test-collection-id').clearSelectedColorByType();
         rangeSelectionStore = writable(null);
         selectedSampleIdsStore = writable([]);
@@ -192,16 +213,20 @@ describe('PlotPanel.svelte', () => {
         await fireEvent.keyDown(window, { key: 'Escape' });
 
         expect(mockSetRangeSelectionForCollection).toHaveBeenCalledWith('test-collection-id', null);
-        expect(mockUpdateSampleIds).toHaveBeenCalledWith([]);
+        // Images clear the region geometry, not a sample-id list.
+        expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith(null);
+        expect(mockClearPlotSelectionCount).toHaveBeenCalledWith('test-collection-id');
+        expect(mockUpdateSampleIds).not.toHaveBeenCalled();
     });
 
-    it('should clear range selection geometry after applying mouse selection', async () => {
-        rangeSelectionStore = writable([
+    it('should send the lasso as region geometry after applying mouse selection', async () => {
+        const polygon = [
             { x: 0, y: 0 },
             { x: 1, y: 0 },
             { x: 1, y: 1 },
             { x: 0, y: 1 }
-        ]);
+        ];
+        rangeSelectionStore = writable(polygon);
         selectedSampleIdsStore = writable(['sample-1']);
         (useEmbeddings as vi.Mock).mockReturnValue({
             isError: false,
@@ -213,7 +238,9 @@ describe('PlotPanel.svelte', () => {
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await fireEvent.mouseUp(window);
 
-        expect(mockUpdateSampleIds).toHaveBeenCalledWith(['sample-1']);
+        expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith({ polygon });
+        expect(mockSetPlotSelectionCount).toHaveBeenCalledWith('test-collection-id', 1);
+        expect(mockUpdateSampleIds).not.toHaveBeenCalled();
         expect(mockSetRangeSelectionForCollection).toHaveBeenCalledWith('test-collection-id', null);
     });
 
@@ -245,9 +272,10 @@ describe('PlotPanel.svelte', () => {
         await tick();
         expect(mockSetRangeSelectionForCollection).not.toHaveBeenCalled();
         expect(mockUpdateSampleIds).not.toHaveBeenCalled();
+        expect(mockUpdateEmbeddingRegion).not.toHaveBeenCalled();
     });
 
-    it('should clear sample_ids when selecting all selectable points', async () => {
+    it('should clear the region when selecting all selectable points', async () => {
         rangeSelectionStore = writable([
             { x: 0, y: 0 },
             { x: 1, y: 0 },
@@ -267,9 +295,60 @@ describe('PlotPanel.svelte', () => {
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await fireEvent.mouseUp(window);
 
-        expect(mockUpdateSampleIds).toHaveBeenCalledWith([]);
-        expect(mockUpdateSampleIds).not.toHaveBeenCalledWith(['sample-1', 'sample-2']);
+        // Selecting every selectable point is equivalent to no filter, so the region is cleared.
+        expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith(null);
+        expect(mockClearPlotSelectionCount).toHaveBeenCalledWith('test-collection-id');
+        expect(mockSetPlotSelectionCount).not.toHaveBeenCalled();
         expect(mockSetRangeSelectionForCollection).toHaveBeenCalledWith('test-collection-id', null);
+    });
+
+    it('saves the lasso to the annotation region store on the annotations route', async () => {
+        routeState.id = ANNOTATIONS_ROUTE;
+        const polygon = [
+            { x: 0, y: 0 },
+            { x: 1, y: 0 },
+            { x: 1, y: 1 },
+            { x: 0, y: 1 }
+        ];
+        rangeSelectionStore = writable(polygon);
+        selectedSampleIdsStore = writable(['annotation-1']);
+        (useEmbeddings as vi.Mock).mockReturnValue({
+            isError: false,
+            error: null,
+            isLoading: true,
+            data: null
+        });
+
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        await fireEvent.mouseUp(window);
+
+        // Annotations have no filter store, so the geometry goes to the shared region store.
+        expect(get(useAnnotationPlotSelection().annotationPlotRegion)).toEqual({ polygon });
+        expect(mockSetPlotSelectionCount).toHaveBeenCalledWith('test-collection-id', 1);
+        // The image filter path must stay untouched on the annotations route.
+        expect(mockUpdateEmbeddingRegion).not.toHaveBeenCalled();
+        expect(mockSetRangeSelectionForCollection).toHaveBeenCalledWith('test-collection-id', null);
+    });
+
+    it('highlights the committed annotation region after the live selection clears', async () => {
+        routeState.id = ANNOTATIONS_ROUTE;
+        const polygon = [
+            { x: 0, y: 0 },
+            { x: 1, y: 0 },
+            { x: 1, y: 1 },
+            { x: 0, y: 1 }
+        ];
+        // The selection is already committed: no live rangeSelection, region in the shared store.
+        rangeSelectionStore = writable(null);
+        useAnnotationPlotSelection().saveRegion({ polygon });
+
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        await tick();
+
+        // The plot must re-derive the highlight from the committed region so the selected
+        // annotations stay highlighted instead of collapsing to "all included".
+        const lastArgs = usePlotDataSpy.mock.calls.at(-1)?.[0];
+        expect(lastArgs?.highlightRegion).toEqual(polygon);
     });
 
     it('passes derived colorBy to useEmbeddings when a metadata field is selected', async () => {

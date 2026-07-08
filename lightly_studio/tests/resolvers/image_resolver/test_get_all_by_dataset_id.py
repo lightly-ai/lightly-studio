@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from uuid import UUID
+
 import pytest
 from pydantic_core._pydantic_core import ValidationError
 from sqlmodel import Session
@@ -11,9 +13,13 @@ from lightly_studio.core.dataset_query.order_by import (
     OrderByField,
     OrderByMetadataField,
 )
+from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
+from lightly_studio.models.image import ImageTable
+from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
 from lightly_studio.resolvers import (
     image_resolver,
     metadata_resolver,
+    sample_embedding_resolver,
     tag_resolver,
 )
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
@@ -35,6 +41,7 @@ from tests.helpers_resolvers import (
     create_image,
     create_images,
     create_sample_embedding,
+    create_samples_with_embeddings,
     create_tag,
 )
 from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
@@ -988,6 +995,166 @@ def test_get_all_by_collection_id__sort_by_height_asc_is_reverse_of_desc(
     assert asc_paths == list(reversed(desc_paths))
     assert result_asc.order_values == [100.0, 200.0, 200.0, 300.0]
     assert result_desc.order_values == [300.0, 200.0, 200.0, 100.0]
+
+
+def _square(x_min: float, y_min: float, x_max: float, y_max: float) -> EmbeddingRegion:
+    return EmbeddingRegion(
+        polygon=[
+            Point2D(x=x_min, y=y_min),
+            Point2D(x=x_max, y=y_min),
+            Point2D(x=x_max, y=y_max),
+            Point2D(x=x_min, y=y_max),
+        ]
+    )
+
+
+def _setup_collection_with_2d_coordinates(
+    session: Session,
+    coordinates: list[tuple[float, float]],
+) -> tuple[UUID, list[ImageTable]]:
+    """Create a collection whose samples have the given cached 2D projection coordinates.
+
+    Returns the collection id and the created images in the same order as ``coordinates``.
+    """
+    collection = create_collection(session=session)
+    collection_id = collection.collection_id
+    embedding_model = create_embedding_model(
+        session=session,
+        collection_id=collection_id,
+        embedding_dimension=3,
+    )
+    images = create_samples_with_embeddings(
+        session=session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        # Distinct first dimensions keep the deterministic cache key stable across samples.
+        images_and_embeddings=[
+            (ImageStub(path=f"sample_{index}.png"), [float(index) + 0.1, 0.2, 0.3])
+            for index in range(len(coordinates))
+        ],
+    )
+    coordinates_by_sample = {
+        image.sample_id: coordinate for image, coordinate in zip(images, coordinates)
+    }
+    # Seed the cached 2D projection so the region resolver reads deterministic coordinates
+    # instead of recomputing them.
+    cache_key, cached_sample_ids = sample_embedding_resolver.get_hash_by_collection_id(
+        session=session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+    session.add(
+        TwoDimEmbeddingTable(
+            hash=cache_key,
+            x=[coordinates_by_sample[sample_id][0] for sample_id in cached_sample_ids],
+            y=[coordinates_by_sample[sample_id][1] for sample_id in cached_sample_ids],
+        )
+    )
+    session.commit()
+    return collection_id, images
+
+
+def test_get_all_by_collection_id__with_embedding_region_filter(db_session: Session) -> None:
+    """A region filter returns only the samples whose 2D coordinates fall inside the polygon."""
+    collection_id, images = _setup_collection_with_2d_coordinates(
+        session=db_session,
+        coordinates=[(1.0, 1.0), (5.0, 5.0), (100.0, 100.0)],
+    )
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        filters=ImageFilter(
+            sample_filter=SampleFilter(
+                embedding_region=_square(x_min=0, y_min=0, x_max=10, y_max=10),
+            )
+        ),
+    )
+
+    # Only the first two samples sit inside the square; the far-away one is excluded.
+    assert {sample.sample_id for sample in result.samples} == {
+        images[0].sample_id,
+        images[1].sample_id,
+    }
+    assert result.total_count == 2
+
+
+def test_get_all_by_collection_id__with_empty_embedding_region_filter(db_session: Session) -> None:
+    """A region enclosing no points matches nothing (rather than everything)."""
+    collection_id, _images = _setup_collection_with_2d_coordinates(
+        session=db_session,
+        coordinates=[(1.0, 1.0), (5.0, 5.0)],
+    )
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        filters=ImageFilter(
+            sample_filter=SampleFilter(
+                embedding_region=_square(x_min=50, y_min=50, x_max=60, y_max=60),
+            )
+        ),
+    )
+
+    assert result.samples == []
+    assert result.total_count == 0
+
+
+def test_get_all_by_collection_id__embedding_region_combined_with_dimension_filter(
+    db_session: Session,
+) -> None:
+    """A region filter and a dimension filter intersect: both must hold for a sample to match."""
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_dimension=3,
+    )
+    # Two samples fall inside the region below, but only one also satisfies the width filter.
+    images = create_samples_with_embeddings(
+        session=db_session,
+        collection_id=collection_id,
+        images_and_embeddings=[
+            (ImageStub(path="inside_wide.png", width=800), [0.1, 0.2, 0.3]),
+            (ImageStub(path="inside_narrow.png", width=100), [1.1, 0.2, 0.3]),
+            (ImageStub(path="outside_wide.png", width=800), [2.1, 0.2, 0.3]),
+        ],
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+    coordinates = {
+        images[0].sample_id: (1.0, 1.0),  # inside region, wide
+        images[1].sample_id: (2.0, 2.0),  # inside region, narrow
+        images[2].sample_id: (100.0, 100.0),  # outside region, wide
+    }
+    cache_key, cached_sample_ids = sample_embedding_resolver.get_hash_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+    db_session.add(
+        TwoDimEmbeddingTable(
+            hash=cache_key,
+            x=[coordinates[sample_id][0] for sample_id in cached_sample_ids],
+            y=[coordinates[sample_id][1] for sample_id in cached_sample_ids],
+        )
+    )
+    db_session.commit()
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        filters=ImageFilter(
+            sample_filter=SampleFilter(
+                embedding_region=_square(x_min=0, y_min=0, x_max=10, y_max=10),
+            ),
+            width=FilterDimensions(min=500),
+        ),
+    )
+
+    # inside_narrow is inside the region but too narrow; outside_wide is wide but outside.
+    assert [sample.sample_id for sample in result.samples] == [images[0].sample_id]
+    assert result.total_count == 1
 
 
 @pytest.mark.parametrize(
