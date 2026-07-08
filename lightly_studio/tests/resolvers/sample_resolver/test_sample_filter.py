@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from pydantic import ValidationError
+from pytest_mock import MockerFixture
 from sqlmodel import Session, col, select
 
 from lightly_studio.models.annotation_label import AnnotationLabelTable
@@ -29,6 +30,7 @@ from lightly_studio.resolvers import (
 )
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import Metadata
+from lightly_studio.resolvers.region_sample_ids_filter import RegionSampleIdsFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
     AnnotationDetails,
@@ -473,6 +475,28 @@ class TestSampleFilter:
             samples[1].sample_id,
             samples[2].sample_id,
         }
+
+    def test_apply__delegates_region_filtering_to_mixin(
+        self, db_session: Session, mocker: MockerFixture
+    ) -> None:
+        # ``apply`` must delegate region filtering to the shared mixin (passing the
+        # ``SampleTable`` sample-id column) and propagate its result. The branch
+        # semantics themselves are covered by the mixin's own tests.
+        spy = mocker.spy(RegionSampleIdsFilter, "_apply_region_sample_ids_filter")
+        collection = create_collection(session=db_session)
+        samples = create_images(
+            db_session=db_session,
+            collection_id=collection.collection_id,
+            images=[ImageStub(path="sample_0.png"), ImageStub(path="sample_1.png")],
+        )
+
+        sample_filter = SampleFilter(region_sample_ids=[samples[0].sample_id])
+        filtered_query = sample_filter.apply(query=select(SampleTable))
+        result = db_session.exec(filtered_query).all()
+
+        spy.assert_called_once()
+        assert spy.call_args.kwargs["sample_id_column"] is col(SampleTable.sample_id)
+        assert [sample.sample_id for sample in result] == [samples[0].sample_id]
 
     def test_apply__combination_with_query_expr(self, db_session: Session) -> None:
         collection = create_collection(session=db_session)

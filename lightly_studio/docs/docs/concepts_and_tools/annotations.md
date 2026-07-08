@@ -35,8 +35,8 @@ Annotations are shown in sample detail view and in the annotation-focused views.
 
 ## Object-level embeddings
 
-LightlyStudio computes embeddings not only for whole images, but also for individual 
-objects defined by object detection boxes or segmentation masks. This unlocks the 
+LightlyStudio computes embeddings not only for whole images, but also for individual
+objects defined by object-detection boxes or segmentation masks. This unlocks the
 **embedding plot** and **similarity search** on individual objects, working exactly the
 same way they do for whole images.
 Open the `Annotations` view in the GUI to browse objects in a grid, search them, and

@@ -27,7 +27,22 @@ AnnotationMetricMatchKind = Literal["confusion"]
 
 @dataclass
 class AnnotationMetricQuery(MatchExpression):
-    """Query if a sample has annotation evaluation metrics matching a criterion."""
+    """Query samples by annotation-level evaluation results.
+
+    This query matches samples that belong to an evaluation run and contain annotation
+    pairs in a selected confusion-matrix cell, optionally constrained by persisted
+    annotation metrics.
+
+    Example:
+        ```python
+        AnnotationMetricQuery.confusion(
+            "run1",
+            "cat",
+            "dog",
+            AnnotationEvaluationMetricField("iou") > 0.3,
+        )
+        ```
+    """
 
     match_kind: AnnotationMetricMatchKind
     run_name: str
@@ -46,16 +61,21 @@ class AnnotationMetricQuery(MatchExpression):
         """Match samples by confusion-matrix cell within an evaluation run.
 
         Example:
-            ```
+            ```python
             AnnotationMetricQuery.confusion(
-                "run1", "cat", "dog", AnnotationEvaluationMetricField("iou") < 0.3
-            )```
+                "run1",
+                "cat",
+                "dog",
+                AnnotationEvaluationMetricField("iou") < 0.3,
+            )
+            ```
 
         Args:
             run_name: The evaluation run name to match metrics against.
             ground_truth: Ground-truth annotation class name.
             prediction: Predicted annotation class name.
-            criteria: The annotation evaluation metric criteria to combine.
+            criteria: Zero or more metric comparisons that must all match the same
+                annotation pair.
         """
         return cls(
             match_kind="confusion",

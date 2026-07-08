@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlmodel import Session
 from sqlmodel.sql.expression import SelectOfScalar
 
+from lightly_studio.resolvers import embedding_region_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 
 
@@ -41,5 +42,14 @@ def get_sample_ids(
     Returns:
         List of sample ids matching the given filters.
     """
+    # Resolve any embedding-plot region selection to concrete sample ids on the filter before the
+    # query is built (the point-in-polygon test needs the session, which `apply` lacks).
+    sample_filter = filters.sample_filter if filters is not None else None
+    if sample_filter is not None and sample_filter.embedding_region is not None:
+        sample_filter.region_sample_ids = embedding_region_resolver.get_sample_ids_in_region(
+            session=session,
+            collection_id=collection_id,
+            region=sample_filter.embedding_region,
+        )
     query = build_sample_ids_query(collection_id=collection_id, filters=filters)
     return set(session.exec(query).all())

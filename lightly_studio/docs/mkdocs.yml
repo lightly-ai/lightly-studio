@@ -34,6 +34,19 @@ docs_dir: docs
 nav:
   - Getting Started:
     - index.md
+  - 🏢 Enterprise:
+    - Enterprise:
+      - enterprise/index.md
+      - Connect from Python: enterprise/connect.md
+      - Security and Architecture: enterprise/security.md
+      - On-Premise Deployment: enterprise/on-premise.md
+      - Local Storage: enterprise/local_storage.md
+    - Cloud Storage:
+      - enterprise/cloud_storage/index.md
+      - AWS S3: enterprise/cloud_storage/aws.md
+  - Tutorials:
+    - tutorials/index.md
+    - "Tutorial 1: Curate a Traffic CCTV Dataset for YOLO Training": tutorials/yolo-traffic-cctv-object-detection.md
   - Dataset Setup:
     - Data Types:
       - Image Dataset: dataset_setup/image_dataset.md
@@ -67,16 +80,6 @@ nav:
       - Lightly Query Language: concepts_and_tools/lightly_query_language.md
   - About Us:
     - about_us/index.md
-  - 🏢 Enterprise:
-    - Enterprise:
-      - enterprise/index.md
-      - Connect from Python: enterprise/connect.md
-      - Security and Architecture: enterprise/security.md
-      - On-Premise Deployment: enterprise/on-premise.md
-      - Local Storage: enterprise/local_storage.md
-    - Cloud Storage:
-      - enterprise/cloud_storage/index.md
-      - AWS S3: enterprise/cloud_storage/aws.md
 
 # Promote link/nav checks from INFO to WARNING so that `mkdocs build --strict`
 # turns them into build errors (see the Makefile `docs` target).
