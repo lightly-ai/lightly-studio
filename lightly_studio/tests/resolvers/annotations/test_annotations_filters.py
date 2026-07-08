@@ -6,6 +6,7 @@ import uuid
 from uuid import UUID
 
 import pytest
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 from sqlmodel.sql.expression import SelectOfScalar
 
@@ -15,12 +16,12 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
     AnnotationType,
 )
-from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
 from lightly_studio.resolvers import annotation_resolver
 from lightly_studio.resolvers import annotation_resolver as annotations_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
+from lightly_studio.resolvers.region_sample_ids_filter import RegionSampleIdsFilter
 from tests.helpers_resolvers import (
     create_annotation_label,
     create_collection,
@@ -205,72 +206,30 @@ def test_combined_filters(
     assert filtered_annotations[0].sample_id == annotation1.sample_id
 
 
-def test_filter_by_embedding_region__resolved_ids(
+def test_filter_delegates_region_filtering_to_mixin(
     db_session: Session,
     filter_test_data: tuple[AnnotationBaseTable, AnnotationBaseTable],
+    mocker: MockerFixture,
 ) -> None:
-    """A resolved embedding region restricts annotations to the enclosed sample ids."""
+    """``apply`` must delegate region filtering to the shared mixin and propagate its result.
+
+    It passes the aliased annotation-sample id column; the branch semantics themselves
+    are covered by the mixin's own tests in tests/resolvers/test_region_sample_ids_filter.py.
+    """
     annotation1, _ = filter_test_data
+    spy = mocker.spy(RegionSampleIdsFilter, "_apply_region_sample_ids_filter")
 
-    # The resolver would populate ``region_sample_ids`` from the cached 2D projection.
-    region_filter = AnnotationsFilter(
-        embedding_region=_square_region(),
-        region_sample_ids=[annotation1.sample_id],
-    )
-
+    region_filter = AnnotationsFilter(region_sample_ids=[annotation1.sample_id])
     filtered_annotations = annotations_resolver.get_all(
         session=db_session, filters=region_filter
     ).annotations
 
+    # ``get_all`` issues both a count and a data query, so ``apply`` (and the delegation)
+    # runs more than once; every call must pass the annotation-sample id column.
+    assert spy.called
+    assert all(call.kwargs["sample_id_column"].key == "sample_id" for call in spy.call_args_list)
     assert len(filtered_annotations) == 1
     assert filtered_annotations[0].sample_id == annotation1.sample_id
-
-
-def test_filter_by_embedding_region__empty_matches_nothing(
-    db_session: Session,
-    filter_test_data: tuple[AnnotationBaseTable, AnnotationBaseTable],  # noqa: ARG001
-) -> None:
-    """An empty resolved region must return no annotations, not all of them."""
-    # The fixture seeds annotations, so an empty result proves the region excluded them
-    # rather than the collection simply being empty.
-    assert annotations_resolver.get_all(session=db_session).annotations
-
-    region_filter = AnnotationsFilter(
-        embedding_region=_square_region(),
-        region_sample_ids=[],
-    )
-
-    filtered_annotations = annotations_resolver.get_all(
-        session=db_session, filters=region_filter
-    ).annotations
-
-    assert filtered_annotations == []
-
-
-def test_filter_by_embedding_region__unresolved_applies_no_restriction(
-    db_session: Session,
-    filter_test_data: tuple[AnnotationBaseTable, AnnotationBaseTable],  # noqa: ARG001
-) -> None:
-    """An unresolved region (``region_sample_ids`` still ``None``) applies no restriction."""
-    all_annotations = annotations_resolver.get_all(session=db_session).annotations
-
-    region_filter = AnnotationsFilter(embedding_region=_square_region())
-    filtered_annotations = annotations_resolver.get_all(
-        session=db_session, filters=region_filter
-    ).annotations
-
-    assert len(filtered_annotations) == len(all_annotations)
-
-
-def _square_region() -> EmbeddingRegion:
-    return EmbeddingRegion(
-        polygon=[
-            Point2D(x=0, y=0),
-            Point2D(x=1, y=0),
-            Point2D(x=1, y=1),
-            Point2D(x=0, y=1),
-        ]
-    )
 
 
 def _count_sample_joins(query: SelectOfScalar[UUID]) -> int:

@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Literal
 from uuid import UUID
 
-import sqlalchemy
 from pydantic import Field
 from sqlalchemy.orm import Mapped, aliased
 from sqlmodel import col, select
@@ -13,14 +12,14 @@ from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.database import db_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
-from lightly_studio.models.embedding_region import EmbeddingRegion
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers.grid_filter_base import GridFilterBase
+from lightly_studio.resolvers.region_sample_ids_filter import RegionSampleIdsFilter
 from lightly_studio.type_definitions import QueryType
 
 
-class AnnotationsFilter(GridFilterBase):
+class AnnotationsFilter(GridFilterBase, RegionSampleIdsFilter):
     """Handles filtering for annotation queries."""
 
     filter_type: Literal["annotations"] = "annotations"
@@ -36,8 +35,6 @@ class AnnotationsFilter(GridFilterBase):
     sample_ids: list[UUID] | None = Field(
         default=None, description="List of annotation sample UUIDs to restrict to"
     )
-    embedding_region: EmbeddingRegion | None = None
-    region_sample_ids: list[UUID] | None = None
 
     def apply(
         self,
@@ -127,7 +124,9 @@ class AnnotationsFilter(GridFilterBase):
             )
 
         # Filter by embedding-plot region selection, resolved server-side to sample ids.
-        query = self._apply_region_sample_ids_filter(query, annotation_sample=annotation_sample)
+        query = self._apply_region_sample_ids_filter(
+            query, sample_id_column=col(annotation_sample.sample_id)
+        )
 
         # Filter by annotation label
         if self.annotation_label_ids:
@@ -151,24 +150,6 @@ class AnnotationsFilter(GridFilterBase):
             query = query.where(col(AnnotationBaseTable.annotation_type).in_(self.annotation_types))
 
         return query
-
-    def _apply_region_sample_ids_filter(
-        self,
-        query: QueryType,
-        annotation_sample: type[SampleTable],
-    ) -> QueryType:
-        """Filter by the embedding-plot region selection, resolved server-side to sample ids."""
-        if self.region_sample_ids is None:
-            return query
-        # An empty region encloses no points and must match nothing (not everything).
-        if not self.region_sample_ids:
-            return query.where(sqlalchemy.false())
-        return query.where(
-            db_array.in_array(
-                column=col(annotation_sample.sample_id),
-                values=self.region_sample_ids,
-            )
-        )
 
     def _select_sample_ids(self) -> SelectOfScalar[UUID]:
         return select(AnnotationBaseTable.sample_id).join(AnnotationBaseTable.sample)
