@@ -1,11 +1,11 @@
 import { extractAddedLines, pct } from './utils';
 import type { ChangedFile, Guardrail, GuardrailContext } from '../context/types';
-import type { GuardrailResult } from '../../shared/verdict';
+import type { GuardrailOutcome } from '../context/types';
 
 const MIN_COVERAGE = 0.8;
 const MIN_COVERAGE_PCT = `${(MIN_COVERAGE * 100).toFixed(0)}%`;
 
-interface CoverageConfig<TCoverage> {
+export interface CoverageConfig<TCoverage> {
     name: string;
     filterFiles(files: ChangedFile[]): ChangedFile[];
     findTestFile(sourcePath: string): Promise<string | undefined>;
@@ -69,7 +69,7 @@ function collectCoverageResults<TCoverage>(
         // Files without a patch cannot be line-filtered; skip them.
         const addedLines = addedLinesByFile.get(source.path);
         if (addedLines === undefined) continue;
-        if (!coverageData) {
+        if (coverageData === null) {
             const msg = `${source.path}: coverage data not found`;
             failures.push(msg);
             lines.push(`  [FAIL] ${msg}`);
@@ -95,17 +95,28 @@ export function createCoverageGuardrail<TCoverage>(config: CoverageConfig<TCover
         required: true,
         needsPrContext: false,
 
-        async run(ctx: GuardrailContext): Promise<GuardrailResult> {
+        async run(ctx: GuardrailContext): Promise<GuardrailOutcome> {
             const files = await ctx.changedFiles();
-            const sourceFiles = config.filterFiles(files).filter((f) => f.status !== 'deleted');
+            const sourceFiles = config
+                .filterFiles(files)
+                .filter((f) => f.status !== 'deleted' && f.patch !== undefined);
 
             if (sourceFiles.length === 0) {
-                return { name: config.name, status: 'pass', summary: '0 file(s) checked.' };
+                return { status: 'pass', summary: '0 file(s) checked.' };
             }
 
             const addedLinesByFile = buildAddedLinesMap(sourceFiles);
+            const checkableFiles = sourceFiles.filter((f) => {
+                const lines = addedLinesByFile.get(f.path);
+                return lines !== undefined && lines.size > 0;
+            });
+
+            if (checkableFiles.length === 0) {
+                return { status: 'pass', summary: '0 file(s) checked.' };
+            }
+
             const { pairs, failures: pairFailures } = await resolvePairs(
-                sourceFiles,
+                checkableFiles,
                 config.findTestFile
             );
             const coverageData = await runCoverage(pairs, config.runTests);
@@ -128,10 +139,10 @@ export function createCoverageGuardrail<TCoverage>(config: CoverageConfig<TCover
                     allLines.length > 0
                         ? allLines.join('\n')
                         : `${checked} file(s) checked, all above ${MIN_COVERAGE_PCT}.`;
-                return { name: config.name, status: 'pass', summary };
+                return { status: 'pass', summary };
             }
 
-            return { name: config.name, status: 'fail', summary: allLines.join('\n') };
+            return { status: 'fail', summary: allLines.join('\n') };
         }
     };
 }

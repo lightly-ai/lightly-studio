@@ -17,6 +17,7 @@ export const createAnnotationsInfiniteOptions = (params: AnnotationsInfinitePara
             annotation_label_ids: params.annotation_label_ids,
             tag_ids: params.tag_ids,
             sample_ids: params.sample_ids,
+            embedding_region: params.embedding_region,
             text_embedding: params.text_embedding
         }
     ];
@@ -37,6 +38,7 @@ export const createAnnotationsInfiniteOptions = (params: AnnotationsInfinitePara
                     annotation_label_ids: params.annotation_label_ids,
                     tag_ids: params.tag_ids,
                     sample_ids: params.sample_ids,
+                    embedding_region: params.embedding_region,
                     text_embedding: params.text_embedding
                 },
                 signal,

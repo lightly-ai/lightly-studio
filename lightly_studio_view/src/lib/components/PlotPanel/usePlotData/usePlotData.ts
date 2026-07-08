@@ -38,12 +38,14 @@ type Selection = Point[] | null;
 export function usePlotData({
     arrowData,
     rangeSelection,
+    highlightRegion = null,
     highlightedSampleIds = [],
     hasActiveFilter = true,
     hiddenCategories = new Set()
 }: {
     arrowData: ArrowData;
     rangeSelection: Selection;
+    highlightRegion?: Selection;
     highlightedSampleIds?: string[];
     hasActiveFilter?: boolean;
     hiddenCategories?: ReadonlySet<number>;
@@ -92,6 +94,12 @@ export function usePlotData({
             return acc;
         }, []);
         selectedSampleIds.update(() => _ids);
+    } else if (highlightRegion) {
+        // A region committed to the filter (e.g. the image lasso stored as embedding_region) has
+        // no live rangeSelection to draw, but the plot must still reflect it: demote points
+        // outside the polygon to Excluded so the in-selection points stay highlighted. The
+        // resolved sample ids live server-side, so we don't recompute selectedSampleIds here.
+        category = category.map(getCategoryBySelection(highlightRegion, data));
     } else if (highlightedSampleIds.length > 0) {
         const highlightedSampleIdSet = new Set(highlightedSampleIds);
         category = category.map((pointCategory, index) => {
