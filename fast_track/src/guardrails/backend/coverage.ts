@@ -11,6 +11,7 @@ const execFileAsync = promisify(execFile);
 const LIGHTLY_STUDIO_ABS = resolve(REPO_ROOT, 'lightly_studio');
 const BACKEND_PREFIX = 'lightly_studio/src/lightly_studio/';
 const COVERAGE_FILE = 'coverage.json';
+const MAX_BUFFER = 10 * 1024 * 1024;
 
 interface CoverageFileData {
     executed_lines: number[];
@@ -111,10 +112,12 @@ export const backendCoverageGuardrail: Guardrail = createCoverageGuardrail<Cover
                     '-q',
                     '--no-header'
                 ],
-                { cwd: LIGHTLY_STUDIO_ABS }
+                { cwd: LIGHTLY_STUDIO_ABS, maxBuffer: MAX_BUFFER }
             );
-        } catch {
+        } catch (err: unknown) {
             // pytest exits non-zero when tests fail; coverage.json is still produced.
+            // Re-throw for system-level errors (e.g. uv not on PATH, bad cwd).
+            if (!existsSync(coveragePath)) throw err;
         }
 
         if (!existsSync(coveragePath)) return null;
