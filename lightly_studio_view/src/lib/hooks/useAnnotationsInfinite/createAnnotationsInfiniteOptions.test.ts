@@ -68,6 +68,18 @@ describe('createAnnotationsInfiniteOptions', () => {
             });
             expect(options1.queryKey).not.toEqual(options2.queryKey);
         });
+
+        it('produces different keys for different embedding_region values', () => {
+            const options1 = createAnnotationsInfiniteOptions({
+                collection_id: 'col-1',
+                embedding_region: { polygon: [{ x: 0, y: 0 }] }
+            });
+            const options2 = createAnnotationsInfiniteOptions({
+                collection_id: 'col-1',
+                embedding_region: { polygon: [{ x: 1, y: 1 }] }
+            });
+            expect(options1.queryKey).not.toEqual(options2.queryKey);
+        });
     });
 
     describe('pagination', () => {
@@ -129,6 +141,28 @@ describe('createAnnotationsInfiniteOptions', () => {
                         sample_ids: ['s1'],
                         text_embedding: [0.5, 0.5]
                     }
+                })
+            );
+        });
+
+        it('passes the embedding region geometry to readAnnotationsWithPayload body', async () => {
+            const embedding_region = {
+                polygon: [
+                    { x: 0, y: 0 },
+                    { x: 1, y: 0 },
+                    { x: 1, y: 1 }
+                ]
+            };
+            const options = createAnnotationsInfiniteOptions({
+                collection_id: 'col-1',
+                embedding_region
+            });
+
+            await callQueryFn(options, { pageParam: 0, signal: new AbortController().signal });
+
+            expect(readAnnotationsWithPayloadMock).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    body: expect.objectContaining({ embedding_region })
                 })
             );
         });
