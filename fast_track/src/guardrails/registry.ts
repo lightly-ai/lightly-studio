@@ -2,12 +2,14 @@ import type { Guardrail } from './context/types';
 import { dummyGuardrail } from './dummy';
 import { backendComplexityGuardrail } from './backend/complexity';
 import { frontendComplexityGuardrail } from './frontend/complexity';
+import { diffSizeGuardrail } from './diff-size';
 
 /** The guardrail registry. */
 export const guardrails: Guardrail[] = [
     dummyGuardrail,
     frontendComplexityGuardrail,
-    backendComplexityGuardrail
+    backendComplexityGuardrail,
+    diffSizeGuardrail
 ];
 
 export interface SelectOptions {
