@@ -96,6 +96,55 @@ class TruePositiveMetricStub:
 
 
 @dataclass
+class FalsePositiveMetricStub:
+    """Helper class to create a false-positive annotation metric.
+
+    Creates a prediction annotation in the evaluation run's prediction collection,
+    then stores metric rows that link the prediction with no ground truth.
+    """
+
+    sample_id: UUID
+    metrics: dict[str, float]
+    pred_annotation_label_id: UUID
+
+    def metric_items(self) -> list[tuple[str, float]]:
+        return list(self.metrics.items())
+
+    def to_annotation_metric_stub(
+        self, session: Session, run: EvaluationRunTable
+    ) -> list[AnnotationMetricStub]:
+        pred_collection = collection_resolver.get_by_id(
+            session=session, collection_id=run.pred_annotation_collection_id
+        )
+        if pred_collection is None:
+            raise ValueError(
+                f"Evaluation run {run.id} references missing prediction annotation collection"
+            )
+        if pred_collection.parent_collection_id is None:
+            raise ValueError(
+                f"Evaluation run {run.id} prediction annotation collection must have a parent"
+            )
+
+        pred_annotation = create_annotation(
+            session=session,
+            collection_id=pred_collection.parent_collection_id,
+            sample_id=self.sample_id,
+            annotation_label_id=self.pred_annotation_label_id,
+            annotation_collection_name=pred_collection.name,
+        )
+        return [
+            AnnotationMetricStub(
+                sample_id=self.sample_id,
+                metric_name=metric_name,
+                value=value,
+                pred_annotation_id=pred_annotation.sample_id,
+                gt_annotation_id=None,
+            )
+            for metric_name, value in self.metric_items()
+        ]
+
+
+@dataclass
 class SampleMetricStub:
     """Helper class to represent a sample-level evaluation metric."""
 
@@ -167,15 +216,15 @@ def create_annotation_metrics(
     session: Session,
     run_id: UUID,
     annotation_metrics: list[AnnotationMetricStub] | None = None,
-    true_positive_metric_stubs: list[TruePositiveMetricStub] | None = None,
+    pair_metric_stubs: list[TruePositiveMetricStub | FalsePositiveMetricStub] | None = None,
 ) -> list[AnnotationMetricStub]:
     annotation_metrics_to_create = list(annotation_metrics) if annotation_metrics else []
-    true_positive_metric_stubs = true_positive_metric_stubs or []
+    pair_metric_stubs = pair_metric_stubs or []
     run = evaluation_run_resolver.get_by_id(session=session, evaluation_id=run_id)
     if run is None:
         raise ValueError(f"Evaluation run {run_id} doesn't exist")
 
-    for stub in true_positive_metric_stubs:
+    for stub in pair_metric_stubs:
         annotation_metrics_to_create.extend(
             stub.to_annotation_metric_stub(session=session, run=run)
         )
