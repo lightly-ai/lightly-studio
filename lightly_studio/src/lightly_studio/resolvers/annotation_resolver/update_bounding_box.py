@@ -9,6 +9,9 @@ from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.resolvers import annotation_resolver
+from lightly_studio.resolvers.annotation_resolver.delete_annotation import (
+    delete_evaluation_metrics,
+)
 
 
 @dataclass
@@ -44,6 +47,13 @@ def update_bounding_box(
         raise ValueError(f"Annotation with ID {annotation_id} not found.")
 
     try:
+        # TODO(Malte, 07/2026): Replace eager deletion with explicit evaluation invalidation
+        # once evaluation results can be recomputed or marked stale independently from updates.
+        delete_evaluation_metrics(
+            session=session,
+            annotation_ids=[annotation.sample_id],
+            parent_sample_ids=[annotation.parent_sample_id],
+        )
         if annotation.object_detection_details:
             annotation.object_detection_details.x = coordinates.x
             annotation.object_detection_details.y = coordinates.y
