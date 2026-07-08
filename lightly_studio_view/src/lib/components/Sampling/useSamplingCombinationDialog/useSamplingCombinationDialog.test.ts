@@ -445,6 +445,15 @@ describe('useSamplingCombinationDialog', () => {
             expect(get(nSamplesToSelect)).toBeNull();
             expect(get(percentageToSelect)).toBeNull();
         });
+
+        it('updates percentageToSelect reactively when filteredSampleCount changes and user has not entered a percentage', () => {
+            filteredSampleCount.set(0);
+            const { percentageToSelect } = useSamplingCombinationDialog(defaultParams);
+
+            filteredSampleCount.set(100);
+
+            expect(get(percentageToSelect)).toBe(10); // default nSamplesToSelect=10, 10/100*100=10
+        });
     });
 
     describe('updatePercentage', () => {

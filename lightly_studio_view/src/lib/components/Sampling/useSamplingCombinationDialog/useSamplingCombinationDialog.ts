@@ -40,35 +40,45 @@ export function useSamplingCombinationDialog({
     });
 
     const nSamplesToSelect = writable<number | null>(10);
-    // Writable rather than derived so the user-entered percentage value is preserved
-    // when filteredSampleCount changes in the background (e.g. from a grid refetch).
-    const percentageToSelect = writable<number | null>(
-        computePercentage(10, get(filteredSampleCount))
+    // Null means the user hasn't explicitly typed a percentage; percentageToSelect
+    // then derives reactively from nSamplesToSelect and filteredSampleCount so that
+    // the display stays correct when filteredSampleCount loads after mount.
+    // A non-null value locks the display to what the user typed, preventing
+    // background filteredSampleCount updates (e.g. grid refetches) from overwriting it.
+    const userEnteredPercentage = writable<number | null>(null);
+
+    const percentageToSelect = derived(
+        [nSamplesToSelect, filteredSampleCount, userEnteredPercentage],
+        ([$n, $total, $userPct]) => {
+            if ($userPct !== null) return $userPct;
+            if ($n === null) return null;
+            return computePercentage($n, $total);
+        }
     );
     const selectionResultTagName = writable('');
 
     function updateAbsolute(count: number) {
         if (!Number.isFinite(count)) {
             nSamplesToSelect.set(null);
-            percentageToSelect.set(null);
+            userEnteredPercentage.set(null);
             return;
         }
         nSamplesToSelect.set(count);
-        percentageToSelect.set(computePercentage(count, get(filteredSampleCount)));
+        userEnteredPercentage.set(null); // let percentage re-derive from count
     }
 
     function updatePercentage(percentage: number) {
         if (!Number.isFinite(percentage)) {
             nSamplesToSelect.set(null);
-            percentageToSelect.set(null);
+            userEnteredPercentage.set(null);
             return;
         }
         const total = get(filteredSampleCount);
         const result = total > 0 ? Math.round((percentage / 100) * total) : 0;
         nSamplesToSelect.set(result);
-        // Preserve the exact value the user typed instead of re-deriving it from the
-        // rounded count.
-        percentageToSelect.set(percentage);
+        // Lock the display to what the user typed so that background
+        // filteredSampleCount changes don't overwrite their entry.
+        userEnteredPercentage.set(percentage);
     }
 
     const noSamples = derived(filteredSampleCount, ($count) => $count === 0);
@@ -108,7 +118,7 @@ export function useSamplingCombinationDialog({
     function resetForm() {
         onSubmitSuccess();
         nSamplesToSelect.set(10);
-        percentageToSelect.set(computePercentage(10, get(filteredSampleCount)));
+        userEnteredPercentage.set(null); // let percentage re-derive from count
         selectionResultTagName.set('');
     }
 
