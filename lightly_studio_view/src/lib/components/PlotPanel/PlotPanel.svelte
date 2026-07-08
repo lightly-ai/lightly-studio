@@ -34,7 +34,6 @@
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { usePlotColorBy } from './usePlotColorBy/usePlotColorBy';
-    import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { writable } from 'svelte/store';
 
@@ -164,7 +163,6 @@
     // Variant B: PCA over text embeddings of all annotation label names in the collection.
     // We deliberately use *all* labels (not just the selected/filtered ones), so that
     // toggling the label filter does not also change the embedding-plot projection.
-    const annotationLabelsQuery = useAnnotationLabels(() => ({ collectionId }));
     const allLabelNames = $derived.by(() => {
         const labels = annotationLabelsQuery.data ?? [];
         const names: string[] = [];
