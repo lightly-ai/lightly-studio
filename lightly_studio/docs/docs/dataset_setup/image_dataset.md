@@ -452,7 +452,7 @@ Instead of the built-in embedding model, you can provide precomputed embeddings 
 model with `sample.set_embedding(...)`. This enables the embedding plot and embedding-based
 sampling for image and video samples.
 
-```python title="Add custom embeddings" hl_lines="9 15"
+```python title="Add custom embeddings" hl_lines="11 23"
 import numpy as np
 from PIL import Image
 
@@ -474,7 +474,6 @@ def compute_custom_embedding(file_path: str) -> list[float]:
     return pixels.mean(axis=(0, 1)).tolist()
 
 
-# Set every sample's embedding before starting the GUI.
 for sample in dataset:
     sample.set_embedding(compute_custom_embedding(sample.file_path_abs))
 
@@ -487,12 +486,7 @@ See the full runnable version in
 There are a few limitations to be aware of:
 
 - **No text-based search.** Custom embeddings do not support text-based search, since there is
-  no text encoder for a custom embedding space. The search bar is hidden automatically as long as
-  you follow the ordering below.
-- **Order matters.** Load the dataset with `embed=False` and set every sample's embedding
-  *before* starting the GUI or otherwise triggering a lookup of the collection's default
-  embedding model (for example, opening the collection in the GUI). Otherwise the built-in model
-  may get registered as the collection's default first, which breaks the embedding plot.
+  no text encoder for a custom embedding space. The search bar is hidden automatically.
 - **`embed=False` only skips image-level embeddings.** If you also import annotations through
   one of the bulk methods (`add_samples_from_coco`, `add_samples_from_yolo`,
   `add_samples_from_labelformat`, `add_annotations_from_coco`, `add_annotations_from_yolo`, ...),
