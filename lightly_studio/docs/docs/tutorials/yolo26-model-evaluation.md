@@ -217,9 +217,6 @@ Only images that have both ground truth and predictions are evaluated. See [Mode
     2. Click **Create run** and pick the ground-truth source, prediction source, and IoU threshold.
     3. Name the run, for example `gt_yolo26n`, and start it.
 
-    !!! todo "Media placeholder"
-        Add a GIF creating an evaluation run and the summary appearing.
-
 ## Step 4: Read the metrics
 
 Each evaluated image gets three per-sample metrics:
@@ -272,7 +269,7 @@ Not every high `fp` or `fn` means the model failed. Triage each case before you 
 
 | Signal | Likely cause | Action |
 | --- | --- | --- |
-| High `fp`/`fn`, and the ground-truth box looks wrong | Mislabeled, missing, or shifted annotation | Fix the box in the `ground_truth` layer, or tag `wrong_annotation` to fix later |
+| High `fp`/`fn`, and the ground-truth box looks wrong | Mislabeled, missing, or shifted annotation | Fix the box in the `ground_truth` layer, or tag `wrong_annotations` to fix later |
 | High `fp`/`fn`, and the ground-truth box looks correct | Real model gap: confused classes, hard scenes, objects the model never learned | Tag by pattern (for example `failure_small_objects`) and group with embedding clusters |
 | High `fn` on a small, isolated cluster | Not enough data to tell a real gap from noise | Add and label more images like that cluster, then re-evaluate |
 
