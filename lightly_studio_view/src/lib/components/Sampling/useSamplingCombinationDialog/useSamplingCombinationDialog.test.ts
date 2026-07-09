@@ -94,6 +94,15 @@ describe('useSamplingCombinationDialog', () => {
     });
 
     describe('notEnoughSamples', () => {
+        it('is false when nSamplesToSelect is null', () => {
+            filteredSampleCount.set(5);
+            const { notEnoughSamples, nSamplesToSelect } =
+                useSamplingCombinationDialog(defaultParams);
+            nSamplesToSelect.set(null);
+
+            expect(get(notEnoughSamples)).toBe(false);
+        });
+
         it('is true when nSamplesToSelect exceeds a positive filteredSampleCount', () => {
             filteredSampleCount.set(5);
             const { notEnoughSamples, nSamplesToSelect } =
@@ -187,6 +196,19 @@ describe('useSamplingCombinationDialog', () => {
             expect(get(isFormValid)).toBe(false);
         });
 
+        it('is false when nSamplesToSelect is null', () => {
+            instances.set([
+                { id: 'a', type: 'diversity', params: { strength: 1 }, isExpanded: true }
+            ]);
+
+            const { isFormValid, nSamplesToSelect, selectionResultTagName } =
+                useSamplingCombinationDialog(defaultParams);
+            nSamplesToSelect.set(null);
+            selectionResultTagName.set('my-tag');
+
+            expect(get(isFormValid)).toBe(false);
+        });
+
         it('is false when selectionResultTagName is blank', () => {
             instances.set([
                 { id: 'a', type: 'diversity', params: { strength: 1 }, isExpanded: true }
@@ -238,6 +260,18 @@ describe('useSamplingCombinationDialog', () => {
             expect(get(createButtonTooltip)).toBe(
                 'Complete the required fields in all strategies.'
             );
+        });
+
+        it('returns message about sample count when nSamplesToSelect is null', () => {
+            instances.set([
+                { id: 'a', type: 'diversity', params: { strength: 1 }, isExpanded: true }
+            ]);
+            const { createButtonTooltip, nSamplesToSelect, selectionResultTagName } =
+                useSamplingCombinationDialog(defaultParams);
+            nSamplesToSelect.set(null);
+            selectionResultTagName.set('my-tag');
+
+            expect(get(createButtonTooltip)).toBe('Enter a number of samples greater than 0.');
         });
 
         it('returns message about sample count when nSamplesToSelect is 0', () => {
@@ -400,6 +434,26 @@ describe('useSamplingCombinationDialog', () => {
 
             expect(get(percentageToSelect)).toBe(0);
         });
+
+        it('sets nSamplesToSelect and percentageToSelect to null when input is cleared', () => {
+            filteredSampleCount.set(1000);
+            const { updateAbsolute, nSamplesToSelect, percentageToSelect } =
+                useSamplingCombinationDialog(defaultParams);
+
+            updateAbsolute(NaN);
+
+            expect(get(nSamplesToSelect)).toBeNull();
+            expect(get(percentageToSelect)).toBeNull();
+        });
+
+        it('updates percentageToSelect reactively when filteredSampleCount changes and user has not entered a percentage', () => {
+            filteredSampleCount.set(0);
+            const { percentageToSelect } = useSamplingCombinationDialog(defaultParams);
+
+            filteredSampleCount.set(100);
+
+            expect(get(percentageToSelect)).toBe(10); // default nSamplesToSelect=10, 10/100*100=10
+        });
     });
 
     describe('updatePercentage', () => {
@@ -443,6 +497,29 @@ describe('useSamplingCombinationDialog', () => {
 
             expect(get(percentageToSelect)).toBe(150);
             expect(get(nSamplesToSelect)).toBe(150);
+        });
+
+        it('sets nSamplesToSelect and percentageToSelect to null when input is cleared', () => {
+            filteredSampleCount.set(1000);
+            const { updatePercentage, nSamplesToSelect, percentageToSelect } =
+                useSamplingCombinationDialog(defaultParams);
+
+            updatePercentage(NaN);
+
+            expect(get(nSamplesToSelect)).toBeNull();
+            expect(get(percentageToSelect)).toBeNull();
+        });
+
+        it('preserves the user-entered percentage when filteredSampleCount changes after entry', () => {
+            filteredSampleCount.set(121);
+            const { updatePercentage, nSamplesToSelect, percentageToSelect } =
+                useSamplingCombinationDialog(defaultParams);
+
+            updatePercentage(100);
+            filteredSampleCount.set(116);
+
+            expect(get(percentageToSelect)).toBe(100);
+            expect(get(nSamplesToSelect)).toBe(121);
         });
     });
 

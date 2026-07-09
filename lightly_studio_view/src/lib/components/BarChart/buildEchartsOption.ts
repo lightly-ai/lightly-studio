@@ -10,8 +10,7 @@ import {
 import type { CategoryCount } from './';
 
 // Single accent color (the Lightly primary green, --color-lightly-primary #3bd99f):
-// per-class colors carry no meaning in a count distribution, mirroring FiftyOne's
-// histograms panel.
+// per-class colors carry no meaning in a count distribution.
 const BAR_COLOR = 'rgba(59,217,159,0.85)';
 
 /** Bar layout: 'vertical' bars grow upward, 'horizontal' bars grow rightward. */
