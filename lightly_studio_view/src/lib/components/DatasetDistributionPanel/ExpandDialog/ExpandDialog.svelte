@@ -60,7 +60,7 @@
             <BarChart
                 data={visible}
                 orientation={config.orientation}
-                heightPx={560}
+                maxHeightPx={560}
                 {totalCount}
                 {onBarClick}
             />
