@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Make sure text embedding is loaded and can be used after a restart of the GUI.
+
 ### Security
 
 ## \[1.0.2\] - 2026-07-02
