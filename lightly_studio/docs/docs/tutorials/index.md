@@ -14,4 +14,9 @@ unlabeled data to a trained and evaluated model.
 
     Explore embeddings, remove near-duplicates, auto-label with a detection plugin, and review annotations before training.
 
+-   **[Evaluate YOLO26 on Your Dataset with LightlyStudio](yolo26-model-evaluation.md)**
+
+    <!-- TODO: add a thumbnail screenshot, e.g. of the confusion matrix or evaluation panel -->
+
+    Compare predictions against ground truth, use the confusion matrix and embeddings to find failure patterns, and export issues for relabeling.
 </div>
