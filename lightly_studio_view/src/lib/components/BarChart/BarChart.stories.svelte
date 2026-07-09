@@ -35,7 +35,4 @@
     args={{ data: longTail, orientation: 'horizontal' }}
 />
 
-<Story
-    name="Horizontal long labels"
-    args={{ data: longLabels, orientation: 'horizontal' }}
-/>
+<Story name="Horizontal long labels" args={{ data: longLabels, orientation: 'horizontal' }} />

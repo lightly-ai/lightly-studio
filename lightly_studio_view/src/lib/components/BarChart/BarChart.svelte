@@ -106,7 +106,9 @@
     </div>
 {:else}
     <div
-        class="w-full dark:[color-scheme:dark] {isHorizontal ? 'overflow-y-auto' : 'overflow-x-auto'}"
+        class="w-full dark:[color-scheme:dark] {isHorizontal
+            ? 'overflow-y-auto'
+            : 'overflow-x-auto'}"
         style={viewportStyle}
         data-testid="bar-chart"
     >
