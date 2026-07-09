@@ -304,15 +304,27 @@
     const plotFilterVideoSampleIds = $derived(
         $videoFilterFromHook?.sample_filter?.sample_ids ?? []
     );
+    // Query, tag and confusion-cell selections live on the shared image filter's
+    // sample_filter. Pull them out so the distribution counts track them too
+    // (previously only sample_ids from this filter were forwarded).
+    const plotFilterTagIds = $derived($imageFilterFromHook?.sample_filter?.tag_ids ?? []);
+    const plotFilterConfusionCell = $derived(
+        $imageFilterFromHook?.sample_filter?.confusion_cell ?? null
+    );
+    const plotFilterQueryExpr = $derived($imageFilterFromHook?.sample_filter?.query_expr ?? null);
 
     // Image-count filter shared by the mix and per-type distribution queries so
-    // the distribution plot tracks the active filters (dimensions, labels, …).
+    // the distribution plot tracks the active filters (dimensions, labels,
+    // metadata, query, tags and confusion cell).
     const imageAnnotationCountsFilter = $derived(
         buildImageFilter({
             dimensionsValues: $dimensionsValues,
             annotationFilter: $annotationFilterStore,
             metadataFilters,
-            sampleIds: isAnnotations ? [] : plotFilterImageSampleIds
+            sampleIds: isAnnotations ? [] : plotFilterImageSampleIds,
+            tagIds: isAnnotations ? [] : plotFilterTagIds,
+            confusionCell: isAnnotations ? null : plotFilterConfusionCell,
+            queryExpr: isAnnotations ? null : plotFilterQueryExpr
         })
     );
 
