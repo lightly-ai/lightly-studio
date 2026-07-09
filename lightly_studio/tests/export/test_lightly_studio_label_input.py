@@ -166,7 +166,6 @@ class TestLightlyStudioLabelInput:
         ]
         create_images(db_session=db_session, collection_id=collection.collection_id, images=images)
 
-        # Test for task_no_ann
         label_input = LightlyStudioObjectDetectionInput(
             session=db_session,
             dataset_id=collection.dataset_id,

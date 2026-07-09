@@ -232,7 +232,7 @@ def _build_full_dataset(session: Session, name: str) -> UUID:
     create_annotation_metrics(
         session=session,
         run_id=run.id,
-        true_positive_metric_stubs=[
+        pair_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=eval_image.sample_id,
                 metrics={"iou": 0.8},

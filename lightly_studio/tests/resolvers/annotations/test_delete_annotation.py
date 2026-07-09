@@ -245,7 +245,7 @@ def test_delete_annotation__preserves_other_run_sample_metrics(
     create_annotation_metrics(
         session=db_session,
         run_id=other_run.id,
-        true_positive_metric_stubs=[
+        pair_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=image.sample_id,
                 metrics={"iou": 0.75},

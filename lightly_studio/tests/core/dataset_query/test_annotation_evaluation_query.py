@@ -43,7 +43,7 @@ def test_annotation_metric_query__filters_matching_samples(db_session: Session) 
         annotation_metrics=[
             AnnotationMetricStub(sample_id=image_a.sample_id, metric_name="score", value=0.95),
         ],
-        true_positive_metric_stubs=[
+        pair_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=image_a.sample_id,
                 metrics={"score": 0.2},
@@ -99,7 +99,7 @@ def test_annotation_metric_query__scopes_run_name_to_dataset(db_session: Session
     create_annotation_metrics(
         session=db_session,
         run_id=run.id,
-        true_positive_metric_stubs=[
+        pair_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=image_a.sample_id,
                 metrics={"score": 0.9},
@@ -115,7 +115,7 @@ def test_annotation_metric_query__scopes_run_name_to_dataset(db_session: Session
     create_annotation_metrics(
         session=db_session,
         run_id=other_run.id,
-        true_positive_metric_stubs=[
+        pair_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=other_image.sample_id,
                 metrics={"score": 0.0},
@@ -150,7 +150,7 @@ def test_annotation_metric_query__matches_multiple_metrics(db_session: Session) 
     create_annotation_metrics(
         session=db_session,
         run_id=run.id,
-        true_positive_metric_stubs=[
+        pair_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=image_a.sample_id,
                 gt_annotation_label_id=cat_label.annotation_label_id,
@@ -192,7 +192,7 @@ def test_annotation_metric_query__does_not_mix_criteria_across_annotation_pairs(
     create_annotation_metrics(
         session=db_session,
         run_id=run.id,
-        true_positive_metric_stubs=[
+        pair_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=image.sample_id,
                 gt_annotation_label_id=cat_label.annotation_label_id,
@@ -240,7 +240,7 @@ def test_annotation_metric_query__matches_run_without_criteria(
     create_annotation_metrics(
         session=db_session,
         run_id=run.id,
-        true_positive_metric_stubs=[
+        pair_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=image_a.sample_id,
                 metrics={"score": 0.2},
@@ -279,7 +279,7 @@ def test_annotation_metric_query__matches_off_diagonal_confusion_cell(
     create_annotation_metrics(
         session=db_session,
         run_id=run.id,
-        true_positive_metric_stubs=[
+        pair_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=image.sample_id,
                 metrics={"score": 0.8},
