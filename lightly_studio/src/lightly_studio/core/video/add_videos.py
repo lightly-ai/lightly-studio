@@ -101,18 +101,6 @@ class VideoLoadContext:
     embedding_model_id: UUID | None
 
 
-@dataclass
-class VideoLoadContext:
-    """Loop-invariant settings shared while loading a batch of videos into a collection."""
-
-    session: Session
-    collection_id: UUID
-    video_frames_collection_id: UUID
-    video_channel: int
-    num_decode_threads: int | None
-    target_fps: float | None
-
-
 def load_into_collection_from_paths(  # noqa: PLR0913
     session: Session,
     collection_id: UUID,
@@ -186,15 +174,6 @@ def load_into_collection_from_paths(  # noqa: PLR0913
         embedding_model_id=embedding_model_id,
     )
 
-    load_context = VideoLoadContext(
-        session=session,
-        collection_id=collection_id,
-        video_frames_collection_id=video_frames_collection_id,
-        video_channel=video_channel,
-        num_decode_threads=num_decode_threads,
-        target_fps=target_fps,
-    )
-
     for video_path in tqdm(
         video_paths_list,
         desc="Loading frames from videos",
@@ -210,27 +189,10 @@ def load_into_collection_from_paths(  # noqa: PLR0913
             created_video_sample_ids.append(video_sample_id)
             created_video_frame_sample_ids.extend(frame_sample_ids)
 
-        # Create video frame samples by parsing all frames
-        extraction_context = FrameExtractionContext(
-            session=context.session,
-            collection_id=context.video_frames_collection_id,
-            video_sample_id=video_sample_ids[0],
-            embed_frames=context.embed_frames,
-            embedding_model_id=context.embedding_model_id,
-        )
-        frame_sample_ids = _create_video_frame_samples(
-            context=extraction_context,
-            video_container=video_container,
-            video_channel=context.video_channel,
-            num_decode_threads=context.num_decode_threads,
-            target_fps=context.target_fps,
-        )
+    report.log_summary()
+    report.raise_if_all_failed()
 
-        video_container.close()
-        return video_sample_ids[0], frame_sample_ids
-    finally:
-        # Ensure file is closed even if container operations fail
-        video_file.close()
+    return created_video_sample_ids, created_video_frame_sample_ids
 
 
 def _load_single_video(
@@ -305,6 +267,8 @@ def _load_single_video(
                 session=context.session,
                 collection_id=context.video_frames_collection_id,
                 video_sample_id=video_sample_ids[0],
+                embed_frames=context.embed_frames,
+                embedding_model_id=context.embedding_model_id,
             )
             frame_sample_ids = _create_video_frame_samples(
                 context=extraction_context,
