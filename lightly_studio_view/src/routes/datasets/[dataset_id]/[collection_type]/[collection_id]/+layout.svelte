@@ -259,9 +259,13 @@
     });
 
     const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId }));
-    const hasEmbeddings = $derived(!!hasEmbeddingsQuery.data);
+    const hasEmbeddings = $derived(!!hasEmbeddingsQuery.data?.has_embeddings);
+    const hasTextSearchEmbeddings = $derived(!!hasEmbeddingsQuery.data?.has_text_search_embeddings);
     const hasMediaWithEmbeddings = $derived(
         (isImages || isVideos || isAnnotations) && hasEmbeddings
+    );
+    const hasMediaWithTextSearch = $derived(
+        (isImages || isVideos || isAnnotations) && hasTextSearchEmbeddings
     );
     const collectionSearchPlaceholder = $derived(
         isAnnotations
@@ -444,7 +448,7 @@
                         {canSelectAll}
                         isSelectionActive={$selectedCount > 0}
                         {isImages}
-                        {hasMediaWithEmbeddings}
+                        hasMediaWithEmbeddings={hasMediaWithTextSearch}
                         collectionDatasetId={collection.dataset_id}
                         onSelectAll={selectAllHandle.handleSelectAll}
                         onDeselectAll={clearSelection}

@@ -136,9 +136,9 @@ def has_embeddings(
         Path(title="collection Id"),
         Depends(get_and_validate_collection_id),
     ],
-) -> bool:
-    """Check if a collection has embeddings."""
-    return embedding_utils.collection_has_embeddings(
+) -> embedding_utils.CollectionEmbeddingsStatus:
+    """Report which embedding-based features are available for a collection."""
+    return embedding_utils.get_collection_embeddings_status(
         session=session, collection_id=collection.collection_id
     )
 

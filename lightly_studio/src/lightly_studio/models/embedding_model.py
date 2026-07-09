@@ -16,6 +16,7 @@ class EmbeddingModelBase(SQLModel):
     embedding_model_hash: str = Field(default="", sa_column=Column(VARCHAR(128)))
     embedding_dimension: int
     collection_id: UUID = Field(default=None, foreign_key="collection.collection_id", index=True)
+    supports_text_search: bool = Field(default=True)
 
 
 class EmbeddingModelCreate(EmbeddingModelBase):

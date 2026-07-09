@@ -120,6 +120,7 @@ class DatabaseEngine:
             )
         else:
             SQLModel.metadata.create_all(self._engine)
+            _migrate_duckdb_schema(self._engine)
 
     @contextmanager
     def session(self) -> Generator[Session, None, None]:
@@ -308,6 +309,26 @@ def _initialize_postgres_schema(
         logging.info("Dropped all tables in PostgreSQL database.")
 
     db_migrations.run_migrations(engine=engine, engine_url=engine_url)
+
+
+def _migrate_duckdb_schema(engine: Engine) -> None:
+    """Apply in-place schema migrations for existing DuckDB databases.
+
+    DuckDB has no migration framework (Alembic only covers PostgreSQL) and
+    ``SQLModel.metadata.create_all`` never alters existing tables, so columns added
+    to a model after a database file was created must be added here. All statements
+    must be idempotent.
+    """
+    with engine.connect() as conn:
+        # Added 07/2026. Defaults to true because all rows created before this column
+        # existed came from CLIP-style vision-text generators.
+        conn.execute(
+            statement=text(
+                "ALTER TABLE embedding_model "
+                "ADD COLUMN IF NOT EXISTS supports_text_search BOOLEAN DEFAULT true"
+            )
+        )
+        conn.commit()
 
 
 def _detect_backend_from_url(engine_url: str) -> DatabaseBackend:

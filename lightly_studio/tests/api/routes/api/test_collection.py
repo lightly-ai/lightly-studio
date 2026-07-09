@@ -4,7 +4,6 @@ from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import (
@@ -14,7 +13,6 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_OK,
 )
-from lightly_studio.dataset.embedding_manager import EmbeddingManager
 from lightly_studio.models.collection import SampleType
 from tests.helpers_resolvers import (
     ImageStub,
@@ -215,22 +213,16 @@ def test_read_collections_overview(test_client: TestClient, db_session: Session)
 def test_has_embeddings(
     test_client: TestClient,
     db_session: Session,
-    mocker: MockerFixture,
 ) -> None:
     col_id = create_collection(session=db_session).collection_id
     embedding_model_id = create_embedding_model(
         session=db_session, collection_id=col_id
     ).embedding_model_id
-    mock_get_model = mocker.patch.object(
-        EmbeddingManager, "load_or_get_default_model", return_value=embedding_model_id
-    )
 
     # Initially, the collection has no embeddings.
     response = test_client.get(f"/api/collections/{col_id!s}/has_embeddings")
     assert response.status_code == HTTP_STATUS_OK
-    assert response.json() is False
-    mock_get_model.assert_called_once_with(session=db_session, collection_id=col_id)
-    mock_get_model.reset_mock()
+    assert response.json() == {"has_embeddings": False, "has_text_search_embeddings": False}
 
     # Add an embedding to the collection.
     create_samples_with_embeddings(
@@ -243,8 +235,27 @@ def test_has_embeddings(
     # Now, the collection should report having embeddings.
     response = test_client.get(f"/api/collections/{col_id!s}/has_embeddings")
     assert response.status_code == HTTP_STATUS_OK
-    assert response.json() is True
-    mock_get_model.assert_called_once_with(session=db_session, collection_id=col_id)
+    assert response.json() == {"has_embeddings": True, "has_text_search_embeddings": True}
+
+
+def test_has_embeddings__custom_model(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    col_id = create_collection(session=db_session).collection_id
+    embedding_model_id = create_embedding_model(
+        session=db_session, collection_id=col_id, supports_text_search=False
+    ).embedding_model_id
+    create_samples_with_embeddings(
+        session=db_session,
+        collection_id=col_id,
+        embedding_model_id=embedding_model_id,
+        images_and_embeddings=[(ImageStub(), [0.1, 0.2, 0.3])],
+    )
+
+    response = test_client.get(f"/api/collections/{col_id!s}/has_embeddings")
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {"has_embeddings": True, "has_text_search_embeddings": False}
 
 
 @pytest.mark.postgres_only  # Deep copying is enterprise-only (PostgreSQL-backed).

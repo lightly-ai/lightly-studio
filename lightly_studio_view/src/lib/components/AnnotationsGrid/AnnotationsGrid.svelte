@@ -64,9 +64,11 @@
     const plotSelectedRegion = $derived($annotationPlotRegion);
 
     // The text embedding search is shared with the images tab and persists across the tab switch.
-    // Only apply it when this annotation collection actually has embeddings.
+    // Only apply it when this annotation collection has embeddings from a text-capable model.
     const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId: collection_id }));
-    const searchEmbedding = $derived(hasEmbeddingsQuery.data ? $textEmbedding : undefined);
+    const searchEmbedding = $derived(
+        hasEmbeddingsQuery.data?.has_text_search_embeddings ? $textEmbedding : undefined
+    );
 
     // Drag-to-search crop preview. Tiles report only their crop geometry; the blob is
     // rendered lazily when a drag starts (not per visible tile), and revoked on unmount.

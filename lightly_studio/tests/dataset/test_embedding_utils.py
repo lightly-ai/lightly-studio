@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.dataset import embedding_utils
-from lightly_studio.dataset.embedding_manager import EmbeddingManager
 from tests.helpers_resolvers import (
     ImageStub,
     create_collection,
@@ -13,27 +11,32 @@ from tests.helpers_resolvers import (
 )
 
 
-def test_collection_has_embeddings(db_session: Session, mocker: MockerFixture) -> None:
+def test_get_collection_embeddings_status__no_models(db_session: Session) -> None:
+    col_id = create_collection(session=db_session).collection_id
+
+    status = embedding_utils.get_collection_embeddings_status(
+        session=db_session, collection_id=col_id
+    )
+    assert status.has_embeddings is False
+    assert status.has_text_search_embeddings is False
+
+
+def test_get_collection_embeddings_status__model_without_embeddings(db_session: Session) -> None:
+    col_id = create_collection(session=db_session).collection_id
+    create_embedding_model(session=db_session, collection_id=col_id)
+
+    status = embedding_utils.get_collection_embeddings_status(
+        session=db_session, collection_id=col_id
+    )
+    assert status.has_embeddings is False
+    assert status.has_text_search_embeddings is False
+
+
+def test_get_collection_embeddings_status__text_capable_model(db_session: Session) -> None:
     col_id = create_collection(session=db_session).collection_id
     embedding_model_id = create_embedding_model(
         session=db_session, collection_id=col_id
     ).embedding_model_id
-    mock_get_model = mocker.patch.object(
-        EmbeddingManager, "load_or_get_default_model", return_value=embedding_model_id
-    )
-
-    # Initially, the collection has no embeddings.
-    assert not embedding_utils.collection_has_embeddings(
-        session=db_session,
-        collection_id=col_id,
-    )
-    mock_get_model.assert_called_once_with(
-        session=db_session,
-        collection_id=col_id,
-    )
-    mock_get_model.reset_mock()
-
-    # Add an embedding to the collection.
     create_samples_with_embeddings(
         session=db_session,
         collection_id=col_id,
@@ -41,12 +44,27 @@ def test_collection_has_embeddings(db_session: Session, mocker: MockerFixture) -
         images_and_embeddings=[(ImageStub(), [0.1, 0.2, 0.3])],
     )
 
-    # Now, the collection should report having embeddings.
-    assert embedding_utils.collection_has_embeddings(
+    status = embedding_utils.get_collection_embeddings_status(
+        session=db_session, collection_id=col_id
+    )
+    assert status.has_embeddings is True
+    assert status.has_text_search_embeddings is True
+
+
+def test_get_collection_embeddings_status__custom_model_only(db_session: Session) -> None:
+    col_id = create_collection(session=db_session).collection_id
+    embedding_model_id = create_embedding_model(
+        session=db_session, collection_id=col_id, supports_text_search=False
+    ).embedding_model_id
+    create_samples_with_embeddings(
         session=db_session,
         collection_id=col_id,
+        embedding_model_id=embedding_model_id,
+        images_and_embeddings=[(ImageStub(), [0.1, 0.2, 0.3])],
     )
-    mock_get_model.assert_called_once_with(
-        session=db_session,
-        collection_id=col_id,
+
+    status = embedding_utils.get_collection_embeddings_status(
+        session=db_session, collection_id=col_id
     )
+    assert status.has_embeddings is True
+    assert status.has_text_search_embeddings is False

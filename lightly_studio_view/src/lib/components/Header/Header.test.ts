@@ -85,7 +85,7 @@ describe('Header', () => {
 
         useHasEmbeddings.mockReturnValue(
             readable({
-                data: true,
+                data: { has_embeddings: true, has_text_search_embeddings: true },
                 isLoading: false,
                 error: null
             })
