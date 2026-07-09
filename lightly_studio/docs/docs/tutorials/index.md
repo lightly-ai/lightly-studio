@@ -16,7 +16,7 @@ unlabeled data to a trained and evaluated model.
 
 -   **[Evaluate YOLO26 on Your Dataset with LightlyStudio](yolo26-model-evaluation.md)**
 
-    <!-- TODO: add a thumbnail screenshot, e.g. of the confusion matrix or evaluation panel -->
+    [![Evaluate YOLO26 on Your Dataset with LightlyStudio](https://storage.googleapis.com/lightly-public/studio/tutorials/detection-model-evaluation/confusion-matrix-overview-crop.jpg)](yolo26-model-evaluation.md)
 
     Compare predictions against ground truth, use the confusion matrix and embeddings to find failure patterns, and export issues for relabeling.
 </div>
