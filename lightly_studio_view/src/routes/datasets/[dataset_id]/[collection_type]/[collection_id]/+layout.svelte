@@ -51,7 +51,8 @@
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
-    import { SampleType } from '$lib/api/lightly_studio_local/types.gen';
+    import { AnnotationType, SampleType } from '$lib/api/lightly_studio_local/types.gen';
+    import type { DistributionSource } from '$lib/components/DatasetDistributionPanel';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
     import {
         buildVideoAnnotationCountsFilter,
@@ -371,8 +372,76 @@
     const panelIsVisible = $derived(
         ($activePanel === 'evaluationRuns' && supportsEvaluation) ||
             ($activePanel === 'embeddingPlot' && hasMediaWithEmbeddings) ||
-            ($activePanel === 'queryEditor' && isImages)
+            ($activePanel === 'queryEditor' && isImages) ||
+            ($activePanel === 'distribution' && isImages)
     );
+
+    // Class counts for the distribution panel. The "All types" source reuses the
+    // shared annotation-count query that feeds the labels filter; the per-type
+    // sources fetch classification / detection / segmentation totals on demand
+    // while the panel is open.
+    const toCategoryCounts = (
+        countsData: { label_name: string; total_count: number }[] | undefined
+    ) =>
+        (countsData ?? []).map((item) => ({
+            label: item.label_name,
+            count: Number(item.total_count)
+        }));
+
+    const classDistributionCounts = $derived(
+        toCategoryCounts(annotationCounts.data as { label_name: string; total_count: number }[])
+    );
+
+    const distributionPanelVisible = $derived($activePanel === 'distribution' && isImages);
+
+    // Only create the per-type queries while the panel is open so we don't fetch
+    // three extra count queries on every collection view.
+    const distributionTypeQueries = $derived.by(() => {
+        if (!distributionPanelVisible) return null;
+        return {
+            [AnnotationType.CLASSIFICATION]: useImageAnnotationCounts({
+                collectionId: datasetId,
+                annotationType: AnnotationType.CLASSIFICATION
+            }),
+            [AnnotationType.OBJECT_DETECTION]: useImageAnnotationCounts({
+                collectionId: datasetId,
+                annotationType: AnnotationType.OBJECT_DETECTION
+            }),
+            [AnnotationType.SEGMENTATION_MASK]: useImageAnnotationCounts({
+                collectionId: datasetId,
+                annotationType: AnnotationType.SEGMENTATION_MASK
+            })
+        };
+    });
+
+    const allTypesSource = $derived<DistributionSource>({
+        id: 'all',
+        label: 'All types',
+        data: classDistributionCounts
+    });
+
+    const distributionSources = $derived.by<DistributionSource[]>(() => {
+        const typeQueries = distributionTypeQueries;
+        if (!typeQueries) return [allTypesSource];
+        const perType = [
+            { id: AnnotationType.CLASSIFICATION, label: 'Classification' },
+            { id: AnnotationType.OBJECT_DETECTION, label: 'Object detection' },
+            { id: AnnotationType.SEGMENTATION_MASK, label: 'Segmentation' }
+        ];
+        const typeSources: DistributionSource[] = [];
+        for (const { id, label } of perType) {
+            const data = toCategoryCounts(
+                typeQueries[id].data as { label_name: string; total_count: number }[]
+            );
+            // Skip types that have no annotations so the selector stays clean.
+            if (data.length > 0) typeSources.push({ id, label, data });
+        }
+        // With a single type, "All types" would just duplicate it — show only
+        // the type so the panel's selector stays hidden.
+        if (typeSources.length <= 1)
+            return typeSources.length === 1 ? typeSources : [allTypesSource];
+        return [allTypesSource, ...typeSources];
+    });
 </script>
 
 <div class="flex-none">
@@ -512,6 +581,13 @@
                             {/await}
                         {:else if $activePanel === 'queryEditor' && isImages}
                             <QueryEditorPanel onClose={() => setActivePanel('none')} />
+                        {:else if $activePanel === 'distribution' && isImages}
+                            {#await import('$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte') then { default: DatasetDistributionPanel }}
+                                <DatasetDistributionPanel
+                                    sources={distributionSources}
+                                    onClose={() => setActivePanel('none')}
+                                />
+                            {/await}
                         {/if}
                     </Pane>
                 </PaneGroup>
