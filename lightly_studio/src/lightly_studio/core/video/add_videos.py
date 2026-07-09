@@ -197,62 +197,70 @@ def _load_single_video(
 
     video_file = fs.open(path=fs_path, mode="rb")
     try:
-        # Translate a failed open/header read into a broken-file signal at this
-        # I/O boundary; any other exception propagates rather than being recorded.
+        # Open the container first: if this fails there is nothing to close, so the
+        # failed open is translated into a broken-file signal at this I/O boundary.
         try:
             # Open video container for reading (returns InputContainer)
             video_container = container.open(file=video_file)
-            video_stream = video_container.streams.video[context.video_channel]
-
-            # Get video metadata
-            framerate = float(video_stream.average_rate) or 0.0
-            video_width = video_stream.width or 0
-            video_height = video_stream.height or 0
-            if video_stream.duration and video_stream.time_base:
-                video_duration = float(video_stream.duration * video_stream.time_base)
-            else:
-                video_duration = None
-        except (OSError, IndexError, FFmpegError) as e:
+        except (OSError, FFmpegError) as e:
             raise BrokenInputFileError() from e
 
-        # Create video sample
-        video_sample_ids = video_resolver.create_many(
-            session=context.session,
-            collection_id=context.collection_id,
-            samples=[
-                VideoCreate(
-                    file_path_abs=video_path,
-                    width=video_width,
-                    height=video_height,
-                    duration_s=video_duration,
-                    fps=framerate,
-                    file_name=Path(video_path).name,
-                )
-            ],
-        )
+        try:
+            # Translate a failed header read into a broken-file signal; any other
+            # exception propagates rather than being recorded.
+            try:
+                video_stream = video_container.streams.video[context.video_channel]
 
-        if len(video_sample_ids) != 1:
+                # Get video metadata
+                framerate = float(video_stream.average_rate) or 0.0
+                video_width = video_stream.width or 0
+                video_height = video_stream.height or 0
+                if video_stream.duration and video_stream.time_base:
+                    video_duration = float(video_stream.duration * video_stream.time_base)
+                else:
+                    video_duration = None
+            except (OSError, IndexError, FFmpegError) as e:
+                raise BrokenInputFileError() from e
+
+            # Create video sample
+            video_sample_ids = video_resolver.create_many(
+                session=context.session,
+                collection_id=context.collection_id,
+                samples=[
+                    VideoCreate(
+                        file_path_abs=video_path,
+                        width=video_width,
+                        height=video_height,
+                        duration_s=video_duration,
+                        fps=framerate,
+                        file_name=Path(video_path).name,
+                    )
+                ],
+            )
+
+            if len(video_sample_ids) != 1:
+                raise RuntimeError(f"There was an error adding {video_path} to the dataset.")
+
+            # Create video frame samples by parsing all frames
+            extraction_context = FrameExtractionContext(
+                session=context.session,
+                collection_id=context.video_frames_collection_id,
+                video_sample_id=video_sample_ids[0],
+            )
+            frame_sample_ids = _create_video_frame_samples(
+                context=extraction_context,
+                video_container=video_container,
+                video_channel=context.video_channel,
+                num_decode_threads=context.num_decode_threads,
+                target_fps=context.target_fps,
+            )
+
+            return video_sample_ids[0], frame_sample_ids
+        finally:
+            # Always release the native FFmpeg container once it has been opened, even
+            # if metadata reads, sample creation, or frame extraction raised.
             video_container.close()
-            raise RuntimeError(f"There was an error adding {video_path} to the dataset.")
-
-        # Create video frame samples by parsing all frames
-        extraction_context = FrameExtractionContext(
-            session=context.session,
-            collection_id=context.video_frames_collection_id,
-            video_sample_id=video_sample_ids[0],
-        )
-        frame_sample_ids = _create_video_frame_samples(
-            context=extraction_context,
-            video_container=video_container,
-            video_channel=context.video_channel,
-            num_decode_threads=context.num_decode_threads,
-            target_fps=context.target_fps,
-        )
-
-        video_container.close()
-        return video_sample_ids[0], frame_sample_ids
     finally:
-        # Ensure file is closed even if container operations fail
         video_file.close()
 
 
