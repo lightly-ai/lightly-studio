@@ -298,6 +298,48 @@ describe('usePlotData', () => {
         expect(Array.from(data.category)).toEqual([0, 0, 0, 0]);
     });
 
+    it('highlights points inside a committed region when there is no live range selection', () => {
+        const mockData = createMockArrowData();
+        const region: Point[] = [
+            { x: 0, y: 0 },
+            { x: 2, y: 0 },
+            { x: 2, y: 6 },
+            { x: 0, y: 6 }
+        ];
+
+        const result = usePlotData({
+            arrowData: mockData,
+            rangeSelection: null,
+            highlightRegion: region
+        });
+
+        const data = get(result.data) as { category: Uint8Array };
+        // First two points are inside the region (keep their category); the rest are demoted to
+        // EXCLUDED (1), so the plot reflects the committed selection.
+        expect(Array.from(data.category)).toEqual([2, 3, 1, 1]);
+        // The resolved ids live server-side; the region path must not recompute them client-side.
+        expect(get(result.selectedSampleIds)).toEqual([]);
+    });
+
+    it('prefers the live range selection over a committed region', () => {
+        const mockData = createMockArrowData();
+        const selection: Point[] = [
+            { x: 0, y: 0 },
+            { x: 2, y: 0 },
+            { x: 2, y: 6 },
+            { x: 0, y: 6 }
+        ];
+
+        const result = usePlotData({
+            arrowData: mockData,
+            rangeSelection: selection,
+            highlightRegion: selection
+        });
+
+        // The range-selection branch still populates selectedSampleIds for the pending commit.
+        expect(get(result.selectedSampleIds)).toEqual(['sample1', 'sample2']);
+    });
+
     it('should return error store', () => {
         const mockData = createMockArrowData();
 

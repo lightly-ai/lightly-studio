@@ -111,22 +111,13 @@ class TestImageDatasetExport:
     ) -> None:
         dataset = ImageDataset.create(name="test_dataset")
 
-        # Mock the actual export function to avoid creating a file
-        mock_to_coco_object_detections = mocker.patch.object(
-            image_dataset_export, "to_coco_object_detections"
-        )
+        # Patch the writer so no file is created and assert the default path is used.
+        mock_output = mocker.patch.object(image_dataset_export, "COCOObjectDetectionOutput")
 
-        # Don't provide the export path
+        # Don't provide the export path.
         dataset.export().to_coco_object_detections()
 
-        # Check that a default output path was used
-        mock_to_coco_object_detections.assert_called_once_with(
-            session=dataset.session,
-            dataset_id=dataset.dataset_id,
-            samples=mocker.ANY,
-            output_json=Path("coco_export.json"),
-            annotation_collection_id=None,
-        )
+        mock_output.assert_called_once_with(output_file=Path("coco_export.json"))
 
     def test_to_coco_captions(
         self,
@@ -180,18 +171,15 @@ class TestImageDatasetExport:
         mocker: MockerFixture,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        mock_to_coco_captions = mocker.patch.object(image_dataset_export, "to_coco_captions")
-
         dataset = ImageDataset.create(name="test_dataset")
 
-        # Call the function under test
+        # Patch Path.open so no file is created and assert the default path is used.
+        mock_open = mocker.patch.object(Path, "open", autospec=True)
+
+        # Don't provide the export path.
         dataset.export().to_coco_captions()
 
-        # Check that a default output path was used
-        mock_to_coco_captions.assert_called_once_with(
-            samples=mocker.ANY,
-            output_json=Path("coco_export.json"),
-        )
+        assert mock_open.call_args.args[0] == Path("coco_export.json")
 
     def test_to_coco_segmentation_masks(
         self,
@@ -284,44 +272,6 @@ class TestImageDatasetExport:
             "annotations": [],
         }
 
-    def test_to_pascalvoc_segmentation_mask__via_class(
-        self,
-        tmp_path: Path,
-        patch_collection: None,  # noqa: ARG002
-    ) -> None:
-        dataset = ImageDataset.create(name="test_dataset")
-        create_images(
-            db_session=dataset.session,
-            collection_id=dataset.collection_id,
-            images=[ImageStub(path="image0.jpg", width=3, height=2)],
-        )
-
-        samples = list(dataset)
-        samples[0].add_annotation(
-            CreateSegmentationMask.from_rle_mask(
-                class_name="dog",
-                sample_2d=samples[0],
-                segmentation_mask=[1, 1, 4],
-            )
-        )
-
-        output_folder = tmp_path / "pascalvoc"
-        dataset.export().to_pascalvoc_segmentation_mask(
-            output_folder=output_folder,
-        )
-
-        class_map_path = output_folder / "class_id_to_name.json"
-        with class_map_path.open() as f:
-            class_map = json.load(f)
-        assert class_map == {"0": "background", "1": "dog"}
-
-        mask_path = output_folder / "SegmentationClass" / "image0.png"
-        with PILImage.open(mask_path) as mask:
-            mask_values = list(mask.getdata())
-        assert mask_values == [0, 1, 0, 0, 0, 0]
-
-    # TODO(Michal, 04/2026): The tests below test the module method, not the ImageDatasetExport
-    # class method. They should move outside of this tests class and not use patch_collection.
     def test_to_pascalvoc_segmentation_mask(
         self,
         tmp_path: Path,
@@ -344,13 +294,7 @@ class TestImageDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        image_dataset_export.to_pascalvoc_segmentation_mask(
-            session=dataset.session,
-            dataset_id=dataset.dataset_id,
-            samples=dataset.query(),
-            output_folder=output_folder,
-            annotation_collection_id=None,
-        )
+        dataset.export().to_pascalvoc_segmentation_mask(output_folder=output_folder)
 
         class_map_path = output_folder / "class_id_to_name.json"
         with class_map_path.open() as f:
@@ -401,13 +345,7 @@ class TestImageDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        image_dataset_export.to_pascalvoc_segmentation_mask(
-            session=dataset.session,
-            dataset_id=dataset.dataset_id,
-            samples=dataset.query(),
-            output_folder=output_folder,
-            annotation_collection_id=None,
-        )
+        dataset.export().to_pascalvoc_segmentation_mask(output_folder=output_folder)
 
         class_map_path = output_folder / "class_id_to_name.json"
         with class_map_path.open() as f:
@@ -450,13 +388,7 @@ class TestImageDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        image_dataset_export.to_pascalvoc_segmentation_mask(
-            session=dataset.session,
-            dataset_id=dataset.dataset_id,
-            samples=dataset.query(),
-            output_folder=output_folder,
-            annotation_collection_id=None,
-        )
+        dataset.export().to_pascalvoc_segmentation_mask(output_folder=output_folder)
 
         class_map_path = output_folder / "class_id_to_name.json"
         with class_map_path.open() as f:
@@ -498,13 +430,7 @@ class TestImageDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        image_dataset_export.to_pascalvoc_segmentation_mask(
-            session=dataset.session,
-            dataset_id=dataset.dataset_id,
-            samples=dataset.query(),
-            output_folder=output_folder,
-            annotation_collection_id=None,
-        )
+        dataset.export().to_pascalvoc_segmentation_mask(output_folder=output_folder)
 
         class_map_path = output_folder / "class_id_to_name.json"
         with class_map_path.open() as f:
@@ -550,13 +476,7 @@ class TestImageDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        image_dataset_export.to_pascalvoc_segmentation_mask(
-            session=dataset.session,
-            dataset_id=dataset.dataset_id,
-            samples=dataset.query(),
-            output_folder=output_folder,
-            annotation_collection_id=None,
-        )
+        dataset.export().to_pascalvoc_segmentation_mask(output_folder=output_folder)
 
         class_map_path = output_folder / "class_id_to_name.json"
         with class_map_path.open() as f:
@@ -584,10 +504,11 @@ def test_to_coco_object_detections(
 
     # Test for task_obj_det_1
     output_json = tmp_path / "task_obj_det_1.json"
-    image_dataset_export.to_coco_object_detections(
+    image_dataset_export.ImageDatasetExport(
         session=db_session,
         dataset_id=dataset.dataset_id,
         samples=DatasetQuery(dataset=dataset, session=db_session),
+    ).to_coco_object_detections(
         output_json=output_json,
         annotation_collection_id=None,
     )
@@ -627,10 +548,11 @@ def test_to_coco_object_detections__no_annotations(
     create_images(db_session=db_session, collection_id=dataset.collection_id, images=images)
 
     output_json = tmp_path / "task_no_ann.json"
-    image_dataset_export.to_coco_object_detections(
+    image_dataset_export.ImageDatasetExport(
         session=db_session,
         dataset_id=dataset.dataset_id,
         samples=DatasetQuery(dataset=dataset, session=db_session),
+    ).to_coco_object_detections(
         output_json=output_json,
         annotation_collection_id=None,
     )
@@ -682,10 +604,11 @@ def test_to_yolo_object_detections(
     )
 
     output_folder = tmp_path / "yolo"
-    image_dataset_export.to_yolo_object_detections(
+    image_dataset_export.ImageDatasetExport(
         session=db_session,
         dataset_id=dataset.dataset_id,
         samples=DatasetQuery(dataset=dataset, session=db_session),
+    ).to_yolo_object_detections(
         output_folder=output_folder,
         annotation_collection_id=None,
     )
@@ -732,50 +655,14 @@ def test_to_yolo_object_detections__filters_by_annotation_collection(
     )
 
     output_folder = tmp_path / "yolo"
-    image_dataset_export.to_yolo_object_detections(
+    image_dataset_export.ImageDatasetExport(
         session=db_session,
         dataset_id=dataset.dataset_id,
         samples=DatasetQuery(dataset=dataset, session=db_session),
+    ).to_yolo_object_detections(
         output_folder=output_folder,
         annotation_collection_id=uuid.uuid4(),
     )
 
     # The annotation belongs to a different collection, so it is filtered out.
     assert (output_folder / "labels" / "image0.txt").read_text() == ""
-
-
-def test_to_coco_captions(
-    db_session: Session,
-    tmp_path: Path,
-) -> None:
-    dataset = create_collection(session=db_session)
-    image = create_images(
-        db_session=db_session,
-        collection_id=dataset.collection_id,
-        images=[ImageStub(path="/path/image0.jpg", width=100, height=100)],
-    )[0]
-    create_caption(
-        session=db_session,
-        collection_id=dataset.collection_id,
-        parent_sample_id=image.sample_id,
-        text="caption one",
-    )
-
-    # Call the function under test
-    output_json = tmp_path / "coco_annotations.json"
-    image_dataset_export.to_coco_captions(
-        samples=DatasetQuery(dataset=dataset, session=db_session),
-        output_json=output_json,
-    )
-
-    # Load the generated JSON and verify its content
-    with open(output_json) as f:
-        coco_data = json.load(f)
-    assert coco_data == {
-        "images": [
-            {"id": 0, "file_name": "/path/image0.jpg", "width": 100, "height": 100},
-        ],
-        "annotations": [
-            {"id": 0, "image_id": 0, "caption": "caption one"},
-        ],
-    }
