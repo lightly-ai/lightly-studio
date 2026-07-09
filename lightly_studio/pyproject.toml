@@ -90,6 +90,7 @@ dev = [
     "types-boto3>=1.26.0",
     "types-tqdm>=4.67.0.20241221",
     "types-PyYAML>=6.0.0",
+    "pytest-cov>=5.0.0",
     "pytest-xdist>=3.6.1",
     "testcontainers[postgres]>=4.0.0",
 ]

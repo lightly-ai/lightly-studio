@@ -463,6 +463,162 @@ def test_count_image_annotations_by_collection__without_body(
     ]
 
 
+def test_count_image_annotations_by_collection__count_mode_samples(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    image_a = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/image_a.png",
+    )
+    image_b = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/image_b.png",
+    )
+
+    car_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection_id,
+        label_name="car",
+    )
+    person_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection_id,
+        label_name="person",
+    )
+
+    # image_a: car, car, person — image_b: car
+    create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image_a.sample_id,
+                annotation_label_id=car_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=image_a.sample_id,
+                annotation_label_id=car_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=image_a.sample_id,
+                annotation_label_id=person_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=image_b.sample_id,
+                annotation_label_id=car_label.annotation_label_id,
+            ),
+        ],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/images/annotations/count",
+        json={"count_mode": "samples"},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = {row["label_name"]: row["total_count"] for row in response.json()}
+    assert result["car"] == 2
+    assert result["person"] == 1
+
+
+def test_count_image_annotations_by_collection__count_mode_samples_with_filter(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    image_a = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/image_a.png",
+    )
+    image_b = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/image_b.png",
+    )
+
+    car_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection_id,
+        label_name="car",
+    )
+    person_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection_id,
+        label_name="person",
+    )
+
+    # image_a: car, car, person — image_b: car
+    create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image_a.sample_id,
+                annotation_label_id=car_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=image_a.sample_id,
+                annotation_label_id=car_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=image_a.sample_id,
+                annotation_label_id=person_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=image_b.sample_id,
+                annotation_label_id=car_label.annotation_label_id,
+            ),
+        ],
+    )
+
+    # Filter to images with a person annotation (only image_a) + samples count mode.
+    response = test_client.post(
+        f"/api/collections/{collection_id}/images/annotations/count",
+        json={
+            "count_mode": "samples",
+            "filter": {
+                "sample_filter": {
+                    "annotations_filter": {
+                        "annotation_label_ids": [str(person_label.annotation_label_id)]
+                    }
+                }
+            },
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = {
+        row["label_name"]: (row["current_count"], row["total_count"]) for row in response.json()
+    }
+    # current: only image_a passes the filter — 1 distinct sample for car, 1 for person
+    assert result["car"] == (1, 2)
+    assert result["person"] == (1, 1)
+
+
+def test_count_image_annotations_by_collection__count_mode_invalid(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/images/annotations/count",
+        json={"count_mode": "invalid"},
+    )
+
+    assert response.status_code == 422
+
+
 def test_get_image_sample_ids(
     test_client: TestClient,
     db_session: Session,

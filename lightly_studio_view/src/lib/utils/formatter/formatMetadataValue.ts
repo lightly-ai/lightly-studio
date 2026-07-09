@@ -1,27 +1,5 @@
-const locale = 'en-US';
-
-export const formatInteger = (num: number): string => {
-    return new Intl.NumberFormat(locale, {}).format(num).toString();
-};
-export const formatFloat = (num: number, maxDigits = 3, minDigits = 0): string => {
-    return new Intl.NumberFormat(locale, {
-        maximumFractionDigits: maxDigits,
-        minimumFractionDigits: minDigits
-    })
-        .format(num)
-        .toString();
-};
-export const formatFloat2 = (num: number): string => {
-    return formatFloat(num, 2);
-};
-
-export const formatConfidence = (confidence?: number | null): string | null => {
-    if (confidence == null) {
-        return null;
-    }
-
-    return formatFloat2(confidence);
-};
+import { formatFloat } from './formatFloat';
+import { formatInteger } from './formatInteger';
 
 /**
  * Format a metadata value for display

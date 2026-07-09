@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatConfidence } from './formatter';
+import { formatConfidence } from './formatConfidence';
 
 describe('formatConfidence', () => {
     it('formats confidence with two decimal places', () => {
