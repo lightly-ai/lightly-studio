@@ -12,6 +12,9 @@ from lightly_studio.models.collection import CollectionTable
 from lightly_studio.resolvers import image_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.image_resolver.count_image_annotations_by_collection import (
+    AnnotationCountMode,
+)
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
     AnnotationDetails,
@@ -199,3 +202,136 @@ def test_count_image_annotations_by_collection_filters_by_annotation_type(
 
     counts_dict = {label: (current, total) for label, current, total in counts}
     assert counts_dict == expected_counts
+
+
+def test_count_image_annotations_by_collection__samples_mode(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    image_a = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/image_a.png",
+    )
+    image_b = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/image_b.png",
+    )
+
+    car_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection_id,
+        label_name="car",
+    )
+    person_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection_id,
+        label_name="person",
+    )
+
+    # image_a: car, car, person — image_b: car
+    create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image_a.sample_id,
+                annotation_label_id=car_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=image_a.sample_id,
+                annotation_label_id=car_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=image_a.sample_id,
+                annotation_label_id=person_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=image_b.sample_id,
+                annotation_label_id=car_label.annotation_label_id,
+            ),
+        ],
+    )
+
+    counts = image_resolver.count_image_annotations_by_collection(
+        session=db_session,
+        collection_id=collection_id,
+        count_mode=AnnotationCountMode.SAMPLES,
+    )
+
+    counts_dict = {label: total for label, _, total in counts}
+    assert counts_dict["car"] == 2
+    assert counts_dict["person"] == 1
+
+
+def test_count_image_annotations_by_collection__samples_mode_with_filter(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    image_a = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/image_a.png",
+    )
+    image_b = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/image_b.png",
+    )
+
+    car_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection_id,
+        label_name="car",
+    )
+    person_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection_id,
+        label_name="person",
+    )
+
+    # image_a: car, car, person — image_b: car
+    create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image_a.sample_id,
+                annotation_label_id=car_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=image_a.sample_id,
+                annotation_label_id=car_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=image_a.sample_id,
+                annotation_label_id=person_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=image_b.sample_id,
+                annotation_label_id=car_label.annotation_label_id,
+            ),
+        ],
+    )
+
+    # Filter to only images that have a person annotation — only image_a matches.
+    counts = image_resolver.count_image_annotations_by_collection(
+        session=db_session,
+        collection_id=collection_id,
+        image_filter=ImageFilter(
+            sample_filter=SampleFilter(
+                annotations_filter=AnnotationsFilter(
+                    annotation_label_ids=[person_label.annotation_label_id]
+                )
+            )
+        ),
+        count_mode=AnnotationCountMode.SAMPLES,
+    )
+
+    counts_dict = {label: (current, total) for label, current, total in counts}
+    # current: only image_a is in filter — 1 distinct sample for car, 1 for person
+    assert counts_dict["car"] == (1, 2)
+    assert counts_dict["person"] == (1, 1)

@@ -12,7 +12,7 @@ from tests.helpers_resolvers import (
 )
 
 
-def test_to_coco_caption_dict(
+def test_to_coco_captions_dict(
     db_session: Session,
 ) -> None:
     """Tests conversion to COCO captions format."""
@@ -56,10 +56,10 @@ def test_to_coco_caption_dict(
     }
 
 
-def test_to_coco_caption_dict__empty(
+def test_to_coco_captions_dict__empty(
     db_session: Session,
 ) -> None:
-    """Tests conversion to COCO captions format."""
+    """Tests conversion to COCO captions format when there are no captions."""
     collection = create_collection(session=db_session)
 
     # Call the function under test
