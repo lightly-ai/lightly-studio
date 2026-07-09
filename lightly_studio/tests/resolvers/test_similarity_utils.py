@@ -75,3 +75,47 @@ class TestGetDistanceExpression:
 
         assert embedding_model_id == embedding_model.embedding_model_id
         assert distance_expr is not None
+
+    def test_mismatched_dimension__returns_none(self, db_session: Session) -> None:
+        """A query vector whose dimension matches no model returns (None, None)."""
+        collection = create_collection(session=db_session)
+        create_embedding_model(
+            session=db_session,
+            collection_id=collection.collection_id,
+            embedding_model_name="custom",
+            embedding_dimension=3,
+        )
+
+        embedding_model_id, distance_expr = get_distance_expression(
+            session=db_session,
+            collection_id=collection.collection_id,
+            text_embedding=[1.0, 0.0, 0.0, 0.0],
+        )
+
+        assert embedding_model_id is None
+        assert distance_expr is None
+
+    def test_multiple_models__picks_matching_dimension(self, db_session: Session) -> None:
+        """With several models, the one matching the query vector's dimension is used."""
+        collection = create_collection(session=db_session)
+        create_embedding_model(
+            session=db_session,
+            collection_id=collection.collection_id,
+            embedding_model_name="custom",
+            embedding_dimension=3,
+        )
+        clip_like_model = create_embedding_model(
+            session=db_session,
+            collection_id=collection.collection_id,
+            embedding_model_name="clip_like",
+            embedding_dimension=4,
+        )
+
+        embedding_model_id, distance_expr = get_distance_expression(
+            session=db_session,
+            collection_id=collection.collection_id,
+            text_embedding=[1.0, 0.0, 0.0, 0.0],
+        )
+
+        assert embedding_model_id == clip_like_model.embedding_model_id
+        assert distance_expr is not None

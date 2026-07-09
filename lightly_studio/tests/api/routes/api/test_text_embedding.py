@@ -8,6 +8,7 @@ from sqlmodel import Session
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
 )
+from lightly_studio.dataset.embedding_generator import RandomEmbeddingGenerator
 from lightly_studio.dataset.embedding_manager import (
     EmbeddingManager,
     EmbeddingManagerProvider,
@@ -44,6 +45,32 @@ def test_embed_text(db_session: Session, mocker: MockerFixture, test_client: Tes
     # Assert the response
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == [0.1, 0.2, 0.3]
+
+
+def test_embed_text__loads_default_model_after_restart(
+    db_session: Session, mocker: MockerFixture, test_client: TestClient
+) -> None:
+    """A fresh EmbeddingManager (e.g. after a server restart) loads the default model lazily."""
+    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
+
+    # A fresh manager whose in-memory model registry is empty, as after a restart.
+    mocker.patch.object(
+        EmbeddingManagerProvider,
+        "get_embedding_manager",
+        return_value=EmbeddingManager(),
+    )
+    mocker.patch(
+        "lightly_studio.dataset.embedding_manager._load_embedding_generator_from_env",
+        return_value=RandomEmbeddingGenerator(dimension=3),
+    )
+
+    response = test_client.get(
+        f"/api/text_embedding/for_collection/{collection_id!s}",
+        params={"query_text": "sample"},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert len(response.json()) == 3
 
 
 def test_embed_text_embedding_invalid_model_id(
