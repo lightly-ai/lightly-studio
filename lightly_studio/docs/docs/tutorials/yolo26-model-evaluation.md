@@ -307,7 +307,7 @@ dataset.query().match(
     SampleEvaluationQuery("gt_yolo26n", EvaluationMetricField("fp") > 0)
 ).add_tag("fp_gt_yolo26n")
 
-# tag images with two or more false positives with tag fn_gt_yolo26n
+# tag images with two or more false negatives with tag fn_gt_yolo26n
 dataset.query().match(
     SampleEvaluationQuery("gt_yolo26n", EvaluationMetricField("fn") >= 2)
 ).add_tag("fn_gt_yolo26n")
