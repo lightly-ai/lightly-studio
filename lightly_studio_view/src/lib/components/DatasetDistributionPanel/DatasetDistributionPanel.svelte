@@ -66,7 +66,10 @@
         (activeSource.groups ?? []).map((group) => ({ value: group.id, label: group.label }))
     );
 
-    let config: DistributionConfig = $state({ n: topN, sortBy: 'count', orientation: 'vertical' });
+    // Default to horizontal bars: categories stack down the left gutter and the
+    // chart scrolls vertically, avoiding the initial horizontal scroll that
+    // vertical bars produce once there are more than a handful of classes.
+    let config: DistributionConfig = $state({ n: topN, sortBy: 'count', orientation: 'horizontal' });
     let configDialogOpen = $state(false);
     let expandOpen = $state(false);
 
