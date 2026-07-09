@@ -239,7 +239,7 @@ def test_get_all_by_collection_id_with_filter(db_session: Session) -> None:
     assert embedding_by_id[samples[1].sample_id] == [1.0, 2.0, 3.0]
 
 
-def test_get_embedding_count(db_session: Session) -> None:
+def test_has_any_embedding(db_session: Session) -> None:
     # Create collections
     col1_id = create_collection(session=db_session).collection_id
     col2_id = create_collection(session=db_session, collection_name="col2").collection_id
@@ -248,43 +248,47 @@ def test_get_embedding_count(db_session: Session) -> None:
     images_col1 = create_images(
         db_session=db_session,
         collection_id=col1_id,
-        images=[ImageStub("sample1.png"), ImageStub("sample2.png"), ImageStub("sample3.png")],
+        images=[ImageStub("sample1.png"), ImageStub("sample2.png")],
     )
     create_images(db_session=db_session, collection_id=col2_id, images=[ImageStub("sample.png")])
 
-    # Create an embedding models
+    # Create embedding models
     embedding_model_1 = create_embedding_model(session=db_session, collection_id=col1_id)
     embedding_model_1_id = embedding_model_1.embedding_model_id
     embedding_model_2 = create_embedding_model(session=db_session, collection_id=col1_id)
     embedding_model_2_id = embedding_model_2.embedding_model_id
 
-    # Create embeddings for col1
-    embedding_inputs = [
-        SampleEmbeddingCreate(
-            sample_id=images_col1[0].sample_id,
-            embedding_model_id=embedding_model_1_id,
-            embedding=np.array([0.0, 0.0, 0.0], dtype=np.float32),
-        ),
-        SampleEmbeddingCreate(
-            sample_id=images_col1[1].sample_id,
-            embedding_model_id=embedding_model_1_id,
-            embedding=np.array([0.0, 0.0, 0.0], dtype=np.float32),
-        ),
-    ]
-    sample_embedding_resolver.create_many(session=db_session, sample_embeddings=embedding_inputs)
+    # Create embeddings for col1 under model 1 only.
+    sample_embedding_resolver.create_many(
+        session=db_session,
+        sample_embeddings=[
+            SampleEmbeddingCreate(
+                sample_id=images_col1[0].sample_id,
+                embedding_model_id=embedding_model_1_id,
+                embedding=np.array([0.0, 0.0, 0.0], dtype=np.float32),
+            ),
+        ],
+    )
 
-    # Collection 1 has two embeddings
-    count = sample_embedding_resolver.get_embedding_count(
+    # Collection 1 has embeddings, collection 2 does not.
+    assert sample_embedding_resolver.has_any_embedding(session=db_session, collection_id=col1_id)
+    assert not sample_embedding_resolver.has_any_embedding(
+        session=db_session, collection_id=col2_id
+    )
+
+    # Filtering by model only counts embeddings under the given models.
+    assert sample_embedding_resolver.has_any_embedding(
         session=db_session,
         collection_id=col1_id,
-        embedding_model_id=embedding_model_1_id,
+        embedding_model_ids=[embedding_model_1_id],
     )
-    assert count == 2
-
-    # Collection 2 has no embeddings
-    count = sample_embedding_resolver.get_embedding_count(
+    assert not sample_embedding_resolver.has_any_embedding(
         session=db_session,
-        collection_id=col2_id,
-        embedding_model_id=embedding_model_2_id,
+        collection_id=col1_id,
+        embedding_model_ids=[embedding_model_2_id],
     )
-    assert count == 0
+
+    # An empty model list never matches.
+    assert not sample_embedding_resolver.has_any_embedding(
+        session=db_session, collection_id=col1_id, embedding_model_ids=[]
+    )

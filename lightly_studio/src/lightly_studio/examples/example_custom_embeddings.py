@@ -2,12 +2,12 @@
 
 Use `Sample.set_embedding` to plug in embeddings from your own model instead of
 relying on the built-in embedding pipeline. This enables the embedding plot,
-image-based similarity, and embedding-based sampling strategies.
+image-based similarity, and embedding-based sampling strategies. Load the dataset
+with `embed=False` so the built-in model never runs.
 
 Note: text-based search does not work with custom embeddings, since there is no
-text encoder for a custom embedding space. To keep the embedding plot correct,
-add all custom embeddings before starting the GUI, and load the dataset with
-`embed=False` so the built-in model never runs.
+text encoder for a custom embedding space. The GUI hides the search bar
+automatically.
 """
 
 import numpy as np

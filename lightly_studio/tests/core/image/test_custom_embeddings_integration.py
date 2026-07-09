@@ -1,11 +1,10 @@
 """Integration test for the "bring your own embeddings" workflow.
 
-Guards the implicit contract documented in `docs/docs/dataset_setup/image_dataset.md`:
-loading a collection with `embed=False` and setting embeddings via
-`Sample.set_embedding(...)` must (1) keep the custom embedding model as the collection's
-default (so the embedding plot resolves to it) and (2) leave `collection_has_embeddings`
-`False` (so the frontend hides the text-search bar), even after the auto-registered
-default embedding model has been touched.
+Guards the contract documented in `docs/docs/dataset_setup/image_dataset.md`: loading a
+collection with `embed=False` and setting embeddings via `Sample.set_embedding(...)` must
+(1) keep the custom embedding model as the collection's default (so the embedding plot
+resolves to it) and (2) report `has_embeddings=True` but `has_text_search_embeddings=False`
+(so the frontend shows the embedding plot but hides the text-search bar).
 """
 
 from __future__ import annotations
@@ -34,18 +33,17 @@ def test_custom_embeddings_stay_default_and_hide_text_search(
         session=session, collection_id=collection.collection_id
     )
     assert [m.name for m in models] == ["custom"]
+    assert models[0].supports_text_search is False
 
-    # Simulate the frontend's collection page load, which is the first thing that
-    # can auto-register the built-in embedding model as the collection's default.
-    assert (
-        embedding_utils.collection_has_embeddings(
-            session=session, collection_id=collection.collection_id
-        )
-        is False
+    # The status the frontend uses to gate features: the embedding plot must be
+    # available, text search must not.
+    status = embedding_utils.get_collection_embeddings_status(
+        session=session, collection_id=collection.collection_id
     )
+    assert status.has_embeddings is True
+    assert status.has_text_search_embeddings is False
 
-    # A second (empty) embedding model may now exist, but the custom one -- being
-    # older -- must still be the one the embedding plot resolves to.
+    # The custom model must be the one the embedding plot resolves to.
     default_model = embedding_model_resolver.get_default_by_collection_id(
         session=session, collection_id=collection.collection_id
     )

@@ -65,6 +65,7 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
             embedding_model_hash=self._model_hash,
             embedding_dimension=EMBEDDING_DIMENSION,
             collection_id=collection_id,
+            supports_text_search=True,
         )
 
     def embed_text(self, text: str) -> list[float]:

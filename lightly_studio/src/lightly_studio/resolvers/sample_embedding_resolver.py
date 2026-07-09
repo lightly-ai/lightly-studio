@@ -7,7 +7,6 @@ from collections.abc import Mapping, Sequence
 from typing import Any, NamedTuple
 from uuid import UUID
 
-from sqlalchemy import func
 from sqlmodel import Session, col, select
 
 from lightly_studio.database import db_vector
@@ -225,24 +224,33 @@ def get_hash_by_collection_id(
     return hasher.hexdigest(), sample_ids
 
 
-def get_embedding_count(session: Session, collection_id: UUID, embedding_model_id: UUID) -> int:
-    """Get the number of sample embeddings for samples in a specific collection.
+def has_any_embedding(
+    session: Session,
+    collection_id: UUID,
+    embedding_model_ids: Sequence[UUID] | None = None,
+) -> bool:
+    """Check whether at least one sample embedding exists for a collection.
 
     Args:
         session: The database session.
         collection_id: The collection ID to filter by.
-        embedding_model_id: The embedding model ID to filter by.
+        embedding_model_ids: If given, only embeddings under these models count.
+            An empty sequence always returns False.
 
     Returns:
-        The number of sample embeddings associated with the collection.
+        True if at least one matching sample embedding exists.
     """
+    if embedding_model_ids is not None and not embedding_model_ids:
+        return False
     query = (
-        select(func.count(col(SampleEmbeddingTable.sample_id)))
+        select(SampleEmbeddingTable.sample_id)
         .join(SampleTable, col(SampleEmbeddingTable.sample_id) == col(SampleTable.sample_id))
         .where(SampleTable.collection_id == collection_id)
-        .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
+        .limit(1)
     )
-    return session.exec(query).one()
+    if embedding_model_ids is not None:
+        query = query.where(col(SampleEmbeddingTable.embedding_model_id).in_(embedding_model_ids))
+    return session.exec(query).first() is not None
 
 
 def _read_embedding_rows_binary(

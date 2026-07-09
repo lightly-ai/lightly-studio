@@ -144,6 +144,7 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             embedding_model_hash=self._model_hash,
             embedding_dimension=self._model.output_dim,
             collection_id=collection_id,
+            supports_text_search=True,
         )
 
     def embed_text(self, text: str) -> list[float]:

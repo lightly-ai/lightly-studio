@@ -298,6 +298,7 @@ def create_embedding_model(  # noqa: PLR0913
     embedding_model_hash: str = "example_hash",
     parameter_count_in_mb: int = 100,
     embedding_dimension: int = 128,
+    supports_text_search: bool = True,
 ) -> EmbeddingModelTable:
     """Helper function to create a embedding model."""
     return embedding_model_resolver.create(
@@ -308,6 +309,7 @@ def create_embedding_model(  # noqa: PLR0913
             embedding_model_hash=embedding_model_hash,
             parameter_count_in_mb=parameter_count_in_mb,
             embedding_dimension=embedding_dimension,
+            supports_text_search=supports_text_search,
         ),
     )
 

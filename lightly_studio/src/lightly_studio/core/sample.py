@@ -334,6 +334,7 @@ class Sample(ABC):
                 embedding_model_hash=f"custom:{embedding_model_name}:{len(embedding)}",
                 embedding_dimension=len(embedding),
                 collection_id=self.collection_id,
+                supports_text_search=False,
             ),
         )
         sample_embedding_resolver.upsert(
