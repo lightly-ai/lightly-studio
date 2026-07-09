@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -27,8 +28,8 @@ class AnnotationMetricStub:
     """Helper class to represent an annotation-level evaluation metric."""
 
     sample_id: UUID
-    metric_name: str
-    value: float
+    metric_name: str | None = None
+    value: float | None = None
     pred_annotation_id: UUID | None = None
     gt_annotation_id: UUID | None = None
 
@@ -104,11 +105,11 @@ class FalsePositiveMetricStub:
     """
 
     sample_id: UUID
-    metrics: dict[str, float]
     pred_annotation_label_id: UUID
+    metrics: dict[str, float] | None = None
 
-    def metric_items(self) -> list[tuple[str, float]]:
-        return list(self.metrics.items())
+    def metric_items(self) -> Iterable[tuple[str, float]]:
+        return (self.metrics or {}).items()
 
     def to_annotation_metric_stub(
         self, session: Session, run: EvaluationRunTable
@@ -132,6 +133,15 @@ class FalsePositiveMetricStub:
             annotation_label_id=self.pred_annotation_label_id,
             annotation_collection_name=pred_collection.name,
         )
+        metrics = self.metric_items()
+        if not metrics:
+            return [
+                AnnotationMetricStub(
+                    sample_id=self.sample_id,
+                    pred_annotation_id=pred_annotation.sample_id,
+                    gt_annotation_id=None,
+                )
+            ]
         return [
             AnnotationMetricStub(
                 sample_id=self.sample_id,
