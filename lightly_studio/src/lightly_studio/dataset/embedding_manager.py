@@ -8,6 +8,7 @@ from uuid import UUID
 
 import numpy as np
 from numpy.typing import NDArray
+from PIL import Image
 from sqlmodel import Session
 from tqdm import tqdm
 
@@ -43,6 +44,7 @@ _GENERATOR_SAMPLE_TYPE: dict[SampleType, SampleType] = {
     SampleType.IMAGE: SampleType.IMAGE,
     SampleType.ANNOTATION: SampleType.IMAGE,
     SampleType.VIDEO: SampleType.VIDEO,
+    SampleType.VIDEO_FRAME: SampleType.IMAGE,
 }
 
 
@@ -165,10 +167,7 @@ class EmbeddingManager:
         model_id = self._get_default_or_validate(
             collection_id=collection_id, embedding_model_id=embedding_model_id
         )
-
-        model = self._models[model_id]
-        if not isinstance(model, ImageEmbeddingGenerator):
-            raise ValueError("Embedding model not compatible with images.")
+        model = self._get_image_model(model_id)
 
         # Query image filenames from the database.
         sample_id_to_filepath = {
@@ -214,9 +213,7 @@ class EmbeddingManager:
         model_id = self._get_default_or_validate(
             collection_id=annotation_collection_id, embedding_model_id=embedding_model_id
         )
-        model = self._models[model_id]
-        if not isinstance(model, ImageEmbeddingGenerator):
-            raise ValueError("Embedding model not compatible with images.")
+        model = self._get_image_model(model_id)
 
         annotation_sample_ids = annotation_resolver.get_unembedded_annotation_ids(
             session=session,
@@ -279,10 +276,7 @@ class EmbeddingManager:
         model_id = self._get_default_or_validate(
             collection_id=collection_id, embedding_model_id=embedding_model_id
         )
-
-        model = self._models[model_id]
-        if not isinstance(model, ImageEmbeddingGenerator):
-            raise ValueError("Embedding model not compatible with images.")
+        model = self._get_image_model(model_id)
 
         # Generate embedding for the image without progress bar.
         embeddings = model.embed_images(filepaths=[filepath], show_progress=False)
@@ -337,6 +331,43 @@ class EmbeddingManager:
             model_id=model_id,
             sample_ids=sample_ids,
             embeddings=embeddings,
+        )
+
+    def embed_and_store_pil_images(
+        self,
+        session: Session,
+        embedding_model_id: UUID,
+        sample_ids: list[UUID],
+        images: list[Image.Image],
+        show_progress: bool = True,
+    ) -> None:
+        """Generate and store embeddings for in-memory PIL images.
+
+        Args:
+            session: Database session for resolver operations.
+            embedding_model_id: ID of a registered image-compatible embedding model.
+            sample_ids: Sample IDs the embeddings are stored for.
+            images: PIL images to embed, in the same order as sample_ids.
+            show_progress: Whether to show a progress bar during embedding and storage.
+
+        Raises:
+            ValueError: If the model is missing, does not support image embedding, or
+                the number of images does not match the number of sample IDs.
+        """
+        if len(sample_ids) != len(images):
+            raise ValueError(
+                f"Expected the same number of sample IDs and images, got "
+                f"{len(sample_ids)} sample IDs and {len(images)} images."
+            )
+
+        model = self._get_image_model(embedding_model_id)
+        embeddings = model.embed_pil_images(images=images, show_progress=show_progress)
+        _store_embeddings(
+            session=session,
+            model_id=embedding_model_id,
+            sample_ids=sample_ids,
+            embeddings=embeddings,
+            show_progress=show_progress,
         )
 
     def load_or_get_default_model(
@@ -409,6 +440,19 @@ class EmbeddingManager:
         if embedding_model_id not in self._models:
             raise ValueError(f"No embedding model found with ID {embedding_model_id}")
         return embedding_model_id
+
+    def _get_image_model(self, model_id: UUID) -> ImageEmbeddingGenerator:
+        """Return the registered image-compatible generator for model_id.
+
+        Raises:
+            ValueError: If no model is registered for the ID or it does not support images.
+        """
+        model = self._models.get(model_id)
+        if model is None:
+            raise ValueError(f"No embedding model found with ID {model_id}")
+        if not isinstance(model, ImageEmbeddingGenerator):
+            raise ValueError("Embedding model not compatible with images.")
+        return model
 
 
 def _store_embeddings(

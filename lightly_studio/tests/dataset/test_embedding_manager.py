@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 import numpy as np
 import pytest
 from numpy.typing import NDArray
+from PIL import Image
 from pytest_mock import MockerFixture
 from sqlmodel import Session, select
 
@@ -105,6 +106,11 @@ def test_register_multiple_models(
 
         def embed_image_crops(
             self, image_crops: list[ImageCrop], show_progress: bool = True
+        ) -> NDArray[np.float32]:
+            raise NotImplementedError()
+
+        def embed_pil_images(
+            self, images: list[Image.Image], show_progress: bool = True
         ) -> NDArray[np.float32]:
             raise NotImplementedError()
 
