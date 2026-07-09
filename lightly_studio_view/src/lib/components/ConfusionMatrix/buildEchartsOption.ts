@@ -1,10 +1,5 @@
 import type { EChartsCoreOption } from 'echarts/core';
-import {
-    CHART_AXIS_LABEL,
-    CHART_EMPHASIS,
-    CHART_LINE_COLOR,
-    CHART_TEXT_COLOR
-} from '$lib/utils';
+import { CHART_AXIS_LABEL, CHART_EMPHASIS, CHART_LINE_COLOR, CHART_TEXT_COLOR } from '$lib/utils';
 import { SENTINELS } from './topNMatrix';
 import { type ConfusionMatrix } from './types';
 
