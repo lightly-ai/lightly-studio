@@ -305,6 +305,17 @@
         $videoFilterFromHook?.sample_filter?.sample_ids ?? []
     );
 
+    // Image-count filter shared by the mix and per-type distribution queries so
+    // the distribution plot tracks the active filters (dimensions, labels, …).
+    const imageAnnotationCountsFilter = $derived(
+        buildImageFilter({
+            dimensionsValues: $dimensionsValues,
+            annotationFilter: $annotationFilterStore,
+            metadataFilters,
+            sampleIds: isAnnotations ? [] : plotFilterImageSampleIds
+        })
+    );
+
     const annotationCounts = $derived.by(() => {
         if (
             isVideoFrames ||
@@ -335,12 +346,7 @@
         }
         return useImageAnnotationCounts({
             collectionId: datasetId,
-            filter: buildImageFilter({
-                dimensionsValues: $dimensionsValues,
-                annotationFilter: $annotationFilterStore,
-                metadataFilters,
-                sampleIds: isAnnotations ? [] : plotFilterImageSampleIds
-            })
+            filter: imageAnnotationCountsFilter
         });
     });
 
@@ -378,18 +384,21 @@
 
     // Class counts for the distribution panel. The "All types" source reuses the
     // shared annotation-count query that feeds the labels filter; the per-type
-    // sources fetch classification / detection / segmentation totals on demand
-    // while the panel is open.
+    // sources fetch classification / detection / segmentation counts on demand
+    // while the panel is open. We map `current_count` so the plot tracks the
+    // active filters, dropping labels with no matches in the current view.
     const toCategoryCounts = (
-        countsData: { label_name: string; total_count: number }[] | undefined
+        countsData: { label_name: string; current_count: number }[] | undefined
     ) =>
-        (countsData ?? []).map((item) => ({
-            label: item.label_name,
-            count: Number(item.total_count)
-        }));
+        (countsData ?? [])
+            .map((item) => ({
+                label: item.label_name,
+                count: Number(item.current_count)
+            }))
+            .filter((item) => item.count > 0);
 
     const classDistributionCounts = $derived(
-        toCategoryCounts(annotationCounts.data as { label_name: string; total_count: number }[])
+        toCategoryCounts(annotationCounts.data as { label_name: string; current_count: number }[])
     );
 
     const distributionPanelVisible = $derived($activePanel === 'distribution' && isImages);
@@ -401,15 +410,18 @@
         return {
             [AnnotationType.CLASSIFICATION]: useImageAnnotationCounts({
                 collectionId: datasetId,
-                annotationType: AnnotationType.CLASSIFICATION
+                annotationType: AnnotationType.CLASSIFICATION,
+                filter: imageAnnotationCountsFilter
             }),
             [AnnotationType.OBJECT_DETECTION]: useImageAnnotationCounts({
                 collectionId: datasetId,
-                annotationType: AnnotationType.OBJECT_DETECTION
+                annotationType: AnnotationType.OBJECT_DETECTION,
+                filter: imageAnnotationCountsFilter
             }),
             [AnnotationType.SEGMENTATION_MASK]: useImageAnnotationCounts({
                 collectionId: datasetId,
-                annotationType: AnnotationType.SEGMENTATION_MASK
+                annotationType: AnnotationType.SEGMENTATION_MASK,
+                filter: imageAnnotationCountsFilter
             })
         };
     });
@@ -431,9 +443,9 @@
         const typeSources: DistributionSource[] = [];
         for (const { id, label } of perType) {
             const data = toCategoryCounts(
-                typeQueries[id].data as { label_name: string; total_count: number }[]
+                typeQueries[id].data as { label_name: string; current_count: number }[]
             );
-            // Skip types that have no annotations so the selector stays clean.
+            // Skip types with no matches in the current view so the selector stays clean.
             if (data.length > 0) typeSources.push({ id, label, data });
         }
         // With a single type, "All types" would just duplicate it — show only
