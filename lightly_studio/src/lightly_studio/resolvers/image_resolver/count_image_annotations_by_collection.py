@@ -42,6 +42,11 @@ def count_image_annotations_by_collection(
     When ``annotation_type`` is provided, both the total and filtered counts are
     restricted to annotations of that type (e.g. only CLASSIFICATION or only
     OBJECT_DETECTION).
+
+    When ``count_mode`` is ``OBJECTS`` (default), each annotation row is counted
+    individually.  When ``count_mode`` is ``SAMPLES``, the count reflects the
+    number of distinct parent samples that carry at least one matching annotation,
+    so a sample with multiple annotations of the same label is counted only once.
     """
     # Resolve any embedding-plot region selection to concrete sample ids on the filter before the
     # query is built (the point-in-polygon test needs the session, which `apply` lacks).
