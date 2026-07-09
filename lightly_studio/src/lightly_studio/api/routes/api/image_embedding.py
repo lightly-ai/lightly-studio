@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi import Path as FastAPIPath
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_INTERNAL_SERVER_ERROR
+from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.dataset.embedding_manager import (
     EmbeddingManager,
     EmbeddingManagerProvider,
@@ -33,6 +34,7 @@ EmbeddingManagerDep = Annotated[
 )
 def embed_image_from_file(
     embedding_manager: EmbeddingManagerDep,
+    session: SessionDep,
     collection_id: Annotated[UUID, FastAPIPath(title="The ID of the collection.")],
     file: Annotated[UploadFile, File(description="The image file to embed.")],
     embedding_model_id: Annotated[
@@ -42,6 +44,7 @@ def embed_image_from_file(
 ) -> list[float]:
     """Retrieve embeddings for the uploaded image file."""
     try:
+        embedding_manager.load_or_get_default_model(session=session, collection_id=collection_id)
         suffix = Path(file.filename).suffix if file.filename else ".jpg"
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             shutil.copyfileobj(file.file, tmp)

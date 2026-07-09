@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_INTERNAL_SERVER_ERROR,
 )
+from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.dataset.embedding_manager import (
     EmbeddingManager,
     EmbeddingManagerProvider,
@@ -29,6 +30,7 @@ EmbeddingManagerDep = Annotated[
 )
 def embed_text(
     embedding_manager: EmbeddingManagerDep,
+    session: SessionDep,
     collection_id: Annotated[UUID, Path(title="The ID of the collection for which to embed.")],
     query_text: str = Query(..., description="The text to embed."),
     embedding_model_id: Annotated[
