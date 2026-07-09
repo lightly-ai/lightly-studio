@@ -4,6 +4,7 @@ import pytest
 from sqlmodel import Session, col, select
 
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
+from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.resolvers import (
     annotation_resolver,
     evaluation_annotation_metric_resolver,
@@ -14,7 +15,9 @@ from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
     create_collection,
+    create_embedding_model,
     create_image,
+    create_sample_embedding,
     create_tag,
 )
 from tests.resolvers.evaluation_sample_metric_resolver import (
@@ -92,6 +95,40 @@ def test_delete_annotation__deletes_sample_tag_links(
         select(SampleTagLinkTable).where(col(SampleTagLinkTable.sample_id) == annotation.sample_id)
     ).all()
     assert not links_after
+    assert db_session.get(SampleTable, annotation.sample_id) is None
+
+
+def test_delete_annotation__deletes_sample_embeddings(
+    db_session: Session,
+    annotations_test_data: AnnotationsTestData,
+) -> None:
+    """Test deleting an annotation whose sample has an embedding.
+
+    Regression test: the sample_id column is part of SampleEmbeddingTable's primary key,
+    so deleting the sample previously failed when the ORM tried to null it out.
+    """
+    annotation = annotations_test_data.annotations[0]
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=annotation.sample.collection_id,
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=annotation.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[0.1] * embedding_model.embedding_dimension,
+    )
+
+    annotation_resolver.delete_annotation(db_session, annotation.sample_id)
+
+    # Verify both annotation and its embedding were deleted.
+    assert annotation_resolver.get_by_id(db_session, annotation.sample_id) is None
+    embeddings_after = db_session.exec(
+        select(SampleEmbeddingTable).where(
+            col(SampleEmbeddingTable.sample_id) == annotation.sample_id
+        )
+    ).all()
+    assert not embeddings_after
     assert db_session.get(SampleTable, annotation.sample_id) is None
 
 
