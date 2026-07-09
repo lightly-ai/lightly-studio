@@ -96,8 +96,6 @@ describe('PanelHeader', () => {
             props: { ...defaultProps, testIdPrefix: 'dataset-distribution-expanded' }
         });
 
-        expect(
-            screen.getByTestId('dataset-distribution-expanded-configure')
-        ).toBeInTheDocument();
+        expect(screen.getByTestId('dataset-distribution-expanded-configure')).toBeInTheDocument();
     });
 });

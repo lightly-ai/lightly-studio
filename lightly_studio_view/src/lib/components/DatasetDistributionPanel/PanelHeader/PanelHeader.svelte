@@ -49,7 +49,8 @@
             {classCount === 1 ? 'class' : 'classes'}
         {/if}
         · sorted by {DISTRIBUTION_SORT_LABELS[config.sortBy].toLowerCase()}
-        · {totalCount.toLocaleString('en-US')} {valueNoun}
+        · {totalCount.toLocaleString('en-US')}
+        {valueNoun}
         {#if onShowAll && visibleClassCount < classCount}
             ·
             <button

@@ -42,7 +42,9 @@ describe('DistributionConfigDialog', () => {
         await fireEvent.click(screen.getByTestId('distribution-config-apply'));
 
         expect(onApply).toHaveBeenCalledWith({ ...baseConfig, n: 8 });
-        await waitFor(() => expect(screen.queryByText('Configure classes')).not.toBeInTheDocument());
+        await waitFor(() =>
+            expect(screen.queryByText('Configure classes')).not.toBeInTheDocument()
+        );
     });
 
     it('sets top-N to maxN via the "All" quick action', async () => {
@@ -82,6 +84,8 @@ describe('DistributionConfigDialog', () => {
         await fireEvent.click(screen.getByText('Cancel'));
 
         expect(onApply).not.toHaveBeenCalled();
-        await waitFor(() => expect(screen.queryByText('Configure classes')).not.toBeInTheDocument());
+        await waitFor(() =>
+            expect(screen.queryByText('Configure classes')).not.toBeInTheDocument()
+        );
     });
 });

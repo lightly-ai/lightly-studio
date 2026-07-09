@@ -53,7 +53,8 @@
         resolvedSources.find((source) => source.id === selectedSourceId) ?? resolvedSources[0]
     );
     const activeGroup = $derived(
-        activeSource.groups?.find((group) => group.id === selectedGroupId) ?? activeSource.groups?.[0]
+        activeSource.groups?.find((group) => group.id === selectedGroupId) ??
+            activeSource.groups?.[0]
     );
     const activeData = $derived<CategoryCount[]>(activeGroup?.data ?? activeSource.data ?? []);
     const valueNoun = $derived(activeSource.valueNoun ?? 'annotations');
@@ -96,7 +97,10 @@
         {/if}
     </div>
     {#if hasSourceSelector}
-        <div class="mt-2 flex flex-wrap items-center gap-2" data-testid="dataset-distribution-source">
+        <div
+            class="mt-2 flex flex-wrap items-center gap-2"
+            data-testid="dataset-distribution-source"
+        >
             <span class="text-xs text-muted-foreground">Source</span>
             <Select
                 items={sourceItems}
@@ -110,7 +114,9 @@
                 }}
             />
             {#if groupItems.length > 0}
-                <span class="text-xs text-muted-foreground">{activeSource.groupLabel ?? 'Field'}</span>
+                <span class="text-xs text-muted-foreground"
+                    >{activeSource.groupLabel ?? 'Field'}</span
+                >
                 <Select
                     items={groupItems}
                     value={activeGroup?.id}
