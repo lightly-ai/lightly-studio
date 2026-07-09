@@ -40,6 +40,7 @@ def embed_text(
 ) -> list[float]:
     """Retrieve embeddings for the input text."""
     try:
+        embedding_manager.load_or_get_default_model(session=session, collection_id=collection_id)
         text_embeddings = embedding_manager.embed_text(
             collection_id=collection_id,
             text_query=TextEmbedQuery(text=query_text, embedding_model_id=embedding_model_id),
