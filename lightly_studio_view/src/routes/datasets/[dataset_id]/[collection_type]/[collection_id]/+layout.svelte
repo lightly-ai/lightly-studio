@@ -52,6 +52,8 @@
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { AnnotationType, SampleType } from '$lib/api/lightly_studio_local/types.gen';
+    import type { AnnotationsFilter } from '$lib/api/lightly_studio_local/types.gen';
+    import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import type { DistributionSource } from '$lib/components/DatasetDistributionPanel';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
     import {
@@ -313,13 +315,27 @@
     );
     const plotFilterQueryExpr = $derived($imageFilterFromHook?.sample_filter?.query_expr ?? null);
 
+    // Selected annotation sources (annotation collections). When a subset is
+    // selected the distribution counts only annotations from those sources; the
+    // backend restricts the counted annotations by their own collection id.
+    const { selectedCollectionIds: selectedAnnotationSourceIds } = useAnnotationCollectionsFilter();
+    const annotationFilterForCounts = $derived.by<AnnotationsFilter | undefined>(() => {
+        const base = $annotationFilterStore;
+        const sourceIds = isAnnotations ? [] : $selectedAnnotationSourceIds;
+        if (sourceIds.length === 0) return base;
+        return {
+            ...(base ?? { filter_type: 'annotations' }),
+            collection_ids: sourceIds
+        };
+    });
+
     // Image-count filter shared by the mix and per-type distribution queries so
     // the distribution plot tracks the active filters (dimensions, labels,
-    // metadata, query, tags and confusion cell).
+    // metadata, query, tags, confusion cell and annotation sources).
     const imageAnnotationCountsFilter = $derived(
         buildImageFilter({
             dimensionsValues: $dimensionsValues,
-            annotationFilter: $annotationFilterStore,
+            annotationFilter: annotationFilterForCounts,
             metadataFilters,
             sampleIds: isAnnotations ? [] : plotFilterImageSampleIds,
             tagIds: isAnnotations ? [] : plotFilterTagIds,
