@@ -4,15 +4,21 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import func
+import numpy as np
 from sqlmodel import Session, col, select
 
 from lightly_studio.database import db_json
 from lightly_studio.models.metadata import (
+    HistogramView,
     MetadataInfoView,
     SampleMetadataTable,
 )
 from lightly_studio.models.sample import SampleTable
+
+# Number of bins used for numeric metadata histograms.
+_HISTOGRAM_BIN_COUNT = 20
+
+_NUMERIC_TYPES = ("integer", "float")
 
 
 def get_all_metadata_keys_and_schema(
@@ -21,14 +27,18 @@ def get_all_metadata_keys_and_schema(
 ) -> list[MetadataInfoView]:
     """Get all unique metadata keys and their schema for a collection.
 
+    For numerical types (``integer`` and ``float``) the returned info also
+    contains the min/max values and a value-distribution histogram.
+
     Args:
         session: The database session.
         collection_id: The collection's UUID.
 
     Returns:
-        List of dicts with 'name', 'type', and optionally 'min'/'max' for numerical types.
+        List of metadata info objects with 'name', 'type', and, for numerical
+        types, 'min', 'max', and 'histogram'.
     """
-    # Query all metadata_schema dicts for samples in the collection
+    # Query all metadata_schema dicts for samples in the collection.
     rows = session.exec(
         select(SampleMetadataTable.metadata_schema)
         .select_from(SampleTable)
@@ -38,46 +48,45 @@ def get_all_metadata_keys_and_schema(
         )
         .where(SampleTable.collection_id == collection_id)
     ).all()
-    # Merge all schemas
+    # Merge all schemas.
     merged: dict[str, str] = {}
     for schema_dict in rows:
         merged.update(schema_dict)
 
-    # Get min and max values for numerical metadata
     result = []
     for key, metadata_type in merged.items():
         metadata_info = MetadataInfoView(name=key, type=metadata_type)
 
-        # Add min and max for numerical types
-        if metadata_type in ["integer", "float"]:
-            min_max_values = _get_metadata_min_max_values(
-                session, collection_id, key, metadata_type
+        # Add min, max, and histogram for numerical types.
+        if metadata_type in _NUMERIC_TYPES:
+            values = _get_metadata_numeric_values(
+                session=session, collection_id=collection_id, metadata_key=key
             )
-            if min_max_values:
-                metadata_info.min = min_max_values[0]
-                metadata_info.max = min_max_values[1]
+            if values:
+                cast = int if metadata_type == "integer" else float
+                metadata_info.min = cast(min(values))
+                metadata_info.max = cast(max(values))
+                metadata_info.histogram = _compute_histogram(values=values)
 
         result.append(metadata_info)
 
     return result
 
 
-def _get_metadata_min_max_values(
+def _get_metadata_numeric_values(
     session: Session,
     collection_id: UUID,
     metadata_key: str,
-    metadata_type: str,
-) -> tuple[int, int] | tuple[float, float] | None:
-    """Get min and max values for a specific numerical metadata key.
+) -> list[float]:
+    """Fetch all non-null values for a specific numerical metadata key.
 
     Args:
         session: The database session.
         collection_id: The collection's UUID.
-        metadata_key: The metadata key to get min/max for.
-        metadata_type: The metadata type ("integer" or "float").
+        metadata_key: The metadata key to fetch values for.
 
     Returns:
-        Tuple with 'min' and 'max' values, or None if no values found.
+        List of the numeric values (as floats) for the given key.
     """
     json_value_expr = db_json.json_extract(
         column=SampleMetadataTable.data, field=metadata_key, cast_to_float=True
@@ -87,10 +96,7 @@ def _get_metadata_min_max_values(
     ).isnot(None)
 
     query = (
-        select(
-            func.min(json_value_expr),
-            func.max(json_value_expr),
-        )
+        select(json_value_expr)
         .select_from(SampleTable)
         .join(
             SampleMetadataTable,
@@ -102,13 +108,25 @@ def _get_metadata_min_max_values(
         )
     )
 
-    result = session.exec(query).first()
+    return [float(value) for value in session.exec(query).all() if value is not None]
 
-    if result and result[0] is not None and result[1] is not None:
-        # Convert to appropriate type
-        if metadata_type == "integer":
-            return int(result[0]), int(result[1])
-        if metadata_type == "float":
-            return float(result[0]), float(result[1])
 
-    return None
+def _compute_histogram(values: list[float]) -> HistogramView:
+    """Compute a value-distribution histogram in Python.
+
+    Binning is done with numpy so it is independent of the database backend
+    (no ``width_bucket()`` or dialect-specific SQL). When all values are equal,
+    numpy produces a single degenerate range which we keep as-is.
+
+    Args:
+        values: The numeric values to bin. Must be non-empty.
+
+    Returns:
+        The histogram with bin edges and per-bin counts.
+    """
+    assert values
+    counts, bin_edges = np.histogram(values, bins=_HISTOGRAM_BIN_COUNT)
+    return HistogramView(
+        bin_edges=[float(edge) for edge in bin_edges],
+        counts=[int(count) for count in counts],
+    )
