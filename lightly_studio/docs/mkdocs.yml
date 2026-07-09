@@ -47,6 +47,7 @@ nav:
   - Tutorials:
     - tutorials/index.md
     - "Tutorial 1: Curate a Traffic CCTV Dataset for YOLO Training": tutorials/yolo-traffic-cctv-object-detection.md
+    - "Tutorial 2: Evaluate YOLO26 on Your Dataset with LightlyStudio": tutorials/yolo26-model-evaluation.md
   - Dataset Setup:
     - Data Types:
       - Image Dataset: dataset_setup/image_dataset.md
