@@ -14,6 +14,7 @@ from lightly_studio.core.dataset_query import ImageSampleField
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image.image_dataset import ImageDataset
 from lightly_studio.export import image_dataset_export
+from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
     AnnotationType,
@@ -118,6 +119,167 @@ class TestImageDatasetExport:
         dataset.export().to_coco_object_detections()
 
         mock_output.assert_called_once_with(output_file=Path("coco_export.json"))
+
+    def test_to_coco_object_detections__multiple_categories(
+        self,
+        db_session: Session,
+        collection_with_annotations: CollectionTable,
+        tmp_path: Path,
+    ) -> None:
+        """Tests that multiple sorted categories and confidence scores are exported."""
+        collection = collection_with_annotations
+
+        output_json = tmp_path / "task_obj_det_1.json"
+        ImageDatasetExport(
+            session=db_session,
+            dataset_id=collection.dataset_id,
+            samples=DatasetQuery(dataset=collection, session=db_session),
+        ).to_coco_object_detections(output_json=output_json, annotation_collection_id=None)
+
+        with open(output_json) as f:
+            coco_data = json.load(f)
+        assert coco_data == {
+            "images": [
+                {"id": 0, "file_name": "img1", "width": 100, "height": 100},
+                {"id": 1, "file_name": "img2", "width": 200, "height": 200},
+                {"id": 2, "file_name": "img3", "width": 300, "height": 300},
+            ],
+            "categories": [
+                {"id": 0, "name": "cat"},
+                {"id": 1, "name": "dog"},
+                {"id": 2, "name": "zebra"},
+            ],
+            "annotations": [
+                {"image_id": 0, "category_id": 1, "bbox": [10.0, 10.0, 10.0, 10.0]},
+                {"image_id": 0, "category_id": 0, "bbox": [20.0, 20.0, 20.0, 20.0], "score": 0.25},
+                {"image_id": 1, "category_id": 1, "bbox": [30.0, 30.0, 30.0, 30.0], "score": 0.375},
+            ],
+        }
+
+    def test_to_coco_object_detections__no_annotations(
+        self,
+        db_session: Session,
+        tmp_path: Path,
+    ) -> None:
+        """Tests exporting to COCO format when there are no annotations."""
+        collection = create_collection(session=db_session)
+        images = [
+            ImageStub(path="img1", width=100, height=100),
+            ImageStub(path="img2", width=200, height=200),
+        ]
+        create_images(db_session=db_session, collection_id=collection.collection_id, images=images)
+
+        output_json = tmp_path / "task_no_ann.json"
+        ImageDatasetExport(
+            session=db_session,
+            dataset_id=collection.dataset_id,
+            samples=DatasetQuery(dataset=collection, session=db_session),
+        ).to_coco_object_detections(output_json=output_json, annotation_collection_id=None)
+
+        with open(output_json) as f:
+            coco_data = json.load(f)
+        assert coco_data == {
+            "images": [
+                {"id": 0, "file_name": "img1", "width": 100, "height": 100},
+                {"id": 1, "file_name": "img2", "width": 200, "height": 200},
+            ],
+            "categories": [],
+            "annotations": [],
+        }
+
+    def test_to_yolo_object_detections(
+        self,
+        db_session: Session,
+        tmp_path: Path,
+    ) -> None:
+        """Tests exporting object detections to YOLO format."""
+        collection = create_collection(session=db_session)
+        images = create_images(
+            db_session=db_session,
+            collection_id=collection.collection_id,
+            images=[
+                ImageStub(path="image0.jpg", width=100, height=100),
+                ImageStub(path="image1.jpg", width=200, height=200),
+            ],
+        )
+        label = create_annotation_label(
+            session=db_session, root_collection_id=collection.collection_id, label_name="dog"
+        )
+        annotation_resolver.create_many(
+            session=db_session,
+            parent_collection_id=collection.collection_id,
+            annotations=[
+                AnnotationCreate(
+                    parent_sample_id=images[0].sample_id,
+                    annotation_label_id=label.annotation_label_id,
+                    annotation_type=AnnotationType.OBJECT_DETECTION,
+                    x=10,
+                    y=10,
+                    width=20,
+                    height=40,
+                ),
+            ],
+        )
+
+        output_folder = tmp_path / "yolo"
+        ImageDatasetExport(
+            session=db_session,
+            dataset_id=collection.dataset_id,
+            samples=DatasetQuery(dataset=collection, session=db_session),
+        ).to_yolo_object_detections(output_folder=output_folder, annotation_collection_id=None)
+
+        # The dataset config lists the single category.
+        with open(output_folder / "data.yaml") as f:
+            data_yaml = yaml.safe_load(f)
+        assert data_yaml == {"path": ".", "train": "images", "nc": 1, "names": {0: "dog"}}
+
+        # One label file per image. The box (x=10, y=10, w=20, h=40) on a 100x100 image has
+        # center (20, 30), so normalized cx=0.2 cy=0.3 w=0.2 h=0.4. image1 has no annotations.
+        assert (output_folder / "labels" / "image0.txt").read_text() == "0 0.2 0.3 0.2 0.4\n"
+        assert (output_folder / "labels" / "image1.txt").read_text() == ""
+
+    def test_to_yolo_object_detections__filters_by_annotation_collection(
+        self,
+        db_session: Session,
+        tmp_path: Path,
+    ) -> None:
+        """Annotations from other annotation collections are excluded from the export."""
+        collection = create_collection(session=db_session)
+        images = create_images(
+            db_session=db_session,
+            collection_id=collection.collection_id,
+            images=[ImageStub(path="image0.jpg", width=100, height=100)],
+        )
+        label = create_annotation_label(
+            session=db_session, root_collection_id=collection.collection_id, label_name="dog"
+        )
+        annotation_resolver.create_many(
+            session=db_session,
+            parent_collection_id=collection.collection_id,
+            annotations=[
+                AnnotationCreate(
+                    parent_sample_id=images[0].sample_id,
+                    annotation_label_id=label.annotation_label_id,
+                    annotation_type=AnnotationType.OBJECT_DETECTION,
+                    x=10,
+                    y=10,
+                    width=20,
+                    height=40,
+                ),
+            ],
+        )
+
+        output_folder = tmp_path / "yolo"
+        ImageDatasetExport(
+            session=db_session,
+            dataset_id=collection.dataset_id,
+            samples=DatasetQuery(dataset=collection, session=db_session),
+        ).to_yolo_object_detections(
+            output_folder=output_folder, annotation_collection_id=uuid.uuid4()
+        )
+
+        # The annotation belongs to a different collection, so it is filtered out.
+        assert (output_folder / "labels" / "image0.txt").read_text() == ""
 
     def test_to_coco_captions(
         self,
@@ -492,177 +654,3 @@ class TestImageDatasetExport:
         with PILImage.open(mask_path_1) as mask_1:
             mask_values_1 = list(mask_1.getdata())
         assert mask_values_1 == [0, 0, 0, 0, 1, 0]
-
-
-def test_to_coco_object_detections(
-    db_session: Session,
-    collection_with_annotations: CollectionTable,
-    tmp_path: Path,
-) -> None:
-    """Tests exporting to COCO format."""
-    dataset = collection_with_annotations
-
-    # Test for task_obj_det_1
-    output_json = tmp_path / "task_obj_det_1.json"
-    image_dataset_export.ImageDatasetExport(
-        session=db_session,
-        dataset_id=dataset.dataset_id,
-        samples=DatasetQuery(dataset=dataset, session=db_session),
-    ).to_coco_object_detections(
-        output_json=output_json,
-        annotation_collection_id=None,
-    )
-
-    # Load the generated JSON and verify its content
-    with open(output_json) as f:
-        coco_data = json.load(f)
-    assert coco_data == {
-        "images": [
-            {"id": 0, "file_name": "img1", "width": 100, "height": 100},
-            {"id": 1, "file_name": "img2", "width": 200, "height": 200},
-            {"id": 2, "file_name": "img3", "width": 300, "height": 300},
-        ],
-        "categories": [
-            {"id": 0, "name": "cat"},
-            {"id": 1, "name": "dog"},
-            {"id": 2, "name": "zebra"},
-        ],
-        "annotations": [
-            {"image_id": 0, "category_id": 1, "bbox": [10.0, 10.0, 10.0, 10.0]},
-            {"image_id": 0, "category_id": 0, "bbox": [20.0, 20.0, 20.0, 20.0], "score": 0.25},
-            {"image_id": 1, "category_id": 1, "bbox": [30.0, 30.0, 30.0, 30.0], "score": 0.375},
-        ],
-    }
-
-
-def test_to_coco_object_detections__no_annotations(
-    db_session: Session,
-    tmp_path: Path,
-) -> None:
-    """Tests exporting to COCO format - no annotations."""
-    dataset = create_collection(session=db_session)
-    images = [
-        ImageStub(path="img1", width=100, height=100),
-        ImageStub(path="img2", width=200, height=200),
-    ]
-    create_images(db_session=db_session, collection_id=dataset.collection_id, images=images)
-
-    output_json = tmp_path / "task_no_ann.json"
-    image_dataset_export.ImageDatasetExport(
-        session=db_session,
-        dataset_id=dataset.dataset_id,
-        samples=DatasetQuery(dataset=dataset, session=db_session),
-    ).to_coco_object_detections(
-        output_json=output_json,
-        annotation_collection_id=None,
-    )
-
-    # Load the generated JSON and verify its content
-    with open(output_json) as f:
-        coco_data = json.load(f)
-    assert coco_data == {
-        "images": [
-            {"id": 0, "file_name": "img1", "width": 100, "height": 100},
-            {"id": 1, "file_name": "img2", "width": 200, "height": 200},
-        ],
-        "categories": [],
-        "annotations": [],
-    }
-
-
-def test_to_yolo_object_detections(
-    db_session: Session,
-    tmp_path: Path,
-) -> None:
-    """Tests exporting object detections to YOLO format."""
-    dataset = create_collection(session=db_session)
-    images = create_images(
-        db_session=db_session,
-        collection_id=dataset.collection_id,
-        images=[
-            ImageStub(path="image0.jpg", width=100, height=100),
-            ImageStub(path="image1.jpg", width=200, height=200),
-        ],
-    )
-    label = create_annotation_label(
-        session=db_session, root_collection_id=dataset.collection_id, label_name="dog"
-    )
-    annotation_resolver.create_many(
-        session=db_session,
-        parent_collection_id=dataset.collection_id,
-        annotations=[
-            AnnotationCreate(
-                parent_sample_id=images[0].sample_id,
-                annotation_label_id=label.annotation_label_id,
-                annotation_type=AnnotationType.OBJECT_DETECTION,
-                x=10,
-                y=10,
-                width=20,
-                height=40,
-            ),
-        ],
-    )
-
-    output_folder = tmp_path / "yolo"
-    image_dataset_export.ImageDatasetExport(
-        session=db_session,
-        dataset_id=dataset.dataset_id,
-        samples=DatasetQuery(dataset=dataset, session=db_session),
-    ).to_yolo_object_detections(
-        output_folder=output_folder,
-        annotation_collection_id=None,
-    )
-
-    # The dataset config lists the single category.
-    with open(output_folder / "data.yaml") as f:
-        data_yaml = yaml.safe_load(f)
-    assert data_yaml == {"path": ".", "train": "images", "nc": 1, "names": {0: "dog"}}
-
-    # One label file per image. The box (x=10, y=10, w=20, h=40) on a 100x100 image has
-    # center (20, 30), so normalized cx=0.2 cy=0.3 w=0.2 h=0.4. image1 has no annotations.
-    assert (output_folder / "labels" / "image0.txt").read_text() == "0 0.2 0.3 0.2 0.4\n"
-    assert (output_folder / "labels" / "image1.txt").read_text() == ""
-
-
-def test_to_yolo_object_detections__filters_by_annotation_collection(
-    db_session: Session,
-    tmp_path: Path,
-) -> None:
-    """Annotations from other annotation collections are excluded from the export."""
-    dataset = create_collection(session=db_session)
-    images = create_images(
-        db_session=db_session,
-        collection_id=dataset.collection_id,
-        images=[ImageStub(path="image0.jpg", width=100, height=100)],
-    )
-    label = create_annotation_label(
-        session=db_session, root_collection_id=dataset.collection_id, label_name="dog"
-    )
-    annotation_resolver.create_many(
-        session=db_session,
-        parent_collection_id=dataset.collection_id,
-        annotations=[
-            AnnotationCreate(
-                parent_sample_id=images[0].sample_id,
-                annotation_label_id=label.annotation_label_id,
-                annotation_type=AnnotationType.OBJECT_DETECTION,
-                x=10,
-                y=10,
-                width=20,
-                height=40,
-            ),
-        ],
-    )
-
-    output_folder = tmp_path / "yolo"
-    image_dataset_export.ImageDatasetExport(
-        session=db_session,
-        dataset_id=dataset.dataset_id,
-        samples=DatasetQuery(dataset=dataset, session=db_session),
-    ).to_yolo_object_detections(
-        output_folder=output_folder,
-        annotation_collection_id=uuid.uuid4(),
-    )
-
-    # The annotation belongs to a different collection, so it is filtered out.
-    assert (output_folder / "labels" / "image0.txt").read_text() == ""
