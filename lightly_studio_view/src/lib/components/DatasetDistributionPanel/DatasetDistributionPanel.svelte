@@ -78,6 +78,10 @@
     });
     let configDialogOpen = $state(false);
     let expandOpen = $state(false);
+    // Measured height of the chart viewport; drives the chart's height budget and
+    // tracks container resizes (bind:clientHeight is backed by a ResizeObserver).
+    let chartHeight = $state(0);
+    let clientWidth = $state(0);
 
     const visible = $derived(selectVisibleCounts(activeData, config));
     const totalCount = $derived(activeData.reduce((sum, item) => sum + item.count, 0));
@@ -154,8 +158,18 @@
             onExpand={() => (expandOpen = true)}
         />
     {/if}
-    <div class="min-h-0 flex-1 overflow-y-auto dark:[color-scheme:dark]">
-        <BarChart data={visible} orientation={config.orientation} {totalCount} {onBarClick} />
+    <div
+        class="min-h-0 flex-1 overflow-y-auto dark:[color-scheme:dark]"
+        bind:clientHeight={chartHeight}
+    >
+        <BarChart
+            data={visible}
+            orientation={config.orientation}
+            maxHeightPx={chartHeight || undefined}
+            maxWidthPx={clientWidth || undefined}
+            {totalCount}
+            {onBarClick}
+        />
     </div>
 </div>
 <DistributionConfigDialog
