@@ -97,7 +97,7 @@ describe('DistributionConfigDialog', () => {
         );
     });
 
-    it('applies the manually selected classes and closes', async () => {
+    it('applies the manually selected classes', async () => {
         const { onApply } = renderDialog({
             config: { ...baseConfig, mode: 'manual', manualClasses: ['class-2'] }
         });
