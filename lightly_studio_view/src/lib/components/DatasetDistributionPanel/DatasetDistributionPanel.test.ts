@@ -72,10 +72,11 @@ describe('DatasetDistributionPanel', () => {
         ];
         render(DatasetDistributionPanel, { props: { data: unsorted } });
 
+        // Horizontal default: categories live on the y-axis.
         const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
-            xAxis: { data: string[] };
+            yAxis: { data: string[] };
         };
-        expect(option.xAxis.data).toEqual(['person', 'dog', 'car']);
+        expect(option.yAxis.data).toEqual(['person', 'dog', 'car']);
     });
 
     it('applies a new top-N from the config dialog', async () => {
@@ -123,10 +124,12 @@ describe('DatasetDistributionPanel', () => {
     it('toggles the chart orientation from the header', async () => {
         render(DatasetDistributionPanel, { props: defaultProps });
 
+        // Defaults to horizontal bars (categories on the y-axis) to avoid the
+        // initial horizontal scroll.
         expect(
             (echartsMock.instance.setOption.mock.lastCall?.[0] as { yAxis: { type: string } }).yAxis
                 .type
-        ).toBe('value');
+        ).toBe('category');
 
         await fireEvent.click(screen.getByTestId('dataset-distribution-toggle-orientation'));
 
@@ -134,7 +137,7 @@ describe('DatasetDistributionPanel', () => {
             expect(
                 (echartsMock.instance.setOption.mock.lastCall?.[0] as { yAxis: { type: string } })
                     .yAxis.type
-            ).toBe('category')
+            ).toBe('value')
         );
     });
 
@@ -161,10 +164,11 @@ describe('DatasetDistributionPanel', () => {
         // The source selector is present; a single-source panel would not show it.
         expect(screen.getByTestId('dataset-distribution-source-select')).toBeInTheDocument();
 
+        // Horizontal default: categories live on the y-axis.
         const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
-            xAxis: { data: string[] };
+            yAxis: { data: string[] };
         };
-        expect(option.xAxis.data).toEqual(['car']);
+        expect(option.yAxis.data).toEqual(['car']);
     });
 
     it('omits the source selector when only one source is available', () => {

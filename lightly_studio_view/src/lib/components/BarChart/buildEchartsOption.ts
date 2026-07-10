@@ -60,6 +60,10 @@ export function buildEchartsOption(
 
     const valueAxis = {
         type: 'value' as const,
+        // Counts are whole numbers, so keep ticks on integer boundaries. Without
+        // this, a max count of 1 makes ECharts split [0,1] into 0.2 steps and
+        // render fractional labels (0, 0.2, 0.4 …).
+        minInterval: 1,
         axisLabel: CHART_AXIS_LABEL,
         splitLine: { lineStyle: { color: CHART_LINE_COLOR } }
     };
