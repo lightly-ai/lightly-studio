@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-import numpy as np
+from sqlalchemy import Integer, cast, func
 from sqlmodel import Session, col, select
 
 from lightly_studio.database import db_json
@@ -59,36 +59,42 @@ def get_all_metadata_keys_and_schema(
 
         # Add min, max, and histogram for numerical types.
         if metadata_type in _NUMERIC_TYPES:
-            values = _get_metadata_numeric_values(
+            stats = _get_metadata_min_max_count(
                 session=session, collection_id=collection_id, metadata_key=key
             )
-            if values:
-                cast = int if metadata_type == "integer" else float
-                metadata_info.min = cast(min(values))
-                metadata_info.max = cast(max(values))
-                metadata_info.histogram = _compute_histogram(values=values)
+            if stats is not None:
+                min_value, max_value, _ = stats
+                cast_type = int if metadata_type == "integer" else float
+                metadata_info.min = cast_type(min_value)
+                metadata_info.max = cast_type(max_value)
+                metadata_info.histogram = _compute_histogram(
+                    session=session,
+                    collection_id=collection_id,
+                    metadata_key=key,
+                    stats=stats,
+                )
 
         result.append(metadata_info)
 
     return result
 
 
-def _get_metadata_numeric_values(
+def _get_metadata_min_max_count(
     session: Session,
     collection_id: UUID,
     metadata_key: str,
-) -> list[float]:
-    """Fetch all non-null values for a specific numerical metadata key.
+) -> tuple[float, float, int] | None:
+    """Aggregate the min, max, and count for a numerical metadata key in SQL.
 
     Args:
         session: The database session.
         collection_id: The collection's UUID.
-        metadata_key: The metadata key to fetch values for.
+        metadata_key: The metadata key to aggregate.
 
     Returns:
-        List of the numeric values (as floats) for the given key.
+        A ``(min, max, count)`` tuple, or ``None`` if the key has no values.
     """
-    json_value_expr = db_json.json_extract(
+    value_expr = db_json.json_extract(
         column=SampleMetadataTable.data, field=metadata_key, cast_to_float=True
     )
     json_not_null_expr = db_json.json_extract(
@@ -96,7 +102,11 @@ def _get_metadata_numeric_values(
     ).isnot(None)
 
     query = (
-        select(json_value_expr)
+        select(
+            func.min(value_expr),
+            func.max(value_expr),
+            func.count(value_expr),
+        )
         .select_from(SampleTable)
         .join(
             SampleMetadataTable,
@@ -108,25 +118,75 @@ def _get_metadata_numeric_values(
         )
     )
 
-    return [float(value) for value in session.exec(query).all() if value is not None]
+    row = session.exec(query).first()
+    if row is None or row[0] is None or row[1] is None or row[2] == 0:
+        return None
+    return float(row[0]), float(row[1]), int(row[2])
 
 
-def _compute_histogram(values: list[float]) -> HistogramView:
-    """Compute a value-distribution histogram in Python.
+def _compute_histogram(
+    session: Session,
+    collection_id: UUID,
+    metadata_key: str,
+    stats: tuple[float, float, int],
+) -> HistogramView:
+    """Compute a value-distribution histogram entirely in SQL.
 
-    Binning is done with numpy so it is independent of the database backend
-    (no ``width_bucket()`` or dialect-specific SQL). When all values are equal,
-    numpy produces a single degenerate range which we keep as-is.
+    Bucketing is expressed with dialect-independent SQLAlchemy functions
+    (``floor``/``least``/``greatest``) so it works on both DuckDB and
+    PostgreSQL without materializing every value in Python. Bin ``i`` covers
+    the half-open interval ``[bin_edges[i], bin_edges[i + 1])``; the last bin
+    includes its right edge, matching the value at ``max``.
+
+    When all values are equal the range is degenerate, so a single bin holding
+    every value is returned.
 
     Args:
-        values: The numeric values to bin. Must be non-empty.
+        session: The database session.
+        collection_id: The collection's UUID.
+        metadata_key: The metadata key to bin.
+        stats: The ``(min, max, count)`` returned by ``_get_metadata_min_max_count``.
 
     Returns:
         The histogram with bin edges and per-bin counts.
     """
-    assert values
-    counts, bin_edges = np.histogram(values, bins=_HISTOGRAM_BIN_COUNT)
-    return HistogramView(
-        bin_edges=[float(edge) for edge in bin_edges],
-        counts=[int(count) for count in counts],
+    min_value, max_value, total_count = stats
+    if max_value == min_value:
+        return HistogramView(bin_edges=[min_value, max_value], counts=[total_count])
+
+    bin_count = _HISTOGRAM_BIN_COUNT
+    width = (max_value - min_value) / bin_count
+
+    value_expr = db_json.json_extract(
+        column=SampleMetadataTable.data, field=metadata_key, cast_to_float=True
     )
+    json_not_null_expr = db_json.json_extract(
+        column=SampleMetadataTable.data, field=metadata_key
+    ).isnot(None)
+
+    # Bucket index in [0, bin_count - 1]; values equal to max map to the last bin.
+    raw_bucket = cast(func.floor((value_expr - min_value) / width), Integer)
+    bucket_expr = func.least(func.greatest(raw_bucket, 0), bin_count - 1)
+
+    query = (
+        select(bucket_expr.label("bucket"), func.count())
+        .select_from(SampleTable)
+        .join(
+            SampleMetadataTable,
+            col(SampleMetadataTable.sample_id) == col(SampleTable.sample_id),
+        )
+        .where(
+            SampleTable.collection_id == collection_id,
+            json_not_null_expr,
+        )
+        .group_by(bucket_expr)
+    )
+
+    counts_by_bucket = {int(bucket): int(count) for bucket, count in session.exec(query).all()}
+    counts = [counts_by_bucket.get(i, 0) for i in range(bin_count)]
+
+    bin_edges = [min_value + (max_value - min_value) * i / bin_count for i in range(bin_count + 1)]
+    # Guard against float drift so the last edge is exactly the max value.
+    bin_edges[-1] = max_value
+
+    return HistogramView(bin_edges=bin_edges, counts=counts)
