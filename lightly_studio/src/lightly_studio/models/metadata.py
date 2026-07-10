@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel
@@ -198,6 +198,45 @@ class MetadataInfoView(BaseModel):
     """Metadata info response model for API endpoints."""
 
     name: str = Field(description="The metadata key name")
-    type: str = Field(description="The metadata type (e.g., 'string', 'integer', 'float')")
+    type: str = Field(
+        description="The metadata type (e.g., 'string', 'integer', 'float', 'gps_coordinate')"
+    )
     min: int | float | None = Field(None, description="Minimum value for numerical metadata")
     max: int | float | None = Field(None, description="Maximum value for numerical metadata")
+    values: list[str] | None = Field(
+        None,
+        description="Distinct values for categorical metadata (string/boolean types)",
+    )
+
+
+class MetadataCategoricalCount(BaseModel):
+    """A single categorical value and how many samples carry it."""
+
+    value: str = Field(description="The display value, or '(none)' for missing metadata")
+    count: int = Field(description="Number of samples with this value")
+
+
+class MetadataDistributionView(BaseModel):
+    """Distribution of one metadata key over a (optionally filtered) sample set.
+
+    ``kind`` selects which payload is populated: ``categorical`` fills
+    ``categorical`` (value/count pairs including an explicit ``(none)`` entry),
+    while ``numeric`` fills ``bin_edges``/``counts`` (an equal-width histogram)
+    and ``none_count`` (samples missing the key).
+    """
+
+    key: str = Field(description="The metadata key name")
+    type: str = Field(description="The metadata schema type")
+    kind: Literal["categorical", "numeric"] = Field(description="Which payload is populated")
+    categorical: list[MetadataCategoricalCount] | None = Field(
+        None, description="Value/count pairs for categorical keys"
+    )
+    bin_edges: list[float] | None = Field(
+        None, description="Histogram bin edges (length = counts + 1) for numeric keys"
+    )
+    counts: list[int] | None = Field(
+        None, description="Per-bin sample counts for numeric keys"
+    )
+    none_count: int | None = Field(
+        None, description="Number of in-scope samples missing the key (numeric keys)"
+    )

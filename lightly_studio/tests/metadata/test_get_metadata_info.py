@@ -3,6 +3,7 @@
 import pytest
 from sqlmodel import Session
 
+from lightly_studio.metadata.gps_coordinate import GPSCoordinate
 from lightly_studio.resolvers.metadata_resolver.sample.get_metadata_info import (
     get_all_metadata_keys_and_schema,
 )
@@ -111,6 +112,54 @@ def test_get_all_metadata_keys_and_schema__no_numerical_values(
     for item in result:
         assert item.min is None
         assert item.max is None
+
+
+def test_get_all_metadata_keys_and_schema__categorical_values(
+    db_session: Session,
+) -> None:
+    """Categorical (string/boolean) keys report their distinct display values."""
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    for path, location, processed in [
+        ("/a.png", "city", True),
+        ("/b.png", "mountain", False),
+        ("/c.png", "city", True),
+    ]:
+        sample = create_image(
+            session=db_session, collection_id=collection_id, file_path_abs=path
+        ).sample
+        sample["location"] = location
+        sample["is_processed"] = processed
+
+    result = get_all_metadata_keys_and_schema(session=db_session, collection_id=collection_id)
+
+    location_info = next(item for item in result if item.name == "location")
+    is_processed_info = next(item for item in result if item.name == "is_processed")
+
+    assert location_info.type == "string"
+    assert location_info.values == ["city", "mountain"]
+    assert is_processed_info.type == "boolean"
+    assert is_processed_info.values == ["false", "true"]
+
+
+def test_get_all_metadata_keys_and_schema__gps_coordinate_reported(
+    db_session: Session,
+) -> None:
+    """The gps_coordinate complex type is exposed so the frontend can gate a map."""
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    sample = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/gps.png"
+    ).sample
+    sample["location_gps"] = GPSCoordinate(lat=47.0, lon=8.0)
+
+    result = get_all_metadata_keys_and_schema(session=db_session, collection_id=collection_id)
+
+    gps_info = next(item for item in result if item.name == "location_gps")
+    assert gps_info.type == "gps_coordinate"
+    assert gps_info.values is None
 
 
 def test_get_all_metadata_keys_and_schema__empty_collection(

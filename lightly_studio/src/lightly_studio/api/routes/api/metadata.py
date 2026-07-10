@@ -9,13 +9,22 @@ from fastapi import APIRouter, Depends, HTTPException, Path
 from pydantic import BaseModel, Field
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
-from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
+from lightly_studio.api.routes.api.status import HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_NOT_FOUND
 from lightly_studio.database.db_manager import SessionDep
-from lightly_studio.errors import TagNotFoundError
+from lightly_studio.errors import (
+    MetadataKeyNotFoundError,
+    TagNotFoundError,
+    UnsupportedMetadataTypeError,
+)
 from lightly_studio.metadata import compute_similarity, compute_typicality
 from lightly_studio.models.collection import CollectionTable
-from lightly_studio.models.metadata import MetadataInfoView
+from lightly_studio.models.metadata import MetadataDistributionView, MetadataInfoView
 from lightly_studio.resolvers import embedding_model_resolver
+from lightly_studio.resolvers.grid_filter import GridFilter
+from lightly_studio.resolvers.metadata_resolver.sample.get_metadata_distribution import (
+    DEFAULT_BINS,
+    get_metadata_distribution,
+)
 from lightly_studio.resolvers.metadata_resolver.sample.get_metadata_info import (
     get_all_metadata_keys_and_schema,
 )
@@ -39,6 +48,76 @@ def get_metadata_info(
         for numerical metadata types.
     """
     return get_all_metadata_keys_and_schema(session=session, collection_id=collection_id)
+
+
+class MetadataDistributionRequest(BaseModel):
+    """Request model for the metadata distribution endpoint."""
+
+    filter: GridFilter | None = Field(
+        default=None,
+        description="Optional grid filter scoping the samples aggregated over.",
+    )
+    bins: int = Field(
+        default=DEFAULT_BINS,
+        gt=0,
+        description="Number of equal-width bins for numeric keys.",
+    )
+
+
+@metadata_router.post(
+    "/metadata/{key}/distribution",
+    response_model=MetadataDistributionView,
+)
+def get_metadata_distribution_route(
+    session: SessionDep,
+    collection: Annotated[
+        CollectionTable,
+        Depends(get_and_validate_collection_id),
+    ],
+    key: Annotated[str, Path(title="Metadata key")],
+    request: MetadataDistributionRequest,
+) -> MetadataDistributionView:
+    """Get the distribution of a single metadata key.
+
+    Categorical keys return value/count pairs (with an explicit ``(none)``
+    entry); numeric keys return an equal-width histogram. An optional filter
+    scopes the aggregation, e.g. to serve one series per tag.
+
+    Args:
+        session: The database session.
+        collection: The validated collection.
+        key: The metadata key to aggregate.
+        request: Optional filter and numeric bin count.
+
+    Returns:
+        The distribution of the key over the (optionally filtered) samples.
+
+    Raises:
+        HTTPException: 404 if the key is absent; 400 if the key type is
+            unsupported for a distribution.
+    """
+    scope_sample_ids: set[UUID] | None = None
+    if request.filter is not None:
+        scope_sample_ids = set(
+            session.exec(
+                request.filter.build_sample_ids_query(collection_id=collection.collection_id)
+            ).all()
+        )
+
+    try:
+        return get_metadata_distribution(
+            session=session,
+            collection_id=collection.collection_id,
+            key=key,
+            scope_sample_ids=scope_sample_ids,
+            bins=request.bins,
+        )
+    except MetadataKeyNotFoundError as e:
+        raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail=str(e)) from e
+    except (UnsupportedMetadataTypeError, ValueError) as e:
+        # ValueError covers schema/data drift (inconsistent schema types or a
+        # non-numeric value under a numeric key) — a bad request, not a 500.
+        raise HTTPException(status_code=HTTP_STATUS_BAD_REQUEST, detail=str(e)) from e
 
 
 class ComputeTypicalityRequest(BaseModel):

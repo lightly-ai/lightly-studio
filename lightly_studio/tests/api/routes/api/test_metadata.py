@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
@@ -9,9 +9,11 @@ from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND, HTTP_STATUS_OK
 from lightly_studio.models.metadata import MetadataInfoView
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import image_resolver, metadata_resolver, tag_resolver
 from tests.helpers_resolvers import (
     create_collection,
+    create_image,
     create_tag,
     fill_db_with_samples_and_embeddings,
 )
@@ -66,6 +68,100 @@ def test_get_metadata_info__empty_response(test_client: TestClient, mocker: Mock
 
 # TODO(Mihnea, 10/2025): Also add tests with passing `embedding_model_name` and/or `metadata_name`
 #  in the body.
+def _create_image_with_metadata(
+    db_session: Session, collection_id: UUID, path: str, **metadata: object
+) -> SampleTable:
+    sample = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs=path
+    ).sample
+    for key, value in metadata.items():
+        sample[key] = value
+    return sample
+
+
+def test_get_metadata_distribution__categorical(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    _create_image_with_metadata(db_session, collection_id, "/a.png", location="city")
+    _create_image_with_metadata(db_session, collection_id, "/b.png", location="city")
+    _create_image_with_metadata(db_session, collection_id, "/c.png", location="mountain")
+    _create_image_with_metadata(db_session, collection_id, "/d.png")  # missing key
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/location/distribution", json={}
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    data = response.json()
+    assert data["kind"] == "categorical"
+    assert data["type"] == "string"
+    counts = {item["value"]: item["count"] for item in data["categorical"]}
+    assert counts == {"city": 2, "mountain": 1, "(none)": 1}
+
+
+def test_get_metadata_distribution__numeric(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    for index, value in enumerate([0.0, 5.0, 10.0]):
+        _create_image_with_metadata(db_session, collection_id, f"/{index}.png", score=value)
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/score/distribution", json={"bins": 2}
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    data = response.json()
+    assert data["kind"] == "numeric"
+    assert data["bin_edges"] == [0.0, 5.0, 10.0]
+    assert data["counts"] == [1, 2]
+    assert data["none_count"] == 0
+
+
+def test_get_metadata_distribution__respects_filter(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    city = _create_image_with_metadata(db_session, collection_id, "/a.png", location="city")
+    _create_image_with_metadata(db_session, collection_id, "/b.png", location="mountain")
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/location/distribution",
+        json={
+            "filter": {
+                "filter_type": "image",
+                "sample_filter": {
+                    "filter_type": "sample",
+                    "sample_ids": [str(city.sample_id)],
+                },
+            }
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    counts = {item["value"]: item["count"] for item in response.json()["categorical"]}
+    assert counts == {"city": 1, "(none)": 0}
+
+
+def test_get_metadata_distribution__missing_key(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection = create_collection(session=db_session)
+    _create_image_with_metadata(
+        db_session, collection.collection_id, "/a.png", location="city"
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/metadata/nope/distribution", json={}
+    )
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
+
+
 def test_compute_typicality_metadata(test_client: TestClient, db_session: Session) -> None:
     # Create collection with samples and embeddings
     collection_id = fill_db_with_samples_and_embeddings(
