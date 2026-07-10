@@ -9,9 +9,11 @@
         selected: string[];
         /** Full list of class labels to choose from, in the order they should be displayed. */
         allClasses: string[];
+        /** test-id for the search input; lets each host keep its own id scheme. */
+        searchTestId?: string;
     }
 
-    let { selected = $bindable(), allClasses }: Props = $props();
+    let { selected = $bindable(), allClasses, searchTestId }: Props = $props();
 
     const toggle = (className: string) => {
         selected = selected.includes(className)
@@ -45,7 +47,7 @@
         </div>
     </div>
     <Command.Root class="rounded-md border">
-        <Command.Input placeholder="Search classes..." data-testid="class-set-search" />
+        <Command.Input placeholder="Search classes..." data-testid={searchTestId} />
         <Command.List class="max-h-[220px] dark:[color-scheme:dark]">
             <Command.Empty>No class found.</Command.Empty>
             {#each allClasses as className (className)}
