@@ -3,7 +3,13 @@ import { describe, expect, it, vi } from 'vitest';
 import PanelHeader from './PanelHeader.svelte';
 import type { DistributionConfig } from '../types';
 
-const config: DistributionConfig = { n: 5, sortBy: 'count', orientation: 'vertical' };
+const config: DistributionConfig = {
+    mode: 'topN',
+    n: 5,
+    sortBy: 'count',
+    manualClasses: [],
+    orientation: 'vertical'
+};
 
 const defaultProps = {
     config,
@@ -47,6 +53,24 @@ describe('PanelHeader', () => {
         await fireEvent.click(screen.getByTestId('dataset-distribution-show-all'));
 
         expect(onShowAll).toHaveBeenCalledOnce();
+    });
+
+    it('labels a top-N subset with "Top" and a manual subset with "Showing"', () => {
+        const { unmount } = render(PanelHeader, {
+            props: { ...defaultProps, classCount: 30, visibleClassCount: 10 }
+        });
+        expect(screen.getByText(/^Top 10 of 30 classes/)).toBeInTheDocument();
+        unmount();
+
+        render(PanelHeader, {
+            props: {
+                ...defaultProps,
+                config: { ...config, mode: 'manual' },
+                classCount: 30,
+                visibleClassCount: 10
+            }
+        });
+        expect(screen.getByText(/^Showing 10 of 30 classes/)).toBeInTheDocument();
     });
 
     it('hides the "Show all" action when all classes are visible', () => {

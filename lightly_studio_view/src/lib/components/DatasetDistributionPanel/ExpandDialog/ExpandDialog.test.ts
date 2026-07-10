@@ -33,7 +33,13 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
     } as unknown as typeof ResizeObserver;
 }
 
-const config: DistributionConfig = { n: 10, sortBy: 'count', orientation: 'vertical' };
+const config: DistributionConfig = {
+    mode: 'topN',
+    n: 10,
+    sortBy: 'count',
+    manualClasses: [],
+    orientation: 'vertical'
+};
 
 const renderDialog = (overrides = {}) => {
     const onConfigChange = vi.fn();
@@ -78,7 +84,7 @@ describe('ExpandDialog', () => {
 
         await fireEvent.click(screen.getByTestId('dataset-distribution-expanded-show-all'));
 
-        expect(onConfigChange).toHaveBeenCalledWith({ ...config, n: 30 });
+        expect(onConfigChange).toHaveBeenCalledWith({ ...config, mode: 'topN', n: 30 });
     });
 
     it('toggles orientation via the header', async () => {

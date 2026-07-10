@@ -61,6 +61,28 @@ describe('buildImageFilter', () => {
         });
     });
 
+    test('adds tagIds to sample_filter', () => {
+        const result = buildImageFilter({ ...baseArgs, tagIds: ['t1', 't2'] });
+        expect(result).toEqual({ sample_filter: { tag_ids: ['t1', 't2'] } });
+    });
+
+    test('ignores empty tagIds', () => {
+        const result = buildImageFilter({ ...baseArgs, tagIds: [] });
+        expect(result).toBeUndefined();
+    });
+
+    test('adds confusionCell to sample_filter', () => {
+        const confusionCell = { predicted: 'a', actual: 'b' } as never;
+        const result = buildImageFilter({ ...baseArgs, confusionCell });
+        expect(result).toEqual({ sample_filter: { confusion_cell: confusionCell } });
+    });
+
+    test('adds queryExpr to sample_filter', () => {
+        const queryExpr = { field: 'foo' } as never;
+        const result = buildImageFilter({ ...baseArgs, queryExpr });
+        expect(result).toEqual({ sample_filter: { query_expr: queryExpr } });
+    });
+
     test('merges dimensions, annotationFilter and metadataFilters', () => {
         const metadataFilters = [{ key: 'foo', operator: 'eq', value: 'bar' }] as never;
 

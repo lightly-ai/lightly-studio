@@ -48,7 +48,8 @@
 <div class="mb-1 flex flex-row items-center gap-2">
     <div class="mb-2 flex-1 text-xs text-muted-foreground">
         {#if visibleClassCount < classCount}
-            Top {visibleClassCount} of {classCount} classes
+            {config.mode === 'manual' ? 'Showing' : 'Top'}
+            {visibleClassCount} of {classCount} classes
         {:else}
             {classCount}
             {classCount === 1 ? 'class' : 'classes'}
