@@ -127,9 +127,11 @@ class EmbeddingManager:
         matched = False
         if isinstance(embedding_generator, ImageEmbeddingGenerator):
             self._override_generators[SampleType.IMAGE] = embedding_generator
+            self._sample_type_to_model_id.pop(SampleType.IMAGE, None)
             matched = True
         if isinstance(embedding_generator, VideoEmbeddingGenerator):
             self._override_generators[SampleType.VIDEO] = embedding_generator
+            self._sample_type_to_model_id.pop(SampleType.VIDEO, None)
             matched = True
         if not matched:
             raise TypeError(

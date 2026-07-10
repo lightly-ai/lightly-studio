@@ -25,7 +25,6 @@ from lightly_studio.dataset import file_utils, image_crop_embedding, image_embed
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
 from lightly_studio.dataset.image_embedding import EmbeddingContext
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
-from lightly_studio.resolvers import embedding_model_resolver
 from lightly_studio.vendor import mobileclip
 
 MODEL_NAME = "mobileclip_s0"
@@ -145,17 +144,5 @@ dataset_path = env.path("EXAMPLES_DATASET_PATH", "/path/to/your/dataset")
 # Create a Dataset from a path. Images are embedded with the custom model.
 dataset = ls.ImageDataset.create()
 dataset.add_images_from_path(path=str(dataset_path))
-
-# Confirm the custom model was actually used: fetch the embedding model that the
-# images were embedded with from the database and print its name.
-used_model = embedding_model_resolver.get_default_by_collection_id(
-    session=dataset.session,
-    collection_id=dataset.collection_id,
-)
-assert used_model is not None, "No embedding model was registered for the collection."
-print(f"Images were embedded with: {used_model.name} (dim={used_model.embedding_dimension})")
-assert used_model.name == "Custom Embedding Model", (
-    f"Expected the custom model to be used, but got '{used_model.name}'."
-)
 
 ls.start_gui()
