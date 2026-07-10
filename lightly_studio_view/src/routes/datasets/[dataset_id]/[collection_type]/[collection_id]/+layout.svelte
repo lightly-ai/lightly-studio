@@ -419,7 +419,8 @@
                                         buttonProps={{
                                             onclick: toggleFilterPanelCollapsed,
                                             'aria-expanded': true,
-                                            'data-testid': 'filter-panel-collapse'
+                                            'data-testid': 'filter-panel-collapse',
+                                            class: 'size-6 p-0'
                                         }}
                                     />
                                 </Tooltip>

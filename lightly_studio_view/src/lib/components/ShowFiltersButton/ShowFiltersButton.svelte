@@ -13,7 +13,8 @@
     buttonProps={{
         onclick: toggleFilterPanelCollapsed,
         'aria-expanded': false,
-        'data-testid': 'filter-panel-expand'
+        'data-testid': 'filter-panel-expand',
+        class: 'h-8 gap-1.5 px-2 text-xs'
     }}
 >
     Filters
