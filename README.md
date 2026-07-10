@@ -356,8 +356,8 @@ ls.start_gui()
 
 Step-by-step guides covering complete workflows — from raw, unlabeled data to a trained and evaluated model:
 
-- **[Curate a Traffic CCTV Dataset for YOLO Training](https://docs.lightly.ai/studio/tutorials/yolo-traffic-cctv-object-detection/)** — Explore embeddings, remove near-duplicates, auto-label with a detection plugin, and review annotations before training.
-- **[Evaluate YOLO26 on Your Dataset with LightlyStudio](https://docs.lightly.ai/studio/tutorials/yolo26-model-evaluation/)** — Compare predictions against ground truth, use the confusion matrix and embeddings to find failure patterns, and export issues for relabeling.
+- **[Curate a Traffic CCTV Dataset for YOLO Training](https://docs.lightly.ai/studio/tutorials/yolo-traffic-cctv-object-detection/):** Explore embeddings, remove near-duplicates, auto-label with a detection plugin, and review annotations before training.
+- **[Evaluate YOLO26 on Your Dataset with LightlyStudio](https://docs.lightly.ai/studio/tutorials/yolo26-model-evaluation/):** Compare predictions against ground truth, use the confusion matrix and embeddings to find failure patterns, and export issues for relabeling.
 
 ## 🐍 Python Interface
 
