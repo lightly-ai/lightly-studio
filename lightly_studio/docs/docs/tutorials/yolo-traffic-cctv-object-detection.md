@@ -299,12 +299,6 @@ Run the script with:
 python train_yolo.py
 ```
 
-Or, if you use `uv`:
-
-```bash
-uv run train_yolo.py
-```
-
 After training, Ultralytics evaluates the model on the `test_yolo` split and prints the evaluation metrics. You should see output similar to this:
 
 ```text
