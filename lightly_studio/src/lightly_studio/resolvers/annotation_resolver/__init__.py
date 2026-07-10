@@ -3,6 +3,7 @@
 from lightly_studio.resolvers.annotation_resolver.create_many import create_many
 from lightly_studio.resolvers.annotation_resolver.delete_annotation import (
     delete_annotation,
+    delete_evaluation_metrics,
 )
 from lightly_studio.resolvers.annotation_resolver.delete_annotations import (
     delete_annotations,
@@ -57,6 +58,7 @@ __all__ = [
     "create_many",
     "delete_annotation",
     "delete_annotations",
+    "delete_evaluation_metrics",
     "get_adjacent_annotations",
     "get_all",
     "get_all_by_collection_id_and_parent_sample_ids",

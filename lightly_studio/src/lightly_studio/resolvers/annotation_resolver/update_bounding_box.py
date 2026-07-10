@@ -44,6 +44,11 @@ def update_bounding_box(
         raise ValueError(f"Annotation with ID {annotation_id} not found.")
 
     try:
+        annotation_resolver.delete_evaluation_metrics(
+            session=session,
+            annotation_ids=[annotation.sample_id],
+            parent_sample_ids=[annotation.parent_sample_id],
+        )
         if annotation.object_detection_details:
             annotation.object_detection_details.x = coordinates.x
             annotation.object_detection_details.y = coordinates.y
