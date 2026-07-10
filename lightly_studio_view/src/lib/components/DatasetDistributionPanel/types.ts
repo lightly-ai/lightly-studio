@@ -1,4 +1,5 @@
 import type { CategoryCount } from '$lib/components/BarChart';
+import type { ClassSetSelection } from '$lib/components/ClassSetConfig';
 
 export type DistributionSortOption = 'count' | 'name';
 
@@ -39,10 +40,7 @@ export interface DistributionSource {
 }
 
 /** User-configurable view options for the distribution panel. */
-export interface DistributionConfig {
-    /** Number of top classes shown. */
-    n: number;
-    sortBy: DistributionSortOption;
+export interface DistributionConfig extends ClassSetSelection<DistributionSortOption> {
     /** Bar orientation (default 'vertical'). */
     orientation: DistributionOrientation;
 }

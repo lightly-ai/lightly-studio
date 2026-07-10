@@ -69,7 +69,13 @@
     // Default to horizontal bars: categories stack down the left gutter and the
     // chart scrolls vertically, avoiding the initial horizontal scroll that
     // vertical bars produce once there are more than a handful of classes.
-    let config: DistributionConfig = $state({ n: topN, sortBy: 'count', orientation: 'horizontal' });
+    let config: DistributionConfig = $state({
+        mode: 'topN',
+        n: topN,
+        sortBy: 'count',
+        manualClasses: [],
+        orientation: 'horizontal'
+    });
     let configDialogOpen = $state(false);
     let expandOpen = $state(false);
 
@@ -139,7 +145,7 @@
             {totalCount}
             {valueNoun}
             onConfigure={() => (configDialogOpen = true)}
-            onShowAll={() => (config = { ...config, n: activeData.length })}
+            onShowAll={() => (config = { ...config, mode: 'topN', n: activeData.length })}
             onToggleOrientation={() =>
                 (config = {
                     ...config,
@@ -154,7 +160,7 @@
 </div>
 <DistributionConfigDialog
     bind:open={configDialogOpen}
-    maxN={activeData.length}
+    allClasses={activeData.map((item) => item.label)}
     {config}
     onApply={(next) => (config = next)}
 />

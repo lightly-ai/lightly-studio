@@ -48,7 +48,7 @@
             {totalCount}
             {valueNoun}
             onConfigure={() => (configDialogOpen = true)}
-            onShowAll={() => onConfigChange({ ...config, n: data.length })}
+            onShowAll={() => onConfigChange({ ...config, mode: 'topN', n: data.length })}
             onToggleOrientation={() =>
                 onConfigChange({
                     ...config,
@@ -70,7 +70,7 @@
 
 <DistributionConfigDialog
     bind:open={configDialogOpen}
-    maxN={data.length}
+    allClasses={data.map((item) => item.label)}
     {config}
     onApply={onConfigChange}
 />
