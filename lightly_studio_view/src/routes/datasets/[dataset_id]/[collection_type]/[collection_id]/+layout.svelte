@@ -621,7 +621,7 @@
                             {/await}
                         {:else if $activePanel === 'queryEditor' && isImages}
                             <QueryEditorPanel onClose={() => setActivePanel('none')} />
-                        {:else if $activePanel === 'distribution' && isImages}
+                        {:else if distributionPanelVisible}
                             {#await import('$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte') then { default: DatasetDistributionPanel }}
                                 <DatasetDistributionPanel
                                     sources={distributionSources}
