@@ -6,6 +6,7 @@ import uuid
 from uuid import UUID
 
 import pytest
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 from sqlmodel.sql.expression import SelectOfScalar
 
@@ -20,6 +21,7 @@ from lightly_studio.resolvers import annotation_resolver as annotations_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
+from lightly_studio.resolvers.region_sample_ids_filter import RegionSampleIdsFilter
 from tests.helpers_resolvers import (
     create_annotation_label,
     create_collection,
@@ -200,6 +202,32 @@ def test_combined_filters(
     filtered_annotations = annotations_resolver.get_all(
         session=db_session, filters=combined_filter
     ).annotations
+    assert len(filtered_annotations) == 1
+    assert filtered_annotations[0].sample_id == annotation1.sample_id
+
+
+def test_filter_delegates_region_filtering_to_mixin(
+    db_session: Session,
+    filter_test_data: tuple[AnnotationBaseTable, AnnotationBaseTable],
+    mocker: MockerFixture,
+) -> None:
+    """``apply`` must delegate region filtering to the shared mixin and propagate its result.
+
+    It passes the aliased annotation-sample id column; the branch semantics themselves
+    are covered by the mixin's own tests in tests/resolvers/test_region_sample_ids_filter.py.
+    """
+    annotation1, _ = filter_test_data
+    spy = mocker.spy(RegionSampleIdsFilter, "_apply_region_sample_ids_filter")
+
+    region_filter = AnnotationsFilter(region_sample_ids=[annotation1.sample_id])
+    filtered_annotations = annotations_resolver.get_all(
+        session=db_session, filters=region_filter
+    ).annotations
+
+    # ``get_all`` issues both a count and a data query, so ``apply`` (and the delegation)
+    # runs more than once; every call must pass the annotation-sample id column.
+    assert spy.called
+    assert all(call.kwargs["sample_id_column"].key == "sample_id" for call in spy.call_args_list)
     assert len(filtered_annotations) == 1
     assert filtered_annotations[0].sample_id == annotation1.sample_id
 

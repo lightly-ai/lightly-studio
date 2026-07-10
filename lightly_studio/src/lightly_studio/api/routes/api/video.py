@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.database.db_manager import SessionDep
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.video import VideoFieldsBoundsView, VideoView, VideoViewsWithCount
 from lightly_studio.resolvers import video_resolver
 from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_collection import (
@@ -43,6 +44,10 @@ class ReadVideoCountAnnotationsRequest(BaseModel):
     filter: Optional[VideoFilter] = Field(
         None, description="Filter parameters for video annotations counter"
     )
+    annotation_type: Optional[AnnotationType] = Field(
+        None,
+        description="Restrict counts to a single annotation type (e.g. classification).",
+    )
 
 
 @video_router.post(
@@ -68,6 +73,7 @@ def count_video_frame_annotations_by_video_collection(
         session=session,
         collection_id=collection_id,
         filters=body.filter,
+        annotation_type=body.annotation_type,
     )
 
 

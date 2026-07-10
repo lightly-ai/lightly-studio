@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlmodel import Session
 from sqlmodel.sql.expression import SelectOfScalar
 
+from lightly_studio.resolvers import embedding_region_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 
 
@@ -41,5 +42,11 @@ def get_sample_ids(
     Returns:
         Set of annotation sample ids matching the given filters.
     """
+    if filters is not None and filters.embedding_region is not None:
+        filters.region_sample_ids = embedding_region_resolver.get_sample_ids_in_region(
+            session=session,
+            collection_id=collection_id,
+            region=filters.embedding_region,
+        )
     query = build_sample_ids_query(collection_id=collection_id, filters=filters)
     return set(session.exec(query).all())

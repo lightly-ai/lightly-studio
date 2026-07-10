@@ -783,7 +783,7 @@ def test_deep_copy__with_evaluation_annotation_metrics(db_session: Session) -> N
     create_annotation_metrics(
         session=db_session,
         run_id=run.id,
-        true_positive_metric_stubs=[
+        pair_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=image.sample_id,
                 metrics={"iou": 0.8},
