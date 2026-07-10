@@ -15,6 +15,7 @@ from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
+from lightly_studio.resolvers import embedding_region_resolver
 from lightly_studio.resolvers.dataset_resolver.get_hierarchy import get_hierarchy
 from lightly_studio.resolvers.image_filter import ImageFilter
 
@@ -69,8 +70,19 @@ def export(
     Returns:
         List of file paths
     """
+    # Resolve any embedding-plot region selection to concrete sample ids before the query is
+    # built (the point-in-polygon test needs the session, which `_build_export_query` lacks).
+    sample_filter = collection_filter.sample_filter if collection_filter is not None else None
+    if sample_filter is not None and sample_filter.embedding_region is not None:
+        sample_filter.region_sample_ids = embedding_region_resolver.get_sample_ids_in_region(
+            session=session,
+            collection_id=collection_id,
+            region=sample_filter.embedding_region,
+        )
     # Get all child collection IDs that could contain annotations
-    annotation_collection_ids = _get_annotation_collection_ids(session, collection_id)
+    annotation_collection_ids = _get_annotation_collection_ids(
+        session=session, collection_id=collection_id
+    )
     query = _build_export_query(
         collection_id=collection_id,
         annotation_collection_ids=annotation_collection_ids,
@@ -106,8 +118,19 @@ def get_filtered_samples_count(
     Returns:
         Count of files to be exported
     """
+    # Resolve any embedding-plot region selection to concrete sample ids before the query is
+    # built (the point-in-polygon test needs the session, which `_build_export_query` lacks).
+    sample_filter = collection_filter.sample_filter if collection_filter is not None else None
+    if sample_filter is not None and sample_filter.embedding_region is not None:
+        sample_filter.region_sample_ids = embedding_region_resolver.get_sample_ids_in_region(
+            session=session,
+            collection_id=collection_id,
+            region=sample_filter.embedding_region,
+        )
     # Get all child collection IDs that could contain annotations
-    annotation_collection_ids = _get_annotation_collection_ids(session, collection_id)
+    annotation_collection_ids = _get_annotation_collection_ids(
+        session=session, collection_id=collection_id
+    )
     query = _build_export_query(
         collection_id=collection_id,
         annotation_collection_ids=annotation_collection_ids,
