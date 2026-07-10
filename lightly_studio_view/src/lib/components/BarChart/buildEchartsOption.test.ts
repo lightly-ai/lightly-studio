@@ -29,6 +29,18 @@ describe('buildEchartsOption', () => {
         expect(option.series[0].data).toEqual(balanced.map((item) => item.count));
     });
 
+    it('keeps the value axis on integer ticks so single-annotation classes avoid fractional labels', () => {
+        const vertical = buildEchartsOption([{ label: 'kite', count: 1 }]) as {
+            yAxis: { minInterval: number };
+        };
+        const horizontal = buildEchartsOption([{ label: 'kite', count: 1 }], {
+            orientation: 'horizontal'
+        }) as { xAxis: { minInterval: number } };
+
+        expect(vertical.yAxis.minInterval).toBe(1);
+        expect(horizontal.xAxis.minInterval).toBe(1);
+    });
+
     const getFormatter = (option: unknown) =>
         (
             option as {
