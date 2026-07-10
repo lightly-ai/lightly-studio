@@ -131,7 +131,7 @@ def _get_total_counts(
     return {row[0]: row[1] for row in session.exec(total_counts_query).all()}
 
 
-def _get_current_counts(
+def _get_current_counts(  # noqa: PLR0913
     session: Session,
     collection_id: UUID,
     image_filter: ImageFilter | None,
