@@ -34,4 +34,10 @@ describe('ManualClassSelector', () => {
 
         await waitFor(() => expect(screen.getByText('0 of 3 selected')).toBeInTheDocument());
     });
+
+    it('applies the given search test-id to the input', () => {
+        render(ManualClassSelector, { props: { ...defaultProps, searchTestId: 'my-search' } });
+
+        expect(screen.getByTestId('my-search')).toBeInTheDocument();
+    });
 });

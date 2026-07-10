@@ -38,7 +38,7 @@
         data,
         orientation = 'vertical',
         maxWidthPx,
-        maxHeightPx = 320,
+        maxHeightPx,
         totalCount,
         onBarClick
     }: Props = $props();
@@ -55,11 +55,16 @@
     const BAR_THICKNESS_PX = 28;
     const barsExtentPx = $derived(data.length * BAR_THICKNESS_PX + (isHorizontal ? 40 : 60));
 
-    // Outer scroll viewport. The bars axis is capped and scrolls past its max; the
-    // value axis is given a concrete height (vertical) or filled (horizontal).
+    // Height budget in px: the measured container height, or a fallback so the
+    // chart still renders when the parent is unconstrained (standalone/Storybook).
+    const heightPx = $derived(maxHeightPx ?? 320);
+
+    // Outer scroll viewport. Vertical bars fill the height budget (the canvas
+    // resolves its `height: 100%` against this concrete height); horizontal bars
+    // cap there and scroll vertically past it.
     const viewportStyle = $derived(
         [
-            isHorizontal ? `max-height: ${maxHeightPx}px` : `height: ${maxHeightPx}px`,
+            isHorizontal ? `max-height: ${heightPx}px` : `height: ${heightPx}px`,
             maxWidthPx ? `max-width: ${maxWidthPx}px` : null
         ]
             .filter(Boolean)

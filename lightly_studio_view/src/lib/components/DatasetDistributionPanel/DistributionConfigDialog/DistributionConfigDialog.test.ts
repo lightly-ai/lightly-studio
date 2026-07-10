@@ -3,12 +3,20 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import DistributionConfigDialog from './DistributionConfigDialog.svelte';
 import type { DistributionConfig } from '../types';
 
-const baseConfig: DistributionConfig = { n: 5, sortBy: 'count', orientation: 'vertical' };
+const baseConfig: DistributionConfig = {
+    mode: 'topN',
+    n: 5,
+    sortBy: 'count',
+    manualClasses: [],
+    orientation: 'vertical'
+};
+
+const allClasses = Array.from({ length: 30 }, (_, i) => `class-${i}`);
 
 const renderDialog = (overrides: Partial<Parameters<typeof render>[1]> = {}) => {
     const onApply = vi.fn();
     render(DistributionConfigDialog, {
-        props: { open: true, maxN: 30, config: baseConfig, onApply, ...overrides }
+        props: { open: true, allClasses, config: baseConfig, onApply, ...overrides }
     });
     return { onApply };
 };
@@ -87,5 +95,23 @@ describe('DistributionConfigDialog', () => {
         await waitFor(() =>
             expect(screen.queryByText('Configure classes')).not.toBeInTheDocument()
         );
+    });
+
+    it('applies the manually selected classes', async () => {
+        const { onApply } = renderDialog({
+            config: { ...baseConfig, mode: 'manual', manualClasses: ['class-2'] }
+        });
+
+        await fireEvent.click(screen.getByTestId('distribution-config-apply'));
+
+        expect(onApply).toHaveBeenCalledWith(
+            expect.objectContaining({ mode: 'manual', manualClasses: ['class-2'] })
+        );
+    });
+
+    it('disables Apply in manual mode when no class is selected', async () => {
+        renderDialog({ config: { ...baseConfig, mode: 'manual', manualClasses: [] } });
+
+        await waitFor(() => expect(screen.getByTestId('distribution-config-apply')).toBeDisabled());
     });
 });

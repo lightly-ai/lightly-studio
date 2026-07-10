@@ -66,9 +66,22 @@
         (activeSource.groups ?? []).map((group) => ({ value: group.id, label: group.label }))
     );
 
-    let config: DistributionConfig = $state({ n: topN, sortBy: 'count', orientation: 'vertical' });
+    // Default to horizontal bars: categories stack down the left gutter and the
+    // chart scrolls vertically, avoiding the initial horizontal scroll that
+    // vertical bars produce once there are more than a handful of classes.
+    let config: DistributionConfig = $state({
+        mode: 'topN',
+        n: topN,
+        sortBy: 'count',
+        manualClasses: [],
+        orientation: 'horizontal'
+    });
     let configDialogOpen = $state(false);
     let expandOpen = $state(false);
+    // Measured height of the chart viewport; drives the chart's height budget and
+    // tracks container resizes (bind:clientHeight is backed by a ResizeObserver).
+    let chartHeight = $state(0);
+    let clientWidth = $state(0);
 
     const visible = $derived(selectVisibleCounts(activeData, config));
     const totalCount = $derived(activeData.reduce((sum, item) => sum + item.count, 0));
@@ -136,7 +149,7 @@
             {totalCount}
             {valueNoun}
             onConfigure={() => (configDialogOpen = true)}
-            onShowAll={() => (config = { ...config, n: activeData.length })}
+            onShowAll={() => (config = { ...config, mode: 'topN', n: activeData.length })}
             onToggleOrientation={() =>
                 (config = {
                     ...config,
@@ -145,13 +158,23 @@
             onExpand={() => (expandOpen = true)}
         />
     {/if}
-    <div class="min-h-0 flex-1 overflow-y-auto dark:[color-scheme:dark]">
-        <BarChart data={visible} orientation={config.orientation} {totalCount} {onBarClick} />
+    <div
+        class="min-h-0 flex-1 overflow-y-auto dark:[color-scheme:dark]"
+        bind:clientHeight={chartHeight}
+    >
+        <BarChart
+            data={visible}
+            orientation={config.orientation}
+            maxHeightPx={chartHeight || undefined}
+            maxWidthPx={clientWidth || undefined}
+            {totalCount}
+            {onBarClick}
+        />
     </div>
 </div>
 <DistributionConfigDialog
     bind:open={configDialogOpen}
-    maxN={activeData.length}
+    allClasses={activeData.map((item) => item.label)}
     {config}
     onApply={(next) => (config = next)}
 />

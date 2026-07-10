@@ -51,7 +51,10 @@
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
-    import { SampleType } from '$lib/api/lightly_studio_local/types.gen';
+    import { AnnotationType, SampleType } from '$lib/api/lightly_studio_local/types.gen';
+    import type { AnnotationsFilter } from '$lib/api/lightly_studio_local/types.gen';
+    import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
+    import type { DistributionSource } from '$lib/components/DatasetDistributionPanel';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
     import {
         buildVideoAnnotationCountsFilter,
@@ -303,6 +306,43 @@
     const plotFilterVideoSampleIds = $derived(
         $videoFilterFromHook?.sample_filter?.sample_ids ?? []
     );
+    // Query, tag and confusion-cell selections live on the shared image filter's
+    // sample_filter. Pull them out so the distribution counts track them too
+    // (previously only sample_ids from this filter were forwarded).
+    const plotFilterTagIds = $derived($imageFilterFromHook?.sample_filter?.tag_ids ?? []);
+    const plotFilterConfusionCell = $derived(
+        $imageFilterFromHook?.sample_filter?.confusion_cell ?? null
+    );
+    const plotFilterQueryExpr = $derived($imageFilterFromHook?.sample_filter?.query_expr ?? null);
+
+    // Selected annotation sources (annotation collections). When a subset is
+    // selected the distribution counts only annotations from those sources; the
+    // backend restricts the counted annotations by their own collection id.
+    const { selectedCollectionIds: selectedAnnotationSourceIds } = useAnnotationCollectionsFilter();
+    const annotationFilterForCounts = $derived.by<AnnotationsFilter | undefined>(() => {
+        const base = $annotationFilterStore;
+        const sourceIds = isAnnotations ? [] : $selectedAnnotationSourceIds;
+        if (sourceIds.length === 0) return base;
+        return {
+            ...(base ?? { filter_type: 'annotations' }),
+            collection_ids: sourceIds
+        };
+    });
+
+    // Image-count filter shared by the mix and per-type distribution queries so
+    // the distribution plot tracks the active filters (dimensions, labels,
+    // metadata, query, tags, confusion cell and annotation sources).
+    const imageAnnotationCountsFilter = $derived(
+        buildImageFilter({
+            dimensionsValues: $dimensionsValues,
+            annotationFilter: annotationFilterForCounts,
+            metadataFilters,
+            sampleIds: isAnnotations ? [] : plotFilterImageSampleIds,
+            tagIds: isAnnotations ? [] : plotFilterTagIds,
+            confusionCell: isAnnotations ? null : plotFilterConfusionCell,
+            queryExpr: isAnnotations ? null : plotFilterQueryExpr
+        })
+    );
 
     const annotationCounts = $derived.by(() => {
         if (
@@ -334,12 +374,7 @@
         }
         return useImageAnnotationCounts({
             collectionId: datasetId,
-            filter: buildImageFilter({
-                dimensionsValues: $dimensionsValues,
-                annotationFilter: $annotationFilterStore,
-                metadataFilters,
-                sampleIds: isAnnotations ? [] : plotFilterImageSampleIds
-            })
+            filter: imageAnnotationCountsFilter
         });
     });
 
@@ -371,8 +406,82 @@
     const panelIsVisible = $derived(
         ($activePanel === 'evaluationRuns' && supportsEvaluation) ||
             ($activePanel === 'embeddingPlot' && hasMediaWithEmbeddings) ||
-            ($activePanel === 'queryEditor' && isImages)
+            ($activePanel === 'queryEditor' && isImages) ||
+            ($activePanel === 'distribution' && isImages)
     );
+
+    // Class counts for the distribution panel. The "All types" source reuses the
+    // shared annotation-count query that feeds the labels filter; the per-type
+    // sources fetch classification / detection / segmentation counts on demand
+    // while the panel is open. We map `current_count` so the plot tracks the
+    // active filters, dropping labels with no matches in the current view.
+    const toCategoryCounts = (
+        countsData: { label_name: string; current_count: number }[] | undefined
+    ) =>
+        (countsData ?? [])
+            .map((item) => ({
+                label: item.label_name,
+                count: Number(item.current_count)
+            }))
+            .filter((item) => item.count > 0);
+
+    const classDistributionCounts = $derived(
+        toCategoryCounts(annotationCounts.data as { label_name: string; current_count: number }[])
+    );
+
+    const distributionPanelVisible = $derived($activePanel === 'distribution' && isImages);
+
+    // Only create the per-type queries while the panel is open so we don't fetch
+    // three extra count queries on every collection view.
+    const distributionTypeQueries = $derived.by(() => {
+        if (!distributionPanelVisible) return null;
+        return {
+            [AnnotationType.CLASSIFICATION]: useImageAnnotationCounts({
+                collectionId: datasetId,
+                annotationType: AnnotationType.CLASSIFICATION,
+                filter: imageAnnotationCountsFilter
+            }),
+            [AnnotationType.OBJECT_DETECTION]: useImageAnnotationCounts({
+                collectionId: datasetId,
+                annotationType: AnnotationType.OBJECT_DETECTION,
+                filter: imageAnnotationCountsFilter
+            }),
+            [AnnotationType.SEGMENTATION_MASK]: useImageAnnotationCounts({
+                collectionId: datasetId,
+                annotationType: AnnotationType.SEGMENTATION_MASK,
+                filter: imageAnnotationCountsFilter
+            })
+        };
+    });
+
+    const allTypesSource = $derived<DistributionSource>({
+        id: 'all',
+        label: 'All types',
+        data: classDistributionCounts
+    });
+
+    const distributionSources = $derived.by<DistributionSource[]>(() => {
+        const typeQueries = distributionTypeQueries;
+        if (!typeQueries) return [allTypesSource];
+        const perType = [
+            { id: AnnotationType.CLASSIFICATION, label: 'Classification' },
+            { id: AnnotationType.OBJECT_DETECTION, label: 'Object detection' },
+            { id: AnnotationType.SEGMENTATION_MASK, label: 'Segmentation' }
+        ];
+        const typeSources: DistributionSource[] = [];
+        for (const { id, label } of perType) {
+            const data = toCategoryCounts(
+                typeQueries[id].data as { label_name: string; current_count: number }[]
+            );
+            // Skip types with no matches in the current view so the selector stays clean.
+            if (data.length > 0) typeSources.push({ id, label, data });
+        }
+        // With a single type, "All types" would just duplicate it — show only
+        // the type so the panel's selector stays hidden.
+        if (typeSources.length <= 1)
+            return typeSources.length === 1 ? typeSources : [allTypesSource];
+        return [allTypesSource, ...typeSources];
+    });
 </script>
 
 <div class="flex-none">
@@ -512,6 +621,13 @@
                             {/await}
                         {:else if $activePanel === 'queryEditor' && isImages}
                             <QueryEditorPanel onClose={() => setActivePanel('none')} />
+                        {:else if distributionPanelVisible}
+                            {#await import('$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte') then { default: DatasetDistributionPanel }}
+                                <DatasetDistributionPanel
+                                    sources={distributionSources}
+                                    onClose={() => setActivePanel('none')}
+                                />
+                            {/await}
                         {/if}
                     </Pane>
                 </PaneGroup>
