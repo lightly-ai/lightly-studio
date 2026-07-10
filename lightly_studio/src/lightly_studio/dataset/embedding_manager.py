@@ -66,6 +66,27 @@ class EmbeddingManagerProvider:
         return cls._instance
 
 
+def set_default_embedding_model(embedding_generator: EmbeddingGenerator) -> None:
+    """Register a custom embedding model that overrides the env-var default.
+
+    Call this before ingesting a dataset (e.g. before ImageDataset.load_or_create)
+    to use your own generator instead of the model selected by
+    LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE. The override applies to every collection.
+
+    Note: the registration lives in-process only. When re-launching the GUI via the
+    `lightly-studio gui` CLI without re-running this call, embeddings computed with the
+    custom model remain, but text search falls back to the env-var default model and
+    will not match them.
+
+    Args:
+        embedding_generator: A generator implementing ImageEmbeddingGenerator and/or
+            VideoEmbeddingGenerator.
+    """
+    EmbeddingManagerProvider.get_embedding_manager().set_default_embedding_model(
+        embedding_generator=embedding_generator
+    )
+
+
 @dataclass
 class TextEmbedQuery:
     """Parameters for text embedding generation."""
@@ -82,6 +103,41 @@ class EmbeddingManager:
         self._models: dict[UUID, EmbeddingGenerator] = {}
         self._collection_id_to_default_model_id: dict[UUID, UUID] = {}
         self._sample_type_to_model_id: dict[SampleType, UUID] = {}
+        # Generators registered by the user that override the env-var default.
+        # Keyed by generator sample type (IMAGE or VIDEO) and consulted before
+        # loading a generator from the environment.
+        self._override_generators: dict[SampleType, EmbeddingGenerator] = {}
+
+    def set_default_embedding_model(self, embedding_generator: EmbeddingGenerator) -> None:
+        """Register a generator that overrides the env-var default for all collections.
+
+        The generator's sample-type slot(s) are inferred from the protocols it
+        implements: an ImageEmbeddingGenerator overrides image (and annotation and
+        text) embeddings, a VideoEmbeddingGenerator overrides video embeddings, and a
+        generator implementing both overrides both. This must be called before a
+        collection loads its default model (e.g. before ingesting a dataset).
+
+        Args:
+            embedding_generator: The generator to use instead of the env-var default.
+
+        Raises:
+            TypeError: If the generator implements neither the image nor the video
+                embedding protocol.
+        """
+        matched = False
+        if isinstance(embedding_generator, ImageEmbeddingGenerator):
+            self._override_generators[SampleType.IMAGE] = embedding_generator
+            self._sample_type_to_model_id.pop(SampleType.IMAGE, None)
+            matched = True
+        if isinstance(embedding_generator, VideoEmbeddingGenerator):
+            self._override_generators[SampleType.VIDEO] = embedding_generator
+            self._sample_type_to_model_id.pop(SampleType.VIDEO, None)
+            matched = True
+        if not matched:
+            raise TypeError(
+                "embedding_generator must implement ImageEmbeddingGenerator or "
+                "VideoEmbeddingGenerator."
+            )
 
     def register_embedding_model(
         self,
@@ -369,6 +425,9 @@ class EmbeddingManager:
         embedding_generator: EmbeddingGenerator | None = None
         if existing_model_id is not None:
             embedding_generator = self._models[existing_model_id]
+        elif generator_sample_type in self._override_generators:
+            # Prefer a user-registered generator over the env-var default.
+            embedding_generator = self._override_generators[generator_sample_type]
         else:
             # Load the embedding generator based on sample_type from the env var.
             embedding_generator = _load_embedding_generator_from_env(
