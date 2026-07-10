@@ -9,12 +9,17 @@
     import { DISTRIBUTION_SORT_LABELS, type DistributionConfig } from '../types';
 
     interface Props {
+        /** Applied view config (top-N, sort order, orientation). */
         config: DistributionConfig;
+        /** Total number of classes in the source. */
         classCount: number;
+        /** Number of classes currently shown after top-N selection. */
         visibleClassCount: number;
+        /** Sum of counts across all classes, for the summary line. */
         totalCount: number;
         /** Noun for the total count summary (e.g. 'annotations', 'samples'). */
         valueNoun?: string;
+        /** Opens the view-config dialog (top-N and sort order). */
         onConfigure: () => void;
         /** Quick action showing all classes; rendered only while a subset is visible. */
         onShowAll?: () => void;

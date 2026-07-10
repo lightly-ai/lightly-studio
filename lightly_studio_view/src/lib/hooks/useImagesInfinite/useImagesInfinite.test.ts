@@ -161,4 +161,33 @@ describe('buildRequestBody', () => {
             filter_type: 'annotations'
         });
     });
+
+    it('propagates the embedding region geometry to the sample filter', () => {
+        const polygon = [
+            { x: 0, y: 0 },
+            { x: 1, y: 0 },
+            { x: 1, y: 1 }
+        ];
+        const params: ImagesInfiniteParams = {
+            collection_id: 'col-1',
+            mode: 'normal',
+            filters: { embedding_region: { polygon } }
+        };
+
+        const result = buildRequestBody(params, 0);
+
+        expect(result.filters?.sample_filter?.embedding_region).toEqual({ polygon });
+    });
+
+    it('omits embedding_region when no region is selected', () => {
+        const params: ImagesInfiniteParams = {
+            collection_id: 'col-1',
+            mode: 'normal',
+            filters: { sample_ids: ['sample-1'] }
+        };
+
+        const result = buildRequestBody(params, 0);
+
+        expect(result.filters?.sample_filter?.embedding_region).toBeUndefined();
+    });
 });

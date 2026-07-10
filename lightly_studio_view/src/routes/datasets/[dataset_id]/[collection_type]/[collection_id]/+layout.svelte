@@ -250,7 +250,7 @@
         if (lastCollectionId && lastCollectionId !== collectionId) {
             clearSelectedSamples(lastCollectionId);
             clearSelectedSampleAnnotationCrops(lastCollectionId);
-            clearAnnotationPlotSelection();
+            clearAnnotationPlotSelection(lastCollectionId);
         }
 
         gridType = nextGridType;

@@ -72,13 +72,13 @@ class ImageDatasetExport:
         """
         if output_json is None:
             output_json = DEFAULT_EXPORT_FILENAME
-        to_coco_object_detections(
+        export_input = LightlyStudioObjectDetectionInput(
             session=self.session,
             dataset_id=self._dataset_id,
             samples=self.samples,
-            output_json=Path(output_json),
             annotation_collection_id=annotation_collection_id,
         )
+        COCOObjectDetectionOutput(output_file=Path(output_json)).save(label_input=export_input)
 
     def to_yolo_object_detections(
         self,
@@ -96,13 +96,16 @@ class ImageDatasetExport:
             annotation_collection_id: If provided, only annotations from this collection
                 are exported. If None, all annotations are exported.
         """
-        to_yolo_object_detections(
+        export_input = LightlyStudioYOLOObjectDetectionInput(
             session=self.session,
             dataset_id=self._dataset_id,
             samples=self.samples,
-            output_folder=Path(output_folder),
             annotation_collection_id=annotation_collection_id,
         )
+        YOLOv8ObjectDetectionOutput(
+            output_file=Path(output_folder) / YOLO_DATASET_CONFIG_FILENAME,
+            output_split=YOLO_DEFAULT_SPLIT,
+        ).save(label_input=export_input)
 
     def to_coco_captions(self, output_json: PathLike | None = None) -> None:
         """Exports captions to a COCO format JSON file.
@@ -113,7 +116,9 @@ class ImageDatasetExport:
         """
         if output_json is None:
             output_json = DEFAULT_EXPORT_FILENAME
-        to_coco_captions(samples=self.samples, output_json=Path(output_json))
+        coco_captions_dict = coco_captions.to_coco_captions_dict(samples=self.samples)
+        with Path(output_json).open("w") as f:
+            json.dump(coco_captions_dict, f, indent=2)
 
     def to_coco_segmentation_masks(
         self,
@@ -130,13 +135,13 @@ class ImageDatasetExport:
         """
         if output_json is None:
             output_json = DEFAULT_EXPORT_FILENAME
-        to_coco_segmentation_masks(
+        export_input = LightlyStudioInstanceSegmentationInput(
             session=self.session,
             dataset_id=self._dataset_id,
             samples=self.samples,
-            output_json=Path(output_json),
             annotation_collection_id=annotation_collection_id,
         )
+        COCOInstanceSegmentationOutput(output_file=Path(output_json)).save(label_input=export_input)
 
     def to_pascalvoc_segmentation_mask(
         self,
@@ -154,155 +159,14 @@ class ImageDatasetExport:
             annotation_collection_id: If provided, only annotations from this collection
                 are exported. If None, all annotations are exported.
         """
-        to_pascalvoc_segmentation_mask(
+        export_input = LightlyStudioPascalVOCInstanceSegmentationInput(
             session=self.session,
             dataset_id=self._dataset_id,
             samples=self.samples,
-            output_folder=Path(output_folder),
             annotation_collection_id=annotation_collection_id,
         )
-
-
-def to_coco_object_detections(
-    session: Session,
-    dataset_id: UUID,
-    samples: Iterable[ImageSample],
-    output_json: Path,
-    annotation_collection_id: UUID | None,
-) -> None:
-    """Exports object detection annotations to a COCO format JSON file.
-
-    This function is for internal use. Use `Dataset.export().to_coco_object_detections()`
-    instead.
-
-    Args:
-        session: The database session.
-        dataset_id: The dataset ID for label retrieval.
-        samples: The samples to export.
-        output_json: The path to save the output JSON file.
-        annotation_collection_id: If provided, only annotations from this collection
-            are exported. If None, all annotations are exported.
-    """
-    export_input = LightlyStudioObjectDetectionInput(
-        session=session,
-        dataset_id=dataset_id,
-        samples=samples,
-        annotation_collection_id=annotation_collection_id,
-    )
-    COCOObjectDetectionOutput(output_file=output_json).save(label_input=export_input)
-
-
-def to_yolo_object_detections(
-    session: Session,
-    dataset_id: UUID,
-    samples: Iterable[ImageSample],
-    output_folder: Path,
-    annotation_collection_id: UUID | None,
-) -> None:
-    """Exports object detection annotations to YOLO (Ultralytics YOLOv8) format.
-
-    This function is for internal use. Use `Dataset.export().to_yolo_object_detections()`
-    instead.
-
-    Writes a ``data.yaml`` dataset config and a ``labels`` subfolder with one ``.txt``
-    file per image into ``output_folder``.
-
-    Args:
-        session: The database session.
-        dataset_id: The dataset ID for label retrieval.
-        samples: The samples to export.
-        output_folder: The folder where YOLO files are written.
-        annotation_collection_id: If provided, only annotations from this collection
-            are exported. If None, all annotations are exported.
-    """
-    export_input = LightlyStudioYOLOObjectDetectionInput(
-        session=session,
-        dataset_id=dataset_id,
-        samples=samples,
-        annotation_collection_id=annotation_collection_id,
-    )
-    YOLOv8ObjectDetectionOutput(
-        output_file=output_folder / YOLO_DATASET_CONFIG_FILENAME,
-        output_split=YOLO_DEFAULT_SPLIT,
-    ).save(label_input=export_input)
-
-
-def to_coco_segmentation_masks(
-    session: Session,
-    dataset_id: UUID,
-    samples: Iterable[ImageSample],
-    output_json: Path,
-    annotation_collection_id: UUID | None,
-) -> None:
-    """Exports segmentation mask annotations to a COCO format JSON file.
-
-    This function is for internal use. Use `Dataset.export().to_coco_segmentation_masks()`
-    instead.
-
-    Args:
-        session: The database session.
-        dataset_id: The dataset ID for label retrieval.
-        samples: The samples to export.
-        output_json: The path to save the output JSON file.
-        annotation_collection_id: If provided, only annotations from this collection
-            are exported. If None, all annotations are exported.
-    """
-    export_input = LightlyStudioInstanceSegmentationInput(
-        session=session,
-        dataset_id=dataset_id,
-        samples=samples,
-        annotation_collection_id=annotation_collection_id,
-    )
-    COCOInstanceSegmentationOutput(output_file=output_json).save(label_input=export_input)
-
-
-def to_pascalvoc_segmentation_mask(
-    session: Session,
-    dataset_id: UUID,
-    samples: Iterable[ImageSample],
-    output_folder: Path,
-    annotation_collection_id: UUID | None,
-) -> None:
-    """Exports segmentation mask annotations to a Pascal VOC segmentation folder.
-
-    This function is for internal use. Use
-    `Dataset.export().to_pascalvoc_segmentation_mask()` instead.
-
-    Args:
-        session: The database session.
-        dataset_id: The dataset ID for label retrieval.
-        samples: The samples to export.
-        output_folder: The folder where Pascal VOC segmentation files are written.
-        annotation_collection_id: If provided, only annotations from this collection
-            are exported. If None, all annotations are exported.
-    """
-    export_input = LightlyStudioPascalVOCInstanceSegmentationInput(
-        session=session,
-        dataset_id=dataset_id,
-        samples=samples,
-        annotation_collection_id=annotation_collection_id,
-    )
-
-    # Keep `background_class_id` unchanged: the label input defines category IDs and
-    # reserves class 0 for background.
-    PascalVOCSemanticSegmentationOutput(
-        output_folder=output_folder,
-    ).save(label_input=export_input)
-
-
-def to_coco_captions(
-    samples: Iterable[ImageSample],
-    output_json: Path,
-) -> None:
-    """Exports captions to a COCO format JSON file.
-
-    This function is for internal use. Use `Dataset.export().to_coco_captions()`
-    instead.
-
-    Args:
-        samples: The samples to export.
-        output_json: The path to save the output JSON file.
-    """
-    coco_captions_dict = coco_captions.to_coco_captions_dict(samples=samples)
-    with output_json.open("w") as f:
-        json.dump(coco_captions_dict, f, indent=2)
+        # Keep `background_class_id` unchanged: the label input defines category IDs and
+        # reserves class 0 for background.
+        PascalVOCSemanticSegmentationOutput(output_folder=Path(output_folder)).save(
+            label_input=export_input
+        )

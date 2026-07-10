@@ -1,30 +1,19 @@
-import { derived, type Readable } from 'svelte/store';
+import { type Readable } from 'svelte/store';
 import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
-import { useFilterVisibility } from './useFilterVisibility';
+import { useRegionFilterVisibility } from './useRegionFilterVisibility';
 
 export function useEmbeddingFilterForImages(
     collectionId: Readable<string>,
     setRangeSelectionForCollection: (collectionId: string, selection: null) => void
 ) {
-    const { filterParams, updateSampleIds } = useImageFilters();
+    const { updateEmbeddingRegion } = useImageFilters();
 
-    const activeSampleIds = derived(
-        [filterParams, collectionId],
-        ([$filterParams, $collectionId]) => {
-            if (!$filterParams?.collection_id || $filterParams.collection_id !== $collectionId) {
-                return [];
-            }
-            if ($filterParams.mode !== 'normal') {
-                return [];
-            }
-            return $filterParams.filters?.sample_ids ?? [];
-        }
-    );
-
-    return useFilterVisibility(
+    // The image lasso selection is stored as geometry (embedding_region) and sent to the
+    // backend rather than as a resolved sample-id list (see LIG-9903), so the chip count comes
+    // from the plot-propagated count and clearing removes the region.
+    return useRegionFilterVisibility(
         collectionId,
-        activeSampleIds,
-        updateSampleIds,
+        () => updateEmbeddingRegion(null),
         setRangeSelectionForCollection
     );
 }
