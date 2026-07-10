@@ -15,6 +15,7 @@ from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationTable,
 )
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
+from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.resolvers import annotation_resolver
@@ -93,7 +94,12 @@ def delete_evaluation_metrics(
     annotation_ids: list[UUID],
     parent_sample_ids: list[UUID],
 ) -> None:
-    """Delete evaluation data invalidated by annotation deletion or mutation."""
+    """Delete evaluation data invalidated by annotation deletion or mutation.
+
+    Invalidates both per-annotation metrics (matched by annotation id) and per-sample metrics
+    of any run whose annotation collections hold the changed annotations. The latter covers
+    sample-only runs such as semantic segmentation, which store no per-annotation rows.
+    """
     if not annotation_ids and not parent_sample_ids:
         return
 
@@ -109,6 +115,36 @@ def delete_evaluation_metrics(
                         ),
                         col(EvaluationAnnotationMetricTable.gt_annotation_id).in_(
                             annotation_id_batch
+                        ),
+                    )
+                )
+                .distinct()
+            ).all()
+        )
+
+    # Runs that store only per-sample metrics (e.g. semantic segmentation `miou`) have no
+    # annotation-metric rows to match on, so also find runs whose ground-truth or prediction
+    # collection holds the changed annotations.
+    annotation_collection_ids: set[UUID] = set()
+    for annotation_id_batch in batching.batched(items=annotation_ids):
+        annotation_collection_ids.update(
+            session.exec(
+                select(SampleTable.collection_id)
+                .where(col(SampleTable.sample_id).in_(annotation_id_batch))
+                .distinct()
+            ).all()
+        )
+    for collection_id_batch in batching.batched(items=annotation_collection_ids):
+        affected_evaluation_run_ids.update(
+            session.exec(
+                select(EvaluationRunTable.id)
+                .where(
+                    sqlalchemy.or_(
+                        col(EvaluationRunTable.gt_annotation_collection_id).in_(
+                            collection_id_batch
+                        ),
+                        col(EvaluationRunTable.pred_annotation_collection_id).in_(
+                            collection_id_batch
                         ),
                     )
                 )

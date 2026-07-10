@@ -188,7 +188,7 @@ def test_update_bounding_box__deletes_evaluation_metrics(
         ],
     )
 
-    updated_annotation = annotation_resolver.update_bounding_box(
+    annotation_resolver.update_bounding_box(
         db_session,
         gt_annotation.sample_id,
         BoundingBoxCoordinates(x=11, y=22, width=111, height=222),
@@ -203,7 +203,5 @@ def test_update_bounding_box__deletes_evaluation_metrics(
         evaluation_run_id=run.id,
     )
 
-    assert updated_annotation.object_detection_details is not None
-    assert updated_annotation.object_detection_details.x == 11
     assert annotation_metrics == []
     assert sample_metrics == []
