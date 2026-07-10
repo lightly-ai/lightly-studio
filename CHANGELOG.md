@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python SDK: `limit` parameter on `ImageDataset.add_samples_from*` methods to index only the first N samples of a dataset.
 - Python dataset queries now support model evaluation queries on the annotation level.
 - View class distribution for image classification.
+- Custom embedding models can be registered.
 
 ### Changed
 
