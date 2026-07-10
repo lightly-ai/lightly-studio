@@ -566,6 +566,102 @@ def test_load_or_get_default_model__cant_load(
     assert model_id is None
 
 
+def test_set_default_embedding_model_overrides_env(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """A registered override is used instead of loading a generator from the env."""
+    collection = create_collection(session=db_session)
+    manager = EmbeddingManager()
+    mock_load = mocker.patch.object(embedding_manager, "_load_embedding_generator_from_env")
+
+    override = RandomEmbeddingGenerator()
+    manager.set_default_embedding_model(embedding_generator=override)
+
+    model_id = manager.load_or_get_default_model(
+        session=db_session, collection_id=collection.collection_id
+    )
+
+    assert model_id is not None
+    assert manager._models[model_id] is override
+    # The env loader is never consulted when an override is registered.
+    mock_load.assert_not_called()
+
+
+def test_set_default_embedding_model_fills_both_slots() -> None:
+    """A generator implementing both protocols overrides image and video slots."""
+    manager = EmbeddingManager()
+    override = RandomEmbeddingGenerator()
+
+    manager.set_default_embedding_model(embedding_generator=override)
+
+    assert manager._override_generators[SampleType.IMAGE] is override
+    assert manager._override_generators[SampleType.VIDEO] is override
+
+
+def test_set_default_embedding_model_falls_back_to_env_for_unregistered_slot(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """Sample types without an override still load from the env."""
+
+    class ImageOnlyGenerator:
+        # Implements the image protocol but not embed_videos, so only the image
+        # slot is overridden.
+        def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
+            return EmbeddingModelCreate(
+                name="ImageOnly",
+                collection_id=collection_id,
+                embedding_dimension=3,
+                embedding_model_hash="image_only_model",
+            )
+
+        def embed_text(self, text: str) -> list[float]:
+            _ = text
+            return [0.1, 0.2, 0.3]
+
+        def embed_images(
+            self, filepaths: list[str], show_progress: bool = True
+        ) -> NDArray[np.float32]:
+            _ = show_progress
+            return np.zeros((len(filepaths), 3), dtype=np.float32)
+
+        def embed_image_crops(
+            self, image_crops: list[ImageCrop], show_progress: bool = True
+        ) -> NDArray[np.float32]:
+            _ = show_progress
+            return np.zeros((len(image_crops), 3), dtype=np.float32)
+
+    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    manager = EmbeddingManager()
+    env_generator = RandomEmbeddingGenerator()
+    mock_load = mocker.patch.object(
+        embedding_manager,
+        "_load_embedding_generator_from_env",
+        return_value=env_generator,
+    )
+
+    manager.set_default_embedding_model(embedding_generator=ImageOnlyGenerator())
+
+    model_id = manager.load_or_get_default_model(
+        session=db_session, collection_id=video_collection.collection_id
+    )
+
+    assert model_id is not None
+    assert manager._models[model_id] is env_generator
+    mock_load.assert_called_once_with(sample_type=SampleType.VIDEO)
+
+
+def test_set_default_embedding_model_raises_on_incompatible_generator() -> None:
+    """A generator implementing neither image nor video protocol is rejected."""
+    manager = EmbeddingManager()
+    with pytest.raises(
+        TypeError,
+        match=r"must implement ImageEmbeddingGenerator or VideoEmbeddingGenerator",
+    ):
+        manager.set_default_embedding_model(embedding_generator=TextOnlyEmbeddingGenerator())
+
+
 def test_default_model(
     db_session: Session,
     collection: CollectionTable,
