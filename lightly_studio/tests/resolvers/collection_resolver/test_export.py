@@ -12,6 +12,8 @@ from lightly_studio.models.image import ImageTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers import collection_resolver, tag_resolver
 from lightly_studio.resolvers.collection_resolver.export import ExportFilter
+from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
@@ -865,6 +867,71 @@ def test_export__exclude_by_multiple_annotation_ids(
     assert len(samples_exported) == len(samples) - 2
     assert samples[0].file_path_abs not in samples_exported
     assert samples[1].file_path_abs not in samples_exported
+
+
+def test_export__image_filter__tag_ids__returns_intersection(
+    db_session: Session,
+) -> None:
+    # include.tag_ids covers A and B; ImageFilter covers B and C → intersection is B.
+    collection_id = create_collection(session=db_session).collection_id
+    image_a = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/path/a.png"
+    )
+    image_b = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/path/b.png"
+    )
+    image_c = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/path/c.png"
+    )
+
+    tag_ab = create_tag(
+        session=db_session, collection_id=collection_id, tag_name="ab", kind="sample"
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session,
+        tag_id=tag_ab.tag_id,
+        sample_ids=[image_a.sample_id, image_b.sample_id],
+    )
+
+    image_filter = ImageFilter(
+        sample_filter=SampleFilter(sample_ids=[image_b.sample_id, image_c.sample_id])
+    )
+    result = collection_resolver.export(
+        session=db_session,
+        collection_id=collection_id,
+        include=ExportFilter(tag_ids=[tag_ab.tag_id]),
+        collection_filter=image_filter,
+    )
+
+    assert result == [image_b.file_path_abs]
+
+
+def test_export__image_filter__sample_ids__returns_intersection(
+    db_session: Session,
+) -> None:
+    # include.sample_ids covers A and B; ImageFilter covers B and C → intersection is B.
+    collection_id = create_collection(session=db_session).collection_id
+    image_a = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/path/a.png"
+    )
+    image_b = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/path/b.png"
+    )
+    image_c = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/path/c.png"
+    )
+
+    image_filter = ImageFilter(
+        sample_filter=SampleFilter(sample_ids=[image_b.sample_id, image_c.sample_id])
+    )
+    result = collection_resolver.export(
+        session=db_session,
+        collection_id=collection_id,
+        include=ExportFilter(sample_ids=[image_a.sample_id, image_b.sample_id]),
+        collection_filter=image_filter,
+    )
+
+    assert result == [image_b.file_path_abs]
 
 
 def test_get_filtered_samples_count__include_single_sample_tag(
