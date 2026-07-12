@@ -39,21 +39,21 @@ export type PreparedSlicImage = {
 
 const MAX_SLIC_EDGE = 512;
 
-const LEVEL_CONFIG: Record<SlicLevel, { targetSegments: number; compactness: number }> = {
-    coarse: { targetSegments: 80, compactness: 12 },
-    medium: { targetSegments: 180, compactness: 10 },
-    fine: { targetSegments: 320, compactness: 8 }
+const LEVEL_CONFIG: Record<
+    SlicLevel,
+    { targetSegments: number; compactness: number; smoothing: 'bilateral' }
+> = {
+    coarse: { targetSegments: 80, compactness: 35, smoothing: 'bilateral' },
+    medium: { targetSegments: 240, compactness: 28, smoothing: 'bilateral' },
+    fine: { targetSegments: 480, compactness: 22, smoothing: 'bilateral' }
 };
 
-type BaseSlicData = {
-    prepared: PreparedSlicImage;
-    fine: Segmentation;
-};
-
-const baseResultCache = new Map<string, Promise<BaseSlicData>>();
+const preparedImageCache = new Map<string, Promise<PreparedSlicImage>>();
 const resultCache = new Map<string, Promise<SlicResult>>();
 
 const stripTrailingSlash = (value: string) => value.replace(/\/+$/, '');
+
+export const getSlicComputeOptions = (level: SlicLevel) => LEVEL_CONFIG[level];
 
 export const upsampleCellMask = (result: SlicResult, labelId: number) =>
     upsampleCellMaskPkg(result, labelId, result.originalWidth, result.originalHeight);
@@ -177,38 +177,19 @@ const toSlicResult = (
     scaleY: prepared.scaleY
 });
 
-/**
- * Compute SLIC once at the finest level and derive coarser levels by merging
- * segments, so switching levels is cheap.
- */
-const deriveHierarchicalResult = async (
-    base: BaseSlicData,
-    level: SlicLevel
-): Promise<SlicResult> => {
-    if (level === 'fine') {
-        return toSlicResult(base.fine, base.prepared, level);
-    }
-
+const computeLevelResult = async (prepared: PreparedSlicImage, level: SlicLevel) => {
     const engine = await getSlicEngine();
-    const medium = engine.mergeSegments({
-        labels: base.fine.labels,
-        width: base.fine.width,
-        height: base.fine.height,
-        targetSegments: LEVEL_CONFIG.medium.targetSegments
+    const start = performance.now();
+    const segmentation = engine.computeSuperpixels(prepared.imageData, {
+        ...getSlicComputeOptions(level)
     });
-
-    if (level === 'medium') {
-        return toSlicResult(medium, base.prepared, level);
-    }
-
-    const coarse = engine.mergeSegments({
-        labels: medium.labels,
-        width: medium.width,
-        height: medium.height,
-        targetSegments: LEVEL_CONFIG.coarse.targetSegments
-    });
-
-    return toSlicResult(coarse, base.prepared, level);
+    const durationMs = performance.now() - start;
+    console.log(
+        `[slic] ${level}: ${segmentation.segmentCount} segments on ` +
+            `${prepared.imageData.width}x${prepared.imageData.height} ` +
+            `(${engine.backend} backend) in ${durationMs.toFixed(1)}ms`
+    );
+    return toSlicResult(segmentation, prepared, level);
 };
 
 export const loadSuperpixelsForImage = async ({
@@ -224,24 +205,24 @@ export const loadSuperpixelsForImage = async ({
         return cached;
     }
 
-    let basePending = baseResultCache.get(imageUrl);
-    if (!basePending) {
-        basePending = (async () => {
-            const prepared = await prepareImageForSlic(imageUrl);
-            const engine = await getSlicEngine();
-            return {
-                prepared,
-                fine: engine.computeSuperpixels(prepared.imageData, {
-                    targetSegments: LEVEL_CONFIG.fine.targetSegments,
-                    compactness: LEVEL_CONFIG.fine.compactness
-                })
-            };
-        })();
-        baseResultCache.set(imageUrl, basePending);
+    let preparedPending = preparedImageCache.get(imageUrl);
+    if (!preparedPending) {
+        preparedPending = prepareImageForSlic(imageUrl);
+        preparedImageCache.set(imageUrl, preparedPending);
+        void preparedPending.catch(() => {
+            if (preparedImageCache.get(imageUrl) === preparedPending) {
+                preparedImageCache.delete(imageUrl);
+            }
+        });
     }
 
-    const pending = basePending.then((base) => deriveHierarchicalResult(base, level));
+    const pending = preparedPending.then((prepared) => computeLevelResult(prepared, level));
 
     resultCache.set(cacheKey, pending);
+    void pending.catch(() => {
+        if (resultCache.get(cacheKey) === pending) {
+            resultCache.delete(cacheKey);
+        }
+    });
     return pending;
 };

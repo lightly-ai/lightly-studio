@@ -3,6 +3,7 @@ import {
     createSlicMaskForLabels,
     extractCellMask,
     getLabelAtPoint,
+    getSlicComputeOptions,
     resolveSlicImageUrl,
     upsampleCellMask,
     type SlicResult
@@ -29,6 +30,14 @@ const makeResult = (overrides: Partial<SlicResult> = {}): SlicResult => ({
 });
 
 describe('slic utilities', () => {
+    it.each([
+        ['coarse', { targetSegments: 80, compactness: 35, smoothing: 'bilateral' }],
+        ['medium', { targetSegments: 240, compactness: 28, smoothing: 'bilateral' }],
+        ['fine', { targetSegments: 480, compactness: 22, smoothing: 'bilateral' }]
+    ] as const)('uses direct smoothed SLIC options for %s', (level, expected) => {
+        expect(getSlicComputeOptions(level)).toEqual(expected);
+    });
+
     it('keeps the original image URL outside dev mode', () => {
         expect(
             resolveSlicImageUrl('http://localhost:8001/images/sample/sample-1', {
