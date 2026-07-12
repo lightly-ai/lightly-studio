@@ -356,11 +356,10 @@ def test_delete_dataset__with_evaluation_annotation_metrics(db_session: Session)
     create_annotation_metrics(
         session=db_session,
         run_id=run_id,
-        true_positive_metric_stubs=[
+        pair_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=image.sample_id,
-                metric_name="iou",
-                value=0.8,
+                metrics={"iou": 0.8},
                 gt_annotation_label_id=label.annotation_label_id,
             )
         ],

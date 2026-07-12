@@ -10,6 +10,14 @@ const confusionCell = {
     pred_label: 'dog'
 };
 
+const embeddingRegion = {
+    polygon: [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+        { x: 1, y: 1 }
+    ]
+};
+
 const normalParams = (collection_id: string, filters: NormalModeFilters): ImagesInfiniteParams => ({
     collection_id,
     mode: 'normal',
@@ -30,11 +38,12 @@ describe('paramsWithoutExternalFilters', () => {
         expect(paramsWithoutExternalFilters(params).filters).toEqual({ tag_ids: ['tag-1'] });
     });
 
-    it('treats params that differ only in sample_ids/confusion_cell as equal', () => {
+    it('treats params that differ only in sample_ids/embedding_region/confusion_cell as equal', () => {
         const base = baseNormalParams();
         const withExternal = normalParams('col-1', {
             tag_ids: ['tag-1'],
             sample_ids: ['s1'],
+            embedding_region: embeddingRegion,
             confusion_cell: confusionCell
         });
 
@@ -77,6 +86,17 @@ describe('mergeExternalFilters', () => {
         if (result.mode === 'normal') {
             expect(result.filters?.sample_ids).toEqual(['s1', 's2']);
             expect(result.filters?.tag_ids).toEqual(['tag-1']);
+        }
+    });
+
+    it('carries the embedding_region forward across collections', () => {
+        const baseParams = baseNormalParams('col-2');
+        const currentParams = normalParams('col-1', { embedding_region: embeddingRegion });
+
+        const result = mergeExternalFilters(baseParams, currentParams);
+
+        if (result.mode === 'normal') {
+            expect(result.filters?.embedding_region).toEqual(embeddingRegion);
         }
     });
 

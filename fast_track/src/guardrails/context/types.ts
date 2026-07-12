@@ -1,14 +1,29 @@
+import type { GitHub } from '@actions/github/lib/utils';
+
 import type { GuardrailResult } from '../../shared/verdict';
+
+export type FileStatus = 'added' | 'deleted' | 'modified' | 'renamed' | 'copied';
+
+/**
+ * A hydrated Octokit client. Type-only import — erases at runtime so the local
+ * git path never loads `@actions/github`.
+ */
+export type Octokit = InstanceType<typeof GitHub>;
 
 export interface ChangedFile {
     path: string;
+    status: FileStatus;
     additions: number;
     deletions: number;
+    /** Unified diff patch for this file. Absent for binary files and very large diffs. */
+    patch?: string;
 }
 
 /** Backed by git locally and the API in CI. */
 export interface GuardrailContext {
     baseRef: string;
+    /** Present only in CI (`ApiGuardrailContext`); absent locally. */
+    octokit?: Octokit;
     changedFiles(): Promise<ChangedFile[]>;
 }
 

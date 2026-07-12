@@ -64,6 +64,19 @@
     options:
         members: [SampleEvaluationQuery]
 
+## AnnotationMetricQuery
+
+::: lightly_studio.core.dataset_query.annotation_evaluation_query
+    options:
+        members: [AnnotationMetricQuery]
+
+## AnnotationEvaluationMetricField
+
+::: lightly_studio.core.dataset_query.annotation_evaluation_metric_expression
+    options:
+        members: [AnnotationEvaluationMetricField]
+        show_if_no_docstring: true
+
 ## EvaluationMetricField
 
 ::: lightly_studio.core.dataset_query.evaluation_metric_expression

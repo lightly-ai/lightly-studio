@@ -194,6 +194,20 @@ class SampleMetadataView(SQLModel):
     data: dict[str, Any]
 
 
+class HistogramView(BaseModel):
+    """Histogram of a numeric metadata field.
+
+    Attributes:
+        bin_edges: The bin edges. Has length ``len(counts) + 1``, where bin ``i``
+            covers the half-open interval ``[bin_edges[i], bin_edges[i + 1])``
+            (the last bin includes its right edge).
+        counts: The number of values falling into each bin.
+    """
+
+    bin_edges: list[float] = Field(description="Bin edges, length is len(counts) + 1")
+    counts: list[int] = Field(description="Value count per bin")
+
+
 class MetadataInfoView(BaseModel):
     """Metadata info response model for API endpoints."""
 
@@ -201,3 +215,6 @@ class MetadataInfoView(BaseModel):
     type: str = Field(description="The metadata type (e.g., 'string', 'integer', 'float')")
     min: int | float | None = Field(None, description="Minimum value for numerical metadata")
     max: int | float | None = Field(None, description="Maximum value for numerical metadata")
+    histogram: HistogramView | None = Field(
+        None, description="Value distribution histogram for numerical metadata"
+    )

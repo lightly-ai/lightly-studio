@@ -1,12 +1,13 @@
-import { simpleGit } from 'simple-git';
+import { DiffNameStatus, simpleGit } from 'simple-git';
 import type { DiffResult } from 'simple-git';
 
-import type { ChangedFile, GuardrailContext } from './types';
+import type { ChangedFile, FileStatus, GuardrailContext } from './types';
 
 /**
  * Local {@link GuardrailContext} backed by `simple-git`. Diffs `baseRef...HEAD`
- * (three-dot, matching GitHub's Files-changed view). `diffSummary` gives exact
- * per-file line counts — all a guardrail needs; no patch text is carried.
+ * (three-dot, matching GitHub's Files-changed view). Two parallel `diffSummary`
+ * calls are made: `--name-status` for file status and destination paths, and the
+ * default stat format for line counts. Results are merged by path.
  */
 export class GitGuardrailContext implements GuardrailContext {
     readonly baseRef: string;
@@ -36,24 +37,75 @@ export class GitGuardrailContext implements GuardrailContext {
     async changedFiles(): Promise<ChangedFile[]> {
         // Memoize: the committed diff is fixed for one run, read by many guardrails.
         this.cache ??= (async () => {
-            const summary = await this.git.diffSummary([`${this.baseRef}...HEAD`]);
-            return toChangedFiles(summary.files);
+            const range = `${this.baseRef}...HEAD`;
+            const [nameStatus, stat, rawPatch] = await Promise.all([
+                this.git.diffSummary(['--name-status', '-M', '-C', range]),
+                this.git.diffSummary(['-M', '-C', range]),
+                this.git.diff(['-M', '-C', range])
+            ]);
+
+            // name-status gives the correct destination path for renames/copies.
+            const statusByPath = new Map(
+                nameStatus.files.map((f) => [f.file, toChangedFile(f).status])
+            );
+
+            const patchByPath = parsePatchesByFile(rawPatch);
+
+            // stat gives line counts; renames use brace notation — resolve to destination.
+            return stat.files.map((file) => {
+                const path = renameTarget(file.file);
+                return {
+                    path,
+                    status: statusByPath.get(path) ?? 'modified',
+                    additions: file.binary ? 0 : file.insertions,
+                    deletions: file.binary ? 0 : file.deletions,
+                    patch: patchByPath.get(path)
+                };
+            });
         })();
         return this.cache;
     }
 }
 
 /**
- * Map `diffSummary` files to {@link ChangedFile}s. Binary files have no line
- * counts (simple-git reports byte sizes), so they become 0/0; renames keep the
- * new path.
+ * Parse a raw unified diff (from `git diff`) into a Map of path → patch.
+ * Modified/added/renamed files are keyed by the destination path (`+++ b/<path>`).
+ * Deleted files (`+++ /dev/null`) are keyed by the source path (`--- a/<path>`).
  */
-export function toChangedFiles(files: DiffResult['files']): ChangedFile[] {
-    return files.map((file) => ({
-        path: renameTarget(file.file),
+export function parsePatchesByFile(raw: string): Map<string, string> {
+    const map = new Map<string, string>();
+    // Each file section begins with 'diff --git a/... b/...'
+    const chunks = raw.split(/^(?=diff --git )/m);
+    for (const chunk of chunks) {
+        if (!chunk) continue;
+        // '+++ b/<path>' is the destination file for modified/added/renamed files.
+        const destMatch = chunk.match(/^\+\+\+ b\/(.+)$/m);
+        if (destMatch?.[1]) {
+            map.set(destMatch[1].trim(), chunk);
+            continue;
+        }
+        // '+++ /dev/null' means deleted — fall back to '--- a/<path>' for the key.
+        if (/^\+\+\+ \/dev\/null/m.test(chunk)) {
+            const srcMatch = chunk.match(/^--- a\/(.+)$/m);
+            if (srcMatch?.[1]) map.set(srcMatch[1].trim(), chunk);
+        }
+    }
+    return map;
+}
+
+/**
+ * Map a `diffSummary --name-status` file entry to a {@link ChangedFile}.
+ * For renames and copies `file` is already the destination path — no path
+ * rewriting needed. Line counts default to 0; merge with a stat pass for
+ * real counts (see {@link GitGuardrailContext.changedFiles}).
+ */
+export function toChangedFile(file: DiffResult['files'][number]): ChangedFile {
+    return {
+        path: file.file,
+        status: 'status' in file ? toFileStatus(file.status) : 'modified',
         additions: file.binary ? 0 : file.insertions,
         deletions: file.binary ? 0 : file.deletions
-    }));
+    };
 }
 
 /**
@@ -65,4 +117,19 @@ export function renameTarget(rawPath: string): string {
     if (braced !== rawPath) return braced;
     const arrow = rawPath.indexOf(' => ');
     return arrow === -1 ? rawPath : rawPath.slice(arrow + ' => '.length);
+}
+
+function toFileStatus(status: DiffNameStatus | undefined): FileStatus {
+    switch (status) {
+        case DiffNameStatus.ADDED:
+            return 'added';
+        case DiffNameStatus.DELETED:
+            return 'deleted';
+        case DiffNameStatus.RENAMED:
+            return 'renamed';
+        case DiffNameStatus.COPIED:
+            return 'copied';
+        default:
+            return 'modified';
+    }
 }

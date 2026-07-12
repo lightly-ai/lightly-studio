@@ -1,0 +1,7 @@
+lightly_studio/uv.lock -diff linguist-generated=true
+lightly_studio_view/package-lock.json -diff linguist-generated=true
+fast_track/package-lock.json -diff linguist-generated=true
+
+lightly_studio/tests/benchmarks/** -diff linguist-generated=true
+
+lightly_studio/src/lightly_studio/vendor/** -diff linguist-vendored=true

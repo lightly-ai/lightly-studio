@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import posixpath
 from argparse import ArgumentParser
 from collections.abc import Iterable
 from pathlib import Path
@@ -22,6 +23,7 @@ from labelformat.model.object_detection import (
     SingleObjectDetection,
 )
 from PIL import Image as PILImage
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.core import labelformat_helpers
@@ -167,11 +169,64 @@ def test_load_into_collection_from_paths__deduplicates_in_run_duplicates(
     assert len(sample_ids) == 1
 
 
+def test_load_into_dataset_from_labelformat__records_missing_already_present_added_outcomes(
+    db_session: Session, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    # Arrange: annotations referencing an added / already-present / missing file mix. Each
+    # outcome gets a distinct count so a mix-up between two outcomes cannot pass the asserts.
+    # Broken is not exercised: this path never opens the file, so it cannot detect broken.
+    collection = helpers_resolvers.create_collection(db_session)
+
+    # 1 added file: referenced by the annotations and present on disk.
+    added_name = "added.jpg"
+    PILImage.new("RGB", (100, 200)).save(str(tmp_path / added_name))
+
+    # 2 already-present files: only pre-inserted into the database. The already-present check
+    # short-circuits before the existence check, so these need not exist on disk.
+    already_present_names = ["present0.jpg", "present1.jpg"]
+    helpers_resolvers.create_images(
+        db_session,
+        collection.collection_id,
+        [ImageStub(path=posixpath.join(str(tmp_path), name)) for name in already_present_names],
+    )
+
+    # 3 missing files: referenced by the annotations but never created on disk.
+    missing_names = [f"missing{i}.jpg" for i in range(3)]
+
+    all_names = [added_name, *already_present_names, *missing_names]
+    label_input = _get_labelformat_input_obj_det_multi(filenames=all_names)
+
+    # Act
+    with caplog.at_level("INFO", logger="lightly_studio.core.file_outcome_report"):
+        sample_ids = add_images.load_into_dataset_from_labelformat(
+            session=db_session,
+            root_collection_id=collection.collection_id,
+            input_labels=label_input,
+            images_path=tmp_path,
+        )
+
+    # Assert: only the added file becomes a new sample.
+    assert len(sample_ids) == 1
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    ).samples
+    assert {sample.file_name for sample in samples} == {added_name, *already_present_names}
+
+    # Assert: the end-of-run summary records the distinct per-outcome counts.
+    assert "added=1" in caplog.text
+    assert "already_present=2" in caplog.text
+    assert "missing=3" in caplog.text
+    assert "broken=0" in caplog.text
+
+
 def test_load_into_dataset_from_labelformat__calls_get_labels_once(
-    db_session: Session, tmp_path: Path
+    db_session: Session, tmp_path: Path, mocker: MockerFixture
 ) -> None:
     collection = helpers_resolvers.create_collection(db_session)
     label_input = CountingLabelInput()
+    # The referenced file is not on disk; treat it as present so a sample is created and the
+    # annotation phase (the second get_labels call) runs.
+    mocker.patch.object(add_images, "_file_exists", return_value=True)
 
     add_images.load_into_dataset_from_labelformat(
         session=db_session,
@@ -197,10 +252,14 @@ def test_load_into_dataset_from_labelformat__calls_get_labels_once(
 def test_load_into_collection_from_labelformat__obj_det(
     db_session: Session,
     images_path: str,
+    mocker: MockerFixture,
 ) -> None:
     # Arrange
     collection = helpers_resolvers.create_collection(db_session)
     label_input = _get_labelformat_input_obj_det(filename="image.jpg")
+    # This test covers path normalization across backends, not file existence: the referenced
+    # paths (including remote schemes) do not exist, so treat every file as present.
+    mocker.patch.object(add_images, "_file_exists", return_value=True)
 
     sample_ids = add_images.load_into_dataset_from_labelformat(
         session=db_session,
@@ -248,8 +307,12 @@ def test_load_into_collection_from_labelformat__obj_det(
     ],
 )
 def test_load_into_collection_from_labelformat__ins_seg(
-    db_session: Session, images_path: str
+    db_session: Session, images_path: str, mocker: MockerFixture
 ) -> None:
+    # This test covers path normalization across backends, not file existence: the referenced
+    # paths (including remote schemes) do not exist, so treat every file as present.
+    mocker.patch.object(add_images, "_file_exists", return_value=True)
+
     class TestLabelInput(InstanceSegmentationInput):
         def __init__(self) -> None:
             self.categories = [Category(id=0, name="dog")]
@@ -350,6 +413,9 @@ def test_load_into_collection_from_coco_captions(db_session: Session, tmp_path: 
     # Create and save the coco json file containing the captions
     annotations_path = tmp_path / "annotations.json"
     _get_captions_input(annotations_path=annotations_path)
+    # The referenced images must exist on disk to be added.
+    for file_name in ("image1.jpg", "image2.jpg"):
+        PILImage.new("RGB", (640, 480)).save(str(tmp_path / file_name))
 
     _ = add_images.load_into_dataset_from_coco_captions(
         session=db_session,
@@ -383,6 +449,64 @@ def test_load_into_collection_from_coco_captions(db_session: Session, tmp_path: 
     assert samples[0].sample.captions[1].text == "Caption 2 of image 1"
     assert len(samples[1].sample.captions) == 1
     assert samples[1].sample.captions[0].text == "Caption 1 of image 2"
+
+
+def test_load_into_dataset_from_coco_captions__records_missing_already_present_added_outcomes(
+    db_session: Session, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    # Arrange: a captions file referencing an added / already-present / missing file mix. Each
+    # outcome gets a distinct count so a mix-up between two outcomes cannot pass the asserts.
+    # Broken is not exercised: this path never opens the file, so it cannot detect broken.
+    collection = helpers_resolvers.create_collection(db_session)
+
+    # 1 added file: referenced by the captions and present on disk.
+    added_name = "added.jpg"
+    PILImage.new("RGB", (640, 480)).save(str(tmp_path / added_name))
+
+    # 2 already-present files: only pre-inserted into the database. The already-present check
+    # short-circuits before the existence check, so these need not exist on disk.
+    already_present_names = ["present0.jpg", "present1.jpg"]
+    helpers_resolvers.create_images(
+        db_session,
+        collection.collection_id,
+        [ImageStub(path=str(tmp_path / name)) for name in already_present_names],
+    )
+
+    # 3 missing files: referenced by the captions but never created on disk.
+    missing_names = [f"missing{i}.jpg" for i in range(3)]
+
+    all_names = [added_name, *already_present_names, *missing_names]
+    coco_dict = {
+        "images": [
+            {"id": i, "file_name": name, "width": 640, "height": 480}
+            for i, name in enumerate(all_names)
+        ],
+        "annotations": [{"id": 0, "image_id": 0, "caption": "Caption of added image"}],
+    }
+    annotations_path = tmp_path / "annotations.json"
+    annotations_path.write_text(json.dumps(coco_dict))
+
+    # Act
+    with caplog.at_level("INFO", logger="lightly_studio.core.file_outcome_report"):
+        sample_ids = add_images.load_into_dataset_from_coco_captions(
+            session=db_session,
+            root_collection_id=collection.collection_id,
+            annotations_json=annotations_path,
+            images_path=tmp_path,
+        )
+
+    # Assert: only the added file becomes a new sample.
+    assert len(sample_ids) == 1
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    ).samples
+    assert {sample.file_name for sample in samples} == {added_name, *already_present_names}
+
+    # Assert: the end-of-run summary records the distinct per-outcome counts.
+    assert "added=1" in caplog.text
+    assert "already_present=2" in caplog.text
+    assert "missing=3" in caplog.text
+    assert "broken=0" in caplog.text
 
 
 def test_create_batch_samples(db_session: Session) -> None:
@@ -592,10 +716,25 @@ def test_tag_samples_by_directory__file_url_normalization(
 def _get_labelformat_input_obj_det(
     filename: str = "image.jpg", category_names: list[str] | None = None
 ) -> LabelformatObjectDetectionInput:
-    """Creates a LabelformatObjectDetectionInput for testing.
+    """Creates a LabelformatObjectDetectionInput referencing a single image.
 
     Args:
         filename: The name of the image file.
+        category_names: The names of the categories. Default: ["dog", "cat"].
+
+    Returns:
+        A LabelformatObjectDetectionInput object for testing.
+    """
+    return _get_labelformat_input_obj_det_multi(filenames=[filename], category_names=category_names)
+
+
+def _get_labelformat_input_obj_det_multi(
+    filenames: list[str], category_names: list[str] | None = None
+) -> LabelformatObjectDetectionInput:
+    """Creates a LabelformatObjectDetectionInput referencing multiple images.
+
+    Args:
+        filenames: The names of the image files, one image per filename.
         category_names: The names of the categories. Default: ["dog", "cat"].
 
     Returns:
@@ -607,18 +746,26 @@ def _get_labelformat_input_obj_det(
     categories = [
         Category(id=i, name=category_name) for i, category_name in enumerate(category_names)
     ]
-    image = Image(id=0, filename=filename, width=100, height=200)
-    objects = [
-        SingleObjectDetection(
-            category=categories[0],
-            box=BoundingBox(xmin=10.0, ymin=20.0, xmax=30.0, ymax=40.0),
-        ),
+    images = [
+        Image(id=i, filename=filename, width=100, height=200)
+        for i, filename in enumerate(filenames)
     ]
-
+    labels = [
+        ImageObjectDetection(
+            image=image,
+            objects=[
+                SingleObjectDetection(
+                    category=categories[0],
+                    box=BoundingBox(xmin=10.0, ymin=20.0, xmax=30.0, ymax=40.0),
+                ),
+            ],
+        )
+        for image in images
+    ]
     return LabelformatObjectDetectionInput(
         categories=categories,
-        images=[image],
-        labels=[ImageObjectDetection(image=image, objects=objects)],
+        images=images,
+        labels=labels,
     )
 
 

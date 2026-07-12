@@ -1,18 +1,18 @@
-import type { GitHub } from '@actions/github/lib/utils';
+import type { ChangedFile, FileStatus, GuardrailContext, Octokit } from './types';
 
-import type { ChangedFile, GuardrailContext } from './types';
-
-/**
- * A hydrated Octokit client, injected (never constructed here). Kept type-only so
- * the import erases at runtime and the local git path never loads `@actions/github`.
- */
-export type Octokit = InstanceType<typeof GitHub>;
+export type { Octokit };
 
 /** `pulls.listFiles` caps per_page at 100. */
 const PER_PAGE = 100;
 
-/** The `pulls.listFiles` fields we read — counts only, no patch. */
-type ListedFile = { filename: string; additions: number; deletions: number };
+/** The `pulls.listFiles` fields we read. `patch` is absent for binary / very large files. */
+type ListedFile = {
+    filename: string;
+    status: string;
+    additions: number;
+    deletions: number;
+    patch?: string;
+};
 
 export interface ApiGuardrailContextParams {
     octokit: Octokit;
@@ -62,5 +62,16 @@ export class ApiGuardrailContext implements GuardrailContext {
 }
 
 export function toChangedFile(file: ListedFile): ChangedFile {
-    return { path: file.filename, additions: file.additions, deletions: file.deletions };
+    return {
+        path: file.filename,
+        status: toFileStatus(file.status),
+        additions: file.additions,
+        deletions: file.deletions,
+        patch: file.patch
+    };
+}
+
+/** GitHub's API uses 'removed' for deleted files; normalise to the shared FileStatus value. */
+function toFileStatus(status: string): FileStatus {
+    return status === 'removed' ? 'deleted' : (status as FileStatus);
 }

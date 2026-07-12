@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel
 
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
@@ -12,6 +14,7 @@ from lightly_studio.type_definitions import QueryType
 class GroupFilter(BaseModel):
     """Encapsulates filter parameters for querying groups."""
 
+    filter_type: Literal["group"] = "group"
     sample_filter: SampleFilter | None = None
 
     def apply(self, query: QueryType) -> QueryType:
