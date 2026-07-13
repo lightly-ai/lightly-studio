@@ -81,54 +81,63 @@ class TestDiscreteColorScale:
         # More grouped values than MAX_OTHER_NAMES -> ellipsis appended.
         assert scale.legend[255] == "Other (v252, v253, v254, v255, v256, …)"
 
-    def test_from_integers__few_values(self) -> None:
-        scale = DiscreteColorScale.from_integers(values=[3, 1, 2])
+    def test_from_quantiles__few_values_one_category_each(self) -> None:
+        # At most num_bins distinct values -> each value keeps its own ordered category.
+        scale = DiscreteColorScale.from_quantiles(values=[3, 1, 2])
+        assert scale.ordered is True
         assert scale.value_to_category(1) == 3
         assert scale.value_to_category(2) == 4
         assert scale.value_to_category(3) == 5
         assert scale.legend == {3: "1", 4: "2", 5: "3"}
 
-    def test_from_integers__empty(self) -> None:
-        scale = DiscreteColorScale.from_integers(values=[])
+    def test_from_quantiles__empty(self) -> None:
+        scale = DiscreteColorScale.from_quantiles(values=[])
+        assert scale.ordered is True
         assert scale.legend == {}
         assert scale.value_to_category(0) is None
 
-    def test_from_integers__duplicates_deduplicated(self) -> None:
-        scale = DiscreteColorScale.from_integers(values=[5, 5, 3, 3, 1])
-        assert scale.value_to_category(1) == 3
-        assert scale.value_to_category(3) == 4
-        assert scale.value_to_category(5) == 5
-        assert scale.legend == {3: "1", 4: "3", 5: "5"}
+    def test_from_quantiles__floats_get_own_category_when_few(self) -> None:
+        scale = DiscreteColorScale.from_quantiles(values=[0.5, 0.1, 0.42])
+        assert scale.legend == {3: "0.1", 4: "0.42", 5: "0.5"}
+        assert scale.value_to_category(0.1) == 3
+        assert scale.value_to_category(0.5) == 5
 
-    def test_from_integers__custom_start_cat(self) -> None:
-        scale = DiscreteColorScale.from_integers(values=[10, 20], start_cat=5)
+    def test_from_quantiles__custom_start_cat(self) -> None:
+        scale = DiscreteColorScale.from_quantiles(values=[10, 20], start_cat=5)
         assert scale.value_to_category(10) == 5
         assert scale.value_to_category(20) == 6
         assert scale.legend == {5: "10", 6: "20"}
 
-    def test_from_integers__exactly_max_categories_no_bucketing(self) -> None:
-        scale = DiscreteColorScale.from_integers(values=[1, 2, 3], max_categories=3)
-        assert scale.value_to_category(1) == 3
-        assert scale.value_to_category(2) == 4
-        assert scale.value_to_category(3) == 5
-        assert scale.legend == {3: "1", 4: "2", 5: "3"}
+    def test_from_quantiles__bins_have_equal_counts(self) -> None:
+        # 8 distinct values, 4 bins -> 2 values per bin, quantile edges at data points.
+        scale = DiscreteColorScale.from_quantiles(values=[0, 1, 2, 3, 4, 5, 6, 7], num_bins=4)
+        assert scale.ordered is True
+        assert len(scale.legend) == 4
+        # Every value maps to one of the 4 ordered categories, low value -> low category.
+        categories = [c for v in range(8) if (c := scale.value_to_category(v)) is not None]
+        assert len(categories) == 8
+        assert categories == sorted(categories)
+        assert min(categories) == 3
+        assert max(categories) == 6
 
-    def test_from_integers__bucketing(self) -> None:
-        # value_range=300, raw_width=150, magnitude=100, bucket_width=200
-        # -> 2 buckets: [0, 199] and [200, 399]
-        scale = DiscreteColorScale.from_integers(values=[0, 100, 200, 300], max_categories=2)
-        assert scale.value_to_category(0) == 3
-        assert scale.value_to_category(100) == 3
-        assert scale.value_to_category(200) == 4
-        assert scale.value_to_category(300) == 4
-        assert scale.legend == {3: "0-199", 4: "200-399"}
+    def test_from_quantiles__range_labels(self) -> None:
+        scale = DiscreteColorScale.from_quantiles(values=list(range(9)), num_bins=3)
+        # Edges at nearest-rank positions of 0..8: 0, 3, 5, 8 -> 3 range-labeled bins.
+        assert scale.legend == {3: "0-3", 4: "3-5", 5: "5-8"}
 
-    def test_from_integers__bucketing_width_one(self) -> None:
-        scale = DiscreteColorScale.from_integers(values=[0, 1, 2], max_categories=2)
-        assert scale.value_to_category(0) == 3
-        assert scale.value_to_category(1) == 4
-        assert scale.value_to_category(2) == 5
-        assert scale.legend == {3: "0", 4: "1", 5: "2"}
+    def test_from_quantiles__non_finite_values_dropped(self) -> None:
+        # NaN/inf cannot be binned; they are dropped so their samples become unassigned.
+        scale = DiscreteColorScale.from_quantiles(values=[0.1, float("nan"), float("inf"), 0.5])
+        assert scale.legend == {3: "0.1", 4: "0.5"}
+        assert scale.value_to_category(float("nan")) is None
+        assert scale.value_to_category(float("inf")) is None
+
+    def test_from_quantiles__concentrated_data_collapses_bins(self) -> None:
+        # Most values identical -> duplicate edges collapse into fewer bins.
+        scale = DiscreteColorScale.from_quantiles(values=[1, 1, 1, 1, 1, 1, 1, 9], num_bins=4)
+        assert scale.ordered is True
+        # Legend and lookup stay consistent: every category in the lookup has a label.
+        assert set(scale._lookup.values()) <= set(scale.legend.keys())
 
 
 def test_assign_color_categories() -> None:

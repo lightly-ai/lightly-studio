@@ -83,7 +83,7 @@ def get_2d_embeddings(
         fulfils_filter = [1 if sample_id in matching_sample_ids else 0 for sample_id in sample_ids]
 
     color_by = body.color_by if body else None
-    color_categories, color_legend = build_color_data(
+    color_data = build_color_data(
         session=session,
         collection_id=collection_id,
         color_by=color_by,
@@ -100,7 +100,12 @@ def get_2d_embeddings(
             pa.field("sample_id", pa.string()),
         ],
         metadata={
-            "color_legend": json.dumps({str(k): v for k, v in color_legend.items()}),
+            "color_legend": json.dumps(
+                {str(k): v for k, v in color_data.color_legend.items()}
+            ),
+            # Signals the frontend to render a sequential (ordered) ramp instead of
+            # the categorical hue wheel, e.g. for numeric quantile bins.
+            "color_ordered": json.dumps(color_data.ordered),
         },
     )
     table = pa.table(
@@ -108,7 +113,7 @@ def get_2d_embeddings(
             "x": pa.array(x_array, type=pa.float32()),
             "y": pa.array(y_array, type=pa.float32()),
             "fulfils_filter": pa.array(fulfils_filter, type=pa.uint8()),
-            "color_categories": pa.array(color_categories, type=pa.list_(pa.uint8())),
+            "color_categories": pa.array(color_data.color_categories, type=pa.list_(pa.uint8())),
             "sample_id": pa.array([str(sample_id) for sample_id in sample_ids], type=pa.string()),
         },
         schema=schema,

@@ -1,4 +1,4 @@
-import { getColorByLabel, oklchHueWheelColor } from '$lib/utils';
+import { getColorByLabel, oklchHueWheelColor, oklchToRgb } from '$lib/utils';
 import {
     EXCLUDED_BY_FILTERS_CATEGORY,
     HIDDEN_CATEGORY,
@@ -7,6 +7,14 @@ import {
 
 const OKLCH_LIGHTNESS = 0.65;
 const OKLCH_CHROMA = 0.3;
+
+// Sequential single-hue ramp for ordered (numeric) color-bys. A fixed hue with a
+// monotonic lightness ramp (light -> dark for low -> high bins) reads as an ordered
+// gradient ("darker = higher") and stays colorblind-safe, unlike the hue wheel.
+const SEQUENTIAL_HUE = 250;
+const SEQUENTIAL_CHROMA = 0.13;
+const SEQUENTIAL_LIGHTNESS_LOW_BIN = 0.9;
+const SEQUENTIAL_LIGHTNESS_HIGH_BIN = 0.35;
 
 const RESERVED_CATEGORY_COUNT = 3;
 
@@ -45,11 +53,25 @@ function getDiscreteCategoryColor(category: number, categoryCount: number): stri
     return getDiscreteOklchColor(category - RESERVED_CATEGORY_COUNT, totalColoredCategories);
 }
 
+// Maps a colored category to a point on the sequential lightness ramp, ordered so the
+// first colored category is the lightest bin and the last is the darkest.
+function getSequentialCategoryColor(category: number, categoryCount: number): string {
+    const totalColoredCategories = Math.max(1, categoryCount - RESERVED_CATEGORY_COUNT);
+    const index = category - RESERVED_CATEGORY_COUNT;
+    const fraction = totalColoredCategories <= 1 ? 0 : index / (totalColoredCategories - 1);
+    const lightness =
+        SEQUENTIAL_LIGHTNESS_LOW_BIN +
+        fraction * (SEQUENTIAL_LIGHTNESS_HIGH_BIN - SEQUENTIAL_LIGHTNESS_LOW_BIN);
+    const { r, g, b } = oklchToRgb(lightness, SEQUENTIAL_CHROMA, SEQUENTIAL_HUE);
+    return `rgb(${r}, ${g}, ${b})`;
+}
+
 function getBaseCategoryColor(
     category: number,
     categoryCount: number,
     label: string,
-    isColorByActive: boolean = false
+    isColorByActive: boolean = false,
+    ordered: boolean = false
 ): string {
     if (category === HIDDEN_CATEGORY) {
         return HIDDEN_COLOR;
@@ -67,6 +89,10 @@ function getBaseCategoryColor(
         return getColorByLabel(label).color;
     }
 
+    if (ordered) {
+        return getSequentialCategoryColor(category, categoryCount);
+    }
+
     return getDiscreteCategoryColor(category, categoryCount);
 }
 
@@ -77,19 +103,21 @@ export function getCategoryCount(colorLegend?: ReadonlyMap<number, string> | nul
 export function getCategoryColors(
     colorLegend?: ReadonlyMap<number, string> | null,
     useLabelColors: boolean = false,
-    isColorByActive: boolean = false
+    isColorByActive: boolean = false,
+    ordered: boolean = false
 ): string[] {
     const categoryCount = getCategoryCount(colorLegend);
     return Array.from({ length: categoryCount }, (_, category) => {
         const label = useLabelColors ? (colorLegend?.get(category) ?? '') : '';
-        return getBaseCategoryColor(category, categoryCount, label, isColorByActive);
+        return getBaseCategoryColor(category, categoryCount, label, isColorByActive, ordered);
     });
 }
 
 export function getLegendEntries(
     colorLegend?: ReadonlyMap<number, string> | null,
     hiddenCategories: ReadonlySet<number> = new Set(),
-    useLabelColors: boolean = true
+    useLabelColors: boolean = true,
+    ordered: boolean = false
 ): LegendEntry[] {
     if (!colorLegend || colorLegend.size === 0) {
         return [];
@@ -103,7 +131,13 @@ export function getLegendEntries(
         .map(([category, label]) => ({
             cat: category,
             label,
-            color: getBaseCategoryColor(category, categoryCount, useLabelColors ? label : ''),
+            color: getBaseCategoryColor(
+                category,
+                categoryCount,
+                useLabelColors ? label : '',
+                false,
+                ordered
+            ),
             hidden: hiddenCategories.has(category)
         }));
 }

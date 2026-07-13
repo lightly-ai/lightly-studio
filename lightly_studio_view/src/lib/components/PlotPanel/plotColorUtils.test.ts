@@ -110,4 +110,39 @@ describe('plotColorUtils', () => {
         ]);
         expect(defaultColors[3]).not.toBe(labelColor);
     });
+
+    it('colors ordered categories with a monotonic sequential ramp', () => {
+        const legend = new Map([
+            [3, '0-1'],
+            [4, '1-2'],
+            [5, '2-3']
+        ]);
+        const colors = getCategoryColors(legend, false, true, true);
+
+        // Reserved slots are unaffected by the ordered ramp.
+        expect(colors[0]).toBe(HIDDEN_COLOR);
+        expect(colors[1]).toBe(NOT_FILTERED_COLOR);
+        expect(colors[2]).toBe(UNASSIGNED_COLOR);
+
+        // Colored bins darken monotonically from the first (lowest) to the last (highest).
+        const brightness = (color: string) =>
+            (color.match(/\d+/g) ?? []).map(Number).reduce((sum, channel) => sum + channel, 0);
+        expect(brightness(colors[3])).toBeGreaterThan(brightness(colors[4]));
+        expect(brightness(colors[4])).toBeGreaterThan(brightness(colors[5]));
+
+        // The ordered ramp differs from the categorical hue wheel used otherwise.
+        const hueWheelColors = getCategoryColors(legend, false, true, false);
+        expect(colors[3]).not.toBe(hueWheelColors[3]);
+    });
+
+    it('colors legend entries with the sequential ramp when ordered', () => {
+        const legend = new Map([
+            [3, '0-1'],
+            [4, '1-2']
+        ]);
+        const entries = getLegendEntries(legend, new Set(), false, true);
+        const rampColors = getCategoryColors(legend, false, false, true);
+
+        expect(entries.map((entry) => entry.color)).toEqual([rampColors[3], rampColors[4]]);
+    });
 });

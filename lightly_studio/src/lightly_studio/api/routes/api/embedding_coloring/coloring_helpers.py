@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import bisect
 import math
 from collections import Counter
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Generic, Protocol, TypeVar
 from uuid import UUID
 
@@ -19,6 +20,26 @@ MAX_LEGEND_SLOTS = 256
 FIRST_COLORED_CATEGORY = 3
 # Number of category names listed inside an "Other" bucket label before truncating with an ellipsis.
 MAX_OTHER_NAMES = 5
+# Target number of quantile bins for numeric (ordered) coloring.
+DEFAULT_NUM_QUANTILE_BINS = 8
+
+
+@dataclass(frozen=True)
+class ColorData:
+    """Per-sample color categories plus the legend describing them.
+
+    Attributes:
+        color_categories: One list per sample, holding that sample's color
+            categories sorted ascending.
+        color_legend: Mapping from color category integer to a human-readable label.
+        ordered: Whether the categories form an ordered sequence (e.g. numeric
+            quantile bins) that the frontend should render as a sequential color
+            ramp rather than an unordered categorical palette.
+    """
+
+    color_categories: list[list[int]]
+    color_legend: dict[int, str]
+    ordered: bool = False
 
 
 class ColorScale(Protocol[T_contra]):
@@ -33,6 +54,11 @@ class ColorScale(Protocol[T_contra]):
         """Mapping from color category integer to a human-readable label."""
         ...
 
+    @property
+    def ordered(self) -> bool:
+        """Whether the categories form an ordered sequence (e.g. numeric bins)."""
+        ...
+
     def value_to_category(self, value: T_contra) -> int | None:
         """Return the color category for a value, or None if unmapped."""
         ...
@@ -44,10 +70,13 @@ class DiscreteColorScale(Generic[T]):
 
     Attributes:
         legend: Mapping from color category integer to a human-readable label.
+        ordered: Whether the categories form an ordered sequence (e.g. numeric
+            quantile bins) rather than an unordered categorical set.
     """
 
     _lookup: dict[T, int]
     legend: dict[int, str]
+    ordered: bool = field(default=False)
 
     def value_to_category(self, value: T) -> int | None:
         """Return the color category for a value, or None if unmapped."""
@@ -116,60 +145,62 @@ class DiscreteColorScale(Generic[T]):
         return cls(_lookup=lookup, legend=legend)
 
     @classmethod
-    def from_integers(
+    def from_quantiles(
         cls,
-        values: Iterable[int],
+        values: Iterable[float],
         start_cat: int = FIRST_COLORED_CATEGORY,
-        max_categories: int = 50,
-    ) -> DiscreteColorScale[int]:
-        """Build a color scale for integer values.
+        num_bins: int = DEFAULT_NUM_QUANTILE_BINS,
+    ) -> DiscreteColorScale[float]:
+        """Build an ordered color scale for numeric values using quantile bins.
 
-        When the number of unique values is at most ``max_categories``, each
-        unique value gets its own category. Otherwise the range [min, max] is
-        split into at most ``max_categories`` equal-width buckets and each value
-        is mapped to the bucket that contains it.
+        Bin edges are chosen so each bin holds roughly the same number of samples
+        (equal-frequency binning), which makes color contrast reflect the actual
+        distribution rather than the raw value range. Bins are labeled with their
+        value range (e.g. ``0.1-0.42``) and ordered from lowest to highest, so the
+        returned scale is marked ``ordered`` for a sequential color ramp.
 
-        In both cases categories are ordered numerically (smallest value first).
+        When there are at most ``num_bins`` distinct values, each distinct value
+        gets its own category labeled with the value itself, keeping small-range
+        integer fields readable.
 
         Args:
-            values: Integer values to build the scale from. Need not be unique.
+            values: Numeric values to build the scale from. Need not be unique.
             start_cat: First category ID to assign. Defaults to 3, reserving
                 0 for hidden samples, 1 for filtered-out samples and 2 for
                 unassigned samples.
-            max_categories: Maximum number of distinct color categories before
-                bucketing is applied. Defaults to 50.
+            num_bins: Target number of quantile bins. Fewer bins result when the
+                data has fewer distinct quantile edges (e.g. many repeated values).
 
         Returns:
-            A DiscreteColorScale mapping each integer to a color category.
+            An ordered DiscreteColorScale mapping each value to its bin's category.
         """
-        unique_values = sorted(set(values))
+        # Non-finite values (NaN/inf) cannot be binned or labeled; drop them so the
+        # affected samples fall through to the "missing value" (gray) path.
+        value_list = sorted(f for v in values if math.isfinite(f := float(v)))
+        if not value_list:
+            return DiscreteColorScale[float](_lookup={}, legend={}, ordered=True)
 
-        if len(unique_values) <= max_categories:
-            return DiscreteColorScale.from_values(values=unique_values, start_cat=start_cat)
+        unique_values = sorted(set(value_list))
+        if len(unique_values) <= num_bins:
+            legend = {start_cat + i: _format_number(v) for i, v in enumerate(unique_values)}
+            lookup: dict[float, int] = {v: start_cat + i for i, v in enumerate(unique_values)}
+            return DiscreteColorScale[float](_lookup=lookup, legend=legend, ordered=True)
 
-        min_val = unique_values[0]
-        max_val = unique_values[-1]
-        value_range = max_val - min_val
-        raw_width = value_range / max_categories
-        magnitude = 10 ** math.floor(math.log10(raw_width)) if raw_width >= 1 else 1
-        bucket_width = math.ceil(raw_width / magnitude) * magnitude
+        edges = _quantile_bin_edges(sorted_values=value_list, num_bins=num_bins)
+        # Interior edges separate adjacent bins; a value falls into the bin whose
+        # upper edge is the first strictly greater than it.
+        interior_edges = edges[1:-1]
+        num_actual_bins = len(edges) - 1
 
-        num_buckets = math.ceil((value_range + 1) / bucket_width)
-
-        def _bucket_idx(value: int) -> int:
-            return min((value - min_val) // bucket_width, num_buckets - 1)
-
-        def _label(bucket_start: int) -> str:
-            if bucket_width == 1:
-                return str(bucket_start)
-            return f"{bucket_start}-{bucket_start + bucket_width - 1}"
-
-        legend: dict[int, str] = {
-            start_cat + i: _label(min_val + i * bucket_width) for i in range(num_buckets)
+        legend = {
+            start_cat + i: _bin_label(low=edges[i], high=edges[i + 1])
+            for i in range(num_actual_bins)
         }
-        lookup: dict[int, int] = {v: start_cat + _bucket_idx(v) for v in unique_values}
-
-        return DiscreteColorScale[int](_lookup=lookup, legend=legend)
+        lookup = {
+            value: start_cat + bisect.bisect_right(interior_edges, value)
+            for value in unique_values
+        }
+        return DiscreteColorScale[float](_lookup=lookup, legend=legend, ordered=True)
 
 
 def assign_color_categories(
@@ -234,6 +265,41 @@ def order_values_by_frequency(
         counts.update(set(values))
 
     return sorted(counts, key=lambda value: (-counts[value], format_fn(value)))
+
+
+def _quantile_bin_edges(sorted_values: list[float], num_bins: int) -> list[float]:
+    """Return ``num_bins`` quantile bin edges (actual data values) for sorted input.
+
+    Edges are the values at the nearest-rank quantile positions, so each of the
+    ``num_bins`` bins holds roughly the same number of samples. Consecutive equal
+    edges are collapsed, which yields fewer bins when the data is concentrated. The
+    result always contains at least two edges (a single degenerate bin).
+    """
+    n = len(sorted_values)
+    raw_edges = [sorted_values[round(i / num_bins * (n - 1))] for i in range(num_bins + 1)]
+
+    edges = [raw_edges[0]]
+    for edge in raw_edges[1:]:
+        if edge != edges[-1]:
+            edges.append(edge)
+
+    if len(edges) == 1:
+        edges.append(edges[0])
+    return edges
+
+
+def _bin_label(low: float, high: float) -> str:
+    """Legend label for a quantile bin, e.g. ``0.1-0.42`` (or a single value)."""
+    if low == high:
+        return _format_number(low)
+    return f"{_format_number(low)}-{_format_number(high)}"
+
+
+def _format_number(value: float) -> str:
+    """Format a numeric value compactly, dropping the decimals of whole numbers."""
+    if value == int(value):
+        return str(int(value))
+    return f"{value:g}"
 
 
 def _format_other_label(values: Sequence[T], format_fn: Callable[[T], str]) -> str:

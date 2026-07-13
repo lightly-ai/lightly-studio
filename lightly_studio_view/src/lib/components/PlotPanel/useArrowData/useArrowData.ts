@@ -19,7 +19,20 @@ export type ArrowData = Record<TableColumn, unknown>;
 type UseArrowDataReturn = {
     data: Writable<ArrowData>;
     colorLegend: Writable<Map<number, string>>;
+    colorOrdered: Writable<boolean>;
     error: Writable<string | undefined>;
+};
+
+// Reads the `color_ordered` schema flag: true when the legend categories form an ordered
+// sequence (e.g. numeric quantile bins) that should render as a sequential ramp.
+const parseColorOrdered = (metadata: Map<string, string | Uint8Array> | undefined): boolean => {
+    const rawOrdered = metadata?.get('color_ordered');
+    if (!rawOrdered) {
+        return false;
+    }
+    const orderedText =
+        rawOrdered instanceof Uint8Array ? new TextDecoder().decode(rawOrdered) : rawOrdered;
+    return orderedText === 'true';
 };
 
 const parseColorLegend = (metadata: Map<string, string | Uint8Array> | undefined) => {
@@ -56,6 +69,7 @@ export function useArrowData({ blobData }: { blobData: Blob }): UseArrowDataRetu
 
     const data = writable<ArrowData>();
     const colorLegend = writable<Map<number, string>>(new Map());
+    const colorOrdered = writable<boolean>(false);
 
     const readData = async () => {
         try {
@@ -79,11 +93,12 @@ export function useArrowData({ blobData }: { blobData: Blob }): UseArrowDataRetu
             }
             data.set(Object.fromEntries(columnData) as Record<TableColumn, unknown>);
             colorLegend.set(parseColorLegend(table.schema?.metadata));
+            colorOrdered.set(parseColorOrdered(table.schema?.metadata));
         } catch (e) {
             error.set(`Error reading Arrow data: ${String(e)}`);
         }
     };
 
     readData();
-    return { data, colorLegend, error };
+    return { data, colorLegend, colorOrdered, error };
 }

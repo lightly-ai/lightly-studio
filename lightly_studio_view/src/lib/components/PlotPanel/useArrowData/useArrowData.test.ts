@@ -61,6 +61,64 @@ describe('useArrowData', () => {
         expect(get(error)).toBeUndefined();
     });
 
+    it('parses the color_ordered flag from schema metadata', async () => {
+        const mockData = {
+            x: [1],
+            y: [2],
+            fulfils_filter: [true],
+            color_categories: [[3]],
+            sample_id: ['a']
+        };
+        const mockTable = {
+            schema: {
+                metadata: new Map([
+                    ['color_legend', '{"3":"0-1"}'],
+                    ['color_ordered', 'true']
+                ])
+            },
+            getChild: createGetChild(mockData)
+        };
+
+        vi.mocked(tableFromIPC).mockResolvedValue(mockTable as unknown as Table);
+
+        const mockBlob = {
+            arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(8))
+        } as Blob;
+        const { colorOrdered, error } = useArrowData({ blobData: mockBlob });
+
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(get(colorOrdered)).toBe(true);
+        expect(get(error)).toBeUndefined();
+    });
+
+    it('defaults color_ordered to false when the flag is absent', async () => {
+        const mockData = {
+            x: [1],
+            y: [2],
+            fulfils_filter: [true],
+            color_categories: [[3]],
+            sample_id: ['a']
+        };
+        const mockTable = {
+            schema: {
+                metadata: new Map([['color_legend', '{"3":"Train"}']])
+            },
+            getChild: createGetChild(mockData)
+        };
+
+        vi.mocked(tableFromIPC).mockResolvedValue(mockTable as unknown as Table);
+
+        const mockBlob = {
+            arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(8))
+        } as Blob;
+        const { colorOrdered } = useArrowData({ blobData: mockBlob });
+
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(get(colorOrdered)).toBe(false);
+    });
+
     it('sets error when table is null', async () => {
         vi.mocked(tableFromIPC).mockResolvedValue(null as unknown as Table);
 

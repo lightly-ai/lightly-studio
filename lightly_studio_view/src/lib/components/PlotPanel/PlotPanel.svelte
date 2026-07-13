@@ -126,6 +126,7 @@
     const {
         data: arrowData,
         colorLegend,
+        colorOrdered,
         error: arrowError
     } = $derived(
         useArrowData({
@@ -187,10 +188,10 @@
     const categoryCount = $derived.by(() => getCategoryCount($colorLegend));
     const useLabelColors = $derived($selectedColorByType === 'annotation_label');
     const categoryColors = $derived.by(() =>
-        getCategoryColors($colorLegend, useLabelColors, $colorBy !== null)
+        getCategoryColors($colorLegend, useLabelColors, $colorBy !== null, $colorOrdered)
     );
     const legendEntries = $derived.by(() =>
-        getLegendEntries($colorLegend, $hiddenCategories, useLabelColors)
+        getLegendEntries($colorLegend, $hiddenCategories, useLabelColors, $colorOrdered)
     );
     const handleMouseUp = () => {
         const hadRangeSelection = $rangeSelection !== null;

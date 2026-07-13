@@ -79,6 +79,8 @@ def test_get_embeddings2d__with_metadata_field_color_by(
     legend = json.loads(table.schema.metadata[b"color_legend"])
     assert legend["3"] == "Paris"
     assert legend["4"] == "London"
+    # String fields are categorical (hue wheel), not an ordered ramp.
+    assert json.loads(table.schema.metadata[b"color_ordered"]) is False
 
 
 def test_get_embeddings2d__with_mixed_type_metadata_color_by(
@@ -213,13 +215,15 @@ def test_get_embeddings2d__with_integer_metadata_color_by(
     assert legend["3"] == "10"
     assert legend["4"] == "20"
     assert legend["5"] == "30"
+    # Numeric fields are ordered so the frontend renders a sequential ramp.
+    assert json.loads(table.schema.metadata[b"color_ordered"]) is True
 
 
-def test_get_embeddings2d__with_integer_metadata_color_by__buckets_when_more_than_50_unique_values(
+def test_get_embeddings2d__with_integer_metadata_color_by__quantile_bins_when_many_values(
     test_client: TestClient,
     db_session: Session,
 ) -> None:
-    """When there are more than 50 unique integer values, values are grouped into buckets."""
+    """More unique integer values than bins -> ordered quantile bins with range labels."""
     n_samples = 100
 
     collection_id = fill_db_with_samples_and_embeddings(
@@ -252,17 +256,68 @@ def test_get_embeddings2d__with_integer_metadata_color_by__buckets_when_more_tha
     sample_ids_payload = table.column("sample_id").to_pylist()
     color_categories = table.column("color_categories").to_pylist()
 
+    # 100 values collapse into 8 quantile bins with range labels; the field is ordered.
     legend = json.loads(table.schema.metadata[b"color_legend"])
-    assert legend["3"] == "0-1"
-    assert legend["52"] == "98-99"
-    assert len(legend) == 50
+    assert len(legend) == 8
+    assert legend["3"].startswith("0-")
+    assert legend["10"].endswith("-99")
+    assert json.loads(table.schema.metadata[b"color_ordered"]) is True
 
-    # score=0 and score=1 share bucket "0-1" -> same category.
+    # Lowest score maps to the first (lowest) ordered category, highest to the last.
     sample_id_to_colors = dict(zip(sample_ids_payload, color_categories))
-    assert sample_id_to_colors[str(samples[0].sample_id)] == [3]  # score=0 -> bucket "0-1"
-    assert sample_id_to_colors[str(samples[1].sample_id)] == [3]  # score=1 -> bucket "0-1"
-    assert sample_id_to_colors[str(samples[2].sample_id)] == [4]  # score=2 -> bucket "2-3"
-    assert sample_id_to_colors[str(samples[99].sample_id)] == [52]  # score=99 -> bucket "98-99"
+    assert sample_id_to_colors[str(samples[0].sample_id)] == [3]  # score=0 -> first bin
+    assert sample_id_to_colors[str(samples[99].sample_id)] == [10]  # score=99 -> last bin
+
+
+def test_get_embeddings2d__with_float_metadata_color_by(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    """Float metadata renders an ordered ramp; a sample missing the value is unassigned."""
+    n_samples = 4
+
+    collection_id = fill_db_with_samples_and_embeddings(
+        session=db_session,
+        n_samples=n_samples,
+        embedding_model_names=["model_a"],
+        embedding_dimension=EMBEDDING_DIMENSION,
+    )
+
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+    ).samples
+    assert len(samples) == n_samples
+
+    confidences = [0.1, 0.5, 0.42]
+    for sample, confidence in zip(samples[:3], confidences):
+        sample.sample["confidence"] = confidence
+    # samples[3] has no "confidence" value.
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/embeddings2d/default",
+        json={
+            "filters": {},
+            "color_by": {"type": "metadata_field", "key": "confidence"},
+        },
+    )
+
+    assert response.status_code == 200
+
+    table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
+    sample_ids_payload = table.column("sample_id").to_pylist()
+    color_categories = table.column("color_categories").to_pylist()
+
+    # 3 distinct values (<= bins) -> one ordered category each, sorted ascending.
+    legend = json.loads(table.schema.metadata[b"color_legend"])
+    assert legend == {"3": "0.1", "4": "0.42", "5": "0.5"}
+    assert json.loads(table.schema.metadata[b"color_ordered"]) is True
+
+    sample_id_to_colors = dict(zip(sample_ids_payload, color_categories))
+    assert sample_id_to_colors[str(samples[0].sample_id)] == [3]  # 0.1 -> lowest
+    assert sample_id_to_colors[str(samples[1].sample_id)] == [5]  # 0.5 -> highest
+    assert sample_id_to_colors[str(samples[2].sample_id)] == [4]  # 0.42 -> middle
+    assert sample_id_to_colors[str(samples[3].sample_id)] == []  # missing -> unassigned
 
 
 def test_get_embeddings2d__with_metadata_field_color_by_and_sample_ids_filter(
@@ -392,7 +447,6 @@ def test_get_embeddings2d__filter_promotes_metadata_value_out_of_other(
     [
         {"a": 1},
         [1, 2, 3],
-        1.5,
     ],
 )
 def test_get_embeddings2d__with_unsupported_metadata_color_by(
