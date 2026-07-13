@@ -88,7 +88,7 @@ class TestDataset:
         )
 
         dataset = VideoDataset.create(name="test_dataset")
-        dataset.add_videos_from_path(path=tmp_path, embed=False)
+        dataset.add_videos_from_path(path=tmp_path, embed=False, embed_frames=False)
 
         # Verify frames are in the database
         videos = video_resolver.get_all_by_collection_id(
@@ -114,6 +114,110 @@ class TestDataset:
         )
         assert len(embeddings) == 0
 
+    def test_dataset_add_videos_from_path__embed_frames(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        create_video_file(
+            output_path=tmp_path / "test_video.mp4",
+            width=640,
+            height=480,
+            num_frames=3,
+            fps=1,
+        )
+
+        dataset = VideoDataset.create(name="test_dataset")
+        dataset.add_videos_from_path(path=tmp_path, embed=False)
+
+        frames_collection_id = collection_resolver.get_or_create_child_collection(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            sample_type=SampleType.VIDEO_FRAME,
+        )
+        frame_samples = video_frame_resolver.get_all_by_collection_id(
+            session=dataset.session,
+            collection_id=frames_collection_id,
+        ).samples
+        assert len(frame_samples) == 3
+
+        embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
+        frame_model_id = embedding_manager.load_or_get_default_model(
+            session=dataset.session,
+            collection_id=frames_collection_id,
+        )
+        assert frame_model_id is not None
+        frame_embeddings = sample_embedding_resolver.get_all_by_collection_id(
+            session=dataset.session,
+            collection_id=frames_collection_id,
+            embedding_model_id=frame_model_id,
+        )
+        assert len(frame_embeddings) == 3
+
+        video_model_id = embedding_manager.load_or_get_default_model(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+        )
+        assert video_model_id is not None
+        video_embeddings = sample_embedding_resolver.get_all_by_collection_id(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            embedding_model_id=video_model_id,
+        )
+        assert len(video_embeddings) == 0
+
+    def test_dataset_add_videos_from_path__embed_frames_and_video(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        create_video_file(
+            output_path=tmp_path / "test_video.mp4",
+            width=640,
+            height=480,
+            num_frames=2,
+            fps=1,
+        )
+
+        dataset = VideoDataset.create(name="test_dataset")
+        dataset.add_videos_from_path(path=tmp_path, embed=True, embed_frames=True)
+
+        frames_collection_id = collection_resolver.get_or_create_child_collection(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            sample_type=SampleType.VIDEO_FRAME,
+        )
+        frame_samples = video_frame_resolver.get_all_by_collection_id(
+            session=dataset.session,
+            collection_id=frames_collection_id,
+        ).samples
+        assert len(frame_samples) == 2
+
+        embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
+        frame_model_id = embedding_manager.load_or_get_default_model(
+            session=dataset.session,
+            collection_id=frames_collection_id,
+        )
+        assert frame_model_id is not None
+        frame_embeddings = sample_embedding_resolver.get_all_by_collection_id(
+            session=dataset.session,
+            collection_id=frames_collection_id,
+            embedding_model_id=frame_model_id,
+        )
+        assert len(frame_embeddings) == 2
+
+        video_model_id = embedding_manager.load_or_get_default_model(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+        )
+        assert video_model_id is not None
+        video_embeddings = sample_embedding_resolver.get_all_by_collection_id(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            embedding_model_id=video_model_id,
+        )
+        assert len(video_embeddings) == 1
+
     def test_dataset_add_videos_from_path__limit(
         self,
         patch_collection: None,  # noqa: ARG002
@@ -127,7 +231,7 @@ class TestDataset:
         )
 
         dataset = VideoDataset.create(name="test_dataset")
-        dataset.add_videos_from_path(path=tmp_path, limit=1, embed=False)
+        dataset.add_videos_from_path(path=tmp_path, limit=1, embed=False, embed_frames=False)
 
         videos = video_resolver.get_all_by_collection_id(
             session=dataset.session,
@@ -160,7 +264,7 @@ class TestDataset:
         )
 
         dataset = VideoDataset.create(name="test_dataset")
-        dataset.add_videos_from_path(path=tmp_path, target_fps=10, embed=False)
+        dataset.add_videos_from_path(path=tmp_path, target_fps=10, embed=False, embed_frames=False)
 
         # The video-level fps remains the original source rate.
         videos = video_resolver.get_all_by_collection_id(
@@ -242,6 +346,7 @@ class TestDataset:
             videos_path=tmp_path,
             annotation_type=AnnotationType.OBJECT_DETECTION,
             embed=False,
+            embed_frames=False,
         )
 
         # Verify videos are in the database.
@@ -304,6 +409,7 @@ class TestDataset:
             videos_path=tmp_path,
             annotation_type=AnnotationType.OBJECT_DETECTION,
             embed=False,
+            embed_frames=False,
             limit=1,
         )
 
@@ -371,6 +477,7 @@ class TestDataset:
             videos_path=tmp_path,
             annotation_type=AnnotationType.SEGMENTATION_MASK,
             embed=False,
+            embed_frames=False,
         )
 
         # Verify videos are in the database.
@@ -450,6 +557,7 @@ class TestDataset:
                 videos_path=tmp_path,
                 annotation_type=AnnotationType.OBJECT_DETECTION,
                 embed=False,
+            embed_frames=False,
             )
 
     def test_add_videos_from_youtube_vis__with_embedding(
