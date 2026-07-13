@@ -9,8 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Python SDK: `embed_frames` parameter on `VideoDataset.add_videos_from_path` and `VideoDataset.add_videos_from_youtube_vis`
-  to generate image embeddings for extracted video frames during ingest.
+- Python SDK: Allow embedding video frames by adding the `embed_frames` parameter to `VideoDataset.add_videos_from_path` and `VideoDataset.add_videos_from_youtube_vis`.
 
 ### Changed
 
