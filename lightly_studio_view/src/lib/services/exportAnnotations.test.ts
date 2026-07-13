@@ -1,193 +1,114 @@
 import { exportAnnotations, exportCaptions } from './exportAnnotations';
-import * as sdk from '$lib/api/lightly_studio_local/sdk.gen';
+import * as clientModule from '$lib/api/lightly_studio_local/client.gen';
 import { ExportFormat } from '$lib/api/lightly_studio_local';
 import { vi } from 'vitest';
 
 vi.mock('$lib/utils', () => ({
-    triggerDownloadBlob: vi.fn()
+    triggerDownloadUrl: vi.fn()
 }));
 
-import { triggerDownloadBlob } from '$lib/utils';
+import { triggerDownloadUrl } from '$lib/utils';
 
-type ExportCollectionAnnotationsReturn = Awaited<
-    ReturnType<typeof sdk.exportCollectionAnnotations>
->;
-type ExportCollectionCaptionsReturn = Awaited<ReturnType<typeof sdk.exportCollectionCaptions>>;
-
-const makeResponse = (filename?: string) =>
-    new Response(null, {
-        headers: filename ? { 'content-disposition': `attachment; filename=${filename}` } : {}
-    });
+const BASE_URL = 'http://localhost:8001/';
 
 describe('exportAnnotations', () => {
-    afterEach(() => {
-        vi.restoreAllMocks();
-        vi.mocked(triggerDownloadBlob).mockClear();
+    beforeEach(() => {
+        vi.mocked(clientModule.client).getConfig = vi.fn().mockReturnValue({ baseUrl: BASE_URL });
     });
 
-    it('calls SDK with correct path and query, triggers download with filename from header', async () => {
-        const blob = new Blob(['data']);
-        const mockedFn = vi.spyOn(sdk, 'exportCollectionAnnotations').mockResolvedValue({
-            data: blob,
-            error: undefined,
-            response: makeResponse('annotations.zip')
-        } as unknown as ExportCollectionAnnotationsReturn);
+    afterEach(() => {
+        vi.restoreAllMocks();
+        vi.mocked(triggerDownloadUrl).mockClear();
+    });
 
+    it('constructs URL with collection_id and annotation_collection_id, triggers download', async () => {
         const result = await exportAnnotations({
             collection_id: 'col1',
             annotation_collection_id: 'ann1'
         });
 
         expect(result).toEqual({});
-        expect(mockedFn).toHaveBeenCalledWith({
-            path: { collection_id: 'col1' },
-            query: { annotation_collection_id: 'ann1', export_format: undefined },
-            parseAs: 'blob'
-        });
-        expect(triggerDownloadBlob).toHaveBeenCalledWith('annotations.zip', blob);
+        expect(triggerDownloadUrl).toHaveBeenCalledWith(
+            'http://localhost:8001/api/collections/col1/export/annotations?annotation_collection_id=ann1'
+        );
     });
 
-    it('passes export_format to SDK query when provided', async () => {
-        const blob = new Blob(['data']);
-        const mockedFn = vi.spyOn(sdk, 'exportCollectionAnnotations').mockResolvedValue({
-            data: blob,
-            error: undefined,
-            response: makeResponse('export.zip')
-        } as unknown as ExportCollectionAnnotationsReturn);
-
+    it('includes export_format in URL query when provided', async () => {
         await exportAnnotations({
             collection_id: 'col1',
             annotation_collection_id: 'ann1',
             export_format: ExportFormat.OBJECT_DETECTION_YOLO
         });
 
-        expect(mockedFn).toHaveBeenCalledWith({
-            path: { collection_id: 'col1' },
-            query: {
-                annotation_collection_id: 'ann1',
-                export_format: ExportFormat.OBJECT_DETECTION_YOLO
-            },
-            parseAs: 'blob'
-        });
+        expect(triggerDownloadUrl).toHaveBeenCalledWith(
+            `http://localhost:8001/api/collections/col1/export/annotations?annotation_collection_id=ann1&export_format=${ExportFormat.OBJECT_DETECTION_YOLO}`
+        );
     });
 
-    it('returns error and does not trigger download when response.error is set', async () => {
-        vi.spyOn(sdk, 'exportCollectionAnnotations').mockResolvedValue({
-            data: undefined,
-            error: 'Not Found',
-            response: makeResponse()
-        } as unknown as ExportCollectionAnnotationsReturn);
-
-        const result = await exportAnnotations({
-            collection_id: 'col1',
-            annotation_collection_id: null
-        });
-
-        expect(result.error).toBeDefined();
-        expect(triggerDownloadBlob).not.toHaveBeenCalled();
-    });
-
-    it('returns error and does not trigger download when response.data is null', async () => {
-        vi.spyOn(sdk, 'exportCollectionAnnotations').mockResolvedValue({
-            data: null,
-            error: undefined,
-            response: makeResponse()
-        } as unknown as ExportCollectionAnnotationsReturn);
-
-        const result = await exportAnnotations({
-            collection_id: 'col1',
-            annotation_collection_id: null
-        });
-
-        expect(result.error).toBeDefined();
-        expect(triggerDownloadBlob).not.toHaveBeenCalled();
-    });
-
-    it('returns error and does not trigger download when SDK call rejects', async () => {
-        vi.spyOn(sdk, 'exportCollectionAnnotations').mockRejectedValue(new Error('network error'));
-
-        const result = await exportAnnotations({
-            collection_id: 'col1',
-            annotation_collection_id: null
-        });
-
-        expect(result.error).toBeDefined();
-        expect(triggerDownloadBlob).not.toHaveBeenCalled();
-    });
-
-    it('uses fallback filename "export" when Content-Disposition header is absent', async () => {
-        const blob = new Blob(['data']);
-        vi.spyOn(sdk, 'exportCollectionAnnotations').mockResolvedValue({
-            data: blob,
-            error: undefined,
-            response: makeResponse()
-        } as unknown as ExportCollectionAnnotationsReturn);
-
+    it('omits annotation_collection_id from URL when null', async () => {
         await exportAnnotations({
             collection_id: 'col1',
             annotation_collection_id: null
         });
 
-        expect(triggerDownloadBlob).toHaveBeenCalledWith('export', blob);
+        expect(triggerDownloadUrl).toHaveBeenCalledWith(
+            'http://localhost:8001/api/collections/col1/export/annotations'
+        );
+    });
+
+    it('strips trailing slash from baseUrl before constructing URL', async () => {
+        vi.mocked(clientModule.client).getConfig = vi
+            .fn()
+            .mockReturnValue({ baseUrl: 'http://localhost:8001/' });
+
+        await exportAnnotations({ collection_id: 'col1', annotation_collection_id: null });
+
+        const url = vi.mocked(triggerDownloadUrl).mock.calls[0][0];
+        expect(url).not.toContain('//api');
+    });
+
+    it('returns error when URL construction throws', async () => {
+        vi.mocked(clientModule.client).getConfig = vi.fn().mockImplementation(() => {
+            throw new Error('config error');
+        });
+
+        const result = await exportAnnotations({
+            collection_id: 'col1',
+            annotation_collection_id: null
+        });
+
+        expect(result.error).toBeDefined();
+        expect(triggerDownloadUrl).not.toHaveBeenCalled();
     });
 });
 
 describe('exportCaptions', () => {
-    afterEach(() => {
-        vi.restoreAllMocks();
-        vi.mocked(triggerDownloadBlob).mockClear();
+    beforeEach(() => {
+        vi.mocked(clientModule.client).getConfig = vi.fn().mockReturnValue({ baseUrl: BASE_URL });
     });
 
-    it('calls SDK with correct path and triggers download with filename from header', async () => {
-        const blob = new Blob(['captions']);
-        const mockedFn = vi.spyOn(sdk, 'exportCollectionCaptions').mockResolvedValue({
-            data: blob,
-            error: undefined,
-            response: makeResponse('captions.json')
-        } as unknown as ExportCollectionCaptionsReturn);
+    afterEach(() => {
+        vi.restoreAllMocks();
+        vi.mocked(triggerDownloadUrl).mockClear();
+    });
 
+    it('constructs URL with collection_id and triggers download', async () => {
         const result = await exportCaptions('col1');
 
         expect(result).toEqual({});
-        expect(mockedFn).toHaveBeenCalledWith({
-            path: { collection_id: 'col1' },
-            parseAs: 'blob'
+        expect(triggerDownloadUrl).toHaveBeenCalledWith(
+            'http://localhost:8001/api/collections/col1/export/captions'
+        );
+    });
+
+    it('returns error when URL construction throws', async () => {
+        vi.mocked(clientModule.client).getConfig = vi.fn().mockImplementation(() => {
+            throw new Error('config error');
         });
-        expect(triggerDownloadBlob).toHaveBeenCalledWith('captions.json', blob);
-    });
-
-    it('returns error and does not trigger download when response.error is set', async () => {
-        vi.spyOn(sdk, 'exportCollectionCaptions').mockResolvedValue({
-            data: undefined,
-            error: 'Forbidden',
-            response: makeResponse()
-        } as unknown as ExportCollectionCaptionsReturn);
 
         const result = await exportCaptions('col1');
 
         expect(result.error).toBeDefined();
-        expect(triggerDownloadBlob).not.toHaveBeenCalled();
-    });
-
-    it('returns error and does not trigger download when response.data is null', async () => {
-        vi.spyOn(sdk, 'exportCollectionCaptions').mockResolvedValue({
-            data: null,
-            error: undefined,
-            response: makeResponse()
-        } as unknown as ExportCollectionCaptionsReturn);
-
-        const result = await exportCaptions('col1');
-
-        expect(result.error).toBeDefined();
-        expect(triggerDownloadBlob).not.toHaveBeenCalled();
-    });
-
-    it('returns error and does not trigger download when SDK call rejects', async () => {
-        vi.spyOn(sdk, 'exportCollectionCaptions').mockRejectedValue(new Error('timeout'));
-
-        const result = await exportCaptions('col1');
-
-        expect(result.error).toBeDefined();
-        expect(triggerDownloadBlob).not.toHaveBeenCalled();
+        expect(triggerDownloadUrl).not.toHaveBeenCalled();
     });
 });
