@@ -8,6 +8,7 @@ from uuid import UUID
 import numpy as np
 import torch
 from numpy.typing import NDArray
+from PIL import Image
 
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
@@ -115,6 +116,25 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
         """
         return image_crop_embedding.embed_image_crops_batched(
             image_crops=image_crops,
+            context=self._embedding_context(),
+            show_progress=show_progress,
+        )
+
+    def embed_pil_images(
+        self, images: list[Image.Image], show_progress: bool = True
+    ) -> NDArray[np.float32]:
+        """Embed in-memory PIL images with MobileCLIP.
+
+        Args:
+            images: PIL images to embed.
+            show_progress: Whether to show a progress bar during embedding.
+
+        Returns:
+            A numpy array representing the generated embeddings in the same order
+            as the input images.
+        """
+        return image_embedding.embed_pil_images_batched(
+            images=images,
             context=self._embedding_context(),
             show_progress=show_progress,
         )

@@ -7,7 +7,10 @@ from pydantic import BaseModel
 from sqlmodel import Session, asc, col, func, select
 from sqlmodel.sql.expression import Select
 
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.annotation.annotation_base import (
+    AnnotationBaseTable,
+    AnnotationType,
+)
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
@@ -23,16 +26,30 @@ class CountAnnotationsView(BaseModel):
 
 
 def count_video_frame_annotations_by_video_collection(
-    session: Session, collection_id: UUID, filters: Optional[VideoFilter] = None
+    session: Session,
+    collection_id: UUID,
+    filters: Optional[VideoFilter] = None,
+    annotation_type: Optional[AnnotationType] = None,
 ) -> list[CountAnnotationsView]:
-    """Count the annotations by video frames."""
+    """Count the annotations by video frames.
+
+    When ``annotation_type`` is provided, both the total and filtered counts are
+    restricted to annotations of that type (e.g. only CLASSIFICATION or only
+    OBJECT_DETECTION).
+    """
     unfiltered_query = (
-        _build_base_query(collection_id=collection_id, count_column_name="total")
+        _build_base_query(
+            collection_id=collection_id,
+            count_column_name="total",
+            annotation_type=annotation_type,
+        )
         .group_by(col(AnnotationBaseTable.annotation_label_id))
         .subquery("unfiltered")
     )
     filtered_query = _build_base_query(
-        collection_id=collection_id, count_column_name="filtered_count"
+        collection_id=collection_id,
+        count_column_name="filtered_count",
+        annotation_type=annotation_type,
     )
 
     if filters is not None:
@@ -69,8 +86,12 @@ def count_video_frame_annotations_by_video_collection(
     ]
 
 
-def _build_base_query(collection_id: UUID, count_column_name: str) -> Select[tuple[Any, int]]:
-    return (
+def _build_base_query(
+    collection_id: UUID,
+    count_column_name: str,
+    annotation_type: Optional[AnnotationType] = None,
+) -> Select[tuple[Any, int]]:
+    query: Select[tuple[Any, int]] = (
         select(
             col(AnnotationBaseTable.annotation_label_id).label("label_id"),
             func.count(func.distinct(VideoTable.sample_id)).label(count_column_name),
@@ -84,3 +105,8 @@ def _build_base_query(collection_id: UUID, count_column_name: str) -> Select[tup
         .join(VideoTable, col(VideoTable.sample_id) == col(SampleTable.sample_id))
         .where(col(SampleTable.collection_id) == collection_id)
     )
+
+    if annotation_type is not None:
+        query = query.where(col(AnnotationBaseTable.annotation_type) == annotation_type)
+
+    return query

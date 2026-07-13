@@ -23,6 +23,7 @@ from tests.resolvers.evaluation_sample_metric_resolver import (
     helpers as evaluation_sample_metric_helpers,
 )
 from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
+    FalsePositiveMetricStub,
     TruePositiveMetricStub,
     create_annotation_metrics,
 )
@@ -282,7 +283,7 @@ def test_get_confusion_matrix__no_fp_or_fn_keeps_synthetic_axes(
     create_annotation_metrics(
         session=db_session,
         run_id=run.id,
-        true_positive_metric_stubs=[
+        pair_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=image.sample_id,
                 metrics={"iou": 0.9},
@@ -301,6 +302,44 @@ def test_get_confusion_matrix__no_fp_or_fn_keeps_synthetic_axes(
     assert matrix.counts == [
         [1, 0],
         [0, 0],
+    ]
+
+
+def test_get_confusion_matrix__counts_metricless_false_positive_stub(
+    db_session: Session,
+) -> None:
+    dataset = create_collection(session=db_session)
+    run = evaluation_sample_metric_helpers.create_run(
+        session=db_session,
+        collection_id=dataset.collection_id,
+    )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
+    label_a = create_annotation_label(
+        session=db_session,
+        root_collection_id=dataset.collection_id,
+        label_name="class_a",
+    )
+    create_annotation_metrics(
+        session=db_session,
+        run_id=run.id,
+        pair_metric_stubs=[
+            FalsePositiveMetricStub(
+                sample_id=image.sample_id,
+                pred_annotation_label_id=label_a.annotation_label_id,
+            )
+        ],
+    )
+
+    matrix = evaluation_annotation_metric_resolver.get_confusion_matrix(
+        session=db_session,
+        evaluation_run_id=run.id,
+    )
+
+    assert matrix.row_labels == ["class_a", NO_GROUND_TRUTH_ROW_LABEL]
+    assert matrix.col_labels == ["class_a", NO_PREDICTION_COL_LABEL]
+    assert matrix.counts == [
+        [0, 0],
+        [1, 0],
     ]
 
 

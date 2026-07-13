@@ -2,8 +2,8 @@
     import { Input } from '$lib/components/ui/input';
 
     interface Props {
-        count: number;
-        percentage: number;
+        count: number | null;
+        percentage: number | null;
         onCountChange: (value: number) => void;
         onPercentageChange: (value: number) => void;
     }
@@ -15,7 +15,7 @@
     <Input
         id="n-samples"
         type="number"
-        value={count}
+        value={count ?? ''}
         oninput={(e) => onCountChange((e.target as HTMLInputElement).valueAsNumber)}
         min="1"
         placeholder="Enter the number of samples"
@@ -28,7 +28,7 @@
             id="n-samples-percentage"
             type="number"
             aria-label="Percentage of filtered samples"
-            value={percentage}
+            value={percentage ?? ''}
             oninput={(e) => onPercentageChange((e.target as HTMLInputElement).valueAsNumber)}
             min="0"
             step="any"

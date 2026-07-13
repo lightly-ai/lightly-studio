@@ -88,6 +88,28 @@ describe('SidePanelTabs', () => {
         expect(setActivePanel).toHaveBeenCalledWith('embeddingPlot');
     });
 
+    it('renders the Distribution button only when isImages is true', () => {
+        const { unmount } = render(SidePanelTabs, {
+            props: { isImages: true, hasMediaWithEmbeddings: false, supportsEvaluation: false }
+        });
+        expect(screen.getByTestId('side-panel-tabs-distribution')).toBeInTheDocument();
+        unmount();
+
+        render(SidePanelTabs, {
+            props: { isImages: false, hasMediaWithEmbeddings: false, supportsEvaluation: false }
+        });
+        expect(screen.queryByTestId('side-panel-tabs-distribution')).not.toBeInTheDocument();
+    });
+
+    it('calls setActivePanel with distribution when the Distribution button is clicked', async () => {
+        render(SidePanelTabs, {
+            props: { isImages: true, hasMediaWithEmbeddings: false, supportsEvaluation: false }
+        });
+
+        await fireEvent.click(screen.getByTestId('side-panel-tabs-distribution'));
+        expect(setActivePanel).toHaveBeenCalledWith('distribution');
+    });
+
     it('calls setActivePanel with evaluationRuns when Eval button is clicked', async () => {
         render(SidePanelTabs, {
             props: { isImages: true, hasMediaWithEmbeddings: false, supportsEvaluation: true }

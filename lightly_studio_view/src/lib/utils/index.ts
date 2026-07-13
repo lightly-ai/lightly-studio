@@ -6,6 +6,7 @@ export * from './getColorByLabel';
 export * from './getSimilarityColor';
 export * from './formatter';
 export * from './formatDate';
+export * from './echartsTheme';
 export * from './shadcn';
 export * from './isInputElement';
 export * from './isTextInputTarget';

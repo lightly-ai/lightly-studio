@@ -2,11 +2,18 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from uuid import UUID
 
+from sqlalchemy import ColumnElement
+from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, func, select
 
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.database import db_array
+from lightly_studio.models.annotation.annotation_base import (
+    AnnotationBaseTable,
+    AnnotationType,
+)
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
@@ -14,16 +21,34 @@ from lightly_studio.resolvers import embedding_region_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 
 
+class AnnotationCountMode(str, Enum):
+    """Controls what the annotation count represents."""
+
+    OBJECTS = "objects"
+    SAMPLES = "samples"
+
+
 def count_image_annotations_by_collection(
     session: Session,
     collection_id: UUID,
     image_filter: ImageFilter | None = None,
+    annotation_type: AnnotationType | None = None,
+    count_mode: AnnotationCountMode = AnnotationCountMode.OBJECTS,
 ) -> list[tuple[str, int, int]]:
     """Count annotations for a specific image collection.
 
     Annotations for a specific collection are grouped by annotation
     label name and counted for total and filtered.
     Returns a list of (label_name, current_count, total_count) tuples.
+
+    When ``annotation_type`` is provided, both the total and filtered counts are
+    restricted to annotations of that type (e.g. only CLASSIFICATION or only
+    OBJECT_DETECTION).
+
+    When ``count_mode`` is ``OBJECTS`` (default), each annotation row is counted
+    individually.  When ``count_mode`` is ``SAMPLES``, the count reflects the
+    number of distinct parent samples that carry at least one matching annotation,
+    so a sample with multiple annotations of the same label is counted only once.
     """
     # Resolve any embedding-plot region selection to concrete sample ids on the filter before the
     # query is built (the point-in-polygon test needs the session, which `apply` lacks).
@@ -34,11 +59,24 @@ def count_image_annotations_by_collection(
             collection_id=collection_id,
             region=sample_filter.embedding_region,
         )
-    total_counts = _get_total_counts(session=session, collection_id=collection_id)
+    annotation_collection_ids = (
+        sample_filter.annotations_filter.collection_ids
+        if sample_filter is not None and sample_filter.annotations_filter is not None
+        else None
+    )
+    total_counts = _get_total_counts(
+        session=session,
+        collection_id=collection_id,
+        annotation_type=annotation_type,
+        count_mode=count_mode,
+    )
     current_counts = _get_current_counts(
         session=session,
         collection_id=collection_id,
         image_filter=image_filter,
+        annotation_type=annotation_type,
+        annotation_collection_ids=annotation_collection_ids,
+        count_mode=count_mode,
     )
 
     return [
@@ -47,12 +85,23 @@ def count_image_annotations_by_collection(
     ]
 
 
-def _get_total_counts(session: Session, collection_id: UUID) -> dict[str, int]:
+def _build_count_expression(count_mode: AnnotationCountMode) -> ColumnElement[int]:
+    if count_mode == AnnotationCountMode.SAMPLES:
+        return func.count(func.distinct(col(AnnotationBaseTable.parent_sample_id)))
+    return func.count(col(AnnotationBaseTable.sample_id))
+
+
+def _get_total_counts(
+    session: Session,
+    collection_id: UUID,
+    annotation_type: AnnotationType | None = None,
+    count_mode: AnnotationCountMode = AnnotationCountMode.OBJECTS,
+) -> dict[str, int]:
     """Returns total annotation counts per label for the collection."""
     total_counts_query = (
         select(
             AnnotationLabelTable.annotation_label_name,
-            func.count(col(AnnotationBaseTable.sample_id)).label("total_count"),
+            _build_count_expression(count_mode).label("total_count"),
         )
         .join(
             AnnotationBaseTable,
@@ -68,23 +117,33 @@ def _get_total_counts(session: Session, collection_id: UUID) -> dict[str, int]:
             col(SampleTable.sample_id) == col(ImageTable.sample_id),
         )
         .where(SampleTable.collection_id == collection_id)
-        .group_by(AnnotationLabelTable.annotation_label_name)
-        .order_by(col(AnnotationLabelTable.annotation_label_name).asc())
     )
+
+    if annotation_type is not None:
+        total_counts_query = total_counts_query.where(
+            col(AnnotationBaseTable.annotation_type) == annotation_type
+        )
+
+    total_counts_query = total_counts_query.group_by(
+        AnnotationLabelTable.annotation_label_name
+    ).order_by(col(AnnotationLabelTable.annotation_label_name).asc())
 
     return {row[0]: row[1] for row in session.exec(total_counts_query).all()}
 
 
-def _get_current_counts(
+def _get_current_counts(  # noqa: PLR0913
     session: Session,
     collection_id: UUID,
     image_filter: ImageFilter | None,
+    annotation_type: AnnotationType | None = None,
+    annotation_collection_ids: list[UUID] | None = None,
+    count_mode: AnnotationCountMode = AnnotationCountMode.OBJECTS,
 ) -> dict[str, int]:
     """Returns filtered annotation counts per label for the collection."""
     filtered_query = (
         select(
             AnnotationLabelTable.annotation_label_name,
-            func.count(col(AnnotationBaseTable.sample_id)).label("current_count"),
+            _build_count_expression(count_mode).label("current_count"),
         )
         .join(
             AnnotationBaseTable,
@@ -101,6 +160,26 @@ def _get_current_counts(
         )
         .where(SampleTable.collection_id == collection_id)
     )
+
+    if annotation_type is not None:
+        filtered_query = filtered_query.where(
+            col(AnnotationBaseTable.annotation_type) == annotation_type
+        )
+
+    # Restrict the counted annotations to the selected source collections. The
+    # annotation's own sample (aliased to avoid clashing with the image sample
+    # joined above) carries its collection id.
+    if annotation_collection_ids:
+        annotation_sample = aliased(SampleTable)
+        filtered_query = filtered_query.join(
+            annotation_sample,
+            col(annotation_sample.sample_id) == col(AnnotationBaseTable.sample_id),
+        ).where(
+            db_array.in_array(
+                column=col(annotation_sample.collection_id),
+                values=annotation_collection_ids,
+            )
+        )
 
     if image_filter is not None:
         filtered_query = image_filter.apply(filtered_query)

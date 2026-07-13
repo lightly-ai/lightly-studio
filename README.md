@@ -105,6 +105,10 @@ LightlyStudio is a browser app that runs on your own computer. Use it in two sim
 1. Load your data into the local database with a Python script.
 2. Start the server and explore the data in your browser.
 
+Prefer a guided, end-to-end walkthrough? Follow the tutorial
+[Curate a Traffic CCTV Dataset for YOLO Training](https://docs.lightly.ai/studio/tutorials/yolo-traffic-cctv-object-detection/) — from raw images to a trained model.
+Or try LightlyStudio without installing anything: [open the example notebook in Colab](https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb).
+
 Get started with one of these example workflows:
 
 <details open>
@@ -348,6 +352,13 @@ ls.start_gui()
 
 </details>
 
+## 📚 Tutorials
+
+Step-by-step guides covering complete workflows — from raw, unlabeled data to a trained and evaluated model:
+
+- **[Curate a Traffic CCTV Dataset for YOLO Training](https://docs.lightly.ai/studio/tutorials/yolo-traffic-cctv-object-detection/):** Explore embeddings, remove near-duplicates, auto-label with a detection plugin, and review annotations before training.
+- **[Evaluate YOLO26 on Your Dataset with LightlyStudio](https://docs.lightly.ai/studio/tutorials/yolo26-model-evaluation/):** Compare predictions against ground truth, use the confusion matrix and embeddings to find failure patterns, and export issues for relabeling.
+
 ## 🐍 Python Interface
 
 LightlyStudio has a powerful Python interface. You can not only index datasets but also query and manipulate them using code.
@@ -355,7 +366,7 @@ LightlyStudio has a powerful Python interface. You can not only index datasets b
 ### ☁️ Using Cloud Storage
 To load images or videos directly from a cloud storage provider (like AWS S3, GCS, etc.), you must first install the required dependencies:
 
-```py
+```shell
 pip install "lightly-studio[cloud-storage]"
 ```
 
