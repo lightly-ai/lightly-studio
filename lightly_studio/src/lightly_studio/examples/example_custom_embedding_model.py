@@ -18,6 +18,7 @@ import numpy as np
 import torch
 from environs import Env
 from numpy.typing import NDArray
+from PIL import Image
 
 import lightly_studio as ls
 from lightly_studio.database import db_manager
@@ -40,9 +41,9 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
 
     This implements the ls.ImageEmbeddingGenerator protocol. Here it wraps
     MobileCLIP to keep the example runnable, but the same structure works for any
-    model: implement get_embedding_model_input, embed_text, embed_images and
-    embed_image_crops. Implement ls.VideoEmbeddingGenerator as well to override the
-    video model.
+    model: implement get_embedding_model_input, embed_text, embed_images,
+    embed_image_crops and embed_pil_images. Implement ls.VideoEmbeddingGenerator as
+    well to override the video model.
     """
 
     def __init__(self) -> None:
@@ -99,6 +100,16 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
         """Embed a batch of image crops (used for annotation embeddings)."""
         return image_crop_embedding.embed_image_crops_batched(
             image_crops=image_crops,
+            context=self._embedding_context(),
+            show_progress=show_progress,
+        )
+
+    def embed_pil_images(
+        self, images: list[Image.Image], show_progress: bool = True
+    ) -> NDArray[np.float32]:
+        """Embed a batch of in-memory PIL images."""
+        return image_embedding.embed_pil_images_batched(
+            images=images,
             context=self._embedding_context(),
             show_progress=show_progress,
         )
