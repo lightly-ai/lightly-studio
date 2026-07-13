@@ -13,7 +13,7 @@ from lightly_studio.core.annotation import CreateSegmentationMask
 from lightly_studio.core.dataset_query import ImageSampleField
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image.image_dataset import ImageDataset
-from lightly_studio.export import image_dataset_export
+from lightly_studio.export import dataset_export
 from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
@@ -113,7 +113,7 @@ class TestImageDatasetExport:
         dataset = ImageDataset.create(name="test_dataset")
 
         # Patch the writer so no file is created and assert the default path is used.
-        mock_output = mocker.patch.object(image_dataset_export, "COCOObjectDetectionOutput")
+        mock_output = mocker.patch.object(dataset_export, "COCOObjectDetectionOutput")
 
         # Don't provide the export path.
         dataset.export().to_coco_object_detections()
