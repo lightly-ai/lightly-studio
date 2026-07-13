@@ -31,13 +31,23 @@ def get_metadata_values_for_key(
             - The schema type for `key`, or `None` if the key is not present in
               the collection schema.
     """
+    # Project only the requested key server-side instead of materializing every
+    # sample's full ``data``/``metadata_schema`` blob. ``as_json`` makes both
+    # dialects decode the value into its native Python type (str/int/float/bool
+    # or the gps ``dict``); see ``db_json.json_extract``.
     schema_type_expr = db_json.json_extract(
         column=SampleMetadataTable.metadata_schema,
         field=key,
+        as_json=True,
+    )
+    value_expr = db_json.json_extract(
+        column=SampleMetadataTable.data,
+        field=key,
+        as_json=True,
     )
 
     rows = session.exec(
-        select(SampleMetadataTable)
+        select(SampleMetadataTable.sample_id, value_expr, schema_type_expr)
         .select_from(SampleTable)
         .join(
             SampleMetadataTable,
@@ -53,16 +63,14 @@ def get_metadata_values_for_key(
 
     sample_to_value: dict[UUID, Any] = {}
     metadata_type: str | None = None
-    for row in rows:
-        row_metadata_type = row.metadata_schema[key]
+    for sample_id, value, row_metadata_type in rows:
         if metadata_type is None:
             metadata_type = row_metadata_type
         elif metadata_type != row_metadata_type:
             raise ValueError(
                 f"Metadata field '{key}': value does not match schema type {metadata_type!r}."
             )
-        value = row.data.get(key)
         if value is not None:
-            sample_to_value[row.sample_id] = value
+            sample_to_value[sample_id] = value
 
     return sample_to_value, metadata_type

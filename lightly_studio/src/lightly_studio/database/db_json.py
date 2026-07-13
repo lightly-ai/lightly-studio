@@ -45,10 +45,20 @@ class json_extract(GenericFunction[Any]):  # noqa: N801
     - DuckDB:      ``CAST(json_extract(col, '$.field') AS FLOAT)``
     - PostgreSQL:  ``(col->>'field')::float``
 
+    When *as_json* is ``True`` the value is returned as JSON rather than text, so
+    both drivers decode it into the NATIVE Python value (``str``, ``int``,
+    ``float``, ``bool`` or ``dict``) instead of a text string:
+    - DuckDB:      ``json_extract(col, '$.field')`` (the driver decodes JSON)
+    - PostgreSQL:  ``col->'field'`` (``->`` returns ``json``; psycopg decodes it)
+
+    This is the counterpart of the default text extraction used together with
+    :func:`json_literal` for SQL string comparisons, where PostgreSQL's ``->>``
+    must return plain text. Use *as_json* when reading values back into Python.
+
     ``field`` supports dot-separated paths (``a.b.c``) and array indices (``a.list[0]``).
     """
 
-    # Field path and cast flag vary per instance, so caching is unsafe.
+    # Field path and flags vary per instance, so caching is unsafe.
     inherit_cache = False
 
     def __init__(
@@ -57,16 +67,23 @@ class json_extract(GenericFunction[Any]):  # noqa: N801
         field: str,
         *,
         cast_to_float: bool = False,
+        as_json: bool = False,
     ) -> None:
-        """Initialize with a column, field path, and optional float cast.
+        """Initialize with a column, field path, and extraction options.
 
         Args:
             column: The JSON column expression (e.g. ``SampleMetadataTable.data``).
             field: Dot-separated path into the JSON object.
             cast_to_float: If True, cast the extracted value to float.
+            as_json: If True, return the value as JSON so the driver decodes it
+                into the native Python value. Mutually exclusive with
+                ``cast_to_float``.
         """
+        if cast_to_float and as_json:
+            raise ValueError("'cast_to_float' and 'as_json' are mutually exclusive.")
         self.field = field
         self.cast_to_float = cast_to_float
+        self.as_json = as_json
         super().__init__(column)
 
 
@@ -102,7 +119,10 @@ def _compile_json_extract_postgresql(
     col = next(iter(element.clauses))
     col_sql = compiler.process(col, **kw)
     return _build_pg_json_accessor(
-        column=col_sql, field=element.field, cast_to_float=element.cast_to_float
+        column=col_sql,
+        field=element.field,
+        cast_to_float=element.cast_to_float,
+        as_json=element.as_json,
     )
 
 
@@ -133,15 +153,20 @@ class _JsonStringType(TypeDecorator[str]):
         return value
 
 
-def _build_pg_json_accessor(column: str, field: str, *, cast_to_float: bool = False) -> str:
+def _build_pg_json_accessor(
+    column: str, field: str, *, cast_to_float: bool = False, as_json: bool = False
+) -> str:
     """Build a PostgreSQL JSON accessor expression from a dot-separated field path.
 
     Converts paths like ``dict.key`` into ``col->'dict'->>'key'`` operator chains.
+    When *as_json* is True the final segment uses ``->`` instead of ``->>`` so the
+    value stays ``json`` (decoded to a native Python object) rather than text.
 
     Args:
         column: Already-compiled column SQL string.
         field: Dot-separated path into the JSON object.
         cast_to_float: If True, wrap the expression in ``(...)::float``.
+        as_json: If True, keep the final segment as ``json`` (use ``->``).
 
     Returns:
         A raw SQL expression string.
@@ -152,7 +177,7 @@ def _build_pg_json_accessor(column: str, field: str, *, cast_to_float: bool = Fa
     accessors: list[str] = []
     for i, part in enumerate(parts):
         is_last = i == len(parts) - 1
-        op = "->>" if is_last else "->"
+        op = "->>" if is_last and not as_json else "->"
         if part.startswith("[") and part.endswith("]"):
             # Array index access: ->>0 or ->0 (unquoted integer)
             index = part[1:-1]
