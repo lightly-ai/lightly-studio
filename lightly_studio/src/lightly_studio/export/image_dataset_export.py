@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from collections.abc import Iterable
 from pathlib import Path
+from typing import cast
 from uuid import UUID
 
 from labelformat.formats import (
@@ -13,9 +14,11 @@ from labelformat.formats import (
     PascalVOCSemanticSegmentationOutput,
     YOLOv8ObjectDetectionOutput,
 )
+from labelformat.model.image import Image
 from sqlmodel import Session
 
 from lightly_studio.core.image.image_sample import ImageSample
+from lightly_studio.core.sample import Sample
 from lightly_studio.export import coco_captions
 from lightly_studio.export.lightly_studio_label_input import (
     LightlyStudioInstanceSegmentationInput,
@@ -77,6 +80,7 @@ class ImageDatasetExport:
             dataset_id=self._dataset_id,
             samples=self.samples,
             annotation_collection_id=annotation_collection_id,
+            sample_to_image=image_sample_to_image,
         )
         COCOObjectDetectionOutput(output_file=Path(output_json)).save(label_input=export_input)
 
@@ -101,6 +105,7 @@ class ImageDatasetExport:
             dataset_id=self._dataset_id,
             samples=self.samples,
             annotation_collection_id=annotation_collection_id,
+            sample_to_image=image_sample_to_image,
         )
         YOLOv8ObjectDetectionOutput(
             output_file=Path(output_folder) / YOLO_DATASET_CONFIG_FILENAME,
@@ -116,7 +121,9 @@ class ImageDatasetExport:
         """
         if output_json is None:
             output_json = DEFAULT_EXPORT_FILENAME
-        coco_captions_dict = coco_captions.to_coco_captions_dict(samples=self.samples)
+        coco_captions_dict = coco_captions.to_coco_captions_dict(
+            samples=self.samples, sample_to_image=image_sample_to_image
+        )
         with Path(output_json).open("w") as f:
             json.dump(coco_captions_dict, f, indent=2)
 
@@ -140,6 +147,7 @@ class ImageDatasetExport:
             dataset_id=self._dataset_id,
             samples=self.samples,
             annotation_collection_id=annotation_collection_id,
+            sample_to_image=image_sample_to_image,
         )
         COCOInstanceSegmentationOutput(output_file=Path(output_json)).save(label_input=export_input)
 
@@ -164,9 +172,28 @@ class ImageDatasetExport:
             dataset_id=self._dataset_id,
             samples=self.samples,
             annotation_collection_id=annotation_collection_id,
+            sample_to_image=image_sample_to_image,
         )
         # Keep `background_class_id` unchanged: the label input defines category IDs and
         # reserves class 0 for background.
         PascalVOCSemanticSegmentationOutput(output_folder=Path(output_folder)).save(
             label_input=export_input
         )
+
+
+def image_sample_to_image(sample: Sample, image_id: int, use_relative_filename: bool) -> Image:
+    """Maps an image sample to a labelformat `Image`.
+
+    Conforms to the `SampleToImage` strategy, so `sample` is typed as `Sample`; it is always
+    an `ImageSample` here because this strategy is only used by `ImageDatasetExport`.
+
+    COCO stores the absolute path verbatim; YOLO and Pascal VOC need a relative file name.
+    """
+    image_sample = cast(ImageSample, sample)
+    filename = image_sample.file_name if use_relative_filename else image_sample.file_path_abs
+    return Image(
+        id=image_id,
+        filename=filename,
+        width=image_sample.width,
+        height=image_sample.height,
+    )
