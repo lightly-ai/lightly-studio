@@ -6,8 +6,10 @@ from enum import Enum
 from uuid import UUID
 
 from sqlalchemy import ColumnElement
+from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, func, select
 
+from lightly_studio.database import db_array
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationType,
@@ -57,6 +59,11 @@ def count_image_annotations_by_collection(
             collection_id=collection_id,
             region=sample_filter.embedding_region,
         )
+    annotation_collection_ids = (
+        sample_filter.annotations_filter.collection_ids
+        if sample_filter is not None and sample_filter.annotations_filter is not None
+        else None
+    )
     total_counts = _get_total_counts(
         session=session,
         collection_id=collection_id,
@@ -68,6 +75,7 @@ def count_image_annotations_by_collection(
         collection_id=collection_id,
         image_filter=image_filter,
         annotation_type=annotation_type,
+        annotation_collection_ids=annotation_collection_ids,
         count_mode=count_mode,
     )
 
@@ -123,11 +131,12 @@ def _get_total_counts(
     return {row[0]: row[1] for row in session.exec(total_counts_query).all()}
 
 
-def _get_current_counts(
+def _get_current_counts(  # noqa: PLR0913
     session: Session,
     collection_id: UUID,
     image_filter: ImageFilter | None,
     annotation_type: AnnotationType | None = None,
+    annotation_collection_ids: list[UUID] | None = None,
     count_mode: AnnotationCountMode = AnnotationCountMode.OBJECTS,
 ) -> dict[str, int]:
     """Returns filtered annotation counts per label for the collection."""
@@ -155,6 +164,21 @@ def _get_current_counts(
     if annotation_type is not None:
         filtered_query = filtered_query.where(
             col(AnnotationBaseTable.annotation_type) == annotation_type
+        )
+
+    # Restrict the counted annotations to the selected source collections. The
+    # annotation's own sample (aliased to avoid clashing with the image sample
+    # joined above) carries its collection id.
+    if annotation_collection_ids:
+        annotation_sample = aliased(SampleTable)
+        filtered_query = filtered_query.join(
+            annotation_sample,
+            col(annotation_sample.sample_id) == col(AnnotationBaseTable.sample_id),
+        ).where(
+            db_array.in_array(
+                column=col(annotation_sample.collection_id),
+                values=annotation_collection_ids,
+            )
         )
 
     if image_filter is not None:

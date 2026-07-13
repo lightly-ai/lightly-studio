@@ -96,6 +96,11 @@ start-e2e-evaluations: build
 	@echo "Starting server for e2e tests with evaluations..."
 	uv run e2e-tests/index_evaluations.py
 
+.PHONY: start-e2e-distribution
+start-e2e-distribution: build
+	@echo "Starting server for e2e tests with mixed annotation types..."
+	uv run e2e-tests/index_distribution.py
+
 .PHONY: start-e2e-video-groups
 start-e2e-video-groups: build
 	uv run e2e-tests/index_videos_groups.py
