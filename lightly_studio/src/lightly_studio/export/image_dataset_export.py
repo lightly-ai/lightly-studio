@@ -35,10 +35,7 @@ YOLO_DEFAULT_SPLIT = "train"
 
 
 class DatasetExport:
-    """Provides methods to export a dataset or a subset of it.
-
-    Subclasses set the `sample_to_image` attribute,
-    """
+    """Provides methods to export a dataset or a subset of it."""
 
     # TODO(malte, 07/2026): Move `DatasetExport` into its own `dataset_export.py` module.
     def __init__(
