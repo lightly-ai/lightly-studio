@@ -25,8 +25,10 @@
     import * as Alert from '$lib/components/ui/alert/index.js';
     import { fade } from 'svelte/transition';
     import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
+    import { useGlobalStorage } from '$lib/hooks';
 
     const { isExportDialogOpen, openExportDialog, closeExportDialog } = useExportDialog();
+    const { filteredSampleCount } = useGlobalStorage();
 
     $effect(() => {
         if ($isExportDialogOpen) {
@@ -188,10 +190,18 @@
         >
             <Dialog.Header>
                 <Dialog.Title class="text-foreground">Collection Export</Dialog.Title>
+                {#if !isVideoCollection}
+                    <Dialog.Description class="text-muted-foreground">
+                        Export from
+                        <strong class="font-semibold text-primary">
+                            {$filteredSampleCount}
+                            {$filteredSampleCount === 1 ? 'sample' : 'samples'}
+                        </strong>
+                        currently matching your filters.
+                    </Dialog.Description>
+                {/if}
             </Dialog.Header>
-            <Dialog.Description class="text-muted-foreground">
-                Choose the export type:
-            </Dialog.Description>
+            <p class="text-sm text-muted-foreground">Choose the export type:</p>
 
             <div class="grid flex-1 gap-4 overflow-y-auto px-1">
                 <Tabs.Root bind:value={exportType} class="w-full">
