@@ -91,9 +91,7 @@
     );
 
     // Enable info panel if there are selected samples or annotations or tag is selected
-    const isInfoEnabled = $derived(
-        exportType === 'samples' ? tagIdToExport || $imageFilter != null : false
-    );
+    const isInfoEnabled = $derived(exportType === 'samples' ? !!tagIdToExport : false);
 
     const filter = $derived.by(() => {
         const filter: ExportFilter = {};
@@ -131,7 +129,7 @@
     // Disable submit button if neither a tag nor a collection filter is set
     const isSubmitDisabled = $derived.by(() => {
         if (exportType === 'samples') {
-            if (!tagIdToExport && $imageFilter == null) {
+            if (!tagIdToExport) {
                 return true;
             }
         }
