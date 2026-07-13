@@ -1,9 +1,10 @@
-"""Count video frame annotations by video collection."""
+"""Count video annotations by video collection."""
 
 from typing import Any, Optional
 from uuid import UUID
 
 from pydantic import BaseModel
+from sqlalchemy import union_all
 from sqlmodel import Session, asc, col, func, select
 from sqlmodel.sql.expression import Select
 
@@ -25,22 +26,41 @@ class CountAnnotationsView(BaseModel):
 def count_video_frame_annotations_by_video_collection(
     session: Session, collection_id: UUID, filters: Optional[VideoFilter] = None
 ) -> list[CountAnnotationsView]:
-    """Count the annotations by video frames."""
+    """Count annotations attached to videos, including frame and direct video labels."""
+    label_video_pairs = _build_label_video_pairs_subquery(collection_id=collection_id)
+
     unfiltered_query = (
-        _build_base_query(collection_id=collection_id, count_column_name="total")
-        .group_by(col(AnnotationBaseTable.annotation_label_id))
+        select(
+            label_video_pairs.c.label_id,
+            func.count(func.distinct(label_video_pairs.c.video_id)).label("total"),
+        )
+        .select_from(label_video_pairs)
+        .group_by(label_video_pairs.c.label_id)
         .subquery("unfiltered")
     )
-    filtered_query = _build_base_query(
-        collection_id=collection_id, count_column_name="filtered_count"
+
+    filtered_pairs_query: Select[tuple[Any, Any]] = (
+        select(
+            label_video_pairs.c.label_id,
+            label_video_pairs.c.video_id,
+        )
+        .select_from(label_video_pairs)
+        .join(VideoTable, col(VideoTable.sample_id) == label_video_pairs.c.video_id)
+        .join(SampleTable, col(SampleTable.sample_id) == col(VideoTable.sample_id))
     )
-
     if filters is not None:
-        filtered_query = filters.apply(filtered_query)
+        filtered_pairs_query = filters.apply(filtered_pairs_query)
 
-    filtered_subquery = filtered_query.group_by(
-        col(AnnotationBaseTable.annotation_label_id)
-    ).subquery("filtered")
+    filtered_pairs_subquery = filtered_pairs_query.subquery("filtered_pairs")
+    filtered_subquery = (
+        select(
+            filtered_pairs_subquery.c.label_id,
+            func.count(func.distinct(filtered_pairs_subquery.c.video_id)).label("filtered_count"),
+        )
+        .select_from(filtered_pairs_subquery)
+        .group_by(filtered_pairs_subquery.c.label_id)
+        .subquery("filtered")
+    )
 
     final_query: Select[Any] = (
         select(
@@ -69,11 +89,12 @@ def count_video_frame_annotations_by_video_collection(
     ]
 
 
-def _build_base_query(collection_id: UUID, count_column_name: str) -> Select[tuple[Any, int]]:
-    return (
+def _build_label_video_pairs_subquery(collection_id: UUID) -> Any:
+    """Return distinct (label_id, video_id) pairs from frame and direct video annotations."""
+    frame_pairs = (
         select(
             col(AnnotationBaseTable.annotation_label_id).label("label_id"),
-            func.count(func.distinct(VideoTable.sample_id)).label(count_column_name),
+            col(VideoTable.sample_id).label("video_id"),
         )
         .select_from(AnnotationBaseTable)
         .join(
@@ -84,3 +105,17 @@ def _build_base_query(collection_id: UUID, count_column_name: str) -> Select[tup
         .join(VideoTable, col(VideoTable.sample_id) == col(SampleTable.sample_id))
         .where(col(SampleTable.collection_id) == collection_id)
     )
+    video_pairs = (
+        select(
+            col(AnnotationBaseTable.annotation_label_id).label("label_id"),
+            col(VideoTable.sample_id).label("video_id"),
+        )
+        .select_from(AnnotationBaseTable)
+        .join(
+            SampleTable,
+            col(SampleTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
+        )
+        .join(VideoTable, col(VideoTable.sample_id) == col(SampleTable.sample_id))
+        .where(col(SampleTable.collection_id) == collection_id)
+    )
+    return union_all(frame_pairs, video_pairs).subquery("label_video_pairs")

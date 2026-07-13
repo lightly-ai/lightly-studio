@@ -1,5 +1,6 @@
 from sqlmodel import Session
 
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import video_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
@@ -11,7 +12,7 @@ from tests.helpers_resolvers import (
     create_annotations,
     create_collection,
 )
-from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
+from tests.resolvers.video.helpers import VideoStub, create_video, create_video_with_frames
 
 
 def test_count_video_frame_annotations_by_video_collection_without_filter(
@@ -192,3 +193,132 @@ def test_count_video_frame_annotations_by_video_collection_with_annotation_filte
     assert annotations[1].label_name == "car"
     assert annotations[1].total_count == 1
     assert annotations[1].current_count == 0
+
+
+def test_count_video_annotations_by_video_collection__direct_video_annotations(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection_id = collection.collection_id
+
+    video_with_running = create_video(
+        session=db_session,
+        collection_id=collection_id,
+        video=VideoStub(path="/path/to/running.mp4"),
+    )
+    video_with_jumping = create_video(
+        session=db_session,
+        collection_id=collection_id,
+        video=VideoStub(path="/path/to/jumping.mp4"),
+    )
+    create_video(
+        session=db_session,
+        collection_id=collection_id,
+        video=VideoStub(path="/path/to/unlabeled.mp4"),
+    )
+
+    running_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection_id,
+        label_name="Running",
+    )
+    jumping_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection_id,
+        label_name="Jumping",
+    )
+
+    create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=video_with_running.sample_id,
+                annotation_label_id=running_label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+            ),
+            AnnotationDetails(
+                sample_id=video_with_jumping.sample_id,
+                annotation_label_id=jumping_label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+            ),
+        ],
+    )
+
+    annotations = video_resolver.count_video_frame_annotations_by_video_collection(
+        session=db_session,
+        collection_id=collection_id,
+    )
+
+    assert len(annotations) == 2
+    assert annotations[0].label_name == "Jumping"
+    assert annotations[0].total_count == 1
+    assert annotations[0].current_count == 1
+    assert annotations[1].label_name == "Running"
+    assert annotations[1].total_count == 1
+    assert annotations[1].current_count == 1
+
+
+def test_count_video_annotations_by_video_collection__direct_video_annotations_with_filter(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection_id = collection.collection_id
+
+    video_with_running = create_video(
+        session=db_session,
+        collection_id=collection_id,
+        video=VideoStub(path="/path/to/running.mp4"),
+    )
+    video_with_jumping = create_video(
+        session=db_session,
+        collection_id=collection_id,
+        video=VideoStub(path="/path/to/jumping.mp4"),
+    )
+
+    running_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection_id,
+        label_name="Running",
+    )
+    jumping_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection_id,
+        label_name="Jumping",
+    )
+
+    create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=video_with_running.sample_id,
+                annotation_label_id=running_label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+            ),
+            AnnotationDetails(
+                sample_id=video_with_jumping.sample_id,
+                annotation_label_id=jumping_label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+            ),
+        ],
+    )
+
+    annotations = video_resolver.count_video_frame_annotations_by_video_collection(
+        session=db_session,
+        collection_id=collection_id,
+        filters=VideoFilter(
+            frame_annotation_filter=AnnotationsFilter(
+                annotation_label_ids=[running_label.annotation_label_id]
+            ),
+            sample_filter=SampleFilter(),
+        ),
+    )
+
+    assert len(annotations) == 2
+    assert annotations[0].label_name == "Jumping"
+    assert annotations[0].total_count == 1
+    assert annotations[0].current_count == 0
+    assert annotations[1].label_name == "Running"
+    assert annotations[1].total_count == 1
+    assert annotations[1].current_count == 1
