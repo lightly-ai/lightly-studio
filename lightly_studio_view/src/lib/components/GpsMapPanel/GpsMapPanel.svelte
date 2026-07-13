@@ -87,18 +87,24 @@
     const SOURCE_ID = 'gps-points';
     const LAYER_ID = 'gps-points-circles';
 
-    // OpenStreetMap raster basemap — no API key required.
+    // CARTO Positron raster basemap — a light, desaturated map (no API key
+    // required) so the colored sample points stand out against the background.
     const mapStyle: StyleSpecification = {
         version: 8,
         sources: {
-            osm: {
+            basemap: {
                 type: 'raster',
-                tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                tiles: [
+                    'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+                    'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+                    'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+                    'https://d.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'
+                ],
                 tileSize: 256,
-                attribution: '© OpenStreetMap contributors'
+                attribution: '© OpenStreetMap contributors © CARTO'
             }
         },
-        layers: [{ id: 'osm', type: 'raster', source: 'osm' }]
+        layers: [{ id: 'basemap', type: 'raster', source: 'basemap' }]
     };
 
     let mapContainer: HTMLDivElement | null = $state(null);
@@ -220,11 +226,13 @@
                 type: 'circle',
                 source: SOURCE_ID,
                 paint: {
-                    'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 2, 12, 5],
+                    'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 3, 12, 6],
                     'circle-color': ['get', 'color'],
-                    'circle-opacity': 0.85,
-                    'circle-stroke-width': 0.5,
-                    'circle-stroke-color': '#00000055'
+                    'circle-opacity': 0.95,
+                    // White halo so points stay legible over the light basemap.
+                    'circle-stroke-width': 1,
+                    'circle-stroke-color': '#ffffff',
+                    'circle-stroke-opacity': 0.9
                 }
             });
             mapLoaded = true;
