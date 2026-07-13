@@ -22,8 +22,10 @@
     import * as Alert from '$lib/components/ui/alert/index.js';
     import { fade } from 'svelte/transition';
     import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
+    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 
     const { isExportDialogOpen, openExportDialog, closeExportDialog } = useExportDialog();
+    const { imageFilter } = useImageFilters();
 
     $effect(() => {
         if ($isExportDialogOpen) {
@@ -89,7 +91,9 @@
     );
 
     // Enable info panel if there are selected samples or annotations or tag is selected
-    const isInfoEnabled = $derived(exportType === 'samples' ? tagIdToExport : false);
+    const isInfoEnabled = $derived(
+        exportType === 'samples' ? tagIdToExport || $imageFilter != null : false
+    );
 
     const filter = $derived.by(() => {
         const filter: ExportFilter = {};
@@ -100,8 +104,12 @@
         return filter;
     });
 
-    const includeFilter = $derived(isSelectionInverted ? undefined : filter);
-    const excludeFilter = $derived(isSelectionInverted ? filter : undefined);
+    const includeFilter = $derived(
+        !isSelectionInverted && Object.keys(filter).length > 0 ? filter : undefined
+    );
+    const excludeFilter = $derived(
+        isSelectionInverted && Object.keys(filter).length > 0 ? filter : undefined
+    );
 
     const {
         count,
@@ -111,7 +119,8 @@
         useExportSamplesCount({
             collection_id: collectionId,
             includeFilter,
-            excludeFilter
+            excludeFilter,
+            collectionFilter: $imageFilter
         })
     );
 
@@ -119,10 +128,10 @@
         return $statError ? $statError : '';
     });
 
-    // Disable submit button if no tags are available for samples tab or no tag is selected
+    // Disable submit button if neither a tag nor a collection filter is set
     const isSubmitDisabled = $derived.by(() => {
         if (exportType === 'samples') {
-            if ($tags.length === 0 || !tagIdToExport) {
+            if (!tagIdToExport && $imageFilter == null) {
                 return true;
             }
         }
@@ -133,7 +142,8 @@
         const response = await exportCollection({
             collection_id: collectionId,
             includeFilter,
-            excludeFilter
+            excludeFilter,
+            collectionFilter: $imageFilter
         });
         if (response.error) {
             errorMessage = `Export failed: ${response.error}`;

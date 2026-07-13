@@ -1,4 +1,4 @@
-import { exportCollectionStats } from '$lib/api/lightly_studio_local';
+import { exportCollectionStats, type ImageFilter } from '$lib/api/lightly_studio_local';
 import type { ExportFilter } from '$lib/services/types';
 import { writable, type Readable } from 'svelte/store';
 
@@ -6,6 +6,7 @@ interface UseExportSamplesCountProps {
     collection_id: string;
     includeFilter?: ExportFilter;
     excludeFilter?: ExportFilter;
+    collectionFilter?: ImageFilter | null;
 }
 
 interface UseExportSamplesCountReturn {
@@ -22,7 +23,8 @@ interface UseExportSamplesCountReturn {
 export function useExportSamplesCount({
     collection_id,
     includeFilter,
-    excludeFilter
+    excludeFilter,
+    collectionFilter
 }: UseExportSamplesCountProps): UseExportSamplesCountReturn {
     const count = writable(0);
     const error = writable<string | undefined>(undefined);
@@ -30,14 +32,16 @@ export function useExportSamplesCount({
 
     const hasIncludeFilter = includeFilter && Object.keys(includeFilter).length > 0;
     const hasExcludeFilter = excludeFilter && Object.keys(excludeFilter).length > 0;
-    if (hasIncludeFilter || hasExcludeFilter) {
+    const hasCollectionFilter = collectionFilter != null;
+    if (hasIncludeFilter || hasExcludeFilter || hasCollectionFilter) {
         isLoading.set(true);
 
         exportCollectionStats({
             path: { collection_id },
             body: {
                 include: includeFilter,
-                exclude: excludeFilter
+                exclude: excludeFilter,
+                collection_filter: collectionFilter
             }
         })
             .then((response) => {
