@@ -49,7 +49,7 @@ def test_get_for_export__no_filter(db_session: Session) -> None:
 def test_get_for_export__with_image_filter(db_session: Session) -> None:
     collection = create_collection(session=db_session)
 
-    small_image = create_image(
+    create_image(
         session=db_session,
         collection_id=collection.collection_id,
         file_path_abs="/data/small.jpg",
