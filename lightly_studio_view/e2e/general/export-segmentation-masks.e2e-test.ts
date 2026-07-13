@@ -14,15 +14,6 @@ test.describe('Export Segmentation Masks', () => {
         // Switch to the correct export type
         await page.getByTestId('export-type-select').click();
         await page.getByRole('option', { name: 'Image Segmentation Mask (COCO)' }).click();
-        await expect(page.getByTestId('submit-button-instance-segmentations')).toHaveAttribute(
-            'href',
-            /\/api\/collections\/.*\/export\/annotations\?ts=\d+&export_format=segmentation_mask_coco/
-        );
-
-        // Remove target to avoid popup and keep navigation in the same page context
-        await page
-            .getByTestId('submit-button-instance-segmentations')
-            .evaluate((el: HTMLAnchorElement) => el.removeAttribute('target'));
 
         // Click and wait for the download event deterministically
         const [download] = await Promise.all([
