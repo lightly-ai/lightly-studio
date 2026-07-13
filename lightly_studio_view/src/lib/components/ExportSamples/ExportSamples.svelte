@@ -14,14 +14,17 @@
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import AnnotationSourceSelect from '$lib/components/AnnotationSourceSelect/AnnotationSourceSelect.svelte';
     import { exportCollection } from '$lib/services/exportCollection';
+    import { exportAnnotations, exportCaptions } from '$lib/services/exportAnnotations';
+    import { ExportFormat } from '$lib/api/lightly_studio_local';
     import type { ExportFilter } from '$lib/services/types';
     import { useExportSamplesCount } from './useExportSamplesCount/useExportSamplesCount';
     import { PUBLIC_LIGHTLY_STUDIO_API_URL } from '$env/static/public';
     import * as Dialog from '$lib/components/ui/dialog';
-    import { Loader2 } from '@lucide/svelte';
     import * as Alert from '$lib/components/ui/alert/index.js';
     import { fade } from 'svelte/transition';
     import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
+    import ExportAnnotationError from './ExportAnnotationError/ExportAnnotationError.svelte';
+    import ExportDownloadButton from './ExportDownloadButton/ExportDownloadButton.svelte';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 
     const { isExportDialogOpen, openExportDialog, closeExportDialog } = useExportDialog();
@@ -71,11 +74,6 @@
     const effectiveAnnotationCollectionId = $derived(
         selectedAnnotationCollectionId ?? annotationSources[0]?.id
     );
-    const annotationCollectionParam = $derived(
-        effectiveAnnotationCollectionId
-            ? `&annotation_collection_id=${effectiveAnnotationCollectionId}`
-            : ''
-    );
 
     //
     // Sample export
@@ -124,9 +122,8 @@
         })
     );
 
-    let errorMessage = $derived.by(() => {
-        return $statError ? $statError : '';
-    });
+    let exportError = $state('');
+    const errorMessage = $derived.by(() => exportError || ($statError ?? ''));
 
     // Disable submit button if neither a tag nor a collection filter is set
     const isSubmitDisabled = $derived.by(() => {
@@ -146,45 +143,51 @@
             collectionFilter: $imageFilter
         });
         if (response.error) {
-            errorMessage = `Export failed: ${response.error}`;
+            exportError = `Export failed: ${response.error}`;
         }
     };
-
-    //
-    // COCO object detection export
-    //
-    const exportObjectDetectionCocoURL = $derived(
-        `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=object_detection_coco${annotationCollectionParam}`
-    );
-
-    //
-    // YOLO object detection export
-    //
-    const exportObjectDetectionYoloURL = $derived(
-        `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=object_detection_yolo${annotationCollectionParam}`
-    );
-
-    //
-    // Segmentation mask export
-    //
-    const exportSegmentationMaskURL = $derived(
-        `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=segmentation_mask_coco${annotationCollectionParam}`
-    );
 
     //
     // YouTube-VIS video Segmentation mask export
     //
     const exportYoutubeVisSegmentationMaskURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/youtube-vis?ts=${Date.now()}&export_format=youtube_vis_segmentation`;
-    // Semantic segmentation export
-    //
-    const exportPascalVocURL = $derived(
-        `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=pascal_voc${annotationCollectionParam}`
-    );
 
     //
-    // Caption export
+    // Annotation / caption export
     //
-    const exportCaptionsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/captions?ts=${Date.now()}`;
+    let annotationExportError = $state('');
+    let isAnnotationExporting = $state(false);
+
+    $effect(() => {
+        if (exportType) {
+            annotationExportError = '';
+            isAnnotationExporting = false;
+        }
+    });
+
+    const handleAnnotationExport = async (export_format: ExportFormat) => {
+        annotationExportError = '';
+        isAnnotationExporting = true;
+        const response = await exportAnnotations({
+            collection_id: collectionId,
+            annotation_collection_id: effectiveAnnotationCollectionId ?? null,
+            export_format
+        });
+        isAnnotationExporting = false;
+        if (response.error) {
+            annotationExportError = response.error;
+        }
+    };
+
+    const handleCaptionExport = async () => {
+        annotationExportError = '';
+        isAnnotationExporting = true;
+        const response = await exportCaptions(collectionId);
+        isAnnotationExporting = false;
+        if (response.error) {
+            annotationExportError = response.error;
+        }
+    };
 </script>
 
 <Dialog.Root
@@ -340,22 +343,12 @@
                             </div>
                         {/if}
 
-                        <Button
-                            class="relative my-4 w-full"
-                            disabled={isSubmitDisabled || $isLoading}
+                        <ExportDownloadButton
                             onclick={handleExport}
-                            data-testid="submit-button-samples"
-                        >
-                            Download
-                            {#if $isLoading}
-                                <div
-                                    class="absolute inset-0 flex items-center justify-center backdrop-blur-sm"
-                                    data-testid="loading-spinner"
-                                >
-                                    <Loader2 class="animate-spin" />
-                                </div>
-                            {/if}
-                        </Button>
+                            disabled={isSubmitDisabled || $isLoading}
+                            isLoading={$isLoading}
+                            testId="submit-button-samples"
+                        />
                     </Tabs.Content>
 
                     <!-- Object Detections (COCO) tab -->
@@ -376,14 +369,15 @@
                             </div>
                         {/if}
 
-                        <Button
-                            class="relative my-4 w-full"
-                            href={exportObjectDetectionCocoURL}
-                            target="_blank"
-                            data-testid="submit-button-annotations-coco"
-                        >
-                            Download
-                        </Button>
+                        <ExportAnnotationError error={annotationExportError} />
+
+                        <ExportDownloadButton
+                            onclick={() =>
+                                handleAnnotationExport(ExportFormat.OBJECT_DETECTION_COCO)}
+                            disabled={isAnnotationExporting}
+                            isLoading={isAnnotationExporting}
+                            testId="submit-button-annotations-coco"
+                        />
                     </Tabs.Content>
 
                     <!-- Object Detections (YOLO) tab -->
@@ -403,14 +397,15 @@
                             </div>
                         {/if}
 
-                        <Button
-                            class="relative my-4 w-full"
-                            href={exportObjectDetectionYoloURL}
-                            target="_blank"
-                            data-testid="submit-button-annotations-yolo"
-                        >
-                            Download
-                        </Button>
+                        <ExportAnnotationError error={annotationExportError} />
+
+                        <ExportDownloadButton
+                            onclick={() =>
+                                handleAnnotationExport(ExportFormat.OBJECT_DETECTION_YOLO)}
+                            disabled={isAnnotationExporting}
+                            isLoading={isAnnotationExporting}
+                            testId="submit-button-annotations-yolo"
+                        />
                     </Tabs.Content>
 
                     <Tabs.Content value="segmentation" class="pt-2">
@@ -430,14 +425,15 @@
                             </div>
                         {/if}
 
-                        <Button
-                            class="relative my-4 w-full"
-                            href={exportSegmentationMaskURL}
-                            target="_blank"
-                            data-testid="submit-button-instance-segmentations"
-                        >
-                            Download
-                        </Button>
+                        <ExportAnnotationError error={annotationExportError} />
+
+                        <ExportDownloadButton
+                            onclick={() =>
+                                handleAnnotationExport(ExportFormat.SEGMENTATION_MASK_COCO)}
+                            disabled={isAnnotationExporting}
+                            isLoading={isAnnotationExporting}
+                            testId="submit-button-instance-segmentations"
+                        />
                     </Tabs.Content>
 
                     {#if isVideoCollection}
@@ -473,14 +469,14 @@
                             </div>
                         {/if}
 
-                        <Button
-                            class="relative my-4 w-full"
-                            href={exportPascalVocURL}
-                            target="_blank"
-                            data-testid="submit-button-semantic-segmentations"
-                        >
-                            Download
-                        </Button>
+                        <ExportAnnotationError error={annotationExportError} />
+
+                        <ExportDownloadButton
+                            onclick={() => handleAnnotationExport(ExportFormat.PASCAL_VOC)}
+                            disabled={isAnnotationExporting}
+                            isLoading={isAnnotationExporting}
+                            testId="submit-button-semantic-segmentations"
+                        />
                     </Tabs.Content>
 
                     <!-- Captions tab -->
@@ -490,14 +486,14 @@
                             The captions will be exported in COCO format.
                         </p>
 
-                        <Button
-                            class="relative my-4 w-full"
-                            href={exportCaptionsURL}
-                            target="_blank"
-                            data-testid="submit-button-captions"
-                        >
-                            Download
-                        </Button>
+                        <ExportAnnotationError error={annotationExportError} />
+
+                        <ExportDownloadButton
+                            onclick={handleCaptionExport}
+                            disabled={isAnnotationExporting}
+                            isLoading={isAnnotationExporting}
+                            testId="submit-button-captions"
+                        />
                     </Tabs.Content>
                 </Tabs.Root>
             </div>
