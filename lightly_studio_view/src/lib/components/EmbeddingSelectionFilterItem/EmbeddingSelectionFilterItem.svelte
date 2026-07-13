@@ -65,8 +65,8 @@
     <Segment title="Embeddings">
         <FilterChip
             checked={isPlotFilterApplied}
-            title="Embedding Plot Filter"
-            checkboxLabel="Embedding plot filter"
+            title="Plot Filter"
+            checkboxLabel="Plot filter"
             testId="embedding-selection-filter-chip"
             onCheckedChange={(nextChecked) => setEmbeddingFilterVisibility(nextChecked === true)}
             onClear={clearFilter}
