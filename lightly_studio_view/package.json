@@ -92,6 +92,7 @@
     "embedding-atlas": "^0.21.0",
     "langium": "^4.2.2",
     "lodash-es": "^4.17.22",
+    "maplibre-gl": "^5.24.0",
     "monaco-editor": "^0.55.1",
     "paneforge": "^1.0.2",
     "posthog-js": "^1.276.0",

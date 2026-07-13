@@ -18,9 +18,16 @@ from lightly_studio.errors import (
 )
 from lightly_studio.metadata import compute_similarity, compute_typicality
 from lightly_studio.models.collection import CollectionTable
-from lightly_studio.models.metadata import MetadataDistributionView, MetadataInfoView
+from lightly_studio.models.metadata import (
+    GPSCoordinateView,
+    MetadataDistributionView,
+    MetadataInfoView,
+)
 from lightly_studio.resolvers import embedding_model_resolver
 from lightly_studio.resolvers.grid_filter import GridFilter
+from lightly_studio.resolvers.metadata_resolver.sample.get_gps_coordinates import (
+    get_gps_coordinates,
+)
 from lightly_studio.resolvers.metadata_resolver.sample.get_metadata_distribution import (
     DEFAULT_BINS,
     get_metadata_distribution,
@@ -117,6 +124,68 @@ def get_metadata_distribution_route(
     except (UnsupportedMetadataTypeError, ValueError) as e:
         # ValueError covers schema/data drift (inconsistent schema types or a
         # non-numeric value under a numeric key) — a bad request, not a 500.
+        raise HTTPException(status_code=HTTP_STATUS_BAD_REQUEST, detail=str(e)) from e
+
+
+class GPSCoordinatesRequest(BaseModel):
+    """Request model for the GPS coordinates endpoint."""
+
+    filter: GridFilter | None = Field(
+        default=None,
+        description="Optional grid filter scoping the samples returned.",
+    )
+
+
+@metadata_router.post(
+    "/metadata/{key}/gps",
+    response_model=list[GPSCoordinateView],
+)
+def get_gps_coordinates_route(
+    session: SessionDep,
+    collection: Annotated[
+        CollectionTable,
+        Depends(get_and_validate_collection_id),
+    ],
+    key: Annotated[str, Path(title="Metadata key")],
+    request: GPSCoordinatesRequest,
+) -> list[GPSCoordinateView]:
+    """Return per-sample GPS coordinates (with sample tags) for the map.
+
+    Only samples that have a value for the ``gps_coordinate`` ``key`` are
+    returned; samples without GPS are omitted. An optional filter scopes the
+    result to the active selection.
+
+    Args:
+        session: The database session.
+        collection: The validated collection.
+        key: The ``gps_coordinate`` metadata key to read.
+        request: Optional filter scoping the samples returned.
+
+    Returns:
+        One entry per in-scope sample with GPS: ``{sample_id, lat, lon, tag_ids}``.
+
+    Raises:
+        HTTPException: 404 if the key is absent; 400 if the key is not a
+            ``gps_coordinate`` key.
+    """
+    scope_sample_ids: set[UUID] | None = None
+    if request.filter is not None:
+        scope_sample_ids = set(
+            session.exec(
+                request.filter.build_sample_ids_query(collection_id=collection.collection_id)
+            ).all()
+        )
+
+    try:
+        return get_gps_coordinates(
+            session=session,
+            collection_id=collection.collection_id,
+            key=key,
+            scope_sample_ids=scope_sample_ids,
+        )
+    except MetadataKeyNotFoundError as e:
+        raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail=str(e)) from e
+    except (UnsupportedMetadataTypeError, ValueError) as e:
         raise HTTPException(status_code=HTTP_STATUS_BAD_REQUEST, detail=str(e)) from e
 
 

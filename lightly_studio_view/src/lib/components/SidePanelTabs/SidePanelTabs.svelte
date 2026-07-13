@@ -1,7 +1,7 @@
 <script lang="ts">
     import { cn } from '$lib/utils/shadcn';
     import { useGlobalStorage } from '$lib/hooks';
-    import { ChartColumn, ChartNetwork, Gauge, SearchCode } from '@lucide/svelte';
+    import { ChartColumn, ChartNetwork, Gauge, MapPin, SearchCode } from '@lucide/svelte';
     import { Tooltip } from '$lib/components/ui/tooltip';
 
     type PanelType = Parameters<ReturnType<typeof useGlobalStorage>['setActivePanel']>[0];
@@ -10,8 +10,9 @@
         isImages: boolean;
         hasMediaWithEmbeddings: boolean;
         supportsEvaluation: boolean;
+        hasGps: boolean;
     }
-    const { isImages, hasMediaWithEmbeddings, supportsEvaluation }: Props = $props();
+    const { isImages, hasMediaWithEmbeddings, supportsEvaluation, hasGps }: Props = $props();
 
     const { activePanel, setActivePanel } = useGlobalStorage();
 
@@ -114,6 +115,30 @@
             >
                 <ChartColumn class="size-4" />
                 <span>Distr</span>
+            </button>
+        </Tooltip>
+    {/if}
+    {#if hasGps}
+        <Tooltip
+            content="Explore samples on a GPS map"
+            position="left"
+            triggerClass="w-full"
+            class="w-max"
+        >
+            <button
+                class={cn(
+                    'flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-md p-1.5 text-[10px] font-medium transition-colors',
+                    $activePanel === 'gpsMap'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                )}
+                data-testid="side-panel-tabs-gps"
+                aria-label="GPS Map"
+                aria-pressed={$activePanel === 'gpsMap'}
+                onclick={() => toggle('gpsMap')}
+            >
+                <MapPin class="size-4" />
+                <span>Map</span>
             </button>
         </Tooltip>
     {/if}

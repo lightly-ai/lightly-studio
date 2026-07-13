@@ -404,11 +404,18 @@
         isImages || isAnnotations || isVideos || isVideoFrames || isGroups
     );
 
+    // The GPS map rail button/panel only exist when a gps_coordinate metadata key is present.
+    const gpsKey = $derived(
+        ($metadataInfo ?? []).find((info) => info.type === 'gps_coordinate')?.name ?? null
+    );
+    const hasGps = $derived(gpsKey !== null);
+
     const panelIsVisible = $derived(
         ($activePanel === 'evaluationRuns' && supportsEvaluation) ||
             ($activePanel === 'embeddingPlot' && hasMediaWithEmbeddings) ||
             ($activePanel === 'queryEditor' && isImages) ||
-            ($activePanel === 'distribution' && isImages)
+            ($activePanel === 'distribution' && isImages) ||
+            ($activePanel === 'gpsMap' && hasGps)
     );
 
     // Class counts for the distribution panel. The "All types" source reuses the
@@ -685,6 +692,12 @@
                                     onClose={() => setActivePanel('none')}
                                 />
                             {/await}
+                        {:else if $activePanel === 'gpsMap' && hasGps && gpsKey}
+                            {#await import('$lib/components/GpsMapPanel/GpsMapPanel.svelte') then { default: GpsMapPanel }}
+                                {#key collectionId}
+                                    <GpsMapPanel {collectionId} {gpsKey} />
+                                {/key}
+                            {/await}
                         {/if}
                     </Pane>
                 </PaneGroup>
@@ -696,8 +709,8 @@
                     {@render mainContent()}
                 </div>
             {/if}
-            {#if isCollectionGrid && (isImages || hasMediaWithEmbeddings)}
-                <SidePanelTabs {isImages} {hasMediaWithEmbeddings} {supportsEvaluation} />
+            {#if isCollectionGrid && (isImages || hasMediaWithEmbeddings || hasGps)}
+                <SidePanelTabs {isImages} {hasMediaWithEmbeddings} {supportsEvaluation} {hasGps} />
             {/if}
             {#if hasEmbeddings}
                 {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then { default: CreateClassifierDialog }}

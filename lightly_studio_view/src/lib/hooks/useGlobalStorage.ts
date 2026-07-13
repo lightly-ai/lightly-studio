@@ -108,7 +108,8 @@ export type PanelType =
     | 'embeddingPlot'
     | 'evaluationRuns'
     | 'queryEditor'
-    | 'distribution';
+    | 'distribution'
+    | 'gpsMap';
 
 const activePanel = writable<PanelType>('none');
 const showEmbeddingPlot = derived(activePanel, ($p) => $p === 'embeddingPlot');

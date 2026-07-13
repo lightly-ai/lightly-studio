@@ -9,32 +9,53 @@
         argTypes: {
             isImages: { control: 'boolean' },
             hasMediaWithEmbeddings: { control: 'boolean' },
-            supportsEvaluation: { control: 'boolean' }
+            supportsEvaluation: { control: 'boolean' },
+            hasGps: { control: 'boolean' }
         }
     });
 </script>
 
 <Story
     name="All Tabs"
-    args={{ isImages: true, hasMediaWithEmbeddings: true, supportsEvaluation: true }}
+    args={{ isImages: true, hasMediaWithEmbeddings: true, supportsEvaluation: true, hasGps: false }}
 />
 
 <Story
     name="Embeddings Only"
-    args={{ isImages: false, hasMediaWithEmbeddings: true, supportsEvaluation: false }}
+    args={{
+        isImages: false,
+        hasMediaWithEmbeddings: true,
+        supportsEvaluation: false,
+        hasGps: false
+    }}
 />
 
 <Story
     name="Images No Embeddings"
-    args={{ isImages: true, hasMediaWithEmbeddings: false, supportsEvaluation: false }}
+    args={{
+        isImages: true,
+        hasMediaWithEmbeddings: false,
+        supportsEvaluation: false,
+        hasGps: false
+    }}
 />
 
 <Story
     name="Images With Evaluation"
-    args={{ isImages: true, hasMediaWithEmbeddings: false, supportsEvaluation: true }}
+    args={{
+        isImages: true,
+        hasMediaWithEmbeddings: false,
+        supportsEvaluation: true,
+        hasGps: false
+    }}
 />
 
 <Story
     name="No Tabs"
-    args={{ isImages: false, hasMediaWithEmbeddings: false, supportsEvaluation: false }}
+    args={{
+        isImages: false,
+        hasMediaWithEmbeddings: false,
+        supportsEvaluation: false,
+        hasGps: false
+    }}
 />

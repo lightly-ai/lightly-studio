@@ -8,6 +8,7 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND, HTTP_STATUS_OK
+from lightly_studio.metadata.gps_coordinate import GPSCoordinate
 from lightly_studio.models.metadata import MetadataInfoView
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import image_resolver, metadata_resolver, tag_resolver
@@ -157,6 +158,38 @@ def test_get_metadata_distribution__missing_key(
 
     response = test_client.post(
         f"/api/collections/{collection.collection_id}/metadata/nope/distribution", json={}
+    )
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
+
+
+def test_get_gps_coordinates(test_client: TestClient, db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    with_gps = _create_image_with_metadata(
+        db_session, collection_id, "/a.png", gps=GPSCoordinate(lat=47.1, lon=8.2)
+    )
+    _create_image_with_metadata(db_session, collection_id, "/b.png")  # no GPS -> omitted
+
+    response = test_client.post(f"/api/collections/{collection_id}/metadata/gps/gps", json={})
+
+    assert response.status_code == HTTP_STATUS_OK
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["sample_id"] == str(with_gps.sample_id)
+    assert data[0]["lat"] == 47.1
+    assert data[0]["lon"] == 8.2
+    assert data[0]["tag_ids"] == []
+
+
+def test_get_gps_coordinates__missing_key(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection = create_collection(session=db_session)
+    _create_image_with_metadata(db_session, collection.collection_id, "/a.png", location="city")
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/metadata/nope/gps", json={}
     )
 
     assert response.status_code == HTTP_STATUS_NOT_FOUND

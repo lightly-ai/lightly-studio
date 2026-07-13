@@ -209,6 +209,22 @@ class MetadataInfoView(BaseModel):
     )
 
 
+class GPSCoordinateView(BaseModel):
+    """One sample's GPS position plus the sample tags it belongs to.
+
+    Feeds the interactive GPS map: the frontend plots ``lat``/``lon`` and colors
+    each point by ``tag_ids`` (against the tags the user selects to compare).
+    """
+
+    sample_id: UUID = Field(description="The sample's UUID")
+    lat: float = Field(description="Latitude in decimal degrees")
+    lon: float = Field(description="Longitude in decimal degrees")
+    tag_ids: list[UUID] = Field(
+        default_factory=list,
+        description="Sample-kind tag ids this sample carries (for tag coloring)",
+    )
+
+
 class MetadataCategoricalCount(BaseModel):
     """A single categorical value and how many samples carry it."""
 
