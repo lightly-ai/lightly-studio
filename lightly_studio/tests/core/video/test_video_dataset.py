@@ -557,7 +557,7 @@ class TestDataset:
                 videos_path=tmp_path,
                 annotation_type=AnnotationType.OBJECT_DETECTION,
                 embed=False,
-            embed_frames=False,
+                embed_frames=False,
             )
 
     def test_add_videos_from_youtube_vis__with_embedding(
