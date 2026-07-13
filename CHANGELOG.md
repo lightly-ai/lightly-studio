@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The left filter panel can now be collapsed entirely to reclaim space for the grid; a "Filters" button in the grid header restores it.
+
 ### Deprecated
 
 ### Removed

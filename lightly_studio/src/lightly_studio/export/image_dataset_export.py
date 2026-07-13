@@ -25,6 +25,7 @@ from lightly_studio.export.lightly_studio_label_input import (
     LightlyStudioObjectDetectionInput,
     LightlyStudioPascalVOCInstanceSegmentationInput,
     LightlyStudioYOLOObjectDetectionInput,
+    SampleToImage,
 )
 from lightly_studio.type_definitions import PathLike
 
@@ -33,29 +34,29 @@ YOLO_DATASET_CONFIG_FILENAME = "data.yaml"
 YOLO_DEFAULT_SPLIT = "train"
 
 
-class ImageDatasetExport:
-    """Provides methods to export a dataset or a subset of it.
+class DatasetExport:
+    """Provides methods to export a dataset or a subset of it."""
 
-    This class is typically not instantiated directly but returned by `Dataset.export()`.
-    It allows exporting data in various formats.
-    """
-
+    # TODO(malte, 07/2026): Move `DatasetExport` into its own `dataset_export.py` module.
     def __init__(
         self,
         session: Session,
         dataset_id: UUID,
-        samples: Iterable[ImageSample],
+        samples: Iterable[Sample],
+        sample_to_image: SampleToImage,
     ):
-        """Initializes the ImageDatasetExport object.
+        """Initializes the DatasetExport object.
 
         Args:
             session: The database session.
             dataset_id: The dataset ID for label retrieval.
             samples: Samples to export.
+            sample_to_image: Strategy mapping a sample to a labelformat `Image`.
         """
         self.session = session
         self._dataset_id = dataset_id
         self.samples = samples
+        self._sample_to_image = sample_to_image
 
     def to_coco_object_detections(
         self,
@@ -80,7 +81,7 @@ class ImageDatasetExport:
             dataset_id=self._dataset_id,
             samples=self.samples,
             annotation_collection_id=annotation_collection_id,
-            sample_to_image=image_sample_to_image,
+            sample_to_image=self._sample_to_image,
         )
         COCOObjectDetectionOutput(output_file=Path(output_json)).save(label_input=export_input)
 
@@ -105,7 +106,7 @@ class ImageDatasetExport:
             dataset_id=self._dataset_id,
             samples=self.samples,
             annotation_collection_id=annotation_collection_id,
-            sample_to_image=image_sample_to_image,
+            sample_to_image=self._sample_to_image,
         )
         YOLOv8ObjectDetectionOutput(
             output_file=Path(output_folder) / YOLO_DATASET_CONFIG_FILENAME,
@@ -122,7 +123,7 @@ class ImageDatasetExport:
         if output_json is None:
             output_json = DEFAULT_EXPORT_FILENAME
         coco_captions_dict = coco_captions.to_coco_captions_dict(
-            samples=self.samples, sample_to_image=image_sample_to_image
+            samples=self.samples, sample_to_image=self._sample_to_image
         )
         with Path(output_json).open("w") as f:
             json.dump(coco_captions_dict, f, indent=2)
@@ -147,7 +148,7 @@ class ImageDatasetExport:
             dataset_id=self._dataset_id,
             samples=self.samples,
             annotation_collection_id=annotation_collection_id,
-            sample_to_image=image_sample_to_image,
+            sample_to_image=self._sample_to_image,
         )
         COCOInstanceSegmentationOutput(output_file=Path(output_json)).save(label_input=export_input)
 
@@ -172,12 +173,40 @@ class ImageDatasetExport:
             dataset_id=self._dataset_id,
             samples=self.samples,
             annotation_collection_id=annotation_collection_id,
-            sample_to_image=image_sample_to_image,
+            sample_to_image=self._sample_to_image,
         )
         # Keep `background_class_id` unchanged: the label input defines category IDs and
         # reserves class 0 for background.
         PascalVOCSemanticSegmentationOutput(output_folder=Path(output_folder)).save(
             label_input=export_input
+        )
+
+
+class ImageDatasetExport(DatasetExport):
+    """Provides methods to export an image dataset or a subset of it.
+
+    This class is typically not instantiated directly but returned by `Dataset.export()`.
+    It allows exporting data in various formats.
+    """
+
+    def __init__(
+        self,
+        session: Session,
+        dataset_id: UUID,
+        samples: Iterable[ImageSample],
+    ):
+        """Initializes the ImageDatasetExport object.
+
+        Args:
+            session: The database session.
+            dataset_id: The dataset ID for label retrieval.
+            samples: Samples to export.
+        """
+        super().__init__(
+            session=session,
+            dataset_id=dataset_id,
+            samples=samples,
+            sample_to_image=image_sample_to_image,
         )
 
 

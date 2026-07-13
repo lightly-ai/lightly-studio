@@ -2,17 +2,20 @@
     import { browser } from '$app/environment';
     import { page } from '$app/state';
     import {
+        Button,
         CombinedMetadataDimensionsFilters,
         DatasetGridHeader,
         Footer,
         LabelsMenu,
         SelectionPill,
+        ShowFiltersButton,
         TagsMenu
     } from '$lib/components';
+    import { Tooltip } from '$lib/components/ui/tooltip';
     import QueryEditorPanel from '$lib/components/QueryEditorPanel/QueryEditorPanel.svelte';
     import { SidePanelTabs } from '$lib/components';
     import Separator from '$lib/components/ui/separator/separator.svelte';
-    import { GripVertical, SlidersHorizontal } from '@lucide/svelte';
+    import { GripVertical, PanelLeftClose, SlidersHorizontal } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
     import { toStore } from 'svelte/store';
     import { Header } from '$lib/components';
@@ -92,6 +95,8 @@
         collections,
         activePanel,
         setActivePanel,
+        filterPanelCollapsed,
+        toggleFilterPanelCollapsed,
         filteredSampleCount,
         filteredAnnotationCount,
         // Sourced from the stable singleton (not `$derived(data)`) so `search`, created once below,
@@ -493,16 +498,41 @@
     {#if isSampleDetails || isAnnotationDetails || isGroupDetails || isVideoDetails}
         {@render children()}
     {:else}
-        <div class="flex min-h-0 flex-1 space-x-4 px-4">
+        <div class="flex min-h-0 flex-1 gap-4 px-4">
             {#if isCollectionGrid}
-                <div class="flex h-full min-h-0 w-80 flex-col">
+                <!--
+                    Keep the panel mounted while collapsed (only visually hidden). Children such as
+                    AnnotationCollectionsMenu run mount-time $effects (e.g. seeding the annotation
+                    source selection) that must still fire after a reload with the panel collapsed.
+                -->
+                <div
+                    class="h-full min-h-0 w-80 flex-col {$filterPanelCollapsed ? 'hidden' : 'flex'}"
+                    data-testid="filter-panel-body"
+                >
                     <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
-                            <h2 class="flex items-center space-x-2 py-2 text-lg font-semibold">
-                                <SlidersHorizontal class="size-5" />
-                                <span>Filters</span>
+                            <h2
+                                class="flex items-center justify-between py-2 text-lg font-semibold"
+                            >
+                                <span class="flex items-center space-x-2">
+                                    <SlidersHorizontal class="size-5" />
+                                    <span>Filters</span>
+                                </span>
+                                <Tooltip content="Hide filters" position="bottom" class="w-max">
+                                    <Button
+                                        variant="ghost"
+                                        icon={PanelLeftClose}
+                                        ariaLabel="Hide filters"
+                                        buttonProps={{
+                                            onclick: toggleFilterPanelCollapsed,
+                                            'aria-expanded': true,
+                                            'data-testid': 'filter-panel-collapse',
+                                            class: 'size-6 p-0'
+                                        }}
+                                    />
+                                </Tooltip>
                             </h2>
 
                             {#if isImages}
@@ -549,23 +579,30 @@
 
             {#snippet mainContent()}
                 {#if isCollectionGrid}
-                    <DatasetGridHeader
-                        {canSelectAll}
-                        isSelectionActive={$selectedCount > 0}
-                        {isImages}
-                        {hasMediaWithEmbeddings}
-                        collectionDatasetId={collection.dataset_id}
-                        onSelectAll={selectAllHandle.handleSelectAll}
-                        onDeselectAll={clearSelection}
-                        searchImage={$searchImage}
-                        searchPending={$searchPending}
-                        searchPlaceholder={collectionSearchPlaceholder}
-                        initialQueryText={$textEmbedding?.queryText ?? ''}
-                        onSubmitText={search.setText}
-                        onSubmitFile={search.setImage}
-                        onSearchClear={search.clear}
-                        onSearchError={search.onError}
-                    />
+                    <div class="flex min-w-0 items-center gap-x-4">
+                        {#if $filterPanelCollapsed}
+                            <ShowFiltersButton />
+                        {/if}
+                        <div class="min-w-0 flex-1">
+                            <DatasetGridHeader
+                                {canSelectAll}
+                                isSelectionActive={$selectedCount > 0}
+                                {isImages}
+                                {hasMediaWithEmbeddings}
+                                collectionDatasetId={collection.dataset_id}
+                                onSelectAll={selectAllHandle.handleSelectAll}
+                                onDeselectAll={clearSelection}
+                                searchImage={$searchImage}
+                                searchPending={$searchPending}
+                                searchPlaceholder={collectionSearchPlaceholder}
+                                initialQueryText={$textEmbedding?.queryText ?? ''}
+                                onSubmitText={search.setText}
+                                onSubmitFile={search.setImage}
+                                onSearchClear={search.clear}
+                                onSearchError={search.onError}
+                            />
+                        </div>
+                    </div>
                     <Separator class="mb-4 bg-border-hard" />
                 {/if}
 
