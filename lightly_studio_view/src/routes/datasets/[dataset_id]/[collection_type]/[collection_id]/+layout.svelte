@@ -49,7 +49,10 @@
         createMetadataFilters,
         useMetadataFilters
     } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
-    import { useNumericMetadataDistribution } from '$lib/hooks/useNumericMetadataDistribution/useNumericMetadataDistribution.js';
+    import {
+        selectDistributions,
+        useNumericMetadataDistribution
+    } from '$lib/hooks/useNumericMetadataDistribution/useNumericMetadataDistribution.js';
     import { useVideoFrameAnnotationCounts } from '$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
@@ -281,9 +284,6 @@
     const { metadataValues, metadataBounds, updateMetadataValues } = $derived.by(() =>
         useMetadataFilters(collectionId)
     );
-    const { distributions: metadataDistributions } = $derived.by(() =>
-        useNumericMetadataDistribution(collectionId)
-    );
     const { dimensionsValues } = useDimensions(collectionIdStore);
 
     const annotationLabelsQuery = useAnnotationLabels(() => ({
@@ -501,11 +501,22 @@
         return { ...base, groups: [allTypesGroup, ...typeGroups] };
     });
 
-    // Numeric metadata fields as histogram groups. Bins come from the metadata
-    // info endpoint (full-collection distribution; filter-aware bins tracked in
-    // LIG-10177).
+    // Numeric metadata fields as histogram groups. Bin edges span the full
+    // collection (stable axis); counts track the active filters — the query
+    // refetches whenever the grid filter changes. Each key's own metadata
+    // filter is excluded server-side (faceted-search behavior). Only queried
+    // while the distribution panel is open.
+    const metadataHistogramsQuery = $derived.by(() => {
+        if (!distributionPanelVisible) return null;
+        return useNumericMetadataDistribution({
+            collectionId: datasetId,
+            filter: imageAnnotationCountsFilter
+        });
+    });
+    const metadataDistributions = $derived(selectDistributions(metadataHistogramsQuery?.data));
+
     const metadataDistributionSource = $derived.by<DistributionSource | null>(() => {
-        const keys = Object.keys($metadataDistributions);
+        const keys = Object.keys(metadataDistributions);
         if (keys.length === 0) return null;
         return {
             id: 'metadata',
@@ -515,7 +526,7 @@
             groups: keys.map((key) => ({
                 id: key,
                 label: key,
-                histogram: $metadataDistributions[key],
+                histogram: metadataDistributions[key],
                 // Highlight the active filter range; bins outside it dim.
                 selectedRange: $metadataValues[key]
             }))
