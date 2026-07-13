@@ -30,8 +30,8 @@ class AnnotationMetricQuery(MatchExpression):
     """Query samples by annotation-level evaluation results.
 
     This query matches samples that belong to an evaluation run and contain annotation
-    pairs in a selected confusion-matrix cell, optionally constrained by persisted
-    annotation metrics.
+    pairs in a selected confusion-matrix cell or false positives, optionally constrained by
+    persisted annotation metrics.
 
     Example:
         ```python
@@ -90,31 +90,27 @@ class AnnotationMetricQuery(MatchExpression):
         cls,
         run_name: str,
         prediction: str,
-        *criteria: AnnotationEvaluationMetricMatchExpression,
     ) -> AnnotationMetricQuery:
         """Match samples with false-positive predictions within an evaluation run.
 
         Example:
             ```python
             AnnotationMetricQuery.false_positive(
-                "run1",
-                "dog",
-                AnnotationEvaluationMetricField("confidence") > 0.8,
+                run_name="run1",
+                prediction="dog"
             )
             ```
 
         Args:
             run_name: The evaluation run name to match metrics against.
             prediction: Predicted annotation class name.
-            criteria: Zero or more metric comparisons that must all match the same
-                false-positive prediction.
         """
         return cls(
             match_kind="false_positive",
             run_name=run_name,
             gt_label_name=None,
             pred_label_name=prediction,
-            criteria=list(criteria),
+            criteria=[],
         )
 
     def get(self) -> ColumnElement[bool]:
