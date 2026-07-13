@@ -35,17 +35,12 @@ YOLO_DEFAULT_SPLIT = "train"
 
 
 class DatasetExport:
-    """Provides methods to export a dataset or a subset of it in various formats.
+    """Provides methods to export a dataset or a subset of it.
 
-    The export logic here is sample-type-agnostic: subclasses bind a `sample_to_image`
-    strategy for their sample type (image or video frame), which is the only part that
-    differs between them.
+    Subclasses set the `sample_to_image` attribute,
     """
 
-    # TODO(malte, 07/2026): Move `DatasetExport` into its own `dataset_export.py` module. It lives
-    # in `image_dataset_export.py` for now so this split stays a small, in-place diff; the move
-    # will be a separate, behavior-preserving PR.
-
+    # TODO(malte, 07/2026): Move `DatasetExport` into its own `dataset_export.py` module.
     def __init__(
         self,
         session: Session,
