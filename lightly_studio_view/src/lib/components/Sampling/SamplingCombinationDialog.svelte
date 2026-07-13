@@ -102,6 +102,9 @@
                                 classBalancingDisabledReason={!strategyOptions.hasAnnotationLabels
                                     ? 'No annotation labels found. Add annotations to your samples to enable this strategy.'
                                     : undefined}
+                                metadataClassBalancingDisabledReason={!strategyOptions.hasCategoricalMetadataFields
+                                    ? 'No categorical metadata fields found. Index string or boolean metadata on your samples to enable this strategy.'
+                                    : undefined}
                                 onAdd={addStrategy}
                             />
                         </div>
@@ -116,6 +119,8 @@
                                         annotationLabels={strategyOptions.annotationLabels}
                                         annotationSourceOptions={strategyOptions.annotationSourceOptions}
                                         metadataFieldNames={strategyOptions.metadataFieldNames}
+                                        categoricalMetadataFieldNames={strategyOptions.categoricalMetadataFieldNames}
+                                        metadataCategoricalValues={strategyOptions.metadataCategoricalValues}
                                         isDuplicateDisabled={instance.type === 'diversity' ||
                                             instance.type === 'deduplication'}
                                         onRemove={() => removeStrategy(instance.id)}

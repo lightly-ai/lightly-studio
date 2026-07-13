@@ -20,6 +20,15 @@ export function useStrategyOptions(getCollectionId: () => string) {
             .map((i) => i.name)
     );
     const hasMetadataFields = $derived(metadataFieldNames.length > 0);
+
+    const categoricalMetadataInfo = $derived(
+        metadataInfoValue.filter((i) => i.type === 'string' || i.type === 'boolean')
+    );
+    const categoricalMetadataFieldNames = $derived(categoricalMetadataInfo.map((i) => i.name));
+    const hasCategoricalMetadataFields = $derived(categoricalMetadataFieldNames.length > 0);
+    const metadataCategoricalValues = $derived(
+        Object.fromEntries(categoricalMetadataInfo.map((i) => [i.name, i.values ?? []]))
+    );
     const annotationLabels = $derived(
         (annotationLabelsQuery.data ?? []).map((l) => l.annotation_label_name)
     );
@@ -34,6 +43,15 @@ export function useStrategyOptions(getCollectionId: () => string) {
         },
         get hasMetadataFields() {
             return hasMetadataFields;
+        },
+        get categoricalMetadataFieldNames() {
+            return categoricalMetadataFieldNames;
+        },
+        get hasCategoricalMetadataFields() {
+            return hasCategoricalMetadataFields;
+        },
+        get metadataCategoricalValues() {
+            return metadataCategoricalValues;
         },
         get annotationLabels() {
             return annotationLabels;

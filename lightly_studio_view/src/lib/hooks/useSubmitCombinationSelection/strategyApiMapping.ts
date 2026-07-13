@@ -42,6 +42,22 @@ export function toApiStrategy(instance: StrategyInstance): SamplingRequest['stra
         };
     }
 
+    if (instance.type === 'metadata_class_balancing') {
+        const targetDistribution =
+            instance.params.target_distribution_mode === 'dictionary'
+                ? Object.fromEntries(
+                      instance.params.target_distribution.map((row) => [row.class_name, row.weight])
+                  )
+                : instance.params.target_distribution_mode;
+
+        return {
+            strategy_name: 'metadata_balance',
+            metadata_key: instance.params.metadata_key,
+            target_distribution: targetDistribution,
+            strength: instance.params.strength
+        };
+    }
+
     const targetDistribution =
         instance.params.target_distribution_mode === 'dictionary'
             ? Object.fromEntries(

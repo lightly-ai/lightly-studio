@@ -4,6 +4,7 @@ export {
     type ClassBalancingTargetDistributionMode,
     type ClassBalancingTargetRow,
     type ClassBalancingParams,
+    type MetadataClassBalancingParams,
     type StrategyParams,
     type StrategyInstance,
     STRATEGY_DEFAULTS,

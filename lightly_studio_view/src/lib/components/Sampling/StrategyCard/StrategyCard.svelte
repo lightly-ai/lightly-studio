@@ -15,12 +15,14 @@
         type StrategyInstance,
         type StrategyParams,
         type StrategySummaryTag,
-        type ClassBalancingParams
+        type ClassBalancingParams,
+        type MetadataClassBalancingParams
     } from '$lib/hooks/useStrategyBuilder';
     import DeduplicationForm from '../forms/DeduplicationForm/DeduplicationForm.svelte';
     import MetadataWeightingForm from '../forms/MetadataWeightingForm/MetadataWeightingForm.svelte';
     import SimilarityForm from '../forms/SimilarityForm/SimilarityForm.svelte';
     import ClassBalancingForm from '../forms/ClassBalancingForm/ClassBalancingForm.svelte';
+    import MetadataClassBalancingForm from '../forms/MetadataClassBalancingForm/MetadataClassBalancingForm.svelte';
     import StrengthField from '../forms/StrengthField/StrengthField.svelte';
     import Typography from '$lib/components/Typography/Typography.svelte';
     interface Props {
@@ -29,6 +31,8 @@
         annotationLabels: string[];
         annotationSourceOptions?: { id: string; name: string }[];
         metadataFieldNames?: string[];
+        categoricalMetadataFieldNames?: string[];
+        metadataCategoricalValues?: Record<string, string[]>;
         isDuplicateDisabled?: boolean;
         onRemove: () => void;
         onDuplicate: () => void;
@@ -41,6 +45,8 @@
         annotationLabels,
         annotationSourceOptions = [],
         metadataFieldNames = [],
+        categoricalMetadataFieldNames = [],
+        metadataCategoricalValues = {},
         isDuplicateDisabled = false,
         onRemove,
         onDuplicate,
@@ -134,6 +140,14 @@
                         <MetadataWeightingForm
                             params={instance.params as MetadataWeightingParams}
                             {metadataFieldNames}
+                            {onUpdate}
+                        />
+                    {:else if instance.type === 'metadata_class_balancing'}
+                        <MetadataClassBalancingForm
+                            instanceId={instance.id}
+                            params={instance.params as MetadataClassBalancingParams}
+                            metadataFieldNames={categoricalMetadataFieldNames}
+                            {metadataCategoricalValues}
                             {onUpdate}
                         />
                     {:else}

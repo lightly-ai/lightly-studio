@@ -37,5 +37,20 @@ export function isStrategyInstanceValid(instance: StrategyInstance): boolean {
         );
     }
 
+    if (instance.type === 'metadata_class_balancing') {
+        if (instance.params.metadata_key.trim().length === 0) {
+            return false;
+        }
+        if (instance.params.target_distribution_mode !== 'dictionary') {
+            return true;
+        }
+        return (
+            instance.params.target_distribution.length > 0 &&
+            instance.params.target_distribution.every(
+                (row) => row.class_name.trim().length > 0 && isPositiveNumber(row.weight)
+            )
+        );
+    }
+
     return true;
 }

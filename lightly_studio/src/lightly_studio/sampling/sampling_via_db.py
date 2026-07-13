@@ -26,6 +26,13 @@ from lightly_studio.resolvers import (
     sample_embedding_resolver,
     tag_resolver,
 )
+from lightly_studio.resolvers.metadata_resolver.sample.get_metadata_info import (
+    CATEGORICAL_METADATA_TYPES,
+    format_categorical_value,
+)
+from lightly_studio.resolvers.metadata_resolver.sample.get_metadata_values_for_key import (
+    get_metadata_values_for_key,
+)
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.sampling.mundig import Mundig
 from lightly_studio.sampling.sampling_config import (
@@ -33,6 +40,7 @@ from lightly_studio.sampling.sampling_config import (
     EmbeddingDeduplicationStrategy,
     EmbeddingDiversityStrategy,
     EmbeddingSimilarityStrategy,
+    MetadataClassBalancingStrategy,
     MetadataWeightingStrategy,
     SamplingConfig,
 )
@@ -218,6 +226,125 @@ def _get_class_balancing_data(  # noqa: C901
     return class_distributions, target_values
 
 
+# Sentinel column for present metadata values not named in an explicit target.
+_OTHER_METADATA_VALUE = object()
+
+
+def _get_metadata_balancing_data(
+    session: Session,
+    strat: MetadataClassBalancingStrategy,
+    collection_id: UUID,
+    input_sample_ids: Sequence[UUID],
+) -> tuple[NDArray[np.float32], list[float]]:
+    """Build the one-hot distribution matrix and target vector for metadata balancing.
+
+    Each in-scope sample contributes a single categorical value, so its row is a
+    one-hot vector (contrast: annotation balancing builds multi-label count rows).
+    Samples missing the key contribute an all-zero row and therefore do not
+    influence this strategy.
+
+    Raises:
+        ValueError: If the key is absent from the collection or is not categorical.
+    """
+    sample_to_value, metadata_type = get_metadata_values_for_key(
+        session=session, collection_id=collection_id, key=strat.metadata_key
+    )
+    if metadata_type is None:
+        raise ValueError(
+            f"Metadata key '{strat.metadata_key}' not found in collection {collection_id}."
+        )
+    if metadata_type not in CATEGORICAL_METADATA_TYPES:
+        raise ValueError(
+            f"Metadata key '{strat.metadata_key}' has type {metadata_type!r}; balancing "
+            f"requires a categorical key (one of {CATEGORICAL_METADATA_TYPES})."
+        )
+
+    # Per input sample: its single display value, or absent when the key is missing.
+    sample_value_by_id: dict[UUID, str] = {
+        sample_id: format_categorical_value(sample_to_value[sample_id])
+        for sample_id in input_sample_ids
+        if sample_id in sample_to_value
+    }
+    present_values = [
+        sample_value_by_id[sample_id]
+        for sample_id in input_sample_ids
+        if sample_id in sample_value_by_id
+    ]
+
+    column_value_by_id: Mapping[UUID, object] = sample_value_by_id
+    if strat.target_distribution == "uniform":
+        # Keep first-seen order so the distribution columns stay stable.
+        target_keys: list[object] = list(dict.fromkeys(present_values))
+        if not target_keys:
+            return np.zeros((len(input_sample_ids), 0), dtype=np.float32), []
+        target_values = [1.0 / len(target_keys)] * len(target_keys)
+    elif strat.target_distribution == "input":
+        value_count = Counter(present_values)
+        target_keys = list(value_count.keys())
+        target_values = [float(count) for count in value_count.values()]
+    elif isinstance(strat.target_distribution, dict):
+        target_keys, target_values, column_value_by_id = _explicit_metadata_target(
+            target_distribution=strat.target_distribution,
+            sample_value_by_id=sample_value_by_id,
+            present_values=present_values,
+        )
+    else:
+        raise ValueError(f"Unknown distribution type: {type(strat.target_distribution)}")
+
+    matrix = _build_one_hot_matrix(
+        input_sample_ids=input_sample_ids,
+        column_value_by_id=column_value_by_id,
+        target_keys=target_keys,
+    )
+    return matrix, target_values
+
+
+def _explicit_metadata_target(
+    target_distribution: dict[str, float],
+    sample_value_by_id: Mapping[UUID, str],
+    present_values: Sequence[str],
+) -> tuple[list[object], list[float], dict[UUID, object]]:
+    """Resolve an explicit metadata target distribution.
+
+    Named values keep their target. Present values that are not named collapse
+    into a single "other" bucket whose target is the ratio remaining to 1.0.
+    """
+    value_to_target: dict[object, float] = {}
+    value_to_target.update(target_distribution)
+    total_targets = sum(target_distribution.values())
+    remaining_ratio = max(1.0 - total_targets, 0.0)
+
+    unlisted_values = set(present_values) - set(target_distribution.keys())
+    column_value_by_id: dict[UUID, object] = dict(sample_value_by_id)
+    if unlisted_values:
+        for sample_id, value in sample_value_by_id.items():
+            if value in unlisted_values:
+                column_value_by_id[sample_id] = _OTHER_METADATA_VALUE
+        value_to_target[_OTHER_METADATA_VALUE] = remaining_ratio
+
+    return list(value_to_target.keys()), list(value_to_target.values()), column_value_by_id
+
+
+def _build_one_hot_matrix(
+    input_sample_ids: Sequence[UUID],
+    column_value_by_id: Mapping[UUID, object],
+    target_keys: Sequence[object],
+) -> NDArray[np.float32]:
+    """One-hot each sample's value into the target column for that value.
+
+    Samples absent from ``column_value_by_id`` (missing key) or whose value is
+    not a target column stay all-zero and do not influence balancing.
+    """
+    value_to_idx = {value: idx for idx, value in enumerate(target_keys)}
+    matrix = np.zeros((len(input_sample_ids), len(target_keys)), dtype=np.float32)
+    for row, sample_id in enumerate(input_sample_ids):
+        value = column_value_by_id.get(sample_id)
+        idx = value_to_idx.get(value) if value is not None else None
+        if idx is not None:
+            matrix[row, idx] = 1.0
+    return matrix
+
+
 def sampling_via_database(
     session: Session, config: SamplingConfig, input_sample_ids: list[UUID]
 ) -> None:
@@ -329,6 +456,50 @@ def _get_annotations_for_class_balancing(
     return annotations
 
 
+def _add_similarity_to_mundig(
+    session: Session,
+    context: _SamplingContext,
+    strat: EmbeddingSimilarityStrategy,
+    mundig: Mundig,
+) -> None:
+    """Resolve an embedding similarity strategy against a query tag and add it to Mundig."""
+    embeddings = _get_embeddings_by_sample_ids(
+        session=session,
+        context=context,
+        embedding_model_name=strat.embedding_model_name,
+    )
+    embedding_model_id = embedding_model_resolver.get_by_name(
+        session=session,
+        collection_id=context.collection_id,
+        embedding_model_name=strat.embedding_model_name,
+    ).embedding_model_id
+    query_tag = tag_resolver.get_by_name(
+        session=session,
+        tag_name=strat.query_tag_name,
+        collection_id=context.collection_id,
+    )
+    if query_tag is None:
+        raise ValueError(f"Query tag with name {strat.query_tag_name} not found.")
+    query_embedding_tables = sample_embedding_resolver.get_all_by_collection_id(
+        session=session,
+        collection_id=context.collection_id,
+        embedding_model_id=embedding_model_id,
+        filters=SampleFilter(tag_ids=[query_tag.tag_id]),
+    )
+    query_embeddings = [embedding.embedding for embedding in query_embedding_tables]
+    if not query_embeddings:
+        raise ValueError(
+            "Query tag "
+            f"{strat.query_tag_name} does not have embeddings for embedding model "
+            f"{strat.embedding_model_name}."
+        )
+    mundig.add_similarity(
+        embeddings=embeddings,
+        query_embeddings=query_embeddings,
+        strength=strat.strength,
+    )
+
+
 def _add_strategy_to_mundig(
     session: Session,
     context: _SamplingContext,
@@ -356,41 +527,7 @@ def _add_strategy_to_mundig(
             stopping_condition_minimum_distance=strat.stopping_condition_minimum_distance,
         )
     elif isinstance(strat, EmbeddingSimilarityStrategy):
-        embeddings = _get_embeddings_by_sample_ids(
-            session=session,
-            context=context,
-            embedding_model_name=strat.embedding_model_name,
-        )
-        embedding_model_id = embedding_model_resolver.get_by_name(
-            session=session,
-            collection_id=context.collection_id,
-            embedding_model_name=strat.embedding_model_name,
-        ).embedding_model_id
-        query_tag = tag_resolver.get_by_name(
-            session=session,
-            tag_name=strat.query_tag_name,
-            collection_id=context.collection_id,
-        )
-        if query_tag is None:
-            raise ValueError(f"Query tag with name {strat.query_tag_name} not found.")
-        query_embedding_tables = sample_embedding_resolver.get_all_by_collection_id(
-            session=session,
-            collection_id=context.collection_id,
-            embedding_model_id=embedding_model_id,
-            filters=SampleFilter(tag_ids=[query_tag.tag_id]),
-        )
-        query_embeddings = [embedding.embedding for embedding in query_embedding_tables]
-        if not query_embeddings:
-            raise ValueError(
-                "Query tag "
-                f"{strat.query_tag_name} does not have embeddings for embedding model "
-                f"{strat.embedding_model_name}."
-            )
-        mundig.add_similarity(
-            embeddings=embeddings,
-            query_embeddings=query_embeddings,
-            strength=strat.strength,
-        )
+        _add_similarity_to_mundig(session=session, context=context, strat=strat, mundig=mundig)
     elif isinstance(strat, MetadataWeightingStrategy):
         weights: list[float] = []
         metadata_key = strat.metadata_key
@@ -417,5 +554,29 @@ def _add_strategy_to_mundig(
             target=target_values,
             strength=strat.strength,
         )
+    elif isinstance(strat, MetadataClassBalancingStrategy):
+        _add_metadata_class_balancing_to_mundig(
+            session=session, context=context, strat=strat, mundig=mundig
+        )
     else:
         raise ValueError(f"Sampling strategy of type {type(strat)} is unknown.")
+
+
+def _add_metadata_class_balancing_to_mundig(
+    session: Session,
+    context: _SamplingContext,
+    strat: MetadataClassBalancingStrategy,
+    mundig: Mundig,
+) -> None:
+    """Resolve a categorical metadata balancing strategy and add it to Mundig."""
+    class_distributions, target_values = _get_metadata_balancing_data(
+        session=session,
+        strat=strat,
+        collection_id=context.collection_id,
+        input_sample_ids=context.input_sample_ids,
+    )
+    mundig.add_class_balancing(
+        class_distributions=class_distributions,
+        target=target_values,
+        strength=strat.strength,
+    )

@@ -10,6 +10,7 @@
         similarityDisabledReason?: string;
         metadataWeightingDisabledReason?: string;
         classBalancingDisabledReason?: string;
+        metadataClassBalancingDisabledReason?: string;
         onAdd: (type: StrategyType) => void;
     }
     let {
@@ -18,6 +19,7 @@
         similarityDisabledReason,
         metadataWeightingDisabledReason,
         classBalancingDisabledReason,
+        metadataClassBalancingDisabledReason,
         onAdd
     }: Props = $props();
 
@@ -34,6 +36,7 @@
         if (type === 'similarity') return similarityDisabledReason;
         if (type === 'metadata_weighting') return metadataWeightingDisabledReason;
         if (type === 'class_balancing') return classBalancingDisabledReason;
+        if (type === 'metadata_class_balancing') return metadataClassBalancingDisabledReason;
         return undefined;
     }
 

@@ -2,6 +2,7 @@ import {
     STRATEGY_DEFAULTS,
     type ClassBalancingParams,
     type ClassBalancingTargetRow,
+    type MetadataClassBalancingParams,
     type StrategyInstance,
     type StrategyParamsByType,
     type StrategyType
@@ -20,6 +21,15 @@ export function cloneStrategyParams<T extends StrategyType>(
             ...params,
             target_distribution: cloneClassBalancingRows(
                 (params as ClassBalancingParams).target_distribution
+            )
+        } as StrategyParamsByType[T];
+    }
+
+    if (type === 'metadata_class_balancing') {
+        return {
+            ...params,
+            target_distribution: cloneClassBalancingRows(
+                (params as MetadataClassBalancingParams).target_distribution
             )
         } as StrategyParamsByType[T];
     }

@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 from pydantic import ValidationError
 from pytest_mock import MockerFixture
 from sqlmodel import Session
@@ -17,6 +18,9 @@ from lightly_studio.resolvers import (
     tag_resolver,
 )
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.metadata_resolver.sample.set_value_for_sample import (
+    set_value_for_sample,
+)
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.sampling.mundig import Mundig
 from lightly_studio.sampling.sampling_config import (
@@ -24,6 +28,7 @@ from lightly_studio.sampling.sampling_config import (
     EmbeddingDeduplicationStrategy,
     EmbeddingDiversityStrategy,
     EmbeddingSimilarityStrategy,
+    MetadataClassBalancingStrategy,
     SamplingConfig,
     SamplingStrategy,
 )
@@ -1091,3 +1096,234 @@ def _all_sample_ids(session: Session, collection_id: UUID) -> list[UUID]:
         session=session, collection_id=collection_id, pagination=None
     ).samples
     return [sample.sample_id for sample in samples]
+
+
+def _columns_as_set(class_distributions: NDArray[np.float32]) -> set[tuple[float, ...]]:
+    """Return the set of column tuples so assertions are column-order independent."""
+    return {tuple(class_distributions[:, idx]) for idx in range(class_distributions.shape[1])}
+
+
+def test_sampling_via_database__metadata_balancing_uniform(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    collection_id = fill_db_with_samples_and_embeddings(
+        db_session, n_samples=3, embedding_model_names=[]
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+    # location: [city, city, mountain] -> uniform target over {city, mountain}.
+    set_value_for_sample(db_session, sample_ids[0], key="location", value="city")
+    set_value_for_sample(db_session, sample_ids[1], key="location", value="city")
+    set_value_for_sample(db_session, sample_ids[2], key="location", value="mountain")
+
+    add_class_balancing_spy = mocker.spy(Mundig, "add_class_balancing")
+    config = SamplingConfig(
+        n_samples_to_select=2,
+        collection_id=collection_id,
+        sampling_result_tag_name="sampling-tag",
+        strategies=[
+            MetadataClassBalancingStrategy(metadata_key="location", target_distribution="uniform")
+        ],
+    )
+
+    sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
+
+    add_class_balancing_spy.assert_called_once()
+    class_distributions = add_class_balancing_spy.call_args.kwargs["class_distributions"]
+    target = add_class_balancing_spy.call_args.kwargs["target"]
+
+    assert class_distributions.shape == (3, 2)
+    assert _columns_as_set(class_distributions) == {(1.0, 1.0, 0.0), (0.0, 0.0, 1.0)}
+    assert target == pytest.approx([0.5, 0.5], abs=1e-9)
+
+
+def test_sampling_via_database__metadata_balancing_input(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    collection_id = fill_db_with_samples_and_embeddings(
+        db_session, n_samples=3, embedding_model_names=[]
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+    set_value_for_sample(db_session, sample_ids[0], key="location", value="city")
+    set_value_for_sample(db_session, sample_ids[1], key="location", value="city")
+    set_value_for_sample(db_session, sample_ids[2], key="location", value="mountain")
+
+    add_class_balancing_spy = mocker.spy(Mundig, "add_class_balancing")
+    config = SamplingConfig(
+        n_samples_to_select=2,
+        collection_id=collection_id,
+        sampling_result_tag_name="sampling-tag",
+        strategies=[
+            MetadataClassBalancingStrategy(metadata_key="location", target_distribution="input")
+        ],
+    )
+
+    sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
+
+    add_class_balancing_spy.assert_called_once()
+    class_distributions = add_class_balancing_spy.call_args.kwargs["class_distributions"]
+    target = add_class_balancing_spy.call_args.kwargs["target"]
+
+    # Columns follow first-seen order: city (count 2), mountain (count 1).
+    assert class_distributions.shape == (3, 2)
+    np.testing.assert_array_equal(
+        class_distributions,
+        np.array([[1.0, 0.0], [1.0, 0.0], [0.0, 1.0]], dtype=np.float32),
+    )
+    assert target == pytest.approx([2.0, 1.0], abs=1e-9)
+
+
+def test_sampling_via_database__metadata_balancing_explicit_with_other(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    collection_id = fill_db_with_samples_and_embeddings(
+        db_session, n_samples=3, embedding_model_names=[]
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+    # Only "city" is named in the target; "mountain" and "forest" fall into "other".
+    set_value_for_sample(db_session, sample_ids[0], key="location", value="city")
+    set_value_for_sample(db_session, sample_ids[1], key="location", value="mountain")
+    set_value_for_sample(db_session, sample_ids[2], key="location", value="forest")
+
+    add_class_balancing_spy = mocker.spy(Mundig, "add_class_balancing")
+    config = SamplingConfig(
+        n_samples_to_select=2,
+        collection_id=collection_id,
+        sampling_result_tag_name="sampling-tag",
+        strategies=[
+            MetadataClassBalancingStrategy(
+                metadata_key="location", target_distribution={"city": 0.7}
+            )
+        ],
+    )
+
+    sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
+
+    add_class_balancing_spy.assert_called_once()
+    class_distributions = add_class_balancing_spy.call_args.kwargs["class_distributions"]
+    target = add_class_balancing_spy.call_args.kwargs["target"]
+
+    # Columns: [city, other]. mountain + forest collapse into the "other" bucket.
+    assert class_distributions.shape == (3, 2)
+    np.testing.assert_array_equal(
+        class_distributions,
+        np.array([[1.0, 0.0], [0.0, 1.0], [0.0, 1.0]], dtype=np.float32),
+    )
+    assert target == pytest.approx([0.7, 0.3], abs=1e-9)
+
+
+def test_sampling_via_database__metadata_balancing_missing_values_not_dropped(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    collection_id = fill_db_with_samples_and_embeddings(
+        db_session, n_samples=3, embedding_model_names=[]
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+    # sample 2 has no value for the key and must not be dropped by the run.
+    set_value_for_sample(db_session, sample_ids[0], key="location", value="city")
+    set_value_for_sample(db_session, sample_ids[1], key="location", value="mountain")
+
+    add_class_balancing_spy = mocker.spy(Mundig, "add_class_balancing")
+    config = SamplingConfig(
+        n_samples_to_select=3,
+        collection_id=collection_id,
+        sampling_result_tag_name="sampling-tag",
+        strategies=[
+            MetadataClassBalancingStrategy(metadata_key="location", target_distribution="uniform")
+        ],
+    )
+
+    sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
+
+    add_class_balancing_spy.assert_called_once()
+    class_distributions = add_class_balancing_spy.call_args.kwargs["class_distributions"]
+    # One row per input sample; the sample missing the key is an all-zero row.
+    assert class_distributions.shape == (3, 2)
+    assert tuple(class_distributions[2]) == (0.0, 0.0)
+
+    # All three samples remain selectable (missing-key sample is not dropped).
+    tags = tag_resolver.get_all_by_collection_id(db_session, collection_id=collection_id)
+    samples_in_tag = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
+    ).samples
+    assert len(samples_in_tag) == 3
+
+
+def test_sampling_via_database__metadata_balancing_stacking_two_keys(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    collection_id = fill_db_with_samples_and_embeddings(
+        db_session, n_samples=3, embedding_model_names=[]
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+    for sample_id in sample_ids:
+        set_value_for_sample(db_session, sample_id, key="location", value="city")
+        set_value_for_sample(db_session, sample_id, key="weather", value="sunny")
+
+    add_class_balancing_spy = mocker.spy(Mundig, "add_class_balancing")
+    config = SamplingConfig(
+        n_samples_to_select=2,
+        collection_id=collection_id,
+        sampling_result_tag_name="sampling-tag",
+        strategies=[
+            MetadataClassBalancingStrategy(metadata_key="location", target_distribution="uniform"),
+            MetadataClassBalancingStrategy(metadata_key="weather", target_distribution="uniform"),
+        ],
+    )
+
+    sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
+
+    # Each stacked single-key strategy adds its own class-balancing term.
+    assert add_class_balancing_spy.call_count == 2
+
+
+def test_sampling_via_database__metadata_balancing_non_categorical_raises(
+    db_session: Session,
+) -> None:
+    collection_id = fill_db_with_samples_and_embeddings(
+        db_session, n_samples=2, embedding_model_names=[]
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+    set_value_for_sample(db_session, sample_ids[0], key="score", value=1)
+    set_value_for_sample(db_session, sample_ids[1], key="score", value=2)
+
+    config = SamplingConfig(
+        n_samples_to_select=1,
+        collection_id=collection_id,
+        sampling_result_tag_name="sampling-tag",
+        strategies=[
+            MetadataClassBalancingStrategy(metadata_key="score", target_distribution="uniform")
+        ],
+    )
+
+    with pytest.raises(ValueError, match="requires a categorical key"):
+        sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
+
+
+def test_sampling_via_database__metadata_balancing_key_not_found_raises(
+    db_session: Session,
+) -> None:
+    collection_id = fill_db_with_samples_and_embeddings(
+        db_session, n_samples=2, embedding_model_names=[]
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+
+    config = SamplingConfig(
+        n_samples_to_select=1,
+        collection_id=collection_id,
+        sampling_result_tag_name="sampling-tag",
+        strategies=[
+            MetadataClassBalancingStrategy(
+                metadata_key="does_not_exist", target_distribution="uniform"
+            )
+        ],
+    )
+
+    with pytest.raises(ValueError, match="not found in collection"):
+        sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)

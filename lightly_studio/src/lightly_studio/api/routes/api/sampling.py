@@ -18,6 +18,7 @@ from lightly_studio.sampling.sampling_config import (
     EmbeddingDeduplicationStrategy,
     EmbeddingDiversityStrategy,
     EmbeddingSimilarityStrategy,
+    MetadataClassBalancingStrategy,
     MetadataWeightingStrategy,
     SamplingConfig,
 )
@@ -31,6 +32,7 @@ Strategy = Annotated[
         EmbeddingDeduplicationStrategy,
         EmbeddingDiversityStrategy,
         EmbeddingSimilarityStrategy,
+        MetadataClassBalancingStrategy,
         MetadataWeightingStrategy,
     ],
     Field(discriminator="strategy_name"),

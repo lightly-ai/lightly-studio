@@ -49,6 +49,18 @@ const defaultClassBalancing: StrategyInstance = {
     isExpanded: true
 };
 
+const defaultMetadataClassBalancing: StrategyInstance = {
+    id: 'mcb-1',
+    type: 'metadata_class_balancing',
+    params: {
+        metadata_key: 'location',
+        target_distribution_mode: 'uniform',
+        target_distribution: [],
+        strength: 1
+    },
+    isExpanded: true
+};
+
 describe('getMetadataKey', () => {
     it('returns typicality-<id> for typicality instances', () => {
         expect(getMetadataKey({ ...defaultTypicality, id: 'abc' })).toBe('typicality-abc');
@@ -72,6 +84,10 @@ describe('getMetadataKey', () => {
 
     it('returns empty string for class_balancing instances', () => {
         expect(getMetadataKey(defaultClassBalancing)).toBe('');
+    });
+
+    it('returns empty string for metadata_class_balancing instances', () => {
+        expect(getMetadataKey(defaultMetadataClassBalancing)).toBe('');
     });
 });
 
@@ -182,6 +198,54 @@ describe('toApiStrategy', () => {
             target_distribution: 'uniform',
             annotation_source_id: 'source-uuid-1',
             strength: 1
+        });
+    });
+
+    it('maps metadata_class_balancing with uniform mode to metadata_balance with string target', () => {
+        expect(toApiStrategy(defaultMetadataClassBalancing)).toEqual({
+            strategy_name: 'metadata_balance',
+            metadata_key: 'location',
+            target_distribution: 'uniform',
+            strength: 1
+        });
+    });
+
+    it('maps metadata_class_balancing with input mode to metadata_balance with string target', () => {
+        expect(
+            toApiStrategy({
+                ...defaultMetadataClassBalancing,
+                params: {
+                    ...defaultMetadataClassBalancing.params,
+                    target_distribution_mode: 'input'
+                }
+            })
+        ).toEqual({
+            strategy_name: 'metadata_balance',
+            metadata_key: 'location',
+            target_distribution: 'input',
+            strength: 1
+        });
+    });
+
+    it('maps metadata_class_balancing with dictionary mode converting rows to object', () => {
+        expect(
+            toApiStrategy({
+                ...defaultMetadataClassBalancing,
+                params: {
+                    metadata_key: 'location',
+                    target_distribution_mode: 'dictionary',
+                    target_distribution: [
+                        { class_name: 'city', weight: 0.7 },
+                        { class_name: 'mountain', weight: 0.3 }
+                    ],
+                    strength: 2
+                }
+            })
+        ).toEqual({
+            strategy_name: 'metadata_balance',
+            metadata_key: 'location',
+            target_distribution: { city: 0.7, mountain: 0.3 },
+            strength: 2
         });
     });
 });
