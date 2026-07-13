@@ -638,6 +638,12 @@ def test_set_default_embedding_model_falls_back_to_env_for_unregistered_slot(
             _ = show_progress
             return np.zeros((len(image_crops), 3), dtype=np.float32)
 
+        def embed_pil_images(
+            self, images: list[Image.Image], show_progress: bool = True
+        ) -> NDArray[np.float32]:
+            _ = show_progress
+            return np.zeros((len(images), 3), dtype=np.float32)
+
     video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     manager = EmbeddingManager()
     env_generator = RandomEmbeddingGenerator()
