@@ -13,10 +13,6 @@ from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.core.sample import Sample
 from lightly_studio.export.dataset_export import DatasetExport
 
-DEFAULT_EXPORT_FILENAME = "coco_export.json"
-YOLO_DATASET_CONFIG_FILENAME = "data.yaml"
-YOLO_DEFAULT_SPLIT = "train"
-
 
 class ImageDatasetExport(DatasetExport):
     """Provides methods to export an image dataset or a subset of it.

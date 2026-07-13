@@ -17,11 +17,6 @@ from sqlmodel import Session
 
 from lightly_studio.core.sample import Sample
 from lightly_studio.export import coco_captions
-from lightly_studio.export.image_dataset_export import (
-    DEFAULT_EXPORT_FILENAME,
-    YOLO_DATASET_CONFIG_FILENAME,
-    YOLO_DEFAULT_SPLIT,
-)
 from lightly_studio.export.lightly_studio_label_input import (
     LightlyStudioInstanceSegmentationInput,
     LightlyStudioObjectDetectionInput,
@@ -30,6 +25,10 @@ from lightly_studio.export.lightly_studio_label_input import (
     SampleToImage,
 )
 from lightly_studio.type_definitions import PathLike
+
+DEFAULT_EXPORT_FILENAME = "coco_export.json"
+YOLO_DATASET_CONFIG_FILENAME = "data.yaml"
+YOLO_DEFAULT_SPLIT = "train"
 
 
 class DatasetExport:
@@ -67,9 +66,6 @@ class DatasetExport:
                 defaults to "coco_export.json" in the current working directory.
             annotation_collection_id: If provided, only annotations from this collection
                 are exported. If None, all annotations are exported.
-
-        Raises:
-            ValueError: If the annotation source with the given name does not exist.
         """
         if output_json is None:
             output_json = DEFAULT_EXPORT_FILENAME
