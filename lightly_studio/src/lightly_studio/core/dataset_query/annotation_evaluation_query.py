@@ -29,8 +29,8 @@ class AnnotationMetricQuery(MatchExpression):
     """Query samples by annotation-level evaluation results.
 
     This query matches samples that belong to an evaluation run and contain annotation
-    pairs in a selected confusion-matrix cell or false positives, optionally constrained by
-    persisted annotation metrics.
+    pairs in a selected confusion-matrix cell, false positives, or false negatives,
+    optionally constrained by persisted annotation metrics.
 
     Example:
         ```python
