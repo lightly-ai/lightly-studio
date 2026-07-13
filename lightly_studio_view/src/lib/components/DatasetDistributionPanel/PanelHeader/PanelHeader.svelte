@@ -3,7 +3,9 @@
         Maximize2 as Maximize2Icon,
         Settings as SettingsIcon,
         BarChart3 as BarChart3Icon,
-        BarChartHorizontal as BarChartHorizontalIcon
+        BarChartHorizontal as BarChartHorizontalIcon,
+        Percent as PercentIcon,
+        Hash as HashIcon
     } from '@lucide/svelte';
     import { Button } from '$lib/components';
     import { DISTRIBUTION_SORT_LABELS, type DistributionConfig } from '../types';
@@ -20,6 +22,8 @@
         onShowAll?: () => void;
         /** Toggles between vertical and horizontal bar layouts. */
         onToggleOrientation?: () => void;
+        /** Toggles counts vs percentages; rendered only when provided (metadata sources). */
+        onToggleNormalize?: () => void;
         /** Renders the expand button only when provided (omit inside the expanded view). */
         onExpand?: () => void;
         /** Prefix for button test ids, to disambiguate panel vs. expanded view. */
@@ -35,6 +39,7 @@
         onConfigure,
         onShowAll,
         onToggleOrientation,
+        onToggleNormalize,
         onExpand,
         testIdPrefix = 'dataset-distribution'
     }: Props = $props();
@@ -64,6 +69,19 @@
             </button>
         {/if}
     </div>
+    {#if onToggleNormalize}
+        <Button
+            variant="ghost"
+            icon={config.normalize === 'percentage' ? HashIcon : PercentIcon}
+            ariaLabel={config.normalize === 'percentage' ? 'Show counts' : 'Show percentages'}
+            buttonProps={{
+                size: 'sm',
+                class: 'h-8 w-8 p-0',
+                onclick: onToggleNormalize,
+                'data-testid': `${testIdPrefix}-toggle-normalize`
+            }}
+        />
+    {/if}
     {#if onToggleOrientation}
         <Button
             variant="ghost"

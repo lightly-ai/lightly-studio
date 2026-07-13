@@ -1,17 +1,40 @@
 <script lang="ts">
     import { onDestroy } from 'svelte';
     import * as echarts from 'echarts/core';
-    import { BarChart as EchartsBarChart } from 'echarts/charts';
-    import { GridComponent, TooltipComponent } from 'echarts/components';
+    import { BarChart as EchartsBarChart, LineChart as EchartsLineChart } from 'echarts/charts';
+    import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components';
     import { CanvasRenderer } from 'echarts/renderers';
-    import { buildEchartsOption, type BarChartOrientation } from './buildEchartsOption';
-    import type { CategoryCount } from './types';
+    import {
+        buildEchartsOption,
+        unionCategories,
+        type BarChartOrientation
+    } from './buildEchartsOption';
+    import type { CategoryCount, ChartMode, ChartNormalize, ChartSeries } from './types';
 
-    echarts.use([EchartsBarChart, GridComponent, TooltipComponent, CanvasRenderer]);
+    echarts.use([
+        EchartsBarChart,
+        EchartsLineChart,
+        GridComponent,
+        TooltipComponent,
+        LegendComponent,
+        CanvasRenderer
+    ]);
 
     interface Props {
-        /** Categories rendered in the given order. */
-        data: CategoryCount[];
+        /**
+         * Single-series categories rendered in the given order. Ignored when
+         * `series` is provided.
+         */
+        data?: CategoryCount[];
+        /**
+         * Multiple overlaid series (e.g. one per compared tag). When provided,
+         * `data` is ignored and the shared series palette colors each series.
+         */
+        series?: ChartSeries[];
+        /** Chart form (default 'bar'). */
+        mode?: ChartMode;
+        /** Count vs within-series percentage (default 'count'). */
+        normalize?: ChartNormalize;
         /** Bar orientation (default 'vertical'). */
         orientation?: BarChartOrientation;
         /**
@@ -36,6 +59,9 @@
 
     const {
         data,
+        series,
+        mode = 'bar',
+        normalize = 'count',
         orientation = 'vertical',
         maxWidthPx,
         maxHeightPx = 320,
@@ -43,35 +69,61 @@
         onBarClick
     }: Props = $props();
 
+    // One code path: wrap a single `data` array into an unlabelled series.
+    const effectiveSeries = $derived<ChartSeries[]>(
+        series ?? [{ id: 'default', label: '', data: data ?? [] }]
+    );
+    const categoryCount = $derived(unionCategories(effectiveSeries).length);
+    // Extra thickness per overlaid series keeps grouped bars readable.
+    const seriesCount = $derived(effectiveSeries.length);
+
     let container: HTMLDivElement | undefined = $state();
     let chart: echarts.ECharts | null = $state(null);
 
     const isHorizontal = $derived(orientation === 'horizontal');
+    // Histograms have a small, fixed bin count and should fill the panel rather
+    // than scroll at a fixed bar thickness (that pattern is for many-category
+    // bar charts).
+    const isHistogram = $derived(mode === 'histogram');
 
     // Bars keep a fixed thickness so many categories overflow into scroll instead
     // of squeezing into unreadability (same pattern as FiftyOne's histograms
     // panel). This extent sizes the category axis (width when vertical, height
     // when horizontal); the +40/+60px covers the axis gutters.
     const BAR_THICKNESS_PX = 28;
-    const barsExtentPx = $derived(data.length * BAR_THICKNESS_PX + (isHorizontal ? 40 : 60));
-
-    // Outer scroll viewport. The bars axis is capped and scrolls past its max; the
-    // value axis is given a concrete height (vertical) or filled (horizontal).
-    const viewportStyle = $derived(
-        [
-            isHorizontal ? `max-height: ${maxHeightPx}px` : `height: ${maxHeightPx}px`,
-            maxWidthPx ? `max-width: ${maxWidthPx}px` : null
-        ]
-            .filter(Boolean)
-            .join('; ')
+    const barsExtentPx = $derived(
+        categoryCount * BAR_THICKNESS_PX * Math.max(1, seriesCount * 0.6) + (isHorizontal ? 40 : 60)
     );
 
-    // Inner canvas — ECharts reads these px dimensions. The bars axis grows with
-    // the data (scrolling past the viewport); the value axis fills 100%.
+    // Outer viewport. Histograms fill the available height of the flex parent
+    // (min-height keeps them visible in unbounded contexts like Storybook); bar
+    // charts cap the value axis and scroll the category axis past it.
+    const viewportStyle = $derived(
+        isHistogram
+            ? [
+                  'height: 100%',
+                  `min-height: ${maxHeightPx}px`,
+                  maxWidthPx ? `max-width: ${maxWidthPx}px` : null
+              ]
+                  .filter(Boolean)
+                  .join('; ')
+            : [
+                  isHorizontal ? `max-height: ${maxHeightPx}px` : `height: ${maxHeightPx}px`,
+                  maxWidthPx ? `max-width: ${maxWidthPx}px` : null
+              ]
+                  .filter(Boolean)
+                  .join('; ')
+    );
+
+    // Inner canvas — ECharts reads these px dimensions. Histograms fill the
+    // viewport (bins compress to fit); bar charts grow the category axis past
+    // the viewport (scrolling) while the value axis fills 100%.
     const canvasStyle = $derived(
-        isHorizontal
-            ? `width: 100%; height: ${barsExtentPx}px;`
-            : `width: ${barsExtentPx}px; min-width: 100%; height: 100%;`
+        isHistogram
+            ? 'width: 100%; height: 100%;'
+            : isHorizontal
+              ? `width: 100%; height: ${barsExtentPx}px;`
+              : `width: ${barsExtentPx}px; min-width: 100%; height: 100%;`
     );
 
     $effect(() => {
@@ -80,7 +132,8 @@
         chart = instance;
         instance.on('click', (params: { dataIndex?: number }) => {
             if (typeof params.dataIndex !== 'number') return;
-            const item = data[params.dataIndex];
+            // Click-through targets the first (primary) series' category.
+            const item = effectiveSeries[0]?.data[params.dataIndex];
             if (item) onBarClick?.(item);
         });
         const resizeObserver = new ResizeObserver(() => instance.resize());
@@ -94,21 +147,26 @@
 
     $effect(() => {
         if (!chart) return;
-        chart.setOption(buildEchartsOption(data, { totalCount, orientation }), true);
+        chart.setOption(
+            buildEchartsOption(effectiveSeries, { totalCount, orientation, mode, normalize }),
+            true
+        );
     });
 
     onDestroy(() => chart?.dispose());
 </script>
 
-{#if data.length === 0}
+{#if categoryCount === 0}
     <div class="p-8 text-center text-sm text-muted-foreground" data-testid="bar-chart-empty">
         No data to display.
     </div>
 {:else}
     <div
-        class="w-full dark:[color-scheme:dark] {isHorizontal
-            ? 'overflow-y-auto'
-            : 'overflow-x-auto'}"
+        class="w-full dark:[color-scheme:dark] {isHistogram
+            ? 'overflow-hidden'
+            : isHorizontal
+              ? 'overflow-y-auto'
+              : 'overflow-x-auto'}"
         style={viewportStyle}
         data-testid="bar-chart"
     >

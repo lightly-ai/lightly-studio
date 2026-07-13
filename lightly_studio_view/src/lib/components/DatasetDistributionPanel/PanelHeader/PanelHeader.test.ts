@@ -8,7 +8,8 @@ const config: DistributionConfig = {
     n: 5,
     sortBy: 'count',
     manualClasses: [],
-    orientation: 'vertical'
+    orientation: 'vertical',
+    normalize: 'percentage'
 };
 
 const defaultProps = {

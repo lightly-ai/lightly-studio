@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { buildEchartsOption } from './buildEchartsOption';
+import { buildEchartsOption, unionCategories } from './buildEchartsOption';
 import { balanced } from './fixtures';
+import type { ChartSeries } from './types';
+
+/** Wrap a single count array into the unlabelled series BarChart builds. */
+const single = (data = balanced): ChartSeries[] => [{ id: 'default', label: '', data }];
 
 describe('buildEchartsOption', () => {
     it('maps labels to the category axis and counts to the bar series', () => {
-        const option = buildEchartsOption(balanced) as {
+        const option = buildEchartsOption(single()) as {
             xAxis: { data: string[] };
             series: [{ type: string; data: number[] }];
         };
@@ -15,7 +19,7 @@ describe('buildEchartsOption', () => {
     });
 
     it('puts categories on the value axis when horizontal, keeping the bar series', () => {
-        const option = buildEchartsOption(balanced, { orientation: 'horizontal' }) as {
+        const option = buildEchartsOption(single(), { orientation: 'horizontal' }) as {
             xAxis: { type: string };
             yAxis: { type: string; data: string[]; inverse: boolean };
             series: [{ type: string; data: number[] }];
@@ -32,16 +36,27 @@ describe('buildEchartsOption', () => {
     const getFormatter = (option: unknown) =>
         (
             option as {
-                tooltip: { formatter: (params: { name: string; value: number }[]) => string };
+                tooltip: {
+                    formatter: (
+                        params: {
+                            name: string;
+                            value: number;
+                            seriesName?: string;
+                            marker?: string;
+                        }[]
+                    ) => string;
+                };
             }
         ).tooltip.formatter;
 
     it('shows the percentage of the data sum in the tooltip', () => {
         const formatter = getFormatter(
-            buildEchartsOption([
-                { label: 'car', count: 25 },
-                { label: 'dog', count: 75 }
-            ])
+            buildEchartsOption(
+                single([
+                    { label: 'car', count: 25 },
+                    { label: 'dog', count: 75 }
+                ])
+            )
         );
 
         expect(formatter([{ name: 'car', value: 25 }])).toBe(
@@ -51,7 +66,7 @@ describe('buildEchartsOption', () => {
 
     it('uses the provided totalCount as the percentage denominator', () => {
         const formatter = getFormatter(
-            buildEchartsOption([{ label: 'car', count: 25 }], { totalCount: 1000 })
+            buildEchartsOption(single([{ label: 'car', count: 25 }]), { totalCount: 1000 })
         );
 
         expect(formatter([{ name: 'car', value: 25 }])).toBe(
@@ -61,11 +76,119 @@ describe('buildEchartsOption', () => {
 
     it('renders tiny shares as <0.1% and omits percentages for an empty total', () => {
         const small = getFormatter(
-            buildEchartsOption([{ label: 'car', count: 1 }], { totalCount: 10000 })
+            buildEchartsOption(single([{ label: 'car', count: 1 }]), { totalCount: 10000 })
         );
         expect(small([{ name: 'car', value: 1 }])).toBe('<b>car</b><br/>Count: <b>1</b> (<0.1%)');
 
-        const empty = getFormatter(buildEchartsOption([]));
+        const empty = getFormatter(buildEchartsOption(single([])));
         expect(empty([{ name: 'car', value: 0 }])).toBe('<b>car</b><br/>Count: <b>0</b>');
+    });
+
+    describe('multi-series comparison', () => {
+        const seriesA: ChartSeries = {
+            id: 'a',
+            label: 'Tag A',
+            data: [
+                { label: 'sunny', count: 30 },
+                { label: 'rainy', count: 10 }
+            ]
+        };
+        const seriesB: ChartSeries = {
+            id: 'b',
+            label: 'Tag B',
+            data: [
+                { label: 'sunny', count: 20 },
+                { label: 'cloudy', count: 20 }
+            ]
+        };
+
+        it('renders one bar series per input, aligned to the union of categories', () => {
+            const option = buildEchartsOption([seriesA, seriesB]) as {
+                xAxis: { data: string[] };
+                series: { name: string; type: string; data: number[] }[];
+            };
+
+            // Union: seriesA order first, then labels unique to seriesB.
+            expect(option.xAxis.data).toEqual(['sunny', 'rainy', 'cloudy']);
+            expect(option.series).toHaveLength(2);
+            expect(option.series[0].name).toBe('Tag A');
+            // Missing categories fill with 0 (rainy absent from B, cloudy from A).
+            expect(option.series[0].data).toEqual([30, 10, 0]);
+            expect(option.series[1].data).toEqual([20, 0, 20]);
+        });
+
+        it('adds a legend only when more than one series is present', () => {
+            const multi = buildEchartsOption([seriesA, seriesB]) as { legend?: { data: string[] } };
+            expect(multi.legend?.data).toEqual(['Tag A', 'Tag B']);
+
+            const solo = buildEchartsOption(single()) as { legend?: unknown };
+            expect(solo.legend).toBeUndefined();
+        });
+
+        it('normalizes within each series to a percentage', () => {
+            const option = buildEchartsOption([seriesA, seriesB], {
+                normalize: 'percentage'
+            }) as { series: { data: number[] }[] };
+
+            // Series A total 40 → sunny 75%, rainy 25%; series B total 40 → sunny/cloudy 50%.
+            expect(option.series[0].data).toEqual([75, 25, 0]);
+            expect(option.series[1].data).toEqual([50, 0, 50]);
+        });
+
+        it('formats percentage tooltips per series', () => {
+            const formatter = getFormatter(
+                buildEchartsOption([seriesA, seriesB], { normalize: 'percentage' })
+            );
+            const text = formatter([
+                { name: 'sunny', value: 75, seriesName: 'Tag A', marker: 'A' },
+                { name: 'sunny', value: 50, seriesName: 'Tag B', marker: 'B' }
+            ]);
+            expect(text).toBe('<b>sunny</b><br/>ATag A: <b>75.0%</b><br/>BTag B: <b>50.0%</b>');
+        });
+    });
+
+    describe('histogram mode', () => {
+        const bins = [
+            { label: '0–1', count: 5 },
+            { label: '1–2', count: 8 },
+            { label: '(none)', count: 2 }
+        ];
+
+        it('keeps a single numeric series as touching bars', () => {
+            const option = buildEchartsOption(single(bins), { mode: 'histogram' }) as {
+                series: { type: string; barCategoryGap: string }[];
+            };
+            expect(option.series[0].type).toBe('bar');
+            expect(option.series[0].barCategoryGap).toBe('0%');
+        });
+
+        it('renders step-line density curves when comparing several series', () => {
+            const option = buildEchartsOption(
+                [
+                    { id: 'a', label: 'A', data: bins },
+                    { id: 'b', label: 'B', data: bins }
+                ],
+                { mode: 'histogram' }
+            ) as { series: { type: string; step?: string }[] };
+            expect(option.series[0].type).toBe('line');
+            expect(option.series[0].step).toBe('middle');
+        });
+    });
+
+    describe('unionCategories', () => {
+        it('pins the (none) bucket last', () => {
+            const categories = unionCategories([
+                {
+                    id: 'a',
+                    label: '',
+                    data: [
+                        { label: '(none)', count: 1 },
+                        { label: 'x', count: 2 },
+                        { label: 'y', count: 3 }
+                    ]
+                }
+            ]);
+            expect(categories).toEqual(['x', 'y', '(none)']);
+        });
     });
 });

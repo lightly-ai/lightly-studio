@@ -8,7 +8,8 @@ const baseConfig: DistributionConfig = {
     n: 5,
     sortBy: 'count',
     manualClasses: [],
-    orientation: 'vertical'
+    orientation: 'vertical',
+    normalize: 'percentage'
 };
 
 const allClasses = Array.from({ length: 30 }, (_, i) => `class-${i}`);

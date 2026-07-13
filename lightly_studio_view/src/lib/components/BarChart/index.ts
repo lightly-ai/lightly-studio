@@ -1,3 +1,3 @@
 export { default as BarChart } from './BarChart.svelte';
-export type { CategoryCount } from './types';
+export type { CategoryCount, ChartSeries, ChartMode, ChartNormalize } from './types';
 export type { BarChartOrientation } from './buildEchartsOption';

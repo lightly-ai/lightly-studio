@@ -3,8 +3,10 @@
     import { Button } from '$lib/components';
     import Typography from '$lib/components/Typography/Typography.svelte';
     import { Select, type SelectItem } from '$lib/components/Select';
-    import { BarChart, type CategoryCount } from '$lib/components/BarChart';
+    import { BarChart, type CategoryCount, type ChartSeries } from '$lib/components/BarChart';
+    import type { MetadataDistributionSeriesResult } from '$lib/hooks/useMetadataDistribution/useMetadataDistributionSeries';
     import DistributionConfigDialog from './DistributionConfigDialog/DistributionConfigDialog.svelte';
+    import MetadataDistributionData from './MetadataDistributionData.svelte';
     import ExpandDialog from './ExpandDialog/ExpandDialog.svelte';
     import PanelHeader from './PanelHeader/PanelHeader.svelte';
     import { selectVisibleCounts } from './selectVisibleCounts';
@@ -48,6 +50,9 @@
 
     let selectedSourceId = $state<string | undefined>(undefined);
     let selectedGroupId = $state<string | undefined>(undefined);
+    // Tag ids overlaid on the metadata distribution (the current selection is
+    // always shown as an implicit series alongside these).
+    let compareTagIds = $state<string[]>([]);
 
     const activeSource = $derived(
         resolvedSources.find((source) => source.id === selectedSourceId) ?? resolvedSources[0]
@@ -56,7 +61,7 @@
         activeSource.groups?.find((group) => group.id === selectedGroupId) ??
             activeSource.groups?.[0]
     );
-    const activeData = $derived<CategoryCount[]>(activeGroup?.data ?? activeSource.data ?? []);
+    const isMetadata = $derived(activeSource.kind === 'metadata');
     const valueNoun = $derived(activeSource.valueNoun ?? 'annotations');
 
     const sourceItems = $derived<SelectItem[]>(
@@ -69,20 +74,113 @@
     // Default to horizontal bars: categories stack down the left gutter and the
     // chart scrolls vertically, avoiding the initial horizontal scroll that
     // vertical bars produce once there are more than a handful of classes.
+    // Metadata sources default to percentages so differently-sized tags stay
+    // comparable; annotation sources ignore `normalize`.
     let config: DistributionConfig = $state({
         mode: 'topN',
         n: topN,
         sortBy: 'count',
         manualClasses: [],
-        orientation: 'horizontal'
+        orientation: 'horizontal',
+        normalize: 'percentage'
     });
     let configDialogOpen = $state(false);
     let expandOpen = $state(false);
 
-    const visible = $derived(selectVisibleCounts(activeData, config));
-    const totalCount = $derived(activeData.reduce((sum, item) => sum + item.count, 0));
+    // --- Annotation-style (pre-fetched) source ---
+    const annotationData = $derived<CategoryCount[]>(activeGroup?.data ?? activeSource.data ?? []);
+    const annotationVisible = $derived(selectVisibleCounts(annotationData, config));
+    const annotationTotal = $derived(annotationData.reduce((sum, item) => sum + item.count, 0));
+
+    // --- Metadata source: fan the distribution endpoint across compared tags ---
+    const compareTags = $derived(activeSource.compareTags ?? []);
+    const selectedCompareTags = $derived(
+        compareTags.filter((tag) => compareTagIds.includes(tag.id))
+    );
+    const metaSeriesInputs = $derived(
+        isMetadata
+            ? [
+                  { id: 'current', label: 'Current', filter: activeSource.baseFilter ?? null },
+                  ...selectedCompareTags.map((tag) => ({
+                      id: tag.id,
+                      label: tag.label,
+                      filter: tag.filter
+                  }))
+              ]
+            : []
+    );
+
+    // Populated by the headless <MetadataDistributionData> (mounted only for
+    // metadata sources, so `createQueries` never runs for annotation panels).
+    let metaResult = $state<MetadataDistributionSeriesResult>({
+        series: [],
+        chartMode: undefined,
+        isLoading: false,
+        isError: false
+    });
+
+    const metaPrimary = $derived<CategoryCount[]>(metaResult.series[0]?.data ?? []);
+    const metaTotal = $derived(metaPrimary.reduce((sum, item) => sum + item.count, 0));
+    // Counts summed across series, used to rank categories for top-N/sort so a
+    // value carried only by an overlaid tag can still make the cut.
+    const metaAggregate = $derived.by<CategoryCount[]>(() => {
+        const totals = new Map<string, number>();
+        for (const series of metaResult.series) {
+            for (const item of series.data) {
+                totals.set(item.label, (totals.get(item.label) ?? 0) + item.count);
+            }
+        }
+        return [...totals].map(([label, count]) => ({ label, count }));
+    });
+    // Ordered labels the chart shows: histograms keep their natural bin order;
+    // categorical keys apply the panel's sort + top-N.
+    const metaOrderedLabels = $derived.by<string[]>(() => {
+        if (metaResult.chartMode === 'histogram') return metaPrimary.map((item) => item.label);
+        return selectVisibleCounts(metaAggregate, config).map((item) => item.label);
+    });
+    const metaVisibleSeries = $derived<ChartSeries[]>(
+        metaResult.series.map((series) => {
+            const byLabel = new Map(series.data.map((item) => [item.label, item.count]));
+            return {
+                ...series,
+                data: metaOrderedLabels.map((label) => ({
+                    label,
+                    count: byLabel.get(label) ?? 0
+                }))
+            };
+        })
+    );
+
+    // Unified header inputs, chosen per source flavour.
+    const classCount = $derived(isMetadata ? metaAggregate.length : annotationData.length);
+    const visibleClassCount = $derived(
+        isMetadata ? metaOrderedLabels.length : annotationVisible.length
+    );
+    const totalCount = $derived(isMetadata ? metaTotal : annotationTotal);
+    const hasChart = $derived(
+        isMetadata ? metaResult.series.length > 0 : annotationData.length > 0
+    );
+    const allClasses = $derived(
+        isMetadata
+            ? metaAggregate.map((item) => item.label)
+            : annotationData.map((item) => item.label)
+    );
+
+    const toggleCompareTag = (tagId: string) => {
+        compareTagIds = compareTagIds.includes(tagId)
+            ? compareTagIds.filter((id) => id !== tagId)
+            : [...compareTagIds, tagId];
+    };
 </script>
 
+{#if isMetadata}
+    <MetadataDistributionData
+        collectionId={activeSource.collectionId ?? ''}
+        metadataKey={activeGroup?.id}
+        series={metaSeriesInputs}
+        bind:result={metaResult}
+    />
+{/if}
 <div
     class="flex h-full min-w-0 flex-1 flex-col rounded-[1vw] bg-card p-4"
     data-testid="dataset-distribution-panel"
@@ -137,38 +235,111 @@
             {/if}
         </div>
     {/if}
-    {#if activeData.length > 0}
+    {#if isMetadata && compareTags.length > 0}
+        <div
+            class="mt-2 flex flex-wrap items-center gap-1.5"
+            data-testid="dataset-distribution-compare-tags"
+        >
+            <span class="text-xs text-muted-foreground">Compare tags</span>
+            {#each compareTags as tag (tag.id)}
+                {@const selected = compareTagIds.includes(tag.id)}
+                <button
+                    type="button"
+                    class="rounded-full border px-2 py-0.5 text-xs transition-colors {selected
+                        ? 'border-primary bg-primary/15 text-primary'
+                        : 'border-border text-muted-foreground hover:border-primary/60'}"
+                    aria-pressed={selected}
+                    onclick={() => toggleCompareTag(tag.id)}
+                    data-testid={`dataset-distribution-compare-tag-${tag.id}`}
+                >
+                    {tag.label}
+                </button>
+            {/each}
+        </div>
+    {/if}
+    {#if hasChart}
         <PanelHeader
             {config}
-            classCount={activeData.length}
-            visibleClassCount={visible.length}
+            {classCount}
+            {visibleClassCount}
             {totalCount}
             {valueNoun}
             onConfigure={() => (configDialogOpen = true)}
-            onShowAll={() => (config = { ...config, mode: 'topN', n: activeData.length })}
+            onShowAll={() => (config = { ...config, mode: 'topN', n: classCount })}
             onToggleOrientation={() =>
                 (config = {
                     ...config,
                     orientation: config.orientation === 'horizontal' ? 'vertical' : 'horizontal'
                 })}
+            onToggleNormalize={isMetadata
+                ? () =>
+                      (config = {
+                          ...config,
+                          normalize: config.normalize === 'percentage' ? 'count' : 'percentage'
+                      })
+                : undefined}
             onExpand={() => (expandOpen = true)}
         />
     {/if}
     <div class="min-h-0 flex-1 overflow-y-auto dark:[color-scheme:dark]">
-        <BarChart data={visible} orientation={config.orientation} {totalCount} {onBarClick} />
+        {#if isMetadata}
+            {#if metaResult.isError}
+                <div
+                    class="p-8 text-center text-sm text-muted-foreground"
+                    data-testid="dataset-distribution-error"
+                >
+                    Failed to load the metadata distribution.
+                </div>
+            {:else if metaResult.series.length === 0 && metaResult.isLoading}
+                <div
+                    class="p-8 text-center text-sm text-muted-foreground"
+                    data-testid="dataset-distribution-loading"
+                >
+                    Loading…
+                </div>
+            {:else}
+                <BarChart
+                    series={metaVisibleSeries}
+                    mode={metaResult.chartMode ?? 'bar'}
+                    normalize={config.normalize}
+                    orientation={config.orientation}
+                />
+            {/if}
+        {:else}
+            <BarChart
+                data={annotationVisible}
+                orientation={config.orientation}
+                totalCount={annotationTotal}
+                {onBarClick}
+            />
+        {/if}
     </div>
 </div>
 <DistributionConfigDialog
     bind:open={configDialogOpen}
-    allClasses={activeData.map((item) => item.label)}
+    {allClasses}
     {config}
     onApply={(next) => (config = next)}
 />
 <ExpandDialog
     bind:open={expandOpen}
-    data={activeData}
+    data={annotationData}
+    series={isMetadata ? metaVisibleSeries : undefined}
+    mode={metaResult.chartMode ?? 'bar'}
+    normalize={config.normalize}
+    {classCount}
+    {visibleClassCount}
+    {totalCount}
+    {allClasses}
     {config}
     {valueNoun}
     onConfigChange={(next) => (config = next)}
-    {onBarClick}
+    onToggleNormalize={isMetadata
+        ? () =>
+              (config = {
+                  ...config,
+                  normalize: config.normalize === 'percentage' ? 'count' : 'percentage'
+              })
+        : undefined}
+    onBarClick={isMetadata ? undefined : onBarClick}
 />

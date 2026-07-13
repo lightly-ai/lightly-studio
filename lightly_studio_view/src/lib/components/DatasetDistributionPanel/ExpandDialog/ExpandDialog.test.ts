@@ -18,10 +18,11 @@ vi.mock('echarts/core', () => ({
     init: echartsMock.init,
     use: vi.fn()
 }));
-vi.mock('echarts/charts', () => ({ BarChart: {} }));
+vi.mock('echarts/charts', () => ({ BarChart: {}, LineChart: {} }));
 vi.mock('echarts/components', () => ({
     GridComponent: {},
-    TooltipComponent: {}
+    TooltipComponent: {},
+    LegendComponent: {}
 }));
 vi.mock('echarts/renderers', () => ({ CanvasRenderer: {} }));
 
@@ -38,7 +39,8 @@ const config: DistributionConfig = {
     n: 10,
     sortBy: 'count',
     manualClasses: [],
-    orientation: 'vertical'
+    orientation: 'vertical',
+    normalize: 'percentage'
 };
 
 const renderDialog = (overrides = {}) => {

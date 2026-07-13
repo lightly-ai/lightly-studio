@@ -5,43 +5,97 @@ import {
     CHART_EMPHASIS,
     CHART_LINE_COLOR,
     CHART_TEXT_COLOR,
-    formatPercent
+    formatPercent,
+    getSeriesColor
 } from '$lib/utils';
-import type { CategoryCount } from './';
+import type { ChartMode, ChartNormalize, ChartSeries } from './types';
 
 // Single accent color (the Lightly primary green, --color-lightly-primary #3bd99f):
-// per-class colors carry no meaning in a count distribution, mirroring FiftyOne's
-// histograms panel.
-const BAR_COLOR = 'rgba(59,217,159,0.85)';
+// per-class colors carry no meaning in a single count distribution, mirroring
+// FiftyOne's histograms panel. Overlaid series use the shared series palette.
+const DEFAULT_BAR_COLOR = 'rgba(59,217,159,0.85)';
+
+/** Missing-value bucket; always pinned last on the category axis. */
+const NONE_LABEL = '(none)';
 
 /** Bar layout: 'vertical' bars grow upward, 'horizontal' bars grow rightward. */
 export type BarChartOrientation = 'vertical' | 'horizontal';
 
 interface BuildEchartsOptionOptions {
     /**
-     * Denominator for tooltip percentages. Pass the sum over all categories
-     * when `data` is a subset (e.g. top-N), so percentages stay relative to
-     * the full dataset. Defaults to the sum of `data`.
+     * Denominator for tooltip percentages in count mode with a single series.
+     * Pass the sum over all categories when the series is a subset (e.g. top-N)
+     * so percentages stay relative to the full dataset. Ignored when
+     * `normalize` is 'percentage'.
      */
     totalCount?: number;
     /** Bar orientation (default 'vertical'). */
     orientation?: BarChartOrientation;
+    /** Chart form (default 'bar'). */
+    mode?: ChartMode;
+    /** Count vs within-series percentage (default 'count'). */
+    normalize?: ChartNormalize;
 }
 
-/** Builds the ECharts option for a category-count bar chart (pass to `setOption`). */
+/**
+ * Ordered union of every series' category labels. Order follows the series with
+ * the most categories, then any labels only other series carry, with `(none)`
+ * pinned last. All series in one metadata distribution share categories (same
+ * key / same histogram edges), so this usually just echoes one series' order.
+ */
+export function unionCategories(series: ChartSeries[]): string[] {
+    const base = series.reduce(
+        (longest, current) => (current.data.length > longest.data.length ? current : longest),
+        series[0] ?? { data: [] }
+    );
+    const ordered: string[] = [];
+    const seen = new Set<string>();
+    const push = (label: string) => {
+        if (!seen.has(label)) {
+            seen.add(label);
+            ordered.push(label);
+        }
+    };
+    base.data.forEach((item) => push(item.label));
+    series.forEach((current) => current.data.forEach((item) => push(item.label)));
+
+    const noneIndex = ordered.indexOf(NONE_LABEL);
+    if (noneIndex !== -1) {
+        ordered.splice(noneIndex, 1);
+        ordered.push(NONE_LABEL);
+    }
+    return ordered;
+}
+
+/** Builds the ECharts option for a (possibly multi-series) distribution chart. */
 export function buildEchartsOption(
-    data: CategoryCount[],
+    series: ChartSeries[],
     options: BuildEchartsOptionOptions = {}
 ): EChartsCoreOption {
-    const totalCount = options.totalCount ?? data.reduce((sum, item) => sum + item.count, 0);
     const orientation = options.orientation ?? 'vertical';
+    const mode = options.mode ?? 'bar';
+    const normalize = options.normalize ?? 'count';
     const isHorizontal = orientation === 'horizontal';
+    const isPercent = normalize === 'percentage';
+    const isMulti = series.length > 1;
 
-    const labels = data.map((item) => item.label);
+    const categories = unionCategories(series);
+    const totals = series.map((s) => s.data.reduce((sum, item) => sum + item.count, 0));
+
+    // Align each series to the shared category order, normalizing within the
+    // series when requested (differently-sized tags stay comparable).
+    const seriesValues = series.map((s, index) => {
+        const byLabel = new Map(s.data.map((item) => [item.label, item.count]));
+        return categories.map((label) => {
+            const count = byLabel.get(label) ?? 0;
+            if (!isPercent) return count;
+            return totals[index] > 0 ? (count / totals[index]) * 100 : 0;
+        });
+    });
 
     const categoryAxis = {
         type: 'category' as const,
-        data: labels,
+        data: categories,
         axisLabel: {
             // Vertical layout rotates long labels so they don't overflow the
             // canvas edge (echarts containLabel ignores rotation); horizontal
@@ -56,38 +110,84 @@ export function buildEchartsOption(
         axisLine: { lineStyle: { color: CHART_LINE_COLOR } },
         axisTick: { alignWithLabel: true },
         // Keep the highest bar at the top when horizontal (data is pre-sorted).
-        inverse: isHorizontal
+        // Histograms keep their natural low→high bin order.
+        inverse: isHorizontal && mode === 'bar'
     };
 
     const valueAxis = {
         type: 'value' as const,
-        axisLabel: CHART_AXIS_LABEL,
+        axisLabel: isPercent ? { ...CHART_AXIS_LABEL, formatter: '{value}%' } : CHART_AXIS_LABEL,
         splitLine: { lineStyle: { color: CHART_LINE_COLOR } }
     };
 
+    const totalCount =
+        options.totalCount ?? series[0]?.data.reduce((sum, item) => sum + item.count, 0) ?? 0;
+
+    const chartSeries = series.map((s, index) => {
+        const color = s.color ?? (isMulti ? getSeriesColor(index) : DEFAULT_BAR_COLOR);
+        const values = seriesValues[index];
+        // Numeric histograms with several series read best as step density
+        // curves; a single series stays a filled histogram.
+        if (mode === 'histogram' && isMulti) {
+            return {
+                name: s.label,
+                type: 'line' as const,
+                step: 'middle' as const,
+                symbol: 'none' as const,
+                data: values,
+                lineStyle: { color, width: 2 },
+                itemStyle: { color },
+                emphasis: CHART_EMPHASIS
+            };
+        }
+        return {
+            name: s.label,
+            type: 'bar' as const,
+            data: values,
+            itemStyle: { color },
+            // Touching bars read as a histogram; grouped bars keep a gap.
+            barCategoryGap: mode === 'histogram' ? '0%' : '25%',
+            emphasis: CHART_EMPHASIS
+        };
+    });
+
     return {
         backgroundColor: 'transparent',
+        legend: isMulti
+            ? {
+                  data: series.map((s) => s.label),
+                  textStyle: { color: CHART_TEXT_COLOR },
+                  top: 0
+              }
+            : undefined,
         tooltip: {
             trigger: 'axis',
-            axisPointer: { type: 'shadow' },
-            formatter: (params: { name: string; value: number }[]) => {
-                const [{ name, value }] = params;
-                const percent = totalCount > 0 ? ` (${formatPercent(value / totalCount)})` : '';
-                return `<b>${name}</b><br/>Count: <b>${value}</b>${percent}`;
+            axisPointer: { type: mode === 'histogram' && isMulti ? 'line' : 'shadow' },
+            formatter: (
+                params: { name: string; value: number; seriesName?: string; marker?: string }[]
+            ) => {
+                const name = params[0]?.name ?? '';
+                const lines = params.map((param) => {
+                    const prefix = `${param.marker ?? ''}${
+                        param.seriesName ? `${param.seriesName}: ` : 'Count: '
+                    }`;
+                    if (isPercent) {
+                        return `${prefix}<b>${param.value.toFixed(1)}%</b>`;
+                    }
+                    // Count mode: bold the number, keep the share (single series) outside.
+                    const suffix =
+                        !isMulti && totalCount > 0
+                            ? ` (${formatPercent(param.value / totalCount)})`
+                            : '';
+                    return `${prefix}<b>${param.value}</b>${suffix}`;
+                });
+                return `<b>${name}</b><br/>${lines.join('<br/>')}`;
             }
         },
-        grid: { left: 8, right: 8, top: 16, bottom: 8, containLabel: true },
+        grid: { left: 8, right: 8, top: isMulti ? 32 : 16, bottom: 8, containLabel: true },
         // Swap which axis holds the categories so bars grow rightward when horizontal.
         xAxis: isHorizontal ? valueAxis : categoryAxis,
         yAxis: isHorizontal ? categoryAxis : valueAxis,
-        series: [
-            {
-                type: 'bar',
-                data: data.map((item) => item.count),
-                itemStyle: { color: BAR_COLOR },
-                barCategoryGap: '25%',
-                emphasis: CHART_EMPHASIS
-            }
-        ]
+        series: chartSeries
     };
 }

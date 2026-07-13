@@ -54,6 +54,7 @@
     import { AnnotationType, SampleType } from '$lib/api/lightly_studio_local/types.gen';
     import type { AnnotationsFilter } from '$lib/api/lightly_studio_local/types.gen';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
+    import { useTags } from '$lib/hooks/useTags/useTags';
     import type { DistributionSource } from '$lib/components/DatasetDistributionPanel';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
     import {
@@ -272,7 +273,7 @@
             : 'Search samples by description or image'
     );
 
-    const { metadataValues } = $derived.by(() => useMetadataFilters(collectionId));
+    const { metadataValues, metadataInfo } = $derived.by(() => useMetadataFilters(collectionId));
     const { dimensionsValues } = useDimensions(collectionIdStore);
 
     const annotationLabelsQuery = useAnnotationLabels(() => ({
@@ -460,9 +461,61 @@
         data: classDistributionCounts
     });
 
+    // Metadata distribution source: one selectable group per categorical or
+    // numeric key, fetched per compared tag from the shared Issue-0 endpoint.
+    const CATEGORICAL_METADATA_TYPES = ['string', 'boolean'];
+    const NUMERIC_METADATA_TYPES = ['integer', 'float'];
+    const { tags: sampleTags } = $derived.by(() =>
+        useTags({ collection_id: collectionId, kind: ['sample'] })
+    );
+
+    const metadataKeyGroups = $derived(
+        ($metadataInfo ?? [])
+            .filter(
+                (info) =>
+                    CATEGORICAL_METADATA_TYPES.includes(info.type) ||
+                    NUMERIC_METADATA_TYPES.includes(info.type)
+            )
+            .map((info) => ({ id: info.name, label: info.name }))
+    );
+    // Each tag becomes one comparable series (all its samples, independent of the
+    // active view); the "Current" series carries the active filter.
+    const metadataCompareTags = $derived(
+        $sampleTags.map((tag) => ({
+            id: tag.tag_id,
+            label: tag.name,
+            filter: {
+                filter_type: 'image' as const,
+                ...buildImageFilter({
+                    dimensionsValues: undefined,
+                    annotationFilter: undefined,
+                    metadataFilters: undefined,
+                    tagIds: [tag.tag_id]
+                })
+            }
+        }))
+    );
+    const metadataSource = $derived.by<DistributionSource | null>(() => {
+        if (!distributionPanelVisible || metadataKeyGroups.length === 0) return null;
+        return {
+            id: 'metadata',
+            label: 'Metadata',
+            kind: 'metadata',
+            groupLabel: 'Metadata key',
+            valueNoun: 'samples',
+            collectionId,
+            baseFilter: imageAnnotationCountsFilter
+                ? { filter_type: 'image', ...imageAnnotationCountsFilter }
+                : null,
+            compareTags: metadataCompareTags,
+            groups: metadataKeyGroups
+        };
+    });
+
     const distributionSources = $derived.by<DistributionSource[]>(() => {
+        const metadataSources = metadataSource ? [metadataSource] : [];
         const typeQueries = distributionTypeQueries;
-        if (!typeQueries) return [allTypesSource];
+        if (!typeQueries) return [allTypesSource, ...metadataSources];
         const perType = [
             { id: AnnotationType.CLASSIFICATION, label: 'Classification' },
             { id: AnnotationType.OBJECT_DETECTION, label: 'Object detection' },
@@ -476,11 +529,15 @@
             // Skip types with no matches in the current view so the selector stays clean.
             if (data.length > 0) typeSources.push({ id, label, data });
         }
-        // With a single type, "All types" would just duplicate it — show only
-        // the type so the panel's selector stays hidden.
-        if (typeSources.length <= 1)
-            return typeSources.length === 1 ? typeSources : [allTypesSource];
-        return [allTypesSource, ...typeSources];
+        // With a single annotation type, "All types" would just duplicate it —
+        // show only the type (plus any metadata source).
+        const annotationSources =
+            typeSources.length <= 1
+                ? typeSources.length === 1
+                    ? typeSources
+                    : [allTypesSource]
+                : [allTypesSource, ...typeSources];
+        return [...annotationSources, ...metadataSources];
     });
 </script>
 
