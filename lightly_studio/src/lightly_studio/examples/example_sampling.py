@@ -12,7 +12,11 @@ the "Metadata" source):
   ``batch_A/B/C`` and ``bright`` tags, and the sampling run adds
   ``diverse_sampling`` — so you can compare 2-4 tags at once (normalized by
   default, toggle to counts).
-- ``gps_coordinates`` additionally lets you try the GPS map.
+- ``gps_coordinates`` additionally lets you try the GPS map (open the "Map" side
+  panel). Samples are scattered in tight clusters around several European cities,
+  and each carries a ``region_<city>`` tag, so coloring the map by those tags
+  shows crisp geographic clusters and shift+drag rectangle-select over one city
+  filters the rest of the app to it. ``region`` is also a categorical key.
 """
 
 from __future__ import annotations
@@ -49,21 +53,37 @@ random.seed(42)
 WEATHER = ["sunny", "rainy", "cloudy", "foggy"]
 SCENES = ["city", "highway", "rural"]
 
+# City centers (lat, lon) the GPS samples cluster around. Round-robin assignment
+# keeps the clusters roughly even; a small jitter spreads points within each city.
+CITIES: dict[str, tuple[float, float]] = {
+    "zurich": (47.3769, 8.5417),
+    "geneva": (46.2044, 6.1432),
+    "bern": (46.9480, 7.4474),
+    "basel": (47.5596, 7.5886),
+    "munich": (48.1351, 11.5820),
+    "milan": (45.4642, 9.1900),
+}
+CITY_JITTER_DEG = 0.05
+
 # Assign metadata (and a couple of comparison tags) to every sample.
 samples = dataset.query().to_list()
 sample_metadata: list[tuple[UUID, Mapping[str, Any]]] = []
+city_names = list(CITIES)
 for index, sample in enumerate(samples):
+    city_name = city_names[index % len(city_names)]
+    city_lat, city_lon = CITIES[city_name]
     values: dict[str, Any] = {
         # Categorical -> grouped bar chart.
         "scene": random.choice(SCENES),
         "is_daytime": random.choice([True, False]),
+        "region": city_name,
         # Numerical -> histogram.
         "object_count": random.randint(0, 40),
         "brightness": random.uniform(0.0, 1.0),
-        # GPS -> map (roughly around Zurich).
+        # GPS -> map. Cluster tightly around the sample's city center.
         "gps_coordinates": GPSCoordinate(
-            lat=random.uniform(47.0, 47.6),
-            lon=random.uniform(8.0, 8.8),
+            lat=city_lat + random.uniform(-CITY_JITTER_DEG, CITY_JITTER_DEG),
+            lon=city_lon + random.uniform(-CITY_JITTER_DEG, CITY_JITTER_DEG),
         ),
     }
     # Leave ~15% of samples without a `weather` value so the plot shows a
@@ -76,6 +96,8 @@ for index, sample in enumerate(samples):
     sample.add_tag(f"batch_{'ABC'[index % 3]}")
     if values["brightness"] > 0.7:  # noqa: PLR2004
         sample.add_tag("bright")
+    # Per-city tag so coloring the GPS map by tag shows one cluster per region.
+    sample.add_tag(f"region_{city_name}")
 
 metadata_resolver.bulk_update_metadata(db_manager.persistent_session(), sample_metadata)
 
