@@ -74,9 +74,9 @@ def test_export_collection_coco(
     )
 
     # Call the API.
-    response = test_client.get(
+    response = test_client.post(
         f"/api/collections/{collection.collection_id}/export/annotations",
-        params={"annotation_collection_id": str(annotation_collection_id)},
+        json={"annotation_collection_id": str(annotation_collection_id)},
     )
 
     # Check the response.
@@ -129,9 +129,9 @@ def test_export_collection_yolo(
         sample_type=SampleType.ANNOTATION,
     )
 
-    response = test_client.get(
+    response = test_client.post(
         f"/api/collections/{collection.collection_id}/export/annotations",
-        params={
+        json={
             "export_format": "object_detection_yolo",
             "annotation_collection_id": str(annotation_collection_id),
         },
@@ -191,9 +191,9 @@ def test_export_collection_segmentation_masks(
         sample_type=SampleType.ANNOTATION,
     )
 
-    response = test_client.get(
+    response = test_client.post(
         f"/api/collections/{collection.collection_id}/export/annotations",
-        params={
+        json={
             "export_format": "segmentation_mask_coco",
             "annotation_collection_id": str(annotation_collection_id),
         },
@@ -258,9 +258,9 @@ def test_export_collection_pascalvoc_from_segmentation_masks(
         sample_type=SampleType.ANNOTATION,
     )
 
-    response = test_client.get(
+    response = test_client.post(
         f"/api/collections/{collection.collection_id}/export/annotations",
-        params={
+        json={
             "export_format": "pascal_voc",
             "annotation_collection_id": str(annotation_collection_id),
         },
@@ -305,7 +305,9 @@ def test_export_collection_captions(
     )
 
     # Call the API.
-    response = test_client.get(f"/api/collections/{collection.collection_id}/export/captions")
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/captions", json={}
+    )
 
     # Check the response.
     assert response.status_code == HTTP_STATUS_OK
@@ -485,6 +487,122 @@ def test_export_collection_youtube_vis__wrong_collection_type(
     )
 
     assert response.status_code == HTTP_STATUS_BAD_REQUEST
+
+
+def test_export_collection_annotations__collection_filter__returns_filtered_samples(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    # image_a has an annotation; image_b also has an annotation.
+    # collection_filter restricts to image_a only → only image_a's annotation is exported.
+    collection = create_collection(session=db_session)
+    image_a = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="img_a.jpg",
+        width=100,
+        height=100,
+    )
+    image_b = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="img_b.jpg",
+        width=100,
+        height=100,
+    )
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    )
+    annotation_resolver.create_many(
+        session=db_session,
+        parent_collection_id=collection.collection_id,
+        annotations=[
+            AnnotationCreate(
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+                parent_sample_id=image_a.sample_id,
+                x=1,
+                y=2,
+                width=3,
+                height=4,
+            ),
+            AnnotationCreate(
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+                parent_sample_id=image_b.sample_id,
+                x=5,
+                y=6,
+                width=7,
+                height=8,
+            ),
+        ],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/annotations",
+        json={
+            "collection_filter": {
+                "filter_type": "image",
+                "sample_filter": {"sample_ids": [str(image_a.sample_id)]},
+            }
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    content = json.loads(response.content)
+    assert content["images"] == [{"id": 0, "file_name": "img_a.jpg", "width": 100, "height": 100}]
+    assert len(content["annotations"]) == 1
+    assert content["annotations"][0]["bbox"] == [1.0, 2.0, 3.0, 4.0]
+
+
+def test_export_collection_captions__collection_filter__returns_filtered_samples(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    # image_a has a caption; image_b also has a caption.
+    # collection_filter restricts to image_a only → only image_a's caption is exported.
+    collection = create_collection(session=db_session)
+    image_a = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="img_a.jpg",
+        width=100,
+        height=100,
+    )
+    image_b = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="img_b.jpg",
+        width=100,
+        height=100,
+    )
+    create_caption(
+        session=db_session,
+        collection_id=collection.collection_id,
+        parent_sample_id=image_a.sample_id,
+        text="caption a",
+    )
+    create_caption(
+        session=db_session,
+        collection_id=collection.collection_id,
+        parent_sample_id=image_b.sample_id,
+        text="caption b",
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/captions",
+        json={
+            "collection_filter": {
+                "filter_type": "image",
+                "sample_filter": {"sample_ids": [str(image_a.sample_id)]},
+            }
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    content = json.loads(response.content)
+    assert content["images"] == [{"id": 0, "file_name": "img_a.jpg", "width": 100, "height": 100}]
+    assert content["annotations"] == [{"id": 0, "image_id": 0, "caption": "caption a"}]
 
 
 def test_export_collection_youtube_vis__wrong_export_format(

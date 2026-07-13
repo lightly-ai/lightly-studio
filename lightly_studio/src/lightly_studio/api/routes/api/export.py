@@ -22,7 +22,7 @@ from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.export import image_dataset_export, video_dataset_export
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.export_format import ExportFormat
-from lightly_studio.resolvers import collection_resolver
+from lightly_studio.resolvers import collection_resolver, image_resolver
 from lightly_studio.resolvers.collection_resolver.export import ExportFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
 
@@ -30,7 +30,25 @@ export_router = APIRouter(prefix="/collections/{collection_id}", tags=["export"]
 _STREAM_CHUNK_SIZE_BYTES = 64 * 1024
 
 
-@export_router.get("/export/annotations")
+class ExportAnnotationsBody(BaseModel):
+    """Body parameters for the annotations export endpoint."""
+
+    annotation_collection_id: UUID | None = None
+    export_format: ExportFormat = ExportFormat.OBJECT_DETECTION_COCO
+    collection_filter: ImageFilter | None = Field(
+        None, description="Active view filter to restrict which samples' annotations are exported."
+    )
+
+
+class ExportCaptionsBody(BaseModel):
+    """Body parameters for the captions export endpoint."""
+
+    collection_filter: ImageFilter | None = Field(
+        None, description="Active view filter to restrict which samples' captions are exported."
+    )
+
+
+@export_router.post("/export/annotations")
 def export_collection_annotations(
     collection: Annotated[
         CollectionTable,
@@ -38,40 +56,42 @@ def export_collection_annotations(
         Depends(collection_api.get_and_validate_collection_id),
     ],
     session: SessionDep,
-    annotation_collection_id: UUID | None,
-    export_format: ExportFormat = ExportFormat.OBJECT_DETECTION_COCO,
+    body: ExportAnnotationsBody,
 ) -> StreamingResponse:
     """Export collection annotations in the selected export format."""
-    # Query to export - all samples in the collection.
-    dataset_query = DatasetQuery(dataset=collection, session=session)
+    samples = image_resolver.get_for_export(
+        session=session,
+        collection_id=collection.collection_id,
+        collection_filter=body.collection_filter,
+    )
     exporter = image_dataset_export.ImageDatasetExport(
         session=session,
         dataset_id=collection.dataset_id,
-        samples=dataset_query,
+        samples=samples,
     )
 
     # Create the export in a temporary directory. We cannot use a context manager
     # because the directory should be deleted only after the file has finished streaming.
     temp_dir = TemporaryDirectory()
 
-    if export_format == ExportFormat.OBJECT_DETECTION_COCO:
+    if body.export_format == ExportFormat.OBJECT_DETECTION_COCO:
         output_path = PathlibPath(temp_dir.name) / "coco_export.json"
         try:
             exporter.to_coco_object_detections(
                 output_json=output_path,
-                annotation_collection_id=annotation_collection_id,
+                annotation_collection_id=body.annotation_collection_id,
             )
         except Exception:
             temp_dir.cleanup()
             # Reraise.
             raise
-    elif export_format == ExportFormat.OBJECT_DETECTION_YOLO:
+    elif body.export_format == ExportFormat.OBJECT_DETECTION_YOLO:
         output_path = PathlibPath(temp_dir.name) / "yolo"
 
         try:
             exporter.to_yolo_object_detections(
                 output_folder=output_path,
-                annotation_collection_id=annotation_collection_id,
+                annotation_collection_id=body.annotation_collection_id,
             )
         except Exception:
             temp_dir.cleanup()
@@ -91,25 +111,25 @@ def export_collection_annotations(
                 "Content-Disposition": f"attachment; filename={output_path.name}.zip",
             },
         )
-    elif export_format == ExportFormat.SEGMENTATION_MASK_COCO:
+    elif body.export_format == ExportFormat.SEGMENTATION_MASK_COCO:
         output_path = PathlibPath(temp_dir.name) / "coco_segmentation_mask_export.json"
 
         try:
             exporter.to_coco_segmentation_masks(
                 output_json=output_path,
-                annotation_collection_id=annotation_collection_id,
+                annotation_collection_id=body.annotation_collection_id,
             )
         except Exception:
             temp_dir.cleanup()
             # Reraise.
             raise
-    elif export_format == ExportFormat.PASCAL_VOC:
+    elif body.export_format == ExportFormat.PASCAL_VOC:
         output_path = PathlibPath(temp_dir.name) / "pascalvoc"
 
         try:
             exporter.to_pascalvoc_segmentation_mask(
                 output_folder=output_path,
-                annotation_collection_id=annotation_collection_id,
+                annotation_collection_id=body.annotation_collection_id,
             )
         except Exception:
             temp_dir.cleanup()
@@ -132,7 +152,9 @@ def export_collection_annotations(
     else:
         raise HTTPException(
             status_code=400,
-            detail=f"Export format '{export_format.value}' is not supported for this endpoint.",
+            detail=(
+                f"Export format '{body.export_format.value}' is not supported for this endpoint."
+            ),
         )
 
     return StreamingResponse(
@@ -148,7 +170,7 @@ def export_collection_annotations(
     )
 
 
-@export_router.get("/export/captions")
+@export_router.post("/export/captions")
 def export_collection_captions(
     collection: Annotated[
         CollectionTable,
@@ -156,10 +178,14 @@ def export_collection_captions(
         Depends(collection_api.get_and_validate_collection_id),
     ],
     session: SessionDep,
+    body: ExportCaptionsBody,
 ) -> StreamingResponse:
     """Export collection captions in COCO format."""
-    # Query to export - all samples in the collection.
-    dataset_query = DatasetQuery(dataset=collection, session=session)
+    samples = image_resolver.get_for_export(
+        session=session,
+        collection_id=collection.collection_id,
+        collection_filter=body.collection_filter,
+    )
 
     # Create the export in a temporary directory. We cannot use a context manager
     # because the directory should be deleted only after the file has finished streaming.
@@ -170,7 +196,7 @@ def export_collection_captions(
         image_dataset_export.ImageDatasetExport(
             session=session,
             dataset_id=collection.dataset_id,
-            samples=dataset_query,
+            samples=samples,
         ).to_coco_captions(output_json=output_path)
     except Exception:
         temp_dir.cleanup()

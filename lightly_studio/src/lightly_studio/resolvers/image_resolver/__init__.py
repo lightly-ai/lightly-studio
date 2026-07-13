@@ -11,6 +11,7 @@ from lightly_studio.resolvers.image_resolver.get_all_by_collection_id import (
 )
 from lightly_studio.resolvers.image_resolver.get_by_id import get_by_id
 from lightly_studio.resolvers.image_resolver.get_dimension_bounds import get_dimension_bounds
+from lightly_studio.resolvers.image_resolver.get_for_export import get_for_export
 from lightly_studio.resolvers.image_resolver.get_many_by_id import get_many_by_id
 from lightly_studio.resolvers.image_resolver.get_sample_ids import (
     build_sample_ids_query,
@@ -30,6 +31,7 @@ __all__ = [
     "get_all_by_collection_id",
     "get_by_id",
     "get_dimension_bounds",
+    "get_for_export",
     "get_many_by_id",
     "get_sample_ids",
     "get_sample_ids_by_paths",
