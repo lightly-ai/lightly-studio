@@ -9,6 +9,7 @@ from labelformat.model.object_detection import ImageObjectDetection, SingleObjec
 from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.export import image_dataset_export
 from lightly_studio.export.lightly_studio_label_input import (
     LightlyStudioObjectDetectionInput,
     LightlyStudioPascalVOCInstanceSegmentationInput,
@@ -42,6 +43,7 @@ class TestLightlyStudioLabelInput:
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
             annotation_collection_id=None,
+            sample_to_image=image_dataset_export.image_sample_to_image,
         )
         assert list(label_input.get_categories()) == [
             Category(id=0, name="cat"),
@@ -61,6 +63,7 @@ class TestLightlyStudioLabelInput:
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
             annotation_collection_id=None,
+            sample_to_image=image_dataset_export.image_sample_to_image,
         )
         assert list(label_input.get_categories()) == [
             Category(id=1, name="cat"),
@@ -83,6 +86,7 @@ class TestLightlyStudioLabelInput:
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
             annotation_collection_id=None,
+            sample_to_image=image_dataset_export.image_sample_to_image,
         )
         assert list(label_input.get_categories()) == []
 
@@ -96,6 +100,7 @@ class TestLightlyStudioLabelInput:
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
             annotation_collection_id=None,
+            sample_to_image=image_dataset_export.image_sample_to_image,
         )
         assert list(label_input.get_images()) == [
             Image(id=0, filename="img1", width=100, height=100),
@@ -110,6 +115,7 @@ class TestLightlyStudioLabelInput:
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
             annotation_collection_id=None,
+            sample_to_image=image_dataset_export.image_sample_to_image,
         )
         assert list(label_input.get_images()) == []
 
@@ -123,6 +129,7 @@ class TestLightlyStudioLabelInput:
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
             annotation_collection_id=None,
+            sample_to_image=image_dataset_export.image_sample_to_image,
         )
         labels = list(label_input.get_labels())
 
@@ -171,6 +178,7 @@ class TestLightlyStudioLabelInput:
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
             annotation_collection_id=None,
+            sample_to_image=image_dataset_export.image_sample_to_image,
         )
         labels = list(label_input.get_labels())
 
@@ -236,6 +244,7 @@ class TestLightlyStudioLabelInput:
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
             annotation_collection_id=source_1_id,
+            sample_to_image=image_dataset_export.image_sample_to_image,
         )
         assert list(label_input_source_1.get_labels()) == [
             ImageObjectDetection(
@@ -255,6 +264,7 @@ class TestLightlyStudioLabelInput:
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
             annotation_collection_id=source_2_id,
+            sample_to_image=image_dataset_export.image_sample_to_image,
         )
         assert list(label_input_source_2.get_labels()) == [
             ImageObjectDetection(
@@ -310,6 +320,7 @@ class TestLightlyStudioLabelInput:
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
             annotation_collection_id=None,
+            sample_to_image=image_dataset_export.image_sample_to_image,
         )
         labels = list(label_input.get_labels())
         assert len(labels) == 1
@@ -363,6 +374,7 @@ class TestLightlyStudioLabelInput:
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
             annotation_collection_id=None,
+            sample_to_image=image_dataset_export.image_sample_to_image,
         )
         labels = list(label_input.get_labels())
 

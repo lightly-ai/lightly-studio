@@ -198,6 +198,25 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             show_progress=show_progress,
         )
 
+    def embed_pil_images(
+        self, images: list[Image.Image], show_progress: bool = True
+    ) -> NDArray[np.float32]:
+        """Embed in-memory PIL images with Perception Encoder.
+
+        Args:
+            images: PIL images to embed.
+            show_progress: Whether to show a progress bar during embedding.
+
+        Returns:
+            A numpy array representing the generated embeddings in the same order
+            as the input images.
+        """
+        return image_embedding.embed_pil_images_batched(
+            images=images,
+            context=self._embedding_context(),
+            show_progress=show_progress,
+        )
+
     def _embedding_context(self) -> EmbeddingContext:
         """Build the model-specific configuration for batched image embedding."""
         return EmbeddingContext(

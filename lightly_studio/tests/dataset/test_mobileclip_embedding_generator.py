@@ -78,6 +78,26 @@ class TestMobileCLIPEmbeddingGenerator:
         # to the full image, so the embeddings must match.
         assert np.allclose(crop_embeddings[0], image_embeddings[0], atol=1e-4)
 
+    def test_embed_pil_images__empty_input(self) -> None:
+        mobileclip = MobileCLIPEmbeddingGenerator()
+        embeddings = mobileclip.embed_pil_images([])
+
+        assert embeddings.shape == (0, 512)
+
+    def test_embed_pil_images__matches_embed_images(self) -> None:
+        mobileclip = MobileCLIPEmbeddingGenerator()
+        cat_image_path = FIXTURES_DIR / "cat.jpg"
+        with Image.open(cat_image_path) as image:
+            cat_pil_image = image.convert("RGB")
+
+        pil_embeddings = mobileclip.embed_pil_images([cat_pil_image])
+        image_embeddings = mobileclip.embed_images([str(cat_image_path)])
+
+        assert pil_embeddings.shape == (1, 512)
+        # An in-memory PIL image is preprocessed and encoded identically to the same
+        # image loaded from disk, so the embeddings must match.
+        assert np.allclose(pil_embeddings[0], image_embeddings[0], atol=1e-4)
+
     def test_classification(self) -> None:
         """End-to-end test for embedding consistency.
 

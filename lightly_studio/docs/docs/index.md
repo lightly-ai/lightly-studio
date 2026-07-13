@@ -19,31 +19,32 @@ with an M1 chip and 16 GB of memory.
 
 ## Installation
 
-Ensure you have **Python 3.9 to 3.14**. We recommend **Python 3.10** for the best compatibility with plugins such as SAM autolabeling. We strongly recommend using a virtual environment.
+LightlyStudio works on Windows, Linux, and macOS with **Python 3.9 to 3.14**. We recommend
+**Python 3.10** for the best compatibility with plugins such as SAM autolabeling.
 
-The library is OS-independent and works on Windows, Linux, and macOS.
+```shell
+pip install lightly-studio
+```
 
-=== "Linux/macOS"
+??? tip "Recommended: install into a virtual environment"
+    A virtual environment keeps LightlyStudio and its dependencies separate from other
+    Python projects on your machine:
 
-    ```shell
-    # 1. Create and activate a virtual environment (Recommended)
-    python3 -m venv venv
-    source venv/bin/activate
+    === "Linux/macOS"
 
-    # 2. Install LightlyStudio
-    pip install lightly_studio
-    ```
+        ```shell
+        python3 -m venv venv
+        source venv/bin/activate
+        pip install lightly-studio
+        ```
 
-=== "Windows"
+    === "Windows"
 
-    ```powershell
-    # 1. Create and activate a virtual environment (Recommended)
-    python -m venv venv
-    .\venv\Scripts\activate
-
-    # 2. Install LightlyStudio
-    pip install lightly_studio
-    ```
+        ```powershell
+        python -m venv venv
+        .\venv\Scripts\activate
+        pip install lightly-studio
+        ```
 
 ## Quickstart
 
@@ -143,6 +144,11 @@ directly use your own image, video, or YOLO/COCO dataset.
 !!! tip
     Call `lightly-studio gui` from the command line instead of `ls.start_gui()` in Python
     to skip reindexing your dataset.
+
+Ready for a complete, end-to-end workflow? Follow the tutorial
+[Curate a Traffic CCTV Dataset for YOLO Training](tutorials/yolo-traffic-cctv-object-detection.md)
+to explore embeddings, remove near-duplicates, auto-label, and train a model — or browse
+[all tutorials](tutorials/index.md).
 
 ## How It Works
 

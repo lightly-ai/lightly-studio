@@ -29,12 +29,15 @@ from sqlmodel import Session
 
 from lightly_studio.core.video import add_videos, video_dataset
 from lightly_studio.core.video.add_videos import FrameExtractionContext
+from lightly_studio.dataset.embedding_generator import RandomEmbeddingGenerator
+from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
     dataset_resolver,
+    sample_embedding_resolver,
     video_frame_resolver,
     video_resolver,
 )
@@ -227,6 +230,75 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
     assert video_frames[1].frame_number == 1
     assert video_frames[1].parent_sample_id == video_sample_id
     assert video_frames[1].frame_timestamp_s == 1
+    video_container.close()
+    video_file.close()
+
+
+def test__create_video_frame_samples__embed_frames(
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+    video_path = create_video_file(
+        output_path=tmp_path / "test_video_frames_embed.mp4",
+        width=320,
+        height=240,
+        num_frames=2,
+        fps=1,
+    )
+    video_sample_ids = video_resolver.create_many(
+        session=db_session,
+        collection_id=collection.collection_id,
+        samples=[
+            VideoCreate(
+                file_path_abs=str(video_path),
+                file_name=video_path.name,
+                width=320,
+                height=240,
+                duration_s=2.0,
+                fps=1,
+            )
+        ],
+    )
+    video_sample_id = video_sample_ids[0]
+    video_frames_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.VIDEO_FRAME,
+    )
+
+    embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
+    model_id = embedding_manager.register_embedding_model(
+        session=db_session,
+        collection_id=video_frames_collection_id,
+        embedding_generator=RandomEmbeddingGenerator(),
+        set_as_default=True,
+    ).embedding_model_id
+
+    fs, fs_path = fsspec.core.url_to_fs(url=str(video_path))
+    video_file = fs.open(path=fs_path, mode="rb")
+    video_container = container.open(file=video_file)
+
+    frame_sample_ids = add_videos._create_video_frame_samples(
+        context=FrameExtractionContext(
+            session=db_session,
+            collection_id=video_frames_collection_id,
+            video_sample_id=video_sample_id,
+            embed_frames=True,
+            embedding_model_id=model_id,
+        ),
+        video_container=video_container,
+        video_channel=0,
+    )
+
+    assert len(frame_sample_ids) == 2
+    frame_embeddings = sample_embedding_resolver.get_by_sample_ids(
+        session=db_session,
+        sample_ids=frame_sample_ids,
+        embedding_model_id=model_id,
+    )
+    assert len(frame_embeddings) == 2
+
     video_container.close()
     video_file.close()
 
