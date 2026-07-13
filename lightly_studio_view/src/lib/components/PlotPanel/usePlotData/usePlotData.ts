@@ -7,14 +7,11 @@ import { resolveVisibleCategory } from '../resolveVisibleCategory/resolveVisible
 import {
     EXCLUDED_BY_FILTERS_CATEGORY,
     HIDDEN_CATEGORY,
-    INCLUDED_BY_FILTERS_CATEGORY
+    INCLUDED_BY_FILTERS_CATEGORY,
+    isUnselectableCategory
 } from '../plotCategories';
 
 type PlotColumn = 'x' | 'y' | 'category';
-
-// Filtered-out and hidden points land in reserved categories and must never be selected.
-const isUnselectableCategory = (category: number): boolean =>
-    category === EXCLUDED_BY_FILTERS_CATEGORY || category === HIDDEN_CATEGORY;
 
 type UsePlotDataReturn = {
     data: ComponentProps<typeof EmbeddingView>['data'];

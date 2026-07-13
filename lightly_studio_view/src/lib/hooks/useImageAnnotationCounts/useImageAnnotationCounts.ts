@@ -1,5 +1,5 @@
 import { createQuery } from '@tanstack/svelte-query';
-import type { ImageFilter } from '$lib/api/lightly_studio_local';
+import type { AnnotationType, ImageFilter } from '$lib/api/lightly_studio_local';
 import {
     countImageAnnotationsByCollectionOptions,
     countImageAnnotationsByCollectionQueryKey
@@ -12,18 +12,36 @@ export const useImageAnnotationCountsQueryKey = countImageAnnotationsByCollectio
 
 export const useImageAnnotationCounts = ({
     collectionId,
-    filter
+    filter,
+    annotationType
 }: {
     collectionId: string;
     filter?: ImageFilter;
+    /** Restrict counts to a single annotation type (e.g. classification). */
+    annotationType?: AnnotationType;
 }) => {
     const requestOptions = {
         path: { collection_id: collectionId },
-        ...(filter ? { body: { filter } } : {})
+        ...(filter || annotationType
+            ? {
+                  body: {
+                      ...(filter ? { filter } : {}),
+                      ...(annotationType ? { annotation_type: annotationType } : {})
+                  }
+              }
+            : {})
     } as const;
 
     const options = countImageAnnotationsByCollectionOptions(requestOptions);
-    const queryKey = useImageAnnotationCountsQueryKey;
+    // Keep the collection id static so annotation mutations invalidate every
+    // variant, but discriminate by annotation type so the per-type queries
+    // don't collide in the cache.
+    const queryKey = annotationType
+        ? countImageAnnotationsByCollectionQueryKey({
+              path: { collection_id: '__static_value__' },
+              body: { annotation_type: annotationType }
+          })
+        : useImageAnnotationCountsQueryKey;
 
     return createQuery(() => ({
         ...options,
