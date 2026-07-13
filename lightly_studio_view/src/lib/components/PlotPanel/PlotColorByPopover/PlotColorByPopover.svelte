@@ -12,7 +12,10 @@
         withAnnotationLabels: boolean;
     }
 
-    const supportedTypes = new Set(['string', 'boolean']);
+    // Numeric fields ('integer', 'float') are colored with an ordered gradient; string
+    // and boolean fields use the categorical hue wheel. See plotColorUtils / the backend
+    // embedding_coloring module.
+    const supportedTypes = new Set(['string', 'boolean', 'integer', 'float']);
 
     // Sentinel value for the explicit "no coloring" option. Kept distinct from
     // both the numeric option indices and the empty-string deselect signal.

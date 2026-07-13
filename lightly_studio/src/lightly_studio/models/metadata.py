@@ -250,9 +250,7 @@ class MetadataDistributionView(BaseModel):
     bin_edges: list[float] | None = Field(
         None, description="Histogram bin edges (length = counts + 1) for numeric keys"
     )
-    counts: list[int] | None = Field(
-        None, description="Per-bin sample counts for numeric keys"
-    )
+    counts: list[int] | None = Field(None, description="Per-bin sample counts for numeric keys")
     none_count: int | None = Field(
         None, description="Number of in-scope samples missing the key (numeric keys)"
     )

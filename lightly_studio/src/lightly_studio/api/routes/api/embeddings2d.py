@@ -100,9 +100,7 @@ def get_2d_embeddings(
             pa.field("sample_id", pa.string()),
         ],
         metadata={
-            "color_legend": json.dumps(
-                {str(k): v for k, v in color_data.color_legend.items()}
-            ),
+            "color_legend": json.dumps({str(k): v for k, v in color_data.color_legend.items()}),
             # Signals the frontend to render a sequential (ordered) ramp instead of
             # the categorical hue wheel, e.g. for numeric quantile bins.
             "color_ordered": json.dumps(color_data.ordered),

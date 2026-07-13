@@ -102,9 +102,7 @@ def test_get_metadata_distribution__categorical(
     assert counts == {"city": 2, "mountain": 1, "(none)": 1}
 
 
-def test_get_metadata_distribution__numeric(
-    test_client: TestClient, db_session: Session
-) -> None:
+def test_get_metadata_distribution__numeric(test_client: TestClient, db_session: Session) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
     for index, value in enumerate([0.0, 5.0, 10.0]):
@@ -152,9 +150,7 @@ def test_get_metadata_distribution__missing_key(
     test_client: TestClient, db_session: Session
 ) -> None:
     collection = create_collection(session=db_session)
-    _create_image_with_metadata(
-        db_session, collection.collection_id, "/a.png", location="city"
-    )
+    _create_image_with_metadata(db_session, collection.collection_id, "/a.png", location="city")
 
     response = test_client.post(
         f"/api/collections/{collection.collection_id}/metadata/nope/distribution", json={}
@@ -182,9 +178,7 @@ def test_get_gps_coordinates(test_client: TestClient, db_session: Session) -> No
     assert data[0]["tag_ids"] == []
 
 
-def test_get_gps_coordinates__missing_key(
-    test_client: TestClient, db_session: Session
-) -> None:
+def test_get_gps_coordinates__missing_key(test_client: TestClient, db_session: Session) -> None:
     collection = create_collection(session=db_session)
     _create_image_with_metadata(db_session, collection.collection_id, "/a.png", location="city")
 

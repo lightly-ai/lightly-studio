@@ -53,9 +53,7 @@ def test_categorical_distribution__boolean_labels(db_session: Session) -> None:
     _add_sample(db_session, collection_id, "/b.png", flag=False)
     _add_sample(db_session, collection_id, "/c.png", flag=False)
 
-    result = get_metadata_distribution(
-        session=db_session, collection_id=collection_id, key="flag"
-    )
+    result = get_metadata_distribution(session=db_session, collection_id=collection_id, key="flag")
 
     assert result.type == "boolean"
     as_dict = {item.value: item.count for item in result.categorical or []}
@@ -143,9 +141,7 @@ def test_missing_key_raises(db_session: Session) -> None:
 
 def test_unsupported_type_raises(db_session: Session) -> None:
     collection_id = create_collection(session=db_session).collection_id
-    _add_sample(
-        db_session, collection_id, "/a.png", location_gps=GPSCoordinate(lat=1.0, lon=2.0)
-    )
+    _add_sample(db_session, collection_id, "/a.png", location_gps=GPSCoordinate(lat=1.0, lon=2.0))
 
     with pytest.raises(UnsupportedMetadataTypeError):
         get_metadata_distribution(

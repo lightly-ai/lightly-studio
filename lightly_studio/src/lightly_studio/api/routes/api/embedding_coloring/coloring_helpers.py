@@ -197,8 +197,7 @@ class DiscreteColorScale(Generic[T]):
             for i in range(num_actual_bins)
         }
         lookup = {
-            value: start_cat + bisect.bisect_right(interior_edges, value)
-            for value in unique_values
+            value: start_cat + bisect.bisect_right(interior_edges, value) for value in unique_values
         }
         return DiscreteColorScale[float](_lookup=lookup, legend=legend, ordered=True)
 

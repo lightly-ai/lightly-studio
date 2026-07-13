@@ -56,8 +56,9 @@ export function sampleIdsInBbox(points: readonly GpsPoint[], bbox: Bbox): string
  *
  * The first selected tag (highest priority) the point belongs to wins; points
  * in none of the selected tags are dimmed to {@link UNASSIGNED_COLOR} but kept
- * visible so the full geographic spread still shows. Tag colors reuse the same
- * assignment as the embedding plot so the two views agree.
+ * visible so the full geographic spread still shows. Tag colors are derived from
+ * the tag name via {@link getColorByLabel} (a deterministic name -> color hash),
+ * so a given tag keeps a stable color across map re-renders and tag selections.
  */
 export function colorForPoint(
     pointTagIds: readonly string[],

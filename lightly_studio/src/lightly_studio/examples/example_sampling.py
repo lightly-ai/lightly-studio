@@ -7,7 +7,13 @@ the "Metadata" source):
 - Categorical keys (``weather``, ``scene``, ``is_daytime``) render as bar charts.
   ``weather`` is intentionally missing on ~15% of samples so the plot shows an
   explicit ``(none)`` bar.
-- Numerical keys (``object_count``, ``brightness``) render as histograms.
+- Numerical keys (``object_count``, ``brightness``, ``capture_year``,
+  ``confidence``) render as histograms.
+- Numerical keys also drive the embedding plot's ordered "Color by" gradient
+  (open the plot and pick a numeric field): high-cardinality fields
+  (``object_count``, ``brightness``) become quantile bins, the small-range
+  ``capture_year`` gets one ordered color per value, and ``confidence`` is
+  intentionally missing on ~10% of samples so those points render gray.
 - The "Compare tags" chips overlay one series per tag — this script creates
   ``batch_A/B/C`` and ``bright`` tags, and the sampling run adds
   ``diverse_sampling`` — so you can compare 2-4 tags at once (normalized by
@@ -52,6 +58,8 @@ random.seed(42)
 
 WEATHER = ["sunny", "rainy", "cloudy", "foggy"]
 SCENES = ["city", "highway", "rural"]
+# Small range of years -> the embedding plot gives each value its own ordered color.
+CAPTURE_YEARS = [2018, 2019, 2020, 2021, 2022, 2023, 2024]
 
 # City centers (lat, lon) the GPS samples cluster around. Round-robin assignment
 # keeps the clusters roughly even; a small jitter spreads points within each city.
@@ -77,9 +85,10 @@ for index, sample in enumerate(samples):
         "scene": random.choice(SCENES),
         "is_daytime": random.choice([True, False]),
         "region": city_name,
-        # Numerical -> histogram.
+        # Numerical -> histogram + ordered embedding-plot color gradient.
         "object_count": random.randint(0, 40),
         "brightness": random.uniform(0.0, 1.0),
+        "capture_year": random.choice(CAPTURE_YEARS),
         # GPS -> map. Cluster tightly around the sample's city center.
         "gps_coordinates": GPSCoordinate(
             lat=city_lat + random.uniform(-CITY_JITTER_DEG, CITY_JITTER_DEG),
@@ -90,6 +99,10 @@ for index, sample in enumerate(samples):
     # "(none)" bucket.
     if random.random() > 0.15:  # noqa: PLR2004
         values["weather"] = random.choice(WEATHER)
+    # Leave ~10% of samples without a `confidence` value so the numeric embedding
+    # color gradient renders those points as gray (unassigned).
+    if random.random() > 0.1:  # noqa: PLR2004
+        values["confidence"] = random.uniform(0.0, 1.0)
     sample_metadata.append((sample.sample_id, values))
 
     # A few sample tags to overlay in the distribution plot's "Compare tags".
