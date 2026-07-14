@@ -12,6 +12,7 @@
         TagsMenu
     } from '$lib/components';
     import { Tooltip } from '$lib/components/ui/tooltip';
+    import MetadataFilterChips from '$lib/components/MetadataFilterChips/MetadataFilterChips.svelte';
     import QueryEditorPanel from '$lib/components/QueryEditorPanel/QueryEditorPanel.svelte';
     import { SidePanelTabs } from '$lib/components';
     import Separator from '$lib/components/ui/separator/separator.svelte';
@@ -646,6 +647,7 @@
 
                             {#if isImages || isVideos || isVideoFrames}
                                 {#key collectionId}
+                                    <MetadataFilterChips {collectionId} />
                                     <CombinedMetadataDimensionsFilters {isVideos} {isVideoFrames} />
                                 {/key}
                             {/if}

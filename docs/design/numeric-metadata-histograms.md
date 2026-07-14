@@ -16,6 +16,10 @@ watch the counts track every other active filter. Demo data:
 `make start-e2e-distribution` (env toggles `ADD_CLASSIFICATIONS`,
 `ADD_OBJECT_DETECTIONS`, `ADD_SEGMENTATIONS`, `ADD_METADATA`).
 
+Active metadata range filters also appear as chips in the left filter panel
+(same pattern as the query filter chip): the checkbox disables/re-enables the
+filter while remembering its range, and X clears it entirely.
+
 ## Issues and how they were resolved
 
 ### 1. The ticket depended on a component that never existed
