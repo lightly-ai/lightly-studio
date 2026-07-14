@@ -27,9 +27,11 @@ export function buildImageAnnotationCountsQueryKey({
     queryKeyOverride?: unknown[];
 }): ReturnType<typeof countImageAnnotationsByCollectionQueryKey> {
     if (queryKeyOverride) {
-        return [...queryKeyOverride, ...(countMode ? [countMode] : [])] as ReturnType<
-            typeof countImageAnnotationsByCollectionQueryKey
-        >;
+        return [
+            ...queryKeyOverride,
+            ...(annotationType ? [annotationType] : []),
+            ...(countMode ? [countMode] : [])
+        ] as ReturnType<typeof countImageAnnotationsByCollectionQueryKey>;
     }
     if (annotationType || countMode) {
         return countImageAnnotationsByCollectionQueryKey({
