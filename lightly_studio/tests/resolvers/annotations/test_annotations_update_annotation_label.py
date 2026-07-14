@@ -44,9 +44,6 @@ def test_update_annotation_label_classification(
 
     assert current_annotation_label_id != new_label.annotation_label_id
 
-    # The fixture's classification annotation carries a temporal span. The label update
-    # rebuilds the row via delete-and-reinsert, so the span must survive.
-
     # Update the label of the first annotation
     annotation_resolver.update_annotation_label(
         db_session,
