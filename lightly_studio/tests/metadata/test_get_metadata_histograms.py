@@ -1,5 +1,7 @@
 """Test the filtered metadata histograms resolver."""
 
+from uuid import UUID
+
 import pytest
 from sqlmodel import Session
 
@@ -12,7 +14,7 @@ from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import create_collection, create_image
 
 
-def _create_samples_with_scores(db_session: Session, collection_id: object) -> None:
+def _create_samples_with_scores(db_session: Session, collection_id: UUID) -> None:
     """Create 10 samples with score 0..9 and parity flag even_score 0/1."""
     for i in range(10):
         sample = create_image(

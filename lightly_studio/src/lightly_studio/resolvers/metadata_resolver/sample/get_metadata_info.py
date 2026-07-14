@@ -142,7 +142,9 @@ def _without_metadata_key_filter(
     ):
         return filters
     updated = filters.model_copy(deep=True)
-    assert updated.sample_filter is not None  # narrowed above; copy preserves it
+    # Narrowed above via ``filters``; the deep copy preserves both.
+    assert updated.sample_filter is not None
+    assert updated.sample_filter.metadata_filters is not None
     updated.sample_filter.metadata_filters = [
         metadata_filter
         for metadata_filter in updated.sample_filter.metadata_filters
