@@ -17,8 +17,8 @@ from lightly_studio.models.annotation.segmentation import (
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
-from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
+from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import annotation_resolver
 from lightly_studio.utils import batching
 

@@ -161,3 +161,47 @@ def test_delete_annotation__removes_temporal_span(db_session: Session) -> None:
     assert db_session.get(TemporalSpanTable, annotation_id) is None, (
         "Temporal span row should be deleted with the annotation."
     )
+
+
+def test_update_annotation_label__preserves_temporal_span(db_session: Session) -> None:
+    """Changing a classification's label keeps its temporal span (delete-and-reinsert)."""
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    old_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="old_action",
+    )
+    new_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="new_action",
+    )
+
+    annotation_ids = annotation_resolver.create_many(
+        session=db_session,
+        parent_collection_id=collection.collection_id,
+        annotations=[
+            AnnotationCreate(
+                parent_sample_id=image.sample_id,
+                annotation_label_id=old_label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+                start_time_s=1.5,
+                end_time_s=4.0,
+            )
+        ],
+    )
+    annotation_id = annotation_ids[0]
+
+    annotation_resolver.update_annotation_label(
+        db_session,
+        annotation_id,
+        new_label.annotation_label_id,
+    )
+
+    updated_annotation = annotation_resolver.get_by_id(db_session, annotation_id)
+    assert updated_annotation is not None
+    assert updated_annotation.annotation_label_id == new_label.annotation_label_id
+    assert updated_annotation.temporal_span_details is not None
+    assert updated_annotation.temporal_span_details.start_time_s == 1.5
+    assert updated_annotation.temporal_span_details.end_time_s == 4.0
