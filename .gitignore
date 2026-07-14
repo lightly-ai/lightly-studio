@@ -22,3 +22,4 @@ dataset_examples_studio
 # Setup for virtual AI team environment
 .agents
 docs
+.claude
