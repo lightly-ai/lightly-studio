@@ -40,13 +40,13 @@ in this same PR (see issues 8–10).
 With bars drawn edge-to-edge, the chart showed uneven 0–1px seams between some
 bars and not others. This went through three rounds:
 
-- *Round 1 — sub-pixel widths.* The built-in bar series computes fractional
+- _Round 1 — sub-pixel widths._ The built-in bar series computes fractional
   per-bar widths; canvas antialiasing turns the fractional boundaries into
   seams. Stroking each bar with its own color closed the gaps…
-- *Round 2 — alpha stacking.* …but the brand colors were semi-transparent, so
-  the now-overlapping strokes stacked into visible *darker* lines instead.
+- _Round 2 — alpha stacking._ …but the brand colors were semi-transparent, so
+  the now-overlapping strokes stacked into visible _darker_ lines instead.
   Colors were made opaque.
-- *Round 3 — residual seams.* Some boundaries still showed 1px gaps (fractional
+- _Round 3 — residual seams._ Some boundaries still showed 1px gaps (fractional
   canvas transforms from device-pixel-ratio/zoom). Final fix: replace the bar
   series with a custom renderer that snaps every bin edge to integer pixels, so
   adjacent bins share the exact same edge coordinate — nothing left to
@@ -67,8 +67,8 @@ PR** — the distribution panel is the single consumer.
 
 ### 5. Selecting one bar highlighted three
 
-Clicking a bar highlighted it *and* both neighbors. Cause: the highlight
-treated a bin as selected when it merely *touched* the range boundary, but bins
+Clicking a bar highlighted it _and_ both neighbors. Cause: the highlight
+treated a bin as selected when it merely _touched_ the range boundary, but bins
 are half-open `[start, end)` — a shared edge is not an overlap. **Resolution:**
 strict interior-overlap semantics; zero-width bins (constant-valued fields)
 compare inclusively so the degenerate single-bin case still highlights.
@@ -76,7 +76,7 @@ compare inclusively so the degenerate single-bin case still highlights.
 ### 6. The panel's "Source" dropdown conflated two different questions
 
 Adding "Metadata" alongside "All types / Classification / Object detection /
-Segmentation" mixed *what to distribute* with *which subset of it* in one flat
+Segmentation" mixed _what to distribute_ with _which subset of it_ in one flat
 list. **Resolution:** two-level selection — first the distribution type (Class
 labels / Metadata), then a contextual second dropdown (annotation type /
 metadata key) — mapped onto the panel's existing source→group model. The panel
@@ -95,8 +95,8 @@ drag, so one interaction model covers everything.
 
 ### 8. Filtered counts would have made the axis jump
 
-Recomputing histograms over the filtered subset naively also *recomputes the
-bin edges*, so the x-axis rescales on every filter change and bars appear to
+Recomputing histograms over the filtered subset naively also _recomputes the
+bin edges_, so the x-axis rescales on every filter change and bars appear to
 move rather than shrink. **Resolution:** bin edges are always computed over the
 full, unfiltered domain of each key; only the counts respect the filters. The
 axis stays put; bars shrink in place.
@@ -107,7 +107,7 @@ If a key's own range filter applies to its own histogram, narrowing the range
 collapses the chart to exactly the selected bars — you lose the context of what
 you are cutting off. **Resolution:** faceted-search semantics: each key's own
 metadata filter is excluded from its histogram (its selection is communicated
-via highlight instead), while every *other* filter — tags, classes, dimensions,
+via highlight instead), while every _other_ filter — tags, classes, dimensions,
 other metadata keys — applies. This matches how FiftyOne and classic faceted
 search behave.
 
@@ -135,17 +135,32 @@ original content within minutes (stale editor buffers or a stray
 histogram is absent from this PR — after the second revert we decided to keep
 this PR panel-only (see issue 4) rather than fight the tooling.
 
-### 13. Bin boundaries vs. inclusive range filters
+### 13. The histogram lacked the categorical plot's config affordances
+
+The class-labels chart has expand / configure / orientation controls; the
+histogram initially had none, and 20 fixed bins washed out heavily skewed
+fields. **Resolution:** the histogram header gained a bin-count preset select
+(10/20/50/100 — bins are computed server-side, so the endpoint took a
+`bin_count` parameter and the query refetches on change) and an expand button
+opening a full-size dialog with the same axes, highlight, and drag-to-filter
+interactions. The horizontal/vertical toggle was **deliberately not** carried
+over: orientation earns its place on the categorical chart because class labels
+need gutter space, but a histogram has no per-bar labels — its x-axis _is_ the
+value domain, and rotating it would complicate the pixel-snapped renderer and
+drag-select mapping for little gain.
+
+### 14. Bin boundaries vs. inclusive range filters
 
 A histogram bin is `[start, end)`, but the range filter created from a bar
 selection is inclusive on both ends (`>= start`, `<= end`), so values sitting
-exactly on the upper edge — which visually belong to the *next* bar — are
+exactly on the upper edge — which visually belong to the _next_ bar — are
 included. Fixing this exactly would require an exclusive `<` operator in the
 filter builder. Accepted for now; documented as a known limitation.
 
 ## Other known limitations
 
-- Bin count fixed at 20; no equal-count binning for heavily skewed fields.
+- Bin count is preset-based (10/20/50/100); no equal-count ("auto") binning
+  for heavily skewed fields.
 - Mouse-only drag selection (no touch).
 - Backend tests (`tests/metadata/test_get_metadata_histograms.py`) were written
   but could not be executed in the implementation sandbox — please run

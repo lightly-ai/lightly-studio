@@ -474,7 +474,7 @@
         const allTypesGroup = { id: 'all', label: 'All types', data: classDistributionCounts };
         const base = {
             id: 'classes',
-            label: 'Class labels',
+            label: 'Annotation classes',
             groupLabel: 'Annotation type',
             valueNoun: 'annotations'
         };
@@ -506,11 +506,15 @@
     // refetches whenever the grid filter changes. Each key's own metadata
     // filter is excluded server-side (faceted-search behavior). Only queried
     // while the distribution panel is open.
+    // User-configurable bin count for the metadata histograms (panel + expand).
+    let histogramBinCount = $state(20);
+
     const metadataHistogramsQuery = $derived.by(() => {
         if (!distributionPanelVisible) return null;
         return useNumericMetadataDistribution({
             collectionId: datasetId,
-            filter: imageAnnotationCountsFilter
+            filter: imageAnnotationCountsFilter,
+            binCount: histogramBinCount
         });
     });
     const metadataDistributions = $derived(selectDistributions(metadataHistogramsQuery?.data));
@@ -737,6 +741,9 @@
                                     sources={distributionSources}
                                     onClose={() => setActivePanel('none')}
                                     onHistogramRangeSelect={handleDistributionHistogramRangeSelect}
+                                    {histogramBinCount}
+                                    onHistogramBinCountChange={(binCount) =>
+                                        (histogramBinCount = binCount)}
                                 />
                             {/await}
                         {/if}

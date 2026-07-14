@@ -76,6 +76,7 @@ def get_metadata_histograms(
     session: Session,
     collection_id: UUID,
     filters: ImageFilter | None = None,
+    bin_count: int = _HISTOGRAM_BIN_COUNT,
 ) -> dict[str, HistogramView]:
     """Compute value-distribution histograms for all numeric metadata keys.
 
@@ -89,6 +90,7 @@ def get_metadata_histograms(
         session: The database session.
         collection_id: The collection's UUID.
         filters: Optional sample filters restricting which values are counted.
+        bin_count: Number of equal-width bins per histogram.
 
     Returns:
         Mapping of metadata key to its histogram.
@@ -110,6 +112,7 @@ def get_metadata_histograms(
             metadata_key=key,
             stats=stats,
             filters=_without_metadata_key_filter(filters=filters, metadata_key=key),
+            bin_count=bin_count,
         )
     return histograms
 
@@ -225,6 +228,7 @@ def _compute_histogram(
     metadata_key: str,
     stats: tuple[float, float, int],
     filters: ImageFilter | None = None,
+    bin_count: int = _HISTOGRAM_BIN_COUNT,
 ) -> HistogramView:
     """Compute a value-distribution histogram entirely in SQL.
 
@@ -263,7 +267,6 @@ def _compute_histogram(
         )
         return HistogramView(bin_edges=[min_value, max_value], counts=[count])
 
-    bin_count = _HISTOGRAM_BIN_COUNT
     width = (max_value - min_value) / bin_count
 
     value_expr = db_json.json_extract(

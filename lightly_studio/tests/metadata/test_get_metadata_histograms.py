@@ -113,6 +113,23 @@ def test_get_metadata_histograms__constant_field_counts_filtered(
     assert sum(parity.counts) == 4
 
 
+def test_get_metadata_histograms__custom_bin_count(db_session: Session) -> None:
+    """The bin count is configurable; edges still span the full domain."""
+    collection = create_collection(session=db_session)
+    _create_samples_with_scores(db_session, collection.collection_id)
+
+    histograms = get_metadata_histograms(
+        session=db_session, collection_id=collection.collection_id, bin_count=5
+    )
+
+    score = histograms["score"]
+    assert len(score.counts) == 5
+    assert len(score.bin_edges) == 6
+    assert score.bin_edges[0] == pytest.approx(0.0)
+    assert score.bin_edges[-1] == pytest.approx(9.0)
+    assert sum(score.counts) == 10
+
+
 def test_get_metadata_histograms__skips_non_numeric_keys(db_session: Session) -> None:
     """String and boolean keys produce no histogram."""
     collection = create_collection(session=db_session)

@@ -34,14 +34,24 @@ export const selectDistributions = (
  */
 export const useNumericMetadataDistribution = ({
     collectionId,
-    filter
+    filter,
+    binCount
 }: {
     collectionId: string;
     filter?: ImageFilter;
+    /** Number of equal-width bins per histogram (server default: 20). */
+    binCount?: number;
 }) => {
     const requestOptions = {
         path: { collection_id: collectionId },
-        ...(filter ? { body: { filters: filter } } : {})
+        ...(filter || binCount
+            ? {
+                  body: {
+                      ...(filter ? { filters: filter } : {}),
+                      ...(binCount ? { bin_count: binCount } : {})
+                  }
+              }
+            : {})
     } as const;
 
     const options = getMetadataHistogramsOptions(requestOptions);
