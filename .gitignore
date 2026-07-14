@@ -18,3 +18,7 @@ dataset_examples_studio
 
 # Top-level tmp dir.
 /tmp/
+
+# Setup for virtual AI team environment
+.agents
+docs
