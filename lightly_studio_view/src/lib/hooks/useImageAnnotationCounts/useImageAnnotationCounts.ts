@@ -14,6 +14,35 @@ export const useImageAnnotationCountsQueryKey = countImageAnnotationsByCollectio
     path: { collection_id: '__static_value__' }
 });
 
+export function buildImageAnnotationCountsQueryKey({
+    annotationType,
+    countMode,
+    queryKeyOverride
+}: {
+    annotationType?: AnnotationType;
+    countMode?: AnnotationCountMode;
+    // unknown[] intentionally: callers may extend the base key with extra
+    // segments (e.g. [...baseKey, 'distribution']). The cast bridges this to
+    // the specific tuple type createQuery expects.
+    queryKeyOverride?: unknown[];
+}): ReturnType<typeof countImageAnnotationsByCollectionQueryKey> {
+    if (queryKeyOverride) {
+        return [...queryKeyOverride, ...(countMode ? [countMode] : [])] as ReturnType<
+            typeof countImageAnnotationsByCollectionQueryKey
+        >;
+    }
+    if (annotationType || countMode) {
+        return countImageAnnotationsByCollectionQueryKey({
+            path: { collection_id: '__static_value__' },
+            body: {
+                ...(annotationType ? { annotation_type: annotationType } : {}),
+                ...(countMode ? { count_mode: countMode } : {})
+            }
+        });
+    }
+    return useImageAnnotationCountsQueryKey;
+}
+
 export function buildImageAnnotationCountsRequest({
     collectionId,
     filter,
@@ -52,9 +81,6 @@ export const useImageAnnotationCounts = (
          * `useImageAnnotationCountsQueryKey` so that mutation invalidations still
          * reach this query while avoiding cache collisions with other callers.
          */
-        // unknown[] intentionally: callers may extend the base key with extra
-        // segments (e.g. [...baseKey, 'distribution']). The cast inside the hook
-        // bridges this to the specific tuple type createQuery expects.
         queryKey?: unknown[];
         /** Set to false to prevent the query from fetching. Default: true. */
         enabled?: boolean;
@@ -78,20 +104,11 @@ export const useImageAnnotationCounts = (
         });
 
         const options = countImageAnnotationsByCollectionOptions(requestOptions);
-        // Keep the collection id static so annotation mutations invalidate every
-        // variant, but discriminate by annotation type so the per-type queries
-        // don't collide in the cache. count_mode is intentionally excluded from
-        // the key: when it changes, TanStack Query returns cached data immediately
-        // and refetches in the background, preventing sources from disappearing
-        // during the mode transition.
-        const queryKey =
-            (queryKeyOverride as ReturnType<typeof countImageAnnotationsByCollectionQueryKey>) ??
-            (annotationType
-                ? countImageAnnotationsByCollectionQueryKey({
-                      path: { collection_id: '__static_value__' },
-                      body: { annotation_type: annotationType }
-                  })
-                : useImageAnnotationCountsQueryKey);
+        const queryKey = buildImageAnnotationCountsQueryKey({
+            annotationType,
+            countMode,
+            queryKeyOverride
+        });
 
         return {
             ...options,
@@ -104,6 +121,11 @@ export const useImageAnnotationCounts = (
                 });
                 return data;
             },
+            // Keep showing previous data while the new key's request is in-flight
+            // so the panel doesn't flash empty during a count_mode transition.
+            placeholderData: (
+                previousData: Array<{ [key: string]: string | number }> | undefined
+            ) => previousData,
             ...(enabled !== undefined ? { enabled } : {})
         };
     });
