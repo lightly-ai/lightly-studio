@@ -33,7 +33,7 @@ def test_update_annotation_label_classification(
     db_session: Session,
     annotations_test_data: AnnotationsTestData,
 ) -> None:
-    """Test updating annotation labels."""
+    """Test updating a classification label preserves its temporal span."""
     annotations = annotation_resolver.get_all(
         db_session,
     ).annotations
@@ -43,6 +43,9 @@ def test_update_annotation_label_classification(
     new_label = annotations_test_data.annotation_labels[1]
 
     assert current_annotation_label_id != new_label.annotation_label_id
+
+    # The fixture's classification annotation carries a temporal span. The label update
+    # rebuilds the row via delete-and-reinsert, so the span must survive.
 
     # Update the label of the first annotation
     annotation_resolver.update_annotation_label(
@@ -58,6 +61,11 @@ def test_update_annotation_label_classification(
     assert (
         updated_annotation.annotation_label.annotation_label_name == new_label.annotation_label_name
     )
+
+    # Verify the temporal span was preserved across the update.
+    assert updated_annotation.temporal_span_details is not None
+    assert updated_annotation.temporal_span_details.start_time_s == 1.5
+    assert updated_annotation.temporal_span_details.end_time_s == 4.0
 
 
 def test_update_annotation_with_tags(
