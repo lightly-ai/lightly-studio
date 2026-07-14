@@ -10,7 +10,7 @@
 			({ type: "file"; files?: FileList } | { type?: InputType; files?: undefined })
 	>;
 
-	interface Props extends BaseProps {
+	type Props = BaseProps & {
 		/**
 		 * When true, disables the input and shows an indeterminate linear
 		 * progress bar at the bottom, consistent with Button.isPending.
@@ -22,7 +22,7 @@
 		 * participates in a flex/grid layout.
 		 */
 		wrapperClass?: string;
-	}
+	};
 
 	let {
 		ref = $bindable(null),
