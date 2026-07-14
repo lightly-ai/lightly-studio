@@ -24,6 +24,7 @@ from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.export_format import ExportFormat
 from lightly_studio.resolvers import collection_resolver
 from lightly_studio.resolvers.collection_resolver.export import ExportFilter
+from lightly_studio.resolvers.image_filter import ImageFilter
 
 export_router = APIRouter(prefix="/collections/{collection_id}", tags=["export"])
 _STREAM_CHUNK_SIZE_BYTES = 64 * 1024
@@ -198,6 +199,9 @@ class ExportBody(BaseModel):
     exclude: ExportFilter | None = Field(
         None, description="exclude filter for sample_ids or tag_ids"
     )
+    collection_filter: ImageFilter | None = Field(
+        None, description="active view filter applied on top of include/exclude"
+    )
 
 
 # This endpoint should be a GET, however due to the potential huge size
@@ -223,6 +227,7 @@ def export_collection_to_absolute_paths(
         collection_id=collection.collection_id,
         include=body.include,
         exclude=body.exclude,
+        collection_filter=body.collection_filter,
     )
 
     # Create a response with the exported data
@@ -254,6 +259,7 @@ def export_collection_stats(
         collection_id=collection.collection_id,
         include=body.include,
         exclude=body.exclude,
+        collection_filter=body.collection_filter,
     )
 
 
