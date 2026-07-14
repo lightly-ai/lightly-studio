@@ -467,6 +467,7 @@
         collectionId: datasetId,
         annotationType: AnnotationType.CLASSIFICATION,
         filter: imageAnnotationCountsFilter,
+        countMode: distributionCountMode,
         enabled: distributionPanelVisible
     }));
 
