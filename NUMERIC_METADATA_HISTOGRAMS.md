@@ -1,154 +1,152 @@
 # Numeric metadata histograms (PR #1638)
 
-Implementation notes for review. Covers [LIG-9587](https://linear.app/lightly/issue/LIG-9587/frontend-numeric-metadata-histogram-2-sp)
-(frontend numeric metadata histogram) and [LIG-10177](https://linear.app/lightly/issue/LIG-10177/backend-filter-aware-metadata-histogram-endpoint)
-(filter-aware histogram endpoint), which was pulled into this branch after discussion.
-Comment on any section — each design decision is numbered so it can be referenced directly.
+Review notes for [LIG-9587](https://linear.app/lightly/issue/LIG-9587/frontend-numeric-metadata-histogram-2-sp)
+and [LIG-10177](https://linear.app/lightly/issue/LIG-10177/backend-filter-aware-metadata-histogram-endpoint).
+Rather than walking the code, this documents the **issues encountered along the
+way and how each was resolved** — the code is the consequence. Each issue is
+numbered so it can be referenced in review comments.
 
-## What this PR delivers
+## What ships
 
-The Dataset Distribution panel is now generic: "Class labels" is one distribution
-type among others, and numeric metadata is the second. Selecting **Distribution →
-Metadata** and a **Metadata key** renders that field's value distribution as a
-histogram with numeric axes. The histogram is interactive: clicking a bar narrows
-the metadata filter for that key to the bar's value interval, press-drag-release
-selects a range of bars, and re-selecting the exact current range resets the
-filter to the full bounds. The active filter range is highlighted (bars outside
-it are dimmed), and the bin counts themselves track every *other* active filter —
-tags, class labels, dimensions, other metadata keys — refetching whenever the
-view changes.
+The Dataset Distribution panel now charts numeric metadata as interactive
+histograms next to the class-label distributions: pick **Distribution →
+Metadata → key**, read the shape off numeric axes, click or drag across bars to
+narrow the grid's metadata filter to that value range (re-select to reset), and
+watch the counts track every other active filter. Demo data:
+`make start-e2e-distribution` (env toggles `ADD_CLASSIFICATIONS`,
+`ADD_OBJECT_DETECTIONS`, `ADD_SEGMENTATIONS`, `ADD_METADATA`).
 
-User-visible features:
+## Issues and how they were resolved
 
-- `Histogram` chart component (ECharts) with numeric x-axis (bin-edge values) and count y-axis
-- Distribution panel: two-level selection — distribution type (Class labels / Metadata), then a contextual second dropdown (annotation type / metadata key); both selects equal width, first populated source auto-selected
-- Bin tooltips with the exact value interval, count, and percentage
-- Click / drag-to-select bars → applies the metadata range filter to the grid; re-select → reset
-- Filter-aware counts with a stable x-axis (see decisions 8–10)
-- `make start-e2e-distribution` seeds a demo dataset; env toggles `ADD_CLASSIFICATIONS`, `ADD_OBJECT_DETECTIONS`, `ADD_SEGMENTATIONS`, `ADD_METADATA` (all default true) control the content
-- Storybook stories for the Histogram (shapes, selection, axes) and the panel (numeric metadata source)
+### 1. The ticket depended on a component that never existed
 
-## How it is built
+LIG-9587 said "reuse the `Histogram` component from LIG-9575" — but LIG-9575
+(chart infrastructure) was canceled; only the categorical `BarChart` existed,
+and it is a poor fit for histograms (fixed 28px bars, scrolling, category axis).
+**Resolution:** built a dedicated `Histogram` component on the same ECharts
+stack `BarChart` established, so theming/tooltips come for free and no new
+charting dependency was introduced.
 
-### Frontend
+### 2. One acceptance criterion was impossible against the existing API
 
-- `lib/components/Histogram/` — presentational chart.
-  - `buildHistogramOption.ts` builds the ECharts option: a **custom series** draws
-    each bin as a pixel-snapped rect; the x-axis is a *value* axis over bin
-    indices (bin *i* spans `[i, i+1]`), so axis ticks land exactly on bin edges
-    and tick labels map back to data values by linear interpolation.
-  - `Histogram.svelte` owns the ECharts instance and the drag-selection state.
-    Selection uses zrender canvas events (`mousedown`/`mousemove`) plus a window
-    `mouseup` listener, mapping pixels to bins via `convertFromPixel`. While
-    dragging, the prospective range is previewed through the same highlight used
-    for the committed selection.
-- `lib/hooks/useNumericMetadataDistribution/` — TanStack query against the new
-  endpoint, keyed on `(collection, filter)` so any filter change refetches;
-  `placeholderData` keeps the previous bars during refetch. Mirrors the
-  `useImageAnnotationCounts` pattern.
-- `DatasetDistributionPanel` — `DistributionSource`/`DistributionSourceGroup`
-  gained optional `histogram` + `selectedRange` fields (mutually exclusive with
-  categorical `data`). A group carrying bins renders the `Histogram` (axes on)
-  instead of the `BarChart`, swaps the categorical header (sort / top-N /
-  orientation) for a compact summary line ("12 400 samples · 20 bins · 0–255"),
-  and emits `onHistogramRangeSelect(groupId, range)`.
-- `+layout.svelte` — builds the two sources (class labels with annotation-type
-  groups; metadata with per-key histogram groups), feeds the histogram query the
-  same `ImageFilter` that drives the grid, and applies range selections via
-  `updateMetadataValues` (with the re-select-to-reset toggle).
+"Chart updates live when active filters change" could not be met:
+`GET /metadata/info` computes bins over the whole collection and accepts no
+filter parameters. **Resolution:** flagged on the ticket instead of silently
+dropping it, split into LIG-10177, and — after scope discussion — implemented
+in this same PR (see issues 8–10).
 
-### Backend
+### 3. Bars rendered with inconsistent hairline gaps
 
-- `POST /api/collections/{collection_id}/metadata/histograms`
-  (`api/routes/api/metadata.py`), body `{ filters?: ImageFilter }` — the same
-  filter model the samples/counts endpoints use — returning
-  `dict[metadata_key, HistogramView]`.
-- `resolvers/metadata_resolver/sample/get_metadata_info.py` —
-  `get_metadata_histograms()` reuses the existing SQL bucketing
-  (`floor/least/greatest`, 20 bins, works on DuckDB and PostgreSQL). Filters are
-  applied as a `sample_id IN (subquery)` where the subquery is
-  `select(ImageTable.sample_id) → join sample → filters.apply(...)`, because
-  dimension filters reference `ImageTable`. `ImageFilter` is imported under
-  `TYPE_CHECKING` only, to avoid an import cycle through
-  `sample_filter → metadata_resolver`.
-- OpenAPI client regenerated via the standard `openapi.json` → `@hey-api/openapi-ts`
-  flow (no hand-edited generated files). `openapi.json` is gitignored; the next
-  `make export-schema` regenerates it from the backend code.
+With bars drawn edge-to-edge, the chart showed uneven 0–1px seams between some
+bars and not others. This went through three rounds:
 
-## Design decisions
+- *Round 1 — sub-pixel widths.* The built-in bar series computes fractional
+  per-bar widths; canvas antialiasing turns the fractional boundaries into
+  seams. Stroking each bar with its own color closed the gaps…
+- *Round 2 — alpha stacking.* …but the brand colors were semi-transparent, so
+  the now-overlapping strokes stacked into visible *darker* lines instead.
+  Colors were made opaque.
+- *Round 3 — residual seams.* Some boundaries still showed 1px gaps (fractional
+  canvas transforms from device-pixel-ratio/zoom). Final fix: replace the bar
+  series with a custom renderer that snaps every bin edge to integer pixels, so
+  adjacent bins share the exact same edge coordinate — nothing left to
+  antialias.
 
-1. **ECharts, not a hand-rolled SVG or d3.** ECharts is already a dependency
-   (`BarChart`), so the histogram reuses the established chart stack, theming
-   constants, and tooltip machinery at no bundle cost. (The `Histogram` component
-   originally planned in LIG-9575 was canceled; this PR effectively supersedes it
-   for the histogram half.)
-2. **Custom series with pixel-snapped rects.** The built-in bar series computes
-   fractional bar widths; at 0% gap, canvas antialiasing turns those into uneven
-   hairline seams. `renderHistogramBin` rounds both edges of every bin to integer
-   pixels, so adjacent bins share the exact same edge coordinate at any chart
-   width.
-3. **Deliberate uniform 1px gap between bars** (`BIN_GAP_PX`), carved out of each
-   bin's right edge after snapping — visually separates bins and is exactly 1px
-   everywhere. Bars never collapse below 1px width.
-4. **Opaque bar colors** (`#3bd99f` accent / `#4b5563` dimmed). Any alpha would
-   stack into visible darker seams wherever rects touch or overlap.
-5. **Strict interior-overlap highlight semantics.** Bins are half-open
-   `[start, end)`; a selection that merely touches a bin's edge does not select
-   it, so selecting exactly one bar highlights exactly one bar (not its
-   neighbors). Zero-width bins (constant-valued fields) compare inclusively.
-6. **Selection = press-drag-release on the canvas layer.** zrender events fire
-   anywhere on the canvas (also over gaps and short bars), and `convertFromPixel`
-   maps pixels to bins; a plain click is a zero-width drag, so one callback
-   (`onRangeSelect`) covers both. Re-selecting the current range resets the
-   filter — clicking is therefore always reversible.
-7. **Two-level selection model in the panel.** The earlier flat source list mixed
-   two dimensions (what to distribute × which subset). Now level 1 is the
-   distribution type (Class labels / Metadata) and level 2 is contextual
-   (annotation type / metadata key), mapped onto the panel's existing
-   source→group model — no new panel machinery.
-8. **Stable bin edges under filtering.** Bin edges always span the full
-   (unfiltered) domain of each key; only counts change with filters. The x-axis
-   never jumps while the user adjusts filters, and bars shrink in place.
-9. **Faceted-search filter semantics.** Each key's *own* metadata filter is
-   excluded from its histogram (server-side): the full shape of the field being
-   adjusted stays visible — its selection is shown via highlight instead — while
-   every other filter applies. This mirrors e.g. FiftyOne's per-view histograms
-   and classic faceted search.
-10. **Filters applied via a sample-ids subquery**, not by joining filters into
-    the bucketing query directly — keeps the metadata SQL untouched and lets the
-    full `ImageFilter` (tags, annotations, dimensions, query expressions,
-    confusion cells) apply uniformly.
-11. **Histograms query only while the panel is open**, and the previous response
-    is kept as placeholder data during refetches, so filter changes don't blank
-    the chart and closed panels cost nothing.
-12. **The inline filter-panel variant (histogram above each range slider) is
-    currently not wired up.** The `Histogram` component supports it (axis-less
-    mode, slider-aligned edge-to-edge layout, live drag highlight), but the
-    integration was deliberately left out of this PR; the distribution panel is
-    the single consumer. Revisit as a follow-up if wanted.
+After the artifacts were gone, a **deliberate, uniform 1px gap** between bars
+was added as a design choice — possible to guarantee only because edges are
+integer-snapped.
 
-## Testing
+### 4. The distribution was unreadable without hovering
 
-- `Histogram`: option-builder unit tests (colors, highlight semantics, tooltip,
-  pixel snapping, 1px gap, degenerate single bin) and component tests
-  (render/empty states, drag selection incl. right-to-left and edge clamping)
-  with a mocked ECharts.
-- `DatasetDistributionPanel`: histogram vs bar-chart rendering, summary line,
-  categorical-controls suppression, range-select forwarding, default-source
-  selection.
-- Hook: response-mapping selector tests.
-- Backend: `tests/metadata/test_get_metadata_histograms.py` — unfiltered totals,
-  filtered counts with stable edges, own-key exclusion, constant fields,
-  non-numeric keys skipped.
+The first version had no axes; values were only visible in tooltips.
+**Resolution:** numeric axes (bin-edge values on x, counts on y) — but only in
+the distribution panel. The component also supports an axis-less inline mode
+(designed to sit above the filter sliders, where axis gutters would break the
+bar↔slider alignment); that integration is intentionally **not wired up in this
+PR** — the distribution panel is the single consumer.
 
-## Known limitations / follow-ups
+### 5. Selecting one bar highlighted three
 
-- Histogram bin count is fixed at 20 (`_HISTOGRAM_BIN_COUNT`); no equal-count
-  ("auto") binning for heavily skewed fields yet.
-- The endpoint is image-scoped (dimension filters reference `ImageTable`), like
-  the distribution panel itself; video/frame collections would need a variant.
-- Values exactly on a shared bin edge belong to the upper bin, but a range
-  filter `[edges[i], edges[i+1]]` is inclusive on both ends — a click can include
-  boundary values that visually belong to the next bar. Exact half-open filter
-  ops would need a `<` operator in `createMetadataFilters`.
-- No drag-select on touch devices (mouse events only).
+Clicking a bar highlighted it *and* both neighbors. Cause: the highlight
+treated a bin as selected when it merely *touched* the range boundary, but bins
+are half-open `[start, end)` — a shared edge is not an overlap. **Resolution:**
+strict interior-overlap semantics; zero-width bins (constant-valued fields)
+compare inclusively so the degenerate single-bin case still highlights.
+
+### 6. The panel's "Source" dropdown conflated two different questions
+
+Adding "Metadata" alongside "All types / Classification / Object detection /
+Segmentation" mixed *what to distribute* with *which subset of it* in one flat
+list. **Resolution:** two-level selection — first the distribution type (Class
+labels / Metadata), then a contextual second dropdown (annotation type /
+metadata key) — mapped onto the panel's existing source→group model. The panel
+was also de-specialized ("Class distribution" → "Distribution") since classes
+are now just one representation.
+
+### 7. Filtering from the chart: click, then drag, then reversibility
+
+Reading a distribution naturally leads to "show me only these bars". Landed in
+three steps: click a bar → filter narrows to its interval; press-drag-release →
+filter spans the selected bars (with live preview while dragging, working over
+gaps and short bars, in both directions, clamped at chart edges); re-selecting
+the exact current range → filter resets to full bounds, so every chart action
+is undoable from the chart itself. A plain click is treated as a zero-width
+drag, so one interaction model covers everything.
+
+### 8. Filtered counts would have made the axis jump
+
+Recomputing histograms over the filtered subset naively also *recomputes the
+bin edges*, so the x-axis rescales on every filter change and bars appear to
+move rather than shrink. **Resolution:** bin edges are always computed over the
+full, unfiltered domain of each key; only the counts respect the filters. The
+axis stays put; bars shrink in place.
+
+### 9. A field filtered by itself shows a useless histogram
+
+If a key's own range filter applies to its own histogram, narrowing the range
+collapses the chart to exactly the selected bars — you lose the context of what
+you are cutting off. **Resolution:** faceted-search semantics: each key's own
+metadata filter is excluded from its histogram (its selection is communicated
+via highlight instead), while every *other* filter — tags, classes, dimensions,
+other metadata keys — applies. This matches how FiftyOne and classic faceted
+search behave.
+
+### 10. The filter model is image-shaped
+
+Dimension filters (width/height) reference the image table, so the histogram
+endpoint applies filters through an image sample-ids subquery and is
+image-scoped — same limitation as the distribution panel itself. Video/frame
+collections need a follow-up variant.
+
+### 11. Constant-valued fields looked broken
+
+A field where every sample has the same value (`sensor_gain: 1.0`) produces a
+degenerate zero-width bin and a min==max slider, and initially appeared as "no
+histogram at all". Investigation showed the chart handled the case correctly
+(verified by headless rendering); the missing chart had a different cause
+(issue 12). The degenerate case is now explicitly handled end-to-end: single
+full-width bar, inclusive highlight, filtered count.
+
+### 12. Working-tree files kept reverting during the session
+
+Twice, freshly written filter-panel integration files reverted to their
+original content within minutes (stale editor buffers or a stray
+`git restore`). Worth knowing for review: it is why the inline above-slider
+histogram is absent from this PR — after the second revert we decided to keep
+this PR panel-only (see issue 4) rather than fight the tooling.
+
+### 13. Bin boundaries vs. inclusive range filters
+
+A histogram bin is `[start, end)`, but the range filter created from a bar
+selection is inclusive on both ends (`>= start`, `<= end`), so values sitting
+exactly on the upper edge — which visually belong to the *next* bar — are
+included. Fixing this exactly would require an exclusive `<` operator in the
+filter builder. Accepted for now; documented as a known limitation.
+
+## Other known limitations
+
+- Bin count fixed at 20; no equal-count binning for heavily skewed fields.
+- Mouse-only drag selection (no touch).
+- Backend tests (`tests/metadata/test_get_metadata_histograms.py`) were written
+  but could not be executed in the implementation sandbox — please run
+  `make test-ci` before merging.
