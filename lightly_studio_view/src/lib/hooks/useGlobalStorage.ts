@@ -50,6 +50,12 @@ const sampleSize = useSessionStorage<{
     height: 6
 });
 
+// Whether the left filter panel is fully collapsed (hidden) to reclaim grid width.
+const filterPanelCollapsed = useSessionStorage<boolean>(
+    'lightlyStudio_filterPanelCollapsed',
+    false
+);
+
 // Metadata stores
 const metadataBounds = useSessionStorage<MetadataBounds>('lightlyStudio_metadata_bounds', {});
 const metadataValues = useSessionStorage<MetadataValues>('lightlyStudio_metadata_values', {});
@@ -103,7 +109,12 @@ export type TextEmbedding = {
     queryText: string;
 };
 
-export type PanelType = 'none' | 'embeddingPlot' | 'evaluationRuns' | 'queryEditor';
+export type PanelType =
+    | 'none'
+    | 'embeddingPlot'
+    | 'evaluationRuns'
+    | 'queryEditor'
+    | 'distribution';
 
 const activePanel = writable<PanelType>('none');
 const showEmbeddingPlot = derived(activePanel, ($p) => $p === 'embeddingPlot');
@@ -374,6 +385,13 @@ export const useGlobalStorage = () => {
 
         isEditingMode,
         setIsEditingMode,
+
+        // Left filter panel collapse state
+        filterPanelCollapsed,
+        toggleFilterPanelCollapsed: () => {
+            filterPanelCollapsed.update((collapsed) => !collapsed);
+        },
+
         activePanel,
         setActivePanel: (panel: PanelType) => activePanel.set(panel),
         showEmbeddingPlot,

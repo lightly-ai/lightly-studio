@@ -61,6 +61,7 @@ export { default as VideoFrameDetails } from '$lib/components/VideoFrameDetails/
 export { default as GroupsComponentsMenu } from '$lib/components/GroupsComponentsMenu/GroupsComponentsMenu.svelte';
 export { default as LayoutCard } from '$lib/components/LayoutCard/LayoutCard.svelte';
 export { default as SelectionPill } from '$lib/components/SelectionPill/SelectionPill.svelte';
+export { default as ShowFiltersButton } from '$lib/components/ShowFiltersButton/ShowFiltersButton.svelte';
 export { default as Separator } from '$lib/components/ui/separator/separator.svelte';
 export { default as CollectionSearch } from '$lib/components/CollectionSearch/CollectionSearch.svelte';
 export { default as CollectionSearchImage } from '$lib/components/CollectionSearch/CollectionSearchImage/CollectionSearchImage.svelte';

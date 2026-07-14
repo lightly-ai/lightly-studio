@@ -2,7 +2,12 @@ import { DiffNameStatus } from 'simple-git';
 import type { DiffResult } from 'simple-git';
 import { describe, expect, it } from 'vitest';
 
-import { GitGuardrailContext, renameTarget, toChangedFile } from './git-context';
+import {
+    GitGuardrailContext,
+    parsePatchesByFile,
+    renameTarget,
+    toChangedFile
+} from './git-context';
 
 type DiffFiles = DiffResult['files'];
 
@@ -123,6 +128,109 @@ describe('GitGuardrailContext', () => {
     it('rejects an empty base ref (would diff against nothing)', () => {
         expect(() => new GitGuardrailContext('')).toThrow(/must not be empty/);
         expect(() => new GitGuardrailContext('   ')).toThrow(/must not be empty/);
+    });
+});
+
+describe('parsePatchesByFile', () => {
+    it('returns an empty map for an empty diff', () => {
+        expect(parsePatchesByFile('')).toEqual(new Map());
+    });
+
+    it('maps a single modified file to its full patch chunk', () => {
+        const raw = [
+            'diff --git a/src/foo.ts b/src/foo.ts',
+            'index abc..def 100644',
+            '--- a/src/foo.ts',
+            '+++ b/src/foo.ts',
+            '@@ -1,3 +1,4 @@',
+            ' const x = 1;',
+            '+const y = 2;'
+        ].join('\n');
+
+        expect(parsePatchesByFile(raw)).toEqual(
+            new Map([
+                [
+                    'src/foo.ts',
+                    [
+                        'diff --git a/src/foo.ts b/src/foo.ts',
+                        'index abc..def 100644',
+                        '--- a/src/foo.ts',
+                        '+++ b/src/foo.ts',
+                        '@@ -1,3 +1,4 @@',
+                        ' const x = 1;',
+                        '+const y = 2;'
+                    ].join('\n')
+                ]
+            ])
+        );
+    });
+
+    it('maps multiple files to separate patch chunks', () => {
+        const raw = [
+            'diff --git a/a.ts b/a.ts',
+            '--- a/a.ts',
+            '+++ b/a.ts',
+            '@@ -1 +1 @@',
+            '+x',
+            'diff --git a/b.ts b/b.ts',
+            '--- a/b.ts',
+            '+++ b/b.ts',
+            '@@ -1 +1 @@',
+            '+y'
+        ].join('\n');
+
+        expect(parsePatchesByFile(raw)).toEqual(
+            new Map([
+                [
+                    'a.ts',
+                    [
+                        'diff --git a/a.ts b/a.ts',
+                        '--- a/a.ts',
+                        '+++ b/a.ts',
+                        '@@ -1 +1 @@',
+                        '+x',
+                        ''
+                    ].join('\n')
+                ],
+                [
+                    'b.ts',
+                    [
+                        'diff --git a/b.ts b/b.ts',
+                        '--- a/b.ts',
+                        '+++ b/b.ts',
+                        '@@ -1 +1 @@',
+                        '+y'
+                    ].join('\n')
+                ]
+            ])
+        );
+    });
+
+    it('includes deleted files keyed by the source path (--- a/...)', () => {
+        const raw = [
+            'diff --git a/gone.ts b/gone.ts',
+            '--- a/gone.ts',
+            '+++ /dev/null',
+            '@@ -1,2 +0,0 @@',
+            '-line1',
+            '-line2'
+        ].join('\n');
+
+        expect(parsePatchesByFile(raw)).toEqual(
+            new Map([
+                [
+                    'gone.ts',
+                    [
+                        'diff --git a/gone.ts b/gone.ts',
+                        '--- a/gone.ts',
+                        '+++ /dev/null',
+                        '@@ -1,2 +0,0 @@',
+                        '-line1',
+                        '-line2'
+                    ].join('\n')
+                ]
+            ])
+        );
     });
 });
 

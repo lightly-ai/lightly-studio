@@ -5,7 +5,8 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import TypedDict
 
-from lightly_studio.core.image.image_sample import ImageSample
+from lightly_studio.core.sample import Sample
+from lightly_studio.export.lightly_studio_label_input import SampleToImage
 
 
 class CocoCaptionImage(TypedDict):
@@ -32,11 +33,16 @@ class CocoCaptionsJson(TypedDict):
     annotations: list[CocoCaptionAnnotation]
 
 
-def to_coco_captions_dict(samples: Iterable[ImageSample]) -> CocoCaptionsJson:
+def to_coco_captions_dict(
+    samples: Iterable[Sample],
+    sample_to_image: SampleToImage,
+) -> CocoCaptionsJson:
     """Convert samples with captions to a COCO captions dictionary.
 
     Args:
         samples: The samples to export.
+        sample_to_image: Strategy mapping a sample to a labelformat `Image` (used for the
+            file name and dimensions).
 
     Returns:
         A dictionary in COCO captions format.
@@ -45,16 +51,17 @@ def to_coco_captions_dict(samples: Iterable[ImageSample]) -> CocoCaptionsJson:
     coco_annotations: list[CocoCaptionAnnotation] = []
     annotation_id = 0
 
-    for image_id, image in enumerate(samples):
+    for image_id, sample in enumerate(samples):
+        image = sample_to_image(sample=sample, image_id=image_id, use_relative_filename=False)
         coco_images.append(
             {
                 "id": image_id,
-                "file_name": image.file_path_abs,
+                "file_name": image.filename,
                 "width": image.width,
                 "height": image.height,
             }
         )
-        for caption in image.captions:
+        for caption in sample.captions:
             coco_annotations.append(
                 {
                     "id": annotation_id,

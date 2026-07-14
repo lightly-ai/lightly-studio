@@ -8,9 +8,14 @@
         type ViewportState
     } from 'embedding-atlas/svelte';
     import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
+    import type { EmbeddingRegion } from '$lib/api/lightly_studio_local';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { useAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
+    import {
+        clearPlotSelectionCount,
+        setPlotSelectionCount
+    } from '$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection';
     import { useArrowData } from './useArrowData/useArrowData';
     import { usePlotData } from './usePlotData/usePlotData';
     import PlotPanelLegend from './PlotPanelLegend.svelte';
@@ -49,26 +54,20 @@
     const isVideos = $derived(isVideosRoute(page.route?.id ?? null));
     // Detect if we're on the annotations route
     const isAnnotations = $derived(isAnnotationsRoute(page.route?.id ?? null));
+    // Everything that isn't videos or annotations is the images grid.
+    const isImages = $derived(!isVideos && !isAnnotations);
 
     // Use appropriate filter hook based on route
     const imageFilters = useImageFilters();
     const videoFilters = useVideoFilters();
-    const { annotationPlotSampleIds, saveSampleIds: saveAnnotationPlotSampleIds } =
-        useAnnotationPlotSelection();
+    const { annotationPlotRegion, saveRegion: saveAnnotationRegion } = useAnnotationPlotSelection();
 
-    const updateSampleIds = $derived(
-        isAnnotations
-            ? saveAnnotationPlotSampleIds
-            : isVideos
-              ? videoFilters.updateSampleIds
-              : imageFilters.updateSampleIds
-    );
     const imageFilter = $derived(isVideos ? null : imageFilters.imageFilter);
     const videoFilter = $derived(isVideos ? videoFilters.videoFilter : null);
+    // Only videos still track their lasso selection as a resolved sample-id list; images and
+    // annotations send it to the backend as region geometry (see LIG-9903).
     const activeSampleIds = $derived(
-        isAnnotations
-            ? $annotationPlotSampleIds
-            : ((isVideos ? $videoFilter : $imageFilter)?.sample_filter?.sample_ids ?? [])
+        isVideos ? ($videoFilter?.sample_filter?.sample_ids ?? []) : []
     );
 
     // The active annotation label/tag filter, mirroring what the annotations grid applies.
@@ -93,7 +92,10 @@
             ...currentFilter,
             sample_filter: {
                 ...currentFilter.sample_filter,
-                sample_ids: []
+                sample_ids: [],
+                // The lasso only scopes the grid, not the plot: the plot shows every point and
+                // highlights the in-selection ones, so drop the region from this request.
+                embedding_region: undefined
             }
         };
     });
@@ -163,11 +165,24 @@
 
     const hasActiveFilter = $derived(filter !== null || activeSampleIds.length > 0);
 
-    // Activating a lasso unhides the Excluded category, otherwise out-of-selection points (which
-    // get demoted to Excluded) would vanish and blank out the canvas mid-draw. The legend keeps
-    // showing the user's real toggle state.
+    // Images and annotations commit the lasso as region geometry, not as sample ids. After the
+    // selection is committed the live rangeSelection is cleared, so the plot re-derives the
+    // highlight from the stored polygon to keep reflecting the actually selected points. Images
+    // keep the region on the image filter store; annotations in the shared plot region store.
+    const committedHighlightRegion = $derived(
+        isImages
+            ? ($imageFilter?.sample_filter?.embedding_region?.polygon ?? null)
+            : isAnnotations
+              ? ($annotationPlotRegion?.polygon ?? null)
+              : null
+    );
+
+    // Activating a lasso (or a committed region) unhides the Excluded category, otherwise
+    // out-of-selection points (which get demoted to Excluded) would vanish and blank out the
+    // canvas. The legend keeps showing the user's real toggle state.
     const effectiveHiddenCategories = $derived.by(() => {
-        if ($rangeSelection === null || !$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)) {
+        const hasSelectionHighlight = $rangeSelection !== null || committedHighlightRegion !== null;
+        if (!hasSelectionHighlight || !$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)) {
             return $hiddenCategories;
         }
         const next = new Set($hiddenCategories);
@@ -179,6 +194,7 @@
         usePlotData({
             arrowData: $arrowData,
             rangeSelection: $rangeSelection,
+            highlightRegion: committedHighlightRegion,
             highlightedSampleIds: activeSampleIds,
             hasActiveFilter: hasActiveFilter,
             hiddenCategories: effectiveHiddenCategories
@@ -192,38 +208,60 @@
     const legendEntries = $derived.by(() =>
         getLegendEntries($colorLegend, $hiddenCategories, useLabelColors)
     );
+    // Images and annotations send the lasso to the backend as region geometry rather than a
+    // resolved sample-id list (see LIG-9903); the sidebar chip reads the selected count from the
+    // plot-propagated count store, and clearing removes the region entirely. Images keep the
+    // region on the image filter store; annotations have no such store, so it lives in the
+    // shared annotation-plot region store instead.
+    const saveRegion = (region: EmbeddingRegion | null) => {
+        if (isImages) {
+            imageFilters.updateEmbeddingRegion(region);
+        } else {
+            saveAnnotationRegion(region);
+        }
+    };
+    const commitRegion = (polygon: Point[], count: number) => {
+        saveRegion({ polygon });
+        setPlotSelectionCount(collectionId, count);
+    };
+    const clearRegion = () => {
+        saveRegion(null);
+        clearPlotSelectionCount(collectionId);
+    };
+
     const handleMouseUp = () => {
-        const hadRangeSelection = $rangeSelection !== null;
-        if (!hadRangeSelection) {
+        if ($rangeSelection === null) {
             return;
         }
+        const polygon = $rangeSelection;
 
-        const currentSampleIds = isAnnotations
-            ? $annotationPlotSampleIds
-            : ((isVideos ? $videoFilter : $imageFilter)?.sample_filter?.sample_ids ?? []);
         const selectableCount =
             ($arrowData?.fulfils_filter as Uint8Array | undefined)?.reduce((count, fulfils) => {
                 return fulfils !== 0 ? count + 1 : count;
             }, 0) ?? null;
+        const selectedCount = $selectedSampleIds.length;
+        // Selecting nothing, or every selectable point, is equivalent to no filter at all.
+        const selectsNothingOrEverything =
+            selectedCount === 0 || (selectableCount !== null && selectedCount === selectableCount);
 
-        if ($selectedSampleIds.length === 0) {
-            if (currentSampleIds.length > 0) {
-                updateSampleIds([]);
+        // Videos still commit the resolved sample-id list; images and annotations send geometry.
+        if (isVideos) {
+            const currentSampleIds = $videoFilter?.sample_filter?.sample_ids ?? [];
+            if (selectsNothingOrEverything) {
+                if (currentSampleIds.length > 0) {
+                    videoFilters.updateSampleIds([]);
+                }
+            } else if (!isEqual($selectedSampleIds, currentSampleIds)) {
+                videoFilters.updateSampleIds($selectedSampleIds);
             }
             setRangeSelection(null);
             return;
         }
 
-        if (selectableCount !== null && $selectedSampleIds.length === selectableCount) {
-            if (currentSampleIds.length > 0) {
-                updateSampleIds([]);
-            }
-            setRangeSelection(null);
-            return;
-        }
-
-        if (!isEqual($selectedSampleIds, currentSampleIds)) {
-            updateSampleIds($selectedSampleIds);
+        if (selectsNothingOrEverything) {
+            clearRegion();
+        } else {
+            commitRegion(polygon, selectedCount);
         }
         setRangeSelection(null);
     };
@@ -298,9 +336,24 @@
 
     const clearSelection = () => {
         setRangeSelection(null);
-        updateSampleIds([]);
+        if (isVideos) {
+            videoFilters.updateSampleIds([]);
+        } else {
+            clearRegion();
+        }
     };
-    const hasActiveSelection = $derived($rangeSelection !== null || activeSampleIds.length > 0);
+    // Images and annotations track their committed selection as region geometry, not sample ids:
+    // images on the image filter store, annotations in the shared annotation-plot region store.
+    const regionSelected = $derived(
+        isImages
+            ? ($imageFilter?.sample_filter?.embedding_region ?? null) !== null
+            : isAnnotations
+              ? $annotationPlotRegion !== null
+              : false
+    );
+    const hasActiveSelection = $derived(
+        $rangeSelection !== null || activeSampleIds.length > 0 || regionSelected
+    );
 
     const onWindowKeyDown = (event: KeyboardEvent) => {
         if (event.key !== 'Escape') {

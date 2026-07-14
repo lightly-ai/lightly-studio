@@ -38,15 +38,18 @@ export class GitGuardrailContext implements GuardrailContext {
         // Memoize: the committed diff is fixed for one run, read by many guardrails.
         this.cache ??= (async () => {
             const range = `${this.baseRef}...HEAD`;
-            const [nameStatus, stat] = await Promise.all([
+            const [nameStatus, stat, rawPatch] = await Promise.all([
                 this.git.diffSummary(['--name-status', '-M', '-C', range]),
-                this.git.diffSummary(['-M', '-C', range])
+                this.git.diffSummary(['-M', '-C', range]),
+                this.git.diff(['-M', '-C', range])
             ]);
 
             // name-status gives the correct destination path for renames/copies.
             const statusByPath = new Map(
                 nameStatus.files.map((f) => [f.file, toChangedFile(f).status])
             );
+
+            const patchByPath = parsePatchesByFile(rawPatch);
 
             // stat gives line counts; renames use brace notation — resolve to destination.
             return stat.files.map((file) => {
@@ -55,12 +58,39 @@ export class GitGuardrailContext implements GuardrailContext {
                     path,
                     status: statusByPath.get(path) ?? 'modified',
                     additions: file.binary ? 0 : file.insertions,
-                    deletions: file.binary ? 0 : file.deletions
+                    deletions: file.binary ? 0 : file.deletions,
+                    patch: patchByPath.get(path)
                 };
             });
         })();
         return this.cache;
     }
+}
+
+/**
+ * Parse a raw unified diff (from `git diff`) into a Map of path → patch.
+ * Modified/added/renamed files are keyed by the destination path (`+++ b/<path>`).
+ * Deleted files (`+++ /dev/null`) are keyed by the source path (`--- a/<path>`).
+ */
+export function parsePatchesByFile(raw: string): Map<string, string> {
+    const map = new Map<string, string>();
+    // Each file section begins with 'diff --git a/... b/...'
+    const chunks = raw.split(/^(?=diff --git )/m);
+    for (const chunk of chunks) {
+        if (!chunk) continue;
+        // '+++ b/<path>' is the destination file for modified/added/renamed files.
+        const destMatch = chunk.match(/^\+\+\+ b\/(.+)$/m);
+        if (destMatch?.[1]) {
+            map.set(destMatch[1].trim(), chunk);
+            continue;
+        }
+        // '+++ /dev/null' means deleted — fall back to '--- a/<path>' for the key.
+        if (/^\+\+\+ \/dev\/null/m.test(chunk)) {
+            const srcMatch = chunk.match(/^--- a\/(.+)$/m);
+            if (srcMatch?.[1]) map.set(srcMatch[1].trim(), chunk);
+        }
+    }
+    return map;
 }
 
 /**
