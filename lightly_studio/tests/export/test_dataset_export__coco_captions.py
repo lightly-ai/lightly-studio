@@ -8,7 +8,7 @@ from pathlib import Path
 from pytest_mock import MockerFixture
 
 from lightly_studio.core.image.image_dataset import ImageDataset
-from tests.export import helpers
+from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from tests.helpers_resolvers import ImageStub, create_caption, create_images
 
 
@@ -33,7 +33,7 @@ class TestDatasetExport:
         )
 
         output_json = tmp_path / "coco_annotations.json"
-        helpers.build_dataset_export(
+        ImageDatasetExport(
             session=dataset.session, dataset_id=dataset.dataset_id, samples=dataset.query()
         ).to_coco_captions(output_json=output_json)
 
@@ -58,7 +58,7 @@ class TestDatasetExport:
         dataset = ImageDataset.create(name="test_dataset")
 
         output_json = tmp_path / "coco_annotations.json"
-        helpers.build_dataset_export(
+        ImageDatasetExport(
             session=dataset.session, dataset_id=dataset.dataset_id, samples=dataset.query()
         ).to_coco_captions(output_json=str(output_json))
 
@@ -75,7 +75,7 @@ class TestDatasetExport:
         # Patch Path.open so no file is created and assert the default path is used.
         mock_open = mocker.patch.object(Path, "open", autospec=True)
 
-        helpers.build_dataset_export(
+        ImageDatasetExport(
             session=dataset.session, dataset_id=dataset.dataset_id, samples=dataset.query()
         ).to_coco_captions()
 

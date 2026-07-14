@@ -9,12 +9,12 @@ import yaml
 from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
     AnnotationType,
 )
 from lightly_studio.resolvers import annotation_resolver
-from tests.export import helpers
 from tests.helpers_resolvers import (
     ImageStub,
     create_annotation_label,
@@ -59,7 +59,7 @@ class TestDatasetExport:
         )
 
         output_folder = tmp_path / "yolo"
-        helpers.build_dataset_export(
+        ImageDatasetExport(
             session=db_session,
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
@@ -107,7 +107,7 @@ class TestDatasetExport:
         )
 
         output_folder = tmp_path / "yolo"
-        helpers.build_dataset_export(
+        ImageDatasetExport(
             session=db_session,
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),

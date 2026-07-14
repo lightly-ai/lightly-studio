@@ -9,7 +9,7 @@ from PIL import Image as PILImage
 
 from lightly_studio.core.annotation import CreateSegmentationMask
 from lightly_studio.core.image.image_dataset import ImageDataset
-from tests.export import helpers
+from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from tests.helpers_resolvers import ImageStub, create_annotation_label, create_images
 
 
@@ -37,7 +37,7 @@ class TestDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        helpers.build_dataset_export(
+        ImageDatasetExport(
             session=dataset.session, dataset_id=dataset.dataset_id, samples=dataset.query()
         ).to_pascalvoc_segmentation_mask(output_folder=output_folder)
 
@@ -91,7 +91,7 @@ class TestDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        helpers.build_dataset_export(
+        ImageDatasetExport(
             session=dataset.session, dataset_id=dataset.dataset_id, samples=dataset.query()
         ).to_pascalvoc_segmentation_mask(output_folder=output_folder)
 
@@ -137,7 +137,7 @@ class TestDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        helpers.build_dataset_export(
+        ImageDatasetExport(
             session=dataset.session, dataset_id=dataset.dataset_id, samples=dataset.query()
         ).to_pascalvoc_segmentation_mask(output_folder=output_folder)
 
@@ -182,7 +182,7 @@ class TestDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        helpers.build_dataset_export(
+        ImageDatasetExport(
             session=dataset.session, dataset_id=dataset.dataset_id, samples=dataset.query()
         ).to_pascalvoc_segmentation_mask(output_folder=output_folder)
 
@@ -231,7 +231,7 @@ class TestDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        helpers.build_dataset_export(
+        ImageDatasetExport(
             session=dataset.session, dataset_id=dataset.dataset_id, samples=dataset.query()
         ).to_pascalvoc_segmentation_mask(output_folder=output_folder)
 

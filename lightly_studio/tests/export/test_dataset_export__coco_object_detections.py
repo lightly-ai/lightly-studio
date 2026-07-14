@@ -12,13 +12,13 @@ from lightly_studio.core.dataset_query import ImageSampleField
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image.image_dataset import ImageDataset
 from lightly_studio.export import dataset_export
+from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
     AnnotationType,
 )
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.resolvers import annotation_resolver
-from tests.export import helpers
 from tests.helpers_resolvers import (
     ImageStub,
     create_annotation_label,
@@ -66,7 +66,7 @@ class TestDatasetExport:
 
         output_json = tmp_path / "task_obj_det_1.json"
         query = dataset.query().match(ImageSampleField.height <= 200)
-        helpers.build_dataset_export(
+        ImageDatasetExport(
             session=dataset.session, dataset_id=dataset.dataset_id, samples=query
         ).to_coco_object_detections(output_json=output_json)
 
@@ -99,7 +99,7 @@ class TestDatasetExport:
 
         output_json = tmp_path / "export.json"
         # Provide the export path as a string
-        helpers.build_dataset_export(
+        ImageDatasetExport(
             session=dataset.session, dataset_id=dataset.dataset_id, samples=dataset.query()
         ).to_coco_object_detections(output_json=str(output_json))
 
@@ -118,7 +118,7 @@ class TestDatasetExport:
         mock_output = mocker.patch.object(dataset_export, "COCOObjectDetectionOutput")
 
         # Don't provide the export path.
-        helpers.build_dataset_export(
+        ImageDatasetExport(
             session=dataset.session, dataset_id=dataset.dataset_id, samples=dataset.query()
         ).to_coco_object_detections()
 
@@ -134,7 +134,7 @@ class TestDatasetExport:
         collection = collection_with_annotations
 
         output_json = tmp_path / "task_obj_det_1.json"
-        helpers.build_dataset_export(
+        ImageDatasetExport(
             session=db_session,
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
@@ -174,7 +174,7 @@ class TestDatasetExport:
         create_images(db_session=db_session, collection_id=collection.collection_id, images=images)
 
         output_json = tmp_path / "task_no_ann.json"
-        helpers.build_dataset_export(
+        ImageDatasetExport(
             session=db_session,
             dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),

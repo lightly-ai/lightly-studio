@@ -7,12 +7,12 @@ from pathlib import Path
 
 from lightly_studio.core.annotation import CreateSegmentationMask
 from lightly_studio.core.image.image_dataset import ImageDataset
+from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
     AnnotationType,
 )
 from lightly_studio.resolvers import annotation_resolver
-from tests.export import helpers
 from tests.helpers_resolvers import ImageStub, create_annotation_label, create_images
 
 
@@ -40,7 +40,7 @@ class TestDatasetExport:
         )
 
         output_json = tmp_path / "task_inst_seg_1.json"
-        helpers.build_dataset_export(
+        ImageDatasetExport(
             session=dataset.session, dataset_id=dataset.dataset_id, samples=dataset.query()
         ).to_coco_segmentation_masks(output_json=output_json)
 
@@ -98,7 +98,7 @@ class TestDatasetExport:
         )
 
         output_json = tmp_path / "task_inst_seg_skip.json"
-        helpers.build_dataset_export(
+        ImageDatasetExport(
             session=dataset.session, dataset_id=dataset.dataset_id, samples=dataset.query()
         ).to_coco_segmentation_masks(output_json=output_json)
 
