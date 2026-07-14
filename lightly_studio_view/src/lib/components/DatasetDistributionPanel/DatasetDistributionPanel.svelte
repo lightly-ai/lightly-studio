@@ -34,6 +34,11 @@
          * Called when the user switches the count mode via the config dialog.
          */
         onCountModeChange?: (mode: AnnotationCountMode) => void;
+        /**
+         * Initial count mode to use when the panel first mounts. Lets the
+         * parent preserve the mode across close/reopen cycles.
+         */
+        initialCountMode?: AnnotationCountMode;
     }
 
     const {
@@ -43,7 +48,8 @@
         topN = 20,
         onClose,
         onBarClick,
-        onCountModeChange
+        onCountModeChange,
+        initialCountMode = AnnotationCountMode.OBJECTS
     }: Props = $props();
 
     // Normalise to a source list so the rest of the panel has one code path.
@@ -74,7 +80,7 @@
         sortBy: 'count',
         manualClasses: [],
         orientation: 'horizontal',
-        countMode: AnnotationCountMode.OBJECTS
+        countMode: initialCountMode
     });
     let configDialogOpen = $state(false);
     let expandOpen = $state(false);

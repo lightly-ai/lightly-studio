@@ -358,7 +358,8 @@
 
     const imageAnnotationCountsQuery = useImageAnnotationCounts(() => ({
         collectionId: datasetId,
-        filter: imageAnnotationCountsFilter
+        filter: imageAnnotationCountsFilter,
+        enabled: !isVideos && !isVideoFrames
     }));
 
     const annotationCounts = $derived.by(() => {
@@ -726,6 +727,7 @@
                             {#await import('$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte') then { default: DatasetDistributionPanel }}
                                 <DatasetDistributionPanel
                                     sources={distributionSources}
+                                    initialCountMode={distributionCountMode}
                                     onClose={() => setActivePanel('none')}
                                     onCountModeChange={(mode) => {
                                         distributionCountMode = mode;
