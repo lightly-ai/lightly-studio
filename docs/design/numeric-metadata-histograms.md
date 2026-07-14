@@ -1,4 +1,4 @@
-# Numeric metadata histograms (PR #1638)
+# Design doc: numeric metadata histograms (PR #1638)
 
 Review notes for [LIG-9587](https://linear.app/lightly/issue/LIG-9587/frontend-numeric-metadata-histogram-2-sp)
 and [LIG-10177](https://linear.app/lightly/issue/LIG-10177/backend-filter-aware-metadata-histogram-endpoint).
