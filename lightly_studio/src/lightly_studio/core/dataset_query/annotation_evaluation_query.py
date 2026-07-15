@@ -21,8 +21,7 @@ from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotat
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.sample import SampleTable
 
-# TODO(lukas, 07/2026): More match kinds will be added later.
-AnnotationMetricMatchKind = Literal["confusion", "false_positive"]
+AnnotationMetricMatchKind = Literal["confusion", "false_positive", "false_negative"]
 
 
 @dataclass
@@ -30,8 +29,10 @@ class AnnotationMetricQuery(MatchExpression):
     """Query samples by annotation-level evaluation results.
 
     This query matches samples that belong to an evaluation run and contain annotation
-    pairs in a selected confusion-matrix cell or false positives, optionally constrained by
-    persisted annotation metrics.
+    pairs in a selected confusion-matrix cell, false positives, or false negatives.
+    Confusion-matrix matches can optionally be constrained by persisted
+    ``AnnotationEvaluationMetricField`` criteria. False-positive and false-negative
+    matches do not support metric constraints.
 
     Example:
         ```python
@@ -47,7 +48,7 @@ class AnnotationMetricQuery(MatchExpression):
     match_kind: AnnotationMetricMatchKind
     run_name: str
     gt_label_name: str | None
-    pred_label_name: str
+    pred_label_name: str | None
     criteria: list[AnnotationEvaluationMetricMatchExpression]
 
     @classmethod
@@ -59,6 +60,8 @@ class AnnotationMetricQuery(MatchExpression):
         *criteria: AnnotationEvaluationMetricMatchExpression,
     ) -> AnnotationMetricQuery:
         """Match samples by confusion-matrix cell within an evaluation run.
+
+        Persisted ``AnnotationEvaluationMetricField`` criteria can constrain matches.
 
         Example:
             ```python
@@ -93,6 +96,8 @@ class AnnotationMetricQuery(MatchExpression):
     ) -> AnnotationMetricQuery:
         """Match samples with false-positive predictions within an evaluation run.
 
+        Metric constraints are not supported for false-positive matches.
+
         Example:
             ```python
             AnnotationMetricQuery.false_positive(
@@ -110,6 +115,36 @@ class AnnotationMetricQuery(MatchExpression):
             run_name=run_name,
             gt_label_name=None,
             pred_label_name=prediction,
+            criteria=[],
+        )
+
+    @classmethod
+    def false_negative(
+        cls,
+        run_name: str,
+        ground_truth: str,
+    ) -> AnnotationMetricQuery:
+        """Match samples with false-negative ground truths within an evaluation run.
+
+        Metric constraints are not supported for false-negative matches.
+
+        Example:
+            ```python
+            AnnotationMetricQuery.false_negative(
+                run_name="run1",
+                ground_truth="cat",
+            )
+            ```
+
+        Args:
+            run_name: The evaluation run name to match metrics against.
+            ground_truth: Ground-truth annotation class name.
+        """
+        return cls(
+            match_kind="false_negative",
+            run_name=run_name,
+            gt_label_name=ground_truth,
+            pred_label_name=None,
             criteria=[],
         )
 
@@ -137,6 +172,10 @@ class AnnotationMetricQuery(MatchExpression):
             metric_subquery = self._build_confusion_metric_subquery(metric_table=candidate_metric)
         elif self.match_kind == "false_positive":
             metric_subquery = self._build_false_positive_metric_subquery(
+                metric_table=candidate_metric
+            )
+        elif self.match_kind == "false_negative":
+            metric_subquery = self._build_false_negative_metric_subquery(
                 metric_table=candidate_metric
             )
         else:
@@ -207,6 +246,30 @@ class AnnotationMetricQuery(MatchExpression):
             .where(col(metric_table.sample_id) == col(SampleTable.sample_id))
             .where(col(metric_table.gt_annotation_id).is_(None))
             .where(col(pred_label.annotation_label_name) == self.pred_label_name)
+        )
+
+    def _build_false_negative_metric_subquery(
+        self,
+        metric_table: Any = EvaluationAnnotationMetricTable,
+    ) -> Select[tuple[int]]:
+        gt_annotation = aliased(AnnotationBaseTable)
+        gt_label = aliased(AnnotationLabelTable)
+
+        return (
+            select(1)
+            .select_from(metric_table)
+            .join(
+                gt_annotation,
+                col(metric_table.gt_annotation_id) == col(gt_annotation.sample_id),
+            )
+            .join(
+                gt_label,
+                col(gt_annotation.annotation_label_id) == col(gt_label.annotation_label_id),
+            )
+            .where(col(metric_table.evaluation_run_id) == col(EvaluationRunTable.id))
+            .where(col(metric_table.sample_id) == col(SampleTable.sample_id))
+            .where(col(metric_table.pred_annotation_id).is_(None))
+            .where(col(gt_label.annotation_label_name) == self.gt_label_name)
         )
 
     def _build_confusion_metric_subquery(
