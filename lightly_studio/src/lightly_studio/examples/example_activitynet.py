@@ -37,8 +37,6 @@ for video in dataset:
     for annotation in video.annotations:
         span = annotation.annotation_base.temporal_span_details
         time_range = f"{span.start_time_s:.2f}s - {span.end_time_s:.2f}s" if span else "no span"
-        print(
-            f"  - {annotation.class_name} [{time_range}] (confidence: {annotation.confidence})"
-        )
+        print(f"  - {annotation.class_name} [{time_range}] (confidence: {annotation.confidence})")
 
 ls.start_gui()
