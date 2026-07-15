@@ -93,36 +93,47 @@
         void loadFrameByPlaybackTime(target.currentTime, video.fps);
     };
 
+    // null = waiting for the frame deep-link timestamp; 0 = start of video.
+    let startTimeS = $state<number | null>(frameNumber !== undefined ? null : 0);
+
+    // #key remounts on navigation, so onMount suffices; an $effect could re-fire
+    // and stop the play sync loop.
     onMount(() => {
         if (frameNumber !== undefined) {
             void loadFramesFromFrameNumber(frameNumber);
-            jumpToCurrentFrame = true;
         } else {
             void loadFrameByPlaybackTime(0, video.fps);
         }
-    });
 
-    $effect(() => {
         return () => stopFrameSyncLoop();
     });
 
+    let videoFrameContainerEl: HTMLDivElement | null = $state(null);
     let videoWidth = $state(0);
     let videoHeight = $state(0);
+    let overlayTop = $state(0);
+    let overlayLeft = $state(0);
 
     let resizeObserver: ResizeObserver;
 
+    // Align the annotation overlay to the <video> box, not the full player chrome.
     $effect(() => {
-        if (!videoEl) return;
+        if (!videoEl || !videoFrameContainerEl) return;
 
         const updateOverlaySize = () => {
-            if (!videoEl) return;
-            videoWidth = videoEl.clientWidth;
-            videoHeight = videoEl.clientHeight;
+            if (!videoEl || !videoFrameContainerEl) return;
+            const videoRect = videoEl.getBoundingClientRect();
+            const containerRect = videoFrameContainerEl.getBoundingClientRect();
+            overlayLeft = videoRect.left - containerRect.left;
+            overlayTop = videoRect.top - containerRect.top;
+            videoWidth = videoRect.width;
+            videoHeight = videoRect.height;
         };
         updateOverlaySize();
 
         resizeObserver = new ResizeObserver(updateOverlaySize);
         resizeObserver.observe(videoEl);
+        resizeObserver.observe(videoFrameContainerEl);
 
         return () => resizeObserver.disconnect();
     });
@@ -131,32 +142,30 @@
         return frame.frame_timestamp_s + 0.002;
     };
 
-    // this param is used when we passed frame_number to jump to specific frame on video load, after that we want to jump to current frame only when user seek or play the video
-    let jumpToCurrentFrame: boolean = $state(false);
-
-    // We track here if we have flag to jump to current frame
+    // Once the deep-linked frame loads, pass its timestamp to VideoPlayer.
     $effect(() => {
-        if (jumpToCurrentFrame && $currentFrame && videoEl) {
-            const targetTime = getTimeByFrameNumber($currentFrame);
-            videoEl.currentTime = targetTime;
-            jumpToCurrentFrame = false;
-        }
+        if (frameNumber === undefined || startTimeS !== null || !$currentFrame) return;
+        if ($currentFrame.frame_number !== frameNumber) return;
+        startTimeS = getTimeByFrameNumber($currentFrame);
     });
 </script>
 
-<div class="flex h-full w-full flex-col space-y-4">
+<div class="flex h-full min-h-0 w-full flex-col">
     <div class="flex min-h-0 flex-1 gap-4">
-        <Card className="flex w-[60vw] flex-col">
-            <CardContent className="flex h-full flex-col gap-4 overflow-hidden">
-                <div class="video-frame-container relative overflow-hidden rounded-lg bg-black">
+        <Card className="flex h-full min-h-0 w-[60vw] flex-col overflow-hidden">
+            <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <div
+                    bind:this={videoFrameContainerEl}
+                    class="video-frame-container relative min-h-0 flex-1 overflow-hidden rounded-lg bg-black"
+                >
                     <VideoDetailsNavigation />
                     <VideoPlayer
                         src={getVideoURLById(video.sample_id)}
                         bind:videoEl
+                        {startTimeS}
                         videoProps={{
-                            controls: true,
                             muted: true,
-                            class: 'block h-full w-full',
+                            class: 'object-contain',
                             onplay,
                             onpause,
                             onended,
@@ -165,21 +174,26 @@
                     />
 
                     {#if $currentFrame && videoWidth > 0}
-                        <VideoFrameAnnotationItem
-                            width={videoWidth}
-                            height={videoHeight}
-                            sample={$currentFrame}
-                            showLabel={true}
-                            sampleWidth={video.width}
-                            sampleHeight={video.height}
-                            {prerenderedAnnotations}
-                        />
+                        <div
+                            class="pointer-events-none absolute"
+                            style={`top: ${overlayTop}px; left: ${overlayLeft}px; width: ${videoWidth}px; height: ${videoHeight}px;`}
+                        >
+                            <VideoFrameAnnotationItem
+                                width={videoWidth}
+                                height={videoHeight}
+                                sample={$currentFrame}
+                                showLabel={true}
+                                sampleWidth={video.width}
+                                sampleHeight={video.height}
+                                {prerenderedAnnotations}
+                            />
+                        </div>
                     {/if}
                 </div>
             </CardContent>
         </Card>
 
-        <Card className="flex flex-1 flex-col overflow-hidden">
+        <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <CardContent className="h-full overflow-y-auto">
                 {#if video?.sample?.sample_id}
                     <SegmentTags
@@ -219,6 +233,6 @@
 <style>
     .video-frame-container {
         width: 100%;
-        height: 100%;
+        min-height: 0;
     }
 </style>
