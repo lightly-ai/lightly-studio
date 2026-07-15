@@ -71,9 +71,11 @@
         preload: 'metadata'
     };
 
-    // Derived so handlers from videoProps stay up to date.
+    // Derived so handlers from videoProps stay up to date. `class` is applied
+    // separately, so drop it here to avoid overriding the merged class.
     const mergedVideoProps = $derived.by(() => {
-        const { class: _videoClass, ...restVideoProps } = videoProps;
+        const restVideoProps = { ...videoProps };
+        delete restVideoProps.class;
         return {
             ...defaultVideoProps,
             ...restVideoProps,
