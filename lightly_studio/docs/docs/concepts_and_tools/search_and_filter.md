@@ -284,7 +284,11 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
 
     #### Annotation evaluation queries
 
-    Filtering samples by annotation evaluation results from a specific [evaluation run](evaluation.md), can be realized via `AnnotationMetricQuery.confusion(...)` together with `AnnotationEvaluationMetricField(...)`. In the below example we filter for samples where `cat` got confused as a `dog` by the model, and the IOU is higher than 0.3.
+    Use `AnnotationMetricQuery` to filter samples by annotation-level results from a specific
+    [evaluation run](evaluation.md). For matched ground-truth and prediction pairs, use
+    `AnnotationMetricQuery.confusion(...)`, optionally together with
+    `AnnotationEvaluationMetricField(...)`. The example below finds samples where `cat` got
+    confused as a `dog` and the IoU is greater than 0.3.
 
     ```py
     from lightly_studio.core.dataset_query import (
@@ -300,6 +304,27 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
     )
 
     # Assign the expression to a query:
+    query.match(expr)
+    ```
+
+    To filter samples with unmatched predictions or missed ground truths, use `AnnotationMetricQuery.false_positive(...)` and `AnnotationMetricQuery.false_negative(...)`.
+
+    ```py
+    from lightly_studio.core.dataset_query import AnnotationMetricQuery
+
+    # Samples where the model predicted a dog that did not match any ground truth.
+    expr = AnnotationMetricQuery.false_positive(
+        run_name="run1",
+        prediction="dog",
+    )
+
+    # Samples where a ground-truth cat was not matched by any prediction.
+    expr = AnnotationMetricQuery.false_negative(
+        run_name="run1",
+        ground_truth="cat",
+    )
+
+    # Assign either expression to a query:
     query.match(expr)
     ```
 

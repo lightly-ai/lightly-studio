@@ -18,3 +18,5 @@ dataset_examples_studio
 
 # Top-level tmp dir.
 /tmp/
+
+.local.gitignore
