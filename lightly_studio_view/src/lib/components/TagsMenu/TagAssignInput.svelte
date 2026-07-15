@@ -7,11 +7,11 @@
         options: TagView[];
         hasSelection: boolean;
         busy: boolean;
-        showSelectionHint?: boolean;
         onSelect: (name: string) => void;
     }
 
-    let { options, hasSelection, busy, showSelectionHint = false, onSelect }: Props = $props();
+    let { options, hasSelection, busy, onSelect }: Props = $props();
+    const showSelectionHint = $derived(!hasSelection);
 
     let searchQuery = $state('');
     let showDropdown = $state(false);

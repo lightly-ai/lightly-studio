@@ -224,12 +224,6 @@
             {/each}
         </div>
 
-        <TagAssignInput
-            options={$tags}
-            {hasSelection}
-            busy={assignBusy}
-            showSelectionHint={!hasSelection}
-            onSelect={handleAssign}
-        />
+        <TagAssignInput options={$tags} {hasSelection} busy={assignBusy} onSelect={handleAssign} />
     </div>
 </Segment>
