@@ -125,6 +125,17 @@ describe('Histogram', () => {
         expect(onRangeSelect).toHaveBeenCalledWith({ min: 75, max: 100 });
     });
 
+    it('tracks drags that move outside the canvas', () => {
+        const onRangeSelect = vi.fn();
+        render(Histogram, { props: { data: normal, onRangeSelect } });
+
+        echartsMock.zrHandlers.mousedown({ offsetX: 150, offsetY: 10 }); // bin 15
+        window.dispatchEvent(new MouseEvent('mousemove', { clientX: 9999 }));
+        window.dispatchEvent(new MouseEvent('mouseup'));
+
+        expect(onRangeSelect).toHaveBeenCalledWith({ min: 75, max: 100 });
+    });
+
     it('does nothing on mouseup without a preceding press', () => {
         const onRangeSelect = vi.fn();
         render(Histogram, { props: { data: normal, onRangeSelect } });

@@ -78,6 +78,11 @@
             if (dragStartIndex === null) return;
             dragCurrentIndex = pixelToBinIndex(instance, event.offsetX);
         };
+        const handleWindowMouseMove = (event: MouseEvent) => {
+            if (dragStartIndex === null) return;
+            const offsetX = event.clientX - container.getBoundingClientRect().left;
+            dragCurrentIndex = pixelToBinIndex(instance, offsetX);
+        };
         const handleWindowMouseUp = () => {
             const range = dragRange;
             dragStartIndex = null;
@@ -86,11 +91,13 @@
         };
         zr.on('mousedown', handleMouseDown);
         zr.on('mousemove', handleMouseMove);
+        window.addEventListener('mousemove', handleWindowMouseMove);
         window.addEventListener('mouseup', handleWindowMouseUp);
 
         const resizeObserver = new ResizeObserver(() => instance.resize());
         resizeObserver.observe(container);
         return () => {
+            window.removeEventListener('mousemove', handleWindowMouseMove);
             window.removeEventListener('mouseup', handleWindowMouseUp);
             resizeObserver.disconnect();
             instance.dispose();
