@@ -49,6 +49,10 @@
         createMetadataFilters,
         useMetadataFilters
     } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
+    import {
+        selectDistributions,
+        useNumericMetadataDistribution
+    } from '$lib/hooks/useNumericMetadataDistribution/useNumericMetadataDistribution.js';
     import { useVideoFrameAnnotationCounts } from '$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
@@ -277,7 +281,9 @@
             : 'Search samples by description or image'
     );
 
-    const { metadataValues } = $derived.by(() => useMetadataFilters(collectionId));
+    const { metadataValues, metadataBounds, updateMetadataValues } = $derived.by(() =>
+        useMetadataFilters(collectionId)
+    );
     const { dimensionsValues } = useDimensions(collectionIdStore);
 
     const annotationLabelsQuery = useAnnotationLabels(() => ({
@@ -459,34 +465,101 @@
         };
     });
 
-    const allTypesSource = $derived<DistributionSource>({
-        id: 'all',
-        label: 'All types',
-        data: classDistributionCounts
-    });
+    // The panel's sources are the distribution *types* (class labels,
+    // metadata, …); the subset within a type (annotation type, metadata key)
+    // is the source's group, picked in a second, contextual dropdown.
 
-    const distributionSources = $derived.by<DistributionSource[]>(() => {
+    // Class labels: one source, annotation types as groups.
+    const classDistributionSource = $derived.by<DistributionSource>(() => {
+        const allTypesGroup = { id: 'all', label: 'All types', data: classDistributionCounts };
+        const base = {
+            id: 'classes',
+            label: 'Annotation classes',
+            groupLabel: 'Annotation type',
+            valueNoun: 'annotations'
+        };
         const typeQueries = distributionTypeQueries;
-        if (!typeQueries) return [allTypesSource];
+        if (!typeQueries) return { ...base, data: classDistributionCounts };
         const perType = [
             { id: AnnotationType.CLASSIFICATION, label: 'Classification' },
             { id: AnnotationType.OBJECT_DETECTION, label: 'Object detection' },
             { id: AnnotationType.SEGMENTATION_MASK, label: 'Segmentation' }
         ];
-        const typeSources: DistributionSource[] = [];
-        for (const { id, label } of perType) {
-            const data = toCategoryCounts(
-                typeQueries[id].data as { label_name: string; current_count: number }[]
-            );
-            // Skip types with no matches in the current view so the selector stays clean.
-            if (data.length > 0) typeSources.push({ id, label, data });
-        }
-        // With a single type, "All types" would just duplicate it — show only
-        // the type so the panel's selector stays hidden.
-        if (typeSources.length <= 1)
-            return typeSources.length === 1 ? typeSources : [allTypesSource];
-        return [allTypesSource, ...typeSources];
+        const typeGroups = perType
+            .map(({ id, label }) => ({
+                id,
+                label,
+                data: toCategoryCounts(
+                    typeQueries[id].data as { label_name: string; current_count: number }[]
+                )
+            }))
+            // Skip types with no matches in the current view so the picker stays clean.
+            .filter((group) => group.data.length > 0);
+        // With zero or one populated type, "All types" would just duplicate it —
+        // drop the group picker entirely.
+        if (typeGroups.length <= 1) return { ...base, data: classDistributionCounts };
+        return { ...base, groups: [allTypesGroup, ...typeGroups] };
     });
+
+    // Numeric metadata fields as histogram groups. Bin edges span the full
+    // collection (stable axis); counts track the active filters — the query
+    // refetches whenever the grid filter changes. Each key's own metadata
+    // filter is excluded server-side (faceted-search behavior). Only queried
+    // while the distribution panel is open.
+    const metadataHistogramsQuery = $derived.by(() => {
+        if (!distributionPanelVisible) return null;
+        return useNumericMetadataDistribution({
+            collectionId: datasetId,
+            filter: imageAnnotationCountsFilter
+        });
+    });
+    const metadataDistributions = $derived(selectDistributions(metadataHistogramsQuery?.data));
+
+    const metadataDistributionSource = $derived.by<DistributionSource | null>(() => {
+        const keys = Object.keys(metadataDistributions);
+        if (keys.length === 0) return null;
+        return {
+            id: 'metadata',
+            label: 'Metadata',
+            groupLabel: 'Metadata key',
+            valueNoun: 'samples',
+            groups: keys.map((key) => ({
+                id: key,
+                label: key,
+                histogram: metadataDistributions[key],
+                // Highlight the active filter range; bins outside it dim.
+                selectedRange: $metadataValues[key]
+            }))
+        };
+    });
+
+    // Selecting a histogram range (bin click or press-drag-release) narrows
+    // the metadata filter for that key; re-selecting the current range resets it.
+    const handleDistributionHistogramRangeSelect = (
+        metadataKey: string,
+        range: { min: number; max: number }
+    ) => {
+        const bound = $metadataBounds[metadataKey];
+        if (!bound) return;
+        const current = $metadataValues[metadataKey];
+        const isBinAlreadySelected =
+            current && current.min === range.min && current.max === range.max;
+        updateMetadataValues({
+            ...$metadataValues,
+            [metadataKey]: isBinAlreadySelected
+                ? { min: bound.min, max: bound.max }
+                : {
+                      min: Math.max(range.min, bound.min),
+                      max: Math.min(range.max, bound.max)
+                  }
+        });
+    };
+
+    const distributionSources = $derived<DistributionSource[]>(
+        metadataDistributionSource
+            ? [classDistributionSource, metadataDistributionSource]
+            : [classDistributionSource]
+    );
 </script>
 
 <div class="flex-none">
@@ -663,6 +736,7 @@
                                 <DatasetDistributionPanel
                                     sources={distributionSources}
                                     onClose={() => setActivePanel('none')}
+                                    onHistogramRangeSelect={handleDistributionHistogramRangeSelect}
                                 />
                             {/await}
                         {/if}
