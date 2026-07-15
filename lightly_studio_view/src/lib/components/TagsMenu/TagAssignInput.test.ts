@@ -27,6 +27,7 @@ describe('TagAssignInput', () => {
         render(TagAssignInput, {
             props: {
                 options,
+                hasSelection: true,
                 busy: false,
                 onSelect
             }
@@ -49,6 +50,7 @@ describe('TagAssignInput', () => {
         render(TagAssignInput, {
             props: {
                 options,
+                hasSelection: true,
                 busy: false,
                 onSelect
             }
@@ -68,6 +70,7 @@ describe('TagAssignInput', () => {
         render(TagAssignInput, {
             props: {
                 options,
+                hasSelection: true,
                 busy: false,
                 onSelect: vi.fn()
             }

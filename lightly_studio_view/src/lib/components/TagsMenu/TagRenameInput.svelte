@@ -60,7 +60,7 @@
         class="h-8 text-xs"
         data-testid={`rename-tag-input-${tag.tag_id}`}
         placeholder="Tag name"
-        disabled={renamingTagId === tag.tag_id}
+        isPending={renamingTagId === tag.tag_id}
         onclick={(event: MouseEvent) => {
             event.stopPropagation();
         }}
