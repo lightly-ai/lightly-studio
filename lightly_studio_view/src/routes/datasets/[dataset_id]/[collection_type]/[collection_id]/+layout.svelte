@@ -2,17 +2,20 @@
     import { browser } from '$app/environment';
     import { page } from '$app/state';
     import {
+        Button,
         CombinedMetadataDimensionsFilters,
         DatasetGridHeader,
         Footer,
         LabelsMenu,
         SelectionPill,
+        ShowFiltersButton,
         TagsMenu
     } from '$lib/components';
+    import { Tooltip } from '$lib/components/ui/tooltip';
     import QueryEditorPanel from '$lib/components/QueryEditorPanel/QueryEditorPanel.svelte';
     import { SidePanelTabs } from '$lib/components';
     import Separator from '$lib/components/ui/separator/separator.svelte';
-    import { GripVertical, SlidersHorizontal } from '@lucide/svelte';
+    import { GripVertical, PanelLeftClose, SlidersHorizontal } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
     import { toStore } from 'svelte/store';
     import { Header } from '$lib/components';
@@ -37,7 +40,6 @@
         isVideoDetailsRoute
     } from '$lib/routes';
     import type { GridType } from '$lib/types';
-    import { useImageAnnotationCounts } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
     import QueryControl from '$lib/components/QueryControl/QueryControl.svelte';
     import { PaneGroup, Pane, PaneResizer } from 'paneforge';
@@ -51,7 +53,14 @@
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
-    import { SampleType } from '$lib/api/lightly_studio_local/types.gen';
+    import {
+        AnnotationCountMode,
+        AnnotationType,
+        SampleType
+    } from '$lib/api/lightly_studio_local/types.gen';
+    import type { AnnotationsFilter } from '$lib/api/lightly_studio_local/types.gen';
+    import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
+    import type { DistributionSource } from '$lib/components/DatasetDistributionPanel';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
     import {
         buildVideoAnnotationCountsFilter,
@@ -59,7 +68,11 @@
     } from '$lib/utils/buildAnnotationCountsFilters';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
     import ConfusionCellFilterItem from '$lib/components/ConfusionCellFilterItem';
-    import { useSelectionSummary } from '$lib/hooks';
+    import {
+        useSelectionSummary,
+        useImageAnnotationCounts,
+        useImageAnnotationCountsQueryKey
+    } from '$lib/hooks';
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
     import { isInputElement } from '$lib/utils';
     import { shutdownMaskRendererPool } from '$lib/workers/maskRendererPool';
@@ -89,6 +102,8 @@
         collections,
         activePanel,
         setActivePanel,
+        filterPanelCollapsed,
+        toggleFilterPanelCollapsed,
         filteredSampleCount,
         filteredAnnotationCount,
         // Sourced from the stable singleton (not `$derived(data)`) so `search`, created once below,
@@ -247,7 +262,7 @@
         if (lastCollectionId && lastCollectionId !== collectionId) {
             clearSelectedSamples(lastCollectionId);
             clearSelectedSampleAnnotationCrops(lastCollectionId);
-            clearAnnotationPlotSelection();
+            clearAnnotationPlotSelection(lastCollectionId);
         }
 
         gridType = nextGridType;
@@ -303,6 +318,49 @@
     const plotFilterVideoSampleIds = $derived(
         $videoFilterFromHook?.sample_filter?.sample_ids ?? []
     );
+    // Query, tag and confusion-cell selections live on the shared image filter's
+    // sample_filter. Pull them out so the distribution counts track them too
+    // (previously only sample_ids from this filter were forwarded).
+    const plotFilterTagIds = $derived($imageFilterFromHook?.sample_filter?.tag_ids ?? []);
+    const plotFilterConfusionCell = $derived(
+        $imageFilterFromHook?.sample_filter?.confusion_cell ?? null
+    );
+    const plotFilterQueryExpr = $derived($imageFilterFromHook?.sample_filter?.query_expr ?? null);
+
+    // Selected annotation sources (annotation collections). When a subset is
+    // selected the distribution counts only annotations from those sources; the
+    // backend restricts the counted annotations by their own collection id.
+    const { selectedCollectionIds: selectedAnnotationSourceIds } = useAnnotationCollectionsFilter();
+    const annotationFilterForCounts = $derived.by<AnnotationsFilter | undefined>(() => {
+        const base = $annotationFilterStore;
+        const sourceIds = isAnnotations ? [] : $selectedAnnotationSourceIds;
+        if (sourceIds.length === 0) return base;
+        return {
+            ...(base ?? { filter_type: 'annotations' }),
+            collection_ids: sourceIds
+        };
+    });
+
+    // Image-count filter shared by the mix and per-type distribution queries so
+    // the distribution plot tracks the active filters (dimensions, labels,
+    // metadata, query, tags, confusion cell and annotation sources).
+    const imageAnnotationCountsFilter = $derived(
+        buildImageFilter({
+            dimensionsValues: $dimensionsValues,
+            annotationFilter: annotationFilterForCounts,
+            metadataFilters,
+            sampleIds: isAnnotations ? [] : plotFilterImageSampleIds,
+            tagIds: isAnnotations ? [] : plotFilterTagIds,
+            confusionCell: isAnnotations ? null : plotFilterConfusionCell,
+            queryExpr: isAnnotations ? null : plotFilterQueryExpr
+        })
+    );
+
+    const imageAnnotationCountsQuery = useImageAnnotationCounts(() => ({
+        collectionId: datasetId,
+        filter: imageAnnotationCountsFilter,
+        enabled: !isVideos && !isVideoFrames
+    }));
 
     const annotationCounts = $derived.by(() => {
         if (
@@ -332,15 +390,7 @@
                 })
             });
         }
-        return useImageAnnotationCounts({
-            collectionId: datasetId,
-            filter: buildImageFilter({
-                dimensionsValues: $dimensionsValues,
-                annotationFilter: $annotationFilterStore,
-                metadataFilters,
-                sampleIds: isAnnotations ? [] : plotFilterImageSampleIds
-            })
-        });
+        return imageAnnotationCountsQuery;
     });
 
     // Feed annotation counts back into the hook for UI-ready filter rows.
@@ -371,8 +421,137 @@
     const panelIsVisible = $derived(
         ($activePanel === 'evaluationRuns' && supportsEvaluation) ||
             ($activePanel === 'embeddingPlot' && hasMediaWithEmbeddings) ||
-            ($activePanel === 'queryEditor' && isImages)
+            ($activePanel === 'queryEditor' && isImages) ||
+            ($activePanel === 'distribution' && isImages)
     );
+
+    // Class counts for the distribution panel. The "All types" source reuses the
+    // shared annotation-count query that feeds the labels filter; the per-type
+    // sources fetch classification / detection / segmentation counts on demand
+    // while the panel is open. We map `current_count` so the plot tracks the
+    // active filters, dropping labels with no matches in the current view.
+    const toCategoryCounts = (
+        countsData: { label_name: string; current_count: number }[] | undefined
+    ) =>
+        (countsData ?? [])
+            .map((item) => ({
+                label: item.label_name,
+                count: Number(item.current_count)
+            }))
+            .filter((item) => item.count > 0);
+
+    const classDistributionCounts = $derived(
+        toCategoryCounts(annotationCounts.data as { label_name: string; current_count: number }[])
+    );
+
+    const distributionPanelVisible = $derived($activePanel === 'distribution' && isImages);
+
+    // Global count mode for the distribution panel (applies to all sources).
+    let distributionCountMode = $state<AnnotationCountMode>(AnnotationCountMode.OBJECTS);
+
+    // Only create the per-type queries while the panel is open so we don't fetch
+    // extra count queries on every collection view.
+    // The 'all' query uses a suffixed key so its cache entry is isolated from
+    // the shared annotationCounts query (labels filter). TanStack's prefix
+    // matching ensures mutation invalidations still reach it.
+    const distributionAllQueryKey = [...useImageAnnotationCountsQueryKey, 'distribution'];
+
+    const distributionAllQuery = useImageAnnotationCounts(() => ({
+        collectionId: datasetId,
+        filter: imageAnnotationCountsFilter,
+        countMode: distributionCountMode,
+        queryKey: distributionAllQueryKey,
+        enabled: distributionPanelVisible
+    }));
+
+    const distributionClassificationQuery = useImageAnnotationCounts(() => ({
+        collectionId: datasetId,
+        annotationType: AnnotationType.CLASSIFICATION,
+        filter: imageAnnotationCountsFilter,
+        countMode: distributionCountMode,
+        enabled: distributionPanelVisible
+    }));
+
+    const distributionObjectDetectionQuery = useImageAnnotationCounts(() => ({
+        collectionId: datasetId,
+        annotationType: AnnotationType.OBJECT_DETECTION,
+        filter: imageAnnotationCountsFilter,
+        countMode: distributionCountMode,
+        enabled: distributionPanelVisible
+    }));
+
+    const distributionSegmentationQuery = useImageAnnotationCounts(() => ({
+        collectionId: datasetId,
+        annotationType: AnnotationType.SEGMENTATION_MASK,
+        filter: imageAnnotationCountsFilter,
+        countMode: distributionCountMode,
+        enabled: distributionPanelVisible
+    }));
+
+    const allTypesSource = $derived<DistributionSource>({
+        id: 'all',
+        label: 'All types',
+        data: classDistributionCounts
+    });
+
+    const distributionSources = $derived.by<DistributionSource[]>(() => {
+        if (!distributionPanelVisible) return [allTypesSource];
+
+        // Use the distribution-specific "all" query so the "All types" source
+        // respects distributionCountMode. Fall back to the shared counts while
+        // the distribution query is still loading (data === undefined).
+        const allDistributionData =
+            distributionAllQuery.data !== undefined
+                ? toCategoryCounts(
+                      distributionAllQuery.data as { label_name: string; current_count: number }[]
+                  )
+                : classDistributionCounts;
+        const allTypesDistributionSource: DistributionSource = {
+            id: 'all',
+            label: 'All types',
+            data: allDistributionData
+        };
+
+        const perType: {
+            id: AnnotationType;
+            label: string;
+            valueNoun?: string;
+            query: ReturnType<typeof useImageAnnotationCounts>;
+        }[] = [
+            {
+                id: AnnotationType.CLASSIFICATION,
+                label: 'Classification',
+                query: distributionClassificationQuery
+            },
+            {
+                id: AnnotationType.OBJECT_DETECTION,
+                label: 'Object detection',
+                valueNoun:
+                    distributionCountMode === AnnotationCountMode.SAMPLES ? 'samples' : 'instances',
+                query: distributionObjectDetectionQuery
+            },
+            {
+                id: AnnotationType.SEGMENTATION_MASK,
+                label: 'Segmentation',
+                valueNoun:
+                    distributionCountMode === AnnotationCountMode.SAMPLES ? 'samples' : 'instances',
+                query: distributionSegmentationQuery
+            }
+        ];
+        const typeSources: DistributionSource[] = [];
+        for (const { id, label, valueNoun, query } of perType) {
+            const data = toCategoryCounts(
+                query.data as { label_name: string; current_count: number }[]
+            );
+            // Skip types with no matches in the current view so the selector stays clean.
+            if (data.length > 0) typeSources.push({ id, label, data, valueNoun });
+        }
+        // With a single type, "All types" would just duplicate it — show only
+        // the type so the panel's selector stays hidden.
+        if (typeSources.length <= 1)
+            return typeSources.length === 1 ? typeSources : [allTypesDistributionSource];
+        return [allTypesDistributionSource, ...typeSources];
+    });
 </script>
 
 <div class="flex-none">
@@ -384,16 +563,41 @@
     {#if isSampleDetails || isAnnotationDetails || isGroupDetails || isVideoDetails}
         {@render children()}
     {:else}
-        <div class="flex min-h-0 flex-1 space-x-4 px-4">
+        <div class="flex min-h-0 flex-1 gap-4 px-4">
             {#if isCollectionGrid}
-                <div class="flex h-full min-h-0 w-80 flex-col">
+                <!--
+                    Keep the panel mounted while collapsed (only visually hidden). Children such as
+                    AnnotationCollectionsMenu run mount-time $effects (e.g. seeding the annotation
+                    source selection) that must still fire after a reload with the panel collapsed.
+                -->
+                <div
+                    class="h-full min-h-0 w-80 flex-col {$filterPanelCollapsed ? 'hidden' : 'flex'}"
+                    data-testid="filter-panel-body"
+                >
                     <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
-                            <h2 class="flex items-center space-x-2 py-2 text-lg font-semibold">
-                                <SlidersHorizontal class="size-5" />
-                                <span>Filters</span>
+                            <h2
+                                class="flex items-center justify-between py-2 text-lg font-semibold"
+                            >
+                                <span class="flex items-center space-x-2">
+                                    <SlidersHorizontal class="size-5" />
+                                    <span>Filters</span>
+                                </span>
+                                <Tooltip content="Hide filters" position="bottom" class="w-max">
+                                    <Button
+                                        variant="ghost"
+                                        icon={PanelLeftClose}
+                                        ariaLabel="Hide filters"
+                                        buttonProps={{
+                                            onclick: toggleFilterPanelCollapsed,
+                                            'aria-expanded': true,
+                                            'data-testid': 'filter-panel-collapse',
+                                            class: 'size-6 p-0'
+                                        }}
+                                    />
+                                </Tooltip>
                             </h2>
 
                             {#if isImages}
@@ -440,23 +644,30 @@
 
             {#snippet mainContent()}
                 {#if isCollectionGrid}
-                    <DatasetGridHeader
-                        {canSelectAll}
-                        isSelectionActive={$selectedCount > 0}
-                        {isImages}
-                        {hasMediaWithEmbeddings}
-                        collectionDatasetId={collection.dataset_id}
-                        onSelectAll={selectAllHandle.handleSelectAll}
-                        onDeselectAll={clearSelection}
-                        searchImage={$searchImage}
-                        searchPending={$searchPending}
-                        searchPlaceholder={collectionSearchPlaceholder}
-                        initialQueryText={$textEmbedding?.queryText ?? ''}
-                        onSubmitText={search.setText}
-                        onSubmitFile={search.setImage}
-                        onSearchClear={search.clear}
-                        onSearchError={search.onError}
-                    />
+                    <div class="flex min-w-0 items-center gap-x-4">
+                        {#if $filterPanelCollapsed}
+                            <ShowFiltersButton />
+                        {/if}
+                        <div class="min-w-0 flex-1">
+                            <DatasetGridHeader
+                                {canSelectAll}
+                                isSelectionActive={$selectedCount > 0}
+                                {isImages}
+                                {hasMediaWithEmbeddings}
+                                collectionDatasetId={collection.dataset_id}
+                                onSelectAll={selectAllHandle.handleSelectAll}
+                                onDeselectAll={clearSelection}
+                                searchImage={$searchImage}
+                                searchPending={$searchPending}
+                                searchPlaceholder={collectionSearchPlaceholder}
+                                initialQueryText={$textEmbedding?.queryText ?? ''}
+                                onSubmitText={search.setText}
+                                onSubmitFile={search.setImage}
+                                onSearchClear={search.clear}
+                                onSearchError={search.onError}
+                            />
+                        </div>
+                    </div>
                     <Separator class="mb-4 bg-border-hard" />
                 {/if}
 
@@ -512,6 +723,17 @@
                             {/await}
                         {:else if $activePanel === 'queryEditor' && isImages}
                             <QueryEditorPanel onClose={() => setActivePanel('none')} />
+                        {:else if distributionPanelVisible}
+                            {#await import('$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte') then { default: DatasetDistributionPanel }}
+                                <DatasetDistributionPanel
+                                    sources={distributionSources}
+                                    initialCountMode={distributionCountMode}
+                                    onClose={() => setActivePanel('none')}
+                                    onCountModeChange={(mode) => {
+                                        distributionCountMode = mode;
+                                    }}
+                                />
+                            {/await}
                         {/if}
                     </Pane>
                 </PaneGroup>

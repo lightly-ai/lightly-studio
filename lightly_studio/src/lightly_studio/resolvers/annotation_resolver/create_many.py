@@ -119,10 +119,11 @@ def create_many(
             )
             segmentation_annotations.append(db_segmentation_mask)
 
-        start_time_s, end_time_s = _validate_optional_temporal_span(
+        temporal_span = _validate_optional_temporal_span(
             annotation=annotation_create, annotation_type=annotation_type
         )
-        if start_time_s is not None and end_time_s is not None:
+        if temporal_span is not None:
+            start_time_s, end_time_s = temporal_span
             temporal_spans.append(
                 TemporalSpanTable(
                     sample_id=base_annotations[i].sample_id,
@@ -162,11 +163,11 @@ def _validate_bbox(annotation: AnnotationCreate, kind: str) -> tuple[int, int, i
 
 def _validate_optional_temporal_span(
     annotation: AnnotationCreate, annotation_type: AnnotationType
-) -> tuple[float | None, float | None]:
+) -> tuple[float, float] | None:
     start_time_s = annotation.start_time_s
     end_time_s = annotation.end_time_s
     if start_time_s is None and end_time_s is None:
-        return (None, None)
+        return None
 
     if annotation_type != AnnotationType.CLASSIFICATION:
         raise ValueError(

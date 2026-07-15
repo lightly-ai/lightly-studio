@@ -1,4 +1,5 @@
-from typing import Optional
+from __future__ import annotations
+
 from uuid import UUID
 
 import pytest
@@ -382,7 +383,7 @@ def typed_collection_id(db_session: Session) -> UUID:
 def test_count_video_frame_annotations_by_video_collection_filters_by_annotation_type(
     db_session: Session,
     typed_collection_id: UUID,
-    annotation_type: Optional[AnnotationType],
+    annotation_type: AnnotationType | None,
     expected_counts: dict[str, tuple[int, int]],
 ) -> None:
     annotations = video_resolver.count_video_frame_annotations_by_video_collection(

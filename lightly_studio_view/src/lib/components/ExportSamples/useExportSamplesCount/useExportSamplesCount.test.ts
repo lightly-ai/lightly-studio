@@ -27,7 +27,8 @@ describe('useExportStats', () => {
             path: { collection_id: 'test-collection' },
             body: {
                 include: defaultProps.includeFilter,
-                exclude: undefined
+                exclude: undefined,
+                collection_filter: undefined
             }
         });
     });
@@ -60,6 +61,34 @@ describe('useExportStats', () => {
             expect(get(isLoading)).toBe(false);
             expect(get(count)).toBe(0);
             expect(get(error)).toBe(errorMessage);
+        });
+    });
+
+    it('should return count when collectionFilter is provided with includeFilter', async () => {
+        mocks.exportCollectionStats.mockResolvedValueOnce({ data: 10 });
+        const collectionFilter = {
+            filter_type: 'image' as const,
+            sample_filter: { tag_ids: ['t1'] }
+        };
+        const { count } = useExportSamplesCount({
+            collection_id: 'test-collection',
+            includeFilter: { tag_ids: ['tag1'] },
+            collectionFilter
+        });
+        await vi.waitFor(() => {
+            expect(get(count)).toBe(10);
+        });
+    });
+
+    it('should return count when only collectionFilter is set', async () => {
+        mocks.exportCollectionStats.mockResolvedValueOnce({ data: 5 });
+        const collectionFilter = { filter_type: 'image' as const };
+        const { count } = useExportSamplesCount({
+            collection_id: 'test-collection',
+            collectionFilter
+        });
+        await vi.waitFor(() => {
+            expect(get(count)).toBe(5);
         });
     });
 });
