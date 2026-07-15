@@ -31,9 +31,7 @@ def test_get_metadata_histograms__unfiltered_matches_totals(db_session: Session)
     collection = create_collection(session=db_session)
     _create_samples_with_scores(db_session, collection.collection_id)
 
-    histograms = get_metadata_histograms(
-        session=db_session, collection_id=collection.collection_id
-    )
+    histograms = get_metadata_histograms(session=db_session, collection_id=collection.collection_id)
 
     score = histograms["score"]
     assert len(score.bin_edges) == len(score.counts) + 1
@@ -141,9 +139,7 @@ def test_get_metadata_histograms__skips_non_numeric_keys(db_session: Session) ->
     sample["location"] = "city"
     sample["score"] = 1.0
 
-    histograms = get_metadata_histograms(
-        session=db_session, collection_id=collection.collection_id
-    )
+    histograms = get_metadata_histograms(session=db_session, collection_id=collection.collection_id)
 
     assert "location" not in histograms
     assert "score" in histograms

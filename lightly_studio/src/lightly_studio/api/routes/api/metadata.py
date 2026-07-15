@@ -49,9 +49,7 @@ class MetadataHistogramsRequest(BaseModel):
     """Request body for computing filtered metadata histograms."""
 
     filters: ImageFilter | None = Field(None, description="Filter parameters for samples")
-    bin_count: int = Field(
-        20, ge=1, le=200, description="Number of equal-width bins per histogram"
-    )
+    bin_count: int = Field(20, ge=1, le=200, description="Number of equal-width bins per histogram")
 
 
 @metadata_router.post("/metadata/histograms", response_model=dict[str, HistogramView])
