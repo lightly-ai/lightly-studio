@@ -6,8 +6,12 @@ from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
 from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
 from lightly_studio.resolvers import image_resolver, sample_embedding_resolver
 from lightly_studio.resolvers.image_filter import FilterDimensions, ImageFilter
+from lightly_studio.resolvers.image_resolver import ImageExportPreload
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
+    create_annotation,
+    create_annotation_label,
+    create_caption,
     create_collection,
     create_embedding_model,
     create_image,
@@ -156,3 +160,45 @@ def test_get_for_export__with_embedding_region_filter(db_session: Session) -> No
     )
 
     assert {s.sample_id for s in result} == {image_inside1.sample_id, image_inside2.sample_id}
+
+
+def test_get_for_export__preloaded_data_accessible(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/data/img.jpg",
+    )
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="cat",
+    )
+    create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_data={"x": 10, "y": 10, "width": 20, "height": 20},
+    )
+    create_caption(
+        session=db_session,
+        collection_id=collection.collection_id,
+        parent_sample_id=image.sample_id,
+        text="a cat sitting on a mat",
+    )
+
+    result = list(
+        image_resolver.get_for_export(
+            session=db_session,
+            collection_id=collection.collection_id,
+            collection_filter=None,
+            preload=frozenset({ImageExportPreload.ANNOTATIONS, ImageExportPreload.CAPTIONS}),
+        )
+    )
+
+    assert len(result) == 1
+    annotations = result[0].annotations
+    assert len(annotations) == 1
+    assert annotations[0].class_name == "cat"
+    assert result[0].captions == ["a cat sitting on a mat"]
