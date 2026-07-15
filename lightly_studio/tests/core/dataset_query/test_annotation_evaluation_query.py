@@ -16,6 +16,7 @@ from tests.helpers_resolvers import (
 )
 from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
     AnnotationMetricStub,
+    FalseNegativeMetricStub,
     FalsePositiveMetricStub,
     TruePositiveMetricStub,
     create_annotation_metrics,
@@ -343,6 +344,57 @@ def test_annotation_metric_query__matches_false_positive_bucket(
 
     results = DatasetQuery(dataset=collection, session=db_session).match(
         AnnotationMetricQuery.false_positive(run_name="run1", prediction="dog")
+    )
+
+    assert [result.sample_id for result in results] == [image_a.sample_id]
+
+
+def test_annotation_metric_query__matches_false_negative_bucket(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    [image_a, image_b, image_c] = create_images(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        images=[
+            ImageStub(path="/path/to/fn-dog.jpg"),
+            ImageStub(path="/path/to/fn-cat.jpg"),
+            ImageStub(path="/path/to/tp-dog.jpg"),
+        ],
+    )
+    run = create_run(session=db_session, collection_id=collection.collection_id, name="run1")
+    dog_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="dog",
+    )
+    cat_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="cat",
+    )
+    create_annotation_metrics(
+        session=db_session,
+        run_id=run.id,
+        pair_metric_stubs=[
+            FalseNegativeMetricStub(
+                sample_id=image_a.sample_id,
+                gt_annotation_label_id=dog_label.annotation_label_id,
+            ),
+            FalseNegativeMetricStub(
+                sample_id=image_b.sample_id,
+                gt_annotation_label_id=cat_label.annotation_label_id,
+            ),
+            TruePositiveMetricStub(
+                sample_id=image_c.sample_id,
+                metrics={"confidence": 0.7},
+                gt_annotation_label_id=dog_label.annotation_label_id,
+            ),
+        ],
+    )
+
+    results = DatasetQuery(dataset=collection, session=db_session).match(
+        AnnotationMetricQuery.false_negative(run_name="run1", ground_truth="dog")
     )
 
     assert [result.sample_id for result in results] == [image_a.sample_id]

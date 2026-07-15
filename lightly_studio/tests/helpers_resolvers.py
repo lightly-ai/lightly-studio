@@ -236,6 +236,8 @@ class AnnotationDetails:
         height: Height of the annotation.
         segmentation_mask: Segmentation mask for segmentation annotations.
         object_track_id: Optional object track id.
+        start_time_s: Optional temporal span start time in seconds.
+        end_time_s: Optional temporal span end time in seconds.
     """
 
     sample_id: UUID
@@ -248,6 +250,8 @@ class AnnotationDetails:
     height: int = 20
     segmentation_mask: list[int] | None = None
     object_track_id: UUID | None = None
+    start_time_s: float | None = None
+    end_time_s: float | None = None
 
 
 def create_annotations(
@@ -279,6 +283,8 @@ def create_annotations(
             y=annotation.y,
             width=annotation.width,
             height=annotation.height,
+            start_time_s=annotation.start_time_s,
+            end_time_s=annotation.end_time_s,
         )
         for annotation in annotations
     ]

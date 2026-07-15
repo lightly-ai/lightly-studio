@@ -1,8 +1,10 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import DatasetDistributionPanel from './DatasetDistributionPanel.svelte';
 import { balanced, empty, longTail } from '../BarChart/fixtures';
 import type { DistributionSource } from './types';
+import { AnnotationCountMode, AnnotationType } from '$lib/api/lightly_studio_local/types.gen';
 
 const echartsMock = vi.hoisted(() => {
     const instance = {
@@ -36,6 +38,13 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
 const defaultProps = { data: balanced };
 
 describe('DatasetDistributionPanel', () => {
+    beforeAll(() => {
+        Element.prototype.scrollIntoView = vi.fn();
+        Element.prototype.hasPointerCapture = vi.fn(() => false);
+        Element.prototype.setPointerCapture = vi.fn();
+        Element.prototype.releasePointerCapture = vi.fn();
+    });
+
     afterEach(() => {
         // bits-ui dialogs portal into the body and can leave styles behind.
         document.body.innerHTML = '';
@@ -183,5 +192,126 @@ describe('DatasetDistributionPanel', () => {
         await fireEvent.click(screen.getByTestId('dataset-distribution-close-button'));
 
         expect(onClose).toHaveBeenCalledOnce();
+    });
+
+    it('shows the count by select in the config dialog with Objects selected by default', async () => {
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: [
+                    {
+                        id: AnnotationType.OBJECT_DETECTION,
+                        label: 'Object detection',
+                        data: [{ label: 'car', count: 5 }]
+                    }
+                ]
+            }
+        });
+
+        await fireEvent.click(screen.getByTestId('dataset-distribution-configure'));
+
+        const countBySelect = await waitFor(() =>
+            screen.getByTestId('distribution-config-count-mode')
+        );
+        expect(countBySelect).toBeInTheDocument();
+        expect(countBySelect).toHaveTextContent('Objects');
+    });
+
+    it('shows the count by select for All types source too', async () => {
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: [
+                    {
+                        id: 'all',
+                        label: 'All types',
+                        data: [{ label: 'car', count: 5 }]
+                    },
+                    {
+                        id: AnnotationType.OBJECT_DETECTION,
+                        label: 'Object detection',
+                        data: [{ label: 'car', count: 5 }]
+                    }
+                ]
+            }
+        });
+
+        await fireEvent.click(screen.getByTestId('dataset-distribution-configure'));
+
+        await waitFor(() =>
+            expect(screen.getByTestId('distribution-config-count-mode')).toBeInTheDocument()
+        );
+    });
+
+    it('calls onCountModeChange when count mode changes via the config dialog', async () => {
+        const user = userEvent.setup();
+        const onCountModeChange = vi.fn();
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: [
+                    {
+                        id: AnnotationType.OBJECT_DETECTION,
+                        label: 'Object detection',
+                        data: [{ label: 'car', count: 5 }]
+                    }
+                ],
+                onCountModeChange
+            }
+        });
+
+        await fireEvent.click(screen.getByTestId('dataset-distribution-configure'));
+        const countBySelect = await waitFor(() =>
+            screen.getByTestId('distribution-config-count-mode')
+        );
+        await user.click(countBySelect);
+        const samplesOption = await waitFor(() => screen.getByRole('option', { name: 'Samples' }));
+        await user.click(samplesOption);
+        await fireEvent.click(screen.getByTestId('distribution-config-apply'));
+
+        expect(onCountModeChange).toHaveBeenCalledWith(AnnotationCountMode.SAMPLES);
+    });
+
+    it('hides the total count in the header when count mode is changed to Samples', async () => {
+        const user = userEvent.setup();
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: [
+                    {
+                        id: AnnotationType.OBJECT_DETECTION,
+                        label: 'Object detection',
+                        data: [{ label: 'car', count: 10 }],
+                        valueNoun: 'instances'
+                    }
+                ]
+            }
+        });
+
+        expect(screen.getByText(/10 instances/)).toBeInTheDocument();
+
+        await fireEvent.click(screen.getByTestId('dataset-distribution-configure'));
+        const countBySelect = await waitFor(() =>
+            screen.getByTestId('distribution-config-count-mode')
+        );
+        await user.click(countBySelect);
+        const samplesOption = await waitFor(() => screen.getByRole('option', { name: 'Samples' }));
+        await user.click(samplesOption);
+        await fireEvent.click(screen.getByTestId('distribution-config-apply'));
+
+        await waitFor(() => expect(screen.queryByText(/instances/)).not.toBeInTheDocument());
+    });
+
+    it('shows the total count in the header by default (Objects mode)', () => {
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: [
+                    {
+                        id: AnnotationType.OBJECT_DETECTION,
+                        label: 'Object detection',
+                        data: [{ label: 'car', count: 10 }],
+                        valueNoun: 'instances'
+                    }
+                ]
+            }
+        });
+
+        expect(screen.getByText(/10 instances/)).toBeInTheDocument();
     });
 });

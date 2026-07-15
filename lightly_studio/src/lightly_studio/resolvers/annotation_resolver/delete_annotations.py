@@ -42,6 +42,8 @@ def delete_annotations(
             session.delete(annotation.object_detection_details)
         if annotation.segmentation_details:
             session.delete(annotation.segmentation_details)
+        if annotation.temporal_span_details:
+            session.delete(annotation.temporal_span_details)
     session.commit()
 
     # Now delete the annotations themselves

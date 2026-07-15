@@ -9,6 +9,7 @@
     import PanelHeader from './PanelHeader/PanelHeader.svelte';
     import { selectVisibleCounts } from './selectVisibleCounts';
     import type { DistributionConfig, DistributionSource } from './types';
+    import { AnnotationCountMode } from '$lib/api/lightly_studio_local/types.gen';
 
     interface Props {
         /**
@@ -29,6 +30,15 @@
         onClose?: () => void;
         /** Called with the clicked class. */
         onBarClick?: (item: CategoryCount) => void;
+        /**
+         * Called when the user switches the count mode via the config dialog.
+         */
+        onCountModeChange?: (mode: AnnotationCountMode) => void;
+        /**
+         * Initial count mode to use when the panel first mounts. Lets the
+         * parent preserve the mode across close/reopen cycles.
+         */
+        initialCountMode?: AnnotationCountMode;
     }
 
     const {
@@ -37,7 +47,9 @@
         title = 'Class distribution',
         topN = 20,
         onClose,
-        onBarClick
+        onBarClick,
+        onCountModeChange,
+        initialCountMode = AnnotationCountMode.OBJECTS
     }: Props = $props();
 
     // Normalise to a source list so the rest of the panel has one code path.
@@ -59,13 +71,6 @@
     const activeData = $derived<CategoryCount[]>(activeGroup?.data ?? activeSource.data ?? []);
     const valueNoun = $derived(activeSource.valueNoun ?? 'annotations');
 
-    const sourceItems = $derived<SelectItem[]>(
-        resolvedSources.map((source) => ({ value: source.id, label: source.label }))
-    );
-    const groupItems = $derived<SelectItem[]>(
-        (activeSource.groups ?? []).map((group) => ({ value: group.id, label: group.label }))
-    );
-
     // Default to horizontal bars: categories stack down the left gutter and the
     // chart scrolls vertically, avoiding the initial horizontal scroll that
     // vertical bars produce once there are more than a handful of classes.
@@ -74,7 +79,8 @@
         n: topN,
         sortBy: 'count',
         manualClasses: [],
-        orientation: 'horizontal'
+        orientation: 'horizontal',
+        countMode: initialCountMode
     });
     let configDialogOpen = $state(false);
     let expandOpen = $state(false);
@@ -83,8 +89,25 @@
     let chartHeight = $state(0);
     let clientWidth = $state(0);
 
+    const activeCountMode = $derived(config.countMode ?? AnnotationCountMode.OBJECTS);
+    const showTotalCount = $derived(activeCountMode !== AnnotationCountMode.SAMPLES);
+
+    const sourceItems = $derived<SelectItem[]>(
+        resolvedSources.map((source) => ({ value: source.id, label: source.label }))
+    );
+    const groupItems = $derived<SelectItem[]>(
+        (activeSource.groups ?? []).map((group) => ({ value: group.id, label: group.label }))
+    );
+
     const visible = $derived(selectVisibleCounts(activeData, config));
     const totalCount = $derived(activeData.reduce((sum, item) => sum + item.count, 0));
+
+    function applyConfig(next: DistributionConfig) {
+        if (next.countMode !== config.countMode) {
+            onCountModeChange?.(next.countMode ?? AnnotationCountMode.OBJECTS);
+        }
+        config = next;
+    }
 </script>
 
 <div
@@ -146,7 +169,7 @@
             {config}
             classCount={activeData.length}
             visibleClassCount={visible.length}
-            {totalCount}
+            totalCount={showTotalCount ? totalCount : undefined}
             {valueNoun}
             onConfigure={() => (configDialogOpen = true)}
             onShowAll={() => (config = { ...config, mode: 'topN', n: activeData.length })}
@@ -161,6 +184,7 @@
     <div
         class="min-h-0 flex-1 overflow-y-auto dark:[color-scheme:dark]"
         bind:clientHeight={chartHeight}
+        bind:clientWidth
     >
         <BarChart
             data={visible}
@@ -176,13 +200,13 @@
     bind:open={configDialogOpen}
     allClasses={activeData.map((item) => item.label)}
     {config}
-    onApply={(next) => (config = next)}
+    onApply={applyConfig}
 />
 <ExpandDialog
     bind:open={expandOpen}
     data={activeData}
     {config}
     {valueNoun}
-    onConfigChange={(next) => (config = next)}
+    onConfigChange={applyConfig}
     {onBarClick}
 />
