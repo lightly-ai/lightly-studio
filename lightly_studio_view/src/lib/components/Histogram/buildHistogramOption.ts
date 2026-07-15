@@ -27,6 +27,24 @@ export interface HistogramOptionOptions {
     showAxes?: boolean;
 }
 
+interface HistogramBin {
+    start: number;
+    end: number;
+    count: number;
+}
+
+interface HistogramAxisOptions {
+    binCount: number;
+    domainMin: number;
+    domainMax: number;
+    showAxes: boolean;
+}
+
+interface HistogramSeriesOptions {
+    bins: HistogramBin[];
+    range?: HistogramRange;
+}
+
 /**
  * A bin is highlighted when its interior overlaps the selected range. Bin `i`
  * covers the half-open interval `[edges[i], edges[i + 1])`, so a range that
@@ -102,87 +120,103 @@ export function buildHistogramOption(
     range?: HistogramRange,
     options: HistogramOptionOptions = {}
 ): EChartsCoreOption {
-    const { binEdges, counts } = data;
+    const bins = buildBins(data);
     const showAxes = options.showAxes ?? false;
-    const totalCount = counts.reduce((sum, count) => sum + count, 0);
-    const binCount = counts.length;
-    const domainMin = binEdges[0];
-    const domainMax = binEdges[binEdges.length - 1];
-
-    const bins = counts.map((count, i) => ({
-        start: binEdges[i],
-        end: binEdges[i + 1],
-        count
-    }));
-
-    // The x-axis runs over bin indices (bin `i` spans `[i, i + 1]`); ticks map
-    // back to data values. Bins are equal-width, so linear interpolation lands
-    // exactly on the bin edges for integer ticks.
-    const indexToValue = (index: number): number =>
-        domainMin + (index / binCount) * (domainMax - domainMin);
+    const axisOptions = {
+        binCount: data.counts.length,
+        domainMin: data.binEdges[0],
+        domainMax: data.binEdges[data.binEdges.length - 1],
+        showAxes
+    };
 
     return {
         backgroundColor: 'transparent',
-        tooltip: {
-            trigger: 'axis',
-            axisPointer: { type: 'line' },
-            // The inline chart is only a few tens of px tall; let the tooltip
-            // escape the canvas instead of being clipped by it.
-            confine: false,
-            formatter: (params: { dataIndex: number }[]) => {
-                const bin = bins[params[0]?.dataIndex];
-                if (!bin) return '';
-                const percent = totalCount > 0 ? ` (${formatPercent(bin.count / totalCount)})` : '';
-                return (
-                    `<b>${formatFloat(bin.start)} – ${formatFloat(bin.end)}</b><br/>` +
-                    `Count: <b>${formatInteger(bin.count)}</b>${percent}`
-                );
-            }
-        },
-        grid: showAxes
-            ? // containLabel reserves gutters for the tick labels; the extra
-              // right padding keeps the last x label from being clipped.
-              { left: 4, right: 16, top: 8, bottom: 4, containLabel: true }
-            : // Bars flush with the canvas edges so they align with the slider track.
-              { left: 0, right: 0, top: 2, bottom: 0 },
-        xAxis: {
-            type: 'value' as const,
-            min: 0,
-            max: binCount,
-            show: showAxes,
-            axisLabel: {
-                ...CHART_AXIS_LABEL,
-                formatter: (index: number) => formatFloat(indexToValue(index))
-            },
-            axisLine: { lineStyle: { color: CHART_LINE_COLOR } },
-            axisTick: { lineStyle: { color: CHART_LINE_COLOR } },
-            splitLine: { show: false }
-        },
-        yAxis: {
-            type: 'value' as const,
-            show: showAxes,
-            // Counts are whole numbers; avoid fractional tick labels.
-            minInterval: 1,
-            axisLabel: CHART_AXIS_LABEL,
-            splitLine: { lineStyle: { color: CHART_LINE_COLOR } }
-        },
-        series: [
-            {
-                // Custom series so every bin renders as a pixel-snapped rect
-                // (see `renderHistogramBin`).
-                type: 'custom',
-                renderItem: renderHistogramBin,
-                encode: { x: 0, y: 1 },
-                data: bins.map((bin, i) => ({
-                    value: [i, bin.count],
-                    itemStyle: {
-                        color:
-                            !range || isBinInRange(bin.start, bin.end, range)
-                                ? BAR_COLOR
-                                : BAR_COLOR_DIMMED
-                    }
-                }))
-            }
-        ]
+        tooltip: buildTooltip(bins),
+        grid: buildGrid(showAxes),
+        xAxis: buildXAxis(axisOptions),
+        yAxis: buildYAxis(showAxes),
+        series: buildSeries({ bins, range })
     };
+}
+
+function buildBins(data: HistogramData): HistogramBin[] {
+    return data.counts.map((count, index) => ({
+        start: data.binEdges[index],
+        end: data.binEdges[index + 1],
+        count
+    }));
+}
+
+function buildTooltip(bins: HistogramBin[]): Record<string, unknown> {
+    const totalCount = bins.reduce((sum, bin) => sum + bin.count, 0);
+    return {
+        trigger: 'axis',
+        axisPointer: { type: 'line' },
+        // Let the tooltip escape the short inline canvas instead of being clipped.
+        confine: false,
+        formatter: (params: { dataIndex: number }[]) => {
+            const bin = bins[params[0]?.dataIndex];
+            if (!bin) return '';
+            const percent = totalCount > 0 ? ` (${formatPercent(bin.count / totalCount)})` : '';
+            return (
+                `<b>${formatFloat(bin.start)} – ${formatFloat(bin.end)}</b><br/>` +
+                `Count: <b>${formatInteger(bin.count)}</b>${percent}`
+            );
+        }
+    };
+}
+
+function buildGrid(showAxes: boolean): Record<string, unknown> {
+    // containLabel reserves gutters for labels; right padding avoids clipping.
+    return showAxes
+        ? { left: 4, right: 16, top: 8, bottom: 4, containLabel: true }
+        : { left: 0, right: 0, top: 2, bottom: 0 };
+}
+
+function buildXAxis(options: HistogramAxisOptions): Record<string, unknown> {
+    const indexToValue = (index: number): number =>
+        options.domainMin + (index / options.binCount) * (options.domainMax - options.domainMin);
+    return {
+        type: 'value',
+        min: 0,
+        max: options.binCount,
+        show: options.showAxes,
+        axisLabel: {
+            ...CHART_AXIS_LABEL,
+            formatter: (index: number) => formatFloat(indexToValue(index))
+        },
+        axisLine: { lineStyle: { color: CHART_LINE_COLOR } },
+        axisTick: { lineStyle: { color: CHART_LINE_COLOR } },
+        splitLine: { show: false }
+    };
+}
+
+function buildYAxis(showAxes: boolean): Record<string, unknown> {
+    return {
+        type: 'value',
+        show: showAxes,
+        // Counts are whole numbers; avoid fractional tick labels.
+        minInterval: 1,
+        axisLabel: CHART_AXIS_LABEL,
+        splitLine: { lineStyle: { color: CHART_LINE_COLOR } }
+    };
+}
+
+function buildSeries(options: HistogramSeriesOptions): Record<string, unknown>[] {
+    return [
+        {
+            type: 'custom',
+            renderItem: renderHistogramBin,
+            encode: { x: 0, y: 1 },
+            data: options.bins.map((bin, index) => ({
+                value: [index, bin.count],
+                itemStyle: {
+                    color:
+                        !options.range || isBinInRange(bin.start, bin.end, options.range)
+                            ? BAR_COLOR
+                            : BAR_COLOR_DIMMED
+                }
+            }))
+        }
+    ];
 }
