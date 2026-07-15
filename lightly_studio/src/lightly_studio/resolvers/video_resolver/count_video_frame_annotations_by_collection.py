@@ -8,7 +8,10 @@ from sqlalchemy import union_all
 from sqlmodel import Session, asc, col, func, select
 from sqlmodel.sql.expression import Select
 
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.annotation.annotation_base import (
+    AnnotationBaseTable,
+    AnnotationType,
+)
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
@@ -24,10 +27,20 @@ class CountAnnotationsView(BaseModel):
 
 
 def count_video_frame_annotations_by_video_collection(
-    session: Session, collection_id: UUID, filters: Optional[VideoFilter] = None
+    session: Session,
+    collection_id: UUID,
+    filters: Optional[VideoFilter] = None,
+    annotation_type: Optional[AnnotationType] = None,
 ) -> list[CountAnnotationsView]:
-    """Count annotations attached to videos, including frame and direct video labels."""
-    label_video_pairs = _build_label_video_pairs_subquery(collection_id=collection_id)
+    """Count annotations attached to videos, including frame and direct video labels.
+
+    When ``annotation_type`` is provided, both the total and filtered counts are
+    restricted to annotations of that type (e.g. only CLASSIFICATION or only
+    OBJECT_DETECTION).
+    """
+    label_video_pairs = _build_label_video_pairs_subquery(
+        collection_id=collection_id, annotation_type=annotation_type
+    )
 
     unfiltered_query = (
         select(
@@ -89,9 +102,14 @@ def count_video_frame_annotations_by_video_collection(
     ]
 
 
-def _build_label_video_pairs_subquery(collection_id: UUID) -> Any:
-    """Return distinct (label_id, video_id) pairs from frame and direct video annotations."""
-    frame_pairs = (
+def _build_label_video_pairs_subquery(
+    collection_id: UUID, annotation_type: Optional[AnnotationType] = None
+) -> Any:
+    """Return distinct (label_id, video_id) pairs from frame and direct video annotations.
+
+    When ``annotation_type`` is provided, only annotations of that type are considered.
+    """
+    frame_pairs: Select[tuple[Any, Any]] = (
         select(
             col(AnnotationBaseTable.annotation_label_id).label("label_id"),
             col(VideoTable.sample_id).label("video_id"),
@@ -105,7 +123,7 @@ def _build_label_video_pairs_subquery(collection_id: UUID) -> Any:
         .join(VideoTable, col(VideoTable.sample_id) == col(SampleTable.sample_id))
         .where(col(SampleTable.collection_id) == collection_id)
     )
-    video_pairs = (
+    video_pairs: Select[tuple[Any, Any]] = (
         select(
             col(AnnotationBaseTable.annotation_label_id).label("label_id"),
             col(VideoTable.sample_id).label("video_id"),
@@ -118,4 +136,7 @@ def _build_label_video_pairs_subquery(collection_id: UUID) -> Any:
         .join(VideoTable, col(VideoTable.sample_id) == col(SampleTable.sample_id))
         .where(col(SampleTable.collection_id) == collection_id)
     )
+    if annotation_type is not None:
+        frame_pairs = frame_pairs.where(col(AnnotationBaseTable.annotation_type) == annotation_type)
+        video_pairs = video_pairs.where(col(AnnotationBaseTable.annotation_type) == annotation_type)
     return union_all(frame_pairs, video_pairs).subquery("label_video_pairs")
