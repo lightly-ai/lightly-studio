@@ -284,7 +284,11 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
 
     #### Annotation evaluation queries
 
-    Use `AnnotationMetricQuery` to filter samples by annotation-level results from a specific [evaluation run](evaluation.md). For matched ground-truth and prediction pairs, use `AnnotationMetricQuery.confusion(...)`, optionally together with `AnnotationEvaluationMetricField(...)`. The example below finds samples where `cat` got confused as a `dog` and the IoU is greater than 0.3.
+    Use `AnnotationMetricQuery` to filter samples by annotation-level results from a specific
+    [evaluation run](evaluation.md). For matched ground-truth and prediction pairs, use
+    `AnnotationMetricQuery.confusion(...)`, optionally together with
+    `AnnotationEvaluationMetricField(...)`. The example below finds samples where `cat` got
+    confused as a `dog` and the IoU is greater than 0.3.
 
     ```py
     from lightly_studio.core.dataset_query import (
