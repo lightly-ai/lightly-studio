@@ -56,6 +56,7 @@ from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.tag import TagTable
+from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import dataset_resolver
 from lightly_studio.resolvers.dataset_resolver import table_coverage_utils
@@ -128,6 +129,7 @@ def deep_copy(
     _copy_annotations(session=session, now=now)
     _copy_annotation_details(session=session, detail_table=ObjectDetectionAnnotationTable)
     _copy_annotation_details(session=session, detail_table=SegmentationAnnotationTable)
+    _copy_annotation_details(session=session, detail_table=TemporalSpanTable)
 
     _copy_sample_embeddings(session=session)
     _copy_metadata(session=session, now=now)

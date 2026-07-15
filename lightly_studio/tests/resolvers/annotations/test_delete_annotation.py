@@ -5,6 +5,7 @@ from sqlmodel import Session, col, select
 
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
+from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import (
     annotation_resolver,
     evaluation_annotation_metric_resolver,
@@ -39,8 +40,9 @@ def test_delete_annotation__success(
     """Test deleting an annotation."""
     annotations = annotation_resolver.get_all(db_session).annotations
 
+    classification_id = annotations[0].sample_id
     annotation_ids_to_delete = [
-        annotations[0].sample_id,  # classification
+        classification_id,  # classification (carries a temporal span from the fixture)
         annotations[3].sample_id,  # object detection
         annotations[6].sample_id,  # segmentation mask
     ]
@@ -51,6 +53,9 @@ def test_delete_annotation__success(
         # Verify the change persisted in the database.
         deleted_annotation = annotation_resolver.get_by_id(db_session, annotation_id)
         assert deleted_annotation is None
+
+    # The temporal span row is deleted along with the annotation.
+    assert db_session.get(TemporalSpanTable, classification_id) is None
 
 
 def test_delete_annotation__raises_error_when_annotation_not_found(

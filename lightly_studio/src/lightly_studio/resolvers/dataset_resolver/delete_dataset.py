@@ -40,6 +40,7 @@ from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.tag import TagTable
+from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import dataset_resolver
 from lightly_studio.resolvers.dataset_resolver import table_coverage_utils
@@ -81,6 +82,7 @@ def delete_dataset(
     # 1. Tables that reference annotation_base.
     _delete_object_detection_annotations(session=session, dataset_id=dataset_id)
     _delete_segmentation_annotations(session=session, dataset_id=dataset_id)
+    _delete_temporal_spans(session=session, dataset_id=dataset_id)
     _delete_evaluation_sample_metrics(session=session, dataset_id=dataset_id)
     _delete_evaluation_annotation_metrics(session=session, dataset_id=dataset_id)
 
@@ -189,6 +191,16 @@ def _delete_segmentation_annotations(session: Session, dataset_id: UUID) -> None
     session.exec(
         delete(SegmentationAnnotationTable).where(
             col(SegmentationAnnotationTable.sample_id).in_(_sample_ids_subquery(dataset_id))
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_temporal_spans(session: Session, dataset_id: UUID) -> None:
+    """Delete temporal spans for the dataset's samples."""
+    session.exec(
+        delete(TemporalSpanTable).where(
+            col(TemporalSpanTable.sample_id).in_(_sample_ids_subquery(dataset_id))
         ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
