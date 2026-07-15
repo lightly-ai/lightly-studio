@@ -7,15 +7,13 @@ from sqlmodel import Session
 
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import MetadataFilter
-from lightly_studio.resolvers.metadata_resolver.sample.get_metadata_info import (
-    get_metadata_histograms,
-)
+from lightly_studio.resolvers.metadata_resolver.sample import get_metadata_info
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import create_collection, create_image
 
 
 def _create_samples_with_scores(db_session: Session, collection_id: UUID) -> None:
-    """Create 10 samples with score 0..9 and parity flag even_score 0/1."""
+    """Create 10 samples with score 0..9, parity flag even_score 0/1, and constant 5.0."""
     for i in range(10):
         sample = create_image(
             session=db_session,
@@ -24,6 +22,7 @@ def _create_samples_with_scores(db_session: Session, collection_id: UUID) -> Non
         ).sample
         sample["score"] = float(i)
         sample["even_score"] = i % 2
+        sample["constant"] = 5.0
 
 
 def test_get_metadata_histograms__unfiltered_matches_totals(db_session: Session) -> None:
@@ -31,7 +30,7 @@ def test_get_metadata_histograms__unfiltered_matches_totals(db_session: Session)
     collection = create_collection(session=db_session)
     _create_samples_with_scores(db_session, collection.collection_id)
 
-    histograms = get_metadata_histograms(
+    histograms = get_metadata_info.get_metadata_histograms(
         session=db_session, collection_id=collection.collection_id
     )
 
@@ -54,7 +53,7 @@ def test_get_metadata_histograms__filter_reduces_counts_keeps_edges(
             metadata_filters=[MetadataFilter(key="even_score", op="==", value=0)]
         )
     )
-    histograms = get_metadata_histograms(
+    histograms = get_metadata_info.get_metadata_histograms(
         session=db_session, collection_id=collection.collection_id, filters=filters
     )
 
@@ -79,7 +78,7 @@ def test_get_metadata_histograms__own_key_filter_is_excluded(db_session: Session
             ]
         )
     )
-    histograms = get_metadata_histograms(
+    histograms = get_metadata_info.get_metadata_histograms(
         session=db_session, collection_id=collection.collection_id, filters=filters
     )
 
@@ -93,11 +92,11 @@ def test_get_metadata_histograms__own_key_filter_is_excluded(db_session: Session
 def test_get_metadata_histograms__constant_field_counts_filtered(
     db_session: Session,
 ) -> None:
-    """A constant-valued key returns a single bin whose count respects filters."""
+    """A constant-valued key returns a single degenerate bin whose count respects filters."""
     collection = create_collection(session=db_session)
     _create_samples_with_scores(db_session, collection.collection_id)
 
-    histograms = get_metadata_histograms(
+    histograms = get_metadata_info.get_metadata_histograms(
         session=db_session,
         collection_id=collection.collection_id,
         filters=ImageFilter(
@@ -107,10 +106,11 @@ def test_get_metadata_histograms__constant_field_counts_filtered(
         ),
     )
 
-    parity = histograms["even_score"]
-    assert histograms["score"].bin_edges[-1] == pytest.approx(9.0)
-    # even_score is not constant; use score <= 3 → 4 samples in even_score bins.
-    assert sum(parity.counts) == 4
+    constant = histograms["constant"]
+    # All values are equal, so the degenerate range collapses to a single bin.
+    assert constant.bin_edges == pytest.approx([5.0, 5.0])
+    # score <= 3 keeps 4 samples, all carrying the constant value.
+    assert constant.counts == [4]
 
 
 def test_get_metadata_histograms__custom_bin_count(db_session: Session) -> None:
@@ -118,7 +118,7 @@ def test_get_metadata_histograms__custom_bin_count(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     _create_samples_with_scores(db_session, collection.collection_id)
 
-    histograms = get_metadata_histograms(
+    histograms = get_metadata_info.get_metadata_histograms(
         session=db_session, collection_id=collection.collection_id, bin_count=5
     )
 
@@ -141,7 +141,7 @@ def test_get_metadata_histograms__skips_non_numeric_keys(db_session: Session) ->
     sample["location"] = "city"
     sample["score"] = 1.0
 
-    histograms = get_metadata_histograms(
+    histograms = get_metadata_info.get_metadata_histograms(
         session=db_session, collection_id=collection.collection_id
     )
 

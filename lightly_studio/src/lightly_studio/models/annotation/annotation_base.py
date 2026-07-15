@@ -22,6 +22,7 @@ from lightly_studio.models.annotation.segmentation import (
 )
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.temporal_span import TemporalSpanTable, TemporalSpanView
 from lightly_studio.models.video import VideoFrameTable
 
 if TYPE_CHECKING:
@@ -94,6 +95,16 @@ class AnnotationBaseTable(SQLModel, table=True):
         sa_relationship_kwargs={"lazy": "select"},
     )
 
+    # Optional temporal bounds for this annotation's sample.
+    temporal_span_details: Mapped[Optional["TemporalSpanTable"]] = Relationship(
+        sa_relationship_kwargs={
+            "primaryjoin": "AnnotationBaseTable.sample_id == foreign(TemporalSpanTable.sample_id)",
+            "lazy": "selectin",
+            "uselist": False,
+            "viewonly": True,
+        },
+    )
+
     # The track this annotation belongs to, if any.
     object_track: Mapped[Optional["ObjectTrackTable"]] = Relationship(
         sa_relationship_kwargs={"lazy": "joined"},
@@ -126,6 +137,10 @@ class AnnotationCreate(ABC, SQLModel):
     # Optional properties for segmentation.
     segmentation_mask: Optional[list[int]] = None
 
+    # Optional properties for temporal annotations.
+    start_time_s: Optional[float] = None
+    end_time_s: Optional[float] = None
+
 
 class AnnotationView(BaseModel):
     """Response model for bounding box annotation."""
@@ -153,6 +168,7 @@ class AnnotationView(BaseModel):
 
     object_detection_details: Optional[ObjectDetectionAnnotationView] = None
     segmentation_details: Optional[SegmentationAnnotationView] = None
+    temporal_span_details: Optional[TemporalSpanView] = None
     object_track_id: Optional[UUID] = None
     object_track_number: Optional[int] = None
 
@@ -171,6 +187,12 @@ class AnnotationView(BaseModel):
             object_track_id=annotation.object_track_id,
             object_track_number=annotation.object_track.object_track_number
             if annotation.object_track
+            else None,
+            temporal_span_details=TemporalSpanView(
+                start_time_s=annotation.temporal_span_details.start_time_s,
+                end_time_s=annotation.temporal_span_details.end_time_s,
+            )
+            if annotation.temporal_span_details
             else None,
             annotation_label=cls.AnnotationLabel(
                 annotation_label_name=annotation.annotation_label.annotation_label_name
