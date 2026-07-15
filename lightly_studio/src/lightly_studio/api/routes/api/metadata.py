@@ -23,6 +23,9 @@ from lightly_studio.resolvers.metadata_resolver.sample import (
 
 metadata_router = APIRouter(prefix="/collections/{collection_id}", tags=["metadata"])
 
+# Default number of equal-width bins per metadata histogram.
+_DEFAULT_BIN_COUNT = 20
+
 
 @metadata_router.get("/metadata/info", response_model=list[MetadataInfoView])
 def get_metadata_info(
@@ -48,7 +51,9 @@ class MetadataHistogramsRequest(BaseModel):
     """Request body for computing filtered metadata histograms."""
 
     filters: ImageFilter | None = Field(None, description="Filter parameters for samples")
-    bin_count: int = Field(20, ge=1, le=200, description="Number of equal-width bins per histogram")
+    bin_count: int = Field(
+        _DEFAULT_BIN_COUNT, ge=1, le=200, description="Number of equal-width bins per histogram"
+    )
 
 
 @metadata_router.post("/metadata/histograms", response_model=dict[str, HistogramView])
@@ -76,7 +81,7 @@ def get_metadata_histograms(
         session=session,
         collection_id=collection_id,
         filters=request.filters if request else None,
-        bin_count=request.bin_count if request else 20,
+        bin_count=request.bin_count if request else _DEFAULT_BIN_COUNT,
     )
 
 
