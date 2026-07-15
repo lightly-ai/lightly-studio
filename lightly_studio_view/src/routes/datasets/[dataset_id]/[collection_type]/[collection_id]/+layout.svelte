@@ -40,7 +40,6 @@
         isVideoDetailsRoute
     } from '$lib/routes';
     import type { GridType } from '$lib/types';
-    import { useImageAnnotationCounts } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
     import QueryControl from '$lib/components/QueryControl/QueryControl.svelte';
     import { PaneGroup, Pane, PaneResizer } from 'paneforge';
@@ -54,7 +53,11 @@
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
-    import { AnnotationType, SampleType } from '$lib/api/lightly_studio_local/types.gen';
+    import {
+        AnnotationCountMode,
+        AnnotationType,
+        SampleType
+    } from '$lib/api/lightly_studio_local/types.gen';
     import type { AnnotationsFilter } from '$lib/api/lightly_studio_local/types.gen';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import type { DistributionSource } from '$lib/components/DatasetDistributionPanel';
@@ -65,7 +68,11 @@
     } from '$lib/utils/buildAnnotationCountsFilters';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
     import ConfusionCellFilterItem from '$lib/components/ConfusionCellFilterItem';
-    import { useSelectionSummary } from '$lib/hooks';
+    import {
+        useSelectionSummary,
+        useImageAnnotationCounts,
+        useImageAnnotationCountsQueryKey
+    } from '$lib/hooks';
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
     import { isInputElement } from '$lib/utils';
     import { shutdownMaskRendererPool } from '$lib/workers/maskRendererPool';
@@ -349,6 +356,12 @@
         })
     );
 
+    const imageAnnotationCountsQuery = useImageAnnotationCounts(() => ({
+        collectionId: datasetId,
+        filter: imageAnnotationCountsFilter,
+        enabled: !isVideos && !isVideoFrames
+    }));
+
     const annotationCounts = $derived.by(() => {
         if (
             isVideoFrames ||
@@ -377,10 +390,7 @@
                 })
             });
         }
-        return useImageAnnotationCounts({
-            collectionId: datasetId,
-            filter: imageAnnotationCountsFilter
-        });
+        return imageAnnotationCountsQuery;
     });
 
     // Feed annotation counts back into the hook for UI-ready filter rows.
@@ -436,28 +446,47 @@
 
     const distributionPanelVisible = $derived($activePanel === 'distribution' && isImages);
 
+    // Global count mode for the distribution panel (applies to all sources).
+    let distributionCountMode = $state<AnnotationCountMode>(AnnotationCountMode.OBJECTS);
+
     // Only create the per-type queries while the panel is open so we don't fetch
-    // three extra count queries on every collection view.
-    const distributionTypeQueries = $derived.by(() => {
-        if (!distributionPanelVisible) return null;
-        return {
-            [AnnotationType.CLASSIFICATION]: useImageAnnotationCounts({
-                collectionId: datasetId,
-                annotationType: AnnotationType.CLASSIFICATION,
-                filter: imageAnnotationCountsFilter
-            }),
-            [AnnotationType.OBJECT_DETECTION]: useImageAnnotationCounts({
-                collectionId: datasetId,
-                annotationType: AnnotationType.OBJECT_DETECTION,
-                filter: imageAnnotationCountsFilter
-            }),
-            [AnnotationType.SEGMENTATION_MASK]: useImageAnnotationCounts({
-                collectionId: datasetId,
-                annotationType: AnnotationType.SEGMENTATION_MASK,
-                filter: imageAnnotationCountsFilter
-            })
-        };
-    });
+    // extra count queries on every collection view.
+    // The 'all' query uses a suffixed key so its cache entry is isolated from
+    // the shared annotationCounts query (labels filter). TanStack's prefix
+    // matching ensures mutation invalidations still reach it.
+    const distributionAllQueryKey = [...useImageAnnotationCountsQueryKey, 'distribution'];
+
+    const distributionAllQuery = useImageAnnotationCounts(() => ({
+        collectionId: datasetId,
+        filter: imageAnnotationCountsFilter,
+        countMode: distributionCountMode,
+        queryKey: distributionAllQueryKey,
+        enabled: distributionPanelVisible
+    }));
+
+    const distributionClassificationQuery = useImageAnnotationCounts(() => ({
+        collectionId: datasetId,
+        annotationType: AnnotationType.CLASSIFICATION,
+        filter: imageAnnotationCountsFilter,
+        countMode: distributionCountMode,
+        enabled: distributionPanelVisible
+    }));
+
+    const distributionObjectDetectionQuery = useImageAnnotationCounts(() => ({
+        collectionId: datasetId,
+        annotationType: AnnotationType.OBJECT_DETECTION,
+        filter: imageAnnotationCountsFilter,
+        countMode: distributionCountMode,
+        enabled: distributionPanelVisible
+    }));
+
+    const distributionSegmentationQuery = useImageAnnotationCounts(() => ({
+        collectionId: datasetId,
+        annotationType: AnnotationType.SEGMENTATION_MASK,
+        filter: imageAnnotationCountsFilter,
+        countMode: distributionCountMode,
+        enabled: distributionPanelVisible
+    }));
 
     const allTypesSource = $derived<DistributionSource>({
         id: 'all',
@@ -466,26 +495,62 @@
     });
 
     const distributionSources = $derived.by<DistributionSource[]>(() => {
-        const typeQueries = distributionTypeQueries;
-        if (!typeQueries) return [allTypesSource];
-        const perType = [
-            { id: AnnotationType.CLASSIFICATION, label: 'Classification' },
-            { id: AnnotationType.OBJECT_DETECTION, label: 'Object detection' },
-            { id: AnnotationType.SEGMENTATION_MASK, label: 'Segmentation' }
+        if (!distributionPanelVisible) return [allTypesSource];
+
+        // Use the distribution-specific "all" query so the "All types" source
+        // respects distributionCountMode. Fall back to the shared counts while
+        // the distribution query is still loading (data === undefined).
+        const allDistributionData =
+            distributionAllQuery.data !== undefined
+                ? toCategoryCounts(
+                      distributionAllQuery.data as { label_name: string; current_count: number }[]
+                  )
+                : classDistributionCounts;
+        const allTypesDistributionSource: DistributionSource = {
+            id: 'all',
+            label: 'All types',
+            data: allDistributionData
+        };
+
+        const perType: {
+            id: AnnotationType;
+            label: string;
+            valueNoun?: string;
+            query: ReturnType<typeof useImageAnnotationCounts>;
+        }[] = [
+            {
+                id: AnnotationType.CLASSIFICATION,
+                label: 'Classification',
+                query: distributionClassificationQuery
+            },
+            {
+                id: AnnotationType.OBJECT_DETECTION,
+                label: 'Object detection',
+                valueNoun:
+                    distributionCountMode === AnnotationCountMode.SAMPLES ? 'samples' : 'instances',
+                query: distributionObjectDetectionQuery
+            },
+            {
+                id: AnnotationType.SEGMENTATION_MASK,
+                label: 'Segmentation',
+                valueNoun:
+                    distributionCountMode === AnnotationCountMode.SAMPLES ? 'samples' : 'instances',
+                query: distributionSegmentationQuery
+            }
         ];
         const typeSources: DistributionSource[] = [];
-        for (const { id, label } of perType) {
+        for (const { id, label, valueNoun, query } of perType) {
             const data = toCategoryCounts(
-                typeQueries[id].data as { label_name: string; current_count: number }[]
+                query.data as { label_name: string; current_count: number }[]
             );
             // Skip types with no matches in the current view so the selector stays clean.
-            if (data.length > 0) typeSources.push({ id, label, data });
+            if (data.length > 0) typeSources.push({ id, label, data, valueNoun });
         }
         // With a single type, "All types" would just duplicate it — show only
         // the type so the panel's selector stays hidden.
         if (typeSources.length <= 1)
-            return typeSources.length === 1 ? typeSources : [allTypesSource];
-        return [allTypesSource, ...typeSources];
+            return typeSources.length === 1 ? typeSources : [allTypesDistributionSource];
+        return [allTypesDistributionSource, ...typeSources];
     });
 </script>
 
@@ -662,7 +727,11 @@
                             {#await import('$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte') then { default: DatasetDistributionPanel }}
                                 <DatasetDistributionPanel
                                     sources={distributionSources}
+                                    initialCountMode={distributionCountMode}
                                     onClose={() => setActivePanel('none')}
+                                    onCountModeChange={(mode) => {
+                                        distributionCountMode = mode;
+                                    }}
                                 />
                             {/await}
                         {/if}

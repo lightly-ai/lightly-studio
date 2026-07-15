@@ -15,8 +15,8 @@
         classCount: number;
         /** Number of classes currently shown after top-N selection. */
         visibleClassCount: number;
-        /** Sum of counts across all classes, for the summary line. */
-        totalCount: number;
+        /** Sum of counts across all classes, for the summary line. Omit to hide the count. */
+        totalCount?: number;
         /** Noun for the total count summary (e.g. 'annotations', 'samples'). */
         valueNoun?: string;
         /** Opens the view-config dialog (top-N and sort order). */
@@ -55,8 +55,10 @@
             {classCount === 1 ? 'class' : 'classes'}
         {/if}
         · sorted by {DISTRIBUTION_SORT_LABELS[config.sortBy].toLowerCase()}
-        · {totalCount.toLocaleString('en-US')}
-        {valueNoun}
+        {#if totalCount !== undefined}
+            · {totalCount.toLocaleString('en-US')}
+            {valueNoun}
+        {/if}
         {#if onShowAll && visibleClassCount < classCount}
             ·
             <button

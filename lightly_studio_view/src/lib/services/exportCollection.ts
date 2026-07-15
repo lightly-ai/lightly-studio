@@ -1,4 +1,4 @@
-import { exportCollectionToAbsolutePaths } from '$lib/api/lightly_studio_local';
+import { exportCollectionToAbsolutePaths, type ImageFilter } from '$lib/api/lightly_studio_local';
 import type { ExportFilter, LoadResult } from '$lib/services/types';
 import { triggerDownloadBlob } from '$lib/utils';
 
@@ -8,13 +8,15 @@ type ExportCollectionParams = {
     filename?: string;
     includeFilter?: ExportFilter;
     excludeFilter?: ExportFilter;
+    collectionFilter?: ImageFilter | null;
 };
 
 export const exportCollection = async ({
     collection_id,
     filename = '',
     includeFilter,
-    excludeFilter
+    excludeFilter,
+    collectionFilter
 }: ExportCollectionParams): Promise<ExportCollectionResult> => {
     const result: ExportCollectionResult = { data: undefined, error: undefined };
     try {
@@ -22,7 +24,8 @@ export const exportCollection = async ({
             path: { collection_id },
             body: {
                 include: includeFilter,
-                exclude: excludeFilter
+                exclude: excludeFilter,
+                collection_filter: collectionFilter
             },
             headers: {
                 'Access-Control-Expose-Headers': 'Content-Disposition'

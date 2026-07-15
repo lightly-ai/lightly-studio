@@ -433,6 +433,10 @@ def annotations_test_data(
                 annotation.width = 150
                 annotation.height = 250
                 annotation.segmentation_mask = [1, 2, 3, 4]
+            elif annotation_type == AnnotationType.CLASSIFICATION:
+                # Classification annotations carry an optional temporal span.
+                annotation.start_time_s = 1.5
+                annotation.end_time_s = 4.0
             if i % 2 == 0:
                 annotations_to_create_first_collection.append(annotation)
             else:
