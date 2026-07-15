@@ -1,38 +1,38 @@
 import { writable, type Readable } from 'svelte/store';
-import { useFilterVisibility } from './useFilterVisibility';
+import type { EmbeddingRegion } from '$lib/api/lightly_studio_local';
+import { useRegionFilterVisibility } from './useRegionFilterVisibility';
+import { clearPlotSelectionCount } from './useEmbeddingPlotSelection';
 
-// For images and videos the lasso selection already lives inside a
-// backend-driven filter store (useImageFilters / useVideoFilters), so the
-// "active sample ids" can be derived straight from those filter params.
-// Annotations have no such filter store, so we keep the lasso selection in
-// this small module-level writable instead. The plot (writer) and the grid
-// (reader) share it, which is why it lives at module scope rather than being
-// created per-component.
-const annotationPlotSampleIds = writable<string[]>([]);
+// For images the lasso selection lives inside the image filter store; annotations have no such
+// store, so we keep the plot region here at module scope. The plot (writer) and the grid
+// (reader) share it. The selection is sent to the backend as geometry (see LIG-9903), so we
+// store the polygon, not the resolved sample ids.
+const annotationPlotRegion = writable<EmbeddingRegion | null>(null);
 
 export function useAnnotationPlotSelection() {
     return {
-        annotationPlotSampleIds,
-        saveSampleIds: (ids: string[]) => annotationPlotSampleIds.set(ids)
+        annotationPlotRegion,
+        saveRegion: (region: EmbeddingRegion | null) => annotationPlotRegion.set(region)
     };
 }
 
-export function clearAnnotationPlotSelection() {
-    annotationPlotSampleIds.set([]);
+// Clears the shared annotation plot region and the plot-selection count for `collectionId`.
+// The region store is global, but the count is per-collection, so leaving it set would keep the
+// Embedding Plot Filter chip visible after switching away from and back to the collection.
+export function clearAnnotationPlotSelection(collectionId: string) {
+    annotationPlotRegion.set(null);
+    clearPlotSelectionCount(collectionId);
 }
 
-// Adapts the local annotation selection store to the shared useFilterVisibility
-// functionality, so the annotations route gets the same show/hide/clear behaviour as
-// the image and video embedding filters.
+// Adapts the local annotation region selection to the shared region-based visibility, so the
+// annotations route gets the same count/clear behaviour as the image embedding filter.
 export function useEmbeddingFilterForAnnotations(
     collectionId: Readable<string>,
     setRangeSelectionForCollection: (collectionId: string, selection: null) => void
 ) {
-    const { saveSampleIds } = useAnnotationPlotSelection();
-    return useFilterVisibility(
+    return useRegionFilterVisibility(
         collectionId,
-        annotationPlotSampleIds,
-        saveSampleIds,
+        () => annotationPlotRegion.set(null),
         setRangeSelectionForCollection
     );
 }

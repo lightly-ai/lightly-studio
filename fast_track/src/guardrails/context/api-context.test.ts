@@ -26,12 +26,13 @@ function fakeOctokit(files: ReturnType<typeof listedFile>[]) {
 }
 
 describe('toChangedFile', () => {
-    it('keeps path, status, and counts, dropping the rest', () => {
+    it('maps path, status, counts, and patch from the API response', () => {
         expect(toChangedFile(listedFile('src/foo.ts', 12, 3))).toEqual({
             path: 'src/foo.ts',
             status: 'modified',
             additions: 12,
-            deletions: 3
+            deletions: 3,
+            patch: '@@ ... @@'
         });
     });
 
@@ -71,8 +72,8 @@ describe('ApiGuardrailContext', () => {
         });
 
         expect(await context.changedFiles()).toEqual([
-            { path: 'a.ts', status: 'modified', additions: 1, deletions: 0 },
-            { path: 'b.ts', status: 'modified', additions: 0, deletions: 5 }
+            { path: 'a.ts', status: 'modified', additions: 1, deletions: 0, patch: '@@ ... @@' },
+            { path: 'b.ts', status: 'modified', additions: 0, deletions: 5, patch: '@@ ... @@' }
         ]);
         expect(paginateCalls).toEqual([
             {

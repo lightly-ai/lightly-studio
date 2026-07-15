@@ -9,6 +9,7 @@ from uuid import UUID
 
 import numpy as np
 from numpy.typing import NDArray
+from PIL import Image
 
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 
@@ -94,6 +95,21 @@ class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
         """
         ...
 
+    def embed_pil_images(
+        self, images: list[Image.Image], show_progress: bool = True
+    ) -> NDArray[np.float32]:
+        """Generate embeddings for in-memory PIL images.
+
+        Args:
+            images: PIL images to embed.
+            show_progress: Whether to show a progress bar during embedding.
+
+        Returns:
+            A numpy array representing the generated embeddings in the same order
+            as the input images.
+        """
+        ...
+
 
 @runtime_checkable
 class VideoEmbeddingGenerator(EmbeddingGenerator, Protocol):
@@ -159,6 +175,13 @@ class RandomEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator)
         """Generate random embeddings for multiple image crops."""
         _ = show_progress  # Not used for random embeddings.
         return np.random.rand(len(image_crops), self._dimension).astype(np.float32)
+
+    def embed_pil_images(
+        self, images: list[Image.Image], show_progress: bool = True
+    ) -> NDArray[np.float32]:
+        """Generate random embeddings for in-memory PIL images."""
+        _ = show_progress  # Not used for random embeddings.
+        return np.random.rand(len(images), self._dimension).astype(np.float32)
 
     def embed_videos(self, filepaths: list[str]) -> NDArray[np.float32]:
         """Generate random embeddings for multiple video samples."""

@@ -1,7 +1,7 @@
 """Temporal span model.
 
 A temporal span stores start and end times in seconds for sample-backed
-entities, such as an classification annotation or caption.
+entities.
 """
 
 from typing import TYPE_CHECKING

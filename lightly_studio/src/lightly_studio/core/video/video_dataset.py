@@ -122,6 +122,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         allowed_extensions: Iterable[str] | None = None,
         num_decode_threads: int | None = None,
         embed: bool = True,
+        embed_frames: bool = True,
         target_fps: float | None = None,
         limit: int | None = None,
     ) -> None:
@@ -135,6 +136,8 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             num_decode_threads: Optional override for the number of FFmpeg decode threads.
                 If omitted, the available CPU cores - 1 (max 16) are used.
             embed: If True, generate embeddings for the newly added videos.
+            embed_frames: If True, generate image embeddings for the extracted video frames
+                during decoding.
             target_fps: Optional target frame rate for subsampling. When set below the source
                 frame rate, only selected frames are kept. frame_number values remain
                 original. Must be greater than 0.
@@ -156,6 +159,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             video_paths=video_paths,
             num_decode_threads=num_decode_threads,
             target_fps=target_fps,
+            embed_frames=embed_frames,
         )
 
         if embed:
@@ -172,6 +176,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         allowed_extensions: Iterable[str] | None = None,
         annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
         embed: bool = True,
+        embed_frames: bool = True,
         limit: int | None = None,
     ) -> None:
         """Load videos and YouTube-VIS annotations and store them in the database.
@@ -186,6 +191,8 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             annotation_type: The type of annotation to be loaded (e.g., 'ObjectDetection',
                 'InstanceSegmentation').
             embed: If True, generate embeddings for the newly added videos.
+            embed_frames: If True, generate image embeddings for the extracted video frames
+                during decoding.
             limit: Maximum number of samples to load. By default, all samples are loaded.
                 Annotations of videos beyond the limit are skipped.
 
@@ -219,6 +226,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             input_labels=input_labels,
             input_labels_paths_root=videos_path,
             limit=limit,
+            embed_frames=embed_frames,
         )
 
         if embed:
