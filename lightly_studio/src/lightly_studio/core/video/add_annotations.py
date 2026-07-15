@@ -20,7 +20,7 @@ from lightly_studio.type_definitions import PathLike
 
 logger = logging.getLogger(__name__)
 
-SAMPLE_BATCH_SIZE = 32
+ANNOTATION_BATCH_SIZE = 1024
 
 
 def add_annotations_from_activitynet(
@@ -41,7 +41,13 @@ def add_annotations_from_activitynet(
     Returns:
         A list of video IDs from the JSON that had no matching video in the collection.
     """
-    input_labels = ActivityNetTemporalClassificationInput(input_file=Path(annotations_json))
+    annotations_json = Path(annotations_json).absolute()
+    if not annotations_json.is_file() or annotations_json.suffix != ".json":
+        raise FileNotFoundError(
+            f"ActivityNet annotations json file not found: '{annotations_json}'"
+        )
+
+    input_labels = ActivityNetTemporalClassificationInput(input_file=annotations_json)
     stem_to_sample_id = video_resolver.get_sample_ids_by_stems(
         session=session,
         collection_id=root_collection_id,
@@ -75,7 +81,7 @@ def add_annotations_from_activitynet(
                 )
             )
 
-            if len(annotations_to_create) >= SAMPLE_BATCH_SIZE:
+            if len(annotations_to_create) >= ANNOTATION_BATCH_SIZE:
                 annotation_resolver.create_many(
                     session=session,
                     parent_collection_id=root_collection_id,
