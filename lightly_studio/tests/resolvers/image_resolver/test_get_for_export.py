@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from sqlalchemy import inspect
 from sqlmodel import Session
 
 from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
@@ -162,6 +163,48 @@ def test_get_for_export__with_embedding_region_filter(db_session: Session) -> No
     assert {s.sample_id for s in result} == {image_inside1.sample_id, image_inside2.sample_id}
 
 
+def test_get_for_export__without_preload_relationships_are_unloaded(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/data/img.jpg",
+    )
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="cat",
+    )
+    create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_data={"x": 10, "y": 10, "width": 20, "height": 20},
+    )
+    create_caption(
+        session=db_session,
+        collection_id=collection.collection_id,
+        parent_sample_id=image.sample_id,
+        text="a cat sitting on a mat",
+    )
+    db_session.expire_all()
+
+    result = list(
+        image_resolver.get_for_export(
+            session=db_session,
+            collection_id=collection.collection_id,
+            collection_filter=None,
+        )
+    )
+
+    assert len(result) == 1
+    sample_state = inspect(result[0].sample_table)
+    assert sample_state is not None
+    assert "annotations" in sample_state.unloaded
+    assert "captions" in sample_state.unloaded
+
+
 def test_get_for_export__preloaded_data_accessible(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(
@@ -187,6 +230,7 @@ def test_get_for_export__preloaded_data_accessible(db_session: Session) -> None:
         parent_sample_id=image.sample_id,
         text="a cat sitting on a mat",
     )
+    db_session.expire_all()
 
     result = list(
         image_resolver.get_for_export(
@@ -198,6 +242,14 @@ def test_get_for_export__preloaded_data_accessible(db_session: Session) -> None:
     )
 
     assert len(result) == 1
+    sample_state = inspect(result[0].sample_table)
+    assert sample_state is not None
+    assert "annotations" not in sample_state.unloaded
+    assert "captions" not in sample_state.unloaded
+    annotation_state = inspect(result[0].sample_table.annotations[0])
+    assert annotation_state is not None
+    assert "annotation_label" not in annotation_state.unloaded
+    assert "object_detection_details" not in annotation_state.unloaded
     annotations = result[0].annotations
     assert len(annotations) == 1
     assert annotations[0].class_name == "cat"
