@@ -29,8 +29,10 @@ class AnnotationMetricQuery(MatchExpression):
     """Query samples by annotation-level evaluation results.
 
     This query matches samples that belong to an evaluation run and contain annotation
-    pairs in a selected confusion-matrix cell or false positives, optionally constrained by
-    persisted annotation metrics.
+    pairs in a selected confusion-matrix cell, false positives, or false negatives.
+    Confusion-matrix matches can optionally be constrained by persisted
+    ``AnnotationEvaluationMetricField`` criteria. False-positive and false-negative
+    matches do not support metric constraints.
 
     Example:
         ```python
@@ -58,6 +60,8 @@ class AnnotationMetricQuery(MatchExpression):
         *criteria: AnnotationEvaluationMetricMatchExpression,
     ) -> AnnotationMetricQuery:
         """Match samples by confusion-matrix cell within an evaluation run.
+
+        Persisted ``AnnotationEvaluationMetricField`` criteria can constrain matches.
 
         Example:
             ```python
@@ -92,6 +96,8 @@ class AnnotationMetricQuery(MatchExpression):
     ) -> AnnotationMetricQuery:
         """Match samples with false-positive predictions within an evaluation run.
 
+        Metric constraints are not supported for false-positive matches.
+
         Example:
             ```python
             AnnotationMetricQuery.false_positive(
@@ -119,6 +125,8 @@ class AnnotationMetricQuery(MatchExpression):
         ground_truth: str,
     ) -> AnnotationMetricQuery:
         """Match samples with false-negative ground truths within an evaluation run.
+
+        Metric constraints are not supported for false-negative matches.
 
         Example:
             ```python
