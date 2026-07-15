@@ -197,7 +197,7 @@ describe('useAnnotationsFilter', () => {
         expect(get(annotationFilterLabels)).toEqual({});
     });
 
-    it('pruneInvalidSelections removes selections whose label has zero current_count', () => {
+    it('pruneInvalidSelections keeps labels present in counts even at zero current_count', () => {
         selectedAnnotationFilterIds.set(new Set(['id-1', 'id-2']));
 
         const { setAnnotationCounts, pruneInvalidSelections } = useAnnotationsFilter({
@@ -210,13 +210,16 @@ describe('useAnnotationsFilter', () => {
         ]);
         pruneInvalidSelections();
 
-        // 'dog' (id-2) has a zero current_count and is toggled off; 'cat' stays.
-        expect(setSelectedAnnotationFilterIds).toHaveBeenCalledWith('id-2');
-        expect(setSelectedAnnotationFilterIds).not.toHaveBeenCalledWith('id-1');
-        expect(get(selectedAnnotationFilterIds)).toEqual(new Set(['id-1']));
+        // Both labels are present in the (source-scoped) counts, so neither is
+        // deselected: a class can't prune itself just because the active filter
+        // currently matches none of its rows.
+        expect(setSelectedAnnotationFilterIds).not.toHaveBeenCalled();
+        expect(get(selectedAnnotationFilterIds)).toEqual(new Set(['id-1', 'id-2']));
     });
 
     it('pruneInvalidSelections removes selections whose label is missing from counts', () => {
+        // Mirrors switching to an annotation source that does not contain 'dog':
+        // its label drops out of the source-scoped counts and gets deselected.
         selectedAnnotationFilterIds.set(new Set(['id-2']));
 
         const { setAnnotationCounts, pruneInvalidSelections } = useAnnotationsFilter({

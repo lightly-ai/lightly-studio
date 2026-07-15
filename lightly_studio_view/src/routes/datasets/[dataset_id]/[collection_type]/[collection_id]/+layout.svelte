@@ -393,8 +393,9 @@
             setAnnotationCounts(
                 countsData as { label_name: string; total_count: number; current_count?: number }[]
             );
-            // Drop any selected label filters that no longer have matching rows in
-            // the fresh counts so the active filter never points at a hidden label.
+            // Drop selected label filters whose label is absent from the fresh,
+            // source-scoped counts (e.g. after switching to a source that doesn't
+            // contain the label) so the active filter never points at a hidden label.
             pruneInvalidSelections();
         }
     });

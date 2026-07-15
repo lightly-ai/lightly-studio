@@ -119,16 +119,14 @@ export function useAnnotationsFilter({
     );
 
     // Drop selected annotation filters that are no longer valid: if a selected
-    // label is missing from the counts (or has a zero current_count) remove it
-    // from the selected set so the active filter never refers to a hidden row.
+    // label is absent from the counts, remove it from the selected set so the
+    // active filter never refers to a hidden label.
     // Called imperatively after counts update (see setAnnotationCounts consumers)
     // rather than via a derived store, so the side effect runs deterministically.
     const pruneInvalidSelections = () => {
         const counts = get(annotationCountsStore);
         if (!counts) return;
-        const validNames = new Set(
-            counts.filter((c) => (c.current_count ?? 0) > 0).map((c) => c.label_name)
-        );
+        const validNames = new Set(counts.map((c) => c.label_name));
         const idToName = new Map(
             Object.entries(get(annotationFilterLabels)).map(([name, id]) => [id, name])
         );
