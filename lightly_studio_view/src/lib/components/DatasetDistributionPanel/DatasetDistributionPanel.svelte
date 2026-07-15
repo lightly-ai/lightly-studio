@@ -4,6 +4,8 @@
     import Typography from '$lib/components/Typography/Typography.svelte';
     import { Select, type SelectItem } from '$lib/components/Select';
     import { BarChart, type CategoryCount } from '$lib/components/BarChart';
+    import { Histogram, type HistogramRange } from '$lib/components/Histogram';
+    import { formatFloat, formatInteger } from '$lib/utils';
     import DistributionConfigDialog from './DistributionConfigDialog/DistributionConfigDialog.svelte';
     import ExpandDialog from './ExpandDialog/ExpandDialog.svelte';
     import PanelHeader from './PanelHeader/PanelHeader.svelte';
@@ -39,17 +41,25 @@
          * parent preserve the mode across close/reopen cycles.
          */
         initialCountMode?: AnnotationCountMode;
+        /**
+         * Called when a histogram range is selected (single-bin click or
+         * press-drag-release across bins), with the group id (e.g. the
+         * metadata key) and the spanned value interval — lets the host narrow
+         * the matching filter to that range.
+         */
+        onHistogramRangeSelect?: (groupId: string, range: HistogramRange) => void;
     }
 
     const {
         data,
         sources,
-        title = 'Class distribution',
+        title = 'Distribution',
         topN = 20,
         onClose,
         onBarClick,
         onCountModeChange,
-        initialCountMode = AnnotationCountMode.OBJECTS
+        initialCountMode = AnnotationCountMode.OBJECTS,
+        onHistogramRangeSelect
     }: Props = $props();
 
     // Normalise to a source list so the rest of the panel has one code path.
@@ -61,14 +71,36 @@
     let selectedSourceId = $state<string | undefined>(undefined);
     let selectedGroupId = $state<string | undefined>(undefined);
 
+    const sourceHasContent = (source: DistributionSource): boolean =>
+        (source.data?.length ?? 0) > 0 ||
+        source.histogram != null ||
+        (source.groups?.some((group) => (group.data?.length ?? 0) > 0 || group.histogram != null) ??
+            false);
+
+    // With nothing explicitly selected, land on the first source that actually
+    // has something to show. Otherwise an empty leading source (e.g. "All types"
+    // before any labeling) would render as empty while a populated source like
+    // metadata sits one click away.
+    const defaultSource = $derived(resolvedSources.find(sourceHasContent) ?? resolvedSources[0]);
     const activeSource = $derived(
-        resolvedSources.find((source) => source.id === selectedSourceId) ?? resolvedSources[0]
+        resolvedSources.find((source) => source.id === selectedSourceId) ?? defaultSource
     );
     const activeGroup = $derived(
         activeSource.groups?.find((group) => group.id === selectedGroupId) ??
             activeSource.groups?.[0]
     );
     const activeData = $derived<CategoryCount[]>(activeGroup?.data ?? activeSource.data ?? []);
+    // A group/source carrying bins renders as a histogram instead of a bar
+    // chart; the categorical controls (sort, top-N, orientation) don't apply.
+    const activeHistogram = $derived(activeGroup?.histogram ?? activeSource.histogram ?? null);
+    const activeHistogramRange = $derived(activeGroup?.selectedRange);
+    const handleHistogramRangeSelect = (range: HistogramRange) => {
+        const groupId = activeGroup?.id ?? activeSource.id;
+        onHistogramRangeSelect?.(groupId, range);
+    };
+    const histogramTotal = $derived(
+        activeHistogram ? activeHistogram.counts.reduce((sum, count) => sum + count, 0) : 0
+    );
     const valueNoun = $derived(activeSource.valueNoun ?? 'annotations');
 
     // Default to horizontal bars: categories stack down the left gutter and the
@@ -122,7 +154,7 @@
             <Button
                 variant="ghost"
                 icon={X}
-                ariaLabel="Close class distribution panel"
+                ariaLabel="Close distribution panel"
                 buttonProps={{
                     size: 'sm',
                     class: 'h-8 w-8 p-0',
@@ -133,38 +165,53 @@
         {/if}
     </div>
     {#if hasSourceSelector}
-        <div
-            class="mt-2 flex flex-wrap items-center gap-2"
-            data-testid="dataset-distribution-source"
-        >
-            <span class="text-xs text-muted-foreground">Source</span>
-            <Select
-                items={sourceItems}
-                value={activeSource.id}
-                size="xs"
-                class="w-40"
-                testId="dataset-distribution-source-select"
-                onValueChange={(value) => {
-                    selectedSourceId = value;
-                    selectedGroupId = undefined;
-                }}
-            />
-            {#if groupItems.length > 0}
-                <span class="text-xs text-muted-foreground"
-                    >{activeSource.groupLabel ?? 'Field'}</span
-                >
+        <!-- Fixed-width labels + flex-1 triggers keep both selects the same
+             width, filling the panel row. -->
+        <div class="mt-2 flex flex-col gap-2" data-testid="dataset-distribution-source">
+            <div class="flex items-center gap-2">
+                <span class="w-[100px] shrink-0 text-xs text-muted-foreground">Distribution</span>
                 <Select
-                    items={groupItems}
-                    value={activeGroup?.id}
+                    items={sourceItems}
+                    value={activeSource.id}
                     size="xs"
-                    class="w-48"
-                    testId="dataset-distribution-group-select"
-                    onValueChange={(value) => (selectedGroupId = value)}
+                    class="min-w-0 flex-1"
+                    testId="dataset-distribution-source-select"
+                    onValueChange={(value) => {
+                        selectedSourceId = value;
+                        selectedGroupId = undefined;
+                    }}
                 />
+            </div>
+
+            {#if groupItems.length > 0}
+                <div class="flex items-center gap-2">
+                    <span class="w-[100px] shrink-0 text-xs text-muted-foreground"
+                        >{activeSource.groupLabel ?? 'Field'}</span
+                    >
+                    <Select
+                        items={groupItems}
+                        value={activeGroup?.id}
+                        size="xs"
+                        class="min-w-0 flex-1"
+                        testId="dataset-distribution-group-select"
+                        onValueChange={(value) => (selectedGroupId = value)}
+                    />
+                </div>
             {/if}
         </div>
     {/if}
-    {#if activeData.length > 0}
+    {#if activeHistogram}
+        <div
+            class="mt-2 text-xs text-muted-foreground"
+            data-testid="dataset-distribution-histogram-summary"
+        >
+            {formatInteger(histogramTotal)}
+            {valueNoun} · {activeHistogram.counts.length}
+            {activeHistogram.counts.length === 1 ? 'bin' : 'bins'} · {formatFloat(
+                activeHistogram.binEdges[0]
+            )}–{formatFloat(activeHistogram.binEdges[activeHistogram.binEdges.length - 1])}
+        </div>
+    {:else if activeData.length > 0}
         <PanelHeader
             {config}
             classCount={activeData.length}
@@ -186,14 +233,24 @@
         bind:clientHeight={chartHeight}
         bind:clientWidth
     >
-        <BarChart
-            data={visible}
-            orientation={config.orientation}
-            maxHeightPx={chartHeight || undefined}
-            maxWidthPx={clientWidth || undefined}
-            {totalCount}
-            {onBarClick}
-        />
+        {#if activeHistogram}
+            <Histogram
+                data={activeHistogram}
+                selectedRange={activeHistogramRange}
+                heightPx={chartHeight || 240}
+                showAxes
+                onRangeSelect={handleHistogramRangeSelect}
+            />
+        {:else}
+            <BarChart
+                data={visible}
+                orientation={config.orientation}
+                maxHeightPx={chartHeight || undefined}
+                maxWidthPx={clientWidth || undefined}
+                {totalCount}
+                {onBarClick}
+            />
+        {/if}
     </div>
 </div>
 <DistributionConfigDialog
