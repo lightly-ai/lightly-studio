@@ -400,6 +400,41 @@ class TestDataset:
         assert len(samples) == 1
         assert len(samples[0].sample_table.embeddings) == 0
 
+    def test_add_samples_from_yolo__records_broken_image(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        # YOLO opens every image to read its dimensions during the get_images()/get_labels()
+        # folder scans, so a broken image must be recorded as BROKEN and skipped instead of
+        # aborting the ingest.
+        annotations_path = tmp_path / "data.yaml"
+        annotations_path.write_text(yaml.dump(get_yolo_yaml_dict_valid()))
+
+        images_path_train = tmp_path / "train" / "images"
+        labels_path_train = tmp_path / "train" / "labels"
+        _create_sample_images([images_path_train / "good.jpg"])
+        _create_sample_labels([labels_path_train / "good.txt"])
+
+        # A broken image: present on disk but not decodable, with a matching label file.
+        (images_path_train / "broken.jpg").write_bytes(b"not a real image")
+        _create_sample_labels([labels_path_train / "broken.txt"])
+
+        dataset = ImageDataset.create(name="test_dataset")
+        with caplog.at_level("INFO", logger="lightly_studio.core.file_outcome_report"):
+            dataset.add_samples_from_yolo(
+                data_yaml=annotations_path, input_split="train", embed=False
+            )
+
+        # Only the readable image becomes a sample; the broken one is skipped, not created.
+        samples = list(dataset)
+        assert [sample.file_name for sample in samples] == ["good.jpg"]
+
+        # The broken image is recorded in the end-of-run summary.
+        assert "added=1" in caplog.text
+        assert "broken=1" in caplog.text
+
     def test_add_samples_from_yolo__coverage_includes_empty_label_file(
         self,
         patch_collection: None,  # noqa: ARG002

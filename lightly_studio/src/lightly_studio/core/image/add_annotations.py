@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import posixpath
 from collections.abc import Mapping
 from pathlib import Path
@@ -31,9 +32,26 @@ from lightly_studio.resolvers import (
 )
 from lightly_studio.type_definitions import PathLike
 
+logger = logging.getLogger(__name__)
+
 # Constants
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
 ALLOWED_YOLO_SPLITS = {"train", "val", "test", "minival"}
+
+
+def skip_and_warn_unreadable_image(path: Path, error: Exception) -> None:
+    """``on_error`` hook for annotation ingest: log and skip an unreadable image.
+
+    Annotation ingest attaches to images already in the dataset (recorded as
+    ``BROKEN`` at their own ingest), so a broken image is skipped with a warning
+    rather than aborting the whole run. Suitable for a folder-scanning input's
+    ``on_error`` attribute and for Pascal VOC's ``from_dirs(on_error=...)``.
+
+    Args:
+        path: The path of the unreadable image.
+        error: The error raised while reading the image.
+    """
+    logger.warning(f"Skipping annotation for unreadable image '{path}': {error}")
 
 
 def add_annotations_from_labelformat(  # noqa: PLR0913
@@ -66,6 +84,15 @@ def add_annotations_from_labelformat(  # noqa: PLR0913
         the collection. An empty list means all images were found.
     """
     images_root_abs = normalize_images_root(images_root=images_root)
+
+    # Folder-scanning formats (e.g. YOLO) open every image during the get_labels() scan below;
+    # without a hook a broken image aborts annotation ingest. Set a skip+log hook so a broken
+    # image is skipped instead. Only formats that expose on_error scan folders, and a caller
+    # that already set a hook (e.g. the combined image+annotation path, which records BROKEN)
+    # keeps it.
+    if getattr(input_labels, "on_error", "unsupported") is None:
+        input_labels.on_error = skip_and_warn_unreadable_image  # type: ignore[union-attr]
+
     label_map = labelformat_helpers.create_label_map(
         session=session,
         root_collection_id=root_collection_id,
