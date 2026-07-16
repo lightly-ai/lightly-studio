@@ -125,4 +125,32 @@ describe('VideoPlayer', () => {
         expect(getByRole('slider')).toBeTruthy();
         expect(getByLabelText('Play')).toBeTruthy();
     });
+
+    it('should not render an event bar when no events are given', () => {
+        const { queryByTestId } = render(VideoPlayer, { props: { src: 'test-video.mp4' } });
+        expect(queryByTestId('video-event-timeline')).toBeFalsy();
+    });
+
+    it('should render an event bar in the controls when events are given', () => {
+        const { getByTestId, getByText } = render(VideoPlayer, {
+            props: {
+                src: 'test-video.mp4',
+                durationS: 10,
+                events: [
+                    {
+                        id: 'e1',
+                        annotationCollectionId: 'coll-1',
+                        label: 'Jump',
+                        startTimeS: 2,
+                        endTimeS: 4,
+                        color: 'rgba(10, 20, 30, 0.7)',
+                        contrastColor: 'rgba(245, 235, 225, 0.7)'
+                    }
+                ]
+            }
+        });
+
+        expect(getByTestId('video-event-timeline')).toBeTruthy();
+        expect(getByText('Jump')).toBeTruthy();
+    });
 });

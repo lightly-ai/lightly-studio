@@ -9,7 +9,7 @@
         VideoPlayer
     } from '$lib/components';
     import { type FrameView, type SampleView, type VideoView } from '$lib/api/lightly_studio_local';
-    import { getVideoURLById } from '$lib/utils';
+    import { getVideoURLById, toVideoEvents } from '$lib/utils';
     import VideoSampleMetadata from '../VideoSampleMetadata/VideoSampleMetadata.svelte';
     import SampleDetailsCaptionSegment from '../SampleDetails/SampleDetailsCaptionsSegment/SampleDetailsCaptionSegment.svelte';
     import { useVideoFrames } from '$lib/hooks/useVideoFrames/useVideoFrames';
@@ -30,6 +30,9 @@
 
     let videoEl: HTMLVideoElement | null = $state(null);
     let frameRequestId: number | null = $state(null);
+
+    // Imported events: classification annotations on the video carrying a time span.
+    const videoEvents = $derived(toVideoEvents((video.sample as SampleView)?.annotations ?? []));
 
     const {
         currentFrame,
@@ -163,6 +166,8 @@
                         src={getVideoURLById(video.sample_id)}
                         bind:videoEl
                         {startTimeS}
+                        events={videoEvents}
+                        durationS={video.duration_s ?? undefined}
                         videoProps={{
                             muted: true,
                             class: 'object-contain',
