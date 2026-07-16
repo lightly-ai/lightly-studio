@@ -6,9 +6,8 @@ import itertools
 import logging
 import math
 import os
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable
 from dataclasses import dataclass
-from fractions import Fraction
 from pathlib import Path
 from typing import cast
 from uuid import UUID
@@ -31,7 +30,6 @@ from labelformat.model.object_detection_track import (
     SingleObjectDetectionTrack,
     VideoObjectDetectionTrack,
 )
-from numpy.typing import NDArray
 from PIL import Image
 from sqlmodel import Session
 from tqdm import tqdm
@@ -58,17 +56,12 @@ from lightly_studio.resolvers import (
     video_frame_resolver,
     video_resolver,
 )
-from lightly_studio.utils import batching
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_VIDEO_CHANNEL = 0
-# Keep original-resolution decode buffers bounded, then batch the lightweight frame
-# metadata and precomputed embeddings separately for database writes.
-FRAME_DATABASE_BATCH_SIZE = 512
-FRAME_EMBEDDING_BATCH_SIZE = 128
-FRAME_EMBEDDING_BATCH_MAX_BYTES = 512 * 1024 * 1024
-OBJECT_TRACK_BATCH_SIZE = 32
+# Number of samples to process in a single batch
+SAMPLE_BATCH_SIZE = 128
 
 # Video file extensions
 # These are commonly supported by PyAV/FFmpeg.
@@ -106,14 +99,6 @@ class VideoLoadContext:
     target_fps: float | None
     embed_frames: bool
     embedding_model_id: UUID | None
-
-
-@dataclass(frozen=True)
-class _EmbeddedFrame:
-    """Video frame metadata with its optional precomputed embedding."""
-
-    sample: VideoFrameCreate
-    embedding: NDArray[np.float32] | None
 
 
 def load_into_collection_from_paths(  # noqa: PLR0913
@@ -494,175 +479,86 @@ def _create_video_frame_samples(
         A list of UUIDs of the created video frame samples.
     """
     created_sample_ids: list[UUID] = []
-    embedded_frames = _iter_embedded_frames(
-        context=context,
-        video_container=video_container,
-        video_channel=video_channel,
-        num_decode_threads=num_decode_threads,
-        target_fps=target_fps,
-    )
-    for frame_batch in batching.batched(
-        items=embedded_frames,
-        batch_size=FRAME_DATABASE_BATCH_SIZE,
-    ):
-        created_sample_ids.extend(_store_frame_batch(context=context, frame_batch=frame_batch))
-    return created_sample_ids
-
-
-def _iter_embedded_frames(
-    context: FrameExtractionContext,
-    video_container: InputContainer,
-    video_channel: int,
-    num_decode_threads: int | None,
-    target_fps: float | None,
-) -> Iterator[_EmbeddedFrame]:
-    """Decode frames in bounded chunks and yield metadata with optional embeddings."""
+    samples_to_create: list[VideoFrameCreate] = []
+    pil_frames: list[Image.Image] = []
     video_stream = video_container.streams.video[video_channel]
     _configure_stream_threading(video_stream=video_stream, num_decode_threads=num_decode_threads)
+
+    # Get time base for converting PTS to seconds
     time_base = video_stream.time_base if video_stream.time_base else None
     original_fps = float(video_stream.average_rate) if video_stream.average_rate else 0.0
-    decode_batches = _iter_decoded_frame_batches(
-        context=context,
-        video_container=video_container,
-        video_stream=video_stream,
-        time_base=time_base,
-        original_fps=original_fps,
-        target_fps=target_fps,
-    )
-    for samples, images in decode_batches:
-        yield from _embed_decoded_frame_batch(
-            context=context,
-            samples=samples,
-            images=images,
-        )
 
-
-def _iter_decoded_frame_batches(  # noqa: PLR0913
-    context: FrameExtractionContext,
-    video_container: InputContainer,
-    video_stream: VideoStream,
-    time_base: Fraction | None,
-    original_fps: float,
-    target_fps: float | None,
-) -> Iterator[tuple[list[VideoFrameCreate], list[Image.Image]]]:
-    """Decode bounded batches without retaining a database-sized image buffer."""
-    samples: list[VideoFrameCreate] = []
-    images: list[Image.Image] = []
-    image_bytes = 0
-    should_embed = context.embed_frames and context.embedding_model_id is not None
+    # Decode all frames, persisting only the subset selected by the target fps.
     for decoded_index, frame in enumerate(video_container.decode(video_stream)):
         if not _should_keep_frame(
             decoded_index=decoded_index, target_fps=target_fps, original_fps=original_fps
         ):
             continue
-        next_image_bytes = frame.width * frame.height * 3 if should_embed else 0
-        if samples and _decode_batch_is_full(
-            num_frames=len(samples),
-            image_bytes=image_bytes,
-            next_image_bytes=next_image_bytes,
-        ):
-            yield samples, images
-            samples, images, image_bytes = [], [], 0
-        image = (
-            frame.to_image().convert("RGB")  # type: ignore[no-untyped-call]
-            if should_embed
-            else None
+
+        # Get the presentation timestamp in seconds from the frame
+        # Convert frame.pts from time base units to seconds
+        if frame.pts is not None and time_base is not None:
+            frame_timestamp_s = float(frame.pts * time_base)
+        else:
+            # Fallback to frame.time if pts or time_base is not available
+            frame_timestamp_s = frame.time if frame.time is not None else -1.0
+
+        sample = VideoFrameCreate(
+            frame_number=decoded_index,
+            frame_timestamp_s=frame_timestamp_s,
+            frame_timestamp_pts=frame.pts if frame.pts is not None else -1,
+            parent_sample_id=context.video_sample_id,
+            rotation_deg=_get_frame_rotation_deg(frame=frame),
         )
-        samples.append(
-            _create_video_frame(
+        samples_to_create.append(sample)
+        if context.embed_frames:
+            pil_frames.append(frame.to_image().convert("RGB"))  # type: ignore[no-untyped-call]
+
+        if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
+            created_sample_ids.extend(
+                _flush_frame_batch(
+                    context=context,
+                    samples_to_create=samples_to_create,
+                    pil_frames=pil_frames,
+                )
+            )
+            samples_to_create = []
+            pil_frames = []
+
+    if samples_to_create:
+        created_sample_ids.extend(
+            _flush_frame_batch(
                 context=context,
-                frame=frame,
-                decoded_index=decoded_index,
-                time_base=time_base,
+                samples_to_create=samples_to_create,
+                pil_frames=pil_frames,
             )
         )
-        if image is not None:
-            images.append(image)
-            image_bytes += next_image_bytes
-    if samples:
-        yield samples, images
+
+    return created_sample_ids
 
 
-def _decode_batch_is_full(
-    num_frames: int,
-    image_bytes: int,
-    next_image_bytes: int,
-) -> bool:
-    """Return whether the next frame would exceed a decode-batch limit."""
-    return (
-        num_frames >= FRAME_EMBEDDING_BATCH_SIZE
-        or image_bytes + next_image_bytes > FRAME_EMBEDDING_BATCH_MAX_BYTES
-    )
-
-
-def _create_video_frame(
+def _flush_frame_batch(
     context: FrameExtractionContext,
-    frame: AVVideoFrame,
-    decoded_index: int,
-    time_base: Fraction | None,
-) -> VideoFrameCreate:
-    """Create persisted frame metadata from one decoded frame."""
-    if frame.pts is not None and time_base is not None:
-        frame_timestamp_s = float(frame.pts * time_base)
-    else:
-        frame_timestamp_s = frame.time if frame.time is not None else -1.0
-    return VideoFrameCreate(
-        frame_number=decoded_index,
-        frame_timestamp_s=frame_timestamp_s,
-        frame_timestamp_pts=frame.pts if frame.pts is not None else -1,
-        parent_sample_id=context.video_sample_id,
-        rotation_deg=_get_frame_rotation_deg(frame=frame),
-    )
-
-
-def _embed_decoded_frame_batch(
-    context: FrameExtractionContext,
-    samples: list[VideoFrameCreate],
-    images: list[Image.Image],
-) -> Iterator[_EmbeddedFrame]:
-    """Embed a bounded image batch and release it before database batching."""
-    if not images or context.embedding_model_id is None:
-        yield from (_EmbeddedFrame(sample=sample, embedding=None) for sample in samples)
-        return
-    embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
-    embeddings = embedding_manager.embed_pil_images(
-        embedding_model_id=context.embedding_model_id,
-        images=images,
-        show_progress=False,
-    )
-    if len(embeddings) != len(samples):
-        raise RuntimeError(f"Expected {len(samples)} embeddings but got {len(embeddings)}.")
-    yield from (
-        _EmbeddedFrame(sample=sample, embedding=embedding)
-        for sample, embedding in zip(samples, embeddings)
-    )
-
-
-def _store_frame_batch(
-    context: FrameExtractionContext,
-    frame_batch: list[_EmbeddedFrame],
+    samples_to_create: list[VideoFrameCreate],
+    pil_frames: list[Image.Image],
 ) -> list[UUID]:
-    """Persist a database-sized frame batch and its precomputed embeddings."""
-    embeddings = [frame.embedding for frame in frame_batch if frame.embedding is not None]
-    if embeddings and context.embedding_model_id is None:
-        raise RuntimeError("Cannot store frame embeddings without an embedding model ID.")
-    if embeddings and len(embeddings) != len(frame_batch):
-        raise RuntimeError("Expected an embedding for every frame in the database batch.")
-    stacked_embeddings = np.stack(embeddings) if embeddings else None
+    """Persist a batch of frame samples and optionally embed them."""
     created_sample_ids = video_frame_resolver.create_many(
         session=context.session,
-        samples=[frame.sample for frame in frame_batch],
+        samples=samples_to_create,
         collection_id=context.collection_id,
     )
-    if stacked_embeddings is not None:
+
+    if context.embed_frames and context.embedding_model_id is not None and pil_frames:
         embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
-        embedding_manager.store_embeddings(
+        embedding_manager.embed_and_store_pil_images(
             session=context.session,
-            embedding_model_id=cast(UUID, context.embedding_model_id),
+            embedding_model_id=context.embedding_model_id,
             sample_ids=created_sample_ids,
-            embeddings=stacked_embeddings,
+            images=pil_frames,
             show_progress=False,
         )
+
     return created_sample_ids
 
 
@@ -802,7 +698,7 @@ def _create_object_tracks(
         )
         object_indices.append(obj_idx)
 
-        if len(tracks_to_create) >= OBJECT_TRACK_BATCH_SIZE:
+        if len(tracks_to_create) >= SAMPLE_BATCH_SIZE:
             created_track_ids = object_track_resolver.create_many(
                 session=session, tracks=tracks_to_create
             )
