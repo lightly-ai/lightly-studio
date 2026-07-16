@@ -3221,11 +3221,7 @@ requires-dist = [
     { name = "fsspec", specifier = ">=2023.1.0" },
     { name = "gcsfs", marker = "extra == 'cloud-storage'", specifier = ">=2023.1.0" },
     { name = "jinja2", specifier = ">=3.1.0" },
-<<<<<<< HEAD
     { name = "labelformat", git = "https://github.com/lightly-ai/labelformat.git?rev=07b00a0edf54e2dc7930a3abc756c7914c068829" },
-=======
-    { name = "labelformat", git = "https://github.com/lightly-ai/labelformat.git?rev=adeaf09cd10ec1b6f105da6886c00370fd894103" },
->>>>>>> 53ac3331e0a1a65dc5f89a2be6db2ab358c7e778
     { name = "lightly-mundig", specifier = "==0.1.13" },
     { name = "open-clip-torch", specifier = ">=2.20.0" },
     { name = "opencv-python-headless", specifier = ">=4.11.0.86" },
