@@ -603,16 +603,18 @@
         const bound = $metadataBounds[metadataKey];
         if (!bound) return;
         const current = $metadataValues[metadataKey];
+        // Clamp first, then compare: the stored value is always clamped to
+        // bound, so checking raw range.min/max would miss re-clicks on bins
+        // whose edges fall outside the collection's value range.
+        const clampedMin = Math.max(range.min, bound.min);
+        const clampedMax = Math.min(range.max, bound.max);
         const isBinAlreadySelected =
-            current && current.min === range.min && current.max === range.max;
+            current && current.min === clampedMin && current.max === clampedMax;
         updateMetadataValues({
             ...$metadataValues,
             [metadataKey]: isBinAlreadySelected
                 ? { min: bound.min, max: bound.max }
-                : {
-                      min: Math.max(range.min, bound.min),
-                      max: Math.min(range.max, bound.max)
-                  }
+                : { min: clampedMin, max: clampedMax }
         });
     };
 
