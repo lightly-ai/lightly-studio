@@ -197,6 +197,9 @@
     // Classification can return multiple annotations for the same sample; collapse them into
     // one tile before rendering so multi-label samples appear once in the grid.
     const classificationTiles = $derived(groupClassificationsBySample(allAnnotations));
+    const classificationTileMap = $derived(
+        new Map(classificationTiles.map((tile) => [tile.sampleId, tile]))
+    );
 
     type ClassificationTile = ReturnType<typeof groupClassificationsBySample>[number];
     type GridDisplayItem =
@@ -215,25 +218,41 @@
 
     // The grid works with one flat list for selection and navigation. `displayId` is the
     // selection key; `annotationId` is the route target when opening sample details.
-    const gridItems: GridDisplayItem[] = $derived([
-        ...allAnnotations
-            .filter(
-                (annotation) =>
-                    annotation.annotation.annotation_type !== AnnotationType.CLASSIFICATION
-            )
-            .map((annotation) => ({
+    const gridItems: GridDisplayItem[] = $derived.by(() => {
+        const emittedSampleIds = new Set<string>();
+
+        return allAnnotations.reduce<GridDisplayItem[]>((items, annotation) => {
+            if (annotation.annotation.annotation_type === AnnotationType.CLASSIFICATION) {
+                const sampleId = annotation.annotation.parent_sample_id;
+
+                if (!emittedSampleIds.has(sampleId)) {
+                    emittedSampleIds.add(sampleId);
+
+                    const tile = classificationTileMap.get(sampleId);
+
+                    if (tile) {
+                        items.push({
+                            kind: 'classification' as const,
+                            data: tile,
+                            displayId: tile.sampleId,
+                            annotationId: tile.representative.annotation.sample_id
+                        });
+                    }
+                }
+
+                return items;
+            }
+
+            items.push({
                 kind: 'annotation' as const,
                 data: annotation,
                 displayId: annotation.annotation.sample_id,
                 annotationId: annotation.annotation.sample_id
-            })),
-        ...classificationTiles.map((tile) => ({
-            kind: 'classification' as const,
-            data: tile,
-            displayId: tile.sampleId,
-            annotationId: tile.representative.annotation.sample_id
-        }))
-    ]);
+            });
+
+            return items;
+        }, []);
+    });
 
     function getGridItemDragData(item: GridDisplayItem) {
         if (item.kind !== 'annotation') {
