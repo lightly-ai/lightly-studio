@@ -17,7 +17,7 @@ def get_sample_ids_by_stems(
 ) -> dict[str, UUID]:
     """Build a mapping from video identifier stems to sample IDs in a collection.
 
-    Each video is indexed by ``Path(file_name).stem`` and ``Path(file_path_abs).stem``.
+    Each video is indexed by ``Path(file_name).stem``.
     If the same stem maps to multiple videos, a ``ValueError`` is raised.
 
     Args:
@@ -28,21 +28,21 @@ def get_sample_ids_by_stems(
         A mapping from stem to sample_id.
     """
     query = (
-        select(VideoTable.file_name, VideoTable.file_path_abs, VideoTable.sample_id)
+        select(VideoTable.file_name, VideoTable.sample_id)
         .join(SampleTable)
         .where(col(SampleTable.collection_id) == collection_id)
     )
     videos = session.exec(query).all()
 
     stem_to_sample_id: dict[str, UUID] = {}
-    for file_name, file_path_abs, sample_id in videos:
-        for stem in {Path(file_name).stem, Path(file_path_abs).stem}:
-            existing = stem_to_sample_id.get(stem)
-            if existing is not None and existing != sample_id:
-                raise ValueError(
-                    f"Duplicate video stem '{stem}' in collection {collection_id}. "
-                    "Video identifiers must be unique."
-                )
-            stem_to_sample_id[stem] = sample_id
+    for file_name, sample_id in videos:
+        stem = Path(file_name).stem
+        existing = stem_to_sample_id.get(stem)
+        if existing is not None and existing != sample_id:
+            raise ValueError(
+                f"Duplicate video stem '{stem}' in collection {collection_id}. "
+                "Video identifiers must be unique."
+            )
+        stem_to_sample_id[stem] = sample_id
 
     return stem_to_sample_id
