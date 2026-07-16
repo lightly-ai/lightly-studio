@@ -153,7 +153,6 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
     images_path: PathLike,
     collection_name: str | None = None,
     limit: int | None = None,
-    broken_image_paths: Iterable[str] = (),
 ) -> list[UUID]:
     """Load samples and their annotations from a labelformat input into the dataset.
 
@@ -164,10 +163,6 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
         images_path: The path to the directory containing the images.
         collection_name: Optional name for the annotation collection.
         limit: Maximum number of samples to load. By default, all samples are loaded.
-        broken_image_paths: Paths of images already found broken during a
-            construction-time folder scan (Pascal VOC ``from_dirs`` scans before
-            this function runs). They are recorded as ``BROKEN`` up front so the
-            report is complete for formats whose scan cannot be hooked lazily.
 
     Returns:
         A list of UUIDs of the created samples.
@@ -181,25 +176,20 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
         dimensions, so a broken file is detected here via the ``on_error`` hook
         and recorded as ``BROKEN``. The hook fires from both folder scans (the
         ``get_images()`` existence check and the Phase 1 ``get_labels()`` loop)
-        and dedupes so a file is recorded once. Pascal VOC scans at construction
-        inside ``from_dirs`` instead, so its broken files arrive here via
-        ``broken_image_paths``. COCO reads dimensions from the annotation
-        metadata without opening the file, so a COCO broken file is not detected
-        here and is deferred to the embedding step. A missing referenced path is
-        recorded as ``MISSING``.
+        and dedupes so a file is recorded once. COCO reads dimensions from the
+        annotation metadata without opening the file, so a COCO broken file is
+        not detected here and is deferred to the embedding step. A missing
+        referenced path is recorded as ``MISSING``.
     """
     images_root_abs = add_annotations.normalize_images_root(images_root=images_path)
 
     report = FileOutcomeReport()
 
-    # Folder-scanning formats open every image to read its dimensions. Route broken images
-    # through one collector so they are recorded as BROKEN and skipped instead of raising
-    # mid-scan and aborting the whole ingest. Lazily-scanned formats fire the hook during the
-    # get_images() and get_labels() scans below; Pascal VOC scans at construction, so its
-    # broken paths are passed in via broken_image_paths. The collector dedupes both sources.
+    # Lazily-scanned folder formats open every image to read its dimensions during the
+    # get_images() and get_labels() scans below. Route broken images through one collector so
+    # they are recorded as BROKEN and skipped instead of raising mid-scan and aborting the whole
+    # ingest. The collector dedupes so a file surfacing in more than one scan is recorded once.
     broken_image_collector = _BrokenImageCollector(report)
-    for broken_image_path in broken_image_paths:
-        broken_image_collector.record(broken_image_path)
     input_labels.on_error = broken_image_collector  # type: ignore[union-attr]
 
     # The set starts with paths already in the database and grows with paths seen in this
@@ -467,10 +457,8 @@ class _BrokenImageCollector:
     """Records broken images as ``BROKEN`` once each, usable as a labelformat ``on_error`` hook.
 
     Lazily-scanned folder formats (YOLO, KITTI, Lightly, mask pairs) invoke this
-    as ``input_labels.on_error`` during iteration. Pascal VOC scans at
-    construction inside ``from_dirs`` and passes this same hook there, so both
-    scan styles funnel broken files through one recorder. Internal dedup keeps a
-    file recorded once even if it surfaces in more than one scan.
+    as ``input_labels.on_error`` during iteration. Internal dedup keeps a file
+    recorded once even if it surfaces in more than one scan.
     """
 
     def __init__(self, report: FileOutcomeReport) -> None:

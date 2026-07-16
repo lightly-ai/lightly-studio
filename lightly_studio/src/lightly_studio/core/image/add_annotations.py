@@ -46,7 +46,7 @@ def skip_and_warn_unreadable_image(path: Path, error: Exception) -> None:
     Annotation ingest attaches to images already in the dataset (recorded as
     ``BROKEN`` at their own ingest), so a broken image is skipped with a warning
     rather than aborting the whole run. Suitable for a folder-scanning input's
-    ``on_error`` attribute and for Pascal VOC's ``from_dirs(on_error=...)``.
+    ``on_error`` attribute.
 
     Args:
         path: The path of the unreadable image.

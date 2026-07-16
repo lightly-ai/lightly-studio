@@ -22,7 +22,6 @@ from labelformat.model.instance_segmentation import (
 from labelformat.model.object_detection import (
     ObjectDetectionInput,
 )
-from labelformat.utils import ImageDimensionError
 from sqlmodel import Session
 
 from lightly_studio.core.dataset import BaseSampleDataset
@@ -309,15 +308,10 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         images_root = _normalize_input_path(path=images_root)
         masks_path = _normalize_input_path(path=masks_path)
 
-        # Pascal VOC opens every image to read its dimensions during the from_dirs folder scan,
-        # which happens here at construction (not lazily in get_labels). Skip a broken image
-        # instead of aborting: it is already in the dataset (and was recorded BROKEN at ingest),
-        # so here it simply gets no annotation attached.
         label_input = PascalVOCSemanticSegmentationInput.from_dirs(
             images_dir=images_root,
             masks_dir=masks_path,
             class_id_to_name=class_id_to_name,
-            on_error=add_annotations.skip_and_warn_unreadable_image,
         )
         self.add_annotations_from_labelformat(
             input_labels=label_input,
@@ -574,24 +568,10 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         images_path = _normalize_input_path(path=images_path)
         masks_path = _normalize_input_path(path=masks_path)
 
-        # Pascal VOC opens every image to read its dimensions during the from_dirs folder scan,
-        # which happens here at construction (not lazily in get_images/get_labels). Collect
-        # broken images via on_error so the scan does not abort, then hand them to
-        # load_into_dataset_from_labelformat to record as BROKEN.
-        broken_image_paths: set[str] = set()
-
-        def _collect_broken_image(path: Path, error: Exception) -> None:
-            # Only a dimension-read failure is a tolerated BROKEN outcome; any other error is a
-            # bug or infra failure and must propagate.
-            if not isinstance(error, ImageDimensionError):
-                raise error
-            broken_image_paths.add(str(path))
-
         label_input = PascalVOCSemanticSegmentationInput.from_dirs(
             images_dir=images_path,
             masks_dir=masks_path,
             class_id_to_name=class_id_to_name,
-            on_error=_collect_broken_image,
         )
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
@@ -601,7 +581,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             images_path=images_path,
             collection_name=annotation_source,
             limit=limit,
-            broken_image_paths=broken_image_paths,
         )
 
         _postprocess_created_images(
