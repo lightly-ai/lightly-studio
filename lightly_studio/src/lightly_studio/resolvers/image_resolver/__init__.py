@@ -11,6 +11,10 @@ from lightly_studio.resolvers.image_resolver.get_all_by_collection_id import (
 )
 from lightly_studio.resolvers.image_resolver.get_by_id import get_by_id
 from lightly_studio.resolvers.image_resolver.get_dimension_bounds import get_dimension_bounds
+from lightly_studio.resolvers.image_resolver.get_for_export import (
+    ImageExportPreload,
+    get_for_export,
+)
 from lightly_studio.resolvers.image_resolver.get_many_by_id import get_many_by_id
 from lightly_studio.resolvers.image_resolver.get_sample_ids import (
     build_sample_ids_query,
@@ -22,6 +26,7 @@ from lightly_studio.resolvers.image_resolver.get_sample_ids_by_paths import (
 from lightly_studio.resolvers.image_resolver.get_samples_excluding import get_samples_excluding
 
 __all__ = [
+    "ImageExportPreload",
     "build_sample_ids_query",
     "count_image_annotations_by_collection",
     "create_many",
@@ -30,6 +35,7 @@ __all__ = [
     "get_all_by_collection_id",
     "get_by_id",
     "get_dimension_bounds",
+    "get_for_export",
     "get_many_by_id",
     "get_sample_ids",
     "get_sample_ids_by_paths",

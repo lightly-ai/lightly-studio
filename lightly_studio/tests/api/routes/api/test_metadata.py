@@ -34,7 +34,7 @@ def test_get_metadata_info(test_client: TestClient, mocker: MockerFixture) -> No
         MetadataInfoView(name="key3", type="float", min=0.0, max=1.0),
     ]
     mocker.patch(
-        "lightly_studio.api.routes.api.metadata.get_all_metadata_keys_and_schema",
+        "lightly_studio.api.routes.api.metadata.metadata_info_resolver.get_all_metadata_keys_and_schema",
         return_value=mock_metadata,
     )
 
@@ -62,7 +62,7 @@ def test_get_metadata_info__empty_response(test_client: TestClient, mocker: Mock
     collection_id = uuid4()
     # Mock get_all_metadata_keys_and_schema to return an empty list.
     mocker.patch(
-        "lightly_studio.api.routes.api.metadata.get_all_metadata_keys_and_schema",
+        "lightly_studio.api.routes.api.metadata.metadata_info_resolver.get_all_metadata_keys_and_schema",
         return_value=[],
     )
 

@@ -17,14 +17,14 @@ from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.metadata import HistogramView, MetadataInfoView
 from lightly_studio.resolvers import embedding_model_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
-from lightly_studio.resolvers.metadata_resolver.sample.get_metadata_info import (
-    get_all_metadata_keys_and_schema,
-)
-from lightly_studio.resolvers.metadata_resolver.sample.get_metadata_info import (
-    get_metadata_histograms as get_metadata_histograms_resolver,
+from lightly_studio.resolvers.metadata_resolver.sample import (
+    get_metadata_info as metadata_info_resolver,
 )
 
 metadata_router = APIRouter(prefix="/collections/{collection_id}", tags=["metadata"])
+
+# Default number of equal-width bins per metadata histogram.
+_DEFAULT_BIN_COUNT = 20
 
 
 @metadata_router.get("/metadata/info", response_model=list[MetadataInfoView])
@@ -42,7 +42,9 @@ def get_metadata_info(
         List of metadata info objects with name, type, and optionally min/max values
         for numerical metadata types.
     """
-    return get_all_metadata_keys_and_schema(session=session, collection_id=collection_id)
+    return metadata_info_resolver.get_all_metadata_keys_and_schema(
+        session=session, collection_id=collection_id
+    )
 
 
 class MetadataHistogramsRequest(BaseModel):
@@ -50,7 +52,7 @@ class MetadataHistogramsRequest(BaseModel):
 
     filters: ImageFilter | None = Field(None, description="Filter parameters for samples")
     bin_count: int = Field(
-        20, ge=1, le=200, description="Number of equal-width bins per histogram"
+        _DEFAULT_BIN_COUNT, ge=1, le=200, description="Number of equal-width bins per histogram"
     )
 
 
@@ -75,11 +77,11 @@ def get_metadata_histograms(
     Returns:
         Mapping of metadata key to its histogram.
     """
-    return get_metadata_histograms_resolver(
+    return metadata_info_resolver.get_metadata_histograms(
         session=session,
         collection_id=collection_id,
         filters=request.filters if request else None,
-        bin_count=request.bin_count if request else 20,
+        bin_count=request.bin_count if request else _DEFAULT_BIN_COUNT,
     )
 
 

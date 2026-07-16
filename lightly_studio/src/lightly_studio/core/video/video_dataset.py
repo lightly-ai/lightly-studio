@@ -15,7 +15,7 @@ from sqlmodel import Session
 
 from lightly_studio.core.dataset import BaseSampleDataset
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
-from lightly_studio.core.video import add_videos
+from lightly_studio.core.video import add_annotations, add_videos
 from lightly_studio.core.video.add_videos import VIDEO_EXTENSIONS
 from lightly_studio.core.video.video_frame_dataset import VideoFrameDataset
 from lightly_studio.core.video.video_sample import VideoSample
@@ -122,6 +122,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         allowed_extensions: Iterable[str] | None = None,
         num_decode_threads: int | None = None,
         embed: bool = True,
+        embed_frames: bool = True,
         target_fps: float | None = None,
         limit: int | None = None,
     ) -> None:
@@ -135,6 +136,8 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             num_decode_threads: Optional override for the number of FFmpeg decode threads.
                 If omitted, the available CPU cores - 1 (max 16) are used.
             embed: If True, generate embeddings for the newly added videos.
+            embed_frames: If True, generate image embeddings for the extracted video frames
+                during decoding.
             target_fps: Optional target frame rate for subsampling. When set below the source
                 frame rate, only selected frames are kept. frame_number values remain
                 original. Must be greater than 0.
@@ -156,6 +159,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             video_paths=video_paths,
             num_decode_threads=num_decode_threads,
             target_fps=target_fps,
+            embed_frames=embed_frames,
         )
 
         if embed:
@@ -172,6 +176,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         allowed_extensions: Iterable[str] | None = None,
         annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
         embed: bool = True,
+        embed_frames: bool = True,
         limit: int | None = None,
     ) -> None:
         """Load videos and YouTube-VIS annotations and store them in the database.
@@ -186,6 +191,8 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             annotation_type: The type of annotation to be loaded (e.g., 'ObjectDetection',
                 'InstanceSegmentation').
             embed: If True, generate embeddings for the newly added videos.
+            embed_frames: If True, generate image embeddings for the extracted video frames
+                during decoding.
             limit: Maximum number of samples to load. By default, all samples are loaded.
                 Annotations of videos beyond the limit are skipped.
 
@@ -219,6 +226,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             input_labels=input_labels,
             input_labels_paths_root=videos_path,
             limit=limit,
+            embed_frames=embed_frames,
         )
 
         if embed:
@@ -227,6 +235,33 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
                 collection_id=self.collection_id,
                 sample_ids=created_sample_ids,
             )
+
+    def add_annotations_from_activitynet(
+        self,
+        annotations_json: PathLike,
+        annotation_source: str | None = None,
+    ) -> list[str]:
+        """Attach ActivityNet-style temporal annotations to videos already in the dataset.
+
+        Videos are matched by ``file_name`` stem or ``file_path_abs`` stem against the
+        ActivityNet video identifier (e.g. ``v_o6wtvlVs3E8`` for ``v_o6wtvlVs3E8.mp4``).
+
+        Args:
+            annotations_json: Path to an ActivityNet-style JSON file with a ``database``
+                or ``results`` key.
+            annotation_source: Name of the annotation source to add the annotations to.
+                Reusing the same source name appends to that source. If ``None``, a
+                default source is used.
+
+        Returns:
+            Video IDs from the JSON that had no matching video in the dataset.
+        """
+        return add_annotations.add_annotations_from_activitynet(
+            session=self.session,
+            root_collection_id=self.collection_id,
+            annotations_json=annotations_json,
+            collection_name=annotation_source,
+        )
 
 
 def _generate_embeddings_video(

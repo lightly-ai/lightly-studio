@@ -1,14 +1,17 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import DistributionConfigDialog from './DistributionConfigDialog.svelte';
 import type { DistributionConfig } from '../types';
+import { AnnotationCountMode } from '$lib/api/lightly_studio_local/types.gen';
 
 const baseConfig: DistributionConfig = {
     mode: 'topN',
     n: 5,
     sortBy: 'count',
     manualClasses: [],
-    orientation: 'vertical'
+    orientation: 'vertical',
+    countMode: AnnotationCountMode.OBJECTS
 };
 
 const allClasses = Array.from({ length: 30 }, (_, i) => `class-${i}`);
@@ -22,6 +25,13 @@ const renderDialog = (overrides: Partial<Parameters<typeof render>[1]> = {}) => 
 };
 
 describe('DistributionConfigDialog', () => {
+    beforeAll(() => {
+        Element.prototype.scrollIntoView = vi.fn();
+        Element.prototype.hasPointerCapture = vi.fn(() => false);
+        Element.prototype.setPointerCapture = vi.fn();
+        Element.prototype.releasePointerCapture = vi.fn();
+    });
+
     afterEach(() => {
         // bits-ui dialogs portal into the body and can leave styles behind.
         document.body.innerHTML = '';
@@ -39,6 +49,28 @@ describe('DistributionConfigDialog', () => {
         renderDialog({ open: false });
 
         expect(screen.queryByText('Configure classes')).not.toBeInTheDocument();
+    });
+
+    it('shows the Count by select with Objects selected by default', () => {
+        renderDialog();
+
+        const countBySelect = screen.getByTestId('distribution-config-count-mode');
+        expect(countBySelect).toBeInTheDocument();
+        expect(countBySelect).toHaveTextContent('Objects');
+    });
+
+    it('applies the selected count mode on Apply', async () => {
+        const user = userEvent.setup();
+        const { onApply } = renderDialog();
+
+        await user.click(screen.getByTestId('distribution-config-count-mode'));
+        const samplesOption = await waitFor(() => screen.getByRole('option', { name: 'Samples' }));
+        await user.click(samplesOption);
+        await fireEvent.click(screen.getByTestId('distribution-config-apply'));
+
+        expect(onApply).toHaveBeenCalledWith(
+            expect.objectContaining({ countMode: AnnotationCountMode.SAMPLES })
+        );
     });
 
     it('applies the edited top-N and closes', async () => {

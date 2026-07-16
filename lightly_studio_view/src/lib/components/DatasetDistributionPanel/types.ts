@@ -1,5 +1,6 @@
 import type { CategoryCount } from '$lib/components/BarChart';
 import type { ClassSetSelection } from '$lib/components/ClassSetConfig';
+import { type AnnotationCountMode } from '$lib/api/lightly_studio_local/types.gen';
 import type { HistogramData, HistogramRange } from '$lib/components/Histogram';
 
 export type DistributionSortOption = 'count' | 'name';
@@ -57,4 +58,6 @@ export interface DistributionSource {
 export interface DistributionConfig extends ClassSetSelection<DistributionSortOption> {
     /** Bar orientation (default 'vertical'). */
     orientation: DistributionOrientation;
+    /** Whether to count annotation objects or distinct annotated samples (default OBJECTS). */
+    countMode?: AnnotationCountMode;
 }

@@ -40,7 +40,6 @@
         isVideoDetailsRoute
     } from '$lib/routes';
     import type { GridType } from '$lib/types';
-    import { useImageAnnotationCounts } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
     import QueryControl from '$lib/components/QueryControl/QueryControl.svelte';
     import { PaneGroup, Pane, PaneResizer } from 'paneforge';
@@ -49,16 +48,17 @@
         createMetadataFilters,
         useMetadataFilters
     } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
-    import {
-        selectDistributions,
-        useNumericMetadataDistribution
-    } from '$lib/hooks/useNumericMetadataDistribution/useNumericMetadataDistribution.js';
+    import { useNumericMetadataDistribution } from '$lib/hooks/useNumericMetadataDistribution/useNumericMetadataDistribution.js';
     import { useVideoFrameAnnotationCounts } from '$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
-    import { AnnotationType, SampleType } from '$lib/api/lightly_studio_local/types.gen';
+    import {
+        AnnotationCountMode,
+        AnnotationType,
+        SampleType
+    } from '$lib/api/lightly_studio_local/types.gen';
     import type { AnnotationsFilter } from '$lib/api/lightly_studio_local/types.gen';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import type { DistributionSource } from '$lib/components/DatasetDistributionPanel';
@@ -69,7 +69,11 @@
     } from '$lib/utils/buildAnnotationCountsFilters';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
     import ConfusionCellFilterItem from '$lib/components/ConfusionCellFilterItem';
-    import { useSelectionSummary } from '$lib/hooks';
+    import {
+        useSelectionSummary,
+        useImageAnnotationCounts,
+        useImageAnnotationCountsQueryKey
+    } from '$lib/hooks';
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
     import { isInputElement } from '$lib/utils';
     import { shutdownMaskRendererPool } from '$lib/workers/maskRendererPool';
@@ -297,7 +301,8 @@
         annotationFilter: annotationFilterStore,
         annotationFilterRows,
         toggleAnnotationFilterSelection,
-        setAnnotationCounts
+        setAnnotationCounts,
+        pruneInvalidSelections
     } = useAnnotationsFilter({
         annotationLabels: annotationLabelsStore
     });
@@ -332,7 +337,8 @@
     const { selectedCollectionIds: selectedAnnotationSourceIds } = useAnnotationCollectionsFilter();
     const annotationFilterForCounts = $derived.by<AnnotationsFilter | undefined>(() => {
         const base = $annotationFilterStore;
-        const sourceIds = isAnnotations ? [] : $selectedAnnotationSourceIds;
+        const sourceIds =
+            isAnnotations || isAnnotationDetails ? [collectionId] : $selectedAnnotationSourceIds;
         if (sourceIds.length === 0) return base;
         return {
             ...(base ?? { filter_type: 'annotations' }),
@@ -354,6 +360,12 @@
             queryExpr: isAnnotations ? null : plotFilterQueryExpr
         })
     );
+
+    const imageAnnotationCountsQuery = useImageAnnotationCounts(() => ({
+        collectionId: datasetId,
+        filter: imageAnnotationCountsFilter,
+        enabled: !isVideos && !isVideoFrames
+    }));
 
     const annotationCounts = $derived.by(() => {
         if (
@@ -383,10 +395,7 @@
                 })
             });
         }
-        return useImageAnnotationCounts({
-            collectionId: datasetId,
-            filter: imageAnnotationCountsFilter
-        });
+        return imageAnnotationCountsQuery;
     });
 
     // Feed annotation counts back into the hook for UI-ready filter rows.
@@ -397,6 +406,10 @@
             setAnnotationCounts(
                 countsData as { label_name: string; total_count: number; current_count?: number }[]
             );
+            // Drop selected label filters whose label is absent from the fresh,
+            // source-scoped counts (e.g. after switching to a source that doesn't
+            // contain the label) so the active filter never points at a hidden label.
+            pruneInvalidSelections();
         }
     });
 
@@ -442,82 +455,130 @@
 
     const distributionPanelVisible = $derived($activePanel === 'distribution' && isImages);
 
+    // Global count mode for the distribution panel (applies to all sources).
+    let distributionCountMode = $state<AnnotationCountMode>(AnnotationCountMode.OBJECTS);
+
     // Only create the per-type queries while the panel is open so we don't fetch
-    // three extra count queries on every collection view.
-    const distributionTypeQueries = $derived.by(() => {
-        if (!distributionPanelVisible) return null;
-        return {
-            [AnnotationType.CLASSIFICATION]: useImageAnnotationCounts({
-                collectionId: datasetId,
-                annotationType: AnnotationType.CLASSIFICATION,
-                filter: imageAnnotationCountsFilter
-            }),
-            [AnnotationType.OBJECT_DETECTION]: useImageAnnotationCounts({
-                collectionId: datasetId,
-                annotationType: AnnotationType.OBJECT_DETECTION,
-                filter: imageAnnotationCountsFilter
-            }),
-            [AnnotationType.SEGMENTATION_MASK]: useImageAnnotationCounts({
-                collectionId: datasetId,
-                annotationType: AnnotationType.SEGMENTATION_MASK,
-                filter: imageAnnotationCountsFilter
-            })
-        };
-    });
+    // extra count queries on every collection view.
+    // The 'all' query uses a suffixed key so its cache entry is isolated from
+    // the shared annotationCounts query (labels filter). TanStack's prefix
+    // matching ensures mutation invalidations still reach it.
+    const distributionAllQueryKey = [...useImageAnnotationCountsQueryKey, 'distribution'];
+
+    const distributionAllQuery = useImageAnnotationCounts(() => ({
+        collectionId: datasetId,
+        filter: imageAnnotationCountsFilter,
+        countMode: distributionCountMode,
+        queryKey: distributionAllQueryKey,
+        enabled: distributionPanelVisible
+    }));
+
+    const distributionClassificationQuery = useImageAnnotationCounts(() => ({
+        collectionId: datasetId,
+        annotationType: AnnotationType.CLASSIFICATION,
+        filter: imageAnnotationCountsFilter,
+        countMode: distributionCountMode,
+        enabled: distributionPanelVisible
+    }));
+
+    const distributionObjectDetectionQuery = useImageAnnotationCounts(() => ({
+        collectionId: datasetId,
+        annotationType: AnnotationType.OBJECT_DETECTION,
+        filter: imageAnnotationCountsFilter,
+        countMode: distributionCountMode,
+        enabled: distributionPanelVisible
+    }));
+
+    const distributionSegmentationQuery = useImageAnnotationCounts(() => ({
+        collectionId: datasetId,
+        annotationType: AnnotationType.SEGMENTATION_MASK,
+        filter: imageAnnotationCountsFilter,
+        countMode: distributionCountMode,
+        enabled: distributionPanelVisible
+    }));
 
     // The panel's sources are the distribution *types* (class labels,
     // metadata, …); the subset within a type (annotation type, metadata key)
     // is the source's group, picked in a second, contextual dropdown.
 
-    // Class labels: one source, annotation types as groups.
+    // Class labels: one source, annotation types as groups. The per-type
+    // valueNoun from the count-mode work collapses to the source level: in
+    // Samples mode everything counts samples, otherwise annotations.
     const classDistributionSource = $derived.by<DistributionSource>(() => {
-        const allTypesGroup = { id: 'all', label: 'All types', data: classDistributionCounts };
         const base = {
             id: 'classes',
             label: 'Annotation classes',
             groupLabel: 'Annotation type',
-            valueNoun: 'annotations'
+            valueNoun:
+                distributionCountMode === AnnotationCountMode.SAMPLES ? 'samples' : 'annotations'
         };
-        const typeQueries = distributionTypeQueries;
-        if (!typeQueries) return { ...base, data: classDistributionCounts };
-        const perType = [
-            { id: AnnotationType.CLASSIFICATION, label: 'Classification' },
-            { id: AnnotationType.OBJECT_DETECTION, label: 'Object detection' },
-            { id: AnnotationType.SEGMENTATION_MASK, label: 'Segmentation' }
+        if (!distributionPanelVisible) return { ...base, data: classDistributionCounts };
+
+        // Use the distribution-specific "all" query so the "All types" group
+        // respects distributionCountMode. Fall back to the shared counts while
+        // the distribution query is still loading (data === undefined).
+        const allDistributionData =
+            distributionAllQuery.data !== undefined
+                ? toCategoryCounts(
+                      distributionAllQuery.data as { label_name: string; current_count: number }[]
+                  )
+                : classDistributionCounts;
+        const allTypesGroup = { id: 'all', label: 'All types', data: allDistributionData };
+
+        const perType: {
+            id: AnnotationType;
+            label: string;
+            query: ReturnType<typeof useImageAnnotationCounts>;
+        }[] = [
+            {
+                id: AnnotationType.CLASSIFICATION,
+                label: 'Classification',
+                query: distributionClassificationQuery
+            },
+            {
+                id: AnnotationType.OBJECT_DETECTION,
+                label: 'Object detection',
+                query: distributionObjectDetectionQuery
+            },
+            {
+                id: AnnotationType.SEGMENTATION_MASK,
+                label: 'Segmentation',
+                query: distributionSegmentationQuery
+            }
         ];
         const typeGroups = perType
-            .map(({ id, label }) => ({
+            .map(({ id, label, query }) => ({
                 id,
                 label,
                 data: toCategoryCounts(
-                    typeQueries[id].data as { label_name: string; current_count: number }[]
+                    query.data as { label_name: string; current_count: number }[]
                 )
             }))
             // Skip types with no matches in the current view so the picker stays clean.
             .filter((group) => group.data.length > 0);
         // With zero or one populated type, "All types" would just duplicate it —
         // drop the group picker entirely.
-        if (typeGroups.length <= 1) return { ...base, data: classDistributionCounts };
+        if (typeGroups.length <= 1) return { ...base, data: allDistributionData };
         return { ...base, groups: [allTypesGroup, ...typeGroups] };
     });
 
     // Numeric metadata fields as histogram groups. Bin edges span the full
     // collection (stable axis); counts track the active filters — the query
     // refetches whenever the grid filter changes. Each key's own metadata
-    // filter is excluded server-side (faceted-search behavior). Only queried
-    // while the distribution panel is open.
+    // filter is excluded server-side (faceted-search behavior). Disabled while
+    // the distribution panel is closed to avoid background fetching.
     // User-configurable bin count for the metadata histograms (panel + expand).
     let histogramBinCount = $state(20);
 
-    const metadataHistogramsQuery = $derived.by(() => {
-        if (!distributionPanelVisible) return null;
-        return useNumericMetadataDistribution({
-            collectionId: datasetId,
-            filter: imageAnnotationCountsFilter,
-            binCount: histogramBinCount
-        });
-    });
-    const metadataDistributions = $derived(selectDistributions(metadataHistogramsQuery?.data));
+    const metadataHistogramsQuery = useNumericMetadataDistribution(() => ({
+        collectionId: datasetId,
+        filter: imageAnnotationCountsFilter,
+        binCount: histogramBinCount,
+        enabled: distributionPanelVisible
+    }));
+    // query.data is already Record<string, HistogramData> — the hook applies
+    // selectDistributions internally via the TanStack Query `select` option.
+    const metadataDistributions = $derived(metadataHistogramsQuery.data ?? {});
 
     const metadataDistributionSource = $derived.by<DistributionSource | null>(() => {
         const keys = Object.keys(metadataDistributions);
@@ -536,7 +597,6 @@
             }))
         };
     });
-
     // Selecting a histogram range (bin click or press-drag-release) narrows
     // the metadata filter for that key; re-selecting the current range resets it.
     const handleDistributionHistogramRangeSelect = (
@@ -546,16 +606,18 @@
         const bound = $metadataBounds[metadataKey];
         if (!bound) return;
         const current = $metadataValues[metadataKey];
+        // Clamp first, then compare: the stored value is always clamped to
+        // bound, so checking raw range.min/max would miss re-clicks on bins
+        // whose edges fall outside the collection's value range.
+        const clampedMin = Math.max(range.min, bound.min);
+        const clampedMax = Math.min(range.max, bound.max);
         const isBinAlreadySelected =
-            current && current.min === range.min && current.max === range.max;
+            current && current.min === clampedMin && current.max === clampedMax;
         updateMetadataValues({
             ...$metadataValues,
             [metadataKey]: isBinAlreadySelected
                 ? { min: bound.min, max: bound.max }
-                : {
-                      min: Math.max(range.min, bound.min),
-                      max: Math.min(range.max, bound.max)
-                  }
+                : { min: clampedMin, max: clampedMax }
         });
     };
 
@@ -739,7 +801,11 @@
                             {#await import('$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte') then { default: DatasetDistributionPanel }}
                                 <DatasetDistributionPanel
                                     sources={distributionSources}
+                                    initialCountMode={distributionCountMode}
                                     onClose={() => setActivePanel('none')}
+                                    onCountModeChange={(mode) => {
+                                        distributionCountMode = mode;
+                                    }}
                                     onHistogramRangeSelect={handleDistributionHistogramRangeSelect}
                                     {histogramBinCount}
                                     onHistogramBinCountChange={(binCount) =>

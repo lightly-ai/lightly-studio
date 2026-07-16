@@ -84,6 +84,10 @@ def load_into_dataset_from_paths(
 
     report = FileOutcomeReport()
 
+    # TODO(Malte, 07/2026): Parallelize image indexing across images with
+    # parallelize.thread_imap_lazy (one task per image; workers and prefetch stay
+    # bounded) to overlap the per-image reads, especially for remote (e.g. S3) inputs.
+    # Keep DB writes on a single thread.
     for normalized_path in tqdm(
         normalized_paths,
         desc="Processing images",
