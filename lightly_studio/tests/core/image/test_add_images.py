@@ -8,6 +8,7 @@ from pathlib import Path
 from uuid import UUID
 
 import pytest
+from labelformat import utils
 from labelformat.formats.labelformat import LabelformatObjectDetectionInput
 from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation
 from labelformat.model.bounding_box import BoundingBox
@@ -23,7 +24,7 @@ from labelformat.model.object_detection import (
     ObjectDetectionInput,
     SingleObjectDetection,
 )
-from labelformat.utils import ImageDimensionError, get_image_dimensions
+from labelformat.utils import ImageDimensionError
 from PIL import Image as PILImage
 from pytest_mock import MockerFixture
 from sqlmodel import Session
@@ -91,7 +92,7 @@ class FolderScanningLabelInput(ObjectDetectionInput):
         for image_id, filename in enumerate(self._filenames):
             path = self._images_dir / filename
             try:
-                width, height = get_image_dimensions(str(path))
+                width, height = utils.get_image_dimensions(str(path))
             except ImageDimensionError as error:
                 if self.on_error is None:
                     raise

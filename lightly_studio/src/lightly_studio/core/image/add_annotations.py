@@ -18,6 +18,7 @@ from labelformat.model.object_detection import (
     ImageObjectDetection,
     ObjectDetectionInput,
 )
+from labelformat.utils import ImageDimensionError
 from sqlmodel import Session
 from tqdm import tqdm
 
@@ -51,6 +52,10 @@ def skip_and_warn_unreadable_image(path: Path, error: Exception) -> None:
         path: The path of the unreadable image.
         error: The error raised while reading the image.
     """
+    # Only a dimension-read failure is a tolerated skip; any other error is a bug or infra
+    # failure and must propagate.
+    if not isinstance(error, ImageDimensionError):
+        raise error
     logger.warning(f"Skipping annotation for unreadable image '{path}': {error}")
 
 

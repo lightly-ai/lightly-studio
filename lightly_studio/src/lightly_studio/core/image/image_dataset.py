@@ -22,6 +22,7 @@ from labelformat.model.instance_segmentation import (
 from labelformat.model.object_detection import (
     ObjectDetectionInput,
 )
+from labelformat.utils import ImageDimensionError
 from sqlmodel import Session
 
 from lightly_studio.core.dataset import BaseSampleDataset
@@ -578,11 +579,19 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         # broken images via on_error so the scan does not abort, then hand them to
         # load_into_dataset_from_labelformat to record as BROKEN.
         broken_image_paths: set[str] = set()
+
+        def _collect_broken_image(path: Path, error: Exception) -> None:
+            # Only a dimension-read failure is a tolerated BROKEN outcome; any other error is a
+            # bug or infra failure and must propagate.
+            if not isinstance(error, ImageDimensionError):
+                raise error
+            broken_image_paths.add(str(path))
+
         label_input = PascalVOCSemanticSegmentationInput.from_dirs(
             images_dir=images_path,
             masks_dir=masks_path,
             class_id_to_name=class_id_to_name,
-            on_error=lambda path, _error: broken_image_paths.add(str(path)),
+            on_error=_collect_broken_image,
         )
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
