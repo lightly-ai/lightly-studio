@@ -1,13 +1,8 @@
 <script lang="ts">
-    import { onDestroy } from 'svelte';
-    import * as echarts from 'echarts/core';
-    import { CustomChart } from 'echarts/charts';
-    import { GridComponent, TooltipComponent } from 'echarts/components';
-    import { CanvasRenderer } from 'echarts/renderers';
+    import type { ECharts } from 'echarts/core';
     import { buildHistogramOption } from './buildHistogramOption';
+    import { createHistogramChart } from './createHistogramChart';
     import type { HistogramData, HistogramRange } from './types';
-
-    echarts.use([CustomChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
     interface Props {
         /** Bin edges and per-bin counts (see `HistogramData`). */
@@ -37,7 +32,7 @@
     const { data, selectedRange, heightPx = 48, showAxes = false, onRangeSelect }: Props = $props();
 
     let container: HTMLDivElement | undefined = $state();
-    let chart: echarts.ECharts | null = $state(null);
+    let chart: ECharts | null = $state(null);
 
     const isEmpty = $derived(data.counts.length === 0 || data.binEdges.length < 2);
 
@@ -52,48 +47,30 @@
         return { min: data.binEdges[lower], max: data.binEdges[upper + 1] };
     });
 
-    /** Maps a canvas x-offset to the bin index under it (clamped to the domain). */
-    const pixelToBinIndex = (instance: echarts.ECharts, offsetX: number): number => {
-        // The x-axis is a value axis over bin indices, so the converted
-        // coordinate is a fractional bin index.
-        const index = Math.floor(instance.convertFromPixel({ xAxisIndex: 0 }, offsetX));
-        return Math.min(Math.max(index, 0), data.counts.length - 1);
-    };
-
     $effect(() => {
         if (!container) return;
-        const instance = echarts.init(container, null, { renderer: 'canvas' });
-        chart = instance;
-
-        // Range selection: press (zrender events fire anywhere on the canvas,
-        // not just on bars) → drag → release. The window listener catches
-        // releases outside the canvas.
-        const zr = instance.getZr();
-        const handleMouseDown = (event: { offsetX: number }) => {
-            if (!onRangeSelect) return;
-            dragStartIndex = pixelToBinIndex(instance, event.offsetX);
-            dragCurrentIndex = dragStartIndex;
-        };
-        const handleMouseMove = (event: { offsetX: number }) => {
-            if (dragStartIndex === null) return;
-            dragCurrentIndex = pixelToBinIndex(instance, event.offsetX);
-        };
-        const handleWindowMouseUp = () => {
-            const range = dragRange;
-            dragStartIndex = null;
-            dragCurrentIndex = null;
-            if (range) onRangeSelect?.(range);
-        };
-        zr.on('mousedown', handleMouseDown);
-        zr.on('mousemove', handleMouseMove);
-        window.addEventListener('mouseup', handleWindowMouseUp);
-
-        const resizeObserver = new ResizeObserver(() => instance.resize());
-        resizeObserver.observe(container);
+        const setup = createHistogramChart({
+            container,
+            getBinCount: () => data.counts.length,
+            onDragStart: (binIndex) => {
+                if (!onRangeSelect) return;
+                dragStartIndex = binIndex;
+                dragCurrentIndex = binIndex;
+            },
+            onDragMove: (binIndex) => {
+                if (dragStartIndex === null) return;
+                dragCurrentIndex = binIndex;
+            },
+            onDragEnd: () => {
+                const range = dragRange;
+                dragStartIndex = null;
+                dragCurrentIndex = null;
+                if (range) onRangeSelect?.(range);
+            }
+        });
+        chart = setup.chart;
         return () => {
-            window.removeEventListener('mouseup', handleWindowMouseUp);
-            resizeObserver.disconnect();
-            instance.dispose();
+            setup.destroy();
             chart = null;
         };
     });
@@ -103,8 +80,6 @@
         // While dragging, preview the prospective selection.
         chart.setOption(buildHistogramOption(data, dragRange ?? selectedRange, { showAxes }), true);
     });
-
-    onDestroy(() => chart?.dispose());
 </script>
 
 {#if !isEmpty}

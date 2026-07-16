@@ -27,6 +27,32 @@ export interface HistogramOptionOptions {
     showAxes?: boolean;
 }
 
+/** A single bar: the half-open value interval `[start, end)` and its count. */
+interface HistogramBin {
+    start: number;
+    end: number;
+    count: number;
+}
+
+/** Inputs the x-axis needs to map integer bin indices back to domain values. */
+interface HistogramAxisOptions {
+    /** Number of bins; also the x-axis max (indices run `0..binCount`). */
+    binCount: number;
+    /** Left edge of the first bin (domain minimum). */
+    domainMin: number;
+    /** Right edge of the last bin (domain maximum). */
+    domainMax: number;
+    /** Whether axis chrome is rendered (see `HistogramOptionOptions.showAxes`). */
+    showAxes: boolean;
+}
+
+/** Inputs the bar series needs: the bins and the optional highlight range. */
+interface HistogramSeriesOptions {
+    bins: HistogramBin[];
+    /** Selected value range; bins outside it render dimmed. Omit to highlight all. */
+    range?: HistogramRange;
+}
+
 /**
  * A bin is highlighted when its interior overlaps the selected range. Bin `i`
  * covers the half-open interval `[edges[i], edges[i + 1])`, so a range that
@@ -41,16 +67,19 @@ export function isBinInRange(binStart: number, binEnd: number, range: HistogramR
     return binEnd > range.min && binStart < range.max;
 }
 
-// Minimal typings for the ECharts custom-series render callback (the full
-// types live in echarts' internal type surface, not in echarts/core).
-interface RenderItemParams {
-    dataIndex: number;
-}
+// Minimal typings for the ECharts custom-series render callback (the full types
+// live in echarts' internal type surface, not in echarts/core). ECharts calls
+// `renderItem(params, api)`; we ignore `params` and read everything — including
+// the bin center, which we encode as dimension 0 — through `api`.
 interface RenderItemApi {
+    /** Reads encoded dimension `d` of the current item (0 = bin center, 1 = count). */
     value: (dimension: number) => number;
+    /** Maps a data-space point `[index, value]` to pixel coordinates `[x, y]`. */
     coord: (point: [number, number]) => [number, number];
+    /** Maps a data-space span `[dx, dy]` to its pixel size `[width, height]`. */
     size: (span: [number, number]) => [number, number];
-    style: () => Record<string, unknown>;
+    /** Resolved visual for the current item; `'color'` returns its itemStyle fill. */
+    visual: (visualType: string) => string;
 }
 
 /**
@@ -60,14 +89,12 @@ interface RenderItemApi {
  * seams. Rounding both edges of every bin to integers makes the bar widths and
  * the gaps between them consistent regardless of chart width.
  *
- * The x-axis is a value axis over bin indices, so bin `i` spans `[i, i + 1]`
- * and `api.coord` returns its left edge.
+ * The x-axis is a value axis over bin indices. `api.value(0)` is the bin
+ * *center* `i + 0.5` (see `buildSeries`), so we step back half a band to the
+ * left edge `i`; bin `i` spans `[i, i + 1]` and `api.coord` maps it to pixels.
  */
-export function renderHistogramBin(
-    params: RenderItemParams,
-    api: RenderItemApi
-): Record<string, unknown> {
-    const index = params.dataIndex;
+export function renderHistogramBin(_params: unknown, api: RenderItemApi): Record<string, unknown> {
+    const index = api.value(0) - 0.5;
     const count = api.value(1);
     const [leftX, topY] = api.coord([index, count]);
     const [, baseY] = api.coord([index, 0]);
@@ -86,7 +113,7 @@ export function renderHistogramBin(
             width: Math.max(1, right - left),
             height: Math.round(baseY) - top
         },
-        style: api.style()
+        style: { fill: api.visual('color') }
     };
 }
 
@@ -102,87 +129,120 @@ export function buildHistogramOption(
     range?: HistogramRange,
     options: HistogramOptionOptions = {}
 ): EChartsCoreOption {
-    const { binEdges, counts } = data;
+    const bins = buildBins(data);
     const showAxes = options.showAxes ?? false;
-    const totalCount = counts.reduce((sum, count) => sum + count, 0);
-    const binCount = counts.length;
-    const domainMin = binEdges[0];
-    const domainMax = binEdges[binEdges.length - 1];
-
-    const bins = counts.map((count, i) => ({
-        start: binEdges[i],
-        end: binEdges[i + 1],
-        count
-    }));
-
-    // The x-axis runs over bin indices (bin `i` spans `[i, i + 1]`); ticks map
-    // back to data values. Bins are equal-width, so linear interpolation lands
-    // exactly on the bin edges for integer ticks.
-    const indexToValue = (index: number): number =>
-        domainMin + (index / binCount) * (domainMax - domainMin);
+    const axisOptions = {
+        binCount: data.counts.length,
+        domainMin: data.binEdges[0],
+        domainMax: data.binEdges[data.binEdges.length - 1],
+        showAxes
+    };
 
     return {
         backgroundColor: 'transparent',
-        tooltip: {
-            trigger: 'axis',
-            axisPointer: { type: 'line' },
-            // The inline chart is only a few tens of px tall; let the tooltip
-            // escape the canvas instead of being clipped by it.
-            confine: false,
-            formatter: (params: { dataIndex: number }[]) => {
-                const bin = bins[params[0]?.dataIndex];
-                if (!bin) return '';
-                const percent = totalCount > 0 ? ` (${formatPercent(bin.count / totalCount)})` : '';
-                return (
-                    `<b>${formatFloat(bin.start)} – ${formatFloat(bin.end)}</b><br/>` +
-                    `Count: <b>${formatInteger(bin.count)}</b>${percent}`
-                );
-            }
-        },
-        grid: showAxes
-            ? // containLabel reserves gutters for the tick labels; the extra
-              // right padding keeps the last x label from being clipped.
-              { left: 4, right: 16, top: 8, bottom: 4, containLabel: true }
-            : // Bars flush with the canvas edges so they align with the slider track.
-              { left: 0, right: 0, top: 2, bottom: 0 },
-        xAxis: {
-            type: 'value' as const,
-            min: 0,
-            max: binCount,
-            show: showAxes,
-            axisLabel: {
-                ...CHART_AXIS_LABEL,
-                formatter: (index: number) => formatFloat(indexToValue(index))
-            },
-            axisLine: { lineStyle: { color: CHART_LINE_COLOR } },
-            axisTick: { lineStyle: { color: CHART_LINE_COLOR } },
-            splitLine: { show: false }
-        },
-        yAxis: {
-            type: 'value' as const,
-            show: showAxes,
-            // Counts are whole numbers; avoid fractional tick labels.
-            minInterval: 1,
-            axisLabel: CHART_AXIS_LABEL,
-            splitLine: { lineStyle: { color: CHART_LINE_COLOR } }
-        },
-        series: [
-            {
-                // Custom series so every bin renders as a pixel-snapped rect
-                // (see `renderHistogramBin`).
-                type: 'custom',
-                renderItem: renderHistogramBin,
-                encode: { x: 0, y: 1 },
-                data: bins.map((bin, i) => ({
-                    value: [i, bin.count],
-                    itemStyle: {
-                        color:
-                            !range || isBinInRange(bin.start, bin.end, range)
-                                ? BAR_COLOR
-                                : BAR_COLOR_DIMMED
-                    }
-                }))
-            }
-        ]
+        tooltip: buildTooltip(bins),
+        grid: buildGrid(showAxes),
+        xAxis: buildXAxis(axisOptions),
+        yAxis: buildYAxis(showAxes),
+        series: buildSeries({ bins, range })
     };
+}
+
+/** Pairs each count with its bin's edges (`counts[i]` spans `binEdges[i..i+1]`). */
+function buildBins(data: HistogramData): HistogramBin[] {
+    return data.counts.map((count, index) => ({
+        start: data.binEdges[index],
+        end: data.binEdges[index + 1],
+        count
+    }));
+}
+
+/** Tooltip showing the hovered bin's interval, count, and share of the total. */
+function buildTooltip(bins: HistogramBin[]): Record<string, unknown> {
+    const totalCount = bins.reduce((sum, bin) => sum + bin.count, 0);
+    return {
+        trigger: 'axis',
+        axisPointer: { type: 'line' },
+        // Let the tooltip escape the short inline canvas instead of being clipped.
+        confine: false,
+        formatter: (params: { dataIndex: number }[]) => {
+            const bin = bins[params[0]?.dataIndex];
+            if (!bin) return '';
+            const percent = totalCount > 0 ? ` (${formatPercent(bin.count / totalCount)})` : '';
+            return (
+                `<b>${formatFloat(bin.start)} – ${formatFloat(bin.end)}</b><br/>` +
+                `Count: <b>${formatInteger(bin.count)}</b>${percent}`
+            );
+        }
+    };
+}
+
+/** Plot padding: gutters for labels when axes show, flush to the edges when not. */
+function buildGrid(showAxes: boolean): Record<string, unknown> {
+    // containLabel reserves gutters for labels; right padding avoids clipping.
+    return showAxes
+        ? { left: 4, right: 16, top: 8, bottom: 4, containLabel: true }
+        : { left: 0, right: 0, top: 2, bottom: 0 };
+}
+
+/**
+ * Value x-axis spanning `0..binCount`. Tick labels convert the integer bin
+ * index back to a domain value, so edges read as real numbers, not indices.
+ */
+function buildXAxis(options: HistogramAxisOptions): Record<string, unknown> {
+    const indexToValue = (index: number): number =>
+        options.domainMin + (index / options.binCount) * (options.domainMax - options.domainMin);
+    return {
+        type: 'value',
+        min: 0,
+        max: options.binCount,
+        show: options.showAxes,
+        axisLabel: {
+            ...CHART_AXIS_LABEL,
+            formatter: (index: number) => formatFloat(indexToValue(index))
+        },
+        axisLine: { lineStyle: { color: CHART_LINE_COLOR } },
+        axisTick: { lineStyle: { color: CHART_LINE_COLOR } },
+        splitLine: { show: false }
+    };
+}
+
+/** Value y-axis for counts, with whole-number ticks. */
+function buildYAxis(showAxes: boolean): Record<string, unknown> {
+    return {
+        type: 'value',
+        show: showAxes,
+        // Counts are whole numbers; avoid fractional tick labels.
+        minInterval: 1,
+        axisLabel: CHART_AXIS_LABEL,
+        splitLine: { lineStyle: { color: CHART_LINE_COLOR } }
+    };
+}
+
+/**
+ * The custom bar series: one pixel-snapped rect per bin (see
+ * `renderHistogramBin`), each colored by whether it falls in the range.
+ */
+function buildSeries(options: HistogramSeriesOptions): Record<string, unknown>[] {
+    return [
+        {
+            type: 'custom',
+            renderItem: renderHistogramBin,
+            encode: { x: 0, y: 1 },
+            data: options.bins.map((bin, index) => ({
+                // x is the bin *center* (index + 0.5), not the left edge, so the
+                // axis-trigger tooltip snaps the pointer to the bar the cursor is
+                // actually over. A left-edge point would snap to the next bin once
+                // the cursor passed a bar's midpoint. `renderHistogramBin` steps
+                // back half a band to recover the left edge for drawing.
+                value: [index + 0.5, bin.count],
+                itemStyle: {
+                    color:
+                        !options.range || isBinInRange(bin.start, bin.end, options.range)
+                            ? BAR_COLOR
+                            : BAR_COLOR_DIMMED
+                }
+            }))
+        }
+    ];
 }

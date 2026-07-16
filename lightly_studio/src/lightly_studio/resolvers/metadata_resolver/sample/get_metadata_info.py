@@ -222,7 +222,7 @@ def _get_metadata_min_max_count(
     return float(row[0]), float(row[1]), int(row[2])
 
 
-def _compute_histogram(
+def _compute_histogram(  # noqa: PLR0913
     session: Session,
     collection_id: UUID,
     metadata_key: str,
@@ -249,6 +249,7 @@ def _compute_histogram(
             The min/max always describe the *unfiltered* domain so the bin
             edges stay stable while filters change.
         filters: Optional sample filters restricting which values are counted.
+        bin_count: Number of equal-width bins.
 
     Returns:
         The histogram with bin edges and per-bin counts.
