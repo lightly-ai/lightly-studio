@@ -275,13 +275,23 @@ def _load_single_video(
                 embed_frames=context.embed_frames,
                 embedding_model_id=context.embedding_model_id,
             )
-            frame_sample_ids = _create_video_frame_samples(
-                context=extraction_context,
-                video_container=video_container,
-                video_channel=context.video_channel,
-                num_decode_threads=context.num_decode_threads,
-                target_fps=context.target_fps,
-            )
+            try:
+                frame_sample_ids = _create_video_frame_samples(
+                    context=extraction_context,
+                    video_container=video_container,
+                    video_channel=context.video_channel,
+                    num_decode_threads=context.num_decode_threads,
+                    target_fps=context.target_fps,
+                )
+            except (OSError, FFmpegError) as e:
+                # A frame that fails to decode mid-stream leaves the already-committed video row
+                # and any flushed frame batches behind. Remove them so a broken video leaves no
+                # rows, then translate the failure into a broken-file signal so the caller's
+                # report.track records it and the run continues instead of aborting.
+                video_resolver.delete_with_frames(
+                    session=context.session, video_sample_id=video_sample_ids[0]
+                )
+                raise BrokenInputFileError() from e
 
             return video_sample_ids[0], frame_sample_ids
         finally:
