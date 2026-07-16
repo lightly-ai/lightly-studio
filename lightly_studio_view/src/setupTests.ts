@@ -17,6 +17,7 @@ Object.defineProperty(window, 'matchMedia', {
 
 vi.mock('$env/static/public', () => ({
     PUBLIC_SAMPLES_URL: 'http://mock-url.com',
+    PUBLIC_VIDEOS_FRAMES_MEDIA_URL: 'http://mock-url.com/frames',
     PUBLIC_LIGHTLY_STUDIO_API_URL: 'http://mock-url.com/api'
 }));
 

@@ -10,15 +10,19 @@
         type SampleClassificationPill
     } from './getSampleClassificationPills';
 
-    let {
-        sample,
-        hasBottomOverlay = false,
-        hasRightOverlay = false
-    }: {
+    interface Props {
         sample: Pick<ImageView, 'annotations'>;
         hasBottomOverlay?: boolean;
         hasRightOverlay?: boolean;
-    } = $props();
+        showLabel?: boolean;
+    }
+
+    let {
+        sample,
+        hasBottomOverlay = false,
+        hasRightOverlay = false,
+        showLabel = true
+    }: Props = $props();
 
     let containerWidth = $state(0);
     let pillsWidth = $state(0);
@@ -54,7 +58,7 @@
     };
 </script>
 
-{#if pills.length > 0}
+{#if showLabel && pills.length > 0}
     <div
         bind:clientWidth={containerWidth}
         class="pointer-events-none absolute left-1 z-10 overflow-hidden {hasBottomOverlay

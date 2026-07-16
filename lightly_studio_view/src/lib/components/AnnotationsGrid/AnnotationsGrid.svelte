@@ -15,7 +15,11 @@
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
-    import { AnnotationType, type AnnotationWithPayloadView } from '$lib/api/lightly_studio_local';
+    import {
+        AnnotationType,
+        type AnnotationView,
+        type AnnotationWithPayloadView
+    } from '$lib/api/lightly_studio_local';
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
@@ -24,6 +28,8 @@
     import { GridItem } from '$lib/components/GridItem';
     import { buildAnnotationDragData } from './AnnotationsGrid.helpers';
     import { renderCropObjectUrl, type CropWindow } from './AnnotationItem/renderCropObjectUrl';
+    import AnnotationClassificationGridItem from './AnnotationClassificationGridItem/AnnotationClassificationGridItem.svelte';
+    import { groupClassificationsBySample } from './groupClassificationsBySample';
 
     type AnnotationsProps = {
         collection_id: string;
@@ -172,6 +178,9 @@
         toggleSampleAnnotationCropSelection,
         clearSelectedSampleAnnotationCrops
     } = useGlobalStorage();
+    const selectedAnnotationIds = $derived(
+        $pickedAnnotationIds[collection_id] ?? new Set<string>()
+    );
 
     let selectionAnchorAnnotationId = $state<string | null>(null);
 
@@ -181,16 +190,71 @@
         }
     }
 
-    // Skip the classification annotations
-    // because we don't have support for the annotation views
-    const annotations: AnnotationWithPayloadView[] = $derived(
-        infiniteAnnotations.data?.pages.flatMap((page) =>
-            page.data.filter(
-                (annotation) =>
-                    annotation.annotation.annotation_type != AnnotationType.CLASSIFICATION
-            )
-        ) || []
+    const allAnnotations: AnnotationWithPayloadView[] = $derived(
+        infiniteAnnotations.data?.pages.flatMap((page) => page.data) ?? []
     );
+
+    // Classification can return multiple annotations for the same sample; collapse them into
+    // one tile before rendering so multi-label samples appear once in the grid.
+    const classificationTiles = $derived(groupClassificationsBySample(allAnnotations));
+
+    type ClassificationTile = ReturnType<typeof groupClassificationsBySample>[number];
+    type GridDisplayItem =
+        | {
+              kind: 'annotation';
+              data: AnnotationWithPayloadView;
+              displayId: string;
+              annotationId: string;
+          }
+        | {
+              kind: 'classification';
+              data: ClassificationTile;
+              displayId: string;
+              annotationId: string;
+          };
+
+    // The grid works with one flat list for selection and navigation. `displayId` is the
+    // selection key; `annotationId` is the route target when opening sample details.
+    const gridItems: GridDisplayItem[] = $derived([
+        ...allAnnotations
+            .filter(
+                (annotation) =>
+                    annotation.annotation.annotation_type !== AnnotationType.CLASSIFICATION
+            )
+            .map((annotation) => ({
+                kind: 'annotation' as const,
+                data: annotation,
+                displayId: annotation.annotation.sample_id,
+                annotationId: annotation.annotation.sample_id
+            })),
+        ...classificationTiles.map((tile) => ({
+            kind: 'classification' as const,
+            data: tile,
+            displayId: tile.sampleId,
+            annotationId: tile.representative.annotation.sample_id
+        }))
+    ]);
+
+    function getGridItemDragData(item: GridDisplayItem) {
+        if (item.kind !== 'annotation') {
+            // Classification tiles aggregate a full parent sample and do not expose crop geometry.
+            return undefined;
+        }
+
+        return buildAnnotationDragData(
+            item.data.annotation,
+            cropWindowByAnnotationId[item.annotationId],
+            cropUrlByAnnotationId[item.annotationId]
+        );
+    }
+
+    function handleGridItemDragStart(item: GridDisplayItem) {
+        if (item.kind !== 'annotation') {
+            return;
+        }
+
+        return handleAnnotationDragStart(item.annotationId);
+    }
 
     function handleLoadMore() {
         if (infiniteAnnotations.hasNextPage) {
@@ -200,8 +264,8 @@
 
     function handleAnnotationSelect(annotationId: string, index: number, shiftKey: boolean) {
         selectionAnchorAnnotationId = selectRangeByAnchor({
-            sampleIdsInOrder: annotations.map((annotation) => annotation.annotation.sample_id),
-            selectedSampleIds: $pickedAnnotationIds[collection_id] ?? new Set<string>(),
+            sampleIdsInOrder: gridItems.map((item) => item.displayId),
+            selectedSampleIds: selectedAnnotationIds,
             clickedSampleId: annotationId,
             clickedIndex: index,
             shiftKey,
@@ -234,10 +298,14 @@
         handleAnnotationSelect(annotationId, index, event.shiftKey);
     }
 
-    const selectedAnnotations = $derived(
-        annotations
-            .map((annotation) => annotation.annotation)
-            .filter((annotation) => $pickedAnnotationIds[collection_id]?.has(annotation.sample_id))
+    const selectedAnnotations: AnnotationView[] = $derived(
+        gridItems
+            .filter((item) => selectedAnnotationIds.has(item.displayId))
+            .flatMap((item) =>
+                item.kind === 'annotation'
+                    ? [item.data.annotation]
+                    : item.data.allAnnotations.map((annotation) => annotation.annotation)
+            )
     );
 
     const handleSelectLabel = async (item: { value: string; label: string }) => {
@@ -261,14 +329,14 @@
 
     const scrollResetKey = $derived(infiniteLoaderIdentifier);
     const hideSelectedAnnotationsPanel = $derived(
-        infiniteAnnotations.isFetched && annotations.length === 0
+        infiniteAnnotations.isFetched && gridItems.length === 0
     );
 </script>
 
 <div class="flex h-full min-w-0 flex-1">
     <div class="min-w-0 flex-1">
         <GridContainer
-            itemCount={annotations.length}
+            itemCount={gridItems.length}
             message={{
                 loading: 'Loading annotations...',
                 error: 'Error loading annotations',
@@ -278,10 +346,10 @@
                 }
             }}
             status={{
-                loading: infiniteAnnotations.isPending && annotations.length === 0,
-                error: infiniteAnnotations.isError && annotations.length === 0,
-                empty: infiniteAnnotations.isFetched && annotations.length === 0,
-                success: annotations.length > 0
+                loading: infiniteAnnotations.isPending && gridItems.length === 0,
+                error: infiniteAnnotations.isError && gridItems.length === 0,
+                empty: infiniteAnnotations.isFetched && gridItems.length === 0,
+                success: gridItems.length > 0
             }}
             loader={{
                 loadMore: handleLoadMore,
@@ -292,7 +360,7 @@
         >
             {#snippet children({ footer })}
                 <Grid
-                    itemCount={annotations.length}
+                    itemCount={gridItems.length}
                     columnCount={itemWidth}
                     onScroll={handleScroll}
                     {initialScrollPosition}
@@ -303,48 +371,30 @@
                     }}
                 >
                     {#snippet gridItem({ index, style, width, height })}
-                        {#if annotations[index]}
-                            {#key annotations[index].annotation.sample_id}
+                        {#if gridItems[index]}
+                            {@const gridItem = gridItems[index]}
+                            {#key gridItem.displayId}
                                 <GridItem
                                     {width}
                                     {height}
                                     {style}
                                     dataTestId="annotation-grid-item"
                                     tag={false}
-                                    ariaLabel={`Edit annotation: ${annotations[index].annotation.sample_id}`}
-                                    dragData={buildAnnotationDragData(
-                                        annotations[index].annotation,
-                                        cropWindowByAnnotationId[
-                                            annotations[index].annotation.sample_id
-                                        ],
-                                        cropUrlByAnnotationId[
-                                            annotations[index].annotation.sample_id
-                                        ]
-                                    )}
-                                    onDragStart={() =>
-                                        handleAnnotationDragStart(
-                                            annotations[index].annotation.sample_id
-                                        )}
+                                    ariaLabel={`Edit annotation: ${gridItem.annotationId}`}
+                                    dragData={getGridItemDragData(gridItem)}
+                                    onDragStart={() => handleGridItemDragStart(gridItem)}
                                     onSelect={(event) =>
-                                        handleGridItemSelect(
-                                            event,
-                                            annotations[index].annotation.sample_id,
-                                            index
-                                        )}
-                                    ondblclick={() =>
-                                        handleOnDoubleClick(
-                                            annotations[index].annotation.sample_id
-                                        )}
+                                        handleGridItemSelect(event, gridItem.displayId, index)}
+                                    ondblclick={() => handleOnDoubleClick(gridItem.annotationId)}
                                 >
                                     <div
                                         class="annotation-grid-item relative h-full w-full"
-                                        data-annotation-id={annotations[index].annotation.sample_id}
+                                        data-annotation-id={gridItem.annotationId}
                                         data-annotation-index={index}
-                                        data-sample-id={annotations[index].annotation
-                                            .parent_sample_id}
+                                        data-sample-id={gridItem.displayId}
                                         data-index={index}
                                     >
-                                        {#if hasMinimumRole(user?.role, 'labeler') && $pickedAnnotationIds[collection_id]?.has(annotations[index].annotation.sample_id)}
+                                        {#if gridItem.kind === 'annotation' && hasMinimumRole(user?.role, 'labeler') && selectedAnnotationIds.has(gridItem.displayId)}
                                             <div
                                                 class="pointer-events-none absolute right-2 top-1.5 z-10"
                                                 inert
@@ -356,17 +406,29 @@
                                             </div>
                                         {/if}
 
-                                        <AnnotationsGridItem
-                                            annotation={annotations[index]}
-                                            {width}
-                                            {height}
-                                            cachedCollectionVersion={collectionVersion}
-                                            showLabel={showLabels}
-                                            selected={$pickedAnnotationIds[collection_id]?.has(
-                                                annotations[index].annotation.sample_id
-                                            )}
-                                            onCropWindowChange={handleCropWindowChange}
-                                        />
+                                        {#if gridItem.kind === 'annotation'}
+                                            <AnnotationsGridItem
+                                                annotation={gridItem.data}
+                                                {width}
+                                                {height}
+                                                cachedCollectionVersion={collectionVersion}
+                                                showLabel={showLabels}
+                                                selected={selectedAnnotationIds.has(
+                                                    gridItem.displayId
+                                                )}
+                                                onCropWindowChange={handleCropWindowChange}
+                                            />
+                                        {:else}
+                                            <AnnotationClassificationGridItem
+                                                tile={gridItem.data}
+                                                containerWidth={width}
+                                                containerHeight={height}
+                                                selected={selectedAnnotationIds.has(
+                                                    gridItem.displayId
+                                                )}
+                                                cachedCollectionVersion={collectionVersion}
+                                            />
+                                        {/if}
                                     </div>
                                 </GridItem>
                             {/key}
