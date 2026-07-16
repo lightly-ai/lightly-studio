@@ -5,12 +5,13 @@
 
     interface Props {
         options: TagView[];
+        hasSelection: boolean;
         busy: boolean;
-        showSelectionHint?: boolean;
         onSelect: (name: string) => void;
     }
 
-    let { options, busy, showSelectionHint = false, onSelect }: Props = $props();
+    let { options, hasSelection, busy, onSelect }: Props = $props();
+    const showSelectionHint = $derived(!hasSelection);
 
     let searchQuery = $state('');
     let showDropdown = $state(false);
@@ -28,7 +29,7 @@
     );
 
     function handleSelect(name: string) {
-        if (busy) {
+        if (busy || !hasSelection) {
             return;
         }
         onSelect(name);
@@ -83,7 +84,8 @@
             oninput={handleInput}
             onfocus={handleFocus}
             onblur={handleBlur}
-            disabled={busy}
+            isPending={busy}
+            disabled={!hasSelection}
         />
     </div>
 {/snippet}
@@ -108,7 +110,7 @@
                 <button
                     type="button"
                     class="flex w-full items-center px-2 py-1.5 text-xs hover:bg-accent disabled:pointer-events-none disabled:opacity-60"
-                    disabled={busy}
+                    disabled={busy || !hasSelection}
                     value={tag.name}
                     onclick={handleOptionClick}
                 >
@@ -119,7 +121,7 @@
                 <button
                     type="button"
                     class="flex w-full items-center gap-1 px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent disabled:pointer-events-none disabled:opacity-60"
-                    disabled={busy}
+                    disabled={busy || !hasSelection}
                     onclick={handleCreateClick}
                 >
                     Create "{trimmedSearchQuery}"
