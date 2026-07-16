@@ -82,7 +82,6 @@ def create_many(
         # Set other relationship details to None
         db_base_annotation.segmentation_details = None
         db_base_annotation.object_detection_details = None
-        db_base_annotation.temporal_span_details = None
 
         base_annotations.append(db_base_annotation)
 
