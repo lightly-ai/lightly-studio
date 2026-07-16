@@ -22,7 +22,8 @@
         /**
          * Multiple selectable sources (class labels, tags, metadata keys,
          * eval …). When provided, a source selector is shown in the header and
-         * `data` is ignored. The same bar-chart UI renders every source.
+         * `data` is ignored. Sources with a `histogram` field render as a
+         * histogram instead of a bar chart.
          */
         sources?: DistributionSource[];
         title?: string;
@@ -239,7 +240,7 @@
                 selectedRange={activeHistogramRange}
                 heightPx={chartHeight || 240}
                 showAxes
-                onRangeSelect={handleHistogramRangeSelect}
+                onRangeSelect={onHistogramRangeSelect ? handleHistogramRangeSelect : undefined}
             />
         {:else}
             <BarChart
