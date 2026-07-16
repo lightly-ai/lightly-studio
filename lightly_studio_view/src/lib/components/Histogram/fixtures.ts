@@ -11,3 +11,13 @@ export const singleBin: HistogramData = {
     binEdges: [42, 42],
     counts: [3]
 };
+
+export const empty: HistogramData = {
+    binEdges: [],
+    counts: []
+};
+
+export const skewed: HistogramData = {
+    binEdges: Array.from({ length: 21 }, (_, i) => i * 0.05),
+    counts: [120, 80, 52, 34, 22, 15, 10, 7, 5, 4, 3, 2, 2, 1, 1, 1, 0, 0, 0, 1]
+};
