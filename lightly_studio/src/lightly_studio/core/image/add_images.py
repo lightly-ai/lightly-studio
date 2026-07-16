@@ -47,31 +47,34 @@ logger = logging.getLogger(__name__)
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
 
 
-class _BrokenImageCollector:
+class BrokenImageCollector:
     """Records broken images as ``BROKEN`` once each, usable as a labelformat ``on_error`` hook.
 
-    Lazily-scanned folder formats (YOLO, KITTI, Lightly, mask pairs) invoke this
-    as ``input_labels.on_error`` during iteration. Internal dedup keeps a file
-    recorded once even if it surfaces in more than one scan.
+    Set it as an input's ``on_error`` so a dimension-read failure is recorded and
+    skipped instead of aborting the scan. It owns the ``FileOutcomeReport`` it
+    writes to, so a caller that must scan a folder before
+    ``load_into_dataset_from_labelformat`` runs can build the collector, use it
+    for that scan, and hand the same instance in so both scans record into one
+    report. Internal dedup keeps a file recorded once even if it surfaces in more
+    than one scan.
     """
 
-    def __init__(self, report: FileOutcomeReport) -> None:
-        self._report = report
+    def __init__(self, report: FileOutcomeReport | None = None) -> None:
+        """Record into ``report``, creating a fresh one when the caller passes ``None``."""
+        self.report = report if report is not None else FileOutcomeReport()
         self._recorded_paths: set[str] = set()
 
-    def record(self, path: str) -> None:
-        """Record ``path`` as ``BROKEN`` unless it was already recorded."""
-        if path in self._recorded_paths:
-            return
-        self._recorded_paths.add(path)
-        self._report.record(path=path, outcome=FileOutcome.BROKEN)
-
     def __call__(self, path: Path, error: Exception) -> None:
+        """Record ``path`` as ``BROKEN`` once; re-raise any non-dimension-read error."""
         # Only a dimension-read failure is a tolerated BROKEN outcome; any other error is a
         # bug or infra failure and must propagate.
         if not isinstance(error, ImageDimensionError):
             raise error
-        self.record(str(path))
+        path_str = str(path)
+        if path_str in self._recorded_paths:
+            return
+        self._recorded_paths.add(path_str)
+        self.report.record(path=path_str, outcome=FileOutcome.BROKEN)
 
 
 def load_into_dataset_from_paths(
@@ -210,13 +213,12 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
     """
     images_root_abs = add_annotations.normalize_images_root(images_root=images_path)
 
-    report = FileOutcomeReport()
-
     # Lazily-scanned folder formats open every image to read its dimensions during the
     # get_images() and get_labels() scans below. Route broken images through one collector so
     # they are recorded as BROKEN and skipped instead of raising mid-scan and aborting the whole
     # ingest. The collector dedupes so a file surfacing in more than one scan is recorded once.
-    broken_image_collector = _BrokenImageCollector(report)
+    broken_image_collector = BrokenImageCollector()
+    report = broken_image_collector.report
     input_labels.on_error = broken_image_collector  # type: ignore[union-attr]
 
     # The set starts with paths already in the database and grows with paths seen in this
