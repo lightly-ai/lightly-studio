@@ -100,13 +100,20 @@ def get_all_by_collection_id(  # noqa: PLR0913
     """Retrieve samples for a specific collection with optional filtering."""
     # Resolve any embedding-plot region selection to concrete sample ids on the filter before the
     # query is built (the point-in-polygon test needs the session, which `apply` lacks).
-    sample_filter = filters.sample_filter if filters is not None else None
-    if sample_filter is not None and sample_filter.embedding_region is not None:
-        sample_filter.region_sample_ids = embedding_region_resolver.get_sample_ids_in_region(
+    if (
+        filters is not None
+        and filters.sample_filter is not None
+        and filters.sample_filter.embedding_region is not None
+    ):
+        region_sample_ids = embedding_region_resolver.get_sample_ids_in_region(
             session=session,
             collection_id=collection_id,
-            region=sample_filter.embedding_region,
+            region=filters.sample_filter.embedding_region,
         )
+        resolved_sample_filter = filters.sample_filter.model_copy(
+            update={"region_sample_ids": region_sample_ids}
+        )
+        filters = filters.model_copy(update={"sample_filter": resolved_sample_filter})
 
     embedding_model_id, distance_expr = get_distance_expression(
         session=session,

@@ -2943,7 +2943,7 @@ wheels = [
 [[package]]
 name = "labelformat"
 version = "0.1.16"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/lightly-ai/labelformat.git?rev=adeaf09cd10ec1b6f105da6886c00370fd894103#adeaf09cd10ec1b6f105da6886c00370fd894103" }
 dependencies = [
     { name = "fsspec", version = "2025.10.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "fsspec", version = "2026.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
@@ -2956,10 +2956,6 @@ dependencies = [
     { name = "pydantic-xml" },
     { name = "pyyaml" },
     { name = "tqdm" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/d4/c6/9e5ecea46d0bc9d52cffccaeacad656f36c1082b315a30cb1b9c735815fe/labelformat-0.1.16.tar.gz", hash = "sha256:eee410ed77c94e37726c71b6092e651f1e831043e8759ff4a7ec76dd7d16357f", size = 40089, upload-time = "2026-06-05T09:42:46.843Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/89/67/829de439f50a6fdd0c69b58f23469191a0a78f489e7b52ac6e0201d543cd/labelformat-0.1.16-py3-none-any.whl", hash = "sha256:628c875858b1b3c5b88fac362901ab25488ab58197b310feee789ffdc6463e8d", size = 57447, upload-time = "2026-06-05T09:42:48.077Z" },
 ]
 
 [[package]]
@@ -3237,7 +3233,7 @@ requires-dist = [
     { name = "fsspec", specifier = ">=2023.1.0" },
     { name = "gcsfs", marker = "extra == 'cloud-storage'", specifier = ">=2023.1.0" },
     { name = "jinja2", specifier = ">=3.1.0" },
-    { name = "labelformat", specifier = ">=0.1.16" },
+    { name = "labelformat", git = "https://github.com/lightly-ai/labelformat.git?rev=adeaf09cd10ec1b6f105da6886c00370fd894103" },
     { name = "lightly-mundig", specifier = "==0.1.13" },
     { name = "open-clip-torch", specifier = ">=2.20.0" },
     { name = "opencv-python-headless", specifier = ">=4.11.0.86" },

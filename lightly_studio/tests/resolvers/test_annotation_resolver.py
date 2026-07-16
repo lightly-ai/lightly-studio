@@ -11,6 +11,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationCreate,
     AnnotationType,
+    AnnotationView,
 )
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.collection import CollectionTable, SampleType
@@ -641,6 +642,16 @@ def test_create_many_annotations(db_session: Session) -> None:
         )
         for i in range(3)
     ]
+    # A classification annotation additionally carrying a temporal span.
+    annotations_to_create.append(
+        AnnotationCreate(
+            parent_sample_id=image.sample_id,
+            annotation_label_id=cat_label.annotation_label_id,
+            annotation_type=AnnotationType.CLASSIFICATION,
+            start_time_s=1.5,
+            end_time_s=4.0,
+        )
+    )
 
     annotation_resolver.create_many(
         session=db_session,
@@ -654,7 +665,7 @@ def test_create_many_annotations(db_session: Session) -> None:
         filters=AnnotationsFilter(collection_ids=[annotation_collection_id]),
     ).annotations
 
-    assert len(created_annotations) == 3
+    assert len(created_annotations) == 4
     assert all(
         anno.sample.collection_id == annotation_collection_id for anno in created_annotations
     )
@@ -662,6 +673,17 @@ def test_create_many_annotations(db_session: Session) -> None:
     assert all(
         anno.annotation_label_id == cat_label.annotation_label_id for anno in created_annotations
     )
+
+    # The temporal span is stored and surfaced through the annotation view.
+    classification = next(
+        anno
+        for anno in created_annotations
+        if anno.annotation_type == AnnotationType.CLASSIFICATION
+    )
+    view = AnnotationView.from_annotation_table(classification)
+    assert view.temporal_span_details is not None
+    assert view.temporal_span_details.start_time_s == 1.5
+    assert view.temporal_span_details.end_time_s == 4.0
 
 
 def test_create_many__populates_coverage(db_session: Session) -> None:

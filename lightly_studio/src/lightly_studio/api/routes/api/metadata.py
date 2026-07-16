@@ -14,13 +14,17 @@ from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.errors import TagNotFoundError
 from lightly_studio.metadata import compute_similarity, compute_typicality
 from lightly_studio.models.collection import CollectionTable
-from lightly_studio.models.metadata import MetadataInfoView
+from lightly_studio.models.metadata import HistogramView, MetadataInfoView
 from lightly_studio.resolvers import embedding_model_resolver
-from lightly_studio.resolvers.metadata_resolver.sample.get_metadata_info import (
-    get_all_metadata_keys_and_schema,
+from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.metadata_resolver.sample import (
+    get_metadata_info as metadata_info_resolver,
 )
 
 metadata_router = APIRouter(prefix="/collections/{collection_id}", tags=["metadata"])
+
+# Default number of equal-width bins per metadata histogram.
+_DEFAULT_BIN_COUNT = 20
 
 
 @metadata_router.get("/metadata/info", response_model=list[MetadataInfoView])
@@ -38,7 +42,47 @@ def get_metadata_info(
         List of metadata info objects with name, type, and optionally min/max values
         for numerical metadata types.
     """
-    return get_all_metadata_keys_and_schema(session=session, collection_id=collection_id)
+    return metadata_info_resolver.get_all_metadata_keys_and_schema(
+        session=session, collection_id=collection_id
+    )
+
+
+class MetadataHistogramsRequest(BaseModel):
+    """Request body for computing filtered metadata histograms."""
+
+    filters: ImageFilter | None = Field(None, description="Filter parameters for samples")
+    bin_count: int = Field(
+        _DEFAULT_BIN_COUNT, ge=1, le=200, description="Number of equal-width bins per histogram"
+    )
+
+
+@metadata_router.post("/metadata/histograms", response_model=dict[str, HistogramView])
+def get_metadata_histograms(
+    session: SessionDep,
+    collection_id: Annotated[UUID, Path(title="collection Id")],
+    request: MetadataHistogramsRequest | None = None,
+) -> dict[str, HistogramView]:
+    """Compute value-distribution histograms for all numeric metadata keys.
+
+    Bin edges always span the full (unfiltered) value range of each key so the
+    chart axis stays stable; the counts reflect the given filters. Each key's
+    own metadata filter is excluded from its histogram (faceted-search
+    behavior).
+
+    Args:
+        session: The database session.
+        collection_id: The ID of the collection.
+        request: Optional request body carrying the active sample filters.
+
+    Returns:
+        Mapping of metadata key to its histogram.
+    """
+    return metadata_info_resolver.get_metadata_histograms(
+        session=session,
+        collection_id=collection_id,
+        filters=request.filters if request else None,
+        bin_count=request.bin_count if request else _DEFAULT_BIN_COUNT,
+    )
 
 
 class ComputeTypicalityRequest(BaseModel):
