@@ -565,18 +565,16 @@
     // Numeric metadata fields as histogram groups. Bin edges span the full
     // collection (stable axis); counts track the active filters — the query
     // refetches whenever the grid filter changes. Each key's own metadata
-    // filter is excluded server-side (faceted-search behavior). Only queried
-    // while the distribution panel is open.
-    const metadataHistogramsQuery = $derived.by(() => {
-        if (!distributionPanelVisible) return null;
-        return useNumericMetadataDistribution({
-            collectionId: datasetId,
-            filter: imageAnnotationCountsFilter
-        });
-    });
+    // filter is excluded server-side (faceted-search behavior). Disabled while
+    // the distribution panel is closed so it doesn't fetch in the background.
+    const metadataHistogramsQuery = useNumericMetadataDistribution(() => ({
+        collectionId: datasetId,
+        filter: imageAnnotationCountsFilter,
+        enabled: distributionPanelVisible
+    }));
     // query.data is already Record<string, HistogramData> — the hook applies
     // selectDistributions internally via the TanStack Query `select` option.
-    const metadataDistributions = $derived(metadataHistogramsQuery?.data ?? {});
+    const metadataDistributions = $derived(metadataHistogramsQuery.data ?? {});
 
     const metadataDistributionSource = $derived.by<DistributionSource | null>(() => {
         const keys = Object.keys(metadataDistributions);

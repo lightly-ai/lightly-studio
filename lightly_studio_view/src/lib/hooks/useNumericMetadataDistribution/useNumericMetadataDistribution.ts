@@ -32,19 +32,18 @@ export const selectDistributions = (
  * the histograms track the active view; the query refetches whenever the
  * filter changes.
  *
- * @param collectionId - ID of the collection whose metadata distributions to load.
- * @param filter - Active image filter; counts in each histogram reflect this
- *   filter (the key's own metadata filter is excluded server-side). The query
- *   refetches automatically when this value changes.
+ * Accepts a reactive factory function (same pattern as `useImageAnnotationCounts`)
+ * so that `collectionId`, `filter`, and `enabled` are re-read inside the
+ * TanStack Query reactive context on every change.
+ *
+ * @param getOptions - Factory returning the query options. Called reactively by
+ *   TanStack Query whenever any reactive dependency inside it changes.
  */
-export const useNumericMetadataDistribution = ({
-    collectionId,
-    filter
-}: {
-    collectionId: string;
-    filter?: ImageFilter;
-}) =>
+export const useNumericMetadataDistribution = (
+    getOptions: () => { collectionId: string; filter?: ImageFilter; enabled?: boolean }
+) =>
     createQuery(() => {
+        const { collectionId, filter, enabled = true } = getOptions();
         // Computed inside the reactive function so a change to collectionId or
         // filter updates the query key and triggers a refetch.
         const requestOptions = {
@@ -53,6 +52,7 @@ export const useNumericMetadataDistribution = ({
         } as const;
         return {
             ...getMetadataHistogramsOptions(requestOptions),
+            enabled,
             select: selectDistributions,
             // Keep the previous bars on screen while a filter change refetches.
             placeholderData: (previous: Record<string, HistogramView> | undefined) => previous,
