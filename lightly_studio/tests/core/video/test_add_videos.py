@@ -4,12 +4,14 @@ import os
 from argparse import ArgumentParser
 from pathlib import Path
 from unittest.mock import MagicMock
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import fsspec
 import pytest
 from av import container
 from av.codec.context import ThreadType
+from av.container import InputContainer
+from av.error import InvalidDataError
 from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation
 from labelformat.model.bounding_box import BoundingBox, BoundingBoxFormat
 from labelformat.model.category import Category
@@ -32,7 +34,7 @@ from lightly_studio.core.video.add_videos import FrameExtractionContext
 from lightly_studio.dataset.embedding_generator import RandomEmbeddingGenerator
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.models.collection import SampleType
-from lightly_studio.models.video import VideoCreate
+from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
@@ -159,6 +161,79 @@ def test_load_into_collection_from_paths__records_missing_broken_already_present
     assert "already_present=2" in caplog.text
     assert "missing=3" in caplog.text
     assert "broken=4" in caplog.text
+
+
+def test_load_into_collection_from_paths__mid_decode_failure_is_cleaned_up(
+    db_session: Session,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+    mocker: MockerFixture,
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    good_path = create_video_file(output_path=tmp_path / "good.mp4", num_frames=2, fps=1)
+    broken_path = create_video_file(output_path=tmp_path / "broken.mp4", num_frames=2, fps=1)
+    _fail_after_frame_creation(mocker=mocker, failing_file_name=broken_path.name)
+
+    with caplog.at_level("INFO"):
+        video_sample_ids, _ = add_videos.load_into_collection_from_paths(
+            session=db_session,
+            collection_id=collection.collection_id,
+            video_paths=[str(broken_path), str(good_path)],
+        )
+
+    videos = video_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    ).samples
+    assert [video.file_name for video in videos] == [good_path.name]
+    assert video_sample_ids == [videos[0].sample_id]
+    assert "added=1" in caplog.text
+    assert "broken=1" in caplog.text
+
+
+def _fail_after_frame_creation(
+    mocker: MockerFixture,
+    failing_file_name: str,
+) -> None:
+    """Make one video fail after its frame rows have been committed."""
+    original_create = add_videos._create_video_frame_samples
+
+    def create_frames_then_maybe_fail(
+        context: FrameExtractionContext,
+        video_container: InputContainer,
+        video_channel: int,
+        num_decode_threads: int | None = None,
+        target_fps: float | None = None,
+    ) -> list[UUID]:
+        video = video_resolver.get_by_id(session=context.session, sample_id=context.video_sample_id)
+        assert video is not None
+        if video.file_name == failing_file_name:
+            video_frame_resolver.create_many(
+                session=context.session,
+                collection_id=context.collection_id,
+                samples=[
+                    VideoFrameCreate(
+                        frame_number=0,
+                        frame_timestamp_s=0.0,
+                        frame_timestamp_pts=0,
+                        parent_sample_id=context.video_sample_id,
+                    )
+                ],
+            )
+            raise InvalidDataError(1094995529, "Invalid data found while decoding a frame")
+
+        return original_create(
+            context=context,
+            video_container=video_container,
+            video_channel=video_channel,
+            num_decode_threads=num_decode_threads,
+            target_fps=target_fps,
+        )
+
+    mocker.patch.object(
+        add_videos,
+        "_create_video_frame_samples",
+        side_effect=create_frames_then_maybe_fail,
+    )
 
 
 def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> None:
