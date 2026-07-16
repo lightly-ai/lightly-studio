@@ -53,6 +53,7 @@ export const useNumericMetadataDistribution = ({
         } as const;
         return {
             ...getMetadataHistogramsOptions(requestOptions),
+            select: selectDistributions,
             // Keep the previous bars on screen while a filter change refetches.
             placeholderData: (previous: Record<string, HistogramView> | undefined) => previous,
             queryFn: async ({ signal }: { signal: AbortSignal }) => {

@@ -20,9 +20,6 @@ from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.metadata_resolver.sample import (
     get_metadata_info as metadata_info_resolver,
 )
-from lightly_studio.resolvers.metadata_resolver.sample.get_metadata_info import (
-    get_metadata_histograms as get_metadata_histograms_resolver,
-)
 
 metadata_router = APIRouter(prefix="/collections/{collection_id}", tags=["metadata"])
 
@@ -85,42 +82,6 @@ def get_metadata_histograms(
         collection_id=collection_id,
         filters=request.filters if request else None,
         bin_count=request.bin_count if request else _DEFAULT_BIN_COUNT,
-    )
-
-
-class MetadataHistogramsRequest(BaseModel):
-    """Request body for computing filtered metadata histograms."""
-
-    filters: ImageFilter | None = Field(None, description="Filter parameters for samples")
-    bin_count: int = Field(20, ge=1, le=200, description="Number of equal-width bins per histogram")
-
-
-@metadata_router.post("/metadata/histograms", response_model=dict[str, HistogramView])
-def get_metadata_histograms(
-    session: SessionDep,
-    collection_id: Annotated[UUID, Path(title="collection Id")],
-    request: MetadataHistogramsRequest | None = None,
-) -> dict[str, HistogramView]:
-    """Compute value-distribution histograms for all numeric metadata keys.
-
-    Bin edges always span the full (unfiltered) value range of each key so the
-    chart axis stays stable; the counts reflect the given filters. Each key's
-    own metadata filter is excluded from its histogram (faceted-search
-    behavior).
-
-    Args:
-        session: The database session.
-        collection_id: The ID of the collection.
-        request: Optional request body carrying the active sample filters.
-
-    Returns:
-        Mapping of metadata key to its histogram.
-    """
-    return get_metadata_histograms_resolver(
-        session=session,
-        collection_id=collection_id,
-        filters=request.filters if request else None,
-        bin_count=request.bin_count if request else 20,
     )
 
 
