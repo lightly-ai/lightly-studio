@@ -298,7 +298,8 @@
         annotationFilter: annotationFilterStore,
         annotationFilterRows,
         toggleAnnotationFilterSelection,
-        setAnnotationCounts
+        setAnnotationCounts,
+        pruneInvalidSelections
     } = useAnnotationsFilter({
         annotationLabels: annotationLabelsStore
     });
@@ -333,7 +334,8 @@
     const { selectedCollectionIds: selectedAnnotationSourceIds } = useAnnotationCollectionsFilter();
     const annotationFilterForCounts = $derived.by<AnnotationsFilter | undefined>(() => {
         const base = $annotationFilterStore;
-        const sourceIds = isAnnotations ? [] : $selectedAnnotationSourceIds;
+        const sourceIds =
+            isAnnotations || isAnnotationDetails ? [collectionId] : $selectedAnnotationSourceIds;
         if (sourceIds.length === 0) return base;
         return {
             ...(base ?? { filter_type: 'annotations' }),
@@ -401,6 +403,10 @@
             setAnnotationCounts(
                 countsData as { label_name: string; total_count: number; current_count?: number }[]
             );
+            // Drop selected label filters whose label is absent from the fresh,
+            // source-scoped counts (e.g. after switching to a source that doesn't
+            // contain the label) so the active filter never points at a hidden label.
+            pruneInvalidSelections();
         }
     });
 

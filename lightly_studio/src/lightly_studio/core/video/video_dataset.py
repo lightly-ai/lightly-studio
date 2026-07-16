@@ -15,7 +15,7 @@ from sqlmodel import Session
 
 from lightly_studio.core.dataset import BaseSampleDataset
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
-from lightly_studio.core.video import add_videos
+from lightly_studio.core.video import add_annotations, add_videos
 from lightly_studio.core.video.add_videos import VIDEO_EXTENSIONS
 from lightly_studio.core.video.video_frame_dataset import VideoFrameDataset
 from lightly_studio.core.video.video_sample import VideoSample
@@ -235,6 +235,33 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
                 collection_id=self.collection_id,
                 sample_ids=created_sample_ids,
             )
+
+    def add_annotations_from_activitynet(
+        self,
+        annotations_json: PathLike,
+        annotation_source: str | None = None,
+    ) -> list[str]:
+        """Attach ActivityNet-style temporal annotations to videos already in the dataset.
+
+        Videos are matched by ``file_name`` stem or ``file_path_abs`` stem against the
+        ActivityNet video identifier (e.g. ``v_o6wtvlVs3E8`` for ``v_o6wtvlVs3E8.mp4``).
+
+        Args:
+            annotations_json: Path to an ActivityNet-style JSON file with a ``database``
+                or ``results`` key.
+            annotation_source: Name of the annotation source to add the annotations to.
+                Reusing the same source name appends to that source. If ``None``, a
+                default source is used.
+
+        Returns:
+            Video IDs from the JSON that had no matching video in the dataset.
+        """
+        return add_annotations.add_annotations_from_activitynet(
+            session=self.session,
+            root_collection_id=self.collection_id,
+            annotations_json=annotations_json,
+            collection_name=annotation_source,
+        )
 
 
 def _generate_embeddings_video(
