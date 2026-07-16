@@ -47,6 +47,33 @@ logger = logging.getLogger(__name__)
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
 
 
+class _BrokenImageCollector:
+    """Records broken images as ``BROKEN`` once each, usable as a labelformat ``on_error`` hook.
+
+    Lazily-scanned folder formats (YOLO, KITTI, Lightly, mask pairs) invoke this
+    as ``input_labels.on_error`` during iteration. Internal dedup keeps a file
+    recorded once even if it surfaces in more than one scan.
+    """
+
+    def __init__(self, report: FileOutcomeReport) -> None:
+        self._report = report
+        self._recorded_paths: set[str] = set()
+
+    def record(self, path: str) -> None:
+        """Record ``path`` as ``BROKEN`` unless it was already recorded."""
+        if path in self._recorded_paths:
+            return
+        self._recorded_paths.add(path)
+        self._report.record(path=path, outcome=FileOutcome.BROKEN)
+
+    def __call__(self, path: Path, error: Exception) -> None:
+        # Only a dimension-read failure is a tolerated BROKEN outcome; any other error is a
+        # bug or infra failure and must propagate.
+        if not isinstance(error, ImageDimensionError):
+            raise error
+        self.record(str(path))
+
+
 def load_into_dataset_from_paths(
     session: Session,
     root_collection_id: UUID,
@@ -451,33 +478,6 @@ def _group_captions_by_image_id(
             continue
         captions_by_image_id[image_id].append(caption_text)
     return captions_by_image_id
-
-
-class _BrokenImageCollector:
-    """Records broken images as ``BROKEN`` once each, usable as a labelformat ``on_error`` hook.
-
-    Lazily-scanned folder formats (YOLO, KITTI, Lightly, mask pairs) invoke this
-    as ``input_labels.on_error`` during iteration. Internal dedup keeps a file
-    recorded once even if it surfaces in more than one scan.
-    """
-
-    def __init__(self, report: FileOutcomeReport) -> None:
-        self._report = report
-        self._recorded_paths: set[str] = set()
-
-    def record(self, path: str) -> None:
-        """Record ``path`` as ``BROKEN`` unless it was already recorded."""
-        if path in self._recorded_paths:
-            return
-        self._recorded_paths.add(path)
-        self._report.record(path=path, outcome=FileOutcome.BROKEN)
-
-    def __call__(self, path: Path, error: Exception) -> None:
-        # Only a dimension-read failure is a tolerated BROKEN outcome; any other error is a
-        # bug or infra failure and must propagate.
-        if not isinstance(error, ImageDimensionError):
-            raise error
-        self.record(str(path))
 
 
 def _file_exists(path: str) -> bool:
