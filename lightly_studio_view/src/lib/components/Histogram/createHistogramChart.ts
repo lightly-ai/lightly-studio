@@ -52,22 +52,34 @@ function setupDragListeners(
 ): () => void {
     const zr = chart.getZr();
     const toBinIndex = (offsetX: number) => pixelToBinIndex(chart, offsetX, options.getBinCount());
-    const handleMouseDown = (event: MouseOffsetEvent) =>
+
+    let dragging = false;
+
+    const handleMouseDown = (event: MouseOffsetEvent) => {
+        dragging = true;
         options.onDragStart(toBinIndex(event.offsetX));
-    const handleMouseMove = (event: MouseOffsetEvent) =>
+    };
+    const handleMouseMove = (event: MouseOffsetEvent) => {
+        if (!dragging) return;
         options.onDragMove(toBinIndex(event.offsetX));
+    };
     const handleWindowMouseMove = (event: MouseEvent) => {
+        if (!dragging) return;
         const offsetX = event.clientX - options.container.getBoundingClientRect().left;
         options.onDragMove(toBinIndex(offsetX));
+    };
+    const handleMouseUp = () => {
+        dragging = false;
+        options.onDragEnd();
     };
     zr.on('mousedown', handleMouseDown);
     zr.on('mousemove', handleMouseMove);
     window.addEventListener('mousemove', handleWindowMouseMove);
-    window.addEventListener('mouseup', options.onDragEnd);
+    window.addEventListener('mouseup', handleMouseUp);
 
     return () => {
         window.removeEventListener('mousemove', handleWindowMouseMove);
-        window.removeEventListener('mouseup', options.onDragEnd);
+        window.removeEventListener('mouseup', handleMouseUp);
     };
 }
 

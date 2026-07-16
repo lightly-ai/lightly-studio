@@ -150,6 +150,10 @@ def _embed_dataset_batched(
     if context.max_batch_size <= 0:
         raise ValueError("max_batch_size must be positive.")
 
+    # TODO(Malte, 07/2026): Parallelize per-item preprocessing with
+    # parallelize.thread_imap_lazy (each item opens/decodes/preprocesses one image,
+    # independently), then group results with batching.batched for the batched forward
+    # pass. This overlaps CPU-bound preprocessing (and remote reads) with inference.
     # To avoid issues with db locking and multiprocessing we set the number of
     # workers to 0 (no multiprocessing). The DataLoader is still very useful for
     # batching and async prefetching of images.
