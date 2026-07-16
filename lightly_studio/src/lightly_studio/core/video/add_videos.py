@@ -174,6 +174,11 @@ def load_into_collection_from_paths(  # noqa: PLR0913
         embedding_model_id=embedding_model_id,
     )
 
+    # TODO(Malte, 07/2026): Parallelize video indexing across videos with
+    # parallelize.thread_imap_lazy (one task per whole video, never split a video;
+    # workers and prefetch stay bounded) to overlap remote reads. Decode single-threaded
+    # per video and keep DB writes and embedding on a single thread, as neither the
+    # session nor the model is thread-safe.
     for video_path in tqdm(
         video_paths_list,
         desc="Loading frames from videos",
