@@ -48,10 +48,7 @@
         createMetadataFilters,
         useMetadataFilters
     } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
-    import {
-        selectDistributions,
-        useNumericMetadataDistribution
-    } from '$lib/hooks/useNumericMetadataDistribution/useNumericMetadataDistribution.js';
+    import { useNumericMetadataDistribution } from '$lib/hooks/useNumericMetadataDistribution/useNumericMetadataDistribution.js';
     import { useVideoFrameAnnotationCounts } from '$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
@@ -577,7 +574,9 @@
             filter: imageAnnotationCountsFilter
         });
     });
-    const metadataDistributions = $derived(selectDistributions(metadataHistogramsQuery?.data));
+    // query.data is already Record<string, HistogramData> — the hook applies
+    // selectDistributions internally via the TanStack Query `select` option.
+    const metadataDistributions = $derived(metadataHistogramsQuery?.data ?? {});
 
     const metadataDistributionSource = $derived.by<DistributionSource | null>(() => {
         const keys = Object.keys(metadataDistributions);
