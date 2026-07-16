@@ -237,13 +237,17 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
 def test__create_video_frame_samples__embed_frames(
     db_session: Session,
     tmp_path: Path,
+    mocker: MockerFixture,
 ) -> None:
+    mocker.patch.object(add_videos, "FRAME_EMBEDDING_BATCH_SIZE", 3)
+    mocker.patch.object(add_videos, "FRAME_DATABASE_BATCH_SIZE", 5)
+    mocker.patch.object(add_videos, "FRAME_EMBEDDING_BATCH_MAX_BYTES", 1024**3)
     collection = create_collection(db_session, sample_type=SampleType.VIDEO)
     video_path = create_video_file(
         output_path=tmp_path / "test_video_frames_embed.mp4",
         width=320,
         height=240,
-        num_frames=2,
+        num_frames=7,
         fps=1,
     )
     video_sample_ids = video_resolver.create_many(
@@ -274,6 +278,9 @@ def test__create_video_frame_samples__embed_frames(
         embedding_generator=RandomEmbeddingGenerator(),
         set_as_default=True,
     ).embedding_model_id
+    embed_spy = mocker.spy(embedding_manager, "embed_pil_images")
+    store_spy = mocker.spy(embedding_manager, "store_embeddings")
+    create_frames_spy = mocker.spy(video_frame_resolver, "create_many")
 
     fs, fs_path = fsspec.core.url_to_fs(url=str(video_path))
     video_file = fs.open(path=fs_path, mode="rb")
@@ -291,16 +298,100 @@ def test__create_video_frame_samples__embed_frames(
         video_channel=0,
     )
 
-    assert len(frame_sample_ids) == 2
+    assert len(frame_sample_ids) == 7
+    assert [len(call.kwargs["images"]) for call in embed_spy.call_args_list] == [3, 3, 1]
+    assert [len(call.kwargs["samples"]) for call in create_frames_spy.call_args_list] == [5, 2]
+    assert [len(call.kwargs["sample_ids"]) for call in store_spy.call_args_list] == [5, 2]
     frame_embeddings = sample_embedding_resolver.get_by_sample_ids(
         session=db_session,
         sample_ids=frame_sample_ids,
         embedding_model_id=model_id,
     )
-    assert len(frame_embeddings) == 2
+    assert len(frame_embeddings) == 7
 
     video_container.close()
     video_file.close()
+
+
+def test__decode_batch_is_full__bounds_count_and_memory() -> None:
+    max_bytes = add_videos.FRAME_EMBEDDING_BATCH_MAX_BYTES
+
+    assert add_videos._decode_batch_is_full(
+        num_frames=add_videos.FRAME_EMBEDDING_BATCH_SIZE,
+        image_bytes=0,
+        next_image_bytes=0,
+    )
+    assert add_videos._decode_batch_is_full(
+        num_frames=1,
+        image_bytes=max_bytes,
+        next_image_bytes=1,
+    )
+    assert not add_videos._decode_batch_is_full(
+        num_frames=1,
+        image_bytes=max_bytes - 1,
+        next_image_bytes=1,
+    )
+
+
+def test__create_video_frame_samples__embedding_failure_does_not_create_frames(
+    db_session: Session,
+    tmp_path: Path,
+    mocker: MockerFixture,
+) -> None:
+    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+    video_path = create_video_file(
+        output_path=tmp_path / "embedding_failure.mp4",
+        num_frames=2,
+        fps=1,
+    )
+    video_sample_id = video_resolver.create_many(
+        session=db_session,
+        collection_id=collection.collection_id,
+        samples=[
+            VideoCreate(
+                file_path_abs=str(video_path),
+                file_name=video_path.name,
+                width=640,
+                height=480,
+                fps=1,
+            )
+        ],
+    )[0]
+    frames_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.VIDEO_FRAME,
+    )
+    manager = EmbeddingManagerProvider.get_embedding_manager()
+    model_id = manager.register_embedding_model(
+        session=db_session,
+        collection_id=frames_collection_id,
+        embedding_generator=RandomEmbeddingGenerator(),
+        set_as_default=True,
+    ).embedding_model_id
+    mocker.patch.object(manager, "embed_pil_images", side_effect=MemoryError)
+
+    with (
+        container.open(str(video_path)) as video_container,
+        pytest.raises(MemoryError),
+    ):
+        add_videos._create_video_frame_samples(
+            context=FrameExtractionContext(
+                session=db_session,
+                collection_id=frames_collection_id,
+                video_sample_id=video_sample_id,
+                embed_frames=True,
+                embedding_model_id=model_id,
+            ),
+            video_container=video_container,
+            video_channel=0,
+        )
+
+    frames = video_frame_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=frames_collection_id,
+    ).samples
+    assert frames == []
 
 
 @pytest.mark.parametrize(

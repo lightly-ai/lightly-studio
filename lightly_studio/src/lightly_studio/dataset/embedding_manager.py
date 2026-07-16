@@ -415,9 +415,63 @@ class EmbeddingManager:
                 f"Expected the same number of sample IDs and images, got "
                 f"{len(sample_ids)} sample IDs and {len(images)} images."
             )
+        embeddings = self.embed_pil_images(
+            embedding_model_id=embedding_model_id,
+            images=images,
+            show_progress=show_progress,
+        )
+        self.store_embeddings(
+            session=session,
+            embedding_model_id=embedding_model_id,
+            sample_ids=sample_ids,
+            embeddings=embeddings,
+            show_progress=show_progress,
+        )
 
+    def embed_pil_images(
+        self,
+        embedding_model_id: UUID,
+        images: list[Image.Image],
+        show_progress: bool = True,
+    ) -> NDArray[np.float32]:
+        """Generate embeddings for in-memory PIL images without storing them.
+
+        Args:
+            embedding_model_id: ID of a registered image-compatible embedding model.
+            images: PIL images to embed.
+            show_progress: Whether to show an embedding progress bar.
+
+        Returns:
+            The image embeddings in the same order as the input images.
+        """
         model = self._get_image_model(embedding_model_id)
-        embeddings = model.embed_pil_images(images=images, show_progress=show_progress)
+        return model.embed_pil_images(images=images, show_progress=show_progress)
+
+    def store_embeddings(
+        self,
+        session: Session,
+        embedding_model_id: UUID,
+        sample_ids: list[UUID],
+        embeddings: NDArray[np.float32],
+        show_progress: bool = True,
+    ) -> None:
+        """Store precomputed embeddings for the corresponding samples.
+
+        Args:
+            session: Database session for resolver operations.
+            embedding_model_id: ID of the embedding model that generated the embeddings.
+            sample_ids: Sample IDs corresponding to the embeddings.
+            embeddings: Precomputed embeddings in the same order as the sample IDs.
+            show_progress: Whether to show a storage progress bar.
+
+        Raises:
+            ValueError: If the numbers of sample IDs and embeddings differ.
+        """
+        if len(sample_ids) != len(embeddings):
+            raise ValueError(
+                f"Expected the same number of sample IDs and embeddings, got "
+                f"{len(sample_ids)} sample IDs and {len(embeddings)} embeddings."
+            )
         _store_embeddings(
             session=session,
             model_id=embedding_model_id,
