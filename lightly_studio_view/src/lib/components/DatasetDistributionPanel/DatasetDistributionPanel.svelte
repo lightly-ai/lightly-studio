@@ -10,7 +10,7 @@
     import ExpandDialog from './ExpandDialog/ExpandDialog.svelte';
     import PanelHeader from './PanelHeader/PanelHeader.svelte';
     import { selectVisibleCounts } from './selectVisibleCounts';
-    import type { DistributionConfig, DistributionSource } from './types';
+    import type { DistributionConfig, DistributionSource, DistributionSourceGroup } from './types';
     import { AnnotationCountMode } from '$lib/api/lightly_studio_local/types.gen';
 
     interface Props {
@@ -22,7 +22,8 @@
         /**
          * Multiple selectable sources (class labels, tags, metadata keys,
          * eval …). When provided, a source selector is shown in the header and
-         * `data` is ignored. The same bar-chart UI renders every source.
+         * `data` is ignored. Sources with a `histogram` field render as a
+         * histogram instead of a bar chart.
          */
         sources?: DistributionSource[];
         title?: string;
@@ -71,11 +72,13 @@
     let selectedSourceId = $state<string | undefined>(undefined);
     let selectedGroupId = $state<string | undefined>(undefined);
 
+    const groupHasContent = (group: DistributionSourceGroup): boolean =>
+        (group.data?.length ?? 0) > 0 || group.histogram != null;
+
     const sourceHasContent = (source: DistributionSource): boolean =>
         (source.data?.length ?? 0) > 0 ||
         source.histogram != null ||
-        (source.groups?.some((group) => (group.data?.length ?? 0) > 0 || group.histogram != null) ??
-            false);
+        (source.groups?.some(groupHasContent) ?? false);
 
     // With nothing explicitly selected, land on the first source that actually
     // has something to show. Otherwise an empty leading source (e.g. "All types"
@@ -87,6 +90,7 @@
     );
     const activeGroup = $derived(
         activeSource.groups?.find((group) => group.id === selectedGroupId) ??
+            activeSource.groups?.find(groupHasContent) ??
             activeSource.groups?.[0]
     );
     const activeData = $derived<CategoryCount[]>(activeGroup?.data ?? activeSource.data ?? []);
@@ -239,7 +243,7 @@
                 selectedRange={activeHistogramRange}
                 heightPx={chartHeight || 240}
                 showAxes
-                onRangeSelect={handleHistogramRangeSelect}
+                onRangeSelect={onHistogramRangeSelect ? handleHistogramRangeSelect : undefined}
             />
         {:else}
             <BarChart
