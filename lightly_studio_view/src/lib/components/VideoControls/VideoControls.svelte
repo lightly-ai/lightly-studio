@@ -71,11 +71,13 @@
 
     function handleKeyDown(event: KeyboardEvent) {
         if (durationS <= 0) return;
+        // Cap the step for short clips so one press never leaps the whole video.
+        const stepS = Math.min(SEEK_STEP_S, durationS / 4);
         if (event.key === 'ArrowRight') {
-            onSeek(Math.min(durationS, currentTimeS + SEEK_STEP_S));
+            onSeek(Math.min(durationS, currentTimeS + stepS));
             event.preventDefault();
         } else if (event.key === 'ArrowLeft') {
-            onSeek(Math.max(0, currentTimeS - SEEK_STEP_S));
+            onSeek(Math.max(0, currentTimeS - stepS));
             event.preventDefault();
         }
     }
