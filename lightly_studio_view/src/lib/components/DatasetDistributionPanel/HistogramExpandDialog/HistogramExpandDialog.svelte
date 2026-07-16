@@ -18,8 +18,8 @@
         valueNoun?: string;
         /** Currently applied bin count, shared with the panel. */
         binCount: number;
-        /** Invoked when the user picks a new bin count. */
-        onBinCountChange: (binCount: number) => void;
+        /** Invoked when the user picks a new bin count. Omit to hide the selector. */
+        onBinCountChange?: (binCount: number) => void;
         /** Invoked when the user selects a value range on the chart. */
         onRangeSelect?: (range: HistogramRange) => void;
     }
@@ -66,14 +66,16 @@
                     data.binEdges[0]
                 )}–{formatFloat(data.binEdges[data.binEdges.length - 1])}
             </span>
-            <Select
-                items={binCountItems}
-                value={String(binCount)}
-                size="xs"
-                class="w-28"
-                testId="dataset-distribution-expanded-bin-count"
-                onValueChange={(value) => onBinCountChange(Number(value))}
-            />
+            {#if onBinCountChange}
+                <Select
+                    items={binCountItems}
+                    value={String(binCount)}
+                    size="xs"
+                    class="w-28"
+                    testId="dataset-distribution-expanded-bin-count"
+                    onValueChange={(value) => onBinCountChange(Number(value))}
+                />
+            {/if}
         </div>
         <div class="min-h-0 flex-1 dark:[color-scheme:dark]" bind:clientHeight={chartHeight}>
             <Histogram

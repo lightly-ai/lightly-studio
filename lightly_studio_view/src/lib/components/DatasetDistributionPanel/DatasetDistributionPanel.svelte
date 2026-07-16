@@ -40,7 +40,6 @@
         /** Called with the clicked class. */
         onBarClick?: (item: CategoryCount) => void;
         /**
-        /**
          * Called when the user switches the count mode via the config dialog.
          */
         onCountModeChange?: (mode: AnnotationCountMode) => void;
@@ -78,7 +77,7 @@
 
     // Normalise to a source list so the rest of the panel has one code path.
     const resolvedSources = $derived<DistributionSource[]>(
-        sources ?? [{ id: 'class', label: 'Annotation labels', data: data ?? [] }]
+        sources ?? [{ id: 'class', label: 'Annotation classes', data: data ?? [] }]
     );
     const hasSourceSelector = $derived(resolvedSources.length > 1);
 
@@ -287,7 +286,7 @@
                 selectedRange={activeHistogramRange}
                 heightPx={chartHeight || 240}
                 showAxes
-                onRangeSelect={handleHistogramRangeSelect}
+                onRangeSelect={onHistogramRangeSelect ? handleHistogramRangeSelect : undefined}
             />
         {:else}
             <BarChart
@@ -323,7 +322,7 @@
         selectedRange={activeHistogramRange}
         {valueNoun}
         binCount={histogramBinCount}
-        onBinCountChange={(binCount) => onHistogramBinCountChange?.(binCount)}
-        onRangeSelect={handleHistogramRangeSelect}
+        onBinCountChange={onHistogramBinCountChange}
+        onRangeSelect={onHistogramRangeSelect ? handleHistogramRangeSelect : undefined}
     />
 {/if}
