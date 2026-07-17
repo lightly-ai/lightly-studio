@@ -50,13 +50,8 @@ SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
 class BrokenImageCollector:
     """Records broken images as ``BROKEN`` once each, usable as a labelformat ``on_error`` hook.
 
-    Set it as an input's ``on_error`` so a dimension-read failure is recorded and
-    skipped instead of aborting the scan. It owns the ``FileOutcomeReport`` it
-    writes to, so a caller that must scan a folder before
-    ``load_into_dataset_from_labelformat`` runs can build the collector, use it
-    for that scan, and hand the same instance in so both scans record into one
-    report. Internal dedup keeps a file recorded once even if it surfaces in more
-    than one scan.
+    It owns the ``FileOutcomeReport`` it writes to. Internal dedup keeps a file recorded once even
+    if it surfaces in more than one scan.
     """
 
     def __init__(self, report: FileOutcomeReport | None = None) -> None:
@@ -66,8 +61,6 @@ class BrokenImageCollector:
 
     def __call__(self, path: Path, error: Exception) -> None:
         """Record ``path`` as ``BROKEN`` once; re-raise any non-dimension-read error."""
-        # Only a dimension-read failure is a tolerated BROKEN outcome; any other error is a
-        # bug or infra failure and must propagate.
         if not isinstance(error, ImageDimensionError):
             raise error
         path_str = str(path)
@@ -201,22 +194,11 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
         AllInputFilesFailedError: If at least one file was attempted and every
             attempted file was missing or broken.
 
-    Notes:
-        Lazily-scanned folder formats (e.g. YOLO) open every image to read its
-        dimensions, so a broken file is detected here via the ``on_error`` hook
-        and recorded as ``BROKEN``. The hook fires from both folder scans (the
-        ``get_images()`` existence check and the Phase 1 ``get_labels()`` loop)
-        and dedupes so a file is recorded once. COCO reads dimensions from the
-        annotation metadata without opening the file, so a COCO broken file is
-        not detected here and is deferred to the embedding step. A missing
-        referenced path is recorded as ``MISSING``.
     """
     images_root_abs = add_annotations.normalize_images_root(images_root=images_path)
 
-    # Lazily-scanned folder formats open every image to read its dimensions during the
-    # get_images() and get_labels() scans below. Route broken images through one collector so
-    # they are recorded as BROKEN and skipped instead of raising mid-scan and aborting the whole
-    # ingest. The collector dedupes so a file surfacing in more than one scan is recorded once.
+    # Some formats open images to read the dimensions during the get_images() and get_labels() scans
+    # Collector is used to record BROKEN images and skip, preventing abort of the ingest.
     broken_image_collector = BrokenImageCollector()
     report = broken_image_collector.report
     input_labels.on_error = broken_image_collector  # type: ignore[union-attr]
