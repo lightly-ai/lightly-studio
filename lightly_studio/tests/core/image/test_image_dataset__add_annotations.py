@@ -389,3 +389,42 @@ class TestDataset:
             parent_collection_id=dataset.collection_id,
         )
         assert len(result.annotations) == 1
+
+    def test_add_annotations_from_pascal_voc_segmentations__skips_broken_image(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        # Pascal VOC opens every image during the from_dirs folder scan. A broken image must be
+        # skipped (it was already recorded BROKEN at its own ingest) instead of aborting the
+        # annotation run, so the readable images still get annotated.
+        dataset, images_path = _setup_dataset_with_images(tmp_path, ["image1.jpg"])
+        # A broken image present in the images folder but not decodable. It is dropped during
+        # the folder scan before its mask is looked up, so no mask is needed.
+        (images_path / "broken.jpg").write_bytes(b"not a real image")
+
+        masks_path = tmp_path / "masks"
+        _create_mask(masks_path / "image1.png", np.zeros((10, 10), dtype=np.uint8))
+
+        with caplog.at_level(logging.WARNING):
+            dataset.add_annotations_from_pascal_voc_segmentations(
+                masks_path=masks_path,
+                images_root=images_path,
+                class_id_to_name={0: "bg"},
+                annotation_source="gt",
+            )
+
+        warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+        assert any(
+            "unreadable image" in r.getMessage() and "broken.jpg" in r.getMessage()
+            for r in warnings
+        )
+
+        # The readable image is still annotated despite the broken one.
+        result = annotation_resolver.get_all_by_collection_name(
+            session=dataset.session,
+            collection_name="gt",
+            parent_collection_id=dataset.collection_id,
+        )
+        assert len(result.annotations) == 1
