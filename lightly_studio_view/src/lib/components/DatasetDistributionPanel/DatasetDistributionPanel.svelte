@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { X } from '@lucide/svelte';
+    import { Maximize2 as Maximize2Icon, X } from '@lucide/svelte';
     import { Button } from '$lib/components';
     import Typography from '$lib/components/Typography/Typography.svelte';
     import { Select, type SelectItem } from '$lib/components/Select';
@@ -8,6 +8,7 @@
     import { formatFloat, formatInteger } from '$lib/utils';
     import DistributionConfigDialog from './DistributionConfigDialog/DistributionConfigDialog.svelte';
     import ExpandDialog from './ExpandDialog/ExpandDialog.svelte';
+    import HistogramExpandDialog from './HistogramExpandDialog/HistogramExpandDialog.svelte';
     import PanelHeader from './PanelHeader/PanelHeader.svelte';
     import { selectVisibleCounts } from './selectVisibleCounts';
     import {
@@ -131,6 +132,8 @@
     });
     let configDialogOpen = $state(false);
     let expandOpen = $state(false);
+    let histogramExpandOpen = $state(false);
+
     const binCountItems: SelectItem[] = HISTOGRAM_BIN_COUNT_ITEMS.map((count) => ({
         value: String(count),
         label: `${count} bins`
@@ -231,16 +234,29 @@
                     activeHistogram.binEdges[0]
                 )}–{formatFloat(activeHistogram.binEdges[activeHistogram.binEdges.length - 1])}
             </span>
-            {#if onHistogramBinCountChange}
-                <Select
-                    items={binCountItems}
-                    value={String(histogramBinCount)}
-                    size="xs"
-                    class="w-24"
-                    testId="dataset-distribution-bin-count"
-                    onValueChange={(value) => onHistogramBinCountChange(Number(value))}
+            <div class="flex items-center gap-1">
+                {#if onHistogramBinCountChange}
+                    <Select
+                        items={binCountItems}
+                        value={String(histogramBinCount)}
+                        size="xs"
+                        class="w-24"
+                        testId="dataset-distribution-bin-count"
+                        onValueChange={(value) => onHistogramBinCountChange(Number(value))}
+                    />
+                {/if}
+                <Button
+                    variant="ghost"
+                    icon={Maximize2Icon}
+                    ariaLabel="Expand distribution"
+                    buttonProps={{
+                        size: 'sm',
+                        class: 'h-8 w-8 p-0',
+                        onclick: () => (histogramExpandOpen = true),
+                        'data-testid': 'dataset-distribution-histogram-expand'
+                    }}
                 />
-            {/if}
+            </div>
         </div>
     {:else if activeData.length > 0}
         <PanelHeader
@@ -298,3 +314,15 @@
     onConfigChange={applyConfig}
     {onBarClick}
 />
+{#if activeHistogram}
+    <HistogramExpandDialog
+        bind:open={histogramExpandOpen}
+        data={activeHistogram}
+        label={activeGroup?.label ?? activeSource.label}
+        selectedRange={activeHistogramRange}
+        {valueNoun}
+        binCount={histogramBinCount}
+        onBinCountChange={onHistogramBinCountChange}
+        onRangeSelect={onHistogramRangeSelect ? handleHistogramRangeSelect : undefined}
+    />
+{/if}
