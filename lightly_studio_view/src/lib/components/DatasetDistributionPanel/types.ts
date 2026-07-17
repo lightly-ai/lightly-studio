@@ -43,6 +43,11 @@ export interface DistributionSource {
     data?: CategoryCount[];
     /** Numeric bin distribution rendered as a histogram. Mutually exclusive with `data`. */
     histogram?: HistogramData;
+    /**
+     * Currently selected value range for a source-level histogram (e.g. the active
+     * filter). Bins outside it render dimmed.
+     */
+    selectedRange?: HistogramRange;
     /** Sub-groups for a source that fans out into fields (e.g. metadata keys). */
     groups?: DistributionSourceGroup[];
     /** Noun for the header summary and value axis (default 'annotations'). */

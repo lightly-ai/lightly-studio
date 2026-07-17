@@ -61,7 +61,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_VIDEO_CHANNEL = 0
 # Number of samples to process in a single batch
-SAMPLE_BATCH_SIZE = 32
+SAMPLE_BATCH_SIZE = 128
 
 # Video file extensions
 # These are commonly supported by PyAV/FFmpeg.
