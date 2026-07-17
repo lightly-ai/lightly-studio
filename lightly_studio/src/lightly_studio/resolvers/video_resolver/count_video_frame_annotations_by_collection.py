@@ -105,7 +105,7 @@ def count_video_frame_annotations_by_video_collection(
 def _build_label_video_pairs_subquery(
     collection_id: UUID, annotation_type: Optional[AnnotationType] = None
 ) -> Any:
-    """Return distinct (label_id, video_id) pairs from frame and direct video annotations.
+    """Return (label_id, video_id) pairs from frame and direct video annotations.
 
     When ``annotation_type`` is provided, only annotations of that type are considered.
     """
