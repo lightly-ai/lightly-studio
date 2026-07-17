@@ -49,7 +49,7 @@ export const useNumericMetadataDistribution = (
         const requestOptions = {
             path: { collection_id: collectionId },
             ...(filter ? { body: { filters: filter } } : {})
-        } as const;
+        };
         return {
             ...getMetadataHistogramsOptions(requestOptions),
             enabled,
