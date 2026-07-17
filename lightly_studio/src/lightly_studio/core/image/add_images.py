@@ -18,12 +18,14 @@ from labelformat.model.instance_segmentation import (
     InstanceSegmentationInput,
 )
 from labelformat.model.object_detection import ObjectDetectionInput
+from labelformat.utils import ImageDimensionError
 from sqlmodel import Session
 from tqdm import tqdm
 
 from lightly_studio.core.file_outcome_report import (
     AlreadyPresentInputFileError,
     BrokenInputFileError,
+    FileOutcome,
     FileOutcomeReport,
     MissingInputFileError,
 )
@@ -43,6 +45,29 @@ logger = logging.getLogger(__name__)
 
 # Constants
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
+
+
+class BrokenImageCollector:
+    """Records broken images as ``BROKEN`` once each, usable as a labelformat ``on_error`` hook.
+
+    It owns the ``FileOutcomeReport`` it writes to. Internal dedup keeps a file recorded once even
+    if it surfaces in more than one scan.
+    """
+
+    def __init__(self, report: FileOutcomeReport | None = None) -> None:
+        """Record into ``report``, creating a fresh one when the caller passes ``None``."""
+        self.report = report if report is not None else FileOutcomeReport()
+        self._recorded_paths: set[str] = set()
+
+    def __call__(self, path: Path, error: Exception) -> None:
+        """Record ``path`` as ``BROKEN`` once; re-raise any non-dimension-read error."""
+        if not isinstance(error, ImageDimensionError):
+            raise error
+        path_str = str(path)
+        if path_str in self._recorded_paths:
+            return
+        self._recorded_paths.add(path_str)
+        self.report.record(path=path_str, outcome=FileOutcome.BROKEN)
 
 
 def load_into_dataset_from_paths(
@@ -167,15 +192,16 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
 
     Raises:
         AllInputFilesFailedError: If at least one file was attempted and every
-            attempted file was missing.
+            attempted file was missing or broken.
 
-    Notes:
-        Image dimensions come from the annotation metadata and the file is never
-        opened here, so a broken file cannot be detected on this path; that is
-        deferred to the embedding step. Only a missing referenced path is
-        classified as a failure (recorded as ``MISSING``).
     """
     images_root_abs = add_annotations.normalize_images_root(images_root=images_path)
+
+    # Some formats open images to read the dimensions during the get_images() and get_labels() scans
+    # Collector is used to record BROKEN images and skip, preventing abort of the ingest.
+    broken_image_collector = BrokenImageCollector()
+    report = broken_image_collector.report
+    input_labels.on_error = broken_image_collector  # type: ignore[union-attr]
 
     # The set starts with paths already in the database and grows with paths seen in this
     # call, so both already-present and in-run duplicate paths are skipped before batching.
@@ -187,8 +213,6 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
             for image in input_labels.get_images()
         ],
     )
-
-    report = FileOutcomeReport()
 
     samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
