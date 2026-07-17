@@ -443,8 +443,6 @@ describe('DatasetDistributionPanel', () => {
     });
 
     it('renders the bin-count select with the applied bin count', () => {
-        // Opening the bits-ui dropdown itself is not reliable in jsdom; the
-        // change wiring is a one-line callback covered by types.
         render(DatasetDistributionPanel, {
             props: {
                 sources: histogramSources,
@@ -454,5 +452,23 @@ describe('DatasetDistributionPanel', () => {
         });
 
         expect(screen.getByTestId('dataset-distribution-bin-count')).toHaveTextContent('50 bins');
+    });
+
+    it('calls onHistogramBinCountChange with the selected count when the user picks a new value', async () => {
+        const onHistogramBinCountChange = vi.fn();
+        const user = userEvent.setup();
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: histogramSources,
+                histogramBinCount: 20,
+                onHistogramBinCountChange
+            }
+        });
+
+        await user.click(screen.getByTestId('dataset-distribution-bin-count'));
+        const option = await waitFor(() => screen.getByRole('option', { name: '10 bins' }));
+        await user.click(option);
+
+        expect(onHistogramBinCountChange).toHaveBeenCalledWith(10);
     });
 });
