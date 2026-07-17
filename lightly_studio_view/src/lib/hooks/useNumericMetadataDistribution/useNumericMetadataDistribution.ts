@@ -54,15 +54,8 @@ export const useNumericMetadataDistribution = (
         // filter, or binCount updates the query key and triggers a refetch.
         const requestOptions = {
             path: { collection_id: collectionId },
-            ...(filter || binCount
-                ? {
-                      body: {
-                          ...(filter ? { filters: filter } : {}),
-                          ...(binCount ? { bin_count: binCount } : {})
-                      }
-                  }
-                : {})
-        } as const;
+            ...(filter ? { body: { filters: filter } } : {})
+        };
         return {
             ...getMetadataHistogramsOptions(requestOptions),
             enabled,

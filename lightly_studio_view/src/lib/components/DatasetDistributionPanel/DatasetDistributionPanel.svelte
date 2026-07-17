@@ -109,7 +109,7 @@
     // A group/source carrying bins renders as a histogram instead of a bar
     // chart; the categorical controls (sort, top-N, orientation) don't apply.
     const activeHistogram = $derived(activeGroup?.histogram ?? activeSource.histogram ?? null);
-    const activeHistogramRange = $derived(activeGroup?.selectedRange);
+    const activeHistogramRange = $derived(activeGroup?.selectedRange ?? activeSource.selectedRange);
     const handleHistogramRangeSelect = (range: HistogramRange) => {
         const groupId = activeGroup?.id ?? activeSource.id;
         onHistogramRangeSelect?.(groupId, range);

@@ -48,7 +48,6 @@
         createMetadataFilters,
         useMetadataFilters
     } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
-    import { useNumericMetadataDistribution } from '$lib/hooks/useNumericMetadataDistribution/useNumericMetadataDistribution.js';
     import { useVideoFrameAnnotationCounts } from '$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
@@ -72,7 +71,8 @@
     import {
         useSelectionSummary,
         useImageAnnotationCounts,
-        useImageAnnotationCountsQueryKey
+        useImageAnnotationCountsQueryKey,
+        useNumericMetadataDistribution
     } from '$lib/hooks';
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
     import { isInputElement } from '$lib/utils';
@@ -439,19 +439,15 @@
     // sources fetch classification / detection / segmentation counts on demand
     // while the panel is open. We map `current_count` so the plot tracks the
     // active filters, dropping labels with no matches in the current view.
-    const toCategoryCounts = (
-        countsData: { label_name: string; current_count: number }[] | undefined
-    ) =>
+    const toCategoryCounts = (countsData: unknown[] | undefined) =>
         (countsData ?? [])
-            .map((item) => ({
-                label: item.label_name,
-                count: Number(item.current_count)
-            }))
+            .map((item) => {
+                const row = item as { [key: string]: unknown };
+                return { label: String(row['label_name']), count: Number(row['current_count']) };
+            })
             .filter((item) => item.count > 0);
 
-    const classDistributionCounts = $derived(
-        toCategoryCounts(annotationCounts.data as { label_name: string; current_count: number }[])
-    );
+    const classDistributionCounts = $derived(toCategoryCounts(annotationCounts.data));
 
     const distributionPanelVisible = $derived($activePanel === 'distribution' && isImages);
 
@@ -505,23 +501,31 @@
     // valueNoun from the count-mode work collapses to the source level: in
     // Samples mode everything counts samples, otherwise annotations.
     const classDistributionSource = $derived.by<DistributionSource>(() => {
+        const valueNoun =
+            distributionCountMode === AnnotationCountMode.SAMPLES ? 'samples' : 'annotations';
+        if (!distributionPanelVisible) {
+            return {
+                id: 'classes',
+                label: 'Annotation classes',
+                groupLabel: 'Annotation type',
+                valueNoun,
+                data: classDistributionCounts
+            };
+        }
+
         const base = {
             id: 'classes',
             label: 'Annotation classes',
             groupLabel: 'Annotation type',
-            valueNoun:
-                distributionCountMode === AnnotationCountMode.SAMPLES ? 'samples' : 'annotations'
+            valueNoun
         };
-        if (!distributionPanelVisible) return { ...base, data: classDistributionCounts };
 
         // Use the distribution-specific "all" query so the "All types" group
         // respects distributionCountMode. Fall back to the shared counts while
         // the distribution query is still loading (data === undefined).
         const allDistributionData =
             distributionAllQuery.data !== undefined
-                ? toCategoryCounts(
-                      distributionAllQuery.data as { label_name: string; current_count: number }[]
-                  )
+                ? toCategoryCounts(distributionAllQuery.data)
                 : classDistributionCounts;
         const allTypesGroup = { id: 'all', label: 'All types', data: allDistributionData };
 
@@ -550,9 +554,7 @@
             .map(({ id, label, query }) => ({
                 id,
                 label,
-                data: toCategoryCounts(
-                    query.data as { label_name: string; current_count: number }[]
-                )
+                data: toCategoryCounts(query.data)
             }))
             // Skip types with no matches in the current view so the picker stays clean.
             .filter((group) => group.data.length > 0);
@@ -571,7 +573,7 @@
     let histogramBinCount = $state(20);
 
     const metadataHistogramsQuery = useNumericMetadataDistribution(() => ({
-        collectionId: datasetId,
+        collectionId: collectionId,
         filter: imageAnnotationCountsFilter,
         binCount: histogramBinCount,
         enabled: distributionPanelVisible
