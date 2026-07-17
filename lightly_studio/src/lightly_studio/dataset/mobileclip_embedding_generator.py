@@ -22,7 +22,7 @@ MODEL_NAME = "mobileclip_s0"
 MOBILECLIP_DOWNLOAD_URL = (
     f"https://docs-assets.developer.apple.com/ml-research/datasets/mobileclip/{MODEL_NAME}.pt"
 )
-MAX_BATCH_SIZE: int = 16
+MAX_BATCH_SIZE: int = 128
 EMBEDDING_DIMENSION: int = 512
 
 
