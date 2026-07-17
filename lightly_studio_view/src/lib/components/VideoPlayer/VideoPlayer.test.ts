@@ -153,4 +153,18 @@ describe('VideoPlayer', () => {
         expect(getByTestId('video-event-timeline')).toBeTruthy();
         expect(getByText('Jump')).toBeTruthy();
     });
+
+    it('shows the event bar with an add button in edit mode even without events', () => {
+        const { getByTestId } = render(VideoPlayer, {
+            props: {
+                src: 'test-video.mp4',
+                durationS: 10,
+                editableEvents: true,
+                onEventAdd: () => {}
+            }
+        });
+
+        expect(getByTestId('video-event-timeline')).toBeTruthy();
+        expect(getByTestId('add-event-button')).toBeTruthy();
+    });
 });

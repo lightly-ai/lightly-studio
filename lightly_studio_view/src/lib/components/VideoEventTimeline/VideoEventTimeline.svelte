@@ -26,6 +26,7 @@
      * />
      * ```
      */
+    import { Plus } from '@lucide/svelte';
     import { cn } from '$lib/utils/shadcn.js';
     import { assignEventLanes, type VideoEvent } from '$lib/utils';
 
@@ -42,6 +43,8 @@
         editable?: boolean;
         /** Called with the new span when an event edge finishes being edited. */
         onResize?: (event: VideoEvent, startTimeS: number, endTimeS: number) => void;
+        /** Called with a default span when the user requests a new event. */
+        onAddEvent?: (startTimeS: number, endTimeS: number) => void;
         /** Heading shown above the timeline. */
         title?: string;
         /** Whether to render the title/count header above the track. */
@@ -57,6 +60,7 @@
         onSeek,
         editable = false,
         onResize,
+        onAddEvent,
         title = 'Events',
         showHeader = true,
         class: className
@@ -68,6 +72,8 @@
     const MIN_BAR_WIDTH_PERCENT = 0.75;
     // Smallest span an edit may collapse an event to.
     const MIN_EVENT_DURATION_S = 0.1;
+    // Default length of an event created via the add button.
+    const DEFAULT_NEW_EVENT_DURATION_S = 1;
 
     type Span = { startTimeS: number; endTimeS: number };
     type Edge = 'start' | 'end';
@@ -159,13 +165,47 @@
         const span = pendingEdits[event.id];
         if (span) onResize?.(event, span.startTimeS, span.endTimeS);
     }
+
+    function addEvent() {
+        if (durationS <= 0) return;
+        const span = Math.min(DEFAULT_NEW_EVENT_DURATION_S, durationS);
+        let startTimeS = Math.min(Math.max(0, currentTimeS), durationS);
+        let endTimeS = startTimeS + span;
+        if (endTimeS > durationS) {
+            endTimeS = durationS;
+            startTimeS = Math.max(0, endTimeS - span);
+        }
+        onAddEvent?.(startTimeS, endTimeS);
+    }
+
+    const showAddButton = $derived(editable && onAddEvent != null && durationS > 0);
 </script>
 
 <div class={cn('flex flex-col gap-2', className)} data-testid="video-event-timeline">
-    {#if showHeader}
+    {#if showHeader || showAddButton}
         <div class="flex items-center justify-between text-xs text-muted-foreground">
-            <span class="font-medium">{title}</span>
-            <span>{events.length}</span>
+            {#if showHeader}
+                <span class="font-medium">{title}</span>
+            {:else}
+                <span></span>
+            {/if}
+            <div class="flex items-center gap-2">
+                {#if showHeader}
+                    <span>{events.length}</span>
+                {/if}
+                {#if showAddButton}
+                    <button
+                        type="button"
+                        class="flex items-center gap-1 rounded px-1.5 py-0.5 transition-colors hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        onclick={addEvent}
+                        aria-label="Add event"
+                        data-testid="add-event-button"
+                    >
+                        <Plus class="size-3.5" />
+                        Add event
+                    </button>
+                {/if}
+            </div>
         </div>
     {/if}
 

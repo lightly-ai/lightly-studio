@@ -126,4 +126,36 @@ describe('VideoEventTimeline', () => {
         // Playback follows the dragged edge so the frame at 2s is visible.
         expect(onSeek).toHaveBeenLastCalledWith(2);
     });
+
+    it('shows the add button only when editable with an onAddEvent handler', () => {
+        const { queryByTestId, rerender } = render(VideoEventTimeline, {
+            props: { events: [], durationS: 20, editable: false, onAddEvent: vi.fn() }
+        });
+        expect(queryByTestId('add-event-button')).toBeFalsy();
+
+        rerender({ events: [], durationS: 20, editable: true, onAddEvent: vi.fn() });
+        expect(queryByTestId('add-event-button')).toBeTruthy();
+    });
+
+    it('adds an event spanning from the current time with a default length', async () => {
+        const onAddEvent = vi.fn();
+        const { getByTestId } = render(VideoEventTimeline, {
+            props: { events: [], durationS: 20, currentTimeS: 3, editable: true, onAddEvent }
+        });
+
+        await fireEvent.click(getByTestId('add-event-button'));
+        // Default 1s span starting at the playhead (3s).
+        expect(onAddEvent).toHaveBeenCalledWith(3, 4);
+    });
+
+    it('clamps a new event that would overflow the end of the video', async () => {
+        const onAddEvent = vi.fn();
+        const { getByTestId } = render(VideoEventTimeline, {
+            props: { events: [], durationS: 10, currentTimeS: 10, editable: true, onAddEvent }
+        });
+
+        await fireEvent.click(getByTestId('add-event-button'));
+        // A 1s span can't start at 10s in a 10s video, so it is shifted back to end at 10s.
+        expect(onAddEvent).toHaveBeenCalledWith(9, 10);
+    });
 });
