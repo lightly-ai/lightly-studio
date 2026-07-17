@@ -35,11 +35,14 @@
     }: VideoControlsProps = $props();
 
     const SEEK_STEP_S = 5;
+    // Bespoke over the Shadcn <Button>: these overlay the video, so they need
+    // transparent backgrounds, white text, and a compact hit area rather than
+    // the design system's surface-oriented button styling.
     const buttonClass =
         'flex items-center rounded p-0.5 hover:text-white/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
     let trackEl: HTMLDivElement | null = $state(null);
-    let isDragging = $state(false);
+    let isDragging = false;
 
     const playedPercent = $derived(
         durationS > 0 ? clampPercent((currentTimeS / durationS) * 100) : 0
@@ -53,7 +56,7 @@
     function stopDragging(pointerId?: number) {
         if (!isDragging) return;
         isDragging = false;
-        if (pointerId !== undefined && trackEl?.hasPointerCapture?.(pointerId)) {
+        if (pointerId !== undefined && trackEl?.hasPointerCapture(pointerId)) {
             trackEl.releasePointerCapture(pointerId);
         }
     }
@@ -99,7 +102,7 @@
         onpointermove={handlePointerMove}
         onpointerup={(event) => stopDragging(event.pointerId)}
         onpointercancel={(event) => stopDragging(event.pointerId)}
-        onlostpointercapture={() => (isDragging = false)}
+        onlostpointercapture={() => stopDragging()}
         onkeydown={handleKeyDown}
     >
         <div class="absolute top-1/2 h-1 w-full -translate-y-1/2 rounded-full bg-white/25"></div>
