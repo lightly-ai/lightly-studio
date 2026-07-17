@@ -43,6 +43,11 @@ vi.mock('$lib/hooks/useVideoFrames/useVideoFrames', () => ({ useVideoFrames: vi.
 vi.mock('$lib/hooks/useVideoFrameAnnotations/useVideoFrameAnnotations', () => ({
     useVideoFrameAnnotations: vi.fn(() => new Map())
 }));
+// Event editing needs a QueryClient; stub the mutation hook so the test runs
+// without a QueryClientProvider.
+vi.mock('$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation', () => ({
+    useUpdateAnnotationsMutation: vi.fn(() => ({ updateAnnotations: vi.fn() }))
+}));
 
 import VideoDetails from './VideoDetails.svelte';
 

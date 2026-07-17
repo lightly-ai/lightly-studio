@@ -1,5 +1,7 @@
 """Tests for updating the temporal span of an annotation."""
 
+from uuid import UUID
+
 import pytest
 from sqlmodel import Session
 
@@ -14,10 +16,10 @@ from tests.helpers_resolvers import create_annotation_label, create_collection, 
 
 def _create_event_annotation(
     db_session: Session,
-    collection_id: str,
+    collection_id: UUID,
     start_time_s: float,
     end_time_s: float,
-) -> str:
+) -> UUID:
     label = create_annotation_label(
         session=db_session, root_collection_id=collection_id, label_name="event"
     )
