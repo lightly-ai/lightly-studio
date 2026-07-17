@@ -27,6 +27,7 @@ from sqlmodel import Session
 from lightly_studio.core.dataset import BaseSampleDataset
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image import add_annotations, add_images
+from lightly_studio.core.image.add_images import BrokenImageCollector
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
@@ -308,10 +309,15 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         images_root = _normalize_input_path(path=images_root)
         masks_path = _normalize_input_path(path=masks_path)
 
+        # Pascal VOC opens every image to read its dimensions during the from_dirs folder scan,
+        # which happens here at construction (not lazily in get_labels). Skip a broken image with
+        # a warning instead of aborting the whole scan: this path only attaches annotations to
+        # images already in the dataset, so a broken image simply gets none attached here.
         label_input = PascalVOCSemanticSegmentationInput.from_dirs(
             images_dir=images_root,
             masks_dir=masks_path,
             class_id_to_name=class_id_to_name,
+            on_error=add_annotations.skip_and_warn_unreadable_image,
         )
         self.add_annotations_from_labelformat(
             input_labels=label_input,
@@ -568,10 +574,17 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         images_path = _normalize_input_path(path=images_path)
         masks_path = _normalize_input_path(path=masks_path)
 
+        # Pascal VOC opens every image to read its dimensions during the from_dirs folder scan,
+        # which happens here at construction (not lazily in get_images/get_labels). Record broken
+        # images through the same collector that load_into_dataset_from_labelformat uses for the
+        # lazy formats, so the scan does not abort and the broken images land in its report.
+        broken_image_collector = BrokenImageCollector()
+
         label_input = PascalVOCSemanticSegmentationInput.from_dirs(
             images_dir=images_path,
             masks_dir=masks_path,
             class_id_to_name=class_id_to_name,
+            on_error=broken_image_collector,
         )
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
@@ -581,6 +594,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             images_path=images_path,
             collection_name=annotation_source,
             limit=limit,
+            broken_image_collector=broken_image_collector,
         )
 
         _postprocess_created_images(

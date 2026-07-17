@@ -176,6 +176,7 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
     images_path: PathLike,
     collection_name: str | None = None,
     limit: int | None = None,
+    broken_image_collector: BrokenImageCollector | None = None,
 ) -> list[UUID]:
     """Load samples and their annotations from a labelformat input into the dataset.
 
@@ -186,6 +187,8 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
         images_path: The path to the directory containing the images.
         collection_name: Optional name for the annotation collection.
         limit: Maximum number of samples to load. By default, all samples are loaded.
+        broken_image_collector: Collector from a caller's construction-time scan (Pascal VOC),
+            so its broken images share this run's report. When ``None``, one is created here.
 
     Returns:
         A list of UUIDs of the created samples.
@@ -198,8 +201,10 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
     images_root_abs = add_annotations.normalize_images_root(images_root=images_path)
 
     # Some formats open images to read the dimensions during the get_images() and get_labels() scans
-    # Collector is used to record BROKEN images and skip, preventing abort of the ingest.
-    broken_image_collector = BrokenImageCollector()
+    # Collector is used to record BROKEN images and skip, preventing abort of the ingest. Pascal VOC
+    # scans at construction and passes its collector in, so its report is reused here.
+    if broken_image_collector is None:
+        broken_image_collector = BrokenImageCollector()
     report = broken_image_collector.report
     input_labels.on_error = broken_image_collector  # type: ignore[union-attr]
 
