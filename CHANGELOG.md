@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python SDK: Allow embedding video frames by adding the `embed_frames` parameter to `VideoDataset.add_videos_from_path` and `VideoDataset.add_videos_from_youtube_vis`.
 - Python dataset queries can now filter annotation evaluation results for false positives and false negatives.
 - Show numeric metadata values in distribution panel.
+- Add a selector for the numeric metadata histogram bin count.
 
 
 ### Changed

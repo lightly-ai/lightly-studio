@@ -568,10 +568,14 @@
     // collection (stable axis); counts track the active filters — the query
     // refetches whenever the grid filter changes. Each key's own metadata
     // filter is excluded server-side (faceted-search behavior). Disabled while
-    // the distribution panel is closed so it doesn't fetch in the background.
+    // the distribution panel is closed to avoid background fetching.
+    // User-configurable bin count for the metadata histograms.
+    let histogramBinCount = $state(20);
+
     const metadataHistogramsQuery = useNumericMetadataDistribution(() => ({
         collectionId: collectionId,
         filter: imageAnnotationCountsFilter,
+        binCount: histogramBinCount,
         enabled: distributionPanelVisible
     }));
     // query.data is already Record<string, HistogramData> — the hook applies
@@ -806,6 +810,9 @@
                                         distributionCountMode = mode;
                                     }}
                                     onHistogramRangeSelect={handleDistributionHistogramRangeSelect}
+                                    {histogramBinCount}
+                                    onHistogramBinCountChange={(binCount) =>
+                                        (histogramBinCount = binCount)}
                                 />
                             {/await}
                         {/if}
