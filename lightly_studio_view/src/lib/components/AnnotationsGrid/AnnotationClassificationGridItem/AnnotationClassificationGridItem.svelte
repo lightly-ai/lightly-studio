@@ -1,6 +1,7 @@
 <script lang="ts">
     import {
         SampleType,
+        type AnnotationWithPayloadView,
         type ImageAnnotationView,
         type VideoFrameAnnotationView
     } from '$lib/api/lightly_studio_local';
@@ -8,10 +9,9 @@
     import { SelectableBox } from '$lib/components';
     import { useSettings } from '$lib/hooks/useSettings';
     import { getGridFrameURL, getGridImageURL, getGridThumbnailRequestSize } from '$lib/utils';
-    import type { ClassificationTile } from '../groupClassificationsBySample';
 
     interface Props {
-        tile: ClassificationTile;
+        annotation: AnnotationWithPayloadView;
         containerWidth: number;
         containerHeight: number;
         selected?: boolean;
@@ -20,7 +20,7 @@
     }
 
     let {
-        tile,
+        annotation,
         containerWidth,
         containerHeight,
         selected = false,
@@ -39,8 +39,8 @@
             globalThis.window?.devicePixelRatio || 1
         );
 
-        if (tile.representative.parent_sample_type === SampleType.IMAGE) {
-            const image = tile.representative.parent_sample_data as ImageAnnotationView;
+        if (annotation.parent_sample_type === SampleType.IMAGE) {
+            const image = annotation.parent_sample_data as ImageAnnotationView;
             return getGridImageURL({
                 sampleId: image.sample_id,
                 quality: $gridViewThumbnailQualityStore,
@@ -50,7 +50,7 @@
             });
         }
 
-        const videoFrame = tile.representative.parent_sample_data as VideoFrameAnnotationView;
+        const videoFrame = annotation.parent_sample_data as VideoFrameAnnotationView;
         return getGridFrameURL({
             sampleId: videoFrame.sample_id,
             quality: $gridViewThumbnailQualityStore,
@@ -59,7 +59,6 @@
         });
     }
 
-    const annotations = $derived(tile.allAnnotations.map((annotation) => annotation.annotation));
     const thumbnailStyle = $derived(
         `width: ${containerWidth}px; height: ${containerHeight}px; background-image: url("${getThumbnailUrl()}"); background-position: center; background-size: contain; background-repeat: no-repeat;`
     );
@@ -77,6 +76,6 @@
         </div>
     {/if}
 
-    <!-- Classification tiles aggregate multiple label annotations onto a single sample thumbnail. -->
-    <SampleClassificationPills sample={{ annotations }} />
+    <!-- One classification tile shows exactly one label annotation. -->
+    <SampleClassificationPills sample={{ annotations: [annotation.annotation] }} />
 </div>

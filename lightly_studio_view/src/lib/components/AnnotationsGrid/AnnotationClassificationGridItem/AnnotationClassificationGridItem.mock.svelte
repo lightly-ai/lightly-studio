@@ -1,16 +1,16 @@
 <script lang="ts">
-    import type { ClassificationTile } from '../groupClassificationsBySample';
+    import type { AnnotationWithPayloadView } from '$lib/api/lightly_studio_local';
 
     interface Props {
-        tile: ClassificationTile;
+        annotation: AnnotationWithPayloadView;
         selected?: boolean;
     }
 
-    let { tile, selected = false }: Props = $props();
+    let { annotation, selected = false }: Props = $props();
 </script>
 
 <div
     data-testid="mock-classification-grid-item"
-    data-sample-id={tile.sampleId}
+    data-annotation-id={annotation.annotation.sample_id}
     data-selected={selected}
 ></div>
