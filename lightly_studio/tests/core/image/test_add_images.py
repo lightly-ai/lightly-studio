@@ -8,7 +8,6 @@ from pathlib import Path
 from uuid import UUID
 
 import pytest
-from labelformat import utils
 from labelformat.formats.labelformat import LabelformatObjectDetectionInput
 from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation
 from labelformat.model.bounding_box import BoundingBox
@@ -24,7 +23,6 @@ from labelformat.model.object_detection import (
     ObjectDetectionInput,
     SingleObjectDetection,
 )
-from labelformat.utils import ImageDimensionError
 from PIL import Image as PILImage
 from pytest_mock import MockerFixture
 from sqlmodel import Session
@@ -66,18 +64,18 @@ class CountingLabelInput(LabelformatObjectDetectionInput):
         return self.labels
 
 
-class FolderScanningLabelInput(ObjectDetectionInput):
-    """Minimal folder-scanning input mirroring labelformat folder formats.
+class ExplodingLabelInput(ObjectDetectionInput):
+    """Folder-scanning input whose scan raises a non-``ImageDimensionError`` via ``on_error``.
 
-    Both ``get_images`` and ``get_labels`` open every file via
-    ``get_image_dimensions`` and honor the settable ``on_error`` hook, so a
-    broken image is skipped instead of aborting iteration. This mirrors the
-    yolov8/kitti/lightly/pascalvoc/maskpair readers.
+    ``load_into_dataset_from_labelformat`` installs its own ``on_error`` hook on the input;
+    this stub invokes that hook with a ``ValueError`` to prove non-dimension errors propagate
+    instead of being recorded as ``BROKEN``. No real reader emits such an error through the
+    hook, so a stub is the only way to exercise this path. Broken/missing-image handling for
+    real folder formats is covered end-to-end by the YOLO tests.
     """
 
-    def __init__(self, images_dir: Path, filenames: list[str]) -> None:
+    def __init__(self, images_dir: Path) -> None:
         self._images_dir = images_dir
-        self._filenames = filenames
         self.categories = [Category(id=0, name="dog")]
         self.on_error: Callable[[Path, Exception], None] | None = None
 
@@ -89,16 +87,10 @@ class FolderScanningLabelInput(ObjectDetectionInput):
         return self.categories
 
     def _scan(self) -> Iterable[Image]:
-        for image_id, filename in enumerate(self._filenames):
-            path = self._images_dir / filename
-            try:
-                width, height = utils.get_image_dimensions(str(path))
-            except ImageDimensionError as error:
-                if self.on_error is None:
-                    raise
-                self.on_error(Path(path), error)
-                continue
-            yield Image(id=image_id, filename=filename, width=width, height=height)
+        assert self.on_error is not None
+        self.on_error(self._images_dir / "boom.jpg", ValueError("boom"))
+        return
+        yield  # pragma: no cover - makes this a generator
 
     def get_images(self) -> Iterable[Image]:
         yield from self._scan()
@@ -264,60 +256,12 @@ def test_load_into_dataset_from_labelformat__records_missing_already_present_add
     assert "broken=0" in caplog.text
 
 
-def test_load_into_dataset_from_labelformat__records_broken_images_from_folder_scan(
-    db_session: Session, tmp_path: Path, caplog: pytest.LogCaptureFixture
-) -> None:
-    # Arrange: a folder-scanning format opens every image to read dimensions, so broken
-    # files surface via the on_error hook instead of aborting the scan.
-    collection = helpers_resolvers.create_collection(db_session)
-
-    good_name = "good.jpg"
-    PILImage.new("RGB", (100, 200)).save(str(tmp_path / good_name))
-
-    # 2 broken files: present on disk but not decodable.
-    broken_names = [f"broken{i}.jpg" for i in range(2)]
-    for name in broken_names:
-        (tmp_path / name).write_bytes(b"not a real image")
-
-    label_input = FolderScanningLabelInput(
-        images_dir=tmp_path, filenames=[good_name, *broken_names]
-    )
-
-    # Act
-    with caplog.at_level("INFO", logger="lightly_studio.core.file_outcome_report"):
-        sample_ids = add_images.load_into_dataset_from_labelformat(
-            session=db_session,
-            root_collection_id=collection.collection_id,
-            input_labels=label_input,
-            images_path=tmp_path,
-        )
-
-    # Assert: only the readable file becomes a sample; broken files are skipped, not created.
-    assert len(sample_ids) == 1
-    samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
-    ).samples
-    assert {sample.file_name for sample in samples} == {good_name}
-
-    # Assert: broken files are recorded once each despite the double folder scan.
-    assert "added=1" in caplog.text
-    assert "broken=2" in caplog.text
-
-
 def test_load_into_dataset_from_labelformat__reraises_non_image_dimension_error(
     db_session: Session, tmp_path: Path
 ) -> None:
     # Arrange: an input whose scan fails with an error that is not an ImageDimensionError.
     collection = helpers_resolvers.create_collection(db_session)
-
-    class ExplodingLabelInput(FolderScanningLabelInput):
-        def _scan(self) -> Iterable[Image]:
-            assert self.on_error is not None
-            self.on_error(Path(self._images_dir / "boom.jpg"), ValueError("boom"))
-            return
-            yield  # pragma: no cover - makes this a generator
-
-    label_input = ExplodingLabelInput(images_dir=tmp_path, filenames=[])
+    label_input = ExplodingLabelInput(images_dir=tmp_path)
 
     # Act / Assert: a non-file-outcome error must propagate rather than be recorded as broken.
     with pytest.raises(ValueError, match="boom"):
