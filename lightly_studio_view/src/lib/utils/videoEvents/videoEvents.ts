@@ -1,4 +1,4 @@
-import type { AnnotationView } from '$lib/api/lightly_studio_local';
+import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
 import { getColorByLabel } from '$lib/utils/getColorByLabel';
 
 /**
@@ -43,7 +43,7 @@ export function toVideoEvents(annotations: AnnotationView[] = []): VideoEvent[] 
     return annotations
         .filter(
             (annotation) =>
-                annotation.annotation_type === 'classification' &&
+                annotation.annotation_type === AnnotationType.CLASSIFICATION &&
                 annotation.temporal_span_details != null
         )
         .map((annotation) => {
