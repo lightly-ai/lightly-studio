@@ -1,19 +1,42 @@
 from __future__ import annotations
 
+import logging
 import posixpath
 from pathlib import Path
 
+import pytest
 from labelformat.formats.labelformat import LabelformatObjectDetectionInput
 from labelformat.model.bounding_box import BoundingBox
 from labelformat.model.category import Category
 from labelformat.model.image import Image
 from labelformat.model.object_detection import ImageObjectDetection, SingleObjectDetection
+from labelformat.utils import ImageDimensionError
 from sqlmodel import Session
 
 from lightly_studio.core.image import add_annotations
 from lightly_studio.resolvers import annotation_resolver, image_resolver
 from tests import helpers_resolvers
 from tests.helpers_resolvers import ImageStub
+
+
+def test_skip_and_warn_unreadable_image__warns_on_image_dimension_error(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    with caplog.at_level(logging.WARNING):
+        add_annotations.skip_and_warn_unreadable_image(
+            Path("broken.jpg"), ImageDimensionError("bad header", path="broken.jpg")
+        )
+
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert any(
+        "unreadable image" in r.getMessage() and "broken.jpg" in r.getMessage() for r in warnings
+    )
+
+
+def test_skip_and_warn_unreadable_image__reraises_other_error() -> None:
+    # A non-dimension error is a bug or infra failure and must propagate, not be swallowed.
+    with pytest.raises(ValueError, match="boom"):
+        add_annotations.skip_and_warn_unreadable_image(Path("x.jpg"), ValueError("boom"))
 
 
 def test_add_annotations_from_labelformat__resolved_path_and_collection_name(
