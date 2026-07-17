@@ -309,9 +309,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         masks_path = _normalize_input_path(path=masks_path)
 
         # Pascal VOC opens every image to read its dimensions during the from_dirs folder scan,
-        # which happens here at construction (not lazily in get_labels). Skip a broken image
-        # instead of aborting: it is already in the dataset (and was recorded BROKEN at ingest),
-        # so here it simply gets no annotation attached.
+        # which happens here at construction (not lazily in get_labels). Skip a broken image with
+        # a warning instead of aborting the whole scan: this path only attaches annotations to
+        # images already in the dataset, so a broken image simply gets none attached here.
         label_input = PascalVOCSemanticSegmentationInput.from_dirs(
             images_dir=images_root,
             masks_dir=masks_path,
