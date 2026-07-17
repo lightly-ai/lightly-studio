@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/svelte';
+import { createRawSnippet } from 'svelte';
 import { describe, expect, it, vi } from 'vitest';
 import BarChart from './BarChart.svelte';
 import { balanced, empty } from './fixtures';
@@ -43,6 +44,20 @@ describe('BarChart', () => {
     it('renders the empty state when there is no data', () => {
         render(BarChart, { props: { data: empty } });
         expect(screen.getByTestId('bar-chart-empty')).toBeInTheDocument();
+    });
+
+    it('renders the default empty message when no emptyState snippet is provided', () => {
+        render(BarChart, { props: { data: empty } });
+        expect(screen.getByTestId('bar-chart-empty')).toHaveTextContent('No data to display.');
+    });
+
+    it('renders a custom emptyState snippet instead of the default message', () => {
+        const emptyState = createRawSnippet(() => ({
+            render: () => '<span data-testid="custom-empty">Custom empty message</span>'
+        }));
+        render(BarChart, { props: { data: empty, emptyState } });
+        expect(screen.getByTestId('custom-empty')).toBeInTheDocument();
+        expect(screen.queryByText('No data to display.')).not.toBeInTheDocument();
     });
 
     it('renders the chart container for non-empty data', () => {
