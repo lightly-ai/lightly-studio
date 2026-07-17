@@ -32,7 +32,7 @@
     let frameRequestId: number | null = $state(null);
 
     // Imported events: classification annotations on the video carrying a time span.
-    const videoEvents = $derived(toVideoEvents((video.sample as SampleView)?.annotations ?? []));
+    const videoEvents = $derived(toVideoEvents(video.sample.annotations ?? []));
 
     const {
         currentFrame,
