@@ -493,6 +493,8 @@ describe('DatasetDistributionPanel', () => {
                 '50 bins'
             )
         );
+    });
+
     it('calls onHistogramBinCountChange with the selected count when the user picks a new value', async () => {
         const onHistogramBinCountChange = vi.fn();
         const user = userEvent.setup();
