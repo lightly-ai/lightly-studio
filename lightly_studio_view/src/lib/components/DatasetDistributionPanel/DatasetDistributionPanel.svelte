@@ -238,6 +238,7 @@
                     size="xs"
                     class="w-24"
                     testId="dataset-distribution-bin-count"
+                    selectProps={{ 'aria-label': 'Histogram bin count' }}
                     onValueChange={(value) => onHistogramBinCountChange(Number(value))}
                 />
             {/if}
