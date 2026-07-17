@@ -420,4 +420,39 @@ describe('DatasetDistributionPanel', () => {
 
         expect(onHistogramRangeSelect).toHaveBeenCalledWith('confidence', { min: 0.5, max: 1 });
     });
+
+    const histogramSources: DistributionSource[] = [
+        {
+            id: 'metadata',
+            label: 'Metadata',
+            groupLabel: 'Metadata key',
+            valueNoun: 'samples',
+            groups: [
+                {
+                    id: 'confidence',
+                    label: 'confidence',
+                    histogram: { binEdges: [0, 0.5, 1], counts: [30, 70] }
+                }
+            ]
+        }
+    ];
+
+    it('shows the bin-count select only when a change handler is provided', () => {
+        render(DatasetDistributionPanel, { props: { sources: histogramSources } });
+        expect(screen.queryByTestId('dataset-distribution-bin-count')).not.toBeInTheDocument();
+    });
+
+    it('renders the bin-count select with the applied bin count', () => {
+        // Opening the bits-ui dropdown itself is not reliable in jsdom; the
+        // change wiring is a one-line callback covered by types.
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: histogramSources,
+                histogramBinCount: 50,
+                onHistogramBinCountChange: vi.fn()
+            }
+        });
+
+        expect(screen.getByTestId('dataset-distribution-bin-count')).toHaveTextContent('50 bins');
+    });
 });
