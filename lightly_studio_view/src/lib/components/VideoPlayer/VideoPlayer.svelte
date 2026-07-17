@@ -69,6 +69,12 @@
          * loads.
          */
         durationS?: number;
+
+        /** Allow dragging event edges on the event bar to edit their time span. */
+        editableEvents?: boolean;
+
+        /** Called with the new span when an event edge finishes being edited. */
+        onEventResize?: (event: VideoEvent, startTimeS: number, endTimeS: number) => void;
     }
 
     let {
@@ -78,7 +84,9 @@
         hoverClass = 'outline outline-2 outline-blue-500',
         startTimeS = 0,
         events = [],
-        durationS
+        durationS,
+        editableEvents = false,
+        onEventResize
     }: VideoPlayerProps = $props();
 
     const defaultVideoProps: HTMLVideoAttributes = {
@@ -199,6 +207,8 @@
                 durationS={effectiveDurationS}
                 currentTimeS={playback.currentTimeS}
                 onSeek={playback.seekTo}
+                editable={editableEvents}
+                onResize={onEventResize}
                 showHeader={false}
             />
         {/if}
