@@ -101,7 +101,7 @@
         <Button
             variant="ghost"
             icon={Maximize2Icon}
-            ariaLabel="Expand class distribution"
+            ariaLabel="Expand distribution"
             buttonProps={{
                 size: 'sm',
                 class: 'h-8 w-8 p-0',

@@ -71,7 +71,8 @@
     import {
         useSelectionSummary,
         useImageAnnotationCounts,
-        useImageAnnotationCountsQueryKey
+        useImageAnnotationCountsQueryKey,
+        useNumericMetadataDistribution
     } from '$lib/hooks';
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
     import { isInputElement } from '$lib/utils';
@@ -284,7 +285,9 @@
             : 'Search samples by description or image'
     );
 
-    const { metadataValues } = $derived.by(() => useMetadataFilters(collectionId));
+    const { metadataValues, metadataBounds, updateMetadataValues } = $derived.by(() =>
+        useMetadataFilters(collectionId)
+    );
     const { dimensionsValues } = useDimensions(collectionIdStore);
 
     const annotationLabelsQuery = useAnnotationLabels(() => ({
@@ -436,19 +439,15 @@
     // sources fetch classification / detection / segmentation counts on demand
     // while the panel is open. We map `current_count` so the plot tracks the
     // active filters, dropping labels with no matches in the current view.
-    const toCategoryCounts = (
-        countsData: { label_name: string; current_count: number }[] | undefined
-    ) =>
+    const toCategoryCounts = (countsData: unknown[] | undefined) =>
         (countsData ?? [])
-            .map((item) => ({
-                label: item.label_name,
-                count: Number(item.current_count)
-            }))
+            .map((item) => {
+                const row = item as { [key: string]: unknown };
+                return { label: String(row['label_name']), count: Number(row['current_count']) };
+            })
             .filter((item) => item.count > 0);
 
-    const classDistributionCounts = $derived(
-        toCategoryCounts(annotationCounts.data as { label_name: string; current_count: number }[])
-    );
+    const classDistributionCounts = $derived(toCategoryCounts(annotationCounts.data));
 
     const distributionPanelVisible = $derived($activePanel === 'distribution' && isImages);
 
@@ -494,34 +493,45 @@
         enabled: distributionPanelVisible
     }));
 
-    const allTypesSource = $derived<DistributionSource>({
-        id: 'all',
-        label: 'All types',
-        data: classDistributionCounts
-    });
+    // The panel's sources are the distribution *types* (class labels,
+    // metadata, …); the subset within a type (annotation type, metadata key)
+    // is the source's group, picked in a second, contextual dropdown.
 
-    const distributionSources = $derived.by<DistributionSource[]>(() => {
-        if (!distributionPanelVisible) return [allTypesSource];
+    // Class labels: one source, annotation types as groups. The per-type
+    // valueNoun from the count-mode work collapses to the source level: in
+    // Samples mode everything counts samples, otherwise annotations.
+    const classDistributionSource = $derived.by<DistributionSource>(() => {
+        const valueNoun =
+            distributionCountMode === AnnotationCountMode.SAMPLES ? 'samples' : 'annotations';
+        if (!distributionPanelVisible) {
+            return {
+                id: 'classes',
+                label: 'Annotation classes',
+                groupLabel: 'Annotation type',
+                valueNoun,
+                data: classDistributionCounts
+            };
+        }
 
-        // Use the distribution-specific "all" query so the "All types" source
+        const base = {
+            id: 'classes',
+            label: 'Annotation classes',
+            groupLabel: 'Annotation type',
+            valueNoun
+        };
+
+        // Use the distribution-specific "all" query so the "All types" group
         // respects distributionCountMode. Fall back to the shared counts while
         // the distribution query is still loading (data === undefined).
         const allDistributionData =
             distributionAllQuery.data !== undefined
-                ? toCategoryCounts(
-                      distributionAllQuery.data as { label_name: string; current_count: number }[]
-                  )
+                ? toCategoryCounts(distributionAllQuery.data)
                 : classDistributionCounts;
-        const allTypesDistributionSource: DistributionSource = {
-            id: 'all',
-            label: 'All types',
-            data: allDistributionData
-        };
+        const allTypesGroup = { id: 'all', label: 'All types', data: allDistributionData };
 
         const perType: {
             id: AnnotationType;
             label: string;
-            valueNoun?: string;
             query: ReturnType<typeof useImageAnnotationCounts>;
         }[] = [
             {
@@ -532,32 +542,89 @@
             {
                 id: AnnotationType.OBJECT_DETECTION,
                 label: 'Object detection',
-                valueNoun:
-                    distributionCountMode === AnnotationCountMode.SAMPLES ? 'samples' : 'instances',
                 query: distributionObjectDetectionQuery
             },
             {
                 id: AnnotationType.SEGMENTATION_MASK,
                 label: 'Segmentation',
-                valueNoun:
-                    distributionCountMode === AnnotationCountMode.SAMPLES ? 'samples' : 'instances',
                 query: distributionSegmentationQuery
             }
         ];
-        const typeSources: DistributionSource[] = [];
-        for (const { id, label, valueNoun, query } of perType) {
-            const data = toCategoryCounts(
-                query.data as { label_name: string; current_count: number }[]
-            );
-            // Skip types with no matches in the current view so the selector stays clean.
-            if (data.length > 0) typeSources.push({ id, label, data, valueNoun });
-        }
-        // With a single type, "All types" would just duplicate it — show only
-        // the type so the panel's selector stays hidden.
-        if (typeSources.length <= 1)
-            return typeSources.length === 1 ? typeSources : [allTypesDistributionSource];
-        return [allTypesDistributionSource, ...typeSources];
+        const typeGroups = perType
+            .map(({ id, label, query }) => ({
+                id,
+                label,
+                data: toCategoryCounts(query.data)
+            }))
+            // Skip types with no matches in the current view so the picker stays clean.
+            .filter((group) => group.data.length > 0);
+        // With zero or one populated type, "All types" would just duplicate it —
+        // drop the group picker entirely.
+        if (typeGroups.length <= 1) return { ...base, data: allDistributionData };
+        return { ...base, groups: [allTypesGroup, ...typeGroups] };
     });
+
+    // Numeric metadata fields as histogram groups. Bin edges span the full
+    // collection (stable axis); counts track the active filters — the query
+    // refetches whenever the grid filter changes. Each key's own metadata
+    // filter is excluded server-side (faceted-search behavior). Disabled while
+    // the distribution panel is closed so it doesn't fetch in the background.
+    const metadataHistogramsQuery = useNumericMetadataDistribution(() => ({
+        collectionId: collectionId,
+        filter: imageAnnotationCountsFilter,
+        enabled: distributionPanelVisible
+    }));
+    // query.data is already Record<string, HistogramData> — the hook applies
+    // selectDistributions internally via the TanStack Query `select` option.
+    const metadataDistributions = $derived(metadataHistogramsQuery.data ?? {});
+
+    const metadataDistributionSource = $derived.by<DistributionSource | null>(() => {
+        const keys = Object.keys(metadataDistributions);
+        if (keys.length === 0) return null;
+        return {
+            id: 'metadata',
+            label: 'Metadata',
+            groupLabel: 'Metadata key',
+            valueNoun: 'samples',
+            groups: keys.map((key) => ({
+                id: key,
+                label: key,
+                histogram: metadataDistributions[key],
+                // Highlight the active filter range; bins outside it dim.
+                selectedRange: $metadataValues[key]
+            }))
+        };
+    });
+
+    // Selecting a histogram range (bin click or press-drag-release) narrows
+    // the metadata filter for that key; re-selecting the current range resets it.
+    const handleDistributionHistogramRangeSelect = (
+        metadataKey: string,
+        range: { min: number; max: number }
+    ) => {
+        const bound = $metadataBounds[metadataKey];
+        if (!bound) return;
+        const current = $metadataValues[metadataKey];
+        // Clamp first, then compare: the stored value is always clamped to
+        // bound, so checking raw range.min/max would miss re-clicks on bins
+        // whose edges fall outside the collection's value range.
+        const clampedMin = Math.max(range.min, bound.min);
+        const clampedMax = Math.min(range.max, bound.max);
+        const isBinAlreadySelected =
+            current && current.min === clampedMin && current.max === clampedMax;
+        updateMetadataValues({
+            ...$metadataValues,
+            [metadataKey]: isBinAlreadySelected
+                ? { min: bound.min, max: bound.max }
+                : { min: clampedMin, max: clampedMax }
+        });
+    };
+
+    const distributionSources = $derived<DistributionSource[]>(
+        metadataDistributionSource
+            ? [classDistributionSource, metadataDistributionSource]
+            : [classDistributionSource]
+    );
 </script>
 
 <div class="flex-none">
@@ -738,6 +805,7 @@
                                     onCountModeChange={(mode) => {
                                         distributionCountMode = mode;
                                     }}
+                                    onHistogramRangeSelect={handleDistributionHistogramRangeSelect}
                                 />
                             {/await}
                         {/if}
