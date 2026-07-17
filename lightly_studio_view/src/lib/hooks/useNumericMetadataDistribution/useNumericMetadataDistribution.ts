@@ -21,15 +21,17 @@ export const selectDistributions = (
         ])
     );
 
+export interface NumericMetadataHistogramOptions {
+    collectionId: string;
+    filter?: ImageFilter;
+    binCount?: number;
+}
+
 export const getNumericMetadataHistogramRequestOptions = ({
     collectionId,
     filter,
     binCount
-}: {
-    collectionId: string;
-    filter?: ImageFilter;
-    binCount?: number;
-}) => ({
+}: NumericMetadataHistogramOptions) => ({
     path: { collection_id: collectionId },
     ...(filter || binCount
         ? {

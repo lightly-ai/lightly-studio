@@ -108,6 +108,16 @@
 {#if data.length === 0}
     <div class="p-8 text-center text-sm text-muted-foreground" data-testid="bar-chart-empty">
         No data to display.
+        <br />Check the
+        <a
+            href="https://docs.lightly.ai/studio/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-primary underline-offset-4 hover:underline"
+        >
+            documentation
+        </a>
+        to learn how to add data.
     </div>
 {:else}
     <div
