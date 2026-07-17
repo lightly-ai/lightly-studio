@@ -21,6 +21,28 @@ export const selectDistributions = (
         ])
     );
 
+export interface NumericMetadataHistogramOptions {
+    collectionId: string;
+    filter?: ImageFilter;
+    binCount?: number;
+}
+
+export const getNumericMetadataHistogramRequestOptions = ({
+    collectionId,
+    filter,
+    binCount
+}: NumericMetadataHistogramOptions) => ({
+    path: { collection_id: collectionId },
+    ...(filter || binCount
+        ? {
+              body: {
+                  ...(filter ? { filters: filter } : {}),
+                  ...(binCount ? { bin_count: binCount } : {})
+              }
+          }
+        : {})
+});
+
 /**
  * Queries the value-distribution histograms of all numeric metadata fields of
  * a collection, keyed by metadata name.
@@ -33,23 +55,30 @@ export const selectDistributions = (
  * filter changes.
  *
  * Accepts a reactive factory function (same pattern as `useImageAnnotationCounts`)
- * so that `collectionId`, `filter`, and `enabled` are re-read inside the
+ * so that `collectionId`, `filter`, `binCount`, and `enabled` are re-read inside the
  * TanStack Query reactive context on every change.
  *
  * @param getOptions - Factory returning the query options. Called reactively by
  *   TanStack Query whenever any reactive dependency inside it changes.
  */
 export const useNumericMetadataDistribution = (
-    getOptions: () => { collectionId: string; filter?: ImageFilter; enabled?: boolean }
+    getOptions: () => {
+        collectionId: string;
+        filter?: ImageFilter;
+        /** Number of equal-width bins per histogram (server default: 20). */
+        binCount?: number;
+        enabled?: boolean;
+    }
 ) =>
     createQuery(() => {
-        const { collectionId, filter, enabled = true } = getOptions();
-        // Computed inside the reactive function so a change to collectionId or
-        // filter updates the query key and triggers a refetch.
-        const requestOptions = {
-            path: { collection_id: collectionId },
-            ...(filter ? { body: { filters: filter } } : {})
-        };
+        const { collectionId, filter, binCount, enabled = true } = getOptions();
+        // Computed inside the reactive function so a change to collectionId,
+        // filter, or binCount updates the query key and triggers a refetch.
+        const requestOptions = getNumericMetadataHistogramRequestOptions({
+            collectionId,
+            filter,
+            binCount
+        });
         return {
             ...getMetadataHistogramsOptions(requestOptions),
             enabled,

@@ -400,6 +400,128 @@ class TestDataset:
         assert len(samples) == 1
         assert len(samples[0].sample_table.embeddings) == 0
 
+    def test_add_samples_from_yolo__records_broken_image(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        # YOLO opens every image to read its dimensions during the get_images()/get_labels()
+        # folder scans, so a broken image must be recorded as BROKEN and skipped instead of
+        # aborting the ingest.
+        annotations_path = tmp_path / "data.yaml"
+        annotations_path.write_text(yaml.dump(get_yolo_yaml_dict_valid()))
+
+        images_path_train = tmp_path / "train" / "images"
+        labels_path_train = tmp_path / "train" / "labels"
+        _create_sample_images([images_path_train / "good.jpg"])
+        _create_sample_labels([labels_path_train / "good.txt"])
+
+        # A broken image: present on disk but not decodable, with a matching label file.
+        (images_path_train / "broken.jpg").write_bytes(b"not a real image")
+        _create_sample_labels([labels_path_train / "broken.txt"])
+
+        dataset = ImageDataset.create(name="test_dataset")
+        with caplog.at_level("INFO", logger="lightly_studio.core.file_outcome_report"):
+            dataset.add_samples_from_yolo(
+                data_yaml=annotations_path, input_split="train", embed=False
+            )
+
+        # Only the readable image becomes a sample; the broken one is skipped, not created.
+        samples = list(dataset)
+        assert [sample.file_name for sample in samples] == ["good.jpg"]
+
+        # The broken image is recorded in the end-of-run summary.
+        assert "added=1" in caplog.text
+        assert "broken=1" in caplog.text
+
+    @pytest.mark.parametrize(
+        ("image_state", "annotation_state", "probe_added", "probe_annotations", "broken_count"),
+        [
+            # A decodable image with a valid label: added and annotated.
+            ("healthy", "healthy", True, 1, 0),
+            # A decodable image whose label content is malformed: added, but the unparsable
+            # entries are dropped, so it carries no annotation.
+            ("healthy", "broken", True, 0, 0),
+            # A decodable image with no label file: get_labels() skips it, so it is never
+            # offered for sample creation and no sample is added.
+            ("healthy", "missing", False, 0, 0),
+            # An undecodable image: recorded BROKEN and skipped during the folder scan,
+            # regardless of its label state.
+            ("broken", "healthy", False, 0, 1),
+            ("broken", "broken", False, 0, 1),
+            ("broken", "missing", False, 0, 1),
+            # An image absent from the folder: never discovered by the scan, so its label (if
+            # any) is a solitary label that YOLO ignores. Nothing is added or recorded.
+            ("missing", "healthy", False, 0, 0),
+            ("missing", "broken", False, 0, 0),
+            ("missing", "missing", False, 0, 0),
+        ],
+    )
+    def test_add_samples_from_yolo__image_x_annotation_matrix(  # noqa: PLR0913
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+        image_state: str,
+        annotation_state: str,
+        probe_added: bool,
+        probe_annotations: int,
+        broken_count: int,
+    ) -> None:
+        # End-to-end coverage of every combination of a healthy/broken/missing image with a
+        # healthy/broken/missing annotation. A guaranteed-healthy "anchor" pair is always
+        # present so the run never fails with AllInputFilesFailedError and each probe outcome
+        # is asserted in isolation.
+        annotations_path = tmp_path / "data.yaml"
+        annotations_path.write_text(
+            yaml.dump({"train": "../train/images", "nc": 1, "names": ["c"]})
+        )
+
+        images_path = tmp_path / "train" / "images"
+        labels_path = tmp_path / "train" / "labels"
+        images_path.mkdir(parents=True, exist_ok=True)
+        labels_path.mkdir(parents=True, exist_ok=True)
+
+        # Anchor: a decodable image with a single valid box.
+        Image.new("RGB", (10, 10)).save(images_path / "anchor.jpg")
+        (labels_path / "anchor.txt").write_text("0 0.5 0.5 0.4 0.4\n")
+
+        # Probe image.
+        if image_state == "healthy":
+            Image.new("RGB", (10, 10)).save(images_path / "probe.jpg")
+        elif image_state == "broken":
+            (images_path / "probe.jpg").write_bytes(b"not a real image")
+        # "missing": no probe image file is created.
+
+        # Probe annotation.
+        if annotation_state == "healthy":
+            (labels_path / "probe.txt").write_text("0 0.5 0.5 0.4 0.4\n")
+        elif annotation_state == "broken":
+            # Wrong field count: parsed, warned about, and dropped, leaving no annotation.
+            (labels_path / "probe.txt").write_text("not a valid yolo label line\n")
+        # "missing": no probe label file is created.
+
+        dataset = ImageDataset.create(name="test_dataset")
+        with caplog.at_level("INFO", logger="lightly_studio.core.file_outcome_report"):
+            dataset.add_samples_from_yolo(
+                data_yaml=annotations_path, input_split="train", embed=False
+            )
+
+        samples = list(dataset)
+        names = {sample.file_name for sample in samples}
+
+        # The anchor is always added; the probe is added only in the expected combinations.
+        assert "anchor.jpg" in names
+        assert ("probe.jpg" in names) == probe_added
+
+        # The anchor contributes one annotation; the probe adds its expected count on top.
+        total_annotations = sum(len(sample.sample_table.annotations) for sample in samples)
+        assert total_annotations == 1 + probe_annotations
+
+        # A broken probe image is recorded BROKEN exactly once; other states record none.
+        assert f"broken={broken_count}" in caplog.text
+
     def test_add_samples_from_yolo__coverage_includes_empty_label_file(
         self,
         patch_collection: None,  # noqa: ARG002

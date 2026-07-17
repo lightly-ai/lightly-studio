@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { X } from '@lucide/svelte';
+    import { Maximize2 as Maximize2Icon, X } from '@lucide/svelte';
     import { Button } from '$lib/components';
     import Typography from '$lib/components/Typography/Typography.svelte';
     import { Select, type SelectItem } from '$lib/components/Select';
@@ -8,9 +8,15 @@
     import { formatFloat, formatInteger } from '$lib/utils';
     import DistributionConfigDialog from './DistributionConfigDialog/DistributionConfigDialog.svelte';
     import ExpandDialog from './ExpandDialog/ExpandDialog.svelte';
+    import HistogramExpandDialog from './HistogramExpandDialog/HistogramExpandDialog.svelte';
     import PanelHeader from './PanelHeader/PanelHeader.svelte';
     import { selectVisibleCounts } from './selectVisibleCounts';
-    import type { DistributionConfig, DistributionSource, DistributionSourceGroup } from './types';
+    import {
+        HISTOGRAM_BIN_COUNT_ITEMS,
+        type DistributionConfig,
+        type DistributionSource,
+        type DistributionSourceGroup
+    } from './types';
     import { AnnotationCountMode } from '$lib/api/lightly_studio_local/types.gen';
 
     interface Props {
@@ -49,6 +55,10 @@
          * the matching filter to that range.
          */
         onHistogramRangeSelect?: (groupId: string, range: HistogramRange) => void;
+        /** Applied histogram bin count, controlled by the host (server default: 20). */
+        histogramBinCount?: number;
+        /** Called when the user picks a new histogram bin count. */
+        onHistogramBinCountChange?: (binCount: number) => void;
     }
 
     const {
@@ -60,7 +70,9 @@
         onBarClick,
         onCountModeChange,
         initialCountMode = AnnotationCountMode.OBJECTS,
-        onHistogramRangeSelect
+        onHistogramRangeSelect,
+        histogramBinCount = 20,
+        onHistogramBinCountChange
     }: Props = $props();
 
     // Normalise to a source list so the rest of the panel has one code path.
@@ -120,6 +132,12 @@
     });
     let configDialogOpen = $state(false);
     let expandOpen = $state(false);
+    let histogramExpandOpen = $state(false);
+
+    const binCountItems: SelectItem[] = HISTOGRAM_BIN_COUNT_ITEMS.map((count) => ({
+        value: String(count),
+        label: `${count} bins`
+    }));
     // Measured height of the chart viewport; drives the chart's height budget and
     // tracks container resizes (bind:clientHeight is backed by a ResizeObserver).
     let chartHeight = $state(0);
@@ -205,15 +223,41 @@
         </div>
     {/if}
     {#if activeHistogram}
-        <div
-            class="mt-2 text-xs text-muted-foreground"
-            data-testid="dataset-distribution-histogram-summary"
-        >
-            {formatInteger(histogramTotal)}
-            {valueNoun} · {activeHistogram.counts.length}
-            {activeHistogram.counts.length === 1 ? 'bin' : 'bins'} · {formatFloat(
-                activeHistogram.binEdges[0]
-            )}–{formatFloat(activeHistogram.binEdges[activeHistogram.binEdges.length - 1])}
+        <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
+            <span
+                class="text-xs text-muted-foreground"
+                data-testid="dataset-distribution-histogram-summary"
+            >
+                {formatInteger(histogramTotal)}
+                {valueNoun} · {activeHistogram.counts.length}
+                {activeHistogram.counts.length === 1 ? 'bin' : 'bins'} · {formatFloat(
+                    activeHistogram.binEdges[0]
+                )}–{formatFloat(activeHistogram.binEdges[activeHistogram.binEdges.length - 1])}
+            </span>
+            <div class="flex items-center gap-1">
+                {#if onHistogramBinCountChange}
+                    <Select
+                        items={binCountItems}
+                        value={String(histogramBinCount)}
+                        size="xs"
+                        class="w-24"
+                        testId="dataset-distribution-bin-count"
+                        selectProps={{ 'aria-label': 'Histogram bin count' }}
+                        onValueChange={(value) => onHistogramBinCountChange(Number(value))}
+                    />
+                {/if}
+                <Button
+                    variant="ghost"
+                    icon={Maximize2Icon}
+                    ariaLabel="Expand distribution"
+                    buttonProps={{
+                        size: 'sm',
+                        class: 'h-8 w-8 p-0',
+                        onclick: () => (histogramExpandOpen = true),
+                        'data-testid': 'dataset-distribution-histogram-expand'
+                    }}
+                />
+            </div>
         </div>
     {:else if activeData.length > 0}
         <PanelHeader
@@ -271,3 +315,15 @@
     onConfigChange={applyConfig}
     {onBarClick}
 />
+{#if activeHistogram}
+    <HistogramExpandDialog
+        bind:open={histogramExpandOpen}
+        data={activeHistogram}
+        label={activeGroup?.label ?? activeSource.label}
+        selectedRange={activeHistogramRange}
+        {valueNoun}
+        binCount={histogramBinCount}
+        onBinCountChange={onHistogramBinCountChange}
+        onRangeSelect={onHistogramRangeSelect ? handleHistogramRangeSelect : undefined}
+    />
+{/if}

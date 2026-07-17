@@ -13,6 +13,9 @@ export const DISTRIBUTION_SORT_LABELS: Record<DistributionSortOption, string> = 
 /** Bar layout for the distribution chart. */
 export type DistributionOrientation = 'vertical' | 'horizontal';
 
+/** Selectable bin counts for histogram sources (server default: 20). */
+export const HISTOGRAM_BIN_COUNT_ITEMS = [10, 20, 50, 100];
+
 /**
  * A selectable sub-group within a source. Used by sources that fan out into
  * several fields — e.g. one entry per metadata key.
