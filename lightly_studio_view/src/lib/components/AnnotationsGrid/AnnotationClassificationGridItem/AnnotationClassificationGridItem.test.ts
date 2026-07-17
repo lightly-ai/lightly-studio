@@ -26,33 +26,43 @@ vi.mock('$lib/utils', async (importOriginal) => {
     };
 });
 
+function buildAnnotation(
+    overrides: Partial<AnnotationWithPayloadView> = {}
+): AnnotationWithPayloadView {
+    return {
+        parent_sample_type: SampleType.IMAGE,
+        annotation: {
+            sample_id: 'ann-1',
+            annotation_type: AnnotationType.CLASSIFICATION,
+            annotation_label: { annotation_label_name: 'cat' },
+            annotation_collection_id: 'col-1',
+            parent_sample_id: 'img-1'
+        } as unknown as AnnotationView,
+        parent_sample_data: {
+            sample_id: 'img-1',
+            width: 800,
+            height: 600
+        } as unknown as ImageAnnotationView,
+        ...overrides
+    };
+}
+
+const defaultProps = {
+    containerWidth: 200,
+    containerHeight: 150,
+    showLabel: true,
+    cachedCollectionVersion: 'v1'
+};
+
+function renderItem(annotation: AnnotationWithPayloadView, props: Record<string, unknown> = {}) {
+    return render(AnnotationClassificationGridItem, {
+        props: { annotation, ...defaultProps, ...props }
+    });
+}
+
 describe('AnnotationClassificationGridItem', () => {
     it('renders thumbnail div and SampleClassificationPills for an image annotation', async () => {
-        const annotation = {
-            parent_sample_type: SampleType.IMAGE,
-            annotation: {
-                sample_id: 'ann-1',
-                annotation_type: AnnotationType.CLASSIFICATION,
-                annotation_label: { annotation_label_name: 'cat' },
-                annotation_collection_id: 'col-1',
-                parent_sample_id: 'img-1'
-            } as unknown as AnnotationView,
-            parent_sample_data: {
-                sample_id: 'img-1',
-                width: 800,
-                height: 600
-            } as unknown as ImageAnnotationView
-        } satisfies AnnotationWithPayloadView;
-
-        const { container } = render(AnnotationClassificationGridItem, {
-            props: {
-                annotation,
-                containerWidth: 200,
-                containerHeight: 150,
-                showLabel: true,
-                cachedCollectionVersion: 'v1'
-            }
-        });
+        const { container } = renderItem(buildAnnotation());
 
         await tick();
 
@@ -63,29 +73,14 @@ describe('AnnotationClassificationGridItem', () => {
     });
 
     it('renders thumbnail using frame URL for a video frame annotation', async () => {
-        const annotation = {
+        const annotation = buildAnnotation({
             parent_sample_type: SampleType.VIDEO_FRAME,
-            annotation: {
-                sample_id: 'ann-2',
-                annotation_type: AnnotationType.CLASSIFICATION,
-                annotation_label: { annotation_label_name: 'dog' },
-                annotation_collection_id: 'col-1',
-                parent_sample_id: 'frame-1'
-            } as unknown as AnnotationView,
             parent_sample_data: {
                 sample_id: 'frame-1',
                 video: { width: 1920, height: 1080, file_path_abs: '/video.mp4' }
             } as unknown as VideoFrameAnnotationView
-        } satisfies AnnotationWithPayloadView;
-
-        const { container } = render(AnnotationClassificationGridItem, {
-            props: {
-                annotation,
-                containerWidth: 200,
-                containerHeight: 150,
-                showLabel: true
-            }
         });
+        const { container } = renderItem(annotation);
 
         await tick();
 
@@ -94,131 +89,45 @@ describe('AnnotationClassificationGridItem', () => {
     });
 
     it('applies grid-item-selected class when selected is true', () => {
-        const annotation = {
-            parent_sample_type: SampleType.IMAGE,
-            annotation: {
-                sample_id: 'ann-3',
-                annotation_type: AnnotationType.CLASSIFICATION,
-                annotation_label: { annotation_label_name: 'cat' },
-                annotation_collection_id: 'col-1',
-                parent_sample_id: 'img-3'
-            } as unknown as AnnotationView,
-            parent_sample_data: {
-                sample_id: 'img-3',
-                width: 800,
-                height: 600
-            } as unknown as ImageAnnotationView
-        } satisfies AnnotationWithPayloadView;
-
-        const { container } = render(AnnotationClassificationGridItem, {
-            props: {
-                annotation,
-                containerWidth: 200,
-                containerHeight: 150,
-                showLabel: true,
-                selected: true
-            }
-        });
+        const { container } = renderItem(buildAnnotation(), { selected: true });
 
         expect(container.firstElementChild).toHaveAttribute('aria-selected', 'true');
     });
 
     it('hides SampleClassificationPills when showLabel is false', () => {
-        const annotation = {
-            parent_sample_type: SampleType.IMAGE,
-            annotation: {
-                sample_id: 'ann-4',
-                annotation_type: AnnotationType.CLASSIFICATION,
-                annotation_label: { annotation_label_name: 'cat' },
-                annotation_collection_id: 'col-1',
-                parent_sample_id: 'img-4'
-            } as unknown as AnnotationView,
-            parent_sample_data: {
-                sample_id: 'img-4',
-                width: 800,
-                height: 600
-            } as unknown as ImageAnnotationView
-        } satisfies AnnotationWithPayloadView;
-
-        render(AnnotationClassificationGridItem, {
-            props: {
-                annotation,
-                containerWidth: 200,
-                containerHeight: 150,
-                showLabel: false
-            }
-        });
+        renderItem(buildAnnotation(), { showLabel: false });
 
         expect(screen.queryByTestId('mock-classification-pills')).not.toBeInTheDocument();
     });
 
     it('passes only the single annotation to SampleClassificationPills', async () => {
-        const annotation = {
-            parent_sample_type: SampleType.IMAGE,
-            annotation: {
-                sample_id: 'ann-5',
-                annotation_type: AnnotationType.CLASSIFICATION,
-                annotation_label: { annotation_label_name: 'cat' },
-                annotation_collection_id: 'col-1',
-                parent_sample_id: 'img-5'
-            } as unknown as AnnotationView,
-            parent_sample_data: {
-                sample_id: 'img-5',
-                width: 800,
-                height: 600
-            } as unknown as ImageAnnotationView
-        } satisfies AnnotationWithPayloadView;
-
-        render(AnnotationClassificationGridItem, {
-            props: {
-                annotation,
-                containerWidth: 200,
-                containerHeight: 150,
-                showLabel: true
-            }
-        });
+        renderItem(buildAnnotation());
 
         await tick();
 
         const pills = screen.getByTestId('mock-classification-pills');
         // Exactly one annotation is passed — not all sibling labels for the parent sample.
         expect(pills).toHaveAttribute('data-annotation-count', '1');
-        expect(pills).toHaveAttribute('data-annotation-id', 'ann-5');
+        expect(pills).toHaveAttribute('data-annotation-id', 'ann-1');
     });
 
     it('calls onCropWindowChange with a full-image CropWindow (windowX/Y=0) once URL is available', async () => {
         const onCropWindowChange = vi.fn();
-        const annotation = {
-            parent_sample_type: SampleType.IMAGE,
-            annotation: {
-                sample_id: 'ann-6',
-                annotation_type: AnnotationType.CLASSIFICATION,
-                annotation_label: { annotation_label_name: 'cat' },
-                annotation_collection_id: 'col-1',
-                parent_sample_id: 'img-6'
-            } as unknown as AnnotationView,
+        const annotation = buildAnnotation({
             parent_sample_data: {
-                sample_id: 'img-6',
+                sample_id: 'img-1',
                 width: 1024,
                 height: 768
             } as unknown as ImageAnnotationView
-        } satisfies AnnotationWithPayloadView;
-
-        render(AnnotationClassificationGridItem, {
-            props: {
-                annotation,
-                containerWidth: 200,
-                containerHeight: 150,
-                showLabel: true,
-                onCropWindowChange
-            }
         });
+
+        renderItem(annotation, { onCropWindowChange });
 
         await tick();
 
         expect(onCropWindowChange).toHaveBeenCalledOnce();
         const [annotationId, cropWindow] = onCropWindowChange.mock.calls[0];
-        expect(annotationId).toBe('ann-6');
+        expect(annotationId).toBe('ann-1');
         expect(cropWindow.windowX).toBe(0);
         expect(cropWindow.windowY).toBe(0);
         expect(cropWindow.windowWidth).toBe(1024);
@@ -229,40 +138,15 @@ describe('AnnotationClassificationGridItem', () => {
 
     it('calls onCropWindowChange with null on unmount', async () => {
         const onCropWindowChange = vi.fn();
-        const annotation = {
-            parent_sample_type: SampleType.IMAGE,
-            annotation: {
-                sample_id: 'ann-7',
-                annotation_type: AnnotationType.CLASSIFICATION,
-                annotation_label: { annotation_label_name: 'cat' },
-                annotation_collection_id: 'col-1',
-                parent_sample_id: 'img-7'
-            } as unknown as AnnotationView,
-            parent_sample_data: {
-                sample_id: 'img-7',
-                width: 1024,
-                height: 768
-            } as unknown as ImageAnnotationView
-        } satisfies AnnotationWithPayloadView;
 
-        const { unmount } = render(AnnotationClassificationGridItem, {
-            props: {
-                annotation,
-                containerWidth: 200,
-                containerHeight: 150,
-                showLabel: true,
-                onCropWindowChange
-            }
-        });
+        const { unmount } = renderItem(buildAnnotation(), { onCropWindowChange });
 
         await tick();
-
         unmount();
-
         await tick();
 
         const lastCall = onCropWindowChange.mock.calls.at(-1);
-        expect(lastCall?.[0]).toBe('ann-7');
+        expect(lastCall?.[0]).toBe('ann-1');
         expect(lastCall?.[1]).toBeNull();
     });
 });

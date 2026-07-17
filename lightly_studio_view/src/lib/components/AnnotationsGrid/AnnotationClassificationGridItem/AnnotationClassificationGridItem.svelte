@@ -1,14 +1,9 @@
 <script lang="ts">
-    import {
-        SampleType,
-        type AnnotationWithPayloadView,
-        type ImageAnnotationView,
-        type VideoFrameAnnotationView
-    } from '$lib/api/lightly_studio_local';
+    import { type AnnotationWithPayloadView } from '$lib/api/lightly_studio_local';
     import { get } from 'svelte/store';
-    import { useSettings } from '$lib/hooks/useSettings';
+    import { useSettings } from '$lib/hooks';
     import SampleClassificationPills from '$lib/components/SampleClassificationPills/SampleClassificationPills.svelte';
-    import { getGridImageURL, getGridFrameURL, getGridThumbnailRequestSize } from '$lib/utils';
+    import { getThumbnailUrl, getSampleDimensions } from './getThumbnailData';
     import type { CropWindow } from '../AnnotationItem/renderCropObjectUrl';
 
     interface Props {
@@ -47,37 +42,17 @@
     // the annotation prop during effect cleanup after the grid array shrinks).
     const annotationId = annotation.annotation.sample_id;
 
-    const thumbnailUrl = $derived.by(() => {
-        const dpr = globalThis.window?.devicePixelRatio || 1;
-        const renderedWidth = getGridThumbnailRequestSize(containerWidth, dpr);
-        const renderedHeight = getGridThumbnailRequestSize(containerHeight, dpr);
-        if (annotation.parent_sample_type === SampleType.IMAGE) {
-            const image = annotation.parent_sample_data as ImageAnnotationView;
-            return getGridImageURL({
-                sampleId: image.sample_id,
-                quality,
-                renderedWidth,
-                renderedHeight,
-                cacheBuster: cachedCollectionVersion
-            });
-        }
-        const frame = annotation.parent_sample_data as VideoFrameAnnotationView;
-        return getGridFrameURL({
-            sampleId: frame.sample_id,
+    const thumbnailUrl = $derived(
+        getThumbnailUrl({
+            annotation,
             quality,
-            renderedWidth,
-            renderedHeight
-        });
-    });
+            containerWidth,
+            containerHeight,
+            cachedCollectionVersion
+        })
+    );
 
-    const sampleDimensions = $derived.by(() => {
-        if (annotation.parent_sample_type === SampleType.IMAGE) {
-            const image = annotation.parent_sample_data as ImageAnnotationView;
-            return { width: image.width, height: image.height };
-        }
-        const frame = annotation.parent_sample_data as VideoFrameAnnotationView;
-        return { width: frame.video.width, height: frame.video.height };
-    });
+    const sampleDimensions = $derived(getSampleDimensions(annotation));
 
     // Emit a full-image CropWindow so classification tiles participate in drag-to-search.
     // windowX/Y=0 covers the entire sample — there is no bounding box to crop for classification.
