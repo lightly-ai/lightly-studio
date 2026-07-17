@@ -7,20 +7,29 @@ import type { DistributionSource } from './types';
 import { AnnotationCountMode, AnnotationType } from '$lib/api/lightly_studio_local/types.gen';
 
 const echartsMock = vi.hoisted(() => {
+    const zrHandlers: Record<string, (event: { offsetX: number; offsetY: number }) => void> = {};
     const instance = {
         setOption: vi.fn(),
         resize: vi.fn(),
         dispose: vi.fn(),
-        on: vi.fn()
+        on: vi.fn(),
+        // 2 bins across a 200px-wide canvas → 100px per bin index.
+        convertFromPixel: vi.fn((_finder: unknown, offsetX: number) => offsetX / 100),
+        getZr: () => ({
+            on: (event: string, handler: (event: { offsetX: number; offsetY: number }) => void) => {
+                zrHandlers[event] = handler;
+            },
+            off: vi.fn()
+        })
     };
-    return { init: vi.fn(() => instance), instance };
+    return { init: vi.fn(() => instance), instance, zrHandlers };
 });
 
 vi.mock('echarts/core', () => ({
     init: echartsMock.init,
     use: vi.fn()
 }));
-vi.mock('echarts/charts', () => ({ BarChart: {} }));
+vi.mock('echarts/charts', () => ({ BarChart: {}, CustomChart: {} }));
 vi.mock('echarts/components', () => ({
     GridComponent: {},
     TooltipComponent: {}
@@ -54,7 +63,7 @@ describe('DatasetDistributionPanel', () => {
     it('renders the title and the class/annotation summary', () => {
         render(DatasetDistributionPanel, { props: defaultProps });
 
-        expect(screen.getByText('Class distribution')).toBeInTheDocument();
+        expect(screen.getByText('Distribution')).toBeInTheDocument();
         expect(
             screen.getByText('5 classes · sorted by count · 491 annotations')
         ).toBeInTheDocument();
@@ -185,6 +194,31 @@ describe('DatasetDistributionPanel', () => {
         expect(screen.queryByTestId('dataset-distribution-source-select')).not.toBeInTheDocument();
     });
 
+    it('defaults to the first source with content when a leading source is empty', () => {
+        const sources: DistributionSource[] = [
+            { id: 'all', label: 'All types', data: [], valueNoun: 'annotations' },
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                valueNoun: 'samples',
+                groups: [
+                    {
+                        id: 'confidence',
+                        label: 'confidence',
+                        histogram: { binEdges: [0, 0.5, 1], counts: [30, 70] }
+                    }
+                ]
+            }
+        ];
+        render(DatasetDistributionPanel, { props: { sources } });
+
+        // The empty "All types" source is skipped in favour of metadata.
+        expect(screen.getByTestId('histogram')).toBeInTheDocument();
+        expect(screen.getByTestId('dataset-distribution-histogram-summary')).toHaveTextContent(
+            '100 samples · 2 bins · 0–1'
+        );
+    });
+
     it('renders a close button only when onClose is provided and forwards clicks', async () => {
         const onClose = vi.fn();
         render(DatasetDistributionPanel, { props: { ...defaultProps, onClose } });
@@ -313,5 +347,77 @@ describe('DatasetDistributionPanel', () => {
         });
 
         expect(screen.getByText(/10 instances/)).toBeInTheDocument();
+    });
+
+    it('renders a histogram instead of a bar chart for a group carrying bins', () => {
+        const sources: DistributionSource[] = [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                groupLabel: 'Metadata key',
+                valueNoun: 'samples',
+                groups: [
+                    {
+                        id: 'confidence',
+                        label: 'confidence',
+                        histogram: { binEdges: [0, 0.5, 1], counts: [30, 70] }
+                    }
+                ]
+            }
+        ];
+        render(DatasetDistributionPanel, { props: { sources } });
+
+        expect(screen.getByTestId('histogram')).toBeInTheDocument();
+        expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
+        // Categorical controls (sort / top-N / orientation) don't apply to bins.
+        expect(screen.queryByText(/sorted by/)).not.toBeInTheDocument();
+    });
+
+    it('summarizes a histogram group with total count, bins and range', () => {
+        const sources: DistributionSource[] = [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                valueNoun: 'samples',
+                groups: [
+                    {
+                        id: 'confidence',
+                        label: 'confidence',
+                        histogram: { binEdges: [0, 0.5, 1], counts: [30, 70] }
+                    }
+                ]
+            }
+        ];
+        render(DatasetDistributionPanel, { props: { sources } });
+
+        expect(screen.getByTestId('dataset-distribution-histogram-summary')).toHaveTextContent(
+            '100 samples · 2 bins · 0–1'
+        );
+    });
+
+    it('forwards a histogram range selection as the group id and value interval', () => {
+        const onHistogramRangeSelect = vi.fn();
+        const sources: DistributionSource[] = [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                groupLabel: 'Metadata key',
+                valueNoun: 'samples',
+                groups: [
+                    {
+                        id: 'confidence',
+                        label: 'confidence',
+                        histogram: { binEdges: [0, 0.5, 1], counts: [30, 70] }
+                    }
+                ]
+            }
+        ];
+        render(DatasetDistributionPanel, { props: { sources, onHistogramRangeSelect } });
+
+        // Press and release over the second bin (offsetX 150 → index 1.5 → bin 1).
+        echartsMock.zrHandlers.mousedown({ offsetX: 150, offsetY: 10 });
+        window.dispatchEvent(new MouseEvent('mouseup'));
+
+        expect(onHistogramRangeSelect).toHaveBeenCalledWith('confidence', { min: 0.5, max: 1 });
     });
 });
