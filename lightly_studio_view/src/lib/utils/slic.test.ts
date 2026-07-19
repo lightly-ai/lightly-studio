@@ -5,7 +5,6 @@ import {
     getLabelAtPoint,
     getSlicComputeOptions,
     resolveSlicImageUrl,
-    upsampleCellMask,
     type SlicResult
 } from './slic';
 
@@ -69,12 +68,6 @@ describe('slic utilities', () => {
         expect(getLabelAtPoint(result, 3, 0)).toBe(1);
         expect(getLabelAtPoint(result, 0, 3)).toBe(2);
         expect(getLabelAtPoint(result, 3, 3)).toBe(3);
-    });
-
-    it('upsamples a selected cell back to the original image resolution', () => {
-        const mask = upsampleCellMask(makeResult(), 1);
-
-        expect(Array.from(mask)).toEqual([0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0]);
     });
 
     it('creates a low-resolution preview mask from touched labels', () => {

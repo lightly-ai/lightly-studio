@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { PUBLIC_SAMPLES_URL } from '$env/static/public';
     import type {
         AnnotationDetailsWithPayloadView,
         AnnotationUpdateInput,
@@ -7,7 +8,6 @@
     import SampleMetadata from '$lib/components/SampleMetadata/SampleMetadata.svelte';
     import { routeHelpers } from '$lib/routes';
     import type { Collection } from '$lib/services/types';
-    import { getImageURLById } from '$lib/utils';
     import AnnotationDetails from '../AnnotationDetails.svelte';
     import AnnotationViewSampleContainer from '../AnnotationViewSampleContainer/AnnotationViewSampleContainer.svelte';
     import { page } from '$app/state';
@@ -39,7 +39,7 @@
     parentSample={{
         width: image.width,
         height: image.height,
-        url: getImageURLById(image.sample.sample_id)
+        url: `${PUBLIC_SAMPLES_URL}/sample/${image.sample.sample_id}`
     }}
 >
     {#snippet parentSampleDetails()}

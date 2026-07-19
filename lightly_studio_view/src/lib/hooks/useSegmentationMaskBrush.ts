@@ -64,8 +64,6 @@ export function useSegmentationMaskBrush({
         lockedAnnotationIds?: Set<string>,
         options?: {
             deferDrawingReset?: boolean;
-            skipImageRefetch?: boolean;
-            refreshAnnotations?: (annotation: AnnotationView) => void | Promise<void>;
         }
     ): Promise<AnnotationView | null> => {
         if (!annotationLabelContext.isDrawing || !workingMask) {
@@ -73,8 +71,6 @@ export function useSegmentationMaskBrush({
         }
 
         const deferDrawingReset = options?.deferDrawingReset ?? false;
-        const skipImageRefetch = options?.skipImageRefetch ?? false;
-        const refreshAnnotations = options?.refreshAnnotations;
         if (!deferDrawingReset) {
             setIsDrawing(false);
         }
@@ -157,10 +153,7 @@ export function useSegmentationMaskBrush({
                         }
                     };
 
-                    if (!skipImageRefetch) {
-                        refetch();
-                    }
-                    await refreshAnnotations?.(updatedAnnotation);
+                    refetch();
 
                     addAnnotationUpdateToUndoStack({
                         annotation: selectedAnnotation,
@@ -219,10 +212,7 @@ export function useSegmentationMaskBrush({
             setAnnotationId(newAnnotation.sample_id);
             setLastCreatedAnnotationId(newAnnotation.sample_id);
 
-            if (!skipImageRefetch) {
-                refetch();
-            }
-            await refreshAnnotations?.(newAnnotation);
+            refetch();
             onAnnotationCreated?.();
             return newAnnotation;
         } finally {

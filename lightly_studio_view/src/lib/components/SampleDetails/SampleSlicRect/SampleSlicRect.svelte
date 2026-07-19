@@ -1,14 +1,5 @@
 <script lang="ts">
-    import type {
-        AnnotationUpdateInput,
-        AnnotationView,
-        ImageView
-    } from '$lib/api/lightly_studio_local';
-    import {
-        getAnnotationOptions,
-        readAnnotationLabelsOptions,
-        readImageOptions
-    } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+    import type { AnnotationUpdateInput, AnnotationView } from '$lib/api/lightly_studio_local';
     import {
         decodeRLEToBinaryMask,
         getImageCoordsFromMouse,
@@ -24,18 +15,21 @@
     import { useSegmentationMaskBrush } from '$lib/hooks/useSegmentationMaskBrush';
     import SelectClassDialog from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
     import {
+        accumulateStrokeLabels,
+        applySegmentToMask,
+        areMasksEqual,
+        createSegmentMaskCache
+    } from '@lightly-ai/slic';
+    import {
         createSlicMaskForLabels,
         extractCellMask,
         getLabelAtPoint,
         loadSuperpixelsForImage,
         maskToColoredDataUrl,
-        upsampleCellMask,
         type SlicResult
     } from '$lib/utils/slic';
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { page } from '$app/state';
-    import { useQueryClient } from '@tanstack/svelte-query';
-    import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
 
     type SampleSlicRectProps = {
@@ -63,7 +57,6 @@
     }: SampleSlicRectProps = $props();
 
     const labels = useAnnotationLabels(() => ({ collectionId }));
-    const queryClient = useQueryClient();
     const { deleteAnnotation } = useDeleteAnnotation({ collectionId });
     const {
         open: selectClassDialogOpen,
@@ -116,7 +109,6 @@
     );
 
     let slicResult = $state<SlicResult | null>(null);
-    let hoveredLabel = $state<number | null>(null);
     let hoverMaskDataUrl = $state('');
     let boundaryDataUrl = $state('');
     let localMask = $state<Uint8Array | null>(null);
@@ -129,12 +121,16 @@
     let pendingServerSyncAnnotationId = $state<string | null>(null);
     let pendingServerSyncMask = $state<number[] | null>(null);
     let isStrokeActive = $state(false);
-    let strokeTouchedLabels = $state<Set<number>>(new Set());
-    let strokeMode = $state<'add' | 'erase' | null>(null);
-    let lastStrokePoint = $state<{ x: number; y: number } | null>(null);
     let slicLoadKey = $state<string | null>(null);
+
+    // Not $state: only read inside event handlers, never in the template or
+    // effects.
+    let hoveredLabel: number | null = null;
+    let strokeTouchedLabels = new Set<number>();
+    let strokeMode: 'add' | 'erase' | null = null;
+    let lastStrokePoint: { x: number; y: number } | null = null;
     let hoverMaskCache = new Map<number, string>();
-    let upsampledMaskCache = new Map<number, Uint8Array>();
+    let getSegmentMask: ((labelId: number) => Uint8Array) | null = null;
 
     const parsedColor = $derived(parseColor(drawerStrokeColor));
     const boundaryColor = $derived([parsedColor.r, parsedColor.g, parsedColor.b, 170] as [
@@ -151,77 +147,6 @@
     ]);
     const updateAnnotation = async (input: AnnotationUpdateInput) => {
         await annotationApi.updateAnnotation(input);
-    };
-
-    const areMasksEqual = (
-        left: number[] | null | undefined,
-        right: number[] | null | undefined
-    ) => {
-        if (!left || !right) return false;
-        if (left.length !== right.length) return false;
-
-        for (let index = 0; index < left.length; index++) {
-            if (left[index] !== right[index]) {
-                return false;
-            }
-        }
-
-        return true;
-    };
-
-    const refreshAnnotations = async (persistedAnnotation: AnnotationView) => {
-        const imageQueryKey = readImageOptions({
-            path: { sample_id: sampleId }
-        }).queryKey;
-        const annotationQueryKey = getAnnotationOptions({
-            path: {
-                annotation_id: persistedAnnotation.sample_id,
-                collection_id: collectionId
-            }
-        }).queryKey;
-        const annotationLabelsQueryKey = readAnnotationLabelsOptions({
-            path: { collection_id: collectionId }
-        }).queryKey;
-
-        queryClient.setQueryData(imageQueryKey, (current: ImageView | undefined) => {
-            if (
-                !current ||
-                current.annotations.some(
-                    (annotation) => annotation.sample_id === persistedAnnotation.sample_id
-                )
-            ) {
-                return current;
-            }
-
-            return {
-                ...current,
-                annotations: [
-                    ...current.annotations,
-                    {
-                        ...persistedAnnotation,
-                        segmentation_details: null
-                    }
-                ]
-            };
-        });
-
-        await Promise.all([
-            queryClient.invalidateQueries({
-                queryKey: annotationLabelsQueryKey
-            }),
-            queryClient.invalidateQueries({
-                queryKey: useImageAnnotationCountsQueryKey
-            })
-        ]);
-
-        window.setTimeout(() => {
-            void queryClient.invalidateQueries({
-                queryKey: imageQueryKey
-            });
-            void queryClient.invalidateQueries({
-                queryKey: annotationQueryKey
-            });
-        }, 0);
     };
 
     const resolveSelectedAnnotation = () => {
@@ -249,43 +174,6 @@
         localMask = nextMask;
         committedMaskDataUrl = '';
         hasLocalChanges = false;
-    };
-
-    const getUpsampledMask = (labelId: number) => {
-        if (!slicResult) {
-            throw new Error('Cannot build label mask without SLIC result');
-        }
-
-        const cachedMask = upsampledMaskCache.get(labelId);
-        if (cachedMask) {
-            return cachedMask;
-        }
-
-        const mask = upsampleCellMask(slicResult, labelId);
-        upsampledMaskCache.set(labelId, mask);
-        return mask;
-    };
-
-    const isLabelActiveInMask = (mask: Uint8Array, labelId: number) => {
-        const labelMask = getUpsampledMask(labelId);
-
-        for (let index = 0; index < labelMask.length; index++) {
-            if (labelMask[index] === 1 && mask[index] === 1) {
-                return true;
-            }
-        }
-
-        return false;
-    };
-
-    const applyLabelToMask = (mask: Uint8Array, labelId: number, nextValue: 0 | 1) => {
-        const labelMask = getUpsampledMask(labelId);
-
-        for (let index = 0; index < labelMask.length; index++) {
-            if (labelMask[index] === 1) {
-                mask[index] = nextValue;
-            }
-        }
     };
 
     const getHoverMaskDataUrl = (labelId: number) => {
@@ -317,7 +205,7 @@
         hoveredLabel = null;
         hoverMaskDataUrl = '';
         hoverMaskCache = new Map();
-        upsampledMaskCache = new Map();
+        getSegmentMask = null;
         strokeMaskDataUrl = '';
         committedMaskDataUrl = '';
 
@@ -328,6 +216,11 @@
             });
 
             slicResult = result;
+            getSegmentMask = createSegmentMaskCache(
+                result,
+                result.originalWidth,
+                result.originalHeight
+            );
             boundaryDataUrl = maskToColoredDataUrl(
                 result.boundaries,
                 result.width,
@@ -355,36 +248,29 @@
 
     const processStrokePoint = (point: { x: number; y: number } | null) => {
         const currentMask = localMask;
-        if (!point || !slicResult || !currentMask) return;
+        if (!point || !slicResult || !currentMask || !getSegmentMask) return;
 
         const points =
             lastStrokePoint === null
                 ? [point]
                 : interpolateLineBetweenPoints(lastStrokePoint, point);
-        let nextTouchedLabels = new Set(strokeTouchedLabels);
-        let nextStrokeMode = strokeMode;
-        let didChangeStroke = false;
 
-        for (const strokePoint of points) {
-            const labelId = getLabelAtPoint(slicResult, strokePoint.x, strokePoint.y);
+        const accumulation = accumulateStrokeLabels({
+            segmentation: slicResult,
+            points,
+            mask: currentMask,
+            getSegmentMask,
+            touchedLabels: strokeTouchedLabels,
+            mode: strokeMode,
+            scaleX: slicResult.scaleX,
+            scaleY: slicResult.scaleY
+        });
 
-            if (nextStrokeMode === null) {
-                nextStrokeMode = isLabelActiveInMask(currentMask, labelId) ? 'erase' : 'add';
-            }
-
-            if (nextTouchedLabels.has(labelId) || !nextStrokeMode) {
-                continue;
-            }
-
-            nextTouchedLabels.add(labelId);
-            didChangeStroke = true;
-        }
-
-        strokeMode = nextStrokeMode;
-        if (didChangeStroke) {
-            strokeTouchedLabels = nextTouchedLabels;
+        strokeMode = accumulation.mode;
+        if (accumulation.changed) {
+            strokeTouchedLabels = accumulation.touchedLabels;
             strokeMaskDataUrl = maskToColoredDataUrl(
-                createSlicMaskForLabels(slicResult, nextTouchedLabels),
+                createSlicMaskForLabels(slicResult, accumulation.touchedLabels),
                 slicResult.width,
                 slicResult.height,
                 hoverColor
@@ -409,11 +295,7 @@
                 labels.data ?? [],
                 updateAnnotation,
                 annotationLabelContext.lockedAnnotationIds,
-                {
-                    deferDrawingReset: true,
-                    skipImageRefetch: true,
-                    refreshAnnotations
-                }
+                { deferDrawingReset: true }
             );
 
             if (persistedAnnotation) {
@@ -589,7 +471,13 @@
         strokeTouchedLabels = new Set();
         strokeMode = null;
 
-        if (!slicResult || !localMask || touchedLabels.size === 0 || !completedStrokeMode) {
+        if (
+            !slicResult ||
+            !localMask ||
+            touchedLabels.size === 0 ||
+            !completedStrokeMode ||
+            !getSegmentMask
+        ) {
             strokeMaskDataUrl = '';
             setIsDrawing(false);
             return;
@@ -599,7 +487,7 @@
         const nextValue = completedStrokeMode === 'add' ? 1 : 0;
 
         for (const labelId of touchedLabels) {
-            applyLabelToMask(nextMask, labelId, nextValue);
+            applySegmentToMask(nextMask, getSegmentMask(labelId), nextValue);
         }
 
         localMask = nextMask;

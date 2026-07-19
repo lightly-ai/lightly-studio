@@ -2,7 +2,6 @@ import {
     createMaskForLabels as createMaskForLabelsPkg,
     getLabelAtPoint as getLabelAtPointPkg,
     getSlicEngine,
-    upsampleCellMask as upsampleCellMaskPkg,
     type Segmentation
 } from '@lightly-ai/slic';
 import { dev } from '$app/environment';
@@ -54,9 +53,6 @@ const resultCache = new Map<string, Promise<SlicResult>>();
 const stripTrailingSlash = (value: string) => value.replace(/\/+$/, '');
 
 export const getSlicComputeOptions = (level: SlicLevel) => LEVEL_CONFIG[level];
-
-export const upsampleCellMask = (result: SlicResult, labelId: number) =>
-    upsampleCellMaskPkg(result, labelId, result.originalWidth, result.originalHeight);
 
 export const createSlicMaskForLabels = (result: SlicResult, labelIds: Iterable<number>) =>
     createMaskForLabelsPkg(result, labelIds);

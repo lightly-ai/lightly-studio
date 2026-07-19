@@ -190,10 +190,9 @@ describe('useSegmentationMaskBrush', () => {
         expect(refetch).toHaveBeenCalled();
     });
 
-    it('returns the updated annotation and delegates annotation refresh when requested', async () => {
+    it('returns the updated annotation with the persisted segmentation details', async () => {
         const refetch = vi.fn();
         const updateAnnotation = vi.fn().mockResolvedValue(true);
-        const refreshAnnotations = vi.fn();
 
         annotationLabelContext.annotationId = 'existing-id';
 
@@ -214,16 +213,9 @@ describe('useSegmentationMaskBrush', () => {
             deleteAnnotation
         });
 
-        const updatedAnnotation = await finishBrush(
-            mask,
-            selectedAnnotation,
-            [],
-            updateAnnotation,
-            undefined,
-            { refreshAnnotations }
-        );
+        const updatedAnnotation = await finishBrush(mask, selectedAnnotation, [], updateAnnotation);
 
-        expect(refreshAnnotations).toHaveBeenCalledWith(
+        expect(updatedAnnotation).toEqual(
             expect.objectContaining({
                 sample_id: 'existing-id',
                 segmentation_details: {
@@ -233,43 +225,6 @@ describe('useSegmentationMaskBrush', () => {
                     height: bbox.height,
                     segmentation_mask: rle
                 }
-            })
-        );
-        expect(updatedAnnotation).toEqual(
-            expect.objectContaining({
-                sample_id: 'existing-id'
-            })
-        );
-    });
-
-    it('skips image refetch and delegates annotation refresh when requested', async () => {
-        const refetch = vi.fn();
-        const refreshAnnotations = vi.fn();
-
-        annotationLabelContext.annotationLabel = 'car';
-
-        const { finishBrush } = useSegmentationMaskBrush({
-            collectionId: 'c1',
-            datasetId,
-            sampleId: 's1',
-            sample,
-            refetch,
-            deleteAnnotation
-        });
-
-        await finishBrush(
-            mask,
-            null,
-            [{ annotation_label_id: 'car-label-id', annotation_label_name: 'car' }],
-            undefined,
-            undefined,
-            { skipImageRefetch: true, refreshAnnotations }
-        );
-
-        expect(refetch).not.toHaveBeenCalled();
-        expect(refreshAnnotations).toHaveBeenCalledWith(
-            expect.objectContaining({
-                sample_id: 'new-annotation-id'
             })
         );
     });
