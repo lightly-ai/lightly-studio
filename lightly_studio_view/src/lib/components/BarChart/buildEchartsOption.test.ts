@@ -59,6 +59,16 @@ describe('buildEchartsOption', () => {
         });
     });
 
+    it('accepts compact top padding without changing the default grid', () => {
+        const standard = buildEchartsOption(balanced) as { grid: { top: number } };
+        const compact = buildEchartsOption(balanced, { gridTopPx: 4 }) as {
+            grid: { top: number };
+        };
+
+        expect(standard.grid.top).toBe(16);
+        expect(compact.grid.top).toBe(4);
+    });
+
     const getFormatter = (option: unknown) =>
         (
             option as {
