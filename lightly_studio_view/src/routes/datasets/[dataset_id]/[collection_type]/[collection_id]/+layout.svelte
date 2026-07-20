@@ -73,7 +73,8 @@
         useSelectionSummary,
         useImageAnnotationCounts,
         useImageAnnotationCountsQueryKey,
-        useNumericMetadataDistribution
+        useNumericMetadataDistribution,
+        useCategoricalMetadataDistribution
     } from '$lib/hooks';
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
     import { isInputElement } from '$lib/utils';
@@ -286,9 +287,14 @@
             : 'Search samples by description or image'
     );
 
-    const { metadataValues, metadataBounds, updateMetadataValues } = $derived.by(() =>
-        useMetadataFilters(collectionId)
-    );
+    const {
+        metadataValues,
+        metadataBounds,
+        metadataInfo,
+        categoricalMetadataValues,
+        updateMetadataValues,
+        updateCategoricalMetadataValues
+    } = $derived.by(() => useMetadataFilters(collectionId));
     const { dimensionsValues } = useDimensions(collectionIdStore);
 
     const annotationLabelsQuery = useAnnotationLabels(() => ({
@@ -309,7 +315,9 @@
     });
 
     const metadataFilters = $derived(
-        metadataValues ? createMetadataFilters($metadataValues) : undefined
+        metadataValues
+            ? createMetadataFilters($metadataValues, $categoricalMetadataValues)
+            : undefined
     );
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { videoBoundsValues } = useVideoBounds();
@@ -583,21 +591,43 @@
     // selectDistributions internally via the TanStack Query `select` option.
     const metadataDistributions = $derived(metadataHistogramsQuery.data ?? {});
 
+    const categoricalMetadataQuery = useCategoricalMetadataDistribution(() => ({
+        collectionId,
+        filter: imageAnnotationCountsFilter,
+        enabled: distributionPanelVisible
+    }));
+    const categoricalMetadataDistributions = $derived(categoricalMetadataQuery.data ?? {});
+
     const metadataDistributionSource = $derived.by<DistributionSource | null>(() => {
-        const keys = Object.keys(metadataDistributions);
-        if (keys.length === 0) return null;
+        const numericKeys = Object.keys(metadataDistributions);
+        const categoricalKeys = ($metadataInfo ?? [])
+            .filter((info) => info.type === 'string' || info.type === 'boolean')
+            .map((info) => info.name);
+        if (numericKeys.length === 0 && categoricalKeys.length === 0) return null;
         return {
             id: 'metadata',
             label: 'Metadata',
             groupLabel: 'Metadata key',
             valueNoun: 'samples',
-            groups: keys.map((key) => ({
-                id: key,
-                label: key,
-                histogram: metadataDistributions[key],
-                // Highlight the active filter range; bins outside it dim.
-                selectedRange: $metadataValues[key]
-            }))
+            groups: [
+                ...numericKeys.map((key) => ({
+                    id: key,
+                    label: key,
+                    histogram: metadataDistributions[key],
+                    // Highlight the active filter range; bins outside it dim.
+                    selectedRange: $metadataValues[key]
+                })),
+                ...categoricalKeys.map((key) => ({
+                    id: key,
+                    label: key,
+                    categorical: {
+                        buckets: categoricalMetadataDistributions[key] ?? [],
+                        selectedValues: $categoricalMetadataValues[key] ?? [],
+                        loading: categoricalMetadataQuery.isFetching,
+                        error: categoricalMetadataQuery.error?.message
+                    }
+                }))
+            ]
         };
     });
 
@@ -623,6 +653,24 @@
                 ? { min: bound.min, max: bound.max }
                 : { min: clampedMin, max: clampedMax }
         });
+    };
+
+    const handleCategoricalValueToggle = (metadataKey: string, value: string | boolean | null) => {
+        const selected = $categoricalMetadataValues[metadataKey] ?? [];
+        const exists = selected.some((candidate) => Object.is(candidate, value));
+        const next = exists
+            ? selected.filter((candidate) => !Object.is(candidate, value))
+            : [...selected, value];
+        updateCategoricalMetadataValues({
+            ...$categoricalMetadataValues,
+            [metadataKey]: next
+        });
+    };
+
+    const clearCategoricalValues = (metadataKey: string) => {
+        const next = { ...$categoricalMetadataValues };
+        delete next[metadataKey];
+        updateCategoricalMetadataValues(next);
     };
 
     const distributionSources = $derived<DistributionSource[]>(
@@ -812,6 +860,9 @@
                                         distributionCountMode = mode;
                                     }}
                                     onHistogramRangeSelect={handleDistributionHistogramRangeSelect}
+                                    onCategoricalValueToggle={handleCategoricalValueToggle}
+                                    onCategoricalValuesClear={clearCategoricalValues}
+                                    onCategoricalRetry={() => categoricalMetadataQuery.refetch()}
                                     {histogramBinCount}
                                     onHistogramBinCountChange={(binCount) =>
                                         (histogramBinCount = binCount)}

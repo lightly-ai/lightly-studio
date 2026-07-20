@@ -26,7 +26,7 @@
         })
     );
 
-    const { metadataValues } = useMetadataFilters();
+    const { metadataValues, categoricalMetadataValues } = useMetadataFilters();
     const { selectedAnnotationFilterIdsArray: selectedAnnotationsFilterIds } =
         useSelectedAnnotationsFilter();
     const { videoBoundsValues } = $derived.by(() => useVideoBounds(collectionId));
@@ -42,7 +42,8 @@
                 ? $selectedAnnotationsFilterIds
                 : undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
-            metadata_values: $metadataValues
+            metadata_values: $metadataValues,
+            categorical_metadata_values: $categoricalMetadataValues
         },
         video_bounds: $videoBoundsValues
     });

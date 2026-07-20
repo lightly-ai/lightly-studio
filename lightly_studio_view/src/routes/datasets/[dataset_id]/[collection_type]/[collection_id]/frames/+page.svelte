@@ -22,7 +22,9 @@
 
     const collectionId = $derived(page.params.collection_id);
 
-    const { metadataValues } = $derived(useMetadataFilters(collectionId));
+    const { metadataValues, categoricalMetadataValues } = $derived(
+        useMetadataFilters(collectionId)
+    );
     const { videoFramesBoundsValues } = $derived(useVideoFramesBounds(collectionId));
 
     const { selectedAnnotationFilterIdsArray: selectedAnnotationFilterIds } =
@@ -41,7 +43,8 @@
                 ? $selectedAnnotationFilterIds
                 : undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
-            metadata_values: $metadataValues
+            metadata_values: $metadataValues,
+            categorical_metadata_values: $categoricalMetadataValues
         },
         frame_bounds: $videoFramesBoundsValues
     });
