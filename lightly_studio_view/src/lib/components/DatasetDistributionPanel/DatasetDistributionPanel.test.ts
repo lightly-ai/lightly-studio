@@ -420,4 +420,96 @@ describe('DatasetDistributionPanel', () => {
 
         expect(onHistogramRangeSelect).toHaveBeenCalledWith('confidence', { min: 0.5, max: 1 });
     });
+
+    const histogramSources: DistributionSource[] = [
+        {
+            id: 'metadata',
+            label: 'Metadata',
+            groupLabel: 'Metadata key',
+            valueNoun: 'samples',
+            groups: [
+                {
+                    id: 'confidence',
+                    label: 'confidence',
+                    histogram: { binEdges: [0, 0.5, 1], counts: [30, 70] }
+                }
+            ]
+        }
+    ];
+
+    it('shows the bin-count select only when a change handler is provided', () => {
+        render(DatasetDistributionPanel, { props: { sources: histogramSources } });
+        expect(screen.queryByTestId('dataset-distribution-bin-count')).not.toBeInTheDocument();
+    });
+
+    it('renders the bin-count select with the applied bin count', () => {
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: histogramSources,
+                histogramBinCount: 50,
+                onHistogramBinCountChange: vi.fn()
+            }
+        });
+
+        expect(screen.getByTestId('dataset-distribution-bin-count')).toHaveTextContent('50 bins');
+    });
+
+    it('expands the histogram into a dialog with the same data', async () => {
+        render(DatasetDistributionPanel, { props: { sources: histogramSources } });
+
+        await fireEvent.click(screen.getByTestId('dataset-distribution-histogram-expand'));
+
+        // Panel + expanded dialog each render a histogram.
+        await waitFor(() => expect(screen.getAllByTestId('histogram')).toHaveLength(2));
+        expect(
+            screen.getByTestId('dataset-distribution-expanded-histogram-summary')
+        ).toHaveTextContent('100 samples · 2 bins · 0–1');
+    });
+
+    it('hides the bin-count select in the expanded dialog when no change handler is provided', async () => {
+        render(DatasetDistributionPanel, { props: { sources: histogramSources } });
+
+        await fireEvent.click(screen.getByTestId('dataset-distribution-histogram-expand'));
+
+        await waitFor(() => expect(screen.getAllByTestId('histogram')).toHaveLength(2));
+        expect(
+            screen.queryByTestId('dataset-distribution-expanded-bin-count')
+        ).not.toBeInTheDocument();
+    });
+
+    it('shows the bin-count select in the expanded dialog with the applied bin count', async () => {
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: histogramSources,
+                histogramBinCount: 50,
+                onHistogramBinCountChange: vi.fn()
+            }
+        });
+
+        await fireEvent.click(screen.getByTestId('dataset-distribution-histogram-expand'));
+
+        await waitFor(() =>
+            expect(screen.getByTestId('dataset-distribution-expanded-bin-count')).toHaveTextContent(
+                '50 bins'
+            )
+        );
+    });
+
+    it('calls onHistogramBinCountChange with the selected count when the user picks a new value', async () => {
+        const onHistogramBinCountChange = vi.fn();
+        const user = userEvent.setup();
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: histogramSources,
+                histogramBinCount: 20,
+                onHistogramBinCountChange
+            }
+        });
+
+        await user.click(screen.getByTestId('dataset-distribution-bin-count'));
+        const option = await waitFor(() => screen.getByRole('option', { name: '10 bins' }));
+        await user.click(option);
+
+        expect(onHistogramBinCountChange).toHaveBeenCalledWith(10);
+    });
 });
