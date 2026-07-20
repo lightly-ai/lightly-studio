@@ -8,4 +8,6 @@ export interface CategoryCount {
     selected?: boolean;
     /** Whether clicking the bar can change selection. */
     selectable?: boolean;
+    /** Keeps semantic buckets visible when a top-N view is applied. */
+    pinned?: boolean;
 }

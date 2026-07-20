@@ -852,21 +852,24 @@
                             <QueryEditorPanel onClose={() => setActivePanel('none')} />
                         {:else if distributionPanelVisible}
                             {#await import('$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte') then { default: DatasetDistributionPanel }}
-                                <DatasetDistributionPanel
-                                    sources={distributionSources}
-                                    initialCountMode={distributionCountMode}
-                                    onClose={() => setActivePanel('none')}
-                                    onCountModeChange={(mode) => {
-                                        distributionCountMode = mode;
-                                    }}
-                                    onHistogramRangeSelect={handleDistributionHistogramRangeSelect}
-                                    onCategoricalValueToggle={handleCategoricalValueToggle}
-                                    onCategoricalValuesClear={clearCategoricalValues}
-                                    onCategoricalRetry={() => categoricalMetadataQuery.refetch()}
-                                    {histogramBinCount}
-                                    onHistogramBinCountChange={(binCount) =>
-                                        (histogramBinCount = binCount)}
-                                />
+                                {#key collectionId}
+                                    <DatasetDistributionPanel
+                                        sources={distributionSources}
+                                        initialCountMode={distributionCountMode}
+                                        onClose={() => setActivePanel('none')}
+                                        onCountModeChange={(mode) => {
+                                            distributionCountMode = mode;
+                                        }}
+                                        onHistogramRangeSelect={handleDistributionHistogramRangeSelect}
+                                        onCategoricalValueToggle={handleCategoricalValueToggle}
+                                        onCategoricalValuesClear={clearCategoricalValues}
+                                        onCategoricalRetry={() =>
+                                            categoricalMetadataQuery.refetch()}
+                                        {histogramBinCount}
+                                        onHistogramBinCountChange={(binCount) =>
+                                            (histogramBinCount = binCount)}
+                                    />
+                                {/key}
                             {/await}
                         {/if}
                     </Pane>
