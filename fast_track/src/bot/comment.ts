@@ -40,11 +40,10 @@ export function renderComment(verdict: Verdict, headSha: string): string {
     return lines.join('\n');
 }
 
-/** Create or edit the App's marked comment, leaving all other comments alone. */
-export async function upsertComment(
+/** Find the App's existing marked comment, or `undefined` if it has none yet. */
+async function findBotComment(
     params: UpsertCommentParams
-): Promise<'created' | 'updated' | 'noop'> {
-    const fullBody = `${COMMENT_MARKER}\n${params.body}`;
+): Promise<{ id: number; body: string } | undefined> {
     const comments = await params.octokit.paginate(params.octokit.rest.issues.listComments, {
         owner: params.owner,
         repo: params.repo,
@@ -55,6 +54,15 @@ export async function upsertComment(
             comment.user?.login === params.botLogin &&
             (comment.body ?? '').startsWith(COMMENT_MARKER)
     );
+    return existing === undefined ? undefined : { id: existing.id, body: existing.body ?? '' };
+}
+
+/** Create or edit the App's marked comment, leaving all other comments alone. */
+export async function upsertComment(
+    params: UpsertCommentParams
+): Promise<'created' | 'updated' | 'noop'> {
+    const fullBody = `${COMMENT_MARKER}\n${params.body}`;
+    const existing = await findBotComment(params);
 
     if (existing === undefined) {
         await params.octokit.rest.issues.createComment({
