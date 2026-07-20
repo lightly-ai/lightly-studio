@@ -3,8 +3,7 @@ import type { RunResult } from './run-guardrails';
 
 /**
  * Wrap a {@link RunResult} into the wire {@link Verdict}, adding the routing
- * fields and a {@link reason} for the PR comment on a non-pass. `opt_out` is
- * produced separately by `buildOptOutVerdict`.
+ * fields and a {@link reason} for the PR comment on a non-pass.
  */
 export function buildVerdict(run: RunResult, routing: VerdictRouting): Verdict {
     const verdict: Verdict = {

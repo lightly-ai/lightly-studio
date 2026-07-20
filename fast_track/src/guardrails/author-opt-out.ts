@@ -1,6 +1,6 @@
 import type { Verdict, VerdictRouting } from '../shared/verdict';
 
-export const OPT_OUT_LABEL = 'needs-human-review';
+export const OPT_OUT_LABEL = 'no-fast-track';
 
 /** Return an override verdict when the PR author requested human review. */
 export function buildOptOutVerdict(labels: string[], routing: VerdictRouting): Verdict | undefined {

@@ -21,7 +21,7 @@ interface PullRequestEvent {
     number: number;
     head: { sha: string };
     base: { ref: string; sha: string };
-    labels: Array<{ name?: string }>;
+    labels: Array<{ name: string }>;
 }
 
 function readPullRequest(): PullRequestEvent {
@@ -41,7 +41,7 @@ function parsePrContext(pr: PullRequestEvent): { routing: VerdictRouting; labels
             baseRef: pr.base.ref,
             baseSha: pr.base.sha
         },
-        labels: pr.labels.flatMap((label) => (label.name === undefined ? [] : [label.name]))
+        labels: pr.labels.map((label) => label.name)
     };
 }
 
