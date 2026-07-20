@@ -22,6 +22,10 @@ export interface Verdict {
     pr_number: number;
     /** Untrusted routing: PR-context code writes it, the Bot re-derives and cross-checks. */
     head_sha: string;
+    /** Untrusted routing: binds the verdict to the base branch used for judging. */
+    base_ref: string;
+    /** Untrusted routing: binds the verdict to the exact base revision used for judging. */
+    base_sha: string;
     /** Shown in the PR comment on a non-pass verdict. */
     reason?: string;
 }

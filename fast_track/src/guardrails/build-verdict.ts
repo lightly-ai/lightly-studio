@@ -5,19 +5,23 @@ import type { RunResult } from './run-guardrails';
 export interface VerdictRouting {
     prNumber: number;
     headSha: string;
+    baseRef: string;
+    baseSha: string;
 }
 
 /**
  * Wrap a {@link RunResult} into the wire {@link Verdict}, adding the routing
  * fields and a {@link reason} for the PR comment on a non-pass. `opt_out` is
- * never produced here — it's an author-label override the bot applies (design §2.3).
+ * produced separately by `buildOptOutVerdict`.
  */
 export function buildVerdict(run: RunResult, routing: VerdictRouting): Verdict {
     const verdict: Verdict = {
         verdict: run.status,
         guardrails: run.guardrails,
         pr_number: routing.prNumber,
-        head_sha: routing.headSha
+        head_sha: routing.headSha,
+        base_ref: routing.baseRef,
+        base_sha: routing.baseSha
     };
     if (run.status !== 'pass') {
         verdict.reason = buildReason(run.guardrails);
