@@ -138,8 +138,8 @@ describe('PanelHeader', () => {
         expect(screen.getByTestId('dataset-distribution-expanded-configure')).toBeInTheDocument();
     });
 
-    it('removes bottom margins in compact layouts', () => {
-        render(PanelHeader, { props: { ...defaultProps, compact: true } });
+    it('does not add plot-specific bottom margins', () => {
+        render(PanelHeader, { props: defaultProps });
 
         const summary = screen.getByText(/^5 classes ·/);
         expect(summary).not.toHaveClass('mb-2');

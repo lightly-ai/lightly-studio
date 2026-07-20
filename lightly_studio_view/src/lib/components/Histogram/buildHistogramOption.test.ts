@@ -124,6 +124,7 @@ describe('buildHistogramOption', () => {
         };
         expect(xAxis.show).toBe(true);
         expect((option.yAxis as { show: boolean }).show).toBe(true);
+        expect((option.grid as { top: number }).top).toBe(4);
         // Integer ticks land exactly on bin edges: 0 → domain min, N → max.
         expect(xAxis.axisLabel.formatter(0)).toBe('0');
         expect(xAxis.axisLabel.formatter(10)).toBe('50');
