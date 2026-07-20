@@ -43,21 +43,28 @@ function derive(pullRequests: unknown[]) {
 
 describe('deriveTarget', () => {
     it('returns the internal open PR bound to the trusted head', async () => {
-        await expect(derive([pullRequest()])).resolves.toEqual({
+        const pr = pullRequest({
+            number: 7,
+            base: { ref: 'release', sha: 'base456', repo: { id: 1 } },
+            labels: [{ name: 'fast-track' }]
+        });
+        await expect(derive([pr])).resolves.toEqual({
             prNumber: 7,
             headSha: HEAD_SHA,
-            baseRef: 'main',
-            baseSha: 'base123',
-            labels: []
+            baseRef: 'release',
+            baseSha: 'base456',
+            labels: ['fast-track']
         });
     });
 
     it('refuses to guess when multiple internal PRs share the trusted head', async () => {
-        await expect(derive([pullRequest(), pullRequest({ number: 8 })])).resolves.toBeNull();
+        await expect(
+            derive([pullRequest({ number: 7 }), pullRequest({ number: 8 })])
+        ).resolves.toBeNull();
     });
 
     it('walks every page so a second candidate cannot hide behind pagination', async () => {
-        const octokit = fakeOctokit([pullRequest(), pullRequest({ number: 8 })]);
+        const octokit = fakeOctokit([pullRequest({ number: 7 }), pullRequest({ number: 8 })]);
         await expect(
             deriveTarget({
                 octokit,
@@ -105,10 +112,23 @@ describe('refreshTarget', () => {
     };
 
     it('reloads the current base and labels', async () => {
-        const octokit = fakeOctokit([], pullRequest({ labels: [{ name: 'bug' }] }));
+        // target starts on main/base123; the freshly fetched PR has been retargeted
+        // and relabelled, and refreshTarget must return the current values.
+        const current = pullRequest({
+            number: 7,
+            base: { ref: 'release', sha: 'base456', repo: { id: 1 } },
+            labels: [{ name: 'bug' }]
+        });
+        const octokit = fakeOctokit([], current);
         await expect(
             refreshTarget({ octokit, owner: 'lightly-ai', repo: 'lightly-studio', target })
-        ).resolves.toEqual({ ...target, labels: ['bug'] });
+        ).resolves.toEqual({
+            prNumber: 7,
+            headSha: HEAD_SHA,
+            baseRef: 'release',
+            baseSha: 'base456',
+            labels: ['bug']
+        });
     });
 
     it('rejects a target whose head changed before mutation', async () => {
