@@ -144,6 +144,20 @@ def test_metadata_value_counts__openapi_models(test_client: TestClient) -> None:
     assert "MetadataValueCountsView" in schemas
 
 
+def test_metadata_filter__invalid_in_value_returns_422(test_client: TestClient) -> None:
+    collection_id = uuid4()
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/value-counts",
+        json={
+            "filters": {
+                "sample_filter": {"metadata_filters": [{"key": "city", "op": "in", "value": []}]}
+            }
+        },
+    )
+
+    assert response.status_code == 422
+
+
 # TODO(Mihnea, 10/2025): Also add tests with passing `embedding_model_name` and/or `metadata_name`
 #  in the body.
 def test_compute_typicality_metadata(test_client: TestClient, db_session: Session) -> None:
