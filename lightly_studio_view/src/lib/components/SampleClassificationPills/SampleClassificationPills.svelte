@@ -13,11 +13,18 @@
     let {
         sample,
         hasBottomOverlay = false,
-        hasRightOverlay = false
+        hasRightOverlay = false,
+        selectedCollectionIds: selectedCollectionIdsOverride = undefined
     }: {
         sample: Pick<ImageView, 'annotations'>;
         hasBottomOverlay?: boolean;
         hasRightOverlay?: boolean;
+        /**
+         * When provided, overrides the collection filter from `useAnnotationCollectionsFilter`.
+         * Pass `[]` to show all annotations regardless of the active source filter (e.g. in the
+         * annotations grid, where the tile already represents a single annotation).
+         */
+        selectedCollectionIds?: string[];
     } = $props();
 
     let containerWidth = $state(0);
@@ -30,7 +37,7 @@
     const pills = $derived(
         getSampleClassificationPills({
             annotations: sample.annotations,
-            selectedCollectionIds: $selectedCollectionIds,
+            selectedCollectionIds: selectedCollectionIdsOverride ?? $selectedCollectionIds,
             collectionIdToName: $collectionIdToName,
             enforceColoringByClass: $enforceColoringByClassStore
         })

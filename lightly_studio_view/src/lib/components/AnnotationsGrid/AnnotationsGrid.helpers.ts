@@ -24,3 +24,23 @@ export function buildAnnotationDragData(
         annotationCollectionId: annotation.annotation_collection_id
     };
 }
+
+/**
+ * Build drag-to-search payload for a classification annotation tile.
+ *
+ * Intentionally omits `annotationSampleId` — classification annotations have no
+ * per-annotation crop embedding, so `readAnnotationEmbedding` would fail. Omitting it
+ * makes the drop handler fall through to the image-upload search path (`search.setImage`),
+ * which sends the thumbnail as the query image.
+ */
+export function buildClassificationDragData(
+    annotation: AnnotationView,
+    cropWindow: CropWindow | undefined,
+    cropUrl: string | undefined
+): GridItemDragData | undefined {
+    if (!cropWindow) return undefined;
+    return {
+        url: cropUrl ?? cropWindow.sourceUrl,
+        fileName: `${annotation.annotation_label.annotation_label_name}-crop.png`
+    };
+}

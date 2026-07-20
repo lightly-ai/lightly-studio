@@ -50,7 +50,6 @@ function buildAnnotation(
 const defaultProps = {
     containerWidth: 200,
     containerHeight: 150,
-    showLabel: true,
     cachedCollectionVersion: 'v1'
 };
 
@@ -94,10 +93,14 @@ describe('AnnotationClassificationGridItem', () => {
         expect(container.firstElementChild).toHaveAttribute('aria-selected', 'true');
     });
 
-    it('hides SampleClassificationPills when showLabel is false', () => {
-        renderItem(buildAnnotation(), { showLabel: false });
+    it('always renders SampleClassificationPills regardless of label visibility settings', async () => {
+        renderItem(buildAnnotation());
 
-        expect(screen.queryByTestId('mock-classification-pills')).not.toBeInTheDocument();
+        await tick();
+
+        // The badge is the primary visual indicator for classification — it shows unconditionally,
+        // unlike OD where the bounding box can be shown without the text label.
+        expect(screen.getByTestId('mock-classification-pills')).toBeInTheDocument();
     });
 
     it('passes only the single annotation to SampleClassificationPills', async () => {
