@@ -20,8 +20,6 @@
         categoryNounPlural?: string;
         sortLabels?: Record<DistributionSortOption, string>;
         showCountMode?: boolean;
-        /** Uses the tighter metadata summary/chart spacing. */
-        compact?: boolean;
         /** Invoked when the user applies a new config from the expanded view. */
         onConfigChange: (config: DistributionConfig) => void;
         onBarClick?: (item: CategoryCount) => void;
@@ -36,7 +34,6 @@
         categoryNounPlural = 'classes',
         sortLabels = DISTRIBUTION_SORT_LABELS,
         showCountMode = true,
-        compact = false,
         onConfigChange,
         onBarClick
     }: Props = $props();
@@ -71,7 +68,6 @@
             {categoryNoun}
             {categoryNounPlural}
             {sortLabels}
-            {compact}
             onConfigure={() => (configDialogOpen = true)}
             onShowAll={() => onConfigChange({ ...config, mode: 'topN', n: data.length })}
             onToggleOrientation={() =>
@@ -92,7 +88,7 @@
                 maxWidthPx={clientWidth || undefined}
                 {totalCount}
                 {onBarClick}
-                gridTopPx={compact ? 4 : undefined}
+                gridTopPx={4}
             />
         </div>
     </Dialog.Content>

@@ -181,7 +181,7 @@ function buildTooltip(bins: HistogramBin[]): Record<string, unknown> {
 function buildGrid(showAxes: boolean): Record<string, unknown> {
     // containLabel reserves gutters for labels; right padding avoids clipping.
     return showAxes
-        ? { left: 4, right: 16, top: 8, bottom: 4, containLabel: true }
+        ? { left: 4, right: 16, top: 4, bottom: 4, containLabel: true }
         : { left: 0, right: 0, top: 2, bottom: 0 };
 }
 
