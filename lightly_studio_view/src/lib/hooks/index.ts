@@ -8,6 +8,7 @@ export { useTags } from '$lib/hooks/useTags/useTags';
 export { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds';
 export { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 export { useNumericMetadataDistribution } from '$lib/hooks/useNumericMetadataDistribution/useNumericMetadataDistribution';
+export { useCategoricalMetadataDistribution } from '$lib/hooks/useCategoricalMetadataDistribution/useCategoricalMetadataDistribution';
 export { useFramesFilter } from '$lib/hooks/useFramesFilter/useFramesFilter';
 export { useCaptions } from '$lib/hooks/useCaptions/useCaptions';
 export { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
