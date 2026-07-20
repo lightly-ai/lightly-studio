@@ -34,6 +34,8 @@
         onExpand?: () => void;
         /** Prefix for button test ids, to disambiguate panel vs. expanded view. */
         testIdPrefix?: string;
+        /** Removes legacy bottom margins for compact metadata layouts. */
+        compact?: boolean;
     }
 
     let {
@@ -49,12 +51,13 @@
         onShowAll,
         onToggleOrientation,
         onExpand,
-        testIdPrefix = 'dataset-distribution'
+        testIdPrefix = 'dataset-distribution',
+        compact = false
     }: Props = $props();
 </script>
 
-<div class="mb-1 flex flex-row items-center gap-2">
-    <div class="mb-2 flex-1 text-xs text-muted-foreground">
+<div class:mb-1={!compact} class="flex flex-row items-center gap-2">
+    <div class:mb-2={!compact} class="flex-1 text-xs text-muted-foreground">
         {#if visibleClassCount < classCount}
             {config.mode === 'manual' ? 'Showing' : 'Top'}
             {visibleClassCount} of {classCount}

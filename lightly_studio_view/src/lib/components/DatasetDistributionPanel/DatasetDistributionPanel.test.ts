@@ -266,8 +266,10 @@ describe('DatasetDistributionPanel', () => {
         const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
             yAxis: { data: string[] };
             series: [{ data: { itemStyle: { borderWidth: number } }[] }];
+            grid: { top: number };
         };
         expect(option.yAxis.data).toEqual(['Missing', 'Missing', 'Other']);
+        expect(option.grid.top).toBe(4);
         expect(option.series[0].data[0].itemStyle.borderWidth).toBe(3);
 
         echartsMock.getClickHandler()?.({ dataIndex: 1 });

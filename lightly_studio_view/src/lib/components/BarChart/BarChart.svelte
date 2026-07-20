@@ -34,6 +34,8 @@
         onBarClick?: (item: CategoryCount) => void;
         /** Custom content shown when data is empty. Replaces the default message. */
         emptyState?: Snippet;
+        /** Top chart-grid padding in px (default 16). */
+        gridTopPx?: number;
     }
 
     const {
@@ -43,7 +45,8 @@
         maxHeightPx,
         totalCount,
         onBarClick,
-        emptyState
+        emptyState,
+        gridTopPx
     }: Props = $props();
 
     let container: HTMLDivElement | undefined = $state();
@@ -102,7 +105,7 @@
 
     $effect(() => {
         if (!chart) return;
-        chart.setOption(buildEchartsOption(data, { totalCount, orientation }), true);
+        chart.setOption(buildEchartsOption(data, { totalCount, orientation, gridTopPx }), true);
     });
 
     onDestroy(() => chart?.dispose());
