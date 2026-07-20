@@ -96,4 +96,14 @@ describe('upsertComment', () => {
         await expect(upsert(fake.octokit)).resolves.toBe('noop');
         expect(fake.updateComment).not.toHaveBeenCalled();
     });
+
+    it('ignores comments from other authors and unmarked bot comments', async () => {
+        const fake = fakeOctokit([
+            { id: 1, login: 'a-human', body: `${MARKER}\nlooks like ours but is not` },
+            { id: 2, login: BOT_LOGIN, body: 'an unmarked bot comment' }
+        ]);
+        await expect(upsert(fake.octokit)).resolves.toBe('created');
+        expect(fake.createComment).toHaveBeenCalled();
+        expect(fake.updateComment).not.toHaveBeenCalled();
+    });
 });

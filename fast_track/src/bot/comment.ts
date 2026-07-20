@@ -42,7 +42,7 @@ export function renderComment(verdict: Verdict, headSha: string): string {
 
 /** Find the App's existing marked comment, or `undefined` if it has none yet. */
 async function findBotComment(
-    params: UpsertCommentParams
+    params: Pick<UpsertCommentParams, 'octokit' | 'owner' | 'repo' | 'prNumber' | 'botLogin'>
 ): Promise<{ id: number; body: string } | undefined> {
     const comments = await params.octokit.paginate(params.octokit.rest.issues.listComments, {
         owner: params.owner,
