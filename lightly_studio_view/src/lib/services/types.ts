@@ -87,3 +87,5 @@ export type SideEffectHook<T, I = unknown> = (params: I) => SideEffectHookResult
 export type MetadataInfo = MetadataInfoView;
 export type MetadataBounds = Record<string, { min: number; max: number }>;
 export type MetadataValues = Record<string, { min: number; max: number }>;
+export type CategoricalMetadataValue = string | boolean | null;
+export type CategoricalMetadataValues = Record<string, CategoricalMetadataValue[]>;
