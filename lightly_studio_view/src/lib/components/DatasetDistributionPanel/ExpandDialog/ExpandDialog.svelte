@@ -4,11 +4,7 @@
     import DistributionConfigDialog from '../DistributionConfigDialog/DistributionConfigDialog.svelte';
     import PanelHeader from '../PanelHeader/PanelHeader.svelte';
     import { selectVisibleCounts } from '../selectVisibleCounts';
-    import type {
-        DistributionConfig,
-        DistributionOrientation,
-        DistributionSortOption
-    } from '../types';
+    import type { DistributionConfig, DistributionSortOption } from '../types';
     import { DISTRIBUTION_SORT_LABELS } from '../types';
 
     interface Props {
@@ -24,8 +20,8 @@
         categoryNounPlural?: string;
         sortLabels?: Record<DistributionSortOption, string>;
         showCountMode?: boolean;
-        /** Keeps categorical metadata horizontal while reusing the expanded chart. */
-        fixedOrientation?: DistributionOrientation;
+        /** Uses the tighter metadata summary/chart spacing. */
+        compact?: boolean;
         /** Invoked when the user applies a new config from the expanded view. */
         onConfigChange: (config: DistributionConfig) => void;
         onBarClick?: (item: CategoryCount) => void;
@@ -40,7 +36,7 @@
         categoryNounPlural = 'classes',
         sortLabels = DISTRIBUTION_SORT_LABELS,
         showCountMode = true,
-        fixedOrientation,
+        compact = false,
         onConfigChange,
         onBarClick
     }: Props = $props();
@@ -53,7 +49,6 @@
 
     const visible = $derived(selectVisibleCounts(data, config));
     const totalCount = $derived(data.reduce((sum, item) => sum + item.count, 0));
-    const orientation = $derived(fixedOrientation ?? config.orientation);
     const configurationItems = $derived(
         data.map((item) => ({ value: item.id ?? item.label, label: item.label }))
     );
@@ -76,17 +71,14 @@
             {categoryNoun}
             {categoryNounPlural}
             {sortLabels}
-            compact={fixedOrientation === 'horizontal'}
+            {compact}
             onConfigure={() => (configDialogOpen = true)}
             onShowAll={() => onConfigChange({ ...config, mode: 'topN', n: data.length })}
-            onToggleOrientation={fixedOrientation
-                ? undefined
-                : () =>
-                      onConfigChange({
-                          ...config,
-                          orientation:
-                              config.orientation === 'horizontal' ? 'vertical' : 'horizontal'
-                      })}
+            onToggleOrientation={() =>
+                onConfigChange({
+                    ...config,
+                    orientation: config.orientation === 'horizontal' ? 'vertical' : 'horizontal'
+                })}
             testIdPrefix="dataset-distribution-expanded"
         />
         <div
@@ -95,12 +87,12 @@
         >
             <BarChart
                 data={visible}
-                {orientation}
+                orientation={config.orientation}
                 maxHeightPx={chartHeight || undefined}
                 maxWidthPx={clientWidth || undefined}
                 {totalCount}
                 {onBarClick}
-                gridTopPx={fixedOrientation === 'horizontal' ? 4 : undefined}
+                gridTopPx={compact ? 4 : undefined}
             />
         </div>
     </Dialog.Content>

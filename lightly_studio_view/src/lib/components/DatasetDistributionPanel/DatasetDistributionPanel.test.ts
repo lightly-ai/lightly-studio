@@ -278,7 +278,41 @@ describe('DatasetDistributionPanel', () => {
         expect(onCategoricalValueToggle).toHaveBeenCalledOnce();
     });
 
-    it('configures and expands categorical values while keeping bars horizontal', async () => {
+    it('stores categorical orientation per metadata field', async () => {
+        const user = userEvent.setup();
+        const categorical = (label: string) => ({
+            selectedValues: [],
+            buckets: [{ id: label, kind: 'value' as const, value: label, label, count: 1 }]
+        });
+        const sources: DistributionSource[] = [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                groupLabel: 'Metadata key',
+                groups: [
+                    { id: 'city', label: 'city', categorical: categorical('Zurich') },
+                    { id: 'weather', label: 'weather', categorical: categorical('rainy') }
+                ]
+            },
+            { id: 'classes', label: 'Classes', data: [] }
+        ];
+        render(DatasetDistributionPanel, { props: { sources } });
+
+        const orientationToggle = screen.getByTestId('dataset-distribution-toggle-orientation');
+        await fireEvent.click(orientationToggle);
+        expect(orientationToggle).toHaveAccessibleName('Switch to horizontal bars');
+
+        const groupSelect = screen.getByTestId('dataset-distribution-group-select');
+        await user.click(groupSelect);
+        await user.click(await screen.findByRole('option', { name: 'weather' }));
+        expect(orientationToggle).toHaveAccessibleName('Switch to vertical bars');
+
+        await user.click(groupSelect);
+        await user.click(await screen.findByRole('option', { name: 'city' }));
+        expect(orientationToggle).toHaveAccessibleName('Switch to horizontal bars');
+    });
+
+    it('configures, reorients, and expands categorical values', async () => {
         const sources: DistributionSource[] = [
             {
                 id: 'metadata',
@@ -314,9 +348,17 @@ describe('DatasetDistributionPanel', () => {
         render(DatasetDistributionPanel, { props: { sources } });
 
         expect(screen.getByText(/2 values · sorted by count · 5 samples/)).toBeInTheDocument();
-        expect(
-            screen.queryByTestId('dataset-distribution-toggle-orientation')
-        ).not.toBeInTheDocument();
+        const orientationToggle = screen.getByTestId('dataset-distribution-toggle-orientation');
+        expect(orientationToggle).toHaveAccessibleName('Switch to vertical bars');
+
+        await fireEvent.click(orientationToggle);
+        await waitFor(() =>
+            expect(
+                (echartsMock.instance.setOption.mock.lastCall?.[0] as { xAxis: { type: string } })
+                    .xAxis.type
+            ).toBe('category')
+        );
+        expect(orientationToggle).toHaveAccessibleName('Switch to horizontal bars');
 
         await fireEvent.click(screen.getByTestId('dataset-distribution-configure'));
         expect(screen.getByText('Configure values')).toBeInTheDocument();
@@ -325,9 +367,15 @@ describe('DatasetDistributionPanel', () => {
 
         await fireEvent.click(screen.getByTestId('dataset-distribution-expand'));
         expect(screen.getByTestId('dataset-distribution-expanded-configure')).toBeInTheDocument();
-        expect(
-            screen.queryByTestId('dataset-distribution-expanded-toggle-orientation')
-        ).not.toBeInTheDocument();
+        const expandedOrientationToggle = screen.getByTestId(
+            'dataset-distribution-expanded-toggle-orientation'
+        );
+        expect(expandedOrientationToggle).toHaveAccessibleName('Switch to horizontal bars');
+
+        await fireEvent.click(expandedOrientationToggle);
+        await waitFor(() =>
+            expect(orientationToggle).toHaveAccessibleName('Switch to vertical bars')
+        );
     });
 
     it('manually configures colliding categorical labels by stable bucket id', async () => {
