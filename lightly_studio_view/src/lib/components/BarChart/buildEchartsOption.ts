@@ -21,6 +21,12 @@ const NONE_LABEL = '(none)';
 /** Bar layout: 'vertical' bars grow upward, 'horizontal' bars grow rightward. */
 export type BarChartOrientation = 'vertical' | 'horizontal';
 
+/** Compact mean-marker label: integers as-is, otherwise two decimals, trimmed. */
+function formatMean(value: number): string {
+    if (Number.isInteger(value)) return String(value);
+    return value.toFixed(2).replace(/\.?0+$/, '');
+}
+
 interface BuildEchartsOptionOptions {
     /**
      * Denominator for tooltip percentages in count mode with a single series.
@@ -133,6 +139,29 @@ export function buildEchartsOption(
     const chartSeries = series.map((s, index) => {
         const color = s.color ?? (isMulti ? getSeriesColor(index) : DEFAULT_BAR_COLOR);
         const values = seriesValues[index];
+        // A dashed line at the series mean, positioned by its fractional index on
+        // the category axis (so it can sit between bins). Attached to the series so
+        // it inherits the series color and appears only for series that carry one.
+        const markLine = s.mean
+            ? {
+                  symbol: 'none' as const,
+                  silent: true,
+                  lineStyle: { color, type: 'dashed' as const, width: 1.5 },
+                  label: {
+                      formatter: `μ ${formatMean(s.mean.value)}`,
+                      color,
+                      position: isHorizontal
+                          ? ('insideEndBottom' as const)
+                          : ('insideEndTop' as const),
+                      fontSize: 11
+                  },
+                  data: [
+                      isHorizontal
+                          ? { yAxis: s.mean.categoryIndex }
+                          : { xAxis: s.mean.categoryIndex }
+                  ]
+              }
+            : undefined;
         // Numeric histograms with several series read best as step density
         // curves; a single series stays a filled histogram.
         if (mode === 'histogram' && isMulti) {
@@ -144,7 +173,8 @@ export function buildEchartsOption(
                 data: values,
                 lineStyle: { color, width: 2 },
                 itemStyle: { color },
-                emphasis: CHART_EMPHASIS
+                emphasis: CHART_EMPHASIS,
+                ...(markLine ? { markLine } : {})
             };
         }
         return {
@@ -154,7 +184,8 @@ export function buildEchartsOption(
             itemStyle: { color },
             // Touching bars read as a histogram; grouped bars keep a gap.
             barCategoryGap: mode === 'histogram' ? '0%' : '25%',
-            emphasis: CHART_EMPHASIS
+            emphasis: CHART_EMPHASIS,
+            ...(markLine ? { markLine } : {})
         };
     });
 

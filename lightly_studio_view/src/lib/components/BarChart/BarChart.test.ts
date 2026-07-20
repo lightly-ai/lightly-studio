@@ -28,7 +28,8 @@ vi.mock('echarts/charts', () => ({ BarChart: {}, LineChart: {} }));
 vi.mock('echarts/components', () => ({
     GridComponent: {},
     TooltipComponent: {},
-    LegendComponent: {}
+    LegendComponent: {},
+    MarkLineComponent: {}
 }));
 vi.mock('echarts/renderers', () => ({ CanvasRenderer: {} }));
 

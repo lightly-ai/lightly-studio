@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
+import pytest
 from sqlmodel import Session
 
 from lightly_studio.resolvers.metadata_resolver.sample.get_nn_distance_distribution import (
@@ -62,6 +63,8 @@ def test_whole_collection_series__excludes_self_matches(db_session: Session) -> 
     # Self-matches are excluded: had they been included every distance would be 0.0
     # and the range would collapse. Instead values span ~0.1 (close pair) to ~1.35.
     assert result.bin_edges[0] < 0.5 < result.bin_edges[-1]
+    # Mean of the four raw distances (~0.1, ~0.1, ~1.35, ~1.35).
+    assert result.mean == pytest.approx(0.7225, abs=1e-2)
 
 
 def test_empty_scopes__returns_empty_list(db_session: Session) -> None:
@@ -87,6 +90,7 @@ def test_no_embedding_model__returns_empty_views(db_session: Session) -> None:
         assert result.kind == "numeric"
         assert result.bin_edges == []
         assert result.counts == []
+        assert result.mean is None  # no distances computed → no mean
     assert results[1].none_count == 1  # the scoped series counts its lone sample as none
 
 
@@ -115,6 +119,7 @@ def test_collection_with_fewer_than_two_embeddings__returns_empty_view(
     assert result.bin_edges == []
     assert result.counts == []
     assert result.none_count == 1
+    assert result.mean is None
 
 
 def test_series_share_bin_edges_and_compute_within_scope(db_session: Session) -> None:
@@ -139,6 +144,8 @@ def test_series_share_bin_edges_and_compute_within_scope(db_session: Session) ->
     # Within-scope distance for the orthogonal pair is sqrt(2); it lands in the last
     # bin of the shared axis (the whole-collection series reaches up to ~1.35).
     assert subset.counts[-1] == 2
+    # Both samples' within-scope neighbor distance is sqrt(2), so the mean is too.
+    assert subset.mean == pytest.approx(2**0.5, abs=1e-5)
 
 
 def test_scope_counts_samples_without_embeddings_as_none(db_session: Session) -> None:

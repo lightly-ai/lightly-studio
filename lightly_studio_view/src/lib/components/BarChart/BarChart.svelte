@@ -2,7 +2,12 @@
     import { onDestroy } from 'svelte';
     import * as echarts from 'echarts/core';
     import { BarChart as EchartsBarChart, LineChart as EchartsLineChart } from 'echarts/charts';
-    import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components';
+    import {
+        GridComponent,
+        TooltipComponent,
+        LegendComponent,
+        MarkLineComponent
+    } from 'echarts/components';
     import { CanvasRenderer } from 'echarts/renderers';
     import {
         buildEchartsOption,
@@ -23,6 +28,7 @@
         GridComponent,
         TooltipComponent,
         LegendComponent,
+        MarkLineComponent,
         CanvasRenderer
     ]);
 

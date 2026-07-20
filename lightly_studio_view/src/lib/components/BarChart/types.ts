@@ -17,6 +17,12 @@ export interface ChartSeries {
     color?: string;
     /** Category counts for this series. */
     data: CategoryCount[];
+    /**
+     * Optional mean marker for numeric/histogram series. `value` is the raw mean
+     * (shown in the marker label); `categoryIndex` is its fractional position
+     * along the category axis so the chart can draw the line between bins.
+     */
+    mean?: { value: number; categoryIndex: number };
 }
 
 /**

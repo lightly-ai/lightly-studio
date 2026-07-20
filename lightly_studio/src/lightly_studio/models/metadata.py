@@ -254,3 +254,10 @@ class MetadataDistributionView(BaseModel):
     none_count: int | None = Field(
         None, description="Number of in-scope samples missing the key (numeric keys)"
     )
+    mean: float | None = Field(
+        None,
+        description=(
+            "Mean of the numeric values (excluding missing ones), or None when no value "
+            "was computed. Lets the frontend draw a mean marker on the histogram."
+        ),
+    )

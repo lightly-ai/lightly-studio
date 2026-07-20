@@ -105,6 +105,9 @@ def get_nn_distance_distributions(
             bin_edges=bin_edges,
             counts=bin_counts(values=values, bin_edges=bin_edges),
             none_count=none_count,
+            # Mean over the raw distances (not the binned counts) so the marker is
+            # exact; None when the scope produced no distance at all.
+            mean=float(np.mean(values)) if values else None,
         )
         for values, none_count in per_series
     ]

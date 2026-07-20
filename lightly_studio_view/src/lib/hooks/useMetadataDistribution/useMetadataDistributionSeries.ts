@@ -80,17 +80,44 @@ export const distributionToCategoryCounts = (view: MetadataDistributionView): Ca
     return data;
 };
 
+/**
+ * Fractional position of `mean` along the histogram's category axis, where each
+ * numeric bin occupies one category band centered on its integer index. Returns
+ * `undefined` when there are no bins to place it against.
+ *
+ * Bin `i` spans `[edges[i], edges[i + 1]]` and is centered at category index `i`,
+ * so its band covers `[i - 0.5, i + 0.5]`; a mean at the bin's left edge maps to
+ * `i - 0.5`, at its center to `i`, at its right edge to `i + 0.5`.
+ */
+export const meanCategoryIndex = (edges: number[], mean: number): number | undefined => {
+    if (edges.length < 2) return undefined;
+    const clamped = Math.min(Math.max(mean, edges[0]), edges[edges.length - 1]);
+    let bin = 0;
+    while (bin < edges.length - 2 && clamped >= edges[bin + 1]) bin += 1;
+    const width = edges[bin + 1] - edges[bin];
+    const fraction = width > 0 ? (clamped - edges[bin]) / width : 0.5;
+    return bin + (fraction - 0.5);
+};
+
 /** Shape one distribution view into a colored chart series (aligned by input order). */
 const toChartSeries = (
     input: MetadataDistributionSeriesInput,
     view: MetadataDistributionView,
     index: number
-): ChartSeries => ({
-    id: input.id,
-    label: input.label,
-    color: getSeriesColor(index),
-    data: distributionToCategoryCounts(view)
-});
+): ChartSeries => {
+    const categoryIndex =
+        view.mean != null ? meanCategoryIndex(view.bin_edges ?? [], view.mean) : undefined;
+    return {
+        id: input.id,
+        label: input.label,
+        color: getSeriesColor(index),
+        data: distributionToCategoryCounts(view),
+        mean:
+            view.mean != null && categoryIndex !== undefined
+                ? { value: view.mean, categoryIndex }
+                : undefined
+    };
+};
 
 /**
  * Metadata endpoint: one filtered request per series. Numeric keys share an x-axis

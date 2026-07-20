@@ -201,6 +201,48 @@ describe('buildEchartsOption', () => {
         });
     });
 
+    describe('mean marker', () => {
+        const withMean: ChartSeries[] = [
+            {
+                id: 'a',
+                label: '',
+                mean: { value: 0.4231, categoryIndex: 1.25 },
+                data: [
+                    { label: '0–1', count: 5 },
+                    { label: '1–2', count: 8 }
+                ]
+            }
+        ];
+
+        it('adds a dashed markLine at the mean category index on the value-carrying axis', () => {
+            const vertical = buildEchartsOption(withMean, { mode: 'histogram' }) as {
+                series: [{ markLine?: { lineStyle: { type: string }; data: { xAxis: number }[] } }];
+            };
+            expect(vertical.series[0].markLine?.lineStyle.type).toBe('dashed');
+            expect(vertical.series[0].markLine?.data).toEqual([{ xAxis: 1.25 }]);
+
+            const horizontal = buildEchartsOption(withMean, {
+                mode: 'histogram',
+                orientation: 'horizontal'
+            }) as { series: [{ markLine?: { data: { yAxis: number }[] } }] };
+            expect(horizontal.series[0].markLine?.data).toEqual([{ yAxis: 1.25 }]);
+        });
+
+        it('labels the marker with a trimmed mean value', () => {
+            const option = buildEchartsOption(withMean, { mode: 'histogram' }) as {
+                series: [{ markLine?: { label: { formatter: string } } }];
+            };
+            expect(option.series[0].markLine?.label.formatter).toBe('μ 0.42');
+        });
+
+        it('omits the markLine for series without a mean', () => {
+            const option = buildEchartsOption(single(), { mode: 'histogram' }) as {
+                series: [{ markLine?: unknown }];
+            };
+            expect(option.series[0].markLine).toBeUndefined();
+        });
+    });
+
     describe('unionCategories', () => {
         it('pins the (none) bucket last', () => {
             const categories = unionCategories([
