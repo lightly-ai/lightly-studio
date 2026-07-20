@@ -80,7 +80,7 @@
             ...defaultVideoProps,
             ...restVideoProps,
             // Force native controls off — the custom bar replaces them.
-            controls: false as const
+            controls: false
         };
     });
     const videoClass = $derived(videoProps.class);
