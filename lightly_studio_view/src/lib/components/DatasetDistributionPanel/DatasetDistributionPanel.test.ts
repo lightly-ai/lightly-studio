@@ -8,11 +8,14 @@ import { AnnotationCountMode, AnnotationType } from '$lib/api/lightly_studio_loc
 
 const echartsMock = vi.hoisted(() => {
     const zrHandlers: Record<string, (event: { offsetX: number; offsetY: number }) => void> = {};
+    let clickHandler: ((params: { dataIndex?: number }) => void) | undefined;
     const instance = {
         setOption: vi.fn(),
         resize: vi.fn(),
         dispose: vi.fn(),
-        on: vi.fn(),
+        on: vi.fn((event: string, handler: (params: { dataIndex?: number }) => void) => {
+            if (event === 'click') clickHandler = handler;
+        }),
         // 2 bins across a 200px-wide canvas → 100px per bin index.
         convertFromPixel: vi.fn((_finder: unknown, offsetX: number) => offsetX / 100),
         getZr: () => ({
@@ -22,7 +25,12 @@ const echartsMock = vi.hoisted(() => {
             off: vi.fn()
         })
     };
-    return { init: vi.fn(() => instance), instance, zrHandlers };
+    return {
+        init: vi.fn(() => instance),
+        instance,
+        zrHandlers,
+        getClickHandler: () => clickHandler
+    };
 });
 
 vi.mock('echarts/core', () => ({
@@ -216,6 +224,120 @@ describe('DatasetDistributionPanel', () => {
         expect(screen.getByTestId('histogram')).toBeInTheDocument();
         expect(screen.getByTestId('dataset-distribution-histogram-summary')).toHaveTextContent(
             '100 samples · 2 bins · 0–1'
+        );
+    });
+
+    it('preserves categorical endpoint order and toggles typed buckets but not Other', () => {
+        const onCategoricalValueToggle = vi.fn();
+        const sources: DistributionSource[] = [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                groups: [
+                    {
+                        id: 'city',
+                        label: 'city',
+                        categorical: {
+                            selectedValues: ['Missing'],
+                            buckets: [
+                                {
+                                    id: 'literal',
+                                    kind: 'value',
+                                    value: 'Missing',
+                                    label: 'Missing',
+                                    count: 4
+                                },
+                                {
+                                    id: 'missing',
+                                    kind: 'missing',
+                                    value: null,
+                                    label: 'Missing',
+                                    count: 3
+                                },
+                                { id: 'other', kind: 'other', label: 'Other', count: 2 }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ];
+        render(DatasetDistributionPanel, { props: { sources, onCategoricalValueToggle } });
+
+        const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+            yAxis: { data: string[] };
+            series: [{ data: { itemStyle: { borderWidth: number } }[] }];
+        };
+        expect(option.yAxis.data).toEqual(['Missing', 'Missing', 'Other']);
+        expect(option.series[0].data[0].itemStyle.borderWidth).toBe(3);
+
+        echartsMock.getClickHandler()?.({ dataIndex: 1 });
+        expect(onCategoricalValueToggle).toHaveBeenCalledWith('city', null);
+        echartsMock.getClickHandler()?.({ dataIndex: 2 });
+        expect(onCategoricalValueToggle).toHaveBeenCalledOnce();
+    });
+
+    it('shows categorical loading and retryable error states', async () => {
+        const onCategoricalRetry = vi.fn();
+        const source = (state: { loading?: boolean; error?: string }): DistributionSource[] => [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                groups: [
+                    {
+                        id: 'city',
+                        label: 'city',
+                        categorical: { buckets: [], selectedValues: ['Zurich'], ...state }
+                    }
+                ]
+            }
+        ];
+        const view = render(DatasetDistributionPanel, {
+            props: { sources: source({ loading: true }), onCategoricalRetry }
+        });
+        expect(screen.getByRole('status')).toHaveTextContent('Loading metadata distribution');
+
+        await view.rerender({
+            sources: source({ error: 'network failure' }),
+            onCategoricalRetry
+        });
+        expect(screen.getByRole('alert')).toHaveTextContent('Could not load metadata distribution');
+        await fireEvent.click(screen.getByTestId('metadata-categorical-retry'));
+        expect(onCategoricalRetry).toHaveBeenCalledOnce();
+    });
+
+    it('keeps stale categorical bars visible after a refetch error', () => {
+        const sources: DistributionSource[] = [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                groups: [
+                    {
+                        id: 'city',
+                        label: 'city',
+                        categorical: {
+                            buckets: [
+                                {
+                                    id: 'zurich',
+                                    kind: 'value',
+                                    value: 'Zurich',
+                                    label: 'Zurich',
+                                    count: 4
+                                }
+                            ],
+                            selectedValues: [],
+                            error: 'network failure'
+                        }
+                    }
+                ]
+            }
+        ];
+
+        render(DatasetDistributionPanel, { props: { sources } });
+
+        expect(screen.getByRole('alert')).toHaveTextContent('Could not update');
+        expect(screen.getByTestId('bar-chart')).toBeInTheDocument();
+        expect(screen.getByLabelText('Categorical metadata value counts')).toHaveTextContent(
+            'Zurich: 4 samples'
         );
     });
 
