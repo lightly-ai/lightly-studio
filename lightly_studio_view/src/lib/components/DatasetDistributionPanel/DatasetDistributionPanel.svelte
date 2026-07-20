@@ -362,50 +362,53 @@
             </div>
         {/if}
         {#if categoricalData.length > 0}
+            <div class="mt-2">
+                <PanelHeader
+                    config={categoricalConfig}
+                    classCount={categoricalData.length}
+                    visibleClassCount={visible.length}
+                    {totalCount}
+                    {valueNoun}
+                    categoryNoun="value"
+                    categoryNounPlural="values"
+                    sortLabels={CATEGORICAL_DISTRIBUTION_SORT_LABELS}
+                    onConfigure={() => (configDialogOpen = true)}
+                    onShowAll={() =>
+                        setCategoricalConfig({
+                            ...categoricalConfig,
+                            mode: 'topN',
+                            n: categoricalData.length
+                        })}
+                    onToggleOrientation={() =>
+                        setCategoricalConfig({
+                            ...categoricalConfig,
+                            orientation:
+                                categoricalConfig.orientation === 'horizontal'
+                                    ? 'vertical'
+                                    : 'horizontal'
+                        })}
+                    onExpand={() => (expandOpen = true)}
+                />
+            </div>
+        {/if}
+    {:else if activeData.length > 0}
+        <div class="mt-2">
             <PanelHeader
-                config={categoricalConfig}
-                classCount={categoricalData.length}
+                {config}
+                classCount={activeData.length}
                 visibleClassCount={visible.length}
-                {totalCount}
+                totalCount={showTotalCount ? totalCount : undefined}
                 {valueNoun}
-                categoryNoun="value"
-                categoryNounPlural="values"
-                sortLabels={CATEGORICAL_DISTRIBUTION_SORT_LABELS}
-                compact
                 onConfigure={() => (configDialogOpen = true)}
-                onShowAll={() =>
-                    setCategoricalConfig({
-                        ...categoricalConfig,
-                        mode: 'topN',
-                        n: categoricalData.length
-                    })}
+                onShowAll={() => (config = { ...config, mode: 'topN', n: activeData.length })}
                 onToggleOrientation={() =>
-                    setCategoricalConfig({
-                        ...categoricalConfig,
-                        orientation:
-                            categoricalConfig.orientation === 'horizontal'
-                                ? 'vertical'
-                                : 'horizontal'
+                    (config = {
+                        ...config,
+                        orientation: config.orientation === 'horizontal' ? 'vertical' : 'horizontal'
                     })}
                 onExpand={() => (expandOpen = true)}
             />
-        {/if}
-    {:else if activeData.length > 0}
-        <PanelHeader
-            {config}
-            classCount={activeData.length}
-            visibleClassCount={visible.length}
-            totalCount={showTotalCount ? totalCount : undefined}
-            {valueNoun}
-            onConfigure={() => (configDialogOpen = true)}
-            onShowAll={() => (config = { ...config, mode: 'topN', n: activeData.length })}
-            onToggleOrientation={() =>
-                (config = {
-                    ...config,
-                    orientation: config.orientation === 'horizontal' ? 'vertical' : 'horizontal'
-                })}
-            onExpand={() => (expandOpen = true)}
-        />
+        </div>
     {/if}
     <div
         class="min-h-0 flex-1 overflow-y-auto dark:[color-scheme:dark]"
@@ -463,7 +466,7 @@
                 {totalCount}
                 onBarClick={activeCategorical ? handleCategoricalBarClick : onBarClick}
                 emptyState={activeCategorical ? categoricalEmptyState : undefined}
-                gridTopPx={activeCategorical ? 4 : undefined}
+                gridTopPx={4}
             />
         {/if}
     </div>
@@ -488,7 +491,6 @@
         categoryNounPlural={activeCategorical ? 'values' : 'classes'}
         sortLabels={activeCategorical ? CATEGORICAL_DISTRIBUTION_SORT_LABELS : undefined}
         showCountMode={!activeCategorical}
-        compact={Boolean(activeCategorical)}
         onConfigChange={applyConfig}
         onBarClick={activeCategorical ? handleCategoricalBarClick : onBarClick}
     />

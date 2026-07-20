@@ -101,8 +101,10 @@ describe('DatasetDistributionPanel', () => {
         // Horizontal default: categories live on the y-axis.
         const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
             yAxis: { data: string[] };
+            grid: { top: number };
         };
         expect(option.yAxis.data).toEqual(['person', 'dog', 'car']);
+        expect(option.grid.top).toBe(4);
     });
 
     it('applies a new top-N from the config dialog', async () => {

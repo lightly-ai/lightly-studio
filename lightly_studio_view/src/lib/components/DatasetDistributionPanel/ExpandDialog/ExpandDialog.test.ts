@@ -97,9 +97,8 @@ describe('ExpandDialog', () => {
         expect(onConfigChange).toHaveBeenCalledWith({ ...config, orientation: 'horizontal' });
     });
 
-    it('uses compact categorical spacing and exposes value controls', async () => {
+    it('uses consistent plot spacing and exposes categorical value controls', async () => {
         renderDialog({
-            compact: true,
             categoryNoun: 'value',
             categoryNounPlural: 'values',
             showCountMode: false,
