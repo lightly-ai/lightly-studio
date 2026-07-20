@@ -1,6 +1,5 @@
 <script lang="ts">
     import { type AnnotationWithPayloadView } from '$lib/api/lightly_studio_local';
-    import { get } from 'svelte/store';
     import { useSettings } from '$lib/hooks';
     import SampleClassificationPills from '$lib/components/SampleClassificationPills/SampleClassificationPills.svelte';
     import { getThumbnailUrl, getSampleDimensions } from './getThumbnailData';
@@ -35,9 +34,6 @@
 
     const { gridViewThumbnailQualityStore } = useSettings();
 
-    let quality = $state(get(gridViewThumbnailQualityStore));
-    $effect(() => gridViewThumbnailQualityStore.subscribe((v) => (quality = v)));
-
     // Stable id captured at init — same pattern as AnnotationItem (avoids re-reading
     // the annotation prop during effect cleanup after the grid array shrinks).
     const annotationId = annotation.annotation.sample_id;
@@ -45,7 +41,7 @@
     const thumbnailUrl = $derived(
         getThumbnailUrl({
             annotation,
-            quality,
+            quality: $gridViewThumbnailQualityStore,
             containerWidth,
             containerHeight,
             cachedCollectionVersion
