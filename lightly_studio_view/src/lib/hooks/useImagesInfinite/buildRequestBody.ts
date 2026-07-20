@@ -14,9 +14,13 @@ const buildBaseBody = (params: ImagesInfiniteParams, pageParam: number): ReadIma
     filters: {
         sample_filter: {
             query_expr: params.query_expr ?? undefined,
-            metadata_filters: params.metadata_values
-                ? createMetadataFilters(params.metadata_values)
-                : undefined
+            metadata_filters:
+                params.metadata_values || params.categorical_metadata_values
+                    ? createMetadataFilters(
+                          params.metadata_values ?? {},
+                          params.categorical_metadata_values
+                      )
+                    : undefined
         }
     }
 });
