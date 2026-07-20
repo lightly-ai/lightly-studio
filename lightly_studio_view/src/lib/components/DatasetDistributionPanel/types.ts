@@ -2,6 +2,8 @@ import type { CategoryCount } from '$lib/components/BarChart';
 import type { ClassSetSelection } from '$lib/components/ClassSetConfig';
 import { type AnnotationCountMode } from '$lib/api/lightly_studio_local/types.gen';
 import type { HistogramData, HistogramRange } from '$lib/components/Histogram';
+import type { CategoricalMetadataBucket } from '$lib/hooks/useCategoricalMetadataDistribution/useCategoricalMetadataDistribution';
+import type { CategoricalMetadataValue } from '$lib/services/types';
 
 export type DistributionSortOption = 'count' | 'name';
 
@@ -32,6 +34,13 @@ export interface DistributionSourceGroup {
      * metadata filter). Bins outside it render dimmed.
      */
     selectedRange?: HistogramRange;
+    /** Controlled categorical distribution and selection state. */
+    categorical?: {
+        buckets: CategoricalMetadataBucket[];
+        selectedValues: CategoricalMetadataValue[];
+        loading?: boolean;
+        error?: string;
+    };
 }
 
 /**

@@ -18,6 +18,8 @@
         type DistributionSourceGroup
     } from './types';
     import { AnnotationCountMode } from '$lib/api/lightly_studio_local/types.gen';
+    import MetadataCategoricalFilter from './MetadataCategoricalFilter.svelte';
+    import type { CategoricalMetadataValue } from '$lib/services/types';
 
     interface Props {
         /**
@@ -59,6 +61,12 @@
         histogramBinCount?: number;
         /** Called when the user picks a new histogram bin count. */
         onHistogramBinCountChange?: (binCount: number) => void;
+        /** Called when a concrete categorical value or Missing is toggled. */
+        onCategoricalValueToggle?: (groupId: string, value: CategoricalMetadataValue) => void;
+        /** Removes every categorical value selected for the given group. */
+        onCategoricalValuesClear?: (groupId: string) => void;
+        /** Retries a failed categorical distribution request. */
+        onCategoricalRetry?: () => void;
     }
 
     const {
@@ -72,7 +80,10 @@
         initialCountMode = AnnotationCountMode.OBJECTS,
         onHistogramRangeSelect,
         histogramBinCount = 20,
-        onHistogramBinCountChange
+        onHistogramBinCountChange,
+        onCategoricalValueToggle,
+        onCategoricalValuesClear,
+        onCategoricalRetry
     }: Props = $props();
 
     // Normalise to a source list so the rest of the panel has one code path.
@@ -85,7 +96,7 @@
     let selectedGroupId = $state<string | undefined>(undefined);
 
     const groupHasContent = (group: DistributionSourceGroup): boolean =>
-        (group.data?.length ?? 0) > 0 || group.histogram != null;
+        (group.data?.length ?? 0) > 0 || group.histogram != null || group.categorical != null;
 
     const sourceHasContent = (source: DistributionSource): boolean =>
         (source.data?.length ?? 0) > 0 ||
@@ -109,6 +120,19 @@
     // A group/source carrying bins renders as a histogram instead of a bar
     // chart; the categorical controls (sort, top-N, orientation) don't apply.
     const activeHistogram = $derived(activeGroup?.histogram ?? activeSource.histogram ?? null);
+    const activeCategorical = $derived(activeGroup?.categorical ?? null);
+    const categoricalData = $derived<CategoryCount[]>(
+        (activeCategorical?.buckets ?? []).map((bucket) => ({
+            id: bucket.id,
+            label: bucket.label,
+            count: bucket.count,
+            selectable: bucket.kind !== 'other',
+            selected:
+                bucket.kind !== 'other' &&
+                activeCategorical?.selectedValues.some((value) => Object.is(value, bucket.value))
+        }))
+    );
+    const displayedData = $derived(activeCategorical ? categoricalData : activeData);
     const activeHistogramRange = $derived(activeGroup?.selectedRange ?? activeSource.selectedRange);
     const handleHistogramRangeSelect = (range: HistogramRange) => {
         const groupId = activeGroup?.id ?? activeSource.id;
@@ -153,8 +177,16 @@
         (activeSource.groups ?? []).map((group) => ({ value: group.id, label: group.label }))
     );
 
-    const visible = $derived(selectVisibleCounts(activeData, config));
-    const totalCount = $derived(activeData.reduce((sum, item) => sum + item.count, 0));
+    const visible = $derived(
+        activeCategorical ? displayedData : selectVisibleCounts(displayedData, config)
+    );
+    const totalCount = $derived(displayedData.reduce((sum, item) => sum + item.count, 0));
+
+    const handleCategoricalBarClick = (item: CategoryCount) => {
+        const bucket = activeCategorical?.buckets.find((candidate) => candidate.id === item.id);
+        if (!bucket || bucket.kind === 'other' || !activeGroup) return;
+        onCategoricalValueToggle?.(activeGroup.id, bucket.value);
+    };
 
     function applyConfig(next: DistributionConfig) {
         if (next.countMode !== config.countMode) {
@@ -163,6 +195,10 @@
         config = next;
     }
 </script>
+
+{#snippet categoricalEmptyState()}
+    <span>No matching samples for this metadata field.</span>
+{/snippet}
 
 <div
     class="flex h-full min-w-0 flex-1 flex-col rounded-[1vw] bg-card p-4"
@@ -259,6 +295,34 @@
                 />
             </div>
         </div>
+    {:else if activeCategorical && activeGroup}
+        <MetadataCategoricalFilter
+            buckets={activeCategorical.buckets}
+            selectedValues={activeCategorical.selectedValues}
+            loading={activeCategorical.loading}
+            onToggle={(value) => onCategoricalValueToggle?.(activeGroup.id, value)}
+            onClear={() => onCategoricalValuesClear?.(activeGroup.id)}
+        />
+        {#if activeCategorical.loading && activeCategorical.buckets.length > 0}
+            <p class="mt-1 text-xs text-muted-foreground" role="status">Updating values…</p>
+        {/if}
+        {#if activeCategorical.error && activeCategorical.buckets.length > 0}
+            <div
+                class="mt-1 flex items-center justify-between gap-2 text-xs text-destructive"
+                role="alert"
+            >
+                <span>Could not update metadata distribution.</span>
+                {#if onCategoricalRetry}
+                    <button
+                        class="underline max-sm:min-h-11"
+                        type="button"
+                        onclick={onCategoricalRetry}
+                    >
+                        Retry
+                    </button>
+                {/if}
+            </div>
+        {/if}
     {:else if activeData.length > 0}
         <PanelHeader
             {config}
@@ -289,32 +353,69 @@
                 showAxes
                 onRangeSelect={onHistogramRangeSelect ? handleHistogramRangeSelect : undefined}
             />
+        {:else if activeCategorical?.loading && activeCategorical.buckets.length === 0}
+            <div class="p-8 text-center text-sm text-muted-foreground" role="status">
+                Loading metadata distribution…
+            </div>
+        {:else if activeCategorical?.error && activeCategorical.buckets.length === 0}
+            <div class="space-y-2 p-8 text-center text-sm" role="alert">
+                <p class="text-destructive">Could not load metadata distribution.</p>
+                {#if onCategoricalRetry}
+                    <Button
+                        variant="secondary"
+                        buttonProps={{
+                            size: 'sm',
+                            class: 'max-sm:min-h-11',
+                            onclick: onCategoricalRetry,
+                            'data-testid': 'metadata-categorical-retry'
+                        }}>Retry</Button
+                    >
+                {/if}
+            </div>
         {:else}
+            {#if activeCategorical}
+                <ul class="sr-only" aria-label="Categorical metadata value counts">
+                    {#each activeCategorical.buckets as bucket (bucket.id)}
+                        <li>
+                            {bucket.label}: {bucket.count} samples{bucket.kind === 'other'
+                                ? ', aggregated and not selectable'
+                                : activeCategorical.selectedValues.some((value) =>
+                                        Object.is(value, bucket.value)
+                                    )
+                                  ? ', selected'
+                                  : ''}
+                        </li>
+                    {/each}
+                </ul>
+            {/if}
             <BarChart
                 data={visible}
-                orientation={config.orientation}
+                orientation={activeCategorical ? 'horizontal' : config.orientation}
                 maxHeightPx={chartHeight || undefined}
                 maxWidthPx={clientWidth || undefined}
                 {totalCount}
-                {onBarClick}
+                onBarClick={activeCategorical ? handleCategoricalBarClick : onBarClick}
+                emptyState={activeCategorical ? categoricalEmptyState : undefined}
             />
         {/if}
     </div>
 </div>
-<DistributionConfigDialog
-    bind:open={configDialogOpen}
-    allClasses={activeData.map((item) => item.label)}
-    {config}
-    onApply={applyConfig}
-/>
-<ExpandDialog
-    bind:open={expandOpen}
-    data={activeData}
-    {config}
-    {valueNoun}
-    onConfigChange={applyConfig}
-    {onBarClick}
-/>
+{#if !activeCategorical}
+    <DistributionConfigDialog
+        bind:open={configDialogOpen}
+        allClasses={activeData.map((item) => item.label)}
+        {config}
+        onApply={applyConfig}
+    />
+    <ExpandDialog
+        bind:open={expandOpen}
+        data={activeData}
+        {config}
+        {valueNoun}
+        onConfigChange={applyConfig}
+        {onBarClick}
+    />
+{/if}
 {#if activeHistogram}
     <HistogramExpandDialog
         bind:open={histogramExpandOpen}
