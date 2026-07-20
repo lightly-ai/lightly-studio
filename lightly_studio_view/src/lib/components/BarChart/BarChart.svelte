@@ -89,7 +89,7 @@
         instance.on('click', (params: { dataIndex?: number }) => {
             if (typeof params.dataIndex !== 'number') return;
             const item = data[params.dataIndex];
-            if (item) onBarClick?.(item);
+            if (item && item.selectable !== false) onBarClick?.(item);
         });
         const resizeObserver = new ResizeObserver(() => instance.resize());
         resizeObserver.observe(container);
