@@ -13,6 +13,8 @@
         open: boolean;
         /** Every class label available; bounds top-N and populates the manual selector. */
         allClasses: string[];
+        /** Stable values and labels for manual selection. */
+        items?: SelectItem[];
         /** The currently applied selection. Copied into a draft each time the dialog opens. */
         selection: ClassSetSelection;
         /** Sort options for the top-N tab (host-specific ranking criteria). */
@@ -23,6 +25,8 @@
         testIdPrefix: string;
         /** Shows an "All" quick action next to the number input. */
         showAllButton?: boolean;
+        /** Singular/plural labels for the configured chart items. */
+        itemNounPlural?: string;
         /** Extra controls rendered below the tabs (e.g. coloring options). */
         extraSections?: Snippet;
         /** Invoked with the new selection when the user clicks Apply. The dialog then closes itself. */
@@ -32,16 +36,18 @@
     let {
         open = $bindable(),
         allClasses,
+        items,
         selection,
         sortItems,
         description,
         testIdPrefix,
         showAllButton = false,
+        itemNounPlural = 'classes',
         extraSections,
         onApply
     }: Props = $props();
 
-    const maxN = $derived(allClasses.length);
+    const maxN = $derived(items?.length ?? allClasses.length);
 
     const toDraft = (): ClassSetSelection => ({
         mode: selection.mode,
@@ -73,7 +79,7 @@
 <Dialog.Root bind:open>
     <Dialog.Content class="max-w-[420px]">
         <Dialog.Header>
-            <Dialog.Title>Configure classes</Dialog.Title>
+            <Dialog.Title>Configure {itemNounPlural}</Dialog.Title>
             <Dialog.Description>{description}</Dialog.Description>
         </Dialog.Header>
         <Tabs.Root bind:value={draft.mode}>
@@ -84,7 +90,7 @@
             <Tabs.Content value="topN">
                 <div class="space-y-3 pt-2">
                     <label class="flex items-center justify-between gap-2 text-sm">
-                        Number of classes
+                        Number of {itemNounPlural}
                         <span class="flex items-center gap-1">
                             <Input
                                 type="number"
@@ -124,6 +130,9 @@
                 <ManualClassSelector
                     bind:selected={draft.manualClasses}
                     {allClasses}
+                    {items}
+                    {itemNounPlural}
+                    itemNoun={itemNounPlural === 'classes' ? 'class' : 'value'}
                     searchTestId={`${testIdPrefix}-search`}
                 />
             </Tabs.Content>

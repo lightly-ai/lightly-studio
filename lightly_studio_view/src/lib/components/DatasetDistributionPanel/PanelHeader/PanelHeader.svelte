@@ -19,6 +19,11 @@
         totalCount?: number;
         /** Noun for the total count summary (e.g. 'annotations', 'samples'). */
         valueNoun?: string;
+        /** Singular/plural labels for the distributed categories. */
+        categoryNoun?: string;
+        categoryNounPlural?: string;
+        /** Labels for the active sort mode. */
+        sortLabels?: Record<keyof typeof DISTRIBUTION_SORT_LABELS, string>;
         /** Opens the view-config dialog (top-N and sort order). */
         onConfigure: () => void;
         /** Quick action showing all classes; rendered only while a subset is visible. */
@@ -37,6 +42,9 @@
         visibleClassCount,
         totalCount,
         valueNoun = 'annotations',
+        categoryNoun = 'class',
+        categoryNounPlural = 'classes',
+        sortLabels = DISTRIBUTION_SORT_LABELS,
         onConfigure,
         onShowAll,
         onToggleOrientation,
@@ -49,12 +57,13 @@
     <div class="mb-2 flex-1 text-xs text-muted-foreground">
         {#if visibleClassCount < classCount}
             {config.mode === 'manual' ? 'Showing' : 'Top'}
-            {visibleClassCount} of {classCount} classes
+            {visibleClassCount} of {classCount}
+            {categoryNounPlural}
         {:else}
             {classCount}
-            {classCount === 1 ? 'class' : 'classes'}
+            {classCount === 1 ? categoryNoun : categoryNounPlural}
         {/if}
-        · sorted by {DISTRIBUTION_SORT_LABELS[config.sortBy].toLowerCase()}
+        · sorted by {sortLabels[config.sortBy].toLowerCase()}
         {#if totalCount !== undefined}
             · {totalCount.toLocaleString('en-US')}
             {valueNoun}
@@ -89,7 +98,7 @@
     <Button
         variant="ghost"
         icon={SettingsIcon}
-        ariaLabel="Configure distribution classes"
+        ariaLabel="Configure distribution {categoryNounPlural}"
         buttonProps={{
             size: 'sm',
             class: 'h-8 gap-1',

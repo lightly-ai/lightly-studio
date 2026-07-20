@@ -4,7 +4,12 @@
     import DistributionConfigDialog from '../DistributionConfigDialog/DistributionConfigDialog.svelte';
     import PanelHeader from '../PanelHeader/PanelHeader.svelte';
     import { selectVisibleCounts } from '../selectVisibleCounts';
-    import type { DistributionConfig } from '../types';
+    import type {
+        DistributionConfig,
+        DistributionOrientation,
+        DistributionSortOption
+    } from '../types';
+    import { DISTRIBUTION_SORT_LABELS } from '../types';
 
     interface Props {
         /** Two-way bound flag controlling dialog visibility. */
@@ -15,6 +20,12 @@
         config: DistributionConfig;
         /** Noun for the header summary (e.g. 'annotations', 'samples'). */
         valueNoun?: string;
+        categoryNoun?: string;
+        categoryNounPlural?: string;
+        sortLabels?: Record<DistributionSortOption, string>;
+        showCountMode?: boolean;
+        /** Keeps categorical metadata horizontal while reusing the expanded chart. */
+        fixedOrientation?: DistributionOrientation;
         /** Invoked when the user applies a new config from the expanded view. */
         onConfigChange: (config: DistributionConfig) => void;
         onBarClick?: (item: CategoryCount) => void;
@@ -25,6 +36,11 @@
         data,
         config,
         valueNoun = 'annotations',
+        categoryNoun = 'class',
+        categoryNounPlural = 'classes',
+        sortLabels = DISTRIBUTION_SORT_LABELS,
+        showCountMode = true,
+        fixedOrientation,
         onConfigChange,
         onBarClick
     }: Props = $props();
@@ -37,13 +53,19 @@
 
     const visible = $derived(selectVisibleCounts(data, config));
     const totalCount = $derived(data.reduce((sum, item) => sum + item.count, 0));
+    const orientation = $derived(fixedOrientation ?? config.orientation);
+    const configurationItems = $derived(
+        data.map((item) => ({ value: item.id ?? item.label, label: item.label }))
+    );
 </script>
 
 <Dialog.Root bind:open>
     <Dialog.Content class="flex h-[92vh] max-w-[94vw] flex-col sm:max-w-[94vw]">
         <Dialog.Header>
             <Dialog.Title>Distribution</Dialog.Title>
-            <Dialog.Description>Hover a bar for the full class name and count</Dialog.Description>
+            <Dialog.Description>
+                Hover a bar for the full {categoryNoun} name and count
+            </Dialog.Description>
         </Dialog.Header>
         <PanelHeader
             {config}
@@ -51,13 +73,19 @@
             visibleClassCount={visible.length}
             {totalCount}
             {valueNoun}
+            {categoryNoun}
+            {categoryNounPlural}
+            {sortLabels}
             onConfigure={() => (configDialogOpen = true)}
             onShowAll={() => onConfigChange({ ...config, mode: 'topN', n: data.length })}
-            onToggleOrientation={() =>
-                onConfigChange({
-                    ...config,
-                    orientation: config.orientation === 'horizontal' ? 'vertical' : 'horizontal'
-                })}
+            onToggleOrientation={fixedOrientation
+                ? undefined
+                : () =>
+                      onConfigChange({
+                          ...config,
+                          orientation:
+                              config.orientation === 'horizontal' ? 'vertical' : 'horizontal'
+                      })}
             testIdPrefix="dataset-distribution-expanded"
         />
         <div
@@ -66,7 +94,7 @@
         >
             <BarChart
                 data={visible}
-                orientation={config.orientation}
+                {orientation}
                 maxHeightPx={chartHeight || undefined}
                 maxWidthPx={clientWidth || undefined}
                 {totalCount}
@@ -79,6 +107,10 @@
 <DistributionConfigDialog
     bind:open={configDialogOpen}
     allClasses={data.map((item) => item.label)}
+    items={configurationItems}
     {config}
+    {showCountMode}
+    itemNounPlural={categoryNounPlural}
+    {sortLabels}
     onApply={onConfigChange}
 />

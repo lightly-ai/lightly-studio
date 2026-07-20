@@ -40,4 +40,24 @@ describe('ManualClassSelector', () => {
 
         expect(screen.getByTestId('my-search')).toBeInTheDocument();
     });
+
+    it('uses stable values for duplicate labels and custom copy', async () => {
+        render(ManualClassSelector, {
+            props: {
+                selected: [],
+                allClasses: ['Missing', 'Missing'],
+                items: [
+                    { value: 'literal-missing', label: 'Missing' },
+                    { value: 'semantic-missing', label: 'Missing' }
+                ],
+                itemNoun: 'value',
+                itemNounPlural: 'values'
+            }
+        });
+
+        expect(screen.getByPlaceholderText('Search values...')).toBeInTheDocument();
+        expect(screen.getAllByText('Missing')).toHaveLength(2);
+        await fireEvent.click(screen.getAllByText('Missing')[0]);
+        await waitFor(() => expect(screen.getByText('1 of 2 selected')).toBeInTheDocument());
+    });
 });
