@@ -77,7 +77,7 @@
 
     // Normalise to a source list so the rest of the panel has one code path.
     const resolvedSources = $derived<DistributionSource[]>(
-        sources ?? [{ id: 'class', label: 'Class labels', data: data ?? [] }]
+        sources ?? [{ id: 'class', label: 'Annotation classes', data: data ?? [] }]
     );
     const hasSourceSelector = $derived(resolvedSources.length > 1);
 
