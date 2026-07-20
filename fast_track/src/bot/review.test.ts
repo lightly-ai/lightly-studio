@@ -31,7 +31,7 @@ function fakeOctokit(reviews: FakeReview[]) {
     return { octokit, createReview, dismissReview };
 }
 
-function params(octokit: Octokit) {
+function buildReviewParams(octokit: Octokit) {
     return {
         octokit,
         owner: 'lightly-ai',
@@ -45,7 +45,7 @@ function params(octokit: Octokit) {
 describe('approve', () => {
     it('creates the first approval', async () => {
         const fake = fakeOctokit([]);
-        await expect(approve(params(fake.octokit))).resolves.toBe('approved');
+        await expect(approve(buildReviewParams(fake.octokit))).resolves.toBe('approved');
         expect(fake.createReview).toHaveBeenCalledWith(
             expect.objectContaining({ commit_id: HEAD_SHA, event: 'APPROVE' })
         );
@@ -55,14 +55,14 @@ describe('approve', () => {
         const fake = fakeOctokit([
             { id: 1, login: BOT_LOGIN, state: 'APPROVED', commitId: HEAD_SHA }
         ]);
-        await expect(approve(params(fake.octokit))).resolves.toBe('noop');
+        await expect(approve(buildReviewParams(fake.octokit))).resolves.toBe('noop');
         expect(fake.createReview).not.toHaveBeenCalled();
         expect(fake.dismissReview).not.toHaveBeenCalled();
     });
 
     it('refreshes an approval and dismisses the superseded one', async () => {
         const fake = fakeOctokit([{ id: 1, login: BOT_LOGIN, state: 'APPROVED', commitId: 'old' }]);
-        await expect(approve(params(fake.octokit))).resolves.toBe('approved');
+        await expect(approve(buildReviewParams(fake.octokit))).resolves.toBe('approved');
         expect(fake.createReview).toHaveBeenCalledOnce();
         expect(fake.dismissReview).toHaveBeenCalledWith(expect.objectContaining({ review_id: 1 }));
     });
@@ -72,7 +72,7 @@ describe('approve', () => {
             { id: 1, login: BOT_LOGIN, state: 'APPROVED', commitId: HEAD_SHA },
             { id: 2, login: BOT_LOGIN, state: 'APPROVED', commitId: HEAD_SHA }
         ]);
-        await expect(approve(params(fake.octokit))).resolves.toBe('noop');
+        await expect(approve(buildReviewParams(fake.octokit))).resolves.toBe('noop');
         expect(fake.createReview).not.toHaveBeenCalled();
         expect(fake.dismissReview).toHaveBeenCalledOnce();
     });
@@ -85,7 +85,7 @@ describe('dismissApproval', () => {
             { id: 2, login: 'human', state: 'APPROVED', commitId: HEAD_SHA },
             { id: 3, login: BOT_LOGIN, state: 'COMMENTED', commitId: HEAD_SHA }
         ]);
-        await expect(dismissApproval(params(fake.octokit))).resolves.toBe(1);
+        await expect(dismissApproval(buildReviewParams(fake.octokit))).resolves.toBe(1);
         expect(fake.dismissReview).toHaveBeenCalledOnce();
         expect(fake.dismissReview).toHaveBeenCalledWith(expect.objectContaining({ review_id: 1 }));
     });
