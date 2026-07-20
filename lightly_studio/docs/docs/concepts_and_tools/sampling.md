@@ -1,3 +1,8 @@
+---
+title: Dataset Sampling Strategies Explained
+description: Select diverse, balanced, or representative subsets from your dataset using LightlyStudio's embedding-based sampling strategies in the GUI or Python.
+---
+
 # Sampling
 
 Sampling helps you select representative subsets from your dataset. LightlyStudio provides sampling strategies that leverage embeddings to pick diverse, balanced, or otherwise optimized subsets for labeling, training, or review. Use the GUI for quick, one-off sampling. Use the Python API when you need reusable, configurable, or combined sampling strategies in code.

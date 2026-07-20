@@ -198,3 +198,99 @@ class TestImageDataset:
         assert sample.file_name == "image.jpg"
         assert sample.tags == {"test_split"}
         assert sample.sample_table.embeddings == []
+
+    def test_add_samples_from_pascal_voc_segmentations__records_broken_image(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        # Pascal VOC opens every image during the from_dirs folder scan (at construction), so a
+        # broken image must be recorded as BROKEN and skipped instead of aborting the ingest.
+        images_path = tmp_path / "JPEGImages"
+        masks_path = tmp_path / "SegmentationClass"
+        images_path.mkdir(parents=True, exist_ok=True)
+        masks_path.mkdir(parents=True, exist_ok=True)
+
+        # One good image with a matching mask.
+        Image.new("RGB", (3, 2)).save(images_path / "good.jpg")
+        Image.fromarray(np.zeros((2, 3), dtype=np.uint8)).save(masks_path / "good.png")
+
+        # One broken image: present on disk but not decodable. It is dropped during the folder
+        # scan before its mask is looked up, so no mask is needed.
+        (images_path / "broken.jpg").write_bytes(b"not a real image")
+
+        dataset = ImageDataset.create(name="test_dataset")
+        with caplog.at_level("INFO", logger="lightly_studio.core.file_outcome_report"):
+            dataset.add_samples_from_pascal_voc_segmentations(
+                images_path=images_path,
+                masks_path=masks_path,
+                class_id_to_name={0: "bg"},
+                embed=False,
+            )
+
+        # Only the readable image becomes a sample; the broken one is skipped, not created.
+        samples = list(dataset)
+        assert [sample.file_name for sample in samples] == ["good.jpg"]
+
+        # The broken image is recorded in the end-of-run summary.
+        assert "added=1" in caplog.text
+        assert "broken=1" in caplog.text
+
+    @pytest.mark.parametrize(
+        ("image_state", "probe_added", "broken_count"),
+        [
+            ("healthy", True, 0),
+            ("broken", False, 1),
+            ("missing", False, 0),
+        ],
+    )
+    def test_add_samples_from_pascal_voc_segmentations__image_matrix(  # noqa: PLR0913
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+        image_state: str,
+        probe_added: bool,
+        broken_count: int,
+    ) -> None:
+        # End-to-end coverage of a healthy/broken/missing image for Pascal VOC. The mask axis is
+        # held valid on purpose: a missing mask raises at from_dirs construction and a broken
+        # mask raises during get_labels, both by design and unchanged by this PR, so only the
+        # image axis is exercised here. A guaranteed-healthy anchor pair keeps the run from
+        # failing with AllInputFilesFailedError so each probe outcome is asserted in isolation.
+        images_path = tmp_path / "JPEGImages"
+        masks_path = tmp_path / "SegmentationClass"
+        images_path.mkdir(parents=True, exist_ok=True)
+        masks_path.mkdir(parents=True, exist_ok=True)
+
+        # Anchor: a decodable image with a matching mask.
+        Image.new("RGB", (3, 2)).save(images_path / "anchor.jpg")
+        Image.fromarray(np.zeros((2, 3), dtype=np.uint8)).save(masks_path / "anchor.png")
+
+        # Probe image (a broken image is dropped during the folder scan before its mask is
+        # looked up, and a missing image is never scanned, so neither needs a mask).
+        if image_state == "healthy":
+            Image.new("RGB", (3, 2)).save(images_path / "probe.jpg")
+            Image.fromarray(np.zeros((2, 3), dtype=np.uint8)).save(masks_path / "probe.png")
+        elif image_state == "broken":
+            (images_path / "probe.jpg").write_bytes(b"not a real image")
+        # "missing": no probe image file is created.
+
+        dataset = ImageDataset.create(name="test_dataset")
+        with caplog.at_level("INFO", logger="lightly_studio.core.file_outcome_report"):
+            dataset.add_samples_from_pascal_voc_segmentations(
+                images_path=images_path,
+                masks_path=masks_path,
+                class_id_to_name={0: "bg"},
+                embed=False,
+            )
+
+        names = {sample.file_name for sample in dataset}
+
+        # The anchor is always added; the probe only when its image is readable.
+        assert "anchor.jpg" in names
+        assert ("probe.jpg" in names) == probe_added
+
+        # A broken probe image is recorded BROKEN exactly once; other states record none.
+        assert f"broken={broken_count}" in caplog.text

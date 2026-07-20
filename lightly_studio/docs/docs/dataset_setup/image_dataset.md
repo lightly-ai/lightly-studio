@@ -1,3 +1,8 @@
+---
+title: "Image Dataset: Load and Query in Python"
+description: Learn how to load images into LightlyStudio from a folder, cloud storage, or existing dataset, then explore and query them in the GUI and Python API.
+---
+
 # Image Dataset
 
 This guide explains how to load images into LightlyStudio, how to explore them

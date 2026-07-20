@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { HistogramView } from '$lib/api/lightly_studio_local';
-import { selectDistributions } from './useNumericMetadataDistribution';
+import {
+    getNumericMetadataHistogramRequestOptions,
+    selectDistributions
+} from './useNumericMetadataDistribution';
 
 const histograms: Record<string, HistogramView> = {
     temperature: { bin_edges: [0, 50, 100], counts: [3, 7] },
@@ -21,5 +24,34 @@ describe('selectDistributions', () => {
 
     it('returns an empty record for an empty response', () => {
         expect(selectDistributions({})).toEqual({});
+    });
+});
+
+describe('getNumericMetadataHistogramRequestOptions', () => {
+    it('includes the selected bin count in the request body', () => {
+        expect(
+            getNumericMetadataHistogramRequestOptions({
+                collectionId: 'collection-id',
+                binCount: 50
+            })
+        ).toEqual({
+            path: { collection_id: 'collection-id' },
+            body: { bin_count: 50 }
+        });
+    });
+
+    it('keeps the filter and bin count in the same request body', () => {
+        const filter = { width: { min: 200, max: 800 } };
+
+        expect(
+            getNumericMetadataHistogramRequestOptions({
+                collectionId: 'collection-id',
+                filter,
+                binCount: 100
+            })
+        ).toEqual({
+            path: { collection_id: 'collection-id' },
+            body: { filters: filter, bin_count: 100 }
+        });
     });
 });
