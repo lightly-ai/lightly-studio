@@ -97,9 +97,9 @@ describe('ExpandDialog', () => {
         expect(onConfigChange).toHaveBeenCalledWith({ ...config, orientation: 'horizontal' });
     });
 
-    it('keeps categorical values horizontal and exposes value configuration', async () => {
+    it('uses compact categorical spacing and exposes value controls', async () => {
         renderDialog({
-            fixedOrientation: 'horizontal',
+            compact: true,
             categoryNoun: 'value',
             categoryNounPlural: 'values',
             showCountMode: false,
@@ -108,15 +108,17 @@ describe('ExpandDialog', () => {
 
         expect(screen.getByText(/values · sorted by count/)).toBeInTheDocument();
         expect(
-            screen.queryByTestId('dataset-distribution-expanded-toggle-orientation')
-        ).not.toBeInTheDocument();
+            screen.getByTestId('dataset-distribution-expanded-toggle-orientation')
+        ).toBeInTheDocument();
         await fireEvent.click(screen.getByTestId('dataset-distribution-expanded-configure'));
         expect(screen.getByText('Configure values')).toBeInTheDocument();
         expect(screen.queryByTestId('distribution-config-count-mode')).not.toBeInTheDocument();
 
         const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
-            yAxis: { data: string[] };
+            xAxis: { data: string[] };
+            grid: { top: number };
         };
-        expect(option.yAxis.data).toBeDefined();
+        expect(option.xAxis.data).toBeDefined();
+        expect(option.grid.top).toBe(4);
     });
 });

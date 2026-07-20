@@ -16,8 +16,8 @@ They need to spot imbalance and missing metadata, then narrow the grid without l
 
 1. Open the existing dataset distribution panel and select **Metadata**.
 2. Use the existing **Metadata key** selector to choose a numeric or categorical field.
-3. Numeric fields continue to show the current histogram. Categorical fields show a horizontal bar
-   chart and a compact searchable value selector.
+3. Numeric fields continue to show the current histogram. Categorical fields show a bar chart,
+   horizontal by default, and a compact searchable value selector.
 4. Select one or more concrete values or **Missing**. The grid and all distributions update using
    the shared active filter; alternatives for the edited field remain visible through faceting.
 5. Deselect every value (or use **Clear**) to remove that field's categorical filter.
@@ -89,8 +89,9 @@ Selected field has no matches  Request failed
 - The selector summary reads **All values**, the selected value for one item, or **N selected**.
 - Categorical fields expose the existing distribution settings and expanded-chart actions. Settings
   support top-N, manual value selection, and count/value sorting; they are stored per metadata key.
-  The categorical chart remains horizontal and omits **Count by** because the endpoint counts
-  samples. Missing and Other remain visible in top-N mode; manual mode is explicitly user-selected.
+  The panel and expanded view expose the existing orientation toggle, and that choice is also stored
+  per metadata key. **Count by** remains hidden because the endpoint counts samples. Missing and
+  Other remain visible in top-N mode; manual mode is explicitly user-selected.
 - For five or fewer concrete values, show direct checkboxes without search. Longer lists add search
   inside the same compact popover; search only narrows returned options and never changes the grid.
 - Retain selected values when they are absent from the latest top-20 response so users can still
@@ -121,7 +122,8 @@ Selected field has no matches  Request failed
 
 - **Reuse the existing source and field selectors:** numeric and categorical metadata are two
   renderings of the same concept, so adding another navigation layer would be needless ceremony.
-- **Horizontal bars:** categorical labels remain readable and the existing `BarChart` can be reused.
+- **Horizontal bars by default:** categorical labels remain readable, while the existing orientation
+  toggle lets users switch low-cardinality fields to vertical bars when that view is more useful.
 - **Compact searchable multi-select:** checkboxes are fast for common low-cardinality fields while
   search keeps the top-20 list manageable.
 - **Explicit Missing; display-only Other:** Missing maps to a precise predicate; Other does not.
@@ -136,9 +138,10 @@ Selected field has no matches  Request failed
 
 - [ ] The Metadata source lists numeric, string, and boolean fields in the existing field selector.
 - [ ] Numeric fields still render the existing histogram and range filter behavior.
-- [ ] Categorical fields render endpoint-ordered horizontal bars with counts.
-- [ ] Categorical fields provide a horizontal expanded view and value-specific configuration for
-      top-N, manual selection, and count/value sorting without exposing Count by or orientation.
+- [ ] Categorical fields render endpoint-ordered bars with counts, horizontal by default.
+- [ ] Categorical fields provide an expanded view, a shared per-field orientation toggle, and
+      value-specific configuration for top-N, manual selection, and count/value sorting without
+      exposing Count by.
 - [ ] Concrete string/boolean values and Missing can be selected by checkbox and bar click.
 - [ ] Multiple values for one field filter with OR; filters across fields remain AND.
 - [ ] Literal `"Missing"`/`"Other"` values do not collide with semantic buckets.

@@ -217,7 +217,6 @@
             ...categoricalConfigs,
             [activeGroup.id]: {
                 ...next,
-                orientation: 'horizontal',
                 countMode: AnnotationCountMode.SAMPLES
             }
         };
@@ -380,6 +379,14 @@
                         mode: 'topN',
                         n: categoricalData.length
                     })}
+                onToggleOrientation={() =>
+                    setCategoricalConfig({
+                        ...categoricalConfig,
+                        orientation:
+                            categoricalConfig.orientation === 'horizontal'
+                                ? 'vertical'
+                                : 'horizontal'
+                    })}
                 onExpand={() => (expandOpen = true)}
             />
         {/if}
@@ -481,7 +488,7 @@
         categoryNounPlural={activeCategorical ? 'values' : 'classes'}
         sortLabels={activeCategorical ? CATEGORICAL_DISTRIBUTION_SORT_LABELS : undefined}
         showCountMode={!activeCategorical}
-        fixedOrientation={activeCategorical ? 'horizontal' : undefined}
+        compact={Boolean(activeCategorical)}
         onConfigChange={applyConfig}
         onBarClick={activeCategorical ? handleCategoricalBarClick : onBarClick}
     />
