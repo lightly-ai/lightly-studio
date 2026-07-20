@@ -78,4 +78,21 @@ describe('getFrameFilter', () => {
             frame_number: {}
         });
     });
+
+    it('adds categorical metadata filters', async () => {
+        const { createMetadataFilters } = await import('../useMetadataFilters/useMetadataFilters');
+        vi.mocked(createMetadataFilters).mockReturnValueOnce([
+            { key: 'city', value: ['Zurich', null], op: 'in' }
+        ]);
+
+        const filter = getFrameFilter({
+            collection_id: 'coll-1',
+            filters: { categorical_metadata_values: { city: ['Zurich', null] } }
+        });
+
+        expect(createMetadataFilters).toHaveBeenCalledWith({}, { city: ['Zurich', null] });
+        expect(filter?.sample_filter?.metadata_filters).toEqual([
+            { key: 'city', value: ['Zurich', null], op: 'in' }
+        ]);
+    });
 });
