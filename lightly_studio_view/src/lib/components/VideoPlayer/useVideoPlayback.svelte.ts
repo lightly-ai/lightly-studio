@@ -94,10 +94,7 @@ export function useVideoPlayback({
     // Keep the fullscreen flag in sync however it's entered/left.
     $effect(() => {
         if (typeof document === 'undefined') return;
-        const syncFullscreen = () => {
-            const regionEl = getRegionEl();
-            isFullscreen = regionEl != null && document.fullscreenElement === regionEl;
-        };
+        const syncFullscreen = () => (isFullscreen = document.fullscreenElement === getRegionEl());
         document.addEventListener('fullscreenchange', syncFullscreen);
         return () => document.removeEventListener('fullscreenchange', syncFullscreen);
     });
@@ -128,11 +125,10 @@ export function useVideoPlayback({
     function toggleFullscreen() {
         if (typeof document === 'undefined') return;
         const regionEl = getRegionEl();
-        if (!regionEl) return;
         if (document.fullscreenElement === regionEl) {
             void document.exitFullscreen();
         } else {
-            void regionEl.requestFullscreen();
+            void regionEl?.requestFullscreen();
         }
     }
 

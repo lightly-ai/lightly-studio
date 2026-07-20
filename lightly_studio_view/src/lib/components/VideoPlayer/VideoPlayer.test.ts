@@ -21,18 +21,18 @@ describe('VideoPlayer', () => {
         expect(video?.getAttribute('preload')).toBe('metadata');
     });
 
-    it('should not show controls by default', () => {
+    it('should not show native controls by default', () => {
         const { container } = render(VideoPlayer, { props: { src: 'test-video.mp4' } });
         const video = container.querySelector('video');
         expect(video?.hasAttribute('controls')).toBe(false);
     });
 
-    it('should show controls when controls prop is true', () => {
+    it('should force native controls off even when videoProps requests them', () => {
         const { container } = render(VideoPlayer, {
             props: { src: 'test-video.mp4', videoProps: { controls: true } }
         });
         const video = container.querySelector('video');
-        expect(video?.hasAttribute('controls')).toBe(true);
+        expect(video?.hasAttribute('controls')).toBe(false);
     });
 
     it('should apply custom className via videoProps', () => {
@@ -116,5 +116,13 @@ describe('VideoPlayer', () => {
         });
         const video = container.querySelector('video');
         expect(video?.getAttribute('preload')).toBe('auto');
+    });
+
+    it('should render the custom control bar', () => {
+        const { getByRole, getByLabelText } = render(VideoPlayer, {
+            props: { src: 'test-video.mp4' }
+        });
+        expect(getByRole('slider')).toBeTruthy();
+        expect(getByLabelText('Play')).toBeTruthy();
     });
 });

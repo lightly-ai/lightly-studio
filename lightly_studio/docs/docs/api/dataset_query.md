@@ -1,3 +1,8 @@
+---
+title: DatasetQuery API Reference
+description: Python API reference for LightlyStudio's DatasetQuery, used to filter, sort, and sample dataset items with a fluent query interface.
+---
+
 # DatasetQuery
 
 ## DatasetQuery
