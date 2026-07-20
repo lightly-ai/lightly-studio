@@ -4,13 +4,8 @@ name: Fast Track Guardrails
 # an artifact for the bot. NOT a required status check — else would block every non-fast-track PR.
 on:
   pull_request:
-    # labeled/unlabeled so toggling the opt-out label re-evaluates.
-    types: [opened, ready_for_review, synchronize, reopened, labeled, unlabeled]
-
-# Judge only the latest push per PR ref.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    # Re-evaluate when the opt-out label or comparison base changes.
+    types: [opened, edited, ready_for_review, synchronize, reopened, labeled, unlabeled]
 
 permissions:
   contents: read
@@ -19,7 +14,15 @@ permissions:
 jobs:
   guardrails:
     name: Fast Track Guardrails
-    if: github.event.pull_request.draft == false
+    # Skip drafts. `edited` fires on any PR edit (title, body, base), so restrict it
+    # to base retargets — those change the diff and warrant a re-judge; other edits don't.
+    if: >-
+      github.event.pull_request.draft == false &&
+      (github.event.action != 'edited' || github.event.changes.base != null)
+    # Job-level concurrency prevents an unrelated skipped edit from cancelling this job.
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     defaults:
       run:

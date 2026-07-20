@@ -1,3 +1,8 @@
+---
+title: "Plugins: Extend LightlyStudio's Workflows"
+description: Extend LightlyStudio with plugins for auto-labeling, SAM3 image segmentation, and video bounding box propagation, or build your own custom plugin.
+---
+
 # Plugins
 
 LightlyStudio offers the possibility to extend its functionality by using plugins. Users can define their own plugins or use pre-defined ones.

@@ -7,6 +7,7 @@
         DatasetGridHeader,
         Footer,
         LabelsMenu,
+        MetadataFilterChips,
         SelectionPill,
         ShowFiltersButton,
         TagsMenu
@@ -711,6 +712,7 @@
 
                             {#if isImages || isVideos || isVideoFrames}
                                 {#key collectionId}
+                                    <MetadataFilterChips {collectionId} />
                                     <CombinedMetadataDimensionsFilters {isVideos} {isVideoFrames} />
                                 {/key}
                             {/if}
