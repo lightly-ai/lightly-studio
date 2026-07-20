@@ -29,3 +29,16 @@ export interface Verdict {
     /** Shown in the PR comment on a non-pass verdict. */
     reason?: string;
 }
+
+/**
+ * The camelCase routing inputs the verdict builders map onto the snake_case wire
+ * fields above. Shared by every builder, so it lives here rather than being owned
+ * by one builder module. UNTRUSTED: written in PR context, re-derived by the Bot
+ * against the trusted commit (design §3).
+ */
+export interface VerdictRouting {
+    prNumber: number;
+    headSha: string;
+    baseRef: string;
+    baseSha: string;
+}

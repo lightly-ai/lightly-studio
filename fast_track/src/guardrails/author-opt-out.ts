@@ -1,5 +1,4 @@
-import type { Verdict } from '../shared/verdict';
-import type { VerdictRouting } from './build-verdict';
+import type { Verdict, VerdictRouting } from '../shared/verdict';
 
 export const OPT_OUT_LABEL = 'needs-human-review';
 

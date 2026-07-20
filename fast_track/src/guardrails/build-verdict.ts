@@ -1,13 +1,5 @@
-import type { GuardrailResult, Verdict } from '../shared/verdict';
+import type { GuardrailResult, Verdict, VerdictRouting } from '../shared/verdict';
 import type { RunResult } from './run-guardrails';
-
-/** UNTRUSTED: written in PR context, re-derived by the bot against the trusted commit (design §3). */
-export interface VerdictRouting {
-    prNumber: number;
-    headSha: string;
-    baseRef: string;
-    baseSha: string;
-}
 
 /**
  * Wrap a {@link RunResult} into the wire {@link Verdict}, adding the routing

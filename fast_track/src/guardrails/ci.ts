@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 import { context, getOctokit } from '@actions/github';
 
-import type { Verdict } from '../shared/verdict';
+import type { Verdict, VerdictRouting } from '../shared/verdict';
 import { buildOptOutVerdict } from './author-opt-out';
 import { buildVerdict } from './build-verdict';
 import { ApiGuardrailContext } from './context/api-context';
@@ -32,19 +32,25 @@ function readPullRequest(): PullRequestEvent {
     return pr as PullRequestEvent;
 }
 
+/** Map the PR event to the routing the verdict is bound to and its label names. */
+function parsePrContext(pr: PullRequestEvent): { routing: VerdictRouting; labels: string[] } {
+    return {
+        routing: {
+            prNumber: pr.number,
+            headSha: pr.head.sha,
+            baseRef: pr.base.ref,
+            baseSha: pr.base.sha
+        },
+        labels: pr.labels.flatMap((label) => (label.name === undefined ? [] : [label.name]))
+    };
+}
+
 async function main(env: NodeJS.ProcessEnv): Promise<void> {
     // Via env, not core.getInput: a `run:` step has no `with:` to feed it.
     const token = env.GITHUB_TOKEN;
     if (token === undefined || token === '') throw new Error('GITHUB_TOKEN is not set.');
 
-    const pr = readPullRequest();
-    const routing = {
-        prNumber: pr.number,
-        headSha: pr.head.sha,
-        baseRef: pr.base.ref,
-        baseSha: pr.base.sha
-    };
-    const labels = pr.labels.flatMap((label) => (label.name === undefined ? [] : [label.name]));
+    const { routing, labels } = parsePrContext(readPullRequest());
     const optOutVerdict = buildOptOutVerdict(labels, routing);
 
     if (optOutVerdict !== undefined) {
@@ -57,8 +63,8 @@ async function main(env: NodeJS.ProcessEnv): Promise<void> {
         octokit: getOctokit(token),
         owner: context.repo.owner,
         repo: context.repo.repo,
-        prNumber: pr.number,
-        baseRef: pr.base.ref
+        prNumber: routing.prNumber,
+        baseRef: routing.baseRef
     });
 
     // hasPrContext: true — unlike the local CLI, pr-only guardrails run here.
