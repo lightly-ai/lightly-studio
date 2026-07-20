@@ -267,6 +267,48 @@ class TestDataset:
         )
         assert len(result.annotations) == 2
 
+    def test_add_annotations_from_yolo__skips_broken_image(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        # YOLO opens every image during the get_labels() folder scan. A broken image must be
+        # skipped (it was already recorded BROKEN at its own ingest) instead of aborting the
+        # annotation run, so the readable images still get annotated.
+        yaml_path = tmp_path / "data.yaml"
+        yaml_path.write_text(yaml.dump({"train": "../train/images", "nc": 1, "names": ["class_0"]}))
+        images_path = tmp_path / "train" / "images"
+        labels_path = tmp_path / "train" / "labels"
+        labels_path.mkdir(parents=True, exist_ok=True)
+        _create_sample_images([images_path / "image1.jpg"])
+        (labels_path / "image1.txt").write_text("0 0.5 0.5 0.4 0.4\n")
+
+        # A broken image present in the images folder but not decodable.
+        (images_path / "broken.jpg").write_bytes(b"not a real image")
+        (labels_path / "broken.txt").write_text("0 0.5 0.5 0.4 0.4\n")
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_images_from_path(path=images_path, embed=False)
+        with caplog.at_level(logging.WARNING):
+            dataset.add_annotations_from_yolo(
+                data_yaml=yaml_path, annotation_source="model_A", input_split="train"
+            )
+
+        warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+        assert any(
+            "unreadable image" in r.getMessage() and "broken.jpg" in r.getMessage()
+            for r in warnings
+        )
+
+        # The readable image is still annotated despite the broken one.
+        result = annotation_resolver.get_all_by_collection_name(
+            session=dataset.session,
+            collection_name="model_A",
+            parent_collection_id=dataset.collection_id,
+        )
+        assert len(result.annotations) == 1
+
     def test_add_annotations_from_pascal_voc_segmentations__appends_to_existing_images(
         self,
         patch_collection: None,  # noqa: ARG002
@@ -341,6 +383,45 @@ class TestDataset:
             for r in warnings
         )
 
+        result = annotation_resolver.get_all_by_collection_name(
+            session=dataset.session,
+            collection_name="gt",
+            parent_collection_id=dataset.collection_id,
+        )
+        assert len(result.annotations) == 1
+
+    def test_add_annotations_from_pascal_voc_segmentations__skips_broken_image(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        # Pascal VOC opens every image during the from_dirs folder scan. A broken image must be
+        # skipped (it was already recorded BROKEN at its own ingest) instead of aborting the
+        # annotation run, so the readable images still get annotated.
+        dataset, images_path = _setup_dataset_with_images(tmp_path, ["image1.jpg"])
+        # A broken image present in the images folder but not decodable. It is dropped during
+        # the folder scan before its mask is looked up, so no mask is needed.
+        (images_path / "broken.jpg").write_bytes(b"not a real image")
+
+        masks_path = tmp_path / "masks"
+        _create_mask(masks_path / "image1.png", np.zeros((10, 10), dtype=np.uint8))
+
+        with caplog.at_level(logging.WARNING):
+            dataset.add_annotations_from_pascal_voc_segmentations(
+                masks_path=masks_path,
+                images_root=images_path,
+                class_id_to_name={0: "bg"},
+                annotation_source="gt",
+            )
+
+        warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+        assert any(
+            "unreadable image" in r.getMessage() and "broken.jpg" in r.getMessage()
+            for r in warnings
+        )
+
+        # The readable image is still annotated despite the broken one.
         result = annotation_resolver.get_all_by_collection_name(
             session=dataset.session,
             collection_name="gt",
