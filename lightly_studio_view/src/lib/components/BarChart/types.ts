@@ -27,3 +27,6 @@ export type ChartMode = 'bar' | 'histogram';
 
 /** Values as raw counts or as a percentage normalized within each series. */
 export type ChartNormalize = 'count' | 'percentage';
+
+/** Value-axis scale: linear or base-10 logarithmic. */
+export type ChartScale = 'linear' | 'log';

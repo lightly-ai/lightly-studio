@@ -153,8 +153,8 @@ def _numeric_distribution(
     ]
     none_count = len(scope) - len(in_scope_values)
 
-    bin_edges = _build_bin_edges(global_values=global_values, bins=bins)
-    counts = _bin_counts(values=in_scope_values, bin_edges=bin_edges)
+    bin_edges = build_bin_edges(global_values=global_values, bins=bins)
+    counts = bin_counts(values=in_scope_values, bin_edges=bin_edges)
 
     return MetadataDistributionView(
         key=key,
@@ -166,7 +166,7 @@ def _numeric_distribution(
     )
 
 
-def _build_bin_edges(global_values: list[float], bins: int) -> list[float]:
+def build_bin_edges(global_values: list[float], bins: int) -> list[float]:
     """Build ``bins + 1`` equal-width edges spanning the global value range."""
     bins = max(bins, 1)
     if not global_values:
@@ -182,7 +182,7 @@ def _build_bin_edges(global_values: list[float], bins: int) -> list[float]:
     return [minimum + width * index for index in range(bins + 1)]
 
 
-def _bin_counts(values: list[float], bin_edges: list[float]) -> list[int]:
+def bin_counts(values: list[float], bin_edges: list[float]) -> list[int]:
     """Count ``values`` into the bins described by ``bin_edges``."""
     if len(bin_edges) < _MIN_BIN_EDGES:
         return []

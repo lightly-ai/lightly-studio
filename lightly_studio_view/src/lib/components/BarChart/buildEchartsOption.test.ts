@@ -84,6 +84,32 @@ describe('buildEchartsOption', () => {
         expect(empty([{ name: 'car', value: 0 }])).toBe('<b>car</b><br/>Count: <b>0</b>');
     });
 
+    describe('scale', () => {
+        it('uses a linear value axis by default', () => {
+            const option = buildEchartsOption(single()) as { yAxis: { type: string } };
+            expect(option.yAxis.type).toBe('value');
+        });
+
+        it('switches the value axis to log scale on the value axis only', () => {
+            const option = buildEchartsOption(single(), { scale: 'log' }) as {
+                yAxis: { type: string };
+                xAxis: { type: string };
+            };
+            // Category axis stays categorical; only the value axis becomes log.
+            expect(option.yAxis.type).toBe('log');
+            expect(option.xAxis.type).toBe('category');
+        });
+
+        it('keeps the log scale on the value axis when horizontal', () => {
+            const option = buildEchartsOption(single(), {
+                scale: 'log',
+                orientation: 'horizontal'
+            }) as { xAxis: { type: string }; yAxis: { type: string } };
+            expect(option.xAxis.type).toBe('log');
+            expect(option.yAxis.type).toBe('category');
+        });
+    });
+
     describe('multi-series comparison', () => {
         const seriesA: ChartSeries = {
             id: 'a',

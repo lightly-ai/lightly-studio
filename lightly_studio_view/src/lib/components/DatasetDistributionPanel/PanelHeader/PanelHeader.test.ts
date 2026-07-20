@@ -9,7 +9,8 @@ const config: DistributionConfig = {
     sortBy: 'count',
     manualClasses: [],
     orientation: 'vertical',
-    normalize: 'percentage'
+    normalize: 'percentage',
+    scale: 'linear'
 };
 
 const defaultProps = {
@@ -102,6 +103,35 @@ describe('PanelHeader', () => {
         await fireEvent.click(screen.getByTestId('dataset-distribution-toggle-orientation'));
 
         expect(onToggleOrientation).toHaveBeenCalledOnce();
+    });
+
+    it('renders the scale toggle only when a handler is provided and forwards clicks', async () => {
+        const onToggleScale = vi.fn();
+        const { unmount } = render(PanelHeader, { props: defaultProps });
+        expect(screen.queryByTestId('dataset-distribution-toggle-scale')).not.toBeInTheDocument();
+        unmount();
+
+        render(PanelHeader, { props: { ...defaultProps, onToggleScale } });
+        await fireEvent.click(screen.getByTestId('dataset-distribution-toggle-scale'));
+
+        expect(onToggleScale).toHaveBeenCalledOnce();
+    });
+
+    it('labels the scale toggle by the active scale', () => {
+        const { unmount } = render(PanelHeader, {
+            props: { ...defaultProps, onToggleScale: vi.fn() }
+        });
+        expect(
+            screen.getByLabelText('Switch to log scale', { selector: 'button' })
+        ).toBeInTheDocument();
+        unmount();
+
+        render(PanelHeader, {
+            props: { ...defaultProps, config: { ...config, scale: 'log' }, onToggleScale: vi.fn() }
+        });
+        expect(
+            screen.getByLabelText('Switch to linear scale', { selector: 'button' })
+        ).toBeInTheDocument();
     });
 
     it('renders the expand button only when a handler is provided', async () => {

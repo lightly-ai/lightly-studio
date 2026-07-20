@@ -11,18 +11,27 @@
         metadataKey: string | undefined;
         /** One entry per overlaid series (current selection + compared tags). */
         series: MetadataDistributionSeriesInput[];
+        /** Which endpoint to fetch from (default 'metadata'). */
+        endpoint?: 'metadata' | 'nn_distance';
         /** Fetched, shaped result surfaced back to the panel. */
         result: MetadataDistributionSeriesResult;
     }
 
-    let { collectionId, metadataKey, series, result = $bindable() }: Props = $props();
+    let {
+        collectionId,
+        metadataKey,
+        series,
+        endpoint = 'metadata',
+        result = $bindable()
+    }: Props = $props();
 
     // Headless: mounted only while a metadata source is active so `createQueries`
     // (and its QueryClient requirement) never runs for annotation-only panels.
     const query = useMetadataDistributionSeries(() => ({
         collectionId,
         key: metadataKey,
-        series
+        series,
+        endpoint
     }));
 
     $effect(() => {

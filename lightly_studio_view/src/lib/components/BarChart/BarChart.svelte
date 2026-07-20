@@ -9,7 +9,13 @@
         unionCategories,
         type BarChartOrientation
     } from './buildEchartsOption';
-    import type { CategoryCount, ChartMode, ChartNormalize, ChartSeries } from './types';
+    import type {
+        CategoryCount,
+        ChartMode,
+        ChartNormalize,
+        ChartScale,
+        ChartSeries
+    } from './types';
 
     echarts.use([
         EchartsBarChart,
@@ -35,6 +41,8 @@
         mode?: ChartMode;
         /** Count vs within-series percentage (default 'count'). */
         normalize?: ChartNormalize;
+        /** Value-axis scale (default 'linear'). */
+        scale?: ChartScale;
         /** Bar orientation (default 'vertical'). */
         orientation?: BarChartOrientation;
         /**
@@ -62,6 +70,7 @@
         series,
         mode = 'bar',
         normalize = 'count',
+        scale = 'linear',
         orientation = 'vertical',
         maxWidthPx,
         maxHeightPx = 320,
@@ -148,7 +157,13 @@
     $effect(() => {
         if (!chart) return;
         chart.setOption(
-            buildEchartsOption(effectiveSeries, { totalCount, orientation, mode, normalize }),
+            buildEchartsOption(effectiveSeries, {
+                totalCount,
+                orientation,
+                mode,
+                normalize,
+                scale
+            }),
             true
         );
     });

@@ -519,8 +519,30 @@
         };
     });
 
+    // Nearest-neighbor distance: a computed numeric distribution (no metadata
+    // key) reusing the metadata source machinery, available when the collection
+    // has embeddings.
+    const nnDistanceSource = $derived.by<DistributionSource | null>(() => {
+        if (!distributionPanelVisible || !hasEmbeddings) return null;
+        return {
+            id: 'nn-distance',
+            label: 'NN distance',
+            kind: 'metadata',
+            distributionEndpoint: 'nn_distance',
+            valueNoun: 'samples',
+            collectionId,
+            baseFilter: imageAnnotationCountsFilter
+                ? { filter_type: 'image', ...imageAnnotationCountsFilter }
+                : null,
+            compareTags: metadataCompareTags
+        };
+    });
+
     const distributionSources = $derived.by<DistributionSource[]>(() => {
-        const metadataSources = metadataSource ? [metadataSource] : [];
+        const metadataSources = [
+            ...(metadataSource ? [metadataSource] : []),
+            ...(nnDistanceSource ? [nnDistanceSource] : [])
+        ];
         const typeQueries = distributionTypeQueries;
         if (!typeQueries) return [allTypesSource, ...metadataSources];
         const perType = [

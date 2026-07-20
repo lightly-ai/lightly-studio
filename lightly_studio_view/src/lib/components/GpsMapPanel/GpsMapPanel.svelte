@@ -84,6 +84,17 @@
             : [...selectedTagIds, tagId];
     }
 
+    // Hide points that carry none of the selected tags (the "none"/unassigned
+    // color). Only meaningful once at least one tag is selected to color by.
+    let hideUnassigned = $state(false);
+    const visiblePoints = $derived<GpsPoint[]>(
+        hideUnassigned && selectedTags.length > 0
+            ? points.filter(
+                  (point) => colorForPoint(point.tagIds, selectedTags) !== UNASSIGNED_COLOR
+              )
+            : points
+    );
+
     const SOURCE_ID = 'gps-points';
     const LAYER_ID = 'gps-points-circles';
 
@@ -115,7 +126,7 @@
     function buildFeatureCollection(): FeatureCollection {
         return {
             type: 'FeatureCollection',
-            features: points.map((point) => ({
+            features: visiblePoints.map((point) => ({
                 type: 'Feature',
                 geometry: { type: 'Point', coordinates: [point.lon, point.lat] },
                 properties: {
@@ -133,12 +144,12 @@
     }
 
     function fitToPoints() {
-        if (!map || points.length === 0 || hasFitBounds) return;
+        if (!map || visiblePoints.length === 0 || hasFitBounds) return;
         let west = Infinity;
         let south = Infinity;
         let east = -Infinity;
         let north = -Infinity;
-        for (const point of points) {
+        for (const point of visiblePoints) {
             west = Math.min(west, point.lon);
             east = Math.max(east, point.lon);
             south = Math.min(south, point.lat);
@@ -190,7 +201,7 @@
                 { lat: cornerA.lat, lon: cornerA.lng },
                 { lat: cornerB.lat, lon: cornerB.lng }
             );
-            updateSampleIds(sampleIdsInBbox(points, bbox));
+            updateSampleIds(sampleIdsInBbox(visiblePoints, bbox));
         }
 
         dragStart = null;
@@ -258,9 +269,9 @@
         };
     });
 
-    // Recolor / refill whenever the points or the selected tags change.
+    // Recolor / refill whenever the visible points or the selected tags change.
     $effect(() => {
-        void points;
+        void visiblePoints;
         void selectedTags;
         refreshSource();
         fitToPoints();
@@ -335,15 +346,25 @@
                         {tag.name}
                     </span>
                 {/each}
-                <span class="flex items-center gap-1">
+                <button
+                    class={cn(
+                        'flex items-center gap-1 rounded-full border px-2 py-0.5 transition-colors',
+                        hideUnassigned
+                            ? 'border-border text-muted-foreground hover:bg-accent'
+                            : 'border-transparent hover:bg-accent'
+                    )}
+                    title={hideUnassigned ? 'Show unassigned points' : 'Hide unassigned points'}
+                    onclick={() => (hideUnassigned = !hideUnassigned)}
+                >
                     <span
                         class="inline-block size-2 rounded-full"
                         style={`background-color: ${UNASSIGNED_COLOR}`}
                     ></span>
-                    none
-                </span>
+                    none {hideUnassigned ? '(hidden)' : ''}
+                </button>
             {:else}
-                <span>Shift + drag to select an area. {points.length.toLocaleString()} points.</span
+                <span
+                    >Shift + drag to select an area. {visiblePoints.length.toLocaleString()} points.</span
                 >
             {/if}
         </div>

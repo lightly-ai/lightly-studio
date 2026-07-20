@@ -5,7 +5,9 @@
         BarChart3 as BarChart3Icon,
         BarChartHorizontal as BarChartHorizontalIcon,
         Percent as PercentIcon,
-        Hash as HashIcon
+        Hash as HashIcon,
+        ChartNoAxesColumn as LinearScaleIcon,
+        ChartNoAxesColumnDecreasing as LogScaleIcon
     } from '@lucide/svelte';
     import { Button } from '$lib/components';
     import { DISTRIBUTION_SORT_LABELS, type DistributionConfig } from '../types';
@@ -24,6 +26,8 @@
         onToggleOrientation?: () => void;
         /** Toggles counts vs percentages; rendered only when provided (metadata sources). */
         onToggleNormalize?: () => void;
+        /** Toggles the value axis between linear and log scale. */
+        onToggleScale?: () => void;
         /** Renders the expand button only when provided (omit inside the expanded view). */
         onExpand?: () => void;
         /** Prefix for button test ids, to disambiguate panel vs. expanded view. */
@@ -40,6 +44,7 @@
         onShowAll,
         onToggleOrientation,
         onToggleNormalize,
+        onToggleScale,
         onExpand,
         testIdPrefix = 'dataset-distribution'
     }: Props = $props();
@@ -79,6 +84,20 @@
                 class: 'h-8 w-8 p-0',
                 onclick: onToggleNormalize,
                 'data-testid': `${testIdPrefix}-toggle-normalize`
+            }}
+        />
+    {/if}
+    {#if onToggleScale}
+        <Button
+            variant="ghost"
+            icon={config.scale === 'log' ? LogScaleIcon : LinearScaleIcon}
+            ariaLabel={config.scale === 'log' ? 'Switch to linear scale' : 'Switch to log scale'}
+            buttonProps={{
+                size: 'sm',
+                class: 'h-8 w-8 p-0',
+                onclick: onToggleScale,
+                title: config.scale === 'log' ? 'Log scale' : 'Linear scale',
+                'data-testid': `${testIdPrefix}-toggle-scale`
             }}
         />
     {/if}

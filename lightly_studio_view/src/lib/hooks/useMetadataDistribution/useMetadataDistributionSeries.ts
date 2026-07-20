@@ -1,4 +1,7 @@
-import { getMetadataDistributionRouteOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+import {
+    getMetadataDistributionRouteOptions,
+    getNnDistanceDistributionRouteOptions
+} from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import type { MetadataDistributionView } from '$lib/api/lightly_studio_local/types.gen';
 import type { CategoryCount, ChartMode, ChartSeries } from '$lib/components/BarChart';
 import { getSeriesColor } from '$lib/utils';
@@ -19,12 +22,21 @@ export interface MetadataDistributionSeriesInput {
 
 export interface UseMetadataDistributionSeriesParams {
     collectionId: string;
-    /** The metadata key to aggregate; queries stay disabled until it is set. */
+    /**
+     * The metadata key to aggregate; queries stay disabled until it is set.
+     * Ignored (and not required) when `endpoint` is `'nn_distance'`.
+     */
     key: string | undefined;
     /** One entry per overlaid series, in display order. */
     series: MetadataDistributionSeriesInput[];
     /** Equal-width bins for numeric keys (backend default when omitted). */
     bins?: number;
+    /**
+     * Which endpoint to fetch from. `'metadata'` (default) aggregates the metadata
+     * `key`; `'nn_distance'` fetches the computed nearest-neighbor distance
+     * histogram, which needs no key.
+     */
+    endpoint?: 'metadata' | 'nn_distance';
     /** Skip all requests while false. */
     enabled?: boolean;
 }
@@ -68,19 +80,28 @@ export const distributionToCategoryCounts = (view: MetadataDistributionView): Ca
     return data;
 };
 
+/** Shape one distribution view into a colored chart series (aligned by input order). */
+const toChartSeries = (
+    input: MetadataDistributionSeriesInput,
+    view: MetadataDistributionView,
+    index: number
+): ChartSeries => ({
+    id: input.id,
+    label: input.label,
+    color: getSeriesColor(index),
+    data: distributionToCategoryCounts(view)
+});
+
 /**
- * Fetch the distribution of one metadata key across several comparison series
- * (one filtered request per series) and shape the results for the multi-series
- * BarChart. `params` is a getter so the queries stay reactive to a changing
- * key, series list, or bin count. Numeric keys share an x-axis because the
- * backend computes bin edges over the key's global range.
+ * Metadata endpoint: one filtered request per series. Numeric keys share an x-axis
+ * because the backend computes bin edges over the key's global range.
  */
-export const useMetadataDistributionSeries = (
+const useMetadataSeries = (
     params: () => UseMetadataDistributionSeriesParams
 ): MetadataDistributionSeriesResult =>
     createQueries(() => {
-        const { collectionId, key, series, bins, enabled = true } = params();
-        const active = enabled && Boolean(collectionId) && Boolean(key);
+        const { collectionId, key, series, bins, endpoint = 'metadata', enabled = true } = params();
+        const active = enabled && endpoint === 'metadata' && Boolean(collectionId) && Boolean(key);
         return {
             queries: series.map((input) => ({
                 ...getMetadataDistributionRouteOptions({
@@ -96,12 +117,7 @@ export const useMetadataDistributionSeries = (
                     const view = result.data;
                     if (!view) return;
                     chartMode ??= view.kind === 'numeric' ? 'histogram' : 'bar';
-                    chartSeries.push({
-                        id: series[index].id,
-                        label: series[index].label,
-                        color: getSeriesColor(index),
-                        data: distributionToCategoryCounts(view)
-                    });
+                    chartSeries.push(toChartSeries(series[index], view, index));
                 });
                 return {
                     series: chartSeries,
@@ -112,3 +128,57 @@ export const useMetadataDistributionSeries = (
             }
         };
     });
+
+/**
+ * Nearest-neighbor endpoint: all series in a *single* request. Each series' distances
+ * are computed within its own samples (small per-tag matrices), and the backend returns
+ * histograms that already share one set of bin edges.
+ */
+const useNnDistanceSeries = (
+    params: () => UseMetadataDistributionSeriesParams
+): MetadataDistributionSeriesResult =>
+    createQueries(() => {
+        const { collectionId, series, bins, endpoint = 'metadata', enabled = true } = params();
+        const active = enabled && endpoint === 'nn_distance' && Boolean(collectionId);
+        return {
+            queries: [
+                {
+                    ...getNnDistanceDistributionRouteOptions({
+                        path: { collection_id: collectionId },
+                        body: {
+                            series: series.map((input) => ({ filter: input.filter ?? null })),
+                            bins
+                        }
+                    }),
+                    enabled: active
+                }
+            ],
+            combine: ([result]): MetadataDistributionSeriesResult => {
+                const views = result.data ?? [];
+                return {
+                    series: views.map((view, index) => toChartSeries(series[index], view, index)),
+                    chartMode: views.length > 0 ? 'histogram' : undefined,
+                    isLoading: result.isLoading,
+                    isError: result.isError
+                };
+            }
+        };
+    });
+
+/**
+ * Fetch the distribution of one metadata key (or the computed nearest-neighbor
+ * distance) across several comparison series and shape them for the multi-series
+ * BarChart. `params` is a getter so the queries stay reactive to a changing key,
+ * series list, or bin count.
+ *
+ * Both endpoints' queries are wired unconditionally (so hook order is stable) and
+ * gated by `endpoint`; only the active one runs and its result is returned.
+ */
+export const useMetadataDistributionSeries = (
+    params: () => UseMetadataDistributionSeriesParams
+): MetadataDistributionSeriesResult => {
+    const metadata = useMetadataSeries(params);
+    const nnDistance = useNnDistanceSeries(params);
+    const isNnDistance = params().endpoint === 'nn_distance';
+    return isNnDistance ? nnDistance : metadata;
+};

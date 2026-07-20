@@ -82,7 +82,8 @@
         sortBy: 'count',
         manualClasses: [],
         orientation: 'horizontal',
-        normalize: 'percentage'
+        normalize: 'percentage',
+        scale: 'linear'
     });
     let configDialogOpen = $state(false);
     let expandOpen = $state(false);
@@ -178,6 +179,7 @@
         collectionId={activeSource.collectionId ?? ''}
         metadataKey={activeGroup?.id}
         series={metaSeriesInputs}
+        endpoint={activeSource.distributionEndpoint ?? 'metadata'}
         bind:result={metaResult}
     />
 {/if}
@@ -278,6 +280,11 @@
                           normalize: config.normalize === 'percentage' ? 'count' : 'percentage'
                       })
                 : undefined}
+            onToggleScale={() =>
+                (config = {
+                    ...config,
+                    scale: config.scale === 'log' ? 'linear' : 'log'
+                })}
             onExpand={() => (expandOpen = true)}
         />
     {/if}
@@ -302,12 +309,14 @@
                     series={metaVisibleSeries}
                     mode={metaResult.chartMode ?? 'bar'}
                     normalize={config.normalize}
+                    scale={config.scale}
                     orientation={config.orientation}
                 />
             {/if}
         {:else}
             <BarChart
                 data={annotationVisible}
+                scale={config.scale}
                 orientation={config.orientation}
                 totalCount={annotationTotal}
                 {onBarClick}

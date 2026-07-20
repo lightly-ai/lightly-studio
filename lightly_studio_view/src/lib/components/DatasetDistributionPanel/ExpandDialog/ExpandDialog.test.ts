@@ -40,7 +40,8 @@ const config: DistributionConfig = {
     sortBy: 'count',
     manualClasses: [],
     orientation: 'vertical',
-    normalize: 'percentage'
+    normalize: 'percentage',
+    scale: 'linear'
 };
 
 const renderDialog = (overrides = {}) => {

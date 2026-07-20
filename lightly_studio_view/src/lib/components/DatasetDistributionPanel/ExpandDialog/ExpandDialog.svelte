@@ -94,6 +94,11 @@
                     orientation: config.orientation === 'horizontal' ? 'vertical' : 'horizontal'
                 })}
             {onToggleNormalize}
+            onToggleScale={() =>
+                onConfigChange({
+                    ...config,
+                    scale: config.scale === 'log' ? 'linear' : 'log'
+                })}
             testIdPrefix="dataset-distribution-expanded"
         />
         <div class="min-h-0 flex-1 overflow-y-auto dark:[color-scheme:dark]">
@@ -102,12 +107,14 @@
                     {series}
                     {mode}
                     {normalize}
+                    scale={config.scale}
                     orientation={config.orientation}
                     maxHeightPx={560}
                 />
             {:else}
                 <BarChart
                     data={annotationVisible}
+                    scale={config.scale}
                     orientation={config.orientation}
                     maxHeightPx={560}
                     totalCount={headerTotal}

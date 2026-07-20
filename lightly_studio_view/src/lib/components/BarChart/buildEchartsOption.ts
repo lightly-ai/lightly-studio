@@ -8,7 +8,7 @@ import {
     formatPercent,
     getSeriesColor
 } from '$lib/utils';
-import type { ChartMode, ChartNormalize, ChartSeries } from './types';
+import type { ChartMode, ChartNormalize, ChartScale, ChartSeries } from './types';
 
 // Single accent color (the Lightly primary green, --color-lightly-primary #3bd99f):
 // per-class colors carry no meaning in a single count distribution, mirroring
@@ -35,6 +35,8 @@ interface BuildEchartsOptionOptions {
     mode?: ChartMode;
     /** Count vs within-series percentage (default 'count'). */
     normalize?: ChartNormalize;
+    /** Value-axis scale (default 'linear'). */
+    scale?: ChartScale;
 }
 
 /**
@@ -75,8 +77,10 @@ export function buildEchartsOption(
     const orientation = options.orientation ?? 'vertical';
     const mode = options.mode ?? 'bar';
     const normalize = options.normalize ?? 'count';
+    const scale = options.scale ?? 'linear';
     const isHorizontal = orientation === 'horizontal';
     const isPercent = normalize === 'percentage';
+    const isLog = scale === 'log';
     const isMulti = series.length > 1;
 
     const categories = unionCategories(series);
@@ -115,7 +119,10 @@ export function buildEchartsOption(
     };
 
     const valueAxis = {
-        type: 'value' as const,
+        // A log axis drops zero/negative values (they map to -Infinity), so bars
+        // for empty categories simply don't render — acceptable for a count
+        // distribution where the point of log scale is separating tall from short.
+        type: isLog ? ('log' as const) : ('value' as const),
         axisLabel: isPercent ? { ...CHART_AXIS_LABEL, formatter: '{value}%' } : CHART_AXIS_LABEL,
         splitLine: { lineStyle: { color: CHART_LINE_COLOR } }
     };

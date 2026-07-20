@@ -1,4 +1,4 @@
-import type { CategoryCount, ChartNormalize } from '$lib/components/BarChart';
+import type { CategoryCount, ChartNormalize, ChartScale } from '$lib/components/BarChart';
 import type { ClassSetSelection } from '$lib/components/ClassSetConfig';
 import type { MetadataDistributionFilter } from '$lib/hooks/useMetadataDistribution/useMetadataDistribution';
 
@@ -50,6 +50,12 @@ export interface DistributionSource {
      * `'metadata'` fetches per-tag series for the selected key group.
      */
     kind?: 'annotations' | 'metadata';
+    /**
+     * Which endpoint a metadata source fetches from (default `'metadata'`, keyed
+     * by group). `'nn_distance'` fetches the computed nearest-neighbor
+     * distance histogram instead, which needs no metadata key.
+     */
+    distributionEndpoint?: 'metadata' | 'nn_distance';
     /** Counts for a simple source. Mutually exclusive with `groups`. */
     data?: CategoryCount[];
     /** Sub-groups for a source that fans out into fields (e.g. metadata keys). */
@@ -74,4 +80,6 @@ export interface DistributionConfig extends ClassSetSelection<DistributionSortOp
     orientation: DistributionOrientation;
     /** Count vs within-series percentage (metadata sources; default 'percentage'). */
     normalize: ChartNormalize;
+    /** Value-axis scale (default 'linear'). */
+    scale: ChartScale;
 }

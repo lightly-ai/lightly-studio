@@ -159,6 +159,64 @@ def test_get_metadata_distribution__missing_key(
     assert response.status_code == HTTP_STATUS_NOT_FOUND
 
 
+def test_get_nn_distance_distribution(test_client: TestClient, db_session: Session) -> None:
+    collection_id = fill_db_with_samples_and_embeddings(
+        session=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/nn-distance/distribution",
+        json={"series": [{"filter": None}], "bins": 5},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    data = response.json()
+    assert len(data) == 1
+    series = data[0]
+    assert series["kind"] == "numeric"
+    assert series["type"] == "float"
+    assert len(series["bin_edges"]) == 6  # bins + 1
+    assert sum(series["counts"]) == 10  # one value per embedded sample
+    assert series["none_count"] == 0
+
+
+def test_get_nn_distance_distribution__defaults_to_single_series(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection_id = fill_db_with_samples_and_embeddings(
+        session=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/nn-distance/distribution",
+        json={},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    data = response.json()
+    assert len(data) == 1
+    assert sum(data[0]["counts"]) == 10
+
+
+def test_get_nn_distance_distribution__no_embeddings(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection = create_collection(session=db_session)
+    _create_image_with_metadata(db_session, collection.collection_id, "/a.png", location="city")
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/metadata/nn-distance/distribution",
+        json={"series": [{"filter": None}]},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["kind"] == "numeric"
+    assert data[0]["bin_edges"] == []
+    assert data[0]["counts"] == []
+
+
 def test_get_gps_coordinates(test_client: TestClient, db_session: Session) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id

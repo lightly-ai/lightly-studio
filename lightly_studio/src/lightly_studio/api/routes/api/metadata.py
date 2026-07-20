@@ -35,6 +35,9 @@ from lightly_studio.resolvers.metadata_resolver.sample.get_metadata_distribution
 from lightly_studio.resolvers.metadata_resolver.sample.get_metadata_info import (
     get_all_metadata_keys_and_schema,
 )
+from lightly_studio.resolvers.metadata_resolver.sample.get_nn_distance_distribution import (
+    get_nn_distance_distributions,
+)
 
 metadata_router = APIRouter(prefix="/collections/{collection_id}", tags=["metadata"])
 
@@ -68,6 +71,88 @@ class MetadataDistributionRequest(BaseModel):
         default=DEFAULT_BINS,
         gt=0,
         description="Number of equal-width bins for numeric keys.",
+    )
+
+
+class NNDistanceSeriesInput(BaseModel):
+    """One overlaid series in a nearest-neighbor distance request."""
+
+    filter: GridFilter | None = Field(
+        default=None,
+        description="Grid filter scoping this series' samples (null = whole collection).",
+    )
+
+
+class NNDistanceDistributionRequest(BaseModel):
+    """Request model for the nearest-neighbor distance distribution endpoint."""
+
+    series: list[NNDistanceSeriesInput] = Field(
+        default_factory=lambda: [NNDistanceSeriesInput()],
+        description=(
+            "Series to compute together, in display order. Distances are computed within "
+            "each series' own samples; all returned histograms share one x-axis. Defaults "
+            "to a single whole-collection series."
+        ),
+    )
+    bins: int = Field(
+        default=DEFAULT_BINS,
+        gt=0,
+        description="Number of equal-width bins for the shared histogram.",
+    )
+    embedding_model_name: str | None = Field(
+        default=None,
+        description="Embedding model name (uses default if not specified).",
+    )
+
+
+# Registered before ``/metadata/{key}/distribution`` so the literal
+# ``nn-distance`` segment is matched instead of being captured as ``{key}``.
+@metadata_router.post(
+    "/metadata/nn-distance/distribution",
+    response_model=list[MetadataDistributionView],
+)
+def get_nn_distance_distribution_route(
+    session: SessionDep,
+    collection: Annotated[
+        CollectionTable,
+        Depends(get_and_validate_collection_id),
+    ],
+    request: NNDistanceDistributionRequest,
+) -> list[MetadataDistributionView]:
+    """Get nearest-neighbor Euclidean-distance histograms for several series at once.
+
+    Each series (e.g. the current selection plus one per compared tag) yields one
+    histogram whose distances are computed among that series' own samples; all
+    histograms share bin edges spanning the union of their values, so the frontend can
+    overlay them on a single x-axis. Reuses the numeric ``MetadataDistributionView``
+    shape so the frontend renders them like any numeric metadata distribution.
+
+    Args:
+        session: The database session.
+        collection: The validated collection.
+        request: The series to compute, bin count, and optional embedding model name.
+
+    Returns:
+        One distribution per requested series, aligned to the request order. Empty
+        numeric views when the collection has no embeddings.
+    """
+    scopes: list[set[UUID] | None] = [
+        set(
+            session.exec(
+                series.filter.build_sample_ids_query(collection_id=collection.collection_id)
+            ).all()
+        )
+        if series.filter is not None
+        else None
+        for series in request.series
+    ]
+
+    return get_nn_distance_distributions(
+        session=session,
+        collection_id=collection.collection_id,
+        scopes=scopes,
+        bins=request.bins,
+        embedding_model_name=request.embedding_model_name,
     )
 
 

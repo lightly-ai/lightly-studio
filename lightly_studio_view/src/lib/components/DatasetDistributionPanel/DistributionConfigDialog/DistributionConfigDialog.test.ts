@@ -9,7 +9,8 @@ const baseConfig: DistributionConfig = {
     sortBy: 'count',
     manualClasses: [],
     orientation: 'vertical',
-    normalize: 'percentage'
+    normalize: 'percentage',
+    scale: 'linear'
 };
 
 const allClasses = Array.from({ length: 30 }, (_, i) => `class-${i}`);
