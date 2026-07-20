@@ -76,6 +76,7 @@
             {categoryNoun}
             {categoryNounPlural}
             {sortLabels}
+            compact={fixedOrientation === 'horizontal'}
             onConfigure={() => (configDialogOpen = true)}
             onShowAll={() => onConfigChange({ ...config, mode: 'topN', n: data.length })}
             onToggleOrientation={fixedOrientation
@@ -99,6 +100,7 @@
                 maxWidthPx={clientWidth || undefined}
                 {totalCount}
                 {onBarClick}
+                gridTopPx={fixedOrientation === 'horizontal' ? 4 : undefined}
             />
         </div>
     </Dialog.Content>

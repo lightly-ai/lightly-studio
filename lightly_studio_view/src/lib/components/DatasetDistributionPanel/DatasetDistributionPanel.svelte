@@ -372,6 +372,7 @@
                 categoryNoun="value"
                 categoryNounPlural="values"
                 sortLabels={CATEGORICAL_DISTRIBUTION_SORT_LABELS}
+                compact
                 onConfigure={() => (configDialogOpen = true)}
                 onShowAll={() =>
                     setCategoricalConfig({
@@ -455,6 +456,7 @@
                 {totalCount}
                 onBarClick={activeCategorical ? handleCategoricalBarClick : onBarClick}
                 emptyState={activeCategorical ? categoricalEmptyState : undefined}
+                gridTopPx={activeCategorical ? 4 : undefined}
             />
         {/if}
     </div>

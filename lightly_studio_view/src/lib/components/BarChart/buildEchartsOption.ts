@@ -26,6 +26,8 @@ interface BuildEchartsOptionOptions {
     totalCount?: number;
     /** Bar orientation (default 'vertical'). */
     orientation?: BarChartOrientation;
+    /** Top chart-grid padding in px (default 16). */
+    gridTopPx?: number;
 }
 
 /** Builds the ECharts option for a category-count bar chart (pass to `setOption`). */
@@ -35,6 +37,7 @@ export function buildEchartsOption(
 ): EChartsCoreOption {
     const totalCount = options.totalCount ?? data.reduce((sum, item) => sum + item.count, 0);
     const orientation = options.orientation ?? 'vertical';
+    const gridTopPx = options.gridTopPx ?? 16;
     const isHorizontal = orientation === 'horizontal';
 
     const labels = data.map((item) => item.label);
@@ -81,7 +84,7 @@ export function buildEchartsOption(
                 return `<b>${name}</b><br/>Count: <b>${value}</b>${percent}`;
             }
         },
-        grid: { left: 8, right: 8, top: 16, bottom: 8, containLabel: true },
+        grid: { left: 8, right: 8, top: gridTopPx, bottom: 8, containLabel: true },
         // Swap which axis holds the categories so bars grow rightward when horizontal.
         xAxis: isHorizontal ? valueAxis : categoryAxis,
         yAxis: isHorizontal ? categoryAxis : valueAxis,

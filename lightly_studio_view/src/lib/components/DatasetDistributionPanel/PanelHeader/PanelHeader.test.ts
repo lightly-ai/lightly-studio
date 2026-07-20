@@ -137,4 +137,12 @@ describe('PanelHeader', () => {
 
         expect(screen.getByTestId('dataset-distribution-expanded-configure')).toBeInTheDocument();
     });
+
+    it('removes bottom margins in compact layouts', () => {
+        render(PanelHeader, { props: { ...defaultProps, compact: true } });
+
+        const summary = screen.getByText(/^5 classes ·/);
+        expect(summary).not.toHaveClass('mb-2');
+        expect(summary.parentElement).not.toHaveClass('mb-1');
+    });
 });
