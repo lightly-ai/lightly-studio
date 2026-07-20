@@ -3,6 +3,7 @@ import { get } from 'svelte/store';
 import { useImageFilters } from './useImageFilters';
 import type { QueryExpr, SortFieldExpr } from '$lib/api/lightly_studio_local/types.gen';
 import { SortDirection } from '$lib/api/lightly_studio_local/types.gen';
+import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters';
 
 const queryExpr = {
     match_expr: {
@@ -67,6 +68,22 @@ describe('useImageFilters', () => {
             updateQueryExpr(undefined);
             expect(get(imageFilter)?.sample_filter?.query_expr).toBeUndefined();
         });
+    });
+
+    it('forwards numeric and categorical metadata state into the shared image filter', () => {
+        vi.mocked(createMetadataFilters).mockReturnValueOnce([
+            { key: 'city', op: 'in', value: ['Zurich', null] }
+        ]);
+        const { imageFilter, updateFilterParams } = useImageFilters();
+        updateFilterParams({
+            ...normalFilterParams,
+            metadata_values: {},
+            categorical_metadata_values: { city: ['Zurich', null] }
+        });
+
+        const metadataFilters = get(imageFilter)?.sample_filter?.metadata_filters;
+        expect(createMetadataFilters).toHaveBeenCalledWith({}, { city: ['Zurich', null] });
+        expect(metadataFilters).toEqual([{ key: 'city', op: 'in', value: ['Zurich', null] }]);
     });
 
     describe('updateConfusionCell', () => {

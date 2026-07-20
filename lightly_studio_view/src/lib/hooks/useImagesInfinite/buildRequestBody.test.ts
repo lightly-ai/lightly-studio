@@ -199,5 +199,19 @@ describe('buildRequestBody', () => {
                 metadataFilterFixture
             ]);
         });
+
+        it('applies categorical metadata values via createMetadataFilters', () => {
+            const result = buildRequestBody(
+                {
+                    collection_id: 'col-1',
+                    mode: 'normal',
+                    categorical_metadata_values: { city: ['Zurich', null] }
+                },
+                0
+            );
+            expect(result.filters?.sample_filter?.metadata_filters).toEqual([
+                metadataFilterFixture
+            ]);
+        });
     });
 });

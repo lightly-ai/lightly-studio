@@ -131,6 +131,24 @@ describe('useVideoFilters', () => {
                 { key: 'temp', value: 10, op: '>=' }
             ]);
         });
+
+        it('includes categorical metadata selections in the sample filter', async () => {
+            const { createMetadataFilters } =
+                await import('../useMetadataFilters/useMetadataFilters');
+            vi.mocked(createMetadataFilters).mockReturnValueOnce([
+                { key: 'city', value: ['Zurich', null], op: 'in' }
+            ]);
+            const { videoFilter, updateFilterParams } = useVideoFilters();
+
+            updateFilterParams({
+                collection_id: 'coll-1',
+                filters: { categorical_metadata_values: { city: ['Zurich', null] } }
+            });
+
+            const metadataFilters = get(videoFilter)?.sample_filter?.metadata_filters;
+            expect(createMetadataFilters).toHaveBeenCalledWith({}, { city: ['Zurich', null] });
+            expect(metadataFilters).toEqual([{ key: 'city', value: ['Zurich', null], op: 'in' }]);
+        });
     });
 
     describe('updateSampleIds', () => {
