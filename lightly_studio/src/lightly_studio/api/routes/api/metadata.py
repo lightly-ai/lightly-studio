@@ -14,9 +14,16 @@ from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.errors import TagNotFoundError
 from lightly_studio.metadata import compute_similarity, compute_typicality
 from lightly_studio.models.collection import CollectionTable
-from lightly_studio.models.metadata import HistogramView, MetadataInfoView
+from lightly_studio.models.metadata import (
+    HistogramView,
+    MetadataInfoView,
+    MetadataValueCountsView,
+)
 from lightly_studio.resolvers import embedding_model_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.metadata_resolver.sample import (
+    categorical_value_counts as metadata_value_counts_resolver,
+)
 from lightly_studio.resolvers.metadata_resolver.sample import (
     get_metadata_info as metadata_info_resolver,
 )
@@ -82,6 +89,26 @@ def get_metadata_histograms(
         collection_id=collection_id,
         filters=request.filters if request else None,
         bin_count=request.bin_count if request else _DEFAULT_BIN_COUNT,
+    )
+
+
+class MetadataValueCountsRequest(BaseModel):
+    """Request body for computing filtered categorical value counts."""
+
+    filters: ImageFilter | None = Field(None, description="Filter parameters for samples")
+
+
+@metadata_router.post("/metadata/value-counts", response_model=dict[str, MetadataValueCountsView])
+def get_metadata_value_counts(
+    session: SessionDep,
+    collection_id: Annotated[UUID, Path(title="collection Id")],
+    request: MetadataValueCountsRequest | None = None,
+) -> dict[str, MetadataValueCountsView]:
+    """Compute categorical metadata value counts under optional sample filters."""
+    return metadata_value_counts_resolver.get_metadata_value_counts(
+        session=session,
+        collection_id=collection_id,
+        filters=request.filters if request else None,
     )
 
 
