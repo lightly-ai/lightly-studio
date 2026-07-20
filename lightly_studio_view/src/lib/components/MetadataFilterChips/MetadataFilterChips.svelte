@@ -10,8 +10,6 @@
     const { collectionId }: Props = $props();
 
     const hook = useMetadataFilterChips(collectionId);
-
-    const prettify = (key: string): string => key.replace(/_/g, ' ');
 </script>
 
 {#if hook.chips.length > 0}
@@ -21,10 +19,10 @@
                 <FilterChip
                     testId="metadata-filter-chip-{chip.key}"
                     checked={chip.active}
-                    title={prettify(chip.key)}
+                    title={chip.key}
                     checkboxLabel={chip.active
-                        ? `Disable ${prettify(chip.key)} filter`
-                        : `Enable ${prettify(chip.key)} filter`}
+                        ? `Disable ${chip.key} filter`
+                        : `Enable ${chip.key} filter`}
                     onCheckedChange={(checked) => hook.handleToggle(chip.key, checked)}
                     onClear={() => hook.handleClear(chip.key)}
                 >

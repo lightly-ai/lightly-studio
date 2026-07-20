@@ -17,11 +17,4 @@ describe('MetadataFilterChips', () => {
         render(MetadataFilterChips);
         expect(screen.queryByText('Metadata filters')).not.toBeInTheDocument();
     });
-
-    it('prettifies underscore-separated keys as chip titles', async () => {
-        storage.updateMetadataBounds({ my_score: { min: 0, max: 1 } });
-        storage.updateMetadataValues({ my_score: { min: 0.1, max: 0.9 } });
-        render(MetadataFilterChips);
-        expect(await screen.findByText('my score')).toBeInTheDocument();
-    });
 });
