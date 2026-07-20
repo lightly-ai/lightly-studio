@@ -41,6 +41,24 @@ describe('buildEchartsOption', () => {
         expect(horizontal.xAxis.minInterval).toBe(1);
     });
 
+    it('adds selected and disabled treatments without changing typed category identity', () => {
+        const option = buildEchartsOption([
+            { id: 'selected', label: 'Missing', count: 3, selected: true, selectable: true },
+            { id: 'other', label: 'Other', count: 2, selected: false, selectable: false }
+        ]) as {
+            series: [{ data: { value: number; itemStyle: Record<string, unknown> }[] }];
+        };
+
+        expect(option.series[0].data[0]).toMatchObject({
+            value: 3,
+            itemStyle: { borderWidth: 3, opacity: 1 }
+        });
+        expect(option.series[0].data[1]).toMatchObject({
+            value: 2,
+            itemStyle: { borderWidth: 0, opacity: 0.45 }
+        });
+    });
+
     const getFormatter = (option: unknown) =>
         (
             option as {

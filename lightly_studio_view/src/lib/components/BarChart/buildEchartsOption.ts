@@ -12,6 +12,7 @@ import type { CategoryCount } from './';
 // Single accent color (the Lightly primary green, --color-lightly-primary #3bd99f):
 // per-class colors carry no meaning in a count distribution.
 const BAR_COLOR = 'rgba(59,217,159,0.85)';
+const SELECTED_BORDER_COLOR = 'rgba(255,255,255,0.95)';
 
 /** Bar layout: 'vertical' bars grow upward, 'horizontal' bars grow rightward. */
 export type BarChartOrientation = 'vertical' | 'horizontal';
@@ -87,7 +88,18 @@ export function buildEchartsOption(
         series: [
             {
                 type: 'bar',
-                data: data.map((item) => item.count),
+                data: data.map((item) => {
+                    if (item.selected == null && item.selectable == null) return item.count;
+                    return {
+                        value: item.count,
+                        itemStyle: {
+                            color: BAR_COLOR,
+                            opacity: item.selectable === false ? 0.45 : 1,
+                            borderColor: item.selected ? SELECTED_BORDER_COLOR : 'transparent',
+                            borderWidth: item.selected ? 3 : 0
+                        }
+                    };
+                }),
                 itemStyle: { color: BAR_COLOR },
                 barCategoryGap: '25%',
                 emphasis: CHART_EMPHASIS
