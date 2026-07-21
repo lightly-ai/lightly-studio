@@ -102,7 +102,7 @@ def embed_image_files_batched(
             return None
         return context.preprocess(image)
 
-    embeddings, kept_indices = _embed_items_batched(
+    result = _embed_items_batched(
         items=filepaths,
         preprocess_item=load_and_preprocess,
         context=context,
@@ -110,15 +110,15 @@ def embed_image_files_batched(
         progress=_EmbeddingProgress(desc="Generating embeddings", unit=" images"),
     )
 
-    kept = set(kept_indices)
+    kept_indices_set = set(result.kept_indices)
     report = FileOutcomeReport()
     for index, filepath in enumerate(filepaths):
-        outcome = FileOutcome.ADDED if index in kept else FileOutcome.BROKEN
+        outcome = FileOutcome.ADDED if index in kept_indices_set else FileOutcome.BROKEN
         report.record(path=filepath, outcome=outcome)
     report.raise_if_all_failed()
     report.log_summary()
 
-    return ImageEmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
+    return result
 
 
 def embed_pil_images_batched(
@@ -136,14 +136,14 @@ def embed_pil_images_batched(
     Returns:
         Float32 array of shape ``(len(images), embedding_dimension)``.
     """
-    embeddings, _ = _embed_items_batched(
+    result = _embed_items_batched(
         items=images,
         preprocess_item=context.preprocess,
         context=context,
         show_progress=show_progress,
         progress=_EmbeddingProgress(desc="Generating frame embeddings", unit=" frames"),
     )
-    return embeddings
+    return result.embeddings
 
 
 def _embed_items_batched(
@@ -152,7 +152,7 @@ def _embed_items_batched(
     context: EmbeddingContext,
     show_progress: bool,
     progress: _EmbeddingProgress,
-) -> tuple[NDArray[np.float32], list[int]]:
+) -> ImageEmbeddingResult:
     """Preprocess items on a thread pool and embed them in batches, preserving order.
 
     ``preprocess_item`` (per-item PIL decode/resize/normalize, plus remote reads for file
@@ -164,12 +164,13 @@ def _embed_items_batched(
     bounded.
 
     Returns:
-        The embeddings for the kept items and their indices into ``items``, both in input
-        order.
+        An ``ImageEmbeddingResult`` whose embeddings cover the kept items and whose
+        ``kept_indices`` map each row back to its index into ``items``, both in input order.
     """
     total_items = len(items)
     if not total_items:
-        return np.empty((0, context.embedding_dimension), dtype=np.float32), []
+        empty = np.empty((0, context.embedding_dimension), dtype=np.float32)
+        return ImageEmbeddingResult(embeddings=empty, kept_indices=[])
 
     if context.max_batch_size <= 0:
         raise ValueError("max_batch_size must be positive.")
@@ -182,44 +183,57 @@ def _embed_items_batched(
         # while memory stays bounded to a small multiple of the batch size.
         buffer_size=2 * context.max_batch_size,
     )
-    # Drop skipped items before batching
+    # Drop skipped items before batching, recording which input indices survive.
     kept_indices: list[int] = []
-    kept_tensors = _keep_non_none(preprocessed_tensors, kept_indices=kept_indices)
+    kept_tensors_iter = _keep_non_none(
+        tensors=preprocessed_tensors, out_kept_indices=kept_indices
+    )
     embeddings = _encode_preprocessed_batches(
-        preprocessed_tensors=kept_tensors,
-        # Upper bound: the array is truncated to the number of items actually embedded.
-        total_items=total_items,
+        preprocessed_tensors=kept_tensors_iter,
+        max_items=total_items,
         context=context,
         show_progress=show_progress,
         progress=progress,
     )
-    return embeddings[: len(kept_indices)], kept_indices
+    return ImageEmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
 
 
 def _keep_non_none(
     tensors: Iterable[torch.Tensor | None],
-    kept_indices: list[int],
+    out_kept_indices: list[int],
 ) -> Iterator[torch.Tensor]:
-    """Yield the non-``None`` tensors, appending each kept tensor's input index in order."""
+    """Yield the non-``None`` tensors, recording their input indices as they are consumed.
+
+    Args:
+        tensors: The preprocessed tensor stream, with ``None`` marking a skipped item.
+        out_kept_indices: Output list, mutated in place. As the returned iterator is
+            consumed, the input index of each yielded (non-``None``) tensor is appended, in
+            input order. It is empty until iteration starts and complete once the iterator is
+            exhausted, so callers must finish consuming before reading it.
+    """
     for index, tensor in enumerate(tensors):
         if tensor is not None:
-            kept_indices.append(index)
+            out_kept_indices.append(index)
             yield tensor
 
 
 def _encode_preprocessed_batches(
     preprocessed_tensors: Iterable[torch.Tensor],
-    total_items: int,
+    max_items: int,
     context: EmbeddingContext,
     show_progress: bool,
     progress: _EmbeddingProgress,
 ) -> NDArray[np.float32]:
-    """Stack the preprocessed tensor stream into batches and run inference, preserving order."""
-    embeddings = np.empty((total_items, context.embedding_dimension), dtype=np.float32)
+    """Stack the preprocessed tensor stream into batches and run inference, preserving order.
+
+    ``max_items`` is an upper bound on the number of embeddings (the input count before any
+    skips); the returned array is truncated to the number of tensors actually encoded.
+    """
+    embeddings = np.empty((max_items, context.embedding_dimension), dtype=np.float32)
     position = 0
     with (
         tqdm(
-            total=total_items,
+            total=max_items,
             desc=progress.desc,
             unit=progress.unit,
             disable=not show_progress,
@@ -234,7 +248,8 @@ def _encode_preprocessed_batches(
             position += batch_size
             progress_bar.update(batch_size)
 
-    return embeddings
+    # Truncate to the number of tensors actually encoded (``max_items`` was an upper bound).
+    return embeddings[:position]
 
 
 def _preprocess_workers() -> int:

@@ -19,7 +19,7 @@ def test_embed_image_files_batched__empty_input_returns_empty_array() -> None:
             max_batch_size=2,
             device=torch.device("cpu"),
             preprocess=lambda image: torch.tensor([float(image.size[0])]),
-            encode_batch=lambda images_tensor: images_tensor.numpy().astype(np.float32),
+            encode_batch=lambda images_tensor: images_tensor.cpu().numpy(),
         ),
         show_progress=False,
     )
@@ -32,7 +32,7 @@ def test_embed_image_files_batched__preserves_input_order(tmp_path: Path) -> Non
     # Each image has a distinct width, and preprocess encodes an image as its
     # width, so the embeddings must come back in input order across batches.
     widths = [5, 6, 7]
-    filepaths = _write_images(tmp_path, widths)
+    filepaths = _write_images(tmp_path=tmp_path, widths=widths)
 
     result = image_embedding.embed_image_files_batched(
         filepaths=filepaths,
@@ -60,7 +60,7 @@ def test_embed_image_files_batched__preserves_order_despite_out_of_order_preproc
     # image only, so the test stays fast and still passes (in order) when preprocessing
     # happens to run single-threaded.
     widths = [5, 6, 7, 8]
-    filepaths = _write_images(tmp_path, widths)
+    filepaths = _write_images(tmp_path=tmp_path, widths=widths)
 
     def preprocess(image: Image.Image) -> torch.Tensor:
         if image.size[0] == widths[0]:
@@ -86,12 +86,19 @@ def test_embed_image_files_batched__skips_broken_files(tmp_path: Path) -> None:
     # Broken files are skipped per-item: the embeddings cover only the readable files and
     # kept_indices maps each row back to its input position, so callers stay in sync.
     widths = [5, 6, 7, 8]
-    filepaths = _write_images(tmp_path, widths)
+    valid_filepaths = _write_images(tmp_path=tmp_path, widths=widths)
     broken = tmp_path / "broken.png"
     broken.write_bytes(b"not a valid image")
     missing = tmp_path / "missing.png"
     # Interleave broken/missing files with readable ones at positions 1 and 3.
-    filepaths = [filepaths[0], str(broken), filepaths[1], str(missing), filepaths[2], filepaths[3]]
+    filepaths = [
+        valid_filepaths[0],
+        str(broken),
+        valid_filepaths[1],
+        str(missing),
+        valid_filepaths[2],
+        valid_filepaths[3],
+    ]
 
     result = image_embedding.embed_image_files_batched(
         filepaths=filepaths,
