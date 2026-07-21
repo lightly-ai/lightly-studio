@@ -43,6 +43,8 @@ describe('buildEchartsOption', () => {
                             value: number;
                             seriesName?: string;
                             marker?: string;
+                            seriesIndex?: number;
+                            dataIndex?: number;
                         }[]
                     ) => string;
                 };
@@ -198,6 +200,55 @@ describe('buildEchartsOption', () => {
             ) as { series: { type: string; step?: string }[] };
             expect(option.series[0].type).toBe('line');
             expect(option.series[0].step).toBe('middle');
+        });
+
+        it('keeps zero-count values on linear multi-series curves', () => {
+            const option = buildEchartsOption(
+                [
+                    { id: 'a', label: 'A', data: [{ label: '0–1', count: 5 }] },
+                    { id: 'b', label: 'B', data: [{ label: '1–2', count: 8 }] }
+                ],
+                { mode: 'histogram' }
+            ) as { series: { data: number[] }[] };
+            // Linear scale renders zeros at the baseline, keeping the curve continuous.
+            expect(option.series[0].data).toEqual([5, 0]);
+        });
+
+        it('floors zero-count bins to the log floor so the curve dips instead of breaking', () => {
+            const option = buildEchartsOption(
+                [
+                    { id: 'a', label: 'A', data: [{ label: '0–1', count: 5 }] },
+                    { id: 'b', label: 'B', data: [{ label: '1–2', count: 8 }] }
+                ],
+                { mode: 'histogram', scale: 'log' }
+            ) as { series: { data: number[] }[]; yAxis: { min?: number } };
+            // Smallest real value is 5 → floor one decade below its decade = 0.1.
+            // Zero bins take the floor (no null, no bridge) and the axis pins to it.
+            expect(option.series[0].data).toEqual([5, 0.1]);
+            expect(option.yAxis.min).toBe(0.1);
+        });
+
+        it('reports the true value for log-floored bins in the tooltip', () => {
+            const option = buildEchartsOption(
+                [
+                    { id: 'a', label: 'A', data: [{ label: '0–1', count: 5 }] },
+                    { id: 'b', label: 'B', data: [{ label: '1–2', count: 8 }] }
+                ],
+                { mode: 'histogram', scale: 'log' }
+            );
+            const formatter = getFormatter(option);
+            // dataIndex 1 for series A is the floored zero bin; tooltip shows 0, not 0.1.
+            const text = formatter([
+                {
+                    name: '1–2',
+                    value: 0.1,
+                    seriesName: 'A',
+                    marker: 'X',
+                    seriesIndex: 0,
+                    dataIndex: 1
+                }
+            ]);
+            expect(text).toBe('<b>1–2</b><br/>XA: <b>0</b>');
         });
     });
 

@@ -103,6 +103,17 @@ export function buildEchartsOption(
         });
     });
 
+    // Multi-series numeric histograms render as step-line density curves.
+    const isLineDensity = mode === 'histogram' && isMulti;
+    // A log axis has no position for a zero-count bin (log 0 = -Infinity), which
+    // would break each density curve into disconnected segments. Instead we floor
+    // zeros to one decade below the smallest real value: the curve stays
+    // continuous and visibly dips toward the bottom (the "0" line) at empty bins,
+    // rather than bridging across at the previous height and hiding the gap.
+    const positiveValues = seriesValues.flat().filter((value) => value > 0);
+    const minPositive = positiveValues.length ? Math.min(...positiveValues) : 1;
+    const logFloor = Math.pow(10, Math.floor(Math.log10(minPositive)) - 1);
+
     const categoryAxis = {
         type: 'category' as const,
         data: categories,
@@ -129,6 +140,8 @@ export function buildEchartsOption(
         // for empty categories simply don't render — acceptable for a count
         // distribution where the point of log scale is separating tall from short.
         type: isLog ? ('log' as const) : ('value' as const),
+        // Pin the log floor so floored zero-count bins sit on the bottom axis line.
+        ...(isLog && isLineDensity ? { min: logFloor } : {}),
         axisLabel: isPercent ? { ...CHART_AXIS_LABEL, formatter: '{value}%' } : CHART_AXIS_LABEL,
         splitLine: { lineStyle: { color: CHART_LINE_COLOR } }
     };
@@ -164,13 +177,18 @@ export function buildEchartsOption(
             : undefined;
         // Numeric histograms with several series read best as step density
         // curves; a single series stays a filled histogram.
-        if (mode === 'histogram' && isMulti) {
+        if (isLineDensity) {
+            // On a log axis, floor zero-count bins so the curve dips to the
+            // bottom instead of vanishing (see logFloor above). Linear keeps 0.
+            const lineValues = isLog
+                ? values.map((value) => (value > 0 ? value : logFloor))
+                : values;
             return {
                 name: s.label,
                 type: 'line' as const,
                 step: 'middle' as const,
                 symbol: 'none' as const,
-                data: values,
+                data: lineValues,
                 lineStyle: { color, width: 2 },
                 itemStyle: { color },
                 emphasis: CHART_EMPHASIS,
@@ -202,22 +220,36 @@ export function buildEchartsOption(
             trigger: 'axis',
             axisPointer: { type: mode === 'histogram' && isMulti ? 'line' : 'shadow' },
             formatter: (
-                params: { name: string; value: number; seriesName?: string; marker?: string }[]
+                params: {
+                    name: string;
+                    value: number;
+                    seriesName?: string;
+                    marker?: string;
+                    seriesIndex?: number;
+                    dataIndex?: number;
+                }[]
             ) => {
                 const name = params[0]?.name ?? '';
                 const lines = params.map((param) => {
                     const prefix = `${param.marker ?? ''}${
                         param.seriesName ? `${param.seriesName}: ` : 'Count: '
                     }`;
+                    // Log-floored zero bins carry the floor as their plotted value;
+                    // report the original value so the tooltip reads a true 0.
+                    const value =
+                        isLog && isLineDensity
+                            ? (seriesValues[param.seriesIndex ?? -1]?.[param.dataIndex ?? -1] ??
+                              param.value)
+                            : param.value;
                     if (isPercent) {
-                        return `${prefix}<b>${param.value.toFixed(1)}%</b>`;
+                        return `${prefix}<b>${value.toFixed(1)}%</b>`;
                     }
                     // Count mode: bold the number, keep the share (single series) outside.
                     const suffix =
                         !isMulti && totalCount > 0
-                            ? ` (${formatPercent(param.value / totalCount)})`
+                            ? ` (${formatPercent(value / totalCount)})`
                             : '';
-                    return `${prefix}<b>${param.value}</b>${suffix}`;
+                    return `${prefix}<b>${value}</b>${suffix}`;
                 });
                 return `<b>${name}</b><br/>${lines.join('<br/>')}`;
             }
