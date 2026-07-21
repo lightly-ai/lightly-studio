@@ -81,7 +81,9 @@ def test_update_annotation__raises_error_when_only_start_time_s_is_provided(
 ) -> None:
     annotation_id = UUID("12345678-1234-5678-1234-567812345678")
 
-    with pytest.raises(ValueError, match="Both start_time_s and end_time_s must be provided together"):
+    with pytest.raises(
+        ValueError, match="Both start_time_s and end_time_s must be provided together"
+    ):
         annotations_service.update_annotation(
             db_session,
             AnnotationUpdate(
@@ -98,7 +100,9 @@ def test_update_annotation__raises_error_when_only_end_time_s_is_provided(
 ) -> None:
     annotation_id = UUID("12345678-1234-5678-1234-567812345678")
 
-    with pytest.raises(ValueError, match="Both start_time_s and end_time_s must be provided together"):
+    with pytest.raises(
+        ValueError, match="Both start_time_s and end_time_s must be provided together"
+    ):
         annotations_service.update_annotation(
             db_session,
             AnnotationUpdate(
