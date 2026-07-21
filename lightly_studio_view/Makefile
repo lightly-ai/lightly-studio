@@ -1,3 +1,5 @@
+# This is a dummy change
+
 # Install dependencies for the project
 .PHONY: install
 install:
