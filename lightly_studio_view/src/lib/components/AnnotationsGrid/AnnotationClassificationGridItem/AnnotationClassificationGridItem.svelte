@@ -70,11 +70,6 @@
     aria-selected={selected}
     style="width: {containerWidth}px; height: {containerHeight}px; background-image: url('{thumbnailUrl}'); background-size: cover; background-position: center;"
 >
-    <!-- One tile shows exactly one label — [annotation.annotation] wraps a single classification. -->
-    <!-- selectedCollectionIds=[] bypasses the images-grid source filter; the tile already
-         represents one annotation so no further filtering is needed. -->
-    <!-- The badge is always visible: for classification there is no bounding-box equivalent,
-         so the badge is the primary visual indicator regardless of the showLabel setting. -->
     <SampleClassificationPills
         sample={{ annotations: [annotation.annotation] }}
         selectedCollectionIds={[]}
