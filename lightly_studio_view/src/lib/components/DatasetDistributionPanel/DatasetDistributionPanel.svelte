@@ -11,6 +11,7 @@
     import ExpandDialog from './ExpandDialog/ExpandDialog.svelte';
     import HistogramExpandDialog from './HistogramExpandDialog/HistogramExpandDialog.svelte';
     import PanelHeader from './PanelHeader/PanelHeader.svelte';
+    import TagComparisonSelect from './TagComparisonSelect.svelte';
     import { selectVisibleCounts } from './selectVisibleCounts';
     import {
         CATEGORICAL_DISTRIBUTION_SORT_LABELS,
@@ -69,6 +70,12 @@
         onCategoricalValuesClear?: (groupId: string) => void;
         /** Retries a failed categorical distribution request. */
         onCategoricalRetry?: () => void;
+        /** Sample tags available for an independent class-distribution comparison. */
+        comparisonTagItems?: SelectItem[];
+        /** IDs of the sample tags currently included in the comparison. */
+        selectedComparisonTagIds?: string[];
+        /** Updates the independent comparison selection without changing the grid filter. */
+        onComparisonTagIdsChange?: (ids: string[]) => void;
     }
 
     const {
@@ -85,7 +92,10 @@
         onHistogramBinCountChange,
         onCategoricalValueToggle,
         onCategoricalValuesClear,
-        onCategoricalRetry
+        onCategoricalRetry,
+        comparisonTagItems = [],
+        selectedComparisonTagIds = [],
+        onComparisonTagIdsChange
     }: Props = $props();
 
     // Normalise to a source list so the rest of the panel has one code path.
@@ -309,6 +319,16 @@
                     />
                 </div>
             {/if}
+        </div>
+    {/if}
+    {#if activeSource.id === 'classes' && comparisonTagItems.length > 0 && onComparisonTagIdsChange}
+        <div class="mt-2 flex items-center gap-2">
+            <span class="w-[100px] shrink-0 text-xs text-muted-foreground">Compare by</span>
+            <TagComparisonSelect
+                items={comparisonTagItems}
+                selectedIds={selectedComparisonTagIds}
+                onChange={onComparisonTagIdsChange}
+            />
         </div>
     {/if}
     {#if activeHistogram}
