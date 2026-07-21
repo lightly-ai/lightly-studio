@@ -18,3 +18,11 @@ export interface CategoryCount {
     /** Keeps semantic buckets visible when a top-N view is applied. */
     pinned?: boolean;
 }
+
+/** One named set of counts rendered against a shared category axis. */
+export interface CategoryCountSeries {
+    /** Stable identity used to derive the series colour. */
+    id: string;
+    label: string;
+    data: CategoryCount[];
+}

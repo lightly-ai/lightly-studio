@@ -1,7 +1,8 @@
 import type { EChartsCoreOption } from 'echarts/core';
+import escape from 'lodash-es/escape';
 import { truncate } from 'lodash-es';
 import { CHART_AXIS_LABEL, CHART_EMPHASIS, CHART_LINE_COLOR, CHART_TEXT_COLOR } from '$lib/utils';
-import type { CategoryCount } from './';
+import type { CategoryCount, CategoryCountSeries } from './';
 import { buildTooltipFormatter } from './buildTooltipFormatter';
 
 // Same accent as Histogram (the Lightly primary green, --color-lightly-primary #3bd99f).
@@ -11,6 +12,23 @@ const BAR_COLOR_DIMMED = '#4b5563';
 // Full-dataset context bars drawn behind the filtered foreground bars.
 // Matches CHART_LINE_COLOR so background bars blend with the chart grid lines.
 const BAR_COLOR_BACKGROUND = '#374151';
+const SERIES_COLORS = [
+    '#4E79A7',
+    '#F28E2B',
+    '#59A14F',
+    '#E15759',
+    '#B07AA1',
+    '#76B7B2',
+    '#EDC948',
+    '#FF9DA7',
+    '#9C755F'
+];
+
+/** Maps a stable series ID to the same accessible chart colour across renders. */
+export function colorForSeries(id: string): string {
+    const hash = [...id].reduce((value, character) => value * 31 + character.charCodeAt(0), 0);
+    return SERIES_COLORS[Math.abs(hash) % SERIES_COLORS.length];
+}
 
 /** Bar layout: 'vertical' bars grow upward, 'horizontal' bars grow rightward. */
 export type BarChartOrientation = 'vertical' | 'horizontal';
@@ -26,6 +44,8 @@ interface BuildEchartsOptionOptions {
     orientation?: BarChartOrientation;
     /** Top chart-grid padding in px (default 16). */
     gridTopPx?: number;
+    /** Named grouped-bar series rendered instead of the single `data` series. */
+    series?: CategoryCountSeries[];
 }
 
 /** Builds the ECharts option for a category-count bar chart (pass to `setOption`). */
@@ -37,6 +57,8 @@ export function buildEchartsOption(
     const orientation = options.orientation ?? 'vertical';
     const gridTopPx = options.gridTopPx ?? 16;
     const isHorizontal = orientation === 'horizontal';
+    const groupedSeries = options.series ?? [];
+    const isGrouped = groupedSeries.length > 0;
 
     const labels = data.map((item) => item.label);
     // When any category is actively selected, dim the rest — mirrors the range
@@ -130,7 +152,25 @@ export function buildEchartsOption(
           }
         : null;
 
-    const series = hasActiveFilter ? [backgroundSeries, foregroundSeries] : [foregroundSeries];
+    const standardSeries = hasActiveFilter
+        ? [backgroundSeries, foregroundSeries]
+        : [foregroundSeries];
+    const chartSeries = isGrouped
+        ? groupedSeries.map((item) => {
+              const countsByLabel = new Map(
+                  item.data.map((count) => [count.label, count.count])
+              );
+              return {
+                  id: item.id,
+                  name: item.label,
+                  type: 'bar',
+                  data: labels.map((label) => countsByLabel.get(label) ?? 0),
+                  itemStyle: { color: colorForSeries(item.id) },
+                  barCategoryGap: '25%',
+                  emphasis: CHART_EMPHASIS
+              };
+          })
+        : standardSeries;
 
     return {
         backgroundColor: 'transparent',
@@ -138,12 +178,33 @@ export function buildEchartsOption(
             trigger: 'axis',
             axisPointer: { type: 'shadow' },
             appendTo: 'body',
-            formatter
+            formatter: isGrouped
+                ? (
+                      params: {
+                          name: string;
+                          value: number;
+                          seriesName?: string;
+                          marker?: string;
+                      }[]
+                  ) => {
+                      if (params.length === 0) return '';
+                      const values = params
+                          .map(
+                              (item) =>
+                                  `${item.marker ?? ''}${escape(item.seriesName ?? '')}: <b>${item.value}</b>`
+                          )
+                          .join('<br/>');
+                      return `<b>${escape(params[0].name)}</b><br/>${values}`;
+                  }
+                : formatter
         },
-        grid: { left: 8, right: 8, top: gridTopPx, bottom: 8, containLabel: true },
+        legend: isGrouped
+            ? { type: 'scroll', top: 0, textStyle: { color: CHART_TEXT_COLOR } }
+            : undefined,
+        grid: { left: 8, right: 8, top: isGrouped ? 48 : gridTopPx, bottom: 8, containLabel: true },
         // Swap which axis holds the categories so bars grow rightward when horizontal.
         xAxis: isHorizontal ? valueAxis : categoryAxis,
         yAxis: isHorizontal ? categoryAxis : valueAxis,
-        series
+        series: chartSeries
     };
 }
