@@ -57,7 +57,11 @@ async function refreshOrNull(
 ): Promise<BotTarget | null> {
     try {
         return await refreshTarget(params);
-    } catch {
+    } catch (error) {
+        console.warn(
+            'Fast Track: target refresh failed; treating the target as unverifiable.',
+            error
+        );
         return null;
     }
 }
