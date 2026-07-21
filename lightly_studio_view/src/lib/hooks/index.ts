@@ -48,3 +48,4 @@ export {
     useImageAnnotationCounts,
     useImageAnnotationCountsQueryKey
 } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
+export { useImageAnnotationCountsBySampleTags } from '$lib/hooks/useImageAnnotationCountsBySampleTags/useImageAnnotationCountsBySampleTags.svelte';
