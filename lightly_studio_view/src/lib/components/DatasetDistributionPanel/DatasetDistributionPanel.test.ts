@@ -422,6 +422,26 @@ describe('DatasetDistributionPanel', () => {
         expect(onHistogramRangeSelect).toHaveBeenCalledWith('confidence', { min: 0.5, max: 1 });
     });
 
+    it('shows a group selector when the only source has multiple groups', () => {
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: [
+                    {
+                        id: 'classes',
+                        label: 'Annotation classes',
+                        groups: [
+                            { id: 'all', label: 'All types', data: balanced },
+                            { id: 'classification', label: 'Classification', data: balanced }
+                        ]
+                    }
+                ]
+            }
+        });
+
+        expect(screen.queryByTestId('dataset-distribution-source-select')).not.toBeInTheDocument();
+        expect(screen.getByTestId('dataset-distribution-group-select')).toBeInTheDocument();
+    });
+
     const histogramSources: DistributionSource[] = [
         {
             id: 'metadata',

@@ -230,24 +230,28 @@
             />
         {/if}
     </div>
-    {#if hasSourceSelector}
+    {#if hasSourceSelector || groupItems.length > 0}
         <!-- Fixed-width labels + flex-1 triggers keep both selects the same
              width, filling the panel row. -->
         <div class="mt-2 flex flex-col gap-2" data-testid="dataset-distribution-source">
-            <div class="flex items-center gap-2">
-                <span class="w-[100px] shrink-0 text-xs text-muted-foreground">Distribution</span>
-                <Select
-                    items={sourceItems}
-                    value={activeSource.id}
-                    size="xs"
-                    class="min-w-0 flex-1"
-                    testId="dataset-distribution-source-select"
-                    onValueChange={(value) => {
-                        selectedSourceId = value;
-                        selectedGroupId = undefined;
-                    }}
-                />
-            </div>
+            {#if hasSourceSelector}
+                <div class="flex items-center gap-2">
+                    <span class="w-[100px] shrink-0 text-xs text-muted-foreground"
+                        >Distribution</span
+                    >
+                    <Select
+                        items={sourceItems}
+                        value={activeSource.id}
+                        size="xs"
+                        class="min-w-0 flex-1"
+                        testId="dataset-distribution-source-select"
+                        onValueChange={(value) => {
+                            selectedSourceId = value;
+                            selectedGroupId = undefined;
+                        }}
+                    />
+                </div>
+            {/if}
 
             {#if groupItems.length > 0}
                 <div class="flex items-center gap-2">
