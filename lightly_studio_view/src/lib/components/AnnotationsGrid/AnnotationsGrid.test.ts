@@ -25,8 +25,7 @@ const mocks = vi.hoisted(() => ({
     addReversibleAction: vi.fn(),
     clearReversibleActions: vi.fn(),
     textEmbeddingStore: null as unknown as Writable<undefined>,
-    isEditingModeStore: null as unknown as Writable<boolean>,
-    addAnnotationLabelChangeToUndoStackFn: vi.fn()
+    isEditingModeStore: null as unknown as Writable<boolean>
 }));
 
 vi.mock('$app/navigation', () => ({
@@ -145,11 +144,6 @@ vi.mock('$lib/hooks/useAuth/useAuth', () => ({
 
 vi.mock('$lib/hooks/useAuth/hasMinimumRole', () => ({
     hasMinimumRole: vi.fn(() => true)
-}));
-
-vi.mock('$lib/services/addAnnotationLabelChangeToUndoStack', () => ({
-    addAnnotationLabelChangeToUndoStack: (...args: unknown[]) =>
-        mocks.addAnnotationLabelChangeToUndoStackFn(...args)
 }));
 
 vi.mock('$lib/components/GridContainer', async () => {
@@ -316,9 +310,11 @@ describe('AnnotationsGrid', () => {
         const button = screen.getByTestId('mock-select-label');
         await fireEvent.click(button);
 
-        expect(mocks.addAnnotationLabelChangeToUndoStackFn).toHaveBeenCalledOnce();
-        const { annotations } = mocks.addAnnotationLabelChangeToUndoStackFn.mock.calls[0][0];
-        expect(annotations).toHaveLength(1);
-        expect(annotations[0].sample_id).toBe('cls-1');
+        expect(mocks.addReversibleAction).toHaveBeenCalledWith(
+            expect.objectContaining({
+                description: 'Undo label change for 1 annotation',
+                groupId: 'annotation-label-change'
+            })
+        );
     });
 });
