@@ -153,24 +153,27 @@ vi.mock('$lib/services/addAnnotationLabelChangeToUndoStack', () => ({
 }));
 
 vi.mock('$lib/components/GridContainer', async () => {
-    const { default: MockGridContainer } = await import('./GridContainer.mock.svelte');
+    const { default: MockGridContainer } =
+        await import('../GridContainer/GridContainer.mock.svelte');
     return { GridContainer: MockGridContainer };
 });
 
 vi.mock('$lib/components/Grid', async () => {
-    const { default: MockGrid } = await import('./Grid.mock.svelte');
+    const { default: MockGrid } = await import('../Grid/Grid.mock.svelte');
     return { Grid: MockGrid };
 });
 
 vi.mock('$lib/components/GridItem', async () => {
-    const { default: MockGridItem } = await import('./GridItem.mock.svelte');
+    const { default: MockGridItem } = await import('../GridItem/GridItem.mock.svelte');
     return { GridItem: MockGridItem };
 });
 
 vi.mock('$lib/components', async (importOriginal) => {
     const actual = await importOriginal<typeof import('$lib/components')>();
-    const { default: MockAnnotationsGridItem } = await import('./AnnotationsGridItem.mock.svelte');
-    const { default: MockSelectableBox } = await import('./SelectableBox.mock.svelte');
+    const { default: MockAnnotationsGridItem } =
+        await import('./AnnotationsGridItem/AnnotationsGridItem.mock.svelte');
+    const { default: MockSelectableBox } =
+        await import('../SelectableBox/SelectableBox.mock.svelte');
     return {
         ...actual,
         AnnotationsGridItem: MockAnnotationsGridItem,
@@ -180,12 +183,13 @@ vi.mock('$lib/components', async (importOriginal) => {
 
 vi.mock('./AnnotationClassificationGridItem/AnnotationClassificationGridItem.svelte', async () => {
     const { default: MockClassification } =
-        await import('./AnnotationsGridItem/AnnotationClassificationGridItem.mock.svelte');
+        await import('./AnnotationClassificationGridItem/AnnotationClassificationGridItem.mock.svelte');
     return { default: MockClassification };
 });
 
 vi.mock('./SelectedAnnotations/SelectedAnnotations.svelte', async () => {
-    const { default: MockSelectedAnnotations } = await import('./SelectedAnnotations.mock.svelte');
+    const { default: MockSelectedAnnotations } =
+        await import('./SelectedAnnotations/SelectedAnnotations.mock.svelte');
     return { default: MockSelectedAnnotations };
 });
 

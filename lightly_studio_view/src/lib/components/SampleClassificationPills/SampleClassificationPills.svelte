@@ -10,12 +10,7 @@
         type SampleClassificationPill
     } from './getSampleClassificationPills';
 
-    let {
-        sample,
-        hasBottomOverlay = false,
-        hasRightOverlay = false,
-        selectedCollectionIds: selectedCollectionIdsOverride = undefined
-    }: {
+    interface Props {
         sample: Pick<ImageView, 'annotations'>;
         hasBottomOverlay?: boolean;
         hasRightOverlay?: boolean;
@@ -25,7 +20,14 @@
          * annotations grid, where the tile already represents a single annotation).
          */
         selectedCollectionIds?: string[];
-    } = $props();
+    }
+
+    let {
+        sample,
+        hasBottomOverlay = false,
+        hasRightOverlay = false,
+        selectedCollectionIds: selectedCollectionIdsOverride = undefined
+    }: Props = $props();
 
     let containerWidth = $state(0);
     let pillsWidth = $state(0);
