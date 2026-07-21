@@ -37,8 +37,8 @@ type PullRead = { pr?: unknown; throws?: boolean };
 interface FakeOptions {
     existingApproval?: boolean;
     associatedPullRequests?: unknown[];
-    // pulls.get fires twice: reloading the target before approving, then
-    // re-checking it afterward. Each read returns a PR or throws.
+    // pulls.get gets called twice: once to reload the target before the approval,
+    // then once to re-check it afterwards. Configure the return values here.
     reloadBeforeApprove?: PullRead;
     recheckAfterApprove?: PullRead;
 }
