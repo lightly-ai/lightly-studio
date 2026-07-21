@@ -80,8 +80,8 @@ export function buildEchartsOption(
             // as `auto` — so the container clips vertically too. With few bars
             // (e.g. a single class) the bar nearly fills the height budget and
             // the tooltip renders right at the top edge, getting clipped by that
-            // implicit vertical overflow. appendToBody escapes it entirely.
-            appendToBody: true,
+            // implicit vertical overflow. appendTo: 'body' escapes it entirely.
+            appendTo: 'body',
             formatter: (params: { name: string; value: number }[]) => {
                 const [{ name, value }] = params;
                 const percent = totalCount > 0 ? ` (${formatPercent(value / totalCount)})` : '';
