@@ -78,6 +78,9 @@
                     end_time_s: endTimeS
                 }
             ]);
+        } catch (error) {
+            console.error('Failed to save event changes:', error);
+            toast.error('Failed to save event changes. Please try again.');
         } finally {
             // Refetch either way so the timeline reflects the persisted span
             // (or reverts the optimistic preview if the update failed).

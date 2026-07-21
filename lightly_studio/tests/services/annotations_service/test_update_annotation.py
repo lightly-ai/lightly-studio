@@ -73,3 +73,68 @@ def test_update_annotation__raises_error_when_label_name_is_none(
                 collection_id=collection_id,
             ),
         )
+
+
+def test_update_annotation__raises_error_when_only_start_time_s_is_provided(
+    db_session: Session,
+    collection_id: UUID,
+) -> None:
+    annotation_id = UUID("12345678-1234-5678-1234-567812345678")
+
+    with pytest.raises(
+        ValueError, match="Both start_time_s and end_time_s must be provided together"
+    ):
+        annotations_service.update_annotation(
+            db_session,
+            AnnotationUpdate(
+                annotation_id=annotation_id,
+                collection_id=collection_id,
+                start_time_s=1.0,
+            ),
+        )
+
+
+def test_update_annotation__raises_error_when_only_end_time_s_is_provided(
+    db_session: Session,
+    collection_id: UUID,
+) -> None:
+    annotation_id = UUID("12345678-1234-5678-1234-567812345678")
+
+    with pytest.raises(
+        ValueError, match="Both start_time_s and end_time_s must be provided together"
+    ):
+        annotations_service.update_annotation(
+            db_session,
+            AnnotationUpdate(
+                annotation_id=annotation_id,
+                collection_id=collection_id,
+                end_time_s=5.0,
+            ),
+        )
+
+
+def test_update_annotation__calls_update_temporal_span_when_both_times_provided(
+    db_session: Session,
+    collection_id: UUID,
+) -> None:
+    annotation_id = UUID("12345678-1234-5678-1234-567812345678")
+
+    with patch(
+        "lightly_studio.services.annotations_service.update_temporal_span"
+    ) as mock_update_temporal_span:
+        annotations_service.update_annotation(
+            db_session,
+            AnnotationUpdate(
+                annotation_id=annotation_id,
+                collection_id=collection_id,
+                start_time_s=1.0,
+                end_time_s=5.0,
+            ),
+        )
+
+        mock_update_temporal_span.assert_called_once_with(
+            session=db_session,
+            annotation_id=annotation_id,
+            start_time_s=1.0,
+            end_time_s=5.0,
+        )

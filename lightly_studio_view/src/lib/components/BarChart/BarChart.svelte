@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onDestroy } from 'svelte';
+    import { onDestroy, type Snippet } from 'svelte';
     import * as echarts from 'echarts/core';
     import { BarChart as EchartsBarChart } from 'echarts/charts';
     import { GridComponent, TooltipComponent } from 'echarts/components';
@@ -32,6 +32,8 @@
         totalCount?: number;
         /** Called with the clicked category. */
         onBarClick?: (item: CategoryCount) => void;
+        /** Custom content shown when data is empty. Replaces the default message. */
+        emptyState?: Snippet;
     }
 
     const {
@@ -40,7 +42,8 @@
         maxWidthPx,
         maxHeightPx,
         totalCount,
-        onBarClick
+        onBarClick,
+        emptyState
     }: Props = $props();
 
     let container: HTMLDivElement | undefined = $state();
@@ -107,7 +110,21 @@
 
 {#if data.length === 0}
     <div class="p-8 text-center text-sm text-muted-foreground" data-testid="bar-chart-empty">
-        No data to display.
+        {#if emptyState}
+            {@render emptyState()}
+        {:else}
+            No data to display.
+            <br />Check the
+            <a
+                href="https://docs.lightly.ai/studio/"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-primary underline-offset-4 hover:underline"
+            >
+                documentation
+            </a>
+            to learn how to add data.
+        {/if}
     </div>
 {:else}
     <div

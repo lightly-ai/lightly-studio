@@ -100,16 +100,20 @@
         preload: 'metadata'
     };
 
-    // Derived so handlers from videoProps stay up to date. `class` is applied
-    // separately, so drop it here to avoid overriding the merged class.
+    // Derived so handlers from videoProps stay up to date. `class`, `onerror`, and
+    // `onloadeddata` are applied separately: `class` to avoid overriding the merged
+    // class; `onerror`/`onloadeddata` to chain consumer callbacks with the built-in
+    // sourceLoadError logic rather than letting the spread silently overwrite them.
     const mergedVideoProps = $derived.by(() => {
         const restVideoProps = { ...videoProps };
         delete restVideoProps.class;
+        delete restVideoProps.onerror;
+        delete restVideoProps.onloadeddata;
         return {
             ...defaultVideoProps,
             ...restVideoProps,
             // Force native controls off — the custom bar replaces them.
-            controls: false as const
+            controls: false
         };
     });
     const videoClass = $derived(videoProps.class);
@@ -177,9 +181,15 @@
                 isHovered && hoverClass
             )}
             {src}
-            onerror={handleVideoError}
-            onloadeddata={() => (sourceLoadError = null)}
             {...mergedVideoProps}
+            onerror={(e) => {
+                handleVideoError();
+                videoProps.onerror?.(e);
+            }}
+            onloadeddata={(e) => {
+                sourceLoadError = null;
+                videoProps.onloadeddata?.(e);
+            }}
             onclick={playback.togglePlay}
         ></video>
         {#if sourceLoadError}

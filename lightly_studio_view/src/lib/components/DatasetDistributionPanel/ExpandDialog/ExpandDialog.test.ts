@@ -59,14 +59,14 @@ describe('ExpandDialog', () => {
     it('renders the title and a top-N summary from the applied config', () => {
         renderDialog();
 
-        expect(screen.getByText('Class distribution')).toBeInTheDocument();
+        expect(screen.getByText('Distribution')).toBeInTheDocument();
         expect(screen.getByText(/Top 10 of 30 classes · sorted by count/)).toBeInTheDocument();
     });
 
     it('renders nothing while closed', () => {
         renderDialog({ open: false });
 
-        expect(screen.queryByText('Class distribution')).not.toBeInTheDocument();
+        expect(screen.queryByText('Distribution')).not.toBeInTheDocument();
     });
 
     it('charts only the visible subset, sorted by count descending', () => {

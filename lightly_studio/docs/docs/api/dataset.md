@@ -1,3 +1,8 @@
+---
+title: Dataset, ImageDataset, VideoDataset API
+description: Python API reference for LightlyStudio's Dataset, ImageDataset, and VideoDataset classes, covering dataset creation and management methods.
+---
+
 # Dataset
 
 ## Dataset
