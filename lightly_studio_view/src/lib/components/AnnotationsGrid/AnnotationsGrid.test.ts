@@ -274,13 +274,13 @@ describe('AnnotationsGrid', () => {
         expect(tiles[1]).toHaveAttribute('data-annotation-id', 'cls-2');
     });
 
-    it('calls toggleSampleAnnotationCropSelection when a classification tile is clicked', () => {
+    it('calls toggleSampleAnnotationCropSelection when a classification tile is clicked', async () => {
         mocks.annotationsData = [buildClassificationAnnotation('cls-1')];
 
         renderGrid();
 
         const gridItem = screen.getByTestId('annotation-grid-item');
-        fireEvent.click(gridItem);
+        await fireEvent.click(gridItem);
 
         expect(mocks.toggleSampleAnnotationCropSelection).toHaveBeenCalledWith('col-1', 'cls-1');
     });
