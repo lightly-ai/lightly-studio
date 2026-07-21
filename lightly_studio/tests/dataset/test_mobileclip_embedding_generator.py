@@ -43,7 +43,7 @@ class TestMobileCLIPEmbeddingGenerator:
     def test_embed_images(self) -> None:
         mobileclip = MobileCLIPEmbeddingGenerator()
         cat_image_path = FIXTURES_DIR / "cat.jpg"
-        embeddings = mobileclip.embed_images([str(cat_image_path)])
+        embeddings = mobileclip.embed_images([str(cat_image_path)]).embeddings
 
         assert len(embeddings) == 1
         cat_embedding = embeddings[0]
@@ -71,7 +71,7 @@ class TestMobileCLIPEmbeddingGenerator:
 
         full_crop = ImageCrop(filepath=str(cat_image_path), x=0, y=0, width=width, height=height)
         crop_embeddings = mobileclip.embed_image_crops([full_crop])
-        image_embeddings = mobileclip.embed_images([str(cat_image_path)])
+        image_embeddings = mobileclip.embed_images([str(cat_image_path)]).embeddings
 
         assert crop_embeddings.shape == (1, 512)
         # A crop covering the entire image is preprocessed and encoded identically
@@ -91,7 +91,7 @@ class TestMobileCLIPEmbeddingGenerator:
             cat_pil_image = image.convert("RGB")
 
         pil_embeddings = mobileclip.embed_pil_images([cat_pil_image])
-        image_embeddings = mobileclip.embed_images([str(cat_image_path)])
+        image_embeddings = mobileclip.embed_images([str(cat_image_path)]).embeddings
 
         assert pil_embeddings.shape == (1, 512)
         # An in-memory PIL image is preprocessed and encoded identically to the same
@@ -119,7 +119,7 @@ class TestMobileCLIPEmbeddingGenerator:
 
         # Embed image.
         cat_image_path = FIXTURES_DIR / "cat.jpg"
-        cat_image_emb = torch.tensor(mobileclip.embed_images([str(cat_image_path)])[0])
+        cat_image_emb = torch.tensor(mobileclip.embed_images([str(cat_image_path)]).embeddings[0])
         cat_image_emb /= cat_image_emb.norm(dim=-1, keepdim=True)
 
         # Compute softmax similarity as in ml-mobileclip repo example.

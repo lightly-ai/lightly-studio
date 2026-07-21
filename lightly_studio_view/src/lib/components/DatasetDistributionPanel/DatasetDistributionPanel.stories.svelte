@@ -17,7 +17,7 @@
     import { GripVertical } from '@lucide/svelte';
     import { Pane, PaneGroup, PaneResizer } from 'paneforge';
     import { balanced, empty, longLabels, longTail, many80Classes } from '../BarChart/fixtures';
-    import { exampleSources } from './sourceFixtures';
+    import { exampleSources, numericMetadataSources } from './sourceFixtures';
 </script>
 
 {#snippet sidePanel(args)}
@@ -49,6 +49,20 @@
 <Story
     name="Multi-source (class / tags / metadata / eval)"
     args={{ sources: exampleSources, title: 'Distribution', onClose: () => {} }}
+    template={sidePanel}
+/>
+
+<!-- Numeric metadata keys carry histogram bins instead of category counts, so
+     the panel renders the Histogram component and hides the categorical
+     controls (sort / top-N / orientation). Switching to "weather" swaps back
+     to the categorical bar chart. -->
+<Story
+    name="Numeric metadata histogram"
+    args={{
+        sources: numericMetadataSources,
+        title: 'Distribution',
+        onClose: () => {}
+    }}
     template={sidePanel}
 />
 

@@ -197,6 +197,59 @@ describe('useAnnotationsFilter', () => {
         expect(get(annotationFilterLabels)).toEqual({});
     });
 
+    it('pruneInvalidSelections keeps labels present in counts even at zero current_count', () => {
+        selectedAnnotationFilterIds.set(new Set(['id-1', 'id-2']));
+
+        const { setAnnotationCounts, pruneInvalidSelections } = useAnnotationsFilter({
+            annotationLabels
+        });
+
+        setAnnotationCounts([
+            { label_name: 'cat', total_count: 10, current_count: 5 },
+            { label_name: 'dog', total_count: 8, current_count: 0 }
+        ]);
+        pruneInvalidSelections();
+
+        // Both labels are present in the (source-scoped) counts, so neither is
+        // deselected: a class can't prune itself just because the active filter
+        // currently matches none of its rows.
+        expect(setSelectedAnnotationFilterIds).not.toHaveBeenCalled();
+        expect(get(selectedAnnotationFilterIds)).toEqual(new Set(['id-1', 'id-2']));
+    });
+
+    it('pruneInvalidSelections removes selections whose label is missing from counts', () => {
+        // Mirrors switching to an annotation source that does not contain 'dog':
+        // its label drops out of the source-scoped counts and gets deselected.
+        selectedAnnotationFilterIds.set(new Set(['id-2']));
+
+        const { setAnnotationCounts, pruneInvalidSelections } = useAnnotationsFilter({
+            annotationLabels
+        });
+
+        setAnnotationCounts([{ label_name: 'cat', total_count: 10, current_count: 5 }]);
+        pruneInvalidSelections();
+
+        expect(setSelectedAnnotationFilterIds).toHaveBeenCalledWith('id-2');
+        expect(get(selectedAnnotationFilterIds)).toEqual(new Set());
+    });
+
+    it('pruneInvalidSelections keeps valid selections and is a no-op without counts', () => {
+        selectedAnnotationFilterIds.set(new Set(['id-1']));
+
+        const { setAnnotationCounts, pruneInvalidSelections } = useAnnotationsFilter({
+            annotationLabels
+        });
+
+        // No counts set yet: nothing should be toggled.
+        pruneInvalidSelections();
+        expect(setSelectedAnnotationFilterIds).not.toHaveBeenCalled();
+
+        setAnnotationCounts([{ label_name: 'cat', total_count: 10, current_count: 5 }]);
+        pruneInvalidSelections();
+        expect(setSelectedAnnotationFilterIds).not.toHaveBeenCalled();
+        expect(get(selectedAnnotationFilterIds)).toEqual(new Set(['id-1']));
+    });
+
     it('selectedAnnotationFilterNames returns selected label names', () => {
         selectedAnnotationFilterIds.set(new Set(['id-2']));
 

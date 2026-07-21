@@ -17,6 +17,10 @@
     let isPlaying = $state(false);
     let isMuted = $state(true);
     let isFullscreen = $state(false);
+
+    // Separate state for the short-clip story so its arrow-key stepping is
+    // independent of the Playground.
+    let shortCurrentTimeS = $state(0);
 </script>
 
 <!-- Rendered on a dark backdrop since the bar is designed to overlay a video. -->
@@ -46,6 +50,27 @@
             isFullscreen={false}
             onPlayPause={() => {}}
             onSeek={() => {}}
+            onToggleMute={() => {}}
+            onToggleFullscreen={() => {}}
+        />
+    </div>
+</Story>
+
+<!--
+    Focus the scrubber and press the arrow keys: the step is capped to a
+    fraction of the duration so a short clip steps in ~1s increments instead of
+    leaping straight to the end.
+-->
+<Story name="Short clip" asChild>
+    <div class="w-[640px] max-w-full bg-black">
+        <VideoControls
+            currentTimeS={shortCurrentTimeS}
+            durationS={4}
+            isPlaying={false}
+            isMuted={true}
+            isFullscreen={false}
+            onPlayPause={() => {}}
+            onSeek={(timeS) => (shortCurrentTimeS = timeS)}
             onToggleMute={() => {}}
             onToggleFullscreen={() => {}}
         />

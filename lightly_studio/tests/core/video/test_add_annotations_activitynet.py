@@ -31,12 +31,18 @@ def test_add_annotations_from_activitynet__imports_events(
             {
                 "database": {
                     "v_action1": {
+                        "duration": 30.0,
+                        "subset": "training",
                         "annotations": [
                             {"label": "Running", "segment": [1.0, 5.5]},
                             {"label": "Jumping", "segment": [6.0, 12.0], "score": 0.8},
-                        ]
+                        ],
                     },
-                    "v_missing": {"annotations": [{"label": "Missing", "segment": [0.0, 1.0]}]},
+                    "v_missing": {
+                        "duration": 1.0,
+                        "subset": "training",
+                        "annotations": [{"label": "Missing", "segment": [0.0, 1.0]}],
+                    },
                 }
             }
         ),
