@@ -9,7 +9,7 @@ crop-specific path lives in ``image_crop_embedding.py`` and reuses the same
 from __future__ import annotations
 
 import os
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from typing import TypeVar
 
@@ -17,9 +17,10 @@ import fsspec
 import numpy as np
 import torch
 from numpy.typing import NDArray
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 from tqdm import tqdm
 
+from lightly_studio.core.file_outcome_report import FileOutcome, FileOutcomeReport
 from lightly_studio.utils import batching, parallelize
 
 _ItemT = TypeVar("_ItemT")
@@ -52,12 +53,31 @@ class _EmbeddingProgress:
     unit: str
 
 
+@dataclass(frozen=True)
+class ImageEmbeddingResult:
+    """Embeddings for the image files that could be read, plus which inputs they cover.
+
+    Broken files (unreadable/undecodable) are skipped rather than aborting the whole
+    run, so ``embeddings`` may hold fewer rows than the input file list. ``kept_indices``
+    maps each row back to its position in the input list, in input order, letting callers
+    realign any parallel per-file data (e.g. sample IDs) with the embeddings.
+
+    Attributes:
+        embeddings: Float32 array of shape ``(len(kept_indices), embedding_dimension)``.
+        kept_indices: Indices into the input file list of the files that were embedded,
+            in input order.
+    """
+
+    embeddings: NDArray[np.float32]
+    kept_indices: list[int]
+
+
 def embed_image_files_batched(
     filepaths: list[str],
     context: EmbeddingContext,
     show_progress: bool,
-) -> NDArray[np.float32]:
-    """Embed image files in batches, preserving input order.
+) -> ImageEmbeddingResult:
+    """Embed image files in batches, preserving input order and skipping broken files.
 
     Args:
         filepaths: Paths of the images to embed.
@@ -65,21 +85,40 @@ def embed_image_files_batched(
         show_progress: Whether to show a tqdm progress bar.
 
     Returns:
-        Float32 array of shape ``(len(filepaths), embedding_dimension)``.
+        An ``ImageEmbeddingResult`` whose embeddings cover only the readable files, with
+        ``kept_indices`` mapping each row back to its input position.
+
+    Raises:
+        AllInputFilesFailedError: If at least one file was attempted and every attempted
+            file was broken (i.e. no file could be read and embedded).
+        ValueError: If ``context.max_batch_size`` is not positive.
     """
 
-    def load_and_preprocess(filepath: str) -> torch.Tensor:
-        with fsspec.open(filepath, "rb") as file:
-            image = Image.open(file).convert("RGB")
-            return context.preprocess(image)
+    def load_and_preprocess(filepath: str) -> torch.Tensor | None:
+        try:
+            with fsspec.open(filepath, "rb") as file:
+                image = Image.open(file).convert("RGB")
+        except (OSError, UnidentifiedImageError):
+            return None
+        return context.preprocess(image)
 
-    return _embed_items_batched(
+    embeddings, kept_indices = _embed_items_batched(
         items=filepaths,
         preprocess_item=load_and_preprocess,
         context=context,
         show_progress=show_progress,
         progress=_EmbeddingProgress(desc="Generating embeddings", unit=" images"),
     )
+
+    kept = set(kept_indices)
+    report = FileOutcomeReport()
+    for index, filepath in enumerate(filepaths):
+        outcome = FileOutcome.ADDED if index in kept else FileOutcome.BROKEN
+        report.record(path=filepath, outcome=outcome)
+    report.raise_if_all_failed()
+    report.log_summary()
+
+    return ImageEmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
 
 
 def embed_pil_images_batched(
@@ -97,33 +136,40 @@ def embed_pil_images_batched(
     Returns:
         Float32 array of shape ``(len(images), embedding_dimension)``.
     """
-    return _embed_items_batched(
+    embeddings, _ = _embed_items_batched(
         items=images,
         preprocess_item=context.preprocess,
         context=context,
         show_progress=show_progress,
         progress=_EmbeddingProgress(desc="Generating frame embeddings", unit=" frames"),
     )
+    return embeddings
 
 
 def _embed_items_batched(
     items: Sequence[_ItemT],
-    preprocess_item: Callable[[_ItemT], torch.Tensor],
+    preprocess_item: Callable[[_ItemT], torch.Tensor | None],
     context: EmbeddingContext,
     show_progress: bool,
     progress: _EmbeddingProgress,
-) -> NDArray[np.float32]:
+) -> tuple[NDArray[np.float32], list[int]]:
     """Preprocess items on a thread pool and embed them in batches, preserving order.
 
     ``preprocess_item`` (per-item PIL decode/resize/normalize, plus remote reads for file
     inputs) runs on a bounded thread pool, overlapping that CPU-bound work with GPU/MPS
-    inference. Inference (``encode_batch``) runs only here on the calling thread, so the
-    model is never touched concurrently; ``thread_imap_lazy`` preserves input order and
-    caps the items in flight, keeping embeddings aligned to ``items`` and memory bounded.
+    inference. It returns ``None`` for an item that should be skipped (e.g. an unreadable
+    file); such items are dropped before batching. Inference (``encode_batch``) runs only here on
+    the calling thread, so the model is never touched concurrently; ``thread_imap_lazy`` preserves
+    input order and caps the items in flight, keeping embeddings aligned to ``items`` and memory
+    bounded.
+
+    Returns:
+        The embeddings for the kept items and their indices into ``items``, both in input
+        order.
     """
     total_items = len(items)
     if not total_items:
-        return np.empty((0, context.embedding_dimension), dtype=np.float32)
+        return np.empty((0, context.embedding_dimension), dtype=np.float32), []
 
     if context.max_batch_size <= 0:
         raise ValueError("max_batch_size must be positive.")
@@ -136,13 +182,29 @@ def _embed_items_batched(
         # while memory stays bounded to a small multiple of the batch size.
         buffer_size=2 * context.max_batch_size,
     )
-    return _encode_preprocessed_batches(
-        preprocessed_tensors=preprocessed_tensors,
+    # Drop skipped items before batching
+    kept_indices: list[int] = []
+    kept_tensors = _keep_non_none(preprocessed_tensors, kept_indices=kept_indices)
+    embeddings = _encode_preprocessed_batches(
+        preprocessed_tensors=kept_tensors,
+        # Upper bound: the array is truncated to the number of items actually embedded.
         total_items=total_items,
         context=context,
         show_progress=show_progress,
         progress=progress,
     )
+    return embeddings[: len(kept_indices)], kept_indices
+
+
+def _keep_non_none(
+    tensors: Iterable[torch.Tensor | None],
+    kept_indices: list[int],
+) -> Iterator[torch.Tensor]:
+    """Yield the non-``None`` tensors, appending each kept tensor's input index in order."""
+    for index, tensor in enumerate(tensors):
+        if tensor is not None:
+            kept_indices.append(index)
+            yield tensor
 
 
 def _encode_preprocessed_batches(

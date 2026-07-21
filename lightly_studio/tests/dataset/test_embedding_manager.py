@@ -21,6 +21,7 @@ from lightly_studio.dataset.embedding_manager import (
     EmbeddingManager,
     TextEmbedQuery,
 )
+from lightly_studio.dataset.image_embedding import ImageEmbeddingResult
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
@@ -101,7 +102,7 @@ def test_register_multiple_models(
 
         def embed_images(
             self, filepaths: list[str], show_progress: bool = True
-        ) -> NDArray[np.float32]:
+        ) -> ImageEmbeddingResult:
             raise NotImplementedError()
 
         def embed_image_crops(
@@ -628,9 +629,12 @@ def test_set_default_embedding_model_falls_back_to_env_for_unregistered_slot(
 
         def embed_images(
             self, filepaths: list[str], show_progress: bool = True
-        ) -> NDArray[np.float32]:
+        ) -> ImageEmbeddingResult:
             _ = show_progress
-            return np.zeros((len(filepaths), 3), dtype=np.float32)
+            return ImageEmbeddingResult(
+                embeddings=np.zeros((len(filepaths), 3), dtype=np.float32),
+                kept_indices=list(range(len(filepaths))),
+            )
 
         def embed_image_crops(
             self, image_crops: list[ImageCrop], show_progress: bool = True
