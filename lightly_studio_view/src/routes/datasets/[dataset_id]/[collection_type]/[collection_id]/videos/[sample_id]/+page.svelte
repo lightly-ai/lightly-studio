@@ -16,7 +16,11 @@
     $effect(() => {
         loadById(data.params.sample_id);
     });
-    const frameNumber = $derived(data.frameNumber ? parseInt(data.frameNumber) : undefined);
+    const frameNumber = $derived(
+        data.frameNumber !== undefined
+            ? ((n) => (Number.isNaN(n) ? undefined : n))(parseInt(data.frameNumber, 10))
+            : undefined
+    );
     const { collection } = useCollectionWithChildren({
         collectionId: data.params.dataset_id
     });

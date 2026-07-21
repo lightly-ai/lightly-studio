@@ -1,3 +1,8 @@
+---
+title: Search and Filter Images by Similarity
+description: Find visually and semantically similar images with text or image search, then filter datasets by tags, annotations, and metadata in LightlyStudio.
+---
+
 # Search and Filter
 
 Search helps you find visually or semantically similar samples from a text or image. Filters narrow down the samples currently shown in the view by tags, annotations, dimensions, and other numeric metadata.
