@@ -1,6 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { buildEchartsOption } from './buildEchartsOption';
+import { buildEchartsOption, colorForSeries } from './buildEchartsOption';
+import type { CategoryCountSeries } from './types';
 import { balanced } from './fixtures';
+
+const groupedSeries: CategoryCountSeries[] = [
+    {
+        id: 'tag-a',
+        label: 'Reviewed',
+        data: [
+            { label: 'car', count: 3 },
+            { label: 'dog', count: 0 }
+        ]
+    },
+    {
+        id: 'tag-b',
+        label: 'Priority',
+        data: [{ label: 'car', count: 1 }]
+    }
+];
 
 describe('buildEchartsOption', () => {
     it('maps labels to the category axis and counts to the bar series', () => {
@@ -44,7 +61,16 @@ describe('buildEchartsOption', () => {
     const getFormatter = (option: unknown) =>
         (
             option as {
-                tooltip: { formatter: (params: { name: string; value: number }[]) => string };
+                tooltip: {
+                    formatter: (
+                        params: {
+                            name: string;
+                            value: number;
+                            seriesName?: string;
+                            marker?: string;
+                        }[]
+                    ) => string;
+                };
             }
         ).tooltip.formatter;
 
@@ -79,5 +105,58 @@ describe('buildEchartsOption', () => {
 
         const empty = getFormatter(buildEchartsOption([]));
         expect(empty([{ name: 'car', value: 0 }])).toBe('<b>car</b><br/>Count: <b>0</b>');
+    });
+
+    it('renders named grouped series on a shared axis and zero-fills missing values', () => {
+        const option = buildEchartsOption(
+            [
+                { label: 'car', count: 4 },
+                { label: 'dog', count: 0 }
+            ],
+            { series: groupedSeries }
+        ) as {
+            xAxis: { data: string[] };
+            legend: { type: string };
+            series: { name: string; data: number[]; itemStyle: { color: string } }[];
+        };
+
+        expect(option.xAxis.data).toEqual(['car', 'dog']);
+        expect(option.legend.type).toBe('scroll');
+        expect(option.series.map((series) => series.name)).toEqual(['Reviewed', 'Priority']);
+        expect(option.series.map((series) => series.data)).toEqual([
+            [3, 0],
+            [1, 0]
+        ]);
+        expect(option.series[0].itemStyle.color).not.toBe(option.series[1].itemStyle.color);
+    });
+
+    it('supports grouped series with a horizontal category axis', () => {
+        const option = buildEchartsOption([{ label: 'car', count: 4 }], {
+            orientation: 'horizontal',
+            series: groupedSeries
+        }) as {
+            xAxis: { type: string };
+            yAxis: { type: string; data: string[] };
+            series: { data: number[] }[];
+        };
+
+        expect(option.xAxis.type).toBe('value');
+        expect(option.yAxis).toMatchObject({ type: 'category', data: ['car'] });
+        expect(option.series.map((series) => series.data)).toEqual([[3], [1]]);
+    });
+
+    it('uses stable colours and identifies every series in grouped tooltips', () => {
+        expect(colorForSeries('tag-a')).toBe(colorForSeries('tag-a'));
+        expect(colorForSeries('tag-a')).not.toBe(colorForSeries('tag-b'));
+
+        const formatter = getFormatter(
+            buildEchartsOption([{ label: 'car', count: 4 }], { series: groupedSeries })
+        );
+        expect(
+            formatter([
+                { name: 'car', value: 3, seriesName: 'Reviewed', marker: '● ' },
+                { name: 'car', value: 1, seriesName: 'Priority', marker: '■ ' }
+            ])
+        ).toBe('<b>car</b><br/>● Reviewed: <b>3</b><br/>■ Priority: <b>1</b>');
     });
 });
