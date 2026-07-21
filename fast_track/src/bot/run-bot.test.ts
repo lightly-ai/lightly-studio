@@ -32,11 +32,15 @@ function pullRequest(overrides: Record<string, unknown> = {}) {
     };
 }
 
+type PullRead = { pr?: unknown; throws?: boolean };
+
 interface FakeOptions {
     existingApproval?: boolean;
-    currentPullRequests?: unknown[];
     associatedPullRequests?: unknown[];
-    failPostApprovalRefresh?: boolean;
+    // pulls.get fires twice: reloading the target before approving, then
+    // re-checking it afterward. Each read returns a PR or throws.
+    reloadBeforeApprove?: PullRead;
+    recheckAfterApprove?: PullRead;
 }
 
 function fakeOctokit(options: FakeOptions = {}) {
@@ -46,8 +50,11 @@ function fakeOctokit(options: FakeOptions = {}) {
     const reviews = options.existingApproval
         ? [{ id: 1, user: { login: BOT_LOGIN }, state: 'APPROVED', commit_id: HEAD_SHA }]
         : [];
-    const currentPullRequests = options.currentPullRequests ?? [pullRequest()];
     const associatedPullRequests = options.associatedPullRequests ?? [pullRequest()];
+    const pullReads: PullRead[] = [
+        options.reloadBeforeApprove ?? { pr: pullRequest() },
+        options.recheckAfterApprove ?? { pr: pullRequest() }
+    ];
     let getCall = 0;
 
     const createReview = vi.fn().mockImplementation(async () => {
@@ -77,14 +84,10 @@ function fakeOctokit(options: FakeOptions = {}) {
             },
             pulls: {
                 get: vi.fn().mockImplementation(async () => {
-                    const call = getCall;
+                    const read = pullReads[Math.min(getCall, pullReads.length - 1)] ?? {};
                     getCall += 1;
-                    if (options.failPostApprovalRefresh && call === 1) {
-                        throw new Error('transient GitHub API failure');
-                    }
-                    const value =
-                        currentPullRequests[Math.min(call, currentPullRequests.length - 1)];
-                    return { data: value };
+                    if (read.throws === true) throw new Error('transient GitHub API failure');
+                    return { data: read.pr };
                 }),
                 listReviews,
                 createReview,
@@ -138,7 +141,7 @@ describe('runBot', () => {
         const current = pullRequest({ labels: [{ name: OPT_OUT_LABEL }] });
         const execution = run(verdict(), {
             existingApproval: true,
-            currentPullRequests: [current]
+            reloadBeforeApprove: { pr: current }
         });
         await expect(execution.result).resolves.toEqual({ status: 'dismissed', prNumber: 7 });
         expect(execution.createReview).not.toHaveBeenCalled();
@@ -149,7 +152,7 @@ describe('runBot', () => {
         const newer = pullRequest({
             head: { sha: 'newer', repo: { id: 1, fork: false } }
         });
-        const execution = run(verdict(), { currentPullRequests: [pullRequest(), newer] });
+        const execution = run(verdict(), { recheckAfterApprove: { pr: newer } });
         await expect(execution.result).resolves.toEqual({ status: 'dismissed', prNumber: 7 });
         expect(execution.createReview).toHaveBeenCalledOnce();
         expect(execution.dismissReview).toHaveBeenCalledOnce();
@@ -157,7 +160,7 @@ describe('runBot', () => {
     });
 
     it('dismisses the approval if the post-approval refresh fails', async () => {
-        const execution = run(verdict(), { failPostApprovalRefresh: true });
+        const execution = run(verdict(), { recheckAfterApprove: { throws: true } });
         await expect(execution.result).resolves.toEqual({ status: 'dismissed', prNumber: 7 });
         expect(execution.createReview).toHaveBeenCalledOnce();
         expect(execution.dismissReview).toHaveBeenCalledOnce();
