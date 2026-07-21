@@ -73,6 +73,15 @@ export function buildEchartsOption(
         tooltip: {
             trigger: 'axis',
             axisPointer: { type: 'shadow' },
+            // Render the tooltip in `document.body` instead of inside the chart's
+            // own overflow container. Vertical bars only set `overflow-x-auto`
+            // on that container, but per the CSS overflow spec an `overflow-x`
+            // other than `visible` forces the browser to also treat `overflow-y`
+            // as `auto` — so the container clips vertically too. With few bars
+            // (e.g. a single class) the bar nearly fills the height budget and
+            // the tooltip renders right at the top edge, getting clipped by that
+            // implicit vertical overflow. appendToBody escapes it entirely.
+            appendToBody: true,
             formatter: (params: { name: string; value: number }[]) => {
                 const [{ name, value }] = params;
                 const percent = totalCount > 0 ? ` (${formatPercent(value / totalCount)})` : '';
