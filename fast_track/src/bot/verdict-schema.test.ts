@@ -48,6 +48,8 @@ describe('isVerdict', () => {
         ],
         ['a non-integer pr_number', { ...artifact(), pr_number: 1.5 }],
         ['a non-string head_sha', { ...artifact(), head_sha: 123 }],
+        ['a non-string base_ref', { ...artifact(), base_ref: 123 }],
+        ['a non-string base_sha', { ...artifact(), base_sha: 123 }],
         ['a non-string reason', { ...artifact(), reason: 42 }]
     ])('rejects %s', (_description, value) => {
         expect(isVerdict(value)).toBe(false);

@@ -65,7 +65,8 @@ function failureVerdict(status: 'fail' | 'opt_out', target: BotTarget, reason: s
     };
 }
 
-/** Policy check: every required guardrail is present and passing. */
+/** Policy check: every required guardrail is present and passing. Fail-closed —
+ *  an empty required set is treated as missing configuration, never as a pass. */
 function hasRequiredPasses(verdict: Verdict, requiredGuardrailNames: readonly string[]): boolean {
     return (
         requiredGuardrailNames.length > 0 &&
