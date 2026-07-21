@@ -16,7 +16,7 @@ from lightly_studio.vendor import mobileclip
 
 from . import file_utils, image_crop_embedding, image_embedding
 from .embedding_generator import ImageCrop, ImageEmbeddingGenerator
-from .image_embedding import EmbeddingContext
+from .image_embedding import EmbeddingContext, ImageEmbeddingResult
 
 MODEL_NAME = "mobileclip_s0"
 MOBILECLIP_DOWNLOAD_URL = (
@@ -84,7 +84,9 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
             embedding_list: list[float] = embedding.cpu().numpy().flatten().tolist()
         return embedding_list
 
-    def embed_images(self, filepaths: list[str], show_progress: bool = True) -> NDArray[np.float32]:
+    def embed_images(
+        self, filepaths: list[str], show_progress: bool = True
+    ) -> ImageEmbeddingResult:
         """Embed images with MobileCLIP.
 
         Args:
@@ -92,8 +94,8 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
             show_progress: Whether to show a progress bar during embedding.
 
         Returns:
-            A numpy array representing the generated embeddings
-            in the same order as the input file paths.
+            An ``ImageEmbeddingResult`` with embeddings for the readable files, in the same
+            order as the corresponding input file paths.
         """
         return image_embedding.embed_image_files_batched(
             filepaths=filepaths,

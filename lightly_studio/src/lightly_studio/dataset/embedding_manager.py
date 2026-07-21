@@ -238,13 +238,14 @@ class EmbeddingManager:
         filepaths = [sample_id_to_filepath[sample_id] for sample_id in sample_ids]
 
         # Generate embeddings for the samples.
-        embeddings = model.embed_images(filepaths=filepaths)
+        result = model.embed_images(filepaths=filepaths)
+        kept_sample_ids = [sample_ids[index] for index in result.kept_indices]
 
         _store_embeddings(
             session=session,
             model_id=model_id,
-            sample_ids=sample_ids,
-            embeddings=embeddings,
+            sample_ids=kept_sample_ids,
+            embeddings=result.embeddings,
         )
 
     def embed_annotations(
@@ -335,11 +336,11 @@ class EmbeddingManager:
         model = self._get_image_model(model_id)
 
         # Generate embedding for the image without progress bar.
-        embeddings = model.embed_images(filepaths=[filepath], show_progress=False)
+        result = model.embed_images(filepaths=[filepath], show_progress=False)
 
         # Return the single embedding as a list of floats.
-        result: list[float] = embeddings[0].tolist()
-        return result
+        embedding: list[float] = result.embeddings[0].tolist()
+        return embedding
 
     def embed_videos(
         self,
