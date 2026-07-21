@@ -21,45 +21,66 @@ export type BotResult =
 
 type BotActionParams = Parameters<typeof dismissApproval>[0];
 
+/** A verified target ready to act on, or the finished result to return when
+ *  there is nothing to act on (no PR) or the target could not be verified. */
+type VerifyOutcome = { target: BotTarget; actionParams: BotActionParams } | { done: BotResult };
+
 /** Apply a current pass verdict, revoking the bot approval for every other outcome. */
 export async function runBot(params: RunBotParams): Promise<BotResult> {
-    const target = await currentTarget(params);
-    if (target === null) {
-        return { status: 'skipped', reason: 'No eligible PR matched the trusted workflow run.' };
-    }
+    const outcome = await verifyTarget(params);
+    if ('done' in outcome) return outcome.done;
 
+    const { target, actionParams } = outcome;
     const verdict = effectiveVerdict(params, target);
-    const actionParams: BotActionParams = {
-        octokit: params.octokit,
-        owner: params.owner,
-        repo: params.repo,
-        prNumber: target.prNumber,
-        botLogin: params.botLogin
-    };
     return verdict.verdict === 'pass'
         ? applyPass(params, target, verdict, actionParams)
         : applyFailure(target, verdict, actionParams);
 }
 
-async function currentTarget(params: RunBotParams): Promise<BotTarget | null> {
+/**
+ * Find the target and reload its mutable state before any write. If there is no
+ * PR, skip. If the target is no longer verifiable, fail closed: dismiss any
+ * existing approval bound to this PR rather than skip, which would leave a stale
+ * approval active.
+ */
+async function verifyTarget(params: RunBotParams): Promise<VerifyOutcome> {
     const derivedTarget = await deriveTarget(params);
-    if (derivedTarget === null) return null;
-    return refreshTarget({ ...params, target: derivedTarget });
+    if (derivedTarget === null) {
+        return {
+            done: { status: 'skipped', reason: 'No eligible PR matched the trusted workflow run.' }
+        };
+    }
+
+    const actionParams = toActionParams(params, derivedTarget.prNumber);
+    const target = await targetOrNull(() => refreshTarget({ ...params, target: derivedTarget }));
+    if (target === null) {
+        await dismissApproval(actionParams);
+        return { done: { status: 'dismissed', prNumber: derivedTarget.prNumber } };
+    }
+    return { target, actionParams };
+}
+
+function toActionParams(params: RunBotParams, prNumber: number): BotActionParams {
+    return {
+        octokit: params.octokit,
+        owner: params.owner,
+        repo: params.repo,
+        prNumber,
+        botLogin: params.botLogin
+    };
 }
 
 /**
- * Reload the target, treating a failed reload as "no longer verifiable" so the
- * caller fails closed. A throw here would otherwise skip the post-approval
- * rollback and leave an unverified approval active.
+ * Resolve a target, treating a thrown error as "no longer verifiable" so the
+ * caller fails closed. A throw would otherwise skip the pre-approval dismissal
+ * or the post-approval rollback and leave an unverified approval active.
  */
-async function refreshOrNull(
-    params: Parameters<typeof refreshTarget>[0]
-): Promise<BotTarget | null> {
+async function targetOrNull(resolve: () => Promise<BotTarget | null>): Promise<BotTarget | null> {
     try {
-        return await refreshTarget(params);
+        return await resolve();
     } catch (error) {
         console.warn(
-            'Fast Track: target refresh failed; treating the target as unverifiable.',
+            'Fast Track: target check failed; treating the target as unverifiable.',
             error
         );
         return null;
@@ -73,7 +94,9 @@ async function applyPass(
     actionParams: BotActionParams
 ): Promise<BotResult> {
     await approve({ ...actionParams, headSha: target.headSha });
-    const finalTarget = await refreshOrNull({ ...params, target });
+    // Re-derive rather than reload: the re-check must re-run the "exactly one
+    // eligible PR at this head" invariant, not just reload the single known PR.
+    const finalTarget = await targetOrNull(() => deriveTarget(params));
     if (finalTarget === null || !verdictMatchesTarget(verdict, finalTarget)) {
         await dismissApproval(actionParams);
         return { status: 'dismissed', prNumber: target.prNumber };

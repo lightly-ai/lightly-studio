@@ -33,14 +33,34 @@ function pullRequest(overrides: Record<string, unknown> = {}) {
 }
 
 type PullRead = { pr?: unknown; throws?: boolean };
+type AssociatedRead = { prs?: unknown[]; throws?: boolean };
+
+/**
+ * Fake one API endpoint that is called several times during a run. Give it the
+ * responses in call order; it hands back the next one each call, and keeps
+ * returning the last one after that. A response marked `{ throws: true }` makes
+ * that call fail instead, standing in for a GitHub API error.
+ */
+function sequentialReads<T extends { throws?: boolean }>(reads: T[]): () => T {
+    let call = 0;
+    return () => {
+        const read = reads[Math.min(call, reads.length - 1)] ?? ({} as T);
+        call += 1;
+        if (read.throws === true) throw new Error('transient GitHub API failure');
+        return read;
+    };
+}
 
 interface FakeOptions {
     existingApproval?: boolean;
+    // deriveTarget looks up the PRs associated with the head commit. It runs once
+    // to find the target, then again only after an approval, to confirm exactly
+    // one eligible PR still points at that commit. Set each call's response here;
+    // the second defaults to repeating the first.
     associatedPullRequests?: unknown[];
-    // pulls.get gets called twice: once to reload the target before the approval,
-    // then once to re-check it afterwards. Configure the return values here.
+    reDeriveAfterApprove?: AssociatedRead;
+    // pulls.get runs once, to reload mutable PR state before the approval.
     reloadBeforeApprove?: PullRead;
-    recheckAfterApprove?: PullRead;
 }
 
 function fakeOctokit(options: FakeOptions = {}) {
@@ -51,11 +71,13 @@ function fakeOctokit(options: FakeOptions = {}) {
         ? [{ id: 1, user: { login: BOT_LOGIN }, state: 'APPROVED', commit_id: HEAD_SHA }]
         : [];
     const associatedPullRequests = options.associatedPullRequests ?? [pullRequest()];
-    const pullReads: PullRead[] = [
-        options.reloadBeforeApprove ?? { pr: pullRequest() },
-        options.recheckAfterApprove ?? { pr: pullRequest() }
-    ];
-    let getCall = 0;
+    const nextAssociated = sequentialReads<AssociatedRead>([
+        { prs: associatedPullRequests },
+        options.reDeriveAfterApprove ?? { prs: associatedPullRequests }
+    ]);
+    const nextPull = sequentialReads<PullRead>([
+        options.reloadBeforeApprove ?? { pr: pullRequest() }
+    ]);
 
     const createReview = vi.fn().mockImplementation(async () => {
         reviews.push({
@@ -75,7 +97,7 @@ function fakeOctokit(options: FakeOptions = {}) {
             if (route === listReviews)
                 return reviews.filter((review) => review.state === 'APPROVED');
             if (route === listComments) return [];
-            if (route === listAssociated) return associatedPullRequests;
+            if (route === listAssociated) return nextAssociated().prs ?? [];
             return [];
         }),
         rest: {
@@ -83,12 +105,7 @@ function fakeOctokit(options: FakeOptions = {}) {
                 listPullRequestsAssociatedWithCommit: listAssociated
             },
             pulls: {
-                get: vi.fn().mockImplementation(async () => {
-                    const read = pullReads[Math.min(getCall, pullReads.length - 1)] ?? {};
-                    getCall += 1;
-                    if (read.throws === true) throw new Error('transient GitHub API failure');
-                    return { data: read.pr };
-                }),
+                get: vi.fn().mockImplementation(async () => ({ data: nextPull().pr })),
                 listReviews,
                 createReview,
                 dismissReview
@@ -152,17 +169,50 @@ describe('runBot', () => {
         const newer = pullRequest({
             head: { sha: 'newer', repo: { id: 1, fork: false } }
         });
-        const execution = run(verdict(), { recheckAfterApprove: { pr: newer } });
+        const execution = run(verdict(), { reDeriveAfterApprove: { prs: [newer] } });
         await expect(execution.result).resolves.toEqual({ status: 'dismissed', prNumber: 7 });
         expect(execution.createReview).toHaveBeenCalledOnce();
         expect(execution.dismissReview).toHaveBeenCalledOnce();
         expect(execution.createComment).not.toHaveBeenCalled();
     });
 
-    it('dismisses the approval if the post-approval refresh fails', async () => {
-        const execution = run(verdict(), { recheckAfterApprove: { throws: true } });
+    it('revokes a pass approval if a second PR now shares the head', async () => {
+        const other = pullRequest({ number: 8 });
+        const execution = run(verdict(), {
+            reDeriveAfterApprove: { prs: [pullRequest(), other] }
+        });
         await expect(execution.result).resolves.toEqual({ status: 'dismissed', prNumber: 7 });
         expect(execution.createReview).toHaveBeenCalledOnce();
+        expect(execution.dismissReview).toHaveBeenCalledOnce();
+        expect(execution.createComment).not.toHaveBeenCalled();
+    });
+
+    it('dismisses the approval if the post-approval re-derive fails', async () => {
+        const execution = run(verdict(), { reDeriveAfterApprove: { throws: true } });
+        await expect(execution.result).resolves.toEqual({ status: 'dismissed', prNumber: 7 });
+        expect(execution.createReview).toHaveBeenCalledOnce();
+        expect(execution.dismissReview).toHaveBeenCalledOnce();
+        expect(execution.createComment).not.toHaveBeenCalled();
+    });
+
+    it('dismisses an existing approval if the target is lost before approving', async () => {
+        const execution = run(verdict(), {
+            existingApproval: true,
+            reloadBeforeApprove: { pr: pullRequest({ state: 'closed' }) }
+        });
+        await expect(execution.result).resolves.toEqual({ status: 'dismissed', prNumber: 7 });
+        expect(execution.createReview).not.toHaveBeenCalled();
+        expect(execution.dismissReview).toHaveBeenCalledOnce();
+        expect(execution.createComment).not.toHaveBeenCalled();
+    });
+
+    it('dismisses an existing approval if the pre-approval reload throws', async () => {
+        const execution = run(verdict(), {
+            existingApproval: true,
+            reloadBeforeApprove: { throws: true }
+        });
+        await expect(execution.result).resolves.toEqual({ status: 'dismissed', prNumber: 7 });
+        expect(execution.createReview).not.toHaveBeenCalled();
         expect(execution.dismissReview).toHaveBeenCalledOnce();
         expect(execution.createComment).not.toHaveBeenCalled();
     });
