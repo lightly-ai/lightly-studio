@@ -42,7 +42,7 @@
 <Dialog.Root bind:open>
     <Dialog.Content class="flex h-[92vh] max-w-[94vw] flex-col sm:max-w-[94vw]">
         <Dialog.Header>
-            <Dialog.Title>Class distribution</Dialog.Title>
+            <Dialog.Title>Distribution</Dialog.Title>
             <Dialog.Description>Hover a bar for the full class name and count</Dialog.Description>
         </Dialog.Header>
         <PanelHeader

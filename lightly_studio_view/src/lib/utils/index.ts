@@ -17,7 +17,8 @@ export { getImageURL as getImageURLById } from './getImageURL';
 export {
     getGridFrameURL,
     getGridImageURL,
-    getGridThumbnailRequestSize
+    getGridThumbnailRequestSize,
+    type GridThumbnailQuality
 } from './getGridThumbnailURL/getGridThumbnailURL';
 export { getVideoURLById } from './getVideoURLById/getVideoURLById';
 export {

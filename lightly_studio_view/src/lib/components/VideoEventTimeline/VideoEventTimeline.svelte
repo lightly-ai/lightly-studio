@@ -93,11 +93,11 @@
             aria-label={title}
         >
             {#each lanes.events as event (event.id)}
-                {@const leftPercent = toPercent(event.startTimeS)}
                 {@const widthPercent = Math.max(
                     MIN_BAR_WIDTH_PERCENT,
-                    toPercent(event.endTimeS) - leftPercent
+                    toPercent(event.endTimeS) - toPercent(event.startTimeS)
                 )}
+                {@const leftPercent = Math.min(toPercent(event.startTimeS), 100 - widthPercent)}
                 {@const timeRange = `${formatTime(event.startTimeS)}–${formatTime(event.endTimeS)}`}
                 <div
                     class="absolute"

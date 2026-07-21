@@ -1,6 +1,10 @@
 import type { CategoryCount } from '$lib/components/BarChart';
 import type { DistributionSource } from './types';
 import { longTail } from '$lib/components/BarChart/fixtures';
+import {
+    normal as numericConfidence,
+    skewed as numericBrightness
+} from '$lib/components/Histogram/fixtures';
 
 /**
  * Prototype fixtures showing how the distribution panel generalises beyond
@@ -73,6 +77,25 @@ const evalErrors: CategoryCount[] = counts([
 ]);
 
 /**
+ * A metadata-only source list with a numeric key first, so the histogram
+ * rendering is visible immediately. Switching to `weather` demonstrates the
+ * numeric ↔ categorical chart swap within one source.
+ */
+export const numericMetadataSources: DistributionSource[] = [
+    {
+        id: 'metadata',
+        label: 'Metadata',
+        groupLabel: 'Metadata key',
+        valueNoun: 'samples',
+        groups: [
+            { id: 'confidence', label: 'confidence (numeric)', histogram: numericConfidence },
+            { id: 'brightness', label: 'brightness (numeric)', histogram: numericBrightness },
+            { id: 'weather', label: 'weather', data: metadataWeather }
+        ]
+    }
+];
+
+/**
  * The full set of example sources. `class` uses the existing long-tail class
  * fixture; the others demonstrate tags, metadata (multi-key), and eval.
  */
@@ -97,7 +120,12 @@ export const exampleSources: DistributionSource[] = [
         groups: [
             { id: 'weather', label: 'weather', data: metadataWeather },
             { id: 'camera_id', label: 'camera_id', data: metadataCamera },
-            { id: 'split', label: 'split', data: metadataSplit }
+            { id: 'split', label: 'split', data: metadataSplit },
+            // Numeric keys carry histogram bins instead of category counts and
+            // render as a histogram — mirrors what the collection layout builds
+            // from `useNumericMetadataDistribution`.
+            { id: 'confidence', label: 'confidence (numeric)', histogram: numericConfidence },
+            { id: 'brightness', label: 'brightness (numeric)', histogram: numericBrightness }
         ]
     },
     {

@@ -191,8 +191,9 @@ def test_count_image_annotations_by_collection_filters_by_annotation_source(
     )
     assert {label: current for label, current, _ in counts} == {"dog": 1, "cat": 1}
 
-    # Restricting to source A counts only its "dog"; totals stay full and "cat"
-    # drops to a current count of 0.
+    # Restricting to source A scopes both the current and total counts to that
+    # source: only "dog" is counted, and "cat" (which lives in source B) drops out
+    # of the results entirely rather than lingering with a zero current count.
     counts = image_resolver.count_image_annotations_by_collection(
         session=db_session,
         collection_id=collection_id,
@@ -203,8 +204,7 @@ def test_count_image_annotations_by_collection_filters_by_annotation_source(
         ),
     )
     counts_dict = {label: (current, total) for label, current, total in counts}
-    assert counts_dict["dog"] == (1, 1)
-    assert counts_dict["cat"] == (0, 1)
+    assert counts_dict == {"dog": (1, 1)}
 
     # Restricting to source B is the mirror image.
     counts = image_resolver.count_image_annotations_by_collection(
@@ -217,8 +217,76 @@ def test_count_image_annotations_by_collection_filters_by_annotation_source(
         ),
     )
     counts_dict = {label: (current, total) for label, current, total in counts}
-    assert counts_dict["dog"] == (0, 1)
-    assert counts_dict["cat"] == (1, 1)
+    assert counts_dict == {"cat": (1, 1)}
+
+
+def test_count_image_annotations_by_collection_total_excludes_other_sources(
+    db_session: Session,
+) -> None:
+    """A shared label's total is scoped to the selected source, not summed across all.
+
+    The same label lives on one image in source A and one image in source B.
+    Viewing a single source must report "1 of 1" for that label, not "1 of 2".
+    """
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    shared_label = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="shared"
+    )
+
+    image_a = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/source_a.png",
+    )
+    image_b = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/source_b.png",
+    )
+
+    source_a = create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image_a.sample_id,
+                annotation_label_id=shared_label.annotation_label_id,
+            )
+        ],
+        collection_name="source_a",
+    )
+    create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image_b.sample_id,
+                annotation_label_id=shared_label.annotation_label_id,
+            )
+        ],
+        collection_name="source_b",
+    )
+    source_a_collection_id = source_a[0].annotation_collection_id
+
+    # Without a source filter the total sums both sources.
+    counts = image_resolver.count_image_annotations_by_collection(
+        session=db_session,
+        collection_id=collection_id,
+    )
+    assert {label: total for label, _, total in counts} == {"shared": 2}
+
+    # Restricting to source A scopes the total to that source: 1 of 1, not 1 of 2.
+    counts = image_resolver.count_image_annotations_by_collection(
+        session=db_session,
+        collection_id=collection_id,
+        image_filter=ImageFilter(
+            sample_filter=SampleFilter(
+                annotations_filter=AnnotationsFilter(collection_ids=[source_a_collection_id])
+            )
+        ),
+    )
+    assert {label: (current, total) for label, current, total in counts} == {"shared": (1, 1)}
 
 
 @pytest.fixture

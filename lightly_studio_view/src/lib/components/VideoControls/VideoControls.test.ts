@@ -104,6 +104,18 @@ describe('VideoControls', () => {
         expect(onSeek).toHaveBeenCalledWith(5);
     });
 
+    it('caps the arrow-key step on short clips instead of leaping to the end', async () => {
+        const onSeek = vi.fn();
+        const { getByRole } = render(VideoControls, {
+            props: baseProps({ currentTimeS: 0, durationS: 4, onSeek })
+        });
+
+        const scrubber = getByRole('slider');
+        // Step is capped to durationS / 4 = 1s, not the default 5s.
+        await fireEvent.keyDown(scrubber, { key: 'ArrowRight' });
+        expect(onSeek).toHaveBeenCalledWith(1);
+    });
+
     it('calls mute and fullscreen callbacks', async () => {
         const onToggleMute = vi.fn();
         const onToggleFullscreen = vi.fn();
