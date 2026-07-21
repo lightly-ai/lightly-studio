@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Class distribution bar chart: tooltip was clipped when hovering a chart with a single class.
+
 ### Security
 
 ## \[1.0.3\] - 2026-07-10
