@@ -94,9 +94,13 @@ class FileOutcomeReport:
     Attributes:
         max_examples_per_outcome: Maximum number of example paths kept per
             outcome.
+        label_overrides: Per-outcome display-label overrides used only by
+            `log_summary()`; any outcome absent from the dict falls back to
+            `outcome.value`. Defaults to empty (add-images behavior).
     """
 
     max_examples_per_outcome: int = DEFAULT_MAX_EXAMPLES_PER_OUTCOME
+    label_overrides: dict[FileOutcome, str] = field(default_factory=dict)
     _counts: dict[FileOutcome, int] = field(
         default_factory=lambda: dict.fromkeys(FileOutcome, 0),
         init=False,
@@ -171,11 +175,17 @@ class FileOutcomeReport:
                 f"({n_missing} missing, {n_broken} broken)."
             )
 
+    def _label(self, outcome: FileOutcome) -> str:
+        """Return the display label for `outcome`, honoring `label_overrides`."""
+        return self.label_overrides.get(outcome, outcome.value)
+
     def log_summary(self) -> None:
         """Log a single end-of-run summary of counts and example paths."""
-        counts = ", ".join(f"{outcome.value}={self._counts[outcome]}" for outcome in FileOutcome)
+        counts = ", ".join(
+            f"{self._label(outcome)}={self._counts[outcome]}" for outcome in FileOutcome
+        )
         logger.info(f"File outcomes: {counts}.")
         for outcome in FileOutcome:
             examples = self._example_paths[outcome]
             if examples:
-                logger.info(f"Example {outcome.value} paths: {', '.join(examples)}.")
+                logger.info(f"Example {self._label(outcome)} paths: {', '.join(examples)}.")

@@ -111,7 +111,7 @@ def embed_image_files_batched(
     )
 
     kept_indices_set = set(result.kept_indices)
-    report = FileOutcomeReport()
+    report = FileOutcomeReport(label_overrides={FileOutcome.ADDED: "embedded"})
     for index, filepath in enumerate(filepaths):
         outcome = FileOutcome.ADDED if index in kept_indices_set else FileOutcome.BROKEN
         report.record(path=filepath, outcome=outcome)
