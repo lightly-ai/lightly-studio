@@ -7,11 +7,28 @@ import {
     CHART_TEXT_COLOR,
     formatPercent
 } from '$lib/utils';
-import type { CategoryCount } from './';
+import type { CategoryCount, CategoryCountSeries } from './';
 
 // Single accent color (the Lightly primary green, --color-lightly-primary #3bd99f):
 // per-class colors carry no meaning in a count distribution.
 const BAR_COLOR = 'rgba(59,217,159,0.85)';
+const SERIES_COLORS = [
+    '#4E79A7',
+    '#F28E2B',
+    '#59A14F',
+    '#E15759',
+    '#B07AA1',
+    '#76B7B2',
+    '#EDC948',
+    '#FF9DA7',
+    '#9C755F'
+];
+
+/** Maps a stable series ID to the same accessible chart colour across renders. */
+export function colorForSeries(id: string): string {
+    const hash = [...id].reduce((value, character) => value * 31 + character.charCodeAt(0), 0);
+    return SERIES_COLORS[Math.abs(hash) % SERIES_COLORS.length];
+}
 
 /** Bar layout: 'vertical' bars grow upward, 'horizontal' bars grow rightward. */
 export type BarChartOrientation = 'vertical' | 'horizontal';
@@ -25,6 +42,8 @@ interface BuildEchartsOptionOptions {
     totalCount?: number;
     /** Bar orientation (default 'vertical'). */
     orientation?: BarChartOrientation;
+    /** Named grouped-bar series rendered instead of the single `data` series. */
+    series?: CategoryCountSeries[];
 }
 
 /** Builds the ECharts option for a category-count bar chart (pass to `setOption`). */
@@ -35,6 +54,8 @@ export function buildEchartsOption(
     const totalCount = options.totalCount ?? data.reduce((sum, item) => sum + item.count, 0);
     const orientation = options.orientation ?? 'vertical';
     const isHorizontal = orientation === 'horizontal';
+    const groupedSeries = options.series ?? [];
+    const isGrouped = groupedSeries.length > 0;
 
     const labels = data.map((item) => item.label);
 
@@ -73,24 +94,52 @@ export function buildEchartsOption(
         tooltip: {
             trigger: 'axis',
             axisPointer: { type: 'shadow' },
-            formatter: (params: { name: string; value: number }[]) => {
+            formatter: (
+                params: { name: string; value: number; seriesName?: string; marker?: string }[]
+            ) => {
                 const [{ name, value }] = params;
+                if (isGrouped) {
+                    const values = params
+                        .map(
+                            (item) => `${item.marker ?? ''}${item.seriesName}: <b>${item.value}</b>`
+                        )
+                        .join('<br/>');
+                    return `<b>${name}</b><br/>${values}`;
+                }
                 const percent = totalCount > 0 ? ` (${formatPercent(value / totalCount)})` : '';
                 return `<b>${name}</b><br/>Count: <b>${value}</b>${percent}`;
             }
         },
-        grid: { left: 8, right: 8, top: 16, bottom: 8, containLabel: true },
+        legend: isGrouped
+            ? { type: 'scroll', top: 0, textStyle: { color: CHART_TEXT_COLOR } }
+            : undefined,
+        grid: { left: 8, right: 8, top: isGrouped ? 48 : 16, bottom: 8, containLabel: true },
         // Swap which axis holds the categories so bars grow rightward when horizontal.
         xAxis: isHorizontal ? valueAxis : categoryAxis,
         yAxis: isHorizontal ? categoryAxis : valueAxis,
-        series: [
-            {
-                type: 'bar',
-                data: data.map((item) => item.count),
-                itemStyle: { color: BAR_COLOR },
-                barCategoryGap: '25%',
-                emphasis: CHART_EMPHASIS
-            }
-        ]
+        series: isGrouped
+            ? groupedSeries.map((item) => {
+                  const countsByLabel = new Map(
+                      item.data.map((count) => [count.label, count.count])
+                  );
+                  return {
+                      id: item.id,
+                      name: item.label,
+                      type: 'bar',
+                      data: labels.map((label) => countsByLabel.get(label) ?? 0),
+                      itemStyle: { color: colorForSeries(item.id) },
+                      barCategoryGap: '25%',
+                      emphasis: CHART_EMPHASIS
+                  };
+              })
+            : [
+                  {
+                      type: 'bar',
+                      data: data.map((item) => item.count),
+                      itemStyle: { color: BAR_COLOR },
+                      barCategoryGap: '25%',
+                      emphasis: CHART_EMPHASIS
+                  }
+              ]
     };
 }
