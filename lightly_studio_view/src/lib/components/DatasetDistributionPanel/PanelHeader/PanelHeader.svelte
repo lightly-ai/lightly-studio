@@ -17,6 +17,8 @@
         visibleClassCount: number;
         /** Sum of counts across all classes, for the summary line. Omit to hide the count. */
         totalCount?: number;
+        /** Number of compared sample-tag series; shown instead of a combined count. */
+        seriesCount?: number;
         /** Noun for the total count summary (e.g. 'annotations', 'samples'). */
         valueNoun?: string;
         /** Singular/plural labels for the distributed categories. */
@@ -41,6 +43,7 @@
         classCount,
         visibleClassCount,
         totalCount,
+        seriesCount,
         valueNoun = 'annotations',
         categoryNoun = 'class',
         categoryNounPlural = 'classes',
@@ -67,6 +70,9 @@
         {#if totalCount !== undefined}
             · {totalCount.toLocaleString('en-US')}
             {valueNoun}
+        {/if}
+        {#if seriesCount !== undefined}
+            · {seriesCount} sample {seriesCount === 1 ? 'tag' : 'tags'}
         {/if}
         {#if onShowAll && visibleClassCount < classCount}
             ·

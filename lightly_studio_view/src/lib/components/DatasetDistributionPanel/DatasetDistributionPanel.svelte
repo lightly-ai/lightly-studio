@@ -4,7 +4,11 @@
     import { Button } from '$lib/components';
     import Typography from '$lib/components/Typography/Typography.svelte';
     import { Select, type SelectItem } from '$lib/components/Select';
-    import { BarChart, type CategoryCount } from '$lib/components/BarChart';
+    import {
+        BarChart,
+        type CategoryCount,
+        type CategoryCountSeries
+    } from '$lib/components/BarChart';
     import { Histogram, type HistogramRange } from '$lib/components/Histogram';
     import { formatFloat, formatInteger } from '$lib/utils';
     import DistributionConfigDialog from './DistributionConfigDialog/DistributionConfigDialog.svelte';
@@ -128,7 +132,30 @@
             activeSource.groups?.find(groupHasContent) ??
             activeSource.groups?.[0]
     );
-    const activeData = $derived<CategoryCount[]>(activeGroup?.data ?? activeSource.data ?? []);
+    const activeSingleSeriesData = $derived<CategoryCount[]>(
+        activeGroup?.data ?? activeSource.data ?? []
+    );
+    const activeComparisonData = $derived(
+        activeGroup?.comparisonData ?? activeSource.comparisonData ?? []
+    );
+    const activeSeries = $derived<CategoryCountSeries[]>(
+        activeComparisonData.map((tag) => ({
+            id: tag.sample_tag_id,
+            label: tag.sample_tag_name,
+            data: tag.counts.map((item) => ({ label: item.label_name, count: item.count }))
+        }))
+    );
+    // Rank the shared axis by the aggregate across tags; individual series stay independent.
+    const activeData = $derived.by<CategoryCount[]>(() => {
+        if (activeSeries.length === 0) return activeSingleSeriesData;
+        const totals = new Map<string, number>();
+        for (const series of activeSeries) {
+            for (const item of series.data) {
+                totals.set(item.label, (totals.get(item.label) ?? 0) + item.count);
+            }
+        }
+        return [...totals].map(([label, count]) => ({ label, count }));
+    });
     // A group/source carrying bins renders as a histogram instead of a bar
     // chart; the categorical controls (sort, top-N, orientation) don't apply.
     const activeHistogram = $derived(activeGroup?.histogram ?? activeSource.histogram ?? null);
@@ -228,6 +255,13 @@
         activeCategorical ? categoricalConfig : config
     );
     const visible = $derived(selectVisibleCounts(displayedData, activeViewConfig));
+    const visibleLabels = $derived(new Set(visible.map((item) => item.label)));
+    const visibleSeries = $derived(
+        activeSeries.map((series) => ({
+            ...series,
+            data: series.data.filter((item) => visibleLabels.has(item.label))
+        }))
+    );
     const totalCount = $derived(displayedData.reduce((sum, item) => sum + item.count, 0));
 
     const handleCategoricalBarClick = (item: CategoryCount) => {
@@ -432,7 +466,8 @@
                 {config}
                 classCount={activeData.length}
                 visibleClassCount={visible.length}
-                totalCount={showTotalCount ? totalCount : undefined}
+                totalCount={showTotalCount && activeSeries.length === 0 ? totalCount : undefined}
+                seriesCount={activeSeries.length || undefined}
                 {valueNoun}
                 onConfigure={() => (configDialogOpen = true)}
                 onShowAll={() => (config = { ...config, mode: 'topN', n: activeData.length })}
@@ -499,6 +534,7 @@
                 maxHeightPx={chartHeight || undefined}
                 maxWidthPx={clientWidth || undefined}
                 {totalCount}
+                series={activeCategorical ? [] : visibleSeries}
                 onBarClick={activeCategorical ? handleCategoricalBarClick : onBarClick}
                 emptyState={activeCategorical ? categoricalEmptyState : undefined}
                 gridTopPx={4}
@@ -521,6 +557,7 @@
     <ExpandDialog
         bind:open={expandOpen}
         data={displayedData}
+        series={activeCategorical ? [] : activeSeries}
         config={activeViewConfig}
         {valueNoun}
         categoryNoun={activeCategorical ? 'value' : 'class'}

@@ -1,6 +1,10 @@
 <script lang="ts">
     import * as Dialog from '$lib/components/ui/dialog';
-    import { BarChart, type CategoryCount } from '$lib/components/BarChart';
+    import {
+        BarChart,
+        type CategoryCount,
+        type CategoryCountSeries
+    } from '$lib/components/BarChart';
     import DistributionConfigDialog from '../DistributionConfigDialog/DistributionConfigDialog.svelte';
     import PanelHeader from '../PanelHeader/PanelHeader.svelte';
     import { selectVisibleCounts } from '../selectVisibleCounts';
@@ -12,6 +16,8 @@
         open: boolean;
         /** Full class counts; the dialog applies `config` itself. */
         data: CategoryCount[];
+        /** Optional comparison series rendered on the shared class axis. */
+        series?: CategoryCountSeries[];
         /** The applied view config, shared with the panel. */
         config: DistributionConfig;
         /** Noun for the header summary (e.g. 'annotations', 'samples'). */
@@ -28,6 +34,7 @@
     let {
         open = $bindable(),
         data,
+        series = [],
         config,
         valueNoun = 'annotations',
         categoryNoun = 'class',
@@ -45,6 +52,13 @@
     let clientWidth = $state(0);
 
     const visible = $derived(selectVisibleCounts(data, config));
+    const visibleLabels = $derived(new Set(visible.map((item) => item.label)));
+    const visibleSeries = $derived(
+        series.map((item) => ({
+            ...item,
+            data: item.data.filter((count) => visibleLabels.has(count.label))
+        }))
+    );
     const totalCount = $derived(data.reduce((sum, item) => sum + item.count, 0));
     const configurationItems = $derived(
         data.map((item) => ({ value: item.id ?? item.label, label: item.label }))
@@ -63,7 +77,8 @@
             {config}
             classCount={data.length}
             visibleClassCount={visible.length}
-            {totalCount}
+            totalCount={series.length === 0 ? totalCount : undefined}
+            seriesCount={series.length || undefined}
             {valueNoun}
             {categoryNoun}
             {categoryNounPlural}
@@ -87,6 +102,7 @@
                 maxHeightPx={chartHeight || undefined}
                 maxWidthPx={clientWidth || undefined}
                 {totalCount}
+                series={visibleSeries}
                 {onBarClick}
                 gridTopPx={4}
             />
