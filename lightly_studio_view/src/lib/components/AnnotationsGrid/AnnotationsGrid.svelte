@@ -314,16 +314,16 @@
                                     tag={false}
                                     ariaLabel={`Edit annotation: ${annotationId}`}
                                     dragData={isClassification
-                                        ? buildClassificationDragData(
-                                              ann.annotation,
-                                              cropWindowByAnnotationId[annotationId],
-                                              cropUrlByAnnotationId[annotationId]
-                                          )
-                                        : buildAnnotationDragData(
-                                              ann.annotation,
-                                              cropWindowByAnnotationId[annotationId],
-                                              cropUrlByAnnotationId[annotationId]
-                                          )}
+                                        ? buildClassificationDragData({
+                                              annotation: ann.annotation,
+                                              cropWindow: cropWindowByAnnotationId[annotationId],
+                                              cropUrl: cropUrlByAnnotationId[annotationId]
+                                          })
+                                        : buildAnnotationDragData({
+                                              annotation: ann.annotation,
+                                              cropWindow: cropWindowByAnnotationId[annotationId],
+                                              cropUrl: cropUrlByAnnotationId[annotationId]
+                                          })}
                                     onDragStart={() => handleAnnotationDragStart(annotationId)}
                                     onSelect={(event) =>
                                         handleGridItemSelect(event, annotationId, index)}
