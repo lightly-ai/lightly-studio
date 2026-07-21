@@ -1,6 +1,10 @@
 <script lang="ts">
     import * as Dialog from '$lib/components/ui/dialog';
-    import { BarChart, type CategoryCount } from '$lib/components/BarChart';
+    import {
+        BarChart,
+        type CategoryCount,
+        type CategoryCountSeries
+    } from '$lib/components/BarChart';
     import DistributionConfigDialog from '../DistributionConfigDialog/DistributionConfigDialog.svelte';
     import PanelHeader from '../PanelHeader/PanelHeader.svelte';
     import { selectVisibleCounts } from '../selectVisibleCounts';
@@ -11,6 +15,8 @@
         open: boolean;
         /** Full class counts; the dialog applies `config` itself. */
         data: CategoryCount[];
+        /** Optional comparison series rendered on the shared class axis. */
+        series?: CategoryCountSeries[];
         /** The applied view config, shared with the panel. */
         config: DistributionConfig;
         /** Noun for the header summary (e.g. 'annotations', 'samples'). */
@@ -23,6 +29,7 @@
     let {
         open = $bindable(),
         data,
+        series = [],
         config,
         valueNoun = 'annotations',
         onConfigChange,
@@ -36,6 +43,13 @@
     let clientWidth = $state(0);
 
     const visible = $derived(selectVisibleCounts(data, config));
+    const visibleLabels = $derived(new Set(visible.map((item) => item.label)));
+    const visibleSeries = $derived(
+        series.map((item) => ({
+            ...item,
+            data: item.data.filter((count) => visibleLabels.has(count.label))
+        }))
+    );
     const totalCount = $derived(data.reduce((sum, item) => sum + item.count, 0));
 </script>
 
@@ -49,7 +63,8 @@
             {config}
             classCount={data.length}
             visibleClassCount={visible.length}
-            {totalCount}
+            totalCount={series.length === 0 ? totalCount : undefined}
+            seriesCount={series.length || undefined}
             {valueNoun}
             onConfigure={() => (configDialogOpen = true)}
             onShowAll={() => onConfigChange({ ...config, mode: 'topN', n: data.length })}
@@ -70,6 +85,7 @@
                 maxHeightPx={chartHeight || undefined}
                 maxWidthPx={clientWidth || undefined}
                 {totalCount}
+                series={visibleSeries}
                 {onBarClick}
             />
         </div>
