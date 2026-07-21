@@ -185,9 +185,7 @@ def _embed_items_batched(
     )
     # Drop skipped items before batching, recording which input indices survive.
     kept_indices: list[int] = []
-    kept_tensors_iter = _keep_non_none(
-        tensors=preprocessed_tensors, out_kept_indices=kept_indices
-    )
+    kept_tensors_iter = _keep_non_none(tensors=preprocessed_tensors, out_kept_indices=kept_indices)
     embeddings = _encode_preprocessed_batches(
         preprocessed_tensors=kept_tensors_iter,
         max_items=total_items,
