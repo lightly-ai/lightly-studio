@@ -17,6 +17,7 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
     import { onMount } from 'svelte';
+    import { toast } from 'svelte-sonner';
     import { routeHelpers } from '$lib/routes';
     import VideoFrameAnnotationItem, {
         type PrerenderedAnnotation
@@ -53,6 +54,9 @@
                     end_time_s: endTimeS
                 }
             ]);
+        } catch (error) {
+            console.error('Failed to save event changes:', error);
+            toast.error('Failed to save event changes. Please try again.');
         } finally {
             // Refetch either way so the timeline reflects the persisted span
             // (or reverts the optimistic preview if the update failed).
