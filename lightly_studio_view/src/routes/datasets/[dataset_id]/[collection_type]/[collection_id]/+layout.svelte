@@ -72,8 +72,10 @@
     import {
         useSelectionSummary,
         useImageAnnotationCounts,
+        useImageAnnotationCountsBySampleTags,
         useImageAnnotationCountsQueryKey,
-        useNumericMetadataDistribution
+        useNumericMetadataDistribution,
+        useTags
     } from '$lib/hooks';
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
     import { isInputElement } from '$lib/utils';
@@ -454,6 +456,20 @@
 
     // Global count mode for the distribution panel (applies to all sources).
     let distributionCountMode = $state<AnnotationCountMode>(AnnotationCountMode.OBJECTS);
+    let distributionSampleTagIds = $state<string[]>([]);
+    const { tags: distributionSampleTags } = $derived(
+        useTags({ collection_id: datasetId, kind: ['sample'] })
+    );
+    const distributionSampleTagItems = $derived(
+        $distributionSampleTags.map((tag) => ({ value: tag.tag_id, label: tag.name }))
+    );
+    $effect(() => {
+        const validIds = new Set($distributionSampleTags.map((tag) => tag.tag_id));
+        const validSelection = distributionSampleTagIds.filter((id) => validIds.has(id));
+        if (validSelection.length !== distributionSampleTagIds.length) {
+            distributionSampleTagIds = validSelection;
+        }
+    });
 
     // Only create the per-type queries while the panel is open so we don't fetch
     // extra count queries on every collection view.
@@ -494,6 +510,27 @@
         enabled: distributionPanelVisible
     }));
 
+    const groupedCountsParams = (annotationType?: AnnotationType) => ({
+        collectionId: datasetId,
+        sampleTagIds: distributionSampleTagIds,
+        filter: imageAnnotationCountsFilter,
+        countMode: distributionCountMode,
+        annotationType,
+        enabled: distributionPanelVisible
+    });
+    const distributionAllTagQuery = useImageAnnotationCountsBySampleTags(() =>
+        groupedCountsParams()
+    );
+    const distributionClassificationTagQuery = useImageAnnotationCountsBySampleTags(() =>
+        groupedCountsParams(AnnotationType.CLASSIFICATION)
+    );
+    const distributionObjectDetectionTagQuery = useImageAnnotationCountsBySampleTags(() =>
+        groupedCountsParams(AnnotationType.OBJECT_DETECTION)
+    );
+    const distributionSegmentationTagQuery = useImageAnnotationCountsBySampleTags(() =>
+        groupedCountsParams(AnnotationType.SEGMENTATION_MASK)
+    );
+
     // The panel's sources are the distribution *types* (class labels,
     // metadata, …); the subset within a type (annotation type, metadata key)
     // is the source's group, picked in a second, contextual dropdown.
@@ -528,40 +565,55 @@
             distributionAllQuery.data !== undefined
                 ? toCategoryCounts(distributionAllQuery.data)
                 : classDistributionCounts;
-        const allTypesGroup = { id: 'all', label: 'All types', data: allDistributionData };
+        const allTypesGroup = {
+            id: 'all',
+            label: 'All types',
+            data: allDistributionData,
+            comparisonData: distributionAllTagQuery.data
+        };
 
         const perType: {
             id: AnnotationType;
             label: string;
             query: ReturnType<typeof useImageAnnotationCounts>;
+            comparisonQuery: ReturnType<typeof useImageAnnotationCountsBySampleTags>;
         }[] = [
             {
                 id: AnnotationType.CLASSIFICATION,
                 label: 'Classification',
-                query: distributionClassificationQuery
+                query: distributionClassificationQuery,
+                comparisonQuery: distributionClassificationTagQuery
             },
             {
                 id: AnnotationType.OBJECT_DETECTION,
                 label: 'Object detection',
-                query: distributionObjectDetectionQuery
+                query: distributionObjectDetectionQuery,
+                comparisonQuery: distributionObjectDetectionTagQuery
             },
             {
                 id: AnnotationType.SEGMENTATION_MASK,
                 label: 'Segmentation',
-                query: distributionSegmentationQuery
+                query: distributionSegmentationQuery,
+                comparisonQuery: distributionSegmentationTagQuery
             }
         ];
         const typeGroups = perType
-            .map(({ id, label, query }) => ({
+            .map(({ id, label, query, comparisonQuery }) => ({
                 id,
                 label,
-                data: toCategoryCounts(query.data)
+                data: toCategoryCounts(query.data),
+                comparisonData: comparisonQuery.data
             }))
             // Skip types with no matches in the current view so the picker stays clean.
             .filter((group) => group.data.length > 0);
         // With zero or one populated type, "All types" would just duplicate it —
         // drop the group picker entirely.
-        if (typeGroups.length <= 1) return { ...base, data: allDistributionData };
+        if (typeGroups.length <= 1)
+            return {
+                ...base,
+                data: allDistributionData,
+                comparisonData: distributionAllTagQuery.data
+            };
         return { ...base, groups: [allTypesGroup, ...typeGroups] };
     });
 
@@ -815,6 +867,10 @@
                                     {histogramBinCount}
                                     onHistogramBinCountChange={(binCount) =>
                                         (histogramBinCount = binCount)}
+                                    comparisonTagItems={distributionSampleTagItems}
+                                    selectedComparisonTagIds={distributionSampleTagIds}
+                                    onComparisonTagIdsChange={(ids) =>
+                                        (distributionSampleTagIds = ids)}
                                 />
                             {/await}
                         {/if}
