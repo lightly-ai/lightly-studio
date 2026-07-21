@@ -47,6 +47,21 @@ async function currentTarget(params: RunBotParams): Promise<BotTarget | null> {
     return refreshTarget({ ...params, target: derivedTarget });
 }
 
+/**
+ * Reload the target, treating a failed reload as "no longer verifiable" so the
+ * caller fails closed. A throw here would otherwise skip the post-approval
+ * rollback and leave an unverified approval active.
+ */
+async function refreshOrNull(
+    params: Parameters<typeof refreshTarget>[0]
+): Promise<BotTarget | null> {
+    try {
+        return await refreshTarget(params);
+    } catch {
+        return null;
+    }
+}
+
 async function applyPass(
     params: RunBotParams,
     target: BotTarget,
@@ -54,7 +69,7 @@ async function applyPass(
     actionParams: BotActionParams
 ): Promise<BotResult> {
     await approve({ ...actionParams, headSha: target.headSha });
-    const finalTarget = await refreshTarget({ ...params, target });
+    const finalTarget = await refreshOrNull({ ...params, target });
     if (finalTarget === null || !verdictMatchesTarget(verdict, finalTarget)) {
         await dismissApproval(actionParams);
         return { status: 'dismissed', prNumber: target.prNumber };

@@ -36,6 +36,7 @@ interface FakeOptions {
     existingApproval?: boolean;
     currentPullRequests?: unknown[];
     associatedPullRequests?: unknown[];
+    failPostApprovalRefresh?: boolean;
 }
 
 function fakeOctokit(options: FakeOptions = {}) {
@@ -76,9 +77,13 @@ function fakeOctokit(options: FakeOptions = {}) {
             },
             pulls: {
                 get: vi.fn().mockImplementation(async () => {
-                    const value =
-                        currentPullRequests[Math.min(getCall, currentPullRequests.length - 1)];
+                    const call = getCall;
                     getCall += 1;
+                    if (options.failPostApprovalRefresh && call === 1) {
+                        throw new Error('transient GitHub API failure');
+                    }
+                    const value =
+                        currentPullRequests[Math.min(call, currentPullRequests.length - 1)];
                     return { data: value };
                 }),
                 listReviews,
@@ -145,6 +150,14 @@ describe('runBot', () => {
             head: { sha: 'newer', repo: { id: 1, fork: false } }
         });
         const execution = run(verdict(), { currentPullRequests: [pullRequest(), newer] });
+        await expect(execution.result).resolves.toEqual({ status: 'dismissed', prNumber: 7 });
+        expect(execution.createReview).toHaveBeenCalledOnce();
+        expect(execution.dismissReview).toHaveBeenCalledOnce();
+        expect(execution.createComment).not.toHaveBeenCalled();
+    });
+
+    it('dismisses the approval if the post-approval refresh fails', async () => {
+        const execution = run(verdict(), { failPostApprovalRefresh: true });
         await expect(execution.result).resolves.toEqual({ status: 'dismissed', prNumber: 7 });
         expect(execution.createReview).toHaveBeenCalledOnce();
         expect(execution.dismissReview).toHaveBeenCalledOnce();
