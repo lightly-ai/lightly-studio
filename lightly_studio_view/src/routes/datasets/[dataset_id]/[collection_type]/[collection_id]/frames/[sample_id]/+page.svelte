@@ -13,6 +13,7 @@
     import ViewVideoButton from '$lib/components/ViewVideoButton/ViewVideoButton.svelte';
     import FrameDetailsNavigation from '$lib/components/FrameDetailsNavigation/FrameDetailsNavigation.svelte';
     import { usePostHog } from '$lib/hooks/usePostHog';
+    import { isVideoFramesRoute } from '$lib/routes';
 
     const { data }: { data: PageData } = $props();
     const { collection_id, sampleId } = $derived(data);
@@ -22,7 +23,7 @@
         trackEvent('sample_inspected', {
             collection_id,
             sample_type: 'video_frame',
-            opened_from: nav.from !== null ? 'grid' : 'direct_url'
+            opened_from: isVideoFramesRoute(nav.from?.route.id ?? null) ? 'grid' : 'direct_url'
         });
     });
     const { refetch, videoFrame } = useFrame(() => sampleId);

@@ -12,6 +12,7 @@
     import VideoDetailsBreadcrumb from '$lib/components/VideoDetailsBreadcrumb/VideoDetailsBreadcrumb.svelte';
     import { afterNavigate } from '$app/navigation';
     import { usePostHog } from '$lib/hooks/usePostHog';
+    import { isVideosRoute } from '$lib/routes';
 
     const { data }: { data: PageData } = $props();
 
@@ -20,7 +21,7 @@
         trackEvent('sample_inspected', {
             collection_id: data.params.collection_id,
             sample_type: 'video',
-            opened_from: nav.from !== null ? 'grid' : 'direct_url'
+            opened_from: isVideosRoute(nav.from?.route.id ?? null) ? 'grid' : 'direct_url'
         });
     });
     const { data: video, isLoading, loadById, error, refetch } = useVideo();

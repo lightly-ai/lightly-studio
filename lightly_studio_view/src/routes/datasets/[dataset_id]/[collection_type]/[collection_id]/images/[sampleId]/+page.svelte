@@ -6,6 +6,7 @@
     import GroupsComponentsMenu from '$lib/components/GroupsComponentsMenu/GroupsComponentsMenu.svelte';
     import LayoutCard from '$lib/components/LayoutCard/LayoutCard.svelte';
     import { usePostHog } from '$lib/hooks/usePostHog';
+    import { isImagesRoute } from '$lib/routes';
 
     const { children } = $props();
 
@@ -22,7 +23,7 @@
         trackEvent('sample_inspected', {
             collection_id: collectionId,
             sample_type: collectionType,
-            opened_from: nav.from !== null ? 'grid' : 'direct_url'
+            opened_from: isImagesRoute(nav.from?.route.id ?? null) ? 'grid' : 'direct_url'
         });
     });
 
