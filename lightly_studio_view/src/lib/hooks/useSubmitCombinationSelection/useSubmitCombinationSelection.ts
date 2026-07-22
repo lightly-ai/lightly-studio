@@ -93,16 +93,6 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
                 }
             });
 
-            trackEvent('sampling_triggered', {
-                collection_id: collectionId,
-                strategies: instances.map((i) => i.type),
-                n_samples: nSamplesToSelect,
-                success: !response.error,
-                error_message: response.error
-                    ? ((response.error as SelectionError).error ?? null)
-                    : null
-            });
-
             if (response.error) {
                 toast.error(
                     (response.error as SelectionError).error ?? 'Failed to create selection'
@@ -111,6 +101,13 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
             }
 
             await handleSelectionSuccess(selectionResultTagName, params);
+            trackEvent('sampling_triggered', {
+                collection_id: collectionId,
+                strategies: instances.map((i) => i.type),
+                n_samples: nSamplesToSelect,
+                success: true,
+                error_message: null
+            });
             return true;
         } catch (error) {
             trackEvent('sampling_triggered', {

@@ -3,7 +3,7 @@ import { usePostHog } from '$lib/hooks';
 
 const isSamplingDialogOpen = writable(false);
 
-interface OpenDialogAnalytics {
+interface OpenDialogAnalytics extends Record<string, unknown> {
     collection_id: string;
     has_active_search: boolean;
 }
