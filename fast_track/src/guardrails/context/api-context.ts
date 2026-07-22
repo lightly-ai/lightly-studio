@@ -1,6 +1,5 @@
-import type { ChangedFile, FileStatus, GuardrailContext, Octokit } from './types';
-
-export type { Octokit };
+import type { Octokit } from '../../shared/octokit';
+import type { ChangedFile, FileStatus, GuardrailContext } from './types';
 
 /** `pulls.listFiles` caps per_page at 100. */
 const PER_PAGE = 100;

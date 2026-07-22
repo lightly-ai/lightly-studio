@@ -45,7 +45,7 @@ class TestPerceptionEncoderEmbeddingGenerator:
     def test_embed_images(self) -> None:
         perception_encoder = PerceptionEncoderEmbeddingGenerator()
         cat_image_path = FIXTURES_DIR / "cat.jpg"
-        embeddings = perception_encoder.embed_images([str(cat_image_path)])
+        embeddings = perception_encoder.embed_images([str(cat_image_path)]).embeddings
 
         assert len(embeddings) == 1
         cat_embedding = embeddings[0]
@@ -73,7 +73,7 @@ class TestPerceptionEncoderEmbeddingGenerator:
 
         full_crop = ImageCrop(filepath=str(cat_image_path), x=0, y=0, width=width, height=height)
         crop_embeddings = perception_encoder.embed_image_crops([full_crop])
-        image_embeddings = perception_encoder.embed_images([str(cat_image_path)])
+        image_embeddings = perception_encoder.embed_images([str(cat_image_path)]).embeddings
 
         assert crop_embeddings.shape == (1, 512)
         # A crop covering the entire image is preprocessed and encoded identically
@@ -93,7 +93,7 @@ class TestPerceptionEncoderEmbeddingGenerator:
             cat_pil_image = image.convert("RGB")
 
         pil_embeddings = perception_encoder.embed_pil_images([cat_pil_image])
-        image_embeddings = perception_encoder.embed_images([str(cat_image_path)])
+        image_embeddings = perception_encoder.embed_images([str(cat_image_path)]).embeddings
 
         assert pil_embeddings.shape == (1, 512)
         # An in-memory PIL image is preprocessed and encoded identically to the same
@@ -139,7 +139,9 @@ class TestPerceptionEncoderEmbeddingGenerator:
 
         # Embed image.
         cat_image_path = FIXTURES_DIR / "cat.jpg"
-        cat_image_emb = torch.tensor(perception_encoder.embed_images([str(cat_image_path)])[0])
+        cat_image_emb = torch.tensor(
+            perception_encoder.embed_images([str(cat_image_path)]).embeddings[0]
+        )
         cat_image_emb /= cat_image_emb.norm(dim=-1, keepdim=True)
 
         # Compute softmax similarity as in perception_encoder repo example.
