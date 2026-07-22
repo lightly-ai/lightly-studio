@@ -111,9 +111,7 @@ export function buildEchartsOption(
             return item.count;
         }
         const foregroundCount =
-            hasActiveFilter && item.filteredCount !== undefined
-                ? item.filteredCount
-                : item.count;
+            hasActiveFilter && item.filteredCount !== undefined ? item.filteredCount : item.count;
         const isDimmed = hasAnySelected && !item.selected;
         return {
             value: foregroundCount,
