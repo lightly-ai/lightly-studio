@@ -57,6 +57,9 @@ vi.mock('$lib/hooks/useCreateLabel/useCreateLabel', () => ({
 vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
     useAnnotationLabels: vi.fn(() => ({ data: [] }))
 }));
+vi.mock('$lib/hooks/useDeleteAnnotation/useDeleteAnnotation', () => ({
+    useDeleteAnnotation: vi.fn(() => ({ deleteAnnotation: vi.fn() }))
+}));
 
 import VideoDetails from './VideoDetails.svelte';
 
