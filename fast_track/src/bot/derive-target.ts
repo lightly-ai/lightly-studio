@@ -1,4 +1,4 @@
-import type { Octokit } from '../guardrails/context/types';
+import type { Octokit } from '../shared/octokit';
 
 /** `listPullRequestsAssociatedWithCommit` caps per_page at 100. */
 const PER_PAGE = 100;

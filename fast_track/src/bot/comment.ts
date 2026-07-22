@@ -1,4 +1,4 @@
-import type { Octokit } from '../guardrails/context/types';
+import type { Octokit } from '../shared/octokit';
 import type { Verdict } from '../shared/verdict';
 
 const COMMENT_MARKER = '<!-- fast-track-bot -->';

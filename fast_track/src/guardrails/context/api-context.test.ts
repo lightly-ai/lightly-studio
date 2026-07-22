@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Octokit } from './api-context';
+import type { Octokit } from '../../shared/octokit';
 import { ApiGuardrailContext, toChangedFile } from './api-context';
 
 /** A `pulls.listFiles` entry, with the extra fields the mapper ignores. */

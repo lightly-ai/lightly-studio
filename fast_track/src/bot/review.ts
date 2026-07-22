@@ -1,4 +1,4 @@
-import type { Octokit } from '../guardrails/context/types';
+import type { Octokit } from '../shared/octokit';
 
 const DISMISS_MESSAGE = 'Fast Track checks no longer pass; dismissing the bot approval.';
 const SUPERSEDED_MESSAGE = 'Superseded by a newer Fast Track approval.';
