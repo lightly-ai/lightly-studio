@@ -1,10 +1,12 @@
 <script lang="ts">
+    import { page } from '$app/state';
     import { Select, type SelectItem } from '$lib/components/Select';
     import { useClassifiersMenu } from '$lib/hooks/useClassifiers/useClassifiersMenu';
     import { useSamplingDialog } from '$lib/hooks/useSamplingDialog/useSamplingDialog';
     import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
+    import { useGlobalStorage } from '$lib/hooks';
     import {
         Puzzle as PuzzleIcon,
         Download as DownloadIcon,
@@ -33,6 +35,7 @@
 
     const { openClassifiersMenu } = useClassifiersMenu();
     const { openSamplingDialog } = useSamplingDialog();
+    const { textEmbedding } = useGlobalStorage();
     const { openExportDialog } = useExportDialog();
     const { openSettingsDialog } = useSettingsDialog();
     const { openOperatorsDialog } = useOperatorsDialog();
@@ -68,7 +71,11 @@
                 label: 'Sampling',
                 icon: WandSparklesIcon,
                 testId: 'menu-sampling',
-                onSelect: openSamplingDialog
+                onSelect: () =>
+                    openSamplingDialog({
+                        collection_id: page.params.collection_id!,
+                        has_active_search: $textEmbedding !== undefined
+                    })
             });
         }
 
