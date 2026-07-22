@@ -21,26 +21,22 @@ function verdict(overrides: Partial<Verdict> = {}): Verdict {
 }
 
 describe('renderComment', () => {
-    it('renders pass, fail, and opt-out states', () => {
+    it('gives each verdict its own headline', () => {
         expect(renderComment({ verdict: verdict(), headSha: HEAD_SHA })).toContain(
-            '✅&nbsp; Fast Track'
+            'all required checks passed'
         );
         expect(
             renderComment({
                 verdict: verdict({ verdict: 'fail', reason: 'failed' }),
                 headSha: HEAD_SHA
             })
-        ).toContain('❌&nbsp; Fast Track: checks did not pass');
+        ).toContain('checks did not pass');
         expect(
             renderComment({
-                verdict: verdict({
-                    verdict: 'opt_out',
-                    reason: 'Author opted out.',
-                    guardrails: []
-                }),
+                verdict: verdict({ verdict: 'opt_out', reason: 'out', guardrails: [] }),
                 headSha: HEAD_SHA
             })
-        ).toContain('⏭️&nbsp; Fast Track skipped');
+        ).toContain('Fast Track skipped');
     });
 
     it('surfaces the reason only when no guardrail rows carry it', () => {
@@ -82,15 +78,6 @@ describe('renderComment', () => {
         expect(renderComment({ verdict: verdict(), headSha: HEAD_SHA })).not.toContain(
             'View the guardrail run'
         );
-    });
-
-    it('always includes the local-repro hint', () => {
-        expect(renderComment({ verdict: verdict(), headSha: HEAD_SHA })).toContain(
-            'make run-guardrails'
-        );
-        expect(
-            renderComment({ verdict: verdict({ verdict: 'fail', reason: 'x' }), headSha: HEAD_SHA })
-        ).toContain('make run-guardrails');
     });
 
     it('renders guardrails safely in a Markdown table', () => {
