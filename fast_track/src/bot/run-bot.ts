@@ -125,5 +125,5 @@ async function updateStatusComment(
     runUrl: string | undefined,
     params: Omit<Parameters<typeof upsertComment>[0], 'body'>
 ): Promise<void> {
-    await upsertComment({ ...params, body: renderComment(verdict, headSha, runUrl) });
+    await upsertComment({ ...params, body: renderComment({ verdict, headSha, runUrl }) });
 }

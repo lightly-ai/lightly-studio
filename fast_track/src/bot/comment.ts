@@ -17,10 +17,24 @@ interface UpsertCommentParams {
     body: string;
 }
 
+interface RenderCommentParams {
+    verdict: Verdict;
+    headSha: string;
+    /** Link to the guardrail run; omitted when it is unknown. */
+    runUrl?: string;
+}
+
 /** Render the human-visible part of the bot's single status comment. */
-export function renderComment(verdict: Verdict, headSha: string, runUrl?: string): string {
+export function renderComment(params: RenderCommentParams): string {
+    const { verdict, headSha, runUrl } = params;
     const lines = [`### ${HEADLINES[verdict.verdict]}`];
-    if (verdict.verdict === 'opt_out' && verdict.reason !== undefined) {
+    // Without guardrail rows (an opt-out or a synthesized failure) the reason is
+    // the only diagnosis, so surface it; otherwise the table already carries it.
+    if (
+        verdict.verdict !== 'pass' &&
+        verdict.reason !== undefined &&
+        verdict.guardrails.length === 0
+    ) {
         lines.push('', verdict.reason);
     }
 
