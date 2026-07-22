@@ -1,9 +1,9 @@
-import { describe, expect, test, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createOverlayProxyReporter } from './overlayProxy';
 
 describe('createOverlayProxyReporter', () => {
-    test('reports the proxy on construct and update, and null on destroy', () => {
+    it('reports the proxy on construct and update, and null on destroy', () => {
         const onProxy = vi.fn();
         const Reporter = createOverlayProxyReporter(onProxy);
         const node = document.createElement('div');

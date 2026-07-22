@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Spinner } from '$lib/components';
-    import type { ThumbnailUrlResolver } from './tooltipThumbnail';
+    import type { ThumbnailUrlResolver } from './thumbnailUrlResolver';
 
     interface Props {
         sampleId: string;
