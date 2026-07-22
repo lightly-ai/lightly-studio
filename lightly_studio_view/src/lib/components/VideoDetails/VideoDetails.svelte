@@ -8,13 +8,26 @@
         VideoFrameDetails,
         VideoPlayer
     } from '$lib/components';
-    import { type FrameView, type SampleView, type VideoView } from '$lib/api/lightly_studio_local';
-    import { getVideoURLById } from '$lib/utils';
+    import {
+        AnnotationType,
+        type FrameView,
+        type SampleView,
+        type VideoView
+    } from '$lib/api/lightly_studio_local';
+    import { getVideoURLById, toVideoEvents, type VideoEvent } from '$lib/utils';
     import VideoSampleMetadata from '../VideoSampleMetadata/VideoSampleMetadata.svelte';
     import SampleDetailsCaptionSegment from '../SampleDetails/SampleDetailsCaptionsSegment/SampleDetailsCaptionSegment.svelte';
+    import SelectClassDialog from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
     import { useVideoFrames } from '$lib/hooks/useVideoFrames/useVideoFrames';
     import { useVideoFrameAnnotations } from '$lib/hooks/useVideoFrameAnnotations/useVideoFrameAnnotations';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
+    import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
+    import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
+    import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
+    import { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
     import { onMount } from 'svelte';
+    import { toast } from 'svelte-sonner';
     import { routeHelpers } from '$lib/routes';
     import VideoFrameAnnotationItem, {
         type PrerenderedAnnotation
@@ -30,6 +43,80 @@
 
     let videoEl: HTMLVideoElement | null = $state(null);
     let frameRequestId: number | null = $state(null);
+
+    // Imported events: classification annotations on the video carrying a time span.
+    const videoEvents = $derived(toVideoEvents(video.sample.annotations ?? []));
+
+    // Reuse the global "Edit annotations" toggle to enable event editing.
+    const { isEditingMode } = useGlobalStorage();
+
+    // Events live on the video's own collection; labels are shared per dataset.
+    const eventCollectionId = (video.sample as SampleView)?.collection_id ?? datasetId;
+    const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId: eventCollectionId });
+    const { createAnnotation } = useCreateAnnotation({ collectionId: eventCollectionId });
+    const { createLabel } = useCreateLabel({ collectionId: eventCollectionId });
+    const annotationLabels = useAnnotationLabels(() => ({ collectionId: eventCollectionId }));
+
+    const {
+        open: selectClassOpen,
+        requestLabel,
+        handleConfirm: handleClassSelected,
+        handleCancel: handleClassDialogCancel
+    } = useSelectClassDialog();
+    const labelNames = $derived(
+        annotationLabels.data?.map((label) => label.annotation_label_name ?? '').filter(Boolean) ??
+            []
+    );
+
+    async function handleEventResize(event: VideoEvent, startTimeS: number, endTimeS: number) {
+        try {
+            await updateAnnotations([
+                {
+                    annotation_id: event.id,
+                    collection_id: event.annotationCollectionId,
+                    start_time_s: startTimeS,
+                    end_time_s: endTimeS
+                }
+            ]);
+        } catch (error) {
+            console.error('Failed to save event changes:', error);
+            toast.error('Failed to save event changes. Please try again.');
+        } finally {
+            // Refetch either way so the timeline reflects the persisted span
+            // (or reverts the optimistic preview if the update failed).
+            onVideoUpdate();
+        }
+    }
+
+    async function handleEventAdd(startTimeS: number, endTimeS: number) {
+        const result = await requestLabel();
+        if (!result?.label) return;
+
+        try {
+            let label = annotationLabels.data?.find(
+                (item) => item.annotation_label_name === result.label
+            );
+            if (!label) {
+                label = await createLabel({
+                    dataset_id: datasetId,
+                    annotation_label_name: result.label
+                });
+            }
+
+            await createAnnotation({
+                parent_sample_id: video.sample_id,
+                annotation_type: AnnotationType.CLASSIFICATION,
+                annotation_label_id: label.annotation_label_id!,
+                start_time_s: startTimeS,
+                end_time_s: endTimeS
+            });
+            onVideoUpdate();
+            toast.success('Event created successfully');
+        } catch (error) {
+            toast.error('Failed to create event. Please try again.');
+            console.error('Error creating event:', error);
+        }
+    }
 
     const {
         currentFrame,
@@ -163,6 +250,11 @@
                         src={getVideoURLById(video.sample_id)}
                         bind:videoEl
                         {startTimeS}
+                        events={videoEvents}
+                        durationS={video.duration_s ?? undefined}
+                        editableEvents={$isEditingMode}
+                        onEventResize={handleEventResize}
+                        onEventAdd={handleEventAdd}
                         videoProps={{
                             muted: true,
                             class: 'object-contain',
@@ -229,6 +321,13 @@
         </Card>
     </div>
 </div>
+
+<SelectClassDialog
+    bind:open={$selectClassOpen}
+    labels={labelNames}
+    onConfirm={handleClassSelected}
+    onCancel={handleClassDialogCancel}
+/>
 
 <style>
     .video-frame-container {

@@ -45,6 +45,7 @@ export { default as Image } from '$lib/components/Image/Image.svelte';
 export { default as VideoPreview } from '$lib/components/VideoPreview/VideoPreview.svelte';
 export { default as VideoPlayer } from '$lib/components/VideoPlayer/VideoPlayer.svelte';
 export { default as VideoControls } from '$lib/components/VideoControls/VideoControls.svelte';
+export { default as VideoEventTimeline } from '$lib/components/VideoEventTimeline/VideoEventTimeline.svelte';
 export { default as VideoSampleMetadata } from '$lib/components/VideoSampleMetadata/VideoSampleMetadata.svelte';
 export { default as GridHeader } from '$lib/components/GridHeader/GridHeader.svelte';
 export { default as DatasetGridHeader } from '$lib/components/DatasetGridHeader/DatasetGridHeader.svelte';

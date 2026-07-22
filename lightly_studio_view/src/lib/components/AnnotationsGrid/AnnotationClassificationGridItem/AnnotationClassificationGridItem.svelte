@@ -12,8 +12,6 @@
         containerWidth: number;
         /** Height of the grid container tile in pixels. */
         containerHeight: number;
-        /** Whether text labels are visible globally. */
-        showLabel: boolean;
         /** Whether this tile is currently selected. */
         selected?: boolean;
         /** Collection version cache-buster (same as AnnotationImageGridItem). */
@@ -26,7 +24,6 @@
         annotation,
         containerWidth,
         containerHeight,
-        showLabel,
         selected = false,
         cachedCollectionVersion = '',
         onCropWindowChange
@@ -73,8 +70,8 @@
     aria-selected={selected}
     style="width: {containerWidth}px; height: {containerHeight}px; background-image: url('{thumbnailUrl}'); background-size: cover; background-position: center;"
 >
-    {#if showLabel}
-        <!-- One tile shows exactly one label — [annotation.annotation] wraps a single classification. -->
-        <SampleClassificationPills sample={{ annotations: [annotation.annotation] }} />
-    {/if}
+    <SampleClassificationPills
+        sample={{ annotations: [annotation.annotation] }}
+        selectedCollectionIds={[]}
+    />
 </div>

@@ -22,7 +22,9 @@
     import { cn } from '$lib/utils/shadcn.js';
     import { MEDIA_ERROR_MESSAGES } from './errors';
     import VideoControls from '../VideoControls/VideoControls.svelte';
+    import VideoEventTimeline from '../VideoEventTimeline/VideoEventTimeline.svelte';
     import { useVideoPlayback } from './useVideoPlayback.svelte';
+    import type { VideoEvent } from '$lib/utils';
 
     interface VideoPlayerProps {
         /**
@@ -54,6 +56,28 @@
          * @default 0
          */
         startTimeS?: number | null;
+
+        /**
+         * Time-bounded events rendered as a clickable bar aligned with the
+         * scrubber. When empty, no event bar is shown.
+         */
+        events?: VideoEvent[];
+
+        /**
+         * Total video duration in seconds, used to position the event bars and
+         * the scrubber. Falls back to the element's own duration once metadata
+         * loads.
+         */
+        durationS?: number;
+
+        /** Allow dragging event edges on the event bar to edit their time span. */
+        editableEvents?: boolean;
+
+        /** Called with the new span when an event edge finishes being edited. */
+        onEventResize?: (event: VideoEvent, startTimeS: number, endTimeS: number) => void;
+
+        /** Called with a default span when the user adds a new event. */
+        onEventAdd?: (startTimeS: number, endTimeS: number) => void;
     }
 
     let {
@@ -61,7 +85,12 @@
         videoEl = $bindable(null),
         videoProps = {},
         hoverClass = 'outline outline-2 outline-blue-500',
-        startTimeS = 0
+        startTimeS = 0,
+        events = [],
+        durationS,
+        editableEvents = false,
+        onEventResize,
+        onEventAdd
     }: VideoPlayerProps = $props();
 
     const defaultVideoProps: HTMLVideoAttributes = {
@@ -101,6 +130,11 @@
         getStartTimeS: () => startTimeS,
         initialMuted: defaultVideoProps.muted ?? true
     });
+
+    // Prefer an explicit duration (known before metadata loads) for the scrubber
+    // and the event bar, so both share the same coordinate system.
+    const effectiveDurationS = $derived(durationS ?? playback.durationS);
+    const showEvents = $derived(events.length > 0);
 
     function handleVideoError() {
         const errorCode = videoEl?.error?.code;
@@ -171,7 +205,7 @@
     <VideoControls
         class="shrink-0"
         currentTimeS={playback.currentTimeS}
-        durationS={playback.durationS}
+        durationS={effectiveDurationS}
         isPlaying={playback.isPlaying}
         isMuted={playback.isMuted}
         isFullscreen={playback.isFullscreen}
@@ -179,5 +213,19 @@
         onSeek={playback.seekTo}
         onToggleMute={playback.toggleMute}
         onToggleFullscreen={playback.toggleFullscreen}
-    />
+    >
+        {#if showEvents || editableEvents}
+            <VideoEventTimeline
+                class="w-full"
+                {events}
+                durationS={effectiveDurationS}
+                currentTimeS={playback.currentTimeS}
+                onSeek={playback.seekTo}
+                editable={editableEvents}
+                onResize={onEventResize}
+                onAddEvent={onEventAdd}
+                showHeader={false}
+            />
+        {/if}
+    </VideoControls>
 </div>
