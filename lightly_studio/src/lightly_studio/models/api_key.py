@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timezone
 from enum import Enum
-from uuid import UUID, uuid4
+from uuid import UUID
 
+import pydantic
 from sqlalchemy import Column, DateTime
 from sqlmodel import Field, SQLModel
 
@@ -29,6 +31,16 @@ class ApiKeyCreate(ApiKeyBase):
 
     expires_at: datetime | None = Field(default=None)
 
+    @pydantic.field_validator("expires_at")
+    @classmethod
+    def _normalize_expires_at(cls, value: datetime | None) -> datetime | None:
+        """Reject naive datetimes and normalize aware datetimes to UTC."""
+        if value is None:
+            return None
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("expires_at must include timezone information")
+        return value.astimezone(timezone.utc)
+
 
 class ApiKeyView(ApiKeyBase):
     """Model used when viewing API key information."""
@@ -51,7 +63,7 @@ class ApiKeyTable(ApiKeyBase, table=True):
 
     __tablename__ = "api_key"
 
-    api_key_id: UUID = Field(default_factory=uuid4, primary_key=True)
+    api_key_id: UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     key_hash: str = Field(index=True, unique=True, description="SHA-256 hash of secret key")
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
