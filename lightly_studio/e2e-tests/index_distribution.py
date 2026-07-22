@@ -132,8 +132,9 @@ def _sample_metadata(rng: random.Random) -> Mapping[str, Any]:
         "reviewed": rng.choices([True, False], [0.3, 0.7])[0],
         "camera_id": rng.choices(CAMERA_IDS, CAMERA_WEIGHTS)[0],
     }
+    split_missing_probability = 0.2
     # ~20 % of images have no split — exercises the "Missing" bucket.
-    if rng.random() >= 0.2:
+    if rng.random() >= split_missing_probability:
         metadata["split"] = rng.choices(DATASET_SPLITS, SPLIT_WEIGHTS)[0]
     return metadata
 
