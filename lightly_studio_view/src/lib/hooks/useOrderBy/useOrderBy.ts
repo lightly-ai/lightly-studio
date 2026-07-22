@@ -42,10 +42,17 @@ function checkIsFieldSelected(field: SortField, current: SortExpr | undefined): 
     );
 }
 
-function sortSource(field: SortField): string {
-    if (field.source === 'evaluation_metric') return 'evaluation_metric';
-    if (field.source === 'metadata') return 'metadata_field';
-    return 'image_field';
+function sortExprAnalytics(expr: SortExpr): { sort_source: string; field_name: string } {
+    if (expr.source === 'evaluation_metric') {
+        return {
+            sort_source: 'evaluation_metric',
+            field_name: `${expr.evaluation_run_name}.${expr.metric_name}`
+        };
+    }
+    return {
+        sort_source: expr.source === 'metadata' ? 'metadata_field' : 'image_field',
+        field_name: expr.field_name
+    };
 }
 
 export function useOrderBy({ collectionId, datasetId }: UseOrderByParams): UseOrderByReturn {
@@ -96,77 +103,37 @@ export function useOrderBy({ collectionId, datasetId }: UseOrderByParams): UseOr
         const current = get(imageSortBy)?.[0];
         if (checkIsFieldSelected(field, current)) {
             updateSortBy(null);
-        } else if (field.source === 'evaluation_metric') {
-            updateSortBy([
-                {
-                    source: 'evaluation_metric',
-                    evaluation_run_name: field.evaluation_run_name,
-                    metric_name: field.metric_name,
-                    direction: get(selectedDirection)
-                }
-            ]);
-            trackEvent('grid_sorted', {
-                collection_id: collectionId(),
-                sort_source: 'evaluation_metric',
-                field_name: `${field.evaluation_run_name}.${field.metric_name}`,
-                direction: get(selectedDirection)
-            });
-        } else {
-            updateSortBy([
-                {
-                    source: field.source,
-                    field_name: field.value,
-                    direction: get(selectedDirection),
-                    is_numeric: field.is_numeric ?? false
-                }
-            ]);
-            trackEvent('grid_sorted', {
-                collection_id: collectionId(),
-                sort_source: sortSource(field),
-                field_name: field.value,
-                direction: get(selectedDirection)
-            });
+            return;
         }
+        const direction = get(selectedDirection);
+        const next: SortExpr =
+            field.source === 'evaluation_metric'
+                ? {
+                      source: 'evaluation_metric',
+                      evaluation_run_name: field.evaluation_run_name,
+                      metric_name: field.metric_name,
+                      direction
+                  }
+                : {
+                      source: field.source,
+                      field_name: field.value,
+                      direction,
+                      is_numeric: field.is_numeric ?? false
+                  };
+        updateSortBy([next]);
+        const { sort_source, field_name } = sortExprAnalytics(next);
+        trackEvent('grid_sorted', { collection_id: collectionId(), sort_source, field_name, direction });
     }
 
     function toggleDirection() {
         const current = get(imageSortBy)?.[0];
         if (!current) return;
-        const next =
+        const direction =
             get(selectedDirection) === SortDirection.ASC ? SortDirection.DESC : SortDirection.ASC;
-        if (current.source === 'evaluation_metric') {
-            updateSortBy([
-                {
-                    source: 'evaluation_metric',
-                    evaluation_run_name: current.evaluation_run_name,
-                    metric_name: current.metric_name,
-                    direction: next
-                }
-            ]);
-        } else {
-            updateSortBy([
-                {
-                    source: current.source,
-                    field_name: current.field_name,
-                    direction: next,
-                    is_numeric: current.is_numeric
-                }
-            ]);
-        }
-        trackEvent('grid_sorted', {
-            collection_id: collectionId(),
-            sort_source:
-                current.source === 'evaluation_metric'
-                    ? 'evaluation_metric'
-                    : current.source === 'metadata'
-                      ? 'metadata_field'
-                      : 'image_field',
-            field_name:
-                current.source === 'evaluation_metric'
-                    ? `${current.evaluation_run_name}.${current.metric_name}`
-                    : current.field_name,
-            direction: next
-        });
+        const next: SortExpr = { ...current, direction };
+        updateSortBy([next]);
+        const { sort_source, field_name } = sortExprAnalytics(next);
+        trackEvent('grid_sorted', { collection_id: collectionId(), sort_source, field_name, direction });
     }
 
     return {
