@@ -8,6 +8,7 @@ from uuid import UUID
 import numpy as np
 import torch
 from numpy.typing import NDArray
+from PIL import Image
 
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
@@ -15,13 +16,13 @@ from lightly_studio.vendor import mobileclip
 
 from . import file_utils, image_crop_embedding, image_embedding
 from .embedding_generator import ImageCrop, ImageEmbeddingGenerator
-from .image_embedding import EmbeddingContext
+from .image_embedding import EmbeddingContext, ImageEmbeddingResult
 
 MODEL_NAME = "mobileclip_s0"
 MOBILECLIP_DOWNLOAD_URL = (
     f"https://docs-assets.developer.apple.com/ml-research/datasets/mobileclip/{MODEL_NAME}.pt"
 )
-MAX_BATCH_SIZE: int = 16
+MAX_BATCH_SIZE: int = 128
 EMBEDDING_DIMENSION: int = 512
 
 
@@ -83,7 +84,9 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
             embedding_list: list[float] = embedding.cpu().numpy().flatten().tolist()
         return embedding_list
 
-    def embed_images(self, filepaths: list[str], show_progress: bool = True) -> NDArray[np.float32]:
+    def embed_images(
+        self, filepaths: list[str], show_progress: bool = True
+    ) -> ImageEmbeddingResult:
         """Embed images with MobileCLIP.
 
         Args:
@@ -91,8 +94,8 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
             show_progress: Whether to show a progress bar during embedding.
 
         Returns:
-            A numpy array representing the generated embeddings
-            in the same order as the input file paths.
+            An ``ImageEmbeddingResult`` with embeddings for the readable files, in the same
+            order as the corresponding input file paths.
         """
         return image_embedding.embed_image_files_batched(
             filepaths=filepaths,
@@ -115,6 +118,25 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
         """
         return image_crop_embedding.embed_image_crops_batched(
             image_crops=image_crops,
+            context=self._embedding_context(),
+            show_progress=show_progress,
+        )
+
+    def embed_pil_images(
+        self, images: list[Image.Image], show_progress: bool = True
+    ) -> NDArray[np.float32]:
+        """Embed in-memory PIL images with MobileCLIP.
+
+        Args:
+            images: PIL images to embed.
+            show_progress: Whether to show a progress bar during embedding.
+
+        Returns:
+            A numpy array representing the generated embeddings in the same order
+            as the input images.
+        """
+        return image_embedding.embed_pil_images_batched(
+            images=images,
             context=self._embedding_context(),
             show_progress=show_progress,
         )

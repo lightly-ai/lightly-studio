@@ -19,6 +19,7 @@ from lightly_studio.models.annotation.segmentation import (
 )
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleCreate
+from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
     collection_resolver,
@@ -55,6 +56,7 @@ def create_many(
     base_annotations = []
     object_detection_annotations = []
     segmentation_annotations = []
+    temporal_spans = []
     annotation_collection_id = collection_resolver.get_or_create_child_collection(
         session=session,
         collection_id=parent_collection_id,
@@ -116,9 +118,23 @@ def create_many(
             )
             segmentation_annotations.append(db_segmentation_mask)
 
+        temporal_span = _validate_optional_temporal_span(
+            annotation=annotation_create, annotation_type=annotation_type
+        )
+        if temporal_span is not None:
+            start_time_s, end_time_s = temporal_span
+            temporal_spans.append(
+                TemporalSpanTable(
+                    sample_id=base_annotations[i].sample_id,
+                    start_time_s=start_time_s,
+                    end_time_s=end_time_s,
+                )
+            )
+
     # Bulk save object detection annotations
     session.bulk_save_objects(object_detection_annotations)
     session.bulk_save_objects(segmentation_annotations)
+    session.bulk_save_objects(temporal_spans)
 
     # Bulk add annotation collection coverage entries.
     annotation_collection_coverage_resolver.add_many(
@@ -142,3 +158,27 @@ def _validate_bbox(annotation: AnnotationCreate, kind: str) -> tuple[int, int, i
         raise ValueError(f"Missing height property for {kind}.")
 
     return (annotation.x, annotation.y, annotation.width, annotation.height)
+
+
+def _validate_optional_temporal_span(
+    annotation: AnnotationCreate, annotation_type: AnnotationType
+) -> tuple[float, float] | None:
+    start_time_s = annotation.start_time_s
+    end_time_s = annotation.end_time_s
+    if start_time_s is None and end_time_s is None:
+        return None
+
+    if annotation_type != AnnotationType.CLASSIFICATION:
+        raise ValueError(
+            "start_time_s and end_time_s are only supported for CLASSIFICATION annotations."
+        )
+
+    kind = annotation_type.value
+    if start_time_s is None or end_time_s is None:
+        raise ValueError(f"Missing start_time_s or end_time_s properties for {kind}.")
+    if start_time_s < 0:
+        raise ValueError(f"start_time_s must be non-negative for {kind}.")
+    if start_time_s >= end_time_s:
+        raise ValueError(f"start_time_s must be less than end_time_s for {kind}.")
+
+    return (start_time_s, end_time_s)

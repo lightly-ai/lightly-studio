@@ -8,15 +8,22 @@ from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.tag import TagTable
-from lightly_studio.resolvers import collection_resolver, tag_resolver
+from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
+from lightly_studio.resolvers import collection_resolver, sample_embedding_resolver, tag_resolver
 from lightly_studio.resolvers.collection_resolver.export import ExportFilter
+from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
+    ImageStub,
     create_annotation,
     create_annotation_label,
     create_collection,
+    create_embedding_model,
     create_image,
+    create_samples_with_embeddings,
     create_tag,
 )
 
@@ -867,6 +874,71 @@ def test_export__exclude_by_multiple_annotation_ids(
     assert samples[1].file_path_abs not in samples_exported
 
 
+def test_export__image_filter__tag_ids__returns_intersection(
+    db_session: Session,
+) -> None:
+    # include.tag_ids covers A and B; ImageFilter covers B and C → intersection is B.
+    collection_id = create_collection(session=db_session).collection_id
+    image_a = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/path/a.png"
+    )
+    image_b = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/path/b.png"
+    )
+    image_c = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/path/c.png"
+    )
+
+    tag_ab = create_tag(
+        session=db_session, collection_id=collection_id, tag_name="ab", kind="sample"
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session,
+        tag_id=tag_ab.tag_id,
+        sample_ids=[image_a.sample_id, image_b.sample_id],
+    )
+
+    image_filter = ImageFilter(
+        sample_filter=SampleFilter(sample_ids=[image_b.sample_id, image_c.sample_id])
+    )
+    result = collection_resolver.export(
+        session=db_session,
+        collection_id=collection_id,
+        include=ExportFilter(tag_ids=[tag_ab.tag_id]),
+        collection_filter=image_filter,
+    )
+
+    assert result == [image_b.file_path_abs]
+
+
+def test_export__image_filter__sample_ids__returns_intersection(
+    db_session: Session,
+) -> None:
+    # include.sample_ids covers A and B; ImageFilter covers B and C → intersection is B.
+    collection_id = create_collection(session=db_session).collection_id
+    image_a = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/path/a.png"
+    )
+    image_b = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/path/b.png"
+    )
+    image_c = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/path/c.png"
+    )
+
+    image_filter = ImageFilter(
+        sample_filter=SampleFilter(sample_ids=[image_b.sample_id, image_c.sample_id])
+    )
+    result = collection_resolver.export(
+        session=db_session,
+        collection_id=collection_id,
+        include=ExportFilter(sample_ids=[image_a.sample_id, image_b.sample_id]),
+        collection_filter=image_filter,
+    )
+
+    assert result == [image_b.file_path_abs]
+
+
 def test_get_filtered_samples_count__include_single_sample_tag(
     db_session: Session,
     test_collection_export: TestcollectionExport,
@@ -982,3 +1054,121 @@ def test_get_filtered_samples_count__exclude_multiple_annotation_ids(
         ),
     )
     assert count == len(samples) - 2
+
+
+def test_export__embedding_region_filter__returns_samples_inside_region(
+    db_session: Session,
+) -> None:
+    # Three samples: a=(1,1) and b=(5,5) inside a [0,10]x[0,10] square; c=(100,100) outside.
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_dimension=3,
+    )
+    image_a, image_b, image_c = create_samples_with_embeddings(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        images_and_embeddings=[
+            (ImageStub(path="sample_a.png"), [0.1, 0.2, 0.3]),
+            (ImageStub(path="sample_b.png"), [1.1, 0.2, 0.3]),
+            (ImageStub(path="sample_c.png"), [2.1, 0.2, 0.3]),
+        ],
+    )
+    # Seed 2D coordinates so that a and b are inside the lasso region, c is not.
+    cache_key, ordered_sample_ids = sample_embedding_resolver.get_hash_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+    coordinates = {
+        image_a.sample_id: (1.0, 1.0),
+        image_b.sample_id: (5.0, 5.0),
+        image_c.sample_id: (100.0, 100.0),
+    }
+    db_session.add(
+        TwoDimEmbeddingTable(
+            hash=cache_key,
+            x=[coordinates[sid][0] for sid in ordered_sample_ids],
+            y=[coordinates[sid][1] for sid in ordered_sample_ids],
+        )
+    )
+    db_session.commit()
+
+    region = EmbeddingRegion(
+        polygon=[
+            Point2D(x=0, y=0),
+            Point2D(x=10, y=0),
+            Point2D(x=10, y=10),
+            Point2D(x=0, y=10),
+        ]
+    )
+    result = collection_resolver.export(
+        session=db_session,
+        collection_id=collection_id,
+        include=ExportFilter(sample_ids=[image_a.sample_id, image_b.sample_id, image_c.sample_id]),
+        collection_filter=ImageFilter(sample_filter=SampleFilter(embedding_region=region)),
+    )
+
+    assert sorted(result) == sorted([image_a.file_path_abs, image_b.file_path_abs])
+
+
+def test_get_filtered_samples_count__embedding_region_filter__returns_count_inside_region(
+    db_session: Session,
+) -> None:
+    # Three samples: a=(1,1) and b=(5,5) inside a [0,10]x[0,10] square; c=(100,100) outside.
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_dimension=3,
+    )
+    image_a, image_b, image_c = create_samples_with_embeddings(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        images_and_embeddings=[
+            (ImageStub(path="sample_a.png"), [0.1, 0.2, 0.3]),
+            (ImageStub(path="sample_b.png"), [1.1, 0.2, 0.3]),
+            (ImageStub(path="sample_c.png"), [2.1, 0.2, 0.3]),
+        ],
+    )
+    # Seed 2D coordinates so that a and b are inside the lasso region, c is not.
+    cache_key, ordered_sample_ids = sample_embedding_resolver.get_hash_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+    coordinates = {
+        image_a.sample_id: (1.0, 1.0),
+        image_b.sample_id: (5.0, 5.0),
+        image_c.sample_id: (100.0, 100.0),
+    }
+    db_session.add(
+        TwoDimEmbeddingTable(
+            hash=cache_key,
+            x=[coordinates[sid][0] for sid in ordered_sample_ids],
+            y=[coordinates[sid][1] for sid in ordered_sample_ids],
+        )
+    )
+    db_session.commit()
+
+    region = EmbeddingRegion(
+        polygon=[
+            Point2D(x=0, y=0),
+            Point2D(x=10, y=0),
+            Point2D(x=10, y=10),
+            Point2D(x=0, y=10),
+        ]
+    )
+    count = collection_resolver.get_filtered_samples_count(
+        session=db_session,
+        collection_id=collection_id,
+        include=ExportFilter(sample_ids=[image_a.sample_id, image_b.sample_id, image_c.sample_id]),
+        collection_filter=ImageFilter(sample_filter=SampleFilter(embedding_region=region)),
+    )
+
+    assert count == 2

@@ -21,18 +21,18 @@ describe('VideoPlayer', () => {
         expect(video?.getAttribute('preload')).toBe('metadata');
     });
 
-    it('should not show controls by default', () => {
+    it('should not show native controls by default', () => {
         const { container } = render(VideoPlayer, { props: { src: 'test-video.mp4' } });
         const video = container.querySelector('video');
         expect(video?.hasAttribute('controls')).toBe(false);
     });
 
-    it('should show controls when controls prop is true', () => {
+    it('should force native controls off even when videoProps requests them', () => {
         const { container } = render(VideoPlayer, {
             props: { src: 'test-video.mp4', videoProps: { controls: true } }
         });
         const video = container.querySelector('video');
-        expect(video?.hasAttribute('controls')).toBe(true);
+        expect(video?.hasAttribute('controls')).toBe(false);
     });
 
     it('should apply custom className via videoProps', () => {
@@ -116,5 +116,55 @@ describe('VideoPlayer', () => {
         });
         const video = container.querySelector('video');
         expect(video?.getAttribute('preload')).toBe('auto');
+    });
+
+    it('should render the custom control bar', () => {
+        const { getByRole, getByLabelText } = render(VideoPlayer, {
+            props: { src: 'test-video.mp4' }
+        });
+        expect(getByRole('slider')).toBeTruthy();
+        expect(getByLabelText('Play')).toBeTruthy();
+    });
+
+    it('should not render an event bar when no events are given', () => {
+        const { queryByTestId } = render(VideoPlayer, { props: { src: 'test-video.mp4' } });
+        expect(queryByTestId('video-event-timeline')).toBeFalsy();
+    });
+
+    it('should render an event bar in the controls when events are given', () => {
+        const { getByTestId, getByText } = render(VideoPlayer, {
+            props: {
+                src: 'test-video.mp4',
+                durationS: 10,
+                events: [
+                    {
+                        id: 'e1',
+                        annotationCollectionId: 'coll-1',
+                        label: 'Jump',
+                        startTimeS: 2,
+                        endTimeS: 4,
+                        color: 'rgba(10, 20, 30, 0.7)',
+                        contrastColor: 'rgba(245, 235, 225, 0.7)'
+                    }
+                ]
+            }
+        });
+
+        expect(getByTestId('video-event-timeline')).toBeTruthy();
+        expect(getByText('Jump')).toBeTruthy();
+    });
+
+    it('shows the event bar with an add button in edit mode even without events', () => {
+        const { getByTestId } = render(VideoPlayer, {
+            props: {
+                src: 'test-video.mp4',
+                durationS: 10,
+                editableEvents: true,
+                onEventAdd: () => {}
+            }
+        });
+
+        expect(getByTestId('video-event-timeline')).toBeTruthy();
+        expect(getByTestId('add-event-button')).toBeTruthy();
     });
 });

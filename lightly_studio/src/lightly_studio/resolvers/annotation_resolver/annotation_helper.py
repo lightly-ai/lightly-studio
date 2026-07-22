@@ -20,6 +20,7 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
+from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import annotation_resolver
 
 
@@ -70,6 +71,17 @@ def update_annotation_object(
         else None
     )
 
+    temporal_span_row = annotation_copy.temporal_span_details
+    temporal_span = (
+        TemporalSpanTable(
+            sample_id=annotation_copy.sample_id,
+            start_time_s=temporal_span_row.start_time_s,
+            end_time_s=temporal_span_row.end_time_s,
+        )
+        if temporal_span_row
+        else None
+    )
+
     annotation_resolver.delete_annotation(session, annotation.sample_id, delete_sample=False)
 
     new_annotation = AnnotationBaseTable(
@@ -88,6 +100,9 @@ def update_annotation_object(
 
     if object_detection:
         session.add(object_detection)
+
+    if temporal_span:
+        session.add(temporal_span)
 
     session.commit()
     session.flush()

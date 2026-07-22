@@ -24,6 +24,9 @@ from lightly_studio.services.annotations_service.update_annotations import (
 from lightly_studio.services.annotations_service.update_segmentation_mask import (
     update_segmentation_mask,
 )
+from lightly_studio.services.annotations_service.update_temporal_span import (
+    update_temporal_span,
+)
 
 __all__ = [
     "create_annotation",
@@ -34,4 +37,5 @@ __all__ = [
     "update_annotation_label",
     "update_annotations",
     "update_segmentation_mask",
+    "update_temporal_span",
 ]

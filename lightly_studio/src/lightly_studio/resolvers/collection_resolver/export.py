@@ -15,7 +15,9 @@ from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
+from lightly_studio.resolvers import embedding_region_resolver
 from lightly_studio.resolvers.dataset_resolver.get_hierarchy import get_hierarchy
+from lightly_studio.resolvers.image_filter import ImageFilter
 
 
 class ExportFilter(BaseModel):
@@ -49,6 +51,7 @@ def export(
     collection_id: UUID,
     include: ExportFilter | None = None,
     exclude: ExportFilter | None = None,
+    collection_filter: ImageFilter | None = None,
 ) -> list[str]:
     # TODO(lukas, 03/2026): take dataset_id instead of collection_id
     """Retrieve samples for exporting from a collection.
@@ -62,17 +65,30 @@ def export(
         collection_id: UUID of the collection.
         include: Filter to include samples.
         exclude: Filter to exclude samples.
+        collection_filter: Active view filter applied on top of include/exclude.
 
     Returns:
         List of file paths
     """
+    # Resolve any embedding-plot region selection to concrete sample ids before the query is
+    # built (the point-in-polygon test needs the session, which `_build_export_query` lacks).
+    sample_filter = collection_filter.sample_filter if collection_filter is not None else None
+    if sample_filter is not None and sample_filter.embedding_region is not None:
+        sample_filter.region_sample_ids = embedding_region_resolver.get_sample_ids_in_region(
+            session=session,
+            collection_id=collection_id,
+            region=sample_filter.embedding_region,
+        )
     # Get all child collection IDs that could contain annotations
-    annotation_collection_ids = _get_annotation_collection_ids(session, collection_id)
+    annotation_collection_ids = _get_annotation_collection_ids(
+        session=session, collection_id=collection_id
+    )
     query = _build_export_query(
         collection_id=collection_id,
         annotation_collection_ids=annotation_collection_ids,
         include=include,
         exclude=exclude,
+        collection_filter=collection_filter,
     )
     result = session.exec(query).all()
     return [sample.file_path_abs for sample in result]
@@ -83,6 +99,7 @@ def get_filtered_samples_count(
     collection_id: UUID,
     include: ExportFilter | None = None,
     exclude: ExportFilter | None = None,
+    collection_filter: ImageFilter | None = None,
 ) -> int:
     # TODO(lukas, 03/2026): take dataset_id instead of collection_id
     """Get statistics about the export query.
@@ -96,17 +113,30 @@ def get_filtered_samples_count(
         collection_id: UUID of the collection.
         include: Filter to include samples.
         exclude: Filter to exclude samples.
+        collection_filter: Active view filter applied on top of include/exclude.
 
     Returns:
         Count of files to be exported
     """
+    # Resolve any embedding-plot region selection to concrete sample ids before the query is
+    # built (the point-in-polygon test needs the session, which `_build_export_query` lacks).
+    sample_filter = collection_filter.sample_filter if collection_filter is not None else None
+    if sample_filter is not None and sample_filter.embedding_region is not None:
+        sample_filter.region_sample_ids = embedding_region_resolver.get_sample_ids_in_region(
+            session=session,
+            collection_id=collection_id,
+            region=sample_filter.embedding_region,
+        )
     # Get all child collection IDs that could contain annotations
-    annotation_collection_ids = _get_annotation_collection_ids(session, collection_id)
+    annotation_collection_ids = _get_annotation_collection_ids(
+        session=session, collection_id=collection_id
+    )
     query = _build_export_query(
         collection_id=collection_id,
         annotation_collection_ids=annotation_collection_ids,
         include=include,
         exclude=exclude,
+        collection_filter=collection_filter,
     )
     count_query = select(func.count()).select_from(query.subquery())
     return session.exec(count_query).one() or 0
@@ -140,6 +170,7 @@ def _build_export_query(  # noqa: C901
     annotation_collection_ids: list[UUID],
     include: ExportFilter | None = None,
     exclude: ExportFilter | None = None,
+    collection_filter: ImageFilter | None = None,
 ) -> SelectOfScalar[ImageTable]:
     """Build the export query based on filters.
 
@@ -148,6 +179,7 @@ def _build_export_query(  # noqa: C901
         annotation_collection_ids: List of collection IDs that could contain annotations.
         include: Filter to include samples.
         exclude: Filter to exclude samples.
+        collection_filter: Active view filter applied on top of include/exclude as an intersection.
 
     Returns:
         SQLModel select query
@@ -156,6 +188,12 @@ def _build_export_query(  # noqa: C901
         raise ValueError("Include or exclude filter is required.")
     if include and exclude:
         raise ValueError("Cannot include and exclude at the same time.")
+
+    active_view_subquery = (
+        collection_filter.build_sample_ids_query(collection_id)
+        if collection_filter is not None
+        else None
+    )
 
     # include tags or sample_ids or annotation_ids from result
     if include:
@@ -174,7 +212,7 @@ def _build_export_query(  # noqa: C901
                 )
             )
 
-            return (
+            query = (
                 select(ImageTable)
                 .join(ImageTable.sample)
                 .where(SampleTable.collection_id == collection_id)
@@ -198,8 +236,8 @@ def _build_export_query(  # noqa: C901
             )
 
         # get samples by specific sample_ids
-        if include.sample_ids:
-            return (
+        elif include.sample_ids:
+            query = (
                 select(ImageTable)
                 .join(ImageTable.sample)
                 .where(SampleTable.collection_id == collection_id)
@@ -211,7 +249,7 @@ def _build_export_query(  # noqa: C901
             )
 
         # get samples by specific annotation_ids
-        if include.annotation_ids:
+        elif include.annotation_ids:
             # Annotations are stored in child collections, so filter by all annotation collection
             # IDs
             # Filter by checking if the annotation's sample_id belongs to a sample in
@@ -224,7 +262,7 @@ def _build_export_query(  # noqa: C901
                 if annotation_collection_ids
                 else false()
             )
-            return (
+            query = (
                 select(ImageTable)
                 .join(ImageTable.sample)
                 .join(SampleTable.annotations)
@@ -256,7 +294,7 @@ def _build_export_query(  # noqa: C901
                 )
             )
 
-            return (
+            query = (
                 select(ImageTable)
                 .join(ImageTable.sample)
                 .where(SampleTable.collection_id == collection_id)
@@ -276,8 +314,8 @@ def _build_export_query(  # noqa: C901
                 .order_by(col(ImageTable.created_at).asc())
                 .distinct()
             )
-        if exclude.sample_ids:
-            return (
+        elif exclude.sample_ids:
+            query = (
                 select(ImageTable)
                 .join(ImageTable.sample)
                 .where(SampleTable.collection_id == collection_id)
@@ -287,8 +325,8 @@ def _build_export_query(  # noqa: C901
                 .order_by(col(ImageTable.created_at).asc())
                 .distinct()
             )
-        if exclude.annotation_ids:
-            return (
+        elif exclude.annotation_ids:
+            query = (
                 select(ImageTable)
                 .join(ImageTable.sample)
                 .where(SampleTable.collection_id == collection_id)
@@ -307,4 +345,7 @@ def _build_export_query(  # noqa: C901
                 .distinct()
             )
 
-    raise ValueError("Invalid include or export filter combination.")
+    if active_view_subquery is not None:
+        query = query.where(col(SampleTable.sample_id).in_(active_view_subquery))
+
+    return query

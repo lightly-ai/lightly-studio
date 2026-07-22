@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import posixpath
 from collections.abc import Mapping
 from pathlib import Path
@@ -17,6 +18,7 @@ from labelformat.model.object_detection import (
     ImageObjectDetection,
     ObjectDetectionInput,
 )
+from labelformat.utils import ImageDimensionError
 from sqlmodel import Session
 from tqdm import tqdm
 
@@ -31,9 +33,23 @@ from lightly_studio.resolvers import (
 )
 from lightly_studio.type_definitions import PathLike
 
+logger = logging.getLogger(__name__)
+
 # Constants
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
 ALLOWED_YOLO_SPLITS = {"train", "val", "test", "minival"}
+
+
+def skip_and_warn_unreadable_image(path: Path, error: Exception) -> None:
+    """``on_error`` hook for annotation ingest: log and skip an unreadable image.
+
+    Args:
+        path: The path of the unreadable image.
+        error: The error raised while reading the image.
+    """
+    if not isinstance(error, ImageDimensionError):
+        raise error
+    logger.warning(f"Skipping annotation for unreadable image '{path}': {error}")
 
 
 def add_annotations_from_labelformat(  # noqa: PLR0913
@@ -66,6 +82,12 @@ def add_annotations_from_labelformat(  # noqa: PLR0913
         the collection. An empty list means all images were found.
     """
     images_root_abs = normalize_images_root(images_root=images_root)
+
+    # Some formats (e.g. YOLO) open every image during the get_labels() scan. Set a skip+log hook so
+    # a broken image is skipped instead of aborting the ingest.
+    if getattr(input_labels, "on_error", "unsupported") is None:
+        input_labels.on_error = skip_and_warn_unreadable_image  # type: ignore[union-attr]
+
     label_map = labelformat_helpers.create_label_map(
         session=session,
         root_collection_id=root_collection_id,

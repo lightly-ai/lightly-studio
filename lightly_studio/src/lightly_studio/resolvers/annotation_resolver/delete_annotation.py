@@ -18,6 +18,7 @@ from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotat
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
+from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import annotation_resolver
 from lightly_studio.utils import batching
 
@@ -62,6 +63,9 @@ def delete_annotation(
         delete(SegmentationAnnotationTable).where(
             col(SegmentationAnnotationTable.sample_id) == annotation.sample_id
         )
+    )
+    session.exec(
+        delete(TemporalSpanTable).where(col(TemporalSpanTable.sample_id) == annotation.sample_id)
     )
     session.commit()
 

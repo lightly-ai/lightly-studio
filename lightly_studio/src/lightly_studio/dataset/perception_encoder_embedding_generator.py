@@ -21,7 +21,7 @@ from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transfor
 
 from . import file_utils, image_crop_embedding, image_embedding
 from .embedding_generator import ImageCrop, ImageEmbeddingGenerator, VideoEmbeddingGenerator
-from .image_embedding import EmbeddingContext
+from .image_embedding import EmbeddingContext, ImageEmbeddingResult
 
 MODEL_NAME = "PE-Core-T16-384"
 DEFAULT_VIDEO_CHANNEL = 0
@@ -162,7 +162,9 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             embedding_list: list[float] = embedding.cpu().numpy().flatten().tolist()
         return embedding_list
 
-    def embed_images(self, filepaths: list[str], show_progress: bool = True) -> NDArray[np.float32]:
+    def embed_images(
+        self, filepaths: list[str], show_progress: bool = True
+    ) -> ImageEmbeddingResult:
         """Embed images with Perception Encoder.
 
         Args:
@@ -170,8 +172,8 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             show_progress: Whether to show a progress bar during embedding.
 
         Returns:
-            A numpy array representing the generated embeddings
-            in the same order as the input file paths.
+            An ``ImageEmbeddingResult`` with embeddings for the readable files, in the same
+            order as the corresponding input file paths.
         """
         return image_embedding.embed_image_files_batched(
             filepaths=filepaths,
@@ -194,6 +196,25 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
         """
         return image_crop_embedding.embed_image_crops_batched(
             image_crops=image_crops,
+            context=self._embedding_context(),
+            show_progress=show_progress,
+        )
+
+    def embed_pil_images(
+        self, images: list[Image.Image], show_progress: bool = True
+    ) -> NDArray[np.float32]:
+        """Embed in-memory PIL images with Perception Encoder.
+
+        Args:
+            images: PIL images to embed.
+            show_progress: Whether to show a progress bar during embedding.
+
+        Returns:
+            A numpy array representing the generated embeddings in the same order
+            as the input images.
+        """
+        return image_embedding.embed_pil_images_batched(
+            images=images,
             context=self._embedding_context(),
             show_progress=show_progress,
         )

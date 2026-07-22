@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import posixpath
 from argparse import ArgumentParser
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 from uuid import UUID
 
@@ -20,6 +20,7 @@ from labelformat.model.instance_segmentation import (
 )
 from labelformat.model.object_detection import (
     ImageObjectDetection,
+    ObjectDetectionInput,
     SingleObjectDetection,
 )
 from PIL import Image as PILImage
@@ -61,6 +62,42 @@ class CountingLabelInput(LabelformatObjectDetectionInput):
     def get_labels(self) -> Iterable[ImageObjectDetection]:
         self._calls += 1
         return self.labels
+
+
+class ExplodingLabelInput(ObjectDetectionInput):
+    """Folder-scanning input whose scan raises a non-``ImageDimensionError`` via ``on_error``.
+
+    ``load_into_dataset_from_labelformat`` installs its own ``on_error`` hook on the input;
+    this stub invokes that hook with a ``ValueError`` to prove non-dimension errors propagate
+    instead of being recorded as ``BROKEN``. No real reader emits such an error through the
+    hook, so a stub is the only way to exercise this path. Broken/missing-image handling for
+    real folder formats is covered end-to-end by the YOLO tests.
+    """
+
+    def __init__(self, images_dir: Path) -> None:
+        self._images_dir = images_dir
+        self.categories = [Category(id=0, name="dog")]
+        self.on_error: Callable[[Path, Exception], None] | None = None
+
+    @staticmethod
+    def add_cli_arguments(parser: ArgumentParser) -> None:
+        raise NotImplementedError()
+
+    def get_categories(self) -> Iterable[Category]:
+        return self.categories
+
+    def _scan(self) -> Iterable[Image]:
+        assert self.on_error is not None
+        self.on_error(self._images_dir / "boom.jpg", ValueError("boom"))
+        return
+        yield  # pragma: no cover - makes this a generator
+
+    def get_images(self) -> Iterable[Image]:
+        yield from self._scan()
+
+    def get_labels(self) -> Iterable[ImageObjectDetection]:
+        for image in self._scan():
+            yield ImageObjectDetection(image=image, objects=[])
 
 
 def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) -> None:
@@ -217,6 +254,23 @@ def test_load_into_dataset_from_labelformat__records_missing_already_present_add
     assert "already_present=2" in caplog.text
     assert "missing=3" in caplog.text
     assert "broken=0" in caplog.text
+
+
+def test_load_into_dataset_from_labelformat__reraises_non_image_dimension_error(
+    db_session: Session, tmp_path: Path
+) -> None:
+    # Arrange: an input whose scan fails with an error that is not an ImageDimensionError.
+    collection = helpers_resolvers.create_collection(db_session)
+    label_input = ExplodingLabelInput(images_dir=tmp_path)
+
+    # Act / Assert: a non-file-outcome error must propagate rather than be recorded as broken.
+    with pytest.raises(ValueError, match="boom"):
+        add_images.load_into_dataset_from_labelformat(
+            session=db_session,
+            root_collection_id=collection.collection_id,
+            input_labels=label_input,
+            images_path=tmp_path,
+        )
 
 
 def test_load_into_dataset_from_labelformat__calls_get_labels_once(

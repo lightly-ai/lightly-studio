@@ -18,12 +18,13 @@ import numpy as np
 import torch
 from environs import Env
 from numpy.typing import NDArray
+from PIL import Image
 
 import lightly_studio as ls
 from lightly_studio.database import db_manager
 from lightly_studio.dataset import file_utils, image_crop_embedding, image_embedding
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
-from lightly_studio.dataset.image_embedding import EmbeddingContext
+from lightly_studio.dataset.image_embedding import EmbeddingContext, ImageEmbeddingResult
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.vendor import mobileclip
 
@@ -40,9 +41,9 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
 
     This implements the ls.ImageEmbeddingGenerator protocol. Here it wraps
     MobileCLIP to keep the example runnable, but the same structure works for any
-    model: implement get_embedding_model_input, embed_text, embed_images and
-    embed_image_crops. Implement ls.VideoEmbeddingGenerator as well to override the
-    video model.
+    model: implement get_embedding_model_input, embed_text, embed_images,
+    embed_image_crops and embed_pil_images. Implement ls.VideoEmbeddingGenerator as
+    well to override the video model.
     """
 
     def __init__(self) -> None:
@@ -85,8 +86,10 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
             embedding_list: list[float] = embedding.cpu().numpy().flatten().tolist()
         return embedding_list
 
-    def embed_images(self, filepaths: list[str], show_progress: bool = True) -> NDArray[np.float32]:
-        """Embed a batch of images, returning one row per input path."""
+    def embed_images(
+        self, filepaths: list[str], show_progress: bool = True
+    ) -> ImageEmbeddingResult:
+        """Embed a batch of images, returning one row per readable input path."""
         return image_embedding.embed_image_files_batched(
             filepaths=filepaths,
             context=self._embedding_context(),
@@ -99,6 +102,16 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
         """Embed a batch of image crops (used for annotation embeddings)."""
         return image_crop_embedding.embed_image_crops_batched(
             image_crops=image_crops,
+            context=self._embedding_context(),
+            show_progress=show_progress,
+        )
+
+    def embed_pil_images(
+        self, images: list[Image.Image], show_progress: bool = True
+    ) -> NDArray[np.float32]:
+        """Embed a batch of in-memory PIL images."""
+        return image_embedding.embed_pil_images_batched(
+            images=images,
             context=self._embedding_context(),
             show_progress=show_progress,
         )

@@ -73,6 +73,7 @@ export function buildEchartsOption(
         tooltip: {
             trigger: 'axis',
             axisPointer: { type: 'shadow' },
+            appendTo: 'body',
             formatter: (params: { name: string; value: number }[]) => {
                 const [{ name, value }] = params;
                 const percent = totalCount > 0 ? ` (${formatPercent(value / totalCount)})` : '';
