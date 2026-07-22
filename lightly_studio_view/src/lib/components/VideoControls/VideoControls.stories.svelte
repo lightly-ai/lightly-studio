@@ -7,13 +7,6 @@
         component: VideoControls,
         tags: ['autodocs']
     });
-<<<<<<< HEAD
-</script>
-
-<script>
-=======
-
->>>>>>> main
     // The bar owns no state; the Playground wires local state so the scrubber
     // and transport buttons actually respond.
     let currentTimeS = $state(15);
@@ -21,13 +14,10 @@
     let isPlaying = $state(false);
     let isMuted = $state(true);
     let isFullscreen = $state(false);
-<<<<<<< HEAD
-=======
 
     // Separate state for the short-clip story so its arrow-key stepping is
     // independent of the Playground.
     let shortCurrentTimeS = $state(0);
->>>>>>> main
 </script>
 
 <!-- Rendered on a dark backdrop since the bar is designed to overlay a video. -->
