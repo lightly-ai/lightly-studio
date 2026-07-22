@@ -9,10 +9,10 @@ import {
 } from '$lib/utils';
 import type { CategoryCount } from './';
 
-// Single accent color (the Lightly primary green, --color-lightly-primary #3bd99f):
-// per-class colors carry no meaning in a count distribution.
+// Same accent as Histogram (the Lightly primary green, --color-lightly-primary #3bd99f).
 const BAR_COLOR = 'rgba(59,217,159,0.85)';
-const SELECTED_BORDER_COLOR = 'rgba(255,255,255,0.95)';
+// Bars not in the active selection render dimmed, matching the histogram behaviour.
+const BAR_COLOR_DIMMED = '#4b5563';
 
 /** Bar layout: 'vertical' bars grow upward, 'horizontal' bars grow rightward. */
 export type BarChartOrientation = 'vertical' | 'horizontal';
@@ -41,6 +41,9 @@ export function buildEchartsOption(
     const isHorizontal = orientation === 'horizontal';
 
     const labels = data.map((item) => item.label);
+    // When any category is actively selected, dim the rest — mirrors the range
+    // highlighting in the numeric Histogram where out-of-range bins go grey.
+    const hasAnySelected = data.some((item) => item.selected === true);
 
     const categoryAxis = {
         type: 'category' as const,
@@ -92,13 +95,12 @@ export function buildEchartsOption(
                 type: 'bar',
                 data: data.map((item) => {
                     if (item.selected == null && item.selectable == null) return item.count;
+                    const isDimmed = hasAnySelected && !item.selected;
                     return {
                         value: item.count,
                         itemStyle: {
-                            color: BAR_COLOR,
-                            opacity: item.selectable === false ? 0.45 : 1,
-                            borderColor: item.selected ? SELECTED_BORDER_COLOR : 'transparent',
-                            borderWidth: item.selected ? 3 : 0
+                            color: isDimmed ? BAR_COLOR_DIMMED : BAR_COLOR,
+                            opacity: item.selectable === false ? 0.45 : 1
                         }
                     };
                 }),
