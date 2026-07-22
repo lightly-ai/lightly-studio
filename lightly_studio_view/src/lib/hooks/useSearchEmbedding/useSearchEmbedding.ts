@@ -55,10 +55,10 @@ export function useSearchEmbedding({ getCollectionId, embedding }: Params): Retu
     const upload = useImageUpload({
         getCollectionId,
         onError,
-        onSuccess: ({ fileName, embedding: vector }) => {
+        onSuccess: ({ fileName, embedding: vector, collectionId }) => {
             embedding.set({ queryText: fileName, embedding: vector });
             trackEvent('search_executed', {
-                collection_id: getCollectionId(),
+                collection_id: collectionId,
                 search_type: 'image'
             });
         }
@@ -67,10 +67,10 @@ export function useSearchEmbedding({ getCollectionId, embedding }: Params): Retu
     const text = useTextEmbedding({
         getCollectionId,
         onError,
-        onSuccess: ({ queryText, embedding: vector }) => {
+        onSuccess: ({ queryText, embedding: vector, collectionId }) => {
             embedding.set({ queryText, embedding: vector });
             trackEvent('search_executed', {
-                collection_id: getCollectionId(),
+                collection_id: collectionId,
                 search_type: 'text',
                 query_length: queryText.length
             });
