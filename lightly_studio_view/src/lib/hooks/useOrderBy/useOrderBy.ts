@@ -122,7 +122,12 @@ export function useOrderBy({ collectionId, datasetId }: UseOrderByParams): UseOr
                   };
         updateSortBy([next]);
         const { sort_source, field_name } = sortExprAnalytics(next);
-        trackEvent('grid_sorted', { collection_id: collectionId(), sort_source, field_name, direction });
+        trackEvent('grid_sorted', {
+            collection_id: collectionId(),
+            sort_source,
+            field_name,
+            direction
+        });
     }
 
     function toggleDirection() {
@@ -133,7 +138,12 @@ export function useOrderBy({ collectionId, datasetId }: UseOrderByParams): UseOr
         const next: SortExpr = { ...current, direction };
         updateSortBy([next]);
         const { sort_source, field_name } = sortExprAnalytics(next);
-        trackEvent('grid_sorted', { collection_id: collectionId(), sort_source, field_name, direction });
+        trackEvent('grid_sorted', {
+            collection_id: collectionId(),
+            sort_source,
+            field_name,
+            direction
+        });
     }
 
     return {
