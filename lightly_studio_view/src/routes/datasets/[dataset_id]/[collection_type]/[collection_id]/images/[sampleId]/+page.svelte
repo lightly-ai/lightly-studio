@@ -22,7 +22,7 @@
     afterNavigate((nav) => {
         trackEvent('sample_inspected', {
             collection_id: collectionId,
-            sample_type: collectionType,
+            sample_type: 'image',
             opened_from: isImagesRoute(nav.from?.route.id ?? null) ? 'grid' : 'direct_url'
         });
     });
