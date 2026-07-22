@@ -61,25 +61,31 @@ def test_get_all_metadata_keys_and_schema__with_numerical_values(
     location_info = next(item for item in result if item.name == "location")
     is_processed_info = next(item for item in result if item.name == "is_processed")
 
-    # Check temperature (float type with min/max).
+    # Check temperature (float type with min/max and histogram).
     assert temperature_info.type == "float"
     assert temperature_info.min == pytest.approx(15.2)
     assert temperature_info.max == pytest.approx(30.0)
+    assert temperature_info.histogram is not None
+    assert sum(temperature_info.histogram.counts) == 3
 
-    # Check count (integer type with min/max).
+    # Check count (integer type with min/max and histogram).
     assert count_info.type == "integer"
     assert count_info.min == 5
     assert count_info.max == 20
+    assert count_info.histogram is not None
+    assert sum(count_info.histogram.counts) == 3
 
-    # Check location (string type without min/max).
+    # Check location (string type without min/max/histogram).
     assert location_info.type == "string"
     assert location_info.min is None
     assert location_info.max is None
+    assert location_info.histogram is None
 
-    # Check is_processed (boolean type without min/max).
+    # Check is_processed (boolean type without min/max/histogram).
     assert is_processed_info.type == "boolean"
     assert is_processed_info.min is None
     assert is_processed_info.max is None
+    assert is_processed_info.histogram is None
 
 
 def test_get_all_metadata_keys_and_schema__no_numerical_values(
@@ -132,3 +138,57 @@ def test_get_all_metadata_keys_and_schema__empty_collection(
 
     # Should return empty list.
     assert result == []
+
+
+def test_get_all_metadata_keys_and_schema__histogram_bins(
+    db_session: Session,
+) -> None:
+    """Test that a numeric field returns histogram bins that span min..max."""
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    # Create samples with integer values 0..9.
+    values = list(range(10))
+    for i in values:
+        sample = create_image(
+            session=db_session,
+            collection_id=collection_id,
+            file_path_abs=f"/path/to/sample{i}.png",
+        ).sample
+        sample["score"] = i
+
+    result = get_all_metadata_keys_and_schema(session=db_session, collection_id=collection_id)
+    score_info = next(item for item in result if item.name == "score")
+
+    assert score_info.histogram is not None
+    histogram = score_info.histogram
+    # Edges are one longer than counts and span the value range.
+    assert len(histogram.bin_edges) == len(histogram.counts) + 1
+    assert histogram.bin_edges[0] == pytest.approx(0.0)
+    assert histogram.bin_edges[-1] == pytest.approx(9.0)
+    # Every value is counted exactly once.
+    assert sum(histogram.counts) == len(values)
+
+
+def test_get_all_metadata_keys_and_schema__histogram_constant_values(
+    db_session: Session,
+) -> None:
+    """Test histogram for a field where all values are identical."""
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    for i in range(3):
+        sample = create_image(
+            session=db_session,
+            collection_id=collection_id,
+            file_path_abs=f"/path/to/sample{i}.png",
+        ).sample
+        sample["score"] = 7.0
+
+    result = get_all_metadata_keys_and_schema(session=db_session, collection_id=collection_id)
+    score_info = next(item for item in result if item.name == "score")
+
+    assert score_info.min == pytest.approx(7.0)
+    assert score_info.max == pytest.approx(7.0)
+    assert score_info.histogram is not None
+    assert sum(score_info.histogram.counts) == 3

@@ -3,6 +3,7 @@ import { get, writable } from 'svelte/store';
 import { useHiddenFilters } from './useHiddenFilters';
 import { useEmbeddingFilterForImages } from './useEmbeddingFilterForImages';
 import { useEmbeddingFilterForVideos } from './useEmbeddingFilterForVideos';
+import { clearPlotSelectionCount, setPlotSelectionCount } from './useEmbeddingPlotSelection';
 import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
 
@@ -82,40 +83,21 @@ describe('useEmbeddingFilterForImages', () => {
         vi.clearAllMocks();
         const { updateFilterParams } = useImageFilters();
         updateFilterParams({ collection_id: 'coll-1', mode: 'normal' });
-        const { clearHidden } = useHiddenFilters(collectionId);
-        clearHidden();
+        clearPlotSelectionCount('coll-1');
+        collectionId.set('coll-1');
     });
 
-    it('isVisible is false when collection_id does not match', () => {
-        const { updateFilterParams } = useImageFilters();
-        updateFilterParams({
-            collection_id: 'other-coll',
-            mode: 'normal',
-            filters: { sample_ids: ['id-1'] }
-        });
-
-        const { isVisible } = useEmbeddingFilterForImages(collectionId, setRangeSelection);
+    it('isVisible is false when no region is selected', () => {
+        const { isVisible, effectiveCount } = useEmbeddingFilterForImages(
+            collectionId,
+            setRangeSelection
+        );
         expect(get(isVisible)).toBe(false);
+        expect(get(effectiveCount)).toBe(0);
     });
 
-    it('isVisible is false when mode is not normal', () => {
-        const { updateFilterParams } = useImageFilters();
-        updateFilterParams({
-            collection_id: 'coll-1',
-            mode: 'classifier'
-        });
-
-        const { isVisible } = useEmbeddingFilterForImages(collectionId, setRangeSelection);
-        expect(get(isVisible)).toBe(false);
-    });
-
-    it('isVisible is true when collection matches and sample_ids are set', () => {
-        const { updateFilterParams } = useImageFilters();
-        updateFilterParams({
-            collection_id: 'coll-1',
-            mode: 'normal',
-            filters: { sample_ids: ['id-1', 'id-2'] }
-        });
+    it('isVisible reflects the propagated plot selection count', () => {
+        setPlotSelectionCount('coll-1', 2);
 
         const { isVisible, effectiveCount } = useEmbeddingFilterForImages(
             collectionId,
@@ -125,13 +107,8 @@ describe('useEmbeddingFilterForImages', () => {
         expect(get(effectiveCount)).toBe(2);
     });
 
-    it('setVisibility(false) moves active IDs to hidden and clears the filter', () => {
-        const { updateFilterParams } = useImageFilters();
-        updateFilterParams({
-            collection_id: 'coll-1',
-            mode: 'normal',
-            filters: { sample_ids: ['id-1', 'id-2'] }
-        });
+    it('setVisibility(false) clears the selection', () => {
+        setPlotSelectionCount('coll-1', 2);
 
         const { isVisible, effectiveCount, setVisibility } = useEmbeddingFilterForImages(
             collectionId,
@@ -140,74 +117,17 @@ describe('useEmbeddingFilterForImages', () => {
         setVisibility(false);
 
         expect(get(isVisible)).toBe(false);
-        expect(get(effectiveCount)).toBe(2);
-    });
-
-    it('setVisibility(true) restores previously hidden IDs', () => {
-        const { updateFilterParams } = useImageFilters();
-        updateFilterParams({
-            collection_id: 'coll-1',
-            mode: 'normal',
-            filters: { sample_ids: ['id-1', 'id-2'] }
-        });
-
-        const { isVisible, effectiveCount, setVisibility } = useEmbeddingFilterForImages(
-            collectionId,
-            setRangeSelection
-        );
-        setVisibility(false);
-        setVisibility(true);
-
-        expect(get(isVisible)).toBe(true);
-        expect(get(effectiveCount)).toBe(2);
-    });
-
-    it('setVisibility(true) keeps hidden IDs when restore cannot be applied', () => {
-        const { updateFilterParams } = useImageFilters();
-        updateFilterParams({
-            collection_id: 'coll-1',
-            mode: 'normal',
-            filters: { sample_ids: ['id-1'] }
-        });
-
-        const { isVisible, effectiveCount, setVisibility } = useEmbeddingFilterForImages(
-            collectionId,
-            setRangeSelection
-        );
-        setVisibility(false);
-
-        updateFilterParams({
-            collection_id: 'coll-1',
-            mode: 'classifier'
-        });
-        setVisibility(true);
-
-        expect(get(isVisible)).toBe(false);
-        expect(get(effectiveCount)).toBe(1);
-    });
-
-    it('setVisibility(false) does nothing when there are no active IDs', () => {
-        const { effectiveCount, setVisibility } = useEmbeddingFilterForImages(
-            collectionId,
-            setRangeSelection
-        );
-        setVisibility(false);
         expect(get(effectiveCount)).toBe(0);
+        expect(setRangeSelection).toHaveBeenCalledWith('coll-1', null);
     });
 
-    it('clearFilter clears both active and hidden IDs and calls setRangeSelection', () => {
-        const { updateFilterParams } = useImageFilters();
-        updateFilterParams({
-            collection_id: 'coll-1',
-            mode: 'normal',
-            filters: { sample_ids: ['id-1'] }
-        });
+    it('clearFilter clears the count and calls setRangeSelection', () => {
+        setPlotSelectionCount('coll-1', 3);
 
-        const { effectiveCount, setVisibility, clearFilter } = useEmbeddingFilterForImages(
+        const { effectiveCount, clearFilter } = useEmbeddingFilterForImages(
             collectionId,
             setRangeSelection
         );
-        setVisibility(false);
         clearFilter();
 
         expect(get(effectiveCount)).toBe(0);

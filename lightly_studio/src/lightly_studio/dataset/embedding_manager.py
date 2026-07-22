@@ -8,6 +8,7 @@ from uuid import UUID
 
 import numpy as np
 from numpy.typing import NDArray
+from PIL import Image
 from sqlmodel import Session
 from tqdm import tqdm
 
@@ -43,6 +44,7 @@ _GENERATOR_SAMPLE_TYPE: dict[SampleType, SampleType] = {
     SampleType.IMAGE: SampleType.IMAGE,
     SampleType.ANNOTATION: SampleType.IMAGE,
     SampleType.VIDEO: SampleType.VIDEO,
+    SampleType.VIDEO_FRAME: SampleType.IMAGE,
 }
 
 
@@ -66,6 +68,27 @@ class EmbeddingManagerProvider:
         return cls._instance
 
 
+def set_default_embedding_model(embedding_generator: EmbeddingGenerator) -> None:
+    """Register a custom embedding model that overrides the env-var default.
+
+    Call this before ingesting a dataset (e.g. before ImageDataset.load_or_create)
+    to use your own generator instead of the model selected by
+    LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE. The override applies to every collection.
+
+    Note: the registration lives in-process only. When re-launching the GUI via the
+    `lightly-studio gui` CLI without re-running this call, embeddings computed with the
+    custom model remain, but text search falls back to the env-var default model and
+    will not match them.
+
+    Args:
+        embedding_generator: A generator implementing ImageEmbeddingGenerator and/or
+            VideoEmbeddingGenerator.
+    """
+    EmbeddingManagerProvider.get_embedding_manager().set_default_embedding_model(
+        embedding_generator=embedding_generator
+    )
+
+
 @dataclass
 class TextEmbedQuery:
     """Parameters for text embedding generation."""
@@ -82,6 +105,41 @@ class EmbeddingManager:
         self._models: dict[UUID, EmbeddingGenerator] = {}
         self._collection_id_to_default_model_id: dict[UUID, UUID] = {}
         self._sample_type_to_model_id: dict[SampleType, UUID] = {}
+        # Generators registered by the user that override the env-var default.
+        # Keyed by generator sample type (IMAGE or VIDEO) and consulted before
+        # loading a generator from the environment.
+        self._override_generators: dict[SampleType, EmbeddingGenerator] = {}
+
+    def set_default_embedding_model(self, embedding_generator: EmbeddingGenerator) -> None:
+        """Register a generator that overrides the env-var default for all collections.
+
+        The generator's sample-type slot(s) are inferred from the protocols it
+        implements: an ImageEmbeddingGenerator overrides image (and annotation and
+        text) embeddings, a VideoEmbeddingGenerator overrides video embeddings, and a
+        generator implementing both overrides both. This must be called before a
+        collection loads its default model (e.g. before ingesting a dataset).
+
+        Args:
+            embedding_generator: The generator to use instead of the env-var default.
+
+        Raises:
+            TypeError: If the generator implements neither the image nor the video
+                embedding protocol.
+        """
+        matched = False
+        if isinstance(embedding_generator, ImageEmbeddingGenerator):
+            self._override_generators[SampleType.IMAGE] = embedding_generator
+            self._sample_type_to_model_id.pop(SampleType.IMAGE, None)
+            matched = True
+        if isinstance(embedding_generator, VideoEmbeddingGenerator):
+            self._override_generators[SampleType.VIDEO] = embedding_generator
+            self._sample_type_to_model_id.pop(SampleType.VIDEO, None)
+            matched = True
+        if not matched:
+            raise TypeError(
+                "embedding_generator must implement ImageEmbeddingGenerator or "
+                "VideoEmbeddingGenerator."
+            )
 
     def register_embedding_model(
         self,
@@ -165,10 +223,7 @@ class EmbeddingManager:
         model_id = self._get_default_or_validate(
             collection_id=collection_id, embedding_model_id=embedding_model_id
         )
-
-        model = self._models[model_id]
-        if not isinstance(model, ImageEmbeddingGenerator):
-            raise ValueError("Embedding model not compatible with images.")
+        model = self._get_image_model(model_id)
 
         # Query image filenames from the database.
         sample_id_to_filepath = {
@@ -183,13 +238,14 @@ class EmbeddingManager:
         filepaths = [sample_id_to_filepath[sample_id] for sample_id in sample_ids]
 
         # Generate embeddings for the samples.
-        embeddings = model.embed_images(filepaths=filepaths)
+        result = model.embed_images(filepaths=filepaths)
+        kept_sample_ids = [sample_ids[index] for index in result.kept_indices]
 
         _store_embeddings(
             session=session,
             model_id=model_id,
-            sample_ids=sample_ids,
-            embeddings=embeddings,
+            sample_ids=kept_sample_ids,
+            embeddings=result.embeddings,
         )
 
     def embed_annotations(
@@ -198,7 +254,9 @@ class EmbeddingManager:
         annotation_collection_id: UUID,
         embedding_model_id: UUID | None = None,
     ) -> None:
-        """Generate and store embeddings for object-detection annotations.
+        """Generate and store embeddings for annotation crops.
+
+        Object-detection and segmentation-mask annotations are both embedded.
 
         Args:
             session: Database session for resolver operations.
@@ -212,9 +270,7 @@ class EmbeddingManager:
         model_id = self._get_default_or_validate(
             collection_id=annotation_collection_id, embedding_model_id=embedding_model_id
         )
-        model = self._models[model_id]
-        if not isinstance(model, ImageEmbeddingGenerator):
-            raise ValueError("Embedding model not compatible with images.")
+        model = self._get_image_model(model_id)
 
         annotation_sample_ids = annotation_resolver.get_unembedded_annotation_ids(
             session=session,
@@ -277,17 +333,14 @@ class EmbeddingManager:
         model_id = self._get_default_or_validate(
             collection_id=collection_id, embedding_model_id=embedding_model_id
         )
-
-        model = self._models[model_id]
-        if not isinstance(model, ImageEmbeddingGenerator):
-            raise ValueError("Embedding model not compatible with images.")
+        model = self._get_image_model(model_id)
 
         # Generate embedding for the image without progress bar.
-        embeddings = model.embed_images(filepaths=[filepath], show_progress=False)
+        result = model.embed_images(filepaths=[filepath], show_progress=False)
 
         # Return the single embedding as a list of floats.
-        result: list[float] = embeddings[0].tolist()
-        return result
+        embedding: list[float] = result.embeddings[0].tolist()
+        return embedding
 
     def embed_videos(
         self,
@@ -337,6 +390,43 @@ class EmbeddingManager:
             embeddings=embeddings,
         )
 
+    def embed_and_store_pil_images(
+        self,
+        session: Session,
+        embedding_model_id: UUID,
+        sample_ids: list[UUID],
+        images: list[Image.Image],
+        show_progress: bool = True,
+    ) -> None:
+        """Generate and store embeddings for in-memory PIL images.
+
+        Args:
+            session: Database session for resolver operations.
+            embedding_model_id: ID of a registered image-compatible embedding model.
+            sample_ids: Sample IDs the embeddings are stored for.
+            images: PIL images to embed, in the same order as sample_ids.
+            show_progress: Whether to show a progress bar during embedding and storage.
+
+        Raises:
+            ValueError: If the model is missing, does not support image embedding, or
+                the number of images does not match the number of sample IDs.
+        """
+        if len(sample_ids) != len(images):
+            raise ValueError(
+                f"Expected the same number of sample IDs and images, got "
+                f"{len(sample_ids)} sample IDs and {len(images)} images."
+            )
+
+        model = self._get_image_model(embedding_model_id)
+        embeddings = model.embed_pil_images(images=images, show_progress=show_progress)
+        _store_embeddings(
+            session=session,
+            model_id=embedding_model_id,
+            sample_ids=sample_ids,
+            embeddings=embeddings,
+            show_progress=show_progress,
+        )
+
     def load_or_get_default_model(
         self,
         session: Session,
@@ -367,6 +457,9 @@ class EmbeddingManager:
         embedding_generator: EmbeddingGenerator | None = None
         if existing_model_id is not None:
             embedding_generator = self._models[existing_model_id]
+        elif generator_sample_type in self._override_generators:
+            # Prefer a user-registered generator over the env-var default.
+            embedding_generator = self._override_generators[generator_sample_type]
         else:
             # Load the embedding generator based on sample_type from the env var.
             embedding_generator = _load_embedding_generator_from_env(
@@ -407,6 +500,19 @@ class EmbeddingManager:
         if embedding_model_id not in self._models:
             raise ValueError(f"No embedding model found with ID {embedding_model_id}")
         return embedding_model_id
+
+    def _get_image_model(self, model_id: UUID) -> ImageEmbeddingGenerator:
+        """Return the registered image-compatible generator for model_id.
+
+        Raises:
+            ValueError: If no model is registered for the ID or it does not support images.
+        """
+        model = self._models.get(model_id)
+        if model is None:
+            raise ValueError(f"No embedding model found with ID {model_id}")
+        if not isinstance(model, ImageEmbeddingGenerator):
+            raise ValueError("Embedding model not compatible with images.")
+        return model
 
 
 def _store_embeddings(

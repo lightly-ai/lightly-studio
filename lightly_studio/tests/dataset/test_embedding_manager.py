@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 import numpy as np
 import pytest
 from numpy.typing import NDArray
+from PIL import Image
 from pytest_mock import MockerFixture
 from sqlmodel import Session, select
 
@@ -20,6 +21,8 @@ from lightly_studio.dataset.embedding_manager import (
     EmbeddingManager,
     TextEmbedQuery,
 )
+from lightly_studio.dataset.image_embedding import ImageEmbeddingResult
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
 from lightly_studio.models.image import ImageTable
@@ -99,11 +102,16 @@ def test_register_multiple_models(
 
         def embed_images(
             self, filepaths: list[str], show_progress: bool = True
-        ) -> NDArray[np.float32]:
+        ) -> ImageEmbeddingResult:
             raise NotImplementedError()
 
         def embed_image_crops(
             self, image_crops: list[ImageCrop], show_progress: bool = True
+        ) -> NDArray[np.float32]:
+            raise NotImplementedError()
+
+        def embed_pil_images(
+            self, images: list[Image.Image], show_progress: bool = True
         ) -> NDArray[np.float32]:
             raise NotImplementedError()
 
@@ -266,11 +274,16 @@ def test_embed_images_with_incompatible_generator(
         )
 
 
+@pytest.mark.parametrize(
+    "annotation_type",
+    [AnnotationType.OBJECT_DETECTION, AnnotationType.SEGMENTATION_MASK],
+)
 def test_embed_annotations(
     db_session: Session,
     collection: CollectionTable,
+    annotation_type: AnnotationType,
 ) -> None:
-    """embed_annotations stores one embedding per object-detection annotation."""
+    """embed_annotations stores one embedding per croppable annotation, per type."""
     image = create_image(session=db_session, collection_id=collection.collection_id)
     label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
     create_annotation(
@@ -278,6 +291,7 @@ def test_embed_annotations(
         collection_id=collection.collection_id,
         sample_id=image.sample_id,
         annotation_label_id=label.annotation_label_id,
+        annotation_type=annotation_type,
     )
     annotation_collection_id = collection_resolver.get_or_create_child_collection(
         session=db_session,
@@ -557,6 +571,111 @@ def test_load_or_get_default_model__cant_load(
 
     mock_load.assert_called_once_with(sample_type=SampleType.IMAGE)
     assert model_id is None
+
+
+def test_set_default_embedding_model_overrides_env(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """A registered override is used instead of loading a generator from the env."""
+    collection = create_collection(session=db_session)
+    manager = EmbeddingManager()
+    mock_load = mocker.patch.object(embedding_manager, "_load_embedding_generator_from_env")
+
+    override = RandomEmbeddingGenerator()
+    manager.set_default_embedding_model(embedding_generator=override)
+
+    model_id = manager.load_or_get_default_model(
+        session=db_session, collection_id=collection.collection_id
+    )
+
+    assert model_id is not None
+    assert manager._models[model_id] is override
+    # The env loader is never consulted when an override is registered.
+    mock_load.assert_not_called()
+
+
+def test_set_default_embedding_model_fills_both_slots() -> None:
+    """A generator implementing both protocols overrides image and video slots."""
+    manager = EmbeddingManager()
+    override = RandomEmbeddingGenerator()
+
+    manager.set_default_embedding_model(embedding_generator=override)
+
+    assert manager._override_generators[SampleType.IMAGE] is override
+    assert manager._override_generators[SampleType.VIDEO] is override
+
+
+def test_set_default_embedding_model_falls_back_to_env_for_unregistered_slot(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """Sample types without an override still load from the env."""
+
+    class ImageOnlyGenerator:
+        # Implements the image protocol but not embed_videos, so only the image
+        # slot is overridden.
+        def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
+            return EmbeddingModelCreate(
+                name="ImageOnly",
+                collection_id=collection_id,
+                embedding_dimension=3,
+                embedding_model_hash="image_only_model",
+            )
+
+        def embed_text(self, text: str) -> list[float]:
+            _ = text
+            return [0.1, 0.2, 0.3]
+
+        def embed_images(
+            self, filepaths: list[str], show_progress: bool = True
+        ) -> ImageEmbeddingResult:
+            _ = show_progress
+            return ImageEmbeddingResult(
+                embeddings=np.zeros((len(filepaths), 3), dtype=np.float32),
+                kept_indices=list(range(len(filepaths))),
+            )
+
+        def embed_image_crops(
+            self, image_crops: list[ImageCrop], show_progress: bool = True
+        ) -> NDArray[np.float32]:
+            _ = show_progress
+            return np.zeros((len(image_crops), 3), dtype=np.float32)
+
+        def embed_pil_images(
+            self, images: list[Image.Image], show_progress: bool = True
+        ) -> NDArray[np.float32]:
+            _ = show_progress
+            return np.zeros((len(images), 3), dtype=np.float32)
+
+    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    manager = EmbeddingManager()
+    env_generator = RandomEmbeddingGenerator()
+    mock_load = mocker.patch.object(
+        embedding_manager,
+        "_load_embedding_generator_from_env",
+        return_value=env_generator,
+    )
+
+    manager.set_default_embedding_model(embedding_generator=ImageOnlyGenerator())
+
+    model_id = manager.load_or_get_default_model(
+        session=db_session, collection_id=video_collection.collection_id
+    )
+
+    assert model_id is not None
+    assert manager._models[model_id] is env_generator
+    mock_load.assert_called_once_with(sample_type=SampleType.VIDEO)
+
+
+def test_set_default_embedding_model_raises_on_incompatible_generator() -> None:
+    """A generator implementing neither image nor video protocol is rejected."""
+    manager = EmbeddingManager()
+    with pytest.raises(
+        TypeError,
+        match=r"must implement ImageEmbeddingGenerator or VideoEmbeddingGenerator",
+    ):
+        manager.set_default_embedding_model(embedding_generator=TextOnlyEmbeddingGenerator())
 
 
 def test_default_model(

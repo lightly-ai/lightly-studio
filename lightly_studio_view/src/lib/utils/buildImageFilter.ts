@@ -1,7 +1,9 @@
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import {
     type AnnotationsFilter,
-    type ImageFilter
+    type ConfusionCell,
+    type ImageFilter,
+    type QueryExpr
 } from '$lib/api/lightly_studio_local/types.gen.js';
 import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
 
@@ -11,12 +13,18 @@ export function buildImageFilter({
     dimensionsValues,
     annotationFilter,
     metadataFilters,
-    sampleIds
+    sampleIds,
+    tagIds,
+    confusionCell,
+    queryExpr
 }: {
     dimensionsValues: DimensionBounds | null | undefined;
     annotationFilter: AnnotationsFilter | undefined;
     metadataFilters: MetadataFilters | undefined;
     sampleIds?: string[];
+    tagIds?: string[];
+    confusionCell?: ConfusionCell | null;
+    queryExpr?: QueryExpr | null;
 }): ImageFilter | undefined {
     const filter: ImageFilter = {};
 
@@ -56,6 +64,27 @@ export function buildImageFilter({
         filter.sample_filter = {
             ...(filter.sample_filter ?? {}),
             sample_ids: sampleIds
+        };
+    }
+
+    if (tagIds && tagIds.length > 0) {
+        filter.sample_filter = {
+            ...(filter.sample_filter ?? {}),
+            tag_ids: tagIds
+        };
+    }
+
+    if (confusionCell) {
+        filter.sample_filter = {
+            ...(filter.sample_filter ?? {}),
+            confusion_cell: confusionCell
+        };
+    }
+
+    if (queryExpr) {
+        filter.sample_filter = {
+            ...(filter.sample_filter ?? {}),
+            query_expr: queryExpr
         };
     }
 

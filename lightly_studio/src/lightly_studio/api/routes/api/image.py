@@ -14,6 +14,7 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.database.db_manager import SessionDep
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import (
     ImageView,
@@ -25,6 +26,9 @@ from lightly_studio.resolvers import (
 )
 from lightly_studio.resolvers.image_filter import (
     ImageFilter,
+)
+from lightly_studio.resolvers.image_resolver.count_image_annotations_by_collection import (
+    AnnotationCountMode,
 )
 
 image_router = APIRouter(tags=["image"])
@@ -134,6 +138,14 @@ class ReadCountImageAnnotationsRequest(BaseModel):
     """Request body for reading image annotation counts."""
 
     filter: ImageFilter | None = None
+    annotation_type: AnnotationType | None = Field(
+        None,
+        description="Restrict counts to a single annotation type (e.g. classification).",
+    )
+    count_mode: AnnotationCountMode = Field(
+        AnnotationCountMode.OBJECTS,
+        description="Whether to count annotation objects or distinct annotated samples.",
+    )
 
 
 @image_router.post("/collections/{collection_id}/images/sample_ids", response_model=list[UUID])
@@ -164,10 +176,14 @@ def count_image_annotations_by_collection(
 ) -> list[dict[str, str | int]]:
     """Get image annotation counts for a specific collection."""
     image_filter = body.filter if body and body.filter else None
+    annotation_type = body.annotation_type if body else None
+    count_mode = body.count_mode if body else AnnotationCountMode.OBJECTS
     counts = image_resolver.count_image_annotations_by_collection(
         session=session,
         collection_id=collection.collection_id,
         image_filter=image_filter,
+        annotation_type=annotation_type,
+        count_mode=count_mode,
     )
 
     return [

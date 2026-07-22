@@ -45,7 +45,7 @@ class TestPerceptionEncoderEmbeddingGenerator:
     def test_embed_images(self) -> None:
         perception_encoder = PerceptionEncoderEmbeddingGenerator()
         cat_image_path = FIXTURES_DIR / "cat.jpg"
-        embeddings = perception_encoder.embed_images([str(cat_image_path)])
+        embeddings = perception_encoder.embed_images([str(cat_image_path)]).embeddings
 
         assert len(embeddings) == 1
         cat_embedding = embeddings[0]
@@ -73,12 +73,32 @@ class TestPerceptionEncoderEmbeddingGenerator:
 
         full_crop = ImageCrop(filepath=str(cat_image_path), x=0, y=0, width=width, height=height)
         crop_embeddings = perception_encoder.embed_image_crops([full_crop])
-        image_embeddings = perception_encoder.embed_images([str(cat_image_path)])
+        image_embeddings = perception_encoder.embed_images([str(cat_image_path)]).embeddings
 
         assert crop_embeddings.shape == (1, 512)
         # A crop covering the entire image is preprocessed and encoded identically
         # to the full image, so the embeddings must match.
         assert np.allclose(crop_embeddings[0], image_embeddings[0], atol=1e-4)
+
+    def test_embed_pil_images__empty_input(self) -> None:
+        perception_encoder = PerceptionEncoderEmbeddingGenerator()
+        embeddings = perception_encoder.embed_pil_images([])
+
+        assert embeddings.shape == (0, 512)
+
+    def test_embed_pil_images__matches_embed_images(self) -> None:
+        perception_encoder = PerceptionEncoderEmbeddingGenerator()
+        cat_image_path = FIXTURES_DIR / "cat.jpg"
+        with Image.open(cat_image_path) as image:
+            cat_pil_image = image.convert("RGB")
+
+        pil_embeddings = perception_encoder.embed_pil_images([cat_pil_image])
+        image_embeddings = perception_encoder.embed_images([str(cat_image_path)]).embeddings
+
+        assert pil_embeddings.shape == (1, 512)
+        # An in-memory PIL image is preprocessed and encoded identically to the same
+        # image loaded from disk, so the embeddings must match.
+        assert np.allclose(pil_embeddings[0], image_embeddings[0], atol=1e-4)
 
     def test_embed_videos(self) -> None:
         perception_encoder = PerceptionEncoderEmbeddingGenerator()
@@ -119,7 +139,9 @@ class TestPerceptionEncoderEmbeddingGenerator:
 
         # Embed image.
         cat_image_path = FIXTURES_DIR / "cat.jpg"
-        cat_image_emb = torch.tensor(perception_encoder.embed_images([str(cat_image_path)])[0])
+        cat_image_emb = torch.tensor(
+            perception_encoder.embed_images([str(cat_image_path)]).embeddings[0]
+        )
         cat_image_emb /= cat_image_emb.norm(dim=-1, keepdim=True)
 
         # Compute softmax similarity as in perception_encoder repo example.

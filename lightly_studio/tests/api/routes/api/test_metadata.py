@@ -8,7 +8,7 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND, HTTP_STATUS_OK
-from lightly_studio.models.metadata import MetadataInfoView
+from lightly_studio.models.metadata import HistogramView, MetadataInfoView
 from lightly_studio.resolvers import image_resolver, metadata_resolver, tag_resolver
 from tests.helpers_resolvers import (
     create_collection,
@@ -24,11 +24,17 @@ def test_get_metadata_info(test_client: TestClient, mocker: MockerFixture) -> No
     # get_all_metadata_keys_and_schema.
     mock_metadata = [
         MetadataInfoView(name="key1", type="string"),
-        MetadataInfoView(name="key2", type="integer", min=0, max=100),
+        MetadataInfoView(
+            name="key2",
+            type="integer",
+            min=0,
+            max=100,
+            histogram=HistogramView(bin_edges=[0.0, 50.0, 100.0], counts=[3, 7]),
+        ),
         MetadataInfoView(name="key3", type="float", min=0.0, max=1.0),
     ]
     mocker.patch(
-        "lightly_studio.api.routes.api.metadata.get_all_metadata_keys_and_schema",
+        "lightly_studio.api.routes.api.metadata.metadata_info_resolver.get_all_metadata_keys_and_schema",
         return_value=mock_metadata,
     )
 
@@ -44,6 +50,11 @@ def test_get_metadata_info(test_client: TestClient, mocker: MockerFixture) -> No
         assert data[i]["type"] == metadata.type
         assert data[i].get("min") == metadata.min
         assert data[i].get("max") == metadata.max
+        if metadata.histogram is None:
+            assert data[i].get("histogram") is None
+        else:
+            assert data[i]["histogram"]["bin_edges"] == metadata.histogram.bin_edges
+            assert data[i]["histogram"]["counts"] == metadata.histogram.counts
 
 
 def test_get_metadata_info__empty_response(test_client: TestClient, mocker: MockerFixture) -> None:
@@ -51,7 +62,7 @@ def test_get_metadata_info__empty_response(test_client: TestClient, mocker: Mock
     collection_id = uuid4()
     # Mock get_all_metadata_keys_and_schema to return an empty list.
     mocker.patch(
-        "lightly_studio.api.routes.api.metadata.get_all_metadata_keys_and_schema",
+        "lightly_studio.api.routes.api.metadata.metadata_info_resolver.get_all_metadata_keys_and_schema",
         return_value=[],
     )
 

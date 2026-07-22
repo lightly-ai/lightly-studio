@@ -4,18 +4,13 @@ import uuid
 
 from sqlmodel import Session
 
-from lightly_studio.models.evaluation_annotation_metric import (
-    EvaluationAnnotationMetricCreate,
-)
 from lightly_studio.models.evaluation_confusion_matrix import (
     NO_GROUND_TRUTH_ROW_LABEL,
     NO_PREDICTION_COL_LABEL,
 )
 from lightly_studio.resolvers import evaluation_annotation_metric_resolver
 from tests.helpers_resolvers import (
-    AnnotationDetails,
     create_annotation_label,
-    create_annotations,
     create_collection,
     create_image,
 )
@@ -23,6 +18,8 @@ from tests.resolvers.evaluation_sample_metric_resolver import (
     helpers as evaluation_sample_metric_helpers,
 )
 from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
+    FalseNegativeMetricStub,
+    FalsePositiveMetricStub,
     TruePositiveMetricStub,
     create_annotation_metrics,
 )
@@ -65,37 +62,23 @@ def test_get_confusion_matrix__aggregates_tp_fp_fn(
         root_collection_id=dataset.collection_id,
         label_name="class_b",
     )
-    [gt_a, gt_b, pred_a, pred_b] = create_annotations(
+    create_annotation_metrics(
         session=db_session,
-        collection_id=dataset.collection_id,
-        annotations=[
-            AnnotationDetails(sample_id=sample_id, annotation_label_id=label_a.annotation_label_id),
-            AnnotationDetails(sample_id=sample_id, annotation_label_id=label_b.annotation_label_id),
-            AnnotationDetails(sample_id=sample_id, annotation_label_id=label_a.annotation_label_id),
-            AnnotationDetails(sample_id=sample_id, annotation_label_id=label_b.annotation_label_id),
-        ],
-    )
-
-    evaluation_annotation_metric_resolver.create_many(
-        session=db_session,
-        records=[
-            EvaluationAnnotationMetricCreate(
-                evaluation_run_id=run.id,
-                sample_id=image.sample_id,
-                pred_annotation_id=pred_a.sample_id,
-                gt_annotation_id=gt_a.sample_id,
-                metric_name="iou",
-                value=0.9,
+        run_id=run.id,
+        pair_metric_stubs=[
+            TruePositiveMetricStub(
+                sample_id=sample_id,
+                metrics={"iou": 0.9},
+                gt_annotation_label_id=label_a.annotation_label_id,
+                pred_annotation_label_id=label_a.annotation_label_id,
             ),
-            EvaluationAnnotationMetricCreate(
-                evaluation_run_id=run.id,
-                sample_id=image.sample_id,
-                pred_annotation_id=pred_b.sample_id,
+            FalsePositiveMetricStub(
+                sample_id=sample_id,
+                pred_annotation_label_id=label_b.annotation_label_id,
             ),
-            EvaluationAnnotationMetricCreate(
-                evaluation_run_id=run.id,
-                sample_id=image.sample_id,
-                gt_annotation_id=gt_b.sample_id,
+            FalseNegativeMetricStub(
+                sample_id=sample_id,
+                gt_annotation_label_id=label_b.annotation_label_id,
             ),
         ],
     )
@@ -147,32 +130,19 @@ def test_get_confusion_matrix__class_only_in_gt(
         root_collection_id=dataset.collection_id,
         label_name="class_b",
     )
-    sample_id = image.sample_id
-    [gt_a, gt_b, pred_a] = create_annotations(
+    create_annotation_metrics(
         session=db_session,
-        collection_id=dataset.collection_id,
-        annotations=[
-            AnnotationDetails(sample_id=sample_id, annotation_label_id=label_a.annotation_label_id),
-            AnnotationDetails(sample_id=sample_id, annotation_label_id=label_b.annotation_label_id),
-            AnnotationDetails(sample_id=sample_id, annotation_label_id=label_a.annotation_label_id),
-        ],
-    )
-
-    evaluation_annotation_metric_resolver.create_many(
-        session=db_session,
-        records=[
-            EvaluationAnnotationMetricCreate(
-                evaluation_run_id=run.id,
+        run_id=run.id,
+        pair_metric_stubs=[
+            TruePositiveMetricStub(
                 sample_id=image.sample_id,
-                pred_annotation_id=pred_a.sample_id,
-                gt_annotation_id=gt_a.sample_id,
-                metric_name="iou",
-                value=0.9,
+                metrics={"iou": 0.9},
+                gt_annotation_label_id=label_a.annotation_label_id,
+                pred_annotation_label_id=label_a.annotation_label_id,
             ),
-            EvaluationAnnotationMetricCreate(
-                evaluation_run_id=run.id,
+            FalseNegativeMetricStub(
                 sample_id=image.sample_id,
-                gt_annotation_id=gt_b.sample_id,
+                gt_annotation_label_id=label_b.annotation_label_id,
             ),
         ],
     )
@@ -216,32 +186,19 @@ def test_get_confusion_matrix__class_only_in_pred(
         root_collection_id=dataset.collection_id,
         label_name="class_b",
     )
-    sample_id = image.sample_id
-    [gt_a, pred_a, pred_b] = create_annotations(
+    create_annotation_metrics(
         session=db_session,
-        collection_id=dataset.collection_id,
-        annotations=[
-            AnnotationDetails(sample_id=sample_id, annotation_label_id=label_a.annotation_label_id),
-            AnnotationDetails(sample_id=sample_id, annotation_label_id=label_a.annotation_label_id),
-            AnnotationDetails(sample_id=sample_id, annotation_label_id=label_b.annotation_label_id),
-        ],
-    )
-
-    evaluation_annotation_metric_resolver.create_many(
-        session=db_session,
-        records=[
-            EvaluationAnnotationMetricCreate(
-                evaluation_run_id=run.id,
+        run_id=run.id,
+        pair_metric_stubs=[
+            TruePositiveMetricStub(
                 sample_id=image.sample_id,
-                pred_annotation_id=pred_a.sample_id,
-                gt_annotation_id=gt_a.sample_id,
-                metric_name="iou",
-                value=0.9,
+                metrics={"iou": 0.9},
+                gt_annotation_label_id=label_a.annotation_label_id,
+                pred_annotation_label_id=label_a.annotation_label_id,
             ),
-            EvaluationAnnotationMetricCreate(
-                evaluation_run_id=run.id,
+            FalsePositiveMetricStub(
                 sample_id=image.sample_id,
-                pred_annotation_id=pred_b.sample_id,
+                pred_annotation_label_id=label_b.annotation_label_id,
             ),
         ],
     )
@@ -282,11 +239,10 @@ def test_get_confusion_matrix__no_fp_or_fn_keeps_synthetic_axes(
     create_annotation_metrics(
         session=db_session,
         run_id=run.id,
-        true_positive_metric_stubs=[
+        pair_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=image.sample_id,
-                metric_name="iou",
-                value=0.9,
+                metrics={"iou": 0.9},
                 gt_annotation_label_id=label_a.annotation_label_id,
             )
         ],
@@ -302,6 +258,44 @@ def test_get_confusion_matrix__no_fp_or_fn_keeps_synthetic_axes(
     assert matrix.counts == [
         [1, 0],
         [0, 0],
+    ]
+
+
+def test_get_confusion_matrix__counts_metricless_false_positive_stub(
+    db_session: Session,
+) -> None:
+    dataset = create_collection(session=db_session)
+    run = evaluation_sample_metric_helpers.create_run(
+        session=db_session,
+        collection_id=dataset.collection_id,
+    )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
+    label_a = create_annotation_label(
+        session=db_session,
+        root_collection_id=dataset.collection_id,
+        label_name="class_a",
+    )
+    create_annotation_metrics(
+        session=db_session,
+        run_id=run.id,
+        pair_metric_stubs=[
+            FalsePositiveMetricStub(
+                sample_id=image.sample_id,
+                pred_annotation_label_id=label_a.annotation_label_id,
+            )
+        ],
+    )
+
+    matrix = evaluation_annotation_metric_resolver.get_confusion_matrix(
+        session=db_session,
+        evaluation_run_id=run.id,
+    )
+
+    assert matrix.row_labels == ["class_a", NO_GROUND_TRUTH_ROW_LABEL]
+    assert matrix.col_labels == ["class_a", NO_PREDICTION_COL_LABEL]
+    assert matrix.counts == [
+        [0, 0],
+        [1, 0],
     ]
 
 

@@ -4,6 +4,7 @@ from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_co
     count_video_frame_annotations_by_video_collection,
 )
 from lightly_studio.resolvers.video_resolver.create_many import create_many
+from lightly_studio.resolvers.video_resolver.delete_with_frames import delete_with_frames
 from lightly_studio.resolvers.video_resolver.get_adjacent_videos import get_adjacent_videos
 from lightly_studio.resolvers.video_resolver.get_all_by_collection_id import (
     get_all_by_collection_id,
@@ -15,6 +16,7 @@ from lightly_studio.resolvers.video_resolver.get_sample_ids import (
     build_sample_ids_query,
     get_sample_ids,
 )
+from lightly_studio.resolvers.video_resolver.get_sample_ids_by_stems import get_sample_ids_by_stems
 from lightly_studio.resolvers.video_resolver.get_table_fields_bounds import (
     get_table_fields_bounds,
 )
@@ -24,12 +26,14 @@ __all__ = [
     "build_sample_ids_query",
     "count_video_frame_annotations_by_video_collection",
     "create_many",
+    "delete_with_frames",
     "get_adjacent_videos",
     "get_all_by_collection_id",
     "get_all_by_collection_id_with_frames",
     "get_by_id",
     "get_many_by_id",
     "get_sample_ids",
+    "get_sample_ids_by_stems",
     "get_table_fields_bounds",
     "get_view_by_id",
 ]

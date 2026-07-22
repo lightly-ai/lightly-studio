@@ -11,15 +11,24 @@
         "lint": "prettier --check . && eslint .",
         "format": "prettier --write --cache --log-level warn . && eslint . --fix",
         "static-checks": "npm run lint && npm run check",
-        "test": "vitest run"
+        "test": "vitest run",
+        "guardrails": "tsx src/guardrails/cli.ts",
+        "list-guardrails": "tsx src/guardrails/cli.ts --list",
+        "guardrails-ci": "tsx src/guardrails/ci.ts",
+        "bot-ci": "tsx src/bot/ci.ts"
+    },
+    "dependencies": {
+        "@actions/github": "^6.0.1",
+        "simple-git": "^3.36.0"
     },
     "devDependencies": {
         "@eslint/js": "^9.19.0",
-        "@types/node": "^24.0.0",
+        "@types/node": "^24.13.2",
         "eslint": "^9.19.0",
         "eslint-config-prettier": "^9.1.0",
         "globals": "^15.14.0",
         "prettier": "^3.4.2",
+        "tsx": "^4.22.5",
         "typescript": "^5.7.3",
         "typescript-eslint": "^8.22.0",
         "vitest": "^3.0.4"

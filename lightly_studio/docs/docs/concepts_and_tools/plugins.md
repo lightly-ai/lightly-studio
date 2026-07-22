@@ -1,3 +1,8 @@
+---
+title: "Plugins: Extend LightlyStudio's Workflows"
+description: Extend LightlyStudio with plugins for auto-labeling, SAM3 image segmentation, and video bounding box propagation, or build your own custom plugin.
+---
+
 # Plugins
 
 LightlyStudio offers the possibility to extend its functionality by using plugins. Users can define their own plugins or use pre-defined ones.
@@ -74,19 +79,13 @@ Ready-to-use plugins are available in the [`lightly-studio-plugins`](https://git
 
 Replace `<plugin_name>` with the folder name of the plugin you want to install:
 
-=== "uv"
-    ```bash
-    uv pip install "git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdirectory=plugins/<plugin_name>/"
-    ```
+```bash
+pip install "git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdirectory=plugins/<plugin_name>/"
+```
 
-=== "pip"
-    ```bash
-    pip install "git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdirectory=plugins/<plugin_name>/"
-    ```
+Once installed, the plugin is auto-registered and will appear in the GUI automatically.
 
-Once installed, register the plugin through the Python API and it will appear in the GUI automatically.
-
-To remove a plugin, uninstall its package with `uv pip uninstall` or `pip uninstall`,
+To remove a plugin, uninstall its package with `pip uninstall`,
 using the package name defined in the plugin's `pyproject.toml` (typically matching the
 plugin folder name).
 

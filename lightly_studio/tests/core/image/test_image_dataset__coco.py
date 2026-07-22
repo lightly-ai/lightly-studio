@@ -8,8 +8,11 @@ from typing import Any
 import pytest
 from labelformat.types import ParseError
 from PIL import Image
+from pytest_mock import MockerFixture
 
 from lightly_studio import ImageDataset
+from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
+from lightly_studio.core.image import add_images
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
 from lightly_studio.models.collection import SampleType
@@ -362,6 +365,7 @@ class TestDataset:
         annotations_path.write_text(json.dumps(get_coco_annotation_dict_valid()))
         images_path = tmp_path / "images"
         images_path.mkdir()
+        # The annotations reference image1.jpg and image2.jpg, but only image1.jpg is on disk.
         _create_sample_images([images_path / "image1.jpg"])
 
         dataset = ImageDataset.create(name="test_dataset")
@@ -370,9 +374,9 @@ class TestDataset:
             images_path=images_path,
             annotation_type=AnnotationType.OBJECT_DETECTION,
         )
-        assert len(list(dataset)) == 2
+        # The missing image2.jpg is recorded as missing and skipped; only image1.jpg is added.
+        assert len(list(dataset)) == 1
 
-    # TODO(Jonas 9/25): This case should be revisited in the future --> should warn and assert to 0
     def test_add_samples_from_coco__non_dir(
         self,
         patch_collection: None,  # noqa: ARG002
@@ -383,12 +387,15 @@ class TestDataset:
         images_path = tmp_path / "images"
 
         dataset = ImageDataset.create(name="test_dataset")
-        dataset.add_samples_from_coco(
-            annotations_json=annotations_path,
-            images_path=images_path,
-            annotation_type=AnnotationType.OBJECT_DETECTION,
-        )
-        assert len(list(dataset)) == 2
+        # The images directory does not exist, so every referenced file is missing and the
+        # run raises loudly instead of silently adding nothing.
+        with pytest.raises(AllInputFilesFailedError):
+            dataset.add_samples_from_coco(
+                annotations_json=annotations_path,
+                images_path=images_path,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+            )
+        assert len(list(dataset)) == 0
 
     def test_add_samples_from_coco__annotations_json_no_file(
         self,
@@ -576,9 +583,13 @@ class TestDataset:
         self,
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
+        mocker: MockerFixture,
     ) -> None:
         annotations_path = tmp_path / "annotations.json"
         annotations_path.write_text(json.dumps(get_coco_annotation_dict_valid()))
+        # This test covers relative-path normalization, not file existence: the referenced
+        # files do not exist on disk, so treat every file as present.
+        mocker.patch.object(add_images, "_file_exists", return_value=True)
 
         dataset = ImageDataset.create(name="test_dataset")
         dataset.add_samples_from_coco(

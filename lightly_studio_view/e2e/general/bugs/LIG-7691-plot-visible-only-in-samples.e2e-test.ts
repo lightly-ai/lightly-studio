@@ -1,6 +1,6 @@
 import { expect, test } from '../../utils';
 
-test('Plot is visible only on samples page', async ({ samplesPage, page }) => {
+test('Plot is available on samples and annotations pages', async ({ samplesPage, page }) => {
     await samplesPage.goto();
 
     const togglePlotButton = page.getByTestId('side-panel-tabs-embed');
@@ -38,6 +38,7 @@ test('Plot is visible only on samples page', async ({ samplesPage, page }) => {
 
     await expect(page.getByTestId('annotations-grid')).toBeVisible({ timeout: 10000 });
 
-    await expect(page.getByTestId('side-panel-tabs-embed')).not.toBeVisible();
-    await expect(page.getByTestId('plot-panel')).not.toBeVisible();
+    await expect(togglePlotButton).toBeVisible();
+    await togglePlotButton.click();
+    await expect(plotPanel).toBeVisible();
 });

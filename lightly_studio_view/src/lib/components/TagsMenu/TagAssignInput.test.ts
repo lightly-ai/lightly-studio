@@ -3,33 +3,34 @@ import { describe, expect, it, vi } from 'vitest';
 import TagAssignInput from './TagAssignInput.svelte';
 import type { TagView } from '$lib/services/types';
 
-const options: TagView[] = [
-    {
-        tag_id: 'tag-1',
-        name: 'Vehicle',
-        kind: 'sample',
-        created_at: new Date('2024-01-01T00:00:00.000Z'),
-        updated_at: new Date('2024-01-01T00:00:00.000Z')
-    },
-    {
-        tag_id: 'tag-2',
-        name: 'Person',
-        kind: 'sample',
-        created_at: new Date('2024-01-02T00:00:00.000Z'),
-        updated_at: new Date('2024-01-02T00:00:00.000Z')
-    }
-];
+const defaultProps = {
+    options: [
+        {
+            tag_id: 'tag-1',
+            name: 'Vehicle',
+            kind: 'sample' as const,
+            created_at: new Date('2024-01-01T00:00:00.000Z'),
+            updated_at: new Date('2024-01-01T00:00:00.000Z')
+        },
+        {
+            tag_id: 'tag-2',
+            name: 'Person',
+            kind: 'sample' as const,
+            created_at: new Date('2024-01-02T00:00:00.000Z'),
+            updated_at: new Date('2024-01-02T00:00:00.000Z')
+        }
+    ] satisfies TagView[],
+    hasSelection: true,
+    busy: false,
+    onSelect: vi.fn()
+};
 
 describe('TagAssignInput', () => {
     it('filters options and selects an existing tag from the dropdown', async () => {
         const onSelect = vi.fn();
 
         render(TagAssignInput, {
-            props: {
-                options,
-                busy: false,
-                onSelect
-            }
+            props: { ...defaultProps, onSelect }
         });
 
         const input = screen.getByPlaceholderText('Assign tag to selection');
@@ -47,11 +48,7 @@ describe('TagAssignInput', () => {
         const onSelect = vi.fn();
 
         render(TagAssignInput, {
-            props: {
-                options,
-                busy: false,
-                onSelect
-            }
+            props: { ...defaultProps, onSelect }
         });
 
         const input = screen.getByPlaceholderText('Assign tag to selection');
@@ -66,11 +63,7 @@ describe('TagAssignInput', () => {
 
     it('clears the query and closes the dropdown on Escape', async () => {
         render(TagAssignInput, {
-            props: {
-                options,
-                busy: false,
-                onSelect: vi.fn()
-            }
+            props: { ...defaultProps }
         });
 
         const input = screen.getByPlaceholderText('Assign tag to selection');

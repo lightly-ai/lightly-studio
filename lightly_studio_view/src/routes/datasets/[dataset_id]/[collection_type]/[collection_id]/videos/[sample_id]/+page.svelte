@@ -16,7 +16,11 @@
     $effect(() => {
         loadById(data.params.sample_id);
     });
-    const frameNumber = data.frameNumber ? parseInt(data.frameNumber) : undefined;
+    const frameNumber = $derived(
+        data.frameNumber !== undefined
+            ? ((n) => (Number.isNaN(n) ? undefined : n))(parseInt(data.frameNumber, 10))
+            : undefined
+    );
     const { collection } = useCollectionWithChildren({
         collectionId: data.params.dataset_id
     });
@@ -35,20 +39,22 @@
                     />
                 </LayoutCard>
             </div>
-            <div class="grow">
-                <VideoDetails
-                    video={$video}
-                    onVideoUpdate={$refetch}
-                    datasetId={data.params.dataset_id}
-                    {frameNumber}
-                />
+            <div class="min-h-0 flex-1 overflow-hidden">
+                {#key `${$video.sample_id}:${frameNumber ?? ''}`}
+                    <VideoDetails
+                        video={$video}
+                        onVideoUpdate={$refetch}
+                        datasetId={data.params.dataset_id}
+                        {frameNumber}
+                    />
+                {/key}
             </div>
         </div>
     {:else}
-        <LayoutCard className="p-4">
-            <div class="flex h-full w-full flex-col space-y-4">
+        <LayoutCard className="flex h-full min-h-0 flex-col overflow-hidden p-4">
+            <div class="flex h-full min-h-0 w-full flex-col gap-4">
                 {#if collection.data}
-                    <div class="flex w-full items-center">
+                    <div class="flex w-full shrink-0 items-center">
                         <VideoDetailsBreadcrumb
                             rootCollection={collection.data}
                             datasetId={data.params.dataset_id}
@@ -56,15 +62,17 @@
                             sampleId={data.params.sample_id}
                         />
                     </div>
-                    <Separator class="mb-4 bg-border-hard" />
+                    <Separator class="shrink-0 bg-border-hard" />
                 {/if}
-                {#key $video.sample_id}
-                    <VideoDetails
-                        video={$video}
-                        onVideoUpdate={$refetch}
-                        datasetId={data.params.dataset_id}
-                        {frameNumber}
-                    />
+                {#key `${$video.sample_id}:${frameNumber ?? ''}`}
+                    <div class="min-h-0 flex-1 overflow-hidden">
+                        <VideoDetails
+                            video={$video}
+                            onVideoUpdate={$refetch}
+                            datasetId={data.params.dataset_id}
+                            {frameNumber}
+                        />
+                    </div>
                 {/key}
             </div>
         </LayoutCard>

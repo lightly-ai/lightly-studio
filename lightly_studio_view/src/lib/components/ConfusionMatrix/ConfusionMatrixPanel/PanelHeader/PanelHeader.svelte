@@ -5,11 +5,17 @@
     import type { ClassSetConfig, ColorConfig } from '../../ClassSetDialog/types';
 
     interface Props {
+        /** Active class-set view (top-N vs manual, sort order). */
         config: ClassSetConfig;
+        /** Cell coloring settings (log/linear scale and intensity). */
         color: ColorConfig;
+        /** Total number of classes in the matrix. */
         realClassCount: number;
+        /** Number of classes currently shown (rest aggregated as "(other)"). */
         visibleClassCount: number;
+        /** Opens the class-filter and color configuration dialog. */
         onConfigure: () => void;
+        /** Opens the expanded (full-screen) matrix view. */
         onExpand: () => void;
     }
 

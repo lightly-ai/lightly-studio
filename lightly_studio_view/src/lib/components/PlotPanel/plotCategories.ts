@@ -8,3 +8,7 @@ export const INCLUDED_BY_FILTERS_CATEGORY = 2;
 export const EXCLUDED_BY_FILTERS_LABEL = 'Excluded by filters';
 export const INCLUDED_BY_FILTERS_LABEL = 'Included by filters';
 export const NO_CATEGORY_LABEL = 'No category';
+
+export function isUnselectableCategory(category: number): boolean {
+    return category === EXCLUDED_BY_FILTERS_CATEGORY || category === HIDDEN_CATEGORY;
+}

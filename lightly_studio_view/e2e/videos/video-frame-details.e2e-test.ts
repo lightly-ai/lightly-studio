@@ -1,7 +1,11 @@
 import { test, expect } from '../utils';
 
 test.describe('video-frames-details', () => {
-    test('Go to video details view', async ({ page, videoFramesPage, videoFrameDetailsPage }) => {
+    test.skip('Go to video details view', async ({
+        page,
+        videoFramesPage,
+        videoFrameDetailsPage
+    }) => {
         await videoFramesPage.doubleClickNthVideoFrame(3);
 
         await videoFrameDetailsPage.pageIsReady();

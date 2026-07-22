@@ -53,6 +53,28 @@ def get_all_by_collection_id(session: Session, collection_id: UUID) -> list[Embe
     return list(embedding_models)
 
 
+def get_default_by_collection_id(
+    session: Session, collection_id: UUID
+) -> EmbeddingModelTable | None:
+    """Return the collection's default embedding model, or None if it has none.
+
+    The default is the oldest model (``created_at`` ascending), which makes the choice
+    deterministic when a collection has multiple embedding models. Endpoints that resolve
+    a selection against a cached 2D projection (embeddings2d, embedding regions) must all
+    agree on this same model so the projections line up. ``embedding_model_id`` breaks ties
+    when models share the same ``created_at`` (e.g. bulk-created in one transaction).
+    """
+    return session.exec(
+        select(EmbeddingModelTable)
+        .where(EmbeddingModelTable.collection_id == collection_id)
+        .order_by(
+            col(EmbeddingModelTable.created_at).asc(),
+            col(EmbeddingModelTable.embedding_model_id).asc(),
+        )
+        .limit(1)
+    ).first()
+
+
 def get_by_id(session: Session, embedding_model_id: UUID) -> EmbeddingModelTable | None:
     """Retrieve a single embedding model by ID."""
     return session.exec(

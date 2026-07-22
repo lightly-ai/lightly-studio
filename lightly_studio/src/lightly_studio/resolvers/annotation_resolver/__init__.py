@@ -50,6 +50,9 @@ from lightly_studio.resolvers.annotation_resolver.update_bounding_box import (
 from lightly_studio.resolvers.annotation_resolver.update_segmentation_mask import (
     update_segmentation_mask,
 )
+from lightly_studio.resolvers.annotation_resolver.update_temporal_span import (
+    update_temporal_span,
+)
 
 __all__ = [
     "AnnotationCrop",
@@ -73,4 +76,5 @@ __all__ = [
     "update_annotation_label",
     "update_bounding_box",
     "update_segmentation_mask",
+    "update_temporal_span",
 ]

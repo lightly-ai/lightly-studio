@@ -12,7 +12,7 @@ from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
 
 class TestVideoDatasetExport:
-    def test_to_youtube_vis(
+    def test_to_youtube_vis_segmentation_mask(
         self,
         tmp_path: Path,
         patch_collection: None,  # noqa: ARG002

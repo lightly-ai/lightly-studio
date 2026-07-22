@@ -7,6 +7,7 @@ export { useFrames } from '$lib/hooks/useFrames/useFrames.svelte';
 export { useTags } from '$lib/hooks/useTags/useTags';
 export { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds';
 export { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
+export { useNumericMetadataDistribution } from '$lib/hooks/useNumericMetadataDistribution/useNumericMetadataDistribution';
 export { useFramesFilter } from '$lib/hooks/useFramesFilter/useFramesFilter';
 export { useCaptions } from '$lib/hooks/useCaptions/useCaptions';
 export { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
@@ -43,3 +44,7 @@ export { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDi
 export { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
 export { useSettings } from '$lib/hooks/useSettings';
 export { useAnnotationClassVisibility } from '$lib/hooks/useAnnotationClassVisibility/useAnnotationClassVisibility';
+export {
+    useImageAnnotationCounts,
+    useImageAnnotationCountsQueryKey
+} from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
