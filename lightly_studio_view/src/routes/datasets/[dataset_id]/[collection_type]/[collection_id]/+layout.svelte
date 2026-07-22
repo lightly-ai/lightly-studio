@@ -615,6 +615,20 @@
     }));
     const categoricalMetadataDistributions = $derived(categoricalMetadataQuery.data ?? {});
 
+    // Second categorical query with the full sidebar filter applied.  Its counts
+    // are passed as `filteredBuckets` so each bar can show a grey background at
+    // the unfiltered height with a coloured foreground at the filtered height.
+    const categoricalMetadataFilteredQuery = useCategoricalMetadataDistribution(() => ({
+        collectionId,
+        filter: imageAnnotationCountsFilter,
+        enabled: distributionPanelVisible
+    }));
+    // Keep undefined (not {}) while loading so DatasetDistributionPanel defers
+    // rendering the background bars until the filtered data is ready.
+    const categoricalMetadataFilteredDistributions = $derived(
+        categoricalMetadataFilteredQuery.data
+    );
+
     const metadataDistributionSource = $derived.by<DistributionSource | null>(() => {
         const numericKeys = Object.keys(metadataDistributions);
         const categoricalKeys = ($metadataInfo ?? [])
@@ -639,6 +653,9 @@
                     label: key,
                     categorical: {
                         buckets: categoricalMetadataDistributions[key] ?? [],
+                        // undefined until the filtered query has returned so the
+                        // distribution panel waits before showing background bars.
+                        filteredBuckets: categoricalMetadataFilteredDistributions?.[key],
                         selectedValues: $categoricalMetadataValues[key] ?? [],
                         loading: categoricalMetadataQuery.isFetching,
                         error: categoricalMetadataQuery.error?.message
