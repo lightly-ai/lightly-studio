@@ -11,7 +11,7 @@ import {
 import type { SortExpr } from '$lib/hooks/useImagesInfinite/types';
 
 interface UseOrderByParams {
-    collectionId: string;
+    collectionId: () => string;
     datasetId: string;
 }
 
@@ -106,7 +106,7 @@ export function useOrderBy({ collectionId, datasetId }: UseOrderByParams): UseOr
                 }
             ]);
             trackEvent('grid_sorted', {
-                collection_id: collectionId,
+                collection_id: collectionId(),
                 sort_source: 'evaluation_metric',
                 field_name: `${field.evaluation_run_name}.${field.metric_name}`,
                 direction: get(selectedDirection)
@@ -121,7 +121,7 @@ export function useOrderBy({ collectionId, datasetId }: UseOrderByParams): UseOr
                 }
             ]);
             trackEvent('grid_sorted', {
-                collection_id: collectionId,
+                collection_id: collectionId(),
                 sort_source: sortSource(field),
                 field_name: field.value,
                 direction: get(selectedDirection)
@@ -154,7 +154,7 @@ export function useOrderBy({ collectionId, datasetId }: UseOrderByParams): UseOr
             ]);
         }
         trackEvent('grid_sorted', {
-            collection_id: collectionId,
+            collection_id: collectionId(),
             sort_source:
                 current.source === 'evaluation_metric'
                     ? 'evaluation_metric'
