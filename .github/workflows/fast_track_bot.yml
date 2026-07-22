@@ -1,0 +1,79 @@
+name: Fast Track Bot
+
+# Acts only after the read-only guardrail workflow completes. workflow_run uses
+# base-repository context, so App credentials are never exposed to PR code.
+on:
+  workflow_run:
+    workflows: ["Fast Track Guardrails"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  approve:
+    name: Fast Track Approval
+    # Scoped to the job, not the workflow: a skipped run (an unrelated title/body
+    # edit) must not cancel a bot that is revoking an approval. Only real runs for
+    # the same branch supersede each other.
+    concurrency:
+      group: >-
+        ${{ github.workflow }}-${{ github.event.workflow_run.head_repository.full_name }}-${{
+        github.event.workflow_run.head_branch }}
+      cancel-in-progress: true
+    # A skipped guardrail run means a title/body edit left the code and base
+    # unchanged, so the existing approval still holds and there is nothing to
+    # re-judge. Every other outcome — failure, timeout, or a cancelled run with no
+    # fresh verdict — reaches the bot, which fails closed and revokes.
+    if: github.event.workflow_run.conclusion != 'skipped'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mint App Token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        # Only the permissions the bot uses: read the verdict artifact, write
+        # the review and status comment.
+        with:
+          app-id: ${{ secrets.FAST_TRACK_APP_ID }}
+          private-key: ${{ secrets.FAST_TRACK_APP_PRIVATE_KEY }}
+          permission-actions: read
+          permission-contents: read
+          permission-pull-requests: write
+
+      # No ref: checkout the trusted default branch, never the PR head. Checkout
+      # must precede artifact download because it cleans the working tree.
+      - name: Checkout Trusted Bot Code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set Up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: fast_track/.nvmrc
+          cache: npm
+          cache-dependency-path: fast_track/package-lock.json
+
+      - name: Install Dependencies
+        working-directory: fast_track
+        run: npm ci
+
+      - name: Download Verdict
+        id: download
+        # Tolerate a missing verdict so the bot still runs and revokes, fail closed.
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          name: fast-track-verdict
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ steps.app-token.outputs.token }}
+          path: fast_track/verdict
+
+      - name: Run Fast Track Bot
+        working-directory: fast_track
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          GUARDRAIL_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+        run: npm run bot-ci

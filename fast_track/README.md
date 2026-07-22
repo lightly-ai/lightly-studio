@@ -6,15 +6,14 @@ thin GitHub workflows launch it.
 
 Runs via [`tsx`](https://tsx.is/) — no build step, no compiled artifact.
 
-> **Status:** the judging half is live. The verdict contract, the guardrail
-> framework (context types, an always-pass dummy guardrail, the registry +
-> selector), the runner, and both context providers (local git + CI API) are in
-> place with unit tests. The **Fast Track Guardrails** workflow
-> (`.github/workflows/fast_track_guardrails.yml`) runs on every non-draft PR: its
-> CI entry (`src/guardrails/ci.ts`) judges the PR via the read-only GitHub API
-> and uploads a `verdict.json` artifact. Locally, `make run-guardrails` runs the
-> guardrails against your branch's committed changes. The bot (which reads the
-> verdict and approves) lands in subsequent, independently reviewable PRs.
+The **Fast Track Guardrails** workflow judges every non-draft PR with a read-only
+token and uploads `verdict.json`. The **Fast Track Bot** workflow then runs the
+trusted default-branch bot code with a short-lived App token. It validates the
+artifact against the current PR head and base, refuses fork PRs, and idempotently
+maintains one approval and one status comment. A crashed workflow or missing,
+invalid, or stale verdict revokes the bot approval. Add the `no-fast-track`
+label to opt out and defer to a human. Locally, `make run-guardrails` judges
+committed changes.
 
 ## Local commands
 

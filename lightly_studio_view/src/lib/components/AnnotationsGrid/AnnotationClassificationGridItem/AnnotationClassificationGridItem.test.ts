@@ -1,7 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import '@testing-library/jest-dom';
 import { tick } from 'svelte';
+import { type Writable } from 'svelte/store';
 import {
     SampleType,
     AnnotationType,
@@ -12,9 +13,29 @@ import {
 } from '$lib/api/lightly_studio_local';
 import AnnotationClassificationGridItem from './AnnotationClassificationGridItem.svelte';
 
-vi.mock('$lib/components/SampleClassificationPills/SampleClassificationPills.svelte', async () => {
-    const module = await import('./SampleClassificationPills.mock.svelte');
-    return { default: module.default };
+const mocks = vi.hoisted(() => ({
+    selectedCollectionIds: null as unknown as Writable<string[]>
+}));
+
+vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter', async () => {
+    const { writable } = await import('svelte/store');
+    mocks.selectedCollectionIds = writable<string[]>([]);
+    return {
+        useAnnotationCollectionsFilter: () => ({
+            selectedCollectionIds: mocks.selectedCollectionIds,
+            collectionIdToName: writable<Record<string, string>>({})
+        })
+    };
+});
+
+vi.mock('$lib/hooks/useSettings', async () => {
+    const { writable } = await import('svelte/store');
+    return {
+        useSettings: vi.fn(() => ({
+            gridViewThumbnailQualityStore: writable('raw'),
+            enforceColoringByClassStore: writable(false)
+        }))
+    };
 });
 
 vi.mock('$lib/utils', async (importOriginal) => {
@@ -50,7 +71,6 @@ function buildAnnotation(
 const defaultProps = {
     containerWidth: 200,
     containerHeight: 150,
-    showLabel: true,
     cachedCollectionVersion: 'v1'
 };
 
@@ -61,7 +81,11 @@ function renderItem(annotation: AnnotationWithPayloadView, props: Record<string,
 }
 
 describe('AnnotationClassificationGridItem', () => {
-    it('renders thumbnail div and SampleClassificationPills for an image annotation', async () => {
+    beforeEach(() => {
+        mocks.selectedCollectionIds.set([]);
+    });
+
+    it('renders thumbnail div and classification pill for an image annotation', async () => {
         const { container } = renderItem(buildAnnotation());
 
         await tick();
@@ -69,7 +93,7 @@ describe('AnnotationClassificationGridItem', () => {
         const thumbnail = container.firstElementChild as HTMLElement;
         expect(thumbnail).toBeInTheDocument();
         expect(thumbnail.style.backgroundImage).toContain('img-1');
-        expect(screen.getByTestId('mock-classification-pills')).toBeInTheDocument();
+        expect(screen.getAllByText('cat').length).toBeGreaterThan(0);
     });
 
     it('renders thumbnail using frame URL for a video frame annotation', async () => {
@@ -94,21 +118,37 @@ describe('AnnotationClassificationGridItem', () => {
         expect(container.firstElementChild).toHaveAttribute('aria-selected', 'true');
     });
 
-    it('hides SampleClassificationPills when showLabel is false', () => {
-        renderItem(buildAnnotation(), { showLabel: false });
-
-        expect(screen.queryByTestId('mock-classification-pills')).not.toBeInTheDocument();
-    });
-
-    it('passes only the single annotation to SampleClassificationPills', async () => {
+    it('always renders classification pill regardless of label visibility settings', async () => {
         renderItem(buildAnnotation());
 
         await tick();
 
-        const pills = screen.getByTestId('mock-classification-pills');
+        // The badge is the primary visual indicator for classification — it shows unconditionally,
+        // unlike OD where the bounding box can be shown without the text label.
+        expect(screen.getAllByText('cat').length).toBeGreaterThan(0);
+    });
+
+    it('passes only the single annotation label to SampleClassificationPills', async () => {
+        renderItem(buildAnnotation());
+
+        await tick();
+
         // Exactly one annotation is passed — not all sibling labels for the parent sample.
-        expect(pills).toHaveAttribute('data-annotation-count', '1');
-        expect(pills).toHaveAttribute('data-annotation-id', 'ann-1');
+        // SampleClassificationPills renders two pill DOM elements (visible + hidden measurement
+        // overlay) when pills are present; both should carry the single label 'cat'.
+        expect(screen.getAllByText('cat')).toHaveLength(2);
+    });
+
+    it('shows classification pill even when the active source filter excludes the annotation collection', async () => {
+        // The hook reports a non-matching collection; without the selectedCollectionIds=[] override
+        // on the component, SampleClassificationPills would filter out 'col-1' and render nothing.
+        mocks.selectedCollectionIds.set(['other-col']);
+
+        renderItem(buildAnnotation());
+
+        await tick();
+
+        expect(screen.getAllByText('cat').length).toBeGreaterThan(0);
     });
 
     it('calls onCropWindowChange with a full-image CropWindow (windowX/Y=0) once URL is available', async () => {

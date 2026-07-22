@@ -36,6 +36,8 @@ class AnnotationCreateInput(BaseModel):
     width: int | None = None
     height: int | None = None
     segmentation_mask: list[int] | None = None
+    start_time_s: float | None = None
+    end_time_s: float | None = None
 
 
 @create_annotation_router.post(

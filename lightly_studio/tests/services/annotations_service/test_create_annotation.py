@@ -164,3 +164,26 @@ def test_create_annotation_with_collection_name(
     assert created_collection is not None
     assert created_collection.name == collection_name
     assert created_collection.parent_collection_id == collection.collection_id
+
+
+def test_create_annotation_classification_with_temporal_span(
+    db_session: Session,
+    collection: CollectionTable,
+    samples: list[ImageTable],
+    annotation_labels: list[AnnotationLabelTable],
+) -> None:
+    """Test to create a classification annotation carrying a temporal span."""
+    annotation = AnnotationCreateParams(
+        annotation_label_id=annotation_labels[0].annotation_label_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+        collection_id=collection.collection_id,
+        parent_sample_id=samples[0].sample_id,
+        start_time_s=2.5,
+        end_time_s=8.0,
+    )
+    result = create_annotation(session=db_session, annotation=annotation)
+
+    assert isinstance(result, AnnotationBaseTable)
+    assert result.temporal_span_details is not None
+    assert result.temporal_span_details.start_time_s == 2.5
+    assert result.temporal_span_details.end_time_s == 8.0

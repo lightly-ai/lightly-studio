@@ -218,6 +218,8 @@ class AnnotationUpdateInput(BaseModel):
     label_name: str | None = None
     bounding_box: BoundingBoxCoordinates | None = None
     segmentation_mask: list[int] | None = None
+    start_time_s: float | None = None
+    end_time_s: float | None = None
 
 
 @annotations_router.put(
@@ -241,6 +243,8 @@ def update_annotations(
                 label_name=annotation_update_input.label_name,
                 bounding_box=annotation_update_input.bounding_box,
                 segmentation_mask=annotation_update_input.segmentation_mask,
+                start_time_s=annotation_update_input.start_time_s,
+                end_time_s=annotation_update_input.end_time_s,
             )
             for annotation_update_input in annotation_update_inputs
         ],

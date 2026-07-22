@@ -4,6 +4,7 @@
      * buttons. Full width so timeline overlays can share its coordinate system.
      * Owns no playback state; calls back on user intent (see {@link VideoPlayer}).
      */
+    import type { Snippet } from 'svelte';
     import { Play, Pause, Volume2, VolumeX, Maximize, Minimize } from '@lucide/svelte';
     import { cn } from '$lib/utils/shadcn.js';
     import { formatTime, clampPercent, timeFromClientX } from './VideoControls.helpers';
@@ -18,6 +19,12 @@
         onSeek: (timeS: number) => void;
         onToggleMute: () => void;
         onToggleFullscreen: () => void;
+        /**
+         * Optional content (e.g. an event bar) rendered below the transport
+         * buttons. It sits in the same padded, full-width column as the scrubber,
+         * so overlays share the scrubber's coordinate system and line up exactly.
+         */
+        children?: Snippet;
         class?: string;
     }
 
@@ -31,6 +38,7 @@
         onSeek,
         onToggleMute,
         onToggleFullscreen,
+        children,
         class: className
     }: VideoControlsProps = $props();
 
@@ -162,4 +170,5 @@
             {/if}
         </button>
     </div>
+    {@render children?.()}
 </div>

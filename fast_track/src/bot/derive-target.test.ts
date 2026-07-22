@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { Octokit } from '../guardrails/context/types';
+import type { Octokit } from '../shared/octokit';
 import { deriveTarget, refreshTarget, type BotTarget } from './derive-target';
 
 const HEAD_SHA = 'abc123';
