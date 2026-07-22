@@ -40,6 +40,7 @@ export { useSegmentationMaskPreview } from '$lib/hooks/useSegmentationMaskPrevie
 export { useCreateSampling } from '$lib/hooks/useCreateSampling/useCreateSampling';
 export { useColorPicker } from '$lib/hooks/useColorPicker/useColorPicker.svelte';
 export { useSubmitCombinationSelection } from '$lib/hooks/useSubmitCombinationSelection/useSubmitCombinationSelection';
+export { usePostHog } from '$lib/hooks/usePostHog';
 export { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
 export { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
 export { useSettings } from '$lib/hooks/useSettings';

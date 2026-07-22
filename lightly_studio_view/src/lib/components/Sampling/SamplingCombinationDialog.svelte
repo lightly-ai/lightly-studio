@@ -1,6 +1,7 @@
 <script lang="ts">
     import { page } from '$app/state';
     import { Info } from '@lucide/svelte';
+    import { usePostHog, useGlobalStorage } from '$lib/hooks';
     import AddStrategyButton from '$lib/components/Sampling/AddStrategyButton.svelte';
     import StrategyCard from '$lib/components/Sampling/StrategyCard/StrategyCard.svelte';
     import FieldTooltip from '$lib/components/FieldTooltip/FieldTooltip.svelte';
@@ -21,6 +22,8 @@
             page.data.collection?.sample_type === 'video_frame'
     );
 
+    const { trackEvent } = usePostHog();
+    const { textEmbedding } = useGlobalStorage();
     const { isSamplingDialogOpen, openSamplingDialog, closeSamplingDialog } = useSamplingDialog();
 
     const {
@@ -34,6 +37,22 @@
     } = useStrategyBuilder();
 
     const strategyOptions = useStrategyOptions(() => collectionId);
+
+    function handleOpenDialog() {
+        openSamplingDialog({
+            collection_id: collectionId,
+            has_active_search: $textEmbedding !== undefined
+        });
+    }
+
+    function handleAddStrategy(type: Parameters<typeof addStrategy>[0]) {
+        trackEvent('sampling_strategy_added', {
+            collection_id: collectionId,
+            strategy_type: type,
+            strategy_count: $instances.length + 1
+        });
+        addStrategy(type);
+    }
 
     // TODO(Leonardo, 06/2026): Update once there are multiple embedding models - currently only one diversity
     // strategy is supported since all samples share a single embedding space.
@@ -66,7 +85,7 @@
 
 <Dialog.Root
     open={$isSamplingDialogOpen}
-    onOpenChange={(open) => (open ? openSamplingDialog() : closeSamplingDialog())}
+    onOpenChange={(open) => (open ? handleOpenDialog() : closeSamplingDialog())}
 >
     <Dialog.Portal>
         <Dialog.Overlay />
@@ -102,7 +121,7 @@
                                 classBalancingDisabledReason={!strategyOptions.hasAnnotationLabels
                                     ? 'No annotation labels found. Add annotations to your samples to enable this strategy.'
                                     : undefined}
-                                onAdd={addStrategy}
+                                onAdd={handleAddStrategy}
                             />
                         </div>
 

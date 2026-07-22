@@ -4,6 +4,7 @@ import { get, readonly, writable, type Readable } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import type { TagView } from '$lib/services/types';
 import type { StrategyInstance } from '$lib/hooks/useStrategyBuilder';
+import { usePostHog } from '$lib/hooks';
 import { computeStrategyMetadata } from './computeStrategyMetadata';
 import { toApiStrategy } from './strategyApiMapping';
 
@@ -55,6 +56,7 @@ async function handleSelectionSuccess(
 }
 
 export function useSubmitCombinationSelection(params: UseSubmitCombinationSelectionParams) {
+    const { trackEvent } = usePostHog();
     const _isSubmitting = writable(false);
     const _loadingMessage = writable('');
 
@@ -91,6 +93,17 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
                 }
             });
 
+            trackEvent('sampling_triggered', {
+                collection_id: collectionId,
+                strategies: instances.map((i) => i.type),
+                n_samples: nSamplesToSelect,
+                has_active_filter: selectionFilter != null,
+                success: !response.error,
+                error_message: response.error
+                    ? ((response.error as SelectionError).error ?? null)
+                    : null
+            });
+
             if (response.error) {
                 toast.error(
                     (response.error as SelectionError).error ?? 'Failed to create selection'
@@ -101,6 +114,14 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
             await handleSelectionSuccess(selectionResultTagName, params);
             return true;
         } catch (error) {
+            trackEvent('sampling_triggered', {
+                collection_id: collectionId,
+                strategies: instances.map((i) => i.type),
+                n_samples: nSamplesToSelect,
+                has_active_filter: selectionFilter != null,
+                success: false,
+                error_message: (error as Error).message
+            });
             console.error('Unexpected error in useSubmitCombinationSelection.submit:', error);
             toast.error('Failed to create selection: ' + (error as Error).message);
             return false;
