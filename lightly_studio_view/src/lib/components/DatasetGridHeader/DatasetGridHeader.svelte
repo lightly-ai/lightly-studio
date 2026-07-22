@@ -5,6 +5,7 @@
     type SearchImage = { name: string; previewUrl: string };
 
     interface Props {
+        collectionId: string;
         canSelectAll: boolean;
         isSelectionActive: boolean;
         isImages: boolean;
@@ -23,6 +24,7 @@
     }
 
     const {
+        collectionId,
         canSelectAll,
         isSelectionActive,
         isImages,
@@ -54,7 +56,7 @@
     {/snippet}
     {#snippet auxControls()}
         {#if isImages}
-            <OrderBy datasetId={collectionDatasetId} />
+            <OrderBy {collectionId} datasetId={collectionDatasetId} />
         {/if}
     {/snippet}
     {#if hasMediaWithEmbeddings}

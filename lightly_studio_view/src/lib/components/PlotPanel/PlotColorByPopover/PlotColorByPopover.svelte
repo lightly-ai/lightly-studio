@@ -3,6 +3,7 @@
     import { Select, SelectMenuItem } from '$lib/components/Select';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import { usePlotColorByType } from './usePlotColorByType/usePlotColorByType';
+    import { usePostHog } from '$lib/hooks/usePostHog';
 
     interface Props {
         collectionId: string;
@@ -24,6 +25,7 @@
     const { metadataInfo } = useMetadataFilters(collectionId);
     const { selectedColorByType, setSelectedColorByType, clearSelectedColorByType } =
         usePlotColorByType(collectionId);
+    const { trackEvent } = usePostHog();
 
     const colorableFields = $derived(
         ($metadataInfo ?? []).filter((field) => supportedTypes.has(field.type))
@@ -75,6 +77,10 @@
         if (value === '' || value === NO_COLOR_BY) {
             clearSelectedColorByType();
             onSelectedKeyChange(null);
+            trackEvent('embedding_color_by_changed', {
+                collection_id: collectionId,
+                color_by_type: null
+            });
             return;
         }
 
@@ -84,12 +90,24 @@
         if (option.type === 'tags') {
             setSelectedColorByType('tags');
             onSelectedKeyChange(null);
+            trackEvent('embedding_color_by_changed', {
+                collection_id: collectionId,
+                color_by_type: 'tag'
+            });
         } else if (option.type === 'annotation_label') {
             setSelectedColorByType('annotation_label');
             onSelectedKeyChange(null);
+            trackEvent('embedding_color_by_changed', {
+                collection_id: collectionId,
+                color_by_type: 'annotation_label'
+            });
         } else {
             setSelectedColorByType('metadata');
             onSelectedKeyChange(option.fieldName);
+            trackEvent('embedding_color_by_changed', {
+                collection_id: collectionId,
+                color_by_type: 'metadata_field'
+            });
         }
     };
 </script>

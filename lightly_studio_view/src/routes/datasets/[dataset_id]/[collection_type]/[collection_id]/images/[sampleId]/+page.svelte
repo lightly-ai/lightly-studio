@@ -1,9 +1,11 @@
 <script lang="ts">
     import { page } from '$app/state';
+    import { afterNavigate } from '$app/navigation';
     import { createSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { ImageDetails } from '$lib/components';
     import GroupsComponentsMenu from '$lib/components/GroupsComponentsMenu/GroupsComponentsMenu.svelte';
     import LayoutCard from '$lib/components/LayoutCard/LayoutCard.svelte';
+    import { usePostHog } from '$lib/hooks/usePostHog';
 
     const { children } = $props();
 
@@ -14,6 +16,15 @@
     const collectionType = $derived(page.params.collection_type);
     const collection = page.data.collection;
     const collectionId = $derived(page.params.collection_id!);
+
+    const { trackEvent } = usePostHog();
+    afterNavigate((nav) => {
+        trackEvent('sample_inspected', {
+            collection_id: collectionId,
+            sample_type: collectionType,
+            opened_from: nav.from !== null ? 'grid' : 'direct_url'
+        });
+    });
 
     const groupId = $derived.by(() => {
         return page.url.searchParams.get('group_id') ?? undefined;

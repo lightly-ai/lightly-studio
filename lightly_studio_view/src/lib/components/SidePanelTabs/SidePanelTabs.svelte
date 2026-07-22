@@ -1,22 +1,29 @@
 <script lang="ts">
     import { cn } from '$lib/utils/shadcn';
     import { useGlobalStorage } from '$lib/hooks';
+    import { usePostHog } from '$lib/hooks/usePostHog';
     import { ChartColumn, ChartNetwork, Gauge, SearchCode } from '@lucide/svelte';
     import { Tooltip } from '$lib/components/ui/tooltip';
 
     type PanelType = Parameters<ReturnType<typeof useGlobalStorage>['setActivePanel']>[0];
 
     interface Props {
+        collectionId: string;
         isImages: boolean;
         hasMediaWithEmbeddings: boolean;
         supportsEvaluation: boolean;
     }
-    const { isImages, hasMediaWithEmbeddings, supportsEvaluation }: Props = $props();
+    const { collectionId, isImages, hasMediaWithEmbeddings, supportsEvaluation }: Props = $props();
 
     const { activePanel, setActivePanel } = useGlobalStorage();
+    const { trackEvent } = usePostHog();
 
     function toggle(panel: PanelType) {
-        setActivePanel($activePanel === panel ? 'none' : panel);
+        const nextPanel = $activePanel === panel ? 'none' : panel;
+        setActivePanel(nextPanel);
+        if (nextPanel !== 'none') {
+            trackEvent('tool_panel_opened', { collection_id: collectionId, panel_type: nextPanel });
+        }
     }
 </script>
 

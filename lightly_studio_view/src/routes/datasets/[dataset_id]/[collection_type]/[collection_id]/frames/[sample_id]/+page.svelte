@@ -2,7 +2,7 @@
     import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
     import type { PageData } from './$types';
     import { type SampleView } from '$lib/api/lightly_studio_local';
-    import { goto } from '$app/navigation';
+    import { goto, afterNavigate } from '$app/navigation';
     import { routeHelpers } from '$lib/routes';
     import FrameDetailsBreadcrumb from '$lib/components/FrameDetailsBreadcrumb/FrameDetailsBreadcrumb.svelte';
     import { useFrame } from '$lib/hooks/useFrame/useFrame';
@@ -12,9 +12,19 @@
     import { page } from '$app/state';
     import ViewVideoButton from '$lib/components/ViewVideoButton/ViewVideoButton.svelte';
     import FrameDetailsNavigation from '$lib/components/FrameDetailsNavigation/FrameDetailsNavigation.svelte';
+    import { usePostHog } from '$lib/hooks/usePostHog';
 
     const { data }: { data: PageData } = $props();
     const { collection_id, sampleId } = $derived(data);
+
+    const { trackEvent } = usePostHog();
+    afterNavigate((nav) => {
+        trackEvent('sample_inspected', {
+            collection_id,
+            sample_type: 'video_frame',
+            opened_from: nav.from !== null ? 'grid' : 'direct_url'
+        });
+    });
     const { refetch, videoFrame } = useFrame(() => sampleId);
 
     const sample = $derived(videoFrame.data);

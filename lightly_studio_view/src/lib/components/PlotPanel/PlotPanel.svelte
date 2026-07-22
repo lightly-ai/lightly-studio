@@ -37,8 +37,10 @@
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { writable } from 'svelte/store';
+    import { usePostHog } from '$lib/hooks/usePostHog';
 
     let { collectionId }: { collectionId: string } = $props();
+    const { trackEvent } = usePostHog();
     const { setShowEmbeddingPlot, getRangeSelection, setRangeSelectionForCollection } =
         useGlobalStorage();
     const rangeSelection = getRangeSelection(collectionId);
@@ -253,8 +255,16 @@
                 }
             } else if (!isEqual($selectedSampleIds, currentSampleIds)) {
                 videoFilters.updateSampleIds($selectedSampleIds);
+                if (pendingSelectionType) {
+                    trackEvent('embedding_selection_made', {
+                        collection_id: collectionId,
+                        selection_type: pendingSelectionType,
+                        selected_count: selectedCount
+                    });
+                }
             }
             setRangeSelection(null);
+            pendingSelectionType = null;
             return;
         }
 
@@ -262,8 +272,16 @@
             clearRegion();
         } else {
             commitRegion(polygon, selectedCount);
+            if (pendingSelectionType) {
+                trackEvent('embedding_selection_made', {
+                    collection_id: collectionId,
+                    selection_type: pendingSelectionType,
+                    selected_count: selectedCount
+                });
+            }
         }
         setRangeSelection(null);
+        pendingSelectionType = null;
     };
 
     let plotContainer: HTMLDivElement | null = $state(null);
@@ -325,6 +343,8 @@
         return selection !== null && !Array.isArray(selection);
     };
 
+    let pendingSelectionType = $state<'lasso' | 'rectangle' | null>(null);
+
     const getPolygonFromRectangle = (rect: Rectangle) => {
         return [
             { x: rect.xMin, y: rect.yMin },
@@ -369,8 +389,10 @@
         // we clear selection
         if (!selection && $rangeSelection) {
             clearSelection();
+            pendingSelectionType = null;
             return;
         }
+        pendingSelectionType = isRectangleSelection(selection) ? 'rectangle' : 'lasso';
         const normalizedSelection = isRectangleSelection(selection)
             ? getPolygonFromRectangle(selection)
             : selection;

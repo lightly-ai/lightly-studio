@@ -8,10 +8,11 @@
     import { ArrowDown, ArrowUp } from '@lucide/svelte';
 
     interface Props {
+        collectionId: string;
         datasetId: string;
     }
 
-    const { datasetId }: Props = $props();
+    const { collectionId, datasetId }: Props = $props();
 
     const { textEmbedding } = useGlobalStorage();
     const isSimilaritySearchActive = $derived(!!$textEmbedding);
@@ -24,7 +25,7 @@
         handleFieldClick,
         toggleDirection,
         dispose
-    } = useOrderBy({ datasetId });
+    } = useOrderBy({ collectionId, datasetId });
 
     $effect(() => {
         return () => dispose();

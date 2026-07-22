@@ -10,8 +10,19 @@
         Separator
     } from '$lib/components';
     import VideoDetailsBreadcrumb from '$lib/components/VideoDetailsBreadcrumb/VideoDetailsBreadcrumb.svelte';
+    import { afterNavigate } from '$app/navigation';
+    import { usePostHog } from '$lib/hooks/usePostHog';
 
     const { data }: { data: PageData } = $props();
+
+    const { trackEvent } = usePostHog();
+    afterNavigate((nav) => {
+        trackEvent('sample_inspected', {
+            collection_id: data.params.collection_id,
+            sample_type: 'video',
+            opened_from: nav.from !== null ? 'grid' : 'direct_url'
+        });
+    });
     const { data: video, isLoading, loadById, error, refetch } = useVideo();
     $effect(() => {
         loadById(data.params.sample_id);

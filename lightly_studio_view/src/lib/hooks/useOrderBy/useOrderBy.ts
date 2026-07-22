@@ -1,6 +1,7 @@
 import { derived, get, type Readable } from 'svelte/store';
 import { SortDirection } from '$lib/api/lightly_studio_local';
 import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+import { usePostHog } from '$lib/hooks/usePostHog';
 import {
     formatEvaluationMetricLabel,
     useSortFields,
@@ -10,6 +11,7 @@ import {
 import type { SortExpr } from '$lib/hooks/useImagesInfinite/types';
 
 interface UseOrderByParams {
+    collectionId: string;
     datasetId: string;
 }
 
@@ -40,9 +42,16 @@ function checkIsFieldSelected(field: SortField, current: SortExpr | undefined): 
     );
 }
 
-export function useOrderBy({ datasetId }: UseOrderByParams): UseOrderByReturn {
+function sortSource(field: SortField): string {
+    if (field.source === 'evaluation_metric') return 'evaluation_metric';
+    if (field.source === 'metadata') return 'metadata_field';
+    return 'image_field';
+}
+
+export function useOrderBy({ collectionId, datasetId }: UseOrderByParams): UseOrderByReturn {
     const { imageSortBy, updateSortBy } = useImageFilters();
     const { allSortFields, dispose } = useSortFields({ datasetId });
+    const { trackEvent } = usePostHog();
 
     const selectedDirection = derived(
         imageSortBy,
@@ -96,6 +105,12 @@ export function useOrderBy({ datasetId }: UseOrderByParams): UseOrderByReturn {
                     direction: get(selectedDirection)
                 }
             ]);
+            trackEvent('grid_sorted', {
+                collection_id: collectionId,
+                sort_source: 'evaluation_metric',
+                field_name: `${field.evaluation_run_name}.${field.metric_name}`,
+                direction: get(selectedDirection)
+            });
         } else {
             updateSortBy([
                 {
@@ -105,6 +120,12 @@ export function useOrderBy({ datasetId }: UseOrderByParams): UseOrderByReturn {
                     is_numeric: field.is_numeric ?? false
                 }
             ]);
+            trackEvent('grid_sorted', {
+                collection_id: collectionId,
+                sort_source: sortSource(field),
+                field_name: field.value,
+                direction: get(selectedDirection)
+            });
         }
     }
 
@@ -132,6 +153,20 @@ export function useOrderBy({ datasetId }: UseOrderByParams): UseOrderByReturn {
                 }
             ]);
         }
+        trackEvent('grid_sorted', {
+            collection_id: collectionId,
+            sort_source:
+                current.source === 'evaluation_metric'
+                    ? 'evaluation_metric'
+                    : current.source === 'metadata'
+                      ? 'metadata_field'
+                      : 'image_field',
+            field_name:
+                current.source === 'evaluation_metric'
+                    ? `${current.evaluation_run_name}.${current.metric_name}`
+                    : current.field_name,
+            direction: next
+        });
     }
 
     return {
