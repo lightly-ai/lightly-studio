@@ -2,6 +2,7 @@ import type { Octokit } from '../shared/octokit';
 import type { Verdict } from '../shared/verdict';
 import { renderComment, upsertComment } from './comment';
 import { deriveTarget, refreshTarget, type BotTarget } from './derive-target';
+import { isSupersededRun } from './latest-run';
 import { approve, dismissApproval } from './review';
 import { effectiveVerdict, verdictMatchesTarget } from './verdict-policy';
 
@@ -10,9 +11,17 @@ interface RunBotParams {
     owner: string;
     repo: string;
     trustedHeadSha: string;
+    /** Head branch of the triggering run, to scope the recency check. */
+    headBranch: string;
     botLogin: string;
     guardrailsSucceeded: boolean;
     requiredGuardrailNames: readonly string[];
+    /** The guardrail workflow that triggered this run, for the recency check. */
+    guardrailWorkflowId: number;
+    /** `run_number` of the triggering guardrail run, for the recency check. */
+    guardrailRunNumber: number;
+    /** `run_attempt` of the triggering guardrail run, for the recency check. */
+    guardrailRunAttempt: number;
     verdict: unknown;
 }
 
@@ -27,6 +36,12 @@ type VerifyOutcome = { target: BotTarget; actionParams: BotActionParams } | { do
 
 /** Apply a current pass verdict, revoking the bot approval for every other outcome. */
 export async function runBot(params: RunBotParams): Promise<BotResult> {
+    // Check first, before any read or write: a stale run must not dismiss the
+    // approval a newer run for this head just created.
+    if (await isSupersededRun(toSupersededParams(params))) {
+        return { status: 'skipped', reason: 'A newer guardrail run for this head superseded it.' };
+    }
+
     const outcome = await verifyTarget(params);
     if ('done' in outcome) return outcome.done;
 
@@ -58,6 +73,19 @@ async function verifyTarget(params: RunBotParams): Promise<VerifyOutcome> {
         return { done: { status: 'dismissed', prNumber: derivedTarget.prNumber } };
     }
     return { target, actionParams };
+}
+
+function toSupersededParams(params: RunBotParams): Parameters<typeof isSupersededRun>[0] {
+    return {
+        octokit: params.octokit,
+        owner: params.owner,
+        repo: params.repo,
+        headSha: params.trustedHeadSha,
+        headBranch: params.headBranch,
+        workflowId: params.guardrailWorkflowId,
+        runNumber: params.guardrailRunNumber,
+        runAttempt: params.guardrailRunAttempt
+    };
 }
 
 function toActionParams(params: RunBotParams, prNumber: number): BotActionParams {
