@@ -1,11 +1,10 @@
 <script lang="ts">
     import { page } from '$app/state';
-    import { afterNavigate } from '$app/navigation';
     import { createSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { ImageDetails } from '$lib/components';
     import GroupsComponentsMenu from '$lib/components/GroupsComponentsMenu/GroupsComponentsMenu.svelte';
     import LayoutCard from '$lib/components/LayoutCard/LayoutCard.svelte';
-    import { usePostHog } from '$lib/hooks';
+    import { useTrackSampleInspected } from '$lib/hooks';
     import { isImagesRoute } from '$lib/routes';
 
     const { children } = $props();
@@ -18,14 +17,7 @@
     const collection = page.data.collection;
     const collectionId = $derived(page.params.collection_id!);
 
-    const { trackEvent } = usePostHog();
-    afterNavigate((nav) => {
-        trackEvent('sample_inspected', {
-            collection_id: collectionId,
-            sample_type: 'image',
-            opened_from: isImagesRoute(nav.from?.route.id ?? null) ? 'grid' : 'direct_url'
-        });
-    });
+    useTrackSampleInspected(() => collectionId, 'image', isImagesRoute);
 
     const groupId = $derived.by(() => {
         return page.url.searchParams.get('group_id') ?? undefined;

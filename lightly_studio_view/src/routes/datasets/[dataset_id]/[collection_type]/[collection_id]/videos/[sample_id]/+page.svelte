@@ -10,20 +10,12 @@
         Separator
     } from '$lib/components';
     import VideoDetailsBreadcrumb from '$lib/components/VideoDetailsBreadcrumb/VideoDetailsBreadcrumb.svelte';
-    import { afterNavigate } from '$app/navigation';
-    import { usePostHog } from '$lib/hooks';
+    import { useTrackSampleInspected } from '$lib/hooks';
     import { isVideosRoute } from '$lib/routes';
 
     const { data }: { data: PageData } = $props();
 
-    const { trackEvent } = usePostHog();
-    afterNavigate((nav) => {
-        trackEvent('sample_inspected', {
-            collection_id: data.params.collection_id,
-            sample_type: 'video',
-            opened_from: isVideosRoute(nav.from?.route.id ?? null) ? 'grid' : 'direct_url'
-        });
-    });
+    useTrackSampleInspected(() => data.params.collection_id, 'video', isVideosRoute);
     const { data: video, isLoading, loadById, error, refetch } = useVideo();
     $effect(() => {
         loadById(data.params.sample_id);
