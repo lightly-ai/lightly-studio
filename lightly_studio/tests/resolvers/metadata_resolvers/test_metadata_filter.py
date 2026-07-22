@@ -38,7 +38,7 @@ def test_apply_metadata_filters__postgres_missing_and_special_key() -> None:
         metadata_join_condition=col(SampleMetadataTable.sample_id) == col(SampleTable.sample_id),
     )
 
-    compiled = query.compile(dialect=postgresql.dialect())
+    compiled = query.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
     sql = str(compiled).lower()
     assert "left outer join" in sql
     assert "->>" in sql
