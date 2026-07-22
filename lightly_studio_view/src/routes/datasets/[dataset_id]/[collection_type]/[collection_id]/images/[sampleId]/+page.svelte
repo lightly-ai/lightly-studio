@@ -5,7 +5,7 @@
     import { ImageDetails } from '$lib/components';
     import GroupsComponentsMenu from '$lib/components/GroupsComponentsMenu/GroupsComponentsMenu.svelte';
     import LayoutCard from '$lib/components/LayoutCard/LayoutCard.svelte';
-    import { usePostHog } from '$lib/hooks/usePostHog';
+    import { usePostHog } from '$lib/hooks';
     import { isImagesRoute } from '$lib/routes';
 
     const { children } = $props();

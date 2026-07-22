@@ -37,7 +37,7 @@
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { writable } from 'svelte/store';
-    import { usePostHog } from '$lib/hooks/usePostHog';
+    import { usePostHog } from '$lib/hooks';
 
     let { collectionId }: { collectionId: string } = $props();
     const { trackEvent } = usePostHog();

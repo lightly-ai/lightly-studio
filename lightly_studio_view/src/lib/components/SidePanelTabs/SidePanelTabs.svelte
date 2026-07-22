@@ -1,7 +1,7 @@
 <script lang="ts">
     import { cn } from '$lib/utils/shadcn';
     import { useGlobalStorage } from '$lib/hooks';
-    import { usePostHog } from '$lib/hooks/usePostHog';
+    import { usePostHog } from '$lib/hooks';
     import { ChartColumn, ChartNetwork, Gauge, SearchCode } from '@lucide/svelte';
     import { Tooltip } from '$lib/components/ui/tooltip';
 

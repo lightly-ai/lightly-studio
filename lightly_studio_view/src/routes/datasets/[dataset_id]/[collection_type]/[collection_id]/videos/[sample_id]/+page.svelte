@@ -11,7 +11,7 @@
     } from '$lib/components';
     import VideoDetailsBreadcrumb from '$lib/components/VideoDetailsBreadcrumb/VideoDetailsBreadcrumb.svelte';
     import { afterNavigate } from '$app/navigation';
-    import { usePostHog } from '$lib/hooks/usePostHog';
+    import { usePostHog } from '$lib/hooks';
     import { isVideosRoute } from '$lib/routes';
 
     const { data }: { data: PageData } = $props();

@@ -84,7 +84,7 @@
     import { useSearchEmbedding } from '$lib/hooks/useSearchEmbedding/useSearchEmbedding';
     import { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
     import { clearAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
-    import { usePostHog } from '$lib/hooks/usePostHog';
+    import { usePostHog } from '$lib/hooks';
     const { data, children } = $props();
     const {
         collection,

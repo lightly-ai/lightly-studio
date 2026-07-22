@@ -1,7 +1,7 @@
 import { derived, get, type Readable } from 'svelte/store';
 import { SortDirection } from '$lib/api/lightly_studio_local';
 import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
-import { usePostHog } from '$lib/hooks/usePostHog';
+import { usePostHog } from '$lib/hooks';
 import {
     formatEvaluationMetricLabel,
     useSortFields,

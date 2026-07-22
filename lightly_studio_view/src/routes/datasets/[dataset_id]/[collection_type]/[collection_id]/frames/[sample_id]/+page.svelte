@@ -12,7 +12,7 @@
     import { page } from '$app/state';
     import ViewVideoButton from '$lib/components/ViewVideoButton/ViewVideoButton.svelte';
     import FrameDetailsNavigation from '$lib/components/FrameDetailsNavigation/FrameDetailsNavigation.svelte';
-    import { usePostHog } from '$lib/hooks/usePostHog';
+    import { usePostHog } from '$lib/hooks';
     import { isVideoFramesRoute } from '$lib/routes';
 
     const { data }: { data: PageData } = $props();

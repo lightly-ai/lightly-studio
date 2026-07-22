@@ -1,7 +1,7 @@
 import { useImageUpload } from '$lib/hooks/useImageUpload/useImageUpload';
 import { useTextEmbedding } from '$lib/hooks/useTextEmbedding/useTextEmbedding';
 import type { TextEmbedding } from '$lib/hooks/useGlobalStorage';
-import { usePostHog } from '$lib/hooks/usePostHog';
+import { usePostHog } from '$lib/hooks';
 import { toast } from 'svelte-sonner';
 import { derived, readonly, type Readable, type Writable } from 'svelte/store';
 

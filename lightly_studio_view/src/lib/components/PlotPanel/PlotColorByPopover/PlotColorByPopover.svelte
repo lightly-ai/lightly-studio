@@ -3,7 +3,7 @@
     import { Select, SelectMenuItem } from '$lib/components/Select';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import { usePlotColorByType } from './usePlotColorByType/usePlotColorByType';
-    import { usePostHog } from '$lib/hooks/usePostHog';
+    import { usePostHog } from '$lib/hooks';
 
     interface Props {
         collectionId: string;
