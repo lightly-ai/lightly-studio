@@ -50,10 +50,7 @@ describe('SelectClassDialog', () => {
     });
 
     it('deduplicates and sorts labels alphabetically', async () => {
-        const user = userEvent.setup();
         renderDialog({ labels: ['dog', 'cat', 'dog', 'bird'] });
-
-        await user.click(screen.getByTestId('select-list-trigger'));
 
         const options = await screen.findAllByRole('option');
         expect(options.map((o) => o.textContent?.trim())).toEqual(['bird', 'cat', 'dog']);
@@ -63,7 +60,6 @@ describe('SelectClassDialog', () => {
         const user = userEvent.setup();
         const { onConfirm, onCancel } = renderDialog();
 
-        await user.click(screen.getByTestId('select-list-trigger'));
         await user.click(await screen.findByRole('option', { name: 'cat' }));
 
         const confirmButton = screen.getByRole('button', { name: 'Confirm' });
@@ -73,6 +69,26 @@ describe('SelectClassDialog', () => {
         expect(onConfirm).toHaveBeenCalledTimes(1);
         expect(onConfirm).toHaveBeenCalledWith('cat');
         expect(onCancel).not.toHaveBeenCalled();
+    });
+
+    it('confirms a newly typed class name when Enter is pressed', async () => {
+        const user = userEvent.setup();
+        const { onConfirm } = renderDialog();
+
+        await user.type(await screen.findByTestId('select-list-input'), 'fish{Enter}');
+
+        expect(onConfirm).toHaveBeenCalledTimes(1);
+        expect(onConfirm).toHaveBeenCalledWith('fish');
+    });
+
+    it('confirms the keyboard-highlighted existing class when Enter is pressed', async () => {
+        const user = userEvent.setup();
+        const { onConfirm } = renderDialog();
+
+        await user.type(await screen.findByTestId('select-list-input'), '{ArrowDown}{Enter}');
+
+        expect(onConfirm).toHaveBeenCalledTimes(1);
+        expect(onConfirm).toHaveBeenCalledWith('cat');
     });
 
     it('calls onCancel when Cancel is clicked', async () => {
@@ -85,12 +101,12 @@ describe('SelectClassDialog', () => {
         expect(onConfirm).not.toHaveBeenCalled();
     });
 
-    it('passes a newly typed class name to onConfirm', async () => {
+    it('selects a newly typed class name before explicit mouse confirmation', async () => {
         const user = userEvent.setup();
         const { onConfirm } = renderDialog();
 
-        await user.click(screen.getByTestId('select-list-trigger'));
-        await user.type(screen.getByTestId('select-list-input'), 'fish{Enter}');
+        await user.type(await screen.findByTestId('select-list-input'), 'fish');
+        await user.click(screen.getByRole('option', { name: /Create:\s*fish/i }));
 
         const confirmButton = screen.getByRole('button', { name: 'Confirm' });
         await waitFor(() => expect(confirmButton).toBeEnabled());
