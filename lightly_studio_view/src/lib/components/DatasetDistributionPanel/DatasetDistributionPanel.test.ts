@@ -276,6 +276,107 @@ describe('DatasetDistributionPanel', () => {
         expect(onCategoricalValueToggle).toHaveBeenCalledOnce();
     });
 
+    it('configures and expands categorical values while keeping bars horizontal', async () => {
+        const sources: DistributionSource[] = [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                valueNoun: 'samples',
+                groups: [
+                    {
+                        id: 'city',
+                        label: 'city',
+                        categorical: {
+                            selectedValues: [],
+                            buckets: [
+                                {
+                                    id: 'zurich',
+                                    kind: 'value',
+                                    value: 'Zurich',
+                                    label: 'Zurich',
+                                    count: 4
+                                },
+                                {
+                                    id: 'missing',
+                                    kind: 'missing',
+                                    value: null,
+                                    label: 'Missing',
+                                    count: 1
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ];
+        render(DatasetDistributionPanel, { props: { sources } });
+
+        expect(screen.getByText(/2 values · sorted by count · 5 samples/)).toBeInTheDocument();
+        expect(
+            screen.queryByTestId('dataset-distribution-toggle-orientation')
+        ).not.toBeInTheDocument();
+
+        await fireEvent.click(screen.getByTestId('dataset-distribution-configure'));
+        expect(screen.getByText('Configure values')).toBeInTheDocument();
+        expect(screen.queryByTestId('distribution-config-count-mode')).not.toBeInTheDocument();
+        await fireEvent.click(screen.getByText('Cancel'));
+
+        await fireEvent.click(screen.getByTestId('dataset-distribution-expand'));
+        expect(screen.getByTestId('dataset-distribution-expanded-configure')).toBeInTheDocument();
+        expect(
+            screen.queryByTestId('dataset-distribution-expanded-toggle-orientation')
+        ).not.toBeInTheDocument();
+    });
+
+    it('manually configures colliding categorical labels by stable bucket id', async () => {
+        const sources: DistributionSource[] = [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                groups: [
+                    {
+                        id: 'status',
+                        label: 'status',
+                        categorical: {
+                            selectedValues: [],
+                            buckets: [
+                                {
+                                    id: 'literal-missing',
+                                    kind: 'value',
+                                    value: 'Missing',
+                                    label: 'Missing',
+                                    count: 4
+                                },
+                                {
+                                    id: 'semantic-missing',
+                                    kind: 'missing',
+                                    value: null,
+                                    label: 'Missing',
+                                    count: 3
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ];
+        render(DatasetDistributionPanel, { props: { sources } });
+
+        await fireEvent.click(screen.getByTestId('dataset-distribution-configure'));
+        await fireEvent.click(screen.getByRole('tab', { name: 'Manual' }));
+        const missingOptions = screen.getAllByText('Missing');
+        expect(missingOptions).toHaveLength(2);
+        await fireEvent.click(missingOptions[1]);
+        await fireEvent.click(screen.getByTestId('distribution-config-apply'));
+
+        const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+            yAxis: { data: string[] };
+            series: [{ data: { value: number }[] }];
+        };
+        expect(option.yAxis.data).toEqual(['Missing']);
+        expect(option.series[0].data[0].value).toBe(3);
+    });
+
     it('shows categorical loading and retryable error states', async () => {
         const onCategoricalRetry = vi.fn();
         const source = (state: { loading?: boolean; error?: string }): DistributionSource[] => [

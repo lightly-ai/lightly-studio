@@ -12,6 +12,7 @@
     import PanelHeader from './PanelHeader/PanelHeader.svelte';
     import { selectVisibleCounts } from './selectVisibleCounts';
     import {
+        CATEGORICAL_DISTRIBUTION_SORT_LABELS,
         HISTOGRAM_BIN_COUNT_ITEMS,
         type DistributionConfig,
         type DistributionSource,
@@ -127,12 +128,16 @@
             label: bucket.label,
             count: bucket.count,
             selectable: bucket.kind !== 'other',
+            pinned: bucket.kind !== 'value',
             selected:
                 bucket.kind !== 'other' &&
                 activeCategorical?.selectedValues.some((value) => Object.is(value, bucket.value))
         }))
     );
     const displayedData = $derived(activeCategorical ? categoricalData : activeData);
+    const configurationItems = $derived(
+        displayedData.map((item) => ({ value: item.id ?? item.label, label: item.label }))
+    );
     const activeHistogramRange = $derived(activeGroup?.selectedRange ?? activeSource.selectedRange);
     const handleHistogramRangeSelect = (range: HistogramRange) => {
         const groupId = activeGroup?.id ?? activeSource.id;
@@ -154,6 +159,23 @@
         orientation: 'horizontal',
         countMode: initialCountMode
     });
+    const defaultCategoricalConfig: DistributionConfig = {
+        mode: 'topN',
+        n: 1,
+        sortBy: 'count',
+        manualClasses: [],
+        orientation: 'horizontal',
+        countMode: AnnotationCountMode.SAMPLES
+    };
+    let categoricalConfigs = $state<Record<string, DistributionConfig>>({});
+    const categoricalConfig = $derived<DistributionConfig>(
+        activeGroup
+            ? (categoricalConfigs[activeGroup.id] ?? {
+                  ...defaultCategoricalConfig,
+                  n: Math.max(categoricalData.length, 1)
+              })
+            : defaultCategoricalConfig
+    );
     let configDialogOpen = $state(false);
     let expandOpen = $state(false);
     let histogramExpandOpen = $state(false);
@@ -177,9 +199,10 @@
         (activeSource.groups ?? []).map((group) => ({ value: group.id, label: group.label }))
     );
 
-    const visible = $derived(
-        activeCategorical ? displayedData : selectVisibleCounts(displayedData, config)
+    const activeViewConfig = $derived<DistributionConfig>(
+        activeCategorical ? categoricalConfig : config
     );
+    const visible = $derived(selectVisibleCounts(displayedData, activeViewConfig));
     const totalCount = $derived(displayedData.reduce((sum, item) => sum + item.count, 0));
 
     const handleCategoricalBarClick = (item: CategoryCount) => {
@@ -188,7 +211,23 @@
         onCategoricalValueToggle?.(activeGroup.id, bucket.value);
     };
 
+    const setCategoricalConfig = (next: DistributionConfig) => {
+        if (!activeGroup) return;
+        categoricalConfigs = {
+            ...categoricalConfigs,
+            [activeGroup.id]: {
+                ...next,
+                orientation: 'horizontal',
+                countMode: AnnotationCountMode.SAMPLES
+            }
+        };
+    };
+
     function applyConfig(next: DistributionConfig) {
+        if (activeCategorical) {
+            setCategoricalConfig(next);
+            return;
+        }
         if (next.countMode !== config.countMode) {
             onCountModeChange?.(next.countMode ?? AnnotationCountMode.OBJECTS);
         }
@@ -323,6 +362,26 @@
                 {/if}
             </div>
         {/if}
+        {#if categoricalData.length > 0}
+            <PanelHeader
+                config={categoricalConfig}
+                classCount={categoricalData.length}
+                visibleClassCount={visible.length}
+                {totalCount}
+                {valueNoun}
+                categoryNoun="value"
+                categoryNounPlural="values"
+                sortLabels={CATEGORICAL_DISTRIBUTION_SORT_LABELS}
+                onConfigure={() => (configDialogOpen = true)}
+                onShowAll={() =>
+                    setCategoricalConfig({
+                        ...categoricalConfig,
+                        mode: 'topN',
+                        n: categoricalData.length
+                    })}
+                onExpand={() => (expandOpen = true)}
+            />
+        {/if}
     {:else if activeData.length > 0}
         <PanelHeader
             {config}
@@ -390,7 +449,7 @@
             {/if}
             <BarChart
                 data={visible}
-                orientation={activeCategorical ? 'horizontal' : config.orientation}
+                orientation={activeViewConfig.orientation}
                 maxHeightPx={chartHeight || undefined}
                 maxWidthPx={clientWidth || undefined}
                 {totalCount}
@@ -400,20 +459,29 @@
         {/if}
     </div>
 </div>
-{#if !activeCategorical}
+{#if !activeHistogram}
     <DistributionConfigDialog
         bind:open={configDialogOpen}
-        allClasses={activeData.map((item) => item.label)}
-        {config}
+        allClasses={displayedData.map((item) => item.label)}
+        items={configurationItems}
+        config={activeViewConfig}
+        showCountMode={!activeCategorical}
+        itemNounPlural={activeCategorical ? 'values' : 'classes'}
+        sortLabels={activeCategorical ? CATEGORICAL_DISTRIBUTION_SORT_LABELS : undefined}
         onApply={applyConfig}
     />
     <ExpandDialog
         bind:open={expandOpen}
-        data={activeData}
-        {config}
+        data={displayedData}
+        config={activeViewConfig}
         {valueNoun}
+        categoryNoun={activeCategorical ? 'value' : 'class'}
+        categoryNounPlural={activeCategorical ? 'values' : 'classes'}
+        sortLabels={activeCategorical ? CATEGORICAL_DISTRIBUTION_SORT_LABELS : undefined}
+        showCountMode={!activeCategorical}
+        fixedOrientation={activeCategorical ? 'horizontal' : undefined}
         onConfigChange={applyConfig}
-        {onBarClick}
+        onBarClick={activeCategorical ? handleCategoricalBarClick : onBarClick}
     />
 {/if}
 {#if activeHistogram}
