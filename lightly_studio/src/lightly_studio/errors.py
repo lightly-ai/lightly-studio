@@ -1,5 +1,4 @@
 """Lightly Studio Exceptions types."""
-# Dummy change
 
 
 class TagNotFoundError(Exception):
