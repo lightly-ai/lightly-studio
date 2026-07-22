@@ -17,6 +17,20 @@ export type CategoricalMetadataBucket =
 const valueBucketId = (value: string | boolean): string =>
     JSON.stringify(['value', typeof value, value]);
 
+const getValueBucketLabel = (
+    value: string | boolean,
+    missingCount: number,
+    otherCount: number
+): string => {
+    if (value === 'Missing' && missingCount > 0) {
+        return 'Missing (value)';
+    }
+    if (value === 'Other' && otherCount > 0) {
+        return 'Other (value)';
+    }
+    return String(value);
+};
+
 export const selectCategoricalDistributions = (
     response: Record<string, MetadataValueCountsView> | undefined
 ): Record<string, CategoricalMetadataBucket[]> =>
@@ -29,12 +43,7 @@ export const selectCategoricalDistributions = (
                     id: valueBucketId(value),
                     kind: 'value',
                     value,
-                    label:
-                        value === 'Missing' && counts.missing_count > 0
-                            ? 'Missing (value)'
-                            : value === 'Other' && counts.other_count > 0
-                              ? 'Other (value)'
-                              : String(value),
+                    label: getValueBucketLabel(value, counts.missing_count, counts.other_count),
                     count
                 })
             );
