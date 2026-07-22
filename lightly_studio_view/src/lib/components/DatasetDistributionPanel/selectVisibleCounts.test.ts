@@ -49,6 +49,23 @@ describe('selectVisibleCounts', () => {
         expect(visible.map((item) => item.label)).toEqual(['dog', 'car']);
     });
 
+    it('uses stable ids for manual selections when labels collide', () => {
+        const visible = selectVisibleCounts(
+            [
+                { id: 'literal-missing', label: 'Missing', count: 2 },
+                { id: 'semantic-missing', label: 'Missing', count: 1 }
+            ],
+            {
+                mode: 'manual',
+                n: 1,
+                sortBy: 'count',
+                manualClasses: ['semantic-missing']
+            }
+        );
+
+        expect(visible.map((item) => item.id)).toEqual(['semantic-missing']);
+    });
+
     it('returns nothing when the manual selection is empty', () => {
         const visible = selectVisibleCounts(data, {
             mode: 'manual',
@@ -57,5 +74,18 @@ describe('selectVisibleCounts', () => {
             manualClasses: []
         });
         expect(visible).toEqual([]);
+    });
+
+    it('keeps pinned semantic buckets within a top-N limit', () => {
+        const visible = selectVisibleCounts(
+            [
+                ...data,
+                { label: 'Missing', count: 1, pinned: true },
+                { label: 'Other', count: 2, pinned: true }
+            ],
+            { mode: 'topN', n: 3, sortBy: 'count', manualClasses: [] }
+        );
+
+        expect(visible.map((item) => item.label)).toEqual(['person', 'Other', 'Missing']);
     });
 });
