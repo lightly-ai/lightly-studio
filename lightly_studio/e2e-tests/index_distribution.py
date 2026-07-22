@@ -77,10 +77,14 @@ LOCATION_WEIGHTS = [0.35, 0.25, 0.20, 0.12, 0.08]
 WEATHER_CONDITIONS = ["sunny", "partly_cloudy", "overcast", "rainy", "foggy", "snowy"]
 WEATHER_WEIGHTS = [0.40, 0.25, 0.15, 0.10, 0.07, 0.03]
 
+REVIEWED_VALUES = [True, False]
+REVIEWED_WEIGHTS = [0.3, 0.7]
+
 # Common ML split assignment; ~20 % of samples intentionally left unassigned
 # so the "Missing" bucket appears in the categorical distribution panel.
 DATASET_SPLITS = ["train", "val", "test"]
 SPLIT_WEIGHTS = [0.70, 0.20, 0.10]
+SPLIT_MISSING_PROBABILITY = 0.2
 
 # 25 camera IDs: exercises the top-20 "Other" bucket in value-counts.
 CAMERA_IDS = [f"CAM_{i:02d}" for i in range(1, 26)]
@@ -113,10 +117,8 @@ def _sample_metadata(rng: random.Random) -> Mapping[str, Any]:
     discrete, constant).  Categorical fields exercise:
     - weighted strings with few values  (location, weather)
     - a boolean field                   (reviewed)
-    - a many-valued string field that   (camera_id — 25 values triggers the
-      overflows the top-20 limit          "Other" bucket in value-counts)
-    - a field present on only ~80 % of  (split — triggers the "Missing" bucket)
-      samples
+    - camera_id has 25 values, which triggers the "Other" bucket in value counts
+    - split is present on only ~80 % of samples, which triggers the "Missing" bucket
     """
     metadata: dict[str, Any] = {
         # Numeric fields
@@ -129,12 +131,11 @@ def _sample_metadata(rng: random.Random) -> Mapping[str, Any]:
         # Categorical fields
         "location": rng.choices(LOCATIONS, LOCATION_WEIGHTS)[0],
         "weather": rng.choices(WEATHER_CONDITIONS, WEATHER_WEIGHTS)[0],
-        "reviewed": rng.choices([True, False], [0.3, 0.7])[0],
+        "reviewed": rng.choices(REVIEWED_VALUES, REVIEWED_WEIGHTS)[0],
         "camera_id": rng.choices(CAMERA_IDS, CAMERA_WEIGHTS)[0],
     }
-    split_missing_probability = 0.2
     # ~20 % of images have no split — exercises the "Missing" bucket.
-    if rng.random() >= split_missing_probability:
+    if rng.random() >= SPLIT_MISSING_PROBABILITY:
         metadata["split"] = rng.choices(DATASET_SPLITS, SPLIT_WEIGHTS)[0]
     return metadata
 
