@@ -41,22 +41,55 @@ describe('buildEchartsOption', () => {
         expect(horizontal.xAxis.minInterval).toBe(1);
     });
 
-    it('adds selected and disabled treatments without changing typed category identity', () => {
+    it('dims unselected bars green when a selection is active; disabled bars keep reduced opacity', () => {
         const option = buildEchartsOption([
-            { id: 'selected', label: 'Missing', count: 3, selected: true, selectable: true },
+            { id: 'sel', label: 'Missing', count: 3, selected: true, selectable: true },
             { id: 'other', label: 'Other', count: 2, selected: false, selectable: false }
         ]) as {
             series: [{ data: { value: number; itemStyle: Record<string, unknown> }[] }];
         };
 
+        // Selected bar: accent green, full opacity.
         expect(option.series[0].data[0]).toMatchObject({
             value: 3,
-            itemStyle: { borderWidth: 3, opacity: 1 }
+            itemStyle: { color: 'rgba(59,217,159,0.85)', opacity: 1 }
         });
+        // Non-selected + non-selectable: dimmed colour and reduced opacity.
         expect(option.series[0].data[1]).toMatchObject({
             value: 2,
-            itemStyle: { borderWidth: 0, opacity: 0.45 }
+            itemStyle: { color: '#4b5563', opacity: 0.45 }
         });
+    });
+
+    it('overlays a filtered foreground bar on a grey full-count background when filteredCount differs', () => {
+        const option = buildEchartsOption([
+            { label: 'dog', count: 100, filteredCount: 60 },
+            { label: 'cat', count: 50, filteredCount: 50 }
+        ]) as {
+            series: [
+                { type: string; data: { value: number }[] },
+                { type: string; data: { value: number }[]; barGap: string }
+            ];
+        };
+
+        // Two series rendered when filter is active.
+        expect(option.series).toHaveLength(2);
+        // Background series: always full count.
+        expect(option.series[0].data[0].value).toBe(100);
+        expect(option.series[0].data[1].value).toBe(50);
+        // Foreground series: filtered count; uses barGap '-100%' to overlay.
+        expect(option.series[1].data[0]).toMatchObject({ value: 60 });
+        expect(option.series[1].data[1]).toMatchObject({ value: 50 });
+        expect(option.series[1].barGap).toBe('-100%');
+    });
+
+    it('renders a single series and no background when all filteredCounts match full counts', () => {
+        const option = buildEchartsOption([
+            { label: 'dog', count: 100, filteredCount: 100 },
+            { label: 'cat', count: 50, filteredCount: 50 }
+        ]) as { series: unknown[] };
+
+        expect(option.series).toHaveLength(1);
     });
 
     it('accepts compact top padding without changing the default grid', () => {
