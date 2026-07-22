@@ -97,7 +97,6 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
                 collection_id: collectionId,
                 strategies: instances.map((i) => i.type),
                 n_samples: nSamplesToSelect,
-                has_active_filter: selectionFilter != null,
                 success: !response.error,
                 error_message: response.error
                     ? ((response.error as SelectionError).error ?? null)
@@ -118,7 +117,6 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
                 collection_id: collectionId,
                 strategies: instances.map((i) => i.type),
                 n_samples: nSamplesToSelect,
-                has_active_filter: selectionFilter != null,
                 success: false,
                 error_message: (error as Error).message
             });
