@@ -52,3 +52,6 @@ from lightly_studio.models.evaluation_sample_metric import (
 from lightly_studio.models.temporal_span import (
     TemporalSpanTable,  # noqa: F401, required for SQLModel to work properly
 )
+from lightly_studio.models.api_key import (
+    ApiKeyTable,  # noqa: F401, required for SQLModel to work properly
+)
