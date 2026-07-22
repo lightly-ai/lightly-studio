@@ -28,7 +28,9 @@ async function main(env: NodeJS.ProcessEnv): Promise<void> {
         requiredGuardrailNames: guardrails
             .filter((guardrail) => guardrail.required)
             .map((guardrail) => guardrail.name),
-        verdict
+        verdict,
+        // Trusted, from the workflow_run event — the run where the guardrails ran.
+        runUrl: env.GUARDRAIL_RUN_URL
     });
     console.log(JSON.stringify(result));
 }

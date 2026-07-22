@@ -3,9 +3,9 @@ import type { Verdict } from '../shared/verdict';
 
 const COMMENT_MARKER = '<!-- fast-track-bot -->';
 const HEADLINES: Record<Verdict['verdict'], string> = {
-    pass: '✅ Fast Track: all required checks passed — auto-approved.',
-    fail: '❌ Fast Track: checks did not pass',
-    opt_out: '⏭️ Fast Track skipped — deferring to human review'
+    pass: '✅&nbsp; Fast Track: all required checks passed — auto-approved.',
+    fail: '❌&nbsp; Fast Track: checks did not pass',
+    opt_out: '⏭️&nbsp; Fast Track skipped — deferring to human review'
 };
 
 interface UpsertCommentParams {
@@ -18,9 +18,9 @@ interface UpsertCommentParams {
 }
 
 /** Render the human-visible part of the bot's single status comment. */
-export function renderComment(verdict: Verdict, headSha: string): string {
+export function renderComment(verdict: Verdict, headSha: string, runUrl?: string): string {
     const lines = [`### ${HEADLINES[verdict.verdict]}`];
-    if (verdict.verdict !== 'pass' && verdict.reason !== undefined) {
+    if (verdict.verdict === 'opt_out' && verdict.reason !== undefined) {
         lines.push('', verdict.reason);
     }
 
@@ -35,6 +35,16 @@ export function renderComment(verdict: Verdict, headSha: string): string {
             );
         }
     }
+
+    if (runUrl !== undefined) {
+        lines.push('', `[View the guardrail run](${runUrl})`);
+    }
+
+    lines.push(
+        '',
+        'To run the guardrails locally, from `fast_track/` run `make install` once, then ' +
+            '`make run-guardrails` (or `GUARDRAILS=<name1>,<name2> make run-guardrails` for some guardrails).'
+    );
 
     lines.push('', `<sub>Reflects \`${headSha.slice(0, 7)}\`.</sub>`);
     return lines.join('\n');

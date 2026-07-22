@@ -22,16 +22,41 @@ function verdict(overrides: Partial<Verdict> = {}): Verdict {
 
 describe('renderComment', () => {
     it('renders pass, fail, and opt-out states', () => {
-        expect(renderComment(verdict(), HEAD_SHA)).toContain('✅ Fast Track');
+        expect(renderComment(verdict(), HEAD_SHA)).toContain('✅&nbsp; Fast Track');
         expect(renderComment(verdict({ verdict: 'fail', reason: 'failed' }), HEAD_SHA)).toContain(
-            '❌ Fast Track: checks did not pass\n\nfailed'
+            '❌&nbsp; Fast Track: checks did not pass'
         );
         expect(
             renderComment(
                 verdict({ verdict: 'opt_out', reason: 'Author opted out.', guardrails: [] }),
                 HEAD_SHA
             )
-        ).toContain('⏭️ Fast Track skipped');
+        ).toContain('⏭️&nbsp; Fast Track skipped');
+    });
+
+    it('keeps the fail reason out of the header but surfaces the opt-out reason', () => {
+        expect(
+            renderComment(verdict({ verdict: 'fail', reason: 'lint failed' }), HEAD_SHA)
+        ).not.toContain('lint failed');
+        expect(
+            renderComment(
+                verdict({ verdict: 'opt_out', reason: 'Author opted out.', guardrails: [] }),
+                HEAD_SHA
+            )
+        ).toContain('Author opted out.');
+    });
+
+    it('links the guardrail run when a URL is given', () => {
+        const url = 'https://github.com/lightly-ai/lightly-studio/actions/runs/123';
+        expect(renderComment(verdict(), HEAD_SHA, url)).toContain(`(${url})`);
+        expect(renderComment(verdict(), HEAD_SHA)).not.toContain('View the guardrail run');
+    });
+
+    it('always includes the local-repro hint', () => {
+        expect(renderComment(verdict(), HEAD_SHA)).toContain('make run-guardrails');
+        expect(renderComment(verdict({ verdict: 'fail', reason: 'x' }), HEAD_SHA)).toContain(
+            'make run-guardrails'
+        );
     });
 
     it('renders guardrails safely in a Markdown table', () => {

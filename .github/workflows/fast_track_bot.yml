@@ -76,4 +76,5 @@ jobs:
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
           APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
           GUARDRAIL_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          GUARDRAIL_RUN_URL: ${{ github.event.workflow_run.html_url }}
         run: npm run bot-ci
