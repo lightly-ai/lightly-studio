@@ -1,4 +1,4 @@
-import type { Octokit } from '../guardrails/context/types';
+import type { Octokit } from '../shared/octokit';
 import type { Verdict } from '../shared/verdict';
 import { renderComment, upsertComment } from './comment';
 import { deriveTarget, refreshTarget, type BotTarget } from './derive-target';

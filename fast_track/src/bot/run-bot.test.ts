@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { Octokit } from '../guardrails/context/types';
+import type { Octokit } from '../shared/octokit';
 import { OPT_OUT_LABEL } from '../guardrails/author-opt-out';
 import type { Verdict } from '../shared/verdict';
 import { runBot } from './run-bot';
