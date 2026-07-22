@@ -370,6 +370,24 @@
         })
     );
 
+    // Distribution queries always show the full dataset so bar heights stay
+    // stable as sidebar filters are applied.  Filtering is communicated through
+    // bar colour (green = in selection, grey = out of selection) rather than
+    // through shrinking bars, which loses the original distribution context.
+    // Tag / sample / confusion-cell / query context is kept so the distributions
+    // stay scoped to the collection the user is currently exploring.
+    const distributionBaseFilter = $derived(
+        buildImageFilter({
+            dimensionsValues: null,
+            annotationFilter: undefined,
+            metadataFilters: undefined,
+            sampleIds: isAnnotations ? [] : plotFilterImageSampleIds,
+            tagIds: isAnnotations ? [] : plotFilterTagIds,
+            confusionCell: isAnnotations ? null : plotFilterConfusionCell,
+            queryExpr: isAnnotations ? null : plotFilterQueryExpr
+        })
+    );
+
     const imageAnnotationCountsQuery = useImageAnnotationCounts(() => ({
         collectionId: datasetId,
         filter: imageAnnotationCountsFilter,
@@ -573,17 +591,16 @@
         return { ...base, groups: [allTypesGroup, ...typeGroups] };
     });
 
-    // Numeric metadata fields as histogram groups. Bin edges span the full
-    // collection (stable axis); counts track the active filters — the query
-    // refetches whenever the grid filter changes. Each key's own metadata
-    // filter is excluded server-side (faceted-search behavior). Disabled while
-    // the distribution panel is closed to avoid background fetching.
+    // Numeric metadata fields as histogram groups. Bin edges and counts both
+    // span the full collection (distributionBaseFilter strips analysis filters)
+    // so bar heights stay stable while the user adjusts sidebar filters.
+    // Disabled while the distribution panel is closed to avoid background fetching.
     // User-configurable bin count for the metadata histograms.
     let histogramBinCount = $state(20);
 
     const metadataHistogramsQuery = useNumericMetadataDistribution(() => ({
         collectionId: collectionId,
-        filter: imageAnnotationCountsFilter,
+        filter: distributionBaseFilter,
         binCount: histogramBinCount,
         enabled: distributionPanelVisible
     }));
@@ -593,7 +610,7 @@
 
     const categoricalMetadataQuery = useCategoricalMetadataDistribution(() => ({
         collectionId,
-        filter: imageAnnotationCountsFilter,
+        filter: distributionBaseFilter,
         enabled: distributionPanelVisible
     }));
     const categoricalMetadataDistributions = $derived(categoricalMetadataQuery.data ?? {});
