@@ -1,3 +1,8 @@
+---
+title: DatasetQuery API Reference
+description: Python API reference for LightlyStudio's DatasetQuery, used to filter, sort, and sample dataset items with a fluent query interface.
+---
+
 # DatasetQuery
 
 ## DatasetQuery
@@ -63,6 +68,19 @@
 ::: lightly_studio.core.dataset_query.sample_evaluation_query
     options:
         members: [SampleEvaluationQuery]
+
+## AnnotationMetricQuery
+
+::: lightly_studio.core.dataset_query.annotation_evaluation_query
+    options:
+        members: [AnnotationMetricQuery]
+
+## AnnotationEvaluationMetricField
+
+::: lightly_studio.core.dataset_query.annotation_evaluation_metric_expression
+    options:
+        members: [AnnotationEvaluationMetricField]
+        show_if_no_docstring: true
 
 ## EvaluationMetricField
 

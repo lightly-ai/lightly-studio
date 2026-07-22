@@ -28,7 +28,8 @@ class CreateImage(CreateSample):
             The UUID of the created image sample.
 
         Raises:
-            ValueError: If the image could not be added.
+            AllInputFilesFailedError: If the image is missing or broken.
+            ValueError: If the image could not be added for any other reason.
         """
         sample_ids = add_images.load_into_dataset_from_paths(
             session=session,

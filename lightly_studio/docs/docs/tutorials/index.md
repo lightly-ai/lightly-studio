@@ -1,0 +1,22 @@
+# Tutorials
+
+Tutorials show end-to-end LightlyStudio workflows for common dataset preparation and model
+development tasks. Each tutorial walks through a complete, practical workflow — from raw,
+unlabeled data to a trained and evaluated model.
+
+## Object Detection
+
+<div class="grid cards wide" markdown>
+
+-   **[Curate a Traffic CCTV Dataset for YOLO Training](yolo-traffic-cctv-object-detection.md)**
+
+    [![Curate a Traffic CCTV Dataset for YOLO Training](https://storage.googleapis.com/lightly-public/studio/tutorials/prepare-a-yolo-dataset/final-screen.jpg)](yolo-traffic-cctv-object-detection.md)
+
+    Explore embeddings, remove near-duplicates, auto-label with a detection plugin, and review annotations before training.
+
+-   **[Evaluate YOLO26 on Your Dataset with LightlyStudio](yolo26-model-evaluation.md)**
+
+    [![Evaluate YOLO26 on Your Dataset with LightlyStudio](https://storage.googleapis.com/lightly-public/studio/tutorials/detection-model-evaluation/confusion-matrix-overview-crop.jpg)](yolo26-model-evaluation.md)
+
+    Compare predictions against ground truth, use the confusion matrix and embeddings to find failure patterns, and export issues for relabeling.
+</div>

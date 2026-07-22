@@ -27,6 +27,12 @@
     font-size: 0.7rem;
 }
 
+/* Wide card grid: up to 2 columns; a lone card keeps a reserved empty column
+   instead of stretching to fill the full row width */
+.md-typeset .grid.cards.wide {
+    grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)) !important;
+}
+
 /* Optional: subtle hover effect for cards */
 .md-typeset .grid.cards > ol > li:hover,
 .md-typeset .grid.cards > ul > li:hover {

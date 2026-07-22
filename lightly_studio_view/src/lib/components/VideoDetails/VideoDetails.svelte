@@ -8,13 +8,27 @@
         VideoFrameDetails,
         VideoPlayer
     } from '$lib/components';
-    import { type FrameView, type SampleView, type VideoView } from '$lib/api/lightly_studio_local';
-    import { getVideoURLById } from '$lib/utils';
+    import {
+        AnnotationType,
+        type FrameView,
+        type SampleView,
+        type VideoView
+    } from '$lib/api/lightly_studio_local';
+    import { getVideoURLById, toVideoEvents, type VideoEvent } from '$lib/utils';
     import VideoSampleMetadata from '../VideoSampleMetadata/VideoSampleMetadata.svelte';
     import SampleDetailsCaptionSegment from '../SampleDetails/SampleDetailsCaptionsSegment/SampleDetailsCaptionSegment.svelte';
+    import SelectClassDialog from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
     import { useVideoFrames } from '$lib/hooks/useVideoFrames/useVideoFrames';
     import { useVideoFrameAnnotations } from '$lib/hooks/useVideoFrameAnnotations/useVideoFrameAnnotations';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
+    import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
+    import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
+    import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
+    import { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
+    import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { onMount } from 'svelte';
+    import { toast } from 'svelte-sonner';
     import { routeHelpers } from '$lib/routes';
     import VideoFrameAnnotationItem, {
         type PrerenderedAnnotation
@@ -30,6 +44,92 @@
 
     let videoEl: HTMLVideoElement | null = $state(null);
     let frameRequestId: number | null = $state(null);
+
+    // Imported events: classification annotations on the video carrying a time span.
+    const videoEvents = $derived(toVideoEvents(video.sample.annotations ?? []));
+
+    // Reuse the global "Edit annotations" toggle to enable event editing.
+    const { isEditingMode } = useGlobalStorage();
+
+    // Events live on the video's own collection; labels are shared per dataset.
+    const eventCollectionId = (video.sample as SampleView)?.collection_id ?? datasetId;
+    const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId: eventCollectionId });
+    const { createAnnotation } = useCreateAnnotation({ collectionId: eventCollectionId });
+    const { createLabel } = useCreateLabel({ collectionId: eventCollectionId });
+    const { deleteAnnotation } = useDeleteAnnotation({ collectionId: eventCollectionId });
+    const annotationLabels = useAnnotationLabels(() => ({ collectionId: eventCollectionId }));
+
+    const {
+        open: selectClassOpen,
+        requestLabel,
+        handleConfirm: handleClassSelected,
+        handleCancel: handleClassDialogCancel
+    } = useSelectClassDialog();
+    const labelNames = $derived(
+        annotationLabels.data?.map((label) => label.annotation_label_name ?? '').filter(Boolean) ??
+            []
+    );
+
+    async function handleEventResize(event: VideoEvent, startTimeS: number, endTimeS: number) {
+        try {
+            await updateAnnotations([
+                {
+                    annotation_id: event.id,
+                    collection_id: event.annotationCollectionId,
+                    start_time_s: startTimeS,
+                    end_time_s: endTimeS
+                }
+            ]);
+        } catch (error) {
+            console.error('Failed to save event changes:', error);
+            toast.error('Failed to save event changes. Please try again.');
+        } finally {
+            // Refetch either way so the timeline reflects the persisted span
+            // (or reverts the optimistic preview if the update failed).
+            onVideoUpdate();
+        }
+    }
+
+    async function handleEventAdd(startTimeS: number, endTimeS: number) {
+        const result = await requestLabel();
+        if (!result?.label) return;
+
+        try {
+            let label = annotationLabels.data?.find(
+                (item) => item.annotation_label_name === result.label
+            );
+            if (!label) {
+                label = await createLabel({
+                    dataset_id: datasetId,
+                    annotation_label_name: result.label
+                });
+            }
+
+            await createAnnotation({
+                parent_sample_id: video.sample_id,
+                annotation_type: AnnotationType.CLASSIFICATION,
+                annotation_label_id: label.annotation_label_id!,
+                start_time_s: startTimeS,
+                end_time_s: endTimeS
+            });
+            onVideoUpdate();
+            toast.success('Event created successfully');
+        } catch (error) {
+            toast.error('Failed to create event. Please try again.');
+            console.error('Error creating event:', error);
+        }
+    }
+
+    async function handleEventDelete(event: VideoEvent) {
+        try {
+            await deleteAnnotation(event.id);
+            onVideoUpdate();
+            toast.success('Event deleted');
+        } catch (error) {
+            toast.error('Failed to delete event. Please try again.');
+            console.error('Error deleting event:', error);
+        }
+    }
 
     const {
         currentFrame,
@@ -93,36 +193,47 @@
         void loadFrameByPlaybackTime(target.currentTime, video.fps);
     };
 
+    // null = waiting for the frame deep-link timestamp; 0 = start of video.
+    let startTimeS = $state<number | null>(frameNumber !== undefined ? null : 0);
+
+    // #key remounts on navigation, so onMount suffices; an $effect could re-fire
+    // and stop the play sync loop.
     onMount(() => {
         if (frameNumber !== undefined) {
             void loadFramesFromFrameNumber(frameNumber);
-            jumpToCurrentFrame = true;
         } else {
             void loadFrameByPlaybackTime(0, video.fps);
         }
-    });
 
-    $effect(() => {
         return () => stopFrameSyncLoop();
     });
 
+    let videoFrameContainerEl: HTMLDivElement | null = $state(null);
     let videoWidth = $state(0);
     let videoHeight = $state(0);
+    let overlayTop = $state(0);
+    let overlayLeft = $state(0);
 
     let resizeObserver: ResizeObserver;
 
+    // Align the annotation overlay to the <video> box, not the full player chrome.
     $effect(() => {
-        if (!videoEl) return;
+        if (!videoEl || !videoFrameContainerEl) return;
 
         const updateOverlaySize = () => {
-            if (!videoEl) return;
-            videoWidth = videoEl.clientWidth;
-            videoHeight = videoEl.clientHeight;
+            if (!videoEl || !videoFrameContainerEl) return;
+            const videoRect = videoEl.getBoundingClientRect();
+            const containerRect = videoFrameContainerEl.getBoundingClientRect();
+            overlayLeft = videoRect.left - containerRect.left;
+            overlayTop = videoRect.top - containerRect.top;
+            videoWidth = videoRect.width;
+            videoHeight = videoRect.height;
         };
         updateOverlaySize();
 
         resizeObserver = new ResizeObserver(updateOverlaySize);
         resizeObserver.observe(videoEl);
+        resizeObserver.observe(videoFrameContainerEl);
 
         return () => resizeObserver.disconnect();
     });
@@ -131,32 +242,36 @@
         return frame.frame_timestamp_s + 0.002;
     };
 
-    // this param is used when we passed frame_number to jump to specific frame on video load, after that we want to jump to current frame only when user seek or play the video
-    let jumpToCurrentFrame: boolean = $state(false);
-
-    // We track here if we have flag to jump to current frame
+    // Once the deep-linked frame loads, pass its timestamp to VideoPlayer.
     $effect(() => {
-        if (jumpToCurrentFrame && $currentFrame && videoEl) {
-            const targetTime = getTimeByFrameNumber($currentFrame);
-            videoEl.currentTime = targetTime;
-            jumpToCurrentFrame = false;
-        }
+        if (frameNumber === undefined || startTimeS !== null || !$currentFrame) return;
+        if ($currentFrame.frame_number !== frameNumber) return;
+        startTimeS = getTimeByFrameNumber($currentFrame);
     });
 </script>
 
-<div class="flex h-full w-full flex-col space-y-4">
+<div class="flex h-full min-h-0 w-full flex-col">
     <div class="flex min-h-0 flex-1 gap-4">
-        <Card className="flex w-[60vw] flex-col">
-            <CardContent className="flex h-full flex-col gap-4 overflow-hidden">
-                <div class="video-frame-container relative overflow-hidden rounded-lg bg-black">
+        <Card className="flex h-full min-h-0 w-[60vw] flex-col overflow-hidden">
+            <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <div
+                    bind:this={videoFrameContainerEl}
+                    class="video-frame-container relative min-h-0 flex-1 overflow-hidden rounded-lg bg-black"
+                >
                     <VideoDetailsNavigation />
                     <VideoPlayer
                         src={getVideoURLById(video.sample_id)}
                         bind:videoEl
+                        {startTimeS}
+                        events={videoEvents}
+                        durationS={video.duration_s ?? undefined}
+                        editableEvents={$isEditingMode}
+                        onEventResize={handleEventResize}
+                        onEventAdd={handleEventAdd}
+                        onEventDelete={handleEventDelete}
                         videoProps={{
-                            controls: true,
                             muted: true,
-                            class: 'block h-full w-full',
+                            class: 'object-contain',
                             onplay,
                             onpause,
                             onended,
@@ -165,21 +280,26 @@
                     />
 
                     {#if $currentFrame && videoWidth > 0}
-                        <VideoFrameAnnotationItem
-                            width={videoWidth}
-                            height={videoHeight}
-                            sample={$currentFrame}
-                            showLabel={true}
-                            sampleWidth={video.width}
-                            sampleHeight={video.height}
-                            {prerenderedAnnotations}
-                        />
+                        <div
+                            class="pointer-events-none absolute"
+                            style={`top: ${overlayTop}px; left: ${overlayLeft}px; width: ${videoWidth}px; height: ${videoHeight}px;`}
+                        >
+                            <VideoFrameAnnotationItem
+                                width={videoWidth}
+                                height={videoHeight}
+                                sample={$currentFrame}
+                                showLabel={true}
+                                sampleWidth={video.width}
+                                sampleHeight={video.height}
+                                {prerenderedAnnotations}
+                            />
+                        </div>
                     {/if}
                 </div>
             </CardContent>
         </Card>
 
-        <Card className="flex flex-1 flex-col overflow-hidden">
+        <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <CardContent className="h-full overflow-y-auto">
                 {#if video?.sample?.sample_id}
                     <SegmentTags
@@ -216,9 +336,16 @@
     </div>
 </div>
 
+<SelectClassDialog
+    bind:open={$selectClassOpen}
+    labels={labelNames}
+    onConfirm={handleClassSelected}
+    onCancel={handleClassDialogCancel}
+/>
+
 <style>
     .video-frame-container {
         width: 100%;
-        height: 100%;
+        min-height: 0;
     }
 </style>

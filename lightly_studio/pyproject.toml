@@ -1,6 +1,6 @@
 [project]
 name = "lightly-studio"
-version = "1.0.2"
+version = "1.0.3"
 description = "LightlyStudio is a lightweight, fast, and easy-to-use data exploration tool for data scientists and engineers."
 readme = "USAGE.md"
 requires-python = ">=3.9,<3.15"
@@ -34,7 +34,7 @@ dependencies = [
     # Unreleased and released labelformat versions can be referenced with this syntax:
     # - "labelformat @ git+https://github.com/lightly-ai/labelformat.git@325a20b"
     # - "labelformat>=0.1.9"
-    "labelformat>=0.1.16",
+    "labelformat @ git+https://github.com/lightly-ai/labelformat.git@07b00a0edf54e2dc7930a3abc756c7914c068829",
     "tqdm>=4.65.0",
     "eval-type-backport>=0.2.2",
     "xxhash>=3.5.0",
@@ -90,6 +90,7 @@ dev = [
     "types-boto3>=1.26.0",
     "types-tqdm>=4.67.0.20241221",
     "types-PyYAML>=6.0.0",
+    "pytest-cov>=5.0.0",
     "pytest-xdist>=3.6.1",
     "testcontainers[postgres]>=4.0.0",
 ]

@@ -4,6 +4,8 @@ import pytest
 from sqlmodel import Session, col, select
 
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
+from lightly_studio.models.sample_embedding import SampleEmbeddingTable
+from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import (
     annotation_resolver,
     evaluation_annotation_metric_resolver,
@@ -14,7 +16,9 @@ from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
     create_collection,
+    create_embedding_model,
     create_image,
+    create_sample_embedding,
     create_tag,
 )
 from tests.resolvers.evaluation_sample_metric_resolver import (
@@ -36,8 +40,9 @@ def test_delete_annotation__success(
     """Test deleting an annotation."""
     annotations = annotation_resolver.get_all(db_session).annotations
 
+    classification_id = annotations[0].sample_id
     annotation_ids_to_delete = [
-        annotations[0].sample_id,  # classification
+        classification_id,  # classification (carries a temporal span from the fixture)
         annotations[3].sample_id,  # object detection
         annotations[6].sample_id,  # segmentation mask
     ]
@@ -48,6 +53,9 @@ def test_delete_annotation__success(
         # Verify the change persisted in the database.
         deleted_annotation = annotation_resolver.get_by_id(db_session, annotation_id)
         assert deleted_annotation is None
+
+    # The temporal span row is deleted along with the annotation.
+    assert db_session.get(TemporalSpanTable, classification_id) is None
 
 
 def test_delete_annotation__raises_error_when_annotation_not_found(
@@ -92,6 +100,40 @@ def test_delete_annotation__deletes_sample_tag_links(
         select(SampleTagLinkTable).where(col(SampleTagLinkTable.sample_id) == annotation.sample_id)
     ).all()
     assert not links_after
+    assert db_session.get(SampleTable, annotation.sample_id) is None
+
+
+def test_delete_annotation__deletes_sample_embeddings(
+    db_session: Session,
+    annotations_test_data: AnnotationsTestData,
+) -> None:
+    """Test deleting an annotation whose sample has an embedding.
+
+    Regression test: the sample_id column is part of SampleEmbeddingTable's primary key,
+    so deleting the sample previously failed when the ORM tried to null it out.
+    """
+    annotation = annotations_test_data.annotations[0]
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=annotation.sample.collection_id,
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=annotation.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[0.1] * embedding_model.embedding_dimension,
+    )
+
+    annotation_resolver.delete_annotation(db_session, annotation.sample_id)
+
+    # Verify both annotation and its embedding were deleted.
+    assert annotation_resolver.get_by_id(db_session, annotation.sample_id) is None
+    embeddings_after = db_session.exec(
+        select(SampleEmbeddingTable).where(
+            col(SampleEmbeddingTable.sample_id) == annotation.sample_id
+        )
+    ).all()
+    assert not embeddings_after
     assert db_session.get(SampleTable, annotation.sample_id) is None
 
 
@@ -208,11 +250,10 @@ def test_delete_annotation__preserves_other_run_sample_metrics(
     create_annotation_metrics(
         session=db_session,
         run_id=other_run.id,
-        true_positive_metric_stubs=[
+        pair_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=image.sample_id,
-                metric_name="iou",
-                value=0.75,
+                metrics={"iou": 0.75},
                 gt_annotation_label_id=label.annotation_label_id,
             )
         ],

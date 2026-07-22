@@ -3,6 +3,7 @@
 from typing import Literal, Optional
 from uuid import UUID
 
+from sqlalchemy import or_
 from sqlmodel import col, select
 from sqlmodel.sql.expression import SelectOfScalar
 
@@ -82,7 +83,7 @@ class VideoFilter(GridFilterBase):
         return query
 
     def _apply_annotation_filter(self, query: QueryType) -> QueryType:
-        """For videos, annotation filters are applied to the frames."""
+        """For videos, annotation filters match frame or direct video annotations."""
         assert self.frame_annotation_filter is not None
 
         frame_filtered_video_ids_subquery = select(VideoFrameTable.parent_sample_id)
@@ -93,7 +94,20 @@ class VideoFilter(GridFilterBase):
             )
         )
 
-        return query.where(col(VideoTable.sample_id).in_(frame_filtered_video_ids_subquery))
+        video_filtered_video_ids_subquery = select(VideoTable.sample_id)
+        video_filtered_video_ids_subquery = (
+            self.frame_annotation_filter.apply_to_parent_sample_query(
+                query=video_filtered_video_ids_subquery,
+                sample_id_column=col(VideoTable.sample_id),
+            )
+        )
+
+        return query.where(
+            or_(
+                col(VideoTable.sample_id).in_(frame_filtered_video_ids_subquery),
+                col(VideoTable.sample_id).in_(video_filtered_video_ids_subquery),
+            )
+        )
 
     def _select_sample_ids(self) -> SelectOfScalar[UUID]:
         return select(VideoTable.sample_id).join(VideoTable.sample)

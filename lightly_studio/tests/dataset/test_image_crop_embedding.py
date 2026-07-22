@@ -5,15 +5,13 @@ import torch
 from numpy.typing import NDArray
 from PIL import Image
 
+from lightly_studio.dataset import image_crop_embedding
 from lightly_studio.dataset.embedding_generator import ImageCrop
-from lightly_studio.dataset.image_crop_embedding import (
-    EmbeddingContext,
-    embed_image_crops_batched,
-)
+from lightly_studio.dataset.image_embedding import EmbeddingContext
 
 
 def test_embed_image_crops_batched__empty_input_returns_empty_array() -> None:
-    embeddings = embed_image_crops_batched(
+    embeddings = image_crop_embedding.embed_image_crops_batched(
         image_crops=[],
         context=EmbeddingContext(
             embedding_dimension=4,
@@ -53,7 +51,7 @@ def test_embed_image_crops_batched__preserves_input_order_across_filepaths(
         # expected (batch_size, 1) embedding; encode is the identity here.
         return images_tensor.numpy().astype(np.float32)
 
-    embeddings = embed_image_crops_batched(
+    embeddings = image_crop_embedding.embed_image_crops_batched(
         image_crops=image_crops,
         context=EmbeddingContext(
             embedding_dimension=1,

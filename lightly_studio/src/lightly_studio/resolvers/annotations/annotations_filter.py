@@ -15,10 +15,11 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers.grid_filter_base import GridFilterBase
+from lightly_studio.resolvers.region_sample_ids_filter import RegionSampleIdsFilter
 from lightly_studio.type_definitions import QueryType
 
 
-class AnnotationsFilter(GridFilterBase):
+class AnnotationsFilter(GridFilterBase, RegionSampleIdsFilter):
     """Handles filtering for annotation queries."""
 
     filter_type: Literal["annotations"] = "annotations"
@@ -91,6 +92,7 @@ class AnnotationsFilter(GridFilterBase):
             or self.tag_ids
             or self.annotation_types
             or self.sample_ids
+            or self.region_sample_ids is not None
         )
 
     def _apply_annotation_filters(
@@ -120,6 +122,11 @@ class AnnotationsFilter(GridFilterBase):
                     values=self.sample_ids,
                 )
             )
+
+        # Filter by embedding-plot region selection, resolved server-side to sample ids.
+        query = self._apply_region_sample_ids_filter(
+            query, sample_id_column=col(annotation_sample.sample_id)
+        )
 
         # Filter by annotation label
         if self.annotation_label_ids:

@@ -103,6 +103,71 @@ describe('PlotPanelLegend', () => {
         expect(includedRow.className).not.toContain('opacity-40');
     });
 
+    describe('scroll fade cues', () => {
+        // jsdom does no layout, so scroll metrics must be stubbed before firing scroll.
+        const setScrollMetrics = (
+            element: HTMLElement,
+            { scrollTop, scrollHeight, clientHeight }: Record<string, number>
+        ) => {
+            Object.defineProperty(element, 'scrollHeight', {
+                value: scrollHeight,
+                configurable: true
+            });
+            Object.defineProperty(element, 'clientHeight', {
+                value: clientHeight,
+                configurable: true
+            });
+            element.scrollTop = scrollTop;
+        };
+
+        const renderScrollContainer = () => {
+            render(PlotPanelLegend, {
+                categoryColors: [HIDDEN_COLOR, NOT_FILTERED_COLOR, FILTERED_COLOR]
+            });
+            return screen.getByTestId('plot-legend-scroll');
+        };
+
+        it('shows no fade when the content fits', async () => {
+            const container = renderScrollContainer();
+
+            setScrollMetrics(container, { scrollTop: 0, scrollHeight: 100, clientHeight: 100 });
+            await fireEvent.scroll(container);
+
+            expect(container.className).not.toContain('legend-fade');
+        });
+
+        it('fades the bottom when scrolled to the top of overflowing content', async () => {
+            const container = renderScrollContainer();
+
+            setScrollMetrics(container, { scrollTop: 0, scrollHeight: 200, clientHeight: 100 });
+            await fireEvent.scroll(container);
+
+            expect(container.className).toContain('legend-fade-bottom');
+            expect(container.className).not.toContain('legend-fade-top');
+            expect(container.className).not.toContain('legend-fade-both');
+        });
+
+        it('fades both edges when scrolled to the middle', async () => {
+            const container = renderScrollContainer();
+
+            setScrollMetrics(container, { scrollTop: 50, scrollHeight: 200, clientHeight: 100 });
+            await fireEvent.scroll(container);
+
+            expect(container.className).toContain('legend-fade-both');
+        });
+
+        it('fades the top when scrolled to the bottom', async () => {
+            const container = renderScrollContainer();
+
+            setScrollMetrics(container, { scrollTop: 100, scrollHeight: 200, clientHeight: 100 });
+            await fireEvent.scroll(container);
+
+            expect(container.className).toContain('legend-fade-top');
+            expect(container.className).not.toContain('legend-fade-bottom');
+            expect(container.className).not.toContain('legend-fade-both');
+        });
+    });
+
     it('renders tag legend entries with getColorByLabel colors', () => {
         const reviewBatch1Color = getColorByLabel('review-batch-1').color;
         const reviewBatch2Color = getColorByLabel('review-batch-2').color;

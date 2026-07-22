@@ -115,6 +115,7 @@ describe('resolveContextFilter', () => {
                 annotationId: 'ann-1'
             };
             expect(resolveContextFilter(ctx, null, null, null, new Set(), new Set())).toEqual({
+                filter_type: 'sample',
                 sample_ids: ['ann-1']
             });
         });
@@ -126,6 +127,7 @@ describe('resolveContextFilter', () => {
                 sampleId: 'smp-1'
             };
             expect(resolveContextFilter(ctx, null, null, null, new Set(), new Set())).toEqual({
+                filter_type: 'sample',
                 sample_ids: ['smp-1']
             });
         });
@@ -135,6 +137,7 @@ describe('resolveContextFilter', () => {
         it('returns sampleId as sample_ids on image detail', () => {
             const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.imageDetails, sampleId: 'smp-1' };
             expect(resolveContextFilter(ctx, null, null, null, new Set(), new Set())).toEqual({
+                filter_type: 'sample',
                 sample_ids: ['smp-1']
             });
         });
@@ -142,6 +145,7 @@ describe('resolveContextFilter', () => {
         it('returns sampleId as sample_ids on frame detail', () => {
             const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.framesDetails, sampleId: 'frm-1' };
             expect(resolveContextFilter(ctx, null, null, null, new Set(), new Set())).toEqual({
+                filter_type: 'sample',
                 sample_ids: ['frm-1']
             });
         });
@@ -149,6 +153,7 @@ describe('resolveContextFilter', () => {
         it('returns sampleId as sample_ids on video detail', () => {
             const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.videoDetails, sampleId: 'vid-1' };
             expect(resolveContextFilter(ctx, null, null, null, new Set(), new Set())).toEqual({
+                filter_type: 'sample',
                 sample_ids: ['vid-1']
             });
         });
@@ -166,21 +171,25 @@ describe('resolveContextFilter', () => {
             const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.annotations };
             expect(
                 resolveContextFilter(ctx, null, null, null, new Set(['lbl-1', 'lbl-2']), new Set())
-            ).toEqual({ annotation_label_ids: ['lbl-1', 'lbl-2'] });
+            ).toEqual({ filter_type: 'annotations', annotation_label_ids: ['lbl-1', 'lbl-2'] });
         });
 
         it('returns AnnotationsFilter with tag_ids when tagsSelected is set', () => {
             const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.annotations };
             expect(
                 resolveContextFilter(ctx, null, null, null, new Set(), new Set(['tag-1']))
-            ).toEqual({ tag_ids: ['tag-1'] });
+            ).toEqual({ filter_type: 'annotations', tag_ids: ['tag-1'] });
         });
 
         it('returns AnnotationsFilter with both when both are set', () => {
             const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.annotations };
             expect(
                 resolveContextFilter(ctx, null, null, null, new Set(['lbl-1']), new Set(['tag-1']))
-            ).toEqual({ annotation_label_ids: ['lbl-1'], tag_ids: ['tag-1'] });
+            ).toEqual({
+                filter_type: 'annotations',
+                annotation_label_ids: ['lbl-1'],
+                tag_ids: ['tag-1']
+            });
         });
 
         it('returns undefined when no filters are set', () => {
@@ -195,6 +204,7 @@ describe('resolveContextFilter', () => {
         it('returns has_captions filter', () => {
             const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.captions };
             expect(resolveContextFilter(ctx, null, null, null, new Set(), new Set())).toEqual({
+                filter_type: 'sample',
                 has_captions: true
             });
         });
@@ -205,11 +215,11 @@ describe('resolveContextFilter', () => {
         const videoFilter = { sample_filter: {} };
         const frameFilter = { sample_filter: {} };
 
-        it('returns imageFilter for images route', () => {
+        it('returns imageFilter with filter_type for images route', () => {
             const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.images };
-            expect(resolveContextFilter(ctx, imageFilter, null, null, new Set(), new Set())).toBe(
-                imageFilter
-            );
+            expect(
+                resolveContextFilter(ctx, imageFilter, null, null, new Set(), new Set())
+            ).toEqual({ ...imageFilter, filter_type: 'image' });
         });
 
         it('returns undefined when imageFilter is null on images route', () => {
@@ -219,18 +229,18 @@ describe('resolveContextFilter', () => {
             ).toBeUndefined();
         });
 
-        it('returns videoFilter for videos route', () => {
+        it('returns videoFilter with filter_type for videos route', () => {
             const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.videos };
-            expect(resolveContextFilter(ctx, null, videoFilter, null, new Set(), new Set())).toBe(
-                videoFilter
-            );
+            expect(
+                resolveContextFilter(ctx, null, videoFilter, null, new Set(), new Set())
+            ).toEqual({ ...videoFilter, filter_type: 'video' });
         });
 
-        it('returns frameFilter for frames route', () => {
+        it('returns frameFilter with filter_type for frames route', () => {
             const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.frames };
-            expect(resolveContextFilter(ctx, null, null, frameFilter, new Set(), new Set())).toBe(
-                frameFilter
-            );
+            expect(
+                resolveContextFilter(ctx, null, null, frameFilter, new Set(), new Set())
+            ).toEqual({ ...frameFilter, filter_type: 'video_frame' });
         });
     });
 

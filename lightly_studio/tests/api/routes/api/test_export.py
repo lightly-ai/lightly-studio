@@ -321,6 +321,40 @@ def test_export_collection_captions(
     )
 
 
+def test_export_collection_samples__image_filter__tag__returns_intersection(
+    db_session: Session, test_client: TestClient
+) -> None:
+    # Tag covers A and B; ImageFilter covers B and C → export returns B only.
+    collection_id = create_collection(session=db_session).collection_id
+    image_a = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="path/a.png"
+    )
+    image_b = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="path/b.png"
+    )
+    image_c = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="path/c.png"
+    )
+
+    tag = create_tag(session=db_session, collection_id=collection_id)
+    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=image_a.sample)
+    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=image_b.sample)
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/export",
+        json={
+            "include": {"tag_ids": [str(tag.tag_id)]},
+            "collection_filter": {
+                "filter_type": "image",
+                "sample_filter": {"sample_ids": [str(image_b.sample_id), str(image_c.sample_id)]},
+            },
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.text == image_b.file_path_abs
+
+
 def test_export_collection_samples(db_session: Session, test_client: TestClient) -> None:
     client = test_client
     collection_id = create_collection(

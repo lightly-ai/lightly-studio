@@ -44,11 +44,10 @@ def test_get_all_by_evaluation_run_id(db_session: Session) -> None:
     [tp_stub] = create_annotation_metrics(
         session=db_session,
         run_id=run.id,
-        true_positive_metric_stubs=[
+        pair_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=image.sample_id,
-                metric_name="iou",
-                value=0.75,
+                metrics={"iou": 0.75},
                 gt_annotation_label_id=label.annotation_label_id,
             )
         ],

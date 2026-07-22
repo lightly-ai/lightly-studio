@@ -1,3 +1,8 @@
+---
+title: Dataset Sampling Strategies Explained
+description: Select diverse, balanced, or representative subsets from your dataset using LightlyStudio's embedding-based sampling strategies in the GUI or Python.
+---
+
 # Sampling
 
 Sampling helps you select representative subsets from your dataset. LightlyStudio provides sampling strategies that leverage embeddings to pick diverse, balanced, or otherwise optimized subsets for labeling, training, or review. Use the GUI for quick, one-off sampling. Use the Python API when you need reusable, configurable, or combined sampling strategies in code.
@@ -12,7 +17,7 @@ Open the dialog from the `Menu` button in the top-right corner and select `Sampl
 
 ## Sampling in Python
 
-Each strategy is configured directly from a [`DatasetQuery`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery) via [`sampling()`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.sampling). The sampled items are stored under the tag passed as `sampling_result_tag_name`, so you can filter or export them later. `sampling_result_tag_name` must be a tag name that does not yet exist in the dataset.
+Each strategy is configured directly from a [`DatasetQuery`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery) via [`sampling()`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.sampling). This works for image datasets, video datasets, and video-frame datasets returned by [`VideoDataset.frames()`](../api/dataset.md#lightly_studio.VideoDataset.frames). The sampled items are stored under the tag passed as `sampling_result_tag_name`, so you can filter or export them later. `sampling_result_tag_name` must be a tag name that does not yet exist in the dataset.
 
 ### Filtering before sampling
 
@@ -28,6 +33,25 @@ dataset = ls.ImageDataset.load_or_create()
 dataset.match(ImageSampleField.width >= 1920).sampling().diverse(
     n_samples_to_select=10,
     sampling_result_tag_name="diverse_hd",
+)
+```
+
+Videos can be filtered and sampled using `VideoDataset.match(...).sampling()` and video frames can be sampled through `VideoDataset.frames().match(...).sampling()`:
+
+```py
+import lightly_studio as ls
+from lightly_studio.core.dataset_query import VideoFrameSampleField
+
+dataset = ls.VideoDataset.load("my_video_dataset")
+frames = dataset.frames()
+
+for frame in frames.match(VideoFrameSampleField.frame_number > 1):
+    frame.metadata["score"] = float(frame.frame_number)
+
+frames.match(VideoFrameSampleField.frame_number > 1).sampling().metadata_weighting(
+    n_samples_to_select=5,
+    sampling_result_tag_name="sampled_frames",
+    metadata_key="score",
 )
 ```
 

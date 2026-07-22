@@ -33,6 +33,27 @@ Annotations are shown in sample detail view and in the annotation-focused views.
   ></iframe>
 </div>
 
+## Object-level embeddings
+
+LightlyStudio computes embeddings not only for whole images, but also for individual
+objects defined by object-detection boxes or segmentation masks. This unlocks the
+**embedding plot** and **similarity search** on individual objects, working exactly the
+same way they do for whole images.
+Open the `Annotations` view in the GUI to browse objects in a grid, search them, and
+explore them in the embedding plot. For how search, filter, and the embedding plot
+behave, see [Search and Filter](search_and_filter.md).
+
+
+Object embeddings are created automatically when object detection or segmentation annotations are imported. The
+`add_annotations_from_*` methods accept `embed_annotations=True` by default. Pass
+`embed_annotations=False` to skip it.
+
+!!! warning "Editing an annotation does not update its embedding"
+    Object-level embeddings are generated only for annotations that do not yet have one. Editing an
+    existing annotation — for example moving or resizing its bounding box — does **not** regenerate
+    its embedding, so the object keeps the embedding of its original crop. We plan to add support
+    for recomputing object embeddings after edits.
+
 ## Annotations in Python
 
 Use the [Python API](../api/annotation.md) to create annotations and predictions directly, import them from model

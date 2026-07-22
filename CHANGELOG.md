@@ -9,9 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Python SDK: `limit` parameter on `ImageDataset.add_samples_from*` methods to index only the first N samples of a dataset.
+- Python SDK: Allow embedding video frames by adding the `embed_frames` parameter to `VideoDataset.add_videos_from_path` and `VideoDataset.add_videos_from_youtube_vis`.
+- Python dataset queries can now filter annotation evaluation results for false positives and false negatives.
+- Show numeric metadata values in distribution panel.
+- Add a selector for the numeric metadata histogram bin count.
+- Introduce button to see expanded distribution for numeric metadata values.
+- Add metadata filter chips to the left sidebar
+- Display classification annotations in the annotations grid.
+
 
 ### Changed
+
+- The left filter panel can now be collapsed entirely to reclaim space for the grid; a "Filters" button in the grid header restores it.
 
 ### Deprecated
 
@@ -19,7 +28,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Class distribution bar chart: tooltip was clipped when hovering a chart with a single class.
+- Long tags shown in the left side menu are truncated.
+
 ### Security
+
+## \[1.0.3\] - 2026-07-10
+
+### Added
+
+- Python SDK: `limit` parameter on `ImageDataset.add_samples_from*` methods to index only the first N samples of a dataset.
+- Python dataset queries now support model evaluation queries on the annotation level.
+- View class distribution for image classification.
+- Custom embedding models can be registered.
+
+### Changed
+
+- Embedding plot legend is now compact and scrollable, and the WebGPU fallback message is no longer shown.
 
 ## \[1.0.2\] - 2026-07-02
 

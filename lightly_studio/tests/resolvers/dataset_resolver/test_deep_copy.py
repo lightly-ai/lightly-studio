@@ -15,6 +15,7 @@ from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotat
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.models.image import ImageCreate
+from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
@@ -548,6 +549,8 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
                 sample_id=img.sample_id,
                 annotation_label_id=label.annotation_label_id,
                 annotation_type=AnnotationType.CLASSIFICATION,
+                start_time_s=1.5,
+                end_time_s=4.0,
             ),
             AnnotationDetails(
                 sample_id=img.sample_id,
@@ -599,11 +602,15 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
     # Build lookup by annotation type for copied annotations
     copied_by_type = {a.annotation_type: a for a in result.annotations}
 
-    # Assert - classification annotation copied (no detail tables)
+    # Assert - classification annotation copied (no bbox/mask detail tables) with its temporal span
     copied_cls = copied_by_type[AnnotationType.CLASSIFICATION]
     assert copied_cls.annotation_type == AnnotationType.CLASSIFICATION
     assert copied_cls.object_detection_details is None
     assert copied_cls.segmentation_details is None
+    copied_span = db_session.get(TemporalSpanTable, copied_cls.sample_id)
+    assert copied_span is not None
+    assert copied_span.start_time_s == 1.5
+    assert copied_span.end_time_s == 4.0
 
     # Assert - object detection detail table copied
     copied_od = copied_by_type[AnnotationType.OBJECT_DETECTION]
@@ -783,11 +790,10 @@ def test_deep_copy__with_evaluation_annotation_metrics(db_session: Session) -> N
     create_annotation_metrics(
         session=db_session,
         run_id=run.id,
-        true_positive_metric_stubs=[
+        pair_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=image.sample_id,
-                metric_name="iou",
-                value=0.8,
+                metrics={"iou": 0.8},
                 gt_annotation_label_id=label.annotation_label_id,
             )
         ],

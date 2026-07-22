@@ -4,12 +4,14 @@ import os
 from argparse import ArgumentParser
 from pathlib import Path
 from unittest.mock import MagicMock
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import fsspec
 import pytest
 from av import container
 from av.codec.context import ThreadType
+from av.container import InputContainer
+from av.error import InvalidDataError
 from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation
 from labelformat.model.bounding_box import BoundingBox, BoundingBoxFormat
 from labelformat.model.category import Category
@@ -29,17 +31,20 @@ from sqlmodel import Session
 
 from lightly_studio.core.video import add_videos, video_dataset
 from lightly_studio.core.video.add_videos import FrameExtractionContext
+from lightly_studio.dataset.embedding_generator import RandomEmbeddingGenerator
+from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.models.collection import SampleType
-from lightly_studio.models.video import VideoCreate
+from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
     dataset_resolver,
+    sample_embedding_resolver,
     video_frame_resolver,
     video_resolver,
 )
 from tests.helpers_resolvers import create_collection
-from tests.resolvers.video.helpers import create_video_file
+from tests.resolvers.video.helpers import VideoStub, create_video_file, create_videos
 
 
 def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) -> None:
@@ -97,6 +102,138 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
         collection_id=collection_hierarchy[1].collection_id,
     ).samples
     assert len(video_frames) == 60
+
+
+def test_load_into_collection_from_paths__records_missing_broken_already_present_outcomes(
+    db_session: Session, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    # Arrange: a folder mixing good / already-present / missing / broken videos. Each outcome
+    # gets a distinct count so a mix-up between two outcomes cannot pass the assertions.
+    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+
+    # 1 good video -> added=1.
+    good_paths = [
+        create_video_file(output_path=tmp_path / "good0.mp4", num_frames=2, fps=1),
+    ]
+
+    # 2 already-present videos: created on disk and pre-inserted into the database.
+    already_present_paths = [tmp_path / "present0.mp4", tmp_path / "present1.mp4"]
+    for path in already_present_paths:
+        create_video_file(output_path=path, num_frames=2, fps=1)
+    create_videos(
+        db_session,
+        collection.collection_id,
+        [VideoStub(path=str(path)) for path in already_present_paths],
+    )
+
+    # 3 missing videos: never created on disk.
+    missing_paths = [tmp_path / f"missing{i}.mp4" for i in range(3)]
+
+    # 4 broken videos: present on disk but not decodable.
+    broken_paths = [tmp_path / f"broken{i}.mp4" for i in range(4)]
+    for path in broken_paths:
+        path.write_bytes(b"not a real video")
+
+    # Act
+    with caplog.at_level("INFO"):
+        video_sample_ids, _ = add_videos.load_into_collection_from_paths(
+            session=db_session,
+            collection_id=collection.collection_id,
+            video_paths=[
+                str(path)
+                for path in good_paths + already_present_paths + missing_paths + broken_paths
+            ],
+        )
+
+    # Assert: only the good video is added.
+    assert len(video_sample_ids) == len(good_paths)
+    videos = video_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    ).samples
+    assert {video.file_name for video in videos} == {
+        "good0.mp4",
+        "present0.mp4",
+        "present1.mp4",
+    }
+
+    # Assert: the end-of-run summary records the distinct per-outcome counts.
+    assert "added=1" in caplog.text
+    assert "already_present=2" in caplog.text
+    assert "missing=3" in caplog.text
+    assert "broken=4" in caplog.text
+
+
+def test_load_into_collection_from_paths__mid_decode_failure_is_cleaned_up(
+    db_session: Session,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+    mocker: MockerFixture,
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    good_path = create_video_file(output_path=tmp_path / "good.mp4", num_frames=2, fps=1)
+    broken_path = create_video_file(output_path=tmp_path / "broken.mp4", num_frames=2, fps=1)
+    _fail_after_frame_creation(mocker=mocker, failing_file_name=broken_path.name)
+
+    with caplog.at_level("INFO"):
+        video_sample_ids, _ = add_videos.load_into_collection_from_paths(
+            session=db_session,
+            collection_id=collection.collection_id,
+            video_paths=[str(broken_path), str(good_path)],
+        )
+
+    videos = video_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    ).samples
+    assert [video.file_name for video in videos] == [good_path.name]
+    assert video_sample_ids == [videos[0].sample_id]
+    assert "added=1" in caplog.text
+    assert "broken=1" in caplog.text
+
+
+def _fail_after_frame_creation(
+    mocker: MockerFixture,
+    failing_file_name: str,
+) -> None:
+    """Make one video fail after its frame rows have been committed."""
+    original_create = add_videos._create_video_frame_samples
+
+    def create_frames_then_maybe_fail(
+        context: FrameExtractionContext,
+        video_container: InputContainer,
+        video_channel: int,
+        num_decode_threads: int | None = None,
+        target_fps: float | None = None,
+    ) -> list[UUID]:
+        video = video_resolver.get_by_id(session=context.session, sample_id=context.video_sample_id)
+        assert video is not None
+        if video.file_name == failing_file_name:
+            video_frame_resolver.create_many(
+                session=context.session,
+                collection_id=context.collection_id,
+                samples=[
+                    VideoFrameCreate(
+                        frame_number=0,
+                        frame_timestamp_s=0.0,
+                        frame_timestamp_pts=0,
+                        parent_sample_id=context.video_sample_id,
+                    )
+                ],
+            )
+            raise InvalidDataError(1094995529, "Invalid data found while decoding a frame")
+
+        return original_create(
+            context=context,
+            video_container=video_container,
+            video_channel=video_channel,
+            num_decode_threads=num_decode_threads,
+            target_fps=target_fps,
+        )
+
+    mocker.patch.object(
+        add_videos,
+        "_create_video_frame_samples",
+        side_effect=create_frames_then_maybe_fail,
+    )
 
 
 def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> None:
@@ -168,6 +305,75 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
     assert video_frames[1].frame_number == 1
     assert video_frames[1].parent_sample_id == video_sample_id
     assert video_frames[1].frame_timestamp_s == 1
+    video_container.close()
+    video_file.close()
+
+
+def test__create_video_frame_samples__embed_frames(
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+    video_path = create_video_file(
+        output_path=tmp_path / "test_video_frames_embed.mp4",
+        width=320,
+        height=240,
+        num_frames=2,
+        fps=1,
+    )
+    video_sample_ids = video_resolver.create_many(
+        session=db_session,
+        collection_id=collection.collection_id,
+        samples=[
+            VideoCreate(
+                file_path_abs=str(video_path),
+                file_name=video_path.name,
+                width=320,
+                height=240,
+                duration_s=2.0,
+                fps=1,
+            )
+        ],
+    )
+    video_sample_id = video_sample_ids[0]
+    video_frames_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.VIDEO_FRAME,
+    )
+
+    embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
+    model_id = embedding_manager.register_embedding_model(
+        session=db_session,
+        collection_id=video_frames_collection_id,
+        embedding_generator=RandomEmbeddingGenerator(),
+        set_as_default=True,
+    ).embedding_model_id
+
+    fs, fs_path = fsspec.core.url_to_fs(url=str(video_path))
+    video_file = fs.open(path=fs_path, mode="rb")
+    video_container = container.open(file=video_file)
+
+    frame_sample_ids = add_videos._create_video_frame_samples(
+        context=FrameExtractionContext(
+            session=db_session,
+            collection_id=video_frames_collection_id,
+            video_sample_id=video_sample_id,
+            embed_frames=True,
+            embedding_model_id=model_id,
+        ),
+        video_container=video_container,
+        video_channel=0,
+    )
+
+    assert len(frame_sample_ids) == 2
+    frame_embeddings = sample_embedding_resolver.get_by_sample_ids(
+        session=db_session,
+        sample_ids=frame_sample_ids,
+        embedding_model_id=model_id,
+    )
+    assert len(frame_embeddings) == 2
+
     video_container.close()
     video_file.close()
 
@@ -625,6 +831,58 @@ def test_load_video_annotations_from_labelformat__raises_on_missing_video(
             input_labels=input_labels,
             input_labels_paths_root=tmp_path,
         )
+
+
+def test_load_video_annotations_from_labelformat__skips_annotations_for_broken_video(
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    # Arrange: a good video plus a broken one, each referenced by annotations. The broken
+    # video is recorded by the per-run report and never created, so its annotations must be
+    # skipped instead of crashing the run.
+    create_video_file(
+        output_path=tmp_path / "good.mp4",
+        width=640,
+        height=480,
+        num_frames=2,
+        fps=2,
+    )
+    (tmp_path / "broken.mp4").write_bytes(b"not a real video")
+
+    categories = [Category(id=0, name="cat")]
+    good_annotation = _get_object_detection_track(
+        filename="good.mp4",
+        number_of_frames=2,
+        categories=categories,
+        boxes_by_object=[[[1.0, 2.0, 3.0, 4.0], None]],
+    )
+    broken_annotation = _get_object_detection_track(
+        filename="broken.mp4",
+        number_of_frames=2,
+        categories=categories,
+        boxes_by_object=[[[5.0, 6.0, 7.0, 8.0], None]],
+    )
+    input_labels = _ObjectDetectionTrackInput(
+        categories=categories,
+        video_annotations=[good_annotation, broken_annotation],
+    )
+
+    # Act: no exception is raised even though the broken video was not created.
+    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+    created_video_sample_ids, _ = add_videos.load_video_annotations_from_labelformat(
+        session=db_session,
+        collection_id=collection.collection_id,
+        dataset_id=collection.dataset_id,
+        video_paths=[str(tmp_path / "good.mp4"), str(tmp_path / "broken.mp4")],
+        input_labels=input_labels,
+        input_labels_paths_root=tmp_path,
+    )
+
+    # Assert: only the good video is created, and only its annotation is added.
+    assert len(created_video_sample_ids) == 1
+    annotations = annotation_resolver.get_all(db_session).annotations
+    assert len(annotations) == 1
+    assert annotations[0].annotation_label.annotation_label_name == "cat"
 
 
 def test_process_video_annotations_object_detection() -> None:

@@ -44,6 +44,8 @@ export { default as GroupComponent } from '$lib/components/GroupComponent/GroupC
 export { default as Image } from '$lib/components/Image/Image.svelte';
 export { default as VideoPreview } from '$lib/components/VideoPreview/VideoPreview.svelte';
 export { default as VideoPlayer } from '$lib/components/VideoPlayer/VideoPlayer.svelte';
+export { default as VideoControls } from '$lib/components/VideoControls/VideoControls.svelte';
+export { default as VideoEventTimeline } from '$lib/components/VideoEventTimeline/VideoEventTimeline.svelte';
 export { default as VideoSampleMetadata } from '$lib/components/VideoSampleMetadata/VideoSampleMetadata.svelte';
 export { default as GridHeader } from '$lib/components/GridHeader/GridHeader.svelte';
 export { default as DatasetGridHeader } from '$lib/components/DatasetGridHeader/DatasetGridHeader.svelte';
@@ -61,9 +63,11 @@ export { default as VideoFrameDetails } from '$lib/components/VideoFrameDetails/
 export { default as GroupsComponentsMenu } from '$lib/components/GroupsComponentsMenu/GroupsComponentsMenu.svelte';
 export { default as LayoutCard } from '$lib/components/LayoutCard/LayoutCard.svelte';
 export { default as SelectionPill } from '$lib/components/SelectionPill/SelectionPill.svelte';
+export { default as ShowFiltersButton } from '$lib/components/ShowFiltersButton/ShowFiltersButton.svelte';
 export { default as Separator } from '$lib/components/ui/separator/separator.svelte';
 export { default as CollectionSearch } from '$lib/components/CollectionSearch/CollectionSearch.svelte';
 export { default as CollectionSearchImage } from '$lib/components/CollectionSearch/CollectionSearchImage/CollectionSearchImage.svelte';
 export { default as CollectionSearchInput } from '$lib/components/CollectionSearch/SearchInput/CollectionSearchInput.svelte';
 export { default as OrderBy } from '$lib/components/OrderBy/OrderBy.svelte';
 export { default as SamplingCombinationDialog } from '$lib/components/Sampling/SamplingCombinationDialog.svelte';
+export { default as MetadataFilterChips } from '$lib/components/MetadataFilterChips/MetadataFilterChips.svelte';

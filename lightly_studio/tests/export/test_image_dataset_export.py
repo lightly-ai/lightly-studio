@@ -1,781 +1,92 @@
+"""Tests for the image-specific export wiring in `image_dataset_export`.
+
+The sample-type-agnostic export format logic is tested in the `test_dataset_export__*.py`
+files. Here we only cover what is image-specific: the `image_sample_to_image` mapping and that
+`ImageDataset.export()` uses it and forwards the query.
+"""
+
 from __future__ import annotations
 
 import json
-import uuid
 from pathlib import Path
 
-import yaml
-from PIL import Image as PILImage
-from pytest_mock import MockerFixture
-from sqlmodel import Session
-
-from lightly_studio.core.annotation import CreateSegmentationMask
 from lightly_studio.core.dataset_query import ImageSampleField
-from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image.image_dataset import ImageDataset
 from lightly_studio.export import image_dataset_export
-from lightly_studio.models.annotation.annotation_base import (
-    AnnotationCreate,
-    AnnotationType,
-)
-from lightly_studio.models.collection import CollectionTable
-from lightly_studio.resolvers import annotation_resolver
-from tests.helpers_resolvers import (
-    ImageStub,
-    create_annotation_label,
-    create_caption,
-    create_collection,
-    create_images,
-)
+from tests.helpers_resolvers import ImageStub, create_images
 
 
 class TestImageDatasetExport:
-    def test_to_coco_object_detections(
+    def test_export__forwards_query_and_maps_image_samples(
         self,
         tmp_path: Path,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        """Tests ImageDatasetExport exporting to COCO format."""
-        dataset = ImageDataset.create(name="test_dataset")
-        images_to_create = [
-            ImageStub(path="image0.jpg", width=100, height=100),
-            ImageStub(path="image1.jpg", width=200, height=200),
-            ImageStub(path="image2.jpg", width=300, height=300),
-        ]
-        images = create_images(
-            db_session=dataset.session, collection_id=dataset.collection_id, images=images_to_create
-        )
-        label = create_annotation_label(
-            session=dataset.session, root_collection_id=dataset.collection_id, label_name="dog"
-        )
-        # TODO(lukas 9/2025): make this into a function
-        annotation_resolver.create_many(
-            session=dataset.session,
-            parent_collection_id=dataset.collection_id,
-            annotations=[
-                AnnotationCreate(
-                    parent_sample_id=images[0].sample_id,
-                    annotation_label_id=label.annotation_label_id,
-                    annotation_type=AnnotationType.OBJECT_DETECTION,
-                    confidence=None,
-                    x=10,
-                    y=10,
-                    width=10,
-                    height=10,
-                ),
-            ],
-        )
+        """Tests that `ImageDataset.export(query)` forwards the query and maps image samples.
 
-        output_json = tmp_path / "task_obj_det_1.json"
-        query = dataset.query().match(ImageSampleField.height <= 200)
-        dataset.export(query).to_coco_object_detections(output_json=output_json)
-
-        # Load the generated JSON and verify its content
-        with open(output_json) as f:
-            coco_data = json.load(f)
-        # Last image is not included due to filtered out height
-        assert coco_data == {
-            "images": [
-                {"id": 0, "file_name": "image0.jpg", "width": 100, "height": 100},
-                {"id": 1, "file_name": "image1.jpg", "width": 200, "height": 200},
-            ],
-            "categories": [{"id": 0, "name": "dog"}],
-            "annotations": [
-                {"image_id": 0, "category_id": 0, "bbox": [10.0, 10.0, 10.0, 10.0]},
-            ],
-        }
-
-    def test_to_coco_object_detections__str_path(
-        self,
-        tmp_path: Path,
-        patch_collection: None,  # noqa: ARG002
-    ) -> None:
-        """Tests ImageDatasetExport exporting to COCO format."""
-        dataset = ImageDataset.create(name="test_dataset")
-        images = [ImageStub(path="image0.jpg", width=100, height=100)]
-        create_images(
-            db_session=dataset.session, collection_id=dataset.collection_id, images=images
-        )
-
-        output_json = tmp_path / "export.json"
-        # Provide the export path as a string
-        dataset.export().to_coco_object_detections(output_json=str(output_json))
-
-        # Verify the file exists
-        assert output_json.exists()
-
-    def test_to_coco_object_detections__default_path(
-        self,
-        mocker: MockerFixture,
-        patch_collection: None,  # noqa: ARG002
-    ) -> None:
-        dataset = ImageDataset.create(name="test_dataset")
-
-        # Mock the actual export function to avoid creating a file
-        mock_to_coco_object_detections = mocker.patch.object(
-            image_dataset_export, "to_coco_object_detections"
-        )
-
-        # Don't provide the export path
-        dataset.export().to_coco_object_detections()
-
-        # Check that a default output path was used
-        mock_to_coco_object_detections.assert_called_once_with(
-            session=dataset.session,
-            dataset_id=dataset.dataset_id,
-            samples=mocker.ANY,
-            output_json=Path("coco_export.json"),
-            annotation_collection_id=None,
-        )
-
-    def test_to_coco_captions(
-        self,
-        tmp_path: Path,
-        patch_collection: None,  # noqa: ARG002
-    ) -> None:
-        dataset = ImageDataset.create(name="test_dataset")
-        image = create_images(
-            db_session=dataset.session,
-            collection_id=dataset.collection_id,
-            images=[ImageStub(path="/path/image0.jpg", width=100, height=100)],
-        )[0]
-        create_caption(
-            session=dataset.session,
-            collection_id=dataset.collection_id,
-            parent_sample_id=image.sample_id,
-            text="caption one",
-        )
-
-        # Call the function under test
-        output_json = tmp_path / "coco_annotations.json"
-        dataset.export().to_coco_captions(output_json=output_json)
-
-        # Load the generated JSON and verify its content
-        with open(output_json) as f:
-            coco_data = json.load(f)
-        assert coco_data == {
-            "images": [
-                {"id": 0, "file_name": "/path/image0.jpg", "width": 100, "height": 100},
-            ],
-            "annotations": [
-                {"id": 0, "image_id": 0, "caption": "caption one"},
-            ],
-        }
-
-    def test_to_coco_captions__str_path(
-        self,
-        tmp_path: Path,
-        patch_collection: None,  # noqa: ARG002
-    ) -> None:
-        dataset = ImageDataset.create(name="test_dataset")
-
-        # Call the function under test
-        output_json = tmp_path / "coco_annotations.json"
-        dataset.export().to_coco_captions(output_json=str(output_json))
-
-        assert output_json.exists()
-
-    def test_to_coco_captions__default_path(
-        self,
-        mocker: MockerFixture,
-        patch_collection: None,  # noqa: ARG002
-    ) -> None:
-        mock_to_coco_captions = mocker.patch.object(image_dataset_export, "to_coco_captions")
-
-        dataset = ImageDataset.create(name="test_dataset")
-
-        # Call the function under test
-        dataset.export().to_coco_captions()
-
-        # Check that a default output path was used
-        mock_to_coco_captions.assert_called_once_with(
-            samples=mocker.ANY,
-            output_json=Path("coco_export.json"),
-        )
-
-    def test_to_coco_segmentation_masks(
-        self,
-        tmp_path: Path,
-        patch_collection: None,  # noqa: ARG002
-    ) -> None:
-        dataset = ImageDataset.create(name="test_dataset")
-        create_images(
-            db_session=dataset.session,
-            collection_id=dataset.collection_id,
-            images=[ImageStub(path="image0.jpg", width=10, height=10)],
-        )
-
-        samples = list(dataset)
-        samples[0].add_annotation(
-            CreateSegmentationMask.from_rle_mask(
-                class_name="dog",
-                sample_2d=samples[0],
-                segmentation_mask=[2, 3, 7, 2, 86],
-            )
-        )
-
-        output_json = tmp_path / "task_inst_seg_1.json"
-        dataset.export().to_coco_segmentation_masks(output_json=output_json)
-
-        # Load the generated JSON and verify its content
-        with open(output_json) as f:
-            coco_data = json.load(f)
-        assert coco_data == {
-            "images": [
-                {"id": 0, "file_name": "image0.jpg", "width": 10, "height": 10},
-            ],
-            "categories": [{"id": 0, "name": "dog"}],
-            "annotations": [
-                {
-                    "image_id": 0,
-                    "category_id": 0,
-                    "segmentation": {"counts": [20, 2, 8, 2, 8, 1, 59], "size": [10, 10]},
-                    "bbox": [2.0, 0.0, 3.0, 2.0],
-                    "iscrowd": 1,
-                },
-            ],
-        }
-
-    def test_to_coco_segmentation_masks__skips_missing_mask(
-        self,
-        tmp_path: Path,
-        patch_collection: None,  # noqa: ARG002
-    ) -> None:
-        dataset = ImageDataset.create(name="test_dataset")
-        images = create_images(
-            db_session=dataset.session,
-            collection_id=dataset.collection_id,
-            images=[ImageStub(path="image0.jpg", width=10, height=10)],
-        )
-
-        label = create_annotation_label(
-            session=dataset.session, root_collection_id=dataset.collection_id, label_name="dog"
-        )
-        # Create an annotation without a mask
-        annotation_resolver.create_many(
-            session=dataset.session,
-            parent_collection_id=dataset.collection_id,
-            annotations=[
-                AnnotationCreate(
-                    parent_sample_id=images[0].sample_id,
-                    annotation_label_id=label.annotation_label_id,
-                    annotation_type=AnnotationType.SEGMENTATION_MASK,
-                    x=2,
-                    y=0,
-                    width=3,
-                    height=2,
-                    segmentation_mask=None,
-                ),
-            ],
-        )
-
-        output_json = tmp_path / "task_inst_seg_skip.json"
-        dataset.export().to_coco_segmentation_masks(output_json=output_json)
-
-        # Load the generated JSON and verify its content
-        with open(output_json) as f:
-            coco_data = json.load(f)
-        # Annotation should be skipped, categories and images should still be there
-        assert coco_data == {
-            "images": [
-                {"id": 0, "file_name": "image0.jpg", "width": 10, "height": 10},
-            ],
-            "categories": [{"id": 0, "name": "dog"}],
-            "annotations": [],
-        }
-
-    def test_to_pascalvoc_segmentation_mask__via_class(
-        self,
-        tmp_path: Path,
-        patch_collection: None,  # noqa: ARG002
-    ) -> None:
-        dataset = ImageDataset.create(name="test_dataset")
-        create_images(
-            db_session=dataset.session,
-            collection_id=dataset.collection_id,
-            images=[ImageStub(path="image0.jpg", width=3, height=2)],
-        )
-
-        samples = list(dataset)
-        samples[0].add_annotation(
-            CreateSegmentationMask.from_rle_mask(
-                class_name="dog",
-                sample_2d=samples[0],
-                segmentation_mask=[1, 1, 4],
-            )
-        )
-
-        output_folder = tmp_path / "pascalvoc"
-        dataset.export().to_pascalvoc_segmentation_mask(
-            output_folder=output_folder,
-        )
-
-        class_map_path = output_folder / "class_id_to_name.json"
-        with class_map_path.open() as f:
-            class_map = json.load(f)
-        assert class_map == {"0": "background", "1": "dog"}
-
-        mask_path = output_folder / "SegmentationClass" / "image0.png"
-        with PILImage.open(mask_path) as mask:
-            mask_values = list(mask.getdata())
-        assert mask_values == [0, 1, 0, 0, 0, 0]
-
-    # TODO(Michal, 04/2026): The tests below test the module method, not the ImageDatasetExport
-    # class method. They should move outside of this tests class and not use patch_collection.
-    def test_to_pascalvoc_segmentation_mask(
-        self,
-        tmp_path: Path,
-        patch_collection: None,  # noqa: ARG002
-    ) -> None:
-        dataset = ImageDataset.create(name="test_dataset")
-        create_images(
-            db_session=dataset.session,
-            collection_id=dataset.collection_id,
-            images=[ImageStub(path="image0.jpg", width=3, height=2)],
-        )
-
-        samples = list(dataset)
-        samples[0].add_annotation(
-            CreateSegmentationMask.from_rle_mask(
-                class_name="dog",
-                sample_2d=samples[0],
-                segmentation_mask=[1, 1, 4],
-            )
-        )
-
-        output_folder = tmp_path / "pascalvoc"
-        image_dataset_export.to_pascalvoc_segmentation_mask(
-            session=dataset.session,
-            dataset_id=dataset.dataset_id,
-            samples=dataset.query(),
-            output_folder=output_folder,
-            annotation_collection_id=None,
-        )
-
-        class_map_path = output_folder / "class_id_to_name.json"
-        with class_map_path.open() as f:
-            class_map = json.load(f)
-        assert class_map == {"0": "background", "1": "dog"}
-
-        mask_path = output_folder / "SegmentationClass" / "image0.png"
-        with PILImage.open(mask_path) as mask:
-            mask_values = list(mask.getdata())
-        assert mask_values == [0, 1, 0, 0, 0, 0]
-
-    def test_to_pascalvoc_segmentation_mask__background_and_dog_labels_partial_image(
-        self,
-        tmp_path: Path,
-        patch_collection: None,  # noqa: ARG002
-    ) -> None:
-        dataset = ImageDataset.create(name="test_dataset")
-        create_images(
-            db_session=dataset.session,
-            collection_id=dataset.collection_id,
-            images=[ImageStub(path="image0.jpg", width=3, height=2)],
-        )
-        create_annotation_label(
-            session=dataset.session,
-            root_collection_id=dataset.collection_id,
-            label_name="background",
-        )
-        create_annotation_label(
-            session=dataset.session,
-            root_collection_id=dataset.collection_id,
-            label_name="dog",
-        )
-
-        samples = list(dataset)
-        samples[0].add_annotation(
-            CreateSegmentationMask.from_rle_mask(
-                class_name="dog",
-                sample_2d=samples[0],
-                segmentation_mask=[1, 1, 4],
-            )
-        )
-        samples[0].add_annotation(
-            CreateSegmentationMask.from_rle_mask(
-                class_name="background",
-                sample_2d=samples[0],
-                segmentation_mask=[4, 1, 1],
-            )
-        )
-
-        output_folder = tmp_path / "pascalvoc"
-        image_dataset_export.to_pascalvoc_segmentation_mask(
-            session=dataset.session,
-            dataset_id=dataset.dataset_id,
-            samples=dataset.query(),
-            output_folder=output_folder,
-            annotation_collection_id=None,
-        )
-
-        class_map_path = output_folder / "class_id_to_name.json"
-        with class_map_path.open() as f:
-            class_map = json.load(f)
-        # Two "background" classes are expected: class 0 is reserved by labelformat,
-        # and class 1 is the user-defined "background" class.
-        assert class_map == {"0": "background", "1": "background", "2": "dog"}
-
-        mask_path = output_folder / "SegmentationClass" / "image0.png"
-        with PILImage.open(mask_path) as mask:
-            mask_values = list(mask.getdata())
-        assert mask_values == [0, 2, 0, 0, 1, 0]
-
-    def test_to_pascalvoc_segmentation_mask__two_foreground_classes_on_one_image(
-        self,
-        tmp_path: Path,
-        patch_collection: None,  # noqa: ARG002
-    ) -> None:
-        dataset = ImageDataset.create(name="test_dataset")
-        create_images(
-            db_session=dataset.session,
-            collection_id=dataset.collection_id,
-            images=[ImageStub(path="image0.jpg", width=3, height=2)],
-        )
-
-        samples = list(dataset)
-        samples[0].add_annotation(
-            CreateSegmentationMask.from_rle_mask(
-                class_name="cat",
-                sample_2d=samples[0],
-                segmentation_mask=[1, 1, 4],
-            )
-        )
-        samples[0].add_annotation(
-            CreateSegmentationMask.from_rle_mask(
-                class_name="dog",
-                sample_2d=samples[0],
-                segmentation_mask=[4, 1, 1],
-            )
-        )
-
-        output_folder = tmp_path / "pascalvoc"
-        image_dataset_export.to_pascalvoc_segmentation_mask(
-            session=dataset.session,
-            dataset_id=dataset.dataset_id,
-            samples=dataset.query(),
-            output_folder=output_folder,
-            annotation_collection_id=None,
-        )
-
-        class_map_path = output_folder / "class_id_to_name.json"
-        with class_map_path.open() as f:
-            class_map = json.load(f)
-        assert class_map == {"0": "background", "1": "cat", "2": "dog"}
-
-        mask_path = output_folder / "SegmentationClass" / "image0.png"
-        with PILImage.open(mask_path) as mask:
-            mask_values = list(mask.getdata())
-
-        assert mask_values == [0, 1, 0, 0, 2, 0]
-
-    def test_to_pascalvoc_segmentation_mask__two_parts_with_same_class_on_one_image(
-        self,
-        tmp_path: Path,
-        patch_collection: None,  # noqa: ARG002
-    ) -> None:
-        dataset = ImageDataset.create(name="test_dataset")
-        create_images(
-            db_session=dataset.session,
-            collection_id=dataset.collection_id,
-            images=[ImageStub(path="image0.jpg", width=3, height=2)],
-        )
-
-        samples = list(dataset)
-        samples[0].add_annotation(
-            CreateSegmentationMask.from_rle_mask(
-                class_name="dog",
-                sample_2d=samples[0],
-                segmentation_mask=[1, 1, 4],
-            )
-        )
-        samples[0].add_annotation(
-            CreateSegmentationMask.from_rle_mask(
-                class_name="dog",
-                sample_2d=samples[0],
-                segmentation_mask=[4, 1, 1],
-            )
-        )
-
-        output_folder = tmp_path / "pascalvoc"
-        image_dataset_export.to_pascalvoc_segmentation_mask(
-            session=dataset.session,
-            dataset_id=dataset.dataset_id,
-            samples=dataset.query(),
-            output_folder=output_folder,
-            annotation_collection_id=None,
-        )
-
-        class_map_path = output_folder / "class_id_to_name.json"
-        with class_map_path.open() as f:
-            class_map = json.load(f)
-        assert class_map == {"0": "background", "1": "dog"}
-
-        mask_path = output_folder / "SegmentationClass" / "image0.png"
-        with PILImage.open(mask_path) as mask:
-            mask_values = list(mask.getdata())
-        assert mask_values == [0, 1, 0, 0, 1, 0]
-
-    def test_to_pascalvoc_segmentation_mask__two_images_with_parts_of_same_class(
-        self,
-        tmp_path: Path,
-        patch_collection: None,  # noqa: ARG002
-    ) -> None:
+        The exported images are filtered by the query and referenced by their absolute path.
+        """
         dataset = ImageDataset.create(name="test_dataset")
         create_images(
             db_session=dataset.session,
             collection_id=dataset.collection_id,
             images=[
-                ImageStub(path="image0.jpg", width=3, height=2),
-                ImageStub(path="image1.jpg", width=3, height=2),
+                ImageStub(path="/abs/dir/image0.jpg", width=100, height=100),
+                ImageStub(path="/abs/dir/image1.jpg", width=200, height=200),
             ],
         )
 
-        samples = list(dataset)
-        sample_by_name = {sample.file_name: sample for sample in samples}
+        output_json = tmp_path / "coco.json"
+        query = dataset.query().match(ImageSampleField.height <= 100)
+        dataset.export(query).to_coco_object_detections(output_json=output_json)
 
-        sample_by_name["image0.jpg"].add_annotation(
-            CreateSegmentationMask.from_rle_mask(
-                class_name="dog",
-                sample_2d=sample_by_name["image0.jpg"],
-                segmentation_mask=[1, 1, 4],
-            )
-        )
-        sample_by_name["image1.jpg"].add_annotation(
-            CreateSegmentationMask.from_rle_mask(
-                class_name="dog",
-                sample_2d=sample_by_name["image1.jpg"],
-                segmentation_mask=[4, 1, 1],
-            )
-        )
-
-        output_folder = tmp_path / "pascalvoc"
-        image_dataset_export.to_pascalvoc_segmentation_mask(
-            session=dataset.session,
-            dataset_id=dataset.dataset_id,
-            samples=dataset.query(),
-            output_folder=output_folder,
-            annotation_collection_id=None,
-        )
-
-        class_map_path = output_folder / "class_id_to_name.json"
-        with class_map_path.open() as f:
-            class_map = json.load(f)
-        assert class_map == {"0": "background", "1": "dog"}
-
-        mask_path_0 = output_folder / "SegmentationClass" / "image0.png"
-        with PILImage.open(mask_path_0) as mask_0:
-            mask_values_0 = list(mask_0.getdata())
-        assert mask_values_0 == [0, 1, 0, 0, 0, 0]
-
-        mask_path_1 = output_folder / "SegmentationClass" / "image1.png"
-        with PILImage.open(mask_path_1) as mask_1:
-            mask_values_1 = list(mask_1.getdata())
-        assert mask_values_1 == [0, 0, 0, 0, 1, 0]
+        with open(output_json) as f:
+            coco_data = json.load(f)
+        # Only the image matching the query is exported, referenced by its absolute path.
+        assert coco_data["images"] == [
+            {"id": 0, "file_name": "/abs/dir/image0.jpg", "width": 100, "height": 100},
+        ]
 
 
-def test_to_coco_object_detections(
-    db_session: Session,
-    collection_with_annotations: CollectionTable,
-    tmp_path: Path,
+def test_image_sample_to_image__coco_uses_absolute_path(
+    patch_collection: None,  # noqa: ARG001
 ) -> None:
-    """Tests exporting to COCO format."""
-    dataset = collection_with_annotations
-
-    # Test for task_obj_det_1
-    output_json = tmp_path / "task_obj_det_1.json"
-    image_dataset_export.to_coco_object_detections(
-        session=db_session,
-        dataset_id=dataset.dataset_id,
-        samples=DatasetQuery(dataset=dataset, session=db_session),
-        output_json=output_json,
-        annotation_collection_id=None,
-    )
-
-    # Load the generated JSON and verify its content
-    with open(output_json) as f:
-        coco_data = json.load(f)
-    assert coco_data == {
-        "images": [
-            {"id": 0, "file_name": "img1", "width": 100, "height": 100},
-            {"id": 1, "file_name": "img2", "width": 200, "height": 200},
-            {"id": 2, "file_name": "img3", "width": 300, "height": 300},
-        ],
-        "categories": [
-            {"id": 0, "name": "cat"},
-            {"id": 1, "name": "dog"},
-            {"id": 2, "name": "zebra"},
-        ],
-        "annotations": [
-            {"image_id": 0, "category_id": 1, "bbox": [10.0, 10.0, 10.0, 10.0]},
-            {"image_id": 0, "category_id": 0, "bbox": [20.0, 20.0, 20.0, 20.0], "score": 0.25},
-            {"image_id": 1, "category_id": 1, "bbox": [30.0, 30.0, 30.0, 30.0], "score": 0.375},
-        ],
-    }
-
-
-def test_to_coco_object_detections__no_annotations(
-    db_session: Session,
-    tmp_path: Path,
-) -> None:
-    """Tests exporting to COCO format - no annotations."""
-    dataset = create_collection(session=db_session)
-    images = [
-        ImageStub(path="img1", width=100, height=100),
-        ImageStub(path="img2", width=200, height=200),
-    ]
-    create_images(db_session=db_session, collection_id=dataset.collection_id, images=images)
-
-    output_json = tmp_path / "task_no_ann.json"
-    image_dataset_export.to_coco_object_detections(
-        session=db_session,
-        dataset_id=dataset.dataset_id,
-        samples=DatasetQuery(dataset=dataset, session=db_session),
-        output_json=output_json,
-        annotation_collection_id=None,
-    )
-
-    # Load the generated JSON and verify its content
-    with open(output_json) as f:
-        coco_data = json.load(f)
-    assert coco_data == {
-        "images": [
-            {"id": 0, "file_name": "img1", "width": 100, "height": 100},
-            {"id": 1, "file_name": "img2", "width": 200, "height": 200},
-        ],
-        "categories": [],
-        "annotations": [],
-    }
-
-
-def test_to_yolo_object_detections(
-    db_session: Session,
-    tmp_path: Path,
-) -> None:
-    """Tests exporting object detections to YOLO format."""
-    dataset = create_collection(session=db_session)
-    images = create_images(
-        db_session=db_session,
+    """COCO exports reference the absolute image path."""
+    dataset = ImageDataset.create(name="test_dataset")
+    create_images(
+        db_session=dataset.session,
         collection_id=dataset.collection_id,
-        images=[
-            ImageStub(path="image0.jpg", width=100, height=100),
-            ImageStub(path="image1.jpg", width=200, height=200),
-        ],
+        images=[ImageStub(path="/abs/dir/image0.jpg", width=100, height=200)],
     )
-    label = create_annotation_label(
-        session=db_session, root_collection_id=dataset.collection_id, label_name="dog"
-    )
-    annotation_resolver.create_many(
-        session=db_session,
-        parent_collection_id=dataset.collection_id,
-        annotations=[
-            AnnotationCreate(
-                parent_sample_id=images[0].sample_id,
-                annotation_label_id=label.annotation_label_id,
-                annotation_type=AnnotationType.OBJECT_DETECTION,
-                x=10,
-                y=10,
-                width=20,
-                height=40,
-            ),
-        ],
+    sample = next(iter(dataset))
+
+    image = image_dataset_export.image_sample_to_image(
+        sample=sample, image_id=7, use_relative_filename=False
     )
 
-    output_folder = tmp_path / "yolo"
-    image_dataset_export.to_yolo_object_detections(
-        session=db_session,
-        dataset_id=dataset.dataset_id,
-        samples=DatasetQuery(dataset=dataset, session=db_session),
-        output_folder=output_folder,
-        annotation_collection_id=None,
-    )
-
-    # The dataset config lists the single category.
-    with open(output_folder / "data.yaml") as f:
-        data_yaml = yaml.safe_load(f)
-    assert data_yaml == {"path": ".", "train": "images", "nc": 1, "names": {0: "dog"}}
-
-    # One label file per image. The box (x=10, y=10, w=20, h=40) on a 100x100 image has
-    # center (20, 30), so normalized cx=0.2 cy=0.3 w=0.2 h=0.4. image1 has no annotations.
-    assert (output_folder / "labels" / "image0.txt").read_text() == "0 0.2 0.3 0.2 0.4\n"
-    assert (output_folder / "labels" / "image1.txt").read_text() == ""
+    assert image.id == 7
+    assert image.filename == "/abs/dir/image0.jpg"
+    assert image.width == 100
+    assert image.height == 200
 
 
-def test_to_yolo_object_detections__filters_by_annotation_collection(
-    db_session: Session,
-    tmp_path: Path,
+def test_image_sample_to_image__yolo_pascal_use_relative_name(
+    patch_collection: None,  # noqa: ARG001
 ) -> None:
-    """Annotations from other annotation collections are excluded from the export."""
-    dataset = create_collection(session=db_session)
-    images = create_images(
-        db_session=db_session,
+    """YOLO and Pascal VOC exports reference the relative file name."""
+    dataset = ImageDataset.create(name="test_dataset")
+    create_images(
+        db_session=dataset.session,
         collection_id=dataset.collection_id,
-        images=[ImageStub(path="image0.jpg", width=100, height=100)],
+        images=[ImageStub(path="/abs/dir/image0.jpg", width=100, height=200)],
     )
-    label = create_annotation_label(
-        session=db_session, root_collection_id=dataset.collection_id, label_name="dog"
-    )
-    annotation_resolver.create_many(
-        session=db_session,
-        parent_collection_id=dataset.collection_id,
-        annotations=[
-            AnnotationCreate(
-                parent_sample_id=images[0].sample_id,
-                annotation_label_id=label.annotation_label_id,
-                annotation_type=AnnotationType.OBJECT_DETECTION,
-                x=10,
-                y=10,
-                width=20,
-                height=40,
-            ),
-        ],
+    sample = next(iter(dataset))
+
+    image = image_dataset_export.image_sample_to_image(
+        sample=sample, image_id=7, use_relative_filename=True
     )
 
-    output_folder = tmp_path / "yolo"
-    image_dataset_export.to_yolo_object_detections(
-        session=db_session,
-        dataset_id=dataset.dataset_id,
-        samples=DatasetQuery(dataset=dataset, session=db_session),
-        output_folder=output_folder,
-        annotation_collection_id=uuid.uuid4(),
-    )
-
-    # The annotation belongs to a different collection, so it is filtered out.
-    assert (output_folder / "labels" / "image0.txt").read_text() == ""
-
-
-def test_to_coco_captions(
-    db_session: Session,
-    tmp_path: Path,
-) -> None:
-    dataset = create_collection(session=db_session)
-    image = create_images(
-        db_session=db_session,
-        collection_id=dataset.collection_id,
-        images=[ImageStub(path="/path/image0.jpg", width=100, height=100)],
-    )[0]
-    create_caption(
-        session=db_session,
-        collection_id=dataset.collection_id,
-        parent_sample_id=image.sample_id,
-        text="caption one",
-    )
-
-    # Call the function under test
-    output_json = tmp_path / "coco_annotations.json"
-    image_dataset_export.to_coco_captions(
-        samples=DatasetQuery(dataset=dataset, session=db_session),
-        output_json=output_json,
-    )
-
-    # Load the generated JSON and verify its content
-    with open(output_json) as f:
-        coco_data = json.load(f)
-    assert coco_data == {
-        "images": [
-            {"id": 0, "file_name": "/path/image0.jpg", "width": 100, "height": 100},
-        ],
-        "annotations": [
-            {"id": 0, "image_id": 0, "caption": "caption one"},
-        ],
-    }
+    assert image.id == 7
+    assert image.filename == "image0.jpg"
+    assert image.width == 100
+    assert image.height == 200

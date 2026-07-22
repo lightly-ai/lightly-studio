@@ -1,0 +1,60 @@
+name: Fast Track Guardrails
+
+# Run Fast Track guardrails on each non-draft PR and publish the verdict as
+# an artifact for the bot. NOT a required status check — else would block every non-fast-track PR.
+on:
+  pull_request:
+    # Re-evaluate when the opt-out label or comparison base changes.
+    types: [opened, edited, ready_for_review, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  guardrails:
+    name: Fast Track Guardrails
+    # Skip drafts. `edited` fires on any PR edit (title, body, base), so restrict it
+    # to base retargets — those change the diff and warrant a re-judge; other edits don't.
+    if: >-
+      github.event.pull_request.draft == false &&
+      (github.event.action != 'edited' || github.event.changes.base != null)
+    # Job-level concurrency prevents an unrelated skipped edit from cancelling this job.
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: fast_track
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        # Runs untrusted PR code and never pushes — keep the token out of git config.
+        with:
+          persist-credentials: false
+
+      # Pin Node from .nvmrc, matching the local Makefile's nvm setup.
+      - name: Set Up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: fast_track/.nvmrc
+          cache: npm
+          cache-dependency-path: fast_track/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Writes fast_track/verdict.json. Non-zero exit = the run crashed, not a fail verdict.
+      - name: Run Fast Track Guardrails
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: npm run guardrails-ci
+
+      # JS action, so defaults.run.working-directory doesn't apply — path is repo-root-relative.
+      - name: Upload verdict
+        uses: actions/upload-artifact@v4
+        with:
+          name: fast-track-verdict
+          path: fast_track/verdict.json
+          if-no-files-found: error

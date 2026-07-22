@@ -34,6 +34,9 @@ class AnnotationCreateParams(BaseModel):
 
     segmentation_mask: list[int] | None = None
 
+    start_time_s: float | None = None
+    end_time_s: float | None = None
+
 
 def create_annotation(session: Session, annotation: AnnotationCreateParams) -> AnnotationBaseTable:
     """Create a new annotation.

@@ -1,4 +1,4 @@
-"""Build image crops for object-detection annotations."""
+"""Build image crops for annotations from their bounding boxes."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from sqlmodel import Session, col, select
 from lightly_studio.dataset.embedding_generator import ImageCrop
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
+from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.image import ImageTable
 
 logger = logging.getLogger(__name__)
@@ -31,7 +32,11 @@ def get_annotation_crops_for_ids(
     session: Session,
     annotation_sample_ids: list[UUID],
 ) -> list[AnnotationCrop]:
-    """Build valid image crops for the given object-detection annotation IDs.
+    """Build valid image crops for the given annotation IDs.
+
+    The bounding box is read from whichever detail table holds it: object-detection
+    annotations store it in ``ObjectDetectionAnnotationTable`` and segmentation
+    annotations in ``SegmentationAnnotationTable`` (both expose ``x/y/width/height``).
 
     Crops whose box does not overlap the source image are skipped with a warning, so the
     returned list may be shorter than ``annotation_sample_ids``.
@@ -44,26 +49,43 @@ def get_annotation_crops_for_ids(
         Resolved annotation crops ready for embedding.
     """
     rows = session.exec(
-        select(AnnotationBaseTable, ImageTable, ObjectDetectionAnnotationTable)
-        .join(
+        select(
+            AnnotationBaseTable,
+            ImageTable,
+            ObjectDetectionAnnotationTable,
+            SegmentationAnnotationTable,
+        )
+        .join(ImageTable, col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id))
+        .outerjoin(
             ObjectDetectionAnnotationTable,
             col(ObjectDetectionAnnotationTable.sample_id) == col(AnnotationBaseTable.sample_id),
         )
-        .join(ImageTable, col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id))
+        .outerjoin(
+            SegmentationAnnotationTable,
+            col(SegmentationAnnotationTable.sample_id) == col(AnnotationBaseTable.sample_id),
+        )
         .where(col(AnnotationBaseTable.sample_id).in_(annotation_sample_ids))
         .order_by(col(ImageTable.file_path_abs))
     ).all()
 
     annotation_crops: list[AnnotationCrop] = []
-    for annotation, image, object_detection in rows:
+    for annotation, image, object_detection, segmentation in rows:
+        # An annotation has a detail row in exactly one table, set by its type in
+        # create_many, so at most one of these joins matches.
+        box_source = object_detection or segmentation
+        if box_source is None:
+            logger.warning(
+                "Skipping annotation crop %s without a bounding box.", annotation.sample_id
+            )
+            continue
         image_crop = _create_valid_image_crop(
             filepath=image.file_path_abs,
             image_size=(image.width, image.height),
             box=(
-                object_detection.x,
-                object_detection.y,
-                object_detection.width,
-                object_detection.height,
+                box_source.x,
+                box_source.y,
+                box_source.width,
+                box_source.height,
             ),
         )
         if image_crop is None:

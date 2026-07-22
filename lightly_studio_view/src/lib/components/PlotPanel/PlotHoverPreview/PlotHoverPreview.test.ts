@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/svelte';
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import PlotHoverPreview from './PlotHoverPreview.svelte';
 
@@ -23,7 +23,7 @@ afterEach(() => {
 });
 
 describe('PlotHoverPreview', () => {
-    test('shows a spinner while loading and swaps to the image once loaded', async () => {
+    it('shows a spinner while loading and swaps to the image once loaded', async () => {
         render(PlotHoverPreview, {
             props: {
                 sampleId: 'sample-a',
@@ -42,7 +42,7 @@ describe('PlotHoverPreview', () => {
         expect(screen.queryByRole('status')).not.toBeInTheDocument();
     });
 
-    test('renders nothing when the thumbnail cannot be resolved', async () => {
+    it('renders nothing when the thumbnail cannot be resolved', async () => {
         render(PlotHoverPreview, {
             props: {
                 sampleId: 'sample-a',

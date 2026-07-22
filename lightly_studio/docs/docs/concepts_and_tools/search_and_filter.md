@@ -1,3 +1,8 @@
+---
+title: Search and Filter Images by Similarity
+description: Find visually and semantically similar images with text or image search, then filter datasets by tags, annotations, and metadata in LightlyStudio.
+---
+
 # Search and Filter
 
 Search helps you find visually or semantically similar samples from a text or image. Filters narrow down the samples currently shown in the view by tags, annotations, dimensions, and other numeric metadata.
@@ -22,6 +27,10 @@ The screen recording below shows the search both by text query "dog" and by past
 
 !!! note "Search requires embeddings"
     Search is available only when embeddings were generated during data loading.
+
+Search works the same way in the `Annotations` view, where it finds similar objects using
+object-level embeddings. See
+[Object-level embeddings](annotations.md#object-level-embeddings) for details.
 
 ## Filter in GUI
 
@@ -275,6 +284,52 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
     )
 
     # Assign any of the previous expressions to a query:
+    query.match(expr)
+    ```
+
+    #### Annotation evaluation queries
+
+    Use `AnnotationMetricQuery` to filter samples by annotation-level results from a specific
+    [evaluation run](evaluation.md). For matched ground-truth and prediction pairs, use
+    `AnnotationMetricQuery.confusion(...)`, optionally together with
+    `AnnotationEvaluationMetricField(...)`. The example below finds samples where `cat` got
+    confused as a `dog` and the IoU is greater than 0.3.
+
+    ```py
+    from lightly_studio.core.dataset_query import (
+        AnnotationEvaluationMetricField,
+        AnnotationMetricQuery,
+    )
+
+    expr = AnnotationMetricQuery.confusion(
+        "run1",
+        "cat",
+        "dog",
+        AnnotationEvaluationMetricField("iou") > 0.3,
+    )
+
+    # Assign the expression to a query:
+    query.match(expr)
+    ```
+
+    To filter samples with unmatched predictions or missed ground truths, use `AnnotationMetricQuery.false_positive(...)` and `AnnotationMetricQuery.false_negative(...)`.
+
+    ```py
+    from lightly_studio.core.dataset_query import AnnotationMetricQuery
+
+    # Samples where the model predicted a dog that did not match any ground truth.
+    expr = AnnotationMetricQuery.false_positive(
+        run_name="run1",
+        prediction="dog",
+    )
+
+    # Samples where a ground-truth cat was not matched by any prediction.
+    expr = AnnotationMetricQuery.false_negative(
+        run_name="run1",
+        ground_truth="cat",
+    )
+
+    # Assign either expression to a query:
     query.match(expr)
     ```
 

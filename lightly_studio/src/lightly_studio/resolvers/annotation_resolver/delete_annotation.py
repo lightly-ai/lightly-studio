@@ -17,6 +17,8 @@ from lightly_studio.models.annotation.segmentation import (
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
+from lightly_studio.models.sample_embedding import SampleEmbeddingTable
+from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import annotation_resolver
 from lightly_studio.utils import batching
 
@@ -62,6 +64,9 @@ def delete_annotation(
             col(SegmentationAnnotationTable.sample_id) == annotation.sample_id
         )
     )
+    session.exec(
+        delete(TemporalSpanTable).where(col(TemporalSpanTable.sample_id) == annotation.sample_id)
+    )
     session.commit()
 
     # Delete the annotation using explicit DELETE to avoid relationship cascade issues
@@ -78,6 +83,12 @@ def delete_annotation(
         session.exec(
             delete(SampleTagLinkTable).where(
                 col(SampleTagLinkTable.sample_id) == annotation_sample_id
+            )
+        )
+        # Explicitly delete embeddings before the sample.
+        session.exec(
+            delete(SampleEmbeddingTable).where(
+                col(SampleEmbeddingTable.sample_id) == annotation_sample_id
             )
         )
         session.commit()

@@ -18,12 +18,19 @@ from labelformat.model.instance_segmentation import (
     InstanceSegmentationInput,
 )
 from labelformat.model.object_detection import ObjectDetectionInput
+from labelformat.utils import ImageDimensionError
 from sqlmodel import Session
 from tqdm import tqdm
 
+from lightly_studio.core.file_outcome_report import (
+    AlreadyPresentInputFileError,
+    BrokenInputFileError,
+    FileOutcome,
+    FileOutcomeReport,
+    MissingInputFileError,
+)
 from lightly_studio.core.image import add_annotations
 from lightly_studio.core.image.image_sample import ImageSample
-from lightly_studio.core.loading_log import LoadingLoggingContext, log_loading_results
 from lightly_studio.models.caption import CaptionCreate
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import (
@@ -38,7 +45,29 @@ logger = logging.getLogger(__name__)
 
 # Constants
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
-MAX_EXAMPLE_PATHS_TO_SHOW = 5
+
+
+class BrokenImageCollector:
+    """Records broken images as ``BROKEN`` once each, usable as a labelformat ``on_error`` hook.
+
+    It owns the ``FileOutcomeReport`` it writes to. Internal dedup keeps a file recorded once even
+    if it surfaces in more than one scan.
+    """
+
+    def __init__(self, report: FileOutcomeReport | None = None) -> None:
+        """Record into ``report``, creating a fresh one when the caller passes ``None``."""
+        self.report = report if report is not None else FileOutcomeReport()
+        self._recorded_paths: set[str] = set()
+
+    def __call__(self, path: Path, error: Exception) -> None:
+        """Record ``path`` as ``BROKEN`` once; re-raise any non-dimension-read error."""
+        if not isinstance(error, ImageDimensionError):
+            raise error
+        path_str = str(path)
+        if path_str in self._recorded_paths:
+            return
+        self._recorded_paths.add(path_str)
+        self.report.record(path=path_str, outcome=FileOutcome.BROKEN)
 
 
 def load_into_dataset_from_paths(
@@ -57,6 +86,10 @@ def load_into_dataset_from_paths(
 
     Returns:
         A list of UUIDs of the created samples.
+
+    Raises:
+        AllInputFilesFailedError: If at least one file was attempted and every
+            attempted file was missing or broken.
     """
     # Normalize all paths up front so the database check can happen once, before the
     # main processing loop, instead of once per batch.
@@ -74,48 +107,55 @@ def load_into_dataset_from_paths(
     samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
 
-    logging_context = LoadingLoggingContext(
-        n_samples_to_be_inserted=len(normalized_paths),
-        n_samples_before_loading=sample_resolver.count_by_collection_id(
-            session=session, collection_id=root_collection_id
-        ),
-    )
+    report = FileOutcomeReport()
 
+    # TODO(Malte, 07/2026): Parallelize image indexing across images with
+    # parallelize.thread_imap_lazy (one task per image; workers and prefetch stay
+    # bounded) to overlap the per-image reads, especially for remote (e.g. S3) inputs.
+    # Keep DB writes on a single thread.
     for normalized_path in tqdm(
         normalized_paths,
         desc="Processing images",
         unit=" images",
         disable=not show_progress,
     ):
-        # Skip paths already in the database or already seen in this call.
-        if normalized_path in seen_or_existing_paths:
-            logging_context.update_example_paths([normalized_path])
-            continue
+        with report.track(path=normalized_path):
+            # Skip paths already in the database or already seen in this call.
+            if normalized_path in seen_or_existing_paths:
+                raise AlreadyPresentInputFileError()
 
-        try:
-            with fsspec.open(normalized_path, "rb") as file:
-                image = PIL.Image.open(file)
-                width, height = image.size
-                image.close()
-        except (FileNotFoundError, PIL.UnidentifiedImageError, OSError):
-            continue
+            # Detect a missing path proactively: FileNotFoundError is unreliable across
+            # fsspec backends and is a subclass of OSError, which we treat as broken.
+            if not _file_exists(normalized_path):
+                raise MissingInputFileError()
 
-        sample = ImageCreate(
-            file_name=Path(normalized_path).name,
-            file_path_abs=normalized_path,
-            width=width,
-            height=height,
-        )
-        seen_or_existing_paths.add(normalized_path)
-        samples_to_create.append(sample)
+            # Translate a failed header read into a broken-file signal at this I/O
+            # boundary; any other exception propagates rather than being recorded.
+            fs, fs_path = fsspec.core.url_to_fs(normalized_path)
+            try:
+                with fs.open(fs_path, "rb") as file:
+                    image = PIL.Image.open(file)
+                    width, height = image.size
+                    image.close()
+            except (PIL.UnidentifiedImageError, OSError) as e:
+                raise BrokenInputFileError() from e
 
-        # Process batch when it reaches SAMPLE_BATCH_SIZE
-        if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
-            created_path_to_id = _create_batch_samples(
-                session=session, collection_id=root_collection_id, samples=samples_to_create
+            sample = ImageCreate(
+                file_name=Path(normalized_path).name,
+                file_path_abs=normalized_path,
+                width=width,
+                height=height,
             )
-            created_sample_ids.extend(created_path_to_id.values())
-            samples_to_create = []
+            seen_or_existing_paths.add(normalized_path)
+            samples_to_create.append(sample)
+
+            # Process batch when it reaches SAMPLE_BATCH_SIZE
+            if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
+                created_path_to_id = _create_batch_samples(
+                    session=session, collection_id=root_collection_id, samples=samples_to_create
+                )
+                created_sample_ids.extend(created_path_to_id.values())
+                samples_to_create = []
 
     # Handle remaining samples
     if samples_to_create:
@@ -124,12 +164,8 @@ def load_into_dataset_from_paths(
         )
         created_sample_ids.extend(created_path_to_id.values())
 
-    log_loading_results(
-        session=session,
-        collection_id=root_collection_id,
-        logging_context=logging_context,
-        print_summary=show_progress,
-    )
+    report.log_summary()
+    report.raise_if_all_failed()
     return created_sample_ids
 
 
@@ -140,6 +176,7 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
     images_path: PathLike,
     collection_name: str | None = None,
     limit: int | None = None,
+    broken_image_collector: BrokenImageCollector | None = None,
 ) -> list[UUID]:
     """Load samples and their annotations from a labelformat input into the dataset.
 
@@ -150,11 +187,26 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
         images_path: The path to the directory containing the images.
         collection_name: Optional name for the annotation collection.
         limit: Maximum number of samples to load. By default, all samples are loaded.
+        broken_image_collector: Collector from a caller's construction-time scan (Pascal VOC),
+            so its broken images share this run's report. When ``None``, one is created here.
 
     Returns:
         A list of UUIDs of the created samples.
+
+    Raises:
+        AllInputFilesFailedError: If at least one file was attempted and every
+            attempted file was missing or broken.
+
     """
     images_root_abs = add_annotations.normalize_images_root(images_root=images_path)
+
+    # Some formats open images to read the dimensions during the get_images() and get_labels() scans
+    # Collector is used to record BROKEN images and skip, preventing abort of the ingest. Pascal VOC
+    # scans at construction and passes its collector in, so its report is reused here.
+    if broken_image_collector is None:
+        broken_image_collector = BrokenImageCollector()
+    report = broken_image_collector.report
+    input_labels.on_error = broken_image_collector  # type: ignore[union-attr]
 
     # The set starts with paths already in the database and grows with paths seen in this
     # call, so both already-present and in-run duplicate paths are skipped before batching.
@@ -167,13 +219,6 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
         ],
     )
 
-    logging_context = LoadingLoggingContext(
-        n_samples_to_be_inserted=0,
-        n_samples_before_loading=sample_resolver.count_by_collection_id(
-            session=session, collection_id=root_collection_id
-        ),
-    )
-
     samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
 
@@ -183,7 +228,6 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
         labels = itertools.islice(labels, limit)
     for image_data in tqdm(labels, desc="Processing images", unit=" images"):
         image: Image = image_data.image  # type: ignore[attr-defined]
-        logging_context.n_samples_to_be_inserted += 1
 
         sample = ImageCreate(
             file_name=str(image.filename),
@@ -192,20 +236,26 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
             height=image.height,
         )
 
-        # Skip paths already in the database or already seen in this call.
-        if sample.file_path_abs in seen_or_existing_paths:
-            logging_context.update_example_paths([sample.file_path_abs])
-            continue
+        with report.track(path=sample.file_path_abs):
+            # Skip paths already in the database or already seen in this call.
+            if sample.file_path_abs in seen_or_existing_paths:
+                raise AlreadyPresentInputFileError()
 
-        seen_or_existing_paths.add(sample.file_path_abs)
-        samples_to_create.append(sample)
+            # Missing is the only failure classifiable here (see the docstring):
+            # detect it proactively because FileNotFoundError is unreliable across
+            # fsspec backends and is a subclass of OSError.
+            if not _file_exists(sample.file_path_abs):
+                raise MissingInputFileError()
 
-        if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
-            created_path_to_id = _create_batch_samples(
-                session=session, collection_id=root_collection_id, samples=samples_to_create
-            )
-            created_sample_ids.extend(created_path_to_id.values())
-            samples_to_create.clear()
+            seen_or_existing_paths.add(sample.file_path_abs)
+            samples_to_create.append(sample)
+
+            if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
+                created_path_to_id = _create_batch_samples(
+                    session=session, collection_id=root_collection_id, samples=samples_to_create
+                )
+                created_sample_ids.extend(created_path_to_id.values())
+                samples_to_create.clear()
 
     if samples_to_create:
         created_path_to_id = _create_batch_samples(
@@ -224,12 +274,8 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
             restrict_to_sample_ids=set(created_sample_ids),
         )
 
-    log_loading_results(
-        session=session,
-        collection_id=root_collection_id,
-        logging_context=logging_context,
-        print_summary=True,
-    )
+    report.log_summary()
+    report.raise_if_all_failed()
     return created_sample_ids
 
 
@@ -251,26 +297,25 @@ def load_into_dataset_from_coco_captions(
 
     Returns:
         The list of newly created sample identifiers.
+
+    Raises:
+        AllInputFilesFailedError: If at least one file was attempted and every
+            attempted file was missing.
+
+    Notes:
+        Image dimensions come from the annotation metadata and the file is never
+        opened here, so a broken file cannot be detected on this path; that is
+        deferred to the embedding step. Only a missing referenced path is
+        classified as a failure (recorded as ``MISSING``).
     """
     with fsspec.open(str(annotations_json), "r") as file:
         coco_payload = json.load(file)
 
     # A slice with limit=None returns the full list.
     images: list[dict[str, object]] = coco_payload.get("images", [])[:limit]
-    annotations: list[dict[str, object]] = coco_payload.get("annotations", [])
-
-    captions_by_image_id: dict[int, list[str]] = defaultdict(list)
-    for annotation in annotations:
-        image_id = annotation["image_id"]
-        caption = annotation["caption"]
-        if not isinstance(image_id, int):
-            continue
-        if not isinstance(caption, str):
-            continue
-        caption_text = caption.strip()
-        if not caption_text:
-            continue
-        captions_by_image_id[image_id].append(caption_text)
+    captions_by_image_id = _group_captions_by_image_id(
+        annotations=coco_payload.get("annotations", [])
+    )
 
     # The set starts with paths already in the database and grows with paths seen in this
     # call, so both already-present and in-run duplicate paths are skipped before batching.
@@ -284,12 +329,7 @@ def load_into_dataset_from_coco_captions(
         ],
     )
 
-    logging_context = LoadingLoggingContext(
-        n_samples_to_be_inserted=len(images),
-        n_samples_before_loading=sample_resolver.count_by_collection_id(
-            session=session, collection_id=root_collection_id
-        ),
-    )
+    report = FileOutcomeReport()
 
     samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
@@ -311,28 +351,34 @@ def load_into_dataset_from_coco_captions(
             height=height,
         )
 
-        # Skip paths already in the database or already seen in this call.
-        if sample.file_path_abs in seen_or_existing_paths:
-            logging_context.update_example_paths([sample.file_path_abs])
-            continue
+        with report.track(path=sample.file_path_abs):
+            # Skip paths already in the database or already seen in this call.
+            if sample.file_path_abs in seen_or_existing_paths:
+                raise AlreadyPresentInputFileError()
 
-        seen_or_existing_paths.add(sample.file_path_abs)
-        samples_to_create.append(sample)
-        path_to_captions[sample.file_path_abs] = captions_by_image_id.get(image_id_raw, [])
+            # Missing is the only failure classifiable here (see the docstring):
+            # detect it proactively because FileNotFoundError is unreliable across
+            # fsspec backends and is a subclass of OSError.
+            if not _file_exists(sample.file_path_abs):
+                raise MissingInputFileError()
 
-        if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
-            created_path_to_id = _create_batch_samples(
-                session=session, collection_id=root_collection_id, samples=samples_to_create
-            )
-            created_sample_ids.extend(created_path_to_id.values())
-            _process_batch_captions(
-                session=session,
-                collection_id=root_collection_id,
-                created_path_to_id=created_path_to_id,
-                path_to_captions=path_to_captions,
-            )
-            samples_to_create.clear()
-            path_to_captions.clear()
+            seen_or_existing_paths.add(sample.file_path_abs)
+            samples_to_create.append(sample)
+            path_to_captions[sample.file_path_abs] = captions_by_image_id.get(image_id_raw, [])
+
+            if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
+                created_path_to_id = _create_batch_samples(
+                    session=session, collection_id=root_collection_id, samples=samples_to_create
+                )
+                created_sample_ids.extend(created_path_to_id.values())
+                _process_batch_captions(
+                    session=session,
+                    collection_id=root_collection_id,
+                    created_path_to_id=created_path_to_id,
+                    path_to_captions=path_to_captions,
+                )
+                samples_to_create.clear()
+                path_to_captions.clear()
 
     if samples_to_create:
         created_path_to_id = _create_batch_samples(
@@ -346,12 +392,8 @@ def load_into_dataset_from_coco_captions(
             path_to_captions=path_to_captions,
         )
 
-    log_loading_results(
-        session=session,
-        collection_id=root_collection_id,
-        logging_context=logging_context,
-        print_summary=True,
-    )
+    report.log_summary()
+    report.raise_if_all_failed()
     return created_sample_ids
 
 
@@ -399,6 +441,49 @@ def tag_samples_by_directory(
             sample_ids=s_ids,
         )
     logger.info(f"Created {len(parent_dir_to_sample_ids)} tags from directories.")
+
+
+def _group_captions_by_image_id(
+    annotations: list[dict[str, object]],
+) -> dict[int, list[str]]:
+    """Group non-empty COCO caption strings by their image id.
+
+    Args:
+        annotations: The ``annotations`` entries from a COCO captions payload.
+
+    Returns:
+        A mapping from image id to its list of non-empty caption strings.
+    """
+    captions_by_image_id: dict[int, list[str]] = defaultdict(list)
+    for annotation in annotations:
+        image_id = annotation["image_id"]
+        caption = annotation["caption"]
+        if not isinstance(image_id, int):
+            continue
+        if not isinstance(caption, str):
+            continue
+        caption_text = caption.strip()
+        if not caption_text:
+            continue
+        captions_by_image_id[image_id].append(caption_text)
+    return captions_by_image_id
+
+
+def _file_exists(path: str) -> bool:
+    """Return whether ``path`` resolves to an existing file on its fsspec backend.
+
+    Shared by the ingest paths to classify a missing input file, so the
+    existence check stays consistent across path, labelformat, and COCO-caption
+    ingest.
+
+    Args:
+        path: The absolute file path to check.
+
+    Returns:
+        ``True`` if the path exists, ``False`` otherwise.
+    """
+    fs, fs_path = fsspec.core.url_to_fs(path)
+    return bool(fs.exists(fs_path))
 
 
 def _get_existing_paths_set(
