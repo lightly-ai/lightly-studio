@@ -30,18 +30,83 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
-        # Runs untrusted PR code and never pushes — keep the token out of git config.
+        # Never pushes — keep the git token out of the checkout. The later toolchain steps
+        # expose GCP secrets to PR code (same posture as test_and_release.yml); fork PRs get
+        # no secrets, so their toolchain-dependent guardrails error instead of emitting a verdict.
         with:
           persist-credentials: false
 
-      # Pin Node from .nvmrc, matching the local Makefile's nvm setup.
+      # Change check to install only needed dependencies below.
+      - name: Detect changed areas
+        id: changes
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        with:
+          filters: |
+            backend:
+              - 'lightly_studio/**'
+            frontend:
+              - 'lightly_studio_view/**'
+
+      # --- Backend toolchain -------------------------------------------------
+      # Full backend venv for backend guardrails (e.g. backend/complexity, backend/coverage);
+      # frontend PRs need it too, to export the schema for their generated API client.
+      - name: Authenticate with GCP
+        if: steps.changes.outputs.backend == 'true' || steps.changes.outputs.frontend == 'true'
+        uses: 'google-github-actions/auth@v3'
+        with:
+          project_id: boris-250909
+          credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
+
+      - name: Set Up Python
+        if: steps.changes.outputs.backend == 'true' || steps.changes.outputs.frontend == 'true'
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.9"
+
+      - name: Set Up uv
+        if: steps.changes.outputs.backend == 'true' || steps.changes.outputs.frontend == 'true'
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          version: "0.8.17"
+          python-version: "3.9"
+          enable-cache: true
+
+      - name: Install backend dependencies
+        if: steps.changes.outputs.backend == 'true' || steps.changes.outputs.frontend == 'true'
+        working-directory: lightly_studio
+        run: make install-optional-deps
+
+      # Only frontend PRs need the schema — it feeds their generated API client.
+      - name: Export schema from backend
+        if: steps.changes.outputs.frontend == 'true'
+        working-directory: lightly_studio
+        run: |
+          make export-schema
+          make export-version
+
+      # Pin Node from .nvmrc. Serves both the fast_track guardrail runner (a Node/tsx program)
+      # and the frontend guardrails' npm ci — both pin the same version.
       - name: Set Up Node
         uses: actions/setup-node@v6
         with:
           node-version-file: fast_track/.nvmrc
           cache: npm
-          cache-dependency-path: fast_track/package-lock.json
+          cache-dependency-path: |
+            fast_track/package-lock.json
+            lightly_studio_view/package-lock.json
 
+      # --- Frontend toolchain ------------------------------------------------
+      # Deps and generated API client for frontend guardrails (e.g. frontend/complexity,
+      # frontend/coverage). prebuild is the app build's generation step, without the
+      # production bundle the guardrails don't use.
+      - name: Install frontend dependencies
+        if: steps.changes.outputs.frontend == 'true'
+        working-directory: lightly_studio_view
+        run: |
+          npm ci
+          npm run prebuild
+
+      # --- Fast Track toolchain ----------------------------------------------
       - name: Install dependencies
         run: npm ci
 
