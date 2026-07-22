@@ -255,6 +255,7 @@ describe('runBot', () => {
         // approval, so it bails before any read or write.
         const execution = run(verdict({ verdict: 'fail', reason: 'stale' }), {
             existingApproval: true,
+            guardrailRunNumber: 10,
             workflowRuns: [workflowRun({ run_number: 11 })]
         });
         await expect(execution.result).resolves.toEqual({
@@ -269,6 +270,7 @@ describe('runBot', () => {
         // A title/body edit skips guardrails and carries no judgment, so it must
         // not suppress this passing run.
         const execution = run(verdict(), {
+            guardrailRunNumber: 10,
             workflowRuns: [workflowRun({ run_number: 11, conclusion: 'skipped' })]
         });
         await expect(execution.result).resolves.toEqual({ status: 'approved', prNumber: 7 });
