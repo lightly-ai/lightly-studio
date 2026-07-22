@@ -2,7 +2,7 @@ import type { Octokit } from '../shared/octokit';
 import type { Verdict } from '../shared/verdict';
 import { renderComment, upsertComment } from './comment';
 import { deriveTarget, refreshTarget, type BotTarget } from './derive-target';
-import { isSupersededRun } from './latest-run';
+import { isSupersededRun, type SupersededRunParams } from './latest-run';
 import { approve, dismissApproval } from './review';
 import { effectiveVerdict, verdictMatchesTarget } from './verdict-policy';
 
@@ -75,7 +75,7 @@ async function verifyTarget(params: RunBotParams): Promise<VerifyOutcome> {
     return { target, actionParams };
 }
 
-function toSupersededParams(params: RunBotParams): Parameters<typeof isSupersededRun>[0] {
+function toSupersededParams(params: RunBotParams): SupersededRunParams {
     return {
         octokit: params.octokit,
         owner: params.owner,
