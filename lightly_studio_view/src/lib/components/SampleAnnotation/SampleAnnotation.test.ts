@@ -31,6 +31,23 @@ const createSegmentationMaskAnnotation = (): ComponentProps<
         }
     }) satisfies ComponentProps<typeof SampleAnnotation>['annotation'];
 
+// The factory above has no `segmentation_mask`, so the component renders no
+// mask image for it. This one carries one, which is what makes the mask
+// <image> - and therefore its opacity - observable.
+const createSegmentationMaskAnnotationWithMask = (): ComponentProps<
+    typeof SampleAnnotation
+>['annotation'] =>
+    ({
+        ...createSegmentationMaskAnnotation(),
+        segmentation_details: {
+            x: 1,
+            y: 2,
+            width: 10,
+            height: 12,
+            segmentation_mask: [0, 4, 2, 4]
+        }
+    }) satisfies ComponentProps<typeof SampleAnnotation>['annotation'];
+
 const createObjectDetectionAnnotation = (): ComponentProps<typeof SampleAnnotation>['annotation'] =>
     ({
         ...BASE_ANNOTATION_FIELDS,
@@ -231,6 +248,44 @@ describe('SampleAnnotation', () => {
                 screen.getByTestId('annotation_box').getAttribute('fill-opacity')
             );
             expect(opacity).toBeCloseTo(0.32); // 0.8 * 0.4
+        });
+
+        // The mask image is rendered by SampleAnnotationSegmentationRLE, which
+        // takes the data URL as a prop; passing it here keeps these assertions
+        // on the opacity alone and off the canvas-backed RLE rasterisation.
+        const renderMask = () =>
+            render(SampleAnnotation, {
+                props: {
+                    annotation: createSegmentationMaskAnnotationWithMask(),
+                    imageWidth: 100,
+                    prerenderedDataUrl: 'data:image/png;base64,iVBORw0KGgo=',
+                    prerenderedHeight: 12
+                }
+            });
+
+        it('renders segmentation-mask opacity at the default when the label has no custom color', () => {
+            const { container } = renderMask();
+
+            const opacity = Number(container.querySelector('image')?.getAttribute('opacity'));
+            expect(opacity).toBeCloseTo(0.65);
+        });
+
+        it('uses custom alpha for segmentation-mask opacity when label has a custom color', () => {
+            setCustomColor('person', '#ff0000', 0.8);
+
+            const { container } = renderMask();
+
+            const opacity = Number(container.querySelector('image')?.getAttribute('opacity'));
+            expect(opacity).toBeCloseTo(0.52); // 0.8 * 0.65
+        });
+
+        it('hides the segmentation mask when the custom alpha is zero', () => {
+            setCustomColor('person', '#ff0000', 0);
+
+            const { container } = renderMask();
+
+            const opacity = Number(container.querySelector('image')?.getAttribute('opacity'));
+            expect(opacity).toBe(0);
         });
     });
 });
