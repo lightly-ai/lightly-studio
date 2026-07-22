@@ -26,6 +26,7 @@
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
     import { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
+    import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { onMount } from 'svelte';
     import { toast } from 'svelte-sonner';
     import { routeHelpers } from '$lib/routes';
@@ -55,6 +56,7 @@
     const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId: eventCollectionId });
     const { createAnnotation } = useCreateAnnotation({ collectionId: eventCollectionId });
     const { createLabel } = useCreateLabel({ collectionId: eventCollectionId });
+    const { deleteAnnotation } = useDeleteAnnotation({ collectionId: eventCollectionId });
     const annotationLabels = useAnnotationLabels(() => ({ collectionId: eventCollectionId }));
 
     const {
@@ -115,6 +117,17 @@
         } catch (error) {
             toast.error('Failed to create event. Please try again.');
             console.error('Error creating event:', error);
+        }
+    }
+
+    async function handleEventDelete(event: VideoEvent) {
+        try {
+            await deleteAnnotation(event.id);
+            onVideoUpdate();
+            toast.success('Event deleted');
+        } catch (error) {
+            toast.error('Failed to delete event. Please try again.');
+            console.error('Error deleting event:', error);
         }
     }
 
@@ -255,6 +268,7 @@
                         editableEvents={$isEditingMode}
                         onEventResize={handleEventResize}
                         onEventAdd={handleEventAdd}
+                        onEventDelete={handleEventDelete}
                         videoProps={{
                             muted: true,
                             class: 'object-contain',
