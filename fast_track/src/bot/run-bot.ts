@@ -38,6 +38,11 @@ type VerifyOutcome = { target: BotTarget; actionParams: BotActionParams } | { do
 export async function runBot(params: RunBotParams): Promise<BotResult> {
     // Check first, before any read or write: a stale run must not dismiss the
     // approval a newer run for this head just created.
+    //
+    // Residual race: the bot's concurrency group cancels by event arrival order,
+    // not run recency, so a late stale delivery can cancel a newer bot that had
+    // not yet written its action and then skip here, leaving that action undone.
+    // Not closable in this layer; the durable fix is the concurrency model.
     if (await isSupersededRun(toSupersededParams(params))) {
         return { status: 'skipped', reason: 'A newer guardrail run for this head superseded it.' };
     }
