@@ -37,7 +37,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field
 from enum import Enum
 from os import PathLike
@@ -100,7 +100,7 @@ class FileOutcomeReport:
     """
 
     max_examples_per_outcome: int = DEFAULT_MAX_EXAMPLES_PER_OUTCOME
-    label_overrides: dict[FileOutcome, str] = field(default_factory=dict)
+    label_overrides: Mapping[FileOutcome, str] = field(default_factory=dict)
     _counts: dict[FileOutcome, int] = field(
         default_factory=lambda: dict.fromkeys(FileOutcome, 0),
         init=False,
@@ -175,10 +175,6 @@ class FileOutcomeReport:
                 f"({n_missing} missing, {n_broken} broken)."
             )
 
-    def _label(self, outcome: FileOutcome) -> str:
-        """Return the display label for `outcome`, honoring `label_overrides`."""
-        return self.label_overrides.get(outcome, outcome.value)
-
     def log_summary(self) -> None:
         """Log a single end-of-run summary of counts and example paths."""
         counts = ", ".join(
@@ -189,3 +185,7 @@ class FileOutcomeReport:
             examples = self._example_paths[outcome]
             if examples:
                 logger.info(f"Example {self._label(outcome)} paths: {', '.join(examples)}.")
+
+    def _label(self, outcome: FileOutcome) -> str:
+        """Return the display label for `outcome`, honoring `label_overrides`."""
+        return self.label_overrides.get(outcome, outcome.value)
