@@ -267,12 +267,13 @@ describe('DatasetDistributionPanel', () => {
 
         const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
             yAxis: { data: string[] };
-            series: [{ data: { itemStyle: { borderWidth: number } }[] }];
+            series: [{ data: { itemStyle: { color: string } }[] }];
             grid: { top: number };
         };
         expect(option.yAxis.data).toEqual(['Missing', 'Missing', 'Other']);
         expect(option.grid.top).toBe(4);
-        expect(option.series[0].data[0].itemStyle.borderWidth).toBe(3);
+        // 'Missing' (value) is selected → accent green; the others are dimmed grey.
+        expect(option.series[0].data[0].itemStyle.color).toBe('rgba(59,217,159,0.85)');
 
         echartsMock.getClickHandler()?.({ dataIndex: 1 });
         expect(onCategoricalValueToggle).toHaveBeenCalledWith('city', null);

@@ -123,16 +123,30 @@
     const activeHistogram = $derived(activeGroup?.histogram ?? activeSource.histogram ?? null);
     const activeCategorical = $derived(activeGroup?.categorical ?? null);
     const categoricalData = $derived<CategoryCount[]>(
-        (activeCategorical?.buckets ?? []).map((bucket) => ({
-            id: bucket.id,
-            label: bucket.label,
-            count: bucket.count,
-            selectable: bucket.kind !== 'other',
-            pinned: bucket.kind !== 'value',
-            selected:
-                bucket.kind !== 'other' &&
-                activeCategorical?.selectedValues.some((value) => Object.is(value, bucket.value))
-        }))
+        (activeCategorical?.buckets ?? []).map((bucket) => {
+            // When filteredBuckets is defined (query has returned) look up the
+            // filtered count for this bucket. Absent = 0 (filter removed it entirely).
+            const filteredBucket = activeCategorical?.filteredBuckets?.find(
+                (fb) => fb.id === bucket.id
+            );
+            const filteredCount =
+                activeCategorical?.filteredBuckets !== undefined
+                    ? (filteredBucket?.count ?? 0)
+                    : undefined;
+            return {
+                id: bucket.id,
+                label: bucket.label,
+                count: bucket.count,
+                filteredCount,
+                selectable: bucket.kind !== 'other',
+                pinned: bucket.kind !== 'value',
+                selected:
+                    bucket.kind !== 'other' &&
+                    activeCategorical?.selectedValues.some((value) =>
+                        Object.is(value, bucket.value)
+                    )
+            };
+        })
     );
     const displayedData = $derived(activeCategorical ? categoricalData : activeData);
     const configurationItems = $derived(

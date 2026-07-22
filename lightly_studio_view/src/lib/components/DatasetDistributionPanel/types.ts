@@ -42,6 +42,14 @@ export interface DistributionSourceGroup {
     /** Controlled categorical distribution and selection state. */
     categorical?: {
         buckets: CategoricalMetadataBucket[];
+        /**
+         * Buckets from the same query with all sidebar filters applied.
+         * When provided, each bar shows a grey background at the full `count`
+         * with a coloured foreground at the filtered count, giving context for
+         * how active filters affect the distribution.
+         * Omit (undefined) while the filtered query is still loading.
+         */
+        filteredBuckets?: CategoricalMetadataBucket[];
         selectedValues: CategoricalMetadataValue[];
         loading?: boolean;
         error?: string;
