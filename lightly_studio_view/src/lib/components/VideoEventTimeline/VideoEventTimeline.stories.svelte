@@ -41,9 +41,6 @@
     ]);
 
     const singleEvent = makeEvents([['Sprint', 3, 14]]);
-</script>
-
-<script>
     let playheadTimeS = $state(6);
 </script>
 
@@ -82,7 +79,6 @@
         currentTimeS: 5
     }}
 />
-
 <Story
     name="NoHeader"
     args={{

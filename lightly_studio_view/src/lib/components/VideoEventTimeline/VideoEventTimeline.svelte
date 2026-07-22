@@ -26,7 +26,7 @@
      * />
      * ```
      */
-    import { Plus } from '@lucide/svelte';
+    import { Plus, Trash2 } from '@lucide/svelte';
     import { cn } from '$lib/utils/shadcn.js';
     import { assignEventLanes, type VideoEvent } from '$lib/utils';
 
@@ -45,6 +45,8 @@
         onResize?: (event: VideoEvent, startTimeS: number, endTimeS: number) => void;
         /** Called with a default span when the user requests a new event. */
         onAddEvent?: (startTimeS: number, endTimeS: number) => void;
+        /** Called when the user deletes an event via its trash affordance. */
+        onDelete?: (event: VideoEvent) => void;
         /** Heading shown above the timeline. */
         title?: string;
         /** Whether to render the title/count header above the track. */
@@ -61,6 +63,7 @@
         editable = false,
         onResize,
         onAddEvent,
+        onDelete,
         title = 'Events',
         showHeader = true,
         class: className
@@ -228,7 +231,7 @@
                 )}
                 {@const timeRange = `${formatTime(span.startTimeS)}–${formatTime(span.endTimeS)}`}
                 <div
-                    class="absolute"
+                    class="group absolute"
                     style={`left: ${leftPercent}%; width: ${widthPercent}%; top: ${
                         event.lane * (LANE_HEIGHT_PX + LANE_GAP_PX)
                     }px; height: ${LANE_HEIGHT_PX}px;`}
@@ -243,6 +246,21 @@
                     >
                         <span class="truncate">{event.label}</span>
                     </button>
+
+                    {#if editable && onDelete}
+                        <button
+                            type="button"
+                            class="absolute right-2.5 top-1/2 z-30 flex -translate-y-1/2 items-center rounded bg-black/60 p-1 text-white opacity-0 transition-opacity hover:bg-black/80 focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100"
+                            aria-label={`Delete ${event.label}`}
+                            data-testid="delete-event-button"
+                            onclick={(e) => {
+                                e.stopPropagation();
+                                onDelete?.(event);
+                            }}
+                        >
+                            <Trash2 class="size-3.5" />
+                        </button>
+                    {/if}
 
                     {#if editable}
                         {#each ['start', 'end'] as const as edge (edge)}
