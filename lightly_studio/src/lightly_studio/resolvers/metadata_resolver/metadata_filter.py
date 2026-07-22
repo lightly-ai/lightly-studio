@@ -3,9 +3,10 @@
 import operator
 from typing import Any, Callable, Literal, Protocol, TypeVar
 
-from pydantic import BaseModel, model_validator
+import pydantic
+import sqlalchemy
+from pydantic import BaseModel
 from pydantic_core import PydanticCustomError
-from sqlalchemy import or_
 from sqlalchemy.sql.elements import ColumnElement
 
 from lightly_studio.database import db_json
@@ -34,7 +35,7 @@ class MetadataFilter(BaseModel):
     op: MetadataOperator
     value: Any
 
-    @model_validator(mode="after")
+    @pydantic.model_validator(mode="after")
     def validate_in_value(self) -> "MetadataFilter":  # noqa: N804
         """Validate the categorical values accepted by the ``in`` operator."""
         if self.op != "in":
@@ -183,4 +184,4 @@ def _build_in_condition(
         conditions.append(extract_expr.in_(values))
     if None in metadata_filter.value:
         conditions.append(extract_expr.is_(None))
-    return or_(*conditions)
+    return sqlalchemy.or_(*conditions)
