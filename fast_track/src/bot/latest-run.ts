@@ -50,12 +50,7 @@ export async function isSupersededRun(params: SupersededRunParams): Promise<bool
             branch: headBranch,
             per_page: PER_PAGE
         });
-        return runs.some(
-            (run) =>
-                isNewerRun(run, runNumber, runAttempt) &&
-                run.status === 'completed' &&
-                run.conclusion !== 'skipped'
-        );
+        return runs.some((run) => isNewerRun(run, runNumber, runAttempt) && hasRealConclusion(run));
     } catch (error) {
         console.warn('Fast Track: could not check for superseding runs; proceeding.', error);
         return false;
@@ -71,4 +66,10 @@ function isNewerRun(
 ): boolean {
     if (run.run_number !== runNumber) return run.run_number > runNumber;
     return (run.run_attempt ?? 1) > runAttempt;
+}
+
+/** A run carries a verdict worth acting on when it completed with a conclusion
+ *  other than `skipped` (a title/body edit skips guardrails with no judgment). */
+function hasRealConclusion(run: { status?: string | null; conclusion?: string | null }): boolean {
+    return run.status === 'completed' && run.conclusion !== 'skipped';
 }
