@@ -1,11 +1,8 @@
 <script lang="ts">
     import { cn } from '$lib/utils/shadcn';
-    import { useGlobalStorage } from '$lib/hooks';
-    import { usePostHog } from '$lib/hooks';
     import { ChartColumn, ChartNetwork, Gauge, SearchCode } from '@lucide/svelte';
     import { Tooltip } from '$lib/components/ui/tooltip';
-
-    type PanelType = Parameters<ReturnType<typeof useGlobalStorage>['setActivePanel']>[0];
+    import { useSidePanelTabs } from './useSidePanelTabs';
 
     interface Props {
         collectionId: string;
@@ -15,16 +12,7 @@
     }
     const { collectionId, isImages, hasMediaWithEmbeddings, supportsEvaluation }: Props = $props();
 
-    const { activePanel, setActivePanel } = useGlobalStorage();
-    const { trackEvent } = usePostHog();
-
-    function toggle(panel: PanelType) {
-        const nextPanel = $activePanel === panel ? 'none' : panel;
-        setActivePanel(nextPanel);
-        if (nextPanel !== 'none') {
-            trackEvent('tool_panel_opened', { collection_id: collectionId, panel_type: nextPanel });
-        }
-    }
+    const { activePanel, toggle } = useSidePanelTabs({ collectionId });
 </script>
 
 <div class="flex w-14 flex-col gap-2 rounded-xl bg-card p-1.5">
@@ -45,7 +33,7 @@
                 data-testid="side-panel-tabs-embed"
                 aria-label="Embeddings"
                 aria-pressed={$activePanel === 'embeddingPlot'}
-                onclick={() => toggle('embeddingPlot')}
+                onclick={() => toggle($activePanel, 'embeddingPlot')}
             >
                 <ChartNetwork class="size-4" />
                 <span>Embed</span>
@@ -69,7 +57,7 @@
                 data-testid="side-panel-tabs-query"
                 aria-label="Query"
                 aria-pressed={$activePanel === 'queryEditor'}
-                onclick={() => toggle('queryEditor')}
+                onclick={() => toggle($activePanel, 'queryEditor')}
             >
                 <SearchCode class="size-4" />
                 <span>Query</span>
@@ -93,7 +81,7 @@
                 data-testid="side-panel-tabs-eval"
                 aria-label="Evaluation"
                 aria-pressed={$activePanel === 'evaluationRuns'}
-                onclick={() => toggle('evaluationRuns')}
+                onclick={() => toggle($activePanel, 'evaluationRuns')}
             >
                 <Gauge class="size-4" />
                 <span>Eval</span>
@@ -117,7 +105,7 @@
                 data-testid="side-panel-tabs-distribution"
                 aria-label="Distribution"
                 aria-pressed={$activePanel === 'distribution'}
-                onclick={() => toggle('distribution')}
+                onclick={() => toggle($activePanel, 'distribution')}
             >
                 <ChartColumn class="size-4" />
                 <span>Distr</span>
