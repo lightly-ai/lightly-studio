@@ -121,15 +121,15 @@ class VideoEmbeddingGenerator(EmbeddingGenerator, Protocol):
     for creating embeddings.
     """
 
-    def embed_videos(self, filepaths: list[str]) -> NDArray[np.float32]:
+    def embed_videos(self, filepaths: list[str]) -> EmbeddingResult:
         """Generate embeddings for multiple video samples.
 
         Args:
             filepaths: A list of file paths to the videos to embed.
 
         Returns:
-            A numpy array representing the generated embeddings
-            in the same order as the input file paths.
+            An ``EmbeddingResult`` with embeddings for the readable videos, in the same
+            order as the corresponding input file paths.
         """
         ...
 
@@ -185,6 +185,7 @@ class RandomEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator)
         _ = show_progress  # Not used for random embeddings.
         return np.random.rand(len(images), self._dimension).astype(np.float32)
 
-    def embed_videos(self, filepaths: list[str]) -> NDArray[np.float32]:
+    def embed_videos(self, filepaths: list[str]) -> EmbeddingResult:
         """Generate random embeddings for multiple video samples."""
-        return np.random.rand(len(filepaths), self._dimension).astype(np.float32)
+        embeddings = np.random.rand(len(filepaths), self._dimension).astype(np.float32)
+        return EmbeddingResult(embeddings=embeddings, kept_indices=list(range(len(filepaths))))
