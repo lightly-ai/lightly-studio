@@ -180,7 +180,7 @@ class TestDataset:
 
         log_text = caplog.text
         assert "added=2, already_present=4" in log_text
-        assert "Example already_present paths:" in log_text
+        assert "Examples 'already_present':" in log_text
         assert f"{images_path}" in log_text
 
     def test_dataset_add_images_from_path__dont_embed(
