@@ -402,8 +402,8 @@
     const OverlayProxyReporter = createOverlayProxyReporter((proxy) => {
         overlayProxy = proxy;
     });
-    // 128px card + 2px border; the gap keeps the card clear of the point.
-    const PREVIEW_CARD_SIZE = 130;
+    // Tailwind's h-32/w-32 size the card's border box to 128px.
+    const PREVIEW_CARD_SIZE = 128;
     const hoverPreview = $derived.by(() =>
         getHoverPreviewState({
             tooltip,

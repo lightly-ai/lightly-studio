@@ -27,8 +27,12 @@ export function getHoverPreviewState({
         return null;
     }
     const point = proxy.location(tooltip.x, tooltip.y);
+    const position = getPreviewPosition({ point, plotWidth: proxy.width, cardSize });
+    if (position === null) {
+        return null;
+    }
     return {
         sampleId: tooltip.identifier,
-        ...getPreviewPosition({ point, plotWidth: proxy.width, cardSize })
+        ...position
     };
 }
