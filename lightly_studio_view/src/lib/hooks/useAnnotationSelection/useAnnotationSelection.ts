@@ -2,6 +2,7 @@ import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolb
 import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
 import { useGlobalStorage } from '../useGlobalStorage';
+import { usePostHog } from '$lib/hooks';
 
 export function useAnnotationSelection() {
     const {
@@ -14,15 +15,18 @@ export function useAnnotationSelection() {
 
     const { setStatus } = useSampleDetailsToolbarContext();
     const { updateLastAnnotationLabel } = useGlobalStorage();
+    const { trackEvent } = usePostHog();
 
     function selectAnnotation({
         annotationId,
         collectionId,
-        annotations
+        annotations,
+        source
     }: {
         annotationId: string;
         collectionId: string;
         annotations: AnnotationView[];
+        source: 'canvas' | 'side_panel';
     }) {
         const annotation = annotations.find((a) => a.sample_id === annotationId);
 
@@ -43,6 +47,16 @@ export function useAnnotationSelection() {
             );
 
         setLastCreatedAnnotationId(null);
+
+        if (context.annotationId !== annotationId) {
+            trackEvent('annotation_focused', {
+                collection_id: collectionId,
+                annotation_type: annotation.annotation_type,
+                focus_source: source,
+                label_name: annotation.annotation_label?.annotation_label_name ?? null
+            });
+        }
+
         setAnnotationId(context.annotationId === annotationId ? null : annotationId);
     }
 

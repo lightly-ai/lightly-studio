@@ -175,7 +175,12 @@
             isOnAnnotationDetailsView
         )
             return;
-        selectAnnotation({ annotationId, annotations: sample.annotations ?? [], collectionId });
+        selectAnnotation({
+            annotationId,
+            annotations: sample.annotations ?? [],
+            collectionId,
+            source: 'canvas'
+        });
     };
 
     let annotationsToShow = $derived(sample?.annotations ? getAnnotations(sample.annotations) : []);

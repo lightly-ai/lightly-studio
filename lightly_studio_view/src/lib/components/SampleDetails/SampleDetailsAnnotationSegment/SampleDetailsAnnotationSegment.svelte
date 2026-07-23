@@ -7,6 +7,7 @@
     import {
         useAnnotationCollections,
         useAnnotationCollectionsFilter,
+        usePostHog,
         useSettings
     } from '$lib/hooks';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
@@ -60,6 +61,7 @@
         collectionId
     });
     const { selectAnnotation } = useAnnotationSelection();
+    const { trackEvent } = usePostHog();
 
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
     const { selectedCollectionIds, seedSelectionIfNeeded } = useAnnotationCollectionsFilter();
@@ -140,7 +142,7 @@
     const toggleAnnotationSelection = (annotationId: string) => {
         if (isPanModeEnabled) return;
 
-        selectAnnotation({ annotationId, annotations, collectionId });
+        selectAnnotation({ annotationId, annotations, collectionId, source: 'side_panel' });
     };
 
     const toggleAnnotationLock = (annotationId: string) => {
@@ -230,6 +232,14 @@
         }}
         canHighlight={annotationLabelContext.lastCreatedAnnotationId === annotation.sample_id}
         onClickSelectList={() => {
+            if (annotationLabelContext.annotationId !== annotation.sample_id) {
+                trackEvent('annotation_focused', {
+                    collection_id: collectionId,
+                    annotation_type: annotation.annotation_type,
+                    focus_source: 'side_panel',
+                    label_name: annotation.annotation_label?.annotation_label_name ?? null
+                });
+            }
             setAnnotationId(annotation.sample_id);
         }}
     />
