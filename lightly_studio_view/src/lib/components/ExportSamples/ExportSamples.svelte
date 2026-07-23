@@ -160,12 +160,14 @@
 
     const handleExport = async () => {
         const sampleCount = get(count);
+        const snapshotExportType = exportType;
+        const snapshotTagName = tagNameToExport;
         markDownloadClicked();
         trackEvent('export_download_clicked', {
             collection_id: collectionId,
-            export_format: exportType,
+            export_format: snapshotExportType,
             sample_count: sampleCount,
-            tag_name: tagNameToExport
+            tag_name: snapshotTagName
         });
         const response = await exportCollection({
             collection_id: collectionId,
@@ -176,9 +178,9 @@
 
         trackEvent('export_triggered', {
             collection_id: collectionId,
-            export_format: exportType,
+            export_format: snapshotExportType,
             sample_count: sampleCount,
-            tag_name: tagNameToExport,
+            tag_name: snapshotTagName,
             success: !response.error,
             error_message: response.error ?? null
         });
