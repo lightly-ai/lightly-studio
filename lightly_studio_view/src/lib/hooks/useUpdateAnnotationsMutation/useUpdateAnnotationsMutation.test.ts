@@ -7,7 +7,7 @@ vi.mock('@tanstack/svelte-query', async (importOriginal) => {
     return { ...actual, createMutation: vi.fn(), useQueryClient: vi.fn() };
 });
 
-const trackEvent = vi.fn();
+const { trackEvent } = vi.hoisted(() => ({ trackEvent: vi.fn() }));
 vi.mock('$lib/hooks/usePostHog', () => ({
     usePostHog: () => ({ trackEvent })
 }));
@@ -36,6 +36,7 @@ describe('useUpdateAnnotationsMutation', () => {
 
         expect(trackEvent).toHaveBeenCalledWith('annotation_label_updated', {
             collection_id: 'col-1',
+            annotation_id: 'ann-1',
             label_name: 'dog'
         });
     });
@@ -55,12 +56,12 @@ describe('useUpdateAnnotationsMutation', () => {
 
         expect(trackEvent).toHaveBeenCalledWith('annotations_bulk_labeled', {
             collection_id: 'col-1',
-            annotation_count: 2,
-            label_names: ['dog', 'cat']
+            annotation_ids: ['ann-1', 'ann-2'],
+            annotation_count: 2
         });
     });
 
-    it('does not fire when no inputs include a label_name', async () => {
+    it('fires annotation_label_updated with label_name undefined when a single update has no label_name', async () => {
         vi.mocked(createMutation).mockReturnValue({
             mutate: (_vars: unknown, opts: { onSuccess: () => void }) => {
                 opts.onSuccess();
@@ -76,6 +77,10 @@ describe('useUpdateAnnotationsMutation', () => {
             }
         ]);
 
-        expect(trackEvent).not.toHaveBeenCalled();
+        expect(trackEvent).toHaveBeenCalledWith('annotation_label_updated', {
+            collection_id: 'col-1',
+            annotation_id: 'ann-1',
+            label_name: undefined
+        });
     });
 });

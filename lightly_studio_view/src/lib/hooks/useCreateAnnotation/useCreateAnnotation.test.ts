@@ -12,7 +12,7 @@ vi.mock('@tanstack/svelte-query', async (importOriginal) => {
     return { ...actual, createMutation: vi.fn(), useQueryClient: vi.fn() };
 });
 
-const trackEvent = vi.fn();
+const { trackEvent } = vi.hoisted(() => ({ trackEvent: vi.fn() }));
 vi.mock('$lib/hooks/usePostHog', () => ({
     usePostHog: () => ({ trackEvent })
 }));
