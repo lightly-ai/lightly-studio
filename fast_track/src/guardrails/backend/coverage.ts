@@ -7,6 +7,7 @@ import { createCoverageGuardrail } from '../shared/coverage-base';
 import { runLoggedCommand } from '../shared/utils';
 
 const LIGHTLY_STUDIO_ABS = resolve(REPO_ROOT, 'lightly_studio');
+const NAME = 'backend/coverage';
 const BACKEND_PREFIX = 'lightly_studio/src/lightly_studio/';
 const COVERAGE_FILE = 'coverage.json';
 const MAX_BUFFER = 10 * 1024 * 1024;
@@ -48,7 +49,7 @@ export function parseCoverageRatio(
 }
 
 export const backendCoverageGuardrail: Guardrail = createCoverageGuardrail<CoverageData>({
-    name: 'backend/coverage',
+    name: NAME,
 
     filterFiles(files: ChangedFile[]): ChangedFile[] {
         return filterBackendFiles(files);
@@ -103,6 +104,7 @@ export const backendCoverageGuardrail: Guardrail = createCoverageGuardrail<Cover
 
         try {
             await runLoggedCommand(
+                NAME,
                 'uv',
                 [
                     'run',

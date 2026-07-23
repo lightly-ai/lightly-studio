@@ -17,26 +17,27 @@ export interface CommandResult {
  * Runs a command via execFile and always echoes its stdout/stderr to the CI
  * console — on both the success and the error path — before returning or
  * re-throwing. Guardrails spawn third-party tools (ruff, pytest, vitest) whose
- * output is otherwise swallowed; surfacing it lets a CI run be inspected.
+ * output is otherwise swallowed; surfacing it under a `label`-headed section
+ * lets a CI run be inspected.
  *
  * The original error is re-thrown unchanged, so callers keep their own exit-code
  * handling (e.g. ruff exits 1 on violations, pytest on a failing test).
  */
 export async function runLoggedCommand(
+    label: string,
     file: string,
     args: string[],
     // Encoding is fixed to the default (utf8 strings) so the output is always
     // loggable text — a buffer encoding would defeat the "echo output" contract.
     options: Omit<ExecFileOptions, 'encoding'>
 ): Promise<CommandResult> {
-    const label = `${file} ${args.join(' ')}`;
     try {
         const { stdout, stderr } = await execFileAsync(file, args, options);
-        logCommandOutput(label, stdout, stderr);
+        logCommandOutput(label, file, args, stdout, stderr);
         return { stdout: asText(stdout), stderr: asText(stderr) };
     } catch (err) {
         const { stdout, stderr } = err as { stdout?: unknown; stderr?: unknown };
-        logCommandOutput(label, stdout, stderr);
+        logCommandOutput(label, file, args, stdout, stderr);
         throw err;
     }
 }
@@ -47,12 +48,28 @@ function asText(value: unknown): string {
     return typeof value === 'string' ? value : '';
 }
 
-function logCommandOutput(label: string, stdout: unknown, stderr: unknown): void {
-    console.log(`$ ${label}`);
-    const out = asText(stdout).trimEnd();
-    const err = asText(stderr).trimEnd();
-    if (out) console.log(out);
-    if (err) console.error(err);
+// Emit the whole section as one console.log so stdout/stderr can't interleave
+// and split the block apart in the CI log.
+function logCommandOutput(
+    label: string,
+    file: string,
+    args: string[],
+    stdout: unknown,
+    stderr: unknown
+): void {
+    const out = asText(stdout).trimEnd() || '(empty)';
+    const err = asText(stderr).trimEnd() || '(empty)';
+    console.log(
+        [
+            `===== guardrail: ${label} =====`,
+            `$ ${file} ${args.join(' ')}`,
+            '----- stdout -----',
+            out,
+            '----- stderr -----',
+            err,
+            `===== end: ${label} =====`
+        ].join('\n')
+    );
 }
 
 // Parses a unified diff patch and returns the set of line numbers (in the new file)

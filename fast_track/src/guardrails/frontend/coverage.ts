@@ -7,6 +7,7 @@ import { runLoggedCommand } from '../shared/utils';
 
 const SRC_PREFIX = FRONTEND_PREFIX + 'src/';
 
+const NAME = 'frontend/coverage';
 const IGNORE_SUFFIXES = ['.test.ts', '.test.js', '.spec.ts', '.spec.js', '.d.ts'];
 const SOURCE_SUFFIXES = ['.ts', '.js', '.svelte'];
 const MAX_BUFFER = 32 * 1024 * 1024;
@@ -66,7 +67,7 @@ export function fileCoverageRatio(
 }
 
 export const frontendCoverageGuardrail: Guardrail = createCoverageGuardrail<RawCoverage>({
-    name: 'frontend/coverage',
+    name: NAME,
 
     filterFiles(files: ChangedFile[]): ChangedFile[] {
         return files.filter(
@@ -86,6 +87,7 @@ export const frontendCoverageGuardrail: Guardrail = createCoverageGuardrail<RawC
         const coverageIncludes = relSources.map((f) => `--coverage.include=${f}`);
         try {
             await runLoggedCommand(
+                NAME,
                 'npm',
                 ['run', 'test:unit', '--', 'run', '--coverage', ...testFiles, ...coverageIncludes],
                 { cwd: FRONTEND_ABS, maxBuffer: MAX_BUFFER }

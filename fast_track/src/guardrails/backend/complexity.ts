@@ -21,6 +21,7 @@ async function runLinter(paths: string[]): Promise<RuffViolation[]> {
     let stdout: string;
     try {
         const result = await runLoggedCommand(
+            NAME,
             'uv',
             [
                 'run',
