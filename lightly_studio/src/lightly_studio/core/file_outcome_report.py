@@ -182,6 +182,8 @@ class FileOutcomeReport:
         )
         logger.info(f"File processing result: {counts}.")
         for outcome in FileOutcome:
+            if outcome == FileOutcome.ADDED:
+                continue
             examples = self._example_paths[outcome]
             if examples:
                 logger.info(f"Examples '{self._label(outcome)}': {', '.join(examples)}.")
