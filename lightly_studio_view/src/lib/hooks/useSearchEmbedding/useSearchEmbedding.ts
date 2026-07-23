@@ -105,8 +105,7 @@ export function useSearchEmbedding({ getCollectionId, embedding }: Params): Retu
     const setImage = async (file: File) => {
         trackEvent('search_initiated', {
             collection_id: getCollectionId(),
-            search_type: 'image',
-            file_name: file.name
+            search_type: 'image'
         });
         await upload.upload(file);
     };
