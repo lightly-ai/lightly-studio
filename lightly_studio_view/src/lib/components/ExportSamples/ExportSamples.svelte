@@ -27,7 +27,8 @@
     import { useExportDialog } from '$lib/hooks';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 
-    const { isExportDialogOpen, openExportDialog, closeExportDialog } = useExportDialog();
+    const { isExportDialogOpen, openExportDialog, closeExportDialog, markDownloadClicked } =
+        useExportDialog();
     const { imageFilter } = useImageFilters();
     const { filteredSampleCount } = useGlobalStorage();
     const { trackEvent } = usePostHog();
@@ -148,6 +149,7 @@
     });
 
     const handleAnnotationDownloadClick = (exportFormat: string) => {
+        markDownloadClicked();
         trackEvent('export_download_clicked', {
             collection_id: collectionId,
             export_format: exportFormat,
@@ -158,6 +160,7 @@
 
     const handleExport = async () => {
         const sampleCount = get(count);
+        markDownloadClicked();
         trackEvent('export_download_clicked', {
             collection_id: collectionId,
             export_format: exportType,

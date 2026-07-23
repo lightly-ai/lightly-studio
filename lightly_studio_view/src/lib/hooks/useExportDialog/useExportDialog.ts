@@ -3,6 +3,7 @@ import { usePostHog } from '$lib/hooks/usePostHog';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 
 const isExportDialogOpen = writable(false);
+const downloadedInSession = writable(false);
 
 interface OpenExportDialogParams {
     collectionId: string;
@@ -19,6 +20,7 @@ export function useExportDialog() {
 
     const openExportDialog = ({ collectionId }: OpenExportDialogParams) => {
         if (get(isExportDialogOpen)) return;
+        downloadedInSession.set(false);
         isExportDialogOpen.set(true);
         trackEvent('export_dialog_opened', {
             collection_id: collectionId,
@@ -28,16 +30,23 @@ export function useExportDialog() {
 
     const closeExportDialog = ({ collectionId, exportFormat }: CloseExportDialogParams) => {
         if (!get(isExportDialogOpen)) return;
-        trackEvent('export_dialog_dismissed', {
-            collection_id: collectionId,
-            export_format: exportFormat
-        });
+        if (!get(downloadedInSession)) {
+            trackEvent('export_dialog_dismissed', {
+                collection_id: collectionId,
+                export_format: exportFormat
+            });
+        }
         isExportDialogOpen.set(false);
+    };
+
+    const markDownloadClicked = () => {
+        downloadedInSession.set(true);
     };
 
     return {
         isExportDialogOpen,
         openExportDialog,
-        closeExportDialog
+        closeExportDialog,
+        markDownloadClicked
     };
 }
