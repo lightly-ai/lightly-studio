@@ -3,8 +3,7 @@ import type { ImageFilter } from '$lib/api/lightly_studio_local';
 import { exportCollection } from '$lib/services/exportCollection';
 import type { ExportFilter } from '$lib/services/types';
 import { useExportDialog } from '$lib/hooks';
-import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-import { usePostHog } from '$lib/hooks/usePostHog';
+import { useGlobalStorage, usePostHog } from '$lib/hooks';
 
 interface UseExportTrackingParams {
     collectionId: string;

@@ -1,6 +1,5 @@
 import { get, writable } from 'svelte/store';
-import { usePostHog } from '$lib/hooks/usePostHog';
-import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+import { useGlobalStorage, usePostHog } from '$lib/hooks';
 
 const isExportDialogOpen = writable(false);
 const downloadedInSession = writable(false);

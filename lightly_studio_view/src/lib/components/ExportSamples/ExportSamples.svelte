@@ -400,7 +400,8 @@
                             href={exportObjectDetectionCocoURL}
                             target="_blank"
                             data-testid="submit-button-annotations-coco"
-                            onclick={() => tracking.handleAnnotationDownloadClick('object_detections_coco')}
+                            onclick={() =>
+                                tracking.handleAnnotationDownloadClick('object_detections_coco')}
                         >
                             Download
                         </Button>
@@ -428,7 +429,8 @@
                             href={exportObjectDetectionYoloURL}
                             target="_blank"
                             data-testid="submit-button-annotations-yolo"
-                            onclick={() => tracking.handleAnnotationDownloadClick('object_detections_yolo')}
+                            onclick={() =>
+                                tracking.handleAnnotationDownloadClick('object_detections_yolo')}
                         >
                             Download
                         </Button>
@@ -474,7 +476,9 @@
                                 target="_blank"
                                 data-testid="submit-button-youtube-vis-instance-segmentations"
                                 onclick={() =>
-                                    tracking.handleAnnotationDownloadClick('youtube_vis_segmentation')}
+                                    tracking.handleAnnotationDownloadClick(
+                                        'youtube_vis_segmentation'
+                                    )}
                             >
                                 Download
                             </Button>
@@ -502,7 +506,8 @@
                             href={exportPascalVocURL}
                             target="_blank"
                             data-testid="submit-button-semantic-segmentations"
-                            onclick={() => tracking.handleAnnotationDownloadClick('semantic_segmentations')}
+                            onclick={() =>
+                                tracking.handleAnnotationDownloadClick('semantic_segmentations')}
                         >
                             Download
                         </Button>

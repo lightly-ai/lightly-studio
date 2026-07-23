@@ -17,7 +17,7 @@
     import TagActionMenu from './TagActionMenu.svelte';
     import { toast } from 'svelte-sonner';
     import { get } from 'svelte/store';
-    import { usePostHog } from '$lib/hooks/usePostHog';
+    import { usePostHog } from '$lib/hooks';
 
     let { collection_id, gridType }: Parameters<typeof useTags>[0] & { gridType: GridType } =
         $props();
@@ -80,6 +80,16 @@
     async function handleAssign(name: string) {
         assignBusy = true;
         const snapshotCount = selectedIds.size;
+
+        function trackTagged(is_new_tag: boolean) {
+            trackEvent('samples_tagged', {
+                collection_id,
+                tag_kind: tagKind,
+                sample_count: snapshotCount,
+                is_new_tag
+            });
+        }
+
         try {
             const existingTag = $tags.find(
                 (t: TagView) => t.name.toLowerCase() === name.toLowerCase()
@@ -90,12 +100,7 @@
                     toast.error('Failed to assign tag. Please try again.');
                     return;
                 }
-                trackEvent('samples_tagged', {
-                    collection_id,
-                    tag_kind: tagKind,
-                    sample_count: snapshotCount,
-                    is_new_tag: false
-                });
+                trackTagged(false);
             } else {
                 const createResponse = await createTag({
                     path: { collection_id },
@@ -110,12 +115,7 @@
                     toast.error('Failed to assign tag. Please try again.');
                     return;
                 }
-                trackEvent('samples_tagged', {
-                    collection_id,
-                    tag_kind: tagKind,
-                    sample_count: snapshotCount,
-                    is_new_tag: true
-                });
+                trackTagged(true);
             }
             loadTags();
         } catch (error) {

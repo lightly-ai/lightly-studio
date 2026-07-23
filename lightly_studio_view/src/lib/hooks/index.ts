@@ -44,6 +44,7 @@ export { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDi
 export { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
 export { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
 export { useSettings } from '$lib/hooks/useSettings';
+export { usePostHog } from '$lib/hooks/usePostHog';
 export { useAnnotationClassVisibility } from '$lib/hooks/useAnnotationClassVisibility/useAnnotationClassVisibility';
 export {
     useImageAnnotationCounts,
