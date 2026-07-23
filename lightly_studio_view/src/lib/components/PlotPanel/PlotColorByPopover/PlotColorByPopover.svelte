@@ -95,28 +95,17 @@
         const option = colorByOptions[Number(value)];
         if (!option) return;
 
-        if (option.type === 'tags') {
-            setSelectedColorByType('tags');
-            onSelectedKeyChange(null);
-            trackEvent('embedding_color_by_changed', {
-                collection_id: collectionId,
-                color_by_type: 'tags'
-            });
-        } else if (option.type === 'annotation_label') {
-            setSelectedColorByType('annotation_label');
-            onSelectedKeyChange(null);
-            trackEvent('embedding_color_by_changed', {
-                collection_id: collectionId,
-                color_by_type: 'annotation_label'
-            });
-        } else {
+        if (option.type === 'metadata') {
             setSelectedColorByType('metadata');
             onSelectedKeyChange(option.fieldName);
-            trackEvent('embedding_color_by_changed', {
-                collection_id: collectionId,
-                color_by_type: 'metadata'
-            });
+        } else {
+            setSelectedColorByType(option.type);
+            onSelectedKeyChange(null);
         }
+        trackEvent('embedding_color_by_changed', {
+            collection_id: collectionId,
+            color_by_type: option.type
+        });
     };
 </script>
 
