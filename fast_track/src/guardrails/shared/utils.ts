@@ -61,13 +61,15 @@ function logCommandOutput(
     const err = asText(stderr).trimEnd() || '(empty)';
     console.log(
         [
+            '',
             `===== guardrail: ${label} =====`,
             `$ ${file} ${args.join(' ')}`,
             '----- stdout -----',
             out,
             '----- stderr -----',
             err,
-            `===== end: ${label} =====`
+            `===== end: ${label} =====`,
+            ''
         ].join('\n')
     );
 }
