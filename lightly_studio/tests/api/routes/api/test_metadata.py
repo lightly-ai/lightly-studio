@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from unittest.mock import ANY
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -110,6 +111,7 @@ def test_get_metadata_value_counts(test_client: TestClient, mocker: MockerFixtur
             "missing_count": 3,
         }
     }
+    resolver.assert_called_once_with(session=ANY, collection_id=collection_id, filters=ANY)
     called_filters = resolver.call_args.kwargs["filters"]
     assert called_filters.model_dump(exclude_none=True) == {
         "filter_type": "image",
@@ -134,7 +136,7 @@ def test_get_metadata_value_counts__optional_body(
 
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == {}
-    assert resolver.call_args.kwargs["filters"] is None
+    resolver.assert_called_once_with(session=ANY, collection_id=collection_id, filters=None)
 
 
 def test_metadata_value_counts__openapi_models(test_client: TestClient) -> None:

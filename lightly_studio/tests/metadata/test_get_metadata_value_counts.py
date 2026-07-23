@@ -15,16 +15,37 @@ from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import create_collection, create_image
 
 
-def test_get_metadata_value_counts__categorical_values_and_missing(
+def test_get_metadata_value_counts__string_values_and_missing(
     db_session: Session,
 ) -> None:
+    """String values, nulls, and missing metadata have separate buckets."""
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
-    _create_sample(db_session, collection_id, {"city": "Zurich", "active": True, "score": 1})
-    _create_sample(db_session, collection_id, {"city": "Zurich", "active": False})
-    _create_sample(db_session, collection_id, {"city": "", "active": False})
-    _create_sample(db_session, collection_id, {"city": "Missing", "active": True})
-    _create_sample(db_session, collection_id, {"city": "Other", "active": True})
+    _create_sample(
+        db_session=db_session,
+        collection_id=collection_id,
+        metadata={"city": "Zurich"},
+    )
+    _create_sample(
+        db_session=db_session,
+        collection_id=collection_id,
+        metadata={"city": "Zurich"},
+    )
+    _create_sample(
+        db_session=db_session,
+        collection_id=collection_id,
+        metadata={"city": ""},
+    )
+    _create_sample(
+        db_session=db_session,
+        collection_id=collection_id,
+        metadata={"city": "Missing"},
+    )
+    _create_sample(
+        db_session=db_session,
+        collection_id=collection_id,
+        metadata={"city": "Other"},
+    )
     _create_explicit_null_sample(db_session=db_session, collection_id=collection_id)
     create_image(
         session=db_session,
@@ -36,7 +57,7 @@ def test_get_metadata_value_counts__categorical_values_and_missing(
         session=db_session, collection_id=collection_id
     )
 
-    assert set(counts) == {"city", "active"}
+    assert set(counts) == {"city"}
     assert [(entry.value, entry.count) for entry in counts["city"].value_counts] == [
         ("Zurich", 2),
         ("", 1),
@@ -45,11 +66,32 @@ def test_get_metadata_value_counts__categorical_values_and_missing(
     ]
     assert counts["city"].other_count == 0
     assert counts["city"].missing_count == 2
+
+
+def test_get_metadata_value_counts__booleans_and_numeric_keys(db_session: Session) -> None:
+    """Boolean metadata is returned while numeric metadata is excluded."""
+    collection = create_collection(session=db_session)
+    _create_sample(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        metadata={"active": True, "score": 1},
+    )
+    _create_sample(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        metadata={"active": False, "score": 2},
+    )
+
+    counts = categorical_value_counts.get_metadata_value_counts(
+        session=db_session, collection_id=collection.collection_id
+    )
+
+    assert set(counts) == {"active"}
     assert [(entry.value, entry.count) for entry in counts["active"].value_counts] == [
-        (True, 3),
-        (False, 2),
+        (False, 1),
+        (True, 1),
     ]
-    assert counts["active"].missing_count == 2
+    assert counts["active"].missing_count == 0
 
 
 def test_get_metadata_value_counts__top_twenty_and_collection_isolation(
@@ -57,12 +99,24 @@ def test_get_metadata_value_counts__top_twenty_and_collection_isolation(
 ) -> None:
     collection = create_collection(session=db_session)
     for index in range(21):
-        _create_sample(db_session, collection.collection_id, {"category": f"value-{index:02d}"})
-    _create_sample(db_session, collection.collection_id, {"category": "value-20"})
+        _create_sample(
+            db_session=db_session,
+            collection_id=collection.collection_id,
+            metadata={"category": f"value-{index:02d}"},
+        )
+    _create_sample(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        metadata={"category": "value-20"},
+    )
 
     other_collection = create_collection(session=db_session)
     for _ in range(3):
-        _create_sample(db_session, other_collection.collection_id, {"category": "value-00"})
+        _create_sample(
+            db_session=db_session,
+            collection_id=other_collection.collection_id,
+            metadata={"category": "value-00"},
+        )
 
     counts = categorical_value_counts.get_metadata_value_counts(
         session=db_session, collection_id=collection.collection_id
@@ -81,9 +135,21 @@ def test_get_metadata_value_counts__filters_and_own_key_exclusion(
     db_session: Session,
 ) -> None:
     collection = create_collection(session=db_session)
-    _create_sample(db_session, collection.collection_id, {"city": "A", "group": "x"})
-    _create_sample(db_session, collection.collection_id, {"city": "B", "group": "x"})
-    _create_sample(db_session, collection.collection_id, {"city": "B", "group": "y"})
+    _create_sample(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        metadata={"city": "A", "group": "x"},
+    )
+    _create_sample(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        metadata={"city": "B", "group": "x"},
+    )
+    _create_sample(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        metadata={"city": "B", "group": "y"},
+    )
     filters = ImageFilter(
         sample_filter=SampleFilter(
             metadata_filters=[
@@ -110,7 +176,11 @@ def test_get_metadata_value_counts__known_fields_with_no_matches(
     db_session: Session,
 ) -> None:
     collection = create_collection(session=db_session)
-    _create_sample(db_session, collection.collection_id, {"city": "A"})
+    _create_sample(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        metadata={"city": "A"},
+    )
 
     counts = categorical_value_counts.get_metadata_value_counts(
         session=db_session,
@@ -133,9 +203,9 @@ def test_get_metadata_value_counts__unknown_collection_is_empty(db_session: Sess
 def test_get_metadata_value_counts__literal_top_level_keys(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     _create_sample(
-        db_session,
-        collection.collection_id,
-        {"site.name": "Zurich", "owner's site": "primary"},
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        metadata={"site.name": "Zurich", "owner's site": "primary"},
     )
 
     counts = categorical_value_counts.get_metadata_value_counts(
