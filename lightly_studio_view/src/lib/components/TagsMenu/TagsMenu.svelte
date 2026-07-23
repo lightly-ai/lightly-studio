@@ -79,6 +79,7 @@
 
     async function handleAssign(name: string) {
         assignBusy = true;
+        const snapshotCount = selectedIds.size;
         try {
             const existingTag = $tags.find(
                 (t: TagView) => t.name.toLowerCase() === name.toLowerCase()
@@ -92,7 +93,7 @@
                 trackEvent('samples_tagged', {
                     collection_id,
                     tag_kind: tagKind,
-                    sample_count: selectedIds.size,
+                    sample_count: snapshotCount,
                     is_new_tag: false
                 });
             } else {
@@ -112,7 +113,7 @@
                 trackEvent('samples_tagged', {
                     collection_id,
                     tag_kind: tagKind,
-                    sample_count: selectedIds.size,
+                    sample_count: snapshotCount,
                     is_new_tag: true
                 });
             }
