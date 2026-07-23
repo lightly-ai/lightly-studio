@@ -78,6 +78,9 @@
 
         /** Called with a default span when the user adds a new event. */
         onEventAdd?: (startTimeS: number, endTimeS: number) => void;
+
+        /** Called when the user deletes an event. */
+        onEventDelete?: (event: VideoEvent) => void;
     }
 
     let {
@@ -90,7 +93,8 @@
         durationS,
         editableEvents = false,
         onEventResize,
-        onEventAdd
+        onEventAdd,
+        onEventDelete
     }: VideoPlayerProps = $props();
 
     const defaultVideoProps: HTMLVideoAttributes = {
@@ -224,6 +228,7 @@
                 editable={editableEvents}
                 onResize={onEventResize}
                 onAddEvent={onEventAdd}
+                onDelete={onEventDelete}
                 showHeader={false}
             />
         {/if}

@@ -7,7 +7,6 @@
         component: VideoControls,
         tags: ['autodocs']
     });
-
     // The bar owns no state; the Playground wires local state so the scrubber
     // and transport buttons actually respond.
     let currentTimeS = $state(15);

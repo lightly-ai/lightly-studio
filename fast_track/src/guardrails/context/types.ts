@@ -1,14 +1,7 @@
-import type { GitHub } from '@actions/github/lib/utils';
-
+import type { Octokit } from '../../shared/octokit';
 import type { GuardrailResult } from '../../shared/verdict';
 
 export type FileStatus = 'added' | 'deleted' | 'modified' | 'renamed' | 'copied';
-
-/**
- * A hydrated Octokit client. Type-only import — erases at runtime so the local
- * git path never loads `@actions/github`.
- */
-export type Octokit = InstanceType<typeof GitHub>;
 
 export interface ChangedFile {
     path: string;
