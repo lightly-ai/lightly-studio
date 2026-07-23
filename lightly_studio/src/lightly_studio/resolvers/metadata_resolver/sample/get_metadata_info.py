@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import Integer, cast, func
@@ -15,10 +14,8 @@ from lightly_studio.models.metadata import (
     SampleMetadataTable,
 )
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.metadata_resolver.sample import metadata_helpers
-
-if TYPE_CHECKING:
-    from lightly_studio.resolvers.image_filter import ImageFilter
 
 # Number of bins used for numeric metadata histograms.
 _HISTOGRAM_BIN_COUNT = 20
