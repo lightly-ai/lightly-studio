@@ -226,10 +226,7 @@
         }
     }
 
-    afterNavigate((navigation) => {
-        const collectionBasePath = `/datasets/${page.params.dataset_id}/${page.params.collection_type}/${page.params.collection_id}`;
-        if (navigation.from?.url.pathname.startsWith(collectionBasePath)) return;
-
+    afterNavigate(() => {
         trackEvent('collection_opened', {
             dataset_id: collection.dataset_id,
             collection_id: collection.collection_id,
