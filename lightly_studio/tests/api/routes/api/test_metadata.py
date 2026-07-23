@@ -112,6 +112,7 @@ def test_get_metadata_value_counts(test_client: TestClient, mocker: MockerFixtur
         }
     }
     resolver.assert_called_once_with(session=ANY, collection_id=collection_id, filters=ANY)
+    assert resolver.call_args.kwargs["collection_id"] == collection_id
     called_filters = resolver.call_args.kwargs["filters"]
     assert called_filters.model_dump(exclude_none=True) == {
         "filter_type": "image",
