@@ -140,7 +140,7 @@ class TestFileOutcomeReport:
         assert "missing=1" in text
         assert "a.jpg" in text
         assert "b.jpg" in text
-        assert "Example added paths" in text
+        assert "Examples 'added'" in text
 
     def test_log_summary__label_overrides(self, caplog: pytest.LogCaptureFixture) -> None:
         report = FileOutcomeReport(label_overrides={FileOutcome.ADDED: "embedded"})
@@ -153,7 +153,7 @@ class TestFileOutcomeReport:
         text = caplog.text
         # Overridden outcome uses the custom label.
         assert "embedded=1" in text
-        assert "Example embedded paths" in text
+        assert "Examples 'embedded'" in text
         assert "added=1" not in text
         # Non-overridden outcomes still render their default labels.
         assert "missing=1" in text
@@ -176,5 +176,5 @@ class TestFileOutcomeReport:
         text = caplog.text
         assert "embedded=1" in text
         assert "not_found=1" in text
-        assert "Example not_found paths" in text
+        assert "Examples 'not_found'" in text
         assert "missing=1" not in text

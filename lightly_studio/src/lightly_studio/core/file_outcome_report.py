@@ -184,7 +184,7 @@ class FileOutcomeReport:
         for outcome in FileOutcome:
             examples = self._example_paths[outcome]
             if examples:
-                logger.info(f"Example {self._label(outcome)} paths: {', '.join(examples)}.")
+                logger.info(f"Examples '{self._label(outcome)}': {', '.join(examples)}.")
 
     def _label(self, outcome: FileOutcome) -> str:
         """Return the display label for `outcome`, honoring `label_overrides`."""
