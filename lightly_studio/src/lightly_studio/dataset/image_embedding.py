@@ -21,6 +21,7 @@ from PIL import Image, UnidentifiedImageError
 from tqdm import tqdm
 
 from lightly_studio.core.file_outcome_report import FileOutcome, FileOutcomeReport
+from lightly_studio.dataset.embedding_result import EmbeddingResult
 from lightly_studio.utils import batching, parallelize
 
 _ItemT = TypeVar("_ItemT")
@@ -53,30 +54,11 @@ class _EmbeddingProgress:
     unit: str
 
 
-@dataclass(frozen=True)
-class ImageEmbeddingResult:
-    """Embeddings for the image files that could be read, plus which inputs they cover.
-
-    Broken files (unreadable/undecodable) are skipped rather than aborting the whole
-    run, so ``embeddings`` may hold fewer rows than the input file list. ``kept_indices``
-    maps each row back to its position in the input list, in input order, letting callers
-    realign any parallel per-file data (e.g. sample IDs) with the embeddings.
-
-    Attributes:
-        embeddings: Float32 array of shape ``(len(kept_indices), embedding_dimension)``.
-        kept_indices: Indices into the input file list of the files that were embedded,
-            in input order.
-    """
-
-    embeddings: NDArray[np.float32]
-    kept_indices: list[int]
-
-
 def embed_image_files_batched(
     filepaths: list[str],
     context: EmbeddingContext,
     show_progress: bool,
-) -> ImageEmbeddingResult:
+) -> EmbeddingResult:
     """Embed image files in batches, preserving input order and skipping broken files.
 
     Args:
@@ -85,7 +67,7 @@ def embed_image_files_batched(
         show_progress: Whether to show a tqdm progress bar.
 
     Returns:
-        An ``ImageEmbeddingResult`` whose embeddings cover only the readable files, with
+        An ``EmbeddingResult`` whose embeddings cover only the readable files, with
         ``kept_indices`` mapping each row back to its input position.
 
     Raises:
@@ -152,7 +134,7 @@ def _embed_items_batched(
     context: EmbeddingContext,
     show_progress: bool,
     progress: _EmbeddingProgress,
-) -> ImageEmbeddingResult:
+) -> EmbeddingResult:
     """Preprocess items on a thread pool and embed them in batches, preserving order.
 
     ``preprocess_item`` (per-item PIL decode/resize/normalize, plus remote reads for file
@@ -164,13 +146,13 @@ def _embed_items_batched(
     bounded.
 
     Returns:
-        An ``ImageEmbeddingResult`` whose embeddings cover the kept items and whose
+        An ``EmbeddingResult`` whose embeddings cover the kept items and whose
         ``kept_indices`` map each row back to its index into ``items``, both in input order.
     """
     total_items = len(items)
     if not total_items:
         empty = np.empty((0, context.embedding_dimension), dtype=np.float32)
-        return ImageEmbeddingResult(embeddings=empty, kept_indices=[])
+        return EmbeddingResult(embeddings=empty, kept_indices=[])
 
     if context.max_batch_size <= 0:
         raise ValueError("max_batch_size must be positive.")
@@ -193,7 +175,7 @@ def _embed_items_batched(
         show_progress=show_progress,
         progress=progress,
     )
-    return ImageEmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
+    return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
 
 
 def _keep_non_none(
