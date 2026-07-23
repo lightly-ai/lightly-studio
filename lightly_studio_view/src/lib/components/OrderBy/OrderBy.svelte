@@ -1,7 +1,7 @@
 <script lang="ts">
     import { SortDirection } from '$lib/api/lightly_studio_local';
     import { useOrderBy } from '$lib/hooks/useOrderBy/useOrderBy';
-    import { useGlobalStorage } from '$lib/hooks';
+    import { useGlobalStorage, usePostHog } from '$lib/hooks';
     import { Select, type SelectItem } from '$lib/components/Select';
     import { Button } from '$lib/components/ui/button';
     import { Tooltip } from '$lib/components/ui/tooltip';
@@ -15,6 +15,7 @@
     const { collectionId, datasetId }: Props = $props();
 
     const { textEmbedding } = useGlobalStorage();
+    const { trackEvent } = usePostHog();
     const isSimilaritySearchActive = $derived(!!$textEmbedding);
 
     const {
@@ -70,6 +71,9 @@
             triggerLabel={$selectedLabel ?? undefined}
             allowDeselect
             onValueChange={handleValueChange}
+            onOpenChange={(open) => {
+                if (open) trackEvent('sort_by_opened', { collection_id: collectionId });
+            }}
             disabled={isSimilaritySearchActive}
             placeholder="Sort by"
             size="xs"

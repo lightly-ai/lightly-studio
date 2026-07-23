@@ -73,6 +73,14 @@
         return 'Color by';
     });
 
+    const handleOpenChange = (open: boolean) => {
+        if (!open) return;
+        trackEvent('color_by_opened', {
+            collection_id: collectionId,
+            current_color_by: $selectedColorByType
+        });
+    };
+
     const handleValueChange = (value: string) => {
         if (value === '' || value === NO_COLOR_BY) {
             clearSelectedColorByType();
@@ -92,7 +100,7 @@
             onSelectedKeyChange(null);
             trackEvent('embedding_color_by_changed', {
                 collection_id: collectionId,
-                color_by_type: 'tag'
+                color_by_type: 'tags'
             });
         } else if (option.type === 'annotation_label') {
             setSelectedColorByType('annotation_label');
@@ -106,7 +114,7 @@
             onSelectedKeyChange(option.fieldName);
             trackEvent('embedding_color_by_changed', {
                 collection_id: collectionId,
-                color_by_type: 'metadata_field'
+                color_by_type: 'metadata'
             });
         }
     };
@@ -118,6 +126,7 @@
     value={selectValue}
     allowDeselect
     onValueChange={handleValueChange}
+    onOpenChange={handleOpenChange}
     size="xs"
     class="w-48"
     testId="plot-color-by-button"

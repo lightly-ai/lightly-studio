@@ -91,11 +91,23 @@ export function useSearchEmbedding({ getCollectionId, embedding }: Params): Retu
         upload.clear();
         if (!input.trim()) {
             embedding.set(undefined);
+        } else {
+            trackEvent('search_initiated', {
+                collection_id: getCollectionId(),
+                search_type: 'text',
+                query_text: input,
+                query_length: input.length
+            });
         }
         await text.embed(input);
     };
 
     const setImage = async (file: File) => {
+        trackEvent('search_initiated', {
+            collection_id: getCollectionId(),
+            search_type: 'image',
+            file_name: file.name
+        });
         await upload.upload(file);
     };
 
@@ -115,6 +127,10 @@ export function useSearchEmbedding({ getCollectionId, embedding }: Params): Retu
             upload.setPreview(imagePreview.name, imagePreview.previewUrl, true);
         }
         embedding.set({ queryText, embedding: vector });
+        trackEvent('search_initiated', {
+            collection_id: getCollectionId(),
+            search_type: 'annotation_crop'
+        });
         trackEvent('search_executed', {
             collection_id: getCollectionId(),
             search_type: 'annotation_crop'
