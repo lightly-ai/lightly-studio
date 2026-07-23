@@ -15,7 +15,7 @@ export const useDeleteAnnotation = ({ collectionId }: { collectionId: string }) 
         });
     };
 
-    const deleteAnnotation = (annotationId: string, annotationType?: string) =>
+    const deleteAnnotation = (annotationId: string, annotationType: string) =>
         new Promise<void>((resolve, reject) => {
             mutation.mutate(
                 {
@@ -29,7 +29,7 @@ export const useDeleteAnnotation = ({ collectionId }: { collectionId: string }) 
                         refetch();
                         trackEvent('annotation_deleted', {
                             collection_id: collectionId,
-                            ...(annotationType && { annotation_type: annotationType })
+                            annotation_type: annotationType
                         });
                         resolve();
                     },

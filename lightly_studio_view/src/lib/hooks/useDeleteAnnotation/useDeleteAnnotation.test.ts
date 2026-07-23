@@ -22,7 +22,7 @@ describe('useDeleteAnnotation', () => {
         } as unknown as ReturnType<typeof useQueryClient>);
     });
 
-    it('fires annotation_deleted with collection_id on success', async () => {
+    it('fires annotation_deleted with collection_id and annotation_type on success', async () => {
         vi.mocked(createMutation).mockReturnValue({
             mutate: (_vars: unknown, opts: { onSuccess: () => void }) => {
                 opts.onSuccess();
@@ -30,14 +30,15 @@ describe('useDeleteAnnotation', () => {
         } as unknown as ReturnType<typeof createMutation>);
 
         const { deleteAnnotation } = useDeleteAnnotation({ collectionId: 'col-1' });
-        await deleteAnnotation('ann-1');
+        await deleteAnnotation('ann-1', 'classification');
 
         expect(trackEvent).toHaveBeenCalledWith('annotation_deleted', {
-            collection_id: 'col-1'
+            collection_id: 'col-1',
+            annotation_type: 'classification'
         });
     });
 
-    it('includes annotation_type when provided', async () => {
+    it('includes the provided annotation_type in the event', async () => {
         vi.mocked(createMutation).mockReturnValue({
             mutate: (_vars: unknown, opts: { onSuccess: () => void }) => {
                 opts.onSuccess();
