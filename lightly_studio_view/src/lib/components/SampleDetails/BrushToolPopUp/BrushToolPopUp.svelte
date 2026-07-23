@@ -5,6 +5,8 @@
     import { isInputElement } from '$lib/utils/isInputElement';
     import { Brush, Eraser } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
+    import { usePostHog } from '$lib/hooks/usePostHog';
+    import { page } from '$app/state';
 
     const {
         context: sampleDetailsToolbarContext,
@@ -12,6 +14,19 @@
         setBrushSize
     } = useSampleDetailsToolbarContext();
     const { settingsStore } = useSettings();
+    const { trackEvent } = usePostHog();
+
+    const activateBrushMode = (
+        mode: 'brush' | 'eraser',
+        triggeredBy: 'click' | 'keyboard_shortcut'
+    ) => {
+        trackEvent('annotation_tool_selected', {
+            collection_id: page.params.collection_id,
+            tool: mode,
+            triggered_by: triggeredBy
+        });
+        setBrushMode(mode);
+    };
 
     const {
         context: annotationLabelContext,
@@ -42,10 +57,10 @@
 
         if (key === brushShortcut) {
             event.preventDefault();
-            setBrushMode('brush');
+            activateBrushMode('brush', 'keyboard_shortcut');
         } else if (key === eraserShortcut) {
             event.preventDefault();
-            setBrushMode('eraser');
+            activateBrushMode('eraser', 'keyboard_shortcut');
         }
     };
 
@@ -121,7 +136,7 @@
                             ? 'bg-primary/20 text-primary'
                             : 'text-muted-foreground hover:bg-muted'}
             "
-                        onclick={() => setBrushMode('brush')}
+                        onclick={() => activateBrushMode('brush', 'click')}
                     >
                         <Brush class="h-4 w-4" />
                     </button>
@@ -135,7 +150,7 @@
                             ? 'bg-primary/20 text-primary'
                             : 'text-muted-foreground hover:bg-muted'}
             "
-                        onclick={() => setBrushMode('eraser')}
+                        onclick={() => activateBrushMode('eraser', 'click')}
                     >
                         <Eraser class="h-4 w-4" />
                     </button>

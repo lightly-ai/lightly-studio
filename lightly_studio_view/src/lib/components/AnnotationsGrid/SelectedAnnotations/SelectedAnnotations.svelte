@@ -6,6 +6,7 @@
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
+    import { usePostHog } from '$lib/hooks/usePostHog';
 
     type Props = {
         selectedAnnotations: Array<AnnotationView>;
@@ -16,6 +17,16 @@
     };
 
     const { selectedAnnotations, onSelect, disabled, isLoading, collectionId }: Props = $props();
+
+    const { trackEvent } = usePostHog();
+
+    const handleSelect = (item: { value: string; label: string }) => {
+        trackEvent('annotations_bulk_labeled', {
+            collection_id: collectionId,
+            annotation_count: selectedAnnotations.length
+        });
+        onSelect(item);
+    };
 
     const result = useAnnotationLabels(() => ({ collectionId }));
 
@@ -37,7 +48,7 @@
                         name="annotation-label"
                         placeholder="Select or create a class"
                         label="Select a class"
-                        {onSelect}
+                        onSelect={handleSelect}
                         {isLoading}
                         {disabled}
                     >

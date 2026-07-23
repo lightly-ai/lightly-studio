@@ -64,6 +64,7 @@ export const usePostHog = () => {
      */
     const trackEvent = (eventName: string, properties?: Record<string, unknown>) => {
         if (!initialized) return;
+        console.log(eventName, properties)
         posthog.capture(eventName, properties);
     };
 

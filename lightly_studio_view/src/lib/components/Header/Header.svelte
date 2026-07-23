@@ -15,6 +15,7 @@
     import UserAvatar from '$lib/components/UserAvatar/UserAvatar.svelte';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
+    import { usePostHog } from '$lib/hooks/usePostHog';
 
     let { collection }: { collection: CollectionView } = $props();
 
@@ -33,6 +34,8 @@
     const { setIsEditingMode, isEditingMode, reversibleActions, executeReversibleAction } =
         page.data.globalStorage;
 
+    const { trackEvent } = usePostHog();
+
     const handleKeyDown = (event: KeyboardEvent) => {
         if (isInputElement(event.target)) {
             return;
@@ -42,15 +45,37 @@
             return;
         }
         if (event.key === get(settingsStore).key_toggle_edit_mode) {
+            if (!$isEditingMode) {
+                trackEvent('edit_mode_started', {
+                    collection_id: collection.collection_id,
+                    triggered_by: 'keyboard_shortcut'
+                });
+            } else {
+                trackEvent('edit_mode_finished', {
+                    collection_id: collection.collection_id,
+                    triggered_by: 'keyboard_shortcut'
+                });
+            }
             setIsEditingMode(!$isEditingMode);
         } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
-            executeUndoAction();
+            const action = $reversibleActions[0];
+            if (action) {
+                trackEvent('edit_undo', {
+                    collection_id: collection.collection_id,
+                    triggered_by: 'keyboard_shortcut'
+                });
+                void executeReversibleAction(action.id);
+            }
         }
     };
 
     const executeUndoAction = async () => {
         const latestAction = $reversibleActions[0];
         if (latestAction) {
+            trackEvent('edit_undo', {
+                collection_id: collection.collection_id,
+                triggered_by: 'click'
+            });
             await executeReversibleAction(latestAction.id);
         }
     };
@@ -100,7 +125,13 @@
                         <Button
                             icon={Check}
                             buttonProps={{
-                                onclick: () => setIsEditingMode(false),
+                                onclick: () => {
+                                    trackEvent('edit_mode_finished', {
+                                        collection_id: collection.collection_id,
+                                        triggered_by: 'click'
+                                    });
+                                    setIsEditingMode(false);
+                                },
                                 title: 'Finish Editing',
                                 'data-testid': 'header-editing-mode-button',
                                 class: 'nav-button'
@@ -112,7 +143,13 @@
                         <Button
                             icon={Pencil}
                             buttonProps={{
-                                onclick: () => setIsEditingMode(true),
+                                onclick: () => {
+                                    trackEvent('edit_mode_started', {
+                                        collection_id: collection.collection_id,
+                                        triggered_by: 'click'
+                                    });
+                                    setIsEditingMode(true);
+                                },
                                 title: 'Edit annotations',
                                 'data-testid': 'header-editing-mode-button',
                                 class: 'nav-button'

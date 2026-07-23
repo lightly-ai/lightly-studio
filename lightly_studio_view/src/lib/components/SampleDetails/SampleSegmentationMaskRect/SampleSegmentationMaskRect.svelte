@@ -19,6 +19,7 @@
         useDeleteAnnotation
     } from '$lib/hooks';
     import { page } from '$app/state';
+    import { usePostHog } from '$lib/hooks/usePostHog';
     import type { PendingChange } from '../pendingChange';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
     import SelectClassDialog from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
@@ -58,6 +59,9 @@
         setIsDrawing,
         setAnnotationId
     } = useAnnotationLabelContext();
+
+    const { trackEvent } = usePostHog();
+    let drawStartFired = $state(false);
 
     const { deleteAnnotation } = useDeleteAnnotation({ collectionId });
 
@@ -213,6 +217,7 @@
 
     const handleStrokeComplete = (e: PointerEvent) => {
         releasePointerCapture(e);
+        drawStartFired = false;
         resetPreviewState({ clearDrawing: false });
 
         const targetAnnotation = resolveSelectedAnnotation();
@@ -252,6 +257,7 @@
 
     const handleStrokeCancel = (e: PointerEvent) => {
         releasePointerCapture(e);
+        drawStartFired = false;
         resetPreviewState();
     };
 </script>
@@ -347,6 +353,14 @@
             return;
         }
 
+        if (!drawStartFired) {
+            trackEvent('annotation_draw_started', {
+                collection_id: collectionId,
+                tool: 'brush',
+                parent_sample_type: page.params.collection_type
+            });
+            drawStartFired = true;
+        }
         setIsDrawing(true);
         lastBrushPoint = point;
         isPreviewVisible = false;
