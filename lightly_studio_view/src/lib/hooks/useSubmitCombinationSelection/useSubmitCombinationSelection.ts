@@ -138,19 +138,24 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
                 success: true,
                 error_message: null
             });
-            await handleSelectionSuccess(selectionResultTagName, params);
+            try {
+                await handleSelectionSuccess(selectionResultTagName, params);
+            } catch (uiError) {
+                console.error('Unexpected error in handleSelectionSuccess:', uiError);
+            }
             return true;
         } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
             trackEvent('sampling_triggered', {
                 collection_id: collectionId,
                 strategies: instances.map((i) => i.type),
                 n_samples: nSamplesToSelect,
                 filtered_sample_count: filteredCount,
                 success: false,
-                error_message: (error as Error).message
+                error_message: errorMessage
             });
             console.error('Unexpected error in useSubmitCombinationSelection.submit:', error);
-            toast.error('Failed to create selection: ' + (error as Error).message);
+            toast.error('Failed to create selection: ' + errorMessage);
             return false;
         } finally {
             _isSubmitting.set(false);
