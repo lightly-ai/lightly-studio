@@ -9,11 +9,12 @@ from uuid import UUID
 import fsspec
 import numpy as np
 import torch
-from av import container
+from av import FFmpegError, container
 from numpy.typing import NDArray
 from PIL import Image
 from tqdm import tqdm
 
+from lightly_studio.core.file_outcome_report import FileOutcome, FileOutcomeReport
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transforms
@@ -155,35 +156,52 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             ),
         )
 
-    def embed_videos(self, filepaths: list[str]) -> NDArray[np.float32]:
-        """Embed videos with Perception Encoder.
+    def embed_videos(self, filepaths: list[str]) -> EmbeddingResult:
+        """Embed videos with Perception Encoder, skipping broken files.
+
+        A video that is unreadable/undecodable is skipped rather than aborting the whole
+        run, and is recorded once as broken.
 
         Args:
             filepaths: A list of file paths to the videos to embed.
 
         Returns:
-            A numpy array representing the generated embeddings
-            in the same order as the input file paths.
+            An ``EmbeddingResult`` whose embeddings cover only the readable videos, with
+            ``kept_indices`` mapping each row back to its input position.
+
+        Raises:
+            AllInputFilesFailedError: If at least one file was attempted and every attempted
+                file was broken (i.e. no file could be read and embedded).
         """
         total_videos = len(filepaths)
         if not total_videos:
-            return np.empty((0, self._model.output_dim), dtype=np.float32)
+            empty = np.empty((0, self._model.output_dim), dtype=np.float32)
+            return EmbeddingResult(embeddings=empty, kept_indices=[])
 
         embeddings = np.empty((total_videos, self._model.output_dim), dtype=np.float32)
+        # Input indices of the videos that were embedded (their file could be read).
+        kept_indices: list[int] = []
         # Reusable batch buffer, lazily sized from the first preprocessed video.
         batch_buffer: torch.Tensor | None = None
         batch_indices: list[int] = []
+        report = FileOutcomeReport()
 
         with (
             tqdm(total=total_videos, desc="Generating embeddings", unit=" videos") as progress_bar,
             torch.no_grad(),
         ):
             for index, filepath in enumerate(filepaths):
-                frames = _load_video_frames(filepath, self._preprocess)
+                try:
+                    frames = _load_video_frames(filepath, self._preprocess)
+                except ValueError:
+                    report.record(path=filepath, outcome=FileOutcome.BROKEN)
+                    continue
+                report.record(path=filepath, outcome=FileOutcome.ADDED)
                 if batch_buffer is None:
                     batch_buffer = torch.empty((MAX_BATCH_SIZE, *frames.shape), dtype=frames.dtype)
                 batch_buffer[len(batch_indices)] = frames
                 batch_indices.append(index)
+                kept_indices.append(index)
                 if len(batch_indices) >= MAX_BATCH_SIZE:
                     self._flush_video_batch(
                         batch_buffer=batch_buffer,
@@ -199,7 +217,11 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
                 progress_bar=progress_bar,
             )
 
-        return embeddings
+        report.raise_if_all_failed()
+        report.log_summary()
+
+        # kept_indices in input order maps each returned row back to its input video.
+        return EmbeddingResult(embeddings=embeddings[kept_indices], kept_indices=kept_indices)
 
     def _flush_video_batch(
         self,
@@ -243,41 +265,45 @@ def _load_video_frames(
         Tensor of shape ``[VIDEO_FRAMES_PER_SAMPLE, C, H, W]``.
 
     Raises:
-        ValueError: If the video has no usable duration to sample frames from.
+        ValueError: If the video is unreadable or undecodable (missing, corrupt, has no
+            video stream, or has no usable duration).
     """
-    fs, fs_path = fsspec.core.url_to_fs(url=filepath)
-    with (
-        fs.open(path=fs_path, mode="rb") as video_file,
-        container.open(file=video_file) as video_container,
-    ):
-        video_stream = video_container.streams.video[DEFAULT_VIDEO_CHANNEL]
-        duration_pts = video_stream.duration
-        time_base = float(video_stream.time_base)
-        if duration_pts is None or duration_pts <= 0 or time_base <= 0.0:
-            raise ValueError(f"Unable to read frames from video '{filepath}'.")
+    try:
+        fs, fs_path = fsspec.core.url_to_fs(url=filepath)
+        with (
+            fs.open(path=fs_path, mode="rb") as video_file,
+            container.open(file=video_file) as video_container,
+        ):
+            video_stream = video_container.streams.video[DEFAULT_VIDEO_CHANNEL]
+            duration_pts = video_stream.duration
+            time_base = float(video_stream.time_base)
+            if duration_pts is None or duration_pts <= 0 or time_base <= 0.0:
+                raise ValueError(f"Unable to read frames from video '{filepath}'.")
 
-        duration_seconds = duration_pts * time_base
+            duration_seconds = duration_pts * time_base
 
-        # Sample VIDEO_FRAMES_PER_SAMPLE evenly spaced inside [0, duration_seconds)
-        ts_to_sample = np.linspace(
-            0.0,
-            duration_seconds,
-            num=VIDEO_FRAMES_PER_SAMPLE,
-            endpoint=False,
-            dtype=np.float64,
-        )
+            # Sample VIDEO_FRAMES_PER_SAMPLE evenly spaced inside [0, duration_seconds)
+            ts_to_sample = np.linspace(
+                0.0,
+                duration_seconds,
+                num=VIDEO_FRAMES_PER_SAMPLE,
+                endpoint=False,
+                dtype=np.float64,
+            )
 
-        frames: list[Image.Image] = []
-        for ts_target in ts_to_sample:
-            pts_target = int(ts_target / time_base)
-            video_container.seek(offset=pts_target, stream=video_stream)
-            try:
-                frame = next(video_container.decode(video=DEFAULT_VIDEO_CHANNEL))
-            except StopIteration:
-                raise ValueError(
-                    f"Unable to decode frame at {ts_target:.3f}s from video '{filepath}'."
-                ) from None
-            frames.append(frame.to_image())
+            frames: list[Image.Image] = []
+            for ts_target in ts_to_sample:
+                pts_target = int(ts_target / time_base)
+                video_container.seek(offset=pts_target, stream=video_stream)
+                try:
+                    frame = next(video_container.decode(video=DEFAULT_VIDEO_CHANNEL))
+                except StopIteration:
+                    raise ValueError(
+                        f"Unable to decode frame at {ts_target:.3f}s from video '{filepath}'."
+                    ) from None
+                frames.append(frame.to_image())
+    except (OSError, FFmpegError, IndexError) as error:
+        raise ValueError(f"Unable to read frames from video '{filepath}'.") from error
 
     processed_frames = [preprocess(frame) for frame in frames]
     return torch.stack(processed_frames)

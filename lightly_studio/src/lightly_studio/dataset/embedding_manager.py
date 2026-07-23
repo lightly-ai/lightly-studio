@@ -382,14 +382,16 @@ class EmbeddingManager:
         if len(filepaths) != len(sample_ids):
             raise ValueError("Could not fetch all video paths for the provided IDs.")
 
-        # Generate embeddings for the samples.
-        embeddings = model.embed_videos(filepaths=filepaths)
+        # Generate embeddings for the samples. Broken videos are skipped, so filter the
+        # sample IDs by kept_indices to keep them aligned with the returned embeddings.
+        result = model.embed_videos(filepaths=filepaths)
+        kept_sample_ids = [sample_ids[index] for index in result.kept_indices]
 
         _store_embeddings(
             session=session,
             model_id=model_id,
-            sample_ids=sample_ids,
-            embeddings=embeddings,
+            sample_ids=kept_sample_ids,
+            embeddings=result.embeddings,
         )
 
     def embed_and_store_pil_images(

@@ -742,6 +742,46 @@ def test_embed_videos(
         assert embedding.sample_id in video_ids
 
 
+def test_embed_videos_skips_broken_videos(
+    db_session: Session,
+) -> None:
+    """A generator that drops a broken video stores embeddings only for the kept ones."""
+
+    class DropsMiddleVideoGenerator(RandomEmbeddingGenerator):
+        def embed_videos(self, filepaths: list[str]) -> EmbeddingResult:
+            # Simulate the middle video being broken and skipped.
+            kept_indices = [index for index in range(len(filepaths)) if index != 1]
+            embeddings = np.zeros((len(kept_indices), self._dimension), dtype=np.float32)
+            return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
+
+    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection_id = video_collection.collection_id
+    video_ids = create_videos(
+        session=db_session,
+        collection_id=collection_id,
+        videos=[
+            VideoStub(path=f"/videos/video_{idx}.mp4", duration_s=1.0 + idx, fps=24.0)
+            for idx in range(3)
+        ],
+    )
+    manager = EmbeddingManager()
+    model_id = manager.register_embedding_model(
+        session=db_session,
+        embedding_generator=DropsMiddleVideoGenerator(),
+        collection_id=collection_id,
+        set_as_default=True,
+    ).embedding_model_id
+
+    manager.embed_videos(session=db_session, collection_id=collection_id, sample_ids=video_ids)
+
+    stored_embeddings = db_session.exec(
+        select(SampleEmbeddingTable).where(SampleEmbeddingTable.embedding_model_id == model_id)
+    ).all()
+    stored_sample_ids = {embedding.sample_id for embedding in stored_embeddings}
+    # The middle video was skipped, so only the first and third sample IDs are stored.
+    assert stored_sample_ids == {video_ids[0], video_ids[2]}
+
+
 def test_embed_videos_with_incompatible_generator(db_session: Session) -> None:
     """Ensure we raise when the default lacks video support."""
     video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
