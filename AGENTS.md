@@ -44,7 +44,3 @@ Exceptions from the guidelines:
 - We allow direct function imports from `tests.helpers_resolvers`, `tests.resolvers.video.helpers`, and `tests.resolvers.evaluation_sample_metric_resolver.helpers` in Python
 
 
-
-## AI Team Workflow
-
-For feature work, act as `lead`: read `docs/`, select the needed roles from `.agents/`, create or update a feature specification with a wireframe and decision rationale, implement only the agreed scope, then request independent validation from `quality-engineer`.

@@ -2,28 +2,26 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlmodel import Session, col, select
+import sqlmodel
+from sqlmodel import Session
 
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.sample import SampleTable
-
-if TYPE_CHECKING:
-    from lightly_studio.resolvers.image_filter import ImageFilter
-    from lightly_studio.type_definitions import QueryType
+from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.type_definitions import QueryType
 
 
 def get_merged_schema(session: Session, collection_id: UUID) -> dict[str, str]:
     """Merge the metadata schemas of all samples in a collection."""
     rows = session.exec(
-        select(SampleMetadataTable.metadata_schema)
+        sqlmodel.select(SampleMetadataTable.metadata_schema)
         .select_from(SampleTable)
         .join(
             SampleMetadataTable,
-            col(SampleMetadataTable.sample_id) == col(SampleTable.sample_id),
+            sqlmodel.col(SampleMetadataTable.sample_id) == sqlmodel.col(SampleTable.sample_id),
         )
         .where(SampleTable.collection_id == collection_id)
     ).all()
@@ -64,9 +62,9 @@ def apply_image_filters(
     if filters is None:
         return query
     filtered_sample_ids = (
-        select(ImageTable.sample_id)
+        sqlmodel.select(ImageTable.sample_id)
         .join(ImageTable.sample)
         .where(SampleTable.collection_id == collection_id)
     )
     filtered_sample_ids = filters.apply(filtered_sample_ids)
-    return query.where(col(SampleTable.sample_id).in_(filtered_sample_ids))
+    return query.where(sqlmodel.col(SampleTable.sample_id).in_(filtered_sample_ids))

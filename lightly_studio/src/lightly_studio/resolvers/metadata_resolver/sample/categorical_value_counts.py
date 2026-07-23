@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 from uuid import UUID
 
+import sqlmodel
 from sqlalchemy import func
 from sqlalchemy.sql.elements import ColumnElement
-from sqlmodel import Session, col, select
+from sqlmodel import Session
 
 from lightly_studio.database import db_json
 from lightly_studio.models.metadata import (
@@ -16,10 +16,8 @@ from lightly_studio.models.metadata import (
     SampleMetadataTable,
 )
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.metadata_resolver.sample import metadata_helpers
-
-if TYPE_CHECKING:
-    from lightly_studio.resolvers.image_filter import ImageFilter
 
 _CATEGORICAL_TYPES = ("string", "boolean")
 _TOP_VALUE_COUNT = 20
@@ -29,6 +27,7 @@ def get_metadata_value_counts(
     session: Session,
     collection_id: UUID,
     filters: ImageFilter | None = None,
+    fields: list[str] | None = None,
 ) -> dict[str, MetadataValueCountsView]:
     """Count categorical metadata values for a collection.
 
@@ -40,6 +39,8 @@ def get_metadata_value_counts(
         session: The database session.
         collection_id: The collection whose sample metadata is aggregated.
         filters: Optional image filters restricting the counted samples.
+        fields: Categorical fields to count. All categorical fields are counted
+            when absent.
 
     Returns:
         A mapping from categorical metadata keys to their value counts.
@@ -48,6 +49,8 @@ def get_metadata_value_counts(
     result: dict[str, MetadataValueCountsView] = {}
     for key, metadata_type in schema.items():
         if metadata_type not in _CATEGORICAL_TYPES:
+            continue
+        if fields is not None and key not in fields:
             continue
         field_filters = metadata_helpers.without_metadata_key_filter(
             filters=filters, metadata_key=key
@@ -103,11 +106,11 @@ def _get_total_and_concrete_counts(
     filters: ImageFilter | None,
 ) -> tuple[int, int]:
     query = (
-        select(func.count(), func.count(value_expr))
+        sqlmodel.select(func.count(), func.count(value_expr))
         .select_from(SampleTable)
         .join(
             SampleMetadataTable,
-            col(SampleMetadataTable.sample_id) == col(SampleTable.sample_id),
+            sqlmodel.col(SampleMetadataTable.sample_id) == sqlmodel.col(SampleTable.sample_id),
             isouter=True,
         )
         .where(SampleTable.collection_id == collection_id)
@@ -127,11 +130,11 @@ def _get_top_value_counts(
 ) -> list[tuple[str, int]]:
     count_expr = func.count().label("value_count")
     query = (
-        select(value_expr, count_expr)
+        sqlmodel.select(value_expr, count_expr)
         .select_from(SampleTable)
         .join(
             SampleMetadataTable,
-            col(SampleMetadataTable.sample_id) == col(SampleTable.sample_id),
+            sqlmodel.col(SampleMetadataTable.sample_id) == sqlmodel.col(SampleTable.sample_id),
             isouter=True,
         )
         .where(SampleTable.collection_id == collection_id)
