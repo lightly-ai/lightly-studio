@@ -6,6 +6,7 @@
     import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
+    import { get } from 'svelte/store';
     import { useGlobalStorage } from '$lib/hooks';
     import {
         Puzzle as PuzzleIcon,
@@ -35,7 +36,7 @@
 
     const { openClassifiersMenu } = useClassifiersMenu();
     const { openSamplingDialog } = useSamplingDialog();
-    const { textEmbedding } = useGlobalStorage();
+    const { filteredSampleCount } = useGlobalStorage();
     const { openExportDialog } = useExportDialog();
     const { openSettingsDialog } = useSettingsDialog();
     const { openOperatorsDialog } = useOperatorsDialog();
@@ -74,7 +75,7 @@
                 onSelect: () =>
                     openSamplingDialog({
                         collection_id: page.params.collection_id!,
-                        has_active_search: $textEmbedding !== undefined
+                        filtered_sample_count: get(filteredSampleCount)
                     })
             });
         }

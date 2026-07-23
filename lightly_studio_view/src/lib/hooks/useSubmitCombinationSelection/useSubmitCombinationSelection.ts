@@ -5,6 +5,7 @@ import { toast } from 'svelte-sonner';
 import type { TagView } from '$lib/services/types';
 import type { StrategyInstance } from '$lib/hooks/useStrategyBuilder';
 import { usePostHog } from '$lib/hooks';
+import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { computeStrategyMetadata } from './computeStrategyMetadata';
 import { toApiStrategy } from './strategyApiMapping';
 
@@ -57,11 +58,15 @@ async function handleSelectionSuccess(
 
 export function useSubmitCombinationSelection(params: UseSubmitCombinationSelectionParams) {
     const { trackEvent } = usePostHog();
+    const { filteredSampleCount } = useGlobalStorage();
     const _isSubmitting = writable(false);
     const _loadingMessage = writable('');
 
     async function submit(submitParams: SubmitParams): Promise<boolean> {
         if (get(_isSubmitting)) return false;
+
+        _isSubmitting.set(true);
+
         const {
             collectionId,
             isVideoCollection,
@@ -71,7 +76,14 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
             selectionFilter
         } = submitParams;
 
-        _isSubmitting.set(true);
+        const filteredCount = get(filteredSampleCount);
+
+        trackEvent('sampling_submitted', {
+            collection_id: collectionId,
+            strategies: instances.map((i) => i.type),
+            n_samples: nSamplesToSelect,
+            filtered_sample_count: filteredCount
+        });
 
         try {
             const metadataOk = await computeAllStrategiesMetadata(
@@ -94,9 +106,17 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
             });
 
             if (response.error) {
-                toast.error(
-                    (response.error as SelectionError).error ?? 'Failed to create selection'
-                );
+                const errorMessage =
+                    (response.error as SelectionError).error ?? 'Failed to create selection';
+                trackEvent('sampling_triggered', {
+                    collection_id: collectionId,
+                    strategies: instances.map((i) => i.type),
+                    n_samples: nSamplesToSelect,
+                    filtered_sample_count: filteredCount,
+                    success: false,
+                    error_message: errorMessage
+                });
+                toast.error(errorMessage);
                 return false;
             }
 
@@ -105,6 +125,7 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
                 collection_id: collectionId,
                 strategies: instances.map((i) => i.type),
                 n_samples: nSamplesToSelect,
+                filtered_sample_count: filteredCount,
                 success: true,
                 error_message: null
             });
@@ -114,6 +135,7 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
                 collection_id: collectionId,
                 strategies: instances.map((i) => i.type),
                 n_samples: nSamplesToSelect,
+                filtered_sample_count: filteredCount,
                 success: false,
                 error_message: (error as Error).message
             });
