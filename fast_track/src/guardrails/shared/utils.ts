@@ -25,7 +25,9 @@ export interface CommandResult {
 export async function runLoggedCommand(
     file: string,
     args: string[],
-    options: ExecFileOptions
+    // Encoding is fixed to the default (utf8 strings) so the output is always
+    // loggable text — a buffer encoding would defeat the "echo output" contract.
+    options: Omit<ExecFileOptions, 'encoding'>
 ): Promise<CommandResult> {
     const label = `${file} ${args.join(' ')}`;
     try {
