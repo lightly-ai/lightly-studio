@@ -1,6 +1,10 @@
 import { get, writable } from 'svelte/store';
 import { usePostHog } from '$lib/hooks';
 
+// Module-level stores are intentional: multiple invocations of useSamplingDialog()
+// (e.g. from SamplingCombinationDialog and useSamplingCombinationDialog) must share
+// the same state. wasSubmitted mirrors this pattern so that markSubmitted() called
+// from one invocation is visible to closeSamplingDialog() in another.
 const isSamplingDialogOpen = writable(false);
 const wasSubmitted = writable(false);
 

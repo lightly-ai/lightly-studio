@@ -5,7 +5,6 @@ import { toast } from 'svelte-sonner';
 import type { TagView } from '$lib/services/types';
 import type { StrategyInstance } from '$lib/hooks/useStrategyBuilder';
 import { usePostHog } from '$lib/hooks';
-import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { computeStrategyMetadata } from './computeStrategyMetadata';
 import { toApiStrategy } from './strategyApiMapping';
 
@@ -16,6 +15,7 @@ interface UseSubmitCombinationSelectionParams {
     setTagSelected: (tagId: string, isSelected: boolean) => void;
     loadTags: () => Promise<void>;
     closeSelectionDialog: () => void;
+    filteredSampleCount: Readable<number>;
 }
 
 interface SubmitParams {
@@ -58,7 +58,7 @@ async function handleSelectionSuccess(
 
 export function useSubmitCombinationSelection(params: UseSubmitCombinationSelectionParams) {
     const { trackEvent } = usePostHog();
-    const { filteredSampleCount } = useGlobalStorage();
+    const { filteredSampleCount } = params;
     const _isSubmitting = writable(false);
     const _loadingMessage = writable('');
 
@@ -92,7 +92,17 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
                 isVideoCollection,
                 (message) => _loadingMessage.set(message)
             );
-            if (!metadataOk) return false;
+            if (!metadataOk) {
+                trackEvent('sampling_triggered', {
+                    collection_id: collectionId,
+                    strategies: instances.map((i) => i.type),
+                    n_samples: nSamplesToSelect,
+                    filtered_sample_count: filteredCount,
+                    success: false,
+                    error_message: 'Metadata computation failed'
+                });
+                return false;
+            }
 
             _loadingMessage.set('Creating selection...');
             const response = await createSampling({
@@ -120,7 +130,6 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
                 return false;
             }
 
-            await handleSelectionSuccess(selectionResultTagName, params);
             trackEvent('sampling_triggered', {
                 collection_id: collectionId,
                 strategies: instances.map((i) => i.type),
@@ -129,6 +138,7 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
                 success: true,
                 error_message: null
             });
+            await handleSelectionSuccess(selectionResultTagName, params);
             return true;
         } catch (error) {
             trackEvent('sampling_triggered', {

@@ -38,6 +38,29 @@
 
     const strategyOptions = useStrategyOptions(() => collectionId);
 
+    const {
+        tags,
+        nSamplesToSelect,
+        percentageToSelect,
+        updateAbsolute,
+        updatePercentage,
+        selectionResultTagName,
+        filteredSampleCount,
+        noSamples,
+        notEnoughSamples,
+        sampleCountLabel,
+        isFormValid,
+        createButtonTooltip,
+        isSubmitting,
+        loadingMessage,
+        handleFormSubmit
+    } = useSamplingCombinationDialog({
+        getCollectionId: () => collectionId,
+        getIsVideoCollection: () => isVideoCollection,
+        instances,
+        onSubmitSuccess: resetStrategies
+    });
+
     function handleOpenDialog() {
         openSamplingDialog({
             collection_id: collectionId,
@@ -90,29 +113,6 @@
     // strategy is supported since all samples share a single embedding space.
     const hasDiversity = $derived($instances.some((i) => i.type === 'diversity'));
     const hasDeduplication = $derived($instances.some((i) => i.type === 'deduplication'));
-
-    const {
-        tags,
-        nSamplesToSelect,
-        percentageToSelect,
-        updateAbsolute,
-        updatePercentage,
-        selectionResultTagName,
-        filteredSampleCount,
-        noSamples,
-        notEnoughSamples,
-        sampleCountLabel,
-        isFormValid,
-        createButtonTooltip,
-        isSubmitting,
-        loadingMessage,
-        handleFormSubmit
-    } = useSamplingCombinationDialog({
-        getCollectionId: () => collectionId,
-        getIsVideoCollection: () => isVideoCollection,
-        instances,
-        onSubmitSuccess: resetStrategies
-    });
 </script>
 
 <Dialog.Root

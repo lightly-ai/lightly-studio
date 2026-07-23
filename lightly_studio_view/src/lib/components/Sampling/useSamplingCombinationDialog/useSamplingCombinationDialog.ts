@@ -1,5 +1,5 @@
 import { derived, get, writable, type Readable } from 'svelte/store';
-import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+import { useGlobalStorage } from '$lib/hooks';
 import { useSamplingDialog } from '$lib/hooks/useSamplingDialog/useSamplingDialog';
 import { isStrategyInstanceValid, type StrategyInstance } from '$lib/hooks/useStrategyBuilder';
 import { useSubmitCombinationSelection } from '$lib/hooks/useSubmitCombinationSelection/useSubmitCombinationSelection';
@@ -41,7 +41,8 @@ export function useSamplingCombinationDialog({
         tags,
         setTagSelected,
         loadTags,
-        closeSelectionDialog: closeAfterSubmit
+        closeSelectionDialog: closeAfterSubmit,
+        filteredSampleCount
     });
 
     const nSamplesToSelect = writable<number | null>(10);
