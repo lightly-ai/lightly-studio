@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from uuid import UUID
 
+import sqlmodel
 from sqlalchemy import func
 from sqlalchemy.sql.elements import ColumnElement
-from sqlmodel import Session, col, select
+from sqlmodel import Session
 
 from lightly_studio.database import db_json
 from lightly_studio.models.metadata import (
@@ -105,11 +106,11 @@ def _get_total_and_concrete_counts(
     filters: ImageFilter | None,
 ) -> tuple[int, int]:
     query = (
-        select(func.count(), func.count(value_expr))
+        sqlmodel.select(func.count(), func.count(value_expr))
         .select_from(SampleTable)
         .join(
             SampleMetadataTable,
-            col(SampleMetadataTable.sample_id) == col(SampleTable.sample_id),
+            sqlmodel.col(SampleMetadataTable.sample_id) == sqlmodel.col(SampleTable.sample_id),
             isouter=True,
         )
         .where(SampleTable.collection_id == collection_id)
@@ -129,11 +130,11 @@ def _get_top_value_counts(
 ) -> list[tuple[str, int]]:
     count_expr = func.count().label("value_count")
     query = (
-        select(value_expr, count_expr)
+        sqlmodel.select(value_expr, count_expr)
         .select_from(SampleTable)
         .join(
             SampleMetadataTable,
-            col(SampleMetadataTable.sample_id) == col(SampleTable.sample_id),
+            sqlmodel.col(SampleMetadataTable.sample_id) == sqlmodel.col(SampleTable.sample_id),
             isouter=True,
         )
         .where(SampleTable.collection_id == collection_id)
