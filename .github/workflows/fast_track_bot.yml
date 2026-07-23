@@ -77,6 +77,7 @@ jobs:
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
           APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
           GUARDRAIL_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          GUARDRAIL_RUN_URL: ${{ github.event.workflow_run.html_url }}
           # Identify the triggering guardrail run so the bot can skip when a newer
           # run for the same head has already acted (out-of-order workflow_run
           # delivery). run_attempt covers re-runs, which keep the run number.
