@@ -11,7 +11,7 @@ import numpy as np
 from numpy.typing import NDArray
 from PIL import Image
 
-from lightly_studio.dataset.image_embedding import ImageEmbeddingResult
+from lightly_studio.dataset.embedding_result import EmbeddingResult
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 
 
@@ -66,9 +66,7 @@ class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
     for creating embeddings.
     """
 
-    def embed_images(
-        self, filepaths: list[str], show_progress: bool = True
-    ) -> ImageEmbeddingResult:
+    def embed_images(self, filepaths: list[str], show_progress: bool = True) -> EmbeddingResult:
         """Generate embeddings for multiple image samples.
 
         TODO(Michal, 04/2025): Use DatasetLoader as input instead.
@@ -78,7 +76,7 @@ class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
             show_progress: Whether to show a progress bar during embedding.
 
         Returns:
-            An ``ImageEmbeddingResult`` with embeddings for the readable files, in the same
+            An ``EmbeddingResult`` with embeddings for the readable files, in the same
             order as the corresponding input file paths.
         """
         ...
@@ -167,13 +165,11 @@ class RandomEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator)
         """Generate a random embedding for a text sample."""
         return [random.random() for _ in range(self._dimension)]
 
-    def embed_images(
-        self, filepaths: list[str], show_progress: bool = True
-    ) -> ImageEmbeddingResult:
+    def embed_images(self, filepaths: list[str], show_progress: bool = True) -> EmbeddingResult:
         """Generate random embeddings for multiple image samples."""
         _ = show_progress  # Not used for random embeddings.
         embeddings = np.random.rand(len(filepaths), self._dimension).astype(np.float32)
-        return ImageEmbeddingResult(embeddings=embeddings, kept_indices=list(range(len(filepaths))))
+        return EmbeddingResult(embeddings=embeddings, kept_indices=list(range(len(filepaths))))
 
     def embed_image_crops(
         self, image_crops: list[ImageCrop], show_progress: bool = True
