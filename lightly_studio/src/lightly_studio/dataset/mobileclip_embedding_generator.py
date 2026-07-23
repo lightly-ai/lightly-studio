@@ -19,9 +19,10 @@ from .embedding_generator import ImageCrop, ImageEmbeddingGenerator
 from .embedding_result import EmbeddingResult
 from .image_embedding import EmbeddingContext
 
-MODEL_NAME = "mobileclip_s0"
+DEFAULT_MODEL_NAME = "mobileclip_s0"
+SUPPORTED_MODEL_NAMES = {"mobileclip_s0", "mobileclip_s1", "mobileclip_s2", "mobileclip_b"}
 MOBILECLIP_DOWNLOAD_URL = (
-    f"https://docs-assets.developer.apple.com/ml-research/datasets/mobileclip/{MODEL_NAME}.pt"
+    "https://docs-assets.developer.apple.com/ml-research/datasets/mobileclip/{model_name}.pt"
 )
 MAX_BATCH_SIZE: int = 128
 EMBEDDING_DIMENSION: int = 512
@@ -30,15 +31,18 @@ EMBEDDING_DIMENSION: int = 512
 class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
     """MobileCLIP embedding model."""
 
-    def __init__(self) -> None:
+    def __init__(self, model_name: str = DEFAULT_MODEL_NAME) -> None:
         """Initialize the MobileCLIP embedding model.
 
         This method loads the MobileCLIP model and its tokenizer. The model
         checkpoint is downloaded and cached locally for future use.
         """
-        model_path = _get_cached_mobileclip_checkpoint()
+        if model_name not in SUPPORTED_MODEL_NAMES:
+            raise ValueError(f"Unsupported MobileCLIP model name: '{model_name}'.")
+        self._model_name = model_name
+        model_path = _get_cached_mobileclip_checkpoint(model_name=model_name)
         self._model, _, self._preprocess = mobileclip.create_model_and_transforms(
-            model_name=MODEL_NAME, pretrained=str(model_path)
+            model_name=model_name, pretrained=str(model_path)
         )
 
         # Auto select device: CUDA > MPS (Apple Silicon) > CPU
@@ -50,7 +54,7 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
             else "cpu"
         )
         self._model = self._model.to(self._device)
-        self._tokenizer = mobileclip.get_tokenizer(model_name=MODEL_NAME)
+        self._tokenizer = mobileclip.get_tokenizer(model_name=model_name)
         self._model_hash = file_utils.get_file_xxhash(model_path)
 
     def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
@@ -63,7 +67,7 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
             An EmbeddingModelCreate instance with the model details.
         """
         return EmbeddingModelCreate(
-            name=MODEL_NAME,
+            name=self._model_name,
             embedding_model_hash=self._model_hash,
             embedding_dimension=EMBEDDING_DIMENSION,
             collection_id=collection_id,
@@ -148,17 +152,15 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
             device=self._device,
             preprocess=self._preprocess,
             encode_batch=lambda images_tensor: (
-                self._model.encode_image(images_tensor)  # type: ignore[operator]
-                .cpu()
-                .numpy()
+                self._model.encode_image(images_tensor).cpu().numpy()  # type: ignore[operator]
             ),
         )
 
 
-def _get_cached_mobileclip_checkpoint() -> Path:
-    file_path = LIGHTLY_STUDIO_MODEL_CACHE_DIR / f"{MODEL_NAME}.pt"
+def _get_cached_mobileclip_checkpoint(model_name: str) -> Path:
+    file_path = LIGHTLY_STUDIO_MODEL_CACHE_DIR / f"{model_name}.pt"
     file_utils.download_file_if_does_not_exist(
-        url=MOBILECLIP_DOWNLOAD_URL,
+        url=MOBILECLIP_DOWNLOAD_URL.format(model_name=model_name),
         local_filename=file_path,
     )
     return file_path

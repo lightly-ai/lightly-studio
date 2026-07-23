@@ -17,14 +17,14 @@ from tqdm import tqdm
 
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
-from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transforms
+from lightly_studio.vendor.perception_encoder.vision_encoder import config, pe, transforms
 
 from . import file_utils, image_crop_embedding, image_embedding
 from .embedding_generator import ImageCrop, ImageEmbeddingGenerator, VideoEmbeddingGenerator
 from .embedding_result import EmbeddingResult
 from .image_embedding import EmbeddingContext
 
-MODEL_NAME = "PE-Core-T16-384"
+DEFAULT_MODEL_NAME = "PE-Core-T16-384"
 DEFAULT_VIDEO_CHANNEL = 0
 MAX_BATCH_SIZE: int = 16
 VIDEO_FRAMES_PER_SAMPLE: int = 8
@@ -107,15 +107,18 @@ class _VideoFileDataset(Dataset[torch.Tensor]):
 class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator):
     """Perception Encoder Core embedding model."""
 
-    def __init__(self) -> None:
+    def __init__(self, model_name: str = DEFAULT_MODEL_NAME) -> None:
         """Initialize the Perception Encoder Core embedding model.
 
         This method loads the Perception Encoder Core model and its tokenizer. The model
         checkpoint is downloaded and cached locally for future use.
         """
         LIGHTLY_STUDIO_MODEL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        if model_name not in config.DOWNLOADABLE_MODEL_URL:
+            raise ValueError(f"Unsupported Perception Encoder model name: '{model_name}'.")
+        self._model_name = model_name
         self._model, model_path = pe.CLIP.from_config(
-            name=MODEL_NAME, pretrained=True, download_dir=LIGHTLY_STUDIO_MODEL_CACHE_DIR
+            name=model_name, pretrained=True, download_dir=LIGHTLY_STUDIO_MODEL_CACHE_DIR
         )
         self._preprocess = transforms.get_image_transform(self._model.image_size)
         self._tokenizer = transforms.get_text_tokenizer(self._model.context_length)
@@ -141,7 +144,7 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             An EmbeddingModelCreate instance with the model details.
         """
         return EmbeddingModelCreate(
-            name=MODEL_NAME,
+            name=self._model_name,
             embedding_model_hash=self._model_hash,
             embedding_dimension=self._model.output_dim,
             collection_id=collection_id,

@@ -19,7 +19,7 @@ from lightly_studio.core.video import add_annotations, add_videos
 from lightly_studio.core.video.add_videos import VIDEO_EXTENSIONS
 from lightly_studio.core.video.video_frame_dataset import VideoFrameDataset
 from lightly_studio.core.video.video_sample import VideoSample
-from lightly_studio.dataset import fsspec_lister
+from lightly_studio.dataset import env, fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.export.video_dataset_export import VideoDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
@@ -151,6 +151,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             path=path, allowed_extensions=allowed_extensions, limit=limit
         )
         logger.info(f"Found {len(video_paths)} videos in {path}.")
+        _validate_video_embedding_configuration(embed=embed, embed_frames=embed_frames)
 
         # Process videos.
         created_sample_ids, _ = add_videos.load_into_collection_from_paths(
@@ -217,6 +218,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         video_paths = _collect_video_file_paths(
             path=videos_path, allowed_extensions=allowed_extensions
         )
+        _validate_video_embedding_configuration(embed=embed, embed_frames=embed_frames)
 
         created_sample_ids, _ = add_videos.load_video_annotations_from_labelformat(
             session=self.session,
@@ -293,6 +295,15 @@ def _generate_embeddings_video(
         sample_ids=sample_ids,
         embedding_model_id=model_id,
     )
+
+
+def _validate_video_embedding_configuration(embed: bool, embed_frames: bool) -> None:
+    """Reject video embedding requests for image-only embedding backends."""
+    if env.LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE == "triton" and (embed or embed_frames):
+        raise ValueError(
+            "Triton embeddings are not supported for videos. "
+            "Set embed=False and embed_frames=False to ingest videos without embeddings."
+        )
 
 
 def _collect_video_file_paths(

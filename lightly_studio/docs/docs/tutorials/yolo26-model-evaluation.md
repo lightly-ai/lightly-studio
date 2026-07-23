@@ -82,7 +82,7 @@ Running the script now is optional: you'll keep extending `evaluate_yolo26.py` i
 
 ## Step 2: Run YOLO26 predictions
 
-Ultralytics returns detections in its own box format (`center x, center y, width, height`). LightlyStudio stores annotations as `CreateObjectDetection` objects with a top-left corner, class name, and confidence. 
+Ultralytics returns detections in its own box format (`center x, center y, width, height`). LightlyStudio stores annotations as `CreateObjectDetection` objects with a top-left corner, class name, and confidence.
 
 Add the snippet below to the end of `evaluate_yolo26.py`: it converts boxes to that format, runs the model on every image, and saves the predictions as a separate annotation layer.
 
@@ -119,8 +119,8 @@ def predict_using_yolo26(
 
     for sample in dataset:
         result = model.predict(
-            source=sample.file_path_abs, 
-            conf=conf, 
+            source=sample.file_path_abs,
+            conf=conf,
             verbose=False
         )[0]
         annotations = [

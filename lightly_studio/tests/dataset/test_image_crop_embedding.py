@@ -1,13 +1,16 @@
 from pathlib import Path
+from typing import Any
 
 import numpy as np
-import torch
+import pytest
 from numpy.typing import NDArray
 from PIL import Image
 
-from lightly_studio.dataset import image_crop_embedding
-from lightly_studio.dataset.embedding_generator import ImageCrop
-from lightly_studio.dataset.image_embedding import EmbeddingContext
+torch = pytest.importorskip("torch")
+
+from lightly_studio.dataset import image_crop_embedding  # noqa: E402
+from lightly_studio.dataset.embedding_generator import ImageCrop  # noqa: E402
+from lightly_studio.dataset.image_embedding import EmbeddingContext  # noqa: E402
 
 
 def test_embed_image_crops_batched__empty_input_returns_empty_array() -> None:
@@ -45,11 +48,11 @@ def test_embed_image_crops_batched__preserves_input_order_across_filepaths(
     ]
     encode_calls: list[int] = []
 
-    def encode_batch(images_tensor: torch.Tensor) -> NDArray[np.float32]:
+    def encode_batch(images_tensor: Any) -> NDArray[np.float32]:
         encode_calls.append(images_tensor.size(0))
         # Each preprocessed crop is its width, so the batch is already the
         # expected (batch_size, 1) embedding; encode is the identity here.
-        return images_tensor.numpy().astype(np.float32)
+        return np.asarray(images_tensor.numpy(), dtype=np.float32)
 
     embeddings = image_crop_embedding.embed_image_crops_batched(
         image_crops=image_crops,

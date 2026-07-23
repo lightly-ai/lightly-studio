@@ -76,6 +76,7 @@ cloud-storage = [
     "gcsfs>=2023.1.0",
     "adlfs>=2023.1.0",
 ]
+triton = ["tritonclient[grpc]>=2.41.1"]
 
 [dependency-groups]
 dev = [
@@ -135,7 +136,6 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "sqlalchemy_utils.*"
 ignore_missing_imports = true
-
 
 [tool.pytest.ini_options]
 # Make pytest discover all files in the tests directory. This is useful for showing

@@ -7,9 +7,11 @@ from environs import Env
 
 env = Env()
 env.read_env()
-LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE: str = env.str(
-    "LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE", "MOBILE_CLIP"
+LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE: str = env.str("LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE", "torch")
+LIGHTLY_STUDIO_EMBEDDINGS_MODEL_NAME: str = env.str(
+    "LIGHTLY_STUDIO_EMBEDDINGS_MODEL_NAME", "mobileclip_s0"
 )
+LIGHTLY_STUDIO_TRITON_URL: Optional[str] = env.str("LIGHTLY_STUDIO_TRITON_URL", default=None)
 LIGHTLY_STUDIO_MODEL_CACHE_DIR: Path = env.path(
     "LIGHTLY_STUDIO_MODEL_CACHE_DIR", Path.home() / ".cache" / "lightly-studio"
 )

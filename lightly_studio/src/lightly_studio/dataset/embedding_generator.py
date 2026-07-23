@@ -17,7 +17,12 @@ from lightly_studio.models.embedding_model import EmbeddingModelCreate
 
 @dataclass(frozen=True)
 class ImageCrop:
-    """Image crop to embed."""
+    """Image crop to embed.
+
+    Coordinates are pixel coordinates in the source image's original resolution.
+    ``x`` and ``y`` define the top-left corner of the crop. ``width`` and
+    ``height`` define the crop size in pixels.
+    """
 
     filepath: str
     x: int
@@ -95,6 +100,11 @@ class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
             as the input crops.
         """
         ...
+
+
+@runtime_checkable
+class PILImageEmbeddingGenerator(ImageEmbeddingGenerator, Protocol):
+    """Protocol for image generators that support in-memory PIL images."""
 
     def embed_pil_images(
         self, images: list[Image.Image], show_progress: bool = True

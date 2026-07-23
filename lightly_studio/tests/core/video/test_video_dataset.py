@@ -7,6 +7,7 @@ from uuid import UUID
 import pytest
 
 from lightly_studio.core.video.video_dataset import VideoDataset
+from lightly_studio.dataset import env
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
@@ -38,6 +39,65 @@ def _count_sample_embeddings(dataset: VideoDataset, collection_id: UUID) -> int:
 
 
 class TestDataset:
+    @pytest.mark.parametrize(
+        ("embed", "embed_frames"),
+        [
+            pytest.param(True, False, id="videos"),
+            pytest.param(False, True, id="frames"),
+            pytest.param(True, True, id="videos_and_frames"),
+        ],
+    )
+    def test_dataset_add_videos_from_path__triton_embeddings_raise_before_ingestion(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        embed: bool,
+        embed_frames: bool,
+    ) -> None:
+        create_video_file(
+            output_path=tmp_path / "test_video.mp4",
+            width=640,
+            height=480,
+            num_frames=3,
+            fps=1,
+        )
+        monkeypatch.setattr(env, "LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE", "triton")
+        dataset = VideoDataset.create(name="test_dataset")
+
+        with pytest.raises(ValueError, match="Triton embeddings are not supported for videos"):
+            dataset.add_videos_from_path(path=tmp_path, embed=embed, embed_frames=embed_frames)
+
+        videos = video_resolver.get_all_by_collection_id(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+        ).samples
+        assert videos == []
+
+    def test_dataset_add_videos_from_path__triton_without_embeddings_succeeds(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        create_video_file(
+            output_path=tmp_path / "test_video.mp4",
+            width=640,
+            height=480,
+            num_frames=3,
+            fps=1,
+        )
+        monkeypatch.setattr(env, "LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE", "triton")
+        dataset = VideoDataset.create(name="test_dataset")
+
+        dataset.add_videos_from_path(path=tmp_path, embed=False, embed_frames=False)
+
+        videos = video_resolver.get_all_by_collection_id(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+        ).samples
+        assert len(videos) == 1
+
     def test_dataset_add_videos_from_path__valid(
         self,
         patch_collection: None,  # noqa: ARG002

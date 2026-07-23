@@ -4,11 +4,13 @@ import uuid
 from pathlib import Path
 
 import numpy as np
-import torch
+import pytest
 from PIL import Image
 
-from lightly_studio.dataset.embedding_generator import ImageCrop
-from lightly_studio.dataset.mobileclip_embedding_generator import (
+torch = pytest.importorskip("torch")
+
+from lightly_studio.dataset.embedding_generator import ImageCrop  # noqa: E402
+from lightly_studio.dataset.mobileclip_embedding_generator import (  # noqa: E402
     MobileCLIPEmbeddingGenerator,
 )
 

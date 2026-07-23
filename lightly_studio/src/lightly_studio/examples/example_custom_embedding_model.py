@@ -123,9 +123,7 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
             device=self._device,
             preprocess=self._preprocess,
             encode_batch=lambda images_tensor: (
-                self._model.encode_image(images_tensor)  # type: ignore[operator]
-                .cpu()
-                .numpy()
+                self._model.encode_image(images_tensor).cpu().numpy()  # type: ignore[operator]
             ),
         )
 

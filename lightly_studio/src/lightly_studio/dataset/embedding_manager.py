@@ -16,6 +16,7 @@ from lightly_studio.dataset import env
 from lightly_studio.dataset.embedding_generator import (
     EmbeddingGenerator,
     ImageEmbeddingGenerator,
+    PILImageEmbeddingGenerator,
     VideoEmbeddingGenerator,
 )
 from lightly_studio.models.collection import SampleType
@@ -39,6 +40,7 @@ EMBEDDING_INSERTION_BATCH_SIZE = 1024
 
 # Number of annotation crops processed per chunk in embed_annotations.
 ANNOTATION_EMBED_BATCH_SIZE = 2048
+
 # Mapping of sample types to the generator type used for embedding generation.
 _GENERATOR_SAMPLE_TYPE: dict[SampleType, SampleType] = {
     SampleType.IMAGE: SampleType.IMAGE,
@@ -418,6 +420,8 @@ class EmbeddingManager:
             )
 
         model = self._get_image_model(embedding_model_id)
+        if not isinstance(model, PILImageEmbeddingGenerator):
+            raise ValueError("Embedding model does not support in-memory images.")
         embeddings = model.embed_pil_images(images=images, show_progress=show_progress)
         _store_embeddings(
             session=session,
@@ -564,43 +568,75 @@ def _load_embedding_generator_from_env(sample_type: SampleType) -> EmbeddingGene
 
 # TODO(Michal, 09/2025): Write tests for this function.
 def _load_image_embedding_generator_from_env() -> ImageEmbeddingGenerator | None:
-    if env.LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE == "MOBILE_CLIP":
+    model_type = env.LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE
+    model_name = env.LIGHTLY_STUDIO_EMBEDDINGS_MODEL_NAME
+    if model_type == "triton":
+        if env.LIGHTLY_STUDIO_TRITON_URL is None:
+            raise ValueError("LIGHTLY_STUDIO_TRITON_URL must be set when using Triton embeddings.")
         try:
             # Keep this import local because this backend is only needed when selected.
-            from lightly_studio.dataset.mobileclip_embedding_generator import (  # noqa: PLC0415
-                MobileCLIPEmbeddingGenerator,
+            from lightly_studio.dataset.triton_mobileclip_embedding_generator import (  # noqa: PLC0415
+                TritonEmbeddingGenerator,
             )
 
-            logger.info("Using MobileCLIP embedding generator for images.")
-            return MobileCLIPEmbeddingGenerator()
-        except ImportError:
-            logger.warning("Embedding functionality is disabled.")
-    elif env.LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE == "PE":
-        try:
-            # Keep this import local because this backend is only needed when selected.
-            from lightly_studio.dataset.perception_encoder_embedding_generator import (  # noqa: PLC0415
-                PerceptionEncoderEmbeddingGenerator,
+            logger.info("Using Triton embedding generator for images.")
+            return TritonEmbeddingGenerator(
+                url=env.LIGHTLY_STUDIO_TRITON_URL,
+                model_name=model_name,
             )
-
-            logger.info("Using PerceptionEncoder embedding generator for images.")
-            return PerceptionEncoderEmbeddingGenerator()
         except ImportError:
             logger.warning("Embedding functionality is disabled.")
-    else:
-        logger.warning(f"Unsupported model type: '{env.LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE}'")
-        logger.warning("Embedding functionality is disabled.")
+    if model_type == "torch":
+        generator = _load_torch_embedding_generator(model_name=model_name)
+        if isinstance(generator, ImageEmbeddingGenerator):
+            return generator
+        raise ValueError(f"Embedding model '{model_name}' does not support images.")
+    logger.warning(f"Unsupported model type: '{model_type}'")
+    logger.warning("Embedding functionality is disabled.")
     return None
 
 
-def _load_video_embedding_generator() -> VideoEmbeddingGenerator | None:
-    try:
-        # Keep this import local because this backend is only needed when selected.
-        from lightly_studio.dataset.perception_encoder_embedding_generator import (  # noqa: PLC0415
-            PerceptionEncoderEmbeddingGenerator,
-        )
+def _load_torch_embedding_generator(model_name: str) -> EmbeddingGenerator:
+    from lightly_studio.dataset.mobileclip_embedding_generator import (  # noqa: PLC0415
+        SUPPORTED_MODEL_NAMES as SUPPORTED_MOBILECLIP_MODEL_NAMES,
+    )
+    from lightly_studio.dataset.mobileclip_embedding_generator import (  # noqa: PLC0415
+        MobileCLIPEmbeddingGenerator,
+    )
+    from lightly_studio.dataset.perception_encoder_embedding_generator import (  # noqa: PLC0415
+        PerceptionEncoderEmbeddingGenerator,
+    )
+    from lightly_studio.vendor.perception_encoder.vision_encoder.config import (  # noqa: PLC0415
+        DOWNLOADABLE_MODEL_URL as SUPPORTED_PERCEPTION_ENCODER_MODEL_NAMES,
+    )
 
-        logger.info("Using PerceptionEncoder embedding generator for videos.")
-        return PerceptionEncoderEmbeddingGenerator()
+    if model_name in SUPPORTED_MOBILECLIP_MODEL_NAMES:
+        logger.info("Using %s MobileCLIP embedding generator.", model_name)
+        return MobileCLIPEmbeddingGenerator(model_name=model_name)
+    if model_name in SUPPORTED_PERCEPTION_ENCODER_MODEL_NAMES:
+        logger.info("Using %s Perception Encoder embedding generator.", model_name)
+        return PerceptionEncoderEmbeddingGenerator(model_name=model_name)
+    supported_names = sorted(
+        SUPPORTED_MOBILECLIP_MODEL_NAMES | set(SUPPORTED_PERCEPTION_ENCODER_MODEL_NAMES)
+    )
+    raise ValueError(
+        f"Unsupported torch embedding model '{model_name}'. Supported models: "
+        f"{', '.join(supported_names)}."
+    )
+
+
+def _load_video_embedding_generator() -> VideoEmbeddingGenerator | None:
+    if env.LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE != "torch":
+        raise ValueError(
+            "Video embedding generation is only supported for torch embedding models."
+        )
+    try:
+        generator = _load_torch_embedding_generator(
+            model_name=env.LIGHTLY_STUDIO_EMBEDDINGS_MODEL_NAME
+        )
     except ImportError:
         logger.warning("Embedding functionality is disabled.")
         return None
+    if isinstance(generator, VideoEmbeddingGenerator):
+        return generator
+    return None
