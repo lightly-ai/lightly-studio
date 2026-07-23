@@ -36,7 +36,9 @@ async function main(env: NodeJS.ProcessEnv): Promise<void> {
         guardrailWorkflowId,
         guardrailRunNumber,
         guardrailRunAttempt,
-        verdict
+        verdict,
+        // Trusted, from the workflow_run event — the run where the guardrails ran.
+        runUrl: env.GUARDRAIL_RUN_URL
     });
     console.log(JSON.stringify(result));
 }

@@ -23,6 +23,8 @@ interface RunBotParams {
     /** `run_attempt` of the triggering guardrail run, for the recency check. */
     guardrailRunAttempt: number;
     verdict: unknown;
+    /** URL of the guardrail run that produced the verdict, linked in the comment. */
+    runUrl?: string;
 }
 
 export type BotResult =
@@ -53,7 +55,7 @@ export async function runBot(params: RunBotParams): Promise<BotResult> {
     const verdict = effectiveVerdict(params, target);
     return verdict.verdict === 'pass'
         ? applyPass(params, target, verdict, actionParams)
-        : applyFailure(target, verdict, actionParams);
+        : applyFailure(params, target, verdict, actionParams);
 }
 
 /**
@@ -134,24 +136,26 @@ async function applyPass(
         return { status: 'dismissed', prNumber: target.prNumber };
     }
 
-    await updateStatusComment(verdict, finalTarget.headSha, actionParams);
+    await updateStatusComment(verdict, finalTarget.headSha, params.runUrl, actionParams);
     return { status: 'approved', prNumber: finalTarget.prNumber };
 }
 
 async function applyFailure(
+    params: RunBotParams,
     target: BotTarget,
     verdict: Verdict,
     actionParams: BotActionParams
 ): Promise<BotResult> {
     await dismissApproval(actionParams);
-    await updateStatusComment(verdict, target.headSha, actionParams);
+    await updateStatusComment(verdict, target.headSha, params.runUrl, actionParams);
     return { status: 'dismissed', prNumber: target.prNumber };
 }
 
 async function updateStatusComment(
     verdict: Verdict,
     headSha: string,
+    runUrl: string | undefined,
     params: Omit<Parameters<typeof upsertComment>[0], 'body'>
 ): Promise<void> {
-    await upsertComment({ ...params, body: renderComment(verdict, headSha) });
+    await upsertComment({ ...params, body: renderComment({ verdict, headSha, runUrl }) });
 }
