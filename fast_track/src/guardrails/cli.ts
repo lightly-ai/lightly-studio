@@ -48,7 +48,9 @@ async function main(argv: string[], env: NodeJS.ProcessEnv): Promise<number> {
         guardrailNames: selectedNames(env.GUARDRAILS)
     });
 
-    console.log(`Fast Track guardrails — base ref: ${baseRef}\n`);
+    console.log(`Fast Track guardrails — base ref: ${baseRef}`);
+    // Introduces the per-guardrail command-output sections that runGuardrails emits.
+    console.log('\nGuardrail command output:');
     const { status, guardrails: results } = await runGuardrails(context, selected);
 
     for (const result of results) {
