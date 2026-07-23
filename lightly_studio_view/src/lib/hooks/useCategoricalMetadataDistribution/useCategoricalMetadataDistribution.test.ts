@@ -3,7 +3,7 @@ import type { MetadataValueCountsView } from '$lib/api/lightly_studio_local';
 import {
     getCategoricalMetadataDistributionRequestOptions,
     selectCategoricalDistributions
-} from './useCategoricalMetadataDistribution';
+} from './useCategoricalMetadataDistribution.svelte';
 
 describe('selectCategoricalDistributions', () => {
     it('preserves typed values and keeps semantic buckets distinct from labels', () => {
