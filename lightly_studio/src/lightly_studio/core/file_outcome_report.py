@@ -180,7 +180,7 @@ class FileOutcomeReport:
         counts = ", ".join(
             f"{self._label(outcome)}={self._counts[outcome]}" for outcome in FileOutcome
         )
-        logger.info(f"File outcomes: {counts}.")
+        logger.info(f"File processing result: {counts}.")
         for outcome in FileOutcome:
             examples = self._example_paths[outcome]
             if examples:
