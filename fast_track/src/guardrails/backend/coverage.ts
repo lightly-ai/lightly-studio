@@ -1,13 +1,11 @@
 import { readdir } from 'node:fs/promises';
 import { existsSync, readFileSync, rmSync } from 'node:fs';
-import { execFile } from 'node:child_process';
 import { basename, relative, resolve } from 'node:path';
-import { promisify } from 'node:util';
 import type { ChangedFile, Guardrail } from '../context/types';
 import { REPO_ROOT } from './shared';
 import { createCoverageGuardrail } from '../shared/coverage-base';
+import { runLoggedCommand } from '../shared/utils';
 
-const execFileAsync = promisify(execFile);
 const LIGHTLY_STUDIO_ABS = resolve(REPO_ROOT, 'lightly_studio');
 const BACKEND_PREFIX = 'lightly_studio/src/lightly_studio/';
 const COVERAGE_FILE = 'coverage.json';
@@ -104,7 +102,7 @@ export const backendCoverageGuardrail: Guardrail = createCoverageGuardrail<Cover
         if (existsSync(coveragePath)) rmSync(coveragePath);
 
         try {
-            await execFileAsync(
+            await runLoggedCommand(
                 'uv',
                 [
                     'run',

@@ -1,12 +1,9 @@
-import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
-import { promisify } from 'node:util';
 import type { Guardrail, GuardrailContext, GuardrailOutcome } from '../context/types';
 import { REPO_ROOT, BACKEND_DIR } from './shared';
-import { extractStdoutOrThrow } from '../shared/utils';
+import { extractStdoutOrThrow, runLoggedCommand } from '../shared/utils';
 
-const execFileAsync = promisify(execFile);
 const BACKEND_PREFIX = 'lightly_studio/';
 const NAME = 'backend/complexity';
 const COMPLEXITY_RULE = 'C901';
@@ -23,7 +20,7 @@ interface RuffViolation {
 async function runLinter(paths: string[]): Promise<RuffViolation[]> {
     let stdout: string;
     try {
-        const result = await execFileAsync(
+        const result = await runLoggedCommand(
             'uv',
             [
                 'run',

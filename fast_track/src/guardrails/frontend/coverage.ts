@@ -1,12 +1,10 @@
-import { execFile } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { promisify } from 'node:util';
 import type { ChangedFile, Guardrail } from '../context/types';
 import { FRONTEND_ABS, FRONTEND_PREFIX } from './eslint-runner';
 import { createCoverageGuardrail } from '../shared/coverage-base';
+import { runLoggedCommand } from '../shared/utils';
 
-const execFileAsync = promisify(execFile);
 const SRC_PREFIX = FRONTEND_PREFIX + 'src/';
 
 const IGNORE_SUFFIXES = ['.test.ts', '.test.js', '.spec.ts', '.spec.js', '.d.ts'];
@@ -87,7 +85,7 @@ export const frontendCoverageGuardrail: Guardrail = createCoverageGuardrail<RawC
         const relSources = sourcePaths.map((p) => p.slice(FRONTEND_PREFIX.length));
         const coverageIncludes = relSources.map((f) => `--coverage.include=${f}`);
         try {
-            await execFileAsync(
+            await runLoggedCommand(
                 'npm',
                 ['run', 'test:unit', '--', 'run', '--coverage', ...testFiles, ...coverageIncludes],
                 { cwd: FRONTEND_ABS, maxBuffer: MAX_BUFFER }
