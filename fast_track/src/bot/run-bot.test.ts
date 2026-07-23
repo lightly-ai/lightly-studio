@@ -7,6 +7,8 @@ import { runBot } from './run-bot';
 
 const HEAD_SHA = 'abc123';
 const BOT_LOGIN = 'fast-track-bot[bot]';
+const WORKFLOW_ID = 42;
+const RUN_NUMBER = 10;
 
 function verdict(overrides: Partial<Verdict> = {}): Verdict {
     return {
@@ -61,12 +63,22 @@ interface FakeOptions {
     reDeriveAfterApprove?: AssociatedRead;
     // pulls.get runs once, to reload mutable PR state before the approval.
     reloadBeforeApprove?: PullRead;
+    // Runs returned by listWorkflowRuns for the trusted head. A run with a higher
+    // run_number that completed with a real (non-skipped) conclusion supersedes
+    // this one. Defaults to none, so nothing supersedes.
+    workflowRuns?: unknown[];
+}
+
+function workflowRun(overrides: Record<string, unknown> = {}) {
+    return { run_number: 11, status: 'completed', conclusion: 'success', ...overrides };
 }
 
 function fakeOctokit(options: FakeOptions = {}) {
     const listReviews = Symbol('listReviews');
     const listComments = Symbol('listComments');
     const listAssociated = Symbol('listAssociated');
+    const listWorkflowRuns = Symbol('listWorkflowRuns');
+    const workflowRuns = options.workflowRuns ?? [];
     const reviews = options.existingApproval
         ? [{ id: 1, user: { login: BOT_LOGIN }, state: 'APPROVED', commit_id: HEAD_SHA }]
         : [];
@@ -98,9 +110,13 @@ function fakeOctokit(options: FakeOptions = {}) {
                 return reviews.filter((review) => review.state === 'APPROVED');
             if (route === listComments) return [];
             if (route === listAssociated) return nextAssociated().prs ?? [];
+            if (route === listWorkflowRuns) return workflowRuns;
             return [];
         }),
         rest: {
+            actions: {
+                listWorkflowRuns
+            },
             repos: {
                 listPullRequestsAssociatedWithCommit: listAssociated
             },
@@ -120,7 +136,10 @@ function fakeOctokit(options: FakeOptions = {}) {
     return { octokit, createReview, dismissReview, createComment };
 }
 
-function run(value: unknown, options: FakeOptions & { guardrailsSucceeded?: boolean } = {}) {
+function run(
+    value: unknown,
+    options: FakeOptions & { guardrailsSucceeded?: boolean; guardrailRunNumber?: number } = {}
+) {
     const fake = fakeOctokit(options);
     return {
         result: runBot({
@@ -128,9 +147,13 @@ function run(value: unknown, options: FakeOptions & { guardrailsSucceeded?: bool
             owner: 'lightly-ai',
             repo: 'lightly-studio',
             trustedHeadSha: HEAD_SHA,
+            headBranch: 'feature',
             botLogin: BOT_LOGIN,
             guardrailsSucceeded: options.guardrailsSucceeded ?? true,
             requiredGuardrailNames: ['dummy'],
+            guardrailWorkflowId: WORKFLOW_ID,
+            guardrailRunNumber: options.guardrailRunNumber ?? RUN_NUMBER,
+            guardrailRunAttempt: 1,
             verdict: value
         }),
         ...fake
@@ -225,5 +248,32 @@ describe('runBot', () => {
         });
         expect(execution.createReview).not.toHaveBeenCalled();
         expect(execution.dismissReview).not.toHaveBeenCalled();
+    });
+
+    it('skips without touching an approval when a newer run superseded it', async () => {
+        // The late event from a stale run must not dismiss the newer run's
+        // approval, so it bails before any read or write.
+        const execution = run(verdict({ verdict: 'fail', reason: 'stale' }), {
+            existingApproval: true,
+            guardrailRunNumber: 10,
+            workflowRuns: [workflowRun({ run_number: 11 })]
+        });
+        await expect(execution.result).resolves.toEqual({
+            status: 'skipped',
+            reason: 'A newer guardrail run for this head superseded it.'
+        });
+        expect(execution.createReview).not.toHaveBeenCalled();
+        expect(execution.dismissReview).not.toHaveBeenCalled();
+    });
+
+    it('still acts when the only newer run merely skipped', async () => {
+        // A title/body edit skips guardrails and carries no judgment, so it must
+        // not suppress this passing run.
+        const execution = run(verdict(), {
+            guardrailRunNumber: 10,
+            workflowRuns: [workflowRun({ run_number: 11, conclusion: 'skipped' })]
+        });
+        await expect(execution.result).resolves.toEqual({ status: 'approved', prNumber: 7 });
+        expect(execution.createReview).toHaveBeenCalledOnce();
     });
 });
