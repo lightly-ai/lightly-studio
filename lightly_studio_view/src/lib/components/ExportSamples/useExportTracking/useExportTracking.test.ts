@@ -6,15 +6,9 @@ const mockTrackEvent = vi.fn();
 const mockMarkDownloadClicked = vi.fn();
 const mockExportCollection = vi.fn();
 
-vi.mock('$lib/hooks/usePostHog', () => ({
-    usePostHog: () => ({ trackEvent: mockTrackEvent })
-}));
-
-vi.mock('$lib/hooks/useGlobalStorage', () => ({
-    useGlobalStorage: () => ({ filteredSampleCount: writable(42) })
-}));
-
 vi.mock('$lib/hooks', () => ({
+    usePostHog: () => ({ trackEvent: mockTrackEvent }),
+    useGlobalStorage: () => ({ filteredSampleCount: writable(42) }),
     useExportDialog: () => ({ markDownloadClicked: mockMarkDownloadClicked })
 }));
 
