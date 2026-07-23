@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 from uuid import UUID
 
 import fsspec
@@ -12,7 +12,6 @@ import torch
 from av import container
 from numpy.typing import NDArray
 from PIL import Image
-from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
@@ -30,78 +29,58 @@ MAX_BATCH_SIZE: int = 16
 VIDEO_FRAMES_PER_SAMPLE: int = 8
 
 
-class _VideoFileDataset(Dataset[torch.Tensor]):
-    """Dataset wrapping video file paths and a preprocess function.
+def _load_video_frames(
+    filepath: str,
+    preprocess: Callable[[Image.Image], torch.Tensor],
+) -> torch.Tensor:
+    """Sample uniformly spaced frames from a video and stack them into a model input.
 
-    Used for efficient batched video loading and preprocessing
+    As in the original paper we subsample N frames from a video and stack them to a tensor.
+    As in the paper, we use a default of 8 frames per video (VIDEO_FRAMES_PER_SAMPLE).
+    Note: the video length in the paper was 16.7 +/- 9.8 sec, hence for longer videos we might
+    consider alternative models or more frames.
+
+    Using seek for sampling is fast, however it may yield slightly different results on
+    different OS (known issue: MacOS vs Linux). Alternative option is to decode frame-by-frame
+    to be OS independent, however this comes with a performance drop.
+
+    Returns:
+        Tensor of shape ``[VIDEO_FRAMES_PER_SAMPLE, C, H, W]``.
+
+    Raises:
+        ValueError: If the video has no usable duration to sample frames from.
     """
+    fs, fs_path = fsspec.core.url_to_fs(url=filepath)
+    with (
+        fs.open(path=fs_path, mode="rb") as video_file,
+        container.open(file=video_file) as video_container,
+    ):
+        video_stream = video_container.streams.video[DEFAULT_VIDEO_CHANNEL]
+        duration_pts = video_stream.duration
+        time_base = float(video_stream.time_base)
+        if duration_pts is None or duration_pts <= 0 or time_base <= 0.0:
+            raise ValueError(f"Unable to read frames from video '{filepath}'.")
 
-    def __init__(
-        self,
-        filepaths: list[str],
-        preprocess: Callable[[Image.Image], torch.Tensor],
-    ) -> None:
-        self.filepaths = filepaths
-        self.preprocess = preprocess
+        duration_seconds = duration_pts * time_base
 
-    def __len__(self) -> int:
-        return len(self.filepaths)
+        # Sample VIDEO_FRAMES_PER_SAMPLE evenly spaced inside [0, duration_seconds)
+        ts_to_sample = np.linspace(
+            0.0,
+            duration_seconds,
+            num=VIDEO_FRAMES_PER_SAMPLE,
+            endpoint=False,
+            dtype=np.float64,
+        )
 
-    def __getitem__(self, idx: int) -> torch.Tensor:
-        """Return tensor [N C H W] for idx-th video.
+        frames: list[Image.Image] = []
+        for ts_target in ts_to_sample:
+            pts_target = int(ts_target / time_base)
+            video_container.seek(offset=pts_target, stream=video_stream)
+            frame = next(video_container.decode(video=DEFAULT_VIDEO_CHANNEL))
+            frames.append(frame.to_image())
 
-        As in the original paper we subsample N frames from a video and stack them to a tensor.
-        As in the paper, we use a default of 8 frames per video (VIDEO_FRAMES_PER_SAMPLE).
-        Note: the video length in the paper was 16.7 +/- 9.8 sec, hence for longer videos we might
-        consider alternative models or more frames.
-        """
-        video_path = self.filepaths[idx]
-        frames = self._load_frames(video_path)
-        if not frames:
-            raise ValueError(f"Unable to read frames from video '{video_path}'.")
-
-        processed_frames = [self.preprocess(frame) for frame in frames]
-        return torch.stack(processed_frames)
-
-    def _load_frames(self, video_path: str) -> list[Image.Image]:
-        """Sample uniformly spaced frames and return them as PIL images.
-
-        Using seek for sampling is fast, however it may yield slightly different results on
-        different OS (known issue: MacOS vs Linux).
-
-        Alternative option is to decode frame-by-frame to be OS independent,
-        however this comes with performance drop.
-        """
-        fs, fs_path = fsspec.core.url_to_fs(url=video_path)
-        with (
-            fs.open(path=fs_path, mode="rb") as video_file,
-            container.open(file=video_file) as video_container,
-        ):
-            video_stream = video_container.streams.video[DEFAULT_VIDEO_CHANNEL]
-            duration_pts = video_stream.duration
-            time_base = float(video_stream.time_base)
-            if duration_pts is None or duration_pts <= 0 or time_base <= 0.0:
-                return []
-
-            duration_seconds = duration_pts * time_base
-
-            # Sample VIDEO_FRAMES_PER_SAMPLE evenly spaced inside [0, duration_seconds)
-            ts_to_sample = np.linspace(
-                0.0,
-                duration_seconds,
-                num=VIDEO_FRAMES_PER_SAMPLE,
-                endpoint=False,
-                dtype=np.float64,
-            )
-
-            frames: list[Image.Image] = []
-            for ts_target in ts_to_sample:
-                pts_target = int(ts_target / time_base)
-                video_container.seek(offset=pts_target, stream=video_stream)
-                frame = next(video_container.decode(video=DEFAULT_VIDEO_CHANNEL))
-                frames.append(frame.to_image())
-
-            return frames
+    processed_frames = [preprocess(frame) for frame in frames]
+    return torch.stack(processed_frames)
 
 
 class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator):
@@ -240,32 +219,56 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             A numpy array representing the generated embeddings
             in the same order as the input file paths.
         """
-        dataset = _VideoFileDataset(filepaths, self._preprocess)
-
-        # To avoid issues with db locking and multiprocessing we set the
-        # number of workers to 0 (no multiprocessing). The DataLoader is still
-        # very useful for batching and async prefetching of videos.
-        loader = DataLoader(
-            dataset,
-            batch_size=MAX_BATCH_SIZE,
-            num_workers=0,  # must be 0 to avoid multiprocessing issues
-        )
         total_videos = len(filepaths)
         if not total_videos:
             return np.empty((0, self._model.output_dim), dtype=np.float32)
 
         embeddings = np.empty((total_videos, self._model.output_dim), dtype=np.float32)
-        position = 0
+        # Reusable batch buffer, lazily sized from the first preprocessed video.
+        batch_buffer: torch.Tensor | None = None
+        batch_indices: list[int] = []
+
         with (
             tqdm(total=total_videos, desc="Generating embeddings", unit=" videos") as progress_bar,
             torch.no_grad(),
         ):
-            for videos_tensor in loader:
-                videos = videos_tensor.to(self._device, non_blocking=True)
-                batch_embeddings = self._model.encode_video(videos, normalize=True).cpu().numpy()
-                batch_size = videos.size(0)
-                embeddings[position : position + batch_size] = batch_embeddings
-                position += batch_size
-                progress_bar.update(batch_size)
+            for index, filepath in enumerate(filepaths):
+                frames = _load_video_frames(filepath, self._preprocess)
+                if batch_buffer is None:
+                    batch_buffer = torch.empty((MAX_BATCH_SIZE, *frames.shape), dtype=frames.dtype)
+                batch_buffer[len(batch_indices)] = frames
+                batch_indices.append(index)
+                if len(batch_indices) >= MAX_BATCH_SIZE:
+                    self._flush_video_batch(
+                        batch_buffer=batch_buffer,
+                        batch_indices=batch_indices,
+                        embeddings=embeddings,
+                        progress_bar=progress_bar,
+                    )
+
+            self._flush_video_batch(
+                batch_buffer=batch_buffer,
+                batch_indices=batch_indices,
+                embeddings=embeddings,
+                progress_bar=progress_bar,
+            )
 
         return embeddings
+
+    def _flush_video_batch(
+        self,
+        batch_buffer: torch.Tensor | None,
+        batch_indices: list[int],
+        embeddings: NDArray[np.float32],
+        progress_bar: Any,
+    ) -> None:
+        """Encode the current video batch and write results into ``embeddings``."""
+        if batch_buffer is None or not batch_indices:
+            return
+        filled = len(batch_indices)
+        videos_tensor = batch_buffer[:filled].to(self._device, non_blocking=True)
+        batch_embeddings = self._model.encode_video(videos_tensor, normalize=True).cpu().numpy()
+        for batch_position, video_index in enumerate(batch_indices):
+            embeddings[video_index] = batch_embeddings[batch_position]
+        progress_bar.update(filled)
+        batch_indices.clear()
