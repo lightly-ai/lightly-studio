@@ -98,17 +98,31 @@ class MetadataValueCountsRequest(BaseModel):
     filters: ImageFilter | None = Field(None, description="Filter parameters for samples")
 
 
-@metadata_router.post("/metadata/value-counts", response_model=dict[str, MetadataValueCountsView])
+@metadata_router.post("/metadata/value-counts")
 def get_metadata_value_counts(
     session: SessionDep,
     collection_id: Annotated[UUID, Path(title="collection Id")],
-    request: MetadataValueCountsRequest | None = None,
+    request: MetadataValueCountsRequest,
 ) -> dict[str, MetadataValueCountsView]:
-    """Compute categorical metadata value counts under optional sample filters."""
+    """Compute categorical metadata value counts under optional sample filters.
+
+    Returns the top 20 most frequent concrete values per key; less-frequent
+    concrete values are aggregated into ``other_count`` and samples with a
+    missing (null) value are counted in ``missing_count``.  Each key's own
+    metadata filter is excluded from its counts (faceted-search behavior).
+
+    Args:
+        session: The database session.
+        collection_id: The ID of the collection.
+        request: Request body carrying the active sample filters.
+
+    Returns:
+        Mapping of categorical metadata key to its value counts.
+    """
     return metadata_value_counts_resolver.get_metadata_value_counts(
         session=session,
         collection_id=collection_id,
-        filters=request.filters if request else None,
+        filters=request.filters,
     )
 
 
