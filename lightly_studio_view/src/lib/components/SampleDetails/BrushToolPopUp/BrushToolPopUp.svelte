@@ -5,7 +5,7 @@
     import { isInputElement } from '$lib/utils/isInputElement';
     import { Brush, Eraser } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
-    import { usePostHog } from '$lib/hooks/usePostHog';
+    import { usePostHog } from '$lib/hooks';
     import { page } from '$app/state';
 
     const {

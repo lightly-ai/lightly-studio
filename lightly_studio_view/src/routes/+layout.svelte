@@ -1,7 +1,7 @@
 <script lang="ts">
     import { browser } from '$app/environment';
     import { useSettings } from '$lib/hooks/useSettings';
-    import { usePostHog } from '$lib/hooks/usePostHog';
+    import { usePostHog } from '$lib/hooks';
     import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
     import { onMount } from 'svelte';
     import '../app.css';

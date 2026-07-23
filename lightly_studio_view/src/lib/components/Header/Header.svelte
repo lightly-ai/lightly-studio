@@ -15,7 +15,7 @@
     import UserAvatar from '$lib/components/UserAvatar/UserAvatar.svelte';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
-    import { usePostHog } from '$lib/hooks/usePostHog';
+    import { usePostHog } from '$lib/hooks';
 
     let { collection }: { collection: CollectionView } = $props();
 
@@ -36,6 +36,27 @@
 
     const { trackEvent } = usePostHog();
 
+    type TriggeredBy = 'click' | 'keyboard_shortcut';
+
+    const setEditMode = (active: boolean, triggeredBy: TriggeredBy) => {
+        trackEvent(active ? 'edit_mode_started' : 'edit_mode_finished', {
+            collection_id: collection.collection_id,
+            triggered_by: triggeredBy
+        });
+        setIsEditingMode(active);
+    };
+
+    const executeUndoAction = async (triggeredBy: TriggeredBy) => {
+        const latestAction = $reversibleActions[0];
+        if (latestAction) {
+            trackEvent('edit_undo', {
+                collection_id: collection.collection_id,
+                triggered_by: triggeredBy
+            });
+            await executeReversibleAction(latestAction.id);
+        }
+    };
+
     const handleKeyDown = (event: KeyboardEvent) => {
         if (isInputElement(event.target)) {
             return;
@@ -45,38 +66,9 @@
             return;
         }
         if (event.key === get(settingsStore).key_toggle_edit_mode) {
-            if (!$isEditingMode) {
-                trackEvent('edit_mode_started', {
-                    collection_id: collection.collection_id,
-                    triggered_by: 'keyboard_shortcut'
-                });
-            } else {
-                trackEvent('edit_mode_finished', {
-                    collection_id: collection.collection_id,
-                    triggered_by: 'keyboard_shortcut'
-                });
-            }
-            setIsEditingMode(!$isEditingMode);
+            setEditMode(!$isEditingMode, 'keyboard_shortcut');
         } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
-            const action = $reversibleActions[0];
-            if (action) {
-                trackEvent('edit_undo', {
-                    collection_id: collection.collection_id,
-                    triggered_by: 'keyboard_shortcut'
-                });
-                void executeReversibleAction(action.id);
-            }
-        }
-    };
-
-    const executeUndoAction = async () => {
-        const latestAction = $reversibleActions[0];
-        if (latestAction) {
-            trackEvent('edit_undo', {
-                collection_id: collection.collection_id,
-                triggered_by: 'click'
-            });
-            await executeReversibleAction(latestAction.id);
+            void executeUndoAction('keyboard_shortcut');
         }
     };
 
@@ -111,7 +103,7 @@
                         <Button
                             icon={Undo2}
                             buttonProps={{
-                                onclick: executeUndoAction,
+                                onclick: () => executeUndoAction('click'),
                                 disabled: $reversibleActions.length === 0,
                                 title: $reversibleActions[0]
                                     ? $reversibleActions[0].description
@@ -125,13 +117,7 @@
                         <Button
                             icon={Check}
                             buttonProps={{
-                                onclick: () => {
-                                    trackEvent('edit_mode_finished', {
-                                        collection_id: collection.collection_id,
-                                        triggered_by: 'click'
-                                    });
-                                    setIsEditingMode(false);
-                                },
+                                onclick: () => setEditMode(false, 'click'),
                                 title: 'Finish Editing',
                                 'data-testid': 'header-editing-mode-button',
                                 class: 'nav-button'
@@ -143,13 +129,7 @@
                         <Button
                             icon={Pencil}
                             buttonProps={{
-                                onclick: () => {
-                                    trackEvent('edit_mode_started', {
-                                        collection_id: collection.collection_id,
-                                        triggered_by: 'click'
-                                    });
-                                    setIsEditingMode(true);
-                                },
+                                onclick: () => setEditMode(true, 'click'),
                                 title: 'Edit annotations',
                                 'data-testid': 'header-editing-mode-button',
                                 class: 'nav-button'

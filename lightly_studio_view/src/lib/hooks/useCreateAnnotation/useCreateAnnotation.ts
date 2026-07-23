@@ -8,7 +8,7 @@ import {
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
-import { usePostHog } from '$lib/hooks/usePostHog';
+import { usePostHog } from '$lib/hooks';
 import { page } from '$app/state';
 
 export const useCreateAnnotation = ({ collectionId }: { collectionId: string }) => {

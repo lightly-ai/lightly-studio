@@ -42,6 +42,7 @@ export { useColorPicker } from '$lib/hooks/useColorPicker/useColorPicker.svelte'
 export { useSubmitCombinationSelection } from '$lib/hooks/useSubmitCombinationSelection/useSubmitCombinationSelection';
 export { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
 export { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
+export { usePostHog } from '$lib/hooks/usePostHog';
 export { useSettings } from '$lib/hooks/useSettings';
 export { useAnnotationClassVisibility } from '$lib/hooks/useAnnotationClassVisibility/useAnnotationClassVisibility';
 export {

@@ -2,7 +2,7 @@ import { type AnnotationUpdateInput } from '$lib/api/lightly_studio_local';
 import { updateAnnotationsMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
-import { usePostHog } from '$lib/hooks/usePostHog';
+import { usePostHog } from '$lib/hooks';
 
 export const useUpdateAnnotationsMutation = ({ collectionId }: { collectionId: string }) => {
     const mutation = createMutation(() => updateAnnotationsMutation());

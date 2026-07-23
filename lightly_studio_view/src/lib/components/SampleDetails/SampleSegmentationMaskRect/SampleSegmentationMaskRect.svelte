@@ -19,7 +19,7 @@
         useDeleteAnnotation
     } from '$lib/hooks';
     import { page } from '$app/state';
-    import { usePostHog } from '$lib/hooks/usePostHog';
+    import { usePostHog } from '$lib/hooks';
     import type { PendingChange } from '../pendingChange';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
     import SelectClassDialog from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
@@ -61,7 +61,7 @@
     } = useAnnotationLabelContext();
 
     const { trackEvent } = usePostHog();
-    let drawStartFired = $state(false);
+    let drawStartFired = false;
 
     const { deleteAnnotation } = useDeleteAnnotation({ collectionId });
 
