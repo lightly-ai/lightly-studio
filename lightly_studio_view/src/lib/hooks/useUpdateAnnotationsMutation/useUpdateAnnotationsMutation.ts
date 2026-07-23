@@ -29,16 +29,17 @@ export const useUpdateAnnotationsMutation = ({ collectionId }: { collectionId: s
                     onSuccess: () => {
                         refetch();
                         const labelInputs = inputs.filter((input) => input.label_name != null);
-                        if (labelInputs.length === 1) {
+                        if (inputs.length === 1) {
                             trackEvent('annotation_label_updated', {
                                 collection_id: collectionId,
-                                label_name: labelInputs[0].label_name
+                                annotation_id: inputs[0].annotation_id,
+                                label_name: labelInputs[0]?.label_name
                             });
-                        } else if (labelInputs.length > 1) {
+                        } else if (inputs.length > 1) {
                             trackEvent('annotations_bulk_labeled', {
                                 collection_id: collectionId,
-                                annotation_count: labelInputs.length,
-                                label_names: labelInputs.map((input) => input.label_name)
+                                annotation_ids: inputs.map((input) => input.annotation_id),
+                                annotation_count: inputs.length
                             });
                         }
                         resolve();
