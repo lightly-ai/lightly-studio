@@ -13,23 +13,33 @@
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import AnnotationSourceSelect from '$lib/components/AnnotationSourceSelect/AnnotationSourceSelect.svelte';
+    import { get } from 'svelte/store';
     import { exportCollection } from '$lib/services/exportCollection';
     import type { ExportFilter } from '$lib/services/types';
+    import { usePostHog } from '$lib/hooks/usePostHog';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useExportSamplesCount } from './useExportSamplesCount/useExportSamplesCount';
     import { PUBLIC_LIGHTLY_STUDIO_API_URL } from '$env/static/public';
     import * as Dialog from '$lib/components/ui/dialog';
     import { Loader2 } from '@lucide/svelte';
     import * as Alert from '$lib/components/ui/alert/index.js';
     import { fade } from 'svelte/transition';
-    import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
+    import { useExportDialog } from '$lib/hooks';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 
     const { isExportDialogOpen, openExportDialog, closeExportDialog } = useExportDialog();
     const { imageFilter } = useImageFilters();
+    const { filteredSampleCount } = useGlobalStorage();
+    const { trackEvent } = usePostHog();
 
     $effect(() => {
         if ($isExportDialogOpen) {
-            exportType = isVideoCollection ? 'youtube_vis_segmentation' : 'samples';
+            const defaultType = isVideoCollection ? 'youtube_vis_segmentation' : 'samples';
+            exportType = defaultType;
+            trackEvent('export_dialog_default_format_set', {
+                collection_id: collectionId,
+                export_format: defaultType
+            });
         }
     });
 
@@ -89,6 +99,7 @@
         $tags.find((f) => f.tag_id === tagIdToExport)?.name ??
             'Select a tag to export its samples (required)'
     );
+    const tagNameToExport = $derived($tags.find((f) => f.tag_id === tagIdToExport)?.name ?? null);
 
     // Enable info panel if there are selected samples or annotations or tag is selected
     const isInfoEnabled = $derived(exportType === 'samples' ? !!tagIdToExport : false);
@@ -136,13 +147,39 @@
         return !!errorMessage;
     });
 
+    const handleAnnotationDownloadClick = (exportFormat: string) => {
+        trackEvent('export_download_clicked', {
+            collection_id: collectionId,
+            export_format: exportFormat,
+            sample_count: $filteredSampleCount,
+            tag_name: null
+        });
+    };
+
     const handleExport = async () => {
+        const sampleCount = get(count);
+        trackEvent('export_download_clicked', {
+            collection_id: collectionId,
+            export_format: exportType,
+            sample_count: sampleCount,
+            tag_name: tagNameToExport
+        });
         const response = await exportCollection({
             collection_id: collectionId,
             includeFilter,
             excludeFilter,
             collectionFilter: $imageFilter
         });
+
+        trackEvent('export_triggered', {
+            collection_id: collectionId,
+            export_format: exportType,
+            sample_count: sampleCount,
+            tag_name: tagNameToExport,
+            success: !response.error,
+            error_message: response.error ?? null
+        });
+
         if (response.error) {
             errorMessage = `Export failed: ${response.error}`;
         }
@@ -187,7 +224,13 @@
 
 <Dialog.Root
     open={$isExportDialogOpen}
-    onOpenChange={(open) => (open ? openExportDialog() : closeExportDialog())}
+    onOpenChange={(open) => {
+        if (open) {
+            openExportDialog({ collectionId });
+        } else {
+            closeExportDialog({ collectionId, exportFormat: exportType });
+        }
+    }}
 >
     <Dialog.Portal>
         <Dialog.Overlay />
@@ -210,7 +253,21 @@
                             triggerLabel={exportTypeTriggerContent}
                             class="w-full"
                             testId="export-type-select"
-                            onValueChange={(v) => (exportType = v as typeof exportType)}
+                            onOpenChange={(open) => {
+                                if (open) {
+                                    trackEvent('export_format_select_opened', {
+                                        collection_id: collectionId,
+                                        current_export_format: exportType
+                                    });
+                                }
+                            }}
+                            onValueChange={(v) => {
+                                exportType = v as typeof exportType;
+                                trackEvent('export_format_selected', {
+                                    collection_id: collectionId,
+                                    export_format: v
+                                });
+                            }}
                         >
                             {#snippet children()}
                                 {#if isVideoCollection}
@@ -379,6 +436,7 @@
                             href={exportObjectDetectionCocoURL}
                             target="_blank"
                             data-testid="submit-button-annotations-coco"
+                            onclick={() => handleAnnotationDownloadClick('object_detections_coco')}
                         >
                             Download
                         </Button>
@@ -406,6 +464,7 @@
                             href={exportObjectDetectionYoloURL}
                             target="_blank"
                             data-testid="submit-button-annotations-yolo"
+                            onclick={() => handleAnnotationDownloadClick('object_detections_yolo')}
                         >
                             Download
                         </Button>
@@ -433,6 +492,7 @@
                             href={exportSegmentationMaskURL}
                             target="_blank"
                             data-testid="submit-button-instance-segmentations"
+                            onclick={() => handleAnnotationDownloadClick('segmentation')}
                         >
                             Download
                         </Button>
@@ -449,6 +509,8 @@
                                 href={exportYoutubeVisSegmentationMaskURL}
                                 target="_blank"
                                 data-testid="submit-button-youtube-vis-instance-segmentations"
+                                onclick={() =>
+                                    handleAnnotationDownloadClick('youtube_vis_segmentation')}
                             >
                                 Download
                             </Button>
@@ -476,6 +538,7 @@
                             href={exportPascalVocURL}
                             target="_blank"
                             data-testid="submit-button-semantic-segmentations"
+                            onclick={() => handleAnnotationDownloadClick('semantic_segmentations')}
                         >
                             Download
                         </Button>
@@ -493,6 +556,7 @@
                             href={exportCaptionsURL}
                             target="_blank"
                             data-testid="submit-button-captions"
+                            onclick={() => handleAnnotationDownloadClick('captions')}
                         >
                             Download
                         </Button>

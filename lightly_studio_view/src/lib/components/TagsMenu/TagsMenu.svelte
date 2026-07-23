@@ -17,6 +17,7 @@
     import TagActionMenu from './TagActionMenu.svelte';
     import { toast } from 'svelte-sonner';
     import { get } from 'svelte/store';
+    import { usePostHog } from '$lib/hooks/usePostHog';
 
     let { collection_id, gridType }: Parameters<typeof useTags>[0] & { gridType: GridType } =
         $props();
@@ -45,6 +46,8 @@
             ? ($selectedSampleAnnotationCropIds[collection_id] ?? new Set<string>())
             : $selectedSampleIds
     );
+
+    const { trackEvent } = usePostHog();
 
     let assignBusy = $state(false);
     let deletingTagId = $state<string | null>(null);
@@ -86,6 +89,12 @@
                     toast.error('Failed to assign tag. Please try again.');
                     return;
                 }
+                trackEvent('samples_tagged', {
+                    collection_id,
+                    tag_kind: tagKind,
+                    sample_count: selectedIds.size,
+                    is_new_tag: false
+                });
             } else {
                 const createResponse = await createTag({
                     path: { collection_id },
@@ -100,6 +109,12 @@
                     toast.error('Failed to assign tag. Please try again.');
                     return;
                 }
+                trackEvent('samples_tagged', {
+                    collection_id,
+                    tag_kind: tagKind,
+                    sample_count: selectedIds.size,
+                    is_new_tag: true
+                });
             }
             loadTags();
         } catch (error) {
