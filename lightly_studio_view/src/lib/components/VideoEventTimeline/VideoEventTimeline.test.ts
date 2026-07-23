@@ -158,4 +158,33 @@ describe('VideoEventTimeline', () => {
         // A 1s span can't start at 10s in a 10s video, so it is shifted back to end at 10s.
         expect(onAddEvent).toHaveBeenCalledWith(9, 10);
     });
+
+    it('shows the delete button only when editable with an onDelete handler', () => {
+        const { queryByTestId, rerender } = render(VideoEventTimeline, {
+            props: { events: [makeEvent({ id: 'a' })], durationS: 10, onDelete: vi.fn() }
+        });
+        expect(queryByTestId('delete-event-button')).toBeFalsy();
+
+        rerender({
+            events: [makeEvent({ id: 'a' })],
+            durationS: 10,
+            editable: true,
+            onDelete: vi.fn()
+        });
+        expect(queryByTestId('delete-event-button')).toBeTruthy();
+    });
+
+    it('calls onDelete without seeking when the trash button is clicked', async () => {
+        const onDelete = vi.fn();
+        const onSeek = vi.fn();
+        const event = makeEvent({ id: 'a', label: 'Clip' });
+        const { getByTestId } = render(VideoEventTimeline, {
+            props: { events: [event], durationS: 10, editable: true, onDelete, onSeek }
+        });
+
+        await fireEvent.click(getByTestId('delete-event-button'));
+        expect(onDelete).toHaveBeenCalledWith(expect.objectContaining({ id: 'a' }));
+        // The bar's seek click must not fire when deleting.
+        expect(onSeek).not.toHaveBeenCalled();
+    });
 });

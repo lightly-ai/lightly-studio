@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { Octokit } from '../guardrails/context/types';
+import type { Octokit } from '../shared/octokit';
 import { approve, dismissApproval } from './review';
 
 const BOT_LOGIN = 'fast-track-bot[bot]';

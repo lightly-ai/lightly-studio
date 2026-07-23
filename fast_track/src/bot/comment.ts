@@ -1,11 +1,11 @@
-import type { Octokit } from '../guardrails/context/types';
+import type { Octokit } from '../shared/octokit';
 import type { Verdict } from '../shared/verdict';
 
 const COMMENT_MARKER = '<!-- fast-track-bot -->';
 const HEADLINES: Record<Verdict['verdict'], string> = {
-    pass: '✅ Fast Track: all required checks passed — auto-approved.',
-    fail: '❌ Fast Track: checks did not pass',
-    opt_out: '⏭️ Fast Track skipped — deferring to human review'
+    pass: '✅&nbsp; Fast Track: all required checks passed — auto-approved.',
+    fail: '❌&nbsp; Fast Track: checks did not pass',
+    opt_out: '⏭️&nbsp; Fast Track skipped — deferring to human review'
 };
 
 interface UpsertCommentParams {
@@ -17,10 +17,24 @@ interface UpsertCommentParams {
     body: string;
 }
 
+interface RenderCommentParams {
+    verdict: Verdict;
+    headSha: string;
+    /** Link to the guardrail run; omitted when it is unknown. */
+    runUrl?: string;
+}
+
 /** Render the human-visible part of the bot's single status comment. */
-export function renderComment(verdict: Verdict, headSha: string): string {
+export function renderComment(params: RenderCommentParams): string {
+    const { verdict, headSha, runUrl } = params;
     const lines = [`### ${HEADLINES[verdict.verdict]}`];
-    if (verdict.verdict !== 'pass' && verdict.reason !== undefined) {
+    // Without guardrail rows (an opt-out or a synthesized failure) the reason is
+    // the only diagnosis, so surface it; otherwise the table already carries it.
+    if (
+        verdict.verdict !== 'pass' &&
+        verdict.reason !== undefined &&
+        verdict.guardrails.length === 0
+    ) {
         lines.push('', verdict.reason);
     }
 
@@ -35,6 +49,16 @@ export function renderComment(verdict: Verdict, headSha: string): string {
             );
         }
     }
+
+    if (runUrl !== undefined) {
+        lines.push('', `[View the guardrail run](${runUrl})`);
+    }
+
+    lines.push(
+        '',
+        'To run the guardrails locally, from `fast_track/` run `make install` once, then ' +
+            '`make run-guardrails` (or `GUARDRAILS=<name1>,<name2> make run-guardrails` for some guardrails).'
+    );
 
     lines.push('', `<sub>Reflects \`${headSha.slice(0, 7)}\`.</sub>`);
     return lines.join('\n');

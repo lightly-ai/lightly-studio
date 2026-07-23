@@ -208,7 +208,6 @@ jobs:
       - name: Run Tests for LightlyStudio
         working-directory: lightly_studio
         env:
-          LIGHTLY_STUDIO_LICENSE_KEY: ${{ secrets.MUNDIG_LICENSE_KEY }}
           UV_PYTHON: ${{ matrix.python }}
         run: make ${{ matrix.make_target }}
 
