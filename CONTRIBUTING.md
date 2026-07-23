@@ -26,7 +26,7 @@ This will:
 For starting it again, you can skip the build step by just calling `make start-example`.
 
 Backend code lives in the `lightly_studio` subdirectory, frontend code in `lightly_studio_view`.
-To run static checks and unit tests use the following commands
+To run static checks and unit tests, use the following commands:
 
 ```bash
 # Backend
