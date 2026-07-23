@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import func
@@ -16,10 +15,8 @@ from lightly_studio.models.metadata import (
     SampleMetadataTable,
 )
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.metadata_resolver.sample import metadata_helpers
-
-if TYPE_CHECKING:
-    from lightly_studio.resolvers.image_filter import ImageFilter
 
 _CATEGORICAL_TYPES = ("string", "boolean")
 _TOP_VALUE_COUNT = 20
@@ -29,6 +26,7 @@ def get_metadata_value_counts(
     session: Session,
     collection_id: UUID,
     filters: ImageFilter | None = None,
+    fields: list[str] | None = None,
 ) -> dict[str, MetadataValueCountsView]:
     """Count categorical metadata values for a collection.
 
@@ -40,6 +38,8 @@ def get_metadata_value_counts(
         session: The database session.
         collection_id: The collection whose sample metadata is aggregated.
         filters: Optional image filters restricting the counted samples.
+        fields: Categorical fields to count. All categorical fields are counted
+            when absent.
 
     Returns:
         A mapping from categorical metadata keys to their value counts.
@@ -48,6 +48,8 @@ def get_metadata_value_counts(
     result: dict[str, MetadataValueCountsView] = {}
     for key, metadata_type in schema.items():
         if metadata_type not in _CATEGORICAL_TYPES:
+            continue
+        if fields is not None and key not in fields:
             continue
         field_filters = metadata_helpers.without_metadata_key_filter(
             filters=filters, metadata_key=key

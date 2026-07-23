@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlmodel import Session, col, select
@@ -10,10 +9,8 @@ from sqlmodel import Session, col, select
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.sample import SampleTable
-
-if TYPE_CHECKING:
-    from lightly_studio.resolvers.image_filter import ImageFilter
-    from lightly_studio.type_definitions import QueryType
+from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.type_definitions import QueryType
 
 
 def get_merged_schema(session: Session, collection_id: UUID) -> dict[str, str]:

@@ -96,6 +96,9 @@ class MetadataValueCountsRequest(BaseModel):
     """Request body for computing filtered categorical value counts."""
 
     filters: ImageFilter | None = Field(None, description="Filter parameters for samples")
+    fields: list[str] | None = Field(
+        None, description="Categorical fields to count; all fields are counted when absent"
+    )
 
 
 @metadata_router.post("/metadata/value-counts", response_model=dict[str, MetadataValueCountsView])
@@ -109,6 +112,7 @@ def get_metadata_value_counts(
         session=session,
         collection_id=collection_id,
         filters=request.filters if request else None,
+        fields=request.fields if request else None,
     )
 
 

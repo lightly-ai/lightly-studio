@@ -157,6 +157,27 @@ def test_get_metadata_value_counts__filters_and_own_key_exclusion(
     assert [(entry.value, entry.count) for entry in counts["group"].value_counts] == [("x", 1)]
 
 
+def test_get_metadata_value_counts__fields_limits_counted_keys(
+    db_session: Session,
+) -> None:
+    """Only fields listed in the fields argument are counted."""
+    collection = create_collection(session=db_session)
+    _create_sample(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        metadata={"city": "Zurich", "group": "x", "active": True},
+    )
+
+    counts = categorical_value_counts.get_metadata_value_counts(
+        session=db_session,
+        collection_id=collection.collection_id,
+        fields=["city"],
+    )
+
+    assert set(counts) == {"city"}
+    assert counts["city"].value_counts[0].value == "Zurich"
+
+
 def test_get_metadata_value_counts__known_fields_with_no_matches(
     db_session: Session,
 ) -> None:
