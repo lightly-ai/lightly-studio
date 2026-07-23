@@ -49,10 +49,9 @@ async function main(argv: string[], env: NodeJS.ProcessEnv): Promise<number> {
     });
 
     console.log(`Fast Track guardrails — base ref: ${baseRef}`);
-    // Introduces the per-guardrail command-output sections that runGuardrails emits.
-    console.log('\nGuardrail command output:');
     const { status, guardrails: results } = await runGuardrails(context, selected);
 
+    console.log('\nGuardrail results:');
     for (const result of results) {
         const mark = result.status === 'pass' ? '✓' : '✗';
         console.log(`  ${mark} ${result.name}  ${result.status}  ${result.summary}`);

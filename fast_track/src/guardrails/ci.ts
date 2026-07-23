@@ -69,8 +69,6 @@ async function main(env: NodeJS.ProcessEnv): Promise<void> {
 
     // hasPrContext: true — unlike the local CLI, pr-only guardrails run here.
     const selected = selectGuardrails(guardrails, { hasPrContext: true });
-    // Introduces the per-guardrail command-output sections that runGuardrails emits.
-    console.log('Guardrail command output:');
     const run = await runGuardrails(guardrailContext, selected);
     const verdict = buildVerdict(run, routing);
 
