@@ -90,9 +90,6 @@ function printVerdict(verdict: Verdict): void {
         const summary = guardrail.summary.replace(/\n/g, '\n    ');
         console.log(`  [${guardrail.status}] ${guardrail.name}: ${summary}`);
     }
-    if (verdict.reason !== undefined) {
-        console.log(`Reason: ${verdict.reason}`);
-    }
 }
 
 // Only a crash exits non-zero. A `fail` verdict returns cleanly, so it publishes
