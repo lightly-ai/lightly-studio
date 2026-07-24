@@ -156,6 +156,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             AllInputFilesFailedError: If every image in the path is missing or broken.
         """
         fsspec_lister.validate_limit(limit)
+        if tag_depth < 0:
+            raise ValueError(f"tag_depth must be non-negative, got {tag_depth}.")
         # Collect image file paths.
         if allowed_extensions:
             allowed_extensions_set = {ext.lower() for ext in allowed_extensions}
