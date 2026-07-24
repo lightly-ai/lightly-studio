@@ -1,6 +1,5 @@
 """Embedding manager for dataset processing."""
 
-# TEMP: validate Fast Track backend/coverage with the real webapp build (revert me).
 from __future__ import annotations
 
 import logging
