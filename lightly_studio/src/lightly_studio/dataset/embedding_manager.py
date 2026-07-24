@@ -1,6 +1,5 @@
 """Embedding manager for dataset processing."""
 
-# TEMP: re-trigger Fast Track backend/coverage to validate the webapp-dist fix (revert me).
 from __future__ import annotations
 
 import logging
