@@ -1,15 +1,9 @@
 """Metadata resolver module."""
 
-from lightly_studio.resolvers.metadata_resolver.sample.bulk_update_metadata import (
+from lightly_studio.resolvers.metadata_resolver.sample import (
     bulk_update_metadata,
-)
-from lightly_studio.resolvers.metadata_resolver.sample.get_by_sample_id import (
     get_by_sample_id,
-)
-from lightly_studio.resolvers.metadata_resolver.sample.get_value_for_sample import (
     get_value_for_sample,
-)
-from lightly_studio.resolvers.metadata_resolver.sample.set_value_for_sample import (
     set_value_for_sample,
 )
 
