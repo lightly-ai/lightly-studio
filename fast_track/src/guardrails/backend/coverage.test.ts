@@ -5,7 +5,9 @@ const mockExecFile = vi.hoisted(() => vi.fn());
 vi.mock('node:fs', () => ({
     existsSync: vi.fn(),
     readFileSync: vi.fn(),
-    rmSync: vi.fn()
+    rmSync: vi.fn(),
+    mkdirSync: vi.fn(),
+    writeFileSync: vi.fn()
 }));
 
 vi.mock('node:fs/promises', () => ({
@@ -16,11 +18,12 @@ vi.mock('node:child_process', () => ({
     execFile: mockExecFile
 }));
 
-import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import {
     backendCoverageGuardrail,
+    ensureWebappDist,
     filterBackendFiles,
     matchesTestFile,
     parseCoverageRatio
@@ -31,6 +34,8 @@ import type { ChangedFile, GuardrailContext } from '../context/types';
 const mockExistsSync = vi.mocked(existsSync);
 const mockReadFileSync = vi.mocked(readFileSync);
 const mockRmSync = vi.mocked(rmSync);
+const mockMkdirSync = vi.mocked(mkdirSync);
+const mockWriteFileSync = vi.mocked(writeFileSync);
 const mockReaddir = vi.mocked(readdir);
 
 const LIGHTLY_STUDIO_ABS = resolve(REPO_ROOT, 'lightly_studio');
@@ -305,10 +310,37 @@ describe('parseCoverageRatio', () => {
     });
 });
 
+describe('ensureWebappDist', () => {
+    const WEBAPP_DIST_DIR = resolve(
+        LIGHTLY_STUDIO_ABS,
+        'src/lightly_studio/dist_lightly_studio_view_app'
+    );
+    const INDEX_FILE = resolve(WEBAPP_DIST_DIR, 'index.html');
+
+    it('creates the dist dir and an empty index.html when missing', () => {
+        mockExistsSync.mockReturnValue(false);
+
+        ensureWebappDist();
+
+        expect(mockMkdirSync).toHaveBeenCalledWith(WEBAPP_DIST_DIR, { recursive: true });
+        expect(mockWriteFileSync).toHaveBeenCalledWith(INDEX_FILE, '');
+    });
+
+    it('does not overwrite an existing index.html', () => {
+        mockExistsSync.mockReturnValue(true);
+
+        ensureWebappDist();
+
+        expect(mockMkdirSync).toHaveBeenCalledWith(WEBAPP_DIST_DIR, { recursive: true });
+        expect(mockWriteFileSync).not.toHaveBeenCalled();
+    });
+});
+
 describe('backendCoverageGuardrail – runTests', () => {
     it('deletes stale coverage.json before running pytest', async () => {
         mockExistsSync
             .mockReturnValueOnce(true) // testsDir exists (findTestFile)
+            .mockReturnValueOnce(false) // webapp index.html missing → written
             .mockReturnValueOnce(true) // stale coveragePath exists → rmSync
             .mockReturnValueOnce(true); // coveragePath exists after run
         setupTestFileFound();
@@ -324,6 +356,7 @@ describe('backendCoverageGuardrail – runTests', () => {
     it('does not delete coverage.json when none exists before the run', async () => {
         mockExistsSync
             .mockReturnValueOnce(true) // testsDir exists
+            .mockReturnValueOnce(false) // webapp index.html missing → written
             .mockReturnValueOnce(false) // no stale coverage file
             .mockReturnValueOnce(true); // coverage written after run
         setupTestFileFound();
@@ -338,6 +371,7 @@ describe('backendCoverageGuardrail – runTests', () => {
     it('reads coverage.json written by pytest even when tests fail', async () => {
         mockExistsSync
             .mockReturnValueOnce(true) // testsDir exists
+            .mockReturnValueOnce(false) // webapp index.html missing → written
             .mockReturnValueOnce(false) // no stale file
             .mockReturnValueOnce(true) // coverage exists in catch block
             .mockReturnValueOnce(true); // coverage exists after catch
@@ -354,6 +388,7 @@ describe('backendCoverageGuardrail – runTests', () => {
     it('re-throws error when pytest fails without writing coverage.json', async () => {
         mockExistsSync
             .mockReturnValueOnce(true) // testsDir exists
+            .mockReturnValueOnce(false) // webapp index.html missing → written
             .mockReturnValueOnce(false) // no stale file
             .mockReturnValueOnce(false); // no coverage in catch → re-throw
         setupTestFileFound();
@@ -366,9 +401,10 @@ describe('backendCoverageGuardrail – runTests', () => {
 
     it('passes when all added lines are covered', async () => {
         mockExistsSync
-            .mockReturnValueOnce(true)
-            .mockReturnValueOnce(false)
-            .mockReturnValueOnce(true);
+            .mockReturnValueOnce(true) // testsDir exists
+            .mockReturnValueOnce(false) // webapp index.html missing → written
+            .mockReturnValueOnce(false) // no stale file
+            .mockReturnValueOnce(true); // coverage written after run
         setupTestFileFound();
         mockExecFileWith(null);
         mockReadFileSync.mockReturnValue(JSON.stringify(FULL_COVERAGE_DATA));
@@ -390,9 +426,10 @@ describe('backendCoverageGuardrail – runTests', () => {
             }
         };
         mockExistsSync
-            .mockReturnValueOnce(true)
-            .mockReturnValueOnce(false)
-            .mockReturnValueOnce(true);
+            .mockReturnValueOnce(true) // testsDir exists
+            .mockReturnValueOnce(false) // webapp index.html missing → written
+            .mockReturnValueOnce(false) // no stale file
+            .mockReturnValueOnce(true); // coverage written after run
         setupTestFileFound();
         mockExecFileWith(null);
         mockReadFileSync.mockReturnValue(JSON.stringify(lowCoverageData));
@@ -414,9 +451,10 @@ describe('backendCoverageGuardrail – runTests', () => {
             }
         };
         mockExistsSync
-            .mockReturnValueOnce(true)
-            .mockReturnValueOnce(false)
-            .mockReturnValueOnce(true);
+            .mockReturnValueOnce(true) // testsDir exists
+            .mockReturnValueOnce(false) // webapp index.html missing → written
+            .mockReturnValueOnce(false) // no stale file
+            .mockReturnValueOnce(true); // coverage written after run
         setupTestFileFound();
         mockExecFileWith(null);
         mockReadFileSync.mockReturnValue(JSON.stringify(unrelatedCoverageData));

@@ -1,5 +1,5 @@
 import { readdir } from 'node:fs/promises';
-import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, relative, resolve } from 'node:path';
 import type { ChangedFile, Guardrail } from '../context/types';
 import { REPO_ROOT } from './shared';
@@ -8,6 +8,13 @@ import { runLoggedCommand } from '../shared/utils';
 
 const LIGHTLY_STUDIO_ABS = resolve(REPO_ROOT, 'lightly_studio');
 const NAME = 'backend/coverage';
+// conftest.py imports the full app, whose webapp route raises at import time unless the
+// built frontend dir exists. We don't build the frontend here, so mock it (an empty dir
+// plus index.html satisfies both checks) — same approach as the Makefile's mock-webapp-dist.
+const WEBAPP_DIST_DIR = resolve(
+    LIGHTLY_STUDIO_ABS,
+    'src/lightly_studio/dist_lightly_studio_view_app'
+);
 const BACKEND_PREFIX = 'lightly_studio/src/lightly_studio/';
 const COVERAGE_FILE = 'coverage.json';
 const MAX_BUFFER = 10 * 1024 * 1024;
@@ -82,6 +89,7 @@ export const backendCoverageGuardrail: Guardrail = createCoverageGuardrail<Cover
     // testFiles and sourcePaths are repo-relative; deduplication of testFiles is the
     // caller's responsibility.
     async runTests(testFiles: string[], sourcePaths: string[]): Promise<CoverageData | null> {
+        ensureWebappDist();
         // Pytest runs from lightly_studio/ so strip the leading lightly_studio/ prefix.
         const testFilesLocal = testFiles.map((f) => f.slice('lightly_studio/'.length));
         // coverage.py misreads *.py paths (relative or absolute) as module identifiers
@@ -135,6 +143,14 @@ export const backendCoverageGuardrail: Guardrail = createCoverageGuardrail<Cover
         return parseCoverageRatio(data, sourcePath, addedLines);
     }
 });
+
+// Ensures the mocked webapp dist exists so importing the app in conftest.py doesn't raise.
+// Idempotent; never overwrites an existing index.html (e.g. a real build on a dev machine).
+export function ensureWebappDist(): void {
+    mkdirSync(WEBAPP_DIST_DIR, { recursive: true });
+    const indexFile = resolve(WEBAPP_DIST_DIR, 'index.html');
+    if (!existsSync(indexFile)) writeFileSync(indexFile, '');
+}
 
 function isExcluded(path: string): boolean {
     const name = path.split('/').at(-1) ?? '';
