@@ -29,60 +29,6 @@ MAX_BATCH_SIZE: int = 16
 VIDEO_FRAMES_PER_SAMPLE: int = 8
 
 
-def _load_video_frames(
-    filepath: str,
-    preprocess: Callable[[Image.Image], torch.Tensor],
-) -> torch.Tensor:
-    """Sample uniformly spaced frames from a video and stack them into a model input.
-
-    As in the original paper we subsample N frames from a video and stack them to a tensor.
-    As in the paper, we use a default of 8 frames per video (VIDEO_FRAMES_PER_SAMPLE).
-    Note: the video length in the paper was 16.7 +/- 9.8 sec, hence for longer videos we might
-    consider alternative models or more frames.
-
-    Using seek for sampling is fast, however it may yield slightly different results on
-    different OS (known issue: MacOS vs Linux). Alternative option is to decode frame-by-frame
-    to be OS independent, however this comes with a performance drop.
-
-    Returns:
-        Tensor of shape ``[VIDEO_FRAMES_PER_SAMPLE, C, H, W]``.
-
-    Raises:
-        ValueError: If the video has no usable duration to sample frames from.
-    """
-    fs, fs_path = fsspec.core.url_to_fs(url=filepath)
-    with (
-        fs.open(path=fs_path, mode="rb") as video_file,
-        container.open(file=video_file) as video_container,
-    ):
-        video_stream = video_container.streams.video[DEFAULT_VIDEO_CHANNEL]
-        duration_pts = video_stream.duration
-        time_base = float(video_stream.time_base)
-        if duration_pts is None or duration_pts <= 0 or time_base <= 0.0:
-            raise ValueError(f"Unable to read frames from video '{filepath}'.")
-
-        duration_seconds = duration_pts * time_base
-
-        # Sample VIDEO_FRAMES_PER_SAMPLE evenly spaced inside [0, duration_seconds)
-        ts_to_sample = np.linspace(
-            0.0,
-            duration_seconds,
-            num=VIDEO_FRAMES_PER_SAMPLE,
-            endpoint=False,
-            dtype=np.float64,
-        )
-
-        frames: list[Image.Image] = []
-        for ts_target in ts_to_sample:
-            pts_target = int(ts_target / time_base)
-            video_container.seek(offset=pts_target, stream=video_stream)
-            frame = next(video_container.decode(video=DEFAULT_VIDEO_CHANNEL))
-            frames.append(frame.to_image())
-
-    processed_frames = [preprocess(frame) for frame in frames]
-    return torch.stack(processed_frames)
-
-
 class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator):
     """Perception Encoder Core embedding model."""
 
@@ -266,9 +212,72 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
         if batch_buffer is None or not batch_indices:
             return
         filled = len(batch_indices)
-        videos_tensor = batch_buffer[:filled].to(self._device, non_blocking=True)
+        videos_tensor = batch_buffer[:filled].to(self._device)
         batch_embeddings = self._model.encode_video(videos_tensor, normalize=True).cpu().numpy()
         for batch_position, video_index in enumerate(batch_indices):
             embeddings[video_index] = batch_embeddings[batch_position]
         progress_bar.update(filled)
         batch_indices.clear()
+
+
+def _load_video_frames(
+    filepath: str,
+    preprocess: Callable[[Image.Image], torch.Tensor],
+) -> torch.Tensor:
+    """Sample uniformly spaced frames from a video and stack them into a model input.
+
+    As in the original paper we subsample N frames from a video and stack them to a tensor.
+    As in the paper, we use a default of 8 frames per video (VIDEO_FRAMES_PER_SAMPLE).
+    Note: the video length in the paper was 16.7 +/- 9.8 sec, hence for longer videos we might
+    consider alternative models or more frames.
+
+    Using seek for sampling is fast, however it may yield slightly different results on
+    different OS (known issue: MacOS vs Linux). Alternative option is to decode frame-by-frame
+    to be OS independent, however this comes with a performance drop.
+
+    Args:
+        filepath: Path or URL of the video to sample frames from.
+        preprocess: Transform applied to each sampled frame to produce a model input tensor.
+
+    Returns:
+        Tensor of shape ``[VIDEO_FRAMES_PER_SAMPLE, C, H, W]``.
+
+    Raises:
+        ValueError: If the video has no usable duration to sample frames from.
+    """
+    fs, fs_path = fsspec.core.url_to_fs(url=filepath)
+    with (
+        fs.open(path=fs_path, mode="rb") as video_file,
+        container.open(file=video_file) as video_container,
+    ):
+        video_stream = video_container.streams.video[DEFAULT_VIDEO_CHANNEL]
+        duration_pts = video_stream.duration
+        time_base = float(video_stream.time_base)
+        if duration_pts is None or duration_pts <= 0 or time_base <= 0.0:
+            raise ValueError(f"Unable to read frames from video '{filepath}'.")
+
+        duration_seconds = duration_pts * time_base
+
+        # Sample VIDEO_FRAMES_PER_SAMPLE evenly spaced inside [0, duration_seconds)
+        ts_to_sample = np.linspace(
+            0.0,
+            duration_seconds,
+            num=VIDEO_FRAMES_PER_SAMPLE,
+            endpoint=False,
+            dtype=np.float64,
+        )
+
+        frames: list[Image.Image] = []
+        for ts_target in ts_to_sample:
+            pts_target = int(ts_target / time_base)
+            video_container.seek(offset=pts_target, stream=video_stream)
+            try:
+                frame = next(video_container.decode(video=DEFAULT_VIDEO_CHANNEL))
+            except StopIteration:
+                raise ValueError(
+                    f"Unable to decode frame at {ts_target:.3f}s from video '{filepath}'."
+                ) from None
+            frames.append(frame.to_image())
+
+    processed_frames = [preprocess(frame) for frame in frames]
+    return torch.stack(processed_frames)
