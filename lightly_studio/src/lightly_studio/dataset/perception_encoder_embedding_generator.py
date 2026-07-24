@@ -14,7 +14,11 @@ from numpy.typing import NDArray
 from PIL import Image
 from tqdm import tqdm
 
-from lightly_studio.core.file_outcome_report import FileOutcome, FileOutcomeReport
+from lightly_studio.core.file_outcome_report import (
+    BrokenInputFileError,
+    FileOutcomeReport,
+    MissingInputFileError,
+)
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transforms
@@ -157,10 +161,10 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
         )
 
     def embed_videos(self, filepaths: list[str]) -> EmbeddingResult:
-        """Embed videos with Perception Encoder, skipping broken files.
+        """Embed videos with Perception Encoder, skipping missing or broken files.
 
-        A video that is unreadable/undecodable is skipped rather than aborting the whole
-        run, and is recorded once as broken.
+        A video that is missing or unreadable/undecodable is skipped rather than aborting
+        the whole run, and is recorded once as missing or broken.
 
         Args:
             filepaths: A list of file paths to the videos to embed.
@@ -171,7 +175,7 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
 
         Raises:
             AllInputFilesFailedError: If at least one file was attempted and every attempted
-                file was broken (i.e. no file could be read and embedded).
+                file was missing or broken (i.e. no file could be read and embedded).
         """
         total_videos = len(filepaths)
         if not total_videos:
@@ -191,24 +195,24 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             torch.no_grad(),
         ):
             for index, filepath in enumerate(filepaths):
-                try:
+                # A missing/broken video raises a typed signal that report.track records as
+                # its outcome and suppresses, so the loop skips it and continues.
+                with report.track(path=filepath):
                     frames = _load_video_frames(filepath, self._preprocess)
-                except ValueError:
-                    report.record(path=filepath, outcome=FileOutcome.BROKEN)
-                    continue
-                report.record(path=filepath, outcome=FileOutcome.ADDED)
-                if batch_buffer is None:
-                    batch_buffer = torch.empty((MAX_BATCH_SIZE, *frames.shape), dtype=frames.dtype)
-                batch_buffer[len(batch_indices)] = frames
-                batch_indices.append(index)
-                kept_indices.append(index)
-                if len(batch_indices) >= MAX_BATCH_SIZE:
-                    self._flush_video_batch(
-                        batch_buffer=batch_buffer,
-                        batch_indices=batch_indices,
-                        embeddings=embeddings,
-                        progress_bar=progress_bar,
-                    )
+                    if batch_buffer is None:
+                        batch_buffer = torch.empty(
+                            (MAX_BATCH_SIZE, *frames.shape), dtype=frames.dtype
+                        )
+                    batch_buffer[len(batch_indices)] = frames
+                    batch_indices.append(index)
+                    kept_indices.append(index)
+                    if len(batch_indices) >= MAX_BATCH_SIZE:
+                        self._flush_video_batch(
+                            batch_buffer=batch_buffer,
+                            batch_indices=batch_indices,
+                            embeddings=embeddings,
+                            progress_bar=progress_bar,
+                        )
 
             self._flush_video_batch(
                 batch_buffer=batch_buffer,
@@ -217,8 +221,8 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
                 progress_bar=progress_bar,
             )
 
-        report.raise_if_all_failed()
         report.log_summary()
+        report.raise_if_all_failed()
 
         # kept_indices in input order maps each returned row back to its input video.
         return EmbeddingResult(embeddings=embeddings[kept_indices], kept_indices=kept_indices)
@@ -265,11 +269,17 @@ def _load_video_frames(
         Tensor of shape ``[VIDEO_FRAMES_PER_SAMPLE, C, H, W]``.
 
     Raises:
-        ValueError: If the video is unreadable or undecodable (missing, corrupt, has no
-            video stream, or has no usable duration).
+        MissingInputFileError: If the video path does not resolve.
+        BrokenInputFileError: If the video is present but unreadable/undecodable (corrupt,
+            has no video stream, or has no usable duration).
     """
+    # Detect a missing path proactively: FileNotFoundError is unreliable across fsspec
+    # backends and is a subclass of OSError, which we treat as broken.
+    fs, fs_path = fsspec.core.url_to_fs(url=filepath)
+    if not fs.exists(fs_path):
+        raise MissingInputFileError(f"Video does not exist: '{filepath}'.")
+
     try:
-        fs, fs_path = fsspec.core.url_to_fs(url=filepath)
         with (
             fs.open(path=fs_path, mode="rb") as video_file,
             container.open(file=video_file) as video_container,
@@ -278,7 +288,7 @@ def _load_video_frames(
             duration_pts = video_stream.duration
             time_base = float(video_stream.time_base)
             if duration_pts is None or duration_pts <= 0 or time_base <= 0.0:
-                raise ValueError(f"Unable to read frames from video '{filepath}'.")
+                raise BrokenInputFileError(f"Unable to read frames from video '{filepath}'.")
 
             duration_seconds = duration_pts * time_base
 
@@ -297,13 +307,13 @@ def _load_video_frames(
                 video_container.seek(offset=pts_target, stream=video_stream)
                 try:
                     frame = next(video_container.decode(video=DEFAULT_VIDEO_CHANNEL))
-                except StopIteration:
-                    raise ValueError(
+                except StopIteration as error:
+                    raise BrokenInputFileError(
                         f"Unable to decode frame at {ts_target:.3f}s from video '{filepath}'."
-                    ) from None
+                    ) from error
                 frames.append(frame.to_image())
     except (OSError, FFmpegError, IndexError) as error:
-        raise ValueError(f"Unable to read frames from video '{filepath}'.") from error
+        raise BrokenInputFileError(f"Unable to read frames from video '{filepath}'.") from error
 
     processed_frames = [preprocess(frame) for frame in frames]
     return torch.stack(processed_frames)
