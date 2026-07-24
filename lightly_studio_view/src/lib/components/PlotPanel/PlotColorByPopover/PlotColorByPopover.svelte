@@ -3,6 +3,7 @@
     import { Select, SelectMenuItem } from '$lib/components/Select';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import { usePlotColorByType } from './usePlotColorByType/usePlotColorByType';
+    import { usePostHog } from '$lib/hooks';
 
     interface Props {
         collectionId: string;
@@ -24,6 +25,7 @@
     const { metadataInfo } = useMetadataFilters(collectionId);
     const { selectedColorByType, setSelectedColorByType, clearSelectedColorByType } =
         usePlotColorByType(collectionId);
+    const { trackEvent } = usePostHog();
 
     const colorableFields = $derived(
         ($metadataInfo ?? []).filter((field) => supportedTypes.has(field.type))
@@ -71,26 +73,39 @@
         return 'Color by';
     });
 
+    const handleOpenChange = (open: boolean) => {
+        if (!open) return;
+        trackEvent('color_by_opened', {
+            collection_id: collectionId,
+            current_color_by: $selectedColorByType
+        });
+    };
+
     const handleValueChange = (value: string) => {
         if (value === '' || value === NO_COLOR_BY) {
             clearSelectedColorByType();
             onSelectedKeyChange(null);
+            trackEvent('embedding_color_by_changed', {
+                collection_id: collectionId,
+                color_by_type: null
+            });
             return;
         }
 
         const option = colorByOptions[Number(value)];
         if (!option) return;
 
-        if (option.type === 'tags') {
-            setSelectedColorByType('tags');
-            onSelectedKeyChange(null);
-        } else if (option.type === 'annotation_label') {
-            setSelectedColorByType('annotation_label');
-            onSelectedKeyChange(null);
-        } else {
+        if (option.type === 'metadata') {
             setSelectedColorByType('metadata');
             onSelectedKeyChange(option.fieldName);
+        } else {
+            setSelectedColorByType(option.type);
+            onSelectedKeyChange(null);
         }
+        trackEvent('embedding_color_by_changed', {
+            collection_id: collectionId,
+            color_by_type: option.type
+        });
     };
 </script>
 
@@ -100,6 +115,7 @@
     value={selectValue}
     allowDeselect
     onValueChange={handleValueChange}
+    onOpenChange={handleOpenChange}
     size="xs"
     class="w-48"
     testId="plot-color-by-button"
