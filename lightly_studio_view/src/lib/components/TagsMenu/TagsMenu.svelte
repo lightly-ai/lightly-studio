@@ -81,13 +81,17 @@
         assignBusy = true;
         const snapshotCount = selectedIds.size;
 
-        function trackTagged(is_new_tag: boolean) {
-            trackEvent('samples_tagged', {
-                collection_id,
-                tag_kind: tagKind,
-                sample_count: snapshotCount,
-                is_new_tag
-            });
+        function trackTagged(isNewTag: boolean) {
+            try {
+                trackEvent('samples_tagged', {
+                    collection_id,
+                    tag_kind: tagKind,
+                    sample_count: snapshotCount,
+                    is_new_tag: isNewTag
+                });
+            } catch (e) {
+                console.error('Failed to track samples_tagged event', e);
+            }
         }
 
         try {
