@@ -16,6 +16,7 @@ from tqdm import tqdm
 
 from lightly_studio.core.file_outcome_report import (
     BrokenInputFileError,
+    FileOutcome,
     FileOutcomeReport,
     MissingInputFileError,
 )
@@ -188,7 +189,7 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
         # Reusable batch buffer, lazily sized from the first preprocessed video.
         batch_buffer: torch.Tensor | None = None
         batch_indices: list[int] = []
-        report = FileOutcomeReport()
+        report = FileOutcomeReport(label_overrides={FileOutcome.ADDED: "embedded"})
 
         with (
             tqdm(total=total_videos, desc="Generating embeddings", unit=" videos") as progress_bar,
