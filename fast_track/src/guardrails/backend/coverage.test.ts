@@ -5,9 +5,7 @@ const mockExecFile = vi.hoisted(() => vi.fn());
 vi.mock('node:fs', () => ({
     existsSync: vi.fn(),
     readFileSync: vi.fn(),
-    rmSync: vi.fn(),
-    mkdirSync: vi.fn(),
-    writeFileSync: vi.fn()
+    rmSync: vi.fn()
 }));
 
 vi.mock('node:fs/promises', () => ({
@@ -18,12 +16,11 @@ vi.mock('node:child_process', () => ({
     execFile: mockExecFile
 }));
 
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import {
     backendCoverageGuardrail,
-    ensureWebappDist,
     filterBackendFiles,
     matchesTestFile,
     parseCoverageRatio
@@ -34,8 +31,6 @@ import type { ChangedFile, GuardrailContext } from '../context/types';
 const mockExistsSync = vi.mocked(existsSync);
 const mockReadFileSync = vi.mocked(readFileSync);
 const mockRmSync = vi.mocked(rmSync);
-const mockMkdirSync = vi.mocked(mkdirSync);
-const mockWriteFileSync = vi.mocked(writeFileSync);
 const mockReaddir = vi.mocked(readdir);
 
 const LIGHTLY_STUDIO_ABS = resolve(REPO_ROOT, 'lightly_studio');
@@ -310,81 +305,10 @@ describe('parseCoverageRatio', () => {
     });
 });
 
-describe('ensureWebappDist', () => {
-    const WEBAPP_DIST_DIR = resolve(
-        LIGHTLY_STUDIO_ABS,
-        'src/lightly_studio/dist_lightly_studio_view_app'
-    );
-    const INDEX_FILE = resolve(WEBAPP_DIST_DIR, 'index.html');
-
-    function eexist(): NodeJS.ErrnoException {
-        return Object.assign(new Error('file already exists'), { code: 'EEXIST' });
-    }
-
-    it('creates the dist dir and an empty index.html (exclusive) when the dir is absent', () => {
-        mockExistsSync.mockReturnValue(false); // dir does not exist yet
-
-        ensureWebappDist();
-
-        expect(mockMkdirSync).toHaveBeenCalledWith(WEBAPP_DIST_DIR, { recursive: true });
-        expect(mockWriteFileSync).toHaveBeenCalledWith(INDEX_FILE, '', { flag: 'wx' });
-    });
-
-    it('leaves an existing index.html untouched (EEXIST is swallowed)', () => {
-        mockExistsSync.mockReturnValue(true); // dir already exists
-        mockWriteFileSync.mockImplementation(() => {
-            throw eexist(); // exclusive create hits a real index.html
-        });
-
-        expect(() => ensureWebappDist()).not.toThrow();
-    });
-
-    it('propagates non-EEXIST write errors', () => {
-        mockExistsSync.mockReturnValue(false);
-        mockWriteFileSync.mockImplementation(() => {
-            throw Object.assign(new Error('permission denied'), { code: 'EACCES' });
-        });
-
-        expect(() => ensureWebappDist()).toThrow('permission denied');
-    });
-
-    it('cleanup removes the whole dir when it created it', () => {
-        mockExistsSync.mockReturnValue(false); // dir absent → helper creates it
-
-        ensureWebappDist()();
-
-        expect(mockRmSync).toHaveBeenCalledWith(WEBAPP_DIST_DIR, {
-            recursive: true,
-            force: true
-        });
-    });
-
-    it('cleanup removes only the index it created when the dir pre-existed', () => {
-        mockExistsSync.mockReturnValue(true); // dir pre-existed; wx write succeeds → index created
-
-        ensureWebappDist()();
-
-        expect(mockRmSync).toHaveBeenCalledWith(INDEX_FILE, { force: true });
-        expect(mockRmSync).not.toHaveBeenCalledWith(WEBAPP_DIST_DIR, expect.anything());
-    });
-
-    it('cleanup is a no-op when a real build was already present', () => {
-        mockExistsSync.mockReturnValue(true); // dir pre-existed
-        mockWriteFileSync.mockImplementation(() => {
-            throw eexist(); // real index.html present → nothing created
-        });
-
-        ensureWebappDist()();
-
-        expect(mockRmSync).not.toHaveBeenCalled();
-    });
-});
-
 describe('backendCoverageGuardrail – runTests', () => {
     it('deletes stale coverage.json before running pytest', async () => {
         mockExistsSync
             .mockReturnValueOnce(true) // testsDir exists (findTestFile)
-            .mockReturnValueOnce(false) // webapp dist dir absent → mocked
             .mockReturnValueOnce(true) // stale coveragePath exists → rmSync
             .mockReturnValueOnce(true); // coveragePath exists after run
         setupTestFileFound();
@@ -393,14 +317,13 @@ describe('backendCoverageGuardrail – runTests', () => {
 
         await backendCoverageGuardrail.run(makeCtx([BACKEND_FILE]));
 
-        // Cleanup also calls rmSync (for the mocked dist), so assert the stale report specifically.
+        expect(mockRmSync).toHaveBeenCalledOnce();
         expect(mockRmSync).toHaveBeenCalledWith(COVERAGE_PATH);
     });
 
     it('does not delete coverage.json when none exists before the run', async () => {
         mockExistsSync
             .mockReturnValueOnce(true) // testsDir exists
-            .mockReturnValueOnce(false) // webapp dist dir absent → mocked
             .mockReturnValueOnce(false) // no stale coverage file
             .mockReturnValueOnce(true); // coverage written after run
         setupTestFileFound();
@@ -409,14 +332,12 @@ describe('backendCoverageGuardrail – runTests', () => {
 
         await backendCoverageGuardrail.run(makeCtx([BACKEND_FILE]));
 
-        // Cleanup may call rmSync (for the mocked dist); assert the stale report was not removed.
-        expect(mockRmSync).not.toHaveBeenCalledWith(COVERAGE_PATH);
+        expect(mockRmSync).not.toHaveBeenCalled();
     });
 
     it('reads coverage.json written by pytest even when tests fail', async () => {
         mockExistsSync
             .mockReturnValueOnce(true) // testsDir exists
-            .mockReturnValueOnce(false) // webapp dist dir absent → mocked
             .mockReturnValueOnce(false) // no stale file
             .mockReturnValueOnce(true) // coverage exists in catch block
             .mockReturnValueOnce(true); // coverage exists after catch
@@ -433,7 +354,6 @@ describe('backendCoverageGuardrail – runTests', () => {
     it('re-throws error when pytest fails without writing coverage.json', async () => {
         mockExistsSync
             .mockReturnValueOnce(true) // testsDir exists
-            .mockReturnValueOnce(false) // webapp dist dir absent → mocked
             .mockReturnValueOnce(false) // no stale file
             .mockReturnValueOnce(false); // no coverage in catch → re-throw
         setupTestFileFound();
@@ -446,10 +366,9 @@ describe('backendCoverageGuardrail – runTests', () => {
 
     it('passes when all added lines are covered', async () => {
         mockExistsSync
-            .mockReturnValueOnce(true) // testsDir exists
-            .mockReturnValueOnce(false) // webapp dist dir absent → mocked
-            .mockReturnValueOnce(false) // no stale file
-            .mockReturnValueOnce(true); // coverage written after run
+            .mockReturnValueOnce(true)
+            .mockReturnValueOnce(false)
+            .mockReturnValueOnce(true);
         setupTestFileFound();
         mockExecFileWith(null);
         mockReadFileSync.mockReturnValue(JSON.stringify(FULL_COVERAGE_DATA));
@@ -471,10 +390,9 @@ describe('backendCoverageGuardrail – runTests', () => {
             }
         };
         mockExistsSync
-            .mockReturnValueOnce(true) // testsDir exists
-            .mockReturnValueOnce(false) // webapp dist dir absent → mocked
-            .mockReturnValueOnce(false) // no stale file
-            .mockReturnValueOnce(true); // coverage written after run
+            .mockReturnValueOnce(true)
+            .mockReturnValueOnce(false)
+            .mockReturnValueOnce(true);
         setupTestFileFound();
         mockExecFileWith(null);
         mockReadFileSync.mockReturnValue(JSON.stringify(lowCoverageData));
@@ -496,10 +414,9 @@ describe('backendCoverageGuardrail – runTests', () => {
             }
         };
         mockExistsSync
-            .mockReturnValueOnce(true) // testsDir exists
-            .mockReturnValueOnce(false) // webapp dist dir absent → mocked
-            .mockReturnValueOnce(false) // no stale file
-            .mockReturnValueOnce(true); // coverage written after run
+            .mockReturnValueOnce(true)
+            .mockReturnValueOnce(false)
+            .mockReturnValueOnce(true);
         setupTestFileFound();
         mockExecFileWith(null);
         mockReadFileSync.mockReturnValue(JSON.stringify(unrelatedCoverageData));

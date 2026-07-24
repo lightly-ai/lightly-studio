@@ -95,6 +95,16 @@ jobs:
             fast_track/package-lock.json
             lightly_studio_view/package-lock.json
 
+      # Build the webapp so backend guardrails can import the app. backend/coverage runs
+      # pytest, whose conftest imports the full app, and the webapp route raises at import
+      # time unless dist_lightly_studio_view_app exists. build-lightly_studio_view exports
+      # the schema/version, builds the Svelte app, and copies the dist into the backend
+      # package. Reusable by any backend guardrail that imports the app.
+      - name: Build webapp for backend guardrails
+        if: steps.changes.outputs.backend == 'true'
+        working-directory: lightly_studio
+        run: make build-lightly_studio_view
+
       # --- Frontend toolchain ------------------------------------------------
       # Deps and generated API client for frontend guardrails (e.g. frontend/complexity,
       # frontend/coverage). prebuild is the app build's generation step, without the

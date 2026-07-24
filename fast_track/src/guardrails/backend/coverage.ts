@@ -1,5 +1,5 @@
 import { readdir } from 'node:fs/promises';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { basename, relative, resolve } from 'node:path';
 import type { ChangedFile, Guardrail } from '../context/types';
 import { REPO_ROOT } from './shared';
@@ -8,11 +8,6 @@ import { runLoggedCommand } from '../shared/utils';
 
 const LIGHTLY_STUDIO_ABS = resolve(REPO_ROOT, 'lightly_studio');
 const NAME = 'backend/coverage';
-// Built-frontend dir the app's webapp route requires at import time; mocked by ensureWebappDist.
-const WEBAPP_DIST_DIR = resolve(
-    LIGHTLY_STUDIO_ABS,
-    'src/lightly_studio/dist_lightly_studio_view_app'
-);
 const BACKEND_PREFIX = 'lightly_studio/src/lightly_studio/';
 const COVERAGE_FILE = 'coverage.json';
 const MAX_BUFFER = 10 * 1024 * 1024;
@@ -87,56 +82,49 @@ export const backendCoverageGuardrail: Guardrail = createCoverageGuardrail<Cover
     // testFiles and sourcePaths are repo-relative; deduplication of testFiles is the
     // caller's responsibility.
     async runTests(testFiles: string[], sourcePaths: string[]): Promise<CoverageData | null> {
-        // conftest.py imports the full app, which needs the built frontend dir; mock it so
-        // pytest can collect, and clean up afterwards so local runs leave no stub behind.
-        const cleanupWebappDist = ensureWebappDist();
+        // Pytest runs from lightly_studio/ so strip the leading lightly_studio/ prefix.
+        const testFilesLocal = testFiles.map((f) => f.slice('lightly_studio/'.length));
+        // coverage.py misreads *.py paths (relative or absolute) as module identifiers
+        // and produces no data. Directory paths are matched by filesystem path instead,
+        // so we pass the parent directory of each changed source file.
+        // Deduplicate: multiple files in the same directory share one --cov arg.
+        const covDirs = [
+            ...new Set(
+                sourcePaths.map((p) => {
+                    const rel = p.slice('lightly_studio/'.length);
+                    return rel.substring(0, rel.lastIndexOf('/'));
+                })
+            )
+        ];
+        const covArgs = covDirs.map((d) => `--cov=${d}`);
+        const coveragePath = resolve(LIGHTLY_STUDIO_ABS, COVERAGE_FILE);
+
+        // Remove any stale report so we only ever parse the file produced by this run.
+        if (existsSync(coveragePath)) rmSync(coveragePath);
+
         try {
-            // Pytest runs from lightly_studio/ so strip the leading lightly_studio/ prefix.
-            const testFilesLocal = testFiles.map((f) => f.slice('lightly_studio/'.length));
-            // coverage.py misreads *.py paths (relative or absolute) as module identifiers
-            // and produces no data. Directory paths are matched by filesystem path instead,
-            // so we pass the parent directory of each changed source file.
-            // Deduplicate: multiple files in the same directory share one --cov arg.
-            const covDirs = [
-                ...new Set(
-                    sourcePaths.map((p) => {
-                        const rel = p.slice('lightly_studio/'.length);
-                        return rel.substring(0, rel.lastIndexOf('/'));
-                    })
-                )
-            ];
-            const covArgs = covDirs.map((d) => `--cov=${d}`);
-            const coveragePath = resolve(LIGHTLY_STUDIO_ABS, COVERAGE_FILE);
-
-            // Remove any stale report so we only ever parse the file produced by this run.
-            if (existsSync(coveragePath)) rmSync(coveragePath);
-
-            try {
-                await runLoggedCommand(
-                    NAME,
-                    'uv',
-                    [
-                        'run',
-                        'pytest',
-                        ...testFilesLocal,
-                        ...covArgs,
-                        `--cov-report=json:${COVERAGE_FILE}`,
-                        '-q',
-                        '--no-header'
-                    ],
-                    { cwd: LIGHTLY_STUDIO_ABS, maxBuffer: MAX_BUFFER }
-                );
-            } catch (err: unknown) {
-                // pytest exits non-zero when tests fail; coverage.json is still produced.
-                // Re-throw for system-level errors (e.g. uv not on PATH, bad cwd).
-                if (!existsSync(coveragePath)) throw err;
-            }
-
-            if (!existsSync(coveragePath)) return null;
-            return JSON.parse(readFileSync(coveragePath, 'utf-8')) as CoverageData;
-        } finally {
-            cleanupWebappDist();
+            await runLoggedCommand(
+                NAME,
+                'uv',
+                [
+                    'run',
+                    'pytest',
+                    ...testFilesLocal,
+                    ...covArgs,
+                    `--cov-report=json:${COVERAGE_FILE}`,
+                    '-q',
+                    '--no-header'
+                ],
+                { cwd: LIGHTLY_STUDIO_ABS, maxBuffer: MAX_BUFFER }
+            );
+        } catch (err: unknown) {
+            // pytest exits non-zero when tests fail; coverage.json is still produced.
+            // Re-throw for system-level errors (e.g. uv not on PATH, bad cwd).
+            if (!existsSync(coveragePath)) throw err;
         }
+
+        if (!existsSync(coveragePath)) return null;
+        return JSON.parse(readFileSync(coveragePath, 'utf-8')) as CoverageData;
     },
 
     parseCoverageRatio(
@@ -147,35 +135,6 @@ export const backendCoverageGuardrail: Guardrail = createCoverageGuardrail<Cover
         return parseCoverageRatio(data, sourcePath, addedLines);
     }
 });
-
-// Ensures the mocked webapp dist exists so importing the app in conftest.py doesn't raise,
-// and returns a cleanup that removes only what it created. Cleanup matters for local runs: a
-// leftover empty index.html would let `lightly-studio gui` serve a blank page instead of
-// raising the intended "did you forget to build the webapp?" error. A pre-existing real build
-// is always preserved — the index is created exclusively and cleanup is scoped to our own
-// additions.
-export function ensureWebappDist(): () => void {
-    const dirExisted = existsSync(WEBAPP_DIST_DIR);
-    mkdirSync(WEBAPP_DIST_DIR, { recursive: true });
-
-    const indexFile = resolve(WEBAPP_DIST_DIR, 'index.html');
-    let indexCreated = false;
-    try {
-        // Exclusive create: never truncate a real index.html (e.g. written by a concurrent build).
-        writeFileSync(indexFile, '', { flag: 'wx' });
-        indexCreated = true;
-    } catch (err: unknown) {
-        if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err;
-    }
-
-    return () => {
-        if (!dirExisted) {
-            rmSync(WEBAPP_DIST_DIR, { recursive: true, force: true });
-        } else if (indexCreated) {
-            rmSync(indexFile, { force: true });
-        }
-    };
-}
 
 function isExcluded(path: string): boolean {
     const name = path.split('/').at(-1) ?? '';
