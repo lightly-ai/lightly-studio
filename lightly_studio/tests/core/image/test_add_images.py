@@ -633,21 +633,18 @@ def test_create_label_map(db_session: Session) -> None:
     assert label_map_2[2] not in label_map_1.values()  # bird is new
 
 
-def test_tag_samples_by_directory_tag_depth_invalid(
+def test_tag_samples_by_directory_tag_depth_negative(
     db_session: Session,
 ) -> None:
-    """Tests that tag_depth > 1 raises an error."""
-    # We don't need a full collection, just the function call
-    with pytest.raises(
-        NotImplementedError,
-        match="tag_depth > 1 is not yet implemented for add_images_from_path",
-    ):
+    """Tests that a negative tag_depth raises an error."""
+    # We don't need a full collection, just the function call.
+    with pytest.raises(ValueError, match="tag_depth must be non-negative"):
         add_images.tag_samples_by_directory(
             session=db_session,
             collection_id=UUID(int=0),
             input_path=".",
             sample_ids=[],
-            tag_depth=2,
+            tag_depth=-1,
         )
 
 
@@ -721,6 +718,43 @@ def test_tag_samples_by_directory_tag_depth_1(
     assert sample_filename_to_tags["img2.png"] == {"site_1"}
     assert sample_filename_to_tags["img3.png"] == {" site_2 "}
     assert sample_filename_to_tags["root_img.png"] == set()
+
+
+def test_tag_samples_by_directory_tag_depth_2(
+    db_session: Session,
+) -> None:
+    """Tests that tag_depth=2 tags samples by their first two directory levels."""
+    mock_root_path = "/mock/path"
+    collection_table = helpers_resolvers.create_collection(db_session, "test_collection")
+    created_images = helpers_resolvers.create_images(
+        db_session=db_session,
+        collection_id=collection_table.collection_id,
+        images=[
+            ImageStub(path=f"{mock_root_path}/root_img.png"),
+            ImageStub(path=f"{mock_root_path}/dogs/img1.png"),
+            ImageStub(path=f"{mock_root_path}/dogs/husky/img2.png"),
+            ImageStub(path=f"{mock_root_path}/dogs/husky/puppy/img3.png"),
+        ],
+    )
+    # Run with tag_depth=2
+    add_images.tag_samples_by_directory(
+        session=db_session,
+        collection_id=collection_table.collection_id,
+        input_path=mock_root_path,
+        sample_ids=[img.sample_id for img in created_images],
+        tag_depth=2,
+    )
+
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection_table.collection_id
+    ).samples
+    assert len(samples) == 4
+
+    sample_filename_to_tags = {s.file_name: {t.name for t in s.sample.tags} for s in samples}
+    assert sample_filename_to_tags["root_img.png"] == set()
+    assert sample_filename_to_tags["img1.png"] == {"dogs"}
+    assert sample_filename_to_tags["img2.png"] == {"dogs", "husky"}
+    assert sample_filename_to_tags["img3.png"] == {"dogs", "husky"}
 
 
 def test_tag_samples_by_directory__file_url_normalization(
