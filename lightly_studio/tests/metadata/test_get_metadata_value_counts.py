@@ -64,6 +64,7 @@ def test_get_metadata_value_counts__categorical_values_and_missing(
         ("Other", 1),
     ]
     assert counts["city"].other_count == 0
+    # 2 missing: one sample has city=null in its metadata row, another has no metadata row at all.
     assert counts["city"].missing_count == 2
     assert [(entry.value, entry.count) for entry in counts["active"].value_counts] == [
         (True, 3),
