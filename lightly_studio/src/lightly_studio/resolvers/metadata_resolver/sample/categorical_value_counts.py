@@ -39,8 +39,10 @@ def get_metadata_value_counts(
         session: The database session.
         collection_id: The collection whose sample metadata is aggregated.
         filters: Optional image filters restricting the counted samples.
-        fields: Categorical fields to count. All categorical fields are counted
-            when absent.
+        fields: Categorical fields to count. Pass only the fields that will be
+            rendered (e.g. on a bar chart) to avoid running DB queries for
+            fields whose results would never be used. All categorical fields
+            are counted when absent.
 
     Returns:
         A mapping from categorical metadata keys to their value counts.
@@ -73,12 +75,6 @@ def _get_field_value_counts(
     filters: ImageFilter | None,
 ) -> MetadataValueCountsView:
     value_expr = db_json.json_extract_string(column=SampleMetadataTable.data, field=metadata_key)
-    total_count, concrete_count = _get_total_and_concrete_counts(
-        session=session,
-        collection_id=collection_id,
-        value_expr=value_expr,
-        filters=filters,
-    )
     rows = _get_top_value_counts(
         session=session,
         collection_id=collection_id,
@@ -91,35 +87,7 @@ def _get_field_value_counts(
         )
         for value, count in rows
     ]
-    top_count = sum(value_count.count for value_count in value_counts)
-    return MetadataValueCountsView(
-        value_counts=value_counts,
-        other_count=concrete_count - top_count,
-        missing_count=total_count - concrete_count,
-    )
-
-
-def _get_total_and_concrete_counts(
-    session: Session,
-    collection_id: UUID,
-    value_expr: ColumnElement[str],
-    filters: ImageFilter | None,
-) -> tuple[int, int]:
-    query = (
-        sqlmodel.select(func.count(), func.count(value_expr))
-        .select_from(SampleTable)
-        .join(
-            SampleMetadataTable,
-            sqlmodel.col(SampleMetadataTable.sample_id) == sqlmodel.col(SampleTable.sample_id),
-            isouter=True,
-        )
-        .where(SampleTable.collection_id == collection_id)
-    )
-    query = metadata_helpers.apply_image_filters(
-        query=query, collection_id=collection_id, filters=filters
-    )
-    total_count, concrete_count = session.execute(query).one()
-    return int(total_count), int(concrete_count)
+    return MetadataValueCountsView(value_counts=value_counts)
 
 
 def _get_top_value_counts(
