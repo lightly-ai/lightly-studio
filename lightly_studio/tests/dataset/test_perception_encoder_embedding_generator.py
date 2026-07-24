@@ -123,8 +123,6 @@ class TestPerceptionEncoderEmbeddingGenerator:
         assert np.isclose(dog_video_embedding_normed[3], -0.077, atol=1e-2)
 
     def test_embed_videos__skips_broken_and_missing(self, tmp_path: Path) -> None:
-        # Broken/missing videos are skipped per-file: embeddings cover only readable videos
-        # and kept_indices maps each row back to its input position, so callers stay in sync.
         perception_encoder = PerceptionEncoderEmbeddingGenerator()
         dog_video_path = FIXTURES_DIR / "dog.mp4"
         broken_path = tmp_path / "broken.mp4"

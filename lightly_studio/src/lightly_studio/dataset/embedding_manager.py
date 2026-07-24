@@ -382,8 +382,7 @@ class EmbeddingManager:
         if len(filepaths) != len(sample_ids):
             raise ValueError("Could not fetch all video paths for the provided IDs.")
 
-        # Generate embeddings for the samples. Broken videos are skipped, so filter the
-        # sample IDs by kept_indices to keep them aligned with the returned embeddings.
+        # Generate embeddings for the samples.
         result = model.embed_videos(filepaths=filepaths)
         kept_sample_ids = [sample_ids[index] for index in result.kept_indices]
 

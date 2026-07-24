@@ -165,9 +165,6 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
     def embed_videos(self, filepaths: list[str]) -> EmbeddingResult:
         """Embed videos with Perception Encoder, skipping missing or broken files.
 
-        A video that is missing or unreadable/undecodable is skipped rather than aborting
-        the whole run, and is recorded once as missing or broken.
-
         Args:
             filepaths: A list of file paths to the videos to embed.
 
@@ -176,8 +173,7 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             ``kept_indices`` mapping each row back to its input position.
 
         Raises:
-            AllInputFilesFailedError: If at least one file was attempted and every attempted
-                file was missing or broken (i.e. no file could be read and embedded).
+            AllInputFilesFailedError: If every attempted file was missing or broken.
         """
         total_videos = len(filepaths)
         if not total_videos:
@@ -185,14 +181,10 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             return EmbeddingResult(embeddings=empty, kept_indices=[])
 
         embeddings = np.empty((total_videos, self._model.output_dim), dtype=np.float32)
-        # Input indices of the videos that were embedded (their file could be read), filled
-        # in input order by the generator below as it yields each readable video.
         kept_indices: list[int] = []
         report = FileOutcomeReport(label_overrides={FileOutcome.ADDED: "embedded"})
 
         def preprocessed_videos_iter() -> Iterator[torch.Tensor]:
-            # A missing/broken video raises a typed signal that report.track records as its
-            # outcome and suppresses, so it is skipped instead of yielded into a batch.
             for index, filepath in enumerate(filepaths):
                 frames: torch.Tensor | None = None
                 with report.track(path=filepath):
@@ -201,8 +193,6 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
                     kept_indices.append(index)
                     yield frames
 
-        # Every readable video yields a fixed VIDEO_FRAMES_PER_SAMPLE-frame tensor of the same
-        # shape, so the per-video tensors can be stacked directly into a batch.
         position = 0
         with (
             tqdm(total=total_videos, desc="Generating embeddings", unit=" videos") as progress_bar,
@@ -221,8 +211,6 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
         report.log_summary()
         report.raise_if_all_failed()
 
-        # Readable videos were written contiguously in input order; kept_indices maps each
-        # returned row back to its input position.
         return EmbeddingResult(embeddings=embeddings[:position], kept_indices=kept_indices)
 
 
@@ -253,8 +241,6 @@ def _load_video_frames(
         BrokenInputFileError: If the video is present but unreadable/undecodable (corrupt,
             has no video stream, or has no usable duration).
     """
-    # Detect a missing path proactively: FileNotFoundError is unreliable across fsspec
-    # backends and is a subclass of OSError, which we treat as broken.
     fs, fs_path = fsspec.core.url_to_fs(url=filepath)
     if not fs.exists(fs_path):
         raise MissingInputFileError(f"Video does not exist: '{filepath}'.")
