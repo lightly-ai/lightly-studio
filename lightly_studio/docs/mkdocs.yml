@@ -37,6 +37,7 @@ nav:
   - 🏢 Enterprise:
     - Enterprise:
       - enterprise/index.md
+      - Collaboration and Permissions: enterprise/collaboration.md
       - Connect from Python: enterprise/connect.md
       - Security and Architecture: enterprise/security.md
       - On-Premise Deployment: enterprise/on-premise.md
