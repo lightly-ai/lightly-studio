@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Callable
+from typing import Callable
 from uuid import UUID
 
 import fsspec
@@ -16,6 +16,7 @@ from tqdm import tqdm
 
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
+from lightly_studio.utils import batching
 from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transforms
 
 from . import file_utils, image_crop_embedding, image_embedding
@@ -170,54 +171,27 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             return np.empty((0, self._model.output_dim), dtype=np.float32)
 
         embeddings = np.empty((total_videos, self._model.output_dim), dtype=np.float32)
-        # Reusable batch buffer, lazily sized from the first preprocessed video.
-        batch_buffer: torch.Tensor | None = None
-        batch_indices: list[int] = []
-
+        # Every video yields a fixed VIDEO_FRAMES_PER_SAMPLE-frame tensor of the same shape,
+        # so the per-video tensors can be stacked directly into a batch.
+        preprocessed_videos = (
+            _load_video_frames(filepath, self._preprocess) for filepath in filepaths
+        )
+        position = 0
         with (
             tqdm(total=total_videos, desc="Generating embeddings", unit=" videos") as progress_bar,
             torch.no_grad(),
         ):
-            for index, filepath in enumerate(filepaths):
-                frames = _load_video_frames(filepath, self._preprocess)
-                if batch_buffer is None:
-                    batch_buffer = torch.empty((MAX_BATCH_SIZE, *frames.shape), dtype=frames.dtype)
-                batch_buffer[len(batch_indices)] = frames
-                batch_indices.append(index)
-                if len(batch_indices) >= MAX_BATCH_SIZE:
-                    self._flush_video_batch(
-                        batch_buffer=batch_buffer,
-                        batch_indices=batch_indices,
-                        embeddings=embeddings,
-                        progress_bar=progress_bar,
-                    )
-
-            self._flush_video_batch(
-                batch_buffer=batch_buffer,
-                batch_indices=batch_indices,
-                embeddings=embeddings,
-                progress_bar=progress_bar,
-            )
+            for batch in batching.batched(preprocessed_videos, batch_size=MAX_BATCH_SIZE):
+                videos_tensor = torch.stack(batch).to(self._device)
+                batch_embeddings = (
+                    self._model.encode_video(videos_tensor, normalize=True).cpu().numpy()
+                )
+                batch_size = videos_tensor.size(0)
+                embeddings[position : position + batch_size] = batch_embeddings
+                position += batch_size
+                progress_bar.update(batch_size)
 
         return embeddings
-
-    def _flush_video_batch(
-        self,
-        batch_buffer: torch.Tensor | None,
-        batch_indices: list[int],
-        embeddings: NDArray[np.float32],
-        progress_bar: Any,
-    ) -> None:
-        """Encode the current video batch and write results into ``embeddings``."""
-        if batch_buffer is None or not batch_indices:
-            return
-        filled = len(batch_indices)
-        videos_tensor = batch_buffer[:filled].to(self._device)
-        batch_embeddings = self._model.encode_video(videos_tensor, normalize=True).cpu().numpy()
-        for batch_position, video_index in enumerate(batch_indices):
-            embeddings[video_index] = batch_embeddings[batch_position]
-        progress_bar.update(filled)
-        batch_indices.clear()
 
 
 def _load_video_frames(
