@@ -109,7 +109,7 @@ _DEFAULT_METADATA_VALUE_COUNTS_BODY = Body(default=_DEFAULT_METADATA_VALUE_COUNT
 def get_metadata_value_counts(
     session: SessionDep,
     collection_id: Annotated[UUID, Path(title="collection Id")],
-    request: MetadataValueCountsRequest,
+    request: MetadataValueCountsRequest = _DEFAULT_METADATA_VALUE_COUNTS_BODY,
 ) -> dict[str, MetadataValueCountsView]:
     """Compute categorical metadata value counts under optional sample filters.
 
