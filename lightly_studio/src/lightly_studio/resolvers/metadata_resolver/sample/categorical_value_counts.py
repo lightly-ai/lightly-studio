@@ -39,8 +39,10 @@ def get_metadata_value_counts(
         session: The database session.
         collection_id: The collection whose sample metadata is aggregated.
         filters: Optional image filters restricting the counted samples.
-        fields: Categorical fields to count. All categorical fields are counted
-            when absent.
+        fields: Categorical fields to count. Pass only the fields that will be
+            rendered (e.g. on a bar chart) to avoid running DB queries for
+            fields whose results would never be used. All categorical fields
+            are counted when absent.
 
     Returns:
         A mapping from categorical metadata keys to their value counts.
