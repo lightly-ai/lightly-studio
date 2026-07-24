@@ -3,6 +3,13 @@
     import { formatInteger } from '$lib/utils';
     import { Slider } from '$lib/components/ui/slider/index.js';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds';
+
+    const {
+        onFilterChanged
+    }: {
+        onFilterChanged?: (fieldName: string, min: number, max: number) => void;
+    } = $props();
+
     const { videoFramesBounds, videoFramesBoundsValues, updateVideoFramesBoundsValues } =
         useVideoFramesBounds(page.params.collection_id);
 
@@ -15,6 +22,7 @@
                 max: newValues[1]
             }
         });
+        onFilterChanged?.('frame_number', newValues[0], newValues[1]);
     };
 </script>
 

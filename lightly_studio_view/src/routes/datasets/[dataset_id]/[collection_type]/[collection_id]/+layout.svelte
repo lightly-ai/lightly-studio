@@ -73,7 +73,8 @@
         useSelectionSummary,
         useImageAnnotationCounts,
         useImageAnnotationCountsQueryKey,
-        useNumericMetadataDistribution
+        useNumericMetadataDistribution,
+        usePostHog
     } from '$lib/hooks';
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
     import { isInputElement } from '$lib/utils';
@@ -88,6 +89,8 @@
         collection,
         globalStorage: { setLastGridType, clearSelectedSamples, clearSelectedSampleAnnotationCrops }
     } = $derived(data);
+
+    const { trackEvent } = usePostHog();
 
     // The dataset ID actually contains the collection ID.
     const datasetId = $derived(page.params.dataset_id!);
@@ -713,7 +716,19 @@
                             {#if isImages || isVideos || isVideoFrames}
                                 {#key collectionId}
                                     <MetadataFilterChips {collectionId} />
-                                    <CombinedMetadataDimensionsFilters {isVideos} {isVideoFrames} />
+                                    <CombinedMetadataDimensionsFilters
+                                        {isVideos}
+                                        {isVideoFrames}
+                                        onFilterChanged={(fieldName, min, max) => {
+                                            trackEvent('metadata_filter_changed', {
+                                                collection_id: collectionId,
+                                                field_name: fieldName,
+                                                action: 'range_changed',
+                                                min,
+                                                max
+                                            });
+                                        }}
+                                    />
                                 {/key}
                             {/if}
                         </div>

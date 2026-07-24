@@ -14,10 +14,12 @@
 
     const {
         isVideos = false,
-        isVideoFrames = false
+        isVideoFrames = false,
+        onFilterChanged
     }: {
         isVideos: boolean;
         isVideoFrames: boolean;
+        onFilterChanged?: (fieldName: string, min: number, max: number) => void;
     } = $props();
 
     // Dimension filters logic
@@ -35,6 +37,7 @@
             min_height: $values.min_height,
             max_height: $values.max_height
         });
+        onFilterChanged?.('width', newValues[0], newValues[1]);
     };
 
     const handleChangeHeight = (newValues: number[]) => {
@@ -45,6 +48,7 @@
             min_height: newValues[0],
             max_height: newValues[1]
         });
+        onFilterChanged?.('height', newValues[0], newValues[1]);
     };
 
     // Metadata filters logic
@@ -61,6 +65,7 @@
             max: newValues[1]
         };
         updateMetadataValues(currentValues);
+        onFilterChanged?.(metadataKey, newValues[0], newValues[1]);
     };
 
     // Get numerical metadata fields
@@ -120,11 +125,11 @@
                 </div>
             </div>
         {:else if isVideos}
-            <VideoFieldBoundsFilters />
+            <VideoFieldBoundsFilters {onFilterChanged} />
         {/if}
 
         {#if isVideoFrames}
-            <VideoFrameBoundsFilter />
+            <VideoFrameBoundsFilter {onFilterChanged} />
         {/if}
 
         <!-- Metadata Filters -->
