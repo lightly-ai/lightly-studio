@@ -37,12 +37,12 @@ export function toggleTagSelection({
     updateSelected(collectionId, newSelected);
 
     const tag = allTags.find((t) => t.tag_id === tagId);
-    const filter_value = tag?.name ?? tagId;
+    const filterValue = tag?.name ?? tagId;
 
     trackEvent('grid_filter_toggled', {
         collection_id: collectionId,
         filter_type: 'tag',
-        filter_value,
+        filter_value: filterValue,
         action,
         active_count: newSelected.size
     });

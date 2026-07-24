@@ -251,9 +251,9 @@ describe('useTags Hook', () => {
     });
 
     it('fires grid_filter_toggled with action selected when tag is not yet selected', async () => {
-        const { tagSelectionToggle, clearTagsSelected } = useTags({ collection_id: '123' });
+        const { tagSelectionToggle, clearTagsSelected, tags } = useTags({ collection_id: '123' });
         clearTagsSelected();
-        await waitFor(() => expect(get(useTags({ collection_id: '123' }).tags)).toEqual(mockTags));
+        await waitFor(() => expect(get(tags)).toEqual(mockTags));
 
         tagSelectionToggle('1');
 
@@ -267,9 +267,9 @@ describe('useTags Hook', () => {
     });
 
     it('fires grid_filter_toggled with action unselected when tag is already selected', async () => {
-        const { tagSelectionToggle, clearTagsSelected } = useTags({ collection_id: '123' });
+        const { tagSelectionToggle, clearTagsSelected, tags } = useTags({ collection_id: '123' });
         clearTagsSelected();
-        await waitFor(() => expect(get(useTags({ collection_id: '123' }).tags)).toEqual(mockTags));
+        await waitFor(() => expect(get(tags)).toEqual(mockTags));
 
         tagSelectionToggle('1');
         trackEvent.mockClear();

@@ -19,19 +19,19 @@ const tags: Tag[] = [
     }
 ];
 
+const defaultParams = {
+    tagId: 't1',
+    collectionId: 'col-1',
+    currentSelected: new Set<string>(),
+    allTags: tags
+};
+
 describe('toggleTagSelection', () => {
     it('calls updateSelected with the tag added when it was not selected', () => {
         const updateSelected = vi.fn();
         const trackEvent = vi.fn();
 
-        toggleTagSelection({
-            tagId: 't1',
-            collectionId: 'col-1',
-            currentSelected: new Set(),
-            allTags: tags,
-            updateSelected,
-            trackEvent
-        });
+        toggleTagSelection({ ...defaultParams, updateSelected, trackEvent });
 
         expect(updateSelected).toHaveBeenCalledWith('col-1', new Set(['t1']));
     });
@@ -41,10 +41,8 @@ describe('toggleTagSelection', () => {
         const trackEvent = vi.fn();
 
         toggleTagSelection({
-            tagId: 't1',
-            collectionId: 'col-1',
+            ...defaultParams,
             currentSelected: new Set(['t1', 't2']),
-            allTags: tags,
             updateSelected,
             trackEvent
         });
@@ -56,14 +54,7 @@ describe('toggleTagSelection', () => {
         const updateSelected = vi.fn();
         const trackEvent = vi.fn();
 
-        toggleTagSelection({
-            tagId: 't1',
-            collectionId: 'col-1',
-            currentSelected: new Set(),
-            allTags: tags,
-            updateSelected,
-            trackEvent
-        });
+        toggleTagSelection({ ...defaultParams, updateSelected, trackEvent });
 
         expect(trackEvent).toHaveBeenCalledWith('grid_filter_toggled', {
             collection_id: 'col-1',
@@ -79,10 +70,8 @@ describe('toggleTagSelection', () => {
         const trackEvent = vi.fn();
 
         toggleTagSelection({
-            tagId: 't1',
-            collectionId: 'col-1',
+            ...defaultParams,
             currentSelected: new Set(['t1', 't2']),
-            allTags: tags,
             updateSelected,
             trackEvent
         });
@@ -100,14 +89,7 @@ describe('toggleTagSelection', () => {
         const updateSelected = vi.fn();
         const trackEvent = vi.fn();
 
-        toggleTagSelection({
-            tagId: 'unknown',
-            collectionId: 'col-1',
-            currentSelected: new Set(),
-            allTags: tags,
-            updateSelected,
-            trackEvent
-        });
+        toggleTagSelection({ ...defaultParams, tagId: 'unknown', updateSelected, trackEvent });
 
         expect(trackEvent).toHaveBeenCalledWith('grid_filter_toggled', {
             collection_id: 'col-1',
@@ -123,10 +105,9 @@ describe('toggleTagSelection', () => {
         const trackEvent = vi.fn();
 
         toggleTagSelection({
+            ...defaultParams,
             tagId: 't2',
-            collectionId: 'col-1',
             currentSelected: new Set(['t1']),
-            allTags: tags,
             updateSelected,
             trackEvent
         });
