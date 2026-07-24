@@ -2,6 +2,7 @@ import type { Octokit } from '../shared/octokit';
 import type { Verdict } from '../shared/verdict';
 import { renderComment, upsertComment } from './comment';
 import { deriveTarget, refreshTarget, type BotTarget } from './derive-target';
+import { isSupersededRun, type SupersededRunParams } from './latest-run';
 import { approve, dismissApproval } from './review';
 import { effectiveVerdict, verdictMatchesTarget } from './verdict-policy';
 
@@ -10,10 +11,20 @@ interface RunBotParams {
     owner: string;
     repo: string;
     trustedHeadSha: string;
+    /** Head branch of the triggering run, to scope the recency check. */
+    headBranch: string;
     botLogin: string;
     guardrailsSucceeded: boolean;
     requiredGuardrailNames: readonly string[];
+    /** The guardrail workflow that triggered this run, for the recency check. */
+    guardrailWorkflowId: number;
+    /** `run_number` of the triggering guardrail run, for the recency check. */
+    guardrailRunNumber: number;
+    /** `run_attempt` of the triggering guardrail run, for the recency check. */
+    guardrailRunAttempt: number;
     verdict: unknown;
+    /** URL of the guardrail run that produced the verdict, linked in the comment. */
+    runUrl?: string;
 }
 
 export type BotResult =
@@ -27,6 +38,16 @@ type VerifyOutcome = { target: BotTarget; actionParams: BotActionParams } | { do
 
 /** Apply a current pass verdict, revoking the bot approval for every other outcome. */
 export async function runBot(params: RunBotParams): Promise<BotResult> {
+    // Check first, before any read or write: a stale run must not dismiss the
+    // approval a newer run for this head just created.
+    //
+    // This cannot fully close the race: the concurrency group cancels by event
+    // arrival, not run recency, so a stale delivery can still cancel a newer bot
+    // mid-action, then skip here. Fully closing it is a concurrency-config change.
+    if (await isSupersededRun(toSupersededParams(params))) {
+        return { status: 'skipped', reason: 'A newer guardrail run for this head superseded it.' };
+    }
+
     const outcome = await verifyTarget(params);
     if ('done' in outcome) return outcome.done;
 
@@ -34,7 +55,7 @@ export async function runBot(params: RunBotParams): Promise<BotResult> {
     const verdict = effectiveVerdict(params, target);
     return verdict.verdict === 'pass'
         ? applyPass(params, target, verdict, actionParams)
-        : applyFailure(target, verdict, actionParams);
+        : applyFailure(params, target, verdict, actionParams);
 }
 
 /**
@@ -58,6 +79,19 @@ async function verifyTarget(params: RunBotParams): Promise<VerifyOutcome> {
         return { done: { status: 'dismissed', prNumber: derivedTarget.prNumber } };
     }
     return { target, actionParams };
+}
+
+function toSupersededParams(params: RunBotParams): SupersededRunParams {
+    return {
+        octokit: params.octokit,
+        owner: params.owner,
+        repo: params.repo,
+        headSha: params.trustedHeadSha,
+        headBranch: params.headBranch,
+        workflowId: params.guardrailWorkflowId,
+        runNumber: params.guardrailRunNumber,
+        runAttempt: params.guardrailRunAttempt
+    };
 }
 
 function toActionParams(params: RunBotParams, prNumber: number): BotActionParams {
@@ -102,24 +136,26 @@ async function applyPass(
         return { status: 'dismissed', prNumber: target.prNumber };
     }
 
-    await updateStatusComment(verdict, finalTarget.headSha, actionParams);
+    await updateStatusComment(verdict, finalTarget.headSha, params.runUrl, actionParams);
     return { status: 'approved', prNumber: finalTarget.prNumber };
 }
 
 async function applyFailure(
+    params: RunBotParams,
     target: BotTarget,
     verdict: Verdict,
     actionParams: BotActionParams
 ): Promise<BotResult> {
     await dismissApproval(actionParams);
-    await updateStatusComment(verdict, target.headSha, actionParams);
+    await updateStatusComment(verdict, target.headSha, params.runUrl, actionParams);
     return { status: 'dismissed', prNumber: target.prNumber };
 }
 
 async function updateStatusComment(
     verdict: Verdict,
     headSha: string,
+    runUrl: string | undefined,
     params: Omit<Parameters<typeof upsertComment>[0], 'body'>
 ): Promise<void> {
-    await upsertComment({ ...params, body: renderComment(verdict, headSha) });
+    await upsertComment({ ...params, body: renderComment({ verdict, headSha, runUrl }) });
 }

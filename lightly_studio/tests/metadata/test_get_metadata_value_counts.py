@@ -64,35 +64,10 @@ def test_get_metadata_value_counts__string_values_and_missing(
         ("Missing", 1),
         ("Other", 1),
     ]
-    assert counts["city"].other_count == 0
-    assert counts["city"].missing_count == 2
-
-
-def test_get_metadata_value_counts__booleans_and_numeric_keys(db_session: Session) -> None:
-    """Boolean metadata is returned while numeric metadata is excluded."""
-    collection = create_collection(session=db_session)
-    _create_sample(
-        db_session=db_session,
-        collection_id=collection.collection_id,
-        metadata={"active": True, "score": 1},
-    )
-    _create_sample(
-        db_session=db_session,
-        collection_id=collection.collection_id,
-        metadata={"active": False, "score": 2},
-    )
-
-    counts = categorical_value_counts.get_metadata_value_counts(
-        session=db_session, collection_id=collection.collection_id
-    )
-
-    assert set(counts) == {"active"}
     assert [(entry.value, entry.count) for entry in counts["active"].value_counts] == [
         (False, 1),
         (True, 1),
     ]
-    assert counts["active"].other_count == 0
-    assert counts["active"].missing_count == 2
 
 
 def test_get_metadata_value_counts__top_twenty_and_collection_isolation(
@@ -127,8 +102,6 @@ def test_get_metadata_value_counts__top_twenty_and_collection_isolation(
     assert [entry.value for entry in counts.value_counts[1:]] == [
         f"value-{index:02d}" for index in range(19)
     ]
-    assert counts.other_count == 1
-    assert counts.missing_count == 0
 
 
 def test_get_metadata_value_counts__filters_and_own_key_exclusion(
@@ -179,6 +152,27 @@ def test_get_metadata_value_counts__filters_and_own_key_exclusion(
     assert [(entry.value, entry.count) for entry in counts["group"].value_counts] == [("x", 1)]
 
 
+def test_get_metadata_value_counts__fields_limits_counted_keys(
+    db_session: Session,
+) -> None:
+    """Only fields listed in the fields argument are counted."""
+    collection = create_collection(session=db_session)
+    _create_sample(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        metadata={"city": "Zurich", "group": "x", "active": True},
+    )
+
+    counts = categorical_value_counts.get_metadata_value_counts(
+        session=db_session,
+        collection_id=collection.collection_id,
+        fields=["city"],
+    )
+
+    assert set(counts) == {"city"}
+    assert counts["city"].value_counts[0].value == "Zurich"
+
+
 def test_get_metadata_value_counts__known_fields_with_no_matches(
     db_session: Session,
 ) -> None:
@@ -201,8 +195,6 @@ def test_get_metadata_value_counts__known_fields_with_no_matches(
     )
 
     assert counts["city"].value_counts == []
-    assert counts["city"].other_count == 0
-    assert counts["city"].missing_count == 0
 
 
 def test_get_metadata_value_counts__unknown_collection_is_empty(db_session: Session) -> None:

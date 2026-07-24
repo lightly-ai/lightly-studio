@@ -77,9 +77,22 @@ async function main(env: NodeJS.ProcessEnv): Promise<void> {
 
 async function writeVerdict(verdict: Verdict): Promise<void> {
     await writeFile(VERDICT_PATH, `${JSON.stringify(verdict, null, 2)}\n`);
+    printVerdict(verdict);
+}
+
+/** Echo the verdict to the CI log so a run can be inspected without downloading the artifact. */
+function printVerdict(verdict: Verdict): void {
     console.log(
         `Verdict: ${verdict.verdict} (${verdict.guardrails.length} guardrail(s)) → ${VERDICT_PATH}`
     );
+    for (const guardrail of verdict.guardrails) {
+        // Indent multi-line summaries so each guardrail reads as one block.
+        const summary = guardrail.summary.replace(/\n/g, '\n    ');
+        console.log(`  [${guardrail.status}] ${guardrail.name}: ${summary}`);
+    }
+    if (verdict.reason !== undefined) {
+        console.log(`\nReason: ${verdict.reason}`);
+    }
 }
 
 // Only a crash exits non-zero. A `fail` verdict returns cleanly, so it publishes
