@@ -2,7 +2,11 @@
 
 ## Coding Guidelines
 
-Guidelines are stored in the `ai_guidelines` folder.
+**Before modifying any file, read the guidelines for its area:**
+- TypeScript / frontend files → read [`ai_guidelines/frontend.md`](./ai_guidelines/frontend.md)
+- Python / backend files → read [`ai_guidelines/python.md`](./ai_guidelines/python.md) and [`ai_guidelines/backend.md`](./ai_guidelines/backend.md)
+
+All guidelines are in the `ai_guidelines` folder.
 
 - [Best Practices](./ai_guidelines/best_practices.md): General coding principles for readability, maintainability, and performance.
 - [Pull Requests](./ai_guidelines/pull_requests.md): Guidelines for submitting a pull request.
