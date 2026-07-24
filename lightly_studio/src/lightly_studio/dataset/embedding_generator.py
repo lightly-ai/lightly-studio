@@ -83,7 +83,7 @@ class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
 
     def embed_image_crops(
         self, image_crops: list[ImageCrop], show_progress: bool = True
-    ) -> NDArray[np.float32]:
+    ) -> EmbeddingResult:
         """Generate embeddings for image crops.
 
         Args:
@@ -91,8 +91,8 @@ class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
             show_progress: Whether to show a progress bar during embedding.
 
         Returns:
-            A numpy array representing the generated embeddings in the same order
-            as the input crops.
+            An ``EmbeddingResult`` with embeddings for the crops of readable files,
+            in the same order as the corresponding input crops.
         """
         ...
 
@@ -173,10 +173,11 @@ class RandomEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator)
 
     def embed_image_crops(
         self, image_crops: list[ImageCrop], show_progress: bool = True
-    ) -> NDArray[np.float32]:
+    ) -> EmbeddingResult:
         """Generate random embeddings for multiple image crops."""
         _ = show_progress  # Not used for random embeddings.
-        return np.random.rand(len(image_crops), self._dimension).astype(np.float32)
+        embeddings = np.random.rand(len(image_crops), self._dimension).astype(np.float32)
+        return EmbeddingResult(embeddings=embeddings, kept_indices=list(range(len(image_crops))))
 
     def embed_pil_images(
         self, images: list[Image.Image], show_progress: bool = True

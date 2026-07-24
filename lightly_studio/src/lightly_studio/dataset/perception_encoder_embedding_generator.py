@@ -107,7 +107,7 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
 
     def embed_image_crops(
         self, image_crops: list[ImageCrop], show_progress: bool = True
-    ) -> NDArray[np.float32]:
+    ) -> EmbeddingResult:
         """Embed image crops with Perception Encoder.
 
         Args:
@@ -115,8 +115,8 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             show_progress: Whether to show a progress bar during embedding.
 
         Returns:
-            A numpy array representing the generated embeddings in the same order
-            as the input crops.
+            An ``EmbeddingResult`` with embeddings for the crops of readable files,
+            in the same order as the corresponding input crops.
         """
         return image_crop_embedding.embed_image_crops_batched(
             image_crops=image_crops,

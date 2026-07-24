@@ -138,5 +138,44 @@ class TestFileOutcomeReport:
         text = caplog.text
         assert "added=1" in text
         assert "missing=1" in text
-        assert "a.jpg" in text
+        # Examples are only shown for non-ADDED outcomes.
         assert "b.jpg" in text
+        assert "Examples 'missing'" in text
+        assert "a.jpg" not in text
+        assert "Examples 'added'" not in text
+
+    def test_log_summary__label_overrides(self, caplog: pytest.LogCaptureFixture) -> None:
+        report = FileOutcomeReport(label_overrides={FileOutcome.ADDED: "embedded"})
+        report.record(path="a.jpg", outcome=FileOutcome.ADDED)
+        report.record(path="b.jpg", outcome=FileOutcome.MISSING)
+
+        with caplog.at_level(logging.INFO):
+            report.log_summary()
+
+        text = caplog.text
+        # Overridden outcome uses the custom label.
+        assert "embedded=1" in text
+        assert "added=1" not in text
+        # Non-overridden outcomes still render their default labels.
+        assert "missing=1" in text
+
+    def test_log_summary__label_overrides_are_general(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        report = FileOutcomeReport(
+            label_overrides={
+                FileOutcome.ADDED: "embedded",
+                FileOutcome.MISSING: "not_found",
+            }
+        )
+        report.record(path="a.jpg", outcome=FileOutcome.ADDED)
+        report.record(path="b.jpg", outcome=FileOutcome.MISSING)
+
+        with caplog.at_level(logging.INFO):
+            report.log_summary()
+
+        text = caplog.text
+        assert "embedded=1" in text
+        assert "not_found=1" in text
+        assert "Examples 'not_found'" in text
+        assert "missing=1" not in text

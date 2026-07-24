@@ -97,7 +97,7 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
 
     def embed_image_crops(
         self, image_crops: list[ls.ImageCrop], show_progress: bool = True
-    ) -> NDArray[np.float32]:
+    ) -> EmbeddingResult:
         """Embed a batch of image crops (used for annotation embeddings)."""
         return image_crop_embedding.embed_image_crops_batched(
             image_crops=image_crops,

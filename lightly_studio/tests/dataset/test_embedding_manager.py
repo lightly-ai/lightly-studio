@@ -105,7 +105,7 @@ def test_register_multiple_models(
 
         def embed_image_crops(
             self, image_crops: list[ImageCrop], show_progress: bool = True
-        ) -> NDArray[np.float32]:
+        ) -> EmbeddingResult:
             raise NotImplementedError()
 
         def embed_pil_images(
@@ -634,9 +634,12 @@ def test_set_default_embedding_model_falls_back_to_env_for_unregistered_slot(
 
         def embed_image_crops(
             self, image_crops: list[ImageCrop], show_progress: bool = True
-        ) -> NDArray[np.float32]:
+        ) -> EmbeddingResult:
             _ = show_progress
-            return np.zeros((len(image_crops), 3), dtype=np.float32)
+            return EmbeddingResult(
+                embeddings=np.zeros((len(image_crops), 3), dtype=np.float32),
+                kept_indices=list(range(len(image_crops))),
+            )
 
         def embed_pil_images(
             self, images: list[Image.Image], show_progress: bool = True

@@ -3,10 +3,16 @@
     import Button from '$lib/components/ui/button/button.svelte';
     import {
         EmbeddingView,
+        type DataPoint,
+        type OverlayProxy,
         type Point,
         type Rectangle,
         type ViewportState
     } from 'embedding-atlas/svelte';
+    import PlotHoverPreview from './PlotHoverPreview/PlotHoverPreview.svelte';
+    import { getHoverPreviewState } from './PlotHoverPreview/hoverPreviewState';
+    import { NoopTooltip, createOverlayProxyReporter } from './PlotHoverPreview/overlayProxy';
+    import { createQuerySelection, createThumbnailUrlResolver } from './PlotHoverPreview';
     import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
     import type { EmbeddingRegion } from '$lib/api/lightly_studio_local';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
@@ -382,6 +388,45 @@
         viewportState = state;
     };
 
+    // Hover preview: a controlled tooltip showing a thumbnail of the hovered point.
+    // The array-based EmbeddingView only emits hover tooltips when querySelection
+    // is provided; ours returns the nearest visible point with its sample ID.
+    let tooltip: DataPoint | null = $state(null);
+    const onTooltip = (value: DataPoint | null) => {
+        tooltip = value;
+    };
+    // The card is rendered by this component (not the library's tooltip container)
+    // so it always sits directly above the hovered point; the overlay proxy
+    // provides the data → pixel conversion.
+    let overlayProxy: OverlayProxy | null = $state(null);
+    const OverlayProxyReporter = createOverlayProxyReporter((proxy) => {
+        overlayProxy = proxy;
+    });
+    // Tailwind's h-32/w-32 size the card's border box to 128px.
+    const PREVIEW_CARD_SIZE = 128;
+    const hoverPreview = $derived.by(() =>
+        getHoverPreviewState({
+            tooltip,
+            rangeSelectionActive: $rangeSelection !== null,
+            proxy: overlayProxy,
+            cardSize: PREVIEW_CARD_SIZE
+        })
+    );
+    const querySelection = $derived.by(() =>
+        createQuerySelection({
+            x: $arrowData?.x as Float32Array | undefined,
+            y: $arrowData?.y as Float32Array | undefined,
+            sampleIds: $arrowData?.sample_id as string[] | undefined,
+            category: $plotData?.category as Uint8Array | undefined
+        })
+    );
+    const resolveThumbnailUrl = $derived.by(() =>
+        createThumbnailUrlResolver({
+            route: isAnnotations ? 'annotations' : isVideos ? 'videos' : 'images',
+            collectionId
+        })
+    );
+
     const errorText = $derived.by(() => {
         if (embeddingsData.isError) {
             return embeddingsData.error?.message ?? 'Unknown error';
@@ -429,7 +474,11 @@
                             {categoryCount}
                             data={$plotData}
                             {categoryColors}
-                            tooltip={null}
+                            tooltip={$rangeSelection ? null : tooltip}
+                            {onTooltip}
+                            {querySelection}
+                            customTooltip={NoopTooltip}
+                            customOverlay={OverlayProxyReporter}
                             theme={embeddingTheme}
                             {onRangeSelection}
                             {onViewportState}
@@ -437,6 +486,18 @@
                             rangeSelection={$rangeSelection}
                         />
                     </div>
+
+                    {#if hoverPreview}
+                        <div
+                            class="pointer-events-none absolute z-10 -translate-x-1/2"
+                            style="left: {hoverPreview.left}px; top: {hoverPreview.top}px"
+                        >
+                            <PlotHoverPreview
+                                sampleId={hoverPreview.sampleId}
+                                {resolveThumbnailUrl}
+                            />
+                        </div>
+                    {/if}
 
                     <PlotPanelLegend
                         {categoryColors}
