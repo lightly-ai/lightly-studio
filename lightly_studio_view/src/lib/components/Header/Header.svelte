@@ -39,10 +39,12 @@
     type TriggeredBy = 'click' | 'keyboard_shortcut';
 
     const setEditMode = (active: boolean, triggeredBy: TriggeredBy) => {
-        trackEvent(active ? 'edit_mode_started' : 'edit_mode_finished', {
-            collection_id: collection.collection_id,
-            triggered_by: triggeredBy
-        });
+        if (active) {
+            trackEvent('edit_mode_started', {
+                collection_id: collection.collection_id,
+                triggered_by: triggeredBy
+            });
+        }
         setIsEditingMode(active);
     };
 

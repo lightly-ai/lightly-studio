@@ -178,8 +178,7 @@
         selectAnnotation({
             annotationId,
             annotations: sample.annotations ?? [],
-            collectionId,
-            source: 'canvas'
+            collectionId
         });
     };
 

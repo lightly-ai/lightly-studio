@@ -140,7 +140,7 @@
     const toggleAnnotationSelection = (annotationId: string) => {
         if (isPanModeEnabled) return;
 
-        selectAnnotation({ annotationId, annotations, collectionId, source: 'side_panel' });
+        selectAnnotation({ annotationId, annotations, collectionId });
     };
 
     const toggleAnnotationLock = (annotationId: string) => {
@@ -233,8 +233,7 @@
             selectAnnotation({
                 annotationId: annotation.sample_id,
                 annotations,
-                collectionId,
-                source: 'side_panel'
+                collectionId
             });
         }}
     />

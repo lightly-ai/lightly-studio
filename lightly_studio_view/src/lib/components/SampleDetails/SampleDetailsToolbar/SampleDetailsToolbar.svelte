@@ -10,13 +10,10 @@
     import CursorToolbarButton from '../CursorToolbarButton/CursorToolbarButton.svelte';
     import DragToolbarButton from '../DragToolbarButton/DragToolbarButton.svelte';
     import { useSettings } from '$lib/hooks/useSettings';
-    import { usePostHog } from '$lib/hooks';
-    import { page } from '$app/state';
 
     const { showSegmentationTool = true }: { showSegmentationTool?: boolean } = $props();
 
     const { settingsStore } = useSettings();
-    const { trackEvent } = usePostHog();
     let isSpacePressed = false;
 
     const onKeyDown = (e: KeyboardEvent) => {
@@ -35,11 +32,11 @@
             onClickCursor();
         } else if (key === $settingsStore.key_toolbar_bounding_box) {
             e.preventDefault();
-            activateBoundingBox('keyboard_shortcut');
+            activateBoundingBox();
         } else if (key === $settingsStore.key_toolbar_segmentation_mask) {
             if (!showSegmentationTool) return;
             e.preventDefault();
-            activateBrush('keyboard_shortcut');
+            activateBrush();
         } else if (key === $settingsStore.key_toolbar_drag) {
             e.preventDefault();
             onClickDrag();
@@ -112,21 +109,16 @@
         }
     });
 
-    const activateBoundingBox = (triggeredBy: 'click' | 'keyboard_shortcut') => {
+    const activateBoundingBox = () => {
         if (annotationLabelContext.isOnAnnotationDetailsView) return;
 
-        trackEvent('annotation_tool_selected', {
-            collection_id: page.params.collection_id,
-            tool: 'bounding-box',
-            triggered_by: triggeredBy
-        });
         setStatus('bounding-box');
         setAnnotationType(AnnotationType.OBJECT_DETECTION);
         setAnnotationId(null);
         setLastCreatedAnnotationId(null);
     };
 
-    const onClickBoundingBox = () => activateBoundingBox('click');
+    const onClickBoundingBox = () => activateBoundingBox();
 
     const onClickCursor = () => {
         setStatus('cursor');
@@ -136,21 +128,16 @@
         setStatus('drag');
     };
 
-    const activateBrush = (triggeredBy: 'click' | 'keyboard_shortcut') => {
+    const activateBrush = () => {
         if (!showSegmentationTool) return;
 
-        trackEvent('annotation_tool_selected', {
-            collection_id: page.params.collection_id,
-            tool: 'brush',
-            triggered_by: triggeredBy
-        });
         setStatus('brush');
         setAnnotationType(AnnotationType.SEGMENTATION_MASK);
         if (!annotationLabelContext.isOnAnnotationDetailsView) setAnnotationId(null);
         setLastCreatedAnnotationId(null);
     };
 
-    const onClickBrush = () => activateBrush('click');
+    const onClickBrush = () => activateBrush();
 </script>
 
 <div class="pointer-events-none absolute left-1 top-1 z-20">
