@@ -173,7 +173,7 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
         embeddings = np.empty((total_videos, self._model.output_dim), dtype=np.float32)
         # Every video yields a fixed VIDEO_FRAMES_PER_SAMPLE-frame tensor of the same shape,
         # so the per-video tensors can be stacked directly into a batch.
-        preprocessed_videos = (
+        preprocessed_videos_iter = (
             _load_video_frames(filepath, self._preprocess) for filepath in filepaths
         )
         position = 0
@@ -181,7 +181,7 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             tqdm(total=total_videos, desc="Generating embeddings", unit=" videos") as progress_bar,
             torch.no_grad(),
         ):
-            for batch in batching.batched(preprocessed_videos, batch_size=MAX_BATCH_SIZE):
+            for batch in batching.batched(preprocessed_videos_iter, batch_size=MAX_BATCH_SIZE):
                 videos_tensor = torch.stack(batch).to(self._device)
                 batch_embeddings = (
                     self._model.encode_video(videos_tensor, normalize=True).cpu().numpy()
