@@ -164,7 +164,7 @@ export function useAnnotationsFilter({
     );
 
     // Toggle by label name
-    const toggleAnnotationFilterSelection = (labelName: string) => {
+    const toggleAnnotationFilterSelection = (labelName: string, collectionId?: string) => {
         const labelsMap = get(annotationFilterLabels);
         const labelId = labelsMap[labelName];
         if (!labelId) return;
@@ -174,14 +174,14 @@ export function useAnnotationsFilter({
 
         toggleSelectedAnnotationFilterId(labelId);
 
-        const active_count = get(selectedAnnotationFilterIds).size;
+        const activeCount = get(selectedAnnotationFilterIds).size;
 
         trackEvent('grid_filter_toggled', {
             collection_id: collectionId,
             filter_type: 'annotation_label',
             filter_value: labelName,
             action,
-            active_count
+            active_count: activeCount
         });
     };
 

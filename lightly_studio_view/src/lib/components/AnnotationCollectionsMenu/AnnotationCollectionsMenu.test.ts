@@ -4,9 +4,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AnnotationCollectionsMenu from './AnnotationCollectionsMenu.svelte';
 
 const { trackEvent } = vi.hoisted(() => ({ trackEvent: vi.fn() }));
-vi.mock('$lib/hooks', () => ({
-    usePostHog: () => ({ trackEvent })
-}));
+vi.mock('$lib/hooks', async (importOriginal) => {
+    const actual = await importOriginal();
+    return {
+        ...(actual as object),
+        usePostHog: () => ({ trackEvent })
+    };
+});
 
 const mocks = vi.hoisted(() => ({
     collections: [] as { collection_id: string; name: string }[],

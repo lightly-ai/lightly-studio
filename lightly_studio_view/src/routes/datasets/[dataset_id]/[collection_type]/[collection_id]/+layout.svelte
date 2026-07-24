@@ -706,7 +706,8 @@
                             {/if}
                             <LabelsMenu
                                 {annotationFilterRows}
-                                onToggleAnnotationFilter={toggleAnnotationFilterSelection}
+                                onToggleAnnotationFilter={(label) =>
+                                    toggleAnnotationFilterSelection(label, collectionId)}
                                 showVisibilityToggle={showAnnotationVisibilityToggle}
                             />
 

@@ -267,12 +267,9 @@ describe('useAnnotationsFilter', () => {
     });
 
     it('fires grid_filter_toggled with action selected when label is not yet selected', () => {
-        const { toggleAnnotationFilterSelection } = useAnnotationsFilter({
-            annotationLabels,
-            collectionId: 'col-1'
-        });
+        const { toggleAnnotationFilterSelection } = useAnnotationsFilter({ annotationLabels });
 
-        toggleAnnotationFilterSelection('cat');
+        toggleAnnotationFilterSelection('cat', 'col-1');
 
         expect(trackEvent).toHaveBeenCalledWith('grid_filter_toggled', {
             collection_id: 'col-1',
@@ -285,12 +282,9 @@ describe('useAnnotationsFilter', () => {
 
     it('fires grid_filter_toggled with action unselected when label is already selected', () => {
         selectedAnnotationFilterIds.set(new Set(['id-1']));
-        const { toggleAnnotationFilterSelection } = useAnnotationsFilter({
-            annotationLabels,
-            collectionId: 'col-1'
-        });
+        const { toggleAnnotationFilterSelection } = useAnnotationsFilter({ annotationLabels });
 
-        toggleAnnotationFilterSelection('cat');
+        toggleAnnotationFilterSelection('cat', 'col-1');
 
         expect(trackEvent).toHaveBeenCalledWith('grid_filter_toggled', {
             collection_id: 'col-1',
@@ -304,18 +298,15 @@ describe('useAnnotationsFilter', () => {
     it('does not fire grid_filter_toggled for unknown label', () => {
         const { toggleAnnotationFilterSelection } = useAnnotationsFilter({ annotationLabels });
 
-        toggleAnnotationFilterSelection('unknown');
+        toggleAnnotationFilterSelection('unknown', 'col-1');
 
         expect(trackEvent).not.toHaveBeenCalled();
     });
 
-    it('uses collectionId prop when provided for grid_filter_toggled', () => {
-        const { toggleAnnotationFilterSelection } = useAnnotationsFilter({
-            annotationLabels,
-            collectionId: 'my-collection'
-        });
+    it('passes collectionId to grid_filter_toggled event', () => {
+        const { toggleAnnotationFilterSelection } = useAnnotationsFilter({ annotationLabels });
 
-        toggleAnnotationFilterSelection('cat');
+        toggleAnnotationFilterSelection('cat', 'my-collection');
 
         expect(trackEvent).toHaveBeenCalledWith(
             'grid_filter_toggled',
