@@ -15,6 +15,7 @@
     import UserAvatar from '$lib/components/UserAvatar/UserAvatar.svelte';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
+    import { usePostHog } from '$lib/hooks';
 
     let { collection }: { collection: CollectionView } = $props();
 
@@ -33,6 +34,31 @@
     const { setIsEditingMode, isEditingMode, reversibleActions, executeReversibleAction } =
         page.data.globalStorage;
 
+    const { trackEvent } = usePostHog();
+
+    type TriggeredBy = 'click' | 'keyboard_shortcut';
+
+    const setEditMode = (active: boolean, triggeredBy: TriggeredBy) => {
+        if (active) {
+            trackEvent('edit_mode_started', {
+                collection_id: collection.collection_id,
+                triggered_by: triggeredBy
+            });
+        }
+        setIsEditingMode(active);
+    };
+
+    const executeUndoAction = async (triggeredBy: TriggeredBy) => {
+        const latestAction = $reversibleActions[0];
+        if (latestAction) {
+            trackEvent('edit_undo', {
+                collection_id: collection.collection_id,
+                triggered_by: triggeredBy
+            });
+            await executeReversibleAction(latestAction.id);
+        }
+    };
+
     const handleKeyDown = (event: KeyboardEvent) => {
         if (isInputElement(event.target)) {
             return;
@@ -42,16 +68,9 @@
             return;
         }
         if (event.key === get(settingsStore).key_toggle_edit_mode) {
-            setIsEditingMode(!$isEditingMode);
+            setEditMode(!$isEditingMode, 'keyboard_shortcut');
         } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
-            executeUndoAction();
-        }
-    };
-
-    const executeUndoAction = async () => {
-        const latestAction = $reversibleActions[0];
-        if (latestAction) {
-            await executeReversibleAction(latestAction.id);
+            void executeUndoAction('keyboard_shortcut');
         }
     };
 
@@ -86,7 +105,7 @@
                         <Button
                             icon={Undo2}
                             buttonProps={{
-                                onclick: executeUndoAction,
+                                onclick: () => executeUndoAction('click'),
                                 disabled: $reversibleActions.length === 0,
                                 title: $reversibleActions[0]
                                     ? $reversibleActions[0].description
@@ -100,7 +119,7 @@
                         <Button
                             icon={Check}
                             buttonProps={{
-                                onclick: () => setIsEditingMode(false),
+                                onclick: () => setEditMode(false, 'click'),
                                 title: 'Finish Editing',
                                 'data-testid': 'header-editing-mode-button',
                                 class: 'nav-button'
@@ -112,7 +131,7 @@
                         <Button
                             icon={Pencil}
                             buttonProps={{
-                                onclick: () => setIsEditingMode(true),
+                                onclick: () => setEditMode(true, 'click'),
                                 title: 'Edit annotations',
                                 'data-testid': 'header-editing-mode-button',
                                 class: 'nav-button'

@@ -122,7 +122,7 @@
 
     async function handleEventDelete(event: VideoEvent) {
         try {
-            await deleteAnnotation(event.id);
+            await deleteAnnotation(event.id, AnnotationType.CLASSIFICATION);
             onVideoUpdate();
             toast.success('Event deleted');
         } catch (error) {

@@ -172,7 +172,7 @@
                     refetch
                 });
 
-                await deleteAnnotation(annotationId);
+                await deleteAnnotation(annotationId, annotation.annotation_type);
                 toast.success('Annotation deleted successfully');
                 refetch();
                 if (annotationLabelContext.annotationId === annotationId) {
@@ -230,7 +230,11 @@
         }}
         canHighlight={annotationLabelContext.lastCreatedAnnotationId === annotation.sample_id}
         onClickSelectList={() => {
-            setAnnotationId(annotation.sample_id);
+            selectAnnotation({
+                annotationId: annotation.sample_id,
+                annotations,
+                collectionId
+            });
         }}
     />
 {/snippet}
