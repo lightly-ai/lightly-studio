@@ -3,7 +3,7 @@ import { get } from 'svelte/store';
 import { useImageFilters } from './useImageFilters';
 import type { QueryExpr, SortFieldExpr } from '$lib/api/lightly_studio_local/types.gen';
 import { SortDirection } from '$lib/api/lightly_studio_local/types.gen';
-import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters';
+import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 
 const queryExpr = {
     match_expr: {
