@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from pydantic import BaseModel, Field
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
@@ -101,11 +101,15 @@ class MetadataValueCountsRequest(BaseModel):
     )
 
 
+_DEFAULT_METADATA_VALUE_COUNTS_REQUEST = MetadataValueCountsRequest()
+_DEFAULT_METADATA_VALUE_COUNTS_BODY = Body(default=_DEFAULT_METADATA_VALUE_COUNTS_REQUEST)
+
+
 @metadata_router.post("/metadata/value-counts")
 def get_metadata_value_counts(
     session: SessionDep,
     collection_id: Annotated[UUID, Path(title="collection Id")],
-    request: MetadataValueCountsRequest,
+    request: MetadataValueCountsRequest = _DEFAULT_METADATA_VALUE_COUNTS_BODY,
 ) -> dict[str, MetadataValueCountsView]:
     """Compute categorical metadata value counts under optional sample filters.
 
@@ -125,8 +129,8 @@ def get_metadata_value_counts(
     return metadata_value_counts_resolver.get_metadata_value_counts(
         session=session,
         collection_id=collection_id,
-        filters=request.filters if request else None,
-        fields=request.fields if request else None,
+        filters=request.filters,
+        fields=request.fields,
     )
 
 
