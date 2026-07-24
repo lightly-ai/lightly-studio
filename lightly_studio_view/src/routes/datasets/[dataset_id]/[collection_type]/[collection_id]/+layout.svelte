@@ -633,6 +633,16 @@
             ? [classDistributionSource, metadataDistributionSource]
             : [classDistributionSource]
     );
+
+    function handleCombinedMetadataFilterChanged(fieldName: string, min: number, max: number) {
+        trackEvent('metadata_filter_changed', {
+            collection_id: collectionId,
+            field_name: fieldName,
+            action: 'range_changed',
+            min,
+            max
+        });
+    }
 </script>
 
 <div class="flex-none">
@@ -719,15 +729,7 @@
                                     <CombinedMetadataDimensionsFilters
                                         {isVideos}
                                         {isVideoFrames}
-                                        onFilterChanged={(fieldName, min, max) => {
-                                            trackEvent('metadata_filter_changed', {
-                                                collection_id: collectionId,
-                                                field_name: fieldName,
-                                                action: 'range_changed',
-                                                min,
-                                                max
-                                            });
-                                        }}
+                                        onFilterChanged={handleCombinedMetadataFilterChanged}
                                     />
                                 {/key}
                             {/if}
