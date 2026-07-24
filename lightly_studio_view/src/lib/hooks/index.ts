@@ -43,6 +43,8 @@ export { useSubmitCombinationSelection } from '$lib/hooks/useSubmitCombinationSe
 export { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
 export { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
 export { useSettings } from '$lib/hooks/useSettings';
+export { usePostHog } from '$lib/hooks/usePostHog';
+export { useTrackSampleInspected } from '$lib/hooks/useTrackSampleInspected';
 export { useAnnotationClassVisibility } from '$lib/hooks/useAnnotationClassVisibility/useAnnotationClassVisibility';
 export {
     useImageAnnotationCounts,
