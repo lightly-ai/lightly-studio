@@ -116,6 +116,35 @@ def test_embed_image_files_batched__skips_broken_files(tmp_path: Path) -> None:
     assert result.embeddings[:, 0].tolist() == [float(width) for width in widths]
 
 
+def test_embed_image_files_batched__skips_decompression_bomb_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A file whose pixel count exceeds Pillow's decompression-bomb limit raises
+    # DecompressionBombError (which is not an OSError) and must be skipped like any broken
+    # file, so the good file is still embedded.
+    good_path = tmp_path / "good.png"
+    Image.new("RGB", (100, 100), color=(255, 0, 0)).save(good_path)  # 10_000 pixels
+    bomb_path = tmp_path / "bomb.png"
+    Image.new("RGB", (300, 300), color=(0, 255, 0)).save(bomb_path)  # 90_000 pixels
+    # Limit sits between the two: good stays under it, bomb exceeds 2x it and raises.
+    monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 20_000)
+
+    result = image_embedding.embed_image_files_batched(
+        filepaths=[str(bomb_path), str(good_path)],
+        context=EmbeddingContext(
+            embedding_dimension=1,
+            max_batch_size=2,
+            device=torch.device("cpu"),
+            preprocess=lambda image: torch.tensor([float(image.size[0])]),
+            encode_batch=lambda images_tensor: images_tensor.numpy().astype(np.float32),
+        ),
+        show_progress=False,
+    )
+
+    assert result.kept_indices == [1]
+    assert result.embeddings[:, 0].tolist() == [100.0]
+
+
 def test_embed_image_files_batched__raises_when_all_files_broken(tmp_path: Path) -> None:
     broken_paths = []
     for index in range(3):

@@ -182,6 +182,40 @@ def test_load_into_dataset_from_paths__records_missing_broken_already_present_ou
     assert "broken=4" in caplog.text
 
 
+def test_load_into_dataset_from_paths__records_decompression_bomb_as_broken(
+    db_session: Session,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # An oversized "decompression bomb" image raises DecompressionBombError (which is not an
+    # OSError) on open. It must be recorded as broken and skipped, while good files are
+    # still added.
+    collection = helpers_resolvers.create_collection(db_session)
+
+    good_path = tmp_path / "good.jpg"
+    PILImage.new("RGB", (100, 100)).save(str(good_path))  # 10_000 pixels
+    bomb_path = tmp_path / "bomb.jpg"
+    PILImage.new("RGB", (300, 300)).save(str(bomb_path))  # 90_000 pixels
+    # Limit sits between the two: good stays under it, bomb exceeds 2x it and raises.
+    monkeypatch.setattr(PILImage, "MAX_IMAGE_PIXELS", 20_000)
+
+    with caplog.at_level("INFO"):
+        sample_ids = add_images.load_into_dataset_from_paths(
+            session=db_session,
+            root_collection_id=collection.collection_id,
+            image_paths=[str(good_path), str(bomb_path)],
+        )
+
+    assert len(sample_ids) == 1
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    ).samples
+    assert {sample.file_name for sample in samples} == {"good.jpg"}
+    assert "added=1" in caplog.text
+    assert "broken=1" in caplog.text
+
+
 def test_load_into_collection_from_paths__deduplicates_in_run_duplicates(
     db_session: Session, tmp_path: Path
 ) -> None:

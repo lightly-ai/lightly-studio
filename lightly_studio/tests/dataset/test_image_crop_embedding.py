@@ -109,6 +109,41 @@ def test_embed_image_crops_batched__skips_broken_file(tmp_path: Path) -> None:
     assert result.embeddings[:, 0].tolist() == [5.0, 7.0]
 
 
+def test_embed_image_crops_batched__skips_decompression_bomb_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A source image whose pixel count exceeds Pillow's decompression-bomb limit raises
+    # DecompressionBombError (which is not an OSError). It must be skipped like any other
+    # broken file, so the good file's crops are still embedded.
+    good_path = tmp_path / "good.png"
+    Image.new("RGB", (100, 100), color=(255, 0, 0)).save(good_path)  # 10_000 pixels
+    bomb_path = tmp_path / "bomb.png"
+    Image.new("RGB", (300, 300), color=(0, 255, 0)).save(bomb_path)  # 90_000 pixels
+    # Limit sits between the two: good stays under it, bomb exceeds 2x it and raises.
+    monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 20_000)
+
+    image_crops = [
+        ImageCrop(filepath=str(bomb_path), x=0, y=0, width=4, height=10),
+        ImageCrop(filepath=str(good_path), x=0, y=0, width=5, height=10),
+        ImageCrop(filepath=str(good_path), x=0, y=0, width=7, height=10),
+    ]
+
+    result = image_crop_embedding.embed_image_crops_batched(
+        image_crops=image_crops,
+        context=EmbeddingContext(
+            embedding_dimension=1,
+            max_batch_size=2,
+            device=torch.device("cpu"),
+            preprocess=lambda image: torch.tensor([float(image.size[0])]),
+            encode_batch=lambda images_tensor: images_tensor.numpy().astype(np.float32),
+        ),
+        show_progress=False,
+    )
+
+    assert result.kept_indices == [1, 2]
+    assert result.embeddings[:, 0].tolist() == [5.0, 7.0]
+
+
 def test_embed_image_crops_batched__raises_when_all_files_broken(tmp_path: Path) -> None:
     broken_path = tmp_path / "broken.png"
     broken_path.write_bytes(b"not a valid image")
