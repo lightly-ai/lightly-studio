@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterator
 from pathlib import Path
-from typing import Any, Callable
 from uuid import UUID
 
 import fsspec
@@ -22,6 +22,7 @@ from lightly_studio.core.file_outcome_report import (
 )
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
+from lightly_studio.utils import batching
 from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transforms
 
 from . import file_utils, image_crop_embedding, image_embedding
@@ -184,67 +185,45 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             return EmbeddingResult(embeddings=empty, kept_indices=[])
 
         embeddings = np.empty((total_videos, self._model.output_dim), dtype=np.float32)
-        # Input indices of the videos that were embedded (their file could be read).
+        # Input indices of the videos that were embedded (their file could be read), filled
+        # in input order by the generator below as it yields each readable video.
         kept_indices: list[int] = []
-        # Reusable batch buffer, lazily sized from the first preprocessed video.
-        batch_buffer: torch.Tensor | None = None
-        batch_indices: list[int] = []
         report = FileOutcomeReport(label_overrides={FileOutcome.ADDED: "embedded"})
 
+        def preprocessed_videos_iter() -> Iterator[torch.Tensor]:
+            # A missing/broken video raises a typed signal that report.track records as its
+            # outcome and suppresses, so it is skipped instead of yielded into a batch.
+            for index, filepath in enumerate(filepaths):
+                frames: torch.Tensor | None = None
+                with report.track(path=filepath):
+                    frames = _load_video_frames(filepath, self._preprocess)
+                if frames is not None:
+                    kept_indices.append(index)
+                    yield frames
+
+        # Every readable video yields a fixed VIDEO_FRAMES_PER_SAMPLE-frame tensor of the same
+        # shape, so the per-video tensors can be stacked directly into a batch.
+        position = 0
         with (
             tqdm(total=total_videos, desc="Generating embeddings", unit=" videos") as progress_bar,
             torch.no_grad(),
         ):
-            for index, filepath in enumerate(filepaths):
-                # A missing/broken video raises a typed signal that report.track records as
-                # its outcome and suppresses, so the loop skips it and continues.
-                with report.track(path=filepath):
-                    frames = _load_video_frames(filepath, self._preprocess)
-                    if batch_buffer is None:
-                        batch_buffer = torch.empty(
-                            (MAX_BATCH_SIZE, *frames.shape), dtype=frames.dtype
-                        )
-                    batch_buffer[len(batch_indices)] = frames
-                    batch_indices.append(index)
-                    kept_indices.append(index)
-                    if len(batch_indices) >= MAX_BATCH_SIZE:
-                        self._flush_video_batch(
-                            batch_buffer=batch_buffer,
-                            batch_indices=batch_indices,
-                            embeddings=embeddings,
-                            progress_bar=progress_bar,
-                        )
-
-            self._flush_video_batch(
-                batch_buffer=batch_buffer,
-                batch_indices=batch_indices,
-                embeddings=embeddings,
-                progress_bar=progress_bar,
-            )
+            for batch in batching.batched(preprocessed_videos_iter(), batch_size=MAX_BATCH_SIZE):
+                videos_tensor = torch.stack(batch).to(self._device)
+                batch_embeddings = (
+                    self._model.encode_video(videos_tensor, normalize=True).cpu().numpy()
+                )
+                batch_size = videos_tensor.size(0)
+                embeddings[position : position + batch_size] = batch_embeddings
+                position += batch_size
+                progress_bar.update(batch_size)
 
         report.log_summary()
         report.raise_if_all_failed()
 
-        # kept_indices in input order maps each returned row back to its input video.
-        return EmbeddingResult(embeddings=embeddings[kept_indices], kept_indices=kept_indices)
-
-    def _flush_video_batch(
-        self,
-        batch_buffer: torch.Tensor | None,
-        batch_indices: list[int],
-        embeddings: NDArray[np.float32],
-        progress_bar: Any,
-    ) -> None:
-        """Encode the current video batch and write results into ``embeddings``."""
-        if batch_buffer is None or not batch_indices:
-            return
-        filled = len(batch_indices)
-        videos_tensor = batch_buffer[:filled].to(self._device)
-        batch_embeddings = self._model.encode_video(videos_tensor, normalize=True).cpu().numpy()
-        for batch_position, video_index in enumerate(batch_indices):
-            embeddings[video_index] = batch_embeddings[batch_position]
-        progress_bar.update(filled)
-        batch_indices.clear()
+        # Readable videos were written contiguously in input order; kept_indices maps each
+        # returned row back to its input position.
+        return EmbeddingResult(embeddings=embeddings[:position], kept_indices=kept_indices)
 
 
 def _load_video_frames(
