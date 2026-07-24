@@ -12,15 +12,16 @@
 
     const collectionId = page.params.collection_id;
 
-    const {
-        isVideos = false,
-        isVideoFrames = false,
-        onFilterChanged
-    }: {
-        isVideos: boolean;
-        isVideoFrames: boolean;
+    interface Props {
+        /** Whether the collection contains videos; shows video field filters instead of dimension filters. */
+        isVideos?: boolean;
+        /** Whether the collection contains video frames; shows frame number filter. */
+        isVideoFrames?: boolean;
+        /** Called when any filter range changes, with the field name and new min/max values. */
         onFilterChanged?: (fieldName: string, min: number, max: number) => void;
-    } = $props();
+    }
+
+    const { isVideos = false, isVideoFrames = false, onFilterChanged }: Props = $props();
 
     // Dimension filters logic
     const {

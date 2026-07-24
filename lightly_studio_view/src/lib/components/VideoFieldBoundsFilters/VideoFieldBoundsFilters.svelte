@@ -4,11 +4,12 @@
     import { formatInteger } from '$lib/utils';
     import { Slider } from '$lib/components/ui/slider/index.js';
 
-    const {
-        onFilterChanged
-    }: {
+    interface Props {
+        /** Called when a video field filter (width, height, fps, duration) range changes. */
         onFilterChanged?: (fieldName: string, min: number, max: number) => void;
-    } = $props();
+    }
+
+    const { onFilterChanged }: Props = $props();
 
     const { videoBounds, videoBoundsValues, updateVideoBoundsValues } = useVideoBounds(
         page.params.collection_id

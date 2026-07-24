@@ -48,4 +48,4 @@ export {
     useImageAnnotationCounts,
     useImageAnnotationCountsQueryKey
 } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
-export { usePostHog } from '$lib/hooks/usePostHog'
+export { usePostHog } from '$lib/hooks/usePostHog';
