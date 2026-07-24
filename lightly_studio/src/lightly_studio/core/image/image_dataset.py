@@ -144,13 +144,15 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             embed: If True, generate embeddings for the newly added images.
             tag_depth: Defines the tagging behavior based on directory depth.
                 - `tag_depth=0` (default): No automatic tagging is performed.
-                - `tag_depth=1`: Automatically creates a tag for each
-                  image based on its parent directory's name.
+                - `tag_depth=N` (N >= 1): Creates a tag for each of the first `N`
+                  directory levels below `path`, or fewer if an image is nested
+                  less deeply, so an image may receive several tags. Images
+                  directly under `path` are not tagged.
             limit: Maximum number of samples to load. By default, all samples are loaded.
 
         Raises:
-            NotImplementedError: If tag_depth > 1.
-            ValueError: If limit is not None and not greater than 0.
+            ValueError: If tag_depth is negative, or if limit is not None and not
+                greater than 0.
             AllInputFilesFailedError: If every image in the path is missing or broken.
         """
         fsspec_lister.validate_limit(limit)
