@@ -4,6 +4,7 @@ import { writable, type Writable } from 'svelte/store';
 type EmbedSuccessResult = {
     queryText: string;
     embedding: number[];
+    collectionId: string;
 };
 
 type UseTextEmbeddingParams = {
@@ -37,11 +38,12 @@ export function useTextEmbedding({
         const trimmed = text.trim();
         if (!trimmed) return;
 
+        const collectionId = getCollectionId();
         pendingRequests += 1;
         isEmbedding.set(true);
         try {
             const { data, error } = await embedText({
-                path: { collection_id: getCollectionId() },
+                path: { collection_id: collectionId },
                 query: { query_text: trimmed, embedding_model_id: null }
             });
             if (requestId !== latestRequestId) return;
@@ -50,7 +52,7 @@ export function useTextEmbedding({
                 throw new Error(String(errObj.error ?? errObj.message ?? 'Failed to embed text'));
             }
             if (!data) throw new Error('Failed to embed text');
-            onSuccess({ queryText: trimmed, embedding: data });
+            onSuccess({ queryText: trimmed, embedding: data, collectionId });
         } catch (err) {
             if (requestId !== latestRequestId) return;
             const message = err instanceof Error ? err.message : 'Failed to embed text';
