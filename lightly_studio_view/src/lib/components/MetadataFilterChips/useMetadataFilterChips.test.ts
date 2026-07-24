@@ -107,9 +107,11 @@ describe('useMetadataFilterChips', () => {
         expect(screen.getByTestId('metadata-filter-chip-score')).toHaveTextContent('0.75 – 1.25');
     });
 
+    const defaultProps = { collectionId: 'col-1' };
+
     it('fires metadata_filter_changed with action disabled when unchecking', async () => {
         seed({ narrowed: true });
-        render(MetadataFilterChips, { props: { collectionId: 'col-1' } });
+        render(MetadataFilterChips, { props: defaultProps });
 
         screen.getByRole('checkbox').click();
 
@@ -124,7 +126,7 @@ describe('useMetadataFilterChips', () => {
 
     it('fires metadata_filter_changed with action enabled when re-checking', async () => {
         seed({ narrowed: true });
-        render(MetadataFilterChips, { props: { collectionId: 'col-1' } });
+        render(MetadataFilterChips, { props: defaultProps });
 
         screen.getByRole('checkbox').click();
         await waitFor(() => expect(screen.getByRole('checkbox')).not.toBeChecked());
@@ -143,7 +145,7 @@ describe('useMetadataFilterChips', () => {
 
     it('fires metadata_filter_changed with action disabled when clearing', async () => {
         seed({ narrowed: true });
-        render(MetadataFilterChips, { props: { collectionId: 'col-1' } });
+        render(MetadataFilterChips, { props: defaultProps });
 
         screen.getByLabelText('Clear confidence').click();
 
