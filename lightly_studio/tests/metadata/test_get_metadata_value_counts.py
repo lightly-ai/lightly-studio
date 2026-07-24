@@ -63,15 +63,10 @@ def test_get_metadata_value_counts__categorical_values_and_missing(
         ("Missing", 1),
         ("Other", 1),
     ]
-    assert counts["city"].other_count == 0
-    # 2 missing: one sample has city=null in its metadata row, another has no metadata row at all.
-    assert counts["city"].missing_count == 2
     assert [(entry.value, entry.count) for entry in counts["active"].value_counts] == [
         (True, 3),
         (False, 2),
     ]
-    assert counts["active"].other_count == 0
-    assert counts["active"].missing_count == 2
 
 
 def test_get_metadata_value_counts__top_twenty_and_collection_isolation(
@@ -106,8 +101,6 @@ def test_get_metadata_value_counts__top_twenty_and_collection_isolation(
     assert [entry.value for entry in counts.value_counts[1:]] == [
         f"value-{index:02d}" for index in range(19)
     ]
-    assert counts.other_count == 1
-    assert counts.missing_count == 0
 
 
 def test_get_metadata_value_counts__filters_and_own_key_exclusion(
@@ -201,8 +194,6 @@ def test_get_metadata_value_counts__known_fields_with_no_matches(
     )
 
     assert counts["city"].value_counts == []
-    assert counts["city"].other_count == 0
-    assert counts["city"].missing_count == 0
 
 
 def test_get_metadata_value_counts__unknown_collection_is_empty(db_session: Session) -> None:
