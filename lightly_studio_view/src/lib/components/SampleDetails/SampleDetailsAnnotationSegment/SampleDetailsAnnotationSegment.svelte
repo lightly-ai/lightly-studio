@@ -7,7 +7,6 @@
     import {
         useAnnotationCollections,
         useAnnotationCollectionsFilter,
-        usePostHog,
         useSettings
     } from '$lib/hooks';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
@@ -61,7 +60,6 @@
         collectionId
     });
     const { selectAnnotation } = useAnnotationSelection();
-    const { trackEvent } = usePostHog();
 
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
     const { selectedCollectionIds, seedSelectionIfNeeded } = useAnnotationCollectionsFilter();
@@ -232,15 +230,12 @@
         }}
         canHighlight={annotationLabelContext.lastCreatedAnnotationId === annotation.sample_id}
         onClickSelectList={() => {
-            if (annotationLabelContext.annotationId !== annotation.sample_id) {
-                trackEvent('annotation_focused', {
-                    collection_id: collectionId,
-                    annotation_type: annotation.annotation_type,
-                    focus_source: 'side_panel',
-                    label_name: annotation.annotation_label?.annotation_label_name ?? null
-                });
-            }
-            setAnnotationId(annotation.sample_id);
+            selectAnnotation({
+                annotationId: annotation.sample_id,
+                annotations,
+                collectionId,
+                source: 'side_panel'
+            });
         }}
     />
 {/snippet}
