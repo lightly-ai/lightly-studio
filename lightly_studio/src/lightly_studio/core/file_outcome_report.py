@@ -5,7 +5,7 @@ Pipeline steps route each per-item file operation through
 by raising one of the typed signals defined here; the report does pure
 bookkeeping and decides the all-failed raise policy. The `FileOutcomeReport`
 itself performs no I/O; the module also exposes `BROKEN_IMAGE_ERRORS`, the shared
-tuple of Pillow exceptions image-open sites map to `BrokenInputFileError`.
+tuple of Pillow exceptions image-open sites map to a broken-file outcome.
 
 Each tracked file ends in exactly one `FileOutcome`:
 
@@ -73,13 +73,8 @@ class BrokenInputFileError(InputFileError):
     """Signal that an input file is present but unreadable/undecodable."""
 
 
-# Exceptions Pillow raises for a file that is present but cannot be turned into a
-# usable image: unreadable/corrupt bytes (``OSError``), an unrecognized format
-# (``UnidentifiedImageError``), or an oversized "decompression bomb" whose pixel
-# count exceeds Pillow's limit (``DecompressionBombError``, which subclasses
-# ``Exception`` directly and is therefore not covered by ``OSError``). Any image
-# open site that maps a decode failure to ``BrokenInputFileError`` should catch
-# this tuple.
+# Pillow exceptions for a present-but-undecodable image; `DecompressionBombError`
+# subclasses `Exception` directly, so it is not covered by `OSError`.
 BROKEN_IMAGE_ERRORS: tuple[type[Exception], ...] = (
     OSError,
     UnidentifiedImageError,

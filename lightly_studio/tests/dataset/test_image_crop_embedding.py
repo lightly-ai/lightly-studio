@@ -112,14 +112,11 @@ def test_embed_image_crops_batched__skips_broken_file(tmp_path: Path) -> None:
 def test_embed_image_crops_batched__skips_decompression_bomb_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # A source image whose pixel count exceeds Pillow's decompression-bomb limit raises
-    # DecompressionBombError (which is not an OSError). It must be skipped like any other
-    # broken file, so the good file's crops are still embedded.
     good_path = tmp_path / "good.png"
     Image.new("RGB", (100, 100), color=(255, 0, 0)).save(good_path)  # 10_000 pixels
     bomb_path = tmp_path / "bomb.png"
     Image.new("RGB", (300, 300), color=(0, 255, 0)).save(bomb_path)  # 90_000 pixels
-    # Limit sits between the two: good stays under it, bomb exceeds 2x it and raises.
+    # Limit sits between the two images so only the bomb exceeds it.
     monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 20_000)
 
     image_crops = [

@@ -188,16 +188,13 @@ def test_load_into_dataset_from_paths__records_decompression_bomb_as_broken(
     caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # An oversized "decompression bomb" image raises DecompressionBombError (which is not an
-    # OSError) on open. It must be recorded as broken and skipped, while good files are
-    # still added.
     collection = helpers_resolvers.create_collection(db_session)
 
     good_path = tmp_path / "good.jpg"
     PILImage.new("RGB", (100, 100)).save(str(good_path))  # 10_000 pixels
     bomb_path = tmp_path / "bomb.jpg"
     PILImage.new("RGB", (300, 300)).save(str(bomb_path))  # 90_000 pixels
-    # Limit sits between the two: good stays under it, bomb exceeds 2x it and raises.
+    # Limit sits between the two images so only the bomb exceeds it.
     monkeypatch.setattr(PILImage, "MAX_IMAGE_PIXELS", 20_000)
 
     with caplog.at_level("INFO"):
