@@ -37,6 +37,7 @@ nav:
   - 🏢 Enterprise:
     - Enterprise:
       - enterprise/index.md
+      - Collaboration and Permissions: enterprise/collaboration.md
       - Connect from Python: enterprise/connect.md
       - Security and Architecture: enterprise/security.md
       - On-Premise Deployment: enterprise/on-premise.md
@@ -73,6 +74,7 @@ nav:
       - Metadata: concepts_and_tools/metadata.md
     - Tools:
       - Search and Filter: concepts_and_tools/search_and_filter.md
+      - Dataset Distributions: concepts_and_tools/dataset_distributions.md
       - Export: concepts_and_tools/export.md
       - Sampling: concepts_and_tools/sampling.md
       - Plugins: concepts_and_tools/plugins.md
