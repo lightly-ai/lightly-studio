@@ -3,6 +3,11 @@ import { type Writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AnnotationCollectionsMenu from './AnnotationCollectionsMenu.svelte';
 
+const { trackEvent } = vi.hoisted(() => ({ trackEvent: vi.fn() }));
+vi.mock('$lib/hooks', () => ({
+    usePostHog: () => ({ trackEvent })
+}));
+
 const mocks = vi.hoisted(() => ({
     collections: [] as { collection_id: string; name: string }[],
     selectedCollectionIds: null as unknown as Writable<string[]>,
@@ -48,6 +53,7 @@ describe('AnnotationCollectionsMenu', () => {
         mocks.collections = [];
         mocks.selectedCollectionIds.set([]);
         mocks.enforceColoringByClassStore.set(false);
+        trackEvent.mockClear();
     });
 
     it('renders nothing when there are no collections', () => {
@@ -147,5 +153,43 @@ describe('AnnotationCollectionsMenu', () => {
         await second.click();
 
         expect(mocks.setSelectedCollectionIds).toHaveBeenLastCalledWith([]);
+    });
+
+    it('fires grid_filter_toggled with action unselected when a source is deselected', async () => {
+        mocks.collections = [
+            { collection_id: 'c1', name: 'Dogs' },
+            { collection_id: 'c2', name: 'Cats' }
+        ];
+        mocks.selectedCollectionIds.set(['c1', 'c2']);
+        render(AnnotationCollectionsMenu, defaultProps);
+
+        await screen.getAllByRole('checkbox')[0].click();
+
+        expect(trackEvent).toHaveBeenCalledWith('grid_filter_toggled', {
+            collection_id: 'col-1',
+            filter_type: 'annotation_source',
+            filter_value: 'Dogs',
+            action: 'unselected',
+            active_count: 1
+        });
+    });
+
+    it('fires grid_filter_toggled with action selected when a source is selected', async () => {
+        mocks.collections = [
+            { collection_id: 'c1', name: 'Dogs' },
+            { collection_id: 'c2', name: 'Cats' }
+        ];
+        mocks.selectedCollectionIds.set(['c2']);
+        render(AnnotationCollectionsMenu, defaultProps);
+
+        await screen.getAllByRole('checkbox')[0].click();
+
+        expect(trackEvent).toHaveBeenCalledWith('grid_filter_toggled', {
+            collection_id: 'col-1',
+            filter_type: 'annotation_source',
+            filter_value: 'Dogs',
+            action: 'selected',
+            active_count: 2
+        });
     });
 });

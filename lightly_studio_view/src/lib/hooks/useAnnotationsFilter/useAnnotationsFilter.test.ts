@@ -2,6 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { get, writable } from 'svelte/store';
 import type { AnnotationLabel } from '$lib/services/types';
 
+const { trackEvent } = vi.hoisted(() => ({ trackEvent: vi.fn() }));
+vi.mock('$lib/hooks', () => ({
+    usePostHog: () => ({ trackEvent })
+}));
+
 const selectedAnnotationFilterIds = writable<Set<string>>(new Set());
 const setSelectedAnnotationFilterIds = vi.fn((id: string) => {
     selectedAnnotationFilterIds.update((state) => {
@@ -118,6 +123,7 @@ describe('useAnnotationsFilter', () => {
         vi.clearAllMocks();
         selectedAnnotationFilterIds.set(new Set());
         annotationLabels = writable<AnnotationLabel[] | undefined>(mockLabels);
+        trackEvent.mockClear();
     });
 
     it('returns empty annotationFilterRows when no counts set', () => {
@@ -258,5 +264,64 @@ describe('useAnnotationsFilter', () => {
         });
 
         expect(get(selectedAnnotationFilterNames)).toEqual(['dog']);
+    });
+
+    it('fires grid_filter_toggled with action selected when label is not yet selected', () => {
+        const { toggleAnnotationFilterSelection } = useAnnotationsFilter({
+            annotationLabels,
+            collectionId: 'col-1'
+        });
+
+        toggleAnnotationFilterSelection('cat');
+
+        expect(trackEvent).toHaveBeenCalledWith('grid_filter_toggled', {
+            collection_id: 'col-1',
+            filter_type: 'annotation_label',
+            filter_value: 'cat',
+            action: 'selected',
+            active_count: 1
+        });
+    });
+
+    it('fires grid_filter_toggled with action unselected when label is already selected', () => {
+        selectedAnnotationFilterIds.set(new Set(['id-1']));
+        const { toggleAnnotationFilterSelection } = useAnnotationsFilter({
+            annotationLabels,
+            collectionId: 'col-1'
+        });
+
+        toggleAnnotationFilterSelection('cat');
+
+        expect(trackEvent).toHaveBeenCalledWith('grid_filter_toggled', {
+            collection_id: 'col-1',
+            filter_type: 'annotation_label',
+            filter_value: 'cat',
+            action: 'unselected',
+            active_count: 0
+        });
+    });
+
+    it('does not fire grid_filter_toggled for unknown label', () => {
+        const { toggleAnnotationFilterSelection } = useAnnotationsFilter({ annotationLabels });
+
+        toggleAnnotationFilterSelection('unknown');
+
+        expect(trackEvent).not.toHaveBeenCalled();
+    });
+
+    it('uses collectionId prop when provided for grid_filter_toggled', () => {
+        const { toggleAnnotationFilterSelection } = useAnnotationsFilter({
+            annotationLabels,
+            collectionId: 'my-collection'
+        });
+
+        toggleAnnotationFilterSelection('cat');
+
+        expect(trackEvent).toHaveBeenCalledWith(
+            'grid_filter_toggled',
+            expect.objectContaining({
+                collection_id: 'my-collection'
+            })
+        );
     });
 });
