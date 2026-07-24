@@ -56,7 +56,11 @@
         });
     };
 
-    const handleMatrixExpand = (data: { visibleClassCount: number; totalClassCount: number }) => {
+    type MatrixExpandData = Parameters<
+        NonNullable<ComponentProps<typeof ConfusionMatrixPanel>['onExpand']>
+    >[0];
+
+    const handleMatrixExpand = (data: MatrixExpandData) => {
         trackEvent('confusion_matrix_expanded', {
             collection_id: collectionId,
             evaluation_run_id: evaluationRunId,
