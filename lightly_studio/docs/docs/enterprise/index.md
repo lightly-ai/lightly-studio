@@ -24,7 +24,7 @@ Contact [sales@lightly.ai](mailto:sales@lightly.ai) to find the right option for
 
 === "User Management"
 
-    ![Multi-user management with roles and permissions](https://storage.googleapis.com/lightly-public/studio/docs/enterprise_user_management_v1.0.0.png){ width="100%" }
+    ![Multi-user management with roles and permissions](https://storage.googleapis.com/lightly-public/studio/docs/enterprise_user_management_v1.0.2.png){ width="100%" }
     _Onboard your team with roles and permissions._
 
 === "Samples Grid"
