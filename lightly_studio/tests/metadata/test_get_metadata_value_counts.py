@@ -57,7 +57,7 @@ def test_get_metadata_value_counts__string_values_and_missing(
         session=db_session, collection_id=collection_id
     )
 
-    assert set(counts) == {"city"}
+    assert set(counts) == {"city", "active"}
     assert [(entry.value, entry.count) for entry in counts["city"].value_counts] == [
         ("Zurich", 2),
         ("", 1),
@@ -65,8 +65,8 @@ def test_get_metadata_value_counts__string_values_and_missing(
         ("Other", 1),
     ]
     assert [(entry.value, entry.count) for entry in counts["active"].value_counts] == [
-        (False, 1),
-        (True, 1),
+        (True, 3),
+        (False, 2),
     ]
 
 

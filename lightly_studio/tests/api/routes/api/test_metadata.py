@@ -107,7 +107,9 @@ def test_get_metadata_value_counts(test_client: TestClient, mocker: MockerFixtur
             "value_counts": [{"value": "Zurich", "count": 2}],
         }
     }
-    resolver.assert_called_once_with(session=ANY, collection_id=collection_id, filters=ANY)
+    resolver.assert_called_once_with(
+        session=ANY, collection_id=collection_id, filters=ANY, fields=None
+    )
     assert resolver.call_args.kwargs["collection_id"] == collection_id
     called_filters = resolver.call_args.kwargs["filters"]
     assert called_filters.model_dump(exclude_none=True) == {
@@ -133,7 +135,9 @@ def test_get_metadata_value_counts__optional_body(
 
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == {}
-    resolver.assert_called_once_with(session=ANY, collection_id=collection_id, filters=None)
+    resolver.assert_called_once_with(
+        session=ANY, collection_id=collection_id, filters=None, fields=None
+    )
 
 
 def test_metadata_value_counts__openapi_models(test_client: TestClient) -> None:
