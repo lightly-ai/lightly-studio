@@ -317,22 +317,66 @@ describe('ensureWebappDist', () => {
     );
     const INDEX_FILE = resolve(WEBAPP_DIST_DIR, 'index.html');
 
-    it('creates the dist dir and an empty index.html when missing', () => {
-        mockExistsSync.mockReturnValue(false);
+    function eexist(): NodeJS.ErrnoException {
+        return Object.assign(new Error('file already exists'), { code: 'EEXIST' });
+    }
+
+    it('creates the dist dir and an empty index.html (exclusive) when the dir is absent', () => {
+        mockExistsSync.mockReturnValue(false); // dir does not exist yet
 
         ensureWebappDist();
 
         expect(mockMkdirSync).toHaveBeenCalledWith(WEBAPP_DIST_DIR, { recursive: true });
-        expect(mockWriteFileSync).toHaveBeenCalledWith(INDEX_FILE, '');
+        expect(mockWriteFileSync).toHaveBeenCalledWith(INDEX_FILE, '', { flag: 'wx' });
     });
 
-    it('does not overwrite an existing index.html', () => {
-        mockExistsSync.mockReturnValue(true);
+    it('leaves an existing index.html untouched (EEXIST is swallowed)', () => {
+        mockExistsSync.mockReturnValue(true); // dir already exists
+        mockWriteFileSync.mockImplementation(() => {
+            throw eexist(); // exclusive create hits a real index.html
+        });
 
-        ensureWebappDist();
+        expect(() => ensureWebappDist()).not.toThrow();
+    });
 
-        expect(mockMkdirSync).toHaveBeenCalledWith(WEBAPP_DIST_DIR, { recursive: true });
-        expect(mockWriteFileSync).not.toHaveBeenCalled();
+    it('propagates non-EEXIST write errors', () => {
+        mockExistsSync.mockReturnValue(false);
+        mockWriteFileSync.mockImplementation(() => {
+            throw Object.assign(new Error('permission denied'), { code: 'EACCES' });
+        });
+
+        expect(() => ensureWebappDist()).toThrow('permission denied');
+    });
+
+    it('cleanup removes the whole dir when it created it', () => {
+        mockExistsSync.mockReturnValue(false); // dir absent → helper creates it
+
+        ensureWebappDist()();
+
+        expect(mockRmSync).toHaveBeenCalledWith(WEBAPP_DIST_DIR, {
+            recursive: true,
+            force: true
+        });
+    });
+
+    it('cleanup removes only the index it created when the dir pre-existed', () => {
+        mockExistsSync.mockReturnValue(true); // dir pre-existed; wx write succeeds → index created
+
+        ensureWebappDist()();
+
+        expect(mockRmSync).toHaveBeenCalledWith(INDEX_FILE, { force: true });
+        expect(mockRmSync).not.toHaveBeenCalledWith(WEBAPP_DIST_DIR, expect.anything());
+    });
+
+    it('cleanup is a no-op when a real build was already present', () => {
+        mockExistsSync.mockReturnValue(true); // dir pre-existed
+        mockWriteFileSync.mockImplementation(() => {
+            throw eexist(); // real index.html present → nothing created
+        });
+
+        ensureWebappDist()();
+
+        expect(mockRmSync).not.toHaveBeenCalled();
     });
 });
 
@@ -340,7 +384,7 @@ describe('backendCoverageGuardrail – runTests', () => {
     it('deletes stale coverage.json before running pytest', async () => {
         mockExistsSync
             .mockReturnValueOnce(true) // testsDir exists (findTestFile)
-            .mockReturnValueOnce(false) // webapp index.html missing → written
+            .mockReturnValueOnce(false) // webapp dist dir absent → mocked
             .mockReturnValueOnce(true) // stale coveragePath exists → rmSync
             .mockReturnValueOnce(true); // coveragePath exists after run
         setupTestFileFound();
@@ -349,14 +393,14 @@ describe('backendCoverageGuardrail – runTests', () => {
 
         await backendCoverageGuardrail.run(makeCtx([BACKEND_FILE]));
 
-        expect(mockRmSync).toHaveBeenCalledOnce();
+        // Cleanup also calls rmSync (for the mocked dist), so assert the stale report specifically.
         expect(mockRmSync).toHaveBeenCalledWith(COVERAGE_PATH);
     });
 
     it('does not delete coverage.json when none exists before the run', async () => {
         mockExistsSync
             .mockReturnValueOnce(true) // testsDir exists
-            .mockReturnValueOnce(false) // webapp index.html missing → written
+            .mockReturnValueOnce(false) // webapp dist dir absent → mocked
             .mockReturnValueOnce(false) // no stale coverage file
             .mockReturnValueOnce(true); // coverage written after run
         setupTestFileFound();
@@ -365,13 +409,14 @@ describe('backendCoverageGuardrail – runTests', () => {
 
         await backendCoverageGuardrail.run(makeCtx([BACKEND_FILE]));
 
-        expect(mockRmSync).not.toHaveBeenCalled();
+        // Cleanup may call rmSync (for the mocked dist); assert the stale report was not removed.
+        expect(mockRmSync).not.toHaveBeenCalledWith(COVERAGE_PATH);
     });
 
     it('reads coverage.json written by pytest even when tests fail', async () => {
         mockExistsSync
             .mockReturnValueOnce(true) // testsDir exists
-            .mockReturnValueOnce(false) // webapp index.html missing → written
+            .mockReturnValueOnce(false) // webapp dist dir absent → mocked
             .mockReturnValueOnce(false) // no stale file
             .mockReturnValueOnce(true) // coverage exists in catch block
             .mockReturnValueOnce(true); // coverage exists after catch
@@ -388,7 +433,7 @@ describe('backendCoverageGuardrail – runTests', () => {
     it('re-throws error when pytest fails without writing coverage.json', async () => {
         mockExistsSync
             .mockReturnValueOnce(true) // testsDir exists
-            .mockReturnValueOnce(false) // webapp index.html missing → written
+            .mockReturnValueOnce(false) // webapp dist dir absent → mocked
             .mockReturnValueOnce(false) // no stale file
             .mockReturnValueOnce(false); // no coverage in catch → re-throw
         setupTestFileFound();
@@ -402,7 +447,7 @@ describe('backendCoverageGuardrail – runTests', () => {
     it('passes when all added lines are covered', async () => {
         mockExistsSync
             .mockReturnValueOnce(true) // testsDir exists
-            .mockReturnValueOnce(false) // webapp index.html missing → written
+            .mockReturnValueOnce(false) // webapp dist dir absent → mocked
             .mockReturnValueOnce(false) // no stale file
             .mockReturnValueOnce(true); // coverage written after run
         setupTestFileFound();
@@ -427,7 +472,7 @@ describe('backendCoverageGuardrail – runTests', () => {
         };
         mockExistsSync
             .mockReturnValueOnce(true) // testsDir exists
-            .mockReturnValueOnce(false) // webapp index.html missing → written
+            .mockReturnValueOnce(false) // webapp dist dir absent → mocked
             .mockReturnValueOnce(false) // no stale file
             .mockReturnValueOnce(true); // coverage written after run
         setupTestFileFound();
@@ -452,7 +497,7 @@ describe('backendCoverageGuardrail – runTests', () => {
         };
         mockExistsSync
             .mockReturnValueOnce(true) // testsDir exists
-            .mockReturnValueOnce(false) // webapp index.html missing → written
+            .mockReturnValueOnce(false) // webapp dist dir absent → mocked
             .mockReturnValueOnce(false) // no stale file
             .mockReturnValueOnce(true); // coverage written after run
         setupTestFileFound();
