@@ -88,8 +88,6 @@ def test_get_metadata_value_counts(test_client: TestClient, mocker: MockerFixtur
         return_value={
             "city": MetadataValueCountsView(
                 value_counts=[MetadataValueCountView(value="Zurich", count=2)],
-                other_count=1,
-                missing_count=3,
             )
         },
     )
@@ -106,8 +104,6 @@ def test_get_metadata_value_counts(test_client: TestClient, mocker: MockerFixtur
     assert response.json() == {
         "city": {
             "value_counts": [{"value": "Zurich", "count": 2}],
-            "other_count": 1,
-            "missing_count": 3,
         }
     }
     called_filters = resolver.call_args.kwargs["filters"]

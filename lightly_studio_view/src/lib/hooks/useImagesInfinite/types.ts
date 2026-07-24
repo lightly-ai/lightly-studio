@@ -7,8 +7,7 @@ import type {
     SortFieldExpr
 } from '$lib/api/lightly_studio_local';
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
-import type { MetadataValues } from '$lib/services/types';
-import type { CategoricalMetadataValues } from '$lib/services/types';
+import type { CategoricalMetadataValues, MetadataValues } from '$lib/services/types';
 
 export interface ClassifierSamples {
     positiveSampleIds: string[];
