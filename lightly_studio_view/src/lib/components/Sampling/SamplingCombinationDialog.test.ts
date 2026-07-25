@@ -13,6 +13,7 @@ const pageMock = vi.hoisted(() => ({
     params: { collection_id: 'test-collection-id' },
     data: { collection: { sample_type: 'image' as string } }
 }));
+const closeSamplingDialogMock = vi.hoisted(() => vi.fn());
 
 vi.mock('$app/state', () => ({
     page: pageMock
@@ -34,7 +35,7 @@ vi.mock('$lib/hooks/useSamplingDialog/useSamplingDialog', () => ({
     useSamplingDialog: () => ({
         isSamplingDialogOpen: readable(true),
         openSamplingDialog: vi.fn(),
-        closeSamplingDialog: vi.fn()
+        closeSamplingDialog: closeSamplingDialogMock
     })
 }));
 
@@ -167,6 +168,20 @@ describe('SamplingCombinationDialog', () => {
         });
 
         expect(screen.getByTestId('sampling-dialog-submit')).not.toBeDisabled();
+    });
+
+    it('shows an estimate once the counts and a strategy are available', async () => {
+        filteredSampleCountStore.set(100);
+
+        render(SamplingCombinationDialog);
+
+        expect(screen.queryByTestId('sampling-dialog-estimate-preview')).not.toBeInTheDocument();
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+        await fireEvent.pointerUp(await screen.findByTestId('add-strategy-diversity'));
+
+        const preview = screen.getByTestId('sampling-dialog-estimate-preview');
+        expect(preview).toHaveTextContent('Estimated core sampling: ~<1 sec');
+        expect(preview).not.toHaveTextContent(/memory/i);
     });
 
     it('shows no samples warning when filteredSampleCount is 0', () => {
@@ -323,6 +338,79 @@ describe('SamplingCombinationDialog', () => {
             expect(submitMock).toHaveBeenCalled();
         });
         expect(screen.getByTestId('sampling-dialog-tag-name-input')).toHaveValue('my-tag');
+    });
+
+    it('freezes the start time and estimate while submitting', async () => {
+        let resolveSubmit!: (success: boolean) => void;
+        submitMock.mockReturnValue(
+            new Promise<boolean>((resolve) => {
+                resolveSubmit = resolve;
+            })
+        );
+        filteredSampleCountStore.set(100);
+        render(SamplingCombinationDialog);
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+        await fireEvent.pointerUp(await screen.findByTestId('add-strategy-diversity'));
+        await fireEvent.input(screen.getByTestId('sampling-dialog-tag-name-input'), {
+            target: { value: 'my-tag' }
+        });
+
+        await fireEvent.click(screen.getByTestId('sampling-dialog-submit'));
+
+        const startedAt = await screen.findByTestId('sampling-dialog-started-at');
+        const estimatedFinish = screen.getByTestId('sampling-dialog-estimated-finish');
+        const startedText = startedAt.textContent;
+        const finishText = estimatedFinish.textContent;
+        expect(screen.getByTestId('sampling-dialog-expected-duration')).toHaveTextContent(
+            '~<1 sec'
+        );
+        expect(screen.queryByTestId('sampling-dialog-expected-memory')).not.toBeInTheDocument();
+        expect(screen.getByTestId('sampling-dialog-running')).not.toHaveTextContent(/memory/i);
+
+        filteredSampleCountStore.set(10_000);
+
+        expect(startedAt).toHaveTextContent(startedText ?? '');
+        expect(estimatedFinish).toHaveTextContent(finishText ?? '');
+        resolveSubmit(false);
+        await waitFor(() =>
+            expect(screen.queryByTestId('sampling-dialog-running')).not.toBeInTheDocument()
+        );
+    });
+
+    it('restores the populated form when a running submission fails', async () => {
+        let resolveSubmit!: (success: boolean) => void;
+        submitMock.mockReturnValue(
+            new Promise<boolean>((resolve) => {
+                resolveSubmit = resolve;
+            })
+        );
+        filteredSampleCountStore.set(100);
+        render(SamplingCombinationDialog);
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+        await fireEvent.pointerUp(await screen.findByTestId('add-strategy-diversity'));
+        await fireEvent.input(screen.getByTestId('sampling-dialog-tag-name-input'), {
+            target: { value: 'my-tag' }
+        });
+        await fireEvent.click(screen.getByTestId('sampling-dialog-submit'));
+        expect(await screen.findByTestId('sampling-dialog-running')).toBeInTheDocument();
+
+        resolveSubmit(false);
+
+        await waitFor(() =>
+            expect(screen.getByTestId('sampling-dialog-tag-name-input')).toHaveValue('my-tag')
+        );
+        expect(screen.getByTestId('sampling-dialog-estimate-preview')).toBeInTheDocument();
+    });
+
+    it('ignores dismissal attempts while submitting', async () => {
+        isSubmittingStore.set(true);
+        filteredSampleCountStore.set(100);
+        render(SamplingCombinationDialog);
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+        await fireEvent.keyDown(document, { key: 'Escape' });
+
+        expect(closeSamplingDialogMock).not.toHaveBeenCalled();
     });
 
     it('disables both buttons and shows loading message while submitting', () => {

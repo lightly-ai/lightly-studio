@@ -1,4 +1,5 @@
-import { derived, get, writable, type Readable } from 'svelte/store';
+import { derived, get, readonly, writable, type Readable } from 'svelte/store';
+import { estimateSampling } from '$lib/components/Sampling/samplingEstimate';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { useSamplingDialog } from '$lib/hooks/useSamplingDialog/useSamplingDialog';
 import { isStrategyInstanceValid, type StrategyInstance } from '$lib/hooks/useStrategyBuilder';
@@ -56,6 +57,21 @@ export function useSamplingCombinationDialog({
         }
     );
     const selectionResultTagName = writable('');
+    const samplingEstimate = derived(
+        [filteredSampleCount, nSamplesToSelect, instances],
+        ([$candidateCount, $selectionCount, $instances]) =>
+            estimateSampling({
+                candidateCount: $candidateCount,
+                selectionCount: $selectionCount ?? 0,
+                strategyCount: $instances.length,
+                // The GUI currently uses the 512-dimensional MobileCLIP embedding.
+                embeddingDimension: 512
+            })
+    );
+    const frozenRun = writable<{
+        estimate: NonNullable<ReturnType<typeof estimateSampling>>;
+        startedAt: Date;
+    } | null>(null);
 
     function updateAbsolute(count: number) {
         if (!Number.isFinite(count)) {
@@ -123,6 +139,9 @@ export function useSamplingCombinationDialog({
     }
 
     async function submitSelection() {
+        const estimate = get(samplingEstimate);
+        if (estimate === null) return;
+        frozenRun.set({ estimate, startedAt: new Date() });
         const success = await submit({
             collectionId: getCollectionId(),
             isVideoCollection: getIsVideoCollection(),
@@ -132,6 +151,7 @@ export function useSamplingCombinationDialog({
             selectionFilter: buildSelectionFilter()
         });
         if (success) resetForm();
+        frozenRun.set(null);
     }
 
     function handleFormSubmit(event: Event) {
@@ -156,6 +176,8 @@ export function useSamplingCombinationDialog({
         createButtonTooltip,
         isSubmitting,
         loadingMessage,
+        samplingEstimate,
+        frozenRun: readonly(frozenRun),
         handleFormSubmit
     };
 }
