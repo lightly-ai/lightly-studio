@@ -500,6 +500,77 @@ class TestDataset:
         assert len(samples[0].tags) == 0
         assert len(samples[1].tags) == 0
 
+    def test_add_samples_from_coco__tags_created_for_tag_depth(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        coco_dict = {
+            "images": [
+                {"id": 1, "file_name": "dogs/husky/image1.jpg", "width": 640, "height": 480},
+                {"id": 2, "file_name": "cats/image2.jpg", "width": 640, "height": 480},
+                {"id": 3, "file_name": "image3.jpg", "width": 640, "height": 480},
+            ],
+            "annotations": [
+                {
+                    "id": 1,
+                    "image_id": 1,
+                    "category_id": 1,
+                    "bbox": [10, 10, 20, 20],
+                    "area": 400,
+                    "iscrowd": 0,
+                    "segmentation": [[10, 10, 10, 20, 20, 20]],
+                },
+            ],
+            "categories": [{"id": 1, "name": "cat"}],
+        }
+        annotations_path = tmp_path / "annotations.json"
+        annotations_path.write_text(json.dumps(coco_dict))
+        images_path = tmp_path / "images"
+        _create_sample_images(
+            [
+                images_path / "dogs" / "husky" / "image1.jpg",
+                images_path / "cats" / "image2.jpg",
+                images_path / "image3.jpg",
+            ]
+        )
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_samples_from_coco(
+            annotations_json=annotations_path,
+            images_path=images_path,
+            annotation_type=AnnotationType.OBJECT_DETECTION,
+            tag_depth=2,
+            embed=False,
+        )
+
+        samples = list(dataset)
+        assert len(samples) == 3
+        name_to_tags = {Path(s.file_name).name: s.tags for s in samples}
+        assert name_to_tags["image1.jpg"] == {"dogs", "husky"}
+        assert name_to_tags["image2.jpg"] == {"cats"}
+        assert name_to_tags["image3.jpg"] == set()
+
+    @pytest.mark.parametrize("tag_depth", [-1, -5])
+    def test_add_samples_from_coco__invalid_tag_depth(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+        tag_depth: int,
+    ) -> None:
+        annotations_path = tmp_path / "annotations.json"
+        annotations_path.write_text(json.dumps(get_coco_annotation_dict_valid()))
+        images_path = _create_valid_samples(tmp_path)
+
+        dataset = ImageDataset.create(name="test_dataset")
+        with pytest.raises(ValueError, match="tag_depth must be non-negative"):
+            dataset.add_samples_from_coco(
+                annotations_json=annotations_path,
+                images_path=images_path,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+                tag_depth=tag_depth,
+            )
+
     def test_add_samples_from_coco__coverage_includes_zero_detection_image(
         self,
         patch_collection: None,  # noqa: ARG002
