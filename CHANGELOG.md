@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add metadata filter chips to the left sidebar
 - Display classification annotations in the annotations grid.
 - Show a preview image when hovering over the 2d embedding plot.
-
+- Show estimated sampling time before and during sampling.
 
 ### Changed
 
