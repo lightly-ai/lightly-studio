@@ -87,5 +87,6 @@ export type SideEffectHook<T, I = unknown> = (params: I) => SideEffectHookResult
 export type MetadataInfo = MetadataInfoView;
 export type MetadataBounds = Record<string, { min: number; max: number }>;
 export type MetadataValues = Record<string, { min: number; max: number }>;
-export type CategoricalMetadataValue = string | boolean | null;
+export const MISSING_CATEGORICAL_VALUE = '__missing__' as const;
+export type CategoricalMetadataValue = string | boolean;
 export type CategoricalMetadataValues = Record<string, CategoricalMetadataValue[]>;
