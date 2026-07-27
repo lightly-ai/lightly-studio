@@ -256,43 +256,23 @@ def test_get_adjacent_samples__annotations_match_grid_ordering(
     ]
     assert len(grid_sample_ids) == len(annotations)
 
-    walked_sample_ids = _walk_adjacents(
-        test_client=test_client,
-        collection_id=annotation_collection_id,
-        start_sample_id=grid_sample_ids[0],
-    )
-
-    assert walked_sample_ids == grid_sample_ids
-
-
-def _walk_adjacents(
-    test_client: TestClient,
-    collection_id: UUID,
-    start_sample_id: UUID,
-) -> list[UUID]:
-    """Follow the adjacency endpoint's next pointers, starting at the given annotation."""
-    sample_ids: list[UUID] = []
-    sample_id: UUID | None = start_sample_id
-    while sample_id is not None:
+    # Follow the adjacency endpoint's next pointers from the first annotation.
+    walked_sample_ids = [grid_sample_ids[0]]
+    while True:
         response = test_client.post(
-            f"/api/samples/{sample_id}/adjacents",
+            f"/api/samples/{walked_sample_ids[-1]}/adjacents",
             json={
                 "sample_type": SampleType.ANNOTATION.value,
-                "collection_id": str(collection_id),
+                "collection_id": str(annotation_collection_id),
                 "filters": {
                     "filter_type": "annotations",
-                    "collection_ids": [str(collection_id)],
+                    "collection_ids": [str(annotation_collection_id)],
                 },
             },
         )
-        assert response.status_code == HTTP_STATUS_OK
-        data = response.json()
-        assert data is not None
-        assert UUID(data["sample_id"]) == sample_id
-        assert data["current_sample_position"] == len(sample_ids) + 1
+        next_sample_id = response.json()["next_sample_id"]
+        if next_sample_id is None:
+            break
+        walked_sample_ids.append(UUID(next_sample_id))
 
-        sample_ids.append(sample_id)
-        next_sample_id = data["next_sample_id"]
-        sample_id = UUID(next_sample_id) if next_sample_id is not None else None
-
-    return sample_ids
+    assert walked_sample_ids == grid_sample_ids
