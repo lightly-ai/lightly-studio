@@ -18,6 +18,7 @@
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { GripVertical, PanelLeftClose, SlidersHorizontal } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
+    import { afterNavigate } from '$app/navigation';
     import { toStore } from 'svelte/store';
     import { Header } from '$lib/components';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
@@ -83,6 +84,7 @@
     import { useSearchEmbedding } from '$lib/hooks/useSearchEmbedding/useSearchEmbedding';
     import { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
     import { clearAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
+    import { usePostHog } from '$lib/hooks';
     const { data, children } = $props();
     const {
         collection,
@@ -112,6 +114,8 @@
         // captures a store reference that never goes stale.
         textEmbedding
     } = useGlobalStorage();
+
+    const { trackEvent } = usePostHog();
 
     const evaluationRunsQuery = useEvaluationRuns(() => ({ datasetId: collection.dataset_id }));
     const evaluationRuns = $derived(evaluationRunsQuery.data ?? []);
@@ -221,6 +225,15 @@
             search.onError(message);
         }
     }
+
+    afterNavigate(() => {
+        trackEvent('collection_opened', {
+            dataset_id: collection.dataset_id,
+            collection_id: collection.collection_id,
+            collection_type: `${collection.sample_type}s`,
+            sample_count: collection.total_sample_count
+        });
+    });
 
     // Setup event handlers for keyboard shortcuts
     onMount(() => {
@@ -706,7 +719,8 @@
                             {/if}
                             <LabelsMenu
                                 {annotationFilterRows}
-                                onToggleAnnotationFilter={toggleAnnotationFilterSelection}
+                                onToggleAnnotationFilter={(label) =>
+                                    toggleAnnotationFilterSelection(label, collectionId)}
                                 showVisibilityToggle={showAnnotationVisibilityToggle}
                             />
 
@@ -729,6 +743,7 @@
                         {/if}
                         <div class="min-w-0 flex-1">
                             <DatasetGridHeader
+                                {collectionId}
                                 {canSelectAll}
                                 isSelectionActive={$selectedCount > 0}
                                 {isImages}
@@ -829,7 +844,12 @@
                 </div>
             {/if}
             {#if isCollectionGrid && (isImages || hasMediaWithEmbeddings)}
-                <SidePanelTabs {isImages} {hasMediaWithEmbeddings} {supportsEvaluation} />
+                <SidePanelTabs
+                    {collectionId}
+                    {isImages}
+                    {hasMediaWithEmbeddings}
+                    {supportsEvaluation}
+                />
             {/if}
             {#if hasEmbeddings}
                 {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then { default: CreateClassifierDialog }}

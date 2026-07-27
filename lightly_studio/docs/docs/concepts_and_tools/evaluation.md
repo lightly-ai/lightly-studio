@@ -4,6 +4,9 @@ Model evaluation runs let you compare model predictions against ground truth
 [annotations](annotations.md) and surface per-sample quality metrics in LightlyStudio. Supported
 task types are object detection, classification and semantic segmentation.
 
+For a hands-on, end-to-end walkthrough, follow the
+[Evaluate YOLO26 on Your Dataset](../tutorials/yolo26-model-evaluation.md) tutorial.
+
 ## Model Evaluation in the GUI
 
 <video autoplay loop muted playsinline controls style="width: 100%;">

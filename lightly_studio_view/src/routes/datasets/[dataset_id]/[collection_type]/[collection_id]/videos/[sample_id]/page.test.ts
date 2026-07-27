@@ -10,7 +10,8 @@ import type { LayoutLoadResult } from '../../+layout';
 
 vi.mock('$lib/hooks', () => ({
     useVideo: vi.fn(),
-    useCollectionWithChildren: vi.fn()
+    useCollectionWithChildren: vi.fn(),
+    useTrackSampleInspected: vi.fn()
 }));
 
 // Track which components were rendered

@@ -23,6 +23,7 @@ from sqlmodel import Session
 from tqdm import tqdm
 
 from lightly_studio.core.file_outcome_report import (
+    BROKEN_IMAGE_ERRORS,
     AlreadyPresentInputFileError,
     BrokenInputFileError,
     FileOutcome,
@@ -137,7 +138,7 @@ def load_into_dataset_from_paths(
                     image = PIL.Image.open(file)
                     width, height = image.size
                     image.close()
-            except (PIL.UnidentifiedImageError, OSError) as e:
+            except BROKEN_IMAGE_ERRORS as e:
                 raise BrokenInputFileError() from e
 
             sample = ImageCreate(
