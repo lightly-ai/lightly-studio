@@ -31,7 +31,7 @@ def upgrade() -> None:
         ),
         sa.Column("collection_id", sa.Uuid(), nullable=False),
         sa.Column("filter_json", sa.JSON(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.PrimaryKeyConstraint("export_key"),
     )
 
