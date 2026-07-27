@@ -14,6 +14,7 @@
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import AnnotationSourceSelect from '$lib/components/AnnotationSourceSelect/AnnotationSourceSelect.svelte';
     import type { ExportFilter } from '$lib/services/types';
+    import { exportCollection } from '$lib/services/exportCollection';
     import { useExportSamplesCount } from './useExportSamplesCount/useExportSamplesCount';
     import { useExportTracking } from './useExportTracking/useExportTracking';
     import { PUBLIC_LIGHTLY_STUDIO_API_URL } from '$env/static/public';
@@ -35,9 +36,10 @@
     $effect(() => {
         const isOpen = $isExportDialogOpen;
         if (isOpen) {
-            exportType = isVideoCollection ? 'youtube_vis_segmentation' : 'samples';
+            const defaultExportType = isVideoCollection ? 'youtube_vis_segmentation' : 'samples';
+            exportType = defaultExportType;
             if (!prevIsDialogOpen) {
-                tracking.trackDialogDefaultFormatSet(exportType);
+                tracking.trackDialogDefaultFormatSet(defaultExportType);
             }
         }
         prevIsDialogOpen = isOpen;
@@ -146,16 +148,26 @@
     });
 
     const handleExport = async () => {
-        const result = await tracking.handleExport({
-            exportType,
-            tagNameToExport,
-            sampleCount: $count,
+        const sampleCount = $count;
+        tracking.trackExportDownloadClicked({ exportType, tagNameToExport, sampleCount });
+
+        const response = await exportCollection({
+            collection_id: collectionId,
             includeFilter,
             excludeFilter,
-            imageFilter: $imageFilter
+            collectionFilter: $imageFilter
         });
-        if (result.errorMessage) {
-            errorMessage = result.errorMessage;
+
+        tracking.trackExportTriggered({
+            exportType,
+            tagNameToExport,
+            sampleCount,
+            success: !response.error,
+            error: response.error
+        });
+
+        if (response.error) {
+            errorMessage = `Export failed: ${response.error}`;
         }
     };
 

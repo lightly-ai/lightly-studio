@@ -1,7 +1,4 @@
 import { get } from 'svelte/store';
-import type { ImageFilter } from '$lib/api/lightly_studio_local';
-import { exportCollection } from '$lib/services/exportCollection';
-import type { ExportFilter } from '$lib/services/types';
 import { useExportDialog } from '$lib/hooks';
 import { useGlobalStorage, usePostHog } from '$lib/hooks';
 
@@ -9,20 +6,32 @@ interface UseExportTrackingParams {
     collectionId: string;
 }
 
-interface HandleExportParams {
+interface TrackExportDownloadClickedParams {
     exportType: string;
     tagNameToExport: string | null;
     sampleCount: number;
-    includeFilter: ExportFilter | undefined;
-    excludeFilter: ExportFilter | undefined;
-    imageFilter: ImageFilter | null | undefined;
 }
 
-interface HandleExportResult {
-    errorMessage: string | undefined;
+interface TrackExportTriggeredParams {
+    exportType: string;
+    tagNameToExport: string | null;
+    sampleCount: number;
+    success: boolean;
+    error: string | undefined;
 }
 
-export function useExportTracking({ collectionId }: UseExportTrackingParams) {
+interface UseExportTrackingReturn {
+    trackDialogDefaultFormatSet: (exportFormat: string) => void;
+    trackFormatSelectOpened: (currentFormat: string) => void;
+    trackFormatSelected: (exportFormat: string) => void;
+    handleAnnotationDownloadClick: (exportFormat: string) => void;
+    trackExportDownloadClicked: (params: TrackExportDownloadClickedParams) => void;
+    trackExportTriggered: (params: TrackExportTriggeredParams) => void;
+}
+
+export function useExportTracking({
+    collectionId
+}: UseExportTrackingParams): UseExportTrackingReturn {
     const { trackEvent } = usePostHog();
     const { filteredSampleCount } = useGlobalStorage();
     const { markDownloadClicked } = useExportDialog();
@@ -58,14 +67,11 @@ export function useExportTracking({ collectionId }: UseExportTrackingParams) {
         });
     };
 
-    const handleExport = async ({
+    const trackExportDownloadClicked = ({
         exportType,
         tagNameToExport,
-        sampleCount,
-        includeFilter,
-        excludeFilter,
-        imageFilter
-    }: HandleExportParams): Promise<HandleExportResult> => {
+        sampleCount
+    }: TrackExportDownloadClickedParams) => {
         markDownloadClicked();
         trackEvent('export_download_clicked', {
             collection_id: collectionId,
@@ -73,26 +79,23 @@ export function useExportTracking({ collectionId }: UseExportTrackingParams) {
             sample_count: sampleCount,
             tag_name: tagNameToExport
         });
+    };
 
-        const response = await exportCollection({
-            collection_id: collectionId,
-            includeFilter,
-            excludeFilter,
-            collectionFilter: imageFilter
-        });
-
+    const trackExportTriggered = ({
+        exportType,
+        tagNameToExport,
+        sampleCount,
+        success,
+        error
+    }: TrackExportTriggeredParams) => {
         trackEvent('export_triggered', {
             collection_id: collectionId,
             export_format: exportType,
             sample_count: sampleCount,
             tag_name: tagNameToExport,
-            success: !response.error,
-            error_message: response.error ?? null
+            success,
+            error_message: error ?? null
         });
-
-        return {
-            errorMessage: response.error ? `Export failed: ${response.error}` : undefined
-        };
     };
 
     return {
@@ -100,6 +103,7 @@ export function useExportTracking({ collectionId }: UseExportTrackingParams) {
         trackFormatSelectOpened,
         trackFormatSelected,
         handleAnnotationDownloadClick,
-        handleExport
+        trackExportDownloadClicked,
+        trackExportTriggered
     };
 }

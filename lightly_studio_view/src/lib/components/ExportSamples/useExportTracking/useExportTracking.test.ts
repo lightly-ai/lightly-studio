@@ -4,7 +4,6 @@ import { useExportTracking } from './useExportTracking';
 
 const mockTrackEvent = vi.fn();
 const mockMarkDownloadClicked = vi.fn();
-const mockExportCollection = vi.fn();
 
 vi.mock('$lib/hooks', () => ({
     usePostHog: () => ({ trackEvent: mockTrackEvent }),
@@ -12,17 +11,18 @@ vi.mock('$lib/hooks', () => ({
     useExportDialog: () => ({ markDownloadClicked: mockMarkDownloadClicked })
 }));
 
-vi.mock('$lib/services/exportCollection', () => ({
-    exportCollection: (...args: unknown[]) => mockExportCollection(...args)
-}));
-
 const COLLECTION_ID = 'col-1';
+
+const defaultExportParams = {
+    exportType: 'samples',
+    tagNameToExport: 'my-tag',
+    sampleCount: 10
+};
 
 describe('useExportTracking', () => {
     beforeEach(() => {
         mockTrackEvent.mockClear();
         mockMarkDownloadClicked.mockClear();
-        mockExportCollection.mockClear();
     });
 
     describe('trackDialogDefaultFormatSet', () => {
@@ -84,19 +84,13 @@ describe('useExportTracking', () => {
         });
     });
 
-    describe('handleExport', () => {
-        it('marks download clicked and tracks export_download_clicked before the request', async () => {
-            mockExportCollection.mockResolvedValue({ error: undefined });
-            const { handleExport } = useExportTracking({ collectionId: COLLECTION_ID });
-
-            await handleExport({
-                exportType: 'samples',
-                tagNameToExport: 'my-tag',
-                sampleCount: 10,
-                includeFilter: undefined,
-                excludeFilter: undefined,
-                imageFilter: null
+    describe('trackExportDownloadClicked', () => {
+        it('marks download clicked and tracks export_download_clicked', () => {
+            const { trackExportDownloadClicked } = useExportTracking({
+                collectionId: COLLECTION_ID
             });
+
+            trackExportDownloadClicked(defaultExportParams);
 
             expect(mockMarkDownloadClicked).toHaveBeenCalledOnce();
             expect(mockTrackEvent).toHaveBeenCalledWith('export_download_clicked', {
@@ -106,19 +100,13 @@ describe('useExportTracking', () => {
                 tag_name: 'my-tag'
             });
         });
+    });
 
-        it('tracks export_triggered with success on a successful response', async () => {
-            mockExportCollection.mockResolvedValue({ error: undefined });
-            const { handleExport } = useExportTracking({ collectionId: COLLECTION_ID });
+    describe('trackExportTriggered', () => {
+        it('tracks export_triggered with success: true', () => {
+            const { trackExportTriggered } = useExportTracking({ collectionId: COLLECTION_ID });
 
-            await handleExport({
-                exportType: 'samples',
-                tagNameToExport: 'my-tag',
-                sampleCount: 10,
-                includeFilter: undefined,
-                excludeFilter: undefined,
-                imageFilter: null
-            });
+            trackExportTriggered({ ...defaultExportParams, success: true, error: undefined });
 
             expect(mockTrackEvent).toHaveBeenCalledWith('export_triggered', {
                 collection_id: COLLECTION_ID,
@@ -130,33 +118,15 @@ describe('useExportTracking', () => {
             });
         });
 
-        it('returns undefined errorMessage on success', async () => {
-            mockExportCollection.mockResolvedValue({ error: undefined });
-            const { handleExport } = useExportTracking({ collectionId: COLLECTION_ID });
+        it('tracks export_triggered with success: false and the error message', () => {
+            const { trackExportTriggered } = useExportTracking({ collectionId: COLLECTION_ID });
 
-            const result = await handleExport({
-                exportType: 'samples',
+            trackExportTriggered({
+                ...defaultExportParams,
                 tagNameToExport: null,
                 sampleCount: 5,
-                includeFilter: undefined,
-                excludeFilter: undefined,
-                imageFilter: null
-            });
-
-            expect(result.errorMessage).toBeUndefined();
-        });
-
-        it('tracks export_triggered with failure and returns an errorMessage on error', async () => {
-            mockExportCollection.mockResolvedValue({ error: 'network timeout' });
-            const { handleExport } = useExportTracking({ collectionId: COLLECTION_ID });
-
-            const result = await handleExport({
-                exportType: 'samples',
-                tagNameToExport: null,
-                sampleCount: 5,
-                includeFilter: undefined,
-                excludeFilter: undefined,
-                imageFilter: null
+                success: false,
+                error: 'network timeout'
             });
 
             expect(mockTrackEvent).toHaveBeenCalledWith('export_triggered', {
@@ -166,62 +136,6 @@ describe('useExportTracking', () => {
                 tag_name: null,
                 success: false,
                 error_message: 'network timeout'
-            });
-            expect(result.errorMessage).toBe('Export failed: network timeout');
-        });
-
-        it('passes filters and imageFilter through to exportCollection', async () => {
-            mockExportCollection.mockResolvedValue({ error: undefined });
-            const { handleExport } = useExportTracking({ collectionId: COLLECTION_ID });
-            const includeFilter = { tag_ids: ['tag-1'] };
-            const imageFilter = { brightness: { min: 0.5 } } as never;
-
-            await handleExport({
-                exportType: 'samples',
-                tagNameToExport: null,
-                sampleCount: 3,
-                includeFilter,
-                excludeFilter: undefined,
-                imageFilter
-            });
-
-            expect(mockExportCollection).toHaveBeenCalledWith({
-                collection_id: COLLECTION_ID,
-                includeFilter,
-                excludeFilter: undefined,
-                collectionFilter: imageFilter
-            });
-        });
-
-        it('uses snapshotted values for tracking even if called with different args later', async () => {
-            mockExportCollection.mockResolvedValue({ error: undefined });
-            const { handleExport } = useExportTracking({ collectionId: COLLECTION_ID });
-
-            await handleExport({
-                exportType: 'captions',
-                tagNameToExport: 'original-tag',
-                sampleCount: 7,
-                includeFilter: undefined,
-                excludeFilter: undefined,
-                imageFilter: null
-            });
-
-            const downloadCall = mockTrackEvent.mock.calls.find(
-                ([event]) => event === 'export_download_clicked'
-            );
-            const triggeredCall = mockTrackEvent.mock.calls.find(
-                ([event]) => event === 'export_triggered'
-            );
-
-            expect(downloadCall?.[1]).toMatchObject({
-                export_format: 'captions',
-                tag_name: 'original-tag',
-                sample_count: 7
-            });
-            expect(triggeredCall?.[1]).toMatchObject({
-                export_format: 'captions',
-                tag_name: 'original-tag',
-                sample_count: 7
             });
         });
     });
