@@ -43,6 +43,7 @@ export function useAnnotationSelection() {
             );
 
         setLastCreatedAnnotationId(null);
+
         setAnnotationId(context.annotationId === annotationId ? null : annotationId);
     }
 

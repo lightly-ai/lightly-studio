@@ -15,10 +15,9 @@ from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import create_collection, create_image
 
 
-def test_get_metadata_value_counts__string_values_and_missing(
+def test_get_metadata_value_counts__categorical_values_and_missing(
     db_session: Session,
 ) -> None:
-    """String values, nulls, and missing metadata have separate buckets."""
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
     _create_sample(
