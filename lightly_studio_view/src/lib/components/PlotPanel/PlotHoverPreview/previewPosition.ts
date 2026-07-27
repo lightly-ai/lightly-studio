@@ -15,7 +15,7 @@ interface GetPreviewPositionParams {
  * flipped below or pushed beside the point.
  *
  * Returns the pixel position of the card's top-center (render with
- * `translateX(-50%)`).
+ * `translateX(-50%)`), or null when the plot is too narrow to contain it.
  */
 export function getPreviewPosition({
     point,
@@ -23,11 +23,14 @@ export function getPreviewPosition({
     cardSize,
     margin = 4,
     offset = 10
-}: GetPreviewPositionParams): { left: number; top: number } {
+}: GetPreviewPositionParams): { left: number; top: number } | null {
+    if (plotWidth < cardSize + 2 * margin) {
+        return null;
+    }
     const halfCard = cardSize / 2;
     const minLeft = margin + halfCard;
     const maxLeft = plotWidth - margin - halfCard;
-    const left = Math.min(Math.max(point.x, minLeft), Math.max(maxLeft, minLeft));
+    const left = Math.min(Math.max(point.x, minLeft), maxLeft);
     const top = Math.max(margin, point.y - offset - cardSize);
     return { left, top };
 }

@@ -1,12 +1,18 @@
 <script lang="ts">
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import Button from '$lib/components/ui/button/button.svelte';
+    import { Button } from '$lib/components/ui/button';
     import {
         EmbeddingView,
+        type DataPoint,
+        type OverlayProxy,
         type Point,
         type Rectangle,
         type ViewportState
     } from 'embedding-atlas/svelte';
+    import PlotHoverPreview from './PlotHoverPreview/PlotHoverPreview.svelte';
+    import { getHoverPreviewState } from './PlotHoverPreview/hoverPreviewState';
+    import { NoopTooltip, createOverlayProxyReporter } from './PlotHoverPreview/overlayProxy';
+    import { createQuerySelection, createThumbnailUrlResolver } from './PlotHoverPreview';
     import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
     import type { EmbeddingRegion } from '$lib/api/lightly_studio_local';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
@@ -36,9 +42,11 @@
     import { usePlotColorBy } from './usePlotColorBy/usePlotColorBy';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
-    import { writable } from 'svelte/store';
+    import { writable, get } from 'svelte/store';
+    import { usePostHog } from '$lib/hooks';
 
     let { collectionId }: { collectionId: string } = $props();
+    const { trackEvent } = usePostHog();
     const { setShowEmbeddingPlot, getRangeSelection, setRangeSelectionForCollection } =
         useGlobalStorage();
     const rangeSelection = getRangeSelection(collectionId);
@@ -144,7 +152,10 @@
         toggleCategoryVisibility,
         focusCategoryVisibility,
         resetCategoryVisibility
-    } = useCategoryVisibility();
+    } = useCategoryVisibility({
+        getCollectionId: () => collectionId,
+        getColorByType: () => get(selectedColorByType)
+    });
 
     // The backend re-ranks color slots per request, so a stale toggle would hide the wrong slot;
     // reset hidden categories on every legend change. EXCLUDED keeps its meaning, so it always
@@ -253,8 +264,16 @@
                 }
             } else if (!isEqual($selectedSampleIds, currentSampleIds)) {
                 videoFilters.updateSampleIds($selectedSampleIds);
+                if (pendingSelectionType) {
+                    trackEvent('embedding_selection_made', {
+                        collection_id: collectionId,
+                        selection_type: pendingSelectionType,
+                        selected_count: selectedCount
+                    });
+                }
             }
             setRangeSelection(null);
+            pendingSelectionType = null;
             return;
         }
 
@@ -262,8 +281,16 @@
             clearRegion();
         } else {
             commitRegion(polygon, selectedCount);
+            if (pendingSelectionType) {
+                trackEvent('embedding_selection_made', {
+                    collection_id: collectionId,
+                    selection_type: pendingSelectionType,
+                    selected_count: selectedCount
+                });
+            }
         }
         setRangeSelection(null);
+        pendingSelectionType = null;
     };
 
     let plotContainer: HTMLDivElement | null = $state(null);
@@ -325,6 +352,8 @@
         return selection !== null && !Array.isArray(selection);
     };
 
+    let pendingSelectionType = $state<'lasso' | 'rectangle' | null>(null);
+
     const getPolygonFromRectangle = (rect: Rectangle) => {
         return [
             { x: rect.xMin, y: rect.yMin },
@@ -369,8 +398,17 @@
         // we clear selection
         if (!selection && $rangeSelection) {
             clearSelection();
+            pendingSelectionType = null;
             return;
         }
+        const nextType = isRectangleSelection(selection) ? 'rectangle' : 'lasso';
+        if (pendingSelectionType === null) {
+            trackEvent('embedding_selection_started', {
+                collection_id: collectionId,
+                selection_type: nextType
+            });
+        }
+        pendingSelectionType = nextType;
         const normalizedSelection = isRectangleSelection(selection)
             ? getPolygonFromRectangle(selection)
             : selection;
@@ -381,6 +419,45 @@
     const onViewportState = (state: ViewportState) => {
         viewportState = state;
     };
+
+    // Hover preview: a controlled tooltip showing a thumbnail of the hovered point.
+    // The array-based EmbeddingView only emits hover tooltips when querySelection
+    // is provided; ours returns the nearest visible point with its sample ID.
+    let tooltip: DataPoint | null = $state(null);
+    const onTooltip = (value: DataPoint | null) => {
+        tooltip = value;
+    };
+    // The card is rendered by this component (not the library's tooltip container)
+    // so it always sits directly above the hovered point; the overlay proxy
+    // provides the data → pixel conversion.
+    let overlayProxy: OverlayProxy | null = $state(null);
+    const OverlayProxyReporter = createOverlayProxyReporter((proxy) => {
+        overlayProxy = proxy;
+    });
+    // Tailwind's h-32/w-32 size the card's border box to 128px.
+    const PREVIEW_CARD_SIZE = 128;
+    const hoverPreview = $derived.by(() =>
+        getHoverPreviewState({
+            tooltip,
+            rangeSelectionActive: $rangeSelection !== null,
+            proxy: overlayProxy,
+            cardSize: PREVIEW_CARD_SIZE
+        })
+    );
+    const querySelection = $derived.by(() =>
+        createQuerySelection({
+            x: $arrowData?.x as Float32Array | undefined,
+            y: $arrowData?.y as Float32Array | undefined,
+            sampleIds: $arrowData?.sample_id as string[] | undefined,
+            category: $plotData?.category as Uint8Array | undefined
+        })
+    );
+    const resolveThumbnailUrl = $derived.by(() =>
+        createThumbnailUrlResolver({
+            route: isAnnotations ? 'annotations' : isVideos ? 'videos' : 'images',
+            collectionId
+        })
+    );
 
     const errorText = $derived.by(() => {
         if (embeddingsData.isError) {
@@ -429,7 +506,11 @@
                             {categoryCount}
                             data={$plotData}
                             {categoryColors}
-                            tooltip={null}
+                            tooltip={$rangeSelection ? null : tooltip}
+                            {onTooltip}
+                            {querySelection}
+                            customTooltip={NoopTooltip}
+                            customOverlay={OverlayProxyReporter}
                             theme={embeddingTheme}
                             {onRangeSelection}
                             {onViewportState}
@@ -437,6 +518,18 @@
                             rangeSelection={$rangeSelection}
                         />
                     </div>
+
+                    {#if hoverPreview}
+                        <div
+                            class="pointer-events-none absolute z-10 -translate-x-1/2"
+                            style="left: {hoverPreview.left}px; top: {hoverPreview.top}px"
+                        >
+                            <PlotHoverPreview
+                                sampleId={hoverPreview.sampleId}
+                                {resolveThumbnailUrl}
+                            />
+                        </div>
+                    {/if}
 
                     <PlotPanelLegend
                         {categoryColors}

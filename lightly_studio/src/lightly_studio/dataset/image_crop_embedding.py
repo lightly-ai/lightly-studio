@@ -11,7 +11,13 @@ from numpy.typing import NDArray
 from PIL import Image
 from tqdm import tqdm
 
+from lightly_studio.core.file_outcome_report import (
+    BROKEN_IMAGE_ERRORS,
+    FileOutcome,
+    FileOutcomeReport,
+)
 from lightly_studio.dataset.embedding_generator import ImageCrop
+from lightly_studio.dataset.embedding_result import EmbeddingResult
 from lightly_studio.dataset.image_embedding import EmbeddingContext
 
 
@@ -19,8 +25,12 @@ def embed_image_crops_batched(
     image_crops: list[ImageCrop],
     context: EmbeddingContext,
     show_progress: bool,
-) -> NDArray[np.float32]:
-    """Embed image crops, opening each source file once and preserving input order.
+) -> EmbeddingResult:
+    """Embed image crops, opening each source file once and skipping broken files.
+
+    Crops are grouped by source filepath and each file is opened once. If a file is
+    unreadable/undecodable, all of its crops are skipped rather than aborting the whole
+    run; the file is recorded once as broken.
 
     Args:
         image_crops: Crop definitions to embed.
@@ -28,11 +38,18 @@ def embed_image_crops_batched(
         show_progress: Whether to show a tqdm progress bar.
 
     Returns:
-        Float32 array of shape ``(len(image_crops), embedding_dimension)``.
+        An ``EmbeddingResult`` whose embeddings cover only the crops of readable
+        files, with ``kept_indices`` mapping each row back to its input position.
+
+    Raises:
+        AllInputFilesFailedError: If at least one file was attempted and every attempted
+            file was broken (i.e. no file could be read and embedded).
+        ValueError: If ``context.max_batch_size`` is not positive.
     """
     total_crops = len(image_crops)
     if not total_crops:
-        return np.empty((0, context.embedding_dimension), dtype=np.float32)
+        empty = np.empty((0, context.embedding_dimension), dtype=np.float32)
+        return EmbeddingResult(embeddings=empty, kept_indices=[])
 
     if context.max_batch_size <= 0:
         raise ValueError("max_batch_size must be positive.")
@@ -42,9 +59,12 @@ def embed_image_crops_batched(
         crops_by_filepath.setdefault(image_crop.filepath, []).append((index, image_crop))
 
     embeddings = np.empty((total_crops, context.embedding_dimension), dtype=np.float32)
+    # Input indices of the crops that were embedded (their file could be read).
+    kept_indices: list[int] = []
     # Reusable batch buffer, lazily sized from the first preprocessed crop.
     batch_buffer: torch.Tensor | None = None
     batch_indices: list[int] = []
+    report = FileOutcomeReport()
 
     with (
         tqdm(
@@ -56,33 +76,39 @@ def embed_image_crops_batched(
         torch.no_grad(),
     ):
         for filepath, indexed_crops in crops_by_filepath.items():
-            with fsspec.open(filepath, "rb") as file:
-                image = Image.open(file).convert("RGB")
-                for index, image_crop in indexed_crops:
-                    cropped = image.crop(
-                        (
-                            image_crop.x,
-                            image_crop.y,
-                            image_crop.x + image_crop.width,
-                            image_crop.y + image_crop.height,
-                        )
+            try:
+                with fsspec.open(filepath, "rb") as file:
+                    image = Image.open(file).convert("RGB")
+            except BROKEN_IMAGE_ERRORS:
+                report.record(path=filepath, outcome=FileOutcome.BROKEN)
+                continue
+            report.record(path=filepath, outcome=FileOutcome.ADDED)
+            for index, image_crop in indexed_crops:
+                cropped = image.crop(
+                    (
+                        image_crop.x,
+                        image_crop.y,
+                        image_crop.x + image_crop.width,
+                        image_crop.y + image_crop.height,
                     )
-                    preprocessed = context.preprocess(cropped)
-                    if batch_buffer is None:
-                        batch_buffer = torch.empty(
-                            (context.max_batch_size, *preprocessed.shape),
-                            dtype=preprocessed.dtype,
-                        )
-                    batch_buffer[len(batch_indices)] = preprocessed
-                    batch_indices.append(index)
-                    if len(batch_indices) >= context.max_batch_size:
-                        _flush_crop_batch(
-                            batch_buffer=batch_buffer,
-                            batch_indices=batch_indices,
-                            embeddings=embeddings,
-                            context=context,
-                            progress_bar=progress_bar,
-                        )
+                )
+                preprocessed = context.preprocess(cropped)
+                if batch_buffer is None:
+                    batch_buffer = torch.empty(
+                        (context.max_batch_size, *preprocessed.shape),
+                        dtype=preprocessed.dtype,
+                    )
+                batch_buffer[len(batch_indices)] = preprocessed
+                batch_indices.append(index)
+                kept_indices.append(index)
+                if len(batch_indices) >= context.max_batch_size:
+                    _flush_crop_batch(
+                        batch_buffer=batch_buffer,
+                        batch_indices=batch_indices,
+                        embeddings=embeddings,
+                        context=context,
+                        progress_bar=progress_bar,
+                    )
 
         _flush_crop_batch(
             batch_buffer=batch_buffer,
@@ -92,7 +118,12 @@ def embed_image_crops_batched(
             progress_bar=progress_bar,
         )
 
-    return embeddings
+    report.raise_if_all_failed()
+    report.log_summary()
+
+    # kept_indices in input order maps each returned row back to its input crop.
+    kept_indices.sort()
+    return EmbeddingResult(embeddings=embeddings[kept_indices], kept_indices=kept_indices)
 
 
 def _flush_crop_batch(

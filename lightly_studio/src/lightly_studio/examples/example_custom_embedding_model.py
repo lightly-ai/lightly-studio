@@ -23,8 +23,9 @@ from PIL import Image
 import lightly_studio as ls
 from lightly_studio.database import db_manager
 from lightly_studio.dataset import file_utils, image_crop_embedding, image_embedding
+from lightly_studio.dataset.embedding_result import EmbeddingResult
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
-from lightly_studio.dataset.image_embedding import EmbeddingContext, ImageEmbeddingResult
+from lightly_studio.dataset.image_embedding import EmbeddingContext
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.vendor import mobileclip
 
@@ -86,9 +87,7 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
             embedding_list: list[float] = embedding.cpu().numpy().flatten().tolist()
         return embedding_list
 
-    def embed_images(
-        self, filepaths: list[str], show_progress: bool = True
-    ) -> ImageEmbeddingResult:
+    def embed_images(self, filepaths: list[str], show_progress: bool = True) -> EmbeddingResult:
         """Embed a batch of images, returning one row per readable input path."""
         return image_embedding.embed_image_files_batched(
             filepaths=filepaths,
@@ -98,7 +97,7 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
 
     def embed_image_crops(
         self, image_crops: list[ls.ImageCrop], show_progress: bool = True
-    ) -> NDArray[np.float32]:
+    ) -> EmbeddingResult:
         """Embed a batch of image crops (used for annotation embeddings)."""
         return image_crop_embedding.embed_image_crops_batched(
             image_crops=image_crops,

@@ -16,11 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Introduce button to see expanded distribution for numeric metadata values.
 - Add metadata filter chips to the left sidebar
 - Display classification annotations in the annotations grid.
+- Show a preview image when hovering over the 2d embedding plot.
 
 
 ### Changed
 
 - The left filter panel can now be collapsed entirely to reclaim space for the grid; a "Filters" button in the grid header restores it.
+- Image and video opening paths (indexing and embedding) now handle errors consistently: broken files are tolerated and skipped instead of breaking the whole operation.
 
 ### Deprecated
 

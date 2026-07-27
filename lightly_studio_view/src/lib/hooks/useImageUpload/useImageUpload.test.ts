@@ -88,7 +88,8 @@ describe('useImageUpload', () => {
         expect(get(upload.previewUrl)).toBe('blob:preview-url');
         expect(onSuccess).toHaveBeenCalledWith({
             fileName: 'image.png',
-            embedding: [1, 2, 3]
+            embedding: [1, 2, 3],
+            collectionId: 'collection-id'
         });
         expect(onError).not.toHaveBeenCalled();
     });

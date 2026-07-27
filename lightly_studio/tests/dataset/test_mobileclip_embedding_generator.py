@@ -59,7 +59,7 @@ class TestMobileCLIPEmbeddingGenerator:
 
     def test_embed_image_crops__empty_input(self) -> None:
         mobileclip = MobileCLIPEmbeddingGenerator()
-        embeddings = mobileclip.embed_image_crops([])
+        embeddings = mobileclip.embed_image_crops([]).embeddings
 
         assert embeddings.shape == (0, 512)
 
@@ -70,7 +70,7 @@ class TestMobileCLIPEmbeddingGenerator:
             width, height = image.size
 
         full_crop = ImageCrop(filepath=str(cat_image_path), x=0, y=0, width=width, height=height)
-        crop_embeddings = mobileclip.embed_image_crops([full_crop])
+        crop_embeddings = mobileclip.embed_image_crops([full_crop]).embeddings
         image_embeddings = mobileclip.embed_images([str(cat_image_path)]).embeddings
 
         assert crop_embeddings.shape == (1, 512)
