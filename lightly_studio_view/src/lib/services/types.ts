@@ -88,5 +88,6 @@ export type MetadataInfo = MetadataInfoView;
 export type MetadataBounds = Record<string, { min: number; max: number }>;
 export type MetadataValues = Record<string, { min: number; max: number }>;
 export const MISSING_CATEGORICAL_VALUE = '__missing__' as const;
+export const OTHER_CATEGORICAL_VALUE = '__other__' as const;
 export type CategoricalMetadataValue = string | boolean;
 export type CategoricalMetadataValues = Record<string, CategoricalMetadataValue[]>;
