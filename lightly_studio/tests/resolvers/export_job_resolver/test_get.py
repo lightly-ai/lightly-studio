@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from uuid import uuid4
+import uuid
 
 from sqlmodel import Session
 
@@ -27,6 +27,6 @@ def test_get(db_session: Session) -> None:
 
 
 def test_get__not_found(db_session: Session) -> None:
-    result = export_job_resolver.get(session=db_session, export_key=uuid4())
+    result = export_job_resolver.get(session=db_session, export_key=uuid.uuid4())
 
     assert result is None

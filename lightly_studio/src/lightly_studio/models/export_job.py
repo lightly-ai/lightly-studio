@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
@@ -25,7 +26,7 @@ class ExportJobTable(SQLModel, table=True):
 
     __tablename__ = "export_job"
 
-    export_key: UUID = Field(default_factory=uuid4, primary_key=True)
+    export_key: UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     export_type: ExportType
     collection_id: UUID
     filter_json: dict[str, Any] = Field(sa_column=Column(JSON, nullable=False))
