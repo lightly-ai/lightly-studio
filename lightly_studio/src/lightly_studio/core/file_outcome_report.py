@@ -3,7 +3,9 @@
 Pipeline steps route each per-item file operation through
 `FileOutcomeReport.track`. The body classifies *why* a file ended where it did
 by raising one of the typed signals defined here; the report does pure
-bookkeeping and decides the all-failed raise policy. It has no knowledge of I/O.
+bookkeeping and decides the all-failed raise policy. The `FileOutcomeReport`
+itself performs no I/O; the module also exposes `BROKEN_IMAGE_ERRORS`, the shared
+tuple of Pillow exceptions image-open sites map to a broken-file outcome.
 
 Each tracked file ends in exactly one `FileOutcome`:
 
@@ -42,6 +44,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from os import PathLike
 
+from PIL import Image, UnidentifiedImageError
+
 logger = logging.getLogger(__name__)
 
 # Maximum number of example paths kept per outcome for the summary.
@@ -67,6 +71,15 @@ class MissingInputFileError(InputFileError):
 
 class BrokenInputFileError(InputFileError):
     """Signal that an input file is present but unreadable/undecodable."""
+
+
+# Pillow exceptions for a present-but-undecodable image; `DecompressionBombError`
+# subclasses `Exception` directly, so it is not covered by `OSError`.
+BROKEN_IMAGE_ERRORS: tuple[type[Exception], ...] = (
+    OSError,
+    UnidentifiedImageError,
+    Image.DecompressionBombError,
+)
 
 
 class AllInputFilesFailedError(Exception):
