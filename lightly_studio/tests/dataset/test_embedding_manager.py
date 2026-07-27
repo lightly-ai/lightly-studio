@@ -748,11 +748,12 @@ def test_embed_videos_skips_broken_videos(
     """A generator that drops a broken video stores embeddings only for the kept ones."""
 
     class DropsMiddleVideoGenerator(RandomEmbeddingGenerator):
-        def embed_videos(self, filepaths: list[str]) -> EmbeddingResult:
+        def embed_videos(self, filepaths: list[str]) -> EmbeddingResult:  # noqa: ARG002
             # Simulate the middle video being broken and skipped.
-            kept_indices = [index for index in range(len(filepaths)) if index != 1]
-            embeddings = np.zeros((len(kept_indices), self._dimension), dtype=np.float32)
-            return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
+            return EmbeddingResult(
+                embeddings=np.zeros((2, self._dimension), dtype=np.float32),
+                kept_indices=[0, 2],
+            )
 
     video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     collection_id = video_collection.collection_id
@@ -760,8 +761,9 @@ def test_embed_videos_skips_broken_videos(
         session=db_session,
         collection_id=collection_id,
         videos=[
-            VideoStub(path=f"/videos/video_{idx}.mp4", duration_s=1.0 + idx, fps=24.0)
-            for idx in range(3)
+            VideoStub(path="/videos/video_0.mp4", duration_s=1.0, fps=24.0),
+            VideoStub(path="/videos/video_1.mp4", duration_s=2.0, fps=24.0),
+            VideoStub(path="/videos/video_2.mp4", duration_s=3.0, fps=24.0),
         ],
     )
     manager = EmbeddingManager()
