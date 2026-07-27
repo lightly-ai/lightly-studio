@@ -132,6 +132,26 @@ def test_get_metadata_value_counts__optional_body(
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == {}
     assert resolver.call_args.kwargs["filters"] is None
+    assert resolver.call_args.kwargs["fields"] is None
+
+
+def test_get_metadata_value_counts__fields_forwarded(
+    test_client: TestClient, mocker: MockerFixture
+) -> None:
+    collection_id = uuid4()
+    resolver = mocker.patch(
+        "lightly_studio.api.routes.api.metadata."
+        "metadata_value_counts_resolver.get_metadata_value_counts",
+        return_value={},
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/value-counts",
+        json={"fields": ["city", "country"]},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert resolver.call_args.kwargs["fields"] == ["city", "country"]
 
 
 def test_metadata_value_counts__openapi_models(test_client: TestClient) -> None:
