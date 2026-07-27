@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
@@ -258,7 +259,7 @@ def test_get_adjacent_samples__annotations_match_grid_ordering(
 
     # Follow the adjacency endpoint's next pointers from the first annotation.
     walked_sample_ids = [grid_sample_ids[0]]
-    while True:
+    for _ in range(len(annotations)):
         response = test_client.post(
             f"/api/samples/{walked_sample_ids[-1]}/adjacents",
             json={
@@ -274,5 +275,7 @@ def test_get_adjacent_samples__annotations_match_grid_ordering(
         if next_sample_id is None:
             break
         walked_sample_ids.append(UUID(next_sample_id))
+    else:
+        pytest.fail("Adjacency chain did not terminate, the next pointers likely cycle.")
 
     assert walked_sample_ids == grid_sample_ids
