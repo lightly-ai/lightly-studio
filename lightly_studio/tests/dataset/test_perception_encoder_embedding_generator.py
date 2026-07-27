@@ -4,9 +4,11 @@ import uuid
 from pathlib import Path
 
 import numpy as np
+import pytest
 import torch
 from PIL import Image
 
+from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
 from lightly_studio.dataset.embedding_generator import ImageCrop
 from lightly_studio.dataset.perception_encoder_embedding_generator import (
     PerceptionEncoderEmbeddingGenerator,
@@ -104,8 +106,10 @@ class TestPerceptionEncoderEmbeddingGenerator:
         perception_encoder = PerceptionEncoderEmbeddingGenerator()
         dog_video_path = FIXTURES_DIR / "dog.mp4"
 
-        embeddings = perception_encoder.embed_videos([str(dog_video_path)])
+        result = perception_encoder.embed_videos([str(dog_video_path)])
+        embeddings = result.embeddings
 
+        assert result.kept_indices == [0]
         assert len(embeddings) == 1
         cat_video_embedding = embeddings[0]
         assert len(cat_video_embedding) == 512
@@ -117,6 +121,36 @@ class TestPerceptionEncoderEmbeddingGenerator:
         assert np.isclose(dog_video_embedding_normed[1], 0.057, atol=1e-2)
         assert np.isclose(dog_video_embedding_normed[2], 0.057, atol=1e-2)
         assert np.isclose(dog_video_embedding_normed[3], -0.077, atol=1e-2)
+
+    def test_embed_videos__skips_broken_and_missing(self, tmp_path: Path) -> None:
+        perception_encoder = PerceptionEncoderEmbeddingGenerator()
+        dog_video_path = FIXTURES_DIR / "dog.mp4"
+        broken_path = tmp_path / "broken.mp4"
+        broken_path.write_bytes(b"not a valid video")
+        missing_path = tmp_path / "missing.mp4"
+
+        # Interleave the broken/missing files with the readable one.
+        filepaths = [
+            str(broken_path),
+            str(dog_video_path),
+            str(missing_path),
+            str(dog_video_path),
+        ]
+
+        result = perception_encoder.embed_videos(filepaths)
+
+        assert result.kept_indices == [1, 3]
+        assert result.embeddings.shape == (2, 512)
+        # The two kept rows embed the same video, so they must match.
+        assert np.allclose(result.embeddings[0], result.embeddings[1])
+
+    def test_embed_videos__raises_when_all_files_broken(self, tmp_path: Path) -> None:
+        perception_encoder = PerceptionEncoderEmbeddingGenerator()
+        broken_path = tmp_path / "broken.mp4"
+        broken_path.write_bytes(b"not a valid video")
+
+        with pytest.raises(AllInputFilesFailedError):
+            perception_encoder.embed_videos([str(broken_path), str(broken_path)])
 
     def test_classification(self) -> None:
         """End-to-end test for embedding consistency.
@@ -173,7 +207,9 @@ class TestPerceptionEncoderEmbeddingGenerator:
         perception_encoder = PerceptionEncoderEmbeddingGenerator()
         dog_video_path = FIXTURES_DIR / "dog.mp4"
 
-        dog_video_emb = torch.tensor(perception_encoder.embed_videos([str(dog_video_path)])[0])
+        dog_video_emb = torch.tensor(
+            perception_encoder.embed_videos([str(dog_video_path)]).embeddings[0]
+        )
         dog_video_emb /= dog_video_emb.norm(dim=-1, keepdim=True)
 
         # Compute softmax similarity as in perception_encoder repo example.

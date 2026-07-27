@@ -32,7 +32,8 @@ describe('useTextEmbedding', () => {
         });
         expect(onSuccess).toHaveBeenCalledWith({
             queryText: 'a yellow excavator',
-            embedding: [1, 2, 3]
+            embedding: [1, 2, 3],
+            collectionId: 'collection-id'
         });
     });
 
@@ -110,7 +111,11 @@ describe('useTextEmbedding', () => {
 
         resolveSecond({ data: [2], error: undefined });
         await second;
-        expect(onSuccess).toHaveBeenLastCalledWith({ queryText: 'second', embedding: [2] });
+        expect(onSuccess).toHaveBeenLastCalledWith({
+            queryText: 'second',
+            embedding: [2],
+            collectionId: 'collection-id'
+        });
 
         resolveFirst({ data: [1], error: undefined });
         await first;

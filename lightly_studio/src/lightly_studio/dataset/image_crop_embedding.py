@@ -8,10 +8,14 @@ import fsspec
 import numpy as np
 import torch
 from numpy.typing import NDArray
-from PIL import Image, UnidentifiedImageError
+from PIL import Image
 from tqdm import tqdm
 
-from lightly_studio.core.file_outcome_report import FileOutcome, FileOutcomeReport
+from lightly_studio.core.file_outcome_report import (
+    BROKEN_IMAGE_ERRORS,
+    FileOutcome,
+    FileOutcomeReport,
+)
 from lightly_studio.dataset.embedding_generator import ImageCrop
 from lightly_studio.dataset.embedding_result import EmbeddingResult
 from lightly_studio.dataset.image_embedding import EmbeddingContext
@@ -75,7 +79,7 @@ def embed_image_crops_batched(
             try:
                 with fsspec.open(filepath, "rb") as file:
                     image = Image.open(file).convert("RGB")
-            except (OSError, UnidentifiedImageError):
+            except BROKEN_IMAGE_ERRORS:
                 report.record(path=filepath, outcome=FileOutcome.BROKEN)
                 continue
             report.record(path=filepath, outcome=FileOutcome.ADDED)

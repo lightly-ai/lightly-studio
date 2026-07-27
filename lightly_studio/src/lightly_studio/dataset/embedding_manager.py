@@ -383,13 +383,14 @@ class EmbeddingManager:
             raise ValueError("Could not fetch all video paths for the provided IDs.")
 
         # Generate embeddings for the samples.
-        embeddings = model.embed_videos(filepaths=filepaths)
+        result = model.embed_videos(filepaths=filepaths)
+        kept_sample_ids = [sample_ids[index] for index in result.kept_indices]
 
         _store_embeddings(
             session=session,
             model_id=model_id,
-            sample_ids=sample_ids,
-            embeddings=embeddings,
+            sample_ids=kept_sample_ids,
+            embeddings=result.embeddings,
         )
 
     def embed_and_store_pil_images(
