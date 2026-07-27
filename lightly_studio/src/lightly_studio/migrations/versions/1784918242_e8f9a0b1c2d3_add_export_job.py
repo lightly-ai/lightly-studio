@@ -26,7 +26,7 @@ def upgrade() -> None:
         sa.Column("export_key", sa.Uuid(), nullable=False),
         sa.Column(
             "export_type",
-            sa.Enum("annotations", "captions", "youtube_vis", "filename", name="exporttype"),
+            sa.Enum("ANNOTATIONS", "CAPTIONS", "YOUTUBE_VIS", "FILENAME", name="exporttype"),
             nullable=False,
         ),
         sa.Column("collection_id", sa.Uuid(), nullable=False),
