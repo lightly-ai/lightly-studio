@@ -21,6 +21,7 @@ Each strategy optimizes for a different goal. Start from what you are trying to 
 |---|---|
 | Pick a diverse subset that covers the whole dataset | [Diverse](#diverse) |
 | Keep a diverse subset that still reflects the real distribution | [Diverse + typicality](#typicality-and-outlier) |
+| Find rare or unusual samples, such as edge cases, anomalies, or potentially mislabeled data | [Outliers](#typicality-and-outlier) |
 | Clean up a dataset by removing near-duplicate images | [Deduplication](#deduplication) |
 | Rank images by a number I have and keep the top ones (e.g. model confidence) | [Metadata weighting](#metadata-weighting) |
 | Find more images based on failure cases | [Similarity](#similarity) |
