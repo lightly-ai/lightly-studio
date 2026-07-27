@@ -3,7 +3,10 @@
 import operator
 from typing import Any, Callable, Literal, Protocol, TypeVar
 
+import pydantic
+import sqlalchemy
 from pydantic import BaseModel
+from pydantic_core import PydanticCustomError
 from sqlalchemy.sql.elements import ColumnElement
 
 from lightly_studio.database import db_json
@@ -14,7 +17,8 @@ T = TypeVar("T", bound=BaseModel)
 M = TypeVar("M", bound="HasMetadata")
 
 # Valid operators for metadata filtering
-MetadataOperator = Literal[">", "<", "==", ">=", "<=", "!="]
+MetadataComparisonOperator = Literal[">", "<", "==", ">=", "<=", "!="]
+MetadataOperator = Literal[">", "<", "==", ">=", "<=", "!=", "in"]
 
 
 class HasMetadata(Protocol):
@@ -30,6 +34,24 @@ class MetadataFilter(BaseModel):
     key: str
     op: MetadataOperator
     value: Any
+
+    @pydantic.model_validator(mode="after")
+    def validate_in_value(self) -> "MetadataFilter":  # noqa: N804
+        """Validate the categorical values accepted by the ``in`` operator."""
+        if self.op != "in":
+            return self
+        if not isinstance(self.value, list) or not self.value:
+            raise PydanticCustomError(
+                "metadata_in_value", "'in' metadata filters require a non-empty array."
+            )
+        concrete_types = {type(value) for value in self.value if value is not None}
+        if not concrete_types.issubset({str, bool}) or len(concrete_types) > 1:
+            raise PydanticCustomError(
+                "metadata_in_value",
+                "'in' metadata filter values must be homogeneous strings or booleans, "
+                "optionally including null.",
+            )
+        return self
 
 
 # Ignore PLW1641 because `==` and `!=` create filters here, so this class does
@@ -66,7 +88,9 @@ class Metadata:  # noqa: PLW1641
         return MetadataFilter(key=self.key, op="!=", value=value)
 
 
-_OP_MAP: dict[MetadataOperator, Callable[[ColumnElement[Any], Any], ColumnElement[bool]]] = {
+_OP_MAP: dict[
+    MetadataComparisonOperator, Callable[[ColumnElement[Any], Any], ColumnElement[bool]]
+] = {
     ">": operator.gt,
     "<": operator.lt,
     "==": operator.eq,
@@ -116,13 +140,21 @@ def apply_metadata_filters(
     if not metadata_filters:
         return query
 
-    # Apply the filters using JSON extraction
+    match_missing = any(
+        meta_filter.op == "in" and None in meta_filter.value for meta_filter in metadata_filters
+    )
     query = query.join(
         metadata_model,
         metadata_join_condition,
+        isouter=match_missing,
     )
 
     for meta_filter in metadata_filters:
+        if meta_filter.op == "in":
+            query = query.where(
+                _build_in_condition(metadata_model=metadata_model, metadata_filter=meta_filter)
+            )
+            continue
         extract_expr = db_json.json_extract(
             column=metadata_model.data,
             field=meta_filter.key,
@@ -133,3 +165,23 @@ def apply_metadata_filters(
         query = query.where(condition)
 
     return query
+
+
+def _build_in_condition(
+    metadata_model: type[M], metadata_filter: MetadataFilter
+) -> ColumnElement[bool]:
+    """Build an OR predicate for a validated categorical ``in`` filter."""
+    extract_expr = db_json.json_extract_string(
+        column=metadata_model.data, field=metadata_filter.key
+    )
+    values = [
+        str(value).lower() if isinstance(value, bool) else value
+        for value in metadata_filter.value
+        if value is not None
+    ]
+    conditions: list[ColumnElement[bool]] = []
+    if values:
+        conditions.append(extract_expr.in_(values))
+    if None in metadata_filter.value:
+        conditions.append(extract_expr.is_(None))
+    return sqlalchemy.or_(*conditions)

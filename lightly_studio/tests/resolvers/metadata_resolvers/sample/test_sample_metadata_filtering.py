@@ -5,6 +5,7 @@ from sqlmodel import Session
 from lightly_studio.resolvers import sample_resolver
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import (
     Metadata,
+    MetadataFilter,
 )
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
@@ -106,3 +107,104 @@ def test_metadata_multiple_filters(db_session: Session) -> None:
     ).samples
     assert len(samples) == 1
     assert samples[0].sample_id == sample2.sample_id
+
+
+def test_metadata_in_filter__concrete_values_and_other_keys(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    first = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/first.png",
+    ).sample
+    second = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/second.png",
+    ).sample
+    third = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/third.png",
+    ).sample
+    first["city"] = "Zurich"
+    first["reviewed"] = True
+    second["city"] = "Berlin"
+    second["reviewed"] = False
+    third["city"] = "Paris"
+    third["reviewed"] = True
+
+    filters = SampleFilter(
+        metadata_filters=[
+            MetadataFilter(key="city", op="in", value=["Zurich", "Berlin"]),
+            MetadataFilter(key="reviewed", op="in", value=[True]),
+        ]
+    )
+    samples = sample_resolver.get_filtered_samples(
+        session=db_session, collection_id=collection.collection_id, filters=filters
+    ).samples
+
+    assert [sample.sample_id for sample in samples] == [first.sample_id]
+
+
+def test_metadata_in_filter__missing(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    concrete = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/concrete.png",
+    ).sample
+    other_metadata = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/other-metadata.png",
+    ).sample
+    no_metadata = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/no-metadata.png",
+    ).sample
+    concrete["city"] = "Zurich"
+    other_metadata["country"] = "CH"
+
+    filters = SampleFilter(metadata_filters=[MetadataFilter(key="city", op="in", value=[None])])
+    samples = sample_resolver.get_filtered_samples(
+        session=db_session, collection_id=collection.collection_id, filters=filters
+    ).samples
+
+    assert {sample.sample_id for sample in samples} == {
+        other_metadata.sample_id,
+        no_metadata.sample_id,
+    }
+
+
+def test_metadata_in_filter__concrete_and_missing_special_key(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    concrete = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/concrete.png",
+    ).sample
+    missing = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/missing.png",
+    ).sample
+    excluded = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/excluded.png",
+    ).sample
+    concrete["city.name's"] = "Zurich"
+    excluded["city.name's"] = "Paris"
+
+    filters = SampleFilter(
+        metadata_filters=[MetadataFilter(key="city.name's", op="in", value=["Zurich", None])]
+    )
+    samples = sample_resolver.get_filtered_samples(
+        session=db_session, collection_id=collection.collection_id, filters=filters
+    ).samples
+
+    assert {sample.sample_id for sample in samples} == {
+        concrete.sample_id,
+        missing.sample_id,
+    }

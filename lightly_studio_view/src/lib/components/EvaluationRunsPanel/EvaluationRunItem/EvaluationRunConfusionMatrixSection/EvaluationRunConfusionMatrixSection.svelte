@@ -1,5 +1,6 @@
 <script lang="ts">
     import { page } from '$app/state';
+    import type { ComponentProps } from 'svelte';
     import { Spinner, Typography } from '$lib/components';
     import {
         ConfusionMatrixPanel,
@@ -7,7 +8,7 @@
         NO_PREDICTION_COL_LABEL,
         type ConfusionCellSelection
     } from '$lib/components/ConfusionMatrix';
-    import { useEvaluationConfusionMatrix } from '$lib/hooks';
+    import { useEvaluationConfusionMatrix, usePostHog } from '$lib/hooks';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 
     interface Props {
@@ -17,6 +18,9 @@
     const { evaluationRunId }: Props = $props();
 
     const datasetId = $derived(page.params.dataset_id!);
+    const collectionId = $derived(page.params.collection_id!);
+
+    const { trackEvent } = usePostHog();
 
     const query = useEvaluationConfusionMatrix(() => ({
         datasetId,
@@ -31,10 +35,52 @@
     // resolves the false-positive (no ground truth) and false-negative (no prediction)
     // margin buckets.
     const handleCellClick = (cell: ConfusionCellSelection) => {
+        const matrix = query.data;
+        const rowIdx = matrix?.row_labels.indexOf(cell.gtLabel) ?? -1;
+        const colIdx = matrix?.col_labels.indexOf(cell.predLabel) ?? -1;
+        const sampleCount =
+            rowIdx >= 0 && colIdx >= 0 ? (matrix?.counts[rowIdx]?.[colIdx] ?? 0) : 0;
+
+        trackEvent('confusion_matrix_cell_clicked', {
+            collection_id: collectionId,
+            evaluation_run_id: evaluationRunId,
+            actual_label: cell.gtLabel,
+            predicted_label: cell.predLabel,
+            sample_count: sampleCount
+        });
+
         updateConfusionCell({
             evaluation_run_id: evaluationRunId,
             gt_label: cell.gtLabel === NO_GROUND_TRUTH_ROW_LABEL ? null : cell.gtLabel,
             pred_label: cell.predLabel === NO_PREDICTION_COL_LABEL ? null : cell.predLabel
+        });
+    };
+
+    type MatrixExpandData = Parameters<
+        NonNullable<ComponentProps<typeof ConfusionMatrixPanel>['onExpand']>
+    >[0];
+
+    const handleMatrixExpand = (data: MatrixExpandData) => {
+        trackEvent('confusion_matrix_expanded', {
+            collection_id: collectionId,
+            evaluation_run_id: evaluationRunId,
+            visible_class_count: data.visibleClassCount,
+            total_class_count: data.totalClassCount
+        });
+    };
+
+    type MatrixConfigApplied = Parameters<
+        NonNullable<ComponentProps<typeof ConfusionMatrixPanel>['onConfigApplied']>
+    >[0];
+
+    const handleMatrixConfigApplied = (data: MatrixConfigApplied) => {
+        trackEvent('confusion_matrix_configured', {
+            collection_id: collectionId,
+            evaluation_run_id: evaluationRunId,
+            mode: data.mode,
+            n: data.mode === 'topN' ? data.n : null,
+            sort_by: data.sortBy,
+            visible_class_count: data.visibleClassCount
         });
     };
 </script>
@@ -58,7 +104,13 @@
                 </Typography>
             </div>
         {:else if query.data}
-            <ConfusionMatrixPanel matrix={query.data} showLegend onCellClick={handleCellClick} />
+            <ConfusionMatrixPanel
+                matrix={query.data}
+                showLegend
+                onCellClick={handleCellClick}
+                onExpand={handleMatrixExpand}
+                onConfigApplied={handleMatrixConfigApplied}
+            />
         {/if}
     </section>
 {/if}

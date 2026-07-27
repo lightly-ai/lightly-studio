@@ -9,7 +9,7 @@ vi.mock('$lib/hooks/usePostHog', () => ({
 }));
 
 vi.mock('$lib/hooks/useGlobalStorage', () => ({
-    useGlobalStorage: () => ({ filteredSampleCount: writable(0) })
+    useGlobalStorage: () => ({ filteredSampleCount: writable(42) })
 }));
 
 describe('useExportDialog', () => {
@@ -40,7 +40,7 @@ describe('useExportDialog', () => {
 
             expect(mockTrackEvent).toHaveBeenCalledWith('export_dialog_opened', {
                 collection_id: 'col-1',
-                filtered_sample_count: expect.anything()
+                filtered_sample_count: 42
             });
         });
 

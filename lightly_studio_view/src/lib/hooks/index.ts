@@ -8,6 +8,7 @@ export { useTags } from '$lib/hooks/useTags/useTags';
 export { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds';
 export { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 export { useNumericMetadataDistribution } from '$lib/hooks/useNumericMetadataDistribution/useNumericMetadataDistribution';
+export { useCategoricalMetadataDistribution } from '$lib/hooks/useCategoricalMetadataDistribution/useCategoricalMetadataDistribution.svelte';
 export { useFramesFilter } from '$lib/hooks/useFramesFilter/useFramesFilter';
 export { useCaptions } from '$lib/hooks/useCaptions/useCaptions';
 export { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
@@ -42,9 +43,9 @@ export { useColorPicker } from '$lib/hooks/useColorPicker/useColorPicker.svelte'
 export { useSubmitCombinationSelection } from '$lib/hooks/useSubmitCombinationSelection/useSubmitCombinationSelection';
 export { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
 export { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
-export { useSettings } from '$lib/hooks/useSettings';
 export { usePostHog } from '$lib/hooks/usePostHog';
 export { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
+export { useSettings } from '$lib/hooks/useSettings';
 export { useTrackSampleInspected } from '$lib/hooks/useTrackSampleInspected';
 export { useAnnotationClassVisibility } from '$lib/hooks/useAnnotationClassVisibility/useAnnotationClassVisibility';
 export {
