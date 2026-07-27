@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from unittest.mock import ANY
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -8,7 +9,12 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND, HTTP_STATUS_OK
-from lightly_studio.models.metadata import HistogramView, MetadataInfoView
+from lightly_studio.models.metadata import (
+    HistogramView,
+    MetadataInfoView,
+    MetadataValueCountsView,
+    MetadataValueCountView,
+)
 from lightly_studio.resolvers import image_resolver, metadata_resolver, tag_resolver
 from tests.helpers_resolvers import (
     create_collection,
@@ -73,6 +79,86 @@ def test_get_metadata_info__empty_response(test_client: TestClient, mocker: Mock
     assert response.status_code == HTTP_STATUS_OK
     data = response.json()
     assert data == []
+
+
+def test_get_metadata_value_counts(test_client: TestClient, mocker: MockerFixture) -> None:
+    collection_id = uuid4()
+    resolver = mocker.patch(
+        "lightly_studio.api.routes.api.metadata."
+        "metadata_value_counts_resolver.get_metadata_value_counts",
+        return_value={
+            "city": MetadataValueCountsView(
+                value_counts=[MetadataValueCountView(value="Zurich", count=2)],
+            )
+        },
+    )
+    filters = {
+        "sample_filter": {"metadata_filters": [{"key": "country", "op": "==", "value": "CH"}]}
+    }
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/value-counts",
+        json={"filters": filters},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {
+        "city": {
+            "value_counts": [{"value": "Zurich", "count": 2}],
+        }
+    }
+    resolver.assert_called_once_with(
+        session=ANY, collection_id=collection_id, filters=ANY, fields=None
+    )
+    assert resolver.call_args.kwargs["collection_id"] == collection_id
+    called_filters = resolver.call_args.kwargs["filters"]
+    assert called_filters.model_dump(exclude_none=True) == {
+        "filter_type": "image",
+        "sample_filter": {
+            "filter_type": "sample",
+            "metadata_filters": [{"key": "country", "op": "==", "value": "CH"}],
+        },
+    }
+
+
+def test_get_metadata_value_counts__optional_body(
+    test_client: TestClient, mocker: MockerFixture
+) -> None:
+    collection_id = uuid4()
+    resolver = mocker.patch(
+        "lightly_studio.api.routes.api.metadata."
+        "metadata_value_counts_resolver.get_metadata_value_counts",
+        return_value={},
+    )
+
+    response = test_client.post(f"/api/collections/{collection_id}/metadata/value-counts")
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {}
+    resolver.assert_called_once_with(
+        session=ANY, collection_id=collection_id, filters=None, fields=None
+    )
+
+
+def test_metadata_value_counts__openapi_models(test_client: TestClient) -> None:
+    openapi = test_client.get("/openapi.json").json()
+    schemas = openapi["components"]["schemas"]
+    assert "MetadataValueCountView" in schemas
+    assert "MetadataValueCountsView" in schemas
+
+
+def test_metadata_filter__invalid_in_value_returns_422(test_client: TestClient) -> None:
+    collection_id = uuid4()
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/value-counts",
+        json={
+            "filters": {
+                "sample_filter": {"metadata_filters": [{"key": "city", "op": "in", "value": []}]}
+            }
+        },
+    )
+
+    assert response.status_code == 422
 
 
 # TODO(Mihnea, 10/2025): Also add tests with passing `embedding_model_name` and/or `metadata_name`

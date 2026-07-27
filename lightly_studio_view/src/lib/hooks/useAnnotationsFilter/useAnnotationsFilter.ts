@@ -4,6 +4,7 @@ import type { Annotation } from '$lib/types';
 import type { AnnotationLabel } from '$lib/services/types';
 import { useGlobalStorage } from '../useGlobalStorage';
 import { useTags } from '../useTags/useTags';
+import { usePostHog } from '$lib/hooks';
 
 /**
  * Low-level hook: manages selected annotation label IDs and produces an AnnotationsFilter.
@@ -96,6 +97,8 @@ export function useAnnotationsFilter({
         clearSelectedAnnotationFilterIds
     } = useSelectedAnnotationsFilter(collectionId);
 
+    const { trackEvent } = usePostHog();
+
     // Internal writable for annotation counts, set via setAnnotationCounts
     const annotationCountsStore = writable<AnnotationCount[] | undefined>(undefined);
 
@@ -161,12 +164,25 @@ export function useAnnotationsFilter({
     );
 
     // Toggle by label name
-    const toggleAnnotationFilterSelection = (labelName: string) => {
+    const toggleAnnotationFilterSelection = (labelName: string, collectionId?: string) => {
         const labelsMap = get(annotationFilterLabels);
         const labelId = labelsMap[labelName];
-        if (labelId) {
-            toggleSelectedAnnotationFilterId(labelId);
-        }
+        if (!labelId) return;
+
+        const currentIds = get(selectedAnnotationFilterIds);
+        const action = currentIds.has(labelId) ? 'unselected' : 'selected';
+
+        toggleSelectedAnnotationFilterId(labelId);
+
+        const activeCount = get(selectedAnnotationFilterIds).size;
+
+        trackEvent('grid_filter_toggled', {
+            collection_id: collectionId,
+            filter_type: 'annotation_label',
+            filter_value: labelName,
+            action,
+            active_count: activeCount
+        });
     };
 
     return {
