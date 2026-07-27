@@ -4,15 +4,10 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import HTTPException
 from sqlmodel import Session
 
-from lightly_studio.api.routes.api.status import (
-    HTTP_STATUS_BAD_REQUEST,
-    HTTP_STATUS_NOT_FOUND,
-)
 from lightly_studio.models.export_job import ExportJobTable, ExportType
-from lightly_studio.resolvers.export_job_resolver.get import get
+from lightly_studio.resolvers import export_job_resolver
 
 
 def get_and_validate(
@@ -33,20 +28,14 @@ def get_and_validate(
         The matching ExportJobTable row.
 
     Raises:
-        HTTPException: 404 if the key is not found; 400 if the
-            collection_id or export_type do not match the stored row.
+        LookupError: If the key is not found.
+        ValueError: If the collection_id or export_type do not match the stored row.
     """
-    job = get(session=session, export_key=export_key)
+    job = export_job_resolver.get(session=session, export_key=export_key)
     if job is None:
-        raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Export key not found.")
+        raise LookupError("Export key not found.")
     if job.collection_id != collection_id:
-        raise HTTPException(
-            status_code=HTTP_STATUS_BAD_REQUEST,
-            detail="Export key does not belong to this collection.",
-        )
+        raise ValueError("Export key does not belong to this collection.")
     if job.export_type != export_type:
-        raise HTTPException(
-            status_code=HTTP_STATUS_BAD_REQUEST,
-            detail="Export key is not valid for this export type.",
-        )
+        raise ValueError("Export key is not valid for this export type.")
     return job
