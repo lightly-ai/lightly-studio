@@ -40,6 +40,8 @@ def _build_window_query(filters: AnnotationsFilter) -> Select[Any]:
     base_rows: SelectOfScalar[AnnotationBaseTable] = select(AnnotationBaseTable)
     filtered_rows = filters.apply(base_rows).subquery()
 
+    # TODO(Jonas, 07/2026): No leading order key here, so next/prev drifts from the grid
+    # whenever the grid sorts by similarity. A leading key added there must be added here.
     ordering_expression = annotation_ordering.build_order_by(
         file_path_abs=annotation_ordering.coalesced_file_path_abs_expression(),
         created_at=filtered_rows.c.created_at,

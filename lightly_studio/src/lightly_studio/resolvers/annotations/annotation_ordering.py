@@ -16,7 +16,8 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.video import VideoTable
 
-# Model columns come in as `Mapped`, subquery and computed columns as `ColumnElement`.
+# Expressions the helper sorts itself: model columns come in as `Mapped`, subquery and
+# computed columns as `ColumnElement`.
 OrderExpression = Union[ColumnElement[Any], Mapped[Any]]
 
 
@@ -24,8 +25,8 @@ def build_order_by(
     file_path_abs: OrderExpression,
     created_at: OrderExpression,
     annotation_sample_id: OrderExpression,
-    leading_order_key: OrderExpression | None = None,
-) -> list[OrderExpression]:
+    leading_order_key: ColumnElement[Any] | None = None,
+) -> list[ColumnElement[Any]]:
     """Build the order by clauses for an annotation query.
 
     Args:
@@ -33,10 +34,13 @@ def build_order_by(
         created_at: Expression for the annotation's creation time.
         annotation_sample_id: Expression for the annotation's sample ID.
         leading_order_key: Optional expression to order by before the tiebreaker chain,
-            e.g. an embedding distance or a metric value.
+            e.g. an embedding distance or a metric value. Passed through unchanged, so it
+            must already carry its sort direction and null placement, e.g.
+            `nullslast(col(...).desc())`.
 
     Returns:
-        Order by clauses, ascending file path, then creation time, then annotation ID.
+        Order by clauses: the leading order key if given, then ascending file path,
+        creation time and annotation sample ID.
     """
     return [
         *([leading_order_key] if leading_order_key is not None else []),

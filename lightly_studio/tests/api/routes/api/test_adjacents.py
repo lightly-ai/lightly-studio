@@ -257,7 +257,9 @@ def test_get_adjacent_samples__annotations_match_grid_ordering(
     ]
     assert len(grid_sample_ids) == len(annotations)
 
-    # Follow the adjacency endpoint's next pointers from the first annotation.
+    # Follow the adjacency endpoint's next pointers from the first annotation. It is
+    # already in the list, so a terminating chain runs out of next pointers within
+    # len(annotations) steps and a longer walk is a cycle.
     walked_sample_ids = [grid_sample_ids[0]]
     for _ in range(len(annotations)):
         response = test_client.post(

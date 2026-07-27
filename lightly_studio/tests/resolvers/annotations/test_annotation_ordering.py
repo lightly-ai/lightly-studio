@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
+from sqlalchemy.sql.elements import ColumnElement
 from sqlmodel import col
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
@@ -50,7 +53,7 @@ def test_build_order_by__leading_order_key_comes_first() -> None:
         (SampleType.VIDEO_FRAME, col(VideoTable.file_path_abs)),
     ],
 )
-def test_file_path_abs_expression(sample_type: SampleType, expected: object) -> None:
+def test_file_path_abs_expression(sample_type: SampleType, expected: ColumnElement[Any]) -> None:
     expression = annotation_ordering.file_path_abs_expression(sample_type=sample_type)
 
     assert str(expression) == str(expected)
