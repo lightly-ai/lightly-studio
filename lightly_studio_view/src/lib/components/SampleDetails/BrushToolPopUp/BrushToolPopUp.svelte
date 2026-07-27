@@ -13,6 +13,10 @@
     } = useSampleDetailsToolbarContext();
     const { settingsStore } = useSettings();
 
+    const activateBrushMode = (mode: 'brush' | 'eraser') => {
+        setBrushMode(mode);
+    };
+
     const {
         context: annotationLabelContext,
         setAnnotationId,
@@ -42,10 +46,10 @@
 
         if (key === brushShortcut) {
             event.preventDefault();
-            setBrushMode('brush');
+            activateBrushMode('brush');
         } else if (key === eraserShortcut) {
             event.preventDefault();
-            setBrushMode('eraser');
+            activateBrushMode('eraser');
         }
     };
 
@@ -121,7 +125,7 @@
                             ? 'bg-primary/20 text-primary'
                             : 'text-muted-foreground hover:bg-muted'}
             "
-                        onclick={() => setBrushMode('brush')}
+                        onclick={() => activateBrushMode('brush')}
                     >
                         <Brush class="h-4 w-4" />
                     </button>
@@ -135,7 +139,7 @@
                             ? 'bg-primary/20 text-primary'
                             : 'text-muted-foreground hover:bg-muted'}
             "
-                        onclick={() => setBrushMode('eraser')}
+                        onclick={() => activateBrushMode('eraser')}
                     >
                         <Eraser class="h-4 w-4" />
                     </button>
