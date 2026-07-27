@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## \[1.0.4\] - 2026-07-27
+
+### Added
+
 - Python SDK: Allow embedding video frames by adding the `embed_frames` parameter to `VideoDataset.add_videos_from_path` and `VideoDataset.add_videos_from_youtube_vis`.
 - Python dataset queries can now filter annotation evaluation results for false positives and false negatives.
 - Show numeric metadata values in distribution panel.
@@ -18,21 +32,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Display classification annotations in the annotations grid.
 - Show a preview image when hovering over the 2d embedding plot.
 
-
 ### Changed
 
 - The left filter panel can now be collapsed entirely to reclaim space for the grid; a "Filters" button in the grid header restores it.
-
-### Deprecated
-
-### Removed
+- Image and video opening paths (indexing and embedding) now handle errors consistently: broken files are tolerated and skipped instead of breaking the whole operation.
 
 ### Fixed
 
 - Class distribution bar chart: tooltip was clipped when hovering a chart with a single class.
 - Long tags shown in the left side menu are truncated.
-
-### Security
 
 ## \[1.0.3\] - 2026-07-10
 
