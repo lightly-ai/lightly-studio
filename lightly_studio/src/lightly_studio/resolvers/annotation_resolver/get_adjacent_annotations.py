@@ -7,7 +7,6 @@ from uuid import UUID
 
 import sqlmodel
 from sqlalchemy import func
-from sqlalchemy.sql.elements import ColumnElement
 from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import Select, SelectOfScalar
 
@@ -16,6 +15,7 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import adjacents
+from lightly_studio.resolvers.annotations import annotation_ordering
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 
 
@@ -40,15 +40,10 @@ def _build_window_query(filters: AnnotationsFilter) -> Select[Any]:
     base_rows: SelectOfScalar[AnnotationBaseTable] = select(AnnotationBaseTable)
     filtered_rows = filters.apply(base_rows).subquery()
 
-    file_path_abs = func.coalesce(
-        col(ImageTable.file_path_abs),
-        col(VideoTable.file_path_abs),
-        "",
-    )
-    ordering_expression: tuple[ColumnElement[Any], ColumnElement[Any], ColumnElement[Any]] = (
-        file_path_abs.asc(),
-        filtered_rows.c.created_at.asc(),
-        filtered_rows.c.sample_id.asc(),
+    ordering_expression = annotation_ordering.build_order_by(
+        file_path_abs=annotation_ordering.coalesced_file_path_abs_expression(),
+        created_at=filtered_rows.c.created_at,
+        annotation_sample_id=filtered_rows.c.sample_id,
     )
 
     # Compute lag/lead/row_number on the already filtered set to avoid tag duplicates.
