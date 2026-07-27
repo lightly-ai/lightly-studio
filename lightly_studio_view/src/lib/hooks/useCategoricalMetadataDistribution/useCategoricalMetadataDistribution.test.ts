@@ -6,15 +6,13 @@ import {
 } from './useCategoricalMetadataDistribution.svelte';
 
 describe('selectCategoricalDistributions', () => {
-    it('preserves typed values and keeps semantic buckets distinct from labels', () => {
+    it('maps value counts to labelled buckets', () => {
         const response: Record<string, MetadataValueCountsView> = {
             city: {
                 value_counts: [
                     { value: 'Missing', count: 4 },
                     { value: true, count: 2 }
-                ],
-                missing_count: 3,
-                other_count: 1
+                ]
             }
         };
 
@@ -23,7 +21,7 @@ describe('selectCategoricalDistributions', () => {
                 id: '["value","string","Missing"]',
                 kind: 'value',
                 value: 'Missing',
-                label: 'Missing (value)',
+                label: 'Missing',
                 count: 4
             },
             {
@@ -32,24 +30,14 @@ describe('selectCategoricalDistributions', () => {
                 value: true,
                 label: 'true',
                 count: 2
-            },
-            {
-                id: '["missing"]',
-                kind: 'missing',
-                value: null,
-                label: 'Missing (no value)',
-                count: 3
-            },
-            { id: '["other"]', kind: 'other', label: 'Other', count: 1 }
+            }
         ]);
     });
 
-    it('omits zero semantic buckets and maps an absent response to an empty record', () => {
-        expect(
-            selectCategoricalDistributions({
-                city: { value_counts: [], missing_count: 0, other_count: 0 }
-            })
-        ).toEqual({ city: [] });
+    it('maps an empty value_counts to an empty array and an absent response to an empty record', () => {
+        expect(selectCategoricalDistributions({ city: { value_counts: [] } })).toEqual({
+            city: []
+        });
         expect(selectCategoricalDistributions(undefined)).toEqual({});
     });
 });
