@@ -1,0 +1,42 @@
+"""add-export-job.
+
+Revision ID: e8f9a0b1c2d3
+Revises: c3d4e5f6a7b8
+Create Date: 2026-07-27 00:00:00.000000
+
+"""
+
+from collections.abc import Sequence
+from typing import Union
+
+import sqlalchemy as sa
+from alembic import op
+
+# revision identifiers, used by Alembic.
+revision: str = "e8f9a0b1c2d3"
+down_revision: Union[str, Sequence[str], None] = "c3d4e5f6a7b8"
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
+
+
+def upgrade() -> None:
+    """Upgrade schema."""
+    op.create_table(
+        "export_job",
+        sa.Column("export_key", sa.Uuid(), nullable=False),
+        sa.Column(
+            "export_type",
+            sa.Enum("annotations", "captions", "youtube_vis", "filename", name="exporttype"),
+            nullable=False,
+        ),
+        sa.Column("collection_id", sa.Uuid(), nullable=False),
+        sa.Column("filter_json", sa.JSON(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint("export_key"),
+    )
+
+
+def downgrade() -> None:
+    """Downgrade schema."""
+    op.drop_table("export_job")
+    op.execute("DROP TYPE IF EXISTS exporttype")
