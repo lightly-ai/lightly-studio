@@ -7,6 +7,7 @@ import { useSessionStorage } from './useSessionStorage/useSessionStorage';
 import type { MetadataInfo } from '$lib/services/types';
 import type { MetadataBounds } from '$lib/services/types';
 import type { MetadataValues } from '$lib/services/types';
+import type { CategoricalMetadataValues } from '$lib/services/types';
 import { useReversibleActions } from './useReversibleActions';
 import type { CollectionView, SampleType, TagByFilterBody } from '$lib/api/lightly_studio_local';
 import type { Point } from 'embedding-atlas/svelte';
@@ -59,6 +60,10 @@ const filterPanelCollapsed = useSessionStorage<boolean>(
 // Metadata stores
 const metadataBounds = useSessionStorage<MetadataBounds>('lightlyStudio_metadata_bounds', {});
 const metadataValues = useSessionStorage<MetadataValues>('lightlyStudio_metadata_values', {});
+const categoricalMetadataValues = useSessionStorage<CategoricalMetadataValues>(
+    'lightlyStudio_categorical_metadata_values',
+    {}
+);
 const metadataInfo = useSessionStorage<MetadataInfo[]>('lightlyStudio_metadata_info', []);
 
 // Store the most recently selected annotation label.
@@ -137,6 +142,9 @@ export const useGlobalStorage = () => {
     // Metadata update methods
     const updateMetadataValues = (values: MetadataValues) => {
         metadataValues.set(values);
+    };
+    const updateCategoricalMetadataValues = (values: CategoricalMetadataValues) => {
+        categoricalMetadataValues.set(values);
     };
     const updateMetadataBounds = (bounds: MetadataBounds) => {
         metadataBounds.set(bounds);
@@ -234,8 +242,10 @@ export const useGlobalStorage = () => {
         // Metadata stores
         metadataBounds,
         metadataValues,
+        categoricalMetadataValues,
         metadataInfo,
         updateMetadataValues,
+        updateCategoricalMetadataValues,
         updateMetadataBounds,
         updateMetadataInfo,
         filteredFramesCount,

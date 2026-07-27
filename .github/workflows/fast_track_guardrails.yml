@@ -95,6 +95,13 @@ jobs:
             fast_track/package-lock.json
             lightly_studio_view/package-lock.json
 
+      # Build the webapp so backend guardrails can import the app: pytest's conftest imports
+      # the full app, and the webapp route raises at import time unless the dist exists.
+      - name: Build webapp for backend guardrails
+        if: steps.changes.outputs.backend == 'true'
+        working-directory: lightly_studio
+        run: make build-lightly_studio_view
+
       # --- Frontend toolchain ------------------------------------------------
       # Deps and generated API client for frontend guardrails (e.g. frontend/complexity,
       # frontend/coverage). prebuild is the app build's generation step, without the
