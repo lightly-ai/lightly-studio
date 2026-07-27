@@ -25,7 +25,7 @@ def build_order_by(
     created_at: OrderExpression,
     annotation_sample_id: OrderExpression,
     leading_order_key: OrderExpression | None = None,
-) -> list[Any]:
+) -> list[OrderExpression]:
     """Build the order by clauses for an annotation query.
 
     Args:
