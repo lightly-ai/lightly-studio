@@ -222,14 +222,14 @@ def test_get_adjacent_samples__annotations_match_grid_ordering(
     )
 
     # Paths are created out of order so that ordering by file path is observable.
-    images = [
-        helpers_resolvers.create_image(
-            session=db_session,
-            collection_id=collection_id,
-            file_path_abs=file_path_abs,
-        )
-        for file_path_abs in ["/images/c.png", "/images/a.png", "/images/b.png"]
-    ]
+    images = helpers_resolvers.create_images(
+        db_session=db_session,
+        collection_id=collection_id,
+        images=[
+            helpers_resolvers.ImageStub(path=path)
+            for path in ["/images/c.png", "/images/a.png", "/images/b.png"]
+        ],
+    )
 
     # Two annotations per image so the created-at and annotation-id tiebreakers matter.
     annotations = helpers_resolvers.create_annotations(
