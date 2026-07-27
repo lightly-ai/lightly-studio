@@ -3,11 +3,12 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 import pytest
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByField
+from lightly_studio.models.sample import SampleTable
 from tests.helpers_resolvers import create_collection, create_image
 
 
@@ -95,6 +96,38 @@ class TestDatasetQuery:
         # Should be ordered reverse alphabetically: zebra.jpg, alpha.jpg
         assert result_samples[0].file_name == "zebra.jpg"
         assert result_samples[1].file_name == "alpha.jpg"
+
+    def test_filter_by_sample_ids__filters_samples(self, db_session: Session) -> None:
+        dataset = create_collection(session=db_session)
+        image1 = create_image(
+            session=db_session,
+            collection_id=dataset.collection_id,
+            file_path_abs="/path/to/sample1.jpg",
+        )
+        create_image(
+            session=db_session,
+            collection_id=dataset.collection_id,
+            file_path_abs="/path/to/sample2.jpg",
+        )
+
+        subquery = select(SampleTable.sample_id).where(
+            SampleTable.sample_id == image1.sample_id
+        )
+        query = DatasetQuery(dataset=dataset, session=db_session)
+        result = query.filter_by_sample_ids(subquery).to_list()
+
+        assert len(result) == 1
+        assert result[0].sample_id == image1.sample_id
+
+    def test_filter_by_sample_ids__called_twice__raises(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
+        query = DatasetQuery(dataset=collection, session=db_session)
+        subquery = select(SampleTable.sample_id)
+
+        query.filter_by_sample_ids(subquery)
+
+        with pytest.raises(ValueError, match="filter_by_sample_ids\\(\\) can only be called once"):
+            query.filter_by_sample_ids(subquery)
 
     def test_iter(self, db_session: Session) -> None:
         """Test that iterating over DatasetQuery yields samples correctly."""
