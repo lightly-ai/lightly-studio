@@ -48,9 +48,10 @@ async function main(argv: string[], env: NodeJS.ProcessEnv): Promise<number> {
         guardrailNames: selectedNames(env.GUARDRAILS)
     });
 
-    console.log(`Fast Track guardrails — base ref: ${baseRef}\n`);
+    console.log(`Fast Track guardrails — base ref: ${baseRef}`);
     const { status, guardrails: results } = await runGuardrails(context, selected);
 
+    console.log('\nGuardrail results:');
     for (const result of results) {
         const mark = result.status === 'pass' ? '✓' : '✗';
         console.log(`  ${mark} ${result.name}  ${result.status}  ${result.summary}`);

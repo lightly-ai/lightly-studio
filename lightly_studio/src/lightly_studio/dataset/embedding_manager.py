@@ -295,16 +295,18 @@ class EmbeddingManager:
                 if not annotation_crops:
                     continue
 
-                embeddings = model.embed_image_crops(
+                result = model.embed_image_crops(
                     image_crops=[crop.image_crop for crop in annotation_crops],
                     show_progress=False,
                 )
+                sample_ids = [crop.annotation_sample_id for crop in annotation_crops]
+                kept_sample_ids = [sample_ids[index] for index in result.kept_indices]
 
                 _store_embeddings(
                     session=session,
                     model_id=model_id,
-                    sample_ids=[crop.annotation_sample_id for crop in annotation_crops],
-                    embeddings=embeddings,
+                    sample_ids=kept_sample_ids,
+                    embeddings=result.embeddings,
                     show_progress=False,
                 )
                 progress.update(len(annotation_crops))
@@ -381,13 +383,14 @@ class EmbeddingManager:
             raise ValueError("Could not fetch all video paths for the provided IDs.")
 
         # Generate embeddings for the samples.
-        embeddings = model.embed_videos(filepaths=filepaths)
+        result = model.embed_videos(filepaths=filepaths)
+        kept_sample_ids = [sample_ids[index] for index in result.kept_indices]
 
         _store_embeddings(
             session=session,
             model_id=model_id,
-            sample_ids=sample_ids,
-            embeddings=embeddings,
+            sample_ids=kept_sample_ids,
+            embeddings=result.embeddings,
         )
 
     def embed_and_store_pil_images(

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from pydantic import BaseModel, Field
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
@@ -14,9 +14,16 @@ from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.errors import TagNotFoundError
 from lightly_studio.metadata import compute_similarity, compute_typicality
 from lightly_studio.models.collection import CollectionTable
-from lightly_studio.models.metadata import HistogramView, MetadataInfoView
+from lightly_studio.models.metadata import (
+    HistogramView,
+    MetadataInfoView,
+    MetadataValueCountsView,
+)
 from lightly_studio.resolvers import embedding_model_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.metadata_resolver.sample import (
+    categorical_value_counts as metadata_value_counts_resolver,
+)
 from lightly_studio.resolvers.metadata_resolver.sample import (
     get_metadata_info as metadata_info_resolver,
 )
@@ -82,6 +89,48 @@ def get_metadata_histograms(
         collection_id=collection_id,
         filters=request.filters if request else None,
         bin_count=request.bin_count if request else _DEFAULT_BIN_COUNT,
+    )
+
+
+class MetadataValueCountsRequest(BaseModel):
+    """Request body for computing filtered categorical value counts."""
+
+    filters: ImageFilter | None = Field(None, description="Filter parameters for samples")
+    fields: list[str] | None = Field(
+        None, description="Categorical fields to count; all fields are counted when absent"
+    )
+
+
+_DEFAULT_METADATA_VALUE_COUNTS_REQUEST = MetadataValueCountsRequest()
+_DEFAULT_METADATA_VALUE_COUNTS_BODY = Body(default=_DEFAULT_METADATA_VALUE_COUNTS_REQUEST)
+
+
+@metadata_router.post("/metadata/value-counts")
+def get_metadata_value_counts(
+    session: SessionDep,
+    collection_id: Annotated[UUID, Path(title="collection Id")],
+    request: MetadataValueCountsRequest = _DEFAULT_METADATA_VALUE_COUNTS_BODY,
+) -> dict[str, MetadataValueCountsView]:
+    """Compute categorical metadata value counts under optional sample filters.
+
+    Returns the top 20 most frequent concrete values per key; less-frequent
+    concrete values are aggregated into ``other_count`` and samples with a
+    missing (null) value are counted in ``missing_count``.  Each key's own
+    metadata filter is excluded from its counts (faceted-search behavior).
+
+    Args:
+        session: The database session.
+        collection_id: The ID of the collection.
+        request: Request body carrying the active sample filters.
+
+    Returns:
+        Mapping of categorical metadata key to its value counts.
+    """
+    return metadata_value_counts_resolver.get_metadata_value_counts(
+        session=session,
+        collection_id=collection_id,
+        filters=request.filters,
+        fields=request.fields,
     )
 
 

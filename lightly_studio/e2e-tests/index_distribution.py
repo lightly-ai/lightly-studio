@@ -7,9 +7,9 @@ seeded (all default to true):
 - ``ADD_OBJECT_DETECTIONS`` a few weighted detection boxes per image
 - ``ADD_SEGMENTATIONS``     one or two weighted segmentation masks per image
 - ``ADD_METADATA``          numeric metadata fields with distinct distribution
-  shapes (bell, flat, skewed, discrete, constant) plus a string field —
-  rendered as histograms in the panel's "Metadata" distribution and above the
-  range sliders in the metadata filter panel
+  shapes (bell, flat, skewed, discrete, constant) plus several categorical
+  fields (string, boolean, many-valued, partially-missing) — rendered as
+  histograms / bar charts in the panel's "Metadata" distribution
 
 Examples::
 
@@ -71,6 +71,24 @@ SEGMENTATION_CLASSES = ["road", "sky", "building", "vegetation", "sidewalk"]
 SEGMENTATION_WEIGHTS = [0.3, 0.25, 0.2, 0.15, 0.1]
 
 LOCATIONS = ["city", "rural", "mountain", "coastal", "desert"]
+LOCATION_WEIGHTS = [0.35, 0.25, 0.20, 0.12, 0.08]
+
+# Skewed weather distribution: sunny dominates, snowy is rare.
+WEATHER_CONDITIONS = ["sunny", "partly_cloudy", "overcast", "rainy", "foggy", "snowy"]
+WEATHER_WEIGHTS = [0.40, 0.25, 0.15, 0.10, 0.07, 0.03]
+
+REVIEWED_VALUES = [True, False]
+REVIEWED_WEIGHTS = [0.3, 0.7]
+
+# Common ML split assignment; ~20 % of samples intentionally left unassigned
+# so the "Missing" bucket appears in the categorical distribution panel.
+DATASET_SPLITS = ["train", "val", "test"]
+SPLIT_WEIGHTS = [0.70, 0.20, 0.10]
+SPLIT_MISSING_PROBABILITY = 0.2
+
+# 25 camera IDs: exercises the top-20 "Other" bucket in value-counts.
+CAMERA_IDS = [f"CAM_{i:02d}" for i in range(1, 26)]
+CAMERA_WEIGHTS = [max(1, 26 - i) for i in range(1, 26)]  # CAM_01 most frequent
 
 
 def _box(
@@ -93,16 +111,33 @@ def _rectangle_mask(
 
 
 def _sample_metadata(rng: random.Random) -> Mapping[str, Any]:
-    """Return one sample's metadata, each key with a distinct distribution."""
-    return {
+    """Return one sample's metadata with numeric and categorical fields.
+
+    Numeric fields cover distinct distribution shapes (bell, flat, skewed,
+    discrete, constant).  Categorical fields exercise:
+    - weighted strings with few values  (location, weather)
+    - a boolean field                   (reviewed)
+    - camera_id has 25 values, which triggers the "Other" bucket in value counts
+    - split is present on only ~80 % of samples, which triggers the "Missing" bucket
+    """
+    metadata: dict[str, Any] = {
+        # Numeric fields
         "confidence": min(1.0, max(0.0, rng.gauss(0.75, 0.12))),
         "brightness": rng.uniform(0.0, 255.0),
         "object_size": rng.lognormvariate(3.0, 0.8),
         "temperature": rng.randint(10, 40),
         "num_defects": rng.choices([0, 1, 2, 3, 5, 8], [50, 25, 12, 7, 4, 2])[0],
         "sensor_gain": 1.0,
-        "location": rng.choice(LOCATIONS),
+        # Categorical fields
+        "location": rng.choices(LOCATIONS, LOCATION_WEIGHTS)[0],
+        "weather": rng.choices(WEATHER_CONDITIONS, WEATHER_WEIGHTS)[0],
+        "reviewed": rng.choices(REVIEWED_VALUES, REVIEWED_WEIGHTS)[0],
+        "camera_id": rng.choices(CAMERA_IDS, CAMERA_WEIGHTS)[0],
     }
+    # ~20 % of images have no split — exercises the "Missing" bucket.
+    if rng.random() >= SPLIT_MISSING_PROBABILITY:
+        metadata["split"] = rng.choices(DATASET_SPLITS, SPLIT_WEIGHTS)[0]
+    return metadata
 
 
 def main() -> None:
@@ -171,7 +206,7 @@ def main() -> None:
             ("classifications", ADD_CLASSIFICATIONS),
             ("object detections", ADD_OBJECT_DETECTIONS),
             ("segmentation masks", ADD_SEGMENTATIONS),
-            ("numeric metadata", ADD_METADATA),
+            ("metadata", ADD_METADATA),
         ]
         if enabled
     ]

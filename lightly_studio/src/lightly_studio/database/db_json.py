@@ -70,6 +70,22 @@ class json_extract(GenericFunction[Any]):  # noqa: N801
         super().__init__(column)
 
 
+class json_extract_string(GenericFunction[str]):  # noqa: N801
+    """Extract a top-level JSON scalar as plain text.
+
+    The key is bound rather than interpolated into SQL. It is treated literally,
+    so dots and quotes in metadata keys do not become path syntax.
+    """
+
+    inherit_cache = False
+    type = Text()
+
+    def __init__(self, column: Any, field: str) -> None:
+        """Initialize with a JSON column and top-level field name."""
+        field_parameter = sqlalchemy.literal(field, type_=_JsonTopLevelKeyType())
+        super().__init__(column, field_parameter)
+
+
 @compiles(json_extract)
 def _compile_json_extract_unsupported(
     element: json_extract, compiler: SQLCompiler, **kw: Any
@@ -104,6 +120,49 @@ def _compile_json_extract_postgresql(
     return _build_pg_json_accessor(
         column=col_sql, field=element.field, cast_to_float=element.cast_to_float
     )
+
+
+@compiles(json_extract_string)
+def _compile_json_extract_string_unsupported(
+    element: json_extract_string, compiler: SQLCompiler, **kw: Any
+) -> str:
+    """Raise for unsupported dialects."""
+    raise NotImplementedError(
+        f"Unsupported dialect: {compiler.dialect.name}."
+        " Only 'postgresql' and 'duckdb' are supported."
+    )
+
+
+@compiles(json_extract_string, "duckdb")
+def _compile_json_extract_string_duckdb(
+    element: json_extract_string, compiler: SQLCompiler, **kw: Any
+) -> str:
+    """Extract a JSON scalar as plain text on DuckDB."""
+    column, field = element.clauses
+    return f"json_extract_string({compiler.process(column, **kw)}, {compiler.process(field, **kw)})"
+
+
+@compiles(json_extract_string, "postgresql")
+def _compile_json_extract_string_postgresql(
+    element: json_extract_string, compiler: SQLCompiler, **kw: Any
+) -> str:
+    """Extract a JSON scalar as plain text on PostgreSQL."""
+    column, field = element.clauses
+    return f"{compiler.process(column, **kw)}->>{compiler.process(field, **kw)}"
+
+
+class _JsonTopLevelKeyType(TypeDecorator[str]):
+    """Bind a literal top-level JSON key for each supported database."""
+
+    impl = Text
+    cache_ok = True
+
+    def process_bind_param(self, value: str | None, dialect: Dialect) -> str | None:
+        """Convert DuckDB keys to JSON Pointer and leave PostgreSQL keys raw."""
+        if value is None or dialect.name != "duckdb":
+            return value
+        escaped = value.replace("~", "~0").replace("/", "~1")
+        return f"/{escaped}"
 
 
 class _JsonStringType(TypeDecorator[str]):
