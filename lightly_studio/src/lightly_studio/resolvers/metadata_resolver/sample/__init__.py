@@ -9,12 +9,8 @@ from .get_by_sample_id import (
 from .get_metadata_values_for_key import (
     get_metadata_values_for_key,
 )
-from .get_value_for_sample import (
-    get_value_for_sample,
-)
-from .set_value_for_sample import (
-    set_value_for_sample,
-)
+from .get_value_for_sample import get_value_for_sample
+from .set_value_for_sample import set_value_for_sample
 
 __all__ = [
     "bulk_update_metadata",

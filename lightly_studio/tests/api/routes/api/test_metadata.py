@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from unittest.mock import ANY
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -106,6 +107,9 @@ def test_get_metadata_value_counts(test_client: TestClient, mocker: MockerFixtur
             "value_counts": [{"value": "Zurich", "count": 2}],
         }
     }
+    resolver.assert_called_once_with(
+        session=ANY, collection_id=collection_id, filters=ANY, fields=None
+    )
     assert resolver.call_args.kwargs["collection_id"] == collection_id
     called_filters = resolver.call_args.kwargs["filters"]
     assert called_filters.model_dump(exclude_none=True) == {
@@ -131,27 +135,9 @@ def test_get_metadata_value_counts__optional_body(
 
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == {}
-    assert resolver.call_args.kwargs["filters"] is None
-    assert resolver.call_args.kwargs["fields"] is None
-
-
-def test_get_metadata_value_counts__fields_forwarded(
-    test_client: TestClient, mocker: MockerFixture
-) -> None:
-    collection_id = uuid4()
-    resolver = mocker.patch(
-        "lightly_studio.api.routes.api.metadata."
-        "metadata_value_counts_resolver.get_metadata_value_counts",
-        return_value={},
+    resolver.assert_called_once_with(
+        session=ANY, collection_id=collection_id, filters=None, fields=None
     )
-
-    response = test_client.post(
-        f"/api/collections/{collection_id}/metadata/value-counts",
-        json={"fields": ["city", "country"]},
-    )
-
-    assert response.status_code == HTTP_STATUS_OK
-    assert resolver.call_args.kwargs["fields"] == ["city", "country"]
 
 
 def test_metadata_value_counts__openapi_models(test_client: TestClient) -> None:
@@ -159,6 +145,20 @@ def test_metadata_value_counts__openapi_models(test_client: TestClient) -> None:
     schemas = openapi["components"]["schemas"]
     assert "MetadataValueCountView" in schemas
     assert "MetadataValueCountsView" in schemas
+
+
+def test_metadata_filter__invalid_in_value_returns_422(test_client: TestClient) -> None:
+    collection_id = uuid4()
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/value-counts",
+        json={
+            "filters": {
+                "sample_filter": {"metadata_filters": [{"key": "city", "op": "in", "value": []}]}
+            }
+        },
+    )
+
+    assert response.status_code == 422
 
 
 # TODO(Mihnea, 10/2025): Also add tests with passing `embedding_model_name` and/or `metadata_name`
