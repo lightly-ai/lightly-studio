@@ -15,11 +15,18 @@ const buckets: CategoricalMetadataBucket[] = [
     { id: 'other', kind: 'other', label: 'Other', count: 2 }
 ];
 
+const defaultProps = {
+    buckets,
+    selectedValues: [] as (string | null)[],
+    onToggle: vi.fn(),
+    onClear: vi.fn()
+};
+
 describe('MetadataCategoricalFilter', () => {
     it('keeps literal Missing and semantic Missing distinct and disables Other', async () => {
         const onToggle = vi.fn();
         render(MetadataCategoricalFilter, {
-            props: { buckets, selectedValues: ['Missing'], onToggle, onClear: vi.fn() }
+            props: { ...defaultProps, selectedValues: ['Missing'], onToggle }
         });
 
         await fireEvent.click(screen.getByTestId('metadata-categorical-filter-trigger'));
@@ -51,12 +58,7 @@ describe('MetadataCategoricalFilter', () => {
         ];
         const onClear = vi.fn();
         render(MetadataCategoricalFilter, {
-            props: {
-                buckets: searchableBuckets,
-                selectedValues: [null],
-                onToggle: vi.fn(),
-                onClear
-            }
+            props: { ...defaultProps, buckets: searchableBuckets, selectedValues: [null], onClear }
         });
         await fireEvent.click(screen.getByTestId('metadata-categorical-filter-trigger'));
         await fireEvent.input(screen.getByLabelText('Search values'), {
@@ -70,7 +72,7 @@ describe('MetadataCategoricalFilter', () => {
     it('keeps a selected value removable when it is absent from the latest response', async () => {
         const onToggle = vi.fn();
         render(MetadataCategoricalFilter, {
-            props: { buckets: [], selectedValues: ['stale'], onToggle, onClear: vi.fn() }
+            props: { ...defaultProps, buckets: [], selectedValues: ['stale'], onToggle }
         });
 
         await fireEvent.click(screen.getByTestId('metadata-categorical-filter-trigger'));
@@ -87,7 +89,7 @@ describe('MetadataCategoricalFilter', () => {
     it('disambiguates a retained literal Other from the aggregate bucket', async () => {
         const onToggle = vi.fn();
         render(MetadataCategoricalFilter, {
-            props: { buckets, selectedValues: ['Other'], onToggle, onClear: vi.fn() }
+            props: { ...defaultProps, selectedValues: ['Other'], onToggle }
         });
 
         expect(screen.getByTestId('metadata-categorical-filter-trigger')).toHaveTextContent(
@@ -117,12 +119,7 @@ describe('MetadataCategoricalFilter', () => {
             { id: 'other', kind: 'other', label: 'Other', count: 2 }
         ];
         render(MetadataCategoricalFilter, {
-            props: {
-                buckets: fiveConcrete,
-                selectedValues: ['retained'],
-                onToggle: vi.fn(),
-                onClear: vi.fn()
-            }
+            props: { ...defaultProps, buckets: fiveConcrete, selectedValues: ['retained'] }
         });
 
         await fireEvent.click(screen.getByTestId('metadata-categorical-filter-trigger'));
