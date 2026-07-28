@@ -71,4 +71,17 @@ describe('buildOptions', () => {
         expect(result[0].retained).toBe(false);
         expect(result[1].retained).toBe(true);
     });
+
+    it('deduplicates absent selected values so each yields exactly one retained option', () => {
+        const result = buildOptions([], ['stale', 'stale', null, null]);
+        expect(result).toHaveLength(2);
+        expect(result[0]).toMatchObject({
+            retained: true,
+            bucket: { kind: 'value', value: 'stale' }
+        });
+        expect(result[1]).toMatchObject({
+            retained: true,
+            bucket: { kind: 'missing', value: null }
+        });
+    });
 });
