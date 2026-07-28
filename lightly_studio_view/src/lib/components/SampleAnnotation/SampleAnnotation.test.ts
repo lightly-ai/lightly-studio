@@ -267,7 +267,7 @@ describe('SampleAnnotation', () => {
             const { container } = renderMask();
 
             const opacity = Number(container.querySelector('image')?.getAttribute('opacity'));
-            expect(opacity).toBeCloseTo(0.65);
+            expect(opacity).toBeCloseTo(0.6);
         });
 
         it('uses custom alpha for segmentation-mask opacity when label has a custom color', () => {
@@ -276,7 +276,7 @@ describe('SampleAnnotation', () => {
             const { container } = renderMask();
 
             const opacity = Number(container.querySelector('image')?.getAttribute('opacity'));
-            expect(opacity).toBeCloseTo(0.52); // 0.8 * 0.65
+            expect(opacity).toBeCloseTo(0.48); // 0.8 * 0.6
         });
 
         it('hides the segmentation mask when the custom alpha is zero', () => {
