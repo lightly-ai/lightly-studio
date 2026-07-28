@@ -845,12 +845,14 @@
                 </div>
             {/if}
             {#if isCollectionGrid && (isImages || hasMediaWithEmbeddings)}
-                <SidePanelTabs
-                    {collectionId}
-                    {isImages}
-                    {hasMediaWithEmbeddings}
-                    {supportsEvaluation}
-                />
+                <div data-testid="side-panel-tabs" class="contents">
+                    <SidePanelTabs
+                        {collectionId}
+                        {isImages}
+                        {hasMediaWithEmbeddings}
+                        {supportsEvaluation}
+                    />
+                </div>
             {/if}
             {#if hasEmbeddings}
                 {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then { default: CreateClassifierDialog }}

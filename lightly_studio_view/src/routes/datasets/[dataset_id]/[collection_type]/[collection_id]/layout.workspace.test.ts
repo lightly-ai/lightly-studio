@@ -923,7 +923,37 @@ describe('right panel – main content stability', () => {
 // SidePanelTabs availability
 
 describe('SidePanelTabs availability', () => {
-    it('workspace frame is absent on a details route', async () => {
+    it('is present on images route', async () => {
+        setPageRoute(APP_ROUTES.images);
+
+        render(LayoutWorkspaceTestWrapper, {
+            props: {
+                data: {
+                    collection: {
+                        collection_id: 'test-collection-id',
+                        dataset_id: 'test-dataset-id',
+                        name: 'Test Collection',
+                        sample_type: SampleType.IMAGE,
+                        total_sample_count: 10
+                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
+                    collectionHierarchy: [],
+                    globalStorage: {
+                        setLastGridType: vi.fn(),
+                        clearSelectedSamples: vi.fn(),
+                        clearSelectedSampleAnnotationCrops: vi.fn()
+                    } as Partial<
+                        LayoutLoadResult['globalStorage']
+                    > as LayoutLoadResult['globalStorage'],
+                    sampleSize: writable({ width: 6, height: 6 })
+                }
+            }
+        });
+        await tick();
+
+        expect(screen.getByTestId('side-panel-tabs')).toBeInTheDocument();
+    });
+
+    it('is absent on a details route', async () => {
         setPageRoute(APP_ROUTES.imageDetails);
 
         render(LayoutWorkspaceTestWrapper, {
@@ -950,13 +980,43 @@ describe('SidePanelTabs availability', () => {
         });
         await tick();
 
-        expect(screen.queryByTestId('workspace-body')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('side-panel-tabs')).not.toBeInTheDocument();
     });
 
-    it('workspace frame is present on images route with no embeddings', async () => {
-        setPageRoute(APP_ROUTES.images);
+    it('is absent on a collection-grid route without embeddings', async () => {
+        setPageRoute(APP_ROUTES.annotations);
+
+        render(LayoutWorkspaceTestWrapper, {
+            props: {
+                data: {
+                    collection: {
+                        collection_id: 'test-collection-id',
+                        dataset_id: 'test-dataset-id',
+                        name: 'Test Collection',
+                        sample_type: SampleType.IMAGE,
+                        total_sample_count: 10
+                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
+                    collectionHierarchy: [],
+                    globalStorage: {
+                        setLastGridType: vi.fn(),
+                        clearSelectedSamples: vi.fn(),
+                        clearSelectedSampleAnnotationCrops: vi.fn()
+                    } as Partial<
+                        LayoutLoadResult['globalStorage']
+                    > as LayoutLoadResult['globalStorage'],
+                    sampleSize: writable({ width: 6, height: 6 })
+                }
+            }
+        });
+        await tick();
+
+        expect(screen.queryByTestId('side-panel-tabs')).not.toBeInTheDocument();
+    });
+
+    it('is present on annotations route when embeddings exist', async () => {
+        setPageRoute(APP_ROUTES.annotations);
         vi.mocked(useHasEmbeddingsModule.useHasEmbeddings).mockReturnValue({
-            data: undefined
+            data: true
         } as Partial<ReturnType<typeof useHasEmbeddingsModule.useHasEmbeddings>> as ReturnType<
             typeof useHasEmbeddingsModule.useHasEmbeddings
         >);
@@ -985,7 +1045,6 @@ describe('SidePanelTabs availability', () => {
         });
         await tick();
 
-        expect(screen.getByTestId('filter-panel-body')).toBeInTheDocument();
-        expect(screen.getByTestId('layout-test-child')).toBeInTheDocument();
+        expect(screen.getByTestId('side-panel-tabs')).toBeInTheDocument();
     });
 });
