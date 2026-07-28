@@ -1,61 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import type { MetadataValueCountsView } from '$lib/api/lightly_studio_local';
+import { MISSING_CATEGORICAL_VALUE, OTHER_CATEGORICAL_VALUE } from '$lib/services/types';
 import {
     getCategoricalMetadataDistributionRequestOptions,
     selectCategoricalDistributions
-} from './useCategoricalMetadataDistribution.svelte';
+} from './useCategoricalMetadataDistribution';
 
 describe('selectCategoricalDistributions', () => {
-    it('maps concrete value counts to labelled value buckets', () => {
-        const response: Record<string, MetadataValueCountsView> = {
-            city: {
-                value_counts: [
-                    { value: 'Zurich', count: 10 },
-                    { value: true, count: 2 }
-                ]
-            }
-        };
-
-        expect(selectCategoricalDistributions(response).city).toEqual([
-            {
-                id: '["value","string","Zurich"]',
-                kind: 'value',
-                value: 'Zurich',
-                label: 'Zurich',
-                count: 10
-            },
-            { id: '["value","boolean",true]', kind: 'value', value: true, label: 'true', count: 2 }
-        ]);
-    });
-
-    it('maps __missing__ sentinel to a missing bucket', () => {
-        const response: Record<string, MetadataValueCountsView> = {
-            city: { value_counts: [{ value: '__missing__', count: 3 }] }
-        };
-
-        expect(selectCategoricalDistributions(response).city).toEqual([
-            { id: '["missing"]', kind: 'missing', value: null, label: 'Missing', count: 3 }
-        ]);
-    });
-
-    it('maps __other__ sentinel to an other bucket', () => {
-        const response: Record<string, MetadataValueCountsView> = {
-            city: { value_counts: [{ value: '__other__', count: 5 }] }
-        };
-
-        expect(selectCategoricalDistributions(response).city).toEqual([
-            { id: '["other"]', kind: 'other', label: 'Other', count: 5 }
-        ]);
-    });
-
-    it('disambiguates literal "Missing" and "Other" values when sentinels are also present', () => {
+    it('preserves typed values and keeps semantic buckets distinct from labels', () => {
         const response: Record<string, MetadataValueCountsView> = {
             city: {
                 value_counts: [
                     { value: 'Missing', count: 4 },
-                    { value: 'Other', count: 1 },
-                    { value: '__missing__', count: 3 },
-                    { value: '__other__', count: 7 }
+                    { value: true, count: 2 },
+                    { value: MISSING_CATEGORICAL_VALUE, count: 3 },
+                    { value: OTHER_CATEGORICAL_VALUE, count: 1 }
                 ]
             }
         };
@@ -69,11 +28,11 @@ describe('selectCategoricalDistributions', () => {
                 count: 4
             },
             {
-                id: '["value","string","Other"]',
+                id: '["value","boolean",true]',
                 kind: 'value',
-                value: 'Other',
-                label: 'Other (value)',
-                count: 1
+                value: true,
+                label: 'true',
+                count: 2
             },
             {
                 id: '["missing"]',
@@ -82,11 +41,11 @@ describe('selectCategoricalDistributions', () => {
                 label: 'Missing (no value)',
                 count: 3
             },
-            { id: '["other"]', kind: 'other', label: 'Other (aggregated)', count: 7 }
+            { id: '["other"]', kind: 'other', label: 'Other', count: 1 }
         ]);
     });
 
-    it('maps an empty value_counts to an empty array and an absent response to an empty record', () => {
+    it('omits zero semantic buckets and maps an absent response to an empty record', () => {
         expect(selectCategoricalDistributions({ city: { value_counts: [] } })).toEqual({
             city: []
         });
