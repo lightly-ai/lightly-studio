@@ -75,7 +75,8 @@
         useSelectionSummary,
         useImageAnnotationCounts,
         useImageAnnotationCountsQueryKey,
-        useNumericMetadataDistribution
+        useNumericMetadataDistribution,
+        usePostHog
     } from '$lib/hooks';
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
     import { isInputElement } from '$lib/utils';
@@ -85,13 +86,14 @@
     import { useSearchEmbedding } from '$lib/hooks/useSearchEmbedding/useSearchEmbedding';
     import { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
     import { clearAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
-    import { usePostHog } from '$lib/hooks';
     import { isPanelVisible } from './panelVisibility';
     const { data, children } = $props();
     const {
         collection,
         globalStorage: { setLastGridType, clearSelectedSamples, clearSelectedSampleAnnotationCrops }
     } = $derived(data);
+
+    const { trackEvent } = usePostHog();
 
     // The dataset ID actually contains the collection ID.
     const datasetId = $derived(page.params.dataset_id!);
@@ -116,8 +118,6 @@
         // captures a store reference that never goes stale.
         textEmbedding
     } = useGlobalStorage();
-
-    const { trackEvent } = usePostHog();
 
     const evaluationRunsQuery = useEvaluationRuns(() => ({ datasetId: collection.dataset_id }));
     const evaluationRuns = $derived(evaluationRunsQuery.data ?? []);
@@ -641,6 +641,16 @@
             ? [classDistributionSource, metadataDistributionSource]
             : [classDistributionSource]
     );
+
+    function handleCombinedMetadataFilterChanged(fieldName: string, min: number, max: number) {
+        trackEvent('metadata_filter_changed', {
+            collection_id: collectionId,
+            field_name: fieldName,
+            action: 'range_changed',
+            min,
+            max
+        });
+    }
 </script>
 
 <div class="flex-none">
@@ -726,7 +736,11 @@
                             {#if isImages || isVideos || isVideoFrames}
                                 {#key collectionId}
                                     <MetadataFilterChips {collectionId} />
-                                    <CombinedMetadataDimensionsFilters {isVideos} {isVideoFrames} />
+                                    <CombinedMetadataDimensionsFilters
+                                        {isVideos}
+                                        {isVideoFrames}
+                                        onFilterChanged={handleCombinedMetadataFilterChanged}
+                                    />
                                 {/key}
                             {/if}
                         </div>
