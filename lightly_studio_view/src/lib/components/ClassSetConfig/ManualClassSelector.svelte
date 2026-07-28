@@ -13,7 +13,7 @@
         /** Currently selected class labels. Bindable — mutated on toggle / Select all / Clear. */
         selected: string[];
         /** Full list of class labels to choose from, in the order they should be displayed. */
-        allClasses: string[];
+        allClasses?: string[];
         /** Optional stable values and display labels; labels need not be unique. */
         items?: ManualSelectionItem[];
         itemNoun?: string;
@@ -32,8 +32,10 @@
     }: Props = $props();
 
     const resolvedItems = $derived(
-        items ?? allClasses.map((className) => ({ value: className, label: className }))
+        items ?? (allClasses ?? []).map((className) => ({ value: className, label: className }))
     );
+
+    const isSelected = (value: string) => selected.includes(value);
 
     const toggle = (value: string) => {
         selected = selected.includes(value)
@@ -76,7 +78,7 @@
                     keywords={[item.label]}
                     onSelect={() => toggle(item.value)}
                 >
-                    <CheckIcon class={cn(!selected.includes(item.value) && 'text-transparent')} />
+                    <CheckIcon class={cn(!isSelected(item.value) && 'text-transparent')} />
                     <span class="min-w-0 flex-1 truncate">{item.label}</span>
                 </Command.Item>
             {/each}
