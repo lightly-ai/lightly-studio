@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/svelte';
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-import MetadataFilterChips from './MetadataFilterChips.svelte';
+import MetadataFilterChips from '../MetadataFilterChips.svelte';
 
 const storage = useGlobalStorage();
 
@@ -21,6 +21,7 @@ describe('useMetadataFilterChips', () => {
     beforeEach(() => {
         storage.updateMetadataBounds({});
         storage.updateMetadataValues({});
+        storage.updateCategoricalMetadataValues({});
     });
 
     it('provides a chip only for narrowed filters, not for full-range ones', () => {
