@@ -17,6 +17,7 @@ export function buildTooltipFormatter(totalCount: number): (params: TooltipParam
                 return `<b>${escape(params[0].name)}</b><br/>Total: <b>${totalValue}</b>${totalPct}<br/>In filter: <b>${filteredValue}</b>${filteredPct}`;
             }
         }
+        if (params.length === 0) return '';
         const [{ name, value }] = params;
         const percent = totalCount > 0 ? ` (${formatPercent(value / totalCount)})` : '';
         return `<b>${escape(name)}</b><br/>Count: <b>${value}</b>${percent}`;
