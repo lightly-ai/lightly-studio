@@ -54,6 +54,13 @@ describe('ClassSetConfigDialog', () => {
         expect(input).toHaveAttribute('max', '30');
     });
 
+    it('uses custom item nouns', () => {
+        renderDialog({ itemNounPlural: 'values' });
+
+        expect(screen.getByText('Configure values')).toBeInTheDocument();
+        expect(screen.getByText('Number of values')).toBeInTheDocument();
+    });
+
     it('shows the label of the current sort option on the trigger', () => {
         renderDialog({ selection: { ...baseSelection, sortBy: 'name' } });
 
