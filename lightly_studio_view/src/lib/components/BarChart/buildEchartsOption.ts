@@ -159,6 +159,7 @@ export function buildEchartsOption(
         tooltip: {
             trigger: 'axis',
             axisPointer: { type: 'shadow' },
+            appendTo: 'body',
             formatter
         },
         grid: { left: 8, right: 8, top: gridTopPx, bottom: 8, containLabel: true },
