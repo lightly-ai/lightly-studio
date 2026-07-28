@@ -14,8 +14,6 @@ const BAR_COLOR = 'rgba(59,217,159,0.85)';
 // Bars not in the active selection render dimmed, matching the histogram behaviour.
 const BAR_COLOR_DIMMED = '#4b5563';
 // Full-dataset context bars drawn behind the filtered foreground bars.
-// Matches CHART_LINE_COLOR so background bars blend with the chart grid lines.
-const BAR_COLOR_BACKGROUND = '#374151';
 
 /** Bar layout: 'vertical' bars grow upward, 'horizontal' bars grow rightward. */
 export type BarChartOrientation = 'vertical' | 'horizontal';
@@ -141,7 +139,7 @@ export function buildEchartsOption(
               data: data.map((item) => ({
                   value: item.count,
                   itemStyle: {
-                      color: BAR_COLOR_BACKGROUND,
+                      color: CHART_LINE_COLOR,
                       opacity: item.selectable === false ? 0.45 : 1
                   }
               })),
