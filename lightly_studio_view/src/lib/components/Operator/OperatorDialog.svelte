@@ -215,6 +215,7 @@
                         {isMissing}
                         description={param.description}
                         onUpdate={(value) => updateParameter(param.name, value)}
+                        {...param.columns ? { columns: param.columns } : {}}
                         {...config.props}
                     />
                 {/each}

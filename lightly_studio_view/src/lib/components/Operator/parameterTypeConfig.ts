@@ -2,8 +2,10 @@ import type { OperatorParameterType, Operator } from '$lib/hooks/useOperators/us
 import type { Component } from 'svelte';
 import ParameterCheckbox from './ParameterCheckbox.svelte';
 import ParameterInput from './ParameterInput.svelte';
+import ParameterTable from './ParameterTable.svelte';
 
-export type ParameterValue = string | number | boolean | null;
+export type ParameterTableRow = Record<string, string>;
+export type ParameterValue = string | number | boolean | null | ParameterTableRow[];
 export type ParameterValues = Record<string, ParameterValue>;
 
 export type ParameterComponentProps = {
@@ -16,6 +18,7 @@ export type ParameterComponentProps = {
     inputType?: 'text' | 'number';
     step?: string;
     parse?: (value: string) => string | number;
+    columns?: string[];
 };
 
 export type TypeConfig = {
@@ -41,7 +44,10 @@ export function isValueFilled(
 export function buildInitialParameters(selectedOperator: Operator): ParameterValues {
     const initial: ParameterValues = {};
     for (const param of selectedOperator.parameters) {
-        if (param.default !== null) {
+        if (Array.isArray(param.default)) {
+            // Clone table rows so the default coming from the API is never mutated or shared.
+            initial[param.name] = (param.default as ParameterTableRow[]).map((row) => ({ ...row }));
+        } else if (param.default !== null) {
             initial[param.name] = param.default as ParameterValue;
         } else {
             initial[param.name] =
@@ -86,6 +92,15 @@ const TYPE_CONFIG: Record<OperatorParameterType | 'default', TypeConfig> = {
         props: { inputType: 'text', parse: identity },
         defaultValue: '',
         validate: (value) => typeof value === 'string' && value.trim().length > 0
+    },
+    table: {
+        component: ParameterTable,
+        props: {},
+        defaultValue: [],
+        validate: (value) =>
+            Array.isArray(value) &&
+            value.length > 0 &&
+            value.every((row) => Object.values(row).every((cell) => cell.trim().length > 0))
     },
     default: {
         component: ParameterInput,

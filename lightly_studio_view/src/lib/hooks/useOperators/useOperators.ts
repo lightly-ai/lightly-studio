@@ -1,6 +1,6 @@
 import type { BaseParameter, RegisteredOperatorMetadata } from '$lib/api/lightly_studio_local';
 
-export type OperatorParameterType = 'string' | 'int' | 'float' | 'bool';
+export type OperatorParameterType = 'string' | 'int' | 'float' | 'bool' | 'table';
 
 export type OperatorParameter = {
     name: string;
@@ -8,6 +8,7 @@ export type OperatorParameter = {
     default?: unknown;
     required?: boolean;
     type: OperatorParameterType;
+    columns?: string[];
 };
 
 export type Operator = {
@@ -21,7 +22,8 @@ const mapParameter = (parameter: BaseParameter): OperatorParameter => ({
     description: parameter.description,
     default: parameter.default,
     required: parameter.required,
-    type: (parameter.param_type as OperatorParameterType) ?? 'string'
+    type: (parameter.param_type as OperatorParameterType) ?? 'string',
+    columns: parameter.columns ?? undefined
 });
 
 export const createOperatorFromMetadata = (
