@@ -85,6 +85,7 @@
     import { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
     import { clearAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
     import { usePostHog } from '$lib/hooks';
+    import { isPanelVisible } from './panelVisibility';
     const { data, children } = $props();
     const {
         collection,
@@ -441,12 +442,7 @@
         isImages || isAnnotations || isVideos || isVideoFrames || isGroups
     );
 
-    const panelIsVisible = $derived(
-        ($activePanel === 'evaluationRuns' && supportsEvaluation) ||
-            ($activePanel === 'embeddingPlot' && hasMediaWithEmbeddings) ||
-            ($activePanel === 'queryEditor' && isImages) ||
-            ($activePanel === 'distribution' && isImages)
-    );
+    const panelIsVisible = $derived(isPanelVisible($activePanel, isImages, hasMediaWithEmbeddings));
 
     // Class counts for the distribution panel. The "All types" source reuses the
     // shared annotation-count query that feeds the labels filter; the per-type
@@ -664,6 +660,7 @@
                 <div
                     class="h-full min-h-0 w-80 flex-col {$filterPanelCollapsed ? 'hidden' : 'flex'}"
                     data-testid="filter-panel-body"
+                    aria-hidden={$filterPanelCollapsed}
                 >
                     <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
                         <div
