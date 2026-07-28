@@ -32,6 +32,10 @@ describe('getCheckboxLabel', () => {
         );
     });
 
+    it('uses "sample" singular when count is one', () => {
+        expect(getCheckboxLabel(valueOption('Foo', 1), 'Foo')).toBe('Select value Foo, 1 sample');
+    });
+
     it('shows "count unavailable" for retained options', () => {
         const option: FilterOption = { ...valueOption('stale', 0), retained: true };
         expect(getCheckboxLabel(option, 'stale')).toBe('Select value stale, count unavailable');
