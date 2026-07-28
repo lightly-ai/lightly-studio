@@ -35,11 +35,23 @@ class BuiltinParameter(BaseParameter, Generic[T]):
     """Represents a built-in operator parameter."""
 
     def __post_init__(self) -> None:
-        """Set up type information and validate default value."""
+        """Set up type information and validate default value.
+
+        Raises:
+            NotImplementedError: If the subclass does not define ``_parameter_type``.
+            ValueError: If ``columns`` is set, as it is only meaningful for table parameters.
+        """
         if not hasattr(self, "_parameter_type") or self._parameter_type is None:
             raise NotImplementedError("Subclasses must define _parameter_type class attribute")
         self._type = self._parameter_type
         self.param_type = self._parameter_type.__name__
+        # Columns are inherited from BaseParameter but only apply to TableParameter. Rejecting them
+        # here surfaces the mistake instead of silently dropping them.
+        if self.columns is not None:
+            raise ValueError(
+                f"Parameter '{self.name}' of type '{self.param_type}' has no columns, "
+                f"but got {list(self.columns)}"
+            )
         super().__post_init__()
 
     def _validate(self, value: T) -> T:
