@@ -1,5 +1,6 @@
 import type { CategoryCount } from '$lib/components/BarChart';
 import type { DistributionSource } from './types';
+import type { CategoricalMetadataBucket } from '$lib/hooks/useCategoricalMetadataDistribution/types';
 import { longTail } from '$lib/components/BarChart/fixtures';
 import {
     normal as numericConfidence,
@@ -135,6 +136,55 @@ export const exampleSources: DistributionSource[] = [
         groups: [
             { id: 'ap', label: 'AP per class (×100)', data: evalAP },
             { id: 'errors', label: 'Error breakdown', data: evalErrors }
+        ]
+    }
+];
+
+const cityBuckets: CategoricalMetadataBucket[] = [
+    { id: 'berlin', kind: 'value', value: 'Berlin', label: 'Berlin', count: 42 },
+    { id: 'paris', kind: 'value', value: 'Paris', label: 'Paris', count: 31 },
+    { id: 'tokyo', kind: 'value', value: 'Tokyo', label: 'Tokyo', count: 18 },
+    { id: 'zurich', kind: 'value', value: 'Zurich', label: 'Zurich', count: 7 },
+    { id: 'missing', kind: 'missing', value: null, label: 'Missing', count: 3 },
+    { id: 'other', kind: 'other', label: 'Other', count: 89 }
+];
+
+const countryBuckets: CategoricalMetadataBucket[] = [
+    { id: 'de', kind: 'value', value: 'Germany', label: 'Germany', count: 73 },
+    { id: 'fr', kind: 'value', value: 'France', label: 'France', count: 50 },
+    { id: 'jp', kind: 'value', value: 'Japan', label: 'Japan', count: 25 },
+    { id: 'ch', kind: 'value', value: 'Switzerland', label: 'Switzerland', count: 12 },
+    { id: 'missing', kind: 'missing', value: null, label: 'Missing', count: 5 }
+];
+
+/**
+ * Metadata source where each group carries a categorical filter instead of
+ * plain bar-chart counts. Demonstrates the MetadataCategoricalFilter UI with
+ * pre-selected values and an Other aggregate bucket.
+ */
+export const categoricalMetadataSources: DistributionSource[] = [
+    {
+        id: 'metadata',
+        label: 'Metadata',
+        groupLabel: 'Metadata key',
+        valueNoun: 'samples',
+        groups: [
+            {
+                id: 'city',
+                label: 'city',
+                categorical: {
+                    buckets: cityBuckets,
+                    selectedValues: ['Berlin', 'Zurich']
+                }
+            },
+            {
+                id: 'country',
+                label: 'country',
+                categorical: {
+                    buckets: countryBuckets,
+                    selectedValues: ['Germany']
+                }
+            }
         ]
     }
 ];

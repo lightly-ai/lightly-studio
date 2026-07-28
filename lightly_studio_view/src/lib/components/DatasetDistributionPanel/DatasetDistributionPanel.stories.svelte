@@ -17,7 +17,11 @@
     import { GripVertical } from '@lucide/svelte';
     import { Pane, PaneGroup, PaneResizer } from 'paneforge';
     import { balanced, empty, longLabels, longTail, many80Classes } from '../BarChart/fixtures';
-    import { exampleSources, numericMetadataSources } from './sourceFixtures';
+    import {
+        categoricalMetadataSources,
+        exampleSources,
+        numericMetadataSources
+    } from './sourceFixtures';
 </script>
 
 {#snippet sidePanel(args)}
@@ -49,6 +53,22 @@
 <Story
     name="Multi-source (class / tags / metadata / eval)"
     args={{ sources: exampleSources, title: 'Distribution', onClose: () => {} }}
+    template={sidePanel}
+/>
+
+<!-- Categorical metadata keys use the MetadataCategoricalFilter UI instead of
+     the standard bar-chart controls. Selected values render with a highlight
+     border; the Other aggregate bucket is not selectable. Switching between
+     "city" and "country" shows the per-key filter state preserved. -->
+<Story
+    name="Categorical metadata filter"
+    args={{
+        sources: categoricalMetadataSources,
+        title: 'Distribution',
+        onClose: () => {},
+        onCategoricalValueToggle: () => {},
+        onCategoricalValuesClear: () => {}
+    }}
     template={sidePanel}
 />
 
