@@ -1,4 +1,4 @@
-import escape from 'lodash-es/escape';
+import { escape } from 'lodash-es/escape';
 import { formatPercent } from '$lib/utils';
 
 type TooltipParams = { name: string; value: number };
