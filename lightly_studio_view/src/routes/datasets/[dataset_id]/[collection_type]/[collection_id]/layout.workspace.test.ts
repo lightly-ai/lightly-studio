@@ -210,33 +210,31 @@ beforeEach(() => {
     >);
 });
 
+const defaultProps = {
+    data: {
+        collection: {
+            collection_id: 'test-collection-id',
+            dataset_id: 'test-dataset-id',
+            name: 'Test Collection',
+            sample_type: SampleType.IMAGE,
+            total_sample_count: 10
+        } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
+        collectionHierarchy: [],
+        globalStorage: {
+            setLastGridType: vi.fn(),
+            clearSelectedSamples: vi.fn(),
+            clearSelectedSampleAnnotationCrops: vi.fn()
+        } as Partial<LayoutLoadResult['globalStorage']> as LayoutLoadResult['globalStorage'],
+        sampleSize: writable({ width: 6, height: 6 })
+    }
+};
+
 // Collection-grid workspace rendering
 
 describe('+layout.svelte collection-grid workspace', () => {
     it('renders filter panel on images route', async () => {
         setPageRoute(APP_ROUTES.images);
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.getByTestId('filter-panel-body')).toBeInTheDocument();
@@ -244,28 +242,7 @@ describe('+layout.svelte collection-grid workspace', () => {
 
     it('renders filter panel on annotations route', async () => {
         setPageRoute(APP_ROUTES.annotations);
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.getByTestId('filter-panel-body')).toBeInTheDocument();
@@ -273,28 +250,7 @@ describe('+layout.svelte collection-grid workspace', () => {
 
     it('renders filter panel on videos route', async () => {
         setPageRoute(APP_ROUTES.videos);
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.getByTestId('filter-panel-body')).toBeInTheDocument();
@@ -302,28 +258,7 @@ describe('+layout.svelte collection-grid workspace', () => {
 
     it('renders filter panel on frames route', async () => {
         setPageRoute(APP_ROUTES.frames);
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.getByTestId('filter-panel-body')).toBeInTheDocument();
@@ -331,28 +266,7 @@ describe('+layout.svelte collection-grid workspace', () => {
 
     it('renders filter panel on groups route', async () => {
         setPageRoute(APP_ROUTES.groups);
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.getByTestId('filter-panel-body')).toBeInTheDocument();
@@ -360,28 +274,7 @@ describe('+layout.svelte collection-grid workspace', () => {
 
     it('renders child route content on images route', async () => {
         setPageRoute(APP_ROUTES.images);
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.getByTestId('layout-test-child')).toBeInTheDocument();
@@ -393,28 +286,7 @@ describe('+layout.svelte collection-grid workspace', () => {
 describe('+layout.svelte details-route bypass', () => {
     it('does NOT render filter panel on image-details route', async () => {
         setPageRoute(APP_ROUTES.imageDetails);
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.queryByTestId('filter-panel-body')).not.toBeInTheDocument();
@@ -422,28 +294,7 @@ describe('+layout.svelte details-route bypass', () => {
 
     it('still renders child content on image-details route', async () => {
         setPageRoute(APP_ROUTES.imageDetails);
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.getByTestId('layout-test-child')).toBeInTheDocument();
@@ -451,28 +302,7 @@ describe('+layout.svelte details-route bypass', () => {
 
     it('does NOT render filter panel on annotation-details route', async () => {
         setPageRoute(APP_ROUTES.annotationDetails);
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.queryByTestId('filter-panel-body')).not.toBeInTheDocument();
@@ -480,28 +310,7 @@ describe('+layout.svelte details-route bypass', () => {
 
     it('still renders child content on annotation-details route', async () => {
         setPageRoute(APP_ROUTES.annotationDetails);
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.getByTestId('layout-test-child')).toBeInTheDocument();
@@ -509,28 +318,7 @@ describe('+layout.svelte details-route bypass', () => {
 
     it('does NOT render filter panel on video-details route', async () => {
         setPageRoute(APP_ROUTES.videoDetails);
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.queryByTestId('filter-panel-body')).not.toBeInTheDocument();
@@ -538,28 +326,7 @@ describe('+layout.svelte details-route bypass', () => {
 
     it('still renders child content on video-details route', async () => {
         setPageRoute(APP_ROUTES.videoDetails);
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.getByTestId('layout-test-child')).toBeInTheDocument();
@@ -567,28 +334,7 @@ describe('+layout.svelte details-route bypass', () => {
 
     it('does NOT render workspace frame on frame-details route', async () => {
         setPageRoute(APP_ROUTES.framesDetails);
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.queryByTestId('workspace-body')).not.toBeInTheDocument();
@@ -596,28 +342,7 @@ describe('+layout.svelte details-route bypass', () => {
 
     it('still renders child content on frame-details route', async () => {
         setPageRoute(APP_ROUTES.framesDetails);
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.getByTestId('layout-test-child')).toBeInTheDocument();
@@ -631,28 +356,7 @@ describe('filter sidebar collapse/expand', () => {
         setPageRoute(APP_ROUTES.images);
         mockFilterPanelCollapsed.set(false);
 
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.getByTestId('filter-panel-body')).toHaveAttribute('aria-hidden', 'false');
@@ -662,28 +366,7 @@ describe('filter sidebar collapse/expand', () => {
         setPageRoute(APP_ROUTES.images);
         mockFilterPanelCollapsed.set(true);
 
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.getByTestId('filter-panel-body')).toHaveAttribute('aria-hidden', 'true');
@@ -693,28 +376,7 @@ describe('filter sidebar collapse/expand', () => {
         setPageRoute(APP_ROUTES.images);
         mockFilterPanelCollapsed.set(true);
 
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.getByTestId('filter-panel-body')).toBeInTheDocument();
@@ -724,28 +386,7 @@ describe('filter sidebar collapse/expand', () => {
         setPageRoute(APP_ROUTES.imageDetails);
         mockFilterPanelCollapsed.set(false);
 
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.queryByTestId('filter-panel-body')).not.toBeInTheDocument();
@@ -759,28 +400,7 @@ describe('right panel – main content stability', () => {
         setPageRoute(APP_ROUTES.images);
         mockActivePanel.set('none');
 
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.getByTestId('layout-test-child')).toBeInTheDocument();
@@ -791,28 +411,7 @@ describe('right panel – main content stability', () => {
         setPageRoute(APP_ROUTES.images);
         mockActivePanel.set('none');
 
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         mockActivePanel.set('evaluationRuns');
@@ -826,28 +425,7 @@ describe('right panel – main content stability', () => {
         setPageRoute(APP_ROUTES.images);
         mockActivePanel.set('evaluationRuns');
 
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         mockActivePanel.set('none');
@@ -861,28 +439,7 @@ describe('right panel – main content stability', () => {
         setPageRoute(APP_ROUTES.videos);
         mockActivePanel.set('evaluationRuns');
 
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.queryByTestId('pane-group-layout')).not.toBeInTheDocument();
@@ -892,28 +449,7 @@ describe('right panel – main content stability', () => {
         setPageRoute(APP_ROUTES.videos);
         mockActivePanel.set('queryEditor');
 
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.queryByTestId('pane-group-layout')).not.toBeInTheDocument();
@@ -926,28 +462,7 @@ describe('SidePanelTabs availability', () => {
     it('is present on images route', async () => {
         setPageRoute(APP_ROUTES.images);
 
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.getByTestId('side-panel-tabs')).toBeInTheDocument();
@@ -956,28 +471,7 @@ describe('SidePanelTabs availability', () => {
     it('is absent on a details route', async () => {
         setPageRoute(APP_ROUTES.imageDetails);
 
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.queryByTestId('side-panel-tabs')).not.toBeInTheDocument();
@@ -986,28 +480,7 @@ describe('SidePanelTabs availability', () => {
     it('is absent on a collection-grid route without embeddings', async () => {
         setPageRoute(APP_ROUTES.annotations);
 
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.queryByTestId('side-panel-tabs')).not.toBeInTheDocument();
@@ -1021,28 +494,7 @@ describe('SidePanelTabs availability', () => {
             typeof useHasEmbeddingsModule.useHasEmbeddings
         >);
 
-        render(LayoutWorkspaceTestWrapper, {
-            props: {
-                data: {
-                    collection: {
-                        collection_id: 'test-collection-id',
-                        dataset_id: 'test-dataset-id',
-                        name: 'Test Collection',
-                        sample_type: SampleType.IMAGE,
-                        total_sample_count: 10
-                    } as Partial<LayoutLoadResult['collection']> as LayoutLoadResult['collection'],
-                    collectionHierarchy: [],
-                    globalStorage: {
-                        setLastGridType: vi.fn(),
-                        clearSelectedSamples: vi.fn(),
-                        clearSelectedSampleAnnotationCrops: vi.fn()
-                    } as Partial<
-                        LayoutLoadResult['globalStorage']
-                    > as LayoutLoadResult['globalStorage'],
-                    sampleSize: writable({ width: 6, height: 6 })
-                }
-            }
-        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.getByTestId('side-panel-tabs')).toBeInTheDocument();
