@@ -1,13 +1,8 @@
 import type { EChartsCoreOption } from 'echarts/core';
 import { truncate } from 'lodash-es';
-import {
-    CHART_AXIS_LABEL,
-    CHART_EMPHASIS,
-    CHART_LINE_COLOR,
-    CHART_TEXT_COLOR,
-    formatPercent
-} from '$lib/utils';
+import { CHART_AXIS_LABEL, CHART_EMPHASIS, CHART_LINE_COLOR, CHART_TEXT_COLOR } from '$lib/utils';
 import type { CategoryCount } from './';
+import { buildTooltipFormatter } from './buildTooltipFormatter';
 
 // Same accent as Histogram (the Lightly primary green, --color-lightly-primary #3bd99f).
 const BAR_COLOR = 'rgba(59,217,159,0.85)';
@@ -84,24 +79,7 @@ export function buildEchartsOption(
         splitLine: { lineStyle: { color: CHART_LINE_COLOR } }
     };
 
-    // Tooltip shows "Total / In filter" when a filter is active and actually
-    // reduces the hovered bar; otherwise shows the single "Count" line.
-    const formatter = (params: { name: string; value: number }[]) => {
-        if (params.length >= 2) {
-            const totalValue = params[0].value; // background series = full count
-            const filteredValue = params[1].value; // foreground series = filtered count
-            if (totalValue !== filteredValue) {
-                const totalPct =
-                    totalCount > 0 ? ` (${formatPercent(totalValue / totalCount)})` : '';
-                const filteredPct =
-                    totalCount > 0 ? ` (${formatPercent(filteredValue / totalCount)})` : '';
-                return `<b>${params[0].name}</b><br/>Total: <b>${totalValue}</b>${totalPct}<br/>In filter: <b>${filteredValue}</b>${filteredPct}`;
-            }
-        }
-        const [{ name, value }] = params;
-        const percent = totalCount > 0 ? ` (${formatPercent(value / totalCount)})` : '';
-        return `<b>${name}</b><br/>Count: <b>${value}</b>${percent}`;
-    };
+    const formatter = buildTooltipFormatter(totalCount);
 
     // Foreground bar: coloured at the filtered count (or full count when no filter).
     const foregroundData = data.map((item) => {
