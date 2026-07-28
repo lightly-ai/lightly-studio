@@ -33,6 +33,7 @@
         isAnnotationDetailsRoute,
         isAnnotationsRoute,
         isCaptionsRoute,
+        isFrameDetailsRoute,
         isSampleDetailsRoute,
         isImagesRoute,
         isVideoFramesRoute,
@@ -134,6 +135,7 @@
     const isAnnotations = $derived(isAnnotationsRoute(page.route.id));
     const isSampleDetails = $derived(isSampleDetailsRoute(page.route.id));
     const isAnnotationDetails = $derived(isAnnotationDetailsRoute(page.route.id));
+    const isFrameDetails = $derived(isFrameDetailsRoute(page.route.id));
     const isCaptions = $derived(isCaptionsRoute(page.route.id));
     const isVideos = $derived(isVideosRoute(page.route.id));
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
@@ -647,10 +649,10 @@
 </div>
 
 <div class="relative flex min-h-0 flex-1 flex-col">
-    {#if isSampleDetails || isAnnotationDetails || isGroupDetails || isVideoDetails}
+    {#if isSampleDetails || isAnnotationDetails || isGroupDetails || isVideoDetails || isFrameDetails}
         {@render children()}
     {:else}
-        <div class="flex min-h-0 flex-1 gap-4 px-4">
+        <div class="flex min-h-0 flex-1 gap-4 px-4" data-testid="workspace-body">
             {#if isCollectionGrid}
                 <!--
                     Keep the panel mounted while collapsed (only visually hidden). Children such as

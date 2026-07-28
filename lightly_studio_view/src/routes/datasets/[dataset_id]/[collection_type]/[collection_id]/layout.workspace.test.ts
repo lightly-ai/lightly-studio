@@ -565,7 +565,7 @@ describe('+layout.svelte details-route bypass', () => {
         expect(screen.getByTestId('layout-test-child')).toBeInTheDocument();
     });
 
-    it('does NOT render filter panel on frame-details route', async () => {
+    it('does NOT render workspace frame on frame-details route', async () => {
         setPageRoute(APP_ROUTES.framesDetails);
         render(LayoutWorkspaceTestWrapper, {
             props: {
@@ -591,7 +591,7 @@ describe('+layout.svelte details-route bypass', () => {
         });
         await tick();
 
-        expect(screen.queryByTestId('filter-panel-body')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('workspace-body')).not.toBeInTheDocument();
     });
 
     it('still renders child content on frame-details route', async () => {
@@ -947,7 +947,7 @@ describe('SidePanelTabs availability', () => {
         });
         await tick();
 
-        expect(screen.queryByTestId('filter-panel-body')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('workspace-body')).not.toBeInTheDocument();
     });
 
     it('workspace frame is present on images route with no embeddings', async () => {
