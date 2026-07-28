@@ -87,7 +87,14 @@ export function buildEchartsOption(
         series: [
             {
                 type: 'bar',
-                data: data.map((item) => item.count),
+                data: data.map((item) =>
+                    item.selected
+                        ? {
+                              value: item.count,
+                              itemStyle: { color: BAR_COLOR, borderWidth: 3, borderColor: '#fff' }
+                          }
+                        : item.count
+                ),
                 itemStyle: { color: BAR_COLOR },
                 barCategoryGap: '25%',
                 emphasis: CHART_EMPHASIS
