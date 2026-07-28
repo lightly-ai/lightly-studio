@@ -162,8 +162,7 @@
             exportType,
             tagNameToExport,
             sampleCount,
-            success: !response.error,
-            error: response.error
+            success: !response.error
         });
 
         if (response.error) {

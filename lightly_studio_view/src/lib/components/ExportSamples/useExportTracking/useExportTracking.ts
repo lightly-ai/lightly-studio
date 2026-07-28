@@ -17,7 +17,6 @@ interface TrackExportTriggeredParams {
     tagNameToExport: string | null;
     sampleCount: number;
     success: boolean;
-    error: string | undefined;
 }
 
 interface UseExportTrackingReturn {
@@ -85,16 +84,14 @@ export function useExportTracking({
         exportType,
         tagNameToExport,
         sampleCount,
-        success,
-        error
+        success
     }: TrackExportTriggeredParams) => {
         trackEvent('export_triggered', {
             collection_id: collectionId,
             export_format: exportType,
             sample_count: sampleCount,
             tag_name: tagNameToExport,
-            success,
-            error_message: error ?? null
+            success
         });
     };
 

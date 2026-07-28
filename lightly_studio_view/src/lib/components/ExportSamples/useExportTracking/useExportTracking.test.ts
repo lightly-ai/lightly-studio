@@ -2,8 +2,10 @@ import { writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useExportTracking } from './useExportTracking';
 
-const mockTrackEvent = vi.fn();
-const mockMarkDownloadClicked = vi.fn();
+const { mockTrackEvent, mockMarkDownloadClicked } = vi.hoisted(() => ({
+    mockTrackEvent: vi.fn(),
+    mockMarkDownloadClicked: vi.fn()
+}));
 
 vi.mock('$lib/hooks', () => ({
     usePostHog: () => ({ trackEvent: mockTrackEvent }),
@@ -106,15 +108,14 @@ describe('useExportTracking', () => {
         it('tracks export_triggered with success: true', () => {
             const { trackExportTriggered } = useExportTracking({ collectionId: COLLECTION_ID });
 
-            trackExportTriggered({ ...defaultExportParams, success: true, error: undefined });
+            trackExportTriggered({ ...defaultExportParams, success: true });
 
             expect(mockTrackEvent).toHaveBeenCalledWith('export_triggered', {
                 collection_id: COLLECTION_ID,
                 export_format: 'samples',
                 sample_count: 10,
                 tag_name: 'my-tag',
-                success: true,
-                error_message: null
+                success: true
             });
         });
 
@@ -125,8 +126,7 @@ describe('useExportTracking', () => {
                 ...defaultExportParams,
                 tagNameToExport: null,
                 sampleCount: 5,
-                success: false,
-                error: 'network timeout'
+                success: false
             });
 
             expect(mockTrackEvent).toHaveBeenCalledWith('export_triggered', {
@@ -134,8 +134,7 @@ describe('useExportTracking', () => {
                 export_format: 'samples',
                 sample_count: 5,
                 tag_name: null,
-                success: false,
-                error_message: 'network timeout'
+                success: false
             });
         });
     });
