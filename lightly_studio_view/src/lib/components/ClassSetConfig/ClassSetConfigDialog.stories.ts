@@ -39,14 +39,6 @@ export const Classes: Story = {
     args: {
         ...baseArgs,
         allClasses: ['dog', 'cat', 'bird', 'horse', 'fish', 'rabbit'],
-        items: [
-            { value: 'dog', label: 'Dog' },
-            { value: 'cat', label: 'Cat' },
-            { value: 'bird', label: 'Bird' },
-            { value: 'horse', label: 'Horse' },
-            { value: 'fish', label: 'Fish' },
-            { value: 'rabbit', label: 'Rabbit' }
-        ],
         selection: classesSelection,
         description: 'Choose how classes are selected for the chart.',
         itemNounPlural: 'classes'
@@ -56,7 +48,6 @@ export const Classes: Story = {
 export const MetadataValues: Story = {
     args: {
         ...baseArgs,
-        allClasses: ['city', 'rural', 'desert', 'mountain', 'coastal'],
         items: [
             { value: 'city', label: 'City' },
             { value: 'rural', label: 'Rural' },
