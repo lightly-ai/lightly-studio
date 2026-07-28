@@ -12,13 +12,16 @@
 
     const collectionId = page.params.collection_id;
 
-    const {
-        isVideos = false,
-        isVideoFrames = false
-    }: {
-        isVideos: boolean;
-        isVideoFrames: boolean;
-    } = $props();
+    interface Props {
+        /** Whether the collection contains videos; shows video field filters instead of dimension filters. */
+        isVideos?: boolean;
+        /** Whether the collection contains video frames; shows frame number filter. */
+        isVideoFrames?: boolean;
+        /** Called when any filter range changes, with the field name and new min/max values. */
+        onFilterChanged?: (fieldName: string, min: number, max: number) => void;
+    }
+
+    const { isVideos = false, isVideoFrames = false, onFilterChanged }: Props = $props();
 
     // Dimension filters logic
     const {
@@ -35,6 +38,7 @@
             min_height: $values.min_height,
             max_height: $values.max_height
         });
+        onFilterChanged?.('width', newValues[0], newValues[1]);
     };
 
     const handleChangeHeight = (newValues: number[]) => {
@@ -45,6 +49,7 @@
             min_height: newValues[0],
             max_height: newValues[1]
         });
+        onFilterChanged?.('height', newValues[0], newValues[1]);
     };
 
     // Metadata filters logic
@@ -61,6 +66,7 @@
             max: newValues[1]
         };
         updateMetadataValues(currentValues);
+        onFilterChanged?.(metadataKey, newValues[0], newValues[1]);
     };
 
     // Get numerical metadata fields
@@ -120,11 +126,11 @@
                 </div>
             </div>
         {:else if isVideos}
-            <VideoFieldBoundsFilters />
+            <VideoFieldBoundsFilters {onFilterChanged} />
         {/if}
 
         {#if isVideoFrames}
-            <VideoFrameBoundsFilter />
+            <VideoFrameBoundsFilter {onFilterChanged} />
         {/if}
 
         <!-- Metadata Filters -->
