@@ -14,6 +14,7 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.models.collection import SampleType
 from tests import helpers_resolvers
+from tests.helpers_resolvers import AnnotationDetails, ImageStub
 from tests.resolvers.video.helpers import VideoStub, create_video
 
 
@@ -227,8 +228,9 @@ def test_get_adjacent_samples__annotations_match_grid_ordering(
         db_session=db_session,
         collection_id=collection_id,
         images=[
-            helpers_resolvers.ImageStub(path=path)
-            for path in ["/images/c.png", "/images/a.png", "/images/b.png"]
+            ImageStub(path="/images/c.png"),
+            ImageStub(path="/images/a.png"),
+            ImageStub(path="/images/b.png"),
         ],
     )
 
@@ -237,7 +239,7 @@ def test_get_adjacent_samples__annotations_match_grid_ordering(
         session=db_session,
         collection_id=collection_id,
         annotations=[
-            helpers_resolvers.AnnotationDetails(
+            AnnotationDetails(
                 sample_id=image.sample_id,
                 annotation_label_id=label.annotation_label_id,
             )
