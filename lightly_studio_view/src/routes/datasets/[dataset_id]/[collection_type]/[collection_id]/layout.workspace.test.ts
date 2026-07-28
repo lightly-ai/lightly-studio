@@ -784,6 +784,7 @@ describe('right panel – main content stability', () => {
         await tick();
 
         expect(screen.getByTestId('layout-test-child')).toBeInTheDocument();
+        expect(screen.queryByTestId('pane-group-layout')).not.toBeInTheDocument();
     });
 
     it('child content is still present after opening an evaluationRuns panel', async () => {
@@ -818,6 +819,7 @@ describe('right panel – main content stability', () => {
         await tick();
 
         expect(screen.getByTestId('layout-test-child')).toBeInTheDocument();
+        expect(screen.getByTestId('pane-group-layout')).toBeInTheDocument();
     });
 
     it('child content is still present after closing the panel', async () => {
@@ -852,6 +854,7 @@ describe('right panel – main content stability', () => {
         await tick();
 
         expect(screen.getByTestId('layout-test-child')).toBeInTheDocument();
+        expect(screen.queryByTestId('pane-group-layout')).not.toBeInTheDocument();
     });
 
     it('evaluationRuns panel is not shown on videos route even when requested', async () => {
@@ -882,7 +885,7 @@ describe('right panel – main content stability', () => {
         });
         await tick();
 
-        expect(screen.getByTestId('layout-test-child')).toBeInTheDocument();
+        expect(screen.queryByTestId('pane-group-layout')).not.toBeInTheDocument();
     });
 
     it('queryEditor panel is not shown on videos route even when requested', async () => {
@@ -913,7 +916,7 @@ describe('right panel – main content stability', () => {
         });
         await tick();
 
-        expect(screen.getByTestId('layout-test-child')).toBeInTheDocument();
+        expect(screen.queryByTestId('pane-group-layout')).not.toBeInTheDocument();
     });
 });
 
