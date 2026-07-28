@@ -15,6 +15,7 @@ export const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
         params.mode === 'normal' ? params.filters : params.classifierSamples,
         {
             metadata_values: params.metadata_values,
+            categorical_metadata_values: params.categorical_metadata_values,
             text_embedding: params.text_embedding,
             query_expr: params.query_expr
         },
