@@ -41,6 +41,7 @@ export const Classes: Story = {
         allClasses: ['dog', 'cat', 'bird', 'horse', 'fish', 'rabbit'],
         selection: classesSelection,
         description: 'Choose how classes are selected for the chart.',
+        itemNoun: 'class',
         itemNounPlural: 'classes'
     }
 };
@@ -57,6 +58,7 @@ export const MetadataValues: Story = {
         ],
         selection: metadataSelection,
         description: 'Choose how categorical values are selected for the chart.',
+        itemNoun: 'value',
         itemNounPlural: 'values'
     }
 };

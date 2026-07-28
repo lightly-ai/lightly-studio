@@ -25,7 +25,9 @@
         testIdPrefix: string;
         /** Shows an "All" quick action next to the number input. */
         showAllButton?: boolean;
-        /** Singular/plural labels for the configured chart items. */
+        /** Singular label for the configured chart items. */
+        itemNoun?: string;
+        /** Plural labels for the configured chart items. */
         itemNounPlural?: string;
         /** Extra controls rendered below the tabs (e.g. coloring options). */
         extraSections?: Snippet;
@@ -42,6 +44,7 @@
         description,
         testIdPrefix,
         showAllButton = false,
+        itemNoun = 'class',
         itemNounPlural = 'classes',
         extraSections,
         onApply
@@ -131,8 +134,8 @@
                     bind:selected={draft.manualClasses}
                     {allClasses}
                     {items}
+                    {itemNoun}
                     {itemNounPlural}
-                    itemNoun={itemNounPlural === 'classes' ? 'class' : 'value'}
                     searchTestId={`${testIdPrefix}-search`}
                 />
             </Tabs.Content>
