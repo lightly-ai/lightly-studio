@@ -5,12 +5,13 @@ from __future__ import annotations
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlmodel import Session, col, func, select
+from sqlmodel import Session, col, select
 
 from lightly_studio.database import db_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
+from lightly_studio.resolvers.annotations import annotation_ordering
 
 
 def get_all_by_parent_sample_ids(
@@ -37,9 +38,11 @@ def get_all_by_parent_sample_ids(
             )
         )
         .order_by(
-            func.coalesce(ImageTable.file_path_abs, VideoTable.file_path_abs, "").asc(),
-            col(AnnotationBaseTable.created_at).asc(),
-            col(AnnotationBaseTable.sample_id).asc(),
+            *annotation_ordering.build_order_by(
+                file_path_abs=annotation_ordering.coalesced_file_path_abs_expression(),
+                created_at=col(AnnotationBaseTable.created_at),
+                annotation_sample_id=col(AnnotationBaseTable.sample_id),
+            )
         )
     )
     return session.exec(annotations_statement).all()

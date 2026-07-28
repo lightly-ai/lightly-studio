@@ -31,6 +31,13 @@
         }
     };
 
+    const handleKeyboardConfirm = (item: ListItem) => {
+        closedByConfirm = true;
+        onConfirm(item.value);
+        open = false;
+        selectedItem = undefined;
+    };
+
     const handleCancel = () => {
         onCancel();
         open = false;
@@ -56,13 +63,16 @@
             </Dialog.Description>
         </Dialog.Header>
 
-        <div class="space-y-1 py-2">
+        <div class="min-w-0 space-y-1 py-2">
             <SelectList
                 bind:selectedItem
                 {items}
                 label="Select a class..."
                 placeholder="Search or create a class..."
                 className="w-full"
+                autoOpen
+                autoFocus
+                onKeyboardConfirm={handleKeyboardConfirm}
             />
         </div>
 

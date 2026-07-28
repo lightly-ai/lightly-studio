@@ -13,6 +13,7 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
+from lightly_studio.resolvers.annotations import annotation_ordering
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
@@ -54,9 +55,11 @@ def get_all(
         )
         .outerjoin(VideoTable, col(VideoTable.sample_id) == col(VideoFrameTable.parent_sample_id))
         .order_by(
-            func.coalesce(ImageTable.file_path_abs, VideoTable.file_path_abs, "").asc(),
-            col(AnnotationBaseTable.created_at).asc(),
-            col(AnnotationBaseTable.sample_id).asc(),
+            *annotation_ordering.build_order_by(
+                file_path_abs=annotation_ordering.coalesced_file_path_abs_expression(),
+                created_at=col(AnnotationBaseTable.created_at),
+                annotation_sample_id=col(AnnotationBaseTable.sample_id),
+            )
         )
     )
     total_count_statement = select(func.count()).select_from(AnnotationBaseTable)
