@@ -74,21 +74,32 @@ describe('SelectClassDialog', () => {
     it('confirms a newly typed class name when Enter is pressed', async () => {
         const user = userEvent.setup();
         const { onConfirm } = renderDialog();
+        const input = await screen.findByTestId('select-list-input');
 
-        await user.type(await screen.findByTestId('select-list-input'), 'fish{Enter}');
+        expect(input).toHaveFocus();
+
+        await user.type(input, 'fish{Enter}');
 
         expect(onConfirm).toHaveBeenCalledTimes(1);
         expect(onConfirm).toHaveBeenCalledWith('fish');
     });
 
-    it('confirms the keyboard-highlighted existing class when Enter is pressed', async () => {
+    it('confirms the keyboard-highlighted class instead of the filter text', async () => {
         const user = userEvent.setup();
         const { onConfirm } = renderDialog();
+        const input = await screen.findByTestId('select-list-input');
 
-        await user.type(await screen.findByTestId('select-list-input'), '{ArrowDown}{Enter}');
+        await user.type(input, 'do');
+        await waitFor(() =>
+            expect(screen.getByRole('option', { name: 'dog' })).toHaveAttribute(
+                'aria-selected',
+                'true'
+            )
+        );
+        await user.keyboard('{Enter}');
 
         expect(onConfirm).toHaveBeenCalledTimes(1);
-        expect(onConfirm).toHaveBeenCalledWith('cat');
+        expect(onConfirm).toHaveBeenCalledWith('dog');
     });
 
     it('calls onCancel when Cancel is clicked', async () => {

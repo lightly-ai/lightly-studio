@@ -110,7 +110,11 @@
             return;
         }
 
-        if (inputValue) {
+        const highlightedItem = items.find((item) => item.value === highlightedValue);
+
+        if (highlightedItem) {
+            confirmWithKeyboard(highlightedItem);
+        } else if (inputValue) {
             const existingItem = items.find(
                 (item) => item.value.toLowerCase() === inputValue.toLowerCase()
             );
@@ -119,16 +123,12 @@
             if (!existingItem) items.push(item);
 
             confirmWithKeyboard(item);
-            event.preventDefault();
-            event.stopPropagation();
-        } else if (highlightedValue) {
-            const item = items.find((item) => item.value === highlightedValue);
-            if (!item) return;
-
-            confirmWithKeyboard(item);
-            event.preventDefault();
-            event.stopPropagation();
+        } else {
+            return;
         }
+
+        event.preventDefault();
+        event.stopPropagation();
     };
 
     const handleOpenAutoFocus = (event: Event) => {

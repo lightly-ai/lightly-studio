@@ -17,7 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Class names no longer overflow in class selection. Autofocus lets users create their first annotation faster.
+- Annotation class names no longer overflow in class selection.
+- Autofocus lets users create their first annotation faster.
 
 ### Security
 
