@@ -85,7 +85,6 @@
     import { useSearchEmbedding } from '$lib/hooks/useSearchEmbedding/useSearchEmbedding';
     import { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
     import { clearAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
-    import { usePostHog } from '$lib/hooks';
     const { data, children } = $props();
     const {
         collection,
@@ -117,8 +116,6 @@
         // captures a store reference that never goes stale.
         textEmbedding
     } = useGlobalStorage();
-
-    const { trackEvent } = usePostHog();
 
     const evaluationRunsQuery = useEvaluationRuns(() => ({ datasetId: collection.dataset_id }));
     const evaluationRuns = $derived(evaluationRunsQuery.data ?? []);
