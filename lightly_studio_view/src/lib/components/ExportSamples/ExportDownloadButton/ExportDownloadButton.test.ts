@@ -12,15 +12,12 @@ const defaultProps = {
 describe('ExportDownloadButton', () => {
     beforeEach(vi.resetAllMocks);
 
-    it('renders the download button', () => {
-        render(ExportDownloadButton, { props: defaultProps });
-        expect(screen.getByTestId('download-button')).toBeInTheDocument();
-    });
-
-    it('calls onclick when the button is clicked', async () => {
+    it('renders and calls onclick when the button is clicked', async () => {
         const onclick = vi.fn();
         render(ExportDownloadButton, { props: { ...defaultProps, onclick } });
-        await fireEvent.click(screen.getByTestId('download-button'));
+        const button = screen.getByTestId('download-button');
+        expect(button).toBeInTheDocument();
+        await fireEvent.click(button);
         expect(onclick).toHaveBeenCalledOnce();
     });
 

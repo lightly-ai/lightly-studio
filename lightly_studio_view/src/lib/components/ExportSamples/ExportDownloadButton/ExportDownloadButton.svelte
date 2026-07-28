@@ -5,10 +5,15 @@
     import { fade } from 'svelte/transition';
 
     interface Props {
+        /** Whether the download is in progress. Disables the button and shows a spinner. */
         isLoading: boolean;
+        /** Whether the button is disabled independently of loading state. */
         disabled?: boolean;
+        /** Called when the user clicks the button. */
         onclick: () => void;
+        /** Test ID for the button element. */
         testId?: string;
+        /** Error message to display above the button. Hidden when empty. */
         errorMessage?: string;
     }
 
