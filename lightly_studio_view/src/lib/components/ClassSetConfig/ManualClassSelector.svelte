@@ -4,7 +4,10 @@
     import * as Command from '$lib/components/ui/command';
     import { cn } from '$lib/utils';
 
-    type ManualSelectionItem = { value: string; label: string };
+    interface ManualSelectionItem {
+        value: string;
+        label: string;
+    }
 
     interface Props {
         /** Currently selected class labels. Bindable — mutated on toggle / Select all / Clear. */
