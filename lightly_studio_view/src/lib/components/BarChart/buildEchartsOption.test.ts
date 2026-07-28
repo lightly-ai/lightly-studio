@@ -41,7 +41,7 @@ describe('buildEchartsOption', () => {
         expect(horizontal.xAxis.minInterval).toBe(1);
     });
 
-    it('dims unselected bars green when a selection is active; disabled bars keep reduced opacity', () => {
+    it('unselected bars are dimmed while the selected bar remains green', () => {
         const option = buildEchartsOption([
             { id: 'sel', label: 'Missing', count: 3, selected: true, selectable: true },
             { id: 'other', label: 'Other', count: 2, selected: false, selectable: false }
