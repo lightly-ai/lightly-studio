@@ -187,7 +187,7 @@
                 refetch
             });
 
-            await deleteAnnotation(annotation!.sample_id);
+            await deleteAnnotation(annotation!.sample_id, annotation!.annotation_type);
             toast.success('Annotation deleted successfully');
 
             if (annotationLabelContext.isOnAnnotationDetailsView) return gotoNextAnnotation();

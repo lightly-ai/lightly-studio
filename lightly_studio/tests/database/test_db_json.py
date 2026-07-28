@@ -118,6 +118,53 @@ def test_json_extract__sqlite_raises() -> None:
         expr.compile(dialect=sqlite.dialect())
 
 
+def test_json_extract_string__duckdb() -> None:
+    expr = db_json.json_extract_string(column=sqlalchemy.column("data"), field="location")
+    result = expr.compile(dialect=Dialect())
+    assert str(result) == "json_extract_string(data, %(param_1)s)"
+    assert result.params == {"param_1": "location"}
+
+
+def test_json_extract_string__postgresql() -> None:
+    expr = db_json.json_extract_string(column=sqlalchemy.column("data"), field="location")
+    result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
+    assert str(result) == "data->>%(param_1)s"
+    assert result.params == {"param_1": "location"}
+
+
+@pytest.mark.parametrize("field", ["site.name", "owner's site"])
+def test_json_extract_string__special_key_is_bound(field: str) -> None:
+    expr = db_json.json_extract_string(column=sqlalchemy.column("data"), field=field)
+    duckdb_result = expr.compile(dialect=Dialect())
+    postgres_result = expr.compile(
+        dialect=postgresql.dialect()  # type: ignore[no-untyped-call]
+    )
+
+    assert str(duckdb_result) == "json_extract_string(data, %(param_1)s)"
+    assert duckdb_result.params == {"param_1": field}
+    assert str(postgres_result) == "data->>%(param_1)s"
+    assert postgres_result.params == {"param_1": field}
+
+
+@pytest.mark.parametrize(
+    ("field", "expected"),
+    [
+        ("site.name", "/site.name"),
+        ("owner's site", "/owner's site"),
+        ("path/to~site", "/path~1to~0site"),
+    ],
+)
+def test_json_top_level_key_type__duckdb_path(field: str, expected: str) -> None:
+    type_ = db_json._JsonTopLevelKeyType()
+    assert type_.process_bind_param(value=field, dialect=Dialect()) == expected
+
+
+def test_json_extract_string__sqlite_raises() -> None:
+    expr = db_json.json_extract_string(column=sqlalchemy.column("data"), field="location")
+    with pytest.raises(NotImplementedError, match="Unsupported dialect: sqlite"):
+        expr.compile(dialect=sqlite.dialect())
+
+
 def test_json_literal__duckdb_string_value() -> None:
     """String values are JSON-encoded for DuckDB."""
     lit = db_json.json_literal("hello")

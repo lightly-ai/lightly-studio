@@ -12,6 +12,15 @@ vi.mock('@tanstack/svelte-query', async (importOriginal) => {
     return { ...actual, createMutation: vi.fn(), useQueryClient: vi.fn() };
 });
 
+const { trackEvent } = vi.hoisted(() => ({ trackEvent: vi.fn() }));
+vi.mock('$lib/hooks/usePostHog', () => ({
+    usePostHog: () => ({ trackEvent })
+}));
+
+vi.mock('$app/state', () => ({
+    page: { params: { collection_type: 'images' } }
+}));
+
 describe('useCreateAnnotation', () => {
     const invalidateQueries = vi.fn();
 
@@ -25,7 +34,11 @@ describe('useCreateAnnotation', () => {
     it('invalidates the annotation counts and the source list after a successful create', async () => {
         vi.mocked(createMutation).mockReturnValue({
             mutate: (_vars: unknown, opts: { onSuccess: (data: unknown) => void }) => {
-                opts.onSuccess({ sample_id: 'created-annotation' });
+                opts.onSuccess({
+                    sample_id: 'created-annotation',
+                    annotation_type: 'object_detection',
+                    annotation_label: { annotation_label_name: 'car' }
+                });
             }
         } as unknown as ReturnType<typeof createMutation>);
 
@@ -41,6 +54,32 @@ describe('useCreateAnnotation', () => {
         });
         expect(invalidateQueries).toHaveBeenCalledWith({
             queryKey: readAnnotationCollectionsQueryKey({ path: { collection_id: 'col-1' } })
+        });
+    });
+
+    it('fires annotation_created with correct properties on success', async () => {
+        vi.mocked(createMutation).mockReturnValue({
+            mutate: (_vars: unknown, opts: { onSuccess: (data: unknown) => void }) => {
+                opts.onSuccess({
+                    sample_id: 'created-annotation',
+                    annotation_type: 'object_detection',
+                    annotation_label: { annotation_label_name: 'car' }
+                });
+            }
+        } as unknown as ReturnType<typeof createMutation>);
+
+        const { createAnnotation } = useCreateAnnotation({ collectionId: 'col-1' });
+        await createAnnotation({
+            parent_sample_id: 's1',
+            annotation_type: 'object_detection',
+            annotation_label_id: 'l1'
+        } as AnnotationCreateInput);
+
+        expect(trackEvent).toHaveBeenCalledWith('annotation_created', {
+            collection_id: 'col-1',
+            annotation_type: 'object_detection',
+            parent_sample_type: 'images',
+            label_name: 'car'
         });
     });
 });

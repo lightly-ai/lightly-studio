@@ -2930,8 +2930,8 @@ wheels = [
 
 [[package]]
 name = "labelformat"
-version = "0.1.16"
-source = { git = "https://github.com/lightly-ai/labelformat.git?rev=07b00a0edf54e2dc7930a3abc756c7914c068829#07b00a0edf54e2dc7930a3abc756c7914c068829" }
+version = "0.1.17"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "fsspec", version = "2025.10.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "fsspec", version = "2026.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
@@ -2944,6 +2944,10 @@ dependencies = [
     { name = "pydantic-xml" },
     { name = "pyyaml" },
     { name = "tqdm" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5c/83/b7174afba0011e4191bebc98b20de0fea436ae2562af26b8ac2a58cbd105/labelformat-0.1.17.tar.gz", hash = "sha256:1b9014bbbb8afa075e65e732a4884f8df535418d7b12e4cf0c769475107c9697", size = 41772, upload-time = "2026-07-27T08:30:01.24Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/48/bb/4b6e2eb736ce74f66a1ee16253badaba12cc334d74bd7adb707a4a4db7d2/labelformat-0.1.17-py3-none-any.whl", hash = "sha256:10247f932cb541157aaf2e40d58a374092365adcdb871283a3badbeb48abf715", size = 61388, upload-time = "2026-07-27T08:29:59.889Z" },
 ]
 
 [[package]]
@@ -3107,7 +3111,7 @@ wheels = [
 
 [[package]]
 name = "lightly-studio"
-version = "1.0.3"
+version = "1.0.4"
 source = { editable = "." }
 dependencies = [
     { name = "alembic", version = "1.16.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -3221,7 +3225,7 @@ requires-dist = [
     { name = "fsspec", specifier = ">=2023.1.0" },
     { name = "gcsfs", marker = "extra == 'cloud-storage'", specifier = ">=2023.1.0" },
     { name = "jinja2", specifier = ">=3.1.0" },
-    { name = "labelformat", git = "https://github.com/lightly-ai/labelformat.git?rev=07b00a0edf54e2dc7930a3abc756c7914c068829" },
+    { name = "labelformat", specifier = ">=0.1.17" },
     { name = "lightly-mundig", specifier = "==0.1.13" },
     { name = "open-clip-torch", specifier = ">=2.20.0" },
     { name = "opencv-python-headless", specifier = ">=4.11.0.86" },
