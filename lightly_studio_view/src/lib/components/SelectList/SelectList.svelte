@@ -11,9 +11,8 @@
     import { cn } from '$lib/utils';
     import type { ListItem } from './types';
 
-    let open = $state(false);
-
     let triggerRef = $state<HTMLButtonElement>(null!);
+    let inputRef = $state<HTMLInputElement>(null!);
 
     // We want to refocus the trigger button when the user selects
     // an item from the list so users can continue navigating the
@@ -21,7 +20,7 @@
     function closeAndFocusTrigger() {
         open = false;
         tick().then(() => {
-            triggerRef.focus();
+            triggerRef?.focus();
         });
     }
 
@@ -39,22 +38,29 @@
         notFound,
         className = '',
         contentClassName = '',
+        autoOpen = false,
+        autoFocus = false,
         disabled = false,
-        isLoading = false
+        isLoading = false,
+        onKeyboardConfirm
     }: {
         placeholder?: string;
         name?: string;
         label?: string;
         className?: string;
         contentClassName?: string;
+        autoOpen?: boolean;
+        autoFocus?: boolean;
         selectedItem?: ListItem;
         items: ListItem[];
         notFound?: Snippet<[{ inputValue: string }]>;
         onSelect?: (item: ListItem) => void;
         disabled?: boolean;
         isLoading?: boolean;
+        onKeyboardConfirm?: (item: ListItem) => void;
     } = $props();
 
+    let open = $state(autoOpen);
     let inputValue = $state('');
     let highlightedValue = $state('');
 
@@ -85,31 +91,72 @@
         }
     };
 
+    const confirmWithKeyboard = (item: ListItem) => {
+        selectedItem = item;
+        onSelect?.(item);
+        onKeyboardConfirm?.(item);
+        closeAndFocusTrigger();
+    };
+
     const handleKeyDown = (event: KeyboardEvent) => {
-        if (event.key === 'Enter' && !highlightedValue && inputValue) {
-            createNewItem(inputValue);
-            event.preventDefault();
-            event.stopPropagation();
-        } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-            event.stopPropagation();
+        if (event.key !== 'Enter' || !onKeyboardConfirm) {
+            if (event.key === 'Enter' && !highlightedValue && inputValue) {
+                createNewItem(inputValue);
+                event.preventDefault();
+                event.stopPropagation();
+            } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+                event.stopPropagation();
+            }
+            return;
         }
+
+        const highlightedItem = items.find((item) => item.value === highlightedValue);
+
+        if (highlightedItem) {
+            confirmWithKeyboard(highlightedItem);
+        } else if (inputValue) {
+            const existingItem = items.find(
+                (item) => item.value.toLowerCase() === inputValue.toLowerCase()
+            );
+            const item = existingItem ?? { value: inputValue, label: inputValue };
+
+            if (!existingItem) items.push(item);
+
+            confirmWithKeyboard(item);
+        } else {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+    };
+
+    const handleOpenAutoFocus = (event: Event) => {
+        if (!autoFocus) return;
+
+        event.preventDefault();
+        // Override the popover's default content focus to keep typing in the search input.
+        inputRef.focus();
     };
 </script>
 
 <Popover.Root bind:open>
     <Popover.Trigger bind:ref={triggerRef}>
         {#snippet child({ props }: ChildProps)}
-            <div class="flex min-w-0 items-center space-x-4">
+            <div class="flex w-full min-w-0 max-w-full items-center space-x-4">
                 <Button
                     {...props}
                     variant="secondary"
                     {disabled}
-                    class={cn('w-[200px] min-w-0 justify-between', className)}
+                    class={cn('w-[200px] min-w-0 max-w-full justify-between', className)}
                     role="combobox"
                     aria-expanded={open}
                     data-testid="select-list-trigger"
                 >
-                    <span class="min-w-0 flex-1 truncate text-left">
+                    <span
+                        class="min-w-0 flex-1 truncate text-left"
+                        title={selectedItem?.label || label}
+                    >
                         {selectedItem?.label || label}
                     </span>
                     <ChevronsUpDownIcon class="shrink-0 opacity-50" />
@@ -120,13 +167,17 @@
             </div>
         {/snippet}
     </Popover.Trigger>
-    <Popover.Content class={cn('w-[200px] p-0', contentClassName)}>
+    <Popover.Content
+        class={cn('w-[200px] p-0', contentClassName)}
+        onOpenAutoFocus={handleOpenAutoFocus}
+    >
         <Command.Root bind:value={highlightedValue}>
             <Command.Input
                 {placeholder}
                 onkeydown={handleKeyDown}
                 data-testid="select-list-input"
                 bind:value={inputValue}
+                bind:ref={inputRef}
             />
             <Command.List class="dark:[color-scheme:dark]">
                 <Command.Empty>
@@ -144,7 +195,9 @@
                             <CheckIcon
                                 class={cn(selectedValue !== item.value && 'text-transparent')}
                             />
-                            <span class="min-w-0 flex-1 truncate">{item.label}</span>
+                            <span class="min-w-0 flex-1 truncate" title={item.label}
+                                >{item.label}</span
+                            >
                         </Command.Item>
                     {/each}
                 </Command.Group>
@@ -161,7 +214,12 @@
                             keywords={[]}
                         >
                             <span class="opacity-50">Create:</span>
-                            <span class="ml-1 font-semibold">{inputValue}</span>
+                            <span
+                                class="ml-1 min-w-0 flex-1 truncate font-semibold"
+                                title={inputValue}
+                            >
+                                {inputValue}
+                            </span>
                         </Command.Item>
                     </div>
                 {/if}
