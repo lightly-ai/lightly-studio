@@ -40,4 +40,23 @@ describe('ManualClassSelector', () => {
 
         expect(screen.getByTestId('my-search')).toBeInTheDocument();
     });
+
+    it('selects the provided item values when items are used for metadata values', async () => {
+        render(ManualClassSelector, {
+            props: {
+                selected: ['city'],
+                items: [
+                    { value: 'city', label: 'City' },
+                    { value: 'mountain', label: 'Mountain' },
+                    { value: 'village', label: 'Village' }
+                ],
+                itemNoun: 'value',
+                itemNounPlural: 'values'
+            }
+        });
+
+        expect(screen.getByText('1 of 3 selected')).toBeInTheDocument();
+        await fireEvent.click(screen.getByText('Mountain'));
+        await waitFor(() => expect(screen.getByText('2 of 3 selected')).toBeInTheDocument());
+    });
 });
