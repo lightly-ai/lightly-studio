@@ -1,3 +1,4 @@
+import escape from 'lodash-es/escape';
 import { formatPercent } from '$lib/utils';
 
 type TooltipParams = { name: string; value: number };
@@ -13,11 +14,11 @@ export function buildTooltipFormatter(totalCount: number): (params: TooltipParam
                     totalCount > 0 ? ` (${formatPercent(totalValue / totalCount)})` : '';
                 const filteredPct =
                     totalCount > 0 ? ` (${formatPercent(filteredValue / totalCount)})` : '';
-                return `<b>${params[0].name}</b><br/>Total: <b>${totalValue}</b>${totalPct}<br/>In filter: <b>${filteredValue}</b>${filteredPct}`;
+                return `<b>${escape(params[0].name)}</b><br/>Total: <b>${totalValue}</b>${totalPct}<br/>In filter: <b>${filteredValue}</b>${filteredPct}`;
             }
         }
         const [{ name, value }] = params;
         const percent = totalCount > 0 ? ` (${formatPercent(value / totalCount)})` : '';
-        return `<b>${name}</b><br/>Count: <b>${value}</b>${percent}`;
+        return `<b>${escape(name)}</b><br/>Count: <b>${value}</b>${percent}`;
     };
 }

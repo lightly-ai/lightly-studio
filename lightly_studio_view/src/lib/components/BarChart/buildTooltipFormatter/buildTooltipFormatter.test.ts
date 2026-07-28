@@ -47,4 +47,21 @@ describe('buildTooltipFormatter', () => {
             ])
         ).toBe('<b>cat</b><br/>Count: <b>50</b> (50.0%)');
     });
+
+    it('escapes HTML markup in category labels', () => {
+        const formatter = buildTooltipFormatter(100);
+
+        expect(formatter([{ name: '<script>alert(1)</script>', value: 10 }])).toBe(
+            '<b>&lt;script&gt;alert(1)&lt;/script&gt;</b><br/>Count: <b>10</b> (10.0%)'
+        );
+
+        expect(
+            formatter([
+                { name: '<b>bold</b>', value: 80 },
+                { name: '<b>bold</b>', value: 40 }
+            ])
+        ).toBe(
+            '<b>&lt;b&gt;bold&lt;/b&gt;</b><br/>Total: <b>80</b> (80.0%)<br/>In filter: <b>40</b> (40.0%)'
+        );
+    });
 });
