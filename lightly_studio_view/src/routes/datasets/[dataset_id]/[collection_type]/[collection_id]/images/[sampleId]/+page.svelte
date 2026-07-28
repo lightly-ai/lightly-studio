@@ -4,6 +4,8 @@
     import { ImageDetails } from '$lib/components';
     import GroupsComponentsMenu from '$lib/components/GroupsComponentsMenu/GroupsComponentsMenu.svelte';
     import LayoutCard from '$lib/components/LayoutCard/LayoutCard.svelte';
+    import { useTrackSampleInspected } from '$lib/hooks';
+    import { isImagesRoute } from '$lib/routes';
 
     const { children } = $props();
 
@@ -14,6 +16,8 @@
     const collectionType = $derived(page.params.collection_type);
     const collection = page.data.collection;
     const collectionId = $derived(page.params.collection_id!);
+
+    useTrackSampleInspected(() => collectionId, 'image', isImagesRoute);
 
     const groupId = $derived.by(() => {
         return page.url.searchParams.get('group_id') ?? undefined;

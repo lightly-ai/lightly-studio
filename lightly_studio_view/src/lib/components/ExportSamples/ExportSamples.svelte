@@ -21,7 +21,7 @@
     import { Loader2 } from '@lucide/svelte';
     import * as Alert from '$lib/components/ui/alert/index.js';
     import { fade } from 'svelte/transition';
-    import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
+    import { useExportDialog } from '$lib/hooks';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 
     const { isExportDialogOpen, openExportDialog, closeExportDialog } = useExportDialog();
@@ -187,7 +187,10 @@
 
 <Dialog.Root
     open={$isExportDialogOpen}
-    onOpenChange={(open) => (open ? openExportDialog() : closeExportDialog())}
+    onOpenChange={(open) =>
+        open
+            ? openExportDialog({ collectionId })
+            : closeExportDialog({ collectionId, exportFormat: exportType })}
 >
     <Dialog.Portal>
         <Dialog.Overlay />

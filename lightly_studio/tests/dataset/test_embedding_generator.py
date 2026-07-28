@@ -15,13 +15,15 @@ class TestRandomEmbeddingGeneratorCrops:
             ImageCrop(filepath="b.jpg", x=0, y=0, width=30, height=30),
         ]
 
-        embeddings = generator.embed_image_crops(image_crops)
+        result = generator.embed_image_crops(image_crops)
 
-        assert embeddings.shape == (3, 4)
+        assert result.embeddings.shape == (3, 4)
+        assert result.kept_indices == [0, 1, 2]
 
     def test_embed_image_crops__empty_input_returns_empty_array(self) -> None:
         generator = RandomEmbeddingGenerator(dimension=4)
 
-        embeddings = generator.embed_image_crops([])
+        result = generator.embed_image_crops([])
 
-        assert embeddings.shape == (0, 4)
+        assert result.embeddings.shape == (0, 4)
+        assert result.kept_indices == []

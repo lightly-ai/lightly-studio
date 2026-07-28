@@ -10,8 +10,12 @@
         Separator
     } from '$lib/components';
     import VideoDetailsBreadcrumb from '$lib/components/VideoDetailsBreadcrumb/VideoDetailsBreadcrumb.svelte';
+    import { useTrackSampleInspected } from '$lib/hooks';
+    import { isVideosRoute } from '$lib/routes';
 
     const { data }: { data: PageData } = $props();
+
+    useTrackSampleInspected(() => data.params.collection_id, 'video', isVideosRoute);
     const { data: video, isLoading, loadById, error, refetch } = useVideo();
     $effect(() => {
         loadById(data.params.sample_id);

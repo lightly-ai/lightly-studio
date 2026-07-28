@@ -167,4 +167,28 @@ describe('VideoPlayer', () => {
         expect(getByTestId('video-event-timeline')).toBeTruthy();
         expect(getByTestId('add-event-button')).toBeTruthy();
     });
+
+    it('renders a delete affordance on events in edit mode', () => {
+        const { getByTestId } = render(VideoPlayer, {
+            props: {
+                src: 'test-video.mp4',
+                durationS: 10,
+                editableEvents: true,
+                onEventDelete: () => {},
+                events: [
+                    {
+                        id: 'e1',
+                        annotationCollectionId: 'coll-1',
+                        label: 'Jump',
+                        startTimeS: 2,
+                        endTimeS: 4,
+                        color: 'rgba(10, 20, 30, 0.7)',
+                        contrastColor: 'rgba(245, 235, 225, 0.7)'
+                    }
+                ]
+            }
+        });
+
+        expect(getByTestId('delete-event-button')).toBeTruthy();
+    });
 });
