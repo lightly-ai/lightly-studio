@@ -8,26 +8,7 @@ from uuid import UUID, uuid4
 from sqlmodel import Field, SQLModel
 
 
-class ExportJobBase(SQLModel):
-    """Base class for the ExportJob model."""
-
-    export_path: str
-
-
-class ExportJobView(ExportJobBase):
-    """Model used when retrieving an export job.
-
-    Attributes:
-        export_key: Unique identifier for the export job.
-        export_path: Absolute path to the pre-generated export file or directory.
-        created_at: Timestamp when the export job was created.
-    """
-
-    export_key: UUID
-    created_at: datetime
-
-
-class ExportJobTable(ExportJobBase, table=True):
+class ExportJobTable(SQLModel, table=True):
     """One row per prepare call; consumed by the download endpoint.
 
     Attributes:
@@ -39,4 +20,5 @@ class ExportJobTable(ExportJobBase, table=True):
     __tablename__ = "export_job"
 
     export_key: UUID = Field(default_factory=uuid4, primary_key=True)
+    export_path: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
