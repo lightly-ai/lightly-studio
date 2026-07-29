@@ -60,9 +60,7 @@
 
     function isCellMissing(row: ParameterTableRow, cell: OperatorParameterColumn): boolean {
         // Only flag the cells that actually block submission, not every cell of the table.
-        return (
-            required && isMissing && cell.required && (row[cell.name] ?? '').trim().length === 0
-        );
+        return required && isMissing && cell.required && (row[cell.name] ?? '').trim().length === 0;
     }
 </script>
 

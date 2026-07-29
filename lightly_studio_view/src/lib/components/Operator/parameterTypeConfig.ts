@@ -112,7 +112,9 @@ const TYPE_CONFIG: Record<OperatorParameterType | 'default', TypeConfig> = {
         props: {},
         defaultValue: [],
         validate: (value, columns) =>
-            Array.isArray(value) && value.length > 0 && value.every((row) => isRowFilled(row, columns))
+            Array.isArray(value) &&
+            value.length > 0 &&
+            value.every((row) => isRowFilled(row, columns))
     },
     default: {
         component: ParameterInput,

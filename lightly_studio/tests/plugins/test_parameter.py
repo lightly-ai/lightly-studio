@@ -148,6 +148,8 @@ class TestTableParameter:
     def test_init__nested_table_column(self) -> None:
         # A table inside a table is not supported by the GUI, so it must fail loudly instead of
         # being rendered as an empty column.
+        nested = TableParameter(name="nested", columns=[StringParameter(name="prompt")])
+
         with pytest.raises(
             TypeError,
             match=re.escape(
@@ -155,7 +157,6 @@ class TestTableParameter:
                 "<class 'lightly_studio.plugins.parameter.TableParameter'>"
             ),
         ):
-            nested = TableParameter(name="nested", columns=[StringParameter(name="prompt")])
             _ = TableParameter(name="prompts", columns=[nested])  # type: ignore[list-item]
 
     def test_init__default_not_a_list(self) -> None:
