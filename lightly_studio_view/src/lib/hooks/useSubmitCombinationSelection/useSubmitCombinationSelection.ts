@@ -4,6 +4,7 @@ import { get, readonly, writable, type Readable } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import type { TagView } from '$lib/services/types';
 import type { StrategyInstance } from '$lib/hooks/useStrategyBuilder';
+import { usePostHog } from '$lib/hooks';
 import { computeStrategyMetadata } from './computeStrategyMetadata';
 import { toApiStrategy } from './strategyApiMapping';
 
@@ -14,6 +15,7 @@ interface UseSubmitCombinationSelectionParams {
     setTagSelected: (tagId: string, isSelected: boolean) => void;
     loadTags: () => Promise<void>;
     closeSelectionDialog: () => void;
+    filteredSampleCount: Readable<number>;
 }
 
 interface SubmitParams {
@@ -55,11 +57,16 @@ async function handleSelectionSuccess(
 }
 
 export function useSubmitCombinationSelection(params: UseSubmitCombinationSelectionParams) {
+    const { trackEvent } = usePostHog();
+    const { filteredSampleCount } = params;
     const _isSubmitting = writable(false);
     const _loadingMessage = writable('');
 
     async function submit(submitParams: SubmitParams): Promise<boolean> {
         if (get(_isSubmitting)) return false;
+
+        _isSubmitting.set(true);
+
         const {
             collectionId,
             isVideoCollection,
@@ -69,7 +76,14 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
             selectionFilter
         } = submitParams;
 
-        _isSubmitting.set(true);
+        const filteredCount = get(filteredSampleCount);
+
+        trackEvent('sampling_submitted', {
+            collection_id: collectionId,
+            strategies: instances.map((i) => i.type),
+            n_samples: nSamplesToSelect,
+            filtered_sample_count: filteredCount
+        });
 
         try {
             const metadataOk = await computeAllStrategiesMetadata(
@@ -78,7 +92,17 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
                 isVideoCollection,
                 (message) => _loadingMessage.set(message)
             );
-            if (!metadataOk) return false;
+            if (!metadataOk) {
+                trackEvent('sampling_triggered', {
+                    collection_id: collectionId,
+                    strategies: instances.map((i) => i.type),
+                    n_samples: nSamplesToSelect,
+                    filtered_sample_count: filteredCount,
+                    success: false,
+                    error_message: 'Metadata computation failed'
+                });
+                return false;
+            }
 
             _loadingMessage.set('Creating selection...');
             const response = await createSampling({
@@ -92,17 +116,46 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
             });
 
             if (response.error) {
-                toast.error(
-                    (response.error as SelectionError).error ?? 'Failed to create selection'
-                );
+                const errorMessage =
+                    (response.error as SelectionError).error ?? 'Failed to create selection';
+                trackEvent('sampling_triggered', {
+                    collection_id: collectionId,
+                    strategies: instances.map((i) => i.type),
+                    n_samples: nSamplesToSelect,
+                    filtered_sample_count: filteredCount,
+                    success: false,
+                    error_message: errorMessage
+                });
+                toast.error(errorMessage);
                 return false;
             }
 
-            await handleSelectionSuccess(selectionResultTagName, params);
+            trackEvent('sampling_triggered', {
+                collection_id: collectionId,
+                strategies: instances.map((i) => i.type),
+                n_samples: nSamplesToSelect,
+                filtered_sample_count: filteredCount,
+                success: true,
+                error_message: null
+            });
+            try {
+                await handleSelectionSuccess(selectionResultTagName, params);
+            } catch (uiError) {
+                console.error('Unexpected error in handleSelectionSuccess:', uiError);
+            }
             return true;
         } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            trackEvent('sampling_triggered', {
+                collection_id: collectionId,
+                strategies: instances.map((i) => i.type),
+                n_samples: nSamplesToSelect,
+                filtered_sample_count: filteredCount,
+                success: false,
+                error_message: errorMessage
+            });
             console.error('Unexpected error in useSubmitCombinationSelection.submit:', error);
-            toast.error('Failed to create selection: ' + (error as Error).message);
+            toast.error('Failed to create selection: ' + errorMessage);
             return false;
         } finally {
             _isSubmitting.set(false);
