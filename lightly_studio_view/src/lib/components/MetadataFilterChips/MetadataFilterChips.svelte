@@ -28,10 +28,14 @@
                 >
                     {#snippet subtitle()}
                         <div class="truncate text-xs text-muted-foreground">
-                            {hook.formatValue(chip.key, chip.range.min)} – {hook.formatValue(
-                                chip.key,
-                                chip.range.max
-                            )}
+                            {#if chip.kind === 'categorical'}
+                                {hook.formatCategoricalValues(chip.values)}
+                            {:else if chip.range}
+                                {hook.formatValue(chip.key, chip.range.min)} – {hook.formatValue(
+                                    chip.key,
+                                    chip.range.max
+                                )}
+                            {/if}
                         </div>
                     {/snippet}
                 </FilterChip>

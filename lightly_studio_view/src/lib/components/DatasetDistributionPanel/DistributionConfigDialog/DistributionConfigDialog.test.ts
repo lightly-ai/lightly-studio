@@ -45,6 +45,25 @@ describe('DistributionConfigDialog', () => {
         expect(screen.getByTestId('distribution-config-top-n')).toHaveValue(5);
     });
 
+    it('uses metadata value wording and hides count mode when configured', () => {
+        renderDialog({ itemNounPlural: 'values', showCountMode: false });
+
+        expect(screen.getByText('Configure values')).toBeInTheDocument();
+        expect(screen.getByText('Number of values')).toBeInTheDocument();
+        expect(screen.queryByTestId('distribution-config-count-mode')).not.toBeInTheDocument();
+    });
+
+    it('uses value wording in the manual selector', async () => {
+        renderDialog({ itemNounPlural: 'values', showCountMode: false });
+
+        await fireEvent.click(screen.getByRole('tab', { name: 'Manual' }));
+        expect(screen.getByPlaceholderText('Search values...')).toBeInTheDocument();
+        await fireEvent.input(screen.getByPlaceholderText('Search values...'), {
+            target: { value: 'not present' }
+        });
+        expect(screen.getByText('No value found.')).toBeInTheDocument();
+    });
+
     it('does not render its content while closed', () => {
         renderDialog({ open: false });
 
