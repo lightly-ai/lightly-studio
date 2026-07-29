@@ -1,4 +1,8 @@
-import type { OperatorParameterType, Operator } from '$lib/hooks/useOperators/useOperators';
+import type {
+    OperatorParameterColumn,
+    OperatorParameterType,
+    Operator
+} from '$lib/hooks/useOperators/useOperators';
 import type { Component } from 'svelte';
 import ParameterCheckbox from './ParameterCheckbox.svelte';
 import ParameterInput from './ParameterInput.svelte';
@@ -18,27 +22,37 @@ export type ParameterComponentProps = {
     inputType?: 'text' | 'number';
     step?: string;
     parse?: (value: string) => string | number;
-    columns?: string[];
+    columns?: OperatorParameterColumn[];
 };
 
 export type TypeConfig = {
     component: Component<ParameterComponentProps>;
     props: Record<string, unknown>;
     defaultValue: ParameterValue;
-    validate: (value: ParameterValue) => boolean;
+    validate: (value: ParameterValue, columns?: OperatorParameterColumn[]) => boolean;
 };
 
 const parseIntegerValue = (value: string) => (value === '' ? '' : Number.parseInt(value, 10));
 const parseFloatValue = (value: string) => (value === '' ? '' : Number.parseFloat(value));
 const identity = (value: string) => value;
 
+function isRowFilled(row: ParameterTableRow, columns?: OperatorParameterColumn[]): boolean {
+    // Only required columns have to be filled in. Without column information every cell counts as
+    // required, which is the stricter fallback.
+    const requiredNames = columns
+        ? columns.filter((column) => column.required).map((column) => column.name)
+        : Object.keys(row);
+    return requiredNames.every((name) => (row[name] ?? '').trim().length > 0);
+}
+
 export function isValueFilled(
     value: ParameterValue,
-    type: OperatorParameterType | 'default'
+    type: OperatorParameterType | 'default',
+    columns?: OperatorParameterColumn[]
 ): boolean {
     if (value === undefined || value === null) return false;
     const config = TYPE_CONFIG[type] ?? TYPE_CONFIG.default;
-    return config.validate(value);
+    return config.validate(value, columns);
 }
 
 export function buildInitialParameters(selectedOperator: Operator): ParameterValues {
@@ -97,10 +111,8 @@ const TYPE_CONFIG: Record<OperatorParameterType | 'default', TypeConfig> = {
         component: ParameterTable,
         props: {},
         defaultValue: [],
-        validate: (value) =>
-            Array.isArray(value) &&
-            value.length > 0 &&
-            value.every((row) => Object.values(row).every((cell) => cell.trim().length > 0))
+        validate: (value, columns) =>
+            Array.isArray(value) && value.length > 0 && value.every((row) => isRowFilled(row, columns))
     },
     default: {
         component: ParameterInput,

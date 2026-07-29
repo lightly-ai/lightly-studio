@@ -1,6 +1,17 @@
-import type { BaseParameter, RegisteredOperatorMetadata } from '$lib/api/lightly_studio_local';
+import type {
+    ParameterColumnView,
+    ParameterView,
+    RegisteredOperatorMetadata
+} from '$lib/api/lightly_studio_local';
 
 export type OperatorParameterType = 'string' | 'int' | 'float' | 'bool' | 'table';
+
+export type OperatorParameterColumn = {
+    name: string;
+    description?: string;
+    default?: string;
+    required: boolean;
+};
 
 export type OperatorParameter = {
     name: string;
@@ -8,7 +19,7 @@ export type OperatorParameter = {
     default?: unknown;
     required?: boolean;
     type: OperatorParameterType;
-    columns?: string[];
+    columns?: OperatorParameterColumn[];
 };
 
 export type Operator = {
@@ -17,18 +28,26 @@ export type Operator = {
     parameters: OperatorParameter[];
 };
 
-const mapParameter = (parameter: BaseParameter): OperatorParameter => ({
+const mapColumn = (column: ParameterColumnView): OperatorParameterColumn => ({
+    name: column.name,
+    description: column.description,
+    // Table cells are strings, so anything else cannot pre-fill a cell.
+    default: typeof column.default === 'string' ? column.default : undefined,
+    required: column.required
+});
+
+const mapParameter = (parameter: ParameterView): OperatorParameter => ({
     name: parameter.name,
     description: parameter.description,
     default: parameter.default,
     required: parameter.required,
     type: (parameter.param_type as OperatorParameterType) ?? 'string',
-    columns: parameter.columns ?? undefined
+    columns: parameter.columns?.map(mapColumn)
 });
 
 export const createOperatorFromMetadata = (
     metadata: RegisteredOperatorMetadata,
-    parameters: BaseParameter[]
+    parameters: ParameterView[]
 ): Operator => ({
     id: metadata.operator_id,
     name: metadata.name,

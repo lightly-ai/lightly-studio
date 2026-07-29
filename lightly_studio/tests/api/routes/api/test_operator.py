@@ -133,11 +133,12 @@ def test_get_operator_parameters__table_parameter(
     test_client: TestClient,
     isolated_operator_registry: OperatorRegistry,
 ) -> None:
-    """`columns` must reach the client through the `list[BaseParameter]` response model.
+    """The full column definitions must reach the client.
 
-    Regression guard: pydantic serializes each item against `BaseParameter` and silently drops
-    fields declared only on a subclass. `columns` therefore has to stay on `BaseParameter`; moving
-    it onto `TableParameter` would leave the GUI without column names and without any error.
+    Regression guard: `columns` lives on `TableParameter` only, so the route has to map the
+    parameters onto `ParameterView` to expose them. Returning the plugin dataclasses directly would
+    make pydantic serialize each item against the base class and silently drop the columns, leaving
+    the GUI without column information and without any error.
     """
     isolated_operator_registry.register(TableParamsOperator(name="table"))
 
@@ -153,7 +154,22 @@ def test_get_operator_parameters__table_parameter(
             "default": [{"prompt": "person", "label": "pedestrian"}],
             "required": True,
             "param_type": "table",
-            "columns": ["prompt", "label"],
+            "columns": [
+                {
+                    "name": "prompt",
+                    "description": "What to segment.",
+                    "default": None,
+                    "required": True,
+                    "param_type": "str",
+                },
+                {
+                    "name": "label",
+                    "description": "",
+                    "default": "pedestrian",
+                    "required": False,
+                    "param_type": "str",
+                },
+            ],
         }
     ]
 
@@ -464,7 +480,10 @@ class TableParamsOperator(TestOperator):
             TableParameter(
                 name="prompts",
                 description="Prompts and labels.",
-                columns=["prompt", "label"],
+                columns=[
+                    StringParameter(name="prompt", description="What to segment."),
+                    StringParameter(name="label", default="pedestrian", required=False),
+                ],
                 default=[{"prompt": "person", "label": "pedestrian"}],
             )
         ]

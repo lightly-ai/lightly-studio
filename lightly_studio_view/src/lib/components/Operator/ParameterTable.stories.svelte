@@ -3,7 +3,15 @@
     import { fn } from 'storybook/test';
     import ParameterTable from './ParameterTable.svelte';
 
-    const COLUMNS = ['prompt', 'label'];
+    const COLUMNS = [
+        { name: 'prompt', description: 'What to segment in the image.', required: true },
+        {
+            name: 'label',
+            description: 'Label to assign to the resulting masks.',
+            default: 'pedestrian',
+            required: false
+        }
+    ];
 
     const { Story } = defineMeta({
         title: 'Components/Operator/ParameterTable',
@@ -22,7 +30,9 @@
                 control: 'object'
             },
             columns: {
-                description: 'Column names in display order, taken from the parameter definition.',
+                description:
+                    'Columns in display order, taken from the parameter definition. Each column ' +
+                    'carries its name, description, default and required flag.',
                 control: 'object'
             },
             required: {
@@ -78,7 +88,7 @@
     name="IncompleteRow"
     args={{
         name: 'prompts',
-        value: [{ prompt: 'person', label: '' }],
+        value: [{ prompt: '', label: 'pedestrian' }],
         columns: COLUMNS,
         required: true,
         isMissing: true,
@@ -113,7 +123,7 @@
     args={{
         name: 'classes',
         value: [{ class: 'person' }, { class: 'car' }],
-        columns: ['class'],
+        columns: [{ name: 'class', required: true }],
         required: false,
         isMissing: false,
         onUpdate: fn()

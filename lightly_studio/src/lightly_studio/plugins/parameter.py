@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Generic, TypeVar
 
 T = TypeVar("T")
@@ -19,7 +19,6 @@ class BaseParameter(ABC):
     default: Any = None
     required: bool = True
     param_type: str | None = None
-    columns: list[str] | None = None
 
     def __post_init__(self) -> None:
         """Run value validation once the dataclass is initialized."""
@@ -39,19 +38,11 @@ class BuiltinParameter(BaseParameter, Generic[T]):
 
         Raises:
             NotImplementedError: If the subclass does not define ``_parameter_type``.
-            ValueError: If ``columns`` is set, as it is only meaningful for table parameters.
         """
         if not hasattr(self, "_parameter_type") or self._parameter_type is None:
             raise NotImplementedError("Subclasses must define _parameter_type class attribute")
         self._type = self._parameter_type
         self.param_type = self._parameter_type.__name__
-        # Columns are inherited from BaseParameter but only apply to TableParameter. Rejecting them
-        # here surfaces the mistake instead of silently dropping them.
-        if self.columns is not None:
-            raise ValueError(
-                f"Parameter '{self.name}' of type '{self.param_type}' has no columns, "
-                f"but got {list(self.columns)}"
-            )
         super().__post_init__()
 
     def _validate(self, value: T) -> T:
@@ -84,6 +75,7 @@ class StringParameter(BuiltinParameter[str]):
     _parameter_type = str
 
 
+@dataclass
 class TableParameter(BaseParameter):
     """Represents a tabular operator parameter.
 
@@ -95,21 +87,29 @@ class TableParameter(BaseParameter):
     TableParameter(
         name="prompts",
         description="Prompt to segment with and the label to assign to the masks.",
-        columns=["prompt", "label"],
-        default=[{"prompt": "person", "label": "pedestrian"}],
+        columns=[
+            StringParameter(name="prompt", description="What to segment."),
+            StringParameter(name="label", default="pedestrian", required=False),
+        ],
     )
     ```
 
-    `columns` is inherited from `BaseParameter` and is required here. The GUI renders one editable
-    text column per entry and lets the user add and remove rows.
+    Every column is a `StringParameter`, so a column ships its own description, default and
+    required flag. The GUI renders one editable text column per entry, pre-fills new cells with the
+    column default and lets the user add and remove rows.
+
+    Attributes:
+        columns: The columns every row must provide. At least one column is required.
     """
+
+    columns: Sequence[StringParameter] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
         """Set up type information, check the columns and validate the default value.
 
         Raises:
-            TypeError: If a column name is not a string.
-            ValueError: If ``columns`` is empty or contains duplicates.
+            TypeError: If a column is not a `StringParameter`.
+            ValueError: If ``columns`` is empty or contains duplicate names.
         """
         self.param_type = "table"
         self.columns = _validated_columns(name=self.name, columns=self.columns)
@@ -124,56 +124,59 @@ class TableParameter(BaseParameter):
         ]
 
 
-def _validated_columns(name: str, columns: Sequence[str] | None) -> list[str]:
-    """Check the column names of a table parameter.
+def _validated_columns(name: str, columns: Sequence[StringParameter]) -> list[StringParameter]:
+    """Check the columns of a table parameter.
 
     Args:
         name: Name of the parameter, used in error messages.
-        columns: The column names to check.
+        columns: The columns to check.
 
     Returns:
-        The column names as a list.
+        The columns as a list.
 
     Raises:
-        TypeError: If a column name is not a string.
-        ValueError: If `columns` is empty or contains duplicates.
+        TypeError: If a column is not a `StringParameter`.
+        ValueError: If `columns` is empty or contains duplicate names.
     """
     if not columns:
         raise ValueError(f"Table parameter '{name}' must define at least one column")
     for column in columns:
-        if not isinstance(column, str):
-            raise TypeError(f"Expected column name of type 'str' but got {type(column)}")
-    if len(set(columns)) != len(columns):
+        if not isinstance(column, StringParameter):
+            raise TypeError(f"Expected column of type 'StringParameter' but got {type(column)}")
+    column_names = [column.name for column in columns]
+    if len(set(column_names)) != len(column_names):
         raise ValueError(
-            f"Columns of table parameter '{name}' must be unique but got {list(columns)}"
+            f"Columns of table parameter '{name}' must be unique but got {column_names}"
         )
     return list(columns)
 
 
-def _validated_row(row: Any, index: int, columns: Sequence[str]) -> dict[str, str]:
+def _validated_row(row: Any, index: int, columns: Sequence[StringParameter]) -> dict[str, str]:
     """Check a single row of a table parameter value.
 
     Args:
         row: The row to check.
         index: Position of the row in the value, used in error messages.
-        columns: The column names the row must provide.
+        columns: The columns the row must provide.
 
     Returns:
         The row with its cells ordered like `columns`.
 
     Raises:
         TypeError: If `row` is not a dict or a cell is not a string.
-        ValueError: If the keys of `row` do not match `columns` exactly.
+        ValueError: If the keys of `row` do not match the column names exactly.
     """
     if not isinstance(row, dict):
         raise TypeError(f"Expected row {index} of type 'dict' but got {type(row)}")
-    if set(row) != set(columns):
+    column_names = [column.name for column in columns]
+    if set(row) != set(column_names):
         raise ValueError(
-            f"Row {index} must have exactly the columns {list(columns)} but got {sorted(row)}"
+            f"Row {index} must have exactly the columns {column_names} but got {sorted(row)}"
         )
-    for column in columns:
-        if not isinstance(row[column], str):
+    for column_name in column_names:
+        if not isinstance(row[column_name], str):
             raise TypeError(
-                f"Expected cell '{column}' in row {index} of type 'str' but got {type(row[column])}"
+                f"Expected cell '{column_name}' in row {index} of type 'str' "
+                f"but got {type(row[column_name])}"
             )
-    return {column: row[column] for column in columns}
+    return {column_name: row[column_name] for column_name in column_names}

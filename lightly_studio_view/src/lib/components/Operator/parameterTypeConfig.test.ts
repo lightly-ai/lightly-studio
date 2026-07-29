@@ -1,18 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import type { BaseParameter, RegisteredOperatorMetadata } from '$lib/api/lightly_studio_local';
+import type { ParameterView, RegisteredOperatorMetadata } from '$lib/api/lightly_studio_local';
 import type { Operator } from '$lib/hooks/useOperators/useOperators';
 import { createOperatorFromMetadata } from '$lib/hooks/useOperators/useOperators';
 import ParameterTable from './ParameterTable.svelte';
 import { buildInitialParameters, getParameterConfig, isValueFilled } from './parameterTypeConfig';
 
+const COLUMNS = [
+    { name: 'prompt', required: true },
+    { name: 'label', required: true }
+];
+
 describe('isValueFilled', () => {
     it('rejects an empty table', () => {
-        expect(isValueFilled([], 'table')).toBe(false);
+        expect(isValueFilled([], 'table', COLUMNS)).toBe(false);
     });
 
     it('rejects a table with a blank or whitespace-only cell', () => {
-        expect(isValueFilled([{ prompt: 'person', label: '' }], 'table')).toBe(false);
-        expect(isValueFilled([{ prompt: 'person', label: '   ' }], 'table')).toBe(false);
+        expect(isValueFilled([{ prompt: 'person', label: '' }], 'table', COLUMNS)).toBe(false);
+        expect(isValueFilled([{ prompt: 'person', label: '   ' }], 'table', COLUMNS)).toBe(false);
     });
 
     it('rejects a table where only some rows are complete', () => {
@@ -22,7 +27,8 @@ describe('isValueFilled', () => {
                     { prompt: 'person', label: 'pedestrian' },
                     { prompt: 'car', label: '' }
                 ],
-                'table'
+                'table',
+                COLUMNS
             )
         ).toBe(false);
     });
@@ -34,9 +40,25 @@ describe('isValueFilled', () => {
                     { prompt: 'person', label: 'pedestrian' },
                     { prompt: 'car', label: 'vehicle' }
                 ],
-                'table'
+                'table',
+                COLUMNS
             )
         ).toBe(true);
+    });
+
+    it('accepts a table with an empty cell in a column that is not required', () => {
+        const columns = [
+            { name: 'prompt', required: true },
+            { name: 'label', required: false }
+        ];
+
+        expect(isValueFilled([{ prompt: 'person', label: '' }], 'table', columns)).toBe(true);
+        expect(isValueFilled([{ prompt: '', label: 'pedestrian' }], 'table', columns)).toBe(false);
+    });
+
+    it('treats every cell as required when no columns are known', () => {
+        expect(isValueFilled([{ prompt: 'person', label: '' }], 'table')).toBe(false);
+        expect(isValueFilled([{ prompt: 'person', label: 'pedestrian' }], 'table')).toBe(true);
     });
 });
 
@@ -52,7 +74,7 @@ describe('buildInitialParameters', () => {
                     type: 'table',
                     default: defaultRows,
                     required: true,
-                    columns: ['prompt', 'label']
+                    columns: COLUMNS
                 }
             ]
         };
@@ -67,14 +89,29 @@ describe('buildInitialParameters', () => {
     it('maps a table parameter straight from the API payload to a rendered table', () => {
         // Literal response of GET /operators/{id}/parameters, pinned by the backend test
         // `test_get_operator_parameters__table_parameter`. Guards the backend/frontend seam.
-        const apiParameters: BaseParameter[] = [
+        const apiParameters: ParameterView[] = [
             {
                 name: 'prompts',
                 description: 'Prompts and labels.',
                 default: [{ prompt: 'person', label: 'pedestrian' }],
                 required: true,
                 param_type: 'table',
-                columns: ['prompt', 'label']
+                columns: [
+                    {
+                        name: 'prompt',
+                        description: 'What to segment.',
+                        default: null,
+                        required: true,
+                        param_type: 'str'
+                    },
+                    {
+                        name: 'label',
+                        description: '',
+                        default: 'pedestrian',
+                        required: false,
+                        param_type: 'str'
+                    }
+                ]
             }
         ];
         const metadata = {
@@ -86,7 +123,10 @@ describe('buildInitialParameters', () => {
         const operator = createOperatorFromMetadata(metadata, apiParameters);
 
         expect(operator.parameters[0].type).toBe('table');
-        expect(operator.parameters[0].columns).toEqual(['prompt', 'label']);
+        expect(operator.parameters[0].columns).toEqual([
+            { name: 'prompt', description: 'What to segment.', default: undefined, required: true },
+            { name: 'label', description: '', default: 'pedestrian', required: false }
+        ]);
         expect(getParameterConfig('table').component).toBe(ParameterTable);
         expect(buildInitialParameters(operator).prompts).toEqual([
             { prompt: 'person', label: 'pedestrian' }
@@ -103,7 +143,7 @@ describe('buildInitialParameters', () => {
                     type: 'table',
                     default: null,
                     required: true,
-                    columns: ['prompt', 'label']
+                    columns: COLUMNS
                 }
             ]
         };

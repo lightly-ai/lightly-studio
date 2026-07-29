@@ -4,9 +4,11 @@ A `TableParameter` lets an operator accept a variable number of rows, where ever
 same set of string columns. Use it when a single scalar parameter is not enough, for example to pair
 a segmentation prompt with the annotation label to assign to the resulting masks.
 
-The GUI renders one editable text column per entry and lets the user add and remove rows. The
-operator receives the rows as a `list[dict[str, str]]`, keyed by column name. This example simply
-reports the rows it received back to the GUI.
+Each column is declared as a `StringParameter`, so it carries its own description, default and
+required flag. The GUI renders one editable text column per entry, pre-fills new cells with the
+column default and lets the user add and remove rows. The operator receives the rows as a
+`list[dict[str, str]]`, keyed by column name. This example simply reports the rows it received back
+to the GUI.
 
 Run it with a path to a folder of images:
 
@@ -29,7 +31,7 @@ from lightly_studio.database import db_manager
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
 from lightly_studio.plugins.operator_context import ExecutionContext, OperatorScope
 from lightly_studio.plugins.operator_registry import operator_registry
-from lightly_studio.plugins.parameter import BaseParameter, TableParameter
+from lightly_studio.plugins.parameter import BaseParameter, StringParameter, TableParameter
 
 PARAM_PROMPTS = "prompts"
 COLUMN_PROMPT = "prompt"
@@ -51,7 +53,17 @@ class PromptTableOperator(BaseOperator):
                 name=PARAM_PROMPTS,
                 required=True,
                 description="Prompt to segment with and the label to assign to the masks.",
-                columns=[COLUMN_PROMPT, COLUMN_LABEL],
+                columns=[
+                    StringParameter(
+                        name=COLUMN_PROMPT, description="What to segment in the image."
+                    ),
+                    StringParameter(
+                        name=COLUMN_LABEL,
+                        description="Label to assign to the resulting masks.",
+                        default="pedestrian",
+                        required=False,
+                    ),
+                ],
                 default=[{COLUMN_PROMPT: "person", COLUMN_LABEL: "pedestrian"}],
             ),
         ]

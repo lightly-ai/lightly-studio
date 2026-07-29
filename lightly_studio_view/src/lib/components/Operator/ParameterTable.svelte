@@ -5,6 +5,7 @@
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
     import { cn } from '$lib/utils';
+    import type { OperatorParameterColumn } from '$lib/hooks/useOperators/useOperators';
     import type { ParameterTableRow, ParameterValue } from './parameterTypeConfig';
 
     const MAX_VISIBLE_ROWS = 4;
@@ -19,7 +20,7 @@
         required: boolean;
         isMissing: boolean;
         description?: string;
-        columns?: string[];
+        columns?: OperatorParameterColumn[];
         onUpdate: (value: ParameterValue) => void;
     }
 
@@ -36,8 +37,11 @@
     );
 
     async function addRow() {
-        const blankRow: ParameterTableRow = Object.fromEntries(cells.map((cell) => [cell, '']));
-        onUpdate([...rows, blankRow]);
+        // A new row starts from the column defaults so the user only edits what they care about.
+        const newRow: ParameterTableRow = Object.fromEntries(
+            cells.map((cell) => [cell.name, cell.default ?? ''])
+        );
+        onUpdate([...rows, newRow]);
         // The new row only reaches the DOM after the parent re-renders with the
         // updated value, so wait before scrolling it into view.
         await tick();
@@ -52,6 +56,13 @@
 
     function removeRow(index: number) {
         onUpdate(rows.filter((_, rowIndex) => rowIndex !== index));
+    }
+
+    function isCellMissing(row: ParameterTableRow, cell: OperatorParameterColumn): boolean {
+        // Only flag the cells that actually block submission, not every cell of the table.
+        return (
+            required && isMissing && cell.required && (row[cell.name] ?? '').trim().length === 0
+        );
     }
 </script>
 
@@ -90,8 +101,13 @@
     {:else}
         <!-- Headers sit outside the scroll container so they stay visible while rows scroll. -->
         <div class="grid gap-2" style={gridStyle}>
-            {#each cells as cell (cell)}
-                <span class="text-xs font-medium text-muted-foreground">{cell}</span>
+            {#each cells as cell (cell.name)}
+                <span class="text-xs font-medium text-muted-foreground" title={cell.description}>
+                    {cell.name}
+                    {#if cell.required}
+                        <span class="text-destructive-text">*</span>
+                    {/if}
+                </span>
             {/each}
             <span></span>
         </div>
@@ -109,19 +125,19 @@
         >
             <div class="grid gap-2" style={gridStyle}>
                 {#each rows as row, index (index)}
-                    {#each cells as cell (cell)}
+                    {#each cells as cell (cell.name)}
                         <Input
                             type="text"
-                            value={row[cell] ?? ''}
-                            aria-label={`${name} ${cell} row ${index + 1}`}
-                            aria-invalid={required && isMissing}
+                            value={row[cell.name] ?? ''}
+                            aria-label={`${name} ${cell.name} row ${index + 1}`}
+                            aria-invalid={isCellMissing(row, cell)}
                             oninput={(event: Event) =>
                                 updateCell(
                                     index,
-                                    cell,
+                                    cell.name,
                                     (event.currentTarget as HTMLInputElement).value
                                 )}
-                            data-testid={`parameter-table-${name}-${cell}-${index}`}
+                            data-testid={`parameter-table-${name}-${cell.name}-${index}`}
                         />
                     {/each}
                     <Button
@@ -140,6 +156,8 @@
     {/if}
 
     {#if required && isMissing}
-        <p class="text-sm text-destructive-text">Add at least one row and fill in every cell.</p>
+        <p class="text-sm text-destructive-text">
+            Add at least one row and fill in every required cell.
+        </p>
     {/if}
 </div>

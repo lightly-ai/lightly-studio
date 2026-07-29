@@ -7,7 +7,10 @@ const defaultProps = {
     value: [] as Record<string, string>[],
     required: true,
     isMissing: false,
-    columns: ['prompt', 'label'],
+    columns: [
+        { name: 'prompt', required: true },
+        { name: 'label', required: true }
+    ],
     onUpdate: vi.fn()
 };
 
@@ -40,6 +43,20 @@ describe('ParameterTable', () => {
         await fireEvent.click(screen.getByTestId('parameter-table-prompts-add-row'));
 
         expect(onUpdate).toHaveBeenCalledWith([{ prompt: '', label: '' }]);
+    });
+
+    it('pre-fills a new row with the column defaults', async () => {
+        const onUpdate = vi.fn();
+        const columns = [
+            { name: 'prompt', required: true },
+            { name: 'label', required: false, default: 'pedestrian' }
+        ];
+
+        render(ParameterTable, { props: { ...defaultProps, columns, onUpdate } });
+
+        await fireEvent.click(screen.getByTestId('parameter-table-prompts-add-row'));
+
+        expect(onUpdate).toHaveBeenCalledWith([{ prompt: '', label: 'pedestrian' }]);
     });
 
     it('calls onUpdate with the edited cell when a cell input changes', async () => {
@@ -94,7 +111,27 @@ describe('ParameterTable', () => {
         });
 
         expect(
-            screen.getByText('Add at least one row and fill in every cell.')
+            screen.getByText('Add at least one row and fill in every required cell.')
         ).toBeInTheDocument();
+    });
+
+    it('only flags the empty cells of required columns', () => {
+        const columns = [
+            { name: 'prompt', required: true },
+            { name: 'label', required: false }
+        ];
+
+        render(ParameterTable, {
+            props: {
+                ...defaultProps,
+                columns,
+                value: [{ prompt: '', label: '' }],
+                isMissing: true,
+                onUpdate: vi.fn()
+            }
+        });
+
+        expect(screen.getByTestId('parameter-table-prompts-prompt-0')).toBeInvalid();
+        expect(screen.getByTestId('parameter-table-prompts-label-0')).toBeValid();
     });
 });
