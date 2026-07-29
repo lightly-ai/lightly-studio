@@ -27,7 +27,7 @@ def upgrade() -> None:
         sa.Column("export_path", sa.String(), nullable=False),
         sa.Column(
             "created_at",
-            sa.DateTime(timezone=True),
+            sa.DateTime(),
             nullable=False,
             server_default=sa.text("now()"),
         ),
