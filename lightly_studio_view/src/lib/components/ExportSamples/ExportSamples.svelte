@@ -13,24 +13,36 @@
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import AnnotationSourceSelect from '$lib/components/AnnotationSourceSelect/AnnotationSourceSelect.svelte';
-    import { exportCollection } from '$lib/services/exportCollection';
     import type { ExportFilter } from '$lib/services/types';
+    import { exportCollection } from '$lib/services/exportCollection';
     import { useExportSamplesCount } from './useExportSamplesCount/useExportSamplesCount';
+    import { useExportTracking } from './useExportTracking/useExportTracking';
     import { PUBLIC_LIGHTLY_STUDIO_API_URL } from '$env/static/public';
     import * as Dialog from '$lib/components/ui/dialog';
     import { Loader2 } from '@lucide/svelte';
     import * as Alert from '$lib/components/ui/alert/index.js';
     import { fade } from 'svelte/transition';
-    import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
+    import { useExportDialog } from '$lib/hooks';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 
     const { isExportDialogOpen, openExportDialog, closeExportDialog } = useExportDialog();
     const { imageFilter } = useImageFilters();
 
+    let collectionId = page.params.collection_id;
+
+    const tracking = useExportTracking({ collectionId });
+
+    let prevIsDialogOpen = false;
     $effect(() => {
-        if ($isExportDialogOpen) {
-            exportType = isVideoCollection ? 'youtube_vis_segmentation' : 'samples';
+        const isOpen = $isExportDialogOpen;
+        if (isOpen) {
+            const defaultExportType = isVideoCollection ? 'youtube_vis_segmentation' : 'samples';
+            exportType = defaultExportType;
+            if (!prevIsDialogOpen) {
+                tracking.trackDialogDefaultFormatSet(defaultExportType);
+            }
         }
+        prevIsDialogOpen = isOpen;
     });
 
     const isVideoCollection = $derived(
@@ -57,7 +69,6 @@
         youtube_vis_segmentation: 'YouTube-VIS Video Segmentation Masks'
     };
     const exportTypeTriggerContent = $derived(exportTypeLabels[exportType]);
-    let collectionId = page.params.collection_id;
 
     //
     // Annotation source selection
@@ -85,9 +96,9 @@
     let tagIdToExport = $state('');
     const { tags } = useTags({ collection_id: collectionId });
 
+    const tagNameToExport = $derived($tags.find((f) => f.tag_id === tagIdToExport)?.name ?? null);
     const triggerContent = $derived(
-        $tags.find((f) => f.tag_id === tagIdToExport)?.name ??
-            'Select a tag to export its samples (required)'
+        tagNameToExport ?? 'Select a tag to export its samples (required)'
     );
 
     // Enable info panel if there are selected samples or annotations or tag is selected
@@ -137,12 +148,23 @@
     });
 
     const handleExport = async () => {
+        const sampleCount = $count;
+        tracking.trackExportDownloadClicked({ exportType, tagNameToExport, sampleCount });
+
         const response = await exportCollection({
             collection_id: collectionId,
             includeFilter,
             excludeFilter,
             collectionFilter: $imageFilter
         });
+
+        tracking.trackExportTriggered({
+            exportType,
+            tagNameToExport,
+            sampleCount,
+            success: !response.error
+        });
+
         if (response.error) {
             errorMessage = `Export failed: ${response.error}`;
         }
@@ -187,7 +209,10 @@
 
 <Dialog.Root
     open={$isExportDialogOpen}
-    onOpenChange={(open) => (open ? openExportDialog() : closeExportDialog())}
+    onOpenChange={(open) =>
+        open
+            ? openExportDialog({ collectionId })
+            : closeExportDialog({ collectionId, exportFormat: exportType })}
 >
     <Dialog.Portal>
         <Dialog.Overlay />
@@ -210,7 +235,12 @@
                             triggerLabel={exportTypeTriggerContent}
                             class="w-full"
                             testId="export-type-select"
-                            onValueChange={(v) => (exportType = v as typeof exportType)}
+                            onOpenChange={(open) =>
+                                open && tracking.trackFormatSelectOpened(exportType)}
+                            onValueChange={(v) => {
+                                exportType = v as typeof exportType;
+                                tracking.trackFormatSelected(v);
+                            }}
                         >
                             {#snippet children()}
                                 {#if isVideoCollection}
@@ -379,6 +409,7 @@
                             href={exportObjectDetectionCocoURL}
                             target="_blank"
                             data-testid="submit-button-annotations-coco"
+                            onclick={() => tracking.handleAnnotationDownloadClick(exportType)}
                         >
                             Download
                         </Button>
@@ -406,6 +437,7 @@
                             href={exportObjectDetectionYoloURL}
                             target="_blank"
                             data-testid="submit-button-annotations-yolo"
+                            onclick={() => tracking.handleAnnotationDownloadClick(exportType)}
                         >
                             Download
                         </Button>
@@ -433,6 +465,7 @@
                             href={exportSegmentationMaskURL}
                             target="_blank"
                             data-testid="submit-button-instance-segmentations"
+                            onclick={() => tracking.handleAnnotationDownloadClick(exportType)}
                         >
                             Download
                         </Button>
@@ -449,6 +482,7 @@
                                 href={exportYoutubeVisSegmentationMaskURL}
                                 target="_blank"
                                 data-testid="submit-button-youtube-vis-instance-segmentations"
+                                onclick={() => tracking.handleAnnotationDownloadClick(exportType)}
                             >
                                 Download
                             </Button>
@@ -476,6 +510,7 @@
                             href={exportPascalVocURL}
                             target="_blank"
                             data-testid="submit-button-semantic-segmentations"
+                            onclick={() => tracking.handleAnnotationDownloadClick(exportType)}
                         >
                             Download
                         </Button>
@@ -493,6 +528,7 @@
                             href={exportCaptionsURL}
                             target="_blank"
                             data-testid="submit-button-captions"
+                            onclick={() => tracking.handleAnnotationDownloadClick(exportType)}
                         >
                             Download
                         </Button>

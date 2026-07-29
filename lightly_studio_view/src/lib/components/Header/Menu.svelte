@@ -96,7 +96,7 @@
                 label: 'Export',
                 icon: DownloadIcon,
                 testId: 'menu-export',
-                onSelect: openExportDialog
+                onSelect: () => openExportDialog({ collectionId: collection.collection_id })
             });
         }
 

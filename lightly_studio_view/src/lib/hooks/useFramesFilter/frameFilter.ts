@@ -5,6 +5,7 @@ import type {
     VideoFrameFilter,
     VideoFrameFieldsBoundsView
 } from '$lib/api/lightly_studio_local/types.gen';
+import type { CategoricalMetadataValues } from '$lib/services/types';
 type MetadataValues = Record<string, { min: number; max: number }>;
 
 export type VideoFrameFilterParams = {
@@ -14,6 +15,7 @@ export type VideoFrameFilterParams = {
         annotation_label_ids?: string[];
         sample_ids?: string[];
         metadata_values?: MetadataValues;
+        categorical_metadata_values?: CategoricalMetadataValues;
     };
     frame_bounds?: VideoFrameFieldsBoundsView | null;
     video_id?: string | null;
@@ -60,8 +62,11 @@ export const getFrameFilter = (params: VideoFrameFilterParams | null): VideoFram
         sampleFilter.tag_ids = tagIds;
     }
 
-    if (params.filters?.metadata_values) {
-        const metadataFilters = createMetadataFilters(params.filters.metadata_values);
+    if (params.filters?.metadata_values || params.filters?.categorical_metadata_values) {
+        const metadataFilters = createMetadataFilters(
+            params.filters.metadata_values ?? {},
+            params.filters.categorical_metadata_values ?? {}
+        );
         if (metadataFilters.length > 0) {
             sampleFilter.metadata_filters = metadataFilters;
         }

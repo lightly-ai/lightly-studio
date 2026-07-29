@@ -18,6 +18,7 @@
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { GripVertical, PanelLeftClose, SlidersHorizontal } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
+    import { afterNavigate } from '$app/navigation';
     import { toStore } from 'svelte/store';
     import { Header } from '$lib/components';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
@@ -73,7 +74,8 @@
         useSelectionSummary,
         useImageAnnotationCounts,
         useImageAnnotationCountsQueryKey,
-        useNumericMetadataDistribution
+        useNumericMetadataDistribution,
+        usePostHog
     } from '$lib/hooks';
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
     import { isInputElement } from '$lib/utils';
@@ -88,6 +90,8 @@
         collection,
         globalStorage: { setLastGridType, clearSelectedSamples, clearSelectedSampleAnnotationCrops }
     } = $derived(data);
+
+    const { trackEvent } = usePostHog();
 
     // The dataset ID actually contains the collection ID.
     const datasetId = $derived(page.params.dataset_id!);
@@ -221,6 +225,15 @@
             search.onError(message);
         }
     }
+
+    afterNavigate(() => {
+        trackEvent('collection_opened', {
+            dataset_id: collection.dataset_id,
+            collection_id: collection.collection_id,
+            collection_type: `${collection.sample_type}s`,
+            sample_count: collection.total_sample_count
+        });
+    });
 
     // Setup event handlers for keyboard shortcuts
     onMount(() => {
@@ -630,6 +643,16 @@
             ? [classDistributionSource, metadataDistributionSource]
             : [classDistributionSource]
     );
+
+    function handleCombinedMetadataFilterChanged(fieldName: string, min: number, max: number) {
+        trackEvent('metadata_filter_changed', {
+            collection_id: collectionId,
+            field_name: fieldName,
+            action: 'range_changed',
+            min,
+            max
+        });
+    }
 </script>
 
 <div class="flex-none">
@@ -706,14 +729,19 @@
                             {/if}
                             <LabelsMenu
                                 {annotationFilterRows}
-                                onToggleAnnotationFilter={toggleAnnotationFilterSelection}
+                                onToggleAnnotationFilter={(label) =>
+                                    toggleAnnotationFilterSelection(label, collectionId)}
                                 showVisibilityToggle={showAnnotationVisibilityToggle}
                             />
 
                             {#if isImages || isVideos || isVideoFrames}
                                 {#key collectionId}
                                     <MetadataFilterChips {collectionId} />
-                                    <CombinedMetadataDimensionsFilters {isVideos} {isVideoFrames} />
+                                    <CombinedMetadataDimensionsFilters
+                                        {isVideos}
+                                        {isVideoFrames}
+                                        onFilterChanged={handleCombinedMetadataFilterChanged}
+                                    />
                                 {/key}
                             {/if}
                         </div>
@@ -729,6 +757,7 @@
                         {/if}
                         <div class="min-w-0 flex-1">
                             <DatasetGridHeader
+                                {collectionId}
                                 {canSelectAll}
                                 isSelectionActive={$selectedCount > 0}
                                 {isImages}
@@ -829,7 +858,12 @@
                 </div>
             {/if}
             {#if isCollectionGrid && (isImages || hasMediaWithEmbeddings)}
-                <SidePanelTabs {isImages} {hasMediaWithEmbeddings} {supportsEvaluation} />
+                <SidePanelTabs
+                    {collectionId}
+                    {isImages}
+                    {hasMediaWithEmbeddings}
+                    {supportsEvaluation}
+                />
             {/if}
             {#if hasEmbeddings}
                 {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then { default: CreateClassifierDialog }}

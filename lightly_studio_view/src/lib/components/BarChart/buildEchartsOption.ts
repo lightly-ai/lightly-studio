@@ -1,17 +1,16 @@
 import type { EChartsCoreOption } from 'echarts/core';
 import { truncate } from 'lodash-es';
-import {
-    CHART_AXIS_LABEL,
-    CHART_EMPHASIS,
-    CHART_LINE_COLOR,
-    CHART_TEXT_COLOR,
-    formatPercent
-} from '$lib/utils';
+import { CHART_AXIS_LABEL, CHART_EMPHASIS, CHART_LINE_COLOR, CHART_TEXT_COLOR } from '$lib/utils';
 import type { CategoryCount } from './';
+import { buildTooltipFormatter } from './buildTooltipFormatter';
 
-// Single accent color (the Lightly primary green, --color-lightly-primary #3bd99f):
-// per-class colors carry no meaning in a count distribution.
+// Same accent as Histogram (the Lightly primary green, --color-lightly-primary #3bd99f).
 const BAR_COLOR = 'rgba(59,217,159,0.85)';
+// Bars not in the active selection render dimmed, matching the histogram behaviour.
+const BAR_COLOR_DIMMED = '#4b5563';
+// Full-dataset context bars drawn behind the filtered foreground bars.
+// Matches CHART_LINE_COLOR so background bars blend with the chart grid lines.
+const BAR_COLOR_BACKGROUND = '#374151';
 
 /** Bar layout: 'vertical' bars grow upward, 'horizontal' bars grow rightward. */
 export type BarChartOrientation = 'vertical' | 'horizontal';
@@ -25,6 +24,8 @@ interface BuildEchartsOptionOptions {
     totalCount?: number;
     /** Bar orientation (default 'vertical'). */
     orientation?: BarChartOrientation;
+    /** Top chart-grid padding in px (default 16). */
+    gridTopPx?: number;
 }
 
 /** Builds the ECharts option for a category-count bar chart (pass to `setOption`). */
@@ -34,9 +35,19 @@ export function buildEchartsOption(
 ): EChartsCoreOption {
     const totalCount = options.totalCount ?? data.reduce((sum, item) => sum + item.count, 0);
     const orientation = options.orientation ?? 'vertical';
+    const gridTopPx = options.gridTopPx ?? 16;
     const isHorizontal = orientation === 'horizontal';
 
     const labels = data.map((item) => item.label);
+    // When any category is actively selected, dim the rest — mirrors the range
+    // highlighting in the numeric Histogram where out-of-range bins go grey.
+    const hasAnySelected = data.some((item) => item.selected === true);
+    // Render a grey background bar at the full count when sidebar filters reduce
+    // some bars below their unfiltered height. This keeps the original distribution
+    // visible as context while the foreground bar communicates the filtered portion.
+    const hasActiveFilter = data.some(
+        (item) => item.filteredCount !== undefined && item.filteredCount !== item.count
+    );
 
     const categoryAxis = {
         type: 'category' as const,
@@ -68,30 +79,71 @@ export function buildEchartsOption(
         splitLine: { lineStyle: { color: CHART_LINE_COLOR } }
     };
 
+    const formatter = buildTooltipFormatter(totalCount);
+
+    // Foreground bar: coloured at the filtered count (or full count when no filter).
+    const foregroundData = data.map((item) => {
+        // Simple items with no selection/filter state can be returned as raw numbers,
+        // which ECharts renders without per-item itemStyle overhead.
+        if (item.selected == null && item.selectable == null && item.filteredCount == null) {
+            return item.count;
+        }
+        const foregroundCount =
+            hasActiveFilter && item.filteredCount !== undefined ? item.filteredCount : item.count;
+        const isDimmed = hasAnySelected && !item.selected;
+        return {
+            value: foregroundCount,
+            itemStyle: {
+                color: isDimmed ? BAR_COLOR_DIMMED : BAR_COLOR,
+                opacity: item.selectable === false ? 0.45 : 1
+            }
+        };
+    });
+
+    const foregroundSeries = {
+        type: 'bar',
+        data: foregroundData,
+        itemStyle: { color: BAR_COLOR },
+        barCategoryGap: '25%',
+        // Overlay on top of the background series (barGap: '-100%' makes the bar
+        // occupy the same slot as the preceding series instead of shifting right).
+        ...(hasActiveFilter ? { barGap: '-100%' } : {}),
+        emphasis: CHART_EMPHASIS
+    };
+
+    // Background series: full (unfiltered) count, always grey — only rendered
+    // when the filter is active and at least one bar is visibly reduced.
+    const backgroundSeries = hasActiveFilter
+        ? {
+              type: 'bar',
+              data: data.map((item) => ({
+                  value: item.count,
+                  itemStyle: {
+                      color: BAR_COLOR_BACKGROUND,
+                      opacity: item.selectable === false ? 0.45 : 1
+                  }
+              })),
+              barCategoryGap: '25%',
+              // Suppress hover highlight on the background so emphasis styling
+              // (colour change, scale) only fires on the foreground bars.
+              emphasis: { disabled: true }
+          }
+        : null;
+
+    const series = hasActiveFilter ? [backgroundSeries, foregroundSeries] : [foregroundSeries];
+
     return {
         backgroundColor: 'transparent',
         tooltip: {
             trigger: 'axis',
             axisPointer: { type: 'shadow' },
             appendTo: 'body',
-            formatter: (params: { name: string; value: number }[]) => {
-                const [{ name, value }] = params;
-                const percent = totalCount > 0 ? ` (${formatPercent(value / totalCount)})` : '';
-                return `<b>${name}</b><br/>Count: <b>${value}</b>${percent}`;
-            }
+            formatter
         },
-        grid: { left: 8, right: 8, top: 16, bottom: 8, containLabel: true },
+        grid: { left: 8, right: 8, top: gridTopPx, bottom: 8, containLabel: true },
         // Swap which axis holds the categories so bars grow rightward when horizontal.
         xAxis: isHorizontal ? valueAxis : categoryAxis,
         yAxis: isHorizontal ? categoryAxis : valueAxis,
-        series: [
-            {
-                type: 'bar',
-                data: data.map((item) => item.count),
-                itemStyle: { color: BAR_COLOR },
-                barCategoryGap: '25%',
-                emphasis: CHART_EMPHASIS
-            }
-        ]
+        series
     };
 }

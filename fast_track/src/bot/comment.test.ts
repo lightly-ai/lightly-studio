@@ -21,26 +21,72 @@ function verdict(overrides: Partial<Verdict> = {}): Verdict {
 }
 
 describe('renderComment', () => {
-    it('renders pass, fail, and opt-out states', () => {
-        expect(renderComment(verdict(), HEAD_SHA)).toContain('✅ Fast Track');
-        expect(renderComment(verdict({ verdict: 'fail', reason: 'failed' }), HEAD_SHA)).toContain(
-            '❌ Fast Track: checks did not pass\n\nfailed'
+    it('gives each verdict its own headline', () => {
+        expect(renderComment({ verdict: verdict(), headSha: HEAD_SHA })).toContain(
+            'all required checks passed'
         );
         expect(
-            renderComment(
-                verdict({ verdict: 'opt_out', reason: 'Author opted out.', guardrails: [] }),
-                HEAD_SHA
-            )
-        ).toContain('⏭️ Fast Track skipped');
+            renderComment({
+                verdict: verdict({ verdict: 'fail', reason: 'failed' }),
+                headSha: HEAD_SHA
+            })
+        ).toContain('checks did not pass');
+        expect(
+            renderComment({
+                verdict: verdict({ verdict: 'opt_out', reason: 'out', guardrails: [] }),
+                headSha: HEAD_SHA
+            })
+        ).toContain('Fast Track skipped');
+    });
+
+    it('surfaces the reason only when no guardrail rows carry it', () => {
+        // A guardrail-level fail lists its rows, so the reason would be redundant.
+        expect(
+            renderComment({
+                verdict: verdict({ verdict: 'fail', reason: 'lint failed' }),
+                headSha: HEAD_SHA
+            })
+        ).not.toContain('lint failed');
+        // A synthesized fail and an opt-out have no rows, so the reason is the diagnosis.
+        expect(
+            renderComment({
+                verdict: verdict({
+                    verdict: 'fail',
+                    reason: 'Workflow did not complete.',
+                    guardrails: []
+                }),
+                headSha: HEAD_SHA
+            })
+        ).toContain('Workflow did not complete.');
+        expect(
+            renderComment({
+                verdict: verdict({
+                    verdict: 'opt_out',
+                    reason: 'Author opted out.',
+                    guardrails: []
+                }),
+                headSha: HEAD_SHA
+            })
+        ).toContain('Author opted out.');
+    });
+
+    it('links the guardrail run when a URL is given', () => {
+        const url = 'https://github.com/lightly-ai/lightly-studio/actions/runs/123';
+        expect(renderComment({ verdict: verdict(), headSha: HEAD_SHA, runUrl: url })).toContain(
+            `(${url})`
+        );
+        expect(renderComment({ verdict: verdict(), headSha: HEAD_SHA })).not.toContain(
+            'View the guardrail run'
+        );
     });
 
     it('renders guardrails safely in a Markdown table', () => {
-        const body = renderComment(
-            verdict({
+        const body = renderComment({
+            verdict: verdict({
                 guardrails: [{ name: 'lint|check', status: 'fail', summary: 'one\ntwo|three' }]
             }),
-            HEAD_SHA
-        );
+            headSha: HEAD_SHA
+        });
         expect(body).toContain('| lint\\|check | ❌ | one two\\|three |');
         expect(body).toContain('<sub>Reflects `abc1234`.</sub>');
     });
