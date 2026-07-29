@@ -59,7 +59,8 @@ describe('useSamplingCombinationDialog', () => {
         vi.mocked(useSamplingDialog).mockReturnValue({
             isSamplingDialogOpen: writable(false),
             openSamplingDialog: vi.fn(),
-            closeSamplingDialog: vi.fn()
+            closeSamplingDialog: vi.fn(),
+            markSubmitted: vi.fn()
         });
 
         vi.mocked(useSubmitCombinationSelection).mockReturnValue({
