@@ -18,11 +18,7 @@ export const getMetadataCollectionId = ({
     collectionSampleType,
     parentCollection
 }: GetMetadataCollectionIdParams): string => {
-    if (
-        (collectionSampleType === SampleType.ANNOTATION ||
-            collectionSampleType === SampleType.CAPTION) &&
-        parentCollection
-    ) {
+    if (collectionSampleType !== SampleType.IMAGE && parentCollection) {
         return parentCollection.collectionId;
     }
     return collectionId;
