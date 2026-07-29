@@ -86,12 +86,12 @@ describe('createMetadataFilters', () => {
     it('combines numeric ranges with one OR predicate per non-empty categorical key', () => {
         const filters = createMetadataFilters(
             { temperature: { min: 20, max: 100 } },
-            { city: ['Zurich', 'Berlin', '__missing__'], ignored: [] }
+            { city: ['Zurich', 'Berlin', null], ignored: [] }
         );
 
         expect(filters).toEqual([
             { key: 'temperature', value: 20, op: '>=' },
-            { key: 'city', value: ['Zurich', 'Berlin', '__missing__'], op: 'in' }
+            { key: 'city', value: ['Zurich', 'Berlin', null], op: 'in' }
         ]);
     });
 
