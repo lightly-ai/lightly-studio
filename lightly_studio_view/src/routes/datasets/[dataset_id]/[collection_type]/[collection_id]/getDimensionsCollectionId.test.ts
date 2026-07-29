@@ -31,4 +31,27 @@ describe('getDimensionsCollectionId', () => {
             })
         ).toBeUndefined();
     });
+
+    it('uses the parent image collection for caption views', () => {
+        expect(
+            getDimensionsCollectionId({
+                collectionId: 'captions',
+                collectionSampleType: SampleType.CAPTION,
+                parentCollection: {
+                    collectionId: 'images',
+                    sampleType: SampleType.IMAGE
+                }
+            })
+        ).toBe('images');
+        expect(
+            getDimensionsCollectionId({
+                collectionId: 'captions',
+                collectionSampleType: SampleType.CAPTION,
+                parentCollection: {
+                    collectionId: 'frames',
+                    sampleType: SampleType.VIDEO_FRAME
+                }
+            })
+        ).toBeUndefined();
+    });
 });

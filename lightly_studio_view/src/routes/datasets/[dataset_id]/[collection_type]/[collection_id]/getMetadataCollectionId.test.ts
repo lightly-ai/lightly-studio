@@ -31,4 +31,24 @@ describe('getMetadataCollectionId', () => {
             })
         ).toBe('annotations');
     });
+
+    it('uses the parent sample collection for caption views', () => {
+        expect(
+            getMetadataCollectionId({
+                collectionId: 'captions',
+                collectionSampleType: SampleType.CAPTION,
+                parentCollection: { collectionId: 'images' }
+            })
+        ).toBe('images');
+    });
+
+    it('falls back to the caption collection when no parent is available', () => {
+        expect(
+            getMetadataCollectionId({
+                collectionId: 'captions',
+                collectionSampleType: SampleType.CAPTION,
+                parentCollection: null
+            })
+        ).toBe('captions');
+    });
 });

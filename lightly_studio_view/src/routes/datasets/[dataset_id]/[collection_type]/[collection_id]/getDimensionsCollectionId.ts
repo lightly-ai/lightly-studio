@@ -21,7 +21,8 @@ export const getDimensionsCollectionId = ({
 }: GetDimensionsCollectionIdParams): string | undefined => {
     if (collectionSampleType === SampleType.IMAGE) return collectionId;
     if (
-        collectionSampleType === SampleType.ANNOTATION &&
+        (collectionSampleType === SampleType.ANNOTATION ||
+            collectionSampleType === SampleType.CAPTION) &&
         parentCollection?.sampleType === SampleType.IMAGE
     ) {
         return parentCollection.collectionId;
