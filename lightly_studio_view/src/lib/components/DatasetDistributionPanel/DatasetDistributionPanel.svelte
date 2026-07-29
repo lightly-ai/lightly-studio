@@ -19,7 +19,7 @@
         type DistributionSourceGroup
     } from './types';
     import { AnnotationCountMode } from '$lib/api/lightly_studio_local/types.gen';
-    import MetadataCategoricalFilter from './MetadataCategoricalFilter.svelte';
+    import { MetadataCategoricalFilter } from './MetadataCategoricalFilter';
     import type { CategoricalMetadataValue } from '$lib/services/types';
 
     interface Props {
