@@ -80,6 +80,18 @@ describe('loadDimensionBounds', () => {
         });
     });
 
+    it('should return an error when dimension data is incomplete', async () => {
+        vi.spyOn(sdk, 'getImageDimensions').mockResolvedValue({
+            data: {},
+            error: undefined
+        } as unknown as GetImageDimensionsReturn);
+
+        await expect(loadDimensionBounds({ collection_id: '1' })).resolves.toEqual({
+            data: undefined,
+            error: 'Error loading dimension bounds: Error: No dimension bounds data'
+        });
+    });
+
     it('should return an error when promise is rejected', async () => {
         vi.spyOn(sdk, 'getImageDimensions').mockRejectedValue('oops');
 

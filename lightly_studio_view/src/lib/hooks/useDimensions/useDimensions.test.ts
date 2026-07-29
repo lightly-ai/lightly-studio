@@ -112,23 +112,33 @@ describe('useDimensions', () => {
     it('loads and refetches when collection_id readable store changes', async () => {
         const { useDimensions } = await import('./useDimensions');
         const collectionId = writable('collection-store-a');
-        const { dimensionsValues } = useDimensions(collectionId);
+        const { dimensionsValues, updateDimensionsValues } = useDimensions(collectionId);
+        const values: unknown[] = [];
+        const unsubscribe = dimensionsValues.subscribe((value) => values.push(value));
 
-        get(dimensionsValues);
         expect(loadDimensionBoundsMock).toHaveBeenCalledTimes(1);
         expect(loadDimensionBoundsMock).toHaveBeenLastCalledWith({
             collection_id: 'collection-store-a'
         });
 
         collectionId.set('collection-store-a');
-        get(dimensionsValues);
         expect(loadDimensionBoundsMock).toHaveBeenCalledTimes(1);
 
         collectionId.set('collection-store-b');
-        get(dimensionsValues);
         expect(loadDimensionBoundsMock).toHaveBeenCalledTimes(2);
         expect(loadDimensionBoundsMock).toHaveBeenLastCalledWith({
             collection_id: 'collection-store-b'
         });
+
+        const updatedValues = {
+            min_width: 30,
+            max_width: 90,
+            min_height: 40,
+            max_height: 180
+        };
+        updateDimensionsValues(updatedValues);
+
+        expect(values.at(-1)).toEqual(updatedValues);
+        unsubscribe();
     });
 });

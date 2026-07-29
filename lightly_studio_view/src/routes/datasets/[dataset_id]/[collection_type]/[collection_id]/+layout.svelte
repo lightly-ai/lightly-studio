@@ -85,6 +85,8 @@
     import { useSearchEmbedding } from '$lib/hooks/useSearchEmbedding/useSearchEmbedding';
     import { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
     import { clearAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
+    import { getDimensionsCollectionId } from './getDimensionsCollectionId';
+    import { getMetadataCollectionId } from './getMetadataCollectionId';
     const { data, children } = $props();
     const {
         collection,
@@ -140,6 +142,21 @@
     const canSelectAll = $derived(isImages || isVideos || isVideoFrames || isAnnotations);
     const showAnnotationVisibilityToggle = $derived(
         isAnnotations || isImages || isVideos || isVideoFrames
+    );
+    const dimensionsCollectionId = $derived(
+        getDimensionsCollectionId({
+            collectionId,
+            collectionSampleType: collection.sample_type,
+            parentCollection
+        })
+    );
+    const dimensionsCollectionIdStore = toStore(() => dimensionsCollectionId);
+    const metadataCollectionId = $derived(
+        getMetadataCollectionId({
+            collectionId,
+            collectionSampleType: collection.sample_type,
+            parentCollection
+        })
     );
 
     let gridType = $state<GridType>('images');
@@ -300,9 +317,9 @@
     );
 
     const { metadataValues, metadataBounds, updateMetadataValues } = $derived.by(() =>
-        useMetadataFilters(collectionId)
+        useMetadataFilters(metadataCollectionId)
     );
-    const { dimensionsValues } = useDimensions(collectionIdStore);
+    const { dimensionsValues } = useDimensions(dimensionsCollectionIdStore);
 
     const annotationLabelsQuery = useAnnotationLabels(() => ({
         collectionId: collectionId ?? ''

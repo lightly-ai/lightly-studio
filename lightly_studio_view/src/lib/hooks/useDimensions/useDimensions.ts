@@ -2,7 +2,7 @@ import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import { loadDimensionBounds } from '$lib/services/loadDimensionBounds';
 import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
 import { isReadableStore } from '$lib/hooks/utils/isReadableStore';
-import { derived, get, writable, type Readable } from 'svelte/store';
+import { get, readable, writable, type Readable } from 'svelte/store';
 
 const dimensionsBounds = useSessionStorage<DimensionBounds | null>(
     'lightlyStudio_dimensions_bounds',
@@ -23,7 +23,7 @@ const updateDimensionsBounds = (bounds: DimensionBounds) => {
 };
 
 const lastCollectionId = writable<string | null>(null);
-type CollectionIdInput = string | Readable<string> | undefined;
+type CollectionIdInput = string | Readable<string | undefined> | undefined;
 
 const loadInitialDimensionBounds = async (collection_id: string) => {
     if (get(lastCollectionId) === collection_id) {
@@ -53,17 +53,23 @@ const bindCollectionLoader = <T>(source: Readable<T>, collectionId: CollectionId
         return source;
     }
 
-    if (!isReadableStore<string>(collectionId)) {
+    if (!isReadableStore<string | undefined>(collectionId)) {
         loadInitialDimensionBounds(collectionId);
         return source;
     }
 
-    return derived([source, collectionId], ([$source, $collectionId]) => {
-        if ($collectionId) {
-            loadInitialDimensionBounds($collectionId);
-        }
+    return readable(get(source), (set) => {
+        const unsubscribeSource = source.subscribe(set);
+        const unsubscribeCollectionId = collectionId.subscribe(($collectionId) => {
+            if ($collectionId) {
+                loadInitialDimensionBounds($collectionId);
+            }
+        });
 
-        return $source;
+        return () => {
+            unsubscribeSource();
+            unsubscribeCollectionId();
+        };
     });
 };
 
