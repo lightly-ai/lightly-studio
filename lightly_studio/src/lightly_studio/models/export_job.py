@@ -14,10 +14,6 @@ class ExportJobBase(SQLModel):
     export_path: str
 
 
-class ExportJobCreate(ExportJobBase):
-    """Model used when creating an export job."""
-
-
 class ExportJobView(ExportJobBase):
     """Model used when retrieving an export job.
 
