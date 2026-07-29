@@ -10,6 +10,7 @@ from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import Select
 
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.core.dataset_query.order_by import OrderByExpression, get_order_value
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationView,
@@ -36,12 +37,13 @@ from lightly_studio.resolvers.similarity_utils import (
 )
 
 
-def get_all_with_payload(
+def get_all_with_payload(  # noqa: PLR0913
     session: Session,
     collection_id: UUID,
     pagination: Paginated | None = None,
     filters: AnnotationsFilter | None = None,
     text_embedding: list[float] | None = None,
+    order_by: OrderByExpression | None = None,
 ) -> AnnotationWithPayloadAndCountView:
     """Get all annotations with payload from the database.
 
@@ -52,10 +54,16 @@ def get_all_with_payload(
         collection_id: ID of the collection to get annotations for
         text_embedding: Optional embedding; when given, annotations are ordered by
             cosine distance of their embedding to it.
+        order_by: Optional ordering applied before the tiebreaker chain, with its value
+            appended to each row. Mutually exclusive with ``text_embedding``.
 
     Returns:
         List of annotations matching the filters with payload
     """
+    # Similarity ordering and metric sorting are mutually exclusive, so at most one of
+    # them appends a column to the row.
+    assert text_embedding is None or order_by is None
+
     parent_collection = collection_resolver.get_parent_collection_id(
         session=session, collection_id=collection_id
     )
@@ -86,18 +94,24 @@ def get_all_with_payload(
             embedding_model_id=embedding_model_id,
         )
 
-    # Type is loosened to Any because similarity search appends a distance column,
-    # changing the row shape from 2-tuple to 3-tuple.
+    if order_by is not None:
+        base_query = order_by.apply_joins(base_query)
+
+    # Type is loosened to Any because the appended column makes the row a 3-tuple.
     annotations_query: Any = base_query.order_by(
         *annotation_ordering.build_order_by(
             file_path_abs=annotation_ordering.file_path_abs_expression(sample_type=sample_type),
             created_at=col(AnnotationBaseTable.created_at),
             annotation_sample_id=col(AnnotationBaseTable.sample_id),
-            leading_order_key=distance_expr,
+            leading_order_key=(
+                order_by.to_column_element() if order_by is not None else distance_expr
+            ),
         )
     )
     if distance_expr is not None:
         annotations_query = annotations_query.add_columns(distance_expr)
+    if order_by is not None:
+        annotations_query = annotations_query.add_columns(order_by.order_value_column())
 
     total_count_query = select(func.count()).select_from(base_query.subquery())
     total_count = session.exec(total_count_query).one()
@@ -111,27 +125,45 @@ def get_all_with_payload(
 
     rows = session.exec(annotations_query).all()
 
-    annotation_views = []
-    for row in rows:
-        if distance_expr is not None:
-            annotation, payload, distance = row
-            similarity_score = distance_to_similarity(distance)
-        else:
-            annotation, payload = row
-            similarity_score = None
-        annotation_views.append(
-            AnnotationWithPayloadView(
-                parent_sample_type=sample_type,
-                annotation=AnnotationView.from_annotation_table(annotation=annotation),
-                parent_sample_data=_serialize_annotation_payload(payload=payload),
-                similarity_score=similarity_score,
-            )
-        )
-
     return AnnotationWithPayloadAndCountView(
         total_count=total_count,
         next_cursor=next_cursor,
-        annotations=annotation_views,
+        annotations=[
+            _to_annotation_view(
+                row=row,
+                sample_type=sample_type,
+                has_distance=distance_expr is not None,
+                has_order_value=order_by is not None,
+            )
+            for row in rows
+        ],
+    )
+
+
+def _to_annotation_view(
+    row: Any,
+    sample_type: SampleType,
+    has_distance: bool,
+    has_order_value: bool,
+) -> AnnotationWithPayloadView:
+    """Build the view for one row, whose shape depends on the applied ordering."""
+    similarity_score = None
+    sort_value = None
+    if has_distance:
+        annotation, payload, distance = row
+        similarity_score = distance_to_similarity(distance)
+    elif has_order_value:
+        annotation, payload, _ = row
+        sort_value = get_order_value(row)
+    else:
+        annotation, payload = row
+
+    return AnnotationWithPayloadView(
+        parent_sample_type=sample_type,
+        annotation=AnnotationView.from_annotation_table(annotation=annotation),
+        parent_sample_data=_serialize_annotation_payload(payload=payload),
+        similarity_score=similarity_score,
+        sort_value=sort_value,
     )
 
 

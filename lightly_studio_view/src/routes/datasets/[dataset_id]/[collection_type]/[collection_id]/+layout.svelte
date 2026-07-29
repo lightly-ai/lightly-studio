@@ -761,6 +761,7 @@
                                 {canSelectAll}
                                 isSelectionActive={$selectedCount > 0}
                                 {isImages}
+                                {isAnnotations}
                                 {hasMediaWithEmbeddings}
                                 collectionDatasetId={collection.dataset_id}
                                 onSelectAll={selectAllHandle.handleSelectAll}

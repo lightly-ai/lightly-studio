@@ -8,10 +8,11 @@ from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from fastapi.params import Query
 from pydantic import BaseModel, Field
+from sqlmodel import col
 
 from lightly_studio.api.routes.api import annotations as annotations_module
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
-from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
+from lightly_studio.api.routes.api.status import HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_NOT_FOUND
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.annotation.annotation_base import (
@@ -21,6 +22,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationViewsWithCount,
     AnnotationWithPayloadAndCountView,
 )
+from lightly_studio.models.annotation_sort import AnnotationSortExpr
 from lightly_studio.models.collection import AnnotationCollectionView, CollectionTable
 from lightly_studio.models.embedding_region import EmbeddingRegion
 from lightly_studio.resolvers import (
@@ -33,6 +35,7 @@ from lightly_studio.resolvers.annotation_resolver.get_all import (
     GetAllAnnotationsResult,
 )
 from lightly_studio.resolvers.annotation_resolver.update_bounding_box import BoundingBoxCoordinates
+from lightly_studio.resolvers.annotations import annotation_metric_sort
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
@@ -43,6 +46,7 @@ from lightly_studio.services.annotations_service.update_annotation import (
 
 annotations_router = APIRouter(prefix="/collections/{collection_id}", tags=["annotations"])
 annotations_router.include_router(annotations_module.create_annotation_router)
+annotations_router.include_router(annotations_module.get_annotation_metrics_info_router)
 
 
 @annotations_router.get(
@@ -91,6 +95,9 @@ class ReadAnnotationsWithPayloadRequest(BaseModel):
     # list of selected annotation sample ids; resolved to sample ids server-side (LIG-9903).
     embedding_region: EmbeddingRegion | None = None
     text_embedding: list[float] | None = None
+    # Singular rather than a list: the UI only ever applies one sort, and a scalar
+    # structurally rules out multi-join row multiplication.
+    sort_by: AnnotationSortExpr | None = None
 
 
 @annotations_router.get(
@@ -152,6 +159,20 @@ def read_annotations_with_payload(
     body: ReadAnnotationsWithPayloadRequest,
 ) -> AnnotationWithPayloadAndCountView:
     """Retrieve annotations with payload and optional similarity or sample filters."""
+    order_by = None
+    if body.sort_by is not None:
+        try:
+            order_by = annotation_metric_sort.sort_expr_to_order_by(
+                session=session,
+                annotation_collection_id=collection_id,
+                sort_expr=body.sort_by,
+                annotation_id_column=col(AnnotationBaseTable.sample_id),
+            )
+        except annotation_metric_sort.EvaluationRunNotFoundError as e:
+            raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail=str(e)) from e
+        except annotation_metric_sort.AnnotationSourceNotInEvaluationRunError as e:
+            raise HTTPException(status_code=HTTP_STATUS_BAD_REQUEST, detail=str(e)) from e
+
     return annotation_resolver.get_all_with_payload(
         session=session,
         pagination=Paginated(
@@ -167,6 +188,7 @@ def read_annotations_with_payload(
         ),
         collection_id=collection_id,
         text_embedding=body.text_embedding,
+        order_by=order_by,
     )
 
 
