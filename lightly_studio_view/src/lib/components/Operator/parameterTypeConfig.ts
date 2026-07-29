@@ -1,9 +1,19 @@
-import type { OperatorParameterType, Operator } from '$lib/hooks/useOperators/useOperators';
+import type {
+    OperatorParameterColumn,
+    OperatorParameterType,
+    Operator
+} from '$lib/hooks/useOperators/useOperators';
 import type { Component } from 'svelte';
 import ParameterCheckbox from './ParameterCheckbox.svelte';
 import ParameterInput from './ParameterInput.svelte';
 
-export type ParameterValue = string | number | boolean | null;
+/**
+ * A single row of a table parameter. Cells are typed after their column: `str` columns hold a
+ * string, `int` and `float` columns a number (or `''` while the number input is mid-edit) and
+ * `bool` columns a boolean.
+ */
+export type ParameterTableRow = Record<string, string | number | boolean>;
+export type ParameterValue = string | number | boolean | null | ParameterTableRow[];
 export type ParameterValues = Record<string, ParameterValue>;
 
 export type ParameterComponentProps = {
@@ -16,6 +26,7 @@ export type ParameterComponentProps = {
     inputType?: 'text' | 'number';
     step?: string;
     parse?: (value: string) => string | number;
+    columns?: OperatorParameterColumn[];
 };
 
 export type TypeConfig = {
@@ -28,6 +39,66 @@ export type TypeConfig = {
 const parseIntegerValue = (value: string) => (value === '' ? '' : Number.parseInt(value, 10));
 const parseFloatValue = (value: string) => (value === '' ? '' : Number.parseFloat(value));
 const identity = (value: string) => value;
+
+/**
+ * Python type names as emitted by the backend for table columns, mapped onto the frontend parameter
+ * types. `BuiltinParameter` reports `str` where `OperatorParameterType` says `string`; every other
+ * name already lines up.
+ */
+const PYTHON_TYPE_ALIASES: Record<string, OperatorParameterType> = {
+    str: 'string',
+    int: 'int',
+    float: 'float',
+    bool: 'bool'
+};
+
+/**
+ * Translates the Python type name of a table column into a parameter type. An unknown or missing
+ * name falls back to `string`, so a column type the GUI does not know yet degrades to a text cell
+ * instead of breaking the table.
+ */
+export function toParameterType(paramType: string | undefined): OperatorParameterType {
+    return (paramType && PYTHON_TYPE_ALIASES[paramType]) || 'string';
+}
+
+/**
+ * How a single cell of the given column is rendered and parsed. Delegates to `TYPE_CONFIG`, so a
+ * cell behaves like a standalone parameter of the same type.
+ */
+export function getCellConfig(column: Pick<OperatorParameterColumn, 'paramType'>): {
+    type: OperatorParameterType;
+    inputType: 'text' | 'number';
+    step?: string;
+    parse: (value: string) => string | number;
+} {
+    const type = toParameterType(column.paramType);
+    const props = TYPE_CONFIG[type].props as {
+        inputType?: 'text' | 'number';
+        step?: string;
+        parse?: (value: string) => string | number;
+    };
+    return {
+        type,
+        inputType: props.inputType ?? 'text',
+        step: props.step,
+        parse: props.parse ?? identity
+    };
+}
+
+/**
+ * Whether a single cell counts as filled in. Booleans are always filled, because `false` is a real
+ * answer rather than a missing one, and a half-typed number input (which reads `''`) counts as
+ * empty.
+ */
+export function isCellFilled(
+    value: ParameterTableRow[string] | undefined,
+    column: Pick<OperatorParameterColumn, 'paramType'>
+): boolean {
+    const type = toParameterType(column.paramType);
+    if (type === 'bool') return true;
+    if (value === undefined || value === '') return false;
+    return TYPE_CONFIG[type].validate(value);
+}
 
 export function isValueFilled(
     value: ParameterValue,
