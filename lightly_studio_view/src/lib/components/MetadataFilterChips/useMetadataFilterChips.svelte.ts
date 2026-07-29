@@ -1,6 +1,7 @@
 import { fromStore } from 'svelte/store';
 import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import { formatFloat, formatInteger } from '$lib/utils';
+import { usePostHog } from '$lib/hooks';
 
 type Range = { min: number; max: number };
 type BoundsMap = Record<string, Range>;
@@ -14,6 +15,7 @@ export interface MetadataFilterChip {
 export function useMetadataFilterChips(collectionId: string | undefined) {
     const { metadataBounds, metadataValues, updateMetadataValues } =
         useMetadataFilters(collectionId);
+    const { trackEvent } = usePostHog();
 
     const boundsStore = fromStore(metadataBounds);
     const valuesStore = fromStore(metadataValues);
@@ -61,6 +63,15 @@ export function useMetadataFilterChips(collectionId: string | undefined) {
         updateMetadataValues({ ...valuesStore.current, [key]: range });
     };
 
+    const trackFilterChanged = (key: string, action: 'enabled' | 'disabled') => {
+        if (!collectionId) return;
+        trackEvent('metadata_filter_changed', {
+            collection_id: collectionId,
+            field_name: key,
+            action
+        });
+    };
+
     const handleToggle = (key: string, checked: boolean | 'indeterminate') => {
         const bound = boundsStore.current[key];
         if (!bound) return;
@@ -69,6 +80,7 @@ export function useMetadataFilterChips(collectionId: string | undefined) {
         } else {
             setRange(key, { min: bound.min, max: bound.max });
         }
+        trackFilterChanged(key, checked ? 'enabled' : 'disabled');
     };
 
     const handleClear = (key: string) => {
@@ -77,6 +89,7 @@ export function useMetadataFilterChips(collectionId: string | undefined) {
         lastRanges = Object.fromEntries(
             Object.entries(lastRanges).filter(([rangeKey]) => rangeKey !== key)
         );
+        trackFilterChanged(key, 'disabled');
     };
 
     const formatValue = (key: string, value: number): string => {

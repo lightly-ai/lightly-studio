@@ -3,11 +3,7 @@ import type { ImageFilter, MetadataValueCountsView } from '$lib/api/lightly_stud
 import { getMetadataValueCountsOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { getMetadataValueCounts } from '$lib/api/lightly_studio_local/sdk.gen';
 import { MISSING_CATEGORICAL_VALUE, OTHER_CATEGORICAL_VALUE } from '$lib/services/types';
-
-export type CategoricalMetadataBucket =
-    | { id: string; kind: 'value'; value: string | boolean; label: string; count: number }
-    | { id: string; kind: 'missing'; value: null; label: string; count: number }
-    | { id: string; kind: 'other'; label: string; count: number };
+import type { CategoricalMetadataBucket } from './types';
 
 const valueBucketId = (value: string | boolean): string =>
     JSON.stringify(['value', typeof value, value]);
