@@ -18,6 +18,7 @@
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { GripVertical, PanelLeftClose, SlidersHorizontal } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
+    import { afterNavigate } from '$app/navigation';
     import { toStore } from 'svelte/store';
     import { Header } from '$lib/components';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
@@ -32,6 +33,7 @@
         isAnnotationDetailsRoute,
         isAnnotationsRoute,
         isCaptionsRoute,
+        isFrameDetailsRoute,
         isSampleDetailsRoute,
         isImagesRoute,
         isVideoFramesRoute,
@@ -73,7 +75,8 @@
         useSelectionSummary,
         useImageAnnotationCounts,
         useImageAnnotationCountsQueryKey,
-        useNumericMetadataDistribution
+        useNumericMetadataDistribution,
+        usePostHog
     } from '$lib/hooks';
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
     import { isInputElement } from '$lib/utils';
@@ -83,11 +86,14 @@
     import { useSearchEmbedding } from '$lib/hooks/useSearchEmbedding/useSearchEmbedding';
     import { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
     import { clearAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
+    import { isPanelVisible } from './panelVisibility';
     const { data, children } = $props();
     const {
         collection,
         globalStorage: { setLastGridType, clearSelectedSamples, clearSelectedSampleAnnotationCrops }
     } = $derived(data);
+
+    const { trackEvent } = usePostHog();
 
     // The dataset ID actually contains the collection ID.
     const datasetId = $derived(page.params.dataset_id!);
@@ -129,6 +135,7 @@
     const isAnnotations = $derived(isAnnotationsRoute(page.route.id));
     const isSampleDetails = $derived(isSampleDetailsRoute(page.route.id));
     const isAnnotationDetails = $derived(isAnnotationDetailsRoute(page.route.id));
+    const isFrameDetails = $derived(isFrameDetailsRoute(page.route.id));
     const isCaptions = $derived(isCaptionsRoute(page.route.id));
     const isVideos = $derived(isVideosRoute(page.route.id));
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
@@ -221,6 +228,15 @@
             search.onError(message);
         }
     }
+
+    afterNavigate(() => {
+        trackEvent('collection_opened', {
+            dataset_id: collection.dataset_id,
+            collection_id: collection.collection_id,
+            collection_type: `${collection.sample_type}s`,
+            sample_count: collection.total_sample_count
+        });
+    });
 
     // Setup event handlers for keyboard shortcuts
     onMount(() => {
@@ -428,12 +444,7 @@
         isImages || isAnnotations || isVideos || isVideoFrames || isGroups
     );
 
-    const panelIsVisible = $derived(
-        ($activePanel === 'evaluationRuns' && supportsEvaluation) ||
-            ($activePanel === 'embeddingPlot' && hasMediaWithEmbeddings) ||
-            ($activePanel === 'queryEditor' && isImages) ||
-            ($activePanel === 'distribution' && isImages)
-    );
+    const panelIsVisible = $derived(isPanelVisible($activePanel, isImages, hasMediaWithEmbeddings));
 
     // Class counts for the distribution panel. The "All types" source reuses the
     // shared annotation-count query that feeds the labels filter; the per-type
@@ -630,6 +641,16 @@
             ? [classDistributionSource, metadataDistributionSource]
             : [classDistributionSource]
     );
+
+    function handleCombinedMetadataFilterChanged(fieldName: string, min: number, max: number) {
+        trackEvent('metadata_filter_changed', {
+            collection_id: collectionId,
+            field_name: fieldName,
+            action: 'range_changed',
+            min,
+            max
+        });
+    }
 </script>
 
 <div class="flex-none">
@@ -638,10 +659,10 @@
 </div>
 
 <div class="relative flex min-h-0 flex-1 flex-col">
-    {#if isSampleDetails || isAnnotationDetails || isGroupDetails || isVideoDetails}
+    {#if isSampleDetails || isAnnotationDetails || isGroupDetails || isVideoDetails || isFrameDetails}
         {@render children()}
     {:else}
-        <div class="flex min-h-0 flex-1 gap-4 px-4">
+        <div class="flex min-h-0 flex-1 gap-4 px-4" data-testid="workspace-body">
             {#if isCollectionGrid}
                 <!--
                     Keep the panel mounted while collapsed (only visually hidden). Children such as
@@ -651,6 +672,7 @@
                 <div
                     class="h-full min-h-0 w-80 flex-col {$filterPanelCollapsed ? 'hidden' : 'flex'}"
                     data-testid="filter-panel-body"
+                    aria-hidden={$filterPanelCollapsed}
                 >
                     <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
                         <div
@@ -706,14 +728,19 @@
                             {/if}
                             <LabelsMenu
                                 {annotationFilterRows}
-                                onToggleAnnotationFilter={toggleAnnotationFilterSelection}
+                                onToggleAnnotationFilter={(label) =>
+                                    toggleAnnotationFilterSelection(label, collectionId)}
                                 showVisibilityToggle={showAnnotationVisibilityToggle}
                             />
 
                             {#if isImages || isVideos || isVideoFrames}
                                 {#key collectionId}
                                     <MetadataFilterChips {collectionId} />
-                                    <CombinedMetadataDimensionsFilters {isVideos} {isVideoFrames} />
+                                    <CombinedMetadataDimensionsFilters
+                                        {isVideos}
+                                        {isVideoFrames}
+                                        onFilterChanged={handleCombinedMetadataFilterChanged}
+                                    />
                                 {/key}
                             {/if}
                         </div>
@@ -729,6 +756,7 @@
                         {/if}
                         <div class="min-w-0 flex-1">
                             <DatasetGridHeader
+                                {collectionId}
                                 {canSelectAll}
                                 isSelectionActive={$selectedCount > 0}
                                 {isImages}
@@ -769,57 +797,59 @@
             {/snippet}
 
             {#if panelIsVisible}
-                <PaneGroup direction="horizontal" class="min-w-0 flex-1">
-                    <Pane defaultSize={65} minSize={35} class="flex">
-                        <div
-                            class="relative flex min-w-0 flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2"
-                        >
-                            {@render mainContent()}
-                        </div>
-                    </Pane>
+                <div data-testid="pane-group-layout" class="contents">
+                    <PaneGroup direction="horizontal" class="min-w-0 flex-1">
+                        <Pane defaultSize={65} minSize={35} class="flex">
+                            <div
+                                class="relative flex min-w-0 flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2"
+                            >
+                                {@render mainContent()}
+                            </div>
+                        </Pane>
 
-                    {@render paneResizer()}
+                        {@render paneResizer()}
 
-                    <Pane defaultSize={35} minSize={25} class="flex min-h-0 flex-col">
-                        {#if $activePanel === 'evaluationRuns' && supportsEvaluation}
-                            {#await import('$lib/components/EvaluationRunsPanel/EvaluationRunsPanel.svelte') then { default: EvaluationRunsPanel }}
-                                <EvaluationRunsPanel
-                                    onClose={() => setActivePanel('none')}
-                                    {evaluationRuns}
-                                    isLoading={evaluationRunsQuery.isLoading}
-                                    error={evaluationRunsQuery.error?.message}
-                                    datasetId={collection.dataset_id}
-                                    {collectionId}
-                                />
-                            {/await}
-                        {:else if $activePanel === 'embeddingPlot' && hasMediaWithEmbeddings}
-                            {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
-                                <!-- PlotPanel captures collectionId at mount; remount it when
+                        <Pane defaultSize={35} minSize={25} class="flex min-h-0 flex-col">
+                            {#if $activePanel === 'evaluationRuns' && supportsEvaluation}
+                                {#await import('$lib/components/EvaluationRunsPanel/EvaluationRunsPanel.svelte') then { default: EvaluationRunsPanel }}
+                                    <EvaluationRunsPanel
+                                        onClose={() => setActivePanel('none')}
+                                        {evaluationRuns}
+                                        isLoading={evaluationRunsQuery.isLoading}
+                                        error={evaluationRunsQuery.error?.message}
+                                        datasetId={collection.dataset_id}
+                                        {collectionId}
+                                    />
+                                {/await}
+                            {:else if $activePanel === 'embeddingPlot' && hasMediaWithEmbeddings}
+                                {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
+                                    <!-- PlotPanel captures collectionId at mount; remount it when
                                      switching collections (e.g. images <-> annotations tab). -->
-                                {#key collectionId}
-                                    <PlotPanel {collectionId} />
-                                {/key}
-                            {/await}
-                        {:else if $activePanel === 'queryEditor' && isImages}
-                            <QueryEditorPanel onClose={() => setActivePanel('none')} />
-                        {:else if distributionPanelVisible}
-                            {#await import('$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte') then { default: DatasetDistributionPanel }}
-                                <DatasetDistributionPanel
-                                    sources={distributionSources}
-                                    initialCountMode={distributionCountMode}
-                                    onClose={() => setActivePanel('none')}
-                                    onCountModeChange={(mode) => {
-                                        distributionCountMode = mode;
-                                    }}
-                                    onHistogramRangeSelect={handleDistributionHistogramRangeSelect}
-                                    {histogramBinCount}
-                                    onHistogramBinCountChange={(binCount) =>
-                                        (histogramBinCount = binCount)}
-                                />
-                            {/await}
-                        {/if}
-                    </Pane>
-                </PaneGroup>
+                                    {#key collectionId}
+                                        <PlotPanel {collectionId} />
+                                    {/key}
+                                {/await}
+                            {:else if $activePanel === 'queryEditor' && isImages}
+                                <QueryEditorPanel onClose={() => setActivePanel('none')} />
+                            {:else if distributionPanelVisible}
+                                {#await import('$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte') then { default: DatasetDistributionPanel }}
+                                    <DatasetDistributionPanel
+                                        sources={distributionSources}
+                                        initialCountMode={distributionCountMode}
+                                        onClose={() => setActivePanel('none')}
+                                        onCountModeChange={(mode) => {
+                                            distributionCountMode = mode;
+                                        }}
+                                        onHistogramRangeSelect={handleDistributionHistogramRangeSelect}
+                                        {histogramBinCount}
+                                        onHistogramBinCountChange={(binCount) =>
+                                            (histogramBinCount = binCount)}
+                                    />
+                                {/await}
+                            {/if}
+                        </Pane>
+                    </PaneGroup>
+                </div>
             {:else}
                 <!-- Normal layout (no side panel) -->
                 <div
@@ -829,7 +859,14 @@
                 </div>
             {/if}
             {#if isCollectionGrid && (isImages || hasMediaWithEmbeddings)}
-                <SidePanelTabs {isImages} {hasMediaWithEmbeddings} {supportsEvaluation} />
+                <div data-testid="side-panel-tabs" class="contents">
+                    <SidePanelTabs
+                        {collectionId}
+                        {isImages}
+                        {hasMediaWithEmbeddings}
+                        {supportsEvaluation}
+                    />
+                </div>
             {/if}
             {#if hasEmbeddings}
                 {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then { default: CreateClassifierDialog }}

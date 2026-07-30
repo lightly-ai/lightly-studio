@@ -4,7 +4,10 @@
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import { useSettings } from '$lib/hooks/useSettings';
+    import { usePostHog } from '$lib/hooks';
     import { resolveEffectiveColorBySource } from '$lib/utils';
+    import { get } from 'svelte/store';
+    import { handleAnnotationSourceFilterChange } from './handleAnnotationSourceFilterChange';
 
     interface Props {
         collectionId: string;
@@ -20,6 +23,7 @@
     const { setSelectedCollectionIds, selectedCollectionIds, seedSelectionIfNeeded } =
         useAnnotationCollectionsFilter();
     const { enforceColoringByClassStore } = useSettings();
+    const { trackEvent } = usePostHog();
 
     const isEnabled = $derived(items.length > 1);
 
@@ -30,6 +34,17 @@
             seedSelectionIfNeeded(collectionId, items);
         }
     });
+
+    const handleChangeSelectedItems = (newIds: string[]) => {
+        handleAnnotationSourceFilterChange({
+            newIds,
+            prevIds: get(selectedCollectionIds),
+            items,
+            collectionId,
+            setSelectedCollectionIds,
+            trackEvent
+        });
+    };
 </script>
 
 {#if isEnabled}
@@ -42,7 +57,7 @@
             enableColorPicker
             {items}
             selectedItemsIds={$selectedCollectionIds}
-            onChangeSelectedItems={setSelectedCollectionIds}
+            onChangeSelectedItems={handleChangeSelectedItems}
         />
     </Segment>
 {/if}

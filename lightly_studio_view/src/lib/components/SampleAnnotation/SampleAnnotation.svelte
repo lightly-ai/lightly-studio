@@ -81,7 +81,8 @@
             return 0.15;
         }
 
-        return segmentationMask ? 0.65 : ($customLabelColorsStore[colorLabel]?.alpha ?? 1.0) * 0.6;
+        const alpha = $customLabelColorsStore[colorLabel]?.alpha ?? 1.0;
+        return alpha * 0.6;
     });
 
     // Do not fill the bounding box if the annotation contains a segmentation mask.

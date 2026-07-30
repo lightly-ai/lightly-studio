@@ -34,7 +34,7 @@ export function useSegmentationMaskBrush({
     refetch: () => void;
     /** Must be a stable reference (not recreated on re-renders) to ensure undo closures
      *  call the live mutation rather than a disposed one. */
-    deleteAnnotation: (annotationId: string) => Promise<void>;
+    deleteAnnotation: (annotationId: string, annotationType: string) => Promise<void>;
     onAnnotationCreated?: () => void;
     /** Called when no label is currently selected. Should show a class-picker and resolve with
      *  the chosen class, or null if the user cancelled. */

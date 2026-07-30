@@ -13,7 +13,7 @@ export const addAnnotationCreateToUndoStack = ({
 }: {
     annotation: AnnotationView;
     addReversibleAction: (action: ReversibleAction) => void;
-    deleteAnnotation: (annotationId: string) => Promise<void>;
+    deleteAnnotation: (annotationId: string, annotationType: string) => Promise<void>;
     refetch: () => void;
     onUndo?: ReversibleActionCallback;
     /** Called after deletion succeeds, before refetch. Use to clean up UI state
@@ -21,7 +21,7 @@ export const addAnnotationCreateToUndoStack = ({
     onDelete?: ReversibleActionCallback;
 }) => {
     const execute = async () => {
-        await deleteAnnotation(annotation.sample_id);
+        await deleteAnnotation(annotation.sample_id, annotation.annotation_type);
         await onUndo?.();
         await onDelete?.();
         refetch();

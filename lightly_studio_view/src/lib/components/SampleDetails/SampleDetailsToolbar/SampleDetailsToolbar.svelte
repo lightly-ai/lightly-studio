@@ -36,11 +36,11 @@
             onClickCursor();
         } else if (key === $settingsStore.key_toolbar_bounding_box) {
             e.preventDefault();
-            onClickBoundingBox();
+            activateBoundingBox();
         } else if (key === $settingsStore.key_toolbar_segmentation_mask) {
             if (!showSegmentationTool) return;
             e.preventDefault();
-            onClickBrush();
+            activateBrush();
         } else if (key === $settingsStore.key_toolbar_drag) {
             e.preventDefault();
             onClickDrag();
@@ -117,7 +117,7 @@
         }
     });
 
-    const onClickBoundingBox = () => {
+    const activateBoundingBox = () => {
         if (annotationLabelContext.isOnAnnotationDetailsView) return;
 
         setStatus('bounding-box');
@@ -125,6 +125,8 @@
         setAnnotationId(null);
         setLastCreatedAnnotationId(null);
     };
+
+    const onClickBoundingBox = () => activateBoundingBox();
 
     const onClickCursor = () => {
         setStatus('cursor');
@@ -134,7 +136,7 @@
         setStatus('drag');
     };
 
-    const onClickBrush = () => {
+    const activateBrush = () => {
         if (!showSegmentationTool) return;
 
         setStatus('brush');
@@ -142,6 +144,8 @@
         if (!annotationLabelContext.isOnAnnotationDetailsView) setAnnotationId(null);
         setLastCreatedAnnotationId(null);
     };
+
+    const onClickBrush = () => activateBrush();
 
     const onClickSlic = () => {
         if (!showSlicTool) return;

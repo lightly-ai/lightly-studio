@@ -25,6 +25,7 @@ from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import collection_resolver, embedding_region_resolver
+from lightly_studio.resolvers.annotations import annotation_ordering
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
@@ -88,10 +89,12 @@ def get_all_with_payload(
     # Type is loosened to Any because similarity search appends a distance column,
     # changing the row shape from 2-tuple to 3-tuple.
     annotations_query: Any = base_query.order_by(
-        *([distance_expr] if distance_expr is not None else []),
-        *_extra_order_by(sample_type=sample_type),
-        col(AnnotationBaseTable.created_at).asc(),
-        col(AnnotationBaseTable.sample_id).asc(),
+        *annotation_ordering.build_order_by(
+            file_path_abs=annotation_ordering.file_path_abs_expression(sample_type=sample_type),
+            created_at=col(AnnotationBaseTable.created_at),
+            annotation_sample_id=col(AnnotationBaseTable.sample_id),
+            leading_order_key=distance_expr,
+        )
     )
     if distance_expr is not None:
         annotations_query = annotations_query.add_columns(distance_expr)
@@ -178,21 +181,6 @@ def _build_base_query(
         )
 
     raise NotImplementedError(f"Unsupported sample type: {sample_type}")
-
-
-def _extra_order_by(sample_type: SampleType) -> list[Any]:
-    """Return extra order by clauses for the query."""
-    if sample_type == SampleType.IMAGE:
-        return [
-            col(ImageTable.file_path_abs).asc(),
-        ]
-
-    if sample_type in (SampleType.VIDEO_FRAME, SampleType.VIDEO):
-        return [
-            col(VideoTable.file_path_abs).asc(),
-        ]
-
-    return []
 
 
 def _serialize_annotation_payload(

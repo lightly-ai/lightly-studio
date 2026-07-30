@@ -1,19 +1,21 @@
 <script lang="ts">
     import { SortDirection } from '$lib/api/lightly_studio_local';
     import { useOrderBy } from '$lib/hooks/useOrderBy/useOrderBy';
-    import { useGlobalStorage } from '$lib/hooks';
+    import { useGlobalStorage, usePostHog } from '$lib/hooks';
     import { Select, type SelectItem } from '$lib/components/Select';
     import { Button } from '$lib/components/ui/button';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { ArrowDown, ArrowUp } from '@lucide/svelte';
 
     interface Props {
+        collectionId: string;
         datasetId: string;
     }
 
-    const { datasetId }: Props = $props();
+    const { collectionId, datasetId }: Props = $props();
 
     const { textEmbedding } = useGlobalStorage();
+    const { trackEvent } = usePostHog();
     const isSimilaritySearchActive = $derived(!!$textEmbedding);
 
     const {
@@ -24,7 +26,7 @@
         handleFieldClick,
         toggleDirection,
         dispose
-    } = useOrderBy({ datasetId });
+    } = useOrderBy({ collectionId: () => collectionId, datasetId });
 
     $effect(() => {
         return () => dispose();
@@ -69,6 +71,9 @@
             triggerLabel={$selectedLabel ?? undefined}
             allowDeselect
             onValueChange={handleValueChange}
+            onOpenChange={(open) => {
+                if (open) trackEvent('sort_by_opened', { collection_id: collectionId });
+            }}
             disabled={isSimilaritySearchActive}
             placeholder="Sort by"
             size="xs"

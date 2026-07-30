@@ -16,7 +16,8 @@ from lightly_studio.vendor import mobileclip
 
 from . import file_utils, image_crop_embedding, image_embedding
 from .embedding_generator import ImageCrop, ImageEmbeddingGenerator
-from .image_embedding import EmbeddingContext, ImageEmbeddingResult
+from .embedding_result import EmbeddingResult
+from .image_embedding import EmbeddingContext
 
 MODEL_NAME = "mobileclip_s0"
 MOBILECLIP_DOWNLOAD_URL = (
@@ -84,9 +85,7 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
             embedding_list: list[float] = embedding.cpu().numpy().flatten().tolist()
         return embedding_list
 
-    def embed_images(
-        self, filepaths: list[str], show_progress: bool = True
-    ) -> ImageEmbeddingResult:
+    def embed_images(self, filepaths: list[str], show_progress: bool = True) -> EmbeddingResult:
         """Embed images with MobileCLIP.
 
         Args:
@@ -94,7 +93,7 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
             show_progress: Whether to show a progress bar during embedding.
 
         Returns:
-            An ``ImageEmbeddingResult`` with embeddings for the readable files, in the same
+            An ``EmbeddingResult`` with embeddings for the readable files, in the same
             order as the corresponding input file paths.
         """
         return image_embedding.embed_image_files_batched(
@@ -105,7 +104,7 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
 
     def embed_image_crops(
         self, image_crops: list[ImageCrop], show_progress: bool = True
-    ) -> NDArray[np.float32]:
+    ) -> EmbeddingResult:
         """Embed image crops with MobileCLIP.
 
         Args:
@@ -113,8 +112,8 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
             show_progress: Whether to show a progress bar during embedding.
 
         Returns:
-            A numpy array representing the generated embeddings in the same order
-            as the input crops.
+            An ``EmbeddingResult`` with embeddings for the crops of readable files,
+            in the same order as the corresponding input crops.
         """
         return image_crop_embedding.embed_image_crops_batched(
             image_crops=image_crops,

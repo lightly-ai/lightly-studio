@@ -1,5 +1,5 @@
 import { derived, get, writable, type Readable } from 'svelte/store';
-import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+import { useGlobalStorage } from '$lib/hooks';
 import { useSamplingDialog } from '$lib/hooks/useSamplingDialog/useSamplingDialog';
 import { isStrategyInstanceValid, type StrategyInstance } from '$lib/hooks/useStrategyBuilder';
 import { useSubmitCombinationSelection } from '$lib/hooks/useSubmitCombinationSelection/useSubmitCombinationSelection';
@@ -29,14 +29,20 @@ export function useSamplingCombinationDialog({
     });
 
     const { filteredSampleCount } = useGlobalStorage();
-    const { closeSamplingDialog } = useSamplingDialog();
+    const { closeSamplingDialog, markSubmitted } = useSamplingDialog();
     const { buildSelectionFilter } = useSelectionFilter(getIsVideoCollection);
+
+    const closeAfterSubmit = () => {
+        markSubmitted();
+        closeSamplingDialog();
+    };
 
     const { isSubmitting, loadingMessage, submit } = useSubmitCombinationSelection({
         tags,
         setTagSelected,
         loadTags,
-        closeSelectionDialog: closeSamplingDialog
+        closeSelectionDialog: closeAfterSubmit,
+        filteredSampleCount
     });
 
     const nSamplesToSelect = writable<number | null>(10);
