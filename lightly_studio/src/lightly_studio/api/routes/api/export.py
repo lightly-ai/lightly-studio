@@ -219,6 +219,12 @@ class ExportAnnotationsPrepareBody(BaseModel):
     image_filter: ImageFilter | None = None
 
 
+class ExportCaptionsPrepareBody(BaseModel):
+    """Request body for the captions prepare endpoint."""
+
+    image_filter: ImageFilter | None = None
+
+
 # This endpoint should be a GET, however due to the potential huge size
 # of sample_ids, it is a POST request to avoid URL length limitations.
 # A body with a GET request is supported by fastAPI however it has undefined
@@ -399,6 +405,39 @@ def export_collection_annotations_prepare(
             temp_dir=temp_dir,
         )
         export = export_job_resolver.create(session=session, export_path=str(export_path))
+    except Exception:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise
+
+    return ExportKeyResponse(export_key=export.export_key)
+
+
+@export_router.post("/export/captions/prepare")
+def export_collection_captions_prepare(
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(collection_api.get_and_validate_collection_id),
+    ],
+    session: SessionDep,
+    body: ExportCaptionsPrepareBody,
+) -> ExportKeyResponse:
+    """Generate the captions export and persist its path."""
+    dataset_query = DatasetQuery(dataset=collection, session=session)
+    if body.image_filter is not None:
+        dataset_query.filter_by_sample_ids(
+            body.image_filter.build_sample_ids_query(collection.collection_id)
+        )
+
+    temp_dir = PathlibPath(tempfile.mkdtemp())
+    output_path = temp_dir / "coco_captions_export.json"
+    try:
+        image_dataset_export.ImageDatasetExport(
+            session=session,
+            dataset_id=collection.dataset_id,
+            samples=dataset_query,
+        ).to_coco_captions(output_json=output_path)
+        export = export_job_resolver.create(session=session, export_path=str(output_path))
     except Exception:
         shutil.rmtree(temp_dir, ignore_errors=True)
         raise
