@@ -12,10 +12,7 @@
     import { useSettings } from '$lib/hooks/useSettings';
     import SlicToolbarButton from '../SlicToolbarButton/SlicToolbarButton.svelte';
 
-    const {
-        showSegmentationTool = true,
-        showSlicTool = true
-    }: { showSegmentationTool?: boolean; showSlicTool?: boolean } = $props();
+    const { showSegmentationTool = true }: { showSegmentationTool?: boolean } = $props();
 
     const { settingsStore } = useSettings();
     let isSpacePressed = false;
@@ -148,7 +145,7 @@
     const onClickBrush = () => activateBrush();
 
     const onClickSlic = () => {
-        if (!showSlicTool) return;
+        if (!showSegmentationTool) return;
 
         const shouldKeepSelectedAnnotation =
             annotationLabelContext.annotationId != null &&
@@ -202,7 +199,7 @@
                 <BoundingBoxToolbarButton onclick={onClickBoundingBox} />
             </SampleDetailsToolbarTooltip>
         {/if}
-        {#if showSlicTool}
+        {#if showSegmentationTool}
             <SampleDetailsToolbarTooltip
                 label="AI-Assisted Labeling"
                 action="toggle superpixels"

@@ -14,6 +14,7 @@ export type SampleDetailsToolbarContext = {
     slic: {
         level: SlicLevel;
         status: SlicStatus;
+        retryCount: number;
     };
 };
 
@@ -23,7 +24,7 @@ export function createSampleDetailsToolbarContext(
     initiaValue: SampleDetailsToolbarContext = {
         status: 'cursor',
         brush: { mode: 'brush', size: 50 },
-        slic: { level: 'medium', status: 'idle' }
+        slic: { level: 'medium', status: 'idle', retryCount: 0 }
     }
 ): SampleDetailsToolbarContext {
     const existingContext = getContext<SampleDetailsToolbarContext | undefined>(CONTEXT_KEY);
@@ -42,6 +43,7 @@ export function useSampleDetailsToolbarContext(): {
     setBrushSize: (size: number) => void;
     setSlicLevel: (level: SlicLevel) => void;
     setSlicStatus: (status: SlicStatus) => void;
+    retrySlic: () => void;
     setStatus: (status: ToolbarStatus) => void;
 } {
     const context = getContext<SampleDetailsToolbarContext>(CONTEXT_KEY);
@@ -66,9 +68,21 @@ export function useSampleDetailsToolbarContext(): {
         context.slic.status = status;
     }
 
+    function retrySlic() {
+        context.slic.retryCount += 1;
+    }
+
     function setStatus(status: ToolbarStatus) {
         context.status = status;
     }
 
-    return { context, setBrushMode, setBrushSize, setSlicLevel, setSlicStatus, setStatus };
+    return {
+        context,
+        setBrushMode,
+        setBrushSize,
+        setSlicLevel,
+        setSlicStatus,
+        retrySlic,
+        setStatus
+    };
 }

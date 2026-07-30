@@ -12,40 +12,49 @@ const {
     setIsDrawingMock,
     updateAnnotationMock,
     getImageCoordsFromMouseMock,
-    getLabelAtPointMock,
-    maskToColoredDataUrlMock,
+    maskToDataUrlMock,
     queuedPoints
 } = vi.hoisted(() => {
     const annotationContext = {
         annotationId: null as string | null,
         isDrawing: false,
         isOnAnnotationDetailsView: false,
-        lockedAnnotationIds: new Set<string>()
+        lockedAnnotationIds: new Set<string>(),
+        isAnnotationLocked(annotationId: string) {
+            return this.lockedAnnotationIds.has(annotationId);
+        }
     };
     const toolbarContext = {
         status: 'slic' as const,
         slic: {
             level: 'medium' as 'coarse' | 'medium' | 'fine',
-            status: 'idle' as 'idle' | 'computing' | 'ready' | 'error'
+            status: 'idle' as 'idle' | 'computing' | 'ready' | 'error',
+            retryCount: 0
         }
     };
+    const createResult = () => ({
+        segmentation: {
+            labels: new Int32Array([0, 1, 2]),
+            width: 3,
+            height: 1,
+            boundaries: new Uint8Array([1, 1, 1]),
+            pixelIndexes: new Uint32Array([0, 1, 2]),
+            segmentOffsets: new Uint32Array([0, 1, 2, 3]),
+            labelPixelIndexes: [[0], [1], [2]],
+            segmentCount: 3
+        },
+        sourceWidth: 3,
+        sourceHeight: 1,
+        scaleX: 1,
+        scaleY: 1,
+        level: 'medium'
+    });
 
     return {
         mockAnnotationContext: annotationContext,
         mockToolbarContext: toolbarContext,
         finishBrushMock: vi.fn(),
-        loadSuperpixelsForImageMock: vi.fn(async () => ({
-            labels: new Int32Array([0, 1, 2]),
-            width: 3,
-            height: 1,
-            boundaries: new Uint8Array([1, 1, 1]),
-            labelPixelIndexes: [[0], [1], [2]],
-            originalWidth: 3,
-            originalHeight: 1,
-            scaleX: 1,
-            scaleY: 1,
-            level: 'medium'
-        })),
+        loadSuperpixelsForImageMock: vi.fn(async () => createResult()),
         setAnnotationIdMock: vi.fn((id: string | null) => {
             annotationContext.annotationId = id;
         }),
@@ -53,36 +62,20 @@ const {
             annotationContext.isDrawing = value;
         }),
         updateAnnotationMock: vi.fn(),
-        maskToColoredDataUrlMock: vi.fn(() => 'data:image/png;base64,mock'),
+        maskToDataUrlMock: vi.fn(() => 'data:image/png;base64,mock'),
         queuedPoints: [] as { x: number; y: number }[],
-        getImageCoordsFromMouseMock: vi.fn(() => queuedPoints.shift() ?? { x: 0, y: 0 }),
-        getLabelAtPointMock: vi.fn((_, x: number) => Math.max(0, Math.min(2, Math.round(x))))
+        getImageCoordsFromMouseMock: vi.fn(() => queuedPoints.shift() ?? { x: 0, y: 0 })
     };
 });
 
 vi.mock('$app/state', () => ({
-    page: {
-        params: {
-            dataset_id: 'dataset-1'
-        }
-    }
+    page: { params: { dataset_id: 'dataset-1' } }
 }));
 
 vi.mock('$lib/components/SampleAnnotation/utils', () => ({
     decodeRLEToBinaryMask: vi.fn(() => new Uint8Array([0, 0, 0])),
     getImageCoordsFromMouse: getImageCoordsFromMouseMock,
-    interpolateLineBetweenPoints: vi.fn(
-        (from: { x: number; y: number }, to: { x: number; y: number }) => {
-            const points = [{ x: from.x, y: from.y }];
-
-            if (Math.abs(to.x - from.x) > 1) {
-                points.push({ x: 1, y: from.y });
-            }
-
-            points.push({ x: to.x, y: to.y });
-            return points;
-        }
-    )
+    maskToDataUrl: maskToDataUrlMock
 }));
 
 vi.mock(
@@ -110,21 +103,15 @@ vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => ({
 }));
 
 vi.mock('$lib/hooks/useAnnotation/useAnnotation', () => ({
-    useAnnotation: () => ({
-        updateAnnotation: updateAnnotationMock
-    })
+    useAnnotation: () => ({ updateAnnotation: updateAnnotationMock })
 }));
 
 vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
-    useAnnotationLabels: () => ({
-        data: []
-    })
+    useAnnotationLabels: () => ({ data: [] })
 }));
 
 vi.mock('$lib/hooks/useDeleteAnnotation/useDeleteAnnotation', () => ({
-    useDeleteAnnotation: () => ({
-        deleteAnnotation: vi.fn()
-    })
+    useDeleteAnnotation: () => ({ deleteAnnotation: vi.fn() })
 }));
 
 vi.mock('$lib/hooks/useSelectClassDialog/useSelectClassDialog', () => ({
@@ -137,62 +124,37 @@ vi.mock('$lib/hooks/useSelectClassDialog/useSelectClassDialog', () => ({
 }));
 
 vi.mock('$lib/hooks/useCollection/useCollection', () => ({
-    useCollectionWithChildren: () => ({
-        refetch: vi.fn()
-    })
+    useCollectionWithChildren: () => ({ refetch: vi.fn() })
 }));
 
 vi.mock('$lib/hooks/useSegmentationMaskBrush', () => ({
-    useSegmentationMaskBrush: () => ({
-        finishBrush: finishBrushMock
-    })
+    useSegmentationMaskBrush: () => ({ finishBrush: finishBrushMock })
 }));
 
-// The pure mask/stroke logic (accumulateStrokeLabels, applySegmentToMask, …)
-// is imported straight from @lightly-ai/slic and runs for real; only the
-// app-side adapter is mocked (canvas rasterization and the async load).
 vi.mock('$lib/utils/slic', () => ({
-    loadSuperpixelsForImage: loadSuperpixelsForImageMock,
-    createSlicMaskForLabels: vi.fn((result, labelIds: Iterable<number>) => {
-        const mask = new Uint8Array(result.width * result.height);
-        for (const labelId of labelIds) {
-            for (const pixelIndex of result.labelPixelIndexes[labelId] ?? []) {
-                mask[pixelIndex] = 1;
-            }
-        }
-        return mask;
-    }),
-    getLabelAtPoint: getLabelAtPointMock,
-    extractCellMask: vi.fn(() => new Uint8Array([0, 1, 0])),
-    maskToColoredDataUrl: maskToColoredDataUrlMock
+    loadSuperpixelsForImage: loadSuperpixelsForImageMock
 }));
 
-/** Render with default props and wait until superpixels are loaded. */
-const renderReady = async (sampleId: string) => {
-    const { container } = render(SampleSlicRect, {
-        props: {
-            sample: { width: 3, height: 1, annotations: [] },
-            sampleId,
-            collectionId: 'collection-1',
-            drawerStrokeColor: 'rgb(0, 0, 255)',
-            imageUrl: 'https://example.com/image.png',
-            refetch: vi.fn()
-        }
-    });
-
-    await waitFor(() => {
-        expect(mockToolbarContext.slic.status).toBe('ready');
-    });
-
-    const rect = container.querySelector('rect');
-    expect(rect).not.toBeNull();
-    return rect as SVGRectElement;
+const defaultProps = {
+    sample: { width: 3, height: 1, annotations: [] },
+    sampleId: 'sample-1',
+    collectionId: 'collection-1',
+    drawerStrokeColor: 'rgb(0, 0, 255)',
+    imageUrl: 'https://example.com/image.png',
+    refetch: vi.fn()
 };
 
-/** Fire a pointer stroke through the given points (down, moves, up). */
+const renderReady = async (props: Partial<typeof defaultProps> = {}) => {
+    const view = render(SampleSlicRect, { props: { ...defaultProps, ...props } });
+    await waitFor(() => expect(mockToolbarContext.slic.status).toBe('ready'));
+
+    const rect = view.container.querySelector('rect');
+    expect(rect).not.toBeNull();
+    return { ...view, rect: rect as SVGRectElement };
+};
+
 const stroke = async (rect: SVGRectElement, points: { x: number; y: number }[], pointerId = 1) => {
     queuedPoints.push(...points);
-
     const [first, ...rest] = points;
     await fireEvent.pointerDown(rect, { pointerId, clientX: first.x, clientY: first.y });
     for (const point of rest) {
@@ -210,104 +172,92 @@ describe('SampleSlicRect', () => {
         mockAnnotationContext.lockedAnnotationIds = new Set<string>();
         mockToolbarContext.slic.level = 'medium';
         mockToolbarContext.slic.status = 'idle';
+        mockToolbarContext.slic.retryCount = 0;
         queuedPoints.length = 0;
-        loadSuperpixelsForImageMock.mockClear();
-        finishBrushMock.mockImplementation(() => null);
-        maskToColoredDataUrlMock.mockClear();
+        finishBrushMock.mockResolvedValue(undefined);
         getImageCoordsFromMouseMock.mockImplementation(
             () => queuedPoints.shift() ?? { x: 0, y: 0 }
         );
-        getLabelAtPointMock.mockImplementation((_, x: number) =>
-            Math.max(0, Math.min(2, Math.round(x)))
-        );
     });
 
-    it('loads superpixels when the slic tool is active', async () => {
-        await renderReady('sample-1');
+    it('renders boundaries after loading superpixels', async () => {
+        const { container } = await renderReady();
+        expect(container.querySelectorAll('image')).toHaveLength(1);
+        expect(loadSuperpixelsForImageMock).toHaveBeenCalledWith({
+            imageUrl: defaultProps.imageUrl,
+            level: 'medium'
+        });
     });
 
-    it('commits a stroke through the brush persistence flow on pointerup', async () => {
-        const rect = await renderReady('sample-2');
-
-        await stroke(rect, [
-            { x: 0, y: 0 },
-            { x: 1, y: 0 }
-        ]);
-
-        expect(setIsDrawingMock).toHaveBeenCalledWith(true);
-        expect(finishBrushMock).toHaveBeenCalledTimes(1);
+    it('exposes an error state when superpixel loading fails', async () => {
+        loadSuperpixelsForImageMock.mockRejectedValueOnce(new Error('compute failed'));
+        render(SampleSlicRect, { props: defaultProps });
+        await waitFor(() => expect(mockToolbarContext.slic.status).toBe('error'));
     });
 
-    it('commits a single clicked label through direct original-image painting', async () => {
-        const rect = await renderReady('sample-single');
+    it('renders hover and stroke previews', async () => {
+        const { container, rect } = await renderReady();
+        queuedPoints.push({ x: 1, y: 0 });
+        await fireEvent.pointerMove(rect);
+        expect(container.querySelectorAll('image')).toHaveLength(2);
 
+        queuedPoints.push({ x: 1, y: 0 }, { x: 2, y: 0 });
+        await fireEvent.pointerDown(rect, { pointerId: 1 });
+        await fireEvent.pointerMove(rect, { pointerId: 1 });
+        expect(maskToDataUrlMock).toHaveBeenCalled();
+        expect(container.querySelectorAll('image').length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('commits the editor mask through the brush persistence flow', async () => {
+        const { rect } = await renderReady();
         await stroke(rect, [{ x: 1, y: 0 }]);
 
-        const persistedMask = finishBrushMock.mock.calls[0][0] as Uint8Array;
-        expect(Array.from(persistedMask)).toEqual([0, 1, 0]);
+        expect(setIsDrawingMock).toHaveBeenCalledWith(true);
+        expect(Array.from(finishBrushMock.mock.calls[0][0] as Uint8Array)).toEqual([0, 1, 0]);
     });
 
-    it('updates the drag preview without rebuilding the full-resolution mask on pointermove', async () => {
-        const rect = await renderReady('sample-preview');
+    it('blocks editing locked annotations', async () => {
+        mockAnnotationContext.annotationId = 'annotation-1';
+        mockAnnotationContext.lockedAnnotationIds.add('annotation-1');
+        const annotation = {
+            sample_id: 'annotation-1',
+            annotation_type: 'segmentation_mask',
+            segmentation_details: { segmentation_mask: [3] }
+        };
+        const { rect } = await renderReady({
+            sample: { width: 3, height: 1, annotations: [annotation] } as typeof defaultProps.sample
+        });
 
-        queuedPoints.push({ x: 0, y: 0 }, { x: 2, y: 0 });
-        await fireEvent.pointerDown(rect, { pointerId: 1, clientX: 0, clientY: 0 });
-        await fireEvent.pointerMove(rect, { pointerId: 1, clientX: 2, clientY: 0 });
-
-        expect(maskToColoredDataUrlMock).toHaveBeenCalled();
-
-        await fireEvent.pointerUp(rect, { pointerId: 1, clientX: 2, clientY: 0 });
-    });
-
-    it('captures middle cells during a fast stroke via interpolation', async () => {
-        const rect = await renderReady('sample-middle');
-
-        await stroke(rect, [
-            { x: 0, y: 0 },
-            { x: 2, y: 0 }
-        ]);
-
-        const persistedMask = finishBrushMock.mock.calls[0][0] as Uint8Array;
-        expect(Array.from(persistedMask)).toEqual([1, 1, 1]);
-    });
-
-    it('toggles each cell only once per stroke even when re-entered', async () => {
-        const rect = await renderReady('sample-repeat');
-
-        await stroke(rect, [
-            { x: 1, y: 0 },
-            { x: 2, y: 0 },
-            { x: 1, y: 0 }
-        ]);
-
-        const persistedMask = finishBrushMock.mock.calls[0][0] as Uint8Array;
-        expect(Array.from(persistedMask)).toEqual([0, 1, 1]);
+        await stroke(rect, [{ x: 1, y: 0 }]);
+        expect(finishBrushMock).not.toHaveBeenCalled();
     });
 
     it('blocks a new stroke while a save is in flight', async () => {
         let resolveFinish: (() => void) | undefined;
         finishBrushMock.mockImplementation(
-            () =>
-                new Promise((resolve) => {
-                    resolveFinish = () => resolve(null);
-                })
+            () => new Promise<void>((resolve) => (resolveFinish = resolve))
         );
-
-        const rect = await renderReady('sample-3');
+        const { rect } = await renderReady();
 
         await stroke(rect, [{ x: 0, y: 0 }]);
         await stroke(rect, [{ x: 1, y: 0 }], 2);
-
         expect(finishBrushMock).toHaveBeenCalledTimes(1);
-
         resolveFinish?.();
     });
 
-    it('does not reload superpixels again when saving a stroke', async () => {
-        const rect = await renderReady('sample-no-reload');
+    it('loads the selected level and recomputes when the image changes', async () => {
+        mockToolbarContext.slic.level = 'fine';
+        const { rerender } = await renderReady();
+        expect(loadSuperpixelsForImageMock).toHaveBeenLastCalledWith({
+            imageUrl: defaultProps.imageUrl,
+            level: 'fine'
+        });
 
-        await stroke(rect, [{ x: 0, y: 0 }]);
-
-        expect(loadSuperpixelsForImageMock).toHaveBeenCalledTimes(1);
+        await rerender({ ...defaultProps, imageUrl: 'https://example.com/next.png' });
+        await waitFor(() => expect(loadSuperpixelsForImageMock).toHaveBeenCalledTimes(2));
+        expect(loadSuperpixelsForImageMock).toHaveBeenLastCalledWith({
+            imageUrl: 'https://example.com/next.png',
+            level: 'fine'
+        });
     });
 });

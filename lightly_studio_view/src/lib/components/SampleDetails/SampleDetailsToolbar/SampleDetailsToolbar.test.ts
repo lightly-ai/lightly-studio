@@ -12,7 +12,8 @@ const mockSampleDetailsToolbarContext = {
     },
     slic: {
         level: 'medium' as 'coarse' | 'medium' | 'fine',
-        status: 'idle' as 'idle' | 'computing' | 'ready' | 'error'
+        status: 'idle' as 'idle' | 'computing' | 'ready' | 'error',
+        retryCount: 0
     }
 };
 

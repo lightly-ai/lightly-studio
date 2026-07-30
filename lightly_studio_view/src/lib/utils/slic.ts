@@ -1,28 +1,13 @@
-import {
-    createMaskForLabels as createMaskForLabelsPkg,
-    getLabelAtPoint as getLabelAtPointPkg,
-    getSlicEngine,
-    type Segmentation
-} from '@lightly-ai/slic';
+import { getSlicEngine, type Segmentation } from '@lightly-ai/slic';
 import { dev } from '$app/environment';
 import { PUBLIC_SAMPLES_URL } from '$env/static/public';
-
-export { extractCellMask } from '@lightly-ai/slic';
 
 export type SlicLevel = 'coarse' | 'medium' | 'fine';
 
 export type SlicResult = {
-    labels: Int32Array;
-    width: number;
-    height: number;
-    boundaries: Uint8Array;
-    /** CSR pixel-index buffers; prefer these in hot paths. */
-    pixelIndexes: Uint32Array;
-    segmentOffsets: Uint32Array;
-    /** Materialized lazily on first access — avoid in hot paths. */
-    labelPixelIndexes: number[][];
-    originalWidth: number;
-    originalHeight: number;
+    segmentation: Segmentation;
+    sourceWidth: number;
+    sourceHeight: number;
     scaleX: number;
     scaleY: number;
     level: SlicLevel;
@@ -53,43 +38,6 @@ const resultCache = new Map<string, Promise<SlicResult>>();
 const stripTrailingSlash = (value: string) => value.replace(/\/+$/, '');
 
 export const getSlicComputeOptions = (level: SlicLevel) => LEVEL_CONFIG[level];
-
-export const createSlicMaskForLabels = (result: SlicResult, labelIds: Iterable<number>) =>
-    createMaskForLabelsPkg(result, labelIds);
-
-export const getLabelAtPoint = (result: SlicResult, x: number, y: number) =>
-    getLabelAtPointPkg(result, x, y, result.scaleX, result.scaleY);
-
-export const maskToColoredDataUrl = (
-    mask: Uint8Array,
-    width: number,
-    height: number,
-    color: [number, number, number, number]
-) => {
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-    if (!ctx) {
-        throw new Error('Failed to create canvas for SLIC mask rendering');
-    }
-
-    const imageData = ctx.createImageData(width, height);
-
-    for (let i = 0; i < mask.length; i++) {
-        if (mask[i] !== 1) continue;
-
-        const offset = i * 4;
-        imageData.data[offset] = color[0];
-        imageData.data[offset + 1] = color[1];
-        imageData.data[offset + 2] = color[2];
-        imageData.data[offset + 3] = color[3];
-    }
-
-    ctx.putImageData(imageData, 0, 0);
-    return canvas.toDataURL();
-};
 
 export const resolveSlicImageUrl = (
     imageUrl: string,
@@ -155,36 +103,19 @@ const toSlicResult = (
     prepared: PreparedSlicImage,
     level: SlicLevel
 ): SlicResult => ({
-    labels: segmentation.labels,
-    width: segmentation.width,
-    height: segmentation.height,
-    boundaries: segmentation.boundaries,
-    pixelIndexes: segmentation.pixelIndexes,
-    segmentOffsets: segmentation.segmentOffsets,
-    // Delegate instead of copying so the package's lazy materialization is
-    // only triggered if something actually reads labelPixelIndexes.
-    get labelPixelIndexes() {
-        return segmentation.labelPixelIndexes;
-    },
+    segmentation,
     level,
-    originalWidth: prepared.originalWidth,
-    originalHeight: prepared.originalHeight,
+    sourceWidth: prepared.originalWidth,
+    sourceHeight: prepared.originalHeight,
     scaleX: prepared.scaleX,
     scaleY: prepared.scaleY
 });
 
 const computeLevelResult = async (prepared: PreparedSlicImage, level: SlicLevel) => {
     const engine = await getSlicEngine();
-    const start = performance.now();
     const segmentation = engine.computeSuperpixels(prepared.imageData, {
         ...getSlicComputeOptions(level)
     });
-    const durationMs = performance.now() - start;
-    console.log(
-        `[slic] ${level}: ${segmentation.segmentCount} segments on ` +
-            `${prepared.imageData.width}x${prepared.imageData.height} ` +
-            `(${engine.backend} backend) in ${durationMs.toFixed(1)}ms`
-    );
     return toSlicResult(segmentation, prepared, level);
 };
 

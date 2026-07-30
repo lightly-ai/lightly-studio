@@ -214,13 +214,6 @@
 
         return true;
     });
-    const shouldShowSlicToolInToolbar = $derived.by(() => {
-        if (annotationLabelContext.isOnAnnotationDetailsView) {
-            return isSegmentationType(sample.annotations[0]?.annotation_type);
-        }
-
-        return true;
-    });
 </script>
 
 <ZoomableContainer
@@ -236,10 +229,7 @@
 >
     {#snippet toolbarContent()}
         {#if $isEditingMode}
-            <SampleDetailsToolbar
-                showSegmentationTool={shouldShowSegmentationToolInToolbar}
-                showSlicTool={shouldShowSlicToolInToolbar}
-            />
+            <SampleDetailsToolbar showSegmentationTool={shouldShowSegmentationToolInToolbar} />
         {/if}
     {/snippet}
     {#snippet zoomPanelContent()}
@@ -360,6 +350,7 @@
                     {drawerStrokeColor}
                     {imageUrl}
                     {refetch}
+                    onFinishBrushPendingChange={handlePendingChange}
                 />
             {:else if sampleDetailsToolbarContext.status === 'bounding-box' && !annotationLabelContext.isOnAnnotationDetailsView && annotationTypeInCurrentView == AnnotationType.OBJECT_DETECTION}
                 <SampleObjectDetectionRect

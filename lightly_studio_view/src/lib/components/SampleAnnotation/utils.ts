@@ -28,18 +28,6 @@ export function getBoundingBox(annotation: Annotation): BoundingBox {
     };
 }
 
-export const hasRenderableBoundingBox = (annotation: AnnotationView) => {
-    if (annotation.annotation_type === 'object_detection') {
-        return annotation.object_detection_details != null;
-    }
-
-    if (annotation.annotation_type === 'segmentation_mask') {
-        return annotation.segmentation_details != null;
-    }
-
-    return annotation.annotation_type === 'classification';
-};
-
 /*
 We do have situations when smaller annotations can be covered by bigger one, 
 and not reachable for click.
@@ -61,11 +49,7 @@ export const getAnnotations = (annotations: AnnotationView[]) => {
     }
 
     return annotations
-        .filter(
-            (annotation) =>
-                annotation.annotation_type !== 'classification' &&
-                hasRenderableBoundingBox(annotation)
-        )
+        .filter((annotation) => annotation.annotation_type !== 'classification')
         .sort(sortByAnnotationArea);
 };
 

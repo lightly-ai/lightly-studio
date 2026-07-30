@@ -3,8 +3,13 @@
         useSampleDetailsToolbarContext,
         type SlicLevel
     } from '$lib/contexts/SampleDetailsToolbar.svelte';
+    import { Button } from '$lib/components/ui/button';
 
-    const { context: sampleDetailsToolbarContext, setSlicLevel } = useSampleDetailsToolbarContext();
+    const {
+        context: sampleDetailsToolbarContext,
+        setSlicLevel,
+        retrySlic
+    } = useSampleDetailsToolbarContext();
 
     const levelLabels: Record<SlicLevel, string> = {
         coarse: 'Coarse',
@@ -42,27 +47,29 @@
             <span class="text-sm text-muted-foreground">Level</span>
             <div class="grid grid-cols-3 gap-1">
                 {#each orderedLevels as level}
-                    <button
-                        type="button"
-                        class={`min-w-0 rounded px-2 py-1 text-center text-xs transition
-                            ${
-                                sampleDetailsToolbarContext.slic.level === level
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-background text-muted-foreground hover:bg-accent hover:text-foreground'
-                            }`}
+                    <Button
+                        variant={sampleDetailsToolbarContext.slic.level === level
+                            ? 'default'
+                            : 'outline'}
+                        size="sm"
+                        class="min-w-0 px-2 text-xs"
                         onclick={() => setSlicLevel(level)}
                     >
                         {levelLabels[level]}
-                    </button>
+                    </Button>
                 {/each}
             </div>
         </div>
 
         <div class="flex items-center justify-between gap-2 text-xs">
             <span class="text-muted-foreground">Status</span>
-            <span class="font-medium text-foreground"
-                >{sampleDetailsToolbarContext.slic.status}</span
-            >
+            {#if sampleDetailsToolbarContext.slic.status === 'error'}
+                <Button variant="outline" size="sm" onclick={retrySlic}>Retry</Button>
+            {:else}
+                <span class="font-medium text-foreground">
+                    {sampleDetailsToolbarContext.slic.status}
+                </span>
+            {/if}
         </div>
     </div>
 </div>
