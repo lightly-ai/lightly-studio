@@ -146,6 +146,7 @@ export const useGlobalStorage = () => {
     const updateCategoricalMetadataValues = (values: CategoricalMetadataValues) => {
         categoricalMetadataValues.set(values);
     };
+
     const updateMetadataBounds = (bounds: MetadataBounds) => {
         metadataBounds.set(bounds);
     };
