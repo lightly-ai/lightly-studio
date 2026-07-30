@@ -15,26 +15,28 @@ interface UseExportSamplesCountReturn {
     count: Readable<number>;
 }
 
-/**
- * Hook for exporting collection data with filters
- * @param params Export parameters including collection_id and filters
- * @returns Object containing export state and trigger function
- */
-export function useExportSamplesCount({
-    collection_id,
-    includeFilter,
-    excludeFilter,
-    collectionFilter
-}: UseExportSamplesCountProps): UseExportSamplesCountReturn {
+export function useExportSamplesCount(
+    getProps: () => UseExportSamplesCountProps
+): UseExportSamplesCountReturn {
     const count = writable(0);
     const error = writable<string | undefined>(undefined);
     const isLoading = writable(false);
 
-    const hasIncludeFilter = includeFilter && Object.keys(includeFilter).length > 0;
-    const hasExcludeFilter = excludeFilter && Object.keys(excludeFilter).length > 0;
-    const hasCollectionFilter = collectionFilter != null;
-    if (hasIncludeFilter || hasExcludeFilter || hasCollectionFilter) {
+    $effect(() => {
+        const { collection_id, includeFilter, excludeFilter, collectionFilter } = getProps();
+
+        const hasIncludeFilter = includeFilter != null && Object.keys(includeFilter).length > 0;
+        const hasExcludeFilter = excludeFilter != null && Object.keys(excludeFilter).length > 0;
+        const hasCollectionFilter = collectionFilter != null;
+
+        if (!hasIncludeFilter && !hasExcludeFilter && !hasCollectionFilter) {
+            return;
+        }
+
+        const controller = new AbortController();
+
         isLoading.set(true);
+        error.set(undefined);
 
         exportCollectionStats({
             path: { collection_id },
@@ -42,24 +44,27 @@ export function useExportSamplesCount({
                 include: includeFilter,
                 exclude: excludeFilter,
                 collection_filter: collectionFilter
-            }
+            },
+            signal: controller.signal
         })
             .then((response) => {
-                if (response?.data) {
+                if (response?.data != null) {
                     count.set(response.data);
                 }
             })
             .catch((_error) => {
-                error.set(_error.message);
+                if (!controller.signal.aborted) {
+                    error.set(_error.message);
+                }
             })
             .finally(() => {
-                isLoading.set(false);
+                if (!controller.signal.aborted) {
+                    isLoading.set(false);
+                }
             });
-    }
 
-    return {
-        isLoading,
-        error,
-        count
-    };
+        return () => controller.abort();
+    });
+
+    return { isLoading, error, count };
 }
