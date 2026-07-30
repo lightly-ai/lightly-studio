@@ -544,6 +544,8 @@ def test_export_download__json_file__streams_content_and_deletes_job(
     assert response.headers["Content-Disposition"] == "attachment; filename=export.json"
     assert response.json() == {"items": [1, 2, 3]}
     assert export_job_resolver.get(session=db_session, export_key=job.export_key) is None
+    assert not export_path.exists()
+    assert export_dir.exists()
 
 
 def test_export_download__txt_file__streams_content_and_deletes_job(
@@ -569,6 +571,8 @@ def test_export_download__txt_file__streams_content_and_deletes_job(
     assert response.headers["Content-Disposition"] == "attachment; filename=export.txt"
     assert response.text == "path/a.jpg\npath/b.jpg\n"
     assert export_job_resolver.get(session=db_session, export_key=job.export_key) is None
+    assert not export_path.exists()
+    assert export_dir.exists()
 
 
 def test_export_download__directory__streams_as_zip_and_deletes_job(
@@ -599,3 +603,5 @@ def test_export_download__directory__streams_as_zip_and_deletes_job(
         assert zip_ref.read("my_export/labels.txt") == b"cat\ndog\n"
 
     assert export_job_resolver.get(session=db_session, export_key=job.export_key) is None
+    assert not export_dir.exists()
+    assert container.exists()

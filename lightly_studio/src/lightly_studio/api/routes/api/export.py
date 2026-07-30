@@ -357,13 +357,13 @@ def _stream_file_and_cleanup(
     session: Session,
     export_key: UUID,
 ) -> Generator[bytes, None, None]:
-    """Stream a file, remove its parent temp directory, and delete the DB row afterwards."""
+    """Stream a file, remove it, and delete the DB row afterwards."""
     try:
         with export_path.open("rb") as file:
             while chunk := file.read(_STREAM_CHUNK_SIZE_BYTES):
                 yield chunk
     finally:
-        shutil.rmtree(export_path.parent, ignore_errors=True)
+        export_path.unlink(missing_ok=True)
         try:
             export_job_resolver.delete(session=session, export_key=export_key)
         except Exception as exc:
@@ -377,7 +377,7 @@ def _stream_dir_and_cleanup(
     session: Session,
     export_key: UUID,
 ) -> Generator[bytes, None, None]:
-    """Zip a directory, stream the archive, remove the temp directory, and delete the DB row."""
+    """Zip the export directory, stream the archive, remove both, and delete the DB row."""
     try:
         archive_path = PathlibPath(
             shutil.make_archive(
@@ -388,7 +388,7 @@ def _stream_dir_and_cleanup(
             )
         )
     except Exception:
-        shutil.rmtree(dir_path.parent, ignore_errors=True)
+        shutil.rmtree(dir_path, ignore_errors=True)
         try:
             export_job_resolver.delete(session=session, export_key=export_key)
         except Exception as exc:
@@ -396,6 +396,7 @@ def _stream_dir_and_cleanup(
                 "Failed to delete export job %s from database: %s", export_key, exc, exc_info=True
             )
         raise
+    shutil.rmtree(dir_path, ignore_errors=True)
     yield from _stream_file_and_cleanup(archive_path, session=session, export_key=export_key)
 
 
