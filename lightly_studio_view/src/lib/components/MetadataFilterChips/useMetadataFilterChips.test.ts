@@ -27,6 +27,7 @@ describe('useMetadataFilterChips', () => {
         storage.updateMetadataBounds({});
         storage.updateMetadataValues({});
         trackEvent.mockClear();
+        storage.updateCategoricalMetadataValues({});
     });
 
     it('provides a chip only for narrowed filters, not for full-range ones', () => {
