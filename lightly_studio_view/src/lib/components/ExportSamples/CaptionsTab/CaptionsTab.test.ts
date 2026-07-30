@@ -19,7 +19,7 @@ vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
 }));
 
 describe('CaptionsTab', () => {
-    let openSpy: ReturnType<typeof vi.spyOn<typeof window, 'open'>> | undefined;
+    let openSpy: { mockRestore: () => void } | undefined;
 
     beforeEach(() => {
         mocks.exportCollectionCaptionsPrepare.mockReset();
@@ -35,6 +35,7 @@ describe('CaptionsTab', () => {
     });
 
     it('calls the API with correct arguments on download', async () => {
+        openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
         mocks.exportCollectionCaptionsPrepare.mockResolvedValue({ data: { export_key: 'key123' } });
         render(CaptionsTab);
         await fireEvent.click(screen.getByTestId('submit-button-captions'));
