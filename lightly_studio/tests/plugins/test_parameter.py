@@ -4,6 +4,7 @@ from dataclasses import asdict
 import pytest
 
 from lightly_studio.plugins.parameter import (
+    BoolParameter,
     FloatParameter,
     IntParameter,
     StringParameter,
@@ -141,7 +142,7 @@ class TestTableParameter:
     def test_init__column_not_a_parameter(self) -> None:
         with pytest.raises(
             TypeError,
-            match=re.escape("Expected column of type 'StringParameter' but got <class 'str'>"),
+            match=re.escape("Expected column of type 'BuiltinParameter' but got <class 'str'>"),
         ):
             _ = TableParameter(name="prompts", columns=["prompt"])  # type: ignore[list-item]
 
@@ -153,7 +154,7 @@ class TestTableParameter:
         with pytest.raises(
             TypeError,
             match=re.escape(
-                "Expected column of type 'StringParameter' but got "
+                "Expected column of type 'BuiltinParameter' but got "
                 "<class 'lightly_studio.plugins.parameter.TableParameter'>"
             ),
         ):
@@ -203,13 +204,34 @@ class TestTableParameter:
                 default=[{"prompt": "person", "confidence": "0.5"}],
             )
 
-    def test_init__cell_not_a_string(self) -> None:
+    def test_init__mixed_column_types(self) -> None:
+        param = TableParameter(
+            name="prompts",
+            columns=[
+                StringParameter(name="prompt"),
+                FloatParameter(name="threshold"),
+                IntParameter(name="max_masks"),
+                BoolParameter(name="enabled"),
+            ],
+            default=[{"prompt": "person", "threshold": 0.5, "max_masks": 3, "enabled": True}],
+        )
+
+        assert param.default == [
+            {"prompt": "person", "threshold": 0.5, "max_masks": 3, "enabled": True}
+        ]
+
+    def test_init__cell_type_does_not_match_column(self) -> None:
         with pytest.raises(
             TypeError,
-            match=re.escape("Expected cell 'prompt' in row 0 of type 'str' but got <class 'int'>"),
+            match=re.escape(
+                "Invalid cell 'threshold' in row 0: Expected value of type 'float' but got "
+                "<class 'str'>"
+            ),
         ):
             _ = TableParameter(
-                name="prompts", columns=[StringParameter(name="prompt")], default=[{"prompt": 1}]
+                name="prompts",
+                columns=[FloatParameter(name="threshold")],
+                default=[{"threshold": "0.5"}],
             )
 
     def test_init__reports_second_row_index(self) -> None:
