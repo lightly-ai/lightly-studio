@@ -12,12 +12,15 @@
     import PanelHeader from './PanelHeader/PanelHeader.svelte';
     import { selectVisibleCounts } from './selectVisibleCounts';
     import {
+        CATEGORICAL_DISTRIBUTION_SORT_LABELS,
         HISTOGRAM_BIN_COUNT_ITEMS,
         type DistributionConfig,
         type DistributionSource,
         type DistributionSourceGroup
     } from './types';
     import { AnnotationCountMode } from '$lib/api/lightly_studio_local/types.gen';
+    import { MetadataCategoricalFilter } from './MetadataCategoricalFilter';
+    import type { CategoricalMetadataValue } from '$lib/services/types';
 
     interface Props {
         /**
@@ -59,6 +62,12 @@
         histogramBinCount?: number;
         /** Called when the user picks a new histogram bin count. */
         onHistogramBinCountChange?: (binCount: number) => void;
+        /** Called when a concrete categorical value or Missing is toggled. */
+        onCategoricalValueToggle?: (groupId: string, value: CategoricalMetadataValue) => void;
+        /** Removes every categorical value selected for the given group. */
+        onCategoricalValuesClear?: (groupId: string) => void;
+        /** Retries a failed categorical distribution request. */
+        onCategoricalRetry?: () => void;
     }
 
     const {
@@ -72,7 +81,10 @@
         initialCountMode = AnnotationCountMode.OBJECTS,
         onHistogramRangeSelect,
         histogramBinCount = 20,
-        onHistogramBinCountChange
+        onHistogramBinCountChange,
+        onCategoricalValueToggle,
+        onCategoricalValuesClear,
+        onCategoricalRetry
     }: Props = $props();
 
     // Normalise to a source list so the rest of the panel has one code path.
@@ -85,7 +97,7 @@
     let selectedGroupId = $state<string | undefined>(undefined);
 
     const groupHasContent = (group: DistributionSourceGroup): boolean =>
-        (group.data?.length ?? 0) > 0 || group.histogram != null;
+        (group.data?.length ?? 0) > 0 || group.histogram != null || group.categorical != null;
 
     const sourceHasContent = (source: DistributionSource): boolean =>
         (source.data?.length ?? 0) > 0 ||
@@ -109,6 +121,37 @@
     // A group/source carrying bins renders as a histogram instead of a bar
     // chart; the categorical controls (sort, top-N, orientation) don't apply.
     const activeHistogram = $derived(activeGroup?.histogram ?? activeSource.histogram ?? null);
+    const activeCategorical = $derived(activeGroup?.categorical ?? null);
+    const categoricalData = $derived<CategoryCount[]>(
+        (activeCategorical?.buckets ?? []).map((bucket) => {
+            // When filteredBuckets is defined (query has returned) look up the
+            // filtered count for this bucket. Absent = 0 (filter removed it entirely).
+            const filteredBucket = activeCategorical?.filteredBuckets?.find(
+                (fb) => fb.id === bucket.id
+            );
+            const filteredCount =
+                activeCategorical?.filteredBuckets !== undefined
+                    ? (filteredBucket?.count ?? 0)
+                    : undefined;
+            return {
+                id: bucket.id,
+                label: bucket.label,
+                count: bucket.count,
+                filteredCount,
+                selectable: bucket.kind !== 'other',
+                pinned: bucket.kind !== 'value',
+                selected:
+                    bucket.kind !== 'other' &&
+                    activeCategorical?.selectedValues.some((value) =>
+                        Object.is(value, bucket.value)
+                    )
+            };
+        })
+    );
+    const displayedData = $derived(activeCategorical ? categoricalData : activeData);
+    const configurationItems = $derived(
+        displayedData.map((item) => ({ value: item.id ?? item.label, label: item.label }))
+    );
     const activeHistogramRange = $derived(activeGroup?.selectedRange ?? activeSource.selectedRange);
     const handleHistogramRangeSelect = (range: HistogramRange) => {
         const groupId = activeGroup?.id ?? activeSource.id;
@@ -130,6 +173,23 @@
         orientation: 'horizontal',
         countMode: initialCountMode
     });
+    const defaultCategoricalConfig: DistributionConfig = {
+        mode: 'topN',
+        n: 1,
+        sortBy: 'count',
+        manualClasses: [],
+        orientation: 'horizontal',
+        countMode: AnnotationCountMode.SAMPLES
+    };
+    let categoricalConfigs = $state<Record<string, DistributionConfig>>({});
+    const categoricalConfig = $derived<DistributionConfig>(
+        activeGroup
+            ? (categoricalConfigs[activeGroup.id] ?? {
+                  ...defaultCategoricalConfig,
+                  n: Math.max(categoricalData.length, 1)
+              })
+            : defaultCategoricalConfig
+    );
     let configDialogOpen = $state(false);
     let expandOpen = $state(false);
     let histogramExpandOpen = $state(false);
@@ -153,16 +213,44 @@
         (activeSource.groups ?? []).map((group) => ({ value: group.id, label: group.label }))
     );
 
-    const visible = $derived(selectVisibleCounts(activeData, config));
-    const totalCount = $derived(activeData.reduce((sum, item) => sum + item.count, 0));
+    const activeViewConfig = $derived<DistributionConfig>(
+        activeCategorical ? categoricalConfig : config
+    );
+    const visible = $derived(selectVisibleCounts(displayedData, activeViewConfig));
+    const totalCount = $derived(displayedData.reduce((sum, item) => sum + item.count, 0));
+
+    const handleCategoricalBarClick = (item: CategoryCount) => {
+        const bucket = activeCategorical?.buckets.find((candidate) => candidate.id === item.id);
+        if (!bucket || bucket.kind === 'other' || !activeGroup) return;
+        onCategoricalValueToggle?.(activeGroup.id, bucket.value);
+    };
+
+    const setCategoricalConfig = (next: DistributionConfig) => {
+        if (!activeGroup) return;
+        categoricalConfigs = {
+            ...categoricalConfigs,
+            [activeGroup.id]: {
+                ...next,
+                countMode: AnnotationCountMode.SAMPLES
+            }
+        };
+    };
 
     function applyConfig(next: DistributionConfig) {
+        if (activeCategorical) {
+            setCategoricalConfig(next);
+            return;
+        }
         if (next.countMode !== config.countMode) {
             onCountModeChange?.(next.countMode ?? AnnotationCountMode.OBJECTS);
         }
         config = next;
     }
 </script>
+
+{#snippet categoricalEmptyState()}
+    <span>No matching samples for this metadata field.</span>
+{/snippet}
 
 <div
     class="flex h-full min-w-0 flex-1 flex-col rounded-[1vw] bg-card p-4"
@@ -259,22 +347,82 @@
                 />
             </div>
         </div>
-    {:else if activeData.length > 0}
-        <PanelHeader
-            {config}
-            classCount={activeData.length}
-            visibleClassCount={visible.length}
-            totalCount={showTotalCount ? totalCount : undefined}
-            {valueNoun}
-            onConfigure={() => (configDialogOpen = true)}
-            onShowAll={() => (config = { ...config, mode: 'topN', n: activeData.length })}
-            onToggleOrientation={() =>
-                (config = {
-                    ...config,
-                    orientation: config.orientation === 'horizontal' ? 'vertical' : 'horizontal'
-                })}
-            onExpand={() => (expandOpen = true)}
+    {:else if activeCategorical && activeGroup}
+        <MetadataCategoricalFilter
+            buckets={activeCategorical.buckets}
+            selectedValues={activeCategorical.selectedValues}
+            loading={activeCategorical.loading}
+            onToggle={(value) => onCategoricalValueToggle?.(activeGroup.id, value)}
+            onClear={() => onCategoricalValuesClear?.(activeGroup.id)}
         />
+        {#if activeCategorical.loading && activeCategorical.buckets.length > 0}
+            <p class="mt-1 text-xs text-muted-foreground" role="status">Updating values…</p>
+        {/if}
+        {#if activeCategorical.error && activeCategorical.buckets.length > 0}
+            <div
+                class="mt-1 flex items-center justify-between gap-2 text-xs text-destructive"
+                role="alert"
+            >
+                <span>Could not update metadata distribution.</span>
+                {#if onCategoricalRetry}
+                    <button
+                        class="underline max-sm:min-h-11"
+                        type="button"
+                        onclick={onCategoricalRetry}
+                    >
+                        Retry
+                    </button>
+                {/if}
+            </div>
+        {/if}
+        {#if categoricalData.length > 0}
+            <div class="mt-2">
+                <PanelHeader
+                    config={categoricalConfig}
+                    classCount={categoricalData.length}
+                    visibleClassCount={visible.length}
+                    {totalCount}
+                    {valueNoun}
+                    categoryNoun="value"
+                    categoryNounPlural="values"
+                    sortLabels={CATEGORICAL_DISTRIBUTION_SORT_LABELS}
+                    onConfigure={() => (configDialogOpen = true)}
+                    onShowAll={() =>
+                        setCategoricalConfig({
+                            ...categoricalConfig,
+                            mode: 'topN',
+                            n: categoricalData.length
+                        })}
+                    onToggleOrientation={() =>
+                        setCategoricalConfig({
+                            ...categoricalConfig,
+                            orientation:
+                                categoricalConfig.orientation === 'horizontal'
+                                    ? 'vertical'
+                                    : 'horizontal'
+                        })}
+                    onExpand={() => (expandOpen = true)}
+                />
+            </div>
+        {/if}
+    {:else if activeData.length > 0}
+        <div class="mt-2">
+            <PanelHeader
+                {config}
+                classCount={activeData.length}
+                visibleClassCount={visible.length}
+                totalCount={showTotalCount ? totalCount : undefined}
+                {valueNoun}
+                onConfigure={() => (configDialogOpen = true)}
+                onShowAll={() => (config = { ...config, mode: 'topN', n: activeData.length })}
+                onToggleOrientation={() =>
+                    (config = {
+                        ...config,
+                        orientation: config.orientation === 'horizontal' ? 'vertical' : 'horizontal'
+                    })}
+                onExpand={() => (expandOpen = true)}
+            />
+        </div>
     {/if}
     <div
         class="min-h-0 flex-1 overflow-y-auto dark:[color-scheme:dark]"
@@ -289,32 +437,79 @@
                 showAxes
                 onRangeSelect={onHistogramRangeSelect ? handleHistogramRangeSelect : undefined}
             />
+        {:else if activeCategorical?.loading && activeCategorical.buckets.length === 0}
+            <div class="p-8 text-center text-sm text-muted-foreground" role="status">
+                Loading metadata distribution…
+            </div>
+        {:else if activeCategorical?.error && activeCategorical.buckets.length === 0}
+            <div class="space-y-2 p-8 text-center text-sm" role="alert">
+                <p class="text-destructive">Could not load metadata distribution.</p>
+                {#if onCategoricalRetry}
+                    <Button
+                        variant="secondary"
+                        buttonProps={{
+                            size: 'sm',
+                            class: 'max-sm:min-h-11',
+                            onclick: onCategoricalRetry,
+                            'data-testid': 'metadata-categorical-retry'
+                        }}>Retry</Button
+                    >
+                {/if}
+            </div>
         {:else}
+            {#if activeCategorical}
+                <ul class="sr-only" aria-label="Categorical metadata value counts">
+                    {#each activeCategorical.buckets as bucket (bucket.id)}
+                        <li>
+                            {bucket.label}: {bucket.count} samples{bucket.kind === 'other'
+                                ? ', aggregated and not selectable'
+                                : activeCategorical.selectedValues.some((value) =>
+                                        Object.is(value, bucket.value)
+                                    )
+                                  ? ', selected'
+                                  : ''}
+                        </li>
+                    {/each}
+                </ul>
+            {/if}
             <BarChart
                 data={visible}
-                orientation={config.orientation}
+                orientation={activeViewConfig.orientation}
                 maxHeightPx={chartHeight || undefined}
                 maxWidthPx={clientWidth || undefined}
                 {totalCount}
-                {onBarClick}
+                onBarClick={activeCategorical ? handleCategoricalBarClick : onBarClick}
+                emptyState={activeCategorical ? categoricalEmptyState : undefined}
+                gridTopPx={4}
             />
         {/if}
     </div>
 </div>
-<DistributionConfigDialog
-    bind:open={configDialogOpen}
-    allClasses={activeData.map((item) => item.label)}
-    {config}
-    onApply={applyConfig}
-/>
-<ExpandDialog
-    bind:open={expandOpen}
-    data={activeData}
-    {config}
-    {valueNoun}
-    onConfigChange={applyConfig}
-    {onBarClick}
-/>
+{#if !activeHistogram}
+    <DistributionConfigDialog
+        bind:open={configDialogOpen}
+        allClasses={displayedData.map((item) => item.label)}
+        items={configurationItems}
+        config={activeViewConfig}
+        showCountMode={!activeCategorical}
+        itemNoun={activeCategorical ? 'value' : 'class'}
+        itemNounPlural={activeCategorical ? 'values' : 'classes'}
+        sortLabels={activeCategorical ? CATEGORICAL_DISTRIBUTION_SORT_LABELS : undefined}
+        onApply={applyConfig}
+    />
+    <ExpandDialog
+        bind:open={expandOpen}
+        data={displayedData}
+        config={activeViewConfig}
+        {valueNoun}
+        categoryNoun={activeCategorical ? 'value' : 'class'}
+        categoryNounPlural={activeCategorical ? 'values' : 'classes'}
+        sortLabels={activeCategorical ? CATEGORICAL_DISTRIBUTION_SORT_LABELS : undefined}
+        showCountMode={!activeCategorical}
+        onConfigChange={applyConfig}
+        onBarClick={activeCategorical ? handleCategoricalBarClick : onBarClick}
+    />
+{/if}
 {#if activeHistogram}
     <HistogramExpandDialog
         bind:open={histogramExpandOpen}

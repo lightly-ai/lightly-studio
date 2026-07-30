@@ -8,11 +8,14 @@ import { AnnotationCountMode, AnnotationType } from '$lib/api/lightly_studio_loc
 
 const echartsMock = vi.hoisted(() => {
     const zrHandlers: Record<string, (event: { offsetX: number; offsetY: number }) => void> = {};
+    let clickHandler: ((params: { dataIndex?: number }) => void) | undefined;
     const instance = {
         setOption: vi.fn(),
         resize: vi.fn(),
         dispose: vi.fn(),
-        on: vi.fn(),
+        on: vi.fn((event: string, handler: (params: { dataIndex?: number }) => void) => {
+            if (event === 'click') clickHandler = handler;
+        }),
         // 2 bins across a 200px-wide canvas → 100px per bin index.
         convertFromPixel: vi.fn((_finder: unknown, offsetX: number) => offsetX / 100),
         getZr: () => ({
@@ -22,7 +25,12 @@ const echartsMock = vi.hoisted(() => {
             off: vi.fn()
         })
     };
-    return { init: vi.fn(() => instance), instance, zrHandlers };
+    return {
+        init: vi.fn(() => instance),
+        instance,
+        zrHandlers,
+        getClickHandler: () => clickHandler
+    };
 });
 
 vi.mock('echarts/core', () => ({
@@ -93,8 +101,10 @@ describe('DatasetDistributionPanel', () => {
         // Horizontal default: categories live on the y-axis.
         const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
             yAxis: { data: string[] };
+            grid: { top: number };
         };
         expect(option.yAxis.data).toEqual(['person', 'dog', 'car']);
+        expect(option.grid.top).toBe(4);
     });
 
     it('applies a new top-N from the config dialog', async () => {
@@ -216,6 +226,272 @@ describe('DatasetDistributionPanel', () => {
         expect(screen.getByTestId('histogram')).toBeInTheDocument();
         expect(screen.getByTestId('dataset-distribution-histogram-summary')).toHaveTextContent(
             '100 samples · 2 bins · 0–1'
+        );
+    });
+
+    it('preserves categorical endpoint order and toggles typed buckets but not Other', () => {
+        const onCategoricalValueToggle = vi.fn();
+        const sources: DistributionSource[] = [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                groups: [
+                    {
+                        id: 'city',
+                        label: 'city',
+                        categorical: {
+                            selectedValues: ['Missing'],
+                            buckets: [
+                                {
+                                    id: 'literal',
+                                    kind: 'value',
+                                    value: 'Missing',
+                                    label: 'Missing',
+                                    count: 4
+                                },
+                                {
+                                    id: 'missing',
+                                    kind: 'missing',
+                                    value: null,
+                                    label: 'Missing',
+                                    count: 3
+                                },
+                                { id: 'other', kind: 'other', label: 'Other', count: 2 }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ];
+        render(DatasetDistributionPanel, { props: { sources, onCategoricalValueToggle } });
+
+        const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+            yAxis: { data: string[] };
+            series: [{ data: { itemStyle: { color: string } }[] }];
+            grid: { top: number };
+        };
+        expect(option.yAxis.data).toEqual(['Missing', 'Missing', 'Other']);
+        expect(option.grid.top).toBe(4);
+        // 'Missing' (value) is selected → accent green; the others are dimmed grey.
+        expect(option.series[0].data[0].itemStyle.color).toBe('rgba(59,217,159,0.85)');
+
+        echartsMock.getClickHandler()?.({ dataIndex: 1 });
+        expect(onCategoricalValueToggle).toHaveBeenCalledWith('city', null);
+        echartsMock.getClickHandler()?.({ dataIndex: 2 });
+        expect(onCategoricalValueToggle).toHaveBeenCalledOnce();
+    });
+
+    it('stores categorical orientation per metadata field', async () => {
+        const user = userEvent.setup();
+        const categorical = (label: string) => ({
+            selectedValues: [],
+            buckets: [{ id: label, kind: 'value' as const, value: label, label, count: 1 }]
+        });
+        const sources: DistributionSource[] = [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                groupLabel: 'Metadata key',
+                groups: [
+                    { id: 'city', label: 'city', categorical: categorical('Zurich') },
+                    { id: 'weather', label: 'weather', categorical: categorical('rainy') }
+                ]
+            },
+            { id: 'classes', label: 'Classes', data: [] }
+        ];
+        render(DatasetDistributionPanel, { props: { sources } });
+
+        const orientationToggle = screen.getByTestId('dataset-distribution-toggle-orientation');
+        await fireEvent.click(orientationToggle);
+        expect(orientationToggle).toHaveAccessibleName('Switch to horizontal bars');
+
+        const groupSelect = screen.getByTestId('dataset-distribution-group-select');
+        await user.click(groupSelect);
+        await user.click(await screen.findByRole('option', { name: 'weather' }));
+        expect(orientationToggle).toHaveAccessibleName('Switch to vertical bars');
+
+        await user.click(groupSelect);
+        await user.click(await screen.findByRole('option', { name: 'city' }));
+        expect(orientationToggle).toHaveAccessibleName('Switch to horizontal bars');
+    });
+
+    it('configures, reorients, and expands categorical values', async () => {
+        const sources: DistributionSource[] = [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                valueNoun: 'samples',
+                groups: [
+                    {
+                        id: 'city',
+                        label: 'city',
+                        categorical: {
+                            selectedValues: [],
+                            buckets: [
+                                {
+                                    id: 'zurich',
+                                    kind: 'value',
+                                    value: 'Zurich',
+                                    label: 'Zurich',
+                                    count: 4
+                                },
+                                {
+                                    id: 'missing',
+                                    kind: 'missing',
+                                    value: null,
+                                    label: 'Missing',
+                                    count: 1
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ];
+        render(DatasetDistributionPanel, { props: { sources } });
+
+        expect(screen.getByText(/2 values · sorted by count · 5 samples/)).toBeInTheDocument();
+        const orientationToggle = screen.getByTestId('dataset-distribution-toggle-orientation');
+        expect(orientationToggle).toHaveAccessibleName('Switch to vertical bars');
+
+        await fireEvent.click(orientationToggle);
+        await waitFor(() =>
+            expect(
+                (echartsMock.instance.setOption.mock.lastCall?.[0] as { xAxis: { type: string } })
+                    .xAxis.type
+            ).toBe('category')
+        );
+        expect(orientationToggle).toHaveAccessibleName('Switch to horizontal bars');
+
+        await fireEvent.click(screen.getByTestId('dataset-distribution-configure'));
+        expect(screen.getByText('Configure values')).toBeInTheDocument();
+        expect(screen.queryByTestId('distribution-config-count-mode')).not.toBeInTheDocument();
+        await fireEvent.click(screen.getByText('Cancel'));
+
+        await fireEvent.click(screen.getByTestId('dataset-distribution-expand'));
+        expect(screen.getByTestId('dataset-distribution-expanded-configure')).toBeInTheDocument();
+        const expandedOrientationToggle = screen.getByTestId(
+            'dataset-distribution-expanded-toggle-orientation'
+        );
+        expect(expandedOrientationToggle).toHaveAccessibleName('Switch to horizontal bars');
+
+        await fireEvent.click(expandedOrientationToggle);
+        await waitFor(() =>
+            expect(orientationToggle).toHaveAccessibleName('Switch to vertical bars')
+        );
+    });
+
+    it('manually configures colliding categorical labels by stable bucket id', async () => {
+        const sources: DistributionSource[] = [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                groups: [
+                    {
+                        id: 'status',
+                        label: 'status',
+                        categorical: {
+                            selectedValues: [],
+                            buckets: [
+                                {
+                                    id: 'literal-missing',
+                                    kind: 'value',
+                                    value: 'Missing',
+                                    label: 'Missing',
+                                    count: 4
+                                },
+                                {
+                                    id: 'semantic-missing',
+                                    kind: 'missing',
+                                    value: null,
+                                    label: 'Missing',
+                                    count: 3
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ];
+        render(DatasetDistributionPanel, { props: { sources } });
+
+        await fireEvent.click(screen.getByTestId('dataset-distribution-configure'));
+        await fireEvent.click(screen.getByRole('tab', { name: 'Manual' }));
+        const missingOptions = screen.getAllByText('Missing');
+        expect(missingOptions).toHaveLength(2);
+        await fireEvent.click(missingOptions[1]);
+        await fireEvent.click(screen.getByTestId('distribution-config-apply'));
+
+        const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+            yAxis: { data: string[] };
+            series: [{ data: { value: number }[] }];
+        };
+        expect(option.yAxis.data).toEqual(['Missing']);
+        expect(option.series[0].data[0].value).toBe(3);
+    });
+
+    it('shows categorical loading and retryable error states', async () => {
+        const onCategoricalRetry = vi.fn();
+        const source = (state: { loading?: boolean; error?: string }): DistributionSource[] => [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                groups: [
+                    {
+                        id: 'city',
+                        label: 'city',
+                        categorical: { buckets: [], selectedValues: ['Zurich'], ...state }
+                    }
+                ]
+            }
+        ];
+        const view = render(DatasetDistributionPanel, {
+            props: { sources: source({ loading: true }), onCategoricalRetry }
+        });
+        expect(screen.getByRole('status')).toHaveTextContent('Loading metadata distribution');
+
+        await view.rerender({
+            sources: source({ error: 'network failure' }),
+            onCategoricalRetry
+        });
+        expect(screen.getByRole('alert')).toHaveTextContent('Could not load metadata distribution');
+        await fireEvent.click(screen.getByTestId('metadata-categorical-retry'));
+        expect(onCategoricalRetry).toHaveBeenCalledOnce();
+    });
+
+    it('keeps stale categorical bars visible after a refetch error', () => {
+        const sources: DistributionSource[] = [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                groups: [
+                    {
+                        id: 'city',
+                        label: 'city',
+                        categorical: {
+                            buckets: [
+                                {
+                                    id: 'zurich',
+                                    kind: 'value',
+                                    value: 'Zurich',
+                                    label: 'Zurich',
+                                    count: 4
+                                }
+                            ],
+                            selectedValues: [],
+                            error: 'network failure'
+                        }
+                    }
+                ]
+            }
+        ];
+
+        render(DatasetDistributionPanel, { props: { sources } });
+
+        expect(screen.getByRole('alert')).toHaveTextContent('Could not update');
+        expect(screen.getByTestId('bar-chart')).toBeInTheDocument();
+        expect(screen.getByLabelText('Categorical metadata value counts')).toHaveTextContent(
+            'Zurich: 4 samples'
         );
     });
 
