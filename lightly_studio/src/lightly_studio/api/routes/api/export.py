@@ -17,10 +17,10 @@ from pydantic import BaseModel
 from sqlmodel import Field, Session
 
 from lightly_studio.api.routes.api import collection as collection_api
-from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.database.db_manager import SessionDep
+from lightly_studio.errors import NotFoundError
 from lightly_studio.export import image_dataset_export, video_dataset_export
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.export_format import ExportFormat
@@ -325,14 +325,11 @@ def export_download(
     """Stream the export identified by *export_key*."""
     job = export_job_resolver.get(session=session, export_key=export_key)
     if job is None:
-        raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Export key not found.")
+        raise NotFoundError("Export key not found.")
 
     export_path = PathlibPath(job.export_path)
     if not export_path.exists():
-        raise HTTPException(
-            status_code=HTTP_STATUS_NOT_FOUND,
-            detail="Export file not found.",
-        )
+        raise NotFoundError("Export file not found.")
     if export_path.is_dir():
         return StreamingResponse(
             content=_stream_dir_and_cleanup(export_path, session=session, export_key=export_key),
