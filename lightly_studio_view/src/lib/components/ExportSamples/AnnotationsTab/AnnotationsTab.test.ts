@@ -1,0 +1,99 @@
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { writable } from 'svelte/store';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import AnnotationsTab from './AnnotationsTab.svelte';
+
+const pageMock = vi.hoisted(() => ({ params: { collection_id: 'test-collection' } }));
+vi.mock('$app/state', () => ({ page: pageMock }));
+
+const mocks = vi.hoisted(() => ({
+    exportCollectionAnnotationsPrepare: vi.fn()
+}));
+vi.mock('$lib/api/lightly_studio_local', () => ({
+    exportCollectionAnnotationsPrepare: mocks.exportCollectionAnnotationsPrepare
+}));
+
+const imageFilterStore = writable(null);
+vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
+    useImageFilters: () => ({ imageFilter: imageFilterStore })
+}));
+
+const defaultProps = {
+    exportFormat: 'object_detection_coco' as const,
+    description: 'Export in COCO format',
+    annotationSources: [{ id: 'source-1', name: 'Source 1' }],
+    selectedAnnotationCollectionId: undefined,
+    testId: 'submit-button-annotations'
+};
+
+describe('AnnotationsTab', () => {
+    beforeEach(() => {
+        mocks.exportCollectionAnnotationsPrepare.mockReset();
+    });
+
+    it('renders the description text', () => {
+        render(AnnotationsTab, { props: defaultProps });
+        expect(screen.getByText('Export in COCO format')).toBeInTheDocument();
+    });
+
+    it('hides the annotation source select when there is only one source', () => {
+        render(AnnotationsTab, { props: defaultProps });
+        expect(screen.queryByText('Annotation Source')).not.toBeInTheDocument();
+    });
+
+    it('shows the annotation source select when there are multiple sources', () => {
+        render(AnnotationsTab, {
+            props: {
+                ...defaultProps,
+                annotationSources: [
+                    { id: 'source-1', name: 'Source 1' },
+                    { id: 'source-2', name: 'Source 2' }
+                ]
+            }
+        });
+        expect(screen.getByText('Annotation Source')).toBeInTheDocument();
+    });
+
+    it('calls the API using the first annotation source when none is selected', async () => {
+        vi.spyOn(window, 'open').mockReturnValue(null);
+        mocks.exportCollectionAnnotationsPrepare.mockResolvedValue({
+            data: { export_key: 'key123' }
+        });
+        render(AnnotationsTab, { props: defaultProps });
+        await fireEvent.click(screen.getByTestId('submit-button-annotations'));
+        await waitFor(() => {
+            expect(mocks.exportCollectionAnnotationsPrepare).toHaveBeenCalledWith({
+                path: { collection_id: 'test-collection' },
+                body: {
+                    export_format: 'object_detection_coco',
+                    annotation_collection_id: 'source-1',
+                    image_filter: null
+                }
+            });
+        });
+    });
+
+    it('opens a new tab with the download URL on success', async () => {
+        const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
+        mocks.exportCollectionAnnotationsPrepare.mockResolvedValue({
+            data: { export_key: 'key123' }
+        });
+        render(AnnotationsTab, { props: defaultProps });
+        await fireEvent.click(screen.getByTestId('submit-button-annotations'));
+        await waitFor(() => {
+            expect(openSpy).toHaveBeenCalledWith(
+                expect.stringContaining('/export/download/key123'),
+                '_blank'
+            );
+        });
+    });
+
+    it('shows an error message when the API fails', async () => {
+        mocks.exportCollectionAnnotationsPrepare.mockRejectedValue(new Error('Network error'));
+        render(AnnotationsTab, { props: defaultProps });
+        await fireEvent.click(screen.getByTestId('submit-button-annotations'));
+        await waitFor(() => {
+            expect(screen.getByText(/Export failed/)).toBeInTheDocument();
+        });
+    });
+});
