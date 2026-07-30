@@ -6,8 +6,7 @@ import type {
     VideoFilter,
     VideoFieldsBoundsView
 } from '$lib/api/lightly_studio_local/types.gen';
-import type { CategoricalMetadataValues } from '$lib/services/types';
-type MetadataValues = Record<string, { min: number; max: number }>;
+import type { CategoricalMetadataValues, MetadataValues } from '$lib/services/types';
 
 export type VideoFilterParams = {
     collection_id: string;

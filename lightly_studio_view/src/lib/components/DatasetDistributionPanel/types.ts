@@ -2,12 +2,19 @@ import type { CategoryCount } from '$lib/components/BarChart';
 import type { ClassSetSelection } from '$lib/components/ClassSetConfig';
 import { type AnnotationCountMode } from '$lib/api/lightly_studio_local/types.gen';
 import type { HistogramData, HistogramRange } from '$lib/components/Histogram';
+import type { CategoricalMetadataBucket } from '$lib/hooks/useCategoricalMetadataDistribution/types';
+import type { CategoricalMetadataValue } from '$lib/services/types';
 
 export type DistributionSortOption = 'count' | 'name';
 
 export const DISTRIBUTION_SORT_LABELS: Record<DistributionSortOption, string> = {
     count: 'Count',
     name: 'Class name'
+};
+
+export const CATEGORICAL_DISTRIBUTION_SORT_LABELS: Record<DistributionSortOption, string> = {
+    count: 'Count',
+    name: 'Value'
 };
 
 /** Bar layout for the distribution chart. */
@@ -32,6 +39,21 @@ export interface DistributionSourceGroup {
      * metadata filter). Bins outside it render dimmed.
      */
     selectedRange?: HistogramRange;
+    /** Controlled categorical distribution and selection state. */
+    categorical?: {
+        buckets: CategoricalMetadataBucket[];
+        /**
+         * Buckets from the same query with all sidebar filters applied.
+         * When provided, each bar shows a grey background at the full `count`
+         * with a coloured foreground at the filtered count, giving context for
+         * how active filters affect the distribution.
+         * Omit (undefined) while the filtered query is still loading.
+         */
+        filteredBuckets?: CategoricalMetadataBucket[];
+        selectedValues: CategoricalMetadataValue[];
+        loading?: boolean;
+        error?: string;
+    };
 }
 
 /**

@@ -93,6 +93,19 @@ describe('createImagesInfiniteOptions', () => {
             });
             expect(options1.queryKey).not.toEqual(options2.queryKey);
         });
+
+        it('includes typed categorical selections in the query key', () => {
+            const categoricalMetadataValues = { city: ['Zurich', null] };
+            const options = createImagesInfiniteOptions({
+                collection_id: 'col-1',
+                mode: 'normal',
+                categorical_metadata_values: categoricalMetadataValues
+            });
+
+            expect(options.queryKey[4]).toMatchObject({
+                categorical_metadata_values: categoricalMetadataValues
+            });
+        });
     });
 
     describe('enabled', () => {
