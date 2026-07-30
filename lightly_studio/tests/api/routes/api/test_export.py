@@ -507,7 +507,7 @@ def test_export_collection_youtube_vis__wrong_export_format(
     assert response.status_code == HTTP_STATUS_BAD_REQUEST
 
 
-def test_export_download__not_found__returns_404(
+def test_export_download__not_found_returns_404(
     db_session: Session,
     test_client: TestClient,
 ) -> None:
@@ -521,7 +521,7 @@ def test_export_download__not_found__returns_404(
     assert response.status_code == HTTP_STATUS_NOT_FOUND
 
 
-def test_export_download__json_file__streams_content_and_deletes_job(
+def test_export_download__json_file_streams_content_and_deletes_job(
     tmp_path: Path,
     db_session: Session,
     test_client: TestClient,
@@ -548,7 +548,7 @@ def test_export_download__json_file__streams_content_and_deletes_job(
     assert export_dir.exists()
 
 
-def test_export_download__txt_file__streams_content_and_deletes_job(
+def test_export_download__txt_file_streams_content_and_deletes_job(
     tmp_path: Path,
     db_session: Session,
     test_client: TestClient,
@@ -575,7 +575,7 @@ def test_export_download__txt_file__streams_content_and_deletes_job(
     assert export_dir.exists()
 
 
-def test_export_download__directory__streams_as_zip_and_deletes_job(
+def test_export_download__directory_streams_as_zip_and_deletes_job(
     tmp_path: Path,
     db_session: Session,
     test_client: TestClient,
