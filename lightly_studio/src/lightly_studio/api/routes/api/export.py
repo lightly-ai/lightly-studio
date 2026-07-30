@@ -394,7 +394,9 @@ def _stream_dir_and_cleanup(
             )
         raise
     shutil.rmtree(dir_path, ignore_errors=True)
-    yield from _stream_file_and_cleanup(export_path=archive_path, session=session, export_key=export_key)
+    yield from _stream_file_and_cleanup(
+        export_path=archive_path, session=session, export_key=export_key
+    )
 
 
 def _media_type_for_path(path: PathlibPath) -> str:
