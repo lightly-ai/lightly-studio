@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import shutil
+import tempfile
 from collections.abc import Generator
 from datetime import datetime, timezone
 from pathlib import Path as PathlibPath
-from tempfile import TemporaryDirectory, mkdtemp
+from tempfile import TemporaryDirectory
 from typing import Annotated
 from uuid import UUID
 
@@ -204,6 +205,12 @@ class ExportBody(BaseModel):
     )
 
 
+class ExportKeyResponse(BaseModel):
+    """Response body for all prepare endpoints."""
+
+    export_key: UUID
+
+
 # This endpoint should be a GET, however due to the potential huge size
 # of sample_ids, it is a POST request to avoid URL length limitations.
 # A body with a GET request is supported by fastAPI however it has undefined
@@ -322,12 +329,6 @@ def export_collection_youtube_vis(
     )
 
 
-class ExportKeyResponse(BaseModel):
-    """Response body for all prepare endpoints."""
-
-    export_key: UUID
-
-
 @export_router.post("/export/prepare")
 def export_collection_prepare(
     collection: Annotated[
@@ -347,7 +348,7 @@ def export_collection_prepare(
         collection_filter=body.collection_filter,
     )
 
-    temp_dir = PathlibPath(mkdtemp())
+    temp_dir = PathlibPath(tempfile.mkdtemp())
     filename = f"{collection.name}_exported_{datetime.now(timezone.utc)}.txt"
     output_path = temp_dir / filename
     try:
