@@ -6,7 +6,7 @@ import shutil
 from collections.abc import Generator
 from datetime import datetime, timezone
 from pathlib import Path as PathlibPath
-from tempfile import TemporaryDirectory
+from tempfile import TemporaryDirectory, mkdtemp
 from typing import Annotated
 from uuid import UUID
 
@@ -22,7 +22,7 @@ from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.export import image_dataset_export, video_dataset_export
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.export_format import ExportFormat
-from lightly_studio.resolvers import collection_resolver
+from lightly_studio.resolvers import collection_resolver, export_job_resolver
 from lightly_studio.resolvers.collection_resolver.export import ExportFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
 
@@ -320,6 +320,43 @@ def export_collection_youtube_vis(
             "Content-Disposition": f"attachment; filename={output_path.name}",
         },
     )
+
+
+class ExportKeyResponse(BaseModel):
+    """Response body for all prepare endpoints."""
+
+    export_key: UUID
+
+
+@export_router.post("/export/prepare")
+def export_collection_prepare(
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(collection_api.get_and_validate_collection_id),
+    ],
+    session: SessionDep,
+    body: ExportBody,
+) -> ExportKeyResponse:
+    """Generate the filename export and persist its path."""
+    exported = collection_resolver.export(
+        session=session,
+        collection_id=collection.collection_id,
+        include=body.include,
+        exclude=body.exclude,
+        collection_filter=body.collection_filter,
+    )
+
+    temp_dir = PathlibPath(mkdtemp())
+    filename = f"{collection.name}_exported_{datetime.now(timezone.utc)}.txt"
+    output_path = temp_dir / filename
+    try:
+        output_path.write_text("\n".join(exported))
+        export = export_job_resolver.create(session=session, export_path=str(output_path))
+    except Exception:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise
+    return ExportKeyResponse(export_key=export.export_key)
 
 
 def _stream_export_dir(
