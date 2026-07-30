@@ -170,4 +170,103 @@ describe('useMetadataFilterChips', () => {
         );
         expect(trackEvent).not.toHaveBeenCalled();
     });
+
+    describe('categorical metadata', () => {
+        it('shows a chip when categorical values are selected', () => {
+            storage.updateCategoricalMetadataValues({ location_type: ['city', 'rural'] });
+            render(MetadataFilterChips);
+
+            expect(screen.getByTestId('metadata-filter-chip-location_type')).toBeInTheDocument();
+        });
+
+        it('chip subtitle shows the selected values joined by comma', () => {
+            storage.updateCategoricalMetadataValues({ location_type: ['city', 'rural'] });
+            render(MetadataFilterChips);
+
+            expect(screen.getByTestId('metadata-filter-chip-location_type')).toHaveTextContent(
+                'city, rural'
+            );
+        });
+
+        it('chip is checked when values are active', () => {
+            storage.updateCategoricalMetadataValues({ location_type: ['city'] });
+            render(MetadataFilterChips);
+
+            expect(screen.getByRole('checkbox')).toBeChecked();
+        });
+
+        it('does not show a chip when categorical values are empty', () => {
+            storage.updateCategoricalMetadataValues({ location_type: [] });
+            render(MetadataFilterChips);
+
+            expect(
+                screen.queryByTestId('metadata-filter-chip-location_type')
+            ).not.toBeInTheDocument();
+        });
+
+        it('unchecking clears the filter but keeps the chip with the remembered values', async () => {
+            storage.updateCategoricalMetadataValues({ location_type: ['city', 'rural'] });
+            render(MetadataFilterChips);
+
+            screen.getByRole('checkbox').click();
+
+            await waitFor(() =>
+                expect(get(storage.categoricalMetadataValues).location_type).toEqual([])
+            );
+            expect(screen.getByTestId('metadata-filter-chip-location_type')).toHaveTextContent(
+                'city, rural'
+            );
+            expect(screen.getByRole('checkbox')).not.toBeChecked();
+        });
+
+        it('re-checking restores the remembered categorical values', async () => {
+            storage.updateCategoricalMetadataValues({ location_type: ['city', 'rural'] });
+            render(MetadataFilterChips);
+
+            screen.getByRole('checkbox').click();
+            await waitFor(() => expect(screen.getByRole('checkbox')).not.toBeChecked());
+
+            screen.getByRole('checkbox').click();
+
+            await waitFor(() =>
+                expect(get(storage.categoricalMetadataValues).location_type).toEqual([
+                    'city',
+                    'rural'
+                ])
+            );
+            expect(screen.getByRole('checkbox')).toBeChecked();
+        });
+
+        it('clearing removes the chip and the filter', async () => {
+            storage.updateCategoricalMetadataValues({ location_type: ['city'] });
+            render(MetadataFilterChips);
+
+            screen.getByLabelText('Clear location_type').click();
+
+            await waitFor(() =>
+                expect(
+                    screen.queryByTestId('metadata-filter-chip-location_type')
+                ).not.toBeInTheDocument()
+            );
+            expect(get(storage.categoricalMetadataValues).location_type).toBeUndefined();
+        });
+
+        it('formats null as "Missing"', () => {
+            storage.updateCategoricalMetadataValues({ location_type: [null] });
+            render(MetadataFilterChips);
+
+            expect(screen.getByTestId('metadata-filter-chip-location_type')).toHaveTextContent(
+                'Missing'
+            );
+        });
+
+        it('disambiguates null and the string "Missing" when both are selected', () => {
+            storage.updateCategoricalMetadataValues({ location_type: [null, 'Missing'] });
+            render(MetadataFilterChips);
+
+            expect(screen.getByTestId('metadata-filter-chip-location_type')).toHaveTextContent(
+                'Missing (no value), Missing (value)'
+            );
+        });
+    });
 });
