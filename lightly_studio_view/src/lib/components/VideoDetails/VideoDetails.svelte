@@ -27,7 +27,7 @@
     import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
     import { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
-    import { onMount } from 'svelte';
+    import { onMount, untrack } from 'svelte';
     import { toast } from 'svelte-sonner';
     import { routeHelpers } from '$lib/routes';
     import VideoFrameAnnotationItem, {
@@ -52,7 +52,7 @@
     const { isEditingMode } = useGlobalStorage();
 
     // Events live on the video's own collection; labels are shared per dataset.
-    const eventCollectionId = (video.sample as SampleView)?.collection_id ?? datasetId;
+    const eventCollectionId = untrack(() => (video.sample as SampleView)?.collection_id ?? datasetId);
     const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId: eventCollectionId });
     const { createAnnotation } = useCreateAnnotation({ collectionId: eventCollectionId });
     const { createLabel } = useCreateLabel({ collectionId: eventCollectionId });
@@ -136,9 +136,11 @@
         frames: videoFrames,
         loadFrameByPlaybackTime,
         loadFramesFromFrameNumber
-    } = useVideoFrames({
-        video
-    });
+    } = $derived.by(() =>
+        useVideoFrames({
+            video
+        })
+    );
 
     // Pre-render all frame annotations as dataURLs for efficient playback
     const frameAnnotationMap = $derived(
@@ -194,7 +196,7 @@
     };
 
     // null = waiting for the frame deep-link timestamp; 0 = start of video.
-    let startTimeS = $state<number | null>(frameNumber !== undefined ? null : 0);
+    let startTimeS = $state<number | null>(untrack(() => (frameNumber !== undefined ? null : 0)));
 
     // #key remounts on navigation, so onMount suffices; an $effect could re-fire
     // and stop the play sync loop.

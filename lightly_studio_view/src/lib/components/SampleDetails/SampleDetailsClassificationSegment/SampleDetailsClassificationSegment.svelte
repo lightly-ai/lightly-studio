@@ -42,10 +42,10 @@
     const { enforceColoringByClassStore } = useSettings();
 
     const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
-    const { createAnnotation } = useCreateAnnotation({ collectionId });
-    const { deleteAnnotation } = useDeleteAnnotation({ collectionId });
-    const { createLabel } = useCreateLabel({ collectionId });
-    const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId });
+    const { createAnnotation } = $derived.by(() => useCreateAnnotation({ collectionId }));
+    const { deleteAnnotation } = $derived.by(() => useDeleteAnnotation({ collectionId }));
+    const { createLabel } = $derived.by(() => useCreateLabel({ collectionId }));
+    const { updateAnnotations } = $derived.by(() => useUpdateAnnotationsMutation({ collectionId }));
     const { context: annotationLabelContext, setLastCreatedAnnotationId } =
         useAnnotationLabelContext();
     const datasetId = $derived(page.params.dataset_id!);

@@ -33,7 +33,7 @@
 
     // Stable id captured at init — same pattern as AnnotationItem (avoids re-reading
     // the annotation prop during effect cleanup after the grid array shrinks).
-    const annotationId = annotation.annotation.sample_id;
+    const annotationId = $derived(annotation.annotation.sample_id);
 
     const thumbnailUrl = $derived(
         getThumbnailUrl({

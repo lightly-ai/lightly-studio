@@ -12,13 +12,17 @@
 
     const { videoEl, regionEl = null, src, startTimeS, initialMuted, onReady }: Props = $props();
 
-    const playback = useVideoPlayback({
-        getVideoEl: () => videoEl,
-        getRegionEl: () => regionEl,
-        getSrc: () => src,
-        getStartTimeS: () => startTimeS,
-        initialMuted
-    });
+    const playback = $derived.by(() =>
+        useVideoPlayback({
+            getVideoEl: () => videoEl,
+            getRegionEl: () => regionEl,
+            getSrc: () => src,
+            getStartTimeS: () => startTimeS,
+            initialMuted
+        })
+    );
 
-    onReady(playback);
+    $effect(() => {
+        onReady(playback);
+    });
 </script>

@@ -26,7 +26,7 @@
         handleFieldClick,
         toggleDirection,
         dispose
-    } = useOrderBy({ collectionId: () => collectionId, datasetId });
+    } = $derived.by(() => useOrderBy({ collectionId: () => collectionId, datasetId }));
 
     $effect(() => {
         return () => dispose();

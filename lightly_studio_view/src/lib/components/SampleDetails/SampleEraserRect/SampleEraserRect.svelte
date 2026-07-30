@@ -54,14 +54,18 @@
         setAnnotationId
     } = useAnnotationLabelContext();
 
-    const { deleteAnnotation } = useDeleteAnnotation({
-        collectionId
-    });
+    const { deleteAnnotation } = $derived.by(() =>
+        useDeleteAnnotation({
+            collectionId
+        })
+    );
     const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
     const { addReversibleAction } = useGlobalStorage();
-    const { createAnnotation } = useCreateAnnotation({
-        collectionId
-    });
+    const { createAnnotation } = $derived.by(() =>
+        useCreateAnnotation({
+            collectionId
+        })
+    );
     const eraserApi = $derived.by(() =>
         useSegmentationMaskEraser({
             collectionId,
@@ -154,7 +158,7 @@
         refetch();
     };
 
-    const datasetId = $derived(page.params.dataset_id);
+    const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type ?? page.data.collectionType);
     const currentAnnotationId = $derived(
         annotationLabelContext.annotationId ?? sample.annotations[0]?.sample_id ?? ''

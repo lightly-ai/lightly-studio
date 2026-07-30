@@ -64,13 +64,17 @@
         handleCancel: handleClassDialogCancel
     } = useSelectClassDialog();
 
-    const { createLabel } = useCreateLabel({ collectionId });
-    const { createAnnotation } = useCreateAnnotation({
-        collectionId
-    });
-    const { deleteAnnotation } = useDeleteAnnotation({
-        collectionId
-    });
+    const { createLabel } = $derived.by(() => useCreateLabel({ collectionId }));
+    const { createAnnotation } = $derived.by(() =>
+        useCreateAnnotation({
+            collectionId
+        })
+    );
+    const { deleteAnnotation } = $derived.by(() =>
+        useDeleteAnnotation({
+            collectionId
+        })
+    );
     const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
 
     const {

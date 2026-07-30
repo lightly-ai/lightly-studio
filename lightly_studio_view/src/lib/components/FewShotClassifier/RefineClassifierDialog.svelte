@@ -29,7 +29,7 @@
     const { openClassifiersMenu, switchToManageTab, scrollToAndSelectClassifier } =
         useClassifiersMenu();
 
-    let collectionId = page.params.collection_id;
+    let collectionId = page.params.collection_id!;
     let isSubmitting = $state(false);
     let showInstructions = $state(false);
     let submitError = $state<string | null>(null);

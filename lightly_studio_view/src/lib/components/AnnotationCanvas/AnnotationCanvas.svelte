@@ -62,7 +62,7 @@
     let hasOffscreen = false;
     let resizeObserver: ResizeObserver | null = null;
     // Shared workers multiplex multiple canvases
-    const canvasId = `${sampleId}-${createCanvasInstanceSuffix()}`;
+    const canvasId = $derived(`${sampleId}-${createCanvasInstanceSuffix()}`);
 
     type ColorParser = (color: string) => [number, number, number, number];
 

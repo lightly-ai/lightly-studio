@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import { ClassSetConfigDialog } from '$lib/components/ClassSetConfig';
     import { Select, type SelectItem } from '$lib/components/Select';
     import {
@@ -33,7 +34,7 @@
     ];
 
     let draftCountMode = $state<AnnotationCountMode>(
-        config.countMode ?? AnnotationCountMode.OBJECTS
+        untrack(() => config.countMode ?? AnnotationCountMode.OBJECTS)
     );
     $effect(() => {
         if (open) draftCountMode = config.countMode ?? AnnotationCountMode.OBJECTS;

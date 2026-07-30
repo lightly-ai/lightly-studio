@@ -63,7 +63,7 @@
     const { trackEvent } = usePostHog();
     let drawStartFired = false;
 
-    const { deleteAnnotation } = useDeleteAnnotation({ collectionId });
+    const { deleteAnnotation } = $derived.by(() => useDeleteAnnotation({ collectionId }));
 
     const labels = useAnnotationLabels(() => ({ collectionId }));
 

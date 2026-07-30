@@ -20,24 +20,22 @@
 
     // Instantiate all variants once and pick reactively: this component lives in the
     // layout, which persists when switching between the images/annotations tabs.
-    const imagesEmbeddingFilter = useEmbeddingFilterForImages(
-        collectionIdStore,
-        setRangeSelectionForCollection
-    );
-    const videosEmbeddingFilter = useEmbeddingFilterForVideos(
-        collectionIdStore,
-        setRangeSelectionForCollection
-    );
-    const annotationsEmbeddingFilter = useEmbeddingFilterForAnnotations(
-        collectionIdStore,
-        setRangeSelectionForCollection
-    );
+    // All three hooks are created in a single $derived.by so they are all eagerly evaluated
+    // together (rather than lazily skipped by the ternary).
+    const embeddingFilters = $derived.by(() => ({
+        images: useEmbeddingFilterForImages(collectionIdStore, setRangeSelectionForCollection),
+        videos: useEmbeddingFilterForVideos(collectionIdStore, setRangeSelectionForCollection),
+        annotations: useEmbeddingFilterForAnnotations(
+            collectionIdStore,
+            setRangeSelectionForCollection
+        )
+    }));
     const embeddingFilter = $derived(
         isAnnotations
-            ? annotationsEmbeddingFilter
+            ? embeddingFilters.annotations
             : isVideos
-              ? videosEmbeddingFilter
-              : imagesEmbeddingFilter
+              ? embeddingFilters.videos
+              : embeddingFilters.images
     );
 
     const plotFilterCountStore = $derived(embeddingFilter.effectiveCount);
