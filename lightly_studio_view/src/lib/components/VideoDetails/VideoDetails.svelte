@@ -52,7 +52,9 @@
     const { isEditingMode } = useGlobalStorage();
 
     // Events live on the video's own collection; labels are shared per dataset.
-    const eventCollectionId = untrack(() => (video.sample as SampleView)?.collection_id ?? datasetId);
+    const eventCollectionId = untrack(
+        () => (video.sample as SampleView)?.collection_id ?? datasetId
+    );
     const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId: eventCollectionId });
     const { createAnnotation } = useCreateAnnotation({ collectionId: eventCollectionId });
     const { createLabel } = useCreateLabel({ collectionId: eventCollectionId });
