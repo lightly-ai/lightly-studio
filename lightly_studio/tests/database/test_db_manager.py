@@ -220,23 +220,34 @@ def test_database_engine__duckdb_lock_conflict_raises_clear_error(
     mocker: MockerFixture,
     patch_engine_singleton: None,  # noqa: ARG001
 ) -> None:
-    """Test that a DuckDB lock conflict (another process has the file open) fails clearly.
-
-    Simulates the conflict by raising it where it would actually originate
-    (`SQLModel.metadata.create_all`), since reproducing a real cross-process lock is
-    too OS-dependent for an automated test.
-    """
+    """Test that a DuckDB lock conflict (another process has the file open) fails clearly."""
     lock_error = duckdb.IOException(
         f'Could not set lock on file "{tmp_path / "locked.db"}": '
         "Conflicting lock is held in /usr/bin/python (PID 1234) by user someone."
     )
     mocker.patch(
         "lightly_studio.database.db_manager.SQLModel.metadata.create_all",
-        side_effect=OperationalError("statement", {}, lock_error),
+        side_effect=OperationalError(statement="statement", params={}, orig=lock_error),
     )
 
     with pytest.raises(RuntimeError, match=r"another process already has it open"):
         DatabaseEngine(engine_url=f"duckdb:///{tmp_path / 'locked.db'}", single_threaded=True)
+
+
+def test_database_engine__duckdb_non_lock_operational_error_propagates(
+    tmp_path: Path,
+    mocker: MockerFixture,
+    patch_engine_singleton: None,  # noqa: ARG001
+) -> None:
+    """Test that a non-lock OperationalError from DuckDB is not swallowed or rewritten."""
+    other_error = duckdb.IOException("Disk full")
+    mocker.patch(
+        "lightly_studio.database.db_manager.SQLModel.metadata.create_all",
+        side_effect=OperationalError(statement="statement", params={}, orig=other_error),
+    )
+
+    with pytest.raises(OperationalError, match=r"Disk full"):
+        DatabaseEngine(engine_url=f"duckdb:///{tmp_path / 'other.db'}", single_threaded=True)
 
 
 def test_detect_backend_from_url() -> None:

@@ -66,6 +66,7 @@ class DatabaseEngine:
 
         Raises:
             FileNotFoundError: If must_exist is True and the database does not exist.
+            RuntimeError: If the DuckDB file is already open in another process.
         """
         if engine_url is not None:
             self._engine_url = engine_url
