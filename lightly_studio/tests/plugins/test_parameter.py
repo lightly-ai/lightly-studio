@@ -195,7 +195,7 @@ class TestTableParameter:
         with pytest.raises(
             ValueError,
             match=re.escape(
-                "Row 0 must have exactly the columns ['prompt'] but got ['confidence', 'prompt']"
+                "Row 0 must have exactly the columns ['prompt'] but got ['prompt', 'confidence']"
             ),
         ):
             _ = TableParameter(

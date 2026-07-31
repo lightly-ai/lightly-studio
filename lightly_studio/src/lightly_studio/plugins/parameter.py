@@ -139,7 +139,7 @@ class TableParameter(BaseParameter):
         column_names = [column.name for column in columns]
         if set(row) != set(column_names):
             raise ValueError(
-                f"Row {index} must have exactly the columns {column_names} but got {sorted(row)}"
+                f"Row {index} must have exactly the columns {column_names} but got {list(row)}"
             )
         validated_row = {}
         for column in columns:
