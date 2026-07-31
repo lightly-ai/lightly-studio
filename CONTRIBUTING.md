@@ -124,9 +124,7 @@ This clones the data into `lightly_studio/datasets`, which is where the `EXAMPLE
 
 ### Define Environment Variables
 
-The example scripts and `make start` read their dataset paths from environment variables, so
-this step is required, not optional — without it they fail immediately with
-`Environment variable "EXAMPLES_..." not set`. Copy `.env.example` to `.env`:
+Copy `.env.example` to `.env`:
 
 ```shell
 cd lightly_studio
