@@ -7,9 +7,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import duckdb
 import pytest
 import sqlmodel
 from pytest_mock import MockerFixture
+from sqlalchemy.exc import OperationalError
 
 from lightly_studio import ImageDataset
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
@@ -211,6 +213,34 @@ def test_close__removes_wal_and_allows_reconnect(
 
     db_manager.connect(db_file=str(db_file), cleanup_existing=False)
     db_manager.close()
+
+
+def test_database_engine__duckdb_lock_conflict_raises_clear_error(
+    tmp_path: Path,
+    mocker: MockerFixture,
+    patch_engine_singleton: None,  # noqa: ARG001
+) -> None:
+    """Test that a DuckDB lock conflict (another process has the file open) fails clearly.
+
+    We reproduced the real conflict manually by running two separate lightly_studio
+    processes against the same DuckDB file: the second one fails with a
+    ``sqlalchemy.exc.OperationalError`` wrapping a ``duckdb.IOException`` whose message
+    contains "Could not set lock". That failure only occurs across independent OS
+    processes, which is too OS-dependent to reproduce reliably in an automated test, so
+    here we raise the same exception at the exact point it originates (`SQLModel.
+    metadata.create_all`) to test the translation into a clear RuntimeError.
+    """
+    lock_error = duckdb.IOException(
+        f'Could not set lock on file "{tmp_path / "locked.db"}": '
+        "Conflicting lock is held in /usr/bin/python (PID 1234) by user someone."
+    )
+    mocker.patch(
+        "lightly_studio.database.db_manager.SQLModel.metadata.create_all",
+        side_effect=OperationalError("statement", {}, lock_error),
+    )
+
+    with pytest.raises(RuntimeError, match=r"another process already has it open"):
+        DatabaseEngine(engine_url=f"duckdb:///{tmp_path / 'locked.db'}", single_threaded=True)
 
 
 def test_detect_backend_from_url() -> None:
