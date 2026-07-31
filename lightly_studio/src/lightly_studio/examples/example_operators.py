@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from environs import Env, EnvError
+from environs import Env
 from sqlmodel import Session
 
 import lightly_studio as ls
@@ -107,14 +107,7 @@ for i in range(20):
     operator_registry.register(operator=TestOperator(name=f"test_{i}"))
 
 # Define data path
-try:
-    dataset_path = env.path("EXAMPLES_DATASET_PATH")
-except EnvError as e:
-    raise EnvError(
-        "EXAMPLES_DATASET_PATH is not set. In lightly_studio/, clone the example "
-        "dataset (`git clone https://github.com/lightly-ai/dataset_examples`), then "
-        "run `cp .env.example .env` and set EXAMPLES_DATASET_PATH (see CONTRIBUTING.md)."
-    ) from e
+dataset_path = env.path("EXAMPLES_DATASET_PATH")
 
 # Create a DatasetLoader from a path
 dataset = ls.ImageDataset.create()

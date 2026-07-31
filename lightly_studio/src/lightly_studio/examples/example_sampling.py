@@ -1,6 +1,6 @@
 """Example of how to run sampling class."""
 
-from environs import Env, EnvError
+from environs import Env
 
 import lightly_studio as ls
 from lightly_studio.database import db_manager
@@ -13,14 +13,7 @@ env.read_env()
 db_manager.connect(cleanup_existing=True)
 
 # Define the path to the dataset directory
-try:
-    dataset_path = env.path("EXAMPLES_DATASET_PATH")
-except EnvError as e:
-    raise EnvError(
-        "EXAMPLES_DATASET_PATH is not set. In lightly_studio/, clone the example "
-        "dataset (`git clone https://github.com/lightly-ai/dataset_examples`), then "
-        "run `cp .env.example .env` and set EXAMPLES_DATASET_PATH (see CONTRIBUTING.md)."
-    ) from e
+dataset_path = env.path("EXAMPLES_DATASET_PATH")
 
 # Create a Dataset from a path
 dataset = ls.ImageDataset.create()
