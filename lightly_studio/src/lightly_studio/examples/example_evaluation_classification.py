@@ -5,7 +5,7 @@ from collections import defaultdict
 from time import perf_counter
 from uuid import UUID
 
-from environs import Env
+from environs import Env, EnvError
 
 import lightly_studio as ls
 from lightly_studio.core.annotation.annotation_create import CreateClassification
@@ -135,7 +135,14 @@ def main() -> None:
 
     db_manager.connect(cleanup_existing=True)
 
-    images_path = env.path("EXAMPLES_COCO_IMAGES_PATH", "/path/to/your/images")
+    try:
+        images_path = env.path("EXAMPLES_COCO_IMAGES_PATH")
+    except EnvError as e:
+        raise EnvError(
+            "EXAMPLES_COCO_IMAGES_PATH is not set. In lightly_studio/, clone the example "
+            "dataset (`git clone https://github.com/lightly-ai/dataset_examples`), then "
+            "run `cp .env.example .env` and set EXAMPLES_COCO_IMAGES_PATH (see CONTRIBUTING.md)."
+        ) from e
 
     dataset = ImageDataset.create(name=DATASET_NAME)
     dataset.add_images_from_path(path=images_path)

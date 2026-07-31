@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from environs import Env
+from environs import Env, EnvError
 from sqlmodel import Session
 
 import lightly_studio as ls
@@ -312,7 +312,14 @@ operator_registry.register(operator=DemoVideoOperator())
 operator_registry.register(operator=DemoAnnotationOperator())
 operator_registry.register(operator=DemoGroupOperator())
 
-dataset_path = env.path("EXAMPLES_MIDV_PATH", "/path/to/midv/dataset")
+try:
+    dataset_path = env.path("EXAMPLES_MIDV_PATH")
+except EnvError as e:
+    raise EnvError(
+        "EXAMPLES_MIDV_PATH is not set. In lightly_studio/, clone the example "
+        "dataset (`git clone https://github.com/lightly-ai/dataset_examples`), then "
+        "run `cp .env.example .env` and set EXAMPLES_MIDV_PATH (see CONTRIBUTING.md)."
+    ) from e
 
 dataset = ls.GroupDataset.create(
     components=[

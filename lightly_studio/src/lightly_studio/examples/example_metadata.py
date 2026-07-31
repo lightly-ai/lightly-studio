@@ -15,7 +15,7 @@ from collections.abc import Mapping
 from typing import Any
 from uuid import UUID
 
-from environs import Env
+from environs import Env, EnvError
 from sqlmodel import Session
 
 import lightly_studio as ls
@@ -30,7 +30,14 @@ from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 # Environment variables
 env = Env()
 env.read_env()
-dataset_path = env.path("EXAMPLES_DATASET_PATH", "/path/to/your/dataset")
+try:
+    dataset_path = env.path("EXAMPLES_DATASET_PATH")
+except EnvError as e:
+    raise EnvError(
+        "EXAMPLES_DATASET_PATH is not set. In lightly_studio/, clone the example "
+        "dataset (`git clone https://github.com/lightly-ai/dataset_examples`), then "
+        "run `cp .env.example .env` and set EXAMPLES_DATASET_PATH (see CONTRIBUTING.md)."
+    ) from e
 
 
 def load_existing_dataset() -> tuple[ls.ImageDataset, list[ImageSample]]:

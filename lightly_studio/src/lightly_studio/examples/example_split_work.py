@@ -2,7 +2,7 @@
 
 import math
 
-from environs import Env
+from environs import Env, EnvError
 
 import lightly_studio as ls
 from lightly_studio.database import db_manager
@@ -18,7 +18,14 @@ db_manager.connect(cleanup_existing=True)
 dataset = ls.ImageDataset.create()
 
 # Define the path to the dataset (folder containing data.yaml)
-dataset_path = env.path("EXAMPLES_YOLO_YAML_PATH", "/path/to/your/yolo/dataset/data.yaml")
+try:
+    dataset_path = env.path("EXAMPLES_YOLO_YAML_PATH")
+except EnvError as e:
+    raise EnvError(
+        "EXAMPLES_YOLO_YAML_PATH is not set. In lightly_studio/, clone the example "
+        "dataset (`git clone https://github.com/lightly-ai/dataset_examples`), then "
+        "run `cp .env.example .env` and set EXAMPLES_YOLO_YAML_PATH (see CONTRIBUTING.md)."
+    ) from e
 input_split = env.str("EXAMPLES_YOLO_SPLIT", "test")
 
 # Load YOLO dataset using data.yaml path

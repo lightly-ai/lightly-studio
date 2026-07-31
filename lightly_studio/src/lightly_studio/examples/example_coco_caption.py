@@ -1,6 +1,6 @@
 """Example of how to add samples in coco caption format to a dataset."""
 
-from environs import Env
+from environs import Env, EnvError
 
 import lightly_studio as ls
 from lightly_studio.database import db_manager
@@ -13,10 +13,23 @@ env.read_env()
 db_manager.connect(cleanup_existing=True)
 
 # Define data paths
-annotations_json = env.path(
-    "EXAMPLES_COCO_CAPTION_JSON_PATH", "/path/to/your/dataset/annotations.json"
-)
-images_path = env.path("EXAMPLES_COCO_CAPTION_IMAGES_PATH", "/path/to/your/dataset")
+try:
+    annotations_json = env.path("EXAMPLES_COCO_CAPTION_JSON_PATH")
+except EnvError as e:
+    raise EnvError(
+        "EXAMPLES_COCO_CAPTION_JSON_PATH is not set. In lightly_studio/, clone the example "
+        "dataset (`git clone https://github.com/lightly-ai/dataset_examples`), then "
+        "run `cp .env.example .env` and set EXAMPLES_COCO_CAPTION_JSON_PATH (see CONTRIBUTING.md)."
+    ) from e
+try:
+    images_path = env.path("EXAMPLES_COCO_CAPTION_IMAGES_PATH")
+except EnvError as e:
+    raise EnvError(
+        "EXAMPLES_COCO_CAPTION_IMAGES_PATH is not set. In lightly_studio/, clone the example "
+        "dataset (`git clone https://github.com/lightly-ai/dataset_examples`), then "
+        "run `cp .env.example .env` and set EXAMPLES_COCO_CAPTION_IMAGES_PATH "
+        "(see CONTRIBUTING.md)."
+    ) from e
 
 
 # Create a DatasetLoader from a path

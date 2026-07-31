@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from environs import Env
+from environs import Env, EnvError
 
 import lightly_studio as ls
 
@@ -11,7 +11,14 @@ env = Env()
 env.read_env()
 
 # Set the path to the dataset directory
-dataset_path = env.path("EXAMPLES_MIDV_PATH", "/path/to/midv/dataset")
+try:
+    dataset_path = env.path("EXAMPLES_MIDV_PATH")
+except EnvError as e:
+    raise EnvError(
+        "EXAMPLES_MIDV_PATH is not set. In lightly_studio/, clone the example "
+        "dataset (`git clone https://github.com/lightly-ai/dataset_examples`), then "
+        "run `cp .env.example .env` and set EXAMPLES_MIDV_PATH (see CONTRIBUTING.md)."
+    ) from e
 
 # Cleanup an existing database
 ls.db_manager.connect(cleanup_existing=True)

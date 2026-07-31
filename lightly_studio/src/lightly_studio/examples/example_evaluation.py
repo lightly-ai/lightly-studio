@@ -3,7 +3,7 @@
 from collections import defaultdict
 from time import perf_counter
 
-from environs import Env
+from environs import Env, EnvError
 
 import lightly_studio as ls
 from lightly_studio.core.dataset_query import ImageSampleField
@@ -82,9 +82,31 @@ def main() -> None:
 
     db_manager.connect(cleanup_existing=True)
 
-    images_path = env.path("EXAMPLES_COCO_IMAGES_PATH", "/path/to/your/images")
-    gt_annotations_json = env.path("EXAMPLES_COCO_JSON_PATH", "/path/to/your/gt.json")
-    pred_annotations_json = env.path("EXAMPLES_PRED_ANNOTATIONS_JSON", "/path/to/your/pred.json")
+    try:
+        images_path = env.path("EXAMPLES_COCO_IMAGES_PATH")
+    except EnvError as e:
+        raise EnvError(
+            "EXAMPLES_COCO_IMAGES_PATH is not set. In lightly_studio/, clone the example "
+            "dataset (`git clone https://github.com/lightly-ai/dataset_examples`), then "
+            "run `cp .env.example .env` and set EXAMPLES_COCO_IMAGES_PATH (see CONTRIBUTING.md)."
+        ) from e
+    try:
+        gt_annotations_json = env.path("EXAMPLES_COCO_JSON_PATH")
+    except EnvError as e:
+        raise EnvError(
+            "EXAMPLES_COCO_JSON_PATH is not set. In lightly_studio/, clone the example "
+            "dataset (`git clone https://github.com/lightly-ai/dataset_examples`), then "
+            "run `cp .env.example .env` and set EXAMPLES_COCO_JSON_PATH (see CONTRIBUTING.md)."
+        ) from e
+    try:
+        pred_annotations_json = env.path("EXAMPLES_PRED_ANNOTATIONS_JSON")
+    except EnvError as e:
+        raise EnvError(
+            "EXAMPLES_PRED_ANNOTATIONS_JSON is not set. In lightly_studio/, clone the example "
+            "dataset (`git clone https://github.com/lightly-ai/dataset_examples`), then "
+            "run `cp .env.example .env` and set EXAMPLES_PRED_ANNOTATIONS_JSON "
+            "(see CONTRIBUTING.md)."
+        ) from e
     evaluation_config = ObjectDetectionEvaluationConfig(
         iou_threshold=0.5,
         classwise=True,

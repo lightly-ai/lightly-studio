@@ -1,6 +1,6 @@
 """Example of how to add samples in yolo format to a dataset."""
 
-from environs import Env
+from environs import Env, EnvError
 
 import lightly_studio as ls
 from lightly_studio.database import db_manager
@@ -13,7 +13,14 @@ env.read_env()
 db_manager.connect(cleanup_existing=True)
 
 # Define the path to the dataset directory
-dataset_path = env.path("EXAMPLES_YOLO_YAML_PATH", "/path/to/your/dataset/data.yaml")
+try:
+    dataset_path = env.path("EXAMPLES_YOLO_YAML_PATH")
+except EnvError as e:
+    raise EnvError(
+        "EXAMPLES_YOLO_YAML_PATH is not set. In lightly_studio/, clone the example "
+        "dataset (`git clone https://github.com/lightly-ai/dataset_examples`), then "
+        "run `cp .env.example .env` and set EXAMPLES_YOLO_YAML_PATH (see CONTRIBUTING.md)."
+    ) from e
 input_split = env.str("EXAMPLES_YOLO_SPLIT", "train")
 
 # Create a DatasetLoader from a path
