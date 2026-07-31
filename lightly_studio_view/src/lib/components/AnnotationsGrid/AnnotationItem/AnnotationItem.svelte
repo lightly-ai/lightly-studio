@@ -80,7 +80,7 @@
     }
 
     const labelName = $derived(annotation.annotation_label.annotation_label_name);
-    const isAnnotationClassHidden = $derived(isClassHidden(labelName));
+    const isAnnotationClassHidden = isClassHidden(untrack(() => labelName));
 
     const colorStroke = $derived.by(
         () => $customLabelColorsStore[labelName]?.color ?? getColorByLabel(labelName, 1).color
