@@ -115,6 +115,22 @@ class TestTableParameter:
 
         assert list(param.default[0]) == ["prompt", "label"]
 
+    def test_init__mixed_column_types(self) -> None:
+        param = TableParameter(
+            name="prompts",
+            columns=[
+                StringParameter(name="prompt"),
+                FloatParameter(name="threshold"),
+                IntParameter(name="max_masks"),
+                BoolParameter(name="enabled"),
+            ],
+            default=[{"prompt": "person", "threshold": 0.5, "max_masks": 3, "enabled": True}],
+        )
+
+        assert param.default == [
+            {"prompt": "person", "threshold": 0.5, "max_masks": 3, "enabled": True}
+        ]
+
     def test_init__missing_columns(self) -> None:
         with pytest.raises(
             ValueError, match="Table parameter 'prompts' must define at least one column"
@@ -203,22 +219,6 @@ class TestTableParameter:
                 columns=[StringParameter(name="prompt")],
                 default=[{"prompt": "person", "confidence": "0.5"}],
             )
-
-    def test_init__mixed_column_types(self) -> None:
-        param = TableParameter(
-            name="prompts",
-            columns=[
-                StringParameter(name="prompt"),
-                FloatParameter(name="threshold"),
-                IntParameter(name="max_masks"),
-                BoolParameter(name="enabled"),
-            ],
-            default=[{"prompt": "person", "threshold": 0.5, "max_masks": 3, "enabled": True}],
-        )
-
-        assert param.default == [
-            {"prompt": "person", "threshold": 0.5, "max_masks": 3, "enabled": True}
-        ]
 
     def test_init__cell_type_does_not_match_column(self) -> None:
         with pytest.raises(
