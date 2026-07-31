@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import shutil
 import tempfile
 from collections.abc import Generator
@@ -14,12 +15,13 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Path
 from fastapi.responses import PlainTextResponse, StreamingResponse
 from pydantic import BaseModel
-from sqlmodel import Field
+from sqlmodel import Field, Session
 
 from lightly_studio.api.routes.api import collection as collection_api
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.database.db_manager import SessionDep
+from lightly_studio.errors import NotFoundError
 from lightly_studio.export import image_dataset_export, video_dataset_export
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.export_format import ExportFormat
@@ -29,6 +31,7 @@ from lightly_studio.resolvers.image_filter import ImageFilter
 
 export_router = APIRouter(prefix="/collections/{collection_id}", tags=["export"])
 _STREAM_CHUNK_SIZE_BYTES = 64 * 1024
+logger = logging.getLogger(__name__)
 
 
 @export_router.get("/export/annotations")
@@ -270,19 +273,6 @@ def export_collection_stats(
     )
 
 
-def _stream_export_file(
-    temp_dir: TemporaryDirectory[str],
-    file_path: PathlibPath,
-) -> Generator[bytes, None, None]:
-    """Stream the export file and clean up the temporary directory afterwards."""
-    try:
-        with file_path.open("rb") as file:
-            while chunk := file.read(_STREAM_CHUNK_SIZE_BYTES):
-                yield chunk
-    finally:
-        temp_dir.cleanup()
-
-
 @export_router.get("/export/youtube-vis")
 def export_collection_youtube_vis(
     collection: Annotated[
@@ -358,6 +348,114 @@ def export_collection_prepare(
         shutil.rmtree(temp_dir, ignore_errors=True)
         raise
     return ExportKeyResponse(export_key=export.export_key)
+
+
+@export_router.get("/export/download/{export_key}")
+def export_download(
+    _collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(collection_api.get_and_validate_collection_id),
+    ],
+    session: SessionDep,
+    export_key: UUID,
+) -> StreamingResponse:
+    """Stream the export identified by *export_key*."""
+    job = export_job_resolver.get(session=session, export_key=export_key)
+    if job is None:
+        raise NotFoundError("Export key not found.")
+
+    export_path = PathlibPath(job.export_path)
+    if not export_path.exists():
+        raise NotFoundError("Export file not found.")
+    if export_path.is_dir():
+        return StreamingResponse(
+            content=_stream_dir_and_cleanup(export_path, session=session, export_key=export_key),
+            media_type="application/zip",
+            headers={
+                "Access-Control-Expose-Headers": "Content-Disposition",
+                "Content-Disposition": f"attachment; filename={export_path.name}.zip",
+            },
+        )
+    return StreamingResponse(
+        content=_stream_file_and_cleanup(export_path, session=session, export_key=export_key),
+        media_type=_media_type_for_path(export_path),
+        headers={
+            "Access-Control-Expose-Headers": "Content-Disposition",
+            "Content-Disposition": f"attachment; filename={export_path.name}",
+        },
+    )
+
+
+def _stream_file_and_cleanup(
+    export_path: PathlibPath,
+    session: Session,
+    export_key: UUID,
+) -> Generator[bytes, None, None]:
+    """Stream a file, remove it, and delete the DB row afterwards."""
+    try:
+        with export_path.open("rb") as file:
+            while chunk := file.read(_STREAM_CHUNK_SIZE_BYTES):
+                yield chunk
+    finally:
+        export_path.unlink(missing_ok=True)
+        try:
+            export_job_resolver.delete(session=session, export_key=export_key)
+        except Exception as exc:
+            logger.error(
+                "Failed to delete export job %s from database: %s", export_key, exc, exc_info=True
+            )
+
+
+def _stream_dir_and_cleanup(
+    dir_path: PathlibPath,
+    session: Session,
+    export_key: UUID,
+) -> Generator[bytes, None, None]:
+    """Zip the export directory, stream the archive, remove both, and delete the DB row."""
+    try:
+        archive_path = PathlibPath(
+            shutil.make_archive(
+                base_name=str(dir_path),
+                format="zip",
+                root_dir=dir_path.parent,
+                base_dir=dir_path.name,
+            )
+        )
+    except Exception:
+        shutil.rmtree(dir_path, ignore_errors=True)
+        try:
+            export_job_resolver.delete(session=session, export_key=export_key)
+        except Exception as exc:
+            logger.error(
+                "Failed to delete export job %s from database: %s", export_key, exc, exc_info=True
+            )
+        raise
+    shutil.rmtree(dir_path, ignore_errors=True)
+    yield from _stream_file_and_cleanup(
+        export_path=archive_path, session=session, export_key=export_key
+    )
+
+
+def _media_type_for_path(path: PathlibPath) -> str:
+    if path.suffix == ".json":
+        return "application/json"
+    if path.suffix == ".txt":
+        return "text/plain"
+    return "application/octet-stream"
+
+
+def _stream_export_file(
+    temp_dir: TemporaryDirectory[str],
+    file_path: PathlibPath,
+) -> Generator[bytes, None, None]:
+    """Stream the export file and clean up the temporary directory afterwards."""
+    try:
+        with file_path.open("rb") as file:
+            while chunk := file.read(_STREAM_CHUNK_SIZE_BYTES):
+                yield chunk
+    finally:
+        temp_dir.cleanup()
 
 
 def _stream_export_dir(

@@ -5,15 +5,19 @@ from __future__ import annotations
 import io
 import json
 import zipfile
-from pathlib import Path as PathlibPath
-from uuid import UUID
+from pathlib import Path
+from uuid import UUID, uuid4
 
 import yaml
 from fastapi.testclient import TestClient
 from PIL import Image as PILImage
 from sqlmodel import Session
 
-from lightly_studio.api.routes.api.status import HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_OK
+from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_BAD_REQUEST,
+    HTTP_STATUS_NOT_FOUND,
+    HTTP_STATUS_OK,
+)
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
     AnnotationType,
@@ -24,6 +28,7 @@ from lightly_studio.models.export_job import ExportJobTable
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
+    export_job_resolver,
     object_track_resolver,
     tag_resolver,
 )
@@ -529,7 +534,7 @@ def test_export_collection_prepare(
 
     export_job = db_session.get(ExportJobTable, export_key)
     assert export_job is not None
-    file_content = PathlibPath(export_job.export_path).read_text()
+    file_content = Path(export_job.export_path).read_text()
     assert file_content == "path/a.png\npath/b.png"
 
 
@@ -568,7 +573,7 @@ def test_export_collection_prepare__with_tag_filter(
 
     export_job = db_session.get(ExportJobTable, export_key)
     assert export_job is not None
-    file_content = PathlibPath(export_job.export_path).read_text()
+    file_content = Path(export_job.export_path).read_text()
     assert file_content == "path/a.png\npath/c.png"
 
 
@@ -598,4 +603,104 @@ def test_export_collection_prepare__exclude_filter(
 
     export_job = db_session.get(ExportJobTable, export_key)
     assert export_job is not None
-    assert PathlibPath(export_job.export_path).read_text() == "path/b.png"
+    assert Path(export_job.export_path).read_text() == "path/b.png"
+
+
+def test_export_download__not_found_returns_404(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+    export_key = uuid4()
+
+    response = test_client.get(
+        f"/api/collections/{collection.collection_id}/export/download/{export_key}"
+    )
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
+
+
+def test_export_download__json_file_streams_content_and_deletes_job(
+    tmp_path: Path,
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+
+    export_dir = tmp_path / "container"
+    export_dir.mkdir()
+    export_path = export_dir / "export.json"
+    export_path.write_text('{"items": [1, 2, 3]}')
+
+    job = export_job_resolver.create(session=db_session, export_path=str(export_path))
+
+    response = test_client.get(
+        f"/api/collections/{collection.collection_id}/export/download/{job.export_key}"
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.headers["Content-Type"] == "application/json"
+    assert response.headers["Content-Disposition"] == "attachment; filename=export.json"
+    assert response.json() == {"items": [1, 2, 3]}
+    assert export_job_resolver.get(session=db_session, export_key=job.export_key) is None
+    assert not export_path.exists()
+    assert export_dir.exists()
+
+
+def test_export_download__txt_file_streams_content_and_deletes_job(
+    tmp_path: Path,
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+
+    export_dir = tmp_path / "container"
+    export_dir.mkdir()
+    export_path = export_dir / "export.txt"
+    export_path.write_text("path/a.jpg\npath/b.jpg\n")
+
+    job = export_job_resolver.create(session=db_session, export_path=str(export_path))
+
+    response = test_client.get(
+        f"/api/collections/{collection.collection_id}/export/download/{job.export_key}"
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.headers["Content-Type"].startswith("text/plain")
+    assert response.headers["Content-Disposition"] == "attachment; filename=export.txt"
+    assert response.text == "path/a.jpg\npath/b.jpg\n"
+    assert export_job_resolver.get(session=db_session, export_key=job.export_key) is None
+    assert not export_path.exists()
+    assert export_dir.exists()
+
+
+def test_export_download__directory_streams_as_zip_and_deletes_job(
+    tmp_path: Path,
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+
+    container = tmp_path / "container"
+    container.mkdir()
+    export_dir = container / "my_export"
+    export_dir.mkdir()
+    (export_dir / "labels.txt").write_text("cat\ndog\n")
+
+    job = export_job_resolver.create(session=db_session, export_path=str(export_dir))
+
+    response = test_client.get(
+        f"/api/collections/{collection.collection_id}/export/download/{job.export_key}"
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.headers["Content-Type"] == "application/zip"
+    assert response.headers["Content-Disposition"] == "attachment; filename=my_export.zip"
+
+    with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
+        assert "my_export/labels.txt" in zip_ref.namelist()
+        assert zip_ref.read("my_export/labels.txt") == b"cat\ndog\n"
+
+    assert export_job_resolver.get(session=db_session, export_key=job.export_key) is None
+    assert not export_dir.exists()
+    assert container.exists()
