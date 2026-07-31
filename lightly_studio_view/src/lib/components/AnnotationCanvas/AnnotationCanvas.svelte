@@ -13,7 +13,7 @@
 </script>
 
 <script lang="ts">
-    import { onDestroy, onMount } from 'svelte';
+    import { onDestroy, onMount, untrack } from 'svelte';
     import { useCustomLabelColors, type CustomColor } from '$lib/hooks/useCustomLabelColors';
     import { getColorByLabel, rgbaFromBytes } from '$lib/utils';
     import type { BoundingBox } from '$lib/types';
@@ -61,8 +61,10 @@
     let workerReady = false;
     let hasOffscreen = false;
     let resizeObserver: ResizeObserver | null = null;
-    // Shared workers multiplex multiple canvases
-    const canvasId = $derived(`${sampleId}-${createCanvasInstanceSuffix()}`);
+    // Shared workers multiplex multiple canvases. Captured once — never re-derived — so that
+    // setupWorker(), render(), handleWorkerMessage(), and onDestroy() all reference the same ID
+    // even if sampleId changes after the worker has been initialised.
+    const canvasId = `${untrack(() => sampleId)}-${createCanvasInstanceSuffix()}`;
 
     type ColorParser = (color: string) => [number, number, number, number];
 

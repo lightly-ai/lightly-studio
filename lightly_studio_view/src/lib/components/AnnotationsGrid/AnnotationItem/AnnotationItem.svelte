@@ -102,7 +102,7 @@
     // effect cleanup would re-evaluate `annotations[index]` in the grid against an
     // already-shrunken array (crash on filter changes). The id is constant per instance —
     // the {#key} wrapper in the grid remounts this component when it changes.
-    const annotationId = $derived(annotation.sample_id);
+    const annotationId = untrack(() => annotation.sample_id);
 
     // Report the crop geometry (not a rendered image) upward. The grid turns it into a
     // preview blob only when a drag actually starts, so no canvas work happens per tile.

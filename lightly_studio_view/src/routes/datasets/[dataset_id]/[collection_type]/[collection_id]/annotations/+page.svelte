@@ -7,7 +7,7 @@
     import { page } from '$app/state';
 
     const { data }: { data: PageData } = $props();
-    const { sampleSize } = $derived(data);
+    const sampleSize = $derived(data.sampleSize);
     const datasetId = $derived(page.params.dataset_id!);
     const collectionId = $derived(page.params.collection_id!);
 

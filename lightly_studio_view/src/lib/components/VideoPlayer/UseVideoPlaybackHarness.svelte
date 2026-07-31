@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import { useVideoPlayback } from './useVideoPlayback.svelte';
 
     interface Props {
@@ -12,15 +13,13 @@
 
     const { videoEl, regionEl = null, src, startTimeS, initialMuted, onReady }: Props = $props();
 
-    const playback = $derived.by(() =>
-        useVideoPlayback({
-            getVideoEl: () => videoEl,
-            getRegionEl: () => regionEl,
-            getSrc: () => src,
-            getStartTimeS: () => startTimeS,
-            initialMuted
-        })
-    );
+    const playback = useVideoPlayback({
+        getVideoEl: () => videoEl,
+        getRegionEl: () => regionEl,
+        getSrc: () => src,
+        getStartTimeS: () => startTimeS,
+        initialMuted: untrack(() => initialMuted)
+    });
 
     $effect(() => {
         onReady(playback);

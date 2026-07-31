@@ -18,14 +18,12 @@
         prerenderedHeight?: number;
     } = $props();
 
-    $effect(() => {
+    // Use prerendered data URL if available, otherwise calculate from segmentation
+    const { dataUrl: maskDataUrl, height } = $derived.by(() => {
         if (!segmentation) {
             throw new Error('Segmentation data is required');
         }
-    });
 
-    // Use prerendered data URL if available, otherwise calculate from segmentation
-    const { dataUrl: maskDataUrl, height } = $derived.by(() => {
         if (prerenderedDataUrl && prerenderedHeight !== undefined) {
             return { dataUrl: prerenderedDataUrl, height: prerenderedHeight };
         }

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import { type AnnotationWithPayloadView } from '$lib/api/lightly_studio_local';
     import { useSettings } from '$lib/hooks';
     import SampleClassificationPills from '$lib/components/SampleClassificationPills/SampleClassificationPills.svelte';
@@ -33,7 +34,7 @@
 
     // Stable id captured at init — same pattern as AnnotationItem (avoids re-reading
     // the annotation prop during effect cleanup after the grid array shrinks).
-    const annotationId = $derived(annotation.annotation.sample_id);
+    const annotationId = untrack(() => annotation.annotation.sample_id);
 
     const thumbnailUrl = $derived(
         getThumbnailUrl({

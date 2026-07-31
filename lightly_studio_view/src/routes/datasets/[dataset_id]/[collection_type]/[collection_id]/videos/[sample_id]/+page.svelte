@@ -27,7 +27,7 @@
     );
     const { collection } = $derived.by(() =>
         useCollectionWithChildren({
-            collectionId: data.params.dataset_id
+            collectionId: data.params.collection_id
         })
     );
 </script>
