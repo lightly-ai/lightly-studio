@@ -222,13 +222,9 @@ def test_database_engine__duckdb_lock_conflict_raises_clear_error(
 ) -> None:
     """Test that a DuckDB lock conflict (another process has the file open) fails clearly.
 
-    We reproduced the real conflict manually by running two separate lightly_studio
-    processes against the same DuckDB file: the second one fails with a
-    ``sqlalchemy.exc.OperationalError`` wrapping a ``duckdb.IOException`` whose message
-    contains "Could not set lock". That failure only occurs across independent OS
-    processes, which is too OS-dependent to reproduce reliably in an automated test, so
-    here we raise the same exception at the exact point it originates (`SQLModel.
-    metadata.create_all`) to test the translation into a clear RuntimeError.
+    Simulates the conflict by raising it where it would actually originate
+    (`SQLModel.metadata.create_all`), since reproducing a real cross-process lock is
+    too OS-dependent for an automated test.
     """
     lock_error = duckdb.IOException(
         f'Could not set lock on file "{tmp_path / "locked.db"}": '
