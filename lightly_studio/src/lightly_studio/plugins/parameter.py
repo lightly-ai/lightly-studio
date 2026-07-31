@@ -35,7 +35,6 @@ class BuiltinParameter(BaseParameter, Generic[T]):
 
     def __post_init__(self) -> None:
         """Set up type information and validate default value."""
-        
         if not hasattr(self, "_parameter_type") or self._parameter_type is None:
             raise NotImplementedError("Subclasses must define _parameter_type class attribute")
         self._type = self._parameter_type
