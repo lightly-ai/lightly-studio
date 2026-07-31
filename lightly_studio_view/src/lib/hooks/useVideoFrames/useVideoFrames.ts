@@ -58,7 +58,7 @@ interface UseVideoFramesState {
  * await loadFramesFromFrameNumber(42); // Load and display frame 42
  * ```
  */
-export function useVideoFrames({ video }: { video: VideoView }) {
+export function useVideoFrames(getVideo: () => VideoView) {
     const frames = writable<FrameView[]>([]);
     const currentFrame = writable<FrameView | undefined>(undefined);
     const playbackTime = writable<number>(0);
@@ -107,6 +107,7 @@ export function useVideoFrames({ video }: { video: VideoView }) {
             return;
         }
 
+        const video = getVideo();
         const frameCollectionId = (video?.frame?.sample as SampleView)?.collection_id;
         if (!frameCollectionId) {
             return;
@@ -178,6 +179,7 @@ export function useVideoFrames({ video }: { video: VideoView }) {
         state.hasStarted = true;
 
         // Set lastVideoId after initial load to track future changes
+        const video = getVideo();
         if (video && state.lastVideoId === null) {
             state.lastVideoId = video.sample_id;
         }
@@ -197,7 +199,7 @@ export function useVideoFrames({ video }: { video: VideoView }) {
             state.seekFrameNumber = false;
         }
 
-        if (!video) throw new Error('No video data available');
+        if (!getVideo()) throw new Error('No video data available');
 
         const frameIndex = Math.floor(currentTime * fps);
         const existingFrame = getFrameByNumber(frameIndex);

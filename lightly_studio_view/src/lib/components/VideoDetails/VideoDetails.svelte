@@ -138,11 +138,7 @@
         frames: videoFrames,
         loadFrameByPlaybackTime,
         loadFramesFromFrameNumber
-    } = $derived.by(() =>
-        useVideoFrames({
-            video
-        })
-    );
+    } = useVideoFrames(() => video);
 
     // Pre-render all frame annotations as dataURLs for efficient playback
     const frameAnnotationMap = $derived(

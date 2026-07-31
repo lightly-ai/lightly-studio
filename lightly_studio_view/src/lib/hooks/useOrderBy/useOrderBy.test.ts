@@ -58,7 +58,10 @@ describe('useOrderBy', () => {
 
     describe('selectedLabel', () => {
         it('returns null when no sort is active', () => {
-            const { selectedLabel } = useOrderBy({ collectionId: () => 'col1', datasetId: () => 'ds1' });
+            const { selectedLabel } = useOrderBy({
+                collectionId: () => 'col1',
+                datasetId: () => 'ds1'
+            });
             expect(get(selectedLabel)).toBeNull();
         });
 
@@ -71,7 +74,10 @@ describe('useOrderBy', () => {
                     is_numeric: false
                 }
             ]);
-            const { selectedLabel } = useOrderBy({ collectionId: () => 'col1', datasetId: () => 'ds1' });
+            const { selectedLabel } = useOrderBy({
+                collectionId: () => 'col1',
+                datasetId: () => 'ds1'
+            });
             expect(get(selectedLabel)).toBe('file name');
         });
 
@@ -93,7 +99,10 @@ describe('useOrderBy', () => {
                     is_numeric: true
                 }
             ]);
-            const { selectedLabel } = useOrderBy({ collectionId: () => 'col1', datasetId: () => 'ds1' });
+            const { selectedLabel } = useOrderBy({
+                collectionId: () => 'col1',
+                datasetId: () => 'ds1'
+            });
             expect(get(selectedLabel)).toBe('metadata.brightness');
         });
 
@@ -115,7 +124,10 @@ describe('useOrderBy', () => {
                     direction: SortDirection.ASC
                 }
             ]);
-            const { selectedLabel } = useOrderBy({ collectionId: () => 'col1', datasetId: () => 'ds1' });
+            const { selectedLabel } = useOrderBy({
+                collectionId: () => 'col1',
+                datasetId: () => 'ds1'
+            });
             expect(get(selectedLabel)).toBe('run1.precision');
         });
     });
