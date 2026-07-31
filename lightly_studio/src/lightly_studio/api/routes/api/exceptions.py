@@ -13,9 +13,10 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_CONFLICT,
     HTTP_STATUS_INTERNAL_SERVER_ERROR,
+    HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
-from lightly_studio.errors import QueryExprError
+from lightly_studio.errors import NotFoundError, QueryExprError
 
 # Set up logger for error handling
 logger = logging.getLogger("lightly_studio.api.exceptions")
@@ -112,6 +113,14 @@ def register_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=HTTP_STATUS_UNPROCESSABLE_ENTITY,
             content={"detail": exc.errors()},
+        )
+
+    @app.exception_handler(NotFoundError)
+    async def _not_found_error_handler(_request: Request, _exc: NotFoundError) -> JSONResponse:
+        """Handle not-found errors."""
+        return JSONResponse(
+            status_code=HTTP_STATUS_NOT_FOUND,
+            content={"error": str(_exc) or "Resource not found."},
         )
 
     @app.exception_handler(QueryExprError)
