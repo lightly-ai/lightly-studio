@@ -111,24 +111,17 @@ class TableParameter(BaseParameter):
     def _validate(self, value: Any) -> list[dict[str, Any]]:
         if not isinstance(value, list):
             raise TypeError(f"Expected value of type 'list' but got {type(value)}")
-        columns = _validated_columns(name=self.name, columns=self.columns)
-        return [
-            self._validated_row(row=row, index=index, columns=columns)
-            for index, row in enumerate(value)
-        ]
+        return [self._validated_row(row=row, index=index) for index, row in enumerate(value)]
 
-    def _validated_row(
-        self, row: Any, index: int, columns: Sequence[BuiltinParameter[Any]]
-    ) -> dict[str, Any]:
+    def _validated_row(self, row: Any, index: int) -> dict[str, Any]:
         """Check a single row of the table value, validating each cell against its column.
 
         Args:
             row: The row to check.
             index: Position of the row in the value, used in error messages.
-            columns: The columns the row must provide.
 
         Returns:
-            The row with its cells ordered like `columns`.
+            The row with its cells ordered like `self.columns`.
 
         Raises:
             TypeError: If `row` is not a dict or a cell does not have the type of its column.
@@ -136,13 +129,13 @@ class TableParameter(BaseParameter):
         """
         if not isinstance(row, dict):
             raise TypeError(f"Expected row {index} of type 'dict' but got {type(row)}")
-        column_names = [column.name for column in columns]
+        column_names = [column.name for column in self.columns]
         if set(row) != set(column_names):
             raise ValueError(
                 f"Row {index} must have exactly the columns {column_names} but got {list(row)}"
             )
         validated_row = {}
-        for column in columns:
+        for column in self.columns:
             try:
                 validated_row[column.name] = column._validate(row[column.name])  # noqa: SLF001
             except TypeError as ex:
