@@ -17,8 +17,9 @@ try:
     dataset_path = env.path("EXAMPLES_DATASET_PATH")
 except EnvError as e:
     raise EnvError(
-        "EXAMPLES_DATASET_PATH is not set. Run `cp .env.example .env` in "
-        "lightly_studio/ and set EXAMPLES_DATASET_PATH (see CONTRIBUTING.md)."
+        "EXAMPLES_DATASET_PATH is not set. In lightly_studio/, clone the example "
+        "dataset (`git clone https://github.com/lightly-ai/dataset_examples`), then "
+        "run `cp .env.example .env` and set EXAMPLES_DATASET_PATH (see CONTRIBUTING.md)."
     ) from e
 
 # Create a Dataset from a path
