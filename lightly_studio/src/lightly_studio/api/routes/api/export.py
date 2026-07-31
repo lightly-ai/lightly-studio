@@ -396,6 +396,43 @@ def export_collection_annotations_prepare(
     return ExportKeyResponse(export_key=export.export_key)
 
 
+@export_router.get("/export/download/{export_key}")
+def export_download(
+    _collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(collection_api.get_and_validate_collection_id),
+    ],
+    session: SessionDep,
+    export_key: UUID,
+) -> StreamingResponse:
+    """Stream the export identified by *export_key*."""
+    job = export_job_resolver.get(session=session, export_key=export_key)
+    if job is None:
+        raise NotFoundError("Export key not found.")
+
+    export_path = PathlibPath(job.export_path)
+    if not export_path.exists():
+        raise NotFoundError("Export file not found.")
+    if export_path.is_dir():
+        return StreamingResponse(
+            content=_stream_dir_and_cleanup(export_path, session=session, export_key=export_key),
+            media_type="application/zip",
+            headers={
+                "Access-Control-Expose-Headers": "Content-Disposition",
+                "Content-Disposition": f"attachment; filename={export_path.name}.zip",
+            },
+        )
+    return StreamingResponse(
+        content=_stream_file_and_cleanup(export_path, session=session, export_key=export_key),
+        media_type=_media_type_for_path(export_path),
+        headers={
+            "Access-Control-Expose-Headers": "Content-Disposition",
+            "Content-Disposition": f"attachment; filename={export_path.name}",
+        },
+    )
+
+
 def _generate_annotations_export(
     exporter: image_dataset_export.ImageDatasetExport,
     export_format: ExportFormat,
@@ -432,43 +469,6 @@ def _generate_annotations_export(
         )
         return output_path
     raise ValueError(f"Export format '{export_format.value}' is not supported for this endpoint.")
-
-
-@export_router.get("/export/download/{export_key}")
-def export_download(
-    _collection: Annotated[
-        CollectionTable,
-        Path(title="collection Id"),
-        Depends(collection_api.get_and_validate_collection_id),
-    ],
-    session: SessionDep,
-    export_key: UUID,
-) -> StreamingResponse:
-    """Stream the export identified by *export_key*."""
-    job = export_job_resolver.get(session=session, export_key=export_key)
-    if job is None:
-        raise NotFoundError("Export key not found.")
-
-    export_path = PathlibPath(job.export_path)
-    if not export_path.exists():
-        raise NotFoundError("Export file not found.")
-    if export_path.is_dir():
-        return StreamingResponse(
-            content=_stream_dir_and_cleanup(export_path, session=session, export_key=export_key),
-            media_type="application/zip",
-            headers={
-                "Access-Control-Expose-Headers": "Content-Disposition",
-                "Content-Disposition": f"attachment; filename={export_path.name}.zip",
-            },
-        )
-    return StreamingResponse(
-        content=_stream_file_and_cleanup(export_path, session=session, export_key=export_key),
-        media_type=_media_type_for_path(export_path),
-        headers={
-            "Access-Control-Expose-Headers": "Content-Disposition",
-            "Content-Disposition": f"attachment; filename={export_path.name}",
-        },
-    )
 
 
 def _stream_file_and_cleanup(
