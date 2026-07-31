@@ -705,6 +705,7 @@ def test_export_download__directory_streams_as_zip_and_deletes_job(
     assert not export_dir.exists()
     assert container.exists()
 
+
 def test_export_collection_annotations_prepare__coco(
     db_session: Session,
     test_client: TestClient,

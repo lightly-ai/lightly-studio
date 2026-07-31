@@ -357,6 +357,7 @@ def export_collection_prepare(
         raise
     return ExportKeyResponse(export_key=export.export_key)
 
+
 @export_router.post("/export/annotations/prepare")
 def export_collection_annotations_prepare(
     collection: Annotated[
@@ -431,6 +432,7 @@ def _generate_annotations_export(
         )
         return output_path
     raise ValueError(f"Export format '{export_format.value}' is not supported for this endpoint.")
+
 
 @export_router.get("/export/download/{export_key}")
 def export_download(
