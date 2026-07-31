@@ -34,11 +34,8 @@ class BuiltinParameter(BaseParameter, Generic[T]):
     """Represents a built-in operator parameter."""
 
     def __post_init__(self) -> None:
-        """Set up type information and validate default value.
-
-        Raises:
-            NotImplementedError: If the subclass does not define ``_parameter_type``.
-        """
+        """Set up type information and validate default value."""
+        
         if not hasattr(self, "_parameter_type") or self._parameter_type is None:
             raise NotImplementedError("Subclasses must define _parameter_type class attribute")
         self._type = self._parameter_type
@@ -80,9 +77,7 @@ class TableParameter(BaseParameter):
     """Represents a tabular operator parameter.
 
     The value is a list of rows, where each row maps every column name to a cell of that column's
-    type. Use it when an operator needs a variable number of homogeneous multi-field inputs, for
-    example segmentation prompts paired with the annotation label to assign to the resulting masks
-    and the confidence threshold to apply:
+    type. Use it for a variable number of multi-field inputs:
 
     ```python
     TableParameter(
@@ -96,13 +91,9 @@ class TableParameter(BaseParameter):
     )
     ```
 
-    A column is any built-in parameter, so it carries its own type, description, default and
-    required flag. The GUI renders one editable column per entry using the editor for the column
-    type, pre-fills new cells with the column default and lets the user add and remove rows. Tables
-    cannot be nested because the GUI cannot render a table inside a cell.
-
     Attributes:
-        columns: The columns every row must provide. At least one column is required.
+        columns: The columns every row must provide. Must be non-empty built-in parameters with
+            unique names. Tables cannot be nested.
     """
 
     columns: Sequence[BuiltinParameter[Any]] = field(default_factory=tuple)
