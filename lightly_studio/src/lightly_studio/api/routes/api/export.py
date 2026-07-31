@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import shutil
+import tempfile
 from collections.abc import Generator
 from datetime import datetime, timezone
 from pathlib import Path as PathlibPath
@@ -207,6 +208,12 @@ class ExportBody(BaseModel):
     )
 
 
+class ExportKeyResponse(BaseModel):
+    """Response body for all prepare endpoints."""
+
+    export_key: UUID
+
+
 # This endpoint should be a GET, however due to the potential huge size
 # of sample_ids, it is a POST request to avoid URL length limitations.
 # A body with a GET request is supported by fastAPI however it has undefined
@@ -310,6 +317,37 @@ def export_collection_youtube_vis(
             "Content-Disposition": f"attachment; filename={output_path.name}",
         },
     )
+
+
+@export_router.post("/export/prepare")
+def export_collection_prepare(
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(collection_api.get_and_validate_collection_id),
+    ],
+    session: SessionDep,
+    body: ExportBody,
+) -> ExportKeyResponse:
+    """Generate the filename export and persist its path."""
+    exported = collection_resolver.export(
+        session=session,
+        collection_id=collection.collection_id,
+        include=body.include,
+        exclude=body.exclude,
+        collection_filter=body.collection_filter,
+    )
+
+    temp_dir = PathlibPath(tempfile.mkdtemp())
+    filename = f"{collection.name}_exported_{datetime.now(timezone.utc)}.txt"
+    output_path = temp_dir / filename
+    try:
+        output_path.write_text("\n".join(exported))
+        export = export_job_resolver.create(session=session, export_path=str(output_path))
+    except Exception:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise
+    return ExportKeyResponse(export_key=export.export_key)
 
 
 @export_router.get("/export/download/{export_key}")
