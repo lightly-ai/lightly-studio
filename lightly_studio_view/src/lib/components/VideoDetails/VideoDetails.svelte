@@ -55,10 +55,12 @@
     const eventCollectionId = untrack(
         () => (video.sample as SampleView)?.collection_id ?? datasetId
     );
-    const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId: eventCollectionId });
-    const { createAnnotation } = useCreateAnnotation({ collectionId: eventCollectionId });
-    const { createLabel } = useCreateLabel({ collectionId: eventCollectionId });
-    const { deleteAnnotation } = useDeleteAnnotation({ collectionId: eventCollectionId });
+    const { updateAnnotations } = useUpdateAnnotationsMutation({
+        getCollectionId: () => eventCollectionId
+    });
+    const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => eventCollectionId });
+    const { createLabel } = useCreateLabel({ getCollectionId: () => eventCollectionId });
+    const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => eventCollectionId });
     const annotationLabels = useAnnotationLabels(() => ({ collectionId: eventCollectionId }));
 
     const {

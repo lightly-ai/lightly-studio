@@ -12,7 +12,7 @@
     }
     const { collectionId, isImages, hasMediaWithEmbeddings, supportsEvaluation }: Props = $props();
 
-    const { activePanel, toggle } = $derived.by(() => useSidePanelTabs({ collectionId }));
+    const { activePanel, toggle } = useSidePanelTabs({ getCollectionId: () => collectionId });
 </script>
 
 <div class="flex w-14 flex-col gap-2 rounded-xl bg-card p-1.5">

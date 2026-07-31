@@ -25,11 +25,9 @@
             ? ((n) => (Number.isNaN(n) ? undefined : n))(parseInt(data.frameNumber, 10))
             : undefined
     );
-    const { collection } = $derived.by(() =>
-        useCollectionWithChildren({
-            collectionId: data.params.collection_id
-        })
-    );
+    const { collection } = useCollectionWithChildren({
+        getCollectionId: () => data.params.collection_id
+    });
 </script>
 
 {#if typeof $video !== 'undefined'}

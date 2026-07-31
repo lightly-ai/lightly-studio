@@ -63,7 +63,7 @@
     const { trackEvent } = usePostHog();
     let drawStartFired = false;
 
-    const { deleteAnnotation } = $derived.by(() => useDeleteAnnotation({ collectionId }));
+    const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
 
     const labels = useAnnotationLabels(() => ({ collectionId }));
 
@@ -82,9 +82,9 @@
         enabled: !!activeAnnotationId
     }));
     const datasetId = $derived(page.params.dataset_id!);
-    const { refetch: refetchRootCollection } = $derived.by(() =>
-        useCollectionWithChildren({ collectionId: datasetId })
-    );
+    const { refetch: refetchRootCollection } = useCollectionWithChildren({
+        getCollectionId: () => datasetId
+    });
 
     const {
         open: selectClassDialogOpen,

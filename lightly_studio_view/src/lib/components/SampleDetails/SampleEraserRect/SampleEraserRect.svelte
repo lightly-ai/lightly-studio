@@ -54,18 +54,10 @@
         setAnnotationId
     } = useAnnotationLabelContext();
 
-    const { deleteAnnotation } = $derived.by(() =>
-        useDeleteAnnotation({
-            collectionId
-        })
-    );
+    const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
     const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
     const { addReversibleAction } = useGlobalStorage();
-    const { createAnnotation } = $derived.by(() =>
-        useCreateAnnotation({
-            collectionId
-        })
-    );
+    const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
     const eraserApi = $derived.by(() =>
         useSegmentationMaskEraser({
             collectionId,

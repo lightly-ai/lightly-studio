@@ -144,11 +144,9 @@
         isPending
     } = useAnnotationsInfinite(() => queryParams);
 
-    const { updateAnnotations: updateAnnotationsRaw } = $derived.by(() =>
-        useUpdateAnnotationsMutation({
-            collectionId: collection_id
-        })
-    );
+    const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
+        getCollectionId: () => collection_id
+    });
     let infiniteLoaderIdentifier = $derived(
         $selectedAnnotationFilterIds.join(',') +
             Array.from($tagsSelected).join(',') +

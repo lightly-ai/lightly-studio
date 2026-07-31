@@ -53,16 +53,8 @@
     } = useAnnotationLabelContext();
 
     const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
-    const { createAnnotation } = $derived.by(() =>
-        useCreateAnnotation({
-            collectionId
-        })
-    );
-    const { deleteAnnotation } = $derived.by(() =>
-        useDeleteAnnotation({
-            collectionId
-        })
-    );
+    const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
+    const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
     const { selectAnnotation } = useAnnotationSelection();
 
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));

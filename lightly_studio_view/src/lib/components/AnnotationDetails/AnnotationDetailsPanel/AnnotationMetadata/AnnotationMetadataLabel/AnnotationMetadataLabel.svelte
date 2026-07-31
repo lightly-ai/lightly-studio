@@ -36,11 +36,9 @@
         onUpdate
     }));
 
-    const { updateAnnotations: updateAnnotationsRaw } = $derived.by(() =>
-        useUpdateAnnotationsMutation({
-            collectionId
-        })
-    );
+    const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
+        getCollectionId: () => collectionId
+    });
 
     const items = $derived(getSelectionItems(result.data || []));
 

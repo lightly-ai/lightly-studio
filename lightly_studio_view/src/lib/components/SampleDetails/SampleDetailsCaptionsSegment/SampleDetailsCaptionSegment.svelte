@@ -24,9 +24,9 @@
     const { deleteCaption } = useDeleteCaption();
     const { createCaption } = useCreateCaption();
     const datasetId = $derived(page.params.dataset_id!);
-    const { refetch: refetchRootCollection } = $derived.by(() =>
-        useCollectionWithChildren({ collectionId: datasetId })
-    );
+    const { refetch: refetchRootCollection } = useCollectionWithChildren({
+        getCollectionId: () => datasetId
+    });
 
     const handleDeleteCaption = async (captionId: string) => {
         const caption = captions?.find((c) => c.sample_id === captionId);
