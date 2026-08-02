@@ -26,7 +26,7 @@
     import type { SampleType } from '$lib/api/lightly_studio_local';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { useQueryClient } from '@tanstack/svelte-query';
-    import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
+    import { useOperatorsDialog, useOperatorProgress } from '$lib/hooks';
 
     interface Props {
         operatorMetadata: RegisteredOperatorMetadata | null;
@@ -56,7 +56,11 @@
     );
 
     const queryClient = useQueryClient();
-    const { setPluginExecuting } = useOperatorsDialog();
+    const { setPluginExecuting, setPluginProgress } = useOperatorsDialog();
+    const { progress, startPolling, stopPolling } = useOperatorProgress();
+
+    // Mirror polled progress into the global store the overlay reads.
+    progress.subscribe((value) => setPluginProgress(value));
 
     const collectionId = $page.params.collection_id;
 
@@ -126,6 +130,9 @@
         executionError = undefined;
         executionSuccess = undefined;
 
+        const runId = crypto.randomUUID();
+        startPolling(runId);
+
         try {
             const response = await executeOperator({
                 path: { operator_id: operator.id },
@@ -134,7 +141,8 @@
                     context: {
                         collection_id: currentCollectionId,
                         ...($contextFilter !== undefined && { context_filter: $contextFilter })
-                    }
+                    },
+                    run_id: runId
                 }
             });
 
@@ -156,6 +164,8 @@
             executionError = message;
             toast.error('Operator execution failed', { description: message });
         } finally {
+            // Always stop the timer, so a failed execution cannot leak a poll loop.
+            stopPolling();
             isExecuting = false;
             setPluginExecuting(false);
         }

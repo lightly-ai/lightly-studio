@@ -12,7 +12,8 @@ from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.plugins import operator_context
 from lightly_studio.plugins.base_operator import OperatorResult, OperatorStatus
-from lightly_studio.plugins.operator_context import AnyFilter, ExecutionContext
+from lightly_studio.plugins.operator_context import AnyFilter, ExecutionContext, ProgressReporter
+from lightly_studio.plugins.operator_progress import OperatorProgress, progress_store
 from lightly_studio.plugins.operator_registry import RegisteredOperatorMetadata, operator_registry
 from lightly_studio.plugins.parameter import BaseParameter
 from lightly_studio.resolvers import collection_resolver
@@ -36,11 +37,39 @@ class ExecuteOperatorRequest(BaseModel):
     parameters: dict[str, Any]
     context: OperatorContextRequest
 
+    run_id: UUID | None = None
+    """Client-generated id used to poll this run's progress while it executes."""
+
 
 @operator_router.get("")
 def get_operators() -> list[RegisteredOperatorMetadata]:
     """Get all registered operators (id, name)."""
     return operator_registry.get_all_metadata()
+
+
+# Declared before the "/{operator_id}/..." routes so that "runs" is not captured
+# as an operator_id by the path parameter.
+@operator_router.get("/runs/{run_id}/progress")
+def get_operator_run_progress(run_id: UUID) -> OperatorProgress:
+    """Get the latest reported progress of an in-flight operator run.
+
+    Args:
+        run_id: The ``run_id`` that was passed to the execute call.
+
+    Returns:
+        The latest progress reported by the running operator.
+
+    Raises:
+        HTTPException: If the run is unknown, has already finished, or has not
+            reported any progress yet.
+    """
+    progress = progress_store.get(run_id=run_id)
+    if progress is None:
+        raise HTTPException(
+            status_code=HTTP_STATUS_NOT_FOUND,
+            detail=f"No progress reported for run '{run_id}'",
+        )
+    return progress
 
 
 @operator_router.get("/{operator_id}/parameters")
@@ -113,11 +142,35 @@ def execute_operator(
             ),
         )
 
-    # Execute the operator
-    return operator.execute(
-        session=session,
-        context=ExecutionContext(
-            collection_id=context.collection_id, context_filter=context.context_filter
-        ),
-        parameters=request.parameters,
+    execution_context = ExecutionContext(
+        collection_id=context.collection_id,
+        context_filter=context.context_filter,
     )
+    run_id = request.run_id
+    if run_id is not None:
+        execution_context.report_progress = _build_progress_reporter(run_id=run_id)
+
+    # Execute the operator
+    try:
+        return operator.execute(
+            session=session,
+            context=execution_context,
+            parameters=request.parameters,
+        )
+    finally:
+        # Runs are only polled while in flight, so drop the entry as soon as the
+        # operator returns to keep the store from growing without bound.
+        if run_id is not None:
+            progress_store.clear(run_id=run_id)
+
+
+def _build_progress_reporter(*, run_id: UUID) -> ProgressReporter:
+    """Build a reporter that records a run's progress into the progress store."""
+
+    def report_progress(*, current: int, total: int, description: str = "") -> None:
+        progress_store.set(
+            run_id=run_id,
+            progress=OperatorProgress(current=current, total=total, description=description),
+        )
+
+    return report_progress

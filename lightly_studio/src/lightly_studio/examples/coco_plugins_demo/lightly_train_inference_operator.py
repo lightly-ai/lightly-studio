@@ -137,6 +137,12 @@ class LightlyTrainObjectDetectionInferenceOperator(BaseOperator):
                     )
                 )
 
+            context.report_progress(
+                current=processed_sample_count,
+                total=len(samples),
+                description="Running inference",
+            )
+
         if annotations_to_create:
             annotation_resolver.create_many(
                 session=session,

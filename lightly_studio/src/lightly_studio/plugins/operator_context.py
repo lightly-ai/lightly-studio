@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Annotated, Union
+from typing import Annotated, Protocol, Union
 from uuid import UUID
 
 from pydantic import Field
@@ -36,6 +36,26 @@ AnyFilter = Annotated[
 ]
 
 
+class ProgressReporter(Protocol):
+    """Callback an operator uses to report how far along its run is."""
+
+    def __call__(self, *, current: int, total: int, description: str = "") -> None:
+        """Report progress of the current run.
+
+        Args:
+            current: Number of units processed so far.
+            total: Total number of units to process.
+            description: Human-readable description of the current step.
+        """
+
+
+# Defined above ExecutionContext because a dataclass field default is evaluated
+# when the class body runs, so it cannot live with the other private helpers at
+# the bottom of the file.
+def _report_progress_noop(*, current: int, total: int, description: str = "") -> None:
+    """Discard reported progress. Default for runs that report nowhere."""
+
+
 @dataclass
 class ExecutionContext:
     """Contextual data passed to ``BaseOperator.execute()``.
@@ -46,6 +66,15 @@ class ExecutionContext:
 
     collection_id: UUID
     context_filter: AnyFilter | None = None
+
+    report_progress: ProgressReporter = field(default=_report_progress_noop)
+    """Reports run progress to the UI.
+
+    Operators should call this from their sample loop, e.g.
+    ``context.report_progress(current=i, total=len(samples), description="Running inference")``.
+    Defaults to a no-op, so operators that do not report progress keep working
+    unchanged and the UI falls back to an indeterminate spinner.
+    """
 
 
 class OperatorScope(str, Enum):

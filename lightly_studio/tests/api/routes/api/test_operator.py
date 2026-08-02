@@ -18,6 +18,7 @@ from lightly_studio.api.routes.api.status import (
 from lightly_studio.models.collection import SampleType
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult, OperatorStatus
 from lightly_studio.plugins.operator_context import ExecutionContext, OperatorScope
+from lightly_studio.plugins.operator_progress import OperatorProgress, progress_store
 from lightly_studio.plugins.operator_registry import OperatorRegistry
 from lightly_studio.plugins.parameter import BaseParameter, BoolParameter, StringParameter
 from lightly_studio.resolvers.image_filter import FilterDimensions, ImageFilter
@@ -338,6 +339,82 @@ def test_execute_operator__sample_ids_filter_resolves_to_sample_filter(
     assert operator.captured_context.context_filter == SampleFilter(sample_ids=[sample_id])
 
 
+def test_execute_operator__reports_progress(
+    test_client: TestClient,
+    collection_id: UUID,
+    isolated_operator_registry: OperatorRegistry,
+) -> None:
+    """Progress reported during a run is readable from the progress endpoint."""
+    run_id = uuid4()
+    operator = ProgressReportingOperator()
+    isolated_operator_registry.register(operator)
+    operator_id = _get_operator_id_by_name(isolated_operator_registry, "progress-reporting")
+
+    response = test_client.post(
+        f"/api/operators/{operator_id}/execute",
+        json={
+            "parameters": {},
+            "context": {"collection_id": str(collection_id)},
+            "run_id": str(run_id),
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    # The operator polls its own progress mid-run, since the store is cleared by
+    # the time the response is returned.
+    assert operator.progress_during_run == OperatorProgress(
+        current=2, total=2, description="Running inference"
+    )
+
+
+def test_execute_operator__clears_progress_when_finished(
+    test_client: TestClient,
+    collection_id: UUID,
+    isolated_operator_registry: OperatorRegistry,
+) -> None:
+    run_id = uuid4()
+    isolated_operator_registry.register(ProgressReportingOperator())
+    operator_id = _get_operator_id_by_name(isolated_operator_registry, "progress-reporting")
+
+    test_client.post(
+        f"/api/operators/{operator_id}/execute",
+        json={
+            "parameters": {},
+            "context": {"collection_id": str(collection_id)},
+            "run_id": str(run_id),
+        },
+    )
+    response = test_client.get(f"/api/operators/runs/{run_id}/progress")
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
+
+
+def test_execute_operator__without_run_id(
+    test_client: TestClient,
+    collection_id: UUID,
+    isolated_operator_registry: OperatorRegistry,
+) -> None:
+    """Reported progress is discarded when the client does not pass a run_id."""
+    operator = ProgressReportingOperator()
+    isolated_operator_registry.register(operator)
+    operator_id = _get_operator_id_by_name(isolated_operator_registry, "progress-reporting")
+
+    response = test_client.post(
+        f"/api/operators/{operator_id}/execute",
+        json={"parameters": {}, "context": {"collection_id": str(collection_id)}},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {"success": True, "message": "ok"}
+    assert operator.progress_during_run is None
+
+
+def test_get_operator_run_progress__unknown_run(test_client: TestClient) -> None:
+    response = test_client.get(f"/api/operators/runs/{uuid4()}/progress")
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
+
+
 @dataclass
 class TestOperator(BaseOperator):
     name: str = "test operator"
@@ -417,3 +494,52 @@ class ImageScopeOperator(BaseOperator):
         _, _ = session, parameters
         self.captured_context = context
         return OperatorResult(success=True, message="ok")
+
+
+@dataclass
+class ProgressReportingOperator(BaseOperator):
+    """Operator that reports progress for two samples while it runs.
+
+    ``progress_during_run`` captures what the progress store held at the end of
+    the run, before the route clears it. The run id is recovered from the store
+    rather than passed in, because operators never receive it.
+    """
+
+    name: str = "progress-reporting"
+    description: str = "reports progress for two samples"
+    progress_during_run: OperatorProgress | None = None
+    status: OperatorStatus = OperatorStatus.READY
+
+    @property
+    def parameters(self) -> list[BaseParameter]:
+        return []
+
+    @property
+    def supported_scopes(self) -> list[OperatorScope]:
+        return [OperatorScope.ROOT]
+
+    def execute(
+        self,
+        *,
+        session: Session,
+        context: ExecutionContext,
+        parameters: dict[str, Any],
+    ) -> OperatorResult:
+        _, _ = session, parameters
+        total = 2
+        for current in range(1, total + 1):
+            context.report_progress(current=current, total=total, description="Running inference")
+        self.progress_during_run = _get_only_stored_progress()
+        return OperatorResult(success=True, message="ok")
+
+
+def _get_only_stored_progress() -> OperatorProgress | None:
+    """Return the single in-flight run's progress, or None if nothing is stored.
+
+    Looks the run up by scanning the store because only the route knows the
+    run id that the client generated.
+    """
+    run_ids = progress_store.get_run_ids()
+    if not run_ids:
+        return None
+    return progress_store.get(run_id=run_ids[0])
