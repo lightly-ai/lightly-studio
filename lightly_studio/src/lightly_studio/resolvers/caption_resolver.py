@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Sequence
 from uuid import UUID
 
@@ -42,6 +43,13 @@ def create_many(
     if not captions:
         return []
 
+    # Validate all temporal spans before writing any rows.
+    temporal_spans_by_index = {
+        index: temporal_span
+        for index, caption in enumerate(captions)
+        if (temporal_span := _validate_optional_temporal_span(caption=caption)) is not None
+    }
+
     caption_collection_id = collection_resolver.get_or_create_child_collection(
         session=session, collection_id=parent_collection_id, sample_type=SampleType.CAPTION
     )
@@ -54,7 +62,7 @@ def create_many(
     # generated sample_ids.
     db_captions = []
     temporal_spans = []
-    for sample_id, caption in zip(sample_ids, captions):
+    for index, (sample_id, caption) in enumerate(zip(sample_ids, captions)):
         db_captions.append(
             CaptionTable.model_validate(
                 CaptionCreateHelper(
@@ -64,7 +72,7 @@ def create_many(
                 )
             )
         )
-        temporal_span = _validate_optional_temporal_span(caption=caption)
+        temporal_span = temporal_spans_by_index.get(index)
         if temporal_span is not None:
             start_time_s, end_time_s = temporal_span
             temporal_spans.append(
@@ -169,6 +177,8 @@ def _validate_optional_temporal_span(caption: CaptionCreate) -> tuple[float, flo
 
     if start_time_s is None or end_time_s is None:
         raise ValueError("Both start_time_s and end_time_s must be provided together.")
+    if not math.isfinite(start_time_s) or not math.isfinite(end_time_s):
+        raise ValueError("start_time_s and end_time_s must be finite.")
     if start_time_s < 0:
         raise ValueError("start_time_s must be non-negative.")
     if start_time_s >= end_time_s:

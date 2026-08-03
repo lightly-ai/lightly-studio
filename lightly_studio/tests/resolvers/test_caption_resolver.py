@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from uuid import uuid4
 
 import pytest
@@ -266,6 +267,38 @@ def test_create_many__invalid_temporal_span(db_session: Session) -> None:
                     parent_sample_id=image.sample_id,
                     text="partial span",
                     start_time_s=1.0,
+                ),
+            ],
+        )
+
+
+@pytest.mark.parametrize(
+    ("start_time_s", "end_time_s"),
+    [
+        (math.nan, 1.0),
+        (0.0, math.nan),
+        (math.inf, 1.0),
+        (0.0, math.inf),
+        (-math.inf, 1.0),
+        (0.0, -math.inf),
+    ],
+)
+def test_create_many__non_finite_temporal_span(
+    db_session: Session, start_time_s: float, end_time_s: float
+) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+
+    with pytest.raises(ValueError, match="start_time_s and end_time_s must be finite"):
+        caption_resolver.create_many(
+            session=db_session,
+            parent_collection_id=collection.collection_id,
+            captions=[
+                CaptionCreate(
+                    parent_sample_id=image.sample_id,
+                    text="non-finite span",
+                    start_time_s=start_time_s,
+                    end_time_s=end_time_s,
                 ),
             ],
         )
