@@ -306,10 +306,15 @@ def export_collection_youtube_vis(
 ) -> StreamingResponse:
     """Export collection video annotations in the selected export format."""
     if collection.sample_type != SampleType.VIDEO:
-        raise ValueError("YouTube-VIS export is only supported for video collections.")
+        raise HTTPException(
+            status_code=400, detail="YouTube-VIS export is only supported for video collections."
+        )
 
     if export_format != ExportFormat.YOUTUBE_VIS_SEGMENTATION:
-        raise ValueError("Only YouTube-VIS segmentation format is supported for this endpoint.")
+        raise HTTPException(
+            status_code=400,
+            detail="Only YouTube-VIS segmentation format is supported for this endpoint.",
+        )
     dataset_query = DatasetQuery(dataset=collection, session=session, sample_class=VideoSample)
 
     temp_dir = TemporaryDirectory()
