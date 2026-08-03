@@ -1,8 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
-import type { OperatorParameterColumn } from '$lib/hooks/useOperators/useOperators';
+import type { OperatorParameterColumn } from '$lib/hooks';
 import ParameterTable from './ParameterTable.svelte';
-import type { ParameterTableRow } from './parameterTypeConfig';
+import type { ParameterTableRow } from '../parameterTypeConfig';
 
 // Columns come from the API mapper, where every field is present. The factory fills in the parts a
 // test does not care about so the fixtures stay readable.
@@ -179,6 +179,24 @@ describe('ParameterTable', () => {
         expect(screen.getByTestId('parameter-table-prompts-prompt-0')).toHaveValue('prompt 0');
         expect(screen.getByTestId('parameter-table-prompts-prompt-5')).toHaveValue('prompt 5');
         expect(screen.getByTestId('parameter-table-prompts-remove-row-5')).toBeInTheDocument();
+    });
+
+    it('lays the headers out in the same grid as the cells so the columns stay aligned', () => {
+        // The scroll container adds padding and a scrollbar, so a header grid of its own would
+        // resolve its `1fr` columns against a wider box than the rows and drift out of alignment.
+        const value = Array.from({ length: 6 }, (_, index) => ({
+            prompt: `prompt ${index}`,
+            label: `label ${index}`
+        }));
+
+        render(ParameterTable, { props: { ...defaultProps, value, onUpdate: vi.fn() } });
+
+        const header = screen.getByText('prompt', { selector: 'span' });
+        const cell = screen.getByTestId('parameter-table-prompts-prompt-0');
+
+        expect(header.closest('.grid')).toBe(cell.closest('.grid'));
+        // Sticky, so the shared grid can scroll while the headers stay visible.
+        expect(header).toHaveClass('sticky');
     });
 
     it('shows the validation hint when a required table is missing a value', () => {

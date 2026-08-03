@@ -1,8 +1,4 @@
-import type {
-    OperatorParameterColumn,
-    OperatorParameterType,
-    Operator
-} from '$lib/hooks/useOperators/useOperators';
+import type { OperatorParameterColumn, OperatorParameterType, Operator } from '$lib/hooks';
 import type { Component } from 'svelte';
 import ParameterCheckbox from './ParameterCheckbox.svelte';
 import ParameterInput from './ParameterInput.svelte';

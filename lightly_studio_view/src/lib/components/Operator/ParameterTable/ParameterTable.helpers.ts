@@ -1,13 +1,14 @@
-import type { OperatorParameterColumn } from '$lib/hooks/useOperators/useOperators';
-import { getCellConfig, isCellFilled, type ParameterTableRow } from './parameterTypeConfig';
+import type { OperatorParameterColumn } from '$lib/hooks';
+import { getCellConfig, isCellFilled, type ParameterTableRow } from '../parameterTypeConfig';
 
 /** Rows shown before the rows area starts scrolling instead of growing the dialog. */
 export const MAX_VISIBLE_ROWS = 4;
 
 // Inputs are h-10 (2.5rem) and rows are gap-2 (0.5rem) apart, so four rows measure
-// 4 * 2.5rem + 3 * 0.5rem. Beyond that the rows area scrolls itself instead of pushing the dialog
-// footer out of view.
-export const MAX_ROWS_HEIGHT = 'max-h-[11.5rem]';
+// 4 * 2.5rem + 3 * 0.5rem = 11.5rem. The scroll container also holds the sticky header row
+// (text-xs, 1rem line height) plus its gap and the p-2 padding, so it gets 11.5 + 1 + 0.5 + 1rem.
+// Beyond that the rows area scrolls itself instead of pushing the dialog footer out of view.
+export const MAX_ROWS_HEIGHT = 'max-h-[14rem]';
 
 /** Tailwind cannot compile a class built at runtime, so the column count goes through style. */
 export const buildGridStyle = (columnCount: number): string =>
@@ -41,6 +42,14 @@ export const replaceCell = (
 ): ParameterTableRow[] =>
     rows.map((row, rowIndex) => (rowIndex === index ? { ...row, [name]: value } : row));
 
+/** Validation state of the table parameter the cell belongs to. */
+interface TableValidationState {
+    /** Whether the table parameter itself is required. */
+    required: boolean;
+    /** Whether the table parameter is currently blocking submission. */
+    isMissing: boolean;
+}
+
 /**
  * Whether a cell should be flagged as invalid. Only the cells that actually block submission are
  * flagged, not every empty cell of the table.
@@ -48,5 +57,5 @@ export const replaceCell = (
 export const isCellInvalid = (
     row: ParameterTableRow,
     column: OperatorParameterColumn,
-    { required, isMissing }: { required: boolean; isMissing: boolean }
+    { required, isMissing }: TableValidationState
 ): boolean => required && isMissing && column.required && !isCellFilled(row[column.name], column);

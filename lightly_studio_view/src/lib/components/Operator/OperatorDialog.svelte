@@ -10,8 +10,7 @@
         type RegisteredOperatorMetadata
     } from '$lib/api/lightly_studio_local';
     import { toast } from 'svelte-sonner';
-    import type { Operator } from '$lib/hooks/useOperators/useOperators';
-    import { createOperatorFromMetadata } from '$lib/hooks/useOperators/useOperators';
+    import { createOperatorFromMetadata, type Operator } from '$lib/hooks';
     import {
         type ParameterValue,
         type ParameterValues,

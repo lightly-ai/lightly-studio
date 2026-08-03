@@ -4,9 +4,9 @@
     import { Button } from '$lib/components/ui/button';
     import { Label } from '$lib/components/ui/label';
     import { cn } from '$lib/utils';
-    import type { OperatorParameterColumn } from '$lib/hooks/useOperators/useOperators';
-    import ParameterTableCell from './ParameterTableCell.svelte';
-    import type { ParameterTableRow, ParameterValue } from './parameterTypeConfig';
+    import type { OperatorParameterColumn } from '$lib/hooks';
+    import ParameterTableCell from './ParameterTableCell/ParameterTableCell.svelte';
+    import type { ParameterTableRow, ParameterValue } from '../parameterTypeConfig';
     import {
         MAX_ROWS_HEIGHT,
         MAX_VISIBLE_ROWS,
@@ -85,19 +85,6 @@
             No rows yet. Use "Add row" to add one.
         </p>
     {:else}
-        <!-- Headers sit outside the scroll container so they stay visible while rows scroll. -->
-        <div class="grid gap-2" style={gridStyle}>
-            {#each cells as cell (cell.name)}
-                <span class="text-xs font-medium text-muted-foreground" title={cell.description}>
-                    {cell.name}
-                    {#if cell.required}
-                        <span class="text-destructive-text">*</span>
-                    {/if}
-                </span>
-            {/each}
-            <span></span>
-        </div>
-
         <!-- overflow-y-auto also clips horizontally, cutting off the inputs' focus
              ring, so it is only applied once the rows actually need to scroll. The
              p-2 then keeps that ring clear of the border. -->
@@ -109,7 +96,23 @@
             )}
             data-testid={`parameter-table-${name}-rows`}
         >
+            <!-- Headers and rows share one grid so the columns line up whatever the padding and
+                 scrollbar take from the scroll container. The header row sticks to the top so it
+                 stays visible while the rows scroll underneath it. -->
             <div class="grid gap-2" style={gridStyle}>
+                {#each cells as cell (cell.name)}
+                    <span
+                        class="sticky top-0 z-10 bg-background text-xs font-medium text-muted-foreground"
+                        title={cell.description}
+                    >
+                        {cell.name}
+                        {#if cell.required}
+                            <span class="text-destructive-text">*</span>
+                        {/if}
+                    </span>
+                {/each}
+                <span class="sticky top-0 z-10 bg-background"></span>
+
                 {#each rows as row, index (index)}
                     {#each cells as cell (cell.name)}
                         <ParameterTableCell

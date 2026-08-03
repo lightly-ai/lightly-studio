@@ -1,8 +1,8 @@
 <script lang="ts">
     import { Checkbox } from '$lib/components/ui/checkbox';
     import { Input } from '$lib/components/ui/input';
-    import type { OperatorParameterColumn } from '$lib/hooks/useOperators/useOperators';
-    import { getCellConfig, type ParameterTableRow } from './parameterTypeConfig';
+    import type { OperatorParameterColumn } from '$lib/hooks';
+    import { getCellConfig, type ParameterTableRow } from '../../parameterTypeConfig';
 
     interface Props {
         column: OperatorParameterColumn;

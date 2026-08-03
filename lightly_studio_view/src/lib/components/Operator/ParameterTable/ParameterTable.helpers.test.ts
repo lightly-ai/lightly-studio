@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { OperatorParameterColumn } from '$lib/hooks/useOperators/useOperators';
+import type { OperatorParameterColumn } from '$lib/hooks';
 import { buildCellDefault } from './ParameterTable.helpers';
 
 const column = (overrides: Partial<OperatorParameterColumn>): OperatorParameterColumn => ({
