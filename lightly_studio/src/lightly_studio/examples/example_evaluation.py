@@ -82,9 +82,9 @@ def main() -> None:
 
     db_manager.connect(cleanup_existing=True)
 
-    images_path = env.path("EXAMPLES_COCO_IMAGES_PATH", "/path/to/your/images")
-    gt_annotations_json = env.path("EXAMPLES_COCO_JSON_PATH", "/path/to/your/gt.json")
-    pred_annotations_json = env.path("EXAMPLES_PRED_ANNOTATIONS_JSON", "/path/to/your/pred.json")
+    images_path = env.path("EXAMPLES_COCO_IMAGES_PATH")
+    gt_annotations_json = env.path("EXAMPLES_COCO_JSON_PATH")
+    pred_annotations_json = env.path("EXAMPLES_PRED_ANNOTATIONS_JSON")
     evaluation_config = ObjectDetectionEvaluationConfig(
         iou_threshold=0.5,
         classwise=True,
