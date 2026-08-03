@@ -6,7 +6,7 @@ import io
 import json
 import zipfile
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import yaml
 from fastapi.testclient import TestClient
@@ -24,6 +24,7 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.export_job import ExportJobTable
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
@@ -505,6 +506,104 @@ def test_export_collection_youtube_vis__wrong_export_format(
     )
 
     assert response.status_code == HTTP_STATUS_BAD_REQUEST
+
+
+def test_export_collection_prepare(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session, collection_name="my_collection")
+    image_a = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="path/a.png",
+    )
+    image_b = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="path/b.png",
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/prepare",
+        json={"include": {"sample_ids": [str(image_a.sample_id), str(image_b.sample_id)]}},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    export_key = UUID(response.json()["export_key"])
+
+    export_job = db_session.get(ExportJobTable, export_key)
+    assert export_job is not None
+    file_content = Path(export_job.export_path).read_text()
+    assert file_content == "path/a.png\npath/b.png"
+
+
+def test_export_collection_prepare__with_tag_filter(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+    image_a = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="path/a.png",
+    )
+    create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="path/b.png",
+    )
+    image_c = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="path/c.png",
+    )
+
+    tag = create_tag(session=db_session, collection_id=collection.collection_id)
+    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=image_a.sample)
+    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=image_c.sample)
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/prepare",
+        json={"include": {"tag_ids": [str(tag.tag_id)]}},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    export_key = UUID(response.json()["export_key"])
+
+    export_job = db_session.get(ExportJobTable, export_key)
+    assert export_job is not None
+    file_content = Path(export_job.export_path).read_text()
+    assert file_content == "path/a.png\npath/c.png"
+
+
+def test_export_collection_prepare__exclude_filter(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+    image_a = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="path/a.png",
+    )
+    create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="path/b.png",
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/prepare",
+        json={"exclude": {"sample_ids": [str(image_a.sample_id)]}},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    export_key = UUID(response.json()["export_key"])
+
+    export_job = db_session.get(ExportJobTable, export_key)
+    assert export_job is not None
+    assert Path(export_job.export_path).read_text() == "path/b.png"
 
 
 def test_export_download__not_found_returns_404(
