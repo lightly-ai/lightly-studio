@@ -135,7 +135,7 @@ def main() -> None:
 
     db_manager.connect(cleanup_existing=True)
 
-    images_path = env.path("EXAMPLES_COCO_IMAGES_PATH", "/path/to/your/images")
+    images_path = env.path("EXAMPLES_COCO_IMAGES_PATH")
 
     dataset = ImageDataset.create(name=DATASET_NAME)
     dataset.add_images_from_path(path=images_path)
