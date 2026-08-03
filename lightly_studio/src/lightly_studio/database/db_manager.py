@@ -320,12 +320,9 @@ def _create_duckdb_schema(engine: Engine, engine_url: str) -> None:
     except OperationalError as e:
         if isinstance(e.orig, duckdb.IOException) and "Could not set lock" in str(e.orig):
             raise RuntimeError(
-                f"Could not open the DuckDB database at {engine_url!r}: another process "
-                "already has it open. DuckDB only allows one process to access a "
-                "database file at a time, so close the other lightly_studio process "
-                "(e.g. the GUI server or another script) before running this one, or "
-                "point this process at a different database with "
-                "LIGHTLY_STUDIO_DATABASE_URL."
+                f"DuckDB database at {engine_url!r} is locked by another process. "
+                "Close the other lightly_studio process, or set "
+                "LIGHTLY_STUDIO_DATABASE_URL to point at a different database."
             ) from e
         raise
 

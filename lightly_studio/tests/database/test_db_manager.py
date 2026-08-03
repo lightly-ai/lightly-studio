@@ -230,7 +230,7 @@ def test_database_engine__duckdb_lock_conflict_raises_clear_error(
         side_effect=OperationalError(statement="statement", params={}, orig=lock_error),
     )
 
-    with pytest.raises(RuntimeError, match=r"another process already has it open"):
+    with pytest.raises(RuntimeError, match=r"locked by another process"):
         DatabaseEngine(engine_url=f"duckdb:///{tmp_path / 'locked.db'}", single_threaded=True)
 
 
@@ -248,6 +248,11 @@ def test_database_engine__duckdb_non_lock_operational_error_propagates(
 
     with pytest.raises(OperationalError, match=r"Disk full"):
         DatabaseEngine(engine_url=f"duckdb:///{tmp_path / 'other.db'}", single_threaded=True)
+
+
+def test_duckdb_io_exception__is_operational_error() -> None:
+    """Regression guard: _create_duckdb_schema's lock detection assumes this holds."""
+    assert issubclass(duckdb.IOException, duckdb.OperationalError)
 
 
 def test_detect_backend_from_url() -> None:
