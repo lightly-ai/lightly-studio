@@ -22,10 +22,14 @@
 
     const {
         sample,
-        objectFit = 'contain'
+        objectFit = 'contain',
+        outputWidth = sample.width,
+        outputHeight = sample.height
     }: {
         sample: SampleView;
         objectFit?: SampleImageObjectFit;
+        outputWidth?: number;
+        outputHeight?: number;
     } = $props();
 
     const { isHidden } = useHideAnnotations();
@@ -119,8 +123,11 @@
     <div data-testid="sample-annotation-item">
         <AnnotationCanvas
             sampleId={sample.sample_id}
-            width={sample.width}
-            height={sample.height}
+            sourceWidth={sample.width}
+            sourceHeight={sample.height}
+            {outputWidth}
+            {outputHeight}
+            {objectFit}
             annotations={annotationsWithVisuals}
             alpha={0.8}
             className={`pointer-events-none absolute inset-0 z-[1] h-full w-full ${objectFitClass}`}
