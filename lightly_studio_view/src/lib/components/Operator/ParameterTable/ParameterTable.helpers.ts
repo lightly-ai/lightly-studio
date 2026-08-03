@@ -51,11 +51,24 @@ interface TableValidationState {
 }
 
 /**
- * Whether a cell should be flagged as invalid. Only the cells that actually block submission are
- * flagged, not every empty cell of the table.
+ * Whether a cell holds a value the backend cannot accept. A numeric column reads `''` while its
+ * input is empty or mid-edit, and the backend validates every cell against its column type
+ * regardless of `required`, so such a cell is always invalid — not just on a required column.
+ */
+const isCellUnsubmittable = (row: ParameterTableRow, column: OperatorParameterColumn): boolean => {
+    const { type } = getCellConfig(column);
+    return (type === 'int' || type === 'float') && !isCellFilled(row[column.name], column);
+};
+
+/**
+ * Whether a cell should be flagged as invalid. Cells that block submission are flagged: the empty
+ * cells of required columns once the table is missing a value, and cells of any column whose value
+ * the backend would reject outright.
  */
 export const isCellInvalid = (
     row: ParameterTableRow,
     column: OperatorParameterColumn,
     { required, isMissing }: TableValidationState
-): boolean => required && isMissing && column.required && !isCellFilled(row[column.name], column);
+): boolean =>
+    isCellUnsubmittable(row, column) ||
+    (required && isMissing && column.required && !isCellFilled(row[column.name], column));
