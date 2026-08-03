@@ -88,52 +88,8 @@ describe('ParameterTable', () => {
         expect(onUpdate).toHaveBeenCalledWith([{ limit: '', enabled: false }]);
     });
 
-    it('parses a numeric cell into a number', async () => {
-        const onUpdate = vi.fn();
-        const columns = [column({ name: 'limit', paramType: 'int' })];
-
-        render(ParameterTable, {
-            props: { ...defaultProps, columns, value: [{ limit: '' }], onUpdate }
-        });
-
-        const cell = screen.getByTestId('parameter-table-prompts-limit-0');
-        expect(cell).toHaveAttribute('type', 'number');
-
-        await fireEvent.input(cell, { target: { value: '7' } });
-
-        expect(onUpdate).toHaveBeenCalledWith([{ limit: 7 }]);
-    });
-
-    it('keeps a cleared numeric cell empty instead of storing NaN', async () => {
-        const onUpdate = vi.fn();
-        const columns = [column({ name: 'threshold', paramType: 'float' })];
-
-        render(ParameterTable, {
-            props: { ...defaultProps, columns, value: [{ threshold: 0.5 }], onUpdate }
-        });
-
-        await fireEvent.input(screen.getByTestId('parameter-table-prompts-threshold-0'), {
-            target: { value: '' }
-        });
-
-        expect(onUpdate).toHaveBeenCalledWith([{ threshold: '' }]);
-    });
-
-    it('renders a boolean cell as a checkbox and reports the toggled value', async () => {
-        const onUpdate = vi.fn();
-        const columns = [column({ name: 'enabled', paramType: 'bool' })];
-
-        render(ParameterTable, {
-            props: { ...defaultProps, columns, value: [{ enabled: false }], onUpdate }
-        });
-
-        const checkbox = screen.getByTestId('parameter-table-prompts-enabled-0');
-        expect(checkbox).not.toBeChecked();
-
-        await fireEvent.click(checkbox);
-
-        expect(onUpdate).toHaveBeenCalledWith([{ enabled: true }]);
-    });
+    // How a cell of each column type renders, parses and reports its edits is covered directly in
+    // ParameterTableCell.test.ts; these tests only cover wiring that belongs to the table.
 
     it('calls onUpdate with the edited cell when a cell input changes', async () => {
         const onUpdate = vi.fn();
@@ -226,41 +182,22 @@ describe('ParameterTable', () => {
         expect(screen.getByTestId('parameter-table-prompts-label-0')).toBeValid();
     });
 
-    it('flags an empty required numeric cell but never an unchecked boolean cell', () => {
-        const columns = [
-            column({ name: 'limit', paramType: 'int' }),
-            column({ name: 'enabled', paramType: 'bool' })
-        ];
+    it('never flags an unchecked boolean cell', () => {
+        // A checkbox always has a value, so a boolean column must not block submission.
+        const columns = [column({ name: 'enabled', paramType: 'bool' })];
 
         render(ParameterTable, {
             props: {
                 ...defaultProps,
                 columns,
-                value: [{ limit: '', enabled: false }],
+                value: [{ enabled: false }],
                 isMissing: true,
                 onUpdate: vi.fn()
             }
         });
 
-        expect(screen.getByTestId('parameter-table-prompts-limit-0')).toBeInvalid();
         expect(screen.getByTestId('parameter-table-prompts-enabled-0')).not.toHaveAttribute(
             'aria-invalid'
         );
-    });
-
-    it('treats a filled numeric cell as valid', () => {
-        const columns = [column({ name: 'limit', paramType: 'int' })];
-
-        render(ParameterTable, {
-            props: {
-                ...defaultProps,
-                columns,
-                value: [{ limit: 3 }],
-                isMissing: true,
-                onUpdate: vi.fn()
-            }
-        });
-
-        expect(screen.getByTestId('parameter-table-prompts-limit-0')).toBeValid();
     });
 });
