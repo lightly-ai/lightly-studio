@@ -10,6 +10,7 @@ from sqlmodel import Session, col, select
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleCreate
+from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import collection_resolver, sample_resolver
 from lightly_studio.utils import batching
 
@@ -49,18 +50,33 @@ def create_many(
         samples=[SampleCreate(collection_id=caption_collection_id) for _ in captions],
     )
 
-    # Bulk create CaptionTable entries using the generated sample_ids.
-    db_captions = [
-        CaptionTable.model_validate(
-            CaptionCreateHelper(
-                parent_sample_id=sample.parent_sample_id,
-                text=sample.text,
-                sample_id=sample_id,
+    # Bulk create CaptionTable entries and their optional temporal spans using the
+    # generated sample_ids.
+    db_captions = []
+    temporal_spans = []
+    for sample_id, caption in zip(sample_ids, captions):
+        db_captions.append(
+            CaptionTable.model_validate(
+                CaptionCreateHelper(
+                    parent_sample_id=caption.parent_sample_id,
+                    text=caption.text,
+                    sample_id=sample_id,
+                )
             )
         )
-        for sample_id, sample in zip(sample_ids, captions)
-    ]
+        temporal_span = _validate_optional_temporal_span(caption=caption)
+        if temporal_span is not None:
+            start_time_s, end_time_s = temporal_span
+            temporal_spans.append(
+                TemporalSpanTable(
+                    sample_id=sample_id,
+                    start_time_s=start_time_s,
+                    end_time_s=end_time_s,
+                )
+            )
+
     session.bulk_save_objects(db_captions)
+    session.bulk_save_objects(temporal_spans)
     session.commit()
     return sample_ids
 
@@ -131,3 +147,31 @@ def delete_caption(
     session.commit()
     session.delete(caption)
     session.commit()
+
+
+def _validate_optional_temporal_span(caption: CaptionCreate) -> tuple[float, float] | None:
+    """Validate the optional temporal span of a caption to create.
+
+    Args:
+        caption: The caption to validate.
+
+    Returns:
+        The validated ``(start_time_s, end_time_s)`` tuple, or ``None`` if the caption has
+        no temporal span.
+
+    Raises:
+        ValueError: If only one of the two bounds is set or the span is invalid.
+    """
+    start_time_s = caption.start_time_s
+    end_time_s = caption.end_time_s
+    if start_time_s is None and end_time_s is None:
+        return None
+
+    if start_time_s is None or end_time_s is None:
+        raise ValueError("Both start_time_s and end_time_s must be provided together.")
+    if start_time_s < 0:
+        raise ValueError("start_time_s must be non-negative.")
+    if start_time_s >= end_time_s:
+        raise ValueError("start_time_s must be less than end_time_s.")
+
+    return (start_time_s, end_time_s)
