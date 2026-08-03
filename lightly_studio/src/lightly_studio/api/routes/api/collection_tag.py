@@ -244,17 +244,28 @@ def add_samples_to_tag_by_filter(
 @tag_router.delete(
     "/collections/{collection_id}/tags/{tag_id}/remove/samples",
 )
-def remove_thing_ids_to_tag_id(
+def remove_sample_ids_from_tag_id(
     session: SessionDep,
+    # collection_id is needed for the generator
+    collection_id: Annotated[
+        UUID,
+        Path(title="collection Id", description="The ID of the collection"),
+    ],
     tag_id: UUID,
     body: SampleIdsBody,
 ) -> bool:
-    """Add thing_ids to a tag_id."""
+    """Remove sample_ids from a tag_id."""
     tag = tag_resolver.get_by_id(session=session, tag_id=tag_id)
     if not tag:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail=f"Tag {tag_id} not found, can't remove samples.",
+        )
+    # Validate the collection id.
+    if tag.collection_id != collection_id:
+        raise HTTPException(
+            status_code=HTTP_STATUS_NOT_FOUND,
+            detail=f"Tag {tag_id} not found in collection {collection_id}.",
         )
 
     sample_ids = body.sample_ids if body.sample_ids else []

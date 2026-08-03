@@ -25,6 +25,12 @@
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
     import { page } from '$app/state';
     import SampleImageGridItem from '../SampleImageGridItem/SampleImageGridItem.svelte';
+    import { GridContextMenu } from '../GridContextMenu';
+    import { useImagesContextMenu } from './useImagesContextMenu.svelte';
+    import { createImagesInfiniteOptions } from '$lib/hooks/useImagesInfinite/createImagesInfiniteOptions';
+    import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
+    import useAuth from '$lib/hooks/useAuth/useAuth';
+    import { get } from 'svelte/store';
 
     // Import the settings hook
     const { gridViewSampleRenderingStore, showSampleFilenamesStore } = useSettings();
@@ -39,7 +45,11 @@
     const { selectedAnnotationFilterIdsArray: selectedAnnotationFilterIds } =
         useSelectedAnnotationsFilter();
 
-    const { tagsSelected } = useTags({
+    const {
+        tagsSelected,
+        tags: sampleTags,
+        loadTags
+    } = useTags({
         collection_id,
         kind: ['sample']
     });
@@ -52,6 +62,8 @@
         setfilteredSampleCount,
         getSelectedSampleIds,
         toggleSampleSelection,
+        clearSelectedSamples,
+        getSelectAllSnapshot,
         sampleSize
     } = useGlobalStorage();
     const columnCount = $derived($sampleSize.width);
@@ -95,12 +107,13 @@
         updateFilterParams(mergeExternalFilters(baseParams, currentParams));
     });
 
-    const { samples: infiniteSamples } = useImagesInfinite(() => ({
+    const imagesParams = $derived({
         ...$filterParams,
         collection_id: collection_id,
         query_expr: $imageQueryExpression?.query_expr,
         sort_by: $textEmbedding ? undefined : ($imageSortBy ?? undefined)
-    }));
+    });
+    const { samples: infiniteSamples, refresh } = useImagesInfinite(() => imagesParams);
     // Derived list of samples from TanStack infinite query
     const samples: ImageView[] = $derived(
         infiniteSamples && infiniteSamples.data
@@ -191,6 +204,22 @@
         }
     }
 
+    const { user } = useAuth();
+    const canEditTags = $derived(hasMinimumRole(user?.role, 'labeler'));
+
+    const contextMenu = useImagesContextMenu({
+        collectionId: collection_id,
+        getSamples: () => samples,
+        getSelectedSampleIds: () => get(selectedSampleIds),
+        getAllTags: () => get(sampleTags),
+        getSelectAllSnapshot: () => get(getSelectAllSnapshot(collection_id)),
+        getSamplesQueryKey: () => createImagesInfiniteOptions(imagesParams).queryKey,
+        onSamplesRefetch: refresh,
+        onTagsRefetch: loadTags,
+        onOpenSample: handleOnDoubleClick
+    });
+    const tagMutationBusy = contextMenu.busy;
+
     function handleSampleSelect({
         sampleId,
         index,
@@ -246,54 +275,70 @@
     itemCount={samples.length}
 >
     {#snippet children({ footer })}
-        <Grid
-            itemCount={samples.length}
-            {columnCount}
-            overScan={sampleGridOverscan}
-            onScroll={handleScroll}
-            {initialScrollPosition}
-            {scrollResetKey}
-            gridProps={{ 'data-testid': 'images-grid', class: 'dark:[color-scheme:dark]' }}
+        <GridContextMenu
+            headerLabel={contextMenu.headerLabel}
+            tags={$sampleTags}
+            tagStates={contextMenu.tagStates}
+            knownTargetNote={contextMenu.knownTargetNote}
+            {canEditTags}
+            busy={$tagMutationBusy}
+            hasSelection={$selectedSampleIds.size > 0}
+            onResolveTarget={contextMenu.resolveTarget}
+            onToggleTag={contextMenu.toggleTag}
+            onCreateAndAssign={contextMenu.createAndAssign}
+            onOpen={contextMenu.openTarget}
+            onFindSimilar={contextMenu.findSimilarTarget}
+            onClearSelection={() => clearSelectedSamples(collection_id)}
         >
-            {#snippet gridItem({ index, style, width, height })}
-                {#if samples[index]}
-                    {#key samples[index].sample_id}
-                        {@const displayTextOnImage = $showSampleFilenamesStore
-                            ? samples[index].file_name
-                            : samples[index].captions?.[0]?.text}
-                        <GridItem
-                            {width}
-                            {height}
-                            {style}
-                            dataSampleName={samples[index].file_name}
-                            dataIndex={index}
-                            dataTestId="sample-grid-item"
-                            isSelected={$selectedSampleIds.has(samples[index].sample_id)}
-                            ariaLabel={`View image: ${samples[index].file_name}`}
-                            dragData={{
-                                url: getGridImageURL({
-                                    sampleId: samples[index].sample_id,
-                                    quality: 'raw'
-                                }),
-                                fileName: samples[index].file_name
-                            }}
-                            ondblclick={() => handleOnDoubleClick(samples[index].sample_id)}
-                            onSelect={(event) =>
-                                handleGridItemSelect(event, samples[index].sample_id, index)}
-                        >
-                            <SampleImageGridItem
-                                sample={samples[index]}
-                                {objectFit}
-                                sampleSize={width}
-                                {displayTextOnImage}
-                            />
-                        </GridItem>
-                    {/key}
-                {/if}
-            {/snippet}
-            {#snippet footerItem()}
-                {@render footer()}
-            {/snippet}
-        </Grid>
+            <Grid
+                itemCount={samples.length}
+                {columnCount}
+                overScan={sampleGridOverscan}
+                onScroll={handleScroll}
+                {initialScrollPosition}
+                {scrollResetKey}
+                gridProps={{ 'data-testid': 'images-grid', class: 'dark:[color-scheme:dark]' }}
+            >
+                {#snippet gridItem({ index, style, width, height })}
+                    {#if samples[index]}
+                        {#key samples[index].sample_id}
+                            {@const displayTextOnImage = $showSampleFilenamesStore
+                                ? samples[index].file_name
+                                : samples[index].captions?.[0]?.text}
+                            <GridItem
+                                {width}
+                                {height}
+                                {style}
+                                dataSampleName={samples[index].file_name}
+                                dataIndex={index}
+                                dataTestId="sample-grid-item"
+                                isSelected={$selectedSampleIds.has(samples[index].sample_id)}
+                                ariaLabel={`View image: ${samples[index].file_name}`}
+                                dragData={{
+                                    url: getGridImageURL({
+                                        sampleId: samples[index].sample_id,
+                                        quality: 'raw'
+                                    }),
+                                    fileName: samples[index].file_name
+                                }}
+                                ondblclick={() => handleOnDoubleClick(samples[index].sample_id)}
+                                onSelect={(event) =>
+                                    handleGridItemSelect(event, samples[index].sample_id, index)}
+                            >
+                                <SampleImageGridItem
+                                    sample={samples[index]}
+                                    {objectFit}
+                                    sampleSize={width}
+                                    {displayTextOnImage}
+                                />
+                            </GridItem>
+                        {/key}
+                    {/if}
+                {/snippet}
+                {#snippet footerItem()}
+                    {@render footer()}
+                {/snippet}
+            </Grid>
+        </GridContextMenu>
     {/snippet}
 </GridContainer>

@@ -9,6 +9,7 @@ from sqlmodel import Session, col, select
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,
+    HTTP_STATUS_OK,
 )
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleTagLinkTable
@@ -139,6 +140,66 @@ def test_add_samples_by_filter__wrong_collection_returns_404(
     )
 
     assert response.status_code == HTTP_STATUS_NOT_FOUND
+
+
+def test_remove_sample_ids_from_tag_id(db_session: Session, test_client: TestClient) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
+    kept, removed = create_images(
+        db_session=db_session,
+        collection_id=collection_id,
+        images=[ImageStub(path="kept.png"), ImageStub(path="removed.png")],
+    )
+    test_client.post(
+        f"/api/collections/{collection_id}/tags/{tag.tag_id}/add/samples",
+        json={"sample_ids": [str(kept.sample_id), str(removed.sample_id)]},
+    )
+
+    response = test_client.request(
+        "DELETE",
+        f"/api/collections/{collection_id}/tags/{tag.tag_id}/remove/samples",
+        json={"sample_ids": [str(removed.sample_id)]},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert _tagged_sample_ids(session=db_session, tag_id=tag.tag_id) == {kept.sample_id}
+
+
+def test_remove_sample_ids_from_tag_id__unknown_tag_returns_404(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+
+    response = test_client.request(
+        "DELETE",
+        f"/api/collections/{collection_id}/tags/{uuid.uuid4()}/remove/samples",
+        json={"sample_ids": []},
+    )
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
+
+
+def test_remove_sample_ids_from_tag_id__wrong_collection_returns_404(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
+    image = create_image(session=db_session, collection_id=collection_id, file_path_abs="s.png")
+    test_client.post(
+        f"/api/collections/{collection_id}/tags/{tag.tag_id}/add/samples",
+        json={"sample_ids": [str(image.sample_id)]},
+    )
+
+    # Tag exists, but not in the collection on the path.
+    response = test_client.request(
+        "DELETE",
+        f"/api/collections/{uuid.uuid4()}/tags/{tag.tag_id}/remove/samples",
+        json={"sample_ids": [str(image.sample_id)]},
+    )
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
+    # The link must survive a request scoped to the wrong collection.
+    assert _tagged_sample_ids(session=db_session, tag_id=tag.tag_id) == {image.sample_id}
 
 
 def _tagged_sample_ids(session: Session, tag_id: UUID) -> set[UUID]:
