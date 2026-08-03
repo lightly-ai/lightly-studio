@@ -20,6 +20,7 @@ export interface SourceCrop {
     height: number;
 }
 
+/** Describes how source-image coordinates map onto the output canvas. */
 export interface RenderGeometry {
     sourceWidth: number;
     sourceHeight: number;
@@ -81,6 +82,10 @@ const getRunEnds = (rle: ReadonlyArray<number>): number[] => {
     return runEnds;
 };
 
+/**
+ * Renders source-sized RLE masks directly into an output-sized pixel buffer.
+ * This keeps memory usage bounded by the visible canvas size.
+ */
 export const renderMasks = (
     geometry: RenderGeometry,
     masks: MaskInput[]
@@ -126,6 +131,7 @@ export const renderMasks = (
     return pixelData;
 };
 
+/** Clips bounding boxes to the visible source crop and maps them onto the output canvas. */
 export const transformBoxes = (
     geometry: RenderGeometry,
     boxes: BoundingBoxInput[]
