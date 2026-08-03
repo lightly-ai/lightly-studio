@@ -1,5 +1,5 @@
 import type { OperatorParameterColumn } from '$lib/hooks';
-import { getCellConfig, isCellFilled, type ParameterTableRow } from '../parameterTypeConfig';
+import { getCellConfig, isCellSubmittable, type ParameterTableRow } from '../parameterTypeConfig';
 
 // Four rows before the table scrolls instead of growing the dialog: inputs are h-10 (2.5rem) and rows
 // are gap-2 (0.5rem) apart, so four measure 4 * 2.5rem + 3 * 0.5rem = 11.5rem. The header shares the
@@ -81,24 +81,21 @@ interface TableValidationState {
 }
 
 /**
- * Whether a cell holds a value the backend cannot accept. A numeric column reads `''` while its
- * input is empty or mid-edit, and the backend validates every cell against its column type
- * regardless of `required`, so such a cell is always invalid — not just on a required column.
- */
-const isCellUnsubmittable = (row: ParameterTableRow, column: OperatorParameterColumn): boolean => {
-    const { type } = getCellConfig(column);
-    return (type === 'int' || type === 'float') && !isCellFilled(row[column.name], column);
-};
-
-/**
- * Whether a cell should be flagged as invalid. Cells that block submission are flagged: the empty
- * cells of required columns once the table is missing a value, and cells of any column whose value
- * the backend would reject outright.
+ * Whether a cell should be flagged as invalid. Only cells that block submission are flagged, and the
+ * two kinds differ in when the user gets told:
+ *
+ * A cell the backend would reject outright is flagged straight away. That is a numeric cell reading
+ * `''` — empty or mid-edit — on a column of any kind, because the backend validates every cell
+ * against its column type whether or not it is required.
+ *
+ * An empty required cell is only flagged once the table itself is blocking submission, so a row the
+ * user is still filling in is not red from the moment it is added.
  */
 export const isCellInvalid = (
     row: ParameterTableRow,
     column: OperatorParameterColumn,
     { required, isMissing }: TableValidationState
-): boolean =>
-    isCellUnsubmittable(row, column) ||
-    (required && isMissing && column.required && !isCellFilled(row[column.name], column));
+): boolean => {
+    if (isCellSubmittable(row[column.name], column)) return false;
+    return !column.required || (required && isMissing);
+};
