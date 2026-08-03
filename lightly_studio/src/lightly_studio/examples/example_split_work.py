@@ -18,7 +18,7 @@ db_manager.connect(cleanup_existing=True)
 dataset = ls.ImageDataset.create()
 
 # Define the path to the dataset (folder containing data.yaml)
-dataset_path = env.path("EXAMPLES_YOLO_YAML_PATH", "/path/to/your/yolo/dataset/data.yaml")
+dataset_path = env.path("EXAMPLES_YOLO_YAML_PATH")
 input_split = env.str("EXAMPLES_YOLO_SPLIT", "test")
 
 # Load YOLO dataset using data.yaml path
