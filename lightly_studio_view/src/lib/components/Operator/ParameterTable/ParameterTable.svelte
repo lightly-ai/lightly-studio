@@ -85,6 +85,25 @@
             No rows yet. Use "Add row" to add one.
         </p>
     {:else}
+        <!-- The header sits outside the scroll container so it stays put while the rows scroll; a
+             sticky header inside the grid would scroll away with its own row track. Both grids use
+             the same template, and scrollbar-gutter keeps the columns aligned by reserving the
+             scrollbar's width whether or not the rows scroll. -->
+        <div
+            class={cn('grid gap-2', isScrollable && 'px-2 [scrollbar-gutter:stable]')}
+            style={gridStyle}
+        >
+            {#each cells as cell (cell.name)}
+                <span class="text-xs font-medium text-muted-foreground" title={cell.description}>
+                    {cell.name}
+                    {#if cell.required}
+                        <span class="text-destructive-text">*</span>
+                    {/if}
+                </span>
+            {/each}
+            <span></span>
+        </div>
+
         <!-- overflow-y-auto also clips horizontally, cutting off the inputs' focus
              ring, so it is only applied once the rows actually need to scroll. The
              p-2 then keeps that ring clear of the border. -->
@@ -92,27 +111,11 @@
             bind:this={rowsContainer}
             class={cn(
                 isScrollable &&
-                    `${MAX_ROWS_HEIGHT} overflow-y-auto rounded-md border border-border p-2`
+                    `${MAX_ROWS_HEIGHT} overflow-y-auto rounded-md border border-border p-2 [scrollbar-gutter:stable]`
             )}
             data-testid={`parameter-table-${name}-rows`}
         >
-            <!-- Headers and rows share one grid so the columns line up whatever the padding and
-                 scrollbar take from the scroll container. The header row sticks to the top so it
-                 stays visible while the rows scroll underneath it. -->
             <div class="grid gap-2" style={gridStyle}>
-                {#each cells as cell (cell.name)}
-                    <span
-                        class="sticky top-0 z-10 bg-background text-xs font-medium text-muted-foreground"
-                        title={cell.description}
-                    >
-                        {cell.name}
-                        {#if cell.required}
-                            <span class="text-destructive-text">*</span>
-                        {/if}
-                    </span>
-                {/each}
-                <span class="sticky top-0 z-10 bg-background"></span>
-
                 {#each rows as row, index (index)}
                     {#each cells as cell (cell.name)}
                         <ParameterTableCell

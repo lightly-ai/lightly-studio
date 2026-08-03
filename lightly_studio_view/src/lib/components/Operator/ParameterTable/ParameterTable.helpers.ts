@@ -5,10 +5,10 @@ import { getCellConfig, isCellFilled, type ParameterTableRow } from '../paramete
 export const MAX_VISIBLE_ROWS = 4;
 
 // Inputs are h-10 (2.5rem) and rows are gap-2 (0.5rem) apart, so four rows measure
-// 4 * 2.5rem + 3 * 0.5rem = 11.5rem. The scroll container also holds the sticky header row
-// (text-xs, 1rem line height) plus its gap and the p-2 padding, so it gets 11.5 + 1 + 0.5 + 1rem.
-// Beyond that the rows area scrolls itself instead of pushing the dialog footer out of view.
-export const MAX_ROWS_HEIGHT = 'max-h-[14rem]';
+// 4 * 2.5rem + 3 * 0.5rem = 11.5rem. The header sits outside the scroll container, so on top of the
+// rows this only has to cover the p-2 padding (1rem), giving 11.5 + 1 = 12.5rem. Beyond that the
+// rows area scrolls itself instead of pushing the dialog footer out of view.
+export const MAX_ROWS_HEIGHT = 'max-h-[12.5rem]';
 
 /** Tailwind cannot compile a class built at runtime, so the column count goes through style. */
 export const buildGridStyle = (columnCount: number): string =>
