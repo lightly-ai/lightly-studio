@@ -1117,6 +1117,7 @@ def test_export_collection_captions_prepare__image_filter(
     assert len(content["annotations"]) == 1
     assert content["annotations"][0]["caption"] == "caption for a"
 
+
 def test_export_collection_youtube_vis_prepare(
     db_session: Session,
     test_client: TestClient,
