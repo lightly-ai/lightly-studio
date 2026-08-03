@@ -22,6 +22,14 @@ export interface UseDistributionPanelParams {
     onCategoricalValuesClear?: (groupId: string) => void;
 }
 
+function makeGetters<T extends Record<string, unknown>>(fns: { [K in keyof T]: () => T[K] }): T {
+    const result = {} as T;
+    for (const key in fns) {
+        Object.defineProperty(result, key, { get: fns[key], enumerable: true, configurable: true });
+    }
+    return result;
+}
+
 const defaultCategoricalConfig: DistributionConfig = {
     mode: 'topN',
     n: 1,
@@ -175,79 +183,43 @@ export function useDistributionPanel(getProps: () => UseDistributionPanelParams)
         config = next;
     }
 
-    return {
-        get hasSourceSelector() {
-            return hasSourceSelector;
-        },
-        get sourceItems() {
-            return sourceItems;
-        },
-        get groupItems() {
-            return groupItems;
-        },
-        get activeSource() {
-            return activeSource;
-        },
-        get activeGroup() {
-            return activeGroup;
-        },
-        get activeData() {
-            return activeData;
-        },
-        get activeHistogram() {
-            return activeHistogram;
-        },
-        get activeCategorical() {
-            return activeCategorical;
-        },
-        get categoricalData() {
-            return categoricalData;
-        },
-        get displayedData() {
-            return displayedData;
-        },
-        get configurationItems() {
-            return configurationItems;
-        },
-        get activeHistogramRange() {
-            return activeHistogramRange;
-        },
-        get histogramTotal() {
-            return histogramTotal;
-        },
-        get valueNoun() {
-            return valueNoun;
-        },
-        get config() {
-            return config;
-        },
-        get categoricalConfig() {
-            return categoricalConfig;
-        },
-        get activeViewConfig() {
-            return activeViewConfig;
-        },
-        get visible() {
-            return visible;
-        },
-        get totalCount() {
-            return totalCount;
-        },
-        get showTotalCount() {
-            return showTotalCount;
-        },
-        binCountItems,
-        setSelectedSourceId: (id: string) => {
-            selectedSourceId = id;
-        },
-        setSelectedGroupId: (id: string | undefined) => {
-            selectedGroupId = id;
-        },
-        handleHistogramRangeSelect,
-        handleCategoricalBarClick,
-        handleCategoricalFilterToggle,
-        handleCategoricalFilterClear,
-        setCategoricalConfig,
-        applyConfig
-    };
+    return Object.assign(
+        makeGetters({
+            hasSourceSelector: () => hasSourceSelector,
+            sourceItems: () => sourceItems,
+            groupItems: () => groupItems,
+            activeSource: () => activeSource,
+            activeGroup: () => activeGroup,
+            activeData: () => activeData,
+            activeHistogram: () => activeHistogram,
+            activeCategorical: () => activeCategorical,
+            categoricalData: () => categoricalData,
+            displayedData: () => displayedData,
+            configurationItems: () => configurationItems,
+            activeHistogramRange: () => activeHistogramRange,
+            histogramTotal: () => histogramTotal,
+            valueNoun: () => valueNoun,
+            config: () => config,
+            categoricalConfig: () => categoricalConfig,
+            activeViewConfig: () => activeViewConfig,
+            visible: () => visible,
+            totalCount: () => totalCount,
+            showTotalCount: () => showTotalCount
+        }),
+        {
+            binCountItems,
+            setSelectedSourceId: (id: string) => {
+                selectedSourceId = id;
+            },
+            setSelectedGroupId: (id: string | undefined) => {
+                selectedGroupId = id;
+            },
+            handleHistogramRangeSelect,
+            handleCategoricalBarClick,
+            handleCategoricalFilterToggle,
+            handleCategoricalFilterClear,
+            setCategoricalConfig,
+            applyConfig
+        }
+    );
 }
