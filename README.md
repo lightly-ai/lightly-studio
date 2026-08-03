@@ -17,42 +17,77 @@
     </picture>
   </a>
 </p>
-<p align="center"><strong>Curate, Annotate, and Manage Your Data in LightlyStudio.</strong></p>
+<p align="center"><strong>Curate, annotate, and evaluate computer vision datasets — locally, in your browser.</strong></p>
 <p align="center">
   <a href="https://pypi.org/project/lightly-studio"><img src="https://img.shields.io/pypi/pyversions/lightly-studio" alt="PyPI python" /></a>
   <a href="https://pypi.org/project/lightly-studio"><img src="https://badge.fury.io/py/lightly-studio.svg" alt="PyPI version" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License" /></a>
   <a href="https://docs.lightly.ai/studio"><img src="https://img.shields.io/badge/Docs-blue" alt="Docs" /></a>
-  <a href="https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab" /></a>
 </p>
 
 ---
 
-# Welcome to LightlyStudio!
-
-We at Lightly created **LightlyStudio**, an open-source tool designed to unify your data workflows from curation, annotation, model evaluation and management in a single tool. Since we're big fans of Rust we used it to speed things up. You can work with COCO and ImageNet on a Macbook Pro with M1 and 16GB of memory!
-
 <p align="center">
-  <video
-    src="https://github.com/user-attachments/assets/012974ce-1040-40f9-9f7e-41a45c56bf1c"
-    width="70%"
-    controls
-    loop
-    muted
-  ></video>
-  <br>
+  <img src="assets/readme/hero_grid_embeddings.png" alt="LightlyStudio grid view with the embedding plot open, lasso-selecting a cluster of similar images" width="100%" />
 </p>
 
-## 💻 Installation
+<p align="center">Browse your dataset as a grid, open the embedding plot next to it, and lasso-select clusters to find duplicates, outliers, and edge cases — all running on your own machine.</p>
 
-Runs on **Python 3.9 to 3.14** on Windows, Linux and MacOS. We recommend **Python 3.10** for the best compatibility with plugins such as SAM autolabeling.
+## 🚀 Try it in 60 seconds
 
 ```shell
 pip install lightly-studio
 ```
 
+```python
+import lightly_studio as ls
 
-## Workflows
+dataset = ls.ImageDataset.load_or_create()
+dataset.add_images_from_path(path="path/to/your/images")
+
+ls.start_gui()
+```
+
+Run it and open the printed URL — your images and embeddings are now in the browser. No account, no cloud upload, nothing to configure.
+
+Don't have images handy? Swap the path for `ls.utils.download_example_dataset(download_dir="dataset_examples")` and point at the `images/` folder inside it.
+
+Runs on **Python 3.9–3.14** (3.10 recommended for plugin compatibility, e.g. SAM autolabeling) on Windows, Linux, and macOS. Rust-accelerated under the hood, so COCO- and ImageNet-scale datasets index comfortably on a laptop.
+
+**No install?** [Open the quickstart in Colab](https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb) — same flow, nothing to set up.
+
+## Why LightlyStudio
+
+Most teams stitch together separate tools for curating data, labeling it, and evaluating models. LightlyStudio does all three in one local tool, so your embeddings, tags, annotations, and evaluation results live in one place instead of three exports that drift out of sync. It's open source, and since it's Rust-accelerated under the hood, it stays fast on large datasets without a server to manage.
+
+## Competitive Landscape
+
+<!--
+  ⚠️ MOCK / DRAFT SECTION — NOT FOR SHIPPING ⚠️
+  All numbers, charts, and claims below are fabricated placeholders for an internal
+  positioning discussion. Nothing here is measured or verified. Do not merge this
+  section into main or publish it as-is. Replace with real benchmarks (or delete)
+  before this ever leaves a local branch.
+-->
+
+> **Draft / internal only.** The table and charts below use invented numbers to sketch
+> a possible positioning narrative. Nothing here is a verified benchmark.
+
+| Capability | LightlyStudio | FiftyOne | CVAT | Label Studio |
+|---|:---:|:---:|:---:|:---:|
+| Local-first, no cloud account required | ✅ | ✅ | ⚠️ self-host only | ⚠️ self-host only |
+| Curation (embeddings/similarity) + annotation + eval in **one** tool | ✅ | ⚠️ curation-focused | ❌ annotation-only | ❌ annotation-only |
+| Rust-accelerated core | ✅ | ❌ | ❌ | ❌ |
+| Native model evaluation (confusion matrix, failure clustering) | ✅ | ⚠️ plugin-based | ❌ | ❌ |
+| Auto-labeling plugins (SAM, detectors) | ✅ | ⚠️ via plugins | ✅ | ✅ |
+| Scales to 100k+ images on a laptop | ✅ (claimed) | ⚠️ | ⚠️ | ❌ |
+| Open source | ✅ | ✅ | ✅ | ✅ |
+
+<p align="center">
+  <img src="assets/readme_mock/positioning_mock.png" alt="MOCK DATA: illustrative throughput and time-to-first-insight comparison" width="90%" />
+</p>
+
+## What you can do
 
 <table>
   <tr>
@@ -70,7 +105,7 @@ pip install lightly-studio
     </td>
     <td align="center">
       <a href="https://docs.lightly.ai/studio/concepts_and_tools/annotations/">
-        <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/annotation.png" width="400" alt="Annotate"/>
+        <img src="assets/readme/annotation_editor.png" width="400" alt="Annotate"/>
       </a>
       <br/><strong>Annotation</strong>
     </td>
@@ -97,79 +132,36 @@ pip install lightly-studio
   </tr>
 </table>
 
+<p align="center">
+  <video
+    src="https://github.com/user-attachments/assets/012974ce-1040-40f9-9f7e-41a45c56bf1c"
+    width="70%"
+    controls
+    loop
+    muted
+  ></video>
+  <br>
+</p>
 
-## 🚀 Quickstart
+## 📚 Tutorials
 
-LightlyStudio is a browser app that runs on your own computer. Use it in two simple steps:
+Step-by-step guides covering complete workflows — from raw, unlabeled data to a trained and evaluated model:
 
-1. Load your data into the local database with a Python script.
-2. Start the server and explore the data in your browser.
+- **[Curate a Traffic CCTV Dataset for YOLO Training](https://docs.lightly.ai/studio/tutorials/yolo-traffic-cctv-object-detection/):** Explore embeddings, remove near-duplicates, auto-label with a detection plugin, and review annotations before training.
+- **[Evaluate YOLO26 on Your Dataset with LightlyStudio](https://docs.lightly.ai/studio/tutorials/yolo26-model-evaluation/):** Compare predictions against ground truth, use the confusion matrix and embeddings to find failure patterns, and export issues for relabeling.
 
-Prefer a guided, end-to-end walkthrough? Follow the tutorial
-[Curate a Traffic CCTV Dataset for YOLO Training](https://docs.lightly.ai/studio/tutorials/yolo-traffic-cctv-object-detection/) — from raw images to a trained model.
-Or try LightlyStudio without installing anything: [open the example notebook in Colab](https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb).
+## 🐍 Python Interface
 
-Get started with one of these example workflows:
+LightlyStudio has a powerful Python interface. You can not only index datasets but also query and manipulate them using code.
 
-<details open>
-<summary><strong>Evaluate object detection predictions on a COCO dataset</strong></summary>
-
-Create a file named `example_coco_od_evaluation.py`:
-
-```python
-import lightly_studio as ls
-from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
-from lightly_studio.evaluation.image_dataset_evaluate import ObjectDetectionEvaluationConfig
-
-
-# Download the example dataset (will be skipped if it already exists)
-dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
-
-images_path = f"{dataset_path}/coco_subset_128_images/images"
-evaluation_config = ObjectDetectionEvaluationConfig(
-    iou_threshold=0.5,
-    classwise=True,
-)
-
-dataset = ls.ImageDataset.load_or_create()
-dataset.add_images_from_path(path=images_path)
-# Add ground truth annotations
-dataset.add_annotations_from_coco(
-    annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
-    images_root=images_path,
-    annotation_source="ground_truth",
-)
-# Add predictions annotations
-dataset.add_annotations_from_coco(
-    annotations_json=f"{dataset_path}/coco_subset_128_images/predictions_train2017.json",
-    images_root=images_path,
-    annotation_source="predictions",
-)
-# Optional: tag a subset of samples to run the evaluation on.
-dataset.query()[:10].add_tag("evaluated_samples")
-# Create query for tagged samples
-tagged_evaluation_query = dataset.query().match(ImageSampleField.tags.contains("evaluated_samples"))
-
-dataset.evaluate(query=tagged_evaluation_query).object_detection(
-    name="od_evaluation",
-    gt_annotation_source="ground_truth",
-    pred_annotation_source="predictions",
-    config=evaluation_config,
-)
-
-ls.start_gui()
-```
-</details>
+### Loading other formats
 
 <details>
-<summary><strong>Index a COCO dataset</strong></summary>
-
-Create a file named `example_coco.py`:
+<summary><strong>Index a COCO dataset (detections or segmentation masks)</strong></summary>
 
 ```python
 import lightly_studio as ls
 
-# Download the example dataset (will be skipped if it already exists)
 dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
 
 dataset = ls.ImageDataset.load_or_create()
@@ -177,31 +169,20 @@ dataset.add_samples_from_coco(
     annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
     images_path=f"{dataset_path}/coco_subset_128_images/images",
 )
-# Optional: tag a subset of samples to filter them in the GUI. 
-dataset.query()[:10].add_tag("sample_subset")
 
 ls.start_gui()
 ```
 
-Run `python example_coco.py` and open the printed URL to inspect images with their annotations.
-
-To import COCO segmentation masks instead of object detections, set:
-
-```python
-annotation_type=ls.AnnotationType.SEGMENTATION_MASK
-```
+To import segmentation masks instead of object detections, set `annotation_type=ls.AnnotationType.SEGMENTATION_MASK`.
 
 </details>
 
 <details>
 <summary><strong>Index a YOLO dataset</strong></summary>
 
-Create a file named `example_yolo.py`:
-
 ```python
 import lightly_studio as ls
 
-# Download the example dataset (will be skipped if it already exists)
 dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
 
 dataset = ls.ImageDataset.load_or_create()
@@ -212,14 +193,26 @@ dataset.add_samples_from_yolo(
 ls.start_gui()
 ```
 
-Run `python example_yolo.py` and open the printed URL to inspect images with their annotations.
+</details>
+
+<details>
+<summary><strong>Index a folder of videos</strong></summary>
+
+```python
+import lightly_studio as ls
+
+dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+
+dataset = ls.VideoDataset.load_or_create()
+dataset.add_videos_from_path(path=f"{dataset_path}/youtube_vis_50_videos/train/videos")
+
+ls.start_gui()
+```
 
 </details>
 
 <details>
-<summary><strong>Add custom annotations</strong></summary>
-
-Create a file named `example_custom_annotations.py`:
+<summary><strong>Add custom annotations from code</strong></summary>
 
 ```python
 import numpy as np
@@ -232,38 +225,24 @@ from lightly_studio.core.annotation import (
 )
 from lightly_studio.core.dataset_query import ImageSampleField
 
-# Download the example dataset (will be skipped if it already exists)
 dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
 images_path = f"{dataset_path}/coco_subset_128_images/images"
 
-# Create an image dataset and add the images first.
 dataset = ls.ImageDataset.load_or_create()
 dataset.add_images_from_path(path=images_path)
 
-# Use a query to fetch the sample you want to annotate.
 sample = dataset.query().match(
     ImageSampleField.file_name == "000000565296.jpg",
 ).to_list()[0]
 
-# A binary mask is indexed as [row, column], so its shape is (height, width).
 binary_mask = np.zeros((sample.height, sample.width), dtype=np.uint8)
 binary_mask[160:300, 300:480] = 1
 
-# Add one set of annotations to this sample.
 sample.add_annotations(
     [
         CreateClassification(class_name="outdoor"),
-        CreateObjectDetection(
-            class_name="vehicle",
-            x=80,
-            y=120,
-            width=180,
-            height=120,
-        ),
-        CreateSegmentationMask.from_binary_mask(
-            class_name="foreground",
-            binary_mask=binary_mask,
-        ),
+        CreateObjectDetection(class_name="vehicle", x=80, y=120, width=180, height=120),
+        CreateSegmentationMask.from_binary_mask(class_name="foreground", binary_mask=binary_mask),
     ],
     annotation_source="ground_truth",
 )
@@ -271,13 +250,48 @@ sample.add_annotations(
 ls.start_gui()
 ```
 
-Run `python example_custom_annotations.py` and open the printed URL to inspect the
-classification, bounding box, and segmentation mask.
+</details>
+
+<details>
+<summary><strong>Evaluate object detection predictions against ground truth</strong></summary>
+
+```python
+import lightly_studio as ls
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
+from lightly_studio.evaluation.image_dataset_evaluate import ObjectDetectionEvaluationConfig
+
+dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+images_path = f"{dataset_path}/coco_subset_128_images/images"
+
+dataset = ls.ImageDataset.load_or_create()
+dataset.add_images_from_path(path=images_path)
+dataset.add_annotations_from_coco(
+    annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
+    images_root=images_path,
+    annotation_source="ground_truth",
+)
+dataset.add_annotations_from_coco(
+    annotations_json=f"{dataset_path}/coco_subset_128_images/predictions_train2017.json",
+    images_root=images_path,
+    annotation_source="predictions",
+)
+
+evaluation_config = ObjectDetectionEvaluationConfig(iou_threshold=0.5, classwise=True)
+tagged = dataset.query().match(ImageSampleField.tags.contains("evaluated_samples"))
+dataset.evaluate(query=tagged).object_detection(
+    name="od_evaluation",
+    gt_annotation_source="ground_truth",
+    pred_annotation_source="predictions",
+    config=evaluation_config,
+)
+
+ls.start_gui()
+```
 
 </details>
 
 <details>
-<summary><strong>Working with notebooks</strong></summary>
+<summary><strong>Working with notebooks (Jupyter / Colab)</strong></summary>
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb)
 
@@ -307,63 +321,11 @@ from google.colab import output
 
 output.serve_kernel_port_as_iframe(server.port, width=1000, height=800)
 ```
-</details>
-
-<details>
-<summary><strong>Index a folder of images for curation and labeling</strong></summary>
-
-Create a file named `example_image.py`:
-
-```python
-import lightly_studio as ls
-
-# Download the example dataset (will be skipped if it already exists)
-dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
-
-# Index the images, create embeddings, and store everything in the local database.
-dataset = ls.ImageDataset.load_or_create()
-dataset.add_images_from_path(
-    path=f"{dataset_path}/coco_subset_128_images/images",
-)
-
-# Start the UI server on localhost:8001.
-# Pass `host` and `port` parameters to customize it.
-ls.start_gui()
-```
-
-Run `python example_image.py` and open the printed URL in your browser.
 
 </details>
-
-<details>
-<summary><strong>Index a folder of videos for curation and labeling</strong></summary>
-
-```python
-import lightly_studio as ls
-
-dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
-
-dataset = ls.VideoDataset.load_or_create()
-dataset.add_videos_from_path(path=f"{dataset_path}/youtube_vis_50_videos/train/videos")
-
-ls.start_gui()
-```
-
-
-</details>
-
-## 📚 Tutorials
-
-Step-by-step guides covering complete workflows — from raw, unlabeled data to a trained and evaluated model:
-
-- **[Curate a Traffic CCTV Dataset for YOLO Training](https://docs.lightly.ai/studio/tutorials/yolo-traffic-cctv-object-detection/):** Explore embeddings, remove near-duplicates, auto-label with a detection plugin, and review annotations before training.
-- **[Evaluate YOLO26 on Your Dataset with LightlyStudio](https://docs.lightly.ai/studio/tutorials/yolo26-model-evaluation/):** Compare predictions against ground truth, use the confusion matrix and embeddings to find failure patterns, and export issues for relabeling.
-
-## 🐍 Python Interface
-
-LightlyStudio has a powerful Python interface. You can not only index datasets but also query and manipulate them using code.
 
 ### ☁️ Using Cloud Storage
+
 To load images or videos directly from a cloud storage provider (like AWS S3, GCS, etc.), you must first install the required dependencies:
 
 ```shell
