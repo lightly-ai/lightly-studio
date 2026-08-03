@@ -133,13 +133,6 @@ def test_get_operator_parameters__table_parameter(
     test_client: TestClient,
     isolated_operator_registry: OperatorRegistry,
 ) -> None:
-    """The full column definitions must reach the client.
-
-    Regression guard: `columns` lives on `TableParameter` only, so the route has to map the
-    parameters onto `ParameterView` to expose them. Returning the plugin dataclasses directly would
-    make pydantic serialize each item against the base class and silently drop the columns, leaving
-    the GUI without column information and without any error.
-    """
     isolated_operator_registry.register(TableParamsOperator(name="table"))
 
     operator_id = _get_operator_id_by_name(isolated_operator_registry, "table")
@@ -363,11 +356,6 @@ def test_execute_operator__table_parameter_rows_reach_the_operator(
     collection_id: UUID,
     isolated_operator_registry: OperatorRegistry,
 ) -> None:
-    """Table rows must arrive in `execute()` as a list of dicts.
-
-    `ExecuteOperatorRequest.parameters` is a `dict[str, Any]`, so the rows pass through untouched.
-    This pins that contract, since it is what plugins index into.
-    """
     operator = TableParamsOperator(name="table")
     isolated_operator_registry.register(operator)
     operator_id = _get_operator_id_by_name(isolated_operator_registry, "table")
