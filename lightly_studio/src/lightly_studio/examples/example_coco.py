@@ -13,8 +13,8 @@ env.read_env()
 db_manager.connect(cleanup_existing=True)
 
 # Define data paths
-annotations_json = env.path("EXAMPLES_COCO_JSON_PATH", "/path/to/your/dataset/annotations.json")
-images_path = env.path("EXAMPLES_COCO_IMAGES_PATH", "/path/to/your/dataset")
+annotations_json = env.path("EXAMPLES_COCO_JSON_PATH")
+images_path = env.path("EXAMPLES_COCO_IMAGES_PATH")
 
 # Create a DatasetLoader from a path
 dataset = ls.ImageDataset.create()

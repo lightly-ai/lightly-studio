@@ -19,8 +19,9 @@
         totalCount?: number;
         /** Noun for the total count summary (e.g. 'annotations', 'samples'). */
         valueNoun?: string;
-        /** Singular/plural labels for the distributed categories. */
+        /** Singular label for the distributed categories. */
         categoryNoun?: string;
+        /** Plural labels for the distributed categories. */
         categoryNounPlural?: string;
         /** Labels for the active sort mode. */
         sortLabels?: Record<keyof typeof DISTRIBUTION_SORT_LABELS, string>;
