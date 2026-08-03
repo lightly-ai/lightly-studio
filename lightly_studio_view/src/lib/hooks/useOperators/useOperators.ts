@@ -6,17 +6,17 @@ import type {
 
 export type OperatorParameterType = 'string' | 'int' | 'float' | 'bool';
 
-export type OperatorParameterColumn = {
-    name: string;
-    description?: string;
-    default?: unknown;
-    required: boolean;
+const mapColumn = (column: ParameterColumnView) => ({
+    name: column.name,
+    description: column.description,
+    default: column.default as unknown,
+    required: column.required,
     /**
      * Python type name of the column, e.g. `'str'`, `'int'`, `'float'` or `'bool'`. Columns accept
      * any built-in parameter type, so this is not an `OperatorParameterType`.
      */
-    paramType?: string;
-};
+    paramType: column.param_type ?? undefined
+});
 
 export type OperatorParameter = {
     name: string;
@@ -24,7 +24,7 @@ export type OperatorParameter = {
     default?: unknown;
     required?: boolean;
     type: OperatorParameterType;
-    columns?: OperatorParameterColumn[];
+    columns?: ReturnType<typeof mapColumn>[];
 };
 
 export type Operator = {
@@ -32,14 +32,6 @@ export type Operator = {
     name: string;
     parameters: OperatorParameter[];
 };
-
-const mapColumn = (column: ParameterColumnView): OperatorParameterColumn => ({
-    name: column.name,
-    description: column.description,
-    default: column.default,
-    required: column.required,
-    paramType: column.param_type ?? undefined
-});
 
 const mapParameter = (parameter: ParameterView): OperatorParameter => ({
     name: parameter.name,
