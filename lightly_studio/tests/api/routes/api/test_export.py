@@ -1025,3 +1025,94 @@ def test_export_collection_annotations_prepare__image_filter(
     content = json.loads(Path(export_job.export_path).read_text())
     assert len(content["images"]) == 1
     assert content["images"][0]["file_name"] == "img_a.jpg"
+
+
+def test_export_collection_captions_prepare(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="img1.jpg",
+        width=100,
+        height=100,
+    )
+    create_caption(
+        session=db_session,
+        collection_id=collection.collection_id,
+        parent_sample_id=image.sample_id,
+        text="a cat on a mat",
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/captions/prepare",
+        json={},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    export_key = UUID(response.json()["export_key"])
+
+    export_job = db_session.get(ExportJobTable, export_key)
+    assert export_job is not None
+    content = json.loads(Path(export_job.export_path).read_text())
+    assert content == {
+        "images": [{"id": 0, "file_name": "img1.jpg", "width": 100, "height": 100}],
+        "annotations": [{"id": 0, "image_id": 0, "caption": "a cat on a mat"}],
+    }
+
+
+def test_export_collection_captions_prepare__image_filter(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    # image_a is included via image_filter; image_b is excluded.
+    collection = create_collection(session=db_session)
+    image_a = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="img_a.jpg",
+        width=100,
+        height=100,
+    )
+    image_b = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="img_b.jpg",
+        width=100,
+        height=100,
+    )
+    create_caption(
+        session=db_session,
+        collection_id=collection.collection_id,
+        parent_sample_id=image_a.sample_id,
+        text="caption for a",
+    )
+    create_caption(
+        session=db_session,
+        collection_id=collection.collection_id,
+        parent_sample_id=image_b.sample_id,
+        text="caption for b",
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/captions/prepare",
+        json={
+            "image_filter": {
+                "filter_type": "image",
+                "sample_filter": {"sample_ids": [str(image_a.sample_id)]},
+            },
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    export_key = UUID(response.json()["export_key"])
+
+    export_job = db_session.get(ExportJobTable, export_key)
+    assert export_job is not None
+    content = json.loads(Path(export_job.export_path).read_text())
+    assert len(content["images"]) == 1
+    assert content["images"][0]["file_name"] == "img_a.jpg"
+    assert len(content["annotations"]) == 1
+    assert content["annotations"][0]["caption"] == "caption for a"
