@@ -164,7 +164,7 @@
         if (!operator) return false;
         return operator.parameters.every((param) => {
             if (!(param.required ?? true)) return true;
-            return isValueFilled(parameters[param.name], param.type);
+            return isValueFilled(parameters[param.name], param.type, param.columns);
         });
     });
 
@@ -210,7 +210,8 @@
                     {@const config = getParameterConfig(param.type)}
                     {@const required = param.required ?? true}
                     {@const isMissing =
-                        required && !isValueFilled(parameters[param.name], param.type)}
+                        required &&
+                        !isValueFilled(parameters[param.name], param.type, param.columns)}
 
                     <config.component
                         name={param.name}
@@ -219,6 +220,7 @@
                         {isMissing}
                         description={param.description}
                         onUpdate={(value) => updateParameter(param.name, value)}
+                        columns={param.columns}
                         {...config.props}
                     />
                 {/each}

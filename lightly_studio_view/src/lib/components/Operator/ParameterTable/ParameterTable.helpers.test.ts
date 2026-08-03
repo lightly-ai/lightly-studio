@@ -1,15 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { OperatorParameterColumn } from '$lib/hooks';
 import { buildCellDefault, buildGridStyle, isCellInvalid } from './ParameterTable.helpers';
-
-const column = (overrides: Partial<OperatorParameterColumn>): OperatorParameterColumn => ({
-    name: 'prompt',
-    description: 'What to segment',
-    default: undefined,
-    required: true,
-    paramType: 'str',
-    ...overrides
-});
+import { column } from '../fixtures';
 
 describe('buildCellDefault', () => {
     it('keeps a default that matches the column type', () => {

@@ -1,15 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import type { Operator } from '$lib/hooks';
+import type { ParameterView, RegisteredOperatorMetadata } from '$lib/api/lightly_studio_local';
+import { createOperatorFromMetadata, type Operator } from '$lib/hooks';
 import ParameterCheckbox from './ParameterCheckbox.svelte';
 import ParameterInput from './ParameterInput.svelte';
+import ParameterTable from './ParameterTable/ParameterTable.svelte';
+import { column } from './fixtures';
 import {
     buildInitialParameters,
     getCellConfig,
     getParameterConfig,
     isCellFilled,
     isValueFilled,
-    toParameterType
+    toParameterType,
+    type ParameterTableRow
 } from './parameterTypeConfig';
+
+const COLUMNS = [column({ name: 'prompt' }), column({ name: 'label' })];
 
 describe('toParameterType', () => {
     it('maps the Python type names of the backend onto parameter types', () => {
@@ -141,6 +147,77 @@ describe('getParameterConfig', () => {
     });
 });
 
+describe('isValueFilled', () => {
+    it('rejects an empty table', () => {
+        expect(isValueFilled([], 'table', COLUMNS)).toBe(false);
+    });
+
+    it('rejects a table with a blank or whitespace-only cell', () => {
+        expect(isValueFilled([{ prompt: 'person', label: '' }], 'table', COLUMNS)).toBe(false);
+        expect(isValueFilled([{ prompt: 'person', label: '   ' }], 'table', COLUMNS)).toBe(false);
+    });
+
+    it('rejects a table where only some rows are complete', () => {
+        expect(
+            isValueFilled(
+                [
+                    { prompt: 'person', label: 'pedestrian' },
+                    { prompt: 'car', label: '' }
+                ],
+                'table',
+                COLUMNS
+            )
+        ).toBe(false);
+    });
+
+    it('accepts a table where every cell of every row is filled', () => {
+        expect(
+            isValueFilled(
+                [
+                    { prompt: 'person', label: 'pedestrian' },
+                    { prompt: 'car', label: 'vehicle' }
+                ],
+                'table',
+                COLUMNS
+            )
+        ).toBe(true);
+    });
+
+    it('accepts a table with an empty cell in a column that is not required', () => {
+        const columns = [column({ name: 'prompt' }), column({ name: 'label', required: false })];
+
+        expect(isValueFilled([{ prompt: 'person', label: '' }], 'table', columns)).toBe(true);
+        expect(isValueFilled([{ prompt: '', label: 'pedestrian' }], 'table', columns)).toBe(false);
+    });
+
+    it('rejects an empty optional numeric cell', () => {
+        const columns = [column({ name: 'threshold', paramType: 'float', required: false })];
+
+        expect(isValueFilled([{ threshold: '' }], 'table', columns)).toBe(false);
+        expect(isValueFilled([{ threshold: 0.5 }], 'table', columns)).toBe(true);
+    });
+
+    it('treats every cell as required when no columns are known', () => {
+        expect(isValueFilled([{ prompt: 'person', label: '' }], 'table')).toBe(false);
+        expect(isValueFilled([{ prompt: 'person', label: 'pedestrian' }], 'table')).toBe(true);
+    });
+
+    it('accepts a required boolean cell that is unchecked', () => {
+        // `false` is an answer rather than a blank, so a boolean column never blocks submission.
+        const columns = [column({ name: 'enabled', paramType: 'bool' })];
+
+        expect(isValueFilled([{ enabled: false }], 'table', columns)).toBe(true);
+    });
+
+    it('judges a numeric cell by its value rather than as text', () => {
+        const columns = [column({ name: 'limit', paramType: 'int' })];
+
+        expect(isValueFilled([{ limit: 3 }], 'table', columns)).toBe(true);
+        // A number input reads as `''` while it is being cleared or typed.
+        expect(isValueFilled([{ limit: '' }], 'table', columns)).toBe(false);
+    });
+});
+
 describe('buildInitialParameters', () => {
     const operatorWith = (parameters: Operator['parameters']): Operator => ({
         id: 'op-1',
@@ -182,5 +259,107 @@ describe('buildInitialParameters', () => {
         ]);
 
         expect(buildInitialParameters(operator)).toEqual({ when: '' });
+    });
+
+    it('clones table rows so the default from the API is not shared', () => {
+        const defaultRows = [{ prompt: 'person', label: 'pedestrian' }];
+        const operator: Operator = {
+            id: 'op-1',
+            name: 'SAM3',
+            parameters: [
+                {
+                    name: 'prompts',
+                    type: 'table',
+                    default: defaultRows,
+                    required: true,
+                    columns: COLUMNS
+                }
+            ]
+        };
+
+        const initial = buildInitialParameters(operator);
+
+        expect(initial.prompts).toEqual(defaultRows);
+        expect(initial.prompts).not.toBe(defaultRows);
+        expect((initial.prompts as ParameterTableRow[])[0]).not.toBe(defaultRows[0]);
+    });
+
+    it('maps a table parameter straight from the API payload to a rendered table', () => {
+        // Literal response of GET /operators/{id}/parameters, pinned by the backend test
+        // `test_get_operator_parameters__table_parameter`. Guards the backend/frontend seam.
+        const apiParameters: ParameterView[] = [
+            {
+                name: 'prompts',
+                description: 'Prompts and labels.',
+                default: [{ prompt: 'person', threshold: 0.5 }],
+                required: true,
+                param_type: 'table',
+                columns: [
+                    {
+                        name: 'prompt',
+                        description: 'What to segment.',
+                        default: null,
+                        required: true,
+                        param_type: 'str'
+                    },
+                    {
+                        name: 'threshold',
+                        description: '',
+                        default: 0.5,
+                        required: false,
+                        param_type: 'float'
+                    }
+                ]
+            }
+        ];
+        const metadata = {
+            operator_id: 'op-1',
+            name: 'SAM3 Segmentation',
+            supported_scopes: []
+        } as RegisteredOperatorMetadata;
+
+        const operator = createOperatorFromMetadata(metadata, apiParameters);
+
+        expect(operator.parameters[0].type).toBe('table');
+        expect(operator.parameters[0].columns).toEqual([
+            {
+                name: 'prompt',
+                description: 'What to segment.',
+                default: null,
+                required: true,
+                paramType: 'str'
+            },
+            {
+                name: 'threshold',
+                description: '',
+                default: 0.5,
+                required: false,
+                paramType: 'float'
+            }
+        ]);
+        expect(getParameterConfig('table').component).toBe(ParameterTable);
+        expect(buildInitialParameters(operator).prompts).toEqual([
+            { prompt: 'person', threshold: 0.5 }
+        ]);
+    });
+
+    it('falls back to an empty table when a table parameter has no default', () => {
+        const operator: Operator = {
+            id: 'op-1',
+            name: 'SAM3',
+            parameters: [
+                {
+                    name: 'prompts',
+                    type: 'table',
+                    default: null,
+                    required: true,
+                    columns: COLUMNS
+                }
+            ]
+        };
+
+        const initial = buildInitialParameters(operator);
+
+        expect(initial.prompts).toEqual([]);
     });
 });

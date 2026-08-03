@@ -4,7 +4,7 @@ import type {
     RegisteredOperatorMetadata
 } from '$lib/api/lightly_studio_local';
 
-export type OperatorParameterType = 'string' | 'int' | 'float' | 'bool';
+export type OperatorParameterType = 'string' | 'int' | 'float' | 'bool' | 'table';
 
 const mapColumn = (column: ParameterColumnView) => ({
     name: column.name,
