@@ -401,6 +401,7 @@ def export_collection_annotations_prepare(
 
     return ExportKeyResponse(export_key=export.export_key)
 
+
 @export_router.post("/export/captions/prepare")
 def export_collection_captions_prepare(
     collection: Annotated[

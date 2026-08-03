@@ -1026,6 +1026,7 @@ def test_export_collection_annotations_prepare__image_filter(
     assert len(content["images"]) == 1
     assert content["images"][0]["file_name"] == "img_a.jpg"
 
+
 def test_export_collection_captions_prepare(
     db_session: Session,
     test_client: TestClient,
