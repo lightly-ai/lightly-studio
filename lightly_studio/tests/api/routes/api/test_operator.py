@@ -22,6 +22,7 @@ from lightly_studio.plugins.operator_registry import OperatorRegistry
 from lightly_studio.plugins.parameter import (
     BaseParameter,
     BoolParameter,
+    FloatParameter,
     StringParameter,
     TableParameter,
 )
@@ -144,7 +145,7 @@ def test_get_operator_parameters__table_parameter(
         {
             "name": "prompts",
             "description": "Prompts and labels.",
-            "default": [{"prompt": "person", "label": "pedestrian"}],
+            "default": [{"prompt": "person", "threshold": 0.5}],
             "required": True,
             "param_type": "table",
             "columns": [
@@ -156,11 +157,11 @@ def test_get_operator_parameters__table_parameter(
                     "param_type": "str",
                 },
                 {
-                    "name": "label",
+                    "name": "threshold",
                     "description": "",
-                    "default": "pedestrian",
+                    "default": 0.5,
                     "required": False,
-                    "param_type": "str",
+                    "param_type": "float",
                 },
             ],
         }
@@ -360,7 +361,7 @@ def test_execute_operator__table_parameter_rows_reach_the_operator(
     isolated_operator_registry.register(operator)
     operator_id = _get_operator_id_by_name(isolated_operator_registry, "table")
 
-    rows = [{"prompt": "person", "label": "pedestrian"}, {"prompt": "car", "label": "vehicle"}]
+    rows = [{"prompt": "person", "threshold": 0.5}, {"prompt": "car", "threshold": 0.25}]
     response = test_client.post(
         f"/api/operators/{operator_id}/execute",
         json={
@@ -470,9 +471,9 @@ class TableParamsOperator(TestOperator):
                 description="Prompts and labels.",
                 columns=[
                     StringParameter(name="prompt", description="What to segment."),
-                    StringParameter(name="label", default="pedestrian", required=False),
+                    FloatParameter(name="threshold", default=0.5, required=False),
                 ],
-                default=[{"prompt": "person", "label": "pedestrian"}],
+                default=[{"prompt": "person", "threshold": 0.5}],
             )
         ]
 
