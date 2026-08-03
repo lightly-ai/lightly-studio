@@ -3,14 +3,17 @@ import { updateAnnotationsMutation } from '$lib/api/lightly_studio_local/@tansta
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 import { usePostHog } from '$lib/hooks';
+import { useInvalidateAnnotationGridQueries } from '$lib/hooks/useInvalidateAnnotationGridQueries';
 
 export const useUpdateAnnotationsMutation = ({ collectionId }: { collectionId: string }) => {
     const mutation = createMutation(() => updateAnnotationsMutation());
 
     const client = useQueryClient();
     const { trackEvent } = usePostHog();
+    const invalidateAnnotationGridQueries = useInvalidateAnnotationGridQueries({ collectionId });
 
     const refetch = () => {
+        invalidateAnnotationGridQueries();
         client.invalidateQueries({
             queryKey: useImageAnnotationCountsQueryKey
         });

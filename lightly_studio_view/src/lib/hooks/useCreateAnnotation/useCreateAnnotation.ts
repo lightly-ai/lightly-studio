@@ -9,14 +9,17 @@ import {
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 import { usePostHog } from '$lib/hooks';
+import { useInvalidateAnnotationGridQueries } from '$lib/hooks/useInvalidateAnnotationGridQueries';
 import { page } from '$app/state';
 
 export const useCreateAnnotation = ({ collectionId }: { collectionId: string }) => {
     const mutation = createMutation(() => createAnnotationMutation());
     const client = useQueryClient();
     const { trackEvent } = usePostHog();
+    const invalidateAnnotationGridQueries = useInvalidateAnnotationGridQueries({ collectionId });
 
     const refetch = () => {
+        invalidateAnnotationGridQueries();
         client.invalidateQueries({
             queryKey: useImageAnnotationCountsQueryKey
         });
