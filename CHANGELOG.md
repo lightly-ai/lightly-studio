@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Grid annotation overlays now render at tile resolution to bound memory usage for large source images.
 - Annotation class names no longer overflow in class selection.
 - Autofocus lets users create their first annotation faster.
 
