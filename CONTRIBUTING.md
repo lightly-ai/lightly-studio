@@ -124,8 +124,7 @@ This clones the data into `lightly_studio/datasets`, which is where the `EXAMPLE
 
 ### Define Environment Variables
 
-We recommend using the `.env` file to set up environment variables. Start by copying `.env.example`
-file to `.env`:
+Copy `.env.example` to `.env`:
 
 ```shell
 cd lightly_studio
