@@ -7,9 +7,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import duckdb
 import pytest
 import sqlmodel
 from pytest_mock import MockerFixture
+from sqlalchemy.exc import OperationalError
 
 from lightly_studio import ImageDataset
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
@@ -211,6 +213,46 @@ def test_close__removes_wal_and_allows_reconnect(
 
     db_manager.connect(db_file=str(db_file), cleanup_existing=False)
     db_manager.close()
+
+
+def test_database_engine__duckdb_lock_conflict_raises_clear_error(
+    tmp_path: Path,
+    mocker: MockerFixture,
+    patch_engine_singleton: None,  # noqa: ARG001
+) -> None:
+    """Test that a DuckDB lock conflict (another process has the file open) fails clearly."""
+    lock_error = duckdb.IOException(
+        f'Could not set lock on file "{tmp_path / "locked.db"}": '
+        "Conflicting lock is held in /usr/bin/python (PID 1234) by user someone."
+    )
+    mocker.patch(
+        "lightly_studio.database.db_manager.SQLModel.metadata.create_all",
+        side_effect=OperationalError(statement="statement", params={}, orig=lock_error),
+    )
+
+    with pytest.raises(RuntimeError, match=r"locked by another process"):
+        DatabaseEngine(engine_url=f"duckdb:///{tmp_path / 'locked.db'}", single_threaded=True)
+
+
+def test_database_engine__duckdb_non_lock_operational_error_propagates(
+    tmp_path: Path,
+    mocker: MockerFixture,
+    patch_engine_singleton: None,  # noqa: ARG001
+) -> None:
+    """Test that a non-lock OperationalError from DuckDB is not swallowed or rewritten."""
+    other_error = duckdb.IOException("Disk full")
+    mocker.patch(
+        "lightly_studio.database.db_manager.SQLModel.metadata.create_all",
+        side_effect=OperationalError(statement="statement", params={}, orig=other_error),
+    )
+
+    with pytest.raises(OperationalError, match=r"Disk full"):
+        DatabaseEngine(engine_url=f"duckdb:///{tmp_path / 'other.db'}", single_threaded=True)
+
+
+def test_duckdb_io_exception__is_operational_error() -> None:
+    """Regression guard: _create_duckdb_schema's lock detection assumes this holds."""
+    assert issubclass(duckdb.IOException, duckdb.OperationalError)
 
 
 def test_detect_backend_from_url() -> None:
