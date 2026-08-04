@@ -27,6 +27,11 @@ export const DISTRIBUTION_SORT_LABELS: Record<DistributionSortOption, string> = 
     name: 'Class name'
 };
 
+export const CATEGORICAL_DISTRIBUTION_SORT_LABELS: Record<DistributionSortOption, string> = {
+    count: 'Count',
+    name: 'Value'
+};
+
 /** Bar layout for the distribution chart. */
 export type DistributionOrientation = 'vertical' | 'horizontal';
 
