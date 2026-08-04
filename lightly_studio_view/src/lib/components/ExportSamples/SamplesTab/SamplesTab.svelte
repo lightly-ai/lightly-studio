@@ -16,7 +16,7 @@
     import type { ExportFilter } from '$lib/services/types';
     import { PUBLIC_LIGHTLY_STUDIO_API_URL } from '$env/static/public';
 
-    const collectionId = page.params.collection_id;
+    const collectionId = page.params.collection_id!;
     const { imageFilter } = useImageFilters();
     const { tags } = useTags({ collection_id: collectionId });
 

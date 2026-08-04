@@ -20,5 +20,7 @@
         collectionFilter
     }));
 
-    onReady(result);
+    $effect(() => {
+        onReady(result);
+    });
 </script>
