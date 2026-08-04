@@ -1,12 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import {
-    useDistributionPanel,
-    type UseDistributionPanelParams
-} from './useDistributionPanel.svelte';
+import { useDistributionPanel } from './useDistributionPanel.svelte';
 import type { DistributionSource } from './types';
 import { AnnotationCountMode } from '$lib/api/lightly_studio_local/types.gen';
 
-const renderHook = (props: UseDistributionPanelParams = {}) => useDistributionPanel(() => props);
+const renderHook = (props: ReturnType<Parameters<typeof useDistributionPanel>[0]> = {}) =>
+    useDistributionPanel(() => props);
 
 describe('useDistributionPanel', () => {
     it('normalizes data to a single source when sources is not provided', () => {

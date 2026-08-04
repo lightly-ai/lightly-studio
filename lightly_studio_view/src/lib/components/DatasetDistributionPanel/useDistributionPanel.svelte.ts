@@ -11,7 +11,7 @@ import { AnnotationCountMode } from '$lib/api/lightly_studio_local/types.gen';
 import { selectVisibleCounts } from './selectVisibleCounts';
 import type { CategoricalMetadataValue } from '$lib/services/types';
 
-export interface UseDistributionPanelParams {
+interface UseDistributionPanelParams {
     sources?: DistributionSource[];
     data?: CategoryCount[];
     topN?: number;
