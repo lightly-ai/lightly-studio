@@ -19,7 +19,13 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult, OperatorStatus
 from lightly_studio.plugins.operator_context import ExecutionContext, OperatorScope
 from lightly_studio.plugins.operator_registry import OperatorRegistry
-from lightly_studio.plugins.parameter import BaseParameter, BoolParameter, StringParameter
+from lightly_studio.plugins.parameter import (
+    BaseParameter,
+    BoolParameter,
+    FloatParameter,
+    StringParameter,
+    TableParameter,
+)
 from lightly_studio.resolvers.image_filter import FilterDimensions, ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests import helpers_resolvers
@@ -111,6 +117,7 @@ def test_get_operator_parameters__multiple_parameters(
             "default": None,
             "required": True,
             "param_type": "bool",
+            "columns": None,
         },
         {
             "name": "test str",
@@ -118,7 +125,46 @@ def test_get_operator_parameters__multiple_parameters(
             "default": None,
             "required": True,
             "param_type": "str",
+            "columns": None,
         },
+    ]
+
+
+def test_get_operator_parameters__table_parameter(
+    test_client: TestClient,
+    isolated_operator_registry: OperatorRegistry,
+) -> None:
+    isolated_operator_registry.register(TableParamsOperator(name="table"))
+
+    operator_id = _get_operator_id_by_name(isolated_operator_registry, "table")
+
+    response = test_client.get(f"/api/operators/{operator_id}/parameters")
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == [
+        {
+            "name": "prompts",
+            "description": "Prompts and labels.",
+            "default": [{"prompt": "person", "threshold": 0.5}],
+            "required": True,
+            "param_type": "table",
+            "columns": [
+                {
+                    "name": "prompt",
+                    "description": "What to segment.",
+                    "default": None,
+                    "required": True,
+                    "param_type": "str",
+                },
+                {
+                    "name": "threshold",
+                    "description": "",
+                    "default": 0.5,
+                    "required": False,
+                    "param_type": "float",
+                },
+            ],
+        }
     ]
 
 
@@ -306,6 +352,28 @@ def test_execute_operator__filter_is_passed_through(
     assert operator.captured_context.context_filter == expected_filter
 
 
+def test_execute_operator__table_parameter_rows_reach_the_operator(
+    test_client: TestClient,
+    collection_id: UUID,
+    isolated_operator_registry: OperatorRegistry,
+) -> None:
+    operator = TableParamsOperator(name="table")
+    isolated_operator_registry.register(operator)
+    operator_id = _get_operator_id_by_name(isolated_operator_registry, "table")
+
+    rows = [{"prompt": "person", "threshold": 0.5}, {"prompt": "car", "threshold": 0.25}]
+    response = test_client.post(
+        f"/api/operators/{operator_id}/execute",
+        json={
+            "parameters": {"prompts": rows},
+            "context": {"collection_id": str(collection_id)},
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert operator.captured_parameters == {"prompts": rows}
+
+
 def test_execute_operator__sample_ids_filter_resolves_to_sample_filter(
     test_client: TestClient,
     collection_id: UUID,
@@ -389,6 +457,35 @@ class EmptyParamsOperator(TestOperator):
     @property
     def parameters(self) -> list[BaseParameter]:
         return []
+
+
+class TableParamsOperator(TestOperator):
+    status: OperatorStatus = OperatorStatus.READY
+    captured_parameters: dict[str, Any] | None = None
+
+    @property
+    def parameters(self) -> list[BaseParameter]:
+        return [
+            TableParameter(
+                name="prompts",
+                description="Prompts and labels.",
+                columns=[
+                    StringParameter(name="prompt", description="What to segment."),
+                    FloatParameter(name="threshold", default=0.5, required=False),
+                ],
+                default=[{"prompt": "person", "threshold": 0.5}],
+            )
+        ]
+
+    def execute(
+        self,
+        session: Session,
+        context: ExecutionContext,
+        parameters: dict[str, Any],
+    ) -> OperatorResult:
+        _, _ = session, context
+        self.captured_parameters = parameters
+        return OperatorResult(success=True, message="captured")
 
 
 @dataclass
