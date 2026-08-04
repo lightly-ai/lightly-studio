@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import warnings
-from typing import Any
+from typing import Any, cast
 
 import fsspec
 
@@ -21,14 +21,9 @@ def apply_cloud_credentials(credentials: dict[str, str]) -> None:
 
     Raises:
         ValueError: If an FSSPEC_* value cannot be parsed by fsspec.
+        ImportError: If a required cloud filesystem dependency is not installed.
     """
     fsspec_config = _parse_fsspec_config(credentials=credentials)
-
-    os.environ.update(credentials)
-    for protocol, protocol_config in fsspec_config.items():
-        # Replace instead of update so removed credential fields do not survive
-        # a credential rotation.
-        fsspec.config.conf[protocol] = protocol_config
 
     protocols = set(fsspec_config)
     if any(key.startswith("AWS_") for key in credentials):
@@ -36,8 +31,18 @@ def apply_cloud_credentials(credentials: dict[str, str]) -> None:
     if "GOOGLE_APPLICATION_CREDENTIALS" in credentials:
         protocols.add("gcs")
 
-    for protocol in protocols:
-        _clear_filesystem_cache(protocol=protocol)
+    filesystem_classes = [
+        _get_filesystem_class(protocol=protocol) for protocol in sorted(protocols)
+    ]
+
+    os.environ.update(credentials)
+    for protocol, protocol_config in fsspec_config.items():
+        # Replace instead of update so removed credential fields do not survive
+        # a credential rotation.
+        fsspec.config.conf[protocol] = protocol_config
+
+    for filesystem_class in filesystem_classes:
+        filesystem_class.clear_instance_cache()
 
 
 def _parse_fsspec_config(credentials: dict[str, str]) -> dict[str, dict[str, Any]]:
@@ -52,12 +57,12 @@ def _parse_fsspec_config(credentials: dict[str, str]) -> dict[str, dict[str, Any
     return config
 
 
-def _clear_filesystem_cache(protocol: str) -> None:
-    """Clear a protocol's instance cache when its implementation is installed."""
+def _get_filesystem_class(protocol: str) -> type[Any]:
+    """Return a filesystem class or raise an actionable dependency error."""
     try:
-        filesystem_class = fsspec.get_filesystem_class(protocol=protocol)
-    except ImportError:
-        # No instance can have been cached when the optional implementation is
-        # unavailable. fsspec will provide its normal installation hint on use.
-        return
-    filesystem_class.clear_instance_cache()
+        return cast(type[Any], fsspec.get_filesystem_class(protocol=protocol))
+    except ImportError as error:
+        raise ImportError(
+            f"Cloud storage credentials require support for the '{protocol}' protocol. "
+            'Install it with pip install "lightly-studio[cloud-storage]".'
+        ) from error
