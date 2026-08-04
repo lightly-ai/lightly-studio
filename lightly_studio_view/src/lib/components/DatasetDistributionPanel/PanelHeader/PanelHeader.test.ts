@@ -44,6 +44,21 @@ describe('PanelHeader', () => {
         expect(screen.getByText(/491 samples/)).toBeInTheDocument();
     });
 
+    it('uses custom category wording and sort labels', () => {
+        render(PanelHeader, {
+            props: {
+                ...defaultProps,
+                categoryNoun: 'value',
+                categoryNounPlural: 'values',
+                sortLabels: { count: 'Count', name: 'Value' },
+                config: { ...config, sortBy: 'name' }
+            }
+        });
+
+        expect(screen.getByText(/5 values · sorted by value/)).toBeInTheDocument();
+        expect(screen.getByLabelText('Configure distribution values')).toBeInTheDocument();
+    });
+
     it('shows the "Show all" action only for a visible subset and forwards clicks', async () => {
         const onShowAll = vi.fn();
         render(PanelHeader, {
@@ -121,5 +136,13 @@ describe('PanelHeader', () => {
         });
 
         expect(screen.getByTestId('dataset-distribution-expanded-configure')).toBeInTheDocument();
+    });
+
+    it('does not add plot-specific bottom margins', () => {
+        render(PanelHeader, { props: defaultProps });
+
+        const summary = screen.getByText(/^5 classes ·/);
+        expect(summary).not.toHaveClass('mb-2');
+        expect(summary.parentElement).not.toHaveClass('mb-1');
     });
 });
