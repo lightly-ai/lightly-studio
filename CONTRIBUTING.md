@@ -166,6 +166,16 @@ cp .env.example .env.local
 npm run dev
 ```
 
+For this to work, the backend must already be serving on <http://localhost:8001> — either via
+`make start` (or `make start-example`), or by running any script directly with
+`uv run src/lightly_studio/examples/<script>.py` (see [Run Examples](#run-examples)). Either way,
+`.env.local` needs to point at it:
+
+```
+PUBLIC_SAMPLES_URL=http://localhost:8001/images
+PUBLIC_LIGHTLY_STUDIO_API_URL=http://localhost:8001/
+```
+
 ### Exploring the Makefile
 
 There are three Makefiles: one in `lightly_studio` for the backend, build, e2e and migration
