@@ -9,7 +9,7 @@
         SelectMenuGroupHeading
     } from '$lib/components/Select';
     import { exportCollectionPrepare } from '$lib/api/lightly_studio_local';
-    import { useTags } from '$lib/hooks/useTags/useTags';
+    import { useTags } from '$lib/hooks';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useExportSamplesCount } from '../useExportSamplesCount/useExportSamplesCount.svelte';
     import { useExportDownload } from '../useExportDownload/useExportDownload';
@@ -133,7 +133,7 @@
     <ExportDownloadButton
         isLoading={$exportIsLoading || $countIsLoading}
         disabled={isSubmitDisabled}
-        errorMessage={$errorMessage}
+        errorMessage={$statError ?? $errorMessage}
         onclick={handleExport}
         testId="submit-button-samples"
     />
