@@ -171,7 +171,7 @@ For this to work, the backend must already be serving on <http://localhost:8001>
 `uv run src/lightly_studio/examples/<script>.py` (see [Run Examples](#run-examples)). Either way,
 `.env.local` needs to point at it:
 
-```
+```shell
 PUBLIC_SAMPLES_URL=http://localhost:8001/images
 PUBLIC_LIGHTLY_STUDIO_API_URL=http://localhost:8001/
 ```
