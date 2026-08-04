@@ -29,7 +29,7 @@
         onDownloadClick
     }: Props = $props();
 
-    const collectionId = page.params.collection_id;
+    const collectionId = page.params.collection_id!;
     const { imageFilter } = useImageFilters();
 
     const { isLoading, errorMessage, handleDownload } = useExportDownload(async () => {
