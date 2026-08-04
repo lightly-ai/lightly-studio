@@ -192,6 +192,16 @@ test-ci:
 	@echo "Running tests..."
 	uv run pytest
 
+# Full-suite line coverage for the Fast Track coverage guardrail, which reads
+# coverage.json rather than running tests itself. Deliberately has no `build`
+# prerequisite: its `clean` step would delete a webapp build the caller made.
+.PHONY: test-coverage
+test-coverage:
+	@echo "Running tests with coverage..."
+	uv run pytest -n auto --cov=src/lightly_studio \
+	  --cov-report=json:coverage.json \
+	  --cov-report=term-missing:skip-covered
+
 .PHONY: test-postgres
 test-postgres: build
 	@echo "Running tests against Postgres..."
