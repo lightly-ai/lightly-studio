@@ -4,18 +4,17 @@
     import { useExportSamplesCount } from './useExportSamplesCount.svelte';
 
     interface Props {
-        collection_id: string;
+        collectionId: string;
         includeFilter?: ExportFilter;
         excludeFilter?: ExportFilter;
         collectionFilter?: ImageFilter | null;
         onReady: (result: ReturnType<typeof useExportSamplesCount>) => void;
     }
 
-    let { collection_id, includeFilter, excludeFilter, collectionFilter, onReady }: Props =
-        $props();
+    let { collectionId, includeFilter, excludeFilter, collectionFilter, onReady }: Props = $props();
 
     const result = useExportSamplesCount(() => ({
-        collection_id,
+        collection_id: collectionId,
         includeFilter,
         excludeFilter,
         collectionFilter

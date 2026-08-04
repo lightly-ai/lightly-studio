@@ -17,7 +17,7 @@ vi.mock('$lib/api/lightly_studio_local', () => ({
 type HookResult = ReturnType<typeof useExportSamplesCount>;
 
 const renderHook = (props: {
-    collection_id: string;
+    collectionId: string;
     includeFilter?: Record<string, unknown>;
     excludeFilter?: Record<string, unknown>;
     collectionFilter?: Record<string, unknown> | null;
@@ -43,7 +43,7 @@ describe('useExportSamplesCount', () => {
         exportCollectionStats.mockResolvedValue({ data: 10 });
 
         renderHook({
-            collection_id: 'col-1',
+            collectionId: 'col-1',
             includeFilter: { tag_ids: ['tag-1'] }
         });
 
@@ -70,7 +70,7 @@ describe('useExportSamplesCount', () => {
         );
 
         const { isLoading } = renderHook({
-            collection_id: 'col-1',
+            collectionId: 'col-1',
             includeFilter: { tag_ids: ['tag-1'] }
         });
 
@@ -85,7 +85,7 @@ describe('useExportSamplesCount', () => {
         exportCollectionStats.mockRejectedValue(new Error('network error'));
 
         const { error } = renderHook({
-            collection_id: 'col-1',
+            collectionId: 'col-1',
             includeFilter: { tag_ids: ['tag-1'] }
         });
 
@@ -96,7 +96,7 @@ describe('useExportSamplesCount', () => {
         exportCollectionStats.mockResolvedValue({ data: 0 });
 
         const { count } = renderHook({
-            collection_id: 'col-1',
+            collectionId: 'col-1',
             includeFilter: { tag_ids: ['tag-1'] }
         });
 
@@ -109,7 +109,7 @@ describe('useExportSamplesCount', () => {
         const collectionFilter = { score: { min: 0.5, max: 1.0 } };
 
         const { count } = renderHook({
-            collection_id: 'col-1',
+            collectionId: 'col-1',
             includeFilter: { tag_ids: ['tag-2'] },
             collectionFilter
         });
@@ -133,7 +133,7 @@ describe('useExportSamplesCount', () => {
         const collectionFilter = { score: { min: 0.8, max: 1.0 } };
 
         const { count } = renderHook({
-            collection_id: 'col-1',
+            collectionId: 'col-1',
             collectionFilter
         });
 
