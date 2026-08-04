@@ -58,25 +58,13 @@ describe('SamplesTab', () => {
         tagsStore = writable([]);
     });
 
-    it('shows the tag select with placeholder text', () => {
+    it('renders initial state with placeholder, checkbox, disabled button, and helper text', () => {
         render(SamplesTab);
         expect(
             screen.getByText('Select a tag to export its samples (required)')
         ).toBeInTheDocument();
-    });
-
-    it('shows the inverse selection checkbox', () => {
-        render(SamplesTab);
         expect(screen.getByText('Inverse selection')).toBeInTheDocument();
-    });
-
-    it('disables the download button when no tag is selected', () => {
-        render(SamplesTab);
         expect(screen.getByTestId('submit-button-samples')).toBeDisabled();
-    });
-
-    it('renders the inverse selection helper text', () => {
-        render(SamplesTab);
         expect(
             screen.getByText(/Inverse selection will export all samples that are not selected/)
         ).toBeInTheDocument();
