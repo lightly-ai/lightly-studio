@@ -1,6 +1,10 @@
 """Lightly Studio Exceptions types."""
 
 
+class NotFoundError(Exception):
+    """Exception signaling that a requested resource has not been found."""
+
+
 class TagNotFoundError(Exception):
     """Exception signaling that a tag has not been found."""
 
