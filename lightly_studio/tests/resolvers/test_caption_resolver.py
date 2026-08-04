@@ -4,10 +4,11 @@ import math
 from uuid import uuid4
 
 import pytest
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import caption_resolver, collection_resolver
 from tests.helpers_resolvers import create_collection, create_image
 
@@ -342,3 +343,29 @@ def test_delete_caption(db_session: Session) -> None:
     wrong_id = uuid4()
     with pytest.raises(ValueError, match=f"Caption with ID {wrong_id} not found."):
         caption_resolver.delete_caption(session=db_session, sample_id=wrong_id)
+
+
+def test_delete_caption__removes_temporal_span(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+
+    caption_ids = caption_resolver.create_many(
+        session=db_session,
+        parent_collection_id=collection.collection_id,
+        captions=[
+            CaptionCreate(
+                parent_sample_id=image.sample_id,
+                text="with span",
+                start_time_s=1.0,
+                end_time_s=2.5,
+            ),
+        ],
+    )
+
+    caption_resolver.delete_caption(session=db_session, sample_id=caption_ids[0])
+
+    # The caption's temporal span must not be left orphaned.
+    remaining_spans = db_session.exec(
+        select(TemporalSpanTable).where(col(TemporalSpanTable.sample_id) == caption_ids[0])
+    ).all()
+    assert remaining_spans == []
