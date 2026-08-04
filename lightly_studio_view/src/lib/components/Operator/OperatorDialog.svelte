@@ -175,7 +175,10 @@
 
 <Dialog.Root open={isOpen} {onOpenChange}>
     <Dialog.Overlay />
-    <Dialog.Content class="max-h-[85vh] overflow-y-auto sm:max-w-md">
+    <!-- overflow-x-hidden spells out that only the vertical axis scrolls: leaving it at `visible`
+         makes it compute to `auto` because the other axis is not `visible`, which lets a wide
+         parameter such as a table scroll the whole dialog sideways instead of scrolling itself. -->
+    <Dialog.Content class="max-h-[85vh] overflow-y-auto overflow-x-hidden sm:max-w-md">
         <Dialog.Header>
             <Dialog.Title>
                 {operator?.name || operatorMetadata?.name || 'Operator'}
@@ -200,7 +203,9 @@
                 {loadError}
             </div>
         {:else if operator && operator.parameters}
-            <div class="space-y-4">
+            <!-- Dialog.Content is a grid, so min-w-0 is what lets this item shrink below its widest
+                 parameter's min-content width instead of stretching the dialog past its max-width. -->
+            <div class="min-w-0 space-y-4">
                 {#each operator.parameters as param}
                     {@const config = getParameterConfig(param.type)}
                     {@const required = param.required ?? true}

@@ -1,18 +1,48 @@
 import type { OperatorParameterColumn } from '$lib/hooks';
 import { getCellConfig, isCellFilled, type ParameterTableRow } from '../parameterTypeConfig';
 
-/** Rows shown before the rows area starts scrolling instead of growing the dialog. */
-export const MAX_VISIBLE_ROWS = 4;
+// Four rows before the table scrolls instead of growing the dialog: inputs are h-10 (2.5rem) and rows
+// are gap-2 (0.5rem) apart, so four measure 4 * 2.5rem + 3 * 0.5rem = 11.5rem. The header shares the
+// scroll container with the rows so the two scroll horizontally as one, so this also has to cover the
+// header row (text-xs, 1rem), the gap below it (0.5rem) and the p-2 padding (1rem), giving
+// 11.5 + 1 + 0.5 + 1 = 14rem. Beyond that the table scrolls itself instead of pushing the dialog
+// footer out of view.
+//
+// The header's -mt-2 and pt-2 cancel each other in the flow — the box grows half a rem upward to cover
+// the container's top padding while its negative margin pulls the same amount back — so the header
+// still contributes only its 1rem of text here.
+export const MAX_TABLE_HEIGHT = 'max-h-[14rem]';
 
-// Inputs are h-10 (2.5rem) and rows are gap-2 (0.5rem) apart, so four rows measure
-// 4 * 2.5rem + 3 * 0.5rem = 11.5rem. The header sits outside the scroll container, so on top of the
-// rows this only has to cover the p-2 padding (1rem), giving 11.5 + 1 = 12.5rem. Beyond that the
-// rows area scrolls itself instead of pushing the dialog footer out of view.
-export const MAX_ROWS_HEIGHT = 'max-h-[12.5rem]';
+/**
+ * The narrowest a data column may get. An Input spends 1.5rem of its width on px-3, so 9rem leaves
+ * about 15 characters of text — below that a prompt or label stops being readable. The dialog leaves
+ * roughly 24rem for the table once its own padding is taken off, which fits the two columns today's
+ * operators use; a third one starts scrolling instead of squeezing every cell.
+ */
+const MIN_COLUMN_WIDTH = '9rem';
 
-/** Tailwind cannot compile a class built at runtime, so the column count goes through style. */
+/**
+ * The frozen remove-button column: 2.5rem for the `size="icon"` button plus the 0.5rem of pl-2 that
+ * gives a cell scrolling underneath somewhere to disappear behind the divider, rather than being cut
+ * off flush against the icon. The cell's pr-2 is not counted because its -mr-2 makes the item resolve
+ * 0.5rem wider than this track, and that surplus hangs off the *left* edge to cover the gutter — the
+ * container's own right padding is covered by the cell's negative right inset instead. Stated outright
+ * rather than left to `auto` because the header and the rows are separate grids that would each size an
+ * `auto` track from their own contents, and the header's cell is empty — the two would not agree on a
+ * width.
+ */
+const REMOVE_COLUMN_WIDTH = '3rem';
+
+/**
+ * Tailwind cannot compile a class built at runtime, so the column count goes through style. Data
+ * columns share the width evenly until they hit MIN_COLUMN_WIDTH, past which the table scrolls
+ * horizontally; the trailing track holds the remove button. `repeat(0, ...)` is invalid CSS and would
+ * make the browser drop the whole declaration, so a table without columns gets that track alone.
+ */
 export const buildGridStyle = (columnCount: number): string =>
-    `grid-template-columns: repeat(${columnCount}, minmax(0, 1fr)) auto`;
+    columnCount > 0
+        ? `grid-template-columns: repeat(${columnCount}, minmax(${MIN_COLUMN_WIDTH}, 1fr)) ${REMOVE_COLUMN_WIDTH}`
+        : `grid-template-columns: ${REMOVE_COLUMN_WIDTH}`;
 
 /**
  * The value a cell starts out with: the column default when it fits the column type, and the empty

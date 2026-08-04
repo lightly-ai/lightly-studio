@@ -124,7 +124,7 @@ describe('ParameterTable', () => {
         expect(onUpdate).toHaveBeenCalledWith([{ prompt: 'car', label: 'vehicle' }]);
     });
 
-    it('keeps every row reachable when the row count exceeds the visible limit', () => {
+    it('renders every row when there are more rows than the table can show at once', () => {
         const value = Array.from({ length: 6 }, (_, index) => ({
             prompt: `prompt ${index}`,
             label: `label ${index}`

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { OperatorParameterColumn } from '$lib/hooks';
-import { buildCellDefault, isCellInvalid } from './ParameterTable.helpers';
+import { buildCellDefault, buildGridStyle, isCellInvalid } from './ParameterTable.helpers';
 
 const column = (overrides: Partial<OperatorParameterColumn>): OperatorParameterColumn => ({
     name: 'prompt',
@@ -36,6 +36,18 @@ describe('buildCellDefault', () => {
 
     it('treats a column type it does not know as text', () => {
         expect(buildCellDefault(column({ paramType: 'datetime', default: 'today' }))).toBe('today');
+    });
+});
+
+describe('buildGridStyle', () => {
+    it('gives every data column a minimum width and the remove button a track of its own', () => {
+        // Without the trailing track the button would take a full column's share of the width.
+        expect(buildGridStyle(3)).toBe('grid-template-columns: repeat(3, minmax(9rem, 1fr)) 3rem');
+    });
+
+    it('drops the repeat when there are no columns', () => {
+        // `repeat(0, ...)` is invalid CSS, which would cost the grid its whole template.
+        expect(buildGridStyle(0)).toBe('grid-template-columns: 3rem');
     });
 });
 
