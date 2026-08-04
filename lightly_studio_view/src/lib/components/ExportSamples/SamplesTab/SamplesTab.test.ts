@@ -11,11 +11,8 @@ vi.mock('$lib/api/lightly_studio_local', () => ({
 }));
 
 let tagsStore: ReturnType<typeof writable<{ tag_id: string; name: string; kind: string }[]>>;
-vi.mock('$lib/hooks/useTags/useTags', () => ({
-    useTags: () => ({ tags: tagsStore })
-}));
-
-vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
+vi.mock('$lib/hooks', () => ({
+    useTags: () => ({ tags: tagsStore }),
     useImageFilters: () => ({ imageFilter: writable(null) })
 }));
 
