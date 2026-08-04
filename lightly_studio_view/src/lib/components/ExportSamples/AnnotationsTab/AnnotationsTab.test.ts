@@ -10,7 +10,8 @@ const mocks = vi.hoisted(() => ({
     exportCollectionAnnotationsPrepare: vi.fn()
 }));
 vi.mock('$lib/api/lightly_studio_local', () => ({
-    exportCollectionAnnotationsPrepare: mocks.exportCollectionAnnotationsPrepare
+    exportCollectionAnnotationsPrepare: mocks.exportCollectionAnnotationsPrepare,
+    SortDirection: { ASC: 'ASC', DESC: 'DESC' }
 }));
 
 const imageFilterStore = writable(null);
