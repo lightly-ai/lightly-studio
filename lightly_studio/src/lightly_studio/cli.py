@@ -17,6 +17,32 @@ def main() -> None:
 
 
 @main.command()
+@click.option("--port", default=None, type=int, help="Port to bind the server to.")
+@click.option(
+    "--force-download",
+    is_flag=True,
+    default=False,
+    help="Re-download the demo dataset even if already cached.",
+)
+def demo(port: int | None, force_download: bool) -> None:
+    """Launch the GUI preloaded with the COCO demo dataset."""
+    import lightly_studio as ls
+
+    dataset_path = ls.utils.download_example_dataset(
+        download_dir="dataset_examples",
+        force_redownload=force_download,
+    )
+    db_manager.connect(cleanup_existing=True)
+    dataset = ls.ImageDataset.create()
+    dataset.add_samples_from_coco(
+        annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
+        images_path=f"{dataset_path}/coco_subset_128_images/images",
+        annotation_type=ls.AnnotationType.SEGMENTATION_MASK,
+    )
+    ls.start_gui(port=port)
+
+
+@main.command()
 @click.option("--host", default=None, type=str, help="Host to bind the server to.")
 @click.option("--port", default=None, type=int, help="Port to bind the server to.")
 @click.option(
