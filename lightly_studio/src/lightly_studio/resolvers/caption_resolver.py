@@ -134,6 +134,54 @@ def update_text(
         raise
 
 
+def update_temporal_span(
+    session: Session,
+    sample_id: UUID,
+    start_time_s: float,
+    end_time_s: float,
+) -> CaptionTable:
+    """Update the temporal span of a caption, creating it if it does not exist.
+
+    Args:
+        session: Database session for executing the operation.
+        sample_id: UUID of the caption to update.
+        start_time_s: New start time in seconds.
+        end_time_s: New end time in seconds.
+
+    Returns:
+        The updated caption with the new temporal span.
+
+    Raises:
+        ValueError: If the caption is not found or the span is invalid.
+    """
+    _validate_temporal_span_bounds(start_time_s=start_time_s, end_time_s=end_time_s)
+
+    captions = get_by_ids(session=session, sample_ids=[sample_id])
+    if not captions:
+        raise ValueError(f"Caption with ID {sample_id} not found.")
+
+    caption = captions[0]
+    try:
+        if caption.temporal_span_details is None:
+            session.add(
+                TemporalSpanTable(
+                    sample_id=sample_id,
+                    start_time_s=start_time_s,
+                    end_time_s=end_time_s,
+                )
+            )
+        else:
+            caption.temporal_span_details.start_time_s = start_time_s
+            caption.temporal_span_details.end_time_s = end_time_s
+            session.add(caption.temporal_span_details)
+        session.commit()
+        session.refresh(caption)
+        return caption
+    except Exception:
+        session.rollback()
+        raise
+
+
 def delete_caption(
     session: Session,
     sample_id: UUID,
@@ -178,11 +226,25 @@ def _validate_optional_temporal_span(caption: CaptionCreate) -> tuple[float, flo
 
     if start_time_s is None or end_time_s is None:
         raise ValueError("Both start_time_s and end_time_s must be provided together.")
+    _validate_temporal_span_bounds(start_time_s=start_time_s, end_time_s=end_time_s)
+
+    return (start_time_s, end_time_s)
+
+
+def _validate_temporal_span_bounds(start_time_s: float, end_time_s: float) -> None:
+    """Validate that a temporal span's bounds are finite, non-negative, and ordered.
+
+    Args:
+        start_time_s: Start time in seconds.
+        end_time_s: End time in seconds.
+
+    Raises:
+        ValueError: If either bound is not finite, the start is negative, or the start is
+            not strictly less than the end.
+    """
     if not math.isfinite(start_time_s) or not math.isfinite(end_time_s):
         raise ValueError("start_time_s and end_time_s must be finite.")
     if start_time_s < 0:
         raise ValueError("start_time_s must be non-negative.")
     if start_time_s >= end_time_s:
         raise ValueError("start_time_s must be less than end_time_s.")
-
-    return (start_time_s, end_time_s)

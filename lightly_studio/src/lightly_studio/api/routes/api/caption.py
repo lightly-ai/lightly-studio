@@ -21,6 +21,17 @@ class CaptionCreateInput(BaseModel):
     parent_sample_id: UUID
     text: str = ""
 
+    # Optional temporal bounds for the caption's sample.
+    start_time_s: float | None = None
+    end_time_s: float | None = None
+
+
+class CaptionTemporalSpanUpdateInput(BaseModel):
+    """API interface to update the temporal span of a caption."""
+
+    start_time_s: float
+    end_time_s: float
+
 
 captions_router = APIRouter(prefix="/collections/{collection_id}", tags=["captions"])
 
@@ -36,6 +47,24 @@ def update_caption_text(
 ) -> CaptionTable:
     """Update an existing caption in the database."""
     return caption_resolver.update_text(session=session, sample_id=sample_id, text=text)
+
+
+@captions_router.put("/captions/{sample_id}/temporal_span", response_model=CaptionView)
+def update_caption_temporal_span(
+    session: SessionDep,
+    sample_id: Annotated[
+        UUID,
+        Path(title="Caption ID", description="ID of the caption to update"),
+    ],
+    temporal_span: Annotated[CaptionTemporalSpanUpdateInput, Body()],
+) -> CaptionTable:
+    """Update the temporal span of an existing caption."""
+    return caption_resolver.update_temporal_span(
+        session=session,
+        sample_id=sample_id,
+        start_time_s=temporal_span.start_time_s,
+        end_time_s=temporal_span.end_time_s,
+    )
 
 
 @captions_router.get("/captions/{sample_id}", response_model=CaptionView)
@@ -75,6 +104,8 @@ def create_caption(
             CaptionCreate(
                 parent_sample_id=create_caption_input.parent_sample_id,
                 text=create_caption_input.text,
+                start_time_s=create_caption_input.start_time_s,
+                end_time_s=create_caption_input.end_time_s,
             ),
         ],
     )
