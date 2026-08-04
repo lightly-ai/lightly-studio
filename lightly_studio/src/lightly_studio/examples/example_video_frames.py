@@ -21,7 +21,7 @@ from lightly_studio.database import db_manager
 env = Env()
 env.read_env()
 db_manager.connect(cleanup_existing=True)
-dataset_path = env.path("EXAMPLES_VIDEO_DATASET_PATH", "/path/to/your/dataset")
+dataset_path = env.path("EXAMPLES_VIDEO_DATASET_PATH")
 
 dataset = ls.VideoDataset.create()
 dataset.add_videos_from_path(path=dataset_path, embed=False, target_fps=1)
