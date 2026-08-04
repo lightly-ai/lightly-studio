@@ -27,9 +27,9 @@
     const hasEmbeddings = $derived(!!hasEmbeddingsQuery.data);
 
     const datasetId = $derived(page.params.dataset_id!);
-    const { collection: datasetCollection } = $derived.by(() =>
-        useCollectionWithChildren({ collectionId: datasetId })
-    );
+    const { collection: datasetCollection } = useCollectionWithChildren({
+        getCollectionId: () => datasetId
+    });
 
     const { setIsEditingMode, isEditingMode, reversibleActions, executeReversibleAction } =
         page.data.globalStorage;
