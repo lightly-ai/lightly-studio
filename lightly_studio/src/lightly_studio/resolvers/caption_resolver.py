@@ -6,7 +6,7 @@ import math
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, delete, select
 
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
 from lightly_studio.models.collection import SampleType
@@ -152,7 +152,8 @@ def delete_caption(
         raise ValueError(f"Caption with ID {sample_id} not found.")
 
     caption = captions[0]
-    session.commit()
+    # Delete the caption's optional temporal span first to avoid leaving an orphaned row.
+    session.exec(delete(TemporalSpanTable).where(col(TemporalSpanTable.sample_id) == sample_id))
     session.delete(caption)
     session.commit()
 
