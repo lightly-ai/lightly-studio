@@ -88,7 +88,7 @@ describe('DistributionChart', () => {
         expect(screen.getByRole('status')).toHaveTextContent('Loading metadata distribution…');
     });
 
-    it('shows the error state with retry when categorical errors with no buckets', () => {
+    it('shows the error state with retry and calls onCategoricalRetry when clicked', async () => {
         const onCategoricalRetry = vi.fn();
         render(DistributionChart, {
             props: {
@@ -105,38 +105,13 @@ describe('DistributionChart', () => {
         expect(screen.getByRole('alert')).toHaveTextContent(
             'Could not load metadata distribution.'
         );
-        expect(screen.getByTestId('metadata-categorical-retry')).toBeInTheDocument();
-    });
-
-    it('calls onCategoricalRetry when the retry button is clicked', async () => {
-        const onCategoricalRetry = vi.fn();
-        render(DistributionChart, {
-            props: {
-                ...defaultProps,
-                activeCategorical: { buckets: [], selectedValues: [], error: 'oops' },
-                onCategoricalRetry
-            }
-        });
-
-        await fireEvent.click(screen.getByTestId('metadata-categorical-retry'));
-
+        const retryButton = screen.getByTestId('metadata-categorical-retry');
+        expect(retryButton).toBeInTheDocument();
+        await fireEvent.click(retryButton);
         expect(onCategoricalRetry).toHaveBeenCalledOnce();
     });
 
-    it('renders a sr-only accessibility list for categorical buckets', () => {
-        render(DistributionChart, {
-            props: {
-                ...defaultProps,
-                activeCategorical: { buckets, selectedValues: [] }
-            }
-        });
-
-        const list = screen.getByRole('list', { name: 'Categorical metadata value counts' });
-        expect(list).toBeInTheDocument();
-        expect(list.querySelectorAll('li')).toHaveLength(2);
-    });
-
-    it('marks selected categorical values in the accessibility list', () => {
+    it('renders and annotates the sr-only accessibility list for categorical buckets', () => {
         render(DistributionChart, {
             props: {
                 ...defaultProps,
@@ -144,9 +119,10 @@ describe('DistributionChart', () => {
             }
         });
 
-        const items = screen
-            .getByRole('list', { name: 'Categorical metadata value counts' })
-            .querySelectorAll('li');
+        const list = screen.getByRole('list', { name: 'Categorical metadata value counts' });
+        expect(list).toBeInTheDocument();
+        const items = list.querySelectorAll('li');
+        expect(items).toHaveLength(2);
         expect(items[0].textContent).toContain(', selected');
         expect(items[1].textContent).not.toContain(', selected');
     });
