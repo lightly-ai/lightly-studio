@@ -106,8 +106,8 @@ The documentation source is in [docs/docs](./lightly_studio/docs/docs). The docu
 written in Markdown and built with MkDocs using the Material theme. For more information regarding
 formatting, see:
 
-- https://squidfunk.github.io/mkdocs-material/reference/ — Material theme syntax (admonitions, tabs, icons)
-- https://www.mkdocs.org/user-guide/writing-your-docs/ — base MkDocs Markdown and page structure
+- https://squidfunk.github.io/mkdocs-material/reference/
+- https://www.mkdocs.org/user-guide/writing-your-docs/
 
 
 ## Development Environment Setup
