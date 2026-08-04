@@ -1,3 +1,8 @@
+---
+name: python
+description: Read before writing or reviewing any Python code in this repository. Covers import style (modules for functions, direct for classes), file layout ordering, protocols vs ABCs, TODO and comment format, assertions, positional vs keyword arguments, docstrings including tensor shapes, typing, and pytest conventions.
+---
+
 # Python Code Guidelines
 
 No rules here are hard, but they are strong recommendations. The golden rule is to make the code easy to understand and difficult to break.

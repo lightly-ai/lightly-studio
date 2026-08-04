@@ -1,3 +1,8 @@
+---
+name: frontend
+description: Read before writing or reviewing any frontend code in lightly_studio_view - Svelte, TypeScript, or SvelteKit files. Covers component structure and naming, stores vs runes, absolute vs relative imports, Shadcn and Tailwind usage, Svelte 5 syntax, TanStack Query hooks, bundle size limits, Storybook stories, and vitest conventions.
+---
+
 # Frontend coding guidelines
 
 Coding standards for frontend development in LightlyStudio using SvelteKit and TypeScript.
@@ -197,7 +202,7 @@ For non-TanStack hooks with static parameters, pass values via SvelteKit's page 
 ## State management & hooks
 
 Create small, reusable hooks in `src/lib/hooks` - avoid monolithic stores. We do not use a `services` folder; hooks handle data fetching and state.
-Ref: [useTags](../../lightly_studio_view/src/lib/hooks/useTags/useTags.ts), [useFeatureFlags](../../lightly_studio_view/src/lib/hooks/useFeatureFlags/useFeatureFlags.ts).
+Ref: `lightly_studio_view/src/lib/hooks/useTags/useTags.ts`, `lightly_studio_view/src/lib/hooks/useFeatureFlags/useFeatureFlags.ts`.
 
 Generic hooks go in `src/lib/hooks`; component-specific hooks go in the component's folder.
 
@@ -248,8 +253,8 @@ Prefer these solutions in order:
 ## Routing and Pages
 
 - Use [SvelteKit's file-based routing](https://svelte.dev/tutorial/kit/layouts) in `src/routes/`.
-- Use dynamic routes with [slug](https://svelte.dev/tutorial/kit/params) syntax. E.g. [sample details](../../lightly_studio_view/src/routes/samples/[sample_id]/).
-- Use `+layout.svelte` for shared layouts. E.g. [collections layout](../../lightly_studio_view/src/routes/collections/[collection_id]/+layout.svelte).
+- Use dynamic routes with [slug](https://svelte.dev/tutorial/kit/params) syntax. E.g. sample details at `lightly_studio_view/src/routes/datasets/[dataset_id]/[collection_type]/[collection_id]/images/[sampleId]/`.
+- Use `+layout.svelte` for shared layouts. E.g. the collection layout at `lightly_studio_view/src/routes/datasets/[dataset_id]/[collection_type]/[collection_id]/+layout.svelte`.
 
 ## Storybook
 
