@@ -177,7 +177,9 @@ For this to work, the backend must already be serving on <http://localhost:8001>
 `.env.local` needs to point at it:
 
 ```shell
+# where the backend serves sample images/videos from
 PUBLIC_SAMPLES_URL=http://localhost:8001/images
+# base URL the frontend uses to call the backend API
 PUBLIC_LIGHTLY_STUDIO_API_URL=http://localhost:8001/
 ```
 
