@@ -2,8 +2,25 @@ import type { CategoryCount } from '$lib/components/BarChart';
 import type { ClassSetSelection } from '$lib/components/ClassSetConfig';
 import { type AnnotationCountMode } from '$lib/api/lightly_studio_local/types.gen';
 import type { HistogramData, HistogramRange } from '$lib/components/Histogram';
+import type { CategoricalMetadataValue } from '$lib/services/types';
 
 export type DistributionSortOption = 'count' | 'name';
+
+export type CategoricalBucket =
+    | {
+          id: string;
+          kind: 'value' | 'missing';
+          label: string;
+          count: number;
+          value: CategoricalMetadataValue;
+      }
+    | { id: string; kind: 'other'; label: string; count: number; value?: never };
+
+export interface CategoricalDistribution {
+    buckets: CategoricalBucket[];
+    filteredBuckets?: Pick<CategoricalBucket, 'id' | 'count'>[];
+    selectedValues: CategoricalMetadataValue[];
+}
 
 export const DISTRIBUTION_SORT_LABELS: Record<DistributionSortOption, string> = {
     count: 'Count',
@@ -32,6 +49,8 @@ export interface DistributionSourceGroup {
      * metadata filter). Bins outside it render dimmed.
      */
     selectedRange?: HistogramRange;
+    /** Categorical distribution rendered as a bar chart with selection state. */
+    categorical?: CategoricalDistribution;
 }
 
 /**
