@@ -14,10 +14,27 @@ from lightly_studio.plugins import operator_context
 from lightly_studio.plugins.base_operator import OperatorResult, OperatorStatus
 from lightly_studio.plugins.operator_context import AnyFilter, ExecutionContext
 from lightly_studio.plugins.operator_registry import RegisteredOperatorMetadata, operator_registry
-from lightly_studio.plugins.parameter import BaseParameter
+from lightly_studio.plugins.parameter import BaseParameter, TableParameter
 from lightly_studio.resolvers import collection_resolver
 
 operator_router = APIRouter(prefix="/operators", tags=["operators"])
+
+
+class ParameterColumnView(BaseModel):
+    """A single column of a table parameter as exposed to the GUI."""
+
+    name: str
+    description: str
+    default: Any = None
+    required: bool
+    param_type: str | None
+
+
+class ParameterView(ParameterColumnView):
+    """An operator parameter as exposed to the GUI."""
+
+    columns: list[ParameterColumnView] | None = None
+    """The columns of a table parameter, `None` for every other parameter type."""
 
 
 class OperatorContextRequest(BaseModel):
@@ -44,7 +61,7 @@ def get_operators() -> list[RegisteredOperatorMetadata]:
 
 
 @operator_router.get("/{operator_id}/parameters")
-def get_operator_parameters(operator_id: str) -> list[BaseParameter]:
+def get_operator_parameters(operator_id: str) -> list[ParameterView]:
     """Get the parameters for a registered operator."""
     operator = operator_registry.get_by_id(operator_id=operator_id)
     if operator is None:
@@ -52,7 +69,7 @@ def get_operator_parameters(operator_id: str) -> list[BaseParameter]:
             status_code=HTTP_STATUS_NOT_FOUND,
             detail=f"Operator '{operator_id}' not found",
         )
-    return operator.parameters
+    return [_parameter_view(parameter=parameter) for parameter in operator.parameters]
 
 
 @operator_router.post("/{operator_id}/execute", response_model=OperatorResult)
@@ -120,4 +137,46 @@ def execute_operator(
             collection_id=context.collection_id, context_filter=context.context_filter
         ),
         parameters=request.parameters,
+    )
+
+
+def _parameter_view(parameter: BaseParameter) -> ParameterView:
+    """Convert an operator parameter into its API representation.
+
+    Args:
+        parameter: The parameter as declared by the operator.
+
+    Returns:
+        The parameter as exposed to the GUI, with the columns filled in for table parameters.
+    """
+    columns = (
+        [_parameter_column_view(parameter=column) for column in parameter.columns]
+        if isinstance(parameter, TableParameter)
+        else None
+    )
+    return ParameterView(
+        name=parameter.name,
+        description=parameter.description,
+        default=parameter.default,
+        required=parameter.required,
+        param_type=parameter.param_type,
+        columns=columns,
+    )
+
+
+def _parameter_column_view(parameter: BaseParameter) -> ParameterColumnView:
+    """Convert a table parameter column into its API representation.
+
+    Args:
+        parameter: The column as declared by the operator.
+
+    Returns:
+        The column as exposed to the GUI.
+    """
+    return ParameterColumnView(
+        name=parameter.name,
+        description=parameter.description,
+        default=parameter.default,
+        required=parameter.required,
+        param_type=parameter.param_type,
     )
