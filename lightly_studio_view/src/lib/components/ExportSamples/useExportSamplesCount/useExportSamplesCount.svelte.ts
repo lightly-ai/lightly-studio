@@ -30,6 +30,9 @@ export function useExportSamplesCount(
         const hasCollectionFilter = collectionFilter != null;
 
         if (!hasIncludeFilter && !hasExcludeFilter && !hasCollectionFilter) {
+            isLoading.set(false);
+            error.set(undefined);
+            count.set(0);
             return;
         }
 
@@ -48,7 +51,7 @@ export function useExportSamplesCount(
             signal: controller.signal
         })
             .then((response) => {
-                if (response?.data != null) {
+                if (!controller.signal.aborted && response?.data != null) {
                     count.set(response.data);
                 }
             })

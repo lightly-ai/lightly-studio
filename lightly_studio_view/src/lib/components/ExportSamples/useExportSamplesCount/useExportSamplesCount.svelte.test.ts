@@ -93,14 +93,31 @@ describe('useExportSamplesCount', () => {
     });
 
     it('writes count of zero to the store (not silently dropped)', async () => {
-        exportCollectionStats.mockResolvedValue({ data: 0 });
+        exportCollectionStats.mockResolvedValue({ data: 5 });
 
-        const { count } = renderHook({
+        let hookResult: HookResult | undefined;
+        const { rerender } = render(UseExportSamplesCountHarness, {
             collectionId: 'col-1',
-            includeFilter: { tag_ids: ['tag-1'] }
+            includeFilter: { tag_ids: ['tag-1'] },
+            onReady: (r: HookResult) => {
+                hookResult = r;
+            }
+        });
+        flushSync();
+        if (!hookResult) throw new Error('UseExportSamplesCountHarness did not initialize');
+        const { count } = hookResult;
+
+        await waitFor(() => expect(get(count)).toBe(5));
+
+        exportCollectionStats.mockResolvedValue({ data: 0 });
+        await rerender({
+            collectionId: 'col-1',
+            includeFilter: { tag_ids: ['tag-1', 'tag-2'] },
+            onReady: (r: HookResult) => {
+                hookResult = r;
+            }
         });
 
-        await waitFor(() => expect(exportCollectionStats).toHaveBeenCalledOnce());
         await waitFor(() => expect(get(count)).toBe(0));
     });
 
