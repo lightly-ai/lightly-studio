@@ -3,6 +3,7 @@
     import { Select, type SelectItem } from '$lib/components/Select';
     import { useClassifiersMenu } from '$lib/hooks/useClassifiers/useClassifiersMenu';
     import { useSamplingDialog } from '$lib/hooks/useSamplingDialog/useSamplingDialog';
+    import { useSplitDialog } from '$lib/hooks/useSplitDialog/useSplitDialog';
     import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
@@ -13,7 +14,8 @@
         Download as DownloadIcon,
         Settings as SettingsIcon,
         BrainCircuit as BrainCircuitIcon,
-        WandSparkles as WandSparklesIcon
+        WandSparkles as WandSparklesIcon,
+        SplitSquareHorizontal as SplitSquareHorizontalIcon
     } from '@lucide/svelte';
 
     import type { CollectionView } from '$lib/api/lightly_studio_local';
@@ -36,6 +38,7 @@
 
     const { openClassifiersMenu } = useClassifiersMenu();
     const { openSamplingDialog } = useSamplingDialog();
+    const { openSplitDialog } = useSplitDialog();
     const { filteredSampleCount } = useGlobalStorage();
     const { openExportDialog } = useExportDialog();
     const { openSettingsDialog } = useSettingsDialog();
@@ -77,6 +80,16 @@
                         collection_id: page.params.collection_id!,
                         filtered_sample_count: get(filteredSampleCount)
                     })
+            });
+        }
+
+        if (hasSampling && isEditor) {
+            items.push({
+                value: 'menu-split',
+                label: 'Split dataset',
+                icon: SplitSquareHorizontalIcon,
+                testId: 'menu-split',
+                onSelect: openSplitDialog
             });
         }
 

@@ -26,6 +26,7 @@ from lightly_studio.api.routes.api import (
     caption,
     classifier,
     collection,
+    collection_split,
     collection_tag,
     embeddings2d,
     enterprise,
@@ -137,6 +138,7 @@ api_router = APIRouter(prefix="/api", tags=["api"])
 
 api_router.include_router(collection.collection_router)
 api_router.include_router(collection_tag.tag_router)
+api_router.include_router(collection_split.split_router)
 api_router.include_router(export.export_router)
 api_router.include_router(image.image_router)
 api_router.include_router(sample.sample_router)

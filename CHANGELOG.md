@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Split a dataset into named subsets (e.g. train/val/test) by proportion, from the UI or via `DatasetQuery.random_split` in the Python SDK.
+
 ### Changed
 
 ### Deprecated

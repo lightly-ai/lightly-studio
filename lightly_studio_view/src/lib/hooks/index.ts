@@ -39,6 +39,8 @@ export { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
 export { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
 export { useSegmentationMaskPreview } from '$lib/hooks/useSegmentationMaskPreview';
 export { useCreateSampling } from '$lib/hooks/useCreateSampling/useCreateSampling';
+export { useCreateSplit } from '$lib/hooks/useCreateSplit/useCreateSplit';
+export { useSplitDialog } from '$lib/hooks/useSplitDialog/useSplitDialog';
 export { useColorPicker } from '$lib/hooks/useColorPicker/useColorPicker.svelte';
 export { useSubmitCombinationSelection } from '$lib/hooks/useSubmitCombinationSelection/useSubmitCombinationSelection';
 export { usePostHog } from '$lib/hooks/usePostHog';
