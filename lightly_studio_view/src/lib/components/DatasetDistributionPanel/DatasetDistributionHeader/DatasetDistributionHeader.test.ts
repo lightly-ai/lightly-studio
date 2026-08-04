@@ -1,8 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import DatasetDistributionHeader from './DatasetDistributionHeader.svelte';
-import { useDistributionPanel } from './useDistributionPanel.svelte';
-import type { DistributionSource } from './types';
+import { useDistributionPanel } from '../useDistributionPanel.svelte';
+import type { DistributionSource } from '../types';
 
 if (typeof globalThis.ResizeObserver === 'undefined') {
     globalThis.ResizeObserver = class {

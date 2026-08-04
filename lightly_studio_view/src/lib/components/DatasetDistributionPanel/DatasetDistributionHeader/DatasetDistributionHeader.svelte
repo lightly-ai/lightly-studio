@@ -26,6 +26,7 @@
         panel,
         histogramBinCount,
         onHistogramBinCountChange,
+        onCategoricalRetry,
         onClose,
         onOpenConfig,
         onOpenExpand,
@@ -83,6 +84,27 @@
         onToggle={panel.handleCategoricalFilterToggle}
         onClear={panel.handleCategoricalFilterClear}
     />
+    {#if panel.activeCategorical.error}
+        <div
+            class="mt-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+        >
+            <div class="font-medium">Unable to refresh categorical values</div>
+            <div class="mt-1">{panel.activeCategorical.error}</div>
+            {#if onCategoricalRetry}
+                <Button
+                    variant="ghost"
+                    buttonProps={{
+                        size: 'sm',
+                        class: 'mt-2 h-8 px-2 text-sm',
+                        onclick: onCategoricalRetry
+                    }}
+                    ariaLabel="Retry categorical refresh"
+                >
+                    Retry
+                </Button>
+            {/if}
+        </div>
+    {/if}
     {#if panel.categoricalData.length > 0}
         <div class="mt-2">
             <PanelHeader
