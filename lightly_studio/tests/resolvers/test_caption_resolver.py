@@ -4,10 +4,11 @@ import math
 from uuid import uuid4
 
 import pytest
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import caption_resolver, collection_resolver
 from tests.helpers_resolvers import create_collection, create_image
 
@@ -304,6 +305,73 @@ def test_create_many__non_finite_temporal_span(
         )
 
 
+def test_update_temporal_span__creates_when_missing(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    created_ids = caption_resolver.create_many(
+        session=db_session,
+        parent_collection_id=collection.collection_id,
+        captions=[CaptionCreate(parent_sample_id=image.sample_id, text="caption")],
+    )
+
+    updated = caption_resolver.update_temporal_span(
+        session=db_session, sample_id=created_ids[0], start_time_s=1.0, end_time_s=3.0
+    )
+    assert updated.temporal_span_details is not None
+    assert updated.temporal_span_details.start_time_s == 1.0
+    assert updated.temporal_span_details.end_time_s == 3.0
+
+
+def test_update_temporal_span__updates_existing(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    created_ids = caption_resolver.create_many(
+        session=db_session,
+        parent_collection_id=collection.collection_id,
+        captions=[
+            CaptionCreate(
+                parent_sample_id=image.sample_id,
+                text="caption",
+                start_time_s=1.0,
+                end_time_s=2.0,
+            )
+        ],
+    )
+
+    updated = caption_resolver.update_temporal_span(
+        session=db_session, sample_id=created_ids[0], start_time_s=4.0, end_time_s=6.0
+    )
+    assert updated.temporal_span_details is not None
+    assert updated.temporal_span_details.start_time_s == 4.0
+    assert updated.temporal_span_details.end_time_s == 6.0
+
+
+def test_update_temporal_span__invalid_and_not_found(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    created_ids = caption_resolver.create_many(
+        session=db_session,
+        parent_collection_id=collection.collection_id,
+        captions=[CaptionCreate(parent_sample_id=image.sample_id, text="caption")],
+    )
+
+    with pytest.raises(ValueError, match="start_time_s must be less than end_time_s"):
+        caption_resolver.update_temporal_span(
+            session=db_session, sample_id=created_ids[0], start_time_s=5.0, end_time_s=1.0
+        )
+
+    with pytest.raises(ValueError, match="start_time_s and end_time_s must be finite"):
+        caption_resolver.update_temporal_span(
+            session=db_session, sample_id=created_ids[0], start_time_s=math.inf, end_time_s=1.0
+        )
+
+    wrong_id = uuid4()
+    with pytest.raises(ValueError, match=f"Caption with ID {wrong_id} not found."):
+        caption_resolver.update_temporal_span(
+            session=db_session, sample_id=wrong_id, start_time_s=1.0, end_time_s=2.0
+        )
+
+
 def test_delete_caption(db_session: Session) -> None:
     collection = create_collection(session=db_session)
 
@@ -342,3 +410,29 @@ def test_delete_caption(db_session: Session) -> None:
     wrong_id = uuid4()
     with pytest.raises(ValueError, match=f"Caption with ID {wrong_id} not found."):
         caption_resolver.delete_caption(session=db_session, sample_id=wrong_id)
+
+
+def test_delete_caption__removes_temporal_span(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+
+    caption_ids = caption_resolver.create_many(
+        session=db_session,
+        parent_collection_id=collection.collection_id,
+        captions=[
+            CaptionCreate(
+                parent_sample_id=image.sample_id,
+                text="with span",
+                start_time_s=1.0,
+                end_time_s=2.5,
+            ),
+        ],
+    )
+
+    caption_resolver.delete_caption(session=db_session, sample_id=caption_ids[0])
+
+    # The caption's temporal span must not be left orphaned.
+    remaining_spans = db_session.exec(
+        select(TemporalSpanTable).where(col(TemporalSpanTable.sample_id) == caption_ids[0])
+    ).all()
+    assert remaining_spans == []

@@ -98,6 +98,51 @@ def test_create_caption(db_session: Session, test_client: TestClient) -> None:
     assert result["error"] == f"Sample with ID {wrong_sample_id} not found."
 
 
+def test_create_caption__with_temporal_span(db_session: Session, test_client: TestClient) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    sample = create_image(session=db_session, collection_id=collection_id)
+    input_data = {
+        "parent_sample_id": str(sample.sample_id),
+        "text": "captioned segment",
+        "start_time_s": 1.0,
+        "end_time_s": 2.5,
+    }
+    response = test_client.post(f"/api/collections/{collection_id!s}/captions", json=input_data)
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert result["temporal_span_details"] == {"start_time_s": 1.0, "end_time_s": 2.5}
+
+
+def test_update_caption_temporal_span(db_session: Session, test_client: TestClient) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    parent_sample = create_image(session=db_session, collection_id=collection_id)
+    caption = create_caption(
+        session=db_session,
+        collection_id=collection_id,
+        parent_sample_id=parent_sample.sample_id,
+    )
+    sample_id = caption.sample_id
+
+    response = test_client.put(
+        f"/api/collections/{collection_id!s}/captions/{sample_id!s}/temporal_span",
+        json={"start_time_s": 3.0, "end_time_s": 5.0},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert result["sample_id"] == str(sample_id)
+    assert result["temporal_span_details"] == {"start_time_s": 3.0, "end_time_s": 5.0}
+
+    # Verify the span persisted in the database.
+    updated_caption = caption_resolver.get_by_ids(db_session, sample_ids=[sample_id])[0]
+    assert updated_caption.temporal_span_details is not None
+    assert updated_caption.temporal_span_details.start_time_s == 3.0
+    assert updated_caption.temporal_span_details.end_time_s == 5.0
+
+
 def test_delete_caption(db_session: Session, test_client: TestClient) -> None:
     # Initialize a collection and add a caption
     collection = create_collection(session=db_session)
