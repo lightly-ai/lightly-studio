@@ -108,7 +108,7 @@ def update(
     start_time_s: float | None = None,
     end_time_s: float | None = None,
 ) -> CaptionTable:
-    """Update a caption's text and/or temporal span in a single transaction.
+    """Update a caption's text and/or temporal span.
 
     The temporal span is created if it does not exist yet. Both ``start_time_s`` and
     ``end_time_s`` must be provided together to change the span.
@@ -117,8 +117,10 @@ def update(
         session: Database session for executing the operation.
         sample_id: UUID of the caption to update.
         text: New text. Left unchanged when ``None``.
-        start_time_s: New start time in seconds. Left unchanged when ``None``.
-        end_time_s: New end time in seconds. Left unchanged when ``None``.
+        start_time_s: New start time in seconds. Must be provided together with
+            ``end_time_s``; the span is left unchanged only when both are ``None``.
+        end_time_s: New end time in seconds. Must be provided together with
+            ``start_time_s``; the span is left unchanged only when both are ``None``.
 
     Returns:
         The updated caption.
