@@ -1,3 +1,6 @@
+// Superseded by `full-suite-coverage.ts`, which reads a report the CI workflow
+// already produced instead of running a per-file-matched subset of tests. Build new
+// coverage guardrails on that; this one goes away once `frontend/coverage` migrates.
 import { extractAddedLines, pct } from './utils';
 import type { ChangedFile, Guardrail, GuardrailContext } from '../context/types';
 import type { GuardrailOutcome } from '../context/types';
@@ -89,6 +92,7 @@ function collectCoverageResults<TCoverage>(
     return { lines, failures, checked };
 }
 
+/** @deprecated Use `createCoverageGuardrail` from `./full-suite-coverage` instead. */
 export function createCoverageGuardrail<TCoverage>(config: CoverageConfig<TCoverage>): Guardrail {
     return {
         name: config.name,
