@@ -36,12 +36,11 @@ describe('AnnotationsTab', () => {
         expect(screen.getByText('Export in COCO format')).toBeInTheDocument();
     });
 
-    it('hides the annotation source select when there is only one source', () => {
-        render(AnnotationsTab, { props: defaultProps });
+    it('hides the annotation source select for one source and shows it for multiple sources', () => {
+        const { unmount } = render(AnnotationsTab, { props: defaultProps });
         expect(screen.queryByText('Annotation Source')).not.toBeInTheDocument();
-    });
+        unmount();
 
-    it('shows the annotation source select when there are multiple sources', () => {
         render(AnnotationsTab, {
             props: {
                 ...defaultProps,
