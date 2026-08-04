@@ -44,6 +44,10 @@ jobs:
           filters: |
             backend:
               - 'lightly_studio/**'
+            # Superset of the upcoming backend/coverage guardrail's own scope, so the
+            # full suite runs only for PRs that guardrail will actually judge.
+            backend_src:
+              - 'lightly_studio/src/lightly_studio/**/*.py'
             frontend:
               - 'lightly_studio_view/**'
 
@@ -101,6 +105,17 @@ jobs:
         if: steps.changes.outputs.backend == 'true'
         working-directory: lightly_studio
         run: make build-lightly_studio_view
+
+      # Produces the coverage report the upcoming backend/coverage guardrail reads; it
+      # will not run tests itself. A red suite must not kill the job — the guardrail
+      # turns it into a fail verdict, and the bot still needs the artifact to explain
+      # itself. Nothing consumes coverage.json yet.
+      - name: Run backend tests with coverage
+        id: backend-tests
+        if: steps.changes.outputs.backend_src == 'true'
+        continue-on-error: true
+        working-directory: lightly_studio
+        run: make test-coverage
 
       # --- Frontend toolchain ------------------------------------------------
       # Deps and generated API client for frontend guardrails (e.g. frontend/complexity,

@@ -18,5 +18,9 @@ dataset_examples
 # Generated API schema
 openapi.json
 
+# Coverage artifacts from `make test-coverage`
+coverage.json
+.coverage
+
 # docs build
 /docs/site
