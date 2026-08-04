@@ -26,44 +26,33 @@ class CaptionCreateInput(BaseModel):
     end_time_s: float | None = None
 
 
-class CaptionTemporalSpanUpdateInput(BaseModel):
-    """API interface to update the temporal span of a caption."""
+class CaptionUpdateInput(BaseModel):
+    """API interface to update a caption's text and/or temporal span."""
 
-    start_time_s: float
-    end_time_s: float
+    text: str | None = None
+    start_time_s: float | None = None
+    end_time_s: float | None = None
 
 
 captions_router = APIRouter(prefix="/collections/{collection_id}", tags=["captions"])
 
 
 @captions_router.put("/captions/{sample_id}", response_model=CaptionView)
-def update_caption_text(
+def update_caption(
     session: SessionDep,
     sample_id: Annotated[
         UUID,
         Path(title="Caption ID", description="ID of the caption to update"),
     ],
-    text: Annotated[str, Body()],
+    caption_update: Annotated[CaptionUpdateInput, Body()],
 ) -> CaptionTable:
-    """Update an existing caption in the database."""
-    return caption_resolver.update_text(session=session, sample_id=sample_id, text=text)
-
-
-@captions_router.put("/captions/{sample_id}/temporal_span", response_model=CaptionView)
-def update_caption_temporal_span(
-    session: SessionDep,
-    sample_id: Annotated[
-        UUID,
-        Path(title="Caption ID", description="ID of the caption to update"),
-    ],
-    temporal_span: Annotated[CaptionTemporalSpanUpdateInput, Body()],
-) -> CaptionTable:
-    """Update the temporal span of an existing caption."""
-    return caption_resolver.update_temporal_span(
+    """Update an existing caption's text and/or temporal span."""
+    return caption_resolver.update(
         session=session,
         sample_id=sample_id,
-        start_time_s=temporal_span.start_time_s,
-        end_time_s=temporal_span.end_time_s,
+        text=caption_update.text,
+        start_time_s=caption_update.start_time_s,
+        end_time_s=caption_update.end_time_s,
     )
 
 
