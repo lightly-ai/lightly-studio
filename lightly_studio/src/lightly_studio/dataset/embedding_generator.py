@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 from uuid import UUID
@@ -53,6 +54,28 @@ class EmbeddingGenerator(Protocol):
 
         Returns:
             A list of floats representing the generated embedding.
+        """
+        ...
+
+
+@runtime_checkable
+class BatchTextEmbeddingGenerator(EmbeddingGenerator, Protocol):
+    """Protocol for embedding models that encode multiple texts in batches.
+
+    Implementing this protocol is optional: a generator without it still embeds texts
+    through ``EmbeddingGenerator.embed_text``, one text per forward pass.
+    """
+
+    def embed_texts(self, texts: Sequence[str], show_progress: bool = True) -> NDArray[np.float32]:
+        """Generate embeddings for multiple text samples.
+
+        Args:
+            texts: The texts to embed.
+            show_progress: Whether to show a progress bar during embedding.
+
+        Returns:
+            A numpy array representing the generated embeddings in the same order
+            as the input texts.
         """
         ...
 
@@ -164,6 +187,11 @@ class RandomEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator)
     def embed_text(self, _text: str) -> list[float]:
         """Generate a random embedding for a text sample."""
         return [random.random() for _ in range(self._dimension)]
+
+    def embed_texts(self, texts: Sequence[str], show_progress: bool = True) -> NDArray[np.float32]:
+        """Generate random embeddings for multiple text samples."""
+        _ = show_progress  # Not used for random embeddings.
+        return np.random.rand(len(texts), self._dimension).astype(np.float32)
 
     def embed_images(self, filepaths: list[str], show_progress: bool = True) -> EmbeddingResult:
         """Generate random embeddings for multiple image samples."""

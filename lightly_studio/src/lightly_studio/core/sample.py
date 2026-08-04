@@ -193,8 +193,12 @@ class Sample(ABC):
         Args:
             captions: The texts of the captions to add.
         """
+        # Import locally: the embedding layer reaches back into core through the
+        # resolvers, so importing it at module scope would be circular.
+        from lightly_studio.dataset import caption_embedding  # noqa: PLC0415
+
         session = self.get_object_session()
-        caption_resolver.create_many(
+        caption_sample_ids = caption_resolver.create_many(
             session=session,
             parent_collection_id=self.collection_id,
             captions=[
@@ -205,6 +209,7 @@ class Sample(ABC):
                 for caption in captions
             ],
         )
+        caption_embedding.embed_captions(session=session, caption_sample_ids=caption_sample_ids)
 
     @property
     def captions(self) -> list[str]:
@@ -218,6 +223,10 @@ class Sample(ABC):
         Args:
             captions: Iterable of caption texts to associate with this sample.
         """
+        # Import locally: the embedding layer reaches back into core through the
+        # resolvers, so importing it at module scope would be circular.
+        from lightly_studio.dataset import caption_embedding  # noqa: PLC0415
+
         session = self.get_object_session()
 
         # Delete all existing captions for this sample
@@ -227,13 +236,14 @@ class Sample(ABC):
 
         # Create new captions from the provided texts
         if captions:
-            caption_resolver.create_many(
+            caption_sample_ids = caption_resolver.create_many(
                 session=session,
                 parent_collection_id=self.collection_id,
                 captions=[
                     CaptionCreate(parent_sample_id=self.sample_id, text=text) for text in captions
                 ],
             )
+            caption_embedding.embed_captions(session=session, caption_sample_ids=caption_sample_ids)
 
     @property
     def annotations(self) -> list[Annotation]:

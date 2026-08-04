@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.database.db_manager import SessionDep
+from lightly_studio.dataset import caption_embedding
 from lightly_studio.models.caption import CaptionCreate, CaptionTable, CaptionView
 from lightly_studio.resolvers import caption_resolver, sample_resolver
 
@@ -47,13 +48,17 @@ def update_caption(
     caption_update: Annotated[CaptionUpdateInput, Body()],
 ) -> CaptionTable:
     """Update an existing caption's text and/or temporal span."""
-    return caption_resolver.update(
+    caption = caption_resolver.update(
         session=session,
         sample_id=sample_id,
         text=caption_update.text,
         start_time_s=caption_update.start_time_s,
         end_time_s=caption_update.end_time_s,
     )
+    # A changed text drops the caption's embedding, so recompute it here. This is a
+    # no-op when only the temporal span changed.
+    caption_embedding.embed_captions(session=session, caption_sample_ids=[sample_id])
+    return caption
 
 
 @captions_router.get("/captions/{sample_id}", response_model=CaptionView)
@@ -99,6 +104,8 @@ def create_caption(
         ],
     )
     assert len(sample_ids) == 1, "Expected exactly one caption to be created."
+
+    caption_embedding.embed_captions(session=session, caption_sample_ids=sample_ids)
 
     # Fetch and return the created caption
     return caption_resolver.get_by_ids(session=session, sample_ids=sample_ids)[0]

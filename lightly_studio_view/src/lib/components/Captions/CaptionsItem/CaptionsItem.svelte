@@ -7,6 +7,7 @@
     import { SampleImage } from '$lib/components';
     import CaptionField from '$lib/components/CaptionField/CaptionField.svelte';
     import CreateCaptionField from '$lib/components/CaptionField/CreateCaptionField.svelte';
+    import CaptionSegmentRibbon from '$lib/components/CaptionSegmentRibbon/CaptionSegmentRibbon.svelte';
     import { useSettings } from '$lib/hooks/useSettings';
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
@@ -167,6 +168,13 @@
             {/if}
             <div class="flex h-full w-full flex-1 flex-col overflow-auto px-4 py-2">
                 {#each captions as caption (caption.sample_id)}
+                    {#if isVideoView(item) && caption.temporal_span_details}
+                        <CaptionSegmentRibbon
+                            videoId={item.sample_id}
+                            startTimeS={caption.temporal_span_details.start_time_s}
+                            endTimeS={caption.temporal_span_details.end_time_s}
+                        />
+                    {/if}
                     <CaptionField
                         {caption}
                         onDeleteCaption={() => onDeleteCaption(caption.sample_id)}

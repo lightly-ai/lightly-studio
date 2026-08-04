@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from uuid import UUID
 
@@ -14,10 +15,11 @@ from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.vendor import mobileclip
 
-from . import file_utils, image_crop_embedding, image_embedding
+from . import file_utils, image_crop_embedding, image_embedding, text_embedding
 from .embedding_generator import ImageCrop, ImageEmbeddingGenerator
 from .embedding_result import EmbeddingResult
 from .image_embedding import EmbeddingContext
+from .text_embedding import TextEmbeddingContext
 
 MODEL_NAME = "mobileclip_s0"
 MOBILECLIP_DOWNLOAD_URL = (
@@ -85,6 +87,23 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
             embedding_list: list[float] = embedding.cpu().numpy().flatten().tolist()
         return embedding_list
 
+    def embed_texts(self, texts: Sequence[str], show_progress: bool = True) -> NDArray[np.float32]:
+        """Embed texts with MobileCLIP.
+
+        Args:
+            texts: The texts to embed.
+            show_progress: Whether to show a progress bar during embedding.
+
+        Returns:
+            A numpy array representing the generated embeddings in the same order
+            as the input texts.
+        """
+        return text_embedding.embed_texts_batched(
+            texts=texts,
+            context=self._text_embedding_context(),
+            show_progress=show_progress,
+        )
+
     def embed_images(self, filepaths: list[str], show_progress: bool = True) -> EmbeddingResult:
         """Embed images with MobileCLIP.
 
@@ -149,6 +168,20 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
             preprocess=self._preprocess,
             encode_batch=lambda images_tensor: (
                 self._model.encode_image(images_tensor)  # type: ignore[operator]
+                .cpu()
+                .numpy()
+            ),
+        )
+
+    def _text_embedding_context(self) -> TextEmbeddingContext:
+        """Build the model-specific configuration for batched text embedding."""
+        return TextEmbeddingContext(
+            embedding_dimension=EMBEDDING_DIMENSION,
+            max_batch_size=MAX_BATCH_SIZE,
+            device=self._device,
+            tokenize=self._tokenizer,
+            encode_batch=lambda tokens: (
+                self._model.encode_text(tokens)  # type: ignore[operator]
                 .cpu()
                 .numpy()
             ),

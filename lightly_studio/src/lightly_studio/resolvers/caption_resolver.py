@@ -10,9 +10,14 @@ from sqlmodel import Session, col, delete, select
 
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
 from lightly_studio.models.collection import SampleType
-from lightly_studio.models.sample import SampleCreate
+from lightly_studio.models.sample import SampleCreate, SampleTable
+from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
-from lightly_studio.resolvers import collection_resolver, sample_resolver
+from lightly_studio.resolvers import (
+    collection_resolver,
+    sample_embedding_resolver,
+    sample_resolver,
+)
 from lightly_studio.utils import batching
 
 
@@ -101,6 +106,47 @@ def get_by_ids(session: Session, sample_ids: Sequence[UUID]) -> list[CaptionTabl
     return [caption_map[id_] for id_ in sample_ids if id_ in caption_map]
 
 
+def get_unembedded_captions(
+    session: Session,
+    caption_collection_id: UUID,
+    embedding_model_id: UUID,
+    sample_ids: Sequence[UUID] | None = None,
+) -> list[CaptionTable]:
+    """Return captions of a collection that have a text but no embedding yet.
+
+    Captions with an empty text are excluded: they carry no signal to embed. A caption
+    whose text changed loses its embedding on update, so it shows up here again.
+
+    Args:
+        session: Database session for executing the operation.
+        caption_collection_id: The caption collection to scan.
+        embedding_model_id: Model whose existing embeddings mark a caption as done.
+        sample_ids: Restrict the scan to these captions. All captions of the collection
+            are scanned when ``None``.
+
+    Returns:
+        The captions that still need an embedding, ordered by creation time.
+    """
+    embedded_ids_subquery = select(col(SampleEmbeddingTable.sample_id)).where(
+        col(SampleEmbeddingTable.embedding_model_id) == embedding_model_id
+    )
+    statement = (
+        select(CaptionTable)
+        .join(SampleTable, col(SampleTable.sample_id) == col(CaptionTable.sample_id))
+        .where(col(SampleTable.collection_id) == caption_collection_id)
+        .where(col(CaptionTable.text) != "")
+        .where(col(CaptionTable.sample_id).notin_(embedded_ids_subquery))
+        .order_by(col(CaptionTable.created_at))
+    )
+    if sample_ids is None:
+        return list(session.exec(statement).all())
+
+    captions: list[CaptionTable] = []
+    for batch in batching.batched(items=set(sample_ids)):
+        captions.extend(session.exec(statement.where(col(CaptionTable.sample_id).in_(batch))).all())
+    return captions
+
+
 def update(
     session: Session,
     sample_id: UUID,
@@ -144,6 +190,11 @@ def update(
     try:
         if text is not None:
             caption.text = text
+            # A stored embedding describes the previous text, so it is dropped here.
+            # Recomputing it is the caller's job, see `dataset.caption_embedding`.
+            sample_embedding_resolver.delete_by_sample_ids(
+                session=session, sample_ids=[sample_id], commit=False
+            )
         if start_time_s is not None and end_time_s is not None:
             if caption.temporal_span_details is None:
                 session.add(
@@ -183,8 +234,12 @@ def delete_caption(
         raise ValueError(f"Caption with ID {sample_id} not found.")
 
     caption = captions[0]
-    # Delete the caption's optional temporal span first to avoid leaving an orphaned row.
+    # Delete the caption's optional temporal span and embeddings first to avoid leaving
+    # orphaned rows behind.
     session.exec(delete(TemporalSpanTable).where(col(TemporalSpanTable.sample_id) == sample_id))
+    sample_embedding_resolver.delete_by_sample_ids(
+        session=session, sample_ids=[sample_id], commit=False
+    )
     session.delete(caption)
     session.commit()
 

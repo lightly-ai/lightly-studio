@@ -23,11 +23,13 @@ from lightly_studio.dataset.embedding_manager import (
 )
 from lightly_studio.dataset.embedding_result import EmbeddingResult
 from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.caption import CaptionCreate
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.resolvers import (
+    caption_resolver,
     collection_resolver,
     embedding_model_resolver,
     sample_embedding_resolver,
@@ -404,6 +406,179 @@ def test_embed_annotations_processes_all_chunks(
         embedding_model_id=model_id,
     )
     assert len(stored_embeddings) == 3
+
+
+def test_embed_captions(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """embed_captions stores one embedding per caption."""
+    caption_collection_id, _ = _create_captions(
+        session=db_session,
+        collection_id=collection.collection_id,
+        texts=["a person walks", "a dog runs"],
+    )
+
+    manager = EmbeddingManager()
+    model_id = manager.register_embedding_model(
+        session=db_session,
+        embedding_generator=RandomEmbeddingGenerator(),
+        collection_id=caption_collection_id,
+        set_as_default=True,
+    ).embedding_model_id
+
+    manager.embed_captions(
+        session=db_session,
+        caption_collection_id=caption_collection_id,
+        embedding_model_id=model_id,
+    )
+
+    stored_embeddings = sample_embedding_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=caption_collection_id,
+        embedding_model_id=model_id,
+    )
+    assert len(stored_embeddings) == 2
+
+
+def test_embed_captions__skips_empty_text(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """A caption without text carries no signal and is not embedded."""
+    caption_collection_id, _ = _create_captions(
+        session=db_session, collection_id=collection.collection_id, texts=["a person walks", ""]
+    )
+
+    manager = EmbeddingManager()
+    model_id = manager.register_embedding_model(
+        session=db_session,
+        embedding_generator=RandomEmbeddingGenerator(),
+        collection_id=caption_collection_id,
+        set_as_default=True,
+    ).embedding_model_id
+
+    manager.embed_captions(session=db_session, caption_collection_id=caption_collection_id)
+
+    stored_embeddings = sample_embedding_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=caption_collection_id,
+        embedding_model_id=model_id,
+    )
+    assert len(stored_embeddings) == 1
+
+
+def test_embed_captions__only_given_sample_ids(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """Passing sample_ids restricts embedding to those captions."""
+    caption_collection_id, caption_sample_ids = _create_captions(
+        session=db_session,
+        collection_id=collection.collection_id,
+        texts=["a person walks", "a dog runs"],
+    )
+
+    manager = EmbeddingManager()
+    model_id = manager.register_embedding_model(
+        session=db_session,
+        embedding_generator=RandomEmbeddingGenerator(),
+        collection_id=caption_collection_id,
+        set_as_default=True,
+    ).embedding_model_id
+
+    manager.embed_captions(
+        session=db_session,
+        caption_collection_id=caption_collection_id,
+        sample_ids=[caption_sample_ids[0]],
+    )
+
+    stored_embeddings = sample_embedding_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=caption_collection_id,
+        embedding_model_id=model_id,
+    )
+    assert [embedding.sample_id for embedding in stored_embeddings] == [caption_sample_ids[0]]
+
+
+def test_embed_captions_is_idempotent(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """Re-running embed_captions does not duplicate embeddings."""
+    caption_collection_id, _ = _create_captions(
+        session=db_session, collection_id=collection.collection_id, texts=["a person walks"]
+    )
+
+    manager = EmbeddingManager()
+    model_id = manager.register_embedding_model(
+        session=db_session,
+        embedding_generator=RandomEmbeddingGenerator(),
+        collection_id=caption_collection_id,
+        set_as_default=True,
+    ).embedding_model_id
+
+    manager.embed_captions(session=db_session, caption_collection_id=caption_collection_id)
+    manager.embed_captions(session=db_session, caption_collection_id=caption_collection_id)
+
+    stored_embeddings = sample_embedding_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=caption_collection_id,
+        embedding_model_id=model_id,
+    )
+    assert len(stored_embeddings) == 1
+
+
+def test_embed_captions_processes_all_chunks(
+    db_session: Session,
+    collection: CollectionTable,
+    mocker: MockerFixture,
+) -> None:
+    """All captions are embedded even when they span multiple chunks."""
+    # Force several chunks.
+    mocker.patch.object(embedding_manager, "CAPTION_EMBED_BATCH_SIZE", 2)
+    caption_collection_id, _ = _create_captions(
+        session=db_session,
+        collection_id=collection.collection_id,
+        texts=[f"caption {index}" for index in range(5)],
+    )
+
+    manager = EmbeddingManager()
+    model_id = manager.register_embedding_model(
+        session=db_session,
+        embedding_generator=RandomEmbeddingGenerator(),
+        collection_id=caption_collection_id,
+        set_as_default=True,
+    ).embedding_model_id
+
+    manager.embed_captions(
+        session=db_session,
+        caption_collection_id=caption_collection_id,
+        embedding_model_id=model_id,
+    )
+
+    stored_embeddings = sample_embedding_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=caption_collection_id,
+        embedding_model_id=model_id,
+    )
+    assert len(stored_embeddings) == 5
+
+
+def _create_captions(
+    session: Session, collection_id: UUID, texts: list[str]
+) -> tuple[UUID, list[UUID]]:
+    """Create captions on a new image and return the caption collection and sample IDs."""
+    image = create_image(session=session, collection_id=collection_id)
+    caption_sample_ids = caption_resolver.create_many(
+        session=session,
+        parent_collection_id=collection_id,
+        captions=[CaptionCreate(parent_sample_id=image.sample_id, text=text) for text in texts],
+    )
+    caption_collection_id = collection_resolver.get_or_create_child_collection(
+        session=session, collection_id=collection_id, sample_type=SampleType.CAPTION
+    )
+    return caption_collection_id, caption_sample_ids
 
 
 def test_get_valid_model_id_without_default_model() -> None:

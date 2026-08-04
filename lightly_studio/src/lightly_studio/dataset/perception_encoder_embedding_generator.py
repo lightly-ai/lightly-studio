@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
 from uuid import UUID
 
@@ -25,10 +25,11 @@ from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.utils import batching
 from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transforms
 
-from . import file_utils, image_crop_embedding, image_embedding
+from . import file_utils, image_crop_embedding, image_embedding, text_embedding
 from .embedding_generator import ImageCrop, ImageEmbeddingGenerator, VideoEmbeddingGenerator
 from .embedding_result import EmbeddingResult
 from .image_embedding import EmbeddingContext
+from .text_embedding import TextEmbeddingContext
 
 MODEL_NAME = "PE-Core-T16-384"
 DEFAULT_VIDEO_CHANNEL = 0
@@ -95,6 +96,23 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             embedding_list: list[float] = embedding.cpu().numpy().flatten().tolist()
         return embedding_list
 
+    def embed_texts(self, texts: Sequence[str], show_progress: bool = True) -> NDArray[np.float32]:
+        """Embed texts with Perception Encoder.
+
+        Args:
+            texts: The texts to embed.
+            show_progress: Whether to show a progress bar during embedding.
+
+        Returns:
+            A numpy array representing the generated embeddings in the same order
+            as the input texts.
+        """
+        return text_embedding.embed_texts_batched(
+            texts=texts,
+            context=self._text_embedding_context(),
+            show_progress=show_progress,
+        )
+
     def embed_images(self, filepaths: list[str], show_progress: bool = True) -> EmbeddingResult:
         """Embed images with Perception Encoder.
 
@@ -159,6 +177,18 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             preprocess=self._preprocess,
             encode_batch=lambda images_tensor: (
                 self._model.encode_image(images_tensor, normalize=True).cpu().numpy()
+            ),
+        )
+
+    def _text_embedding_context(self) -> TextEmbeddingContext:
+        """Build the model-specific configuration for batched text embedding."""
+        return TextEmbeddingContext(
+            embedding_dimension=self._model.output_dim,
+            max_batch_size=MAX_BATCH_SIZE,
+            device=self._device,
+            tokenize=self._tokenizer,
+            encode_batch=lambda tokens: (
+                self._model.encode_text(tokens, normalize=True).cpu().numpy()
             ),
         )
 

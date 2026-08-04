@@ -8,7 +8,7 @@ from typing import Any, NamedTuple
 from uuid import UUID
 
 from sqlalchemy import func
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, delete, select
 
 from lightly_studio.database import db_vector
 from lightly_studio.database.db_manager import DatabaseBackend
@@ -55,6 +55,25 @@ def create_many(
     """
     db_sample_embeddings = [SampleEmbeddingTable.model_validate(e) for e in sample_embeddings]
     session.bulk_save_objects(db_sample_embeddings)
+    if commit:
+        session.commit()
+
+
+def delete_by_sample_ids(session: Session, sample_ids: Sequence[UUID], commit: bool = True) -> None:
+    """Delete the embeddings of the given samples, for every embedding model.
+
+    Args:
+        session: The database session.
+        sample_ids: The samples whose embeddings are deleted.
+        commit: Whether to commit. Pass ``False`` to delete as part of a larger
+            transaction that the caller commits.
+    """
+    if not sample_ids:
+        return
+    for batch in batching.batched(items=set(sample_ids)):
+        session.exec(
+            delete(SampleEmbeddingTable).where(col(SampleEmbeddingTable.sample_id).in_(batch))
+        )
     if commit:
         session.commit()
 

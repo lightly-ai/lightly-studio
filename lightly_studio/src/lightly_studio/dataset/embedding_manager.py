@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -12,7 +13,7 @@ from PIL import Image
 from sqlmodel import Session
 from tqdm import tqdm
 
-from lightly_studio.dataset import env
+from lightly_studio.dataset import env, text_embedding
 from lightly_studio.dataset.embedding_generator import (
     EmbeddingGenerator,
     ImageEmbeddingGenerator,
@@ -23,6 +24,7 @@ from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
+    caption_resolver,
     collection_resolver,
     embedding_model_resolver,
     image_resolver,
@@ -39,12 +41,19 @@ EMBEDDING_INSERTION_BATCH_SIZE = 1024
 
 # Number of annotation crops processed per chunk in embed_annotations.
 ANNOTATION_EMBED_BATCH_SIZE = 2048
+
+# Number of captions processed per chunk in embed_captions.
+CAPTION_EMBED_BATCH_SIZE = 2048
+
 # Mapping of sample types to the generator type used for embedding generation.
+# Captions are embedded with the text encoder of the image generator, which puts them
+# in the same vector space as the image embeddings of that model.
 _GENERATOR_SAMPLE_TYPE: dict[SampleType, SampleType] = {
     SampleType.IMAGE: SampleType.IMAGE,
     SampleType.ANNOTATION: SampleType.IMAGE,
     SampleType.VIDEO: SampleType.VIDEO,
     SampleType.VIDEO_FRAME: SampleType.IMAGE,
+    SampleType.CAPTION: SampleType.IMAGE,
 }
 
 
@@ -310,6 +319,69 @@ class EmbeddingManager:
                     show_progress=False,
                 )
                 progress.update(len(annotation_crops))
+
+    def embed_captions(
+        self,
+        session: Session,
+        caption_collection_id: UUID,
+        sample_ids: Sequence[UUID] | None = None,
+        embedding_model_id: UUID | None = None,
+    ) -> None:
+        """Generate and store embeddings for caption texts.
+
+        The texts are embedded with the model's text encoder, so the stored caption
+        embeddings live in the same vector space as the image embeddings of that model.
+        Captions that already have an embedding for the model, and captions with an
+        empty text, are skipped.
+
+        Args:
+            session: Database session for resolver operations.
+            caption_collection_id: The caption collection whose captions should receive
+                embeddings.
+            sample_ids: Restrict embedding to these captions. All captions of the
+                collection are considered if None.
+            embedding_model_id: ID of the model to use. Uses default if None.
+
+        Raises:
+            ValueError: If no embedding model is registered or the provided model ID
+                doesn't exist.
+        """
+        model_id = self._get_default_or_validate(
+            collection_id=caption_collection_id, embedding_model_id=embedding_model_id
+        )
+        model = self._models[model_id]
+
+        captions = caption_resolver.get_unembedded_captions(
+            session=session,
+            caption_collection_id=caption_collection_id,
+            embedding_model_id=model_id,
+            sample_ids=sample_ids,
+        )
+        if not captions:
+            logger.info("No captions to embed.")
+            return
+
+        with tqdm(
+            total=len(captions),
+            desc="Embedding captions",
+            unit=" captions",
+        ) as progress:
+            for caption_chunk in batching.batched(
+                items=captions, batch_size=CAPTION_EMBED_BATCH_SIZE
+            ):
+                embeddings = text_embedding.embed_texts(
+                    generator=model,
+                    texts=[caption.text for caption in caption_chunk],
+                    show_progress=False,
+                )
+                _store_embeddings(
+                    session=session,
+                    model_id=model_id,
+                    sample_ids=[caption.sample_id for caption in caption_chunk],
+                    embeddings=embeddings,
+                    show_progress=False,
+                )
+                progress.update(len(caption_chunk))
 
     def compute_image_embedding(
         self,
