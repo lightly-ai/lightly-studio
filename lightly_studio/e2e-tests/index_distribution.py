@@ -60,6 +60,10 @@ ADD_METADATA = env.bool("ADD_METADATA", True)
 DATASET_NAME = "distribution_example_dataset"
 RANDOM_SEED = 42
 
+COMPARISON_TAG_REVIEWED = "distribution_reviewed"
+COMPARISON_TAG_PRIORITY = "distribution_priority"
+COMPARISON_TAG_EMPTY = "distribution_empty"
+
 # Distinct, weighted class pools per type so each distribution has a clear shape.
 CLASSIFICATION_CLASSES = ["daytime", "night", "dawn", "dusk", "indoor"]
 CLASSIFICATION_WEIGHTS = [0.45, 0.25, 0.15, 0.1, 0.05]
@@ -113,6 +117,10 @@ def main() -> None:
     dataset.add_images_from_path(path=IMAGES_PATH)
     samples = list(dataset)
     rng = random.Random(RANDOM_SEED)
+
+    dataset.query()[:32].add_tag(COMPARISON_TAG_REVIEWED)
+    dataset.query()[16:48].add_tag(COMPARISON_TAG_PRIORITY)
+    dataset.query()[:0].add_tag(COMPARISON_TAG_EMPTY)
 
     for sample in samples:
         annotations: list[CreateAnnotation] = []

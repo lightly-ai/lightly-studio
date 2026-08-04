@@ -49,7 +49,11 @@
                 <Command.Empty>No sample tag found.</Command.Empty>
                 <Command.Group>
                     {#each items as item (item.value)}
-                        <Command.Item value={item.label} onSelect={() => toggle(item.value)}>
+                        <Command.Item
+                            value={item.label}
+                            data-testid={`dataset-distribution-tag-option-${item.value}`}
+                            onSelect={() => toggle(item.value)}
+                        >
                             <Check
                                 class={cn(!selectedIds.includes(item.value) && 'text-transparent')}
                             />

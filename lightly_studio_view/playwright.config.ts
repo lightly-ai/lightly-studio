@@ -50,6 +50,10 @@ export default defineConfig({
         {
             name: 'evaluations',
             testDir: './e2e/evaluations'
+        },
+        {
+            name: 'distribution',
+            testDir: './e2e/distribution'
         }
     ],
 
