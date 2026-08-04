@@ -30,7 +30,7 @@ def test_update_caption_text(db_session: Session, test_client: TestClient) -> No
     new_text = "updated text"
     response = test_client.put(
         f"/api/collections/{collection_id!s}/captions/{sample_id!s}",
-        json=new_text,
+        json={"text": new_text},
     )
 
     # Verify that the response includes the updated caption.
@@ -127,7 +127,7 @@ def test_update_caption_temporal_span(db_session: Session, test_client: TestClie
     sample_id = caption.sample_id
 
     response = test_client.put(
-        f"/api/collections/{collection_id!s}/captions/{sample_id!s}/temporal_span",
+        f"/api/collections/{collection_id!s}/captions/{sample_id!s}",
         json={"start_time_s": 3.0, "end_time_s": 5.0},
     )
 
@@ -141,6 +141,30 @@ def test_update_caption_temporal_span(db_session: Session, test_client: TestClie
     assert updated_caption.temporal_span_details is not None
     assert updated_caption.temporal_span_details.start_time_s == 3.0
     assert updated_caption.temporal_span_details.end_time_s == 5.0
+
+
+def test_update_caption_text_and_temporal_span(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    parent_sample = create_image(session=db_session, collection_id=collection_id)
+    caption = create_caption(
+        session=db_session,
+        collection_id=collection_id,
+        parent_sample_id=parent_sample.sample_id,
+    )
+    sample_id = caption.sample_id
+
+    response = test_client.put(
+        f"/api/collections/{collection_id!s}/captions/{sample_id!s}",
+        json={"text": "new text", "start_time_s": 1.0, "end_time_s": 2.0},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert result["text"] == "new text"
+    assert result["temporal_span_details"] == {"start_time_s": 1.0, "end_time_s": 2.0}
 
 
 def test_delete_caption(db_session: Session, test_client: TestClient) -> None:

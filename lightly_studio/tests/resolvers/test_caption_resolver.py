@@ -175,7 +175,7 @@ def test_get_by_id(db_session: Session) -> None:
     assert caption_retrieved[1].sample_id == created_caption_ids[1]
 
 
-def test_update_text(db_session: Session) -> None:
+def test_update__text(db_session: Session) -> None:
     collection = create_collection(session=db_session)
 
     image_a = create_image(
@@ -196,7 +196,7 @@ def test_update_text(db_session: Session) -> None:
     )
 
     # Update the text and double check it got updated
-    caption_updated = caption_resolver.update_text(
+    caption_updated = caption_resolver.update(
         session=db_session, sample_id=created_caption_ids[0], text="Updated text"
     )
     assert caption_updated.text == "Updated text"
@@ -205,12 +205,18 @@ def test_update_text(db_session: Session) -> None:
     )
     assert caption_retrieved[0].text == "Updated text"
 
-    # Try to update non exist caption
-    wrong_id = uuid4()
-    with pytest.raises(ValueError, match=f"Caption with ID {wrong_id} not found."):
-        caption_updated = caption_resolver.update_text(
-            session=db_session, sample_id=wrong_id, text="Updated text"
-        )
+
+def test_update__no_fields(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    created_ids = caption_resolver.create_many(
+        session=db_session,
+        parent_collection_id=collection.collection_id,
+        captions=[CaptionCreate(parent_sample_id=image.sample_id, text="caption")],
+    )
+
+    with pytest.raises(ValueError, match="No updates provided for the caption"):
+        caption_resolver.update(session=db_session, sample_id=created_ids[0])
 
 
 def test_create_many__with_temporal_span(db_session: Session) -> None:
@@ -305,7 +311,7 @@ def test_create_many__non_finite_temporal_span(
         )
 
 
-def test_update_temporal_span__creates_when_missing(db_session: Session) -> None:
+def test_update__creates_temporal_span_when_missing(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
     created_ids = caption_resolver.create_many(
@@ -314,7 +320,7 @@ def test_update_temporal_span__creates_when_missing(db_session: Session) -> None
         captions=[CaptionCreate(parent_sample_id=image.sample_id, text="caption")],
     )
 
-    updated = caption_resolver.update_temporal_span(
+    updated = caption_resolver.update(
         session=db_session, sample_id=created_ids[0], start_time_s=1.0, end_time_s=3.0
     )
     assert updated.temporal_span_details is not None
@@ -322,7 +328,7 @@ def test_update_temporal_span__creates_when_missing(db_session: Session) -> None
     assert updated.temporal_span_details.end_time_s == 3.0
 
 
-def test_update_temporal_span__updates_existing(db_session: Session) -> None:
+def test_update__updates_existing_temporal_span(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
     created_ids = caption_resolver.create_many(
@@ -338,7 +344,7 @@ def test_update_temporal_span__updates_existing(db_session: Session) -> None:
         ],
     )
 
-    updated = caption_resolver.update_temporal_span(
+    updated = caption_resolver.update(
         session=db_session, sample_id=created_ids[0], start_time_s=4.0, end_time_s=6.0
     )
     assert updated.temporal_span_details is not None
@@ -346,7 +352,29 @@ def test_update_temporal_span__updates_existing(db_session: Session) -> None:
     assert updated.temporal_span_details.end_time_s == 6.0
 
 
-def test_update_temporal_span__invalid_and_not_found(db_session: Session) -> None:
+def test_update__text_and_temporal_span(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    created_ids = caption_resolver.create_many(
+        session=db_session,
+        parent_collection_id=collection.collection_id,
+        captions=[CaptionCreate(parent_sample_id=image.sample_id, text="caption")],
+    )
+
+    updated = caption_resolver.update(
+        session=db_session,
+        sample_id=created_ids[0],
+        text="new text",
+        start_time_s=1.0,
+        end_time_s=3.0,
+    )
+    assert updated.text == "new text"
+    assert updated.temporal_span_details is not None
+    assert updated.temporal_span_details.start_time_s == 1.0
+    assert updated.temporal_span_details.end_time_s == 3.0
+
+
+def test_update__invalid_temporal_span(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
     created_ids = caption_resolver.create_many(
@@ -356,18 +384,23 @@ def test_update_temporal_span__invalid_and_not_found(db_session: Session) -> Non
     )
 
     with pytest.raises(ValueError, match="start_time_s must be less than end_time_s"):
-        caption_resolver.update_temporal_span(
+        caption_resolver.update(
             session=db_session, sample_id=created_ids[0], start_time_s=5.0, end_time_s=1.0
         )
 
     with pytest.raises(ValueError, match="start_time_s and end_time_s must be finite"):
-        caption_resolver.update_temporal_span(
+        caption_resolver.update(
             session=db_session, sample_id=created_ids[0], start_time_s=math.inf, end_time_s=1.0
         )
 
+    with pytest.raises(ValueError, match="Both start_time_s and end_time_s must be provided"):
+        caption_resolver.update(session=db_session, sample_id=created_ids[0], start_time_s=1.0)
+
+
+def test_update__not_found(db_session: Session) -> None:
     wrong_id = uuid4()
     with pytest.raises(ValueError, match=f"Caption with ID {wrong_id} not found."):
-        caption_resolver.update_temporal_span(
+        caption_resolver.update(
             session=db_session, sample_id=wrong_id, start_time_s=1.0, end_time_s=2.0
         )
 

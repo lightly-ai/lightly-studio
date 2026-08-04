@@ -101,60 +101,38 @@ def get_by_ids(session: Session, sample_ids: Sequence[UUID]) -> list[CaptionTabl
     return [caption_map[id_] for id_ in sample_ids if id_ in caption_map]
 
 
-def update_text(
+def update(
     session: Session,
     sample_id: UUID,
-    text: str,
+    text: str | None = None,
+    start_time_s: float | None = None,
+    end_time_s: float | None = None,
 ) -> CaptionTable:
-    """Update the text of a caption.
+    """Update a caption's text and/or temporal span in a single transaction.
+
+    The temporal span is created if it does not exist yet. Both ``start_time_s`` and
+    ``end_time_s`` must be provided together to change the span.
 
     Args:
         session: Database session for executing the operation.
         sample_id: UUID of the caption to update.
-        text: New text.
+        text: New text. Left unchanged when ``None``.
+        start_time_s: New start time in seconds. Left unchanged when ``None``.
+        end_time_s: New end time in seconds. Left unchanged when ``None``.
 
     Returns:
-        The updated caption with the new text.
+        The updated caption.
 
     Raises:
-        ValueError: If the caption is not found.
+        ValueError: If the caption is not found, no fields are provided, or the temporal
+            span is incomplete or invalid.
     """
-    captions = get_by_ids(session, [sample_id])
-    if not captions:
-        raise ValueError(f"Caption with ID {sample_id} not found.")
-
-    caption = captions[0]
-    try:
-        caption.text = text
-        session.commit()
-        session.refresh(caption)
-        return caption
-    except Exception:
-        session.rollback()
-        raise
-
-
-def update_temporal_span(
-    session: Session,
-    sample_id: UUID,
-    start_time_s: float,
-    end_time_s: float,
-) -> CaptionTable:
-    """Update the temporal span of a caption, creating it if it does not exist.
-
-    Args:
-        session: Database session for executing the operation.
-        sample_id: UUID of the caption to update.
-        start_time_s: New start time in seconds.
-        end_time_s: New end time in seconds.
-
-    Returns:
-        The updated caption with the new temporal span.
-
-    Raises:
-        ValueError: If the caption is not found or the span is invalid.
-    """
-    _validate_temporal_span_bounds(start_time_s=start_time_s, end_time_s=end_time_s)
+    if (start_time_s is None) != (end_time_s is None):
+        raise ValueError("Both start_time_s and end_time_s must be provided together.")
+    if text is None and start_time_s is None:
+        raise ValueError("No updates provided for the caption.")
+    if start_time_s is not None and end_time_s is not None:
+        _validate_temporal_span_bounds(start_time_s=start_time_s, end_time_s=end_time_s)
 
     captions = get_by_ids(session=session, sample_ids=[sample_id])
     if not captions:
@@ -162,18 +140,21 @@ def update_temporal_span(
 
     caption = captions[0]
     try:
-        if caption.temporal_span_details is None:
-            session.add(
-                TemporalSpanTable(
-                    sample_id=sample_id,
-                    start_time_s=start_time_s,
-                    end_time_s=end_time_s,
+        if text is not None:
+            caption.text = text
+        if start_time_s is not None and end_time_s is not None:
+            if caption.temporal_span_details is None:
+                session.add(
+                    TemporalSpanTable(
+                        sample_id=sample_id,
+                        start_time_s=start_time_s,
+                        end_time_s=end_time_s,
+                    )
                 )
-            )
-        else:
-            caption.temporal_span_details.start_time_s = start_time_s
-            caption.temporal_span_details.end_time_s = end_time_s
-            session.add(caption.temporal_span_details)
+            else:
+                caption.temporal_span_details.start_time_s = start_time_s
+                caption.temporal_span_details.end_time_s = end_time_s
+                session.add(caption.temporal_span_details)
         session.commit()
         session.refresh(caption)
         return caption
