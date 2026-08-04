@@ -2,19 +2,18 @@
     import { X } from '@lucide/svelte';
     import { Button } from '$lib/components';
     import Typography from '$lib/components/Typography/Typography.svelte';
-    import SourceGroupSelector from './SourceGroupSelector/SourceGroupSelector.svelte';
-    import HistogramToolbar from './HistogramToolbar/HistogramToolbar.svelte';
-    import PanelHeader from './PanelHeader/PanelHeader.svelte';
-    import { MetadataCategoricalFilter } from './MetadataCategoricalFilter';
-    import { CATEGORICAL_DISTRIBUTION_SORT_LABELS } from './types';
-    import type { useDistributionPanel } from './useDistributionPanel.svelte';
+    import SourceGroupSelector from '../SourceGroupSelector/SourceGroupSelector.svelte';
+    import HistogramToolbar from '../HistogramToolbar/HistogramToolbar.svelte';
+    import PanelHeader from '../PanelHeader/PanelHeader.svelte';
+    import { MetadataCategoricalFilter } from '../MetadataCategoricalFilter';
+    import { CATEGORICAL_DISTRIBUTION_SORT_LABELS } from '../types';
+    import type { useDistributionPanel } from '../useDistributionPanel.svelte';
 
     interface Props {
         title: string;
         panel: ReturnType<typeof useDistributionPanel>;
         histogramBinCount: number;
         onHistogramBinCountChange?: (binCount: number) => void;
-        onCategoricalRetry?: () => void;
         onClose?: () => void;
         onOpenConfig: () => void;
         onOpenExpand: () => void;
@@ -26,7 +25,6 @@
         panel,
         histogramBinCount,
         onHistogramBinCountChange,
-        onCategoricalRetry,
         onClose,
         onOpenConfig,
         onOpenExpand,

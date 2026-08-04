@@ -70,7 +70,6 @@
         {panel}
         {histogramBinCount}
         {onHistogramBinCountChange}
-        {onCategoricalRetry}
         {onClose}
         onOpenConfig={() => (configDialogOpen = true)}
         onOpenExpand={() => (expandOpen = true)}

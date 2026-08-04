@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { CategoricalMetadataBucket } from '$lib/hooks/useCategoricalMetadataDistribution/types';
+import type { CategoricalBucket } from '../../types';
 import type { FilterOption } from './buildOptions';
 import { getOptionLabel } from './getOptionLabel';
 
@@ -11,7 +11,7 @@ const missingOption = (): FilterOption => ({
     bucket: { id: 'missing', kind: 'missing', value: null, label: 'Missing', count: 1 },
     retained: false
 });
-const otherBucket = (): CategoricalMetadataBucket => ({
+const otherBucket = (): CategoricalBucket => ({
     id: 'other',
     kind: 'other',
     label: 'Other',

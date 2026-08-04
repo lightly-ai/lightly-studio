@@ -1,8 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import DatasetDistributionContent from './DatasetDistributionContent.svelte';
-import { useDistributionPanel } from './useDistributionPanel.svelte';
-import type { DistributionSource } from './types';
+import { useDistributionPanel } from '../useDistributionPanel.svelte';
+import type { DistributionSource } from '../types';
 
 const echartsMock = vi.hoisted(() => {
     let clickHandler: ((params: { dataIndex?: number }) => void) | undefined;

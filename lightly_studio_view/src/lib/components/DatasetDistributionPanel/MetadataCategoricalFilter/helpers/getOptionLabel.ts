@@ -1,10 +1,10 @@
-import type { CategoricalMetadataBucket } from '$lib/hooks/useCategoricalMetadataDistribution/types';
+import type { CategoricalBucket } from '../../types';
 import type { FilterOption } from './buildOptions';
 
 export function getOptionLabel(
     option: FilterOption,
     options: FilterOption[],
-    buckets: CategoricalMetadataBucket[]
+    buckets: CategoricalBucket[]
 ): string {
     const hasMissing = options.some(({ bucket }) => bucket.kind === 'missing');
     const hasOtherAggregate = buckets.some((bucket) => bucket.kind === 'other');

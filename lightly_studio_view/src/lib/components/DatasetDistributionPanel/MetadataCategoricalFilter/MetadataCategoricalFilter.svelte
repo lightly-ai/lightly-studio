@@ -4,12 +4,12 @@
     import { Button } from '$lib/components/ui/button';
     import { Checkbox } from '$lib/components/ui/checkbox';
     import { Input } from '$lib/components/ui/input';
-    import type { CategoricalMetadataBucket } from '$lib/hooks/useCategoricalMetadataDistribution/types';
+    import type { CategoricalBucket } from '../types';
     import type { CategoricalMetadataValue } from '$lib/services/types';
     import { getOptionLabel, getCheckboxLabel, buildOptions, type FilterOption } from './helpers';
 
     interface Props {
-        buckets: CategoricalMetadataBucket[];
+        buckets: CategoricalBucket[];
         selectedValues: CategoricalMetadataValue[];
         loading?: boolean;
         onToggle: (value: CategoricalMetadataValue) => void;
