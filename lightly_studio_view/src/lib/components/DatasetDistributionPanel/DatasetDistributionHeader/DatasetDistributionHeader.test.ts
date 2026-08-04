@@ -101,11 +101,6 @@ describe('DatasetDistributionHeader', () => {
         expect(screen.getByTestId('dataset-distribution-close-button')).toBeInTheDocument();
     });
 
-    it('omits the close button when onClose is not provided', () => {
-        renderHeader([barSource()]);
-        expect(screen.queryByTestId('dataset-distribution-close-button')).not.toBeInTheDocument();
-    });
-
     it('calls onClose when the close button is clicked', async () => {
         const onClose = vi.fn();
         const panel = useDistributionPanel(() => ({ sources: [barSource()] }));

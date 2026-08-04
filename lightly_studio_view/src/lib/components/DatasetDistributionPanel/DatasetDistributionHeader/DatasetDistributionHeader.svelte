@@ -1,11 +1,11 @@
 <script lang="ts">
     import { X } from '@lucide/svelte';
-    import { Button } from '$lib/components';
-    import Typography from '$lib/components/Typography/Typography.svelte';
+    import { Button, Typography } from '$lib/components';
     import SourceGroupSelector from '../SourceGroupSelector/SourceGroupSelector.svelte';
     import HistogramToolbar from '../HistogramToolbar/HistogramToolbar.svelte';
     import PanelHeader from '../PanelHeader/PanelHeader.svelte';
     import { MetadataCategoricalFilter } from '../MetadataCategoricalFilter';
+    import { CategoricalStatusBanner } from '../CategoricalStatusBanner';
     import { CATEGORICAL_DISTRIBUTION_SORT_LABELS } from '../types';
     import type { useDistributionPanel } from '../useDistributionPanel.svelte';
 
@@ -84,26 +84,12 @@
         onToggle={panel.handleCategoricalFilterToggle}
         onClear={panel.handleCategoricalFilterClear}
     />
-    {#if panel.activeCategorical.error}
-        <div
-            class="mt-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
-        >
-            <div class="font-medium">Unable to refresh categorical values</div>
-            <div class="mt-1">{panel.activeCategorical.error}</div>
-            {#if onCategoricalRetry}
-                <Button
-                    variant="ghost"
-                    buttonProps={{
-                        size: 'sm',
-                        class: 'mt-2 h-8 px-2 text-sm',
-                        onclick: onCategoricalRetry
-                    }}
-                    ariaLabel="Retry categorical refresh"
-                >
-                    Retry
-                </Button>
-            {/if}
-        </div>
+    {#if panel.activeCategorical.loading || panel.activeCategorical.error}
+        <CategoricalStatusBanner
+            loading={panel.activeCategorical.loading}
+            error={panel.activeCategorical.error}
+            onRetry={onCategoricalRetry}
+        />
     {/if}
     {#if panel.categoricalData.length > 0}
         <div class="mt-2">
