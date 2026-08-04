@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import { PUBLIC_VIDEOS_MEDIA_URL } from '$env/static/public';
     import {
         getAllFrames,
@@ -38,7 +39,7 @@
     const HOVER_DELAY = 200;
     let isHovering = false;
     // Start it with the initial frame
-    let frames = $state<FrameView[]>(video.frame == null ? [] : [video.frame]);
+    let frames = $state<FrameView[]>(untrack(() => (video.frame == null ? [] : [video.frame])));
 
     async function handleMouseEnter() {
         isHovering = true;

@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { writable } from 'svelte/store';
 import * as appState from '$app/state';
-import type { Page } from '@sveltejs/kit';
 import { tick } from 'svelte';
 import '@testing-library/jest-dom';
 
@@ -177,10 +176,7 @@ function setPageRoute(routeId: string | null): void {
             collection_id: 'test-collection-id',
             collection_type: 'image'
         }
-    } as Partial<Page<Record<string, string>, string | null>> as Page<
-        Record<string, string>,
-        string | null
-    >);
+    } as unknown as typeof appState.page);
 }
 
 beforeEach(() => {

@@ -4,7 +4,7 @@
         ChevronsUpDown as ChevronsUpDownIcon,
         LoaderCircle as Loader2Icon
     } from '@lucide/svelte';
-    import { tick, type Snippet } from 'svelte';
+    import { tick, untrack, type Snippet } from 'svelte';
     import * as Command from '$lib/components/ui/command/index.js';
     import * as Popover from '$lib/components/ui/popover/index.js';
     import { Button } from '$lib/components/ui/button/index.js';
@@ -60,7 +60,7 @@
         onKeyboardConfirm?: (item: ListItem) => void;
     } = $props();
 
-    let open = $state(autoOpen);
+    let open = $state(untrack(() => autoOpen));
     let inputValue = $state('');
     let highlightedValue = $state('');
 

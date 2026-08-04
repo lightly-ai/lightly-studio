@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import { page } from '$app/stores';
     import { derived as storeDerived } from 'svelte/store';
     import { Button } from '$lib/components/ui/button';
@@ -48,7 +49,7 @@
         ($p) =>
             ({
                 routeId: $p.route.id,
-                collectionId: $p.params.collection_id,
+                collectionId: $p.params.collection_id!,
                 sampleId: $p.params.sampleId || $p.params.sample_id || null,
                 annotationId: $p.params.annotationId || null,
                 sampleType: ($p.params.collection_type as SampleType) ?? null
@@ -58,7 +59,7 @@
     const queryClient = useQueryClient();
     const { setPluginExecuting } = useOperatorsDialog();
 
-    const collectionId = $page.params.collection_id;
+    const collectionId = $page.params.collection_id!;
 
     const { tagsSelected } = useTags({ collection_id: collectionId, kind: ['annotation'] });
 
@@ -103,7 +104,7 @@
         }
     });
 
-    let previousIsOpen = isOpen;
+    let previousIsOpen = $state(untrack(() => isOpen));
     $effect(() => {
         if (!isOpen && previousIsOpen) {
             parameters = operator ? buildInitialParameters(operator) : {};
