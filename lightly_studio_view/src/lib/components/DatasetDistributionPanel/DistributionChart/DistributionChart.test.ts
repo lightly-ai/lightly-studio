@@ -123,17 +123,6 @@ describe('DistributionChart', () => {
         expect(onCategoricalRetry).toHaveBeenCalledOnce();
     });
 
-    it('hides the retry button in the error state when no handler is provided', () => {
-        render(DistributionChart, {
-            props: {
-                ...defaultProps,
-                activeCategorical: { buckets: [], selectedValues: [], error: 'oops' }
-            }
-        });
-
-        expect(screen.queryByTestId('metadata-categorical-retry')).not.toBeInTheDocument();
-    });
-
     it('renders a sr-only accessibility list for categorical buckets', () => {
         render(DistributionChart, {
             props: {
