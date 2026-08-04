@@ -1,9 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import MetadataCategoricalFilter from './MetadataCategoricalFilter.svelte';
-import type { CategoricalMetadataBucket } from '$lib/hooks/useCategoricalMetadataDistribution/types';
+import type { CategoricalBucket } from '../types';
 
-const buckets: CategoricalMetadataBucket[] = [
+const buckets: CategoricalBucket[] = [
     {
         id: 'literal-missing',
         kind: 'value',
@@ -46,7 +46,7 @@ describe('MetadataCategoricalFilter', () => {
     });
 
     it('searches values and clears the controlled selection', async () => {
-        const searchableBuckets: CategoricalMetadataBucket[] = [
+        const searchableBuckets: CategoricalBucket[] = [
             ...buckets,
             ...Array.from({ length: 5 }, (_, index) => ({
                 id: `value-${index}`,
@@ -107,7 +107,7 @@ describe('MetadataCategoricalFilter', () => {
     });
 
     it('shows search only above five returned concrete values', async () => {
-        const fiveConcrete: CategoricalMetadataBucket[] = [
+        const fiveConcrete: CategoricalBucket[] = [
             ...Array.from({ length: 5 }, (_, index) => ({
                 id: `value-${index}`,
                 kind: 'value' as const,

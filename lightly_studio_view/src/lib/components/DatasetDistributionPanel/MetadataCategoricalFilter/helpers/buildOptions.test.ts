@@ -1,22 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import type { CategoricalMetadataBucket } from '$lib/hooks/useCategoricalMetadataDistribution/types';
+import type { CategoricalBucket } from '../../types';
 import { buildOptions } from './buildOptions';
 
-const value = (id: string, v: string, count = 1): CategoricalMetadataBucket => ({
+const value = (id: string, v: string, count = 1): CategoricalBucket => ({
     id,
     kind: 'value',
     value: v,
     label: v,
     count
 });
-const missing = (count = 1): CategoricalMetadataBucket => ({
+const missing = (count = 1): CategoricalBucket => ({
     id: 'missing',
     kind: 'missing',
     value: null,
     label: 'Missing',
     count
 });
-const other = (): CategoricalMetadataBucket => ({
+const other = (): CategoricalBucket => ({
     id: 'other',
     kind: 'other',
     label: 'Other',

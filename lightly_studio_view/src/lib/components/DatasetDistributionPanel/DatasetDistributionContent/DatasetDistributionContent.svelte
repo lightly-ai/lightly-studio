@@ -1,8 +1,8 @@
 <script lang="ts">
-    import DistributionChart from './DistributionChart/DistributionChart.svelte';
+    import DistributionChart from '../DistributionChart/DistributionChart.svelte';
     import type { CategoryCount } from '$lib/components/BarChart';
     import type { HistogramRange } from '$lib/components/Histogram';
-    import type { useDistributionPanel } from './useDistributionPanel.svelte';
+    import type { useDistributionPanel } from '../useDistributionPanel.svelte';
 
     interface Props {
         panel: ReturnType<typeof useDistributionPanel>;

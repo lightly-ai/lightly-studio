@@ -20,6 +20,8 @@ export interface CategoricalDistribution {
     buckets: CategoricalBucket[];
     filteredBuckets?: Pick<CategoricalBucket, 'id' | 'count'>[];
     selectedValues: CategoricalMetadataValue[];
+    loading?: boolean;
+    error?: string;
 }
 
 export const DISTRIBUTION_SORT_LABELS: Record<DistributionSortOption, string> = {

@@ -1,11 +1,11 @@
-import type { CategoricalMetadataBucket } from '$lib/hooks/useCategoricalMetadataDistribution/types';
+import type { CategoricalBucket } from '../../types';
 import type { CategoricalMetadataValue } from '$lib/services/types';
 
-type SelectableBucket = Exclude<CategoricalMetadataBucket, { kind: 'other' }>;
+type SelectableBucket = Exclude<CategoricalBucket, { kind: 'other' }>;
 export type FilterOption = { bucket: SelectableBucket; retained: boolean };
 
 export function buildOptions(
-    buckets: CategoricalMetadataBucket[],
+    buckets: CategoricalBucket[],
     selectedValues: CategoricalMetadataValue[]
 ): FilterOption[] {
     const selectable = buckets.filter((b): b is SelectableBucket => b.kind !== 'other');
