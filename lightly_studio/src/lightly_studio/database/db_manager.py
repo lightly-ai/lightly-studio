@@ -20,10 +20,12 @@ from enum import Enum
 from pathlib import Path
 from typing import Annotated, Any
 
+import duckdb
 import sqlalchemy_utils
 from fastapi import Depends
 from sqlalchemy import StaticPool, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import OperationalError
 from sqlmodel import Session, SQLModel, create_engine
 
 import lightly_studio.api.db_tables  # noqa: F401, required for SQLModel to work properly
@@ -64,6 +66,7 @@ class DatabaseEngine:
 
         Raises:
             FileNotFoundError: If must_exist is True and the database does not exist.
+            RuntimeError: If the DuckDB file is already open in another process.
         """
         if engine_url is not None:
             self._engine_url = engine_url
@@ -119,7 +122,7 @@ class DatabaseEngine:
                 cleanup_existing=cleanup_existing,
             )
         else:
-            SQLModel.metadata.create_all(self._engine)
+            _create_duckdb_schema(engine=self._engine, engine_url=self._engine_url)
 
     @contextmanager
     def session(self) -> Generator[Session, None, None]:
@@ -308,6 +311,20 @@ def _initialize_postgres_schema(
         logging.info("Dropped all tables in PostgreSQL database.")
 
     db_migrations.run_migrations(engine=engine, engine_url=engine_url)
+
+
+def _create_duckdb_schema(engine: Engine, engine_url: str) -> None:
+    """Create the DuckDB schema, raising a clear error if the file is locked elsewhere."""
+    try:
+        SQLModel.metadata.create_all(engine)
+    except OperationalError as e:
+        if isinstance(e.orig, duckdb.IOException) and "Could not set lock" in str(e.orig):
+            raise RuntimeError(
+                f"DuckDB database at {engine_url!r} is locked by another process. "
+                "Close the other lightly_studio process, or set "
+                "LIGHTLY_STUDIO_DATABASE_URL to point at a different database."
+            ) from e
+        raise
 
 
 def _detect_backend_from_url(engine_url: str) -> DatabaseBackend:

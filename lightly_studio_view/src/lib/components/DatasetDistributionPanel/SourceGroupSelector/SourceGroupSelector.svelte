@@ -2,12 +2,19 @@
     import { Select, type SelectItem } from '$lib/components/Select';
 
     interface Props {
+        /** Available distribution source options (e.g. datasets, tags). */
         sourceItems: SelectItem[];
+        /** Available group options within the selected source (e.g. metadata categories). Hidden when empty. */
         groupItems: SelectItem[];
+        /** ID of the currently selected source. */
         activeSourceId: string;
+        /** ID of the currently selected group, or undefined when no group is selected. */
         activeGroupId: string | undefined;
+        /** Label displayed next to the group selector. */
         groupLabel: string;
+        /** Called with the new source ID when the user changes the source selection. */
         onSourceChange: (id: string) => void;
+        /** Called with the new group ID when the user changes the group selection. */
         onGroupChange: (id: string) => void;
     }
 

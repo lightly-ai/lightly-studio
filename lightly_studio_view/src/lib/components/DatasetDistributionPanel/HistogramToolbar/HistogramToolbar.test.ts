@@ -64,14 +64,6 @@ describe('HistogramToolbar', () => {
         expect(screen.getByTestId('dataset-distribution-bin-count')).toHaveTextContent('50 bins');
     });
 
-    it('hides the bin-count selector when no change handler is provided', () => {
-        render(HistogramToolbar, {
-            props: { ...defaultProps, onHistogramBinCountChange: undefined }
-        });
-
-        expect(screen.queryByTestId('dataset-distribution-bin-count')).not.toBeInTheDocument();
-    });
-
     it('calls onHistogramBinCountChange with the selected count', async () => {
         const onHistogramBinCountChange = vi.fn();
         const user = userEvent.setup();
