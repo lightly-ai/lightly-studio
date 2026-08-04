@@ -7,13 +7,9 @@ import type { CategoricalMetadataValue } from '$lib/services/types';
 type Range = { min: number; max: number };
 type BoundsMap = Record<string, Range>;
 
-export interface MetadataFilterChip {
-    key: string;
-    active: boolean;
-    kind: 'numeric' | 'categorical';
-    range?: Range;
-    values?: CategoricalMetadataValue[];
-}
+export type MetadataFilterChip =
+    | { key: string; active: boolean; kind: 'numeric'; range: Range }
+    | { key: string; active: boolean; kind: 'categorical'; values: CategoricalMetadataValue[] };
 
 export function useMetadataFilterChips(collectionId: string | undefined) {
     const {
@@ -77,22 +73,26 @@ export function useMetadataFilterChips(collectionId: string | undefined) {
                 const range: Range | undefined = active
                     ? valuesStore.current[key]
                     : lastRanges[key];
-                return range ? { key, active, range, kind: 'numeric' as const } : null;
+                return range ? { key, active, kind: 'numeric' as const, range } : null;
             })
-            .filter((chip): chip is NonNullable<typeof chip> => chip !== null);
+            .filter(
+                (chip): chip is Extract<MetadataFilterChip, { kind: 'numeric' }> => chip !== null
+            );
         const categoricalKeys = new Set([
             ...Object.keys(lastCategoricalValues),
             ...Object.entries(categoricalStore.current)
                 .filter(([, values]) => values.length > 0)
                 .map(([key]) => key)
         ]);
-        const categoricalChips: MetadataFilterChip[] = [...categoricalKeys].map((key) => {
+        const categoricalChips: Extract<MetadataFilterChip, { kind: 'categorical' }>[] = [
+            ...categoricalKeys
+        ].map((key) => {
             const current = categoricalStore.current[key] ?? [];
             return {
                 key,
                 active: current.length > 0,
-                kind: 'categorical',
-                values: current.length > 0 ? current : lastCategoricalValues[key]
+                kind: 'categorical' as const,
+                values: current.length > 0 ? current : (lastCategoricalValues[key] ?? [])
             };
         });
         return [...numericChips, ...categoricalChips];
@@ -153,6 +153,8 @@ export function useMetadataFilterChips(collectionId: string | undefined) {
         return isInteger ? formatInteger(value) : formatFloat(value);
     };
 
+    // Disambiguates null ("no value") from the literal string "Missing", and
+    // "Other" (a value) from any other sentinel, only when ambiguity exists.
     const formatCategoricalValues = (values: CategoricalMetadataValue[] = []): string => {
         const hasMissingValue = values.includes('Missing');
         const hasNoValue = values.includes(null);
