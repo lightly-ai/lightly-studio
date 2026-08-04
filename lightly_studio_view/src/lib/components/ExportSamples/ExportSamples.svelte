@@ -28,7 +28,7 @@
     const { isExportDialogOpen, openExportDialog, closeExportDialog } = useExportDialog();
     const { imageFilter } = useImageFilters();
 
-    let collectionId = page.params.collection_id;
+    let collectionId = page.params.collection_id!;
 
     const tracking = useExportTracking({ collectionId });
 

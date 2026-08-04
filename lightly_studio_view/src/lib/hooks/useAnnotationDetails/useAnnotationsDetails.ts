@@ -26,7 +26,7 @@ export const useAnnotationDetails = ({
     const client = useQueryClient();
 
     const { updateAnnotations } = useUpdateAnnotationsMutation({
-        collectionId
+        getCollectionId: () => collectionId
     });
     const annotation = createQuery(() => annotationOptions);
 

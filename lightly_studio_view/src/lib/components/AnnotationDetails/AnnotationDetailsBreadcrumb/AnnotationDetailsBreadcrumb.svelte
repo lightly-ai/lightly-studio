@@ -26,7 +26,7 @@
 
     const { query: sampleAdjacentQuery } = $derived(
         useAdjacentAnnotations({
-            sampleId: page.params.annotationId,
+            sampleId: page.params.annotationId!,
             collectionId: collectionId
         })
     );
