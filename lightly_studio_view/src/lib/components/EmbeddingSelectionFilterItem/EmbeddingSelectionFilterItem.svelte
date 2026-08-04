@@ -18,26 +18,22 @@
 
     const { setRangeSelectionForCollection } = useGlobalStorage();
 
-    // Instantiate all variants once and pick reactively: this component lives in the
-    // layout, which persists when switching between the images/annotations tabs.
-    const imagesEmbeddingFilter = useEmbeddingFilterForImages(
+    // Instantiate all variants once: this component lives in the layout, which persists
+    // when switching between the images/annotations tabs.
+    const imagesFilter = useEmbeddingFilterForImages(
         collectionIdStore,
         setRangeSelectionForCollection
     );
-    const videosEmbeddingFilter = useEmbeddingFilterForVideos(
+    const videosFilter = useEmbeddingFilterForVideos(
         collectionIdStore,
         setRangeSelectionForCollection
     );
-    const annotationsEmbeddingFilter = useEmbeddingFilterForAnnotations(
+    const annotationsFilter = useEmbeddingFilterForAnnotations(
         collectionIdStore,
         setRangeSelectionForCollection
     );
     const embeddingFilter = $derived(
-        isAnnotations
-            ? annotationsEmbeddingFilter
-            : isVideos
-              ? videosEmbeddingFilter
-              : imagesEmbeddingFilter
+        isAnnotations ? annotationsFilter : isVideos ? videosFilter : imagesFilter
     );
 
     const plotFilterCountStore = $derived(embeddingFilter.effectiveCount);

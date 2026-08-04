@@ -18,9 +18,8 @@ export const useAnnotation = (
 ) => {
     const client = useQueryClient();
 
-    // Evaluate collectionId once at construction for mutation setup (stable route param)
     const { updateAnnotations } = useUpdateAnnotationsMutation({
-        collectionId: getParams().collectionId
+        getCollectionId: () => getParams().collectionId
     });
 
     const annotation = createQuery(() => ({
