@@ -14,7 +14,7 @@ vi.mock('$lib/api/lightly_studio_local', () => ({
 }));
 
 const imageFilterStore = writable(null);
-vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
+vi.mock('$lib/hooks', () => ({
     useImageFilters: () => ({ imageFilter: imageFilterStore })
 }));
 
@@ -95,5 +95,16 @@ describe('AnnotationsTab', () => {
         await waitFor(() => {
             expect(screen.getByText(/Export failed/)).toBeInTheDocument();
         });
+    });
+
+    it('calls onDownloadClick when the download button is clicked', async () => {
+        vi.spyOn(window, 'open').mockReturnValue(null);
+        mocks.exportCollectionAnnotationsPrepare.mockResolvedValue({
+            data: { export_key: 'key123' }
+        });
+        const onDownloadClick = vi.fn();
+        render(AnnotationsTab, { props: { ...defaultProps, onDownloadClick } });
+        await fireEvent.click(screen.getByTestId('submit-button-annotations'));
+        expect(onDownloadClick).toHaveBeenCalledOnce();
     });
 });

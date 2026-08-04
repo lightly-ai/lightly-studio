@@ -1,15 +1,15 @@
 <script lang="ts">
     import { page } from '$app/state';
-    import FormField from '$lib/components/FormField/FormField.svelte';
-    import AnnotationSourceSelect from '$lib/components/AnnotationSourceSelect/AnnotationSourceSelect.svelte';
-    import {
-        exportCollectionAnnotationsPrepare,
-        type ExportFormat
-    } from '$lib/api/lightly_studio_local';
-    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { FormField, AnnotationSourceSelect } from '$lib/components';
+    import { exportCollectionAnnotationsPrepare } from '$lib/api/lightly_studio_local';
+    import { useImageFilters } from '$lib/hooks';
     import { PUBLIC_LIGHTLY_STUDIO_API_URL } from '$env/static/public';
     import { useExportDownload } from '../useExportDownload/useExportDownload';
     import ExportDownloadButton from '../ExportDownloadButton/ExportDownloadButton.svelte';
+
+    type ExportFormat = NonNullable<
+        Parameters<typeof exportCollectionAnnotationsPrepare>[0]['body']['export_format']
+    >;
 
     interface Props {
         exportFormat: ExportFormat;
@@ -17,6 +17,7 @@
         annotationSources: { id: string; name: string }[];
         selectedAnnotationCollectionId: string | undefined;
         testId: string;
+        onDownloadClick?: () => void;
     }
 
     let {
@@ -24,7 +25,8 @@
         description,
         annotationSources,
         selectedAnnotationCollectionId = $bindable(),
-        testId
+        testId,
+        onDownloadClick
     }: Props = $props();
 
     const collectionId = page.params.collection_id;
@@ -67,7 +69,10 @@
     <ExportDownloadButton
         isLoading={$isLoading}
         errorMessage={$errorMessage}
-        onclick={handleDownload}
+        onclick={() => {
+            onDownloadClick?.();
+            handleDownload();
+        }}
         {testId}
     />
 </div>
