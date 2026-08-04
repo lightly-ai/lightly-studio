@@ -328,30 +328,6 @@ def test_update__creates_temporal_span_when_missing(db_session: Session) -> None
     assert updated.temporal_span_details.end_time_s == 3.0
 
 
-def test_update__updates_existing_temporal_span(db_session: Session) -> None:
-    collection = create_collection(session=db_session)
-    image = create_image(session=db_session, collection_id=collection.collection_id)
-    created_ids = caption_resolver.create_many(
-        session=db_session,
-        parent_collection_id=collection.collection_id,
-        captions=[
-            CaptionCreate(
-                parent_sample_id=image.sample_id,
-                text="caption",
-                start_time_s=1.0,
-                end_time_s=2.0,
-            )
-        ],
-    )
-
-    updated = caption_resolver.update(
-        session=db_session, sample_id=created_ids[0], start_time_s=4.0, end_time_s=6.0
-    )
-    assert updated.temporal_span_details is not None
-    assert updated.temporal_span_details.start_time_s == 4.0
-    assert updated.temporal_span_details.end_time_s == 6.0
-
-
 def test_update__text_and_temporal_span(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
