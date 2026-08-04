@@ -4,7 +4,11 @@ import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 import { usePostHog } from '$lib/hooks';
 
-export const useUpdateAnnotationsMutation = ({ collectionId }: { collectionId: string }) => {
+export const useUpdateAnnotationsMutation = ({
+    getCollectionId
+}: {
+    getCollectionId: () => string;
+}) => {
     const mutation = createMutation(() => updateAnnotationsMutation());
 
     const client = useQueryClient();
@@ -18,6 +22,7 @@ export const useUpdateAnnotationsMutation = ({ collectionId }: { collectionId: s
 
     const updateAnnotations = (inputs: AnnotationUpdateInput[]) =>
         new Promise<void>((resolve, reject) => {
+            const collectionId = getCollectionId();
             mutation.mutate(
                 {
                     path: {
