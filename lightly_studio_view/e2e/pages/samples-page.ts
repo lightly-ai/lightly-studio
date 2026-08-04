@@ -257,4 +257,52 @@ export class SamplesPage {
         await this.getSampleByIndex(index).dblclick();
         await this.page.getByTestId('sample-details-loading').waitFor({ state: 'hidden' });
     }
+
+    /** Right-clicks the sample at `index` and waits for the context menu. */
+    async openContextMenuOnSample(index: number): Promise<void> {
+        await this.getSampleByIndex(index).click({ button: 'right' });
+        await expect(this.getContextMenu()).toBeVisible();
+    }
+
+    getContextMenu() {
+        return this.page.getByTestId('grid-context-menu');
+    }
+
+    getContextMenuHeader() {
+        return this.page.getByTestId('grid-context-menu-header');
+    }
+
+    /** Opens the Tags submenu of an already-open context menu. */
+    async openContextMenuTags(): Promise<void> {
+        await this.page.getByTestId('grid-context-menu-tags').click();
+        await expect(this.page.getByPlaceholder('Search tags…')).toBeVisible();
+    }
+
+    getContextMenuTagRow(tagName: string) {
+        return this.page.getByTestId(`context-menu-tag-${tagName}`);
+    }
+
+    /** Toggles an existing tag from the context menu and waits for the write. */
+    async toggleContextMenuTag(tagName: string): Promise<void> {
+        const responsePromise = this.page.waitForResponse((response) =>
+            /\/tags\/.+\/(add|remove)\/samples/.test(response.url())
+        );
+        await this.getContextMenuTagRow(tagName).click();
+        await responsePromise;
+    }
+
+    /** Creates a tag from the context menu search field and assigns it to the targets. */
+    async createContextMenuTag(tagName: string): Promise<void> {
+        await this.page.getByPlaceholder('Search tags…').fill(tagName);
+        const responsePromise = this.page.waitForResponse((response) =>
+            /\/tags\/.+\/add\/samples/.test(response.url())
+        );
+        await this.page.getByTestId('context-menu-create-tag').click();
+        await responsePromise;
+    }
+
+    async closeContextMenu(): Promise<void> {
+        await this.page.keyboard.press('Escape');
+        await expect(this.getContextMenu()).toBeHidden();
+    }
 }

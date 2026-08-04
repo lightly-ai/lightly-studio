@@ -5,19 +5,13 @@
     import type { TagView } from '$lib/services/types';
     import { useTags } from '$lib/hooks/useTags/useTags.js';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import {
-        createTag,
-        addSampleIdsToTagId,
-        addSamplesToTagByFilter,
-        deleteTag,
-        renameTag
-    } from '$lib/api/lightly_studio_local';
+    import { deleteTag, renameTag } from '$lib/api/lightly_studio_local';
     import TagAssignInput from './TagAssignInput.svelte';
     import TagRenameInput from './TagRenameInput.svelte';
     import TagActionMenu from './TagActionMenu.svelte';
     import { toast } from 'svelte-sonner';
     import { get } from 'svelte/store';
-    import { usePostHog } from '$lib/hooks';
+    import { useTagMutations } from '$lib/hooks';
 
     let { collection_id, gridType }: Parameters<typeof useTags>[0] & { gridType: GridType } =
         $props();
@@ -47,88 +41,29 @@
             : $selectedSampleIds
     );
 
-    const { trackEvent } = usePostHog();
+    const { busy: assignBusy, assignByName } = $derived(
+        useTagMutations({
+            collectionId: collection_id,
+            getTagKind: () => tagKind,
+            getTargetIds: () => [...selectedIds],
+            getSelectAllSnapshot: () =>
+                get(
+                    tagKind === 'annotation'
+                        ? getSelectAllAnnotationSnapshot(collection_id)
+                        : getSelectAllSnapshot(collection_id)
+                ),
+            getExistingTags: () => $tags,
+            // The grid refetches on its own when tag filters change.
+            onSamplesRefetch: () => {},
+            onTagsRefetch: () => loadTags()
+        })
+    );
 
-    let assignBusy = $state(false);
     let deletingTagId = $state<string | null>(null);
     let editingTagId = $state<string | null>(null);
     let renamingTagId = $state<string | null>(null);
     let openActionsTagId = $state<string | null>(null);
     let suppressCloseAutoFocusTagId = $state<string | null>(null);
-
-    // Tag by filter when the selection is still an unmodified select-all (do not send
-    // a potentially large ID list), else fall back to the ID-list path.
-    function assignSelectionToTag(tag_id: string) {
-        const snapshot = get(
-            tagKind === 'annotation'
-                ? getSelectAllAnnotationSnapshot(collection_id)
-                : getSelectAllSnapshot(collection_id)
-        );
-        const isUnmodifiedSelectAll = snapshot != null && snapshot.size === selectedIds.size;
-        if (isUnmodifiedSelectAll) {
-            return addSamplesToTagByFilter({
-                path: { collection_id, tag_id },
-                body: { filter: snapshot.filter }
-            });
-        }
-        return addSampleIdsToTagId({
-            path: { collection_id, tag_id },
-            body: { sample_ids: [...selectedIds] }
-        });
-    }
-
-    async function handleAssign(name: string) {
-        assignBusy = true;
-        const snapshotCount = selectedIds.size;
-
-        function trackTagged(isNewTag: boolean) {
-            try {
-                trackEvent('samples_tagged', {
-                    collection_id,
-                    tag_kind: tagKind,
-                    sample_count: snapshotCount,
-                    is_new_tag: isNewTag
-                });
-            } catch (e) {
-                console.error('Failed to track samples_tagged event', e);
-            }
-        }
-
-        try {
-            const existingTag = $tags.find(
-                (t: TagView) => t.name.toLowerCase() === name.toLowerCase()
-            );
-            if (existingTag) {
-                const response = await assignSelectionToTag(existingTag.tag_id);
-                if (response.error) {
-                    toast.error('Failed to assign tag. Please try again.');
-                    return;
-                }
-                trackTagged(false);
-            } else {
-                const createResponse = await createTag({
-                    path: { collection_id },
-                    body: { name, kind: tagKind }
-                });
-                if (createResponse.error || !createResponse.data?.tag_id) {
-                    toast.error('Failed to create tag. Please try again.');
-                    return;
-                }
-                const assignResponse = await assignSelectionToTag(createResponse.data.tag_id);
-                if (assignResponse.error) {
-                    toast.error('Failed to assign tag. Please try again.');
-                    return;
-                }
-                trackTagged(true);
-            }
-            loadTags();
-        } catch (error) {
-            console.error('Failed to assign tag', error);
-            toast.error('Failed to assign tag. Please try again.');
-        } finally {
-            assignBusy = false;
-        }
-    }
 
     async function handleDeleteTag(tag: TagView, event: MouseEvent) {
         event.stopPropagation();
@@ -244,6 +179,6 @@
             {/each}
         </div>
 
-        <TagAssignInput options={$tags} {hasSelection} busy={assignBusy} onSelect={handleAssign} />
+        <TagAssignInput options={$tags} {hasSelection} busy={$assignBusy} onSelect={assignByName} />
     </div>
 </Segment>
