@@ -6,7 +6,7 @@
     import ExportDownloadButton from '../ExportDownloadButton/ExportDownloadButton.svelte';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
 
-    const collectionId = page.params.collection_id;
+    const collectionId = page.params.collection_id!;
     const { videoFilter } = useVideoFilters();
 
     const { isLoading, errorMessage, handleDownload } = useExportDownload(async () => {
