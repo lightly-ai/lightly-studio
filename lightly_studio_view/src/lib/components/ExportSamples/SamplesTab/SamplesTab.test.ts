@@ -7,7 +7,8 @@ const pageMock = vi.hoisted(() => ({ params: { collection_id: 'test-collection' 
 vi.mock('$app/state', () => ({ page: pageMock }));
 
 vi.mock('$lib/api/lightly_studio_local', () => ({
-    exportCollectionPrepare: vi.fn()
+    exportCollectionPrepare: vi.fn(),
+    SortDirection: { ASC: 'ASC', DESC: 'DESC' }
 }));
 
 let tagsStore: ReturnType<typeof writable<{ tag_id: string; name: string; kind: string }[]>>;
