@@ -3,32 +3,36 @@
 import {
     type BoundingBoxInput,
     type MaskInput,
-    computeStroke,
     drawBoxesOnContext,
-    renderMasks
+    renderMasks,
+    transformBoxes,
+    type RenderGeometry,
+    type SourceCrop
 } from './maskRendererUtils';
 
-type RenderMessage = {
+interface RenderMessage {
     type: 'render';
     canvasId: string;
-    width: number;
-    height: number;
+    sourceWidth: number;
+    sourceHeight: number;
+    outputWidth: number;
+    outputHeight: number;
+    objectFit: 'contain' | 'cover';
+    sourceCrop?: SourceCrop;
     masks: MaskInput[];
     boxes: BoundingBoxInput[];
-    scaleX?: number;
-    scaleY?: number;
-};
+}
 
-type InitMessage = {
+interface InitMessage {
     type: 'init';
     canvasId: string;
     canvas: OffscreenCanvas;
-};
+}
 
-type DisposeMessage = {
+interface DisposeMessage {
     type: 'dispose';
     canvasId: string;
-};
+}
 
 type WorkerMessage = RenderMessage | InitMessage | DisposeMessage;
 
@@ -37,31 +41,50 @@ const contexts = new Map<string, OffscreenCanvasRenderingContext2D>();
 
 const handleRender = ({
     canvasId,
-    width,
-    height,
+    sourceWidth,
+    sourceHeight,
+    outputWidth,
+    outputHeight,
+    objectFit,
+    sourceCrop,
     masks,
-    boxes,
-    scaleX = 1,
-    scaleY = 1
+    boxes
 }: RenderMessage) => {
-    // Render masks into a pixel buffer and overlay boxes; stroke is scaled to CSS size.
-    const pixelData = renderMasks(width, height, masks);
-    const stroke = computeStroke(scaleX, scaleY);
+    const geometry: RenderGeometry = {
+        sourceWidth,
+        sourceHeight,
+        outputWidth,
+        outputHeight,
+        objectFit,
+        sourceCrop
+    };
+    const pixelData = renderMasks(geometry, masks);
+    const transformedBoxes = transformBoxes(geometry, boxes);
     const ctx = contexts.get(canvasId);
 
     if (ctx) {
         // Offscreen path: paint fully inside worker.
-        const imageData = new ImageData(pixelData, width, height);
-        ctx.canvas.width = width;
-        ctx.canvas.height = height;
-        ctx.clearRect(0, 0, width, height);
+        const imageData = new ImageData(pixelData, outputWidth, outputHeight);
+        ctx.canvas.width = outputWidth;
+        ctx.canvas.height = outputHeight;
+        ctx.clearRect(0, 0, outputWidth, outputHeight);
         ctx.putImageData(imageData, 0, 0);
-        drawBoxesOnContext(ctx, boxes, width, height, stroke);
+        drawBoxesOnContext(ctx, transformedBoxes);
     } else {
         // Fallback path when no OffscreenCanvas context was registered for this canvas id.
-        postMessage({ type: 'image', canvasId, width, height, data: pixelData, boxes, stroke }, [
-            pixelData.buffer
-        ]);
+        // renderMasks deliberately returns an ArrayBuffer-backed view because transferable
+        // payloads cannot use SharedArrayBuffer as their ownership-transfer list entry.
+        postMessage(
+            {
+                type: 'image',
+                canvasId,
+                width: outputWidth,
+                height: outputHeight,
+                data: pixelData,
+                boxes: transformedBoxes
+            },
+            [pixelData.buffer]
+        );
     }
 };
 
