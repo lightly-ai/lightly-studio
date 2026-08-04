@@ -38,6 +38,53 @@ GUARDRAILS=dummy make run-guardrails
 BASE_REF=origin/develop make run-guardrails
 ```
 
+## Coverage guardrails
+
+`backend/coverage` does not run tests. The workflow runs the full suite
+(`make test-coverage` in `lightly_studio`) and hands the guardrail its report
+through two env vars; the guardrail then judges each changed file's **added**
+lines at **90%**, per file, not pooled.
+
+| var                     | meaning                               |
+| ----------------------- | ------------------------------------- |
+| `BACKEND_COVERAGE_JSON` | path to the `coverage.py` JSON report |
+| `BACKEND_TESTS_PASSED`  | `false` when that test run ended red  |
+
+Full-suite coverage inflates numbers via incidental execution — `conftest.py`
+imports the whole app, so imports, decorators and class bodies read as covered
+whether or not a test exercises them. Hence 90% rather than 80%.
+
+Verdicts:
+
+- no changed file in scope → pass, `0 file(s) checked`
+- report present → each file judged at 90%; a file the report omits fails
+- env var set but the file is missing → fail, `coverage report missing`
+- `BACKEND_TESTS_PASSED=false` → fail, coverage is not judged on partial data
+- **env var unset** → pass, with a loud `coverage skipped` summary. Only the
+  local `make run-guardrails` path reaches this; CI always sets the var.
+
+To exercise it locally, produce a report and point the guardrail at it:
+
+```bash
+cd lightly_studio
+make build-lightly_studio_view   # conftest imports the app, so the dist must exist
+make install-optional-deps       # some test modules need extras (e.g. s3fs)
+make test-coverage               # writes lightly_studio/coverage.json
+
+cd ../fast_track
+BACKEND_COVERAGE_JSON=$PWD/../lightly_studio/coverage.json \
+  GUARDRAILS=backend/coverage make run-guardrails
+```
+
+A branch of its own often changes no backend source, which just reports
+`0 file(s) checked`. Add `BASE_REF=origin/main~20` to judge the last 20 commits'
+worth of real backend changes instead — the quickest way to see how the
+threshold behaves on merged code.
+
+`backend/coverage` is built on `shared/full-suite-coverage.ts`. `frontend/coverage`
+still uses the older per-file test-matching factory (`shared/coverage-base.ts`)
+until it migrates, at which point that file can go.
+
 ## Toolchain
 
 - **Node** floor enforced by `engine-strict` + `engines` (`>=24`); the exact
