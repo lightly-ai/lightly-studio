@@ -9,5 +9,6 @@
 # Protected locations.
 /.github/            @lightly-ai/engineering
 /.githooks/          @lightly-ai/engineering
-/ai_guidelines/      @lightly-ai/engineering
+/.agents/            @lightly-ai/engineering
+/.claude/            @lightly-ai/engineering
 /fast_track/         @lightly-ai/engineering
