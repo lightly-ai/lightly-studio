@@ -3,10 +3,10 @@ import { useGlobalStorage, usePostHog } from '$lib/hooks';
 type PanelType = Parameters<ReturnType<typeof useGlobalStorage>['setActivePanel']>[0];
 
 interface UseSidePanelTabsParams {
-    collectionId: string;
+    getCollectionId: () => string;
 }
 
-export function useSidePanelTabs({ collectionId }: UseSidePanelTabsParams) {
+export function useSidePanelTabs({ getCollectionId }: UseSidePanelTabsParams) {
     const { activePanel, setActivePanel } = useGlobalStorage();
     const { trackEvent } = usePostHog();
 
@@ -14,7 +14,10 @@ export function useSidePanelTabs({ collectionId }: UseSidePanelTabsParams) {
         const nextPanel = activePanel === panel ? 'none' : panel;
         setActivePanel(nextPanel);
         if (nextPanel !== 'none') {
-            trackEvent('tool_panel_opened', { collection_id: collectionId, panel_type: nextPanel });
+            trackEvent('tool_panel_opened', {
+                collection_id: getCollectionId(),
+                panel_type: nextPanel
+            });
         }
     }
 

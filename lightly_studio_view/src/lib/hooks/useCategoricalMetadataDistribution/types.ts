@@ -1,8 +1,10 @@
+import type { CategoricalMetadataValue } from '$lib/services/types';
+
 export type CategoricalMetadataBucket =
     | {
           id: string;
           kind: 'value';
-          value: string | boolean;
+          value: CategoricalMetadataValue;
           label: string;
           count: number;
       }

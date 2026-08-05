@@ -39,13 +39,17 @@
     const { selectedAnnotationFilterIdsArray: selectedAnnotationFilterIds } =
         useSelectedAnnotationsFilter();
 
-    const { tagsSelected } = useTags({
-        collection_id,
-        kind: ['sample']
-    });
+    const { tagsSelected } = $derived.by(() =>
+        useTags({
+            collection_id,
+            kind: ['sample']
+        })
+    );
 
     const { dimensionsValues: dimensions } = useDimensions();
-    const { metadataValues } = useMetadataFilters(collection_id);
+    const { metadataValues, categoricalMetadataValues } = $derived.by(() =>
+        useMetadataFilters(collection_id)
+    );
 
     const {
         getCollectionVersion,
@@ -67,6 +71,7 @@
             dimensions: $dimensions ?? undefined
         },
         metadata_values: $metadataValues,
+        categorical_metadata_values: $categoricalMetadataValues,
         text_embedding: $textEmbedding?.embedding
     });
 
@@ -107,7 +112,7 @@
             ? infiniteSamples.data.pages.flatMap((page: { data?: ImageView[] }) => page.data ?? [])
             : []
     );
-    const selectedSampleIds = getSelectedSampleIds(collection_id);
+    const selectedSampleIds = $derived(getSelectedSampleIds(collection_id));
     let selectionAnchorSampleId = $state<string | null>(null);
 
     let isReady = $state(false);
@@ -141,6 +146,7 @@
             `${$dimensions?.min_width}-${$dimensions?.max_width}`,
             `${$dimensions?.min_height}-${$dimensions?.max_height}`,
             JSON.stringify($metadataValues),
+            JSON.stringify($categoricalMetadataValues),
             $textEmbedding?.queryText || '',
             confusionCell ? JSON.stringify(confusionCell) : '',
             JSON.stringify($imageSortBy)
@@ -284,7 +290,8 @@
                             <SampleImageGridItem
                                 sample={samples[index]}
                                 {objectFit}
-                                sampleSize={width}
+                                tileWidth={width}
+                                tileHeight={height}
                                 {displayTextOnImage}
                             />
                         </GridItem>

@@ -2,6 +2,7 @@ import type { CategoryCount } from '$lib/components/BarChart';
 import type { ClassSetSelection } from '$lib/components/ClassSetConfig';
 import { type AnnotationCountMode } from '$lib/api/lightly_studio_local/types.gen';
 import type { HistogramData, HistogramRange } from '$lib/components/Histogram';
+import type { CategoricalMetadataBucket } from '$lib/hooks/useCategoricalMetadataDistribution/types';
 import type { CategoricalMetadataValue } from '$lib/services/types';
 
 export type DistributionSortOption = 'count' | 'name';
@@ -9,10 +10,17 @@ export type DistributionSortOption = 'count' | 'name';
 export type CategoricalBucket =
     | {
           id: string;
-          kind: 'value' | 'missing';
+          kind: 'value';
           label: string;
           count: number;
           value: CategoricalMetadataValue;
+      }
+    | {
+          id: string;
+          kind: 'missing';
+          label: string;
+          count: number;
+          value: null;
       }
     | { id: string; kind: 'other'; label: string; count: number; value?: never };
 
@@ -56,8 +64,21 @@ export interface DistributionSourceGroup {
      * metadata filter). Bins outside it render dimmed.
      */
     selectedRange?: HistogramRange;
-    /** Categorical distribution rendered as a bar chart with selection state. */
-    categorical?: CategoricalDistribution;
+    /** Controlled categorical distribution and selection state. */
+    categorical?: {
+        buckets: CategoricalMetadataBucket[];
+        /**
+         * Buckets from the same query with all sidebar filters applied.
+         * When provided, each bar shows a grey background at the full `count`
+         * with a coloured foreground at the filtered count, giving context for
+         * how active filters affect the distribution.
+         * Omit (undefined) while the filtered query is still loading.
+         */
+        filteredBuckets?: CategoricalMetadataBucket[];
+        selectedValues: CategoricalMetadataValue[];
+        loading?: boolean;
+        error?: string;
+    };
 }
 
 /**

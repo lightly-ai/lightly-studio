@@ -15,11 +15,14 @@
         annotationId: string;
         isPrediction?: boolean;
     } = $props();
-    const [x, y, width, height] = bbox;
+    const x = $derived(bbox[0]);
+    const y = $derived(bbox[1]);
+    const width = $derived(bbox[2]);
+    const height = $derived(bbox[3]);
 
     // Define different styles for predictions vs. ground truth
-    const strokeDashArray = isPrediction ? '5,5' : 'none';
-    const strokeOpacity = isPrediction ? 0.8 : 1;
+    const strokeDashArray = $derived(isPrediction ? '5,5' : 'none');
+    const strokeOpacity = $derived(isPrediction ? 0.8 : 1);
 </script>
 
 <rect

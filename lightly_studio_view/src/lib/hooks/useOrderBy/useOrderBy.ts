@@ -12,7 +12,7 @@ import type { SortExpr } from '$lib/hooks/useImagesInfinite/types';
 
 interface UseOrderByParams {
     collectionId: () => string;
-    datasetId: string;
+    datasetId: () => string;
 }
 
 interface UseOrderByReturn {
