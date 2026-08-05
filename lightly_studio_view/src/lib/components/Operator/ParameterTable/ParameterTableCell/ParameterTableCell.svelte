@@ -5,11 +5,17 @@
     import { getCellConfig, type ParameterTableRow } from '../../parameterTypeConfig';
 
     interface Props {
+        /** The column the cell belongs to; its type decides how the cell is rendered and parsed. */
         column: OperatorParameterColumn;
+        /** Current cell value, `undefined` while the row has no entry for this column yet. */
         value: ParameterTableRow[string] | undefined;
+        /** Whether to mark the cell as invalid for assistive technology. */
         isInvalid: boolean;
+        /** Accessible name of the cell. Column names repeat across rows, so it also carries the row. */
         label: string;
+        /** `data-testid` of the rendered control. */
         testId: string;
+        /** Called with the parsed value on every edit. */
         onUpdate: (value: ParameterTableRow[string]) => void;
     }
 

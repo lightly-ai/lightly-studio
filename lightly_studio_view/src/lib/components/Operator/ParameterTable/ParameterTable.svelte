@@ -16,12 +16,19 @@
     } from './ParameterTable.helpers';
 
     interface Props {
+        /** Name of the table parameter, shown as its label and used to build test ids. */
         name: string;
+        /** Current parameter value. Anything other than an array of rows renders as an empty table. */
         value: ParameterValue;
+        /** Whether the parameter has to be filled in before the operator can run. */
         required: boolean;
+        /** Whether the parameter is currently blocking submission, which reveals the error message. */
         isMissing: boolean;
+        /** Optional help text shown under the label. */
         description?: string;
+        /** The columns every row is made of. Omitted or empty renders the table without data columns. */
         columns?: OperatorParameterColumn[];
+        /** Called with the full row list whenever a row is added, edited or removed. */
         onUpdate: (value: ParameterValue) => void;
     }
 
