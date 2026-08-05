@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import io
 import json
 import zipfile
@@ -33,8 +34,10 @@ from lightly_studio.resolvers import (
     tag_resolver,
 )
 from tests.helpers_resolvers import (
+    AnnotationDetails,
     ImageStub,
     create_annotation_label,
+    create_annotations,
     create_caption,
     create_collection,
     create_image,
@@ -98,6 +101,103 @@ def test_export_collection_coco(
 
     # Check the export file name. Quotes are intentionally omitted.
     assert response.headers["Content-Disposition"] == "attachment; filename=coco_export.json"
+
+
+def test_export_collection_classifications_csv(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/data/img1.jpg",
+    )
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    )
+    create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image.sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+                confidence=0.75,
+            )
+        ],
+        collection_name="model",
+    )
+
+    response = test_client.get(
+        f"/api/collections/{collection.collection_id}/export/annotations",
+        params={"export_format": "classification_csv"},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.headers["Content-Type"].startswith("text/csv")
+    assert response.headers["Content-Disposition"] == (
+        "attachment; filename=classification_export.csv"
+    )
+    assert list(csv.DictReader(io.StringIO(response.text))) == [
+        {
+            "file_path_abs": "/data/img1.jpg",
+            "class_name": "cat",
+            "confidence": "0.75",
+            "annotation_source": "model",
+        }
+    ]
+
+
+def test_export_collection_classifications_csv__annotation_source(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/data/img1.jpg",
+    )
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    )
+    selected_annotations = create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image.sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+            )
+        ],
+        collection_name="selected",
+    )
+    create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image.sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+            )
+        ],
+        collection_name="excluded",
+    )
+
+    response = test_client.get(
+        f"/api/collections/{collection.collection_id}/export/annotations",
+        params={
+            "export_format": "classification_csv",
+            "annotation_collection_id": str(selected_annotations[0].annotation_collection_id),
+        },
+    )
+
+    rows = list(csv.DictReader(io.StringIO(response.text)))
+    assert [row["annotation_source"] for row in rows] == ["selected"]
 
 
 def test_export_collection_yolo(
@@ -674,6 +774,33 @@ def test_export_download__txt_file_streams_content_and_deletes_job(
     assert export_dir.exists()
 
 
+def test_export_download__csv_file_streams_content_and_deletes_job(
+    tmp_path: Path,
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+    export_dir = tmp_path / "container"
+    export_dir.mkdir()
+    export_path = export_dir / "classification_export.csv"
+    export_path.write_text("file_path_abs,class_name\n/data/img1.jpg,cat\n")
+    job = export_job_resolver.create(session=db_session, export_path=str(export_path))
+
+    response = test_client.get(
+        f"/api/collections/{collection.collection_id}/export/download/{job.export_key}"
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.headers["Content-Type"].startswith("text/csv")
+    assert response.headers["Content-Disposition"] == (
+        "attachment; filename=classification_export.csv"
+    )
+    assert response.text == "file_path_abs,class_name\n/data/img1.jpg,cat\n"
+    assert export_job_resolver.get(session=db_session, export_key=job.export_key) is None
+    assert not export_path.exists()
+    assert export_dir.exists()
+
+
 def test_export_download__directory_streams_as_zip_and_deletes_job(
     tmp_path: Path,
     db_session: Session,
@@ -761,6 +888,56 @@ def test_export_collection_annotations_prepare__coco(
         "categories": [{"id": 0, "name": "cat"}],
         "annotations": [{"image_id": 0, "category_id": 0, "bbox": [10.0, 20.0, 30.0, 40.0]}],
     }
+
+
+def test_export_collection_annotations_prepare__classification_csv(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/data/img1.jpg",
+    )
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    )
+    annotations = create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image.sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+                confidence=0.5,
+            )
+        ],
+        collection_name="model",
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/annotations/prepare",
+        json={
+            "export_format": "classification_csv",
+            "annotation_collection_id": str(annotations[0].annotation_collection_id),
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    export_job = db_session.get(ExportJobTable, UUID(response.json()["export_key"]))
+    assert export_job is not None
+    export_path = Path(export_job.export_path)
+    assert export_path.name == "classification_export.csv"
+    assert list(csv.DictReader(io.StringIO(export_path.read_text()))) == [
+        {
+            "file_path_abs": "/data/img1.jpg",
+            "class_name": "cat",
+            "confidence": "0.5",
+            "annotation_source": "model",
+        }
+    ]
 
 
 def test_export_collection_annotations_prepare__yolo(
