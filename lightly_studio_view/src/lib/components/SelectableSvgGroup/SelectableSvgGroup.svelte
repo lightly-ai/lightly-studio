@@ -16,7 +16,10 @@
         box: BoundingBox;
     } = $props();
 
-    const { x, y, width, height } = box;
+    const x = $derived(box.x);
+    const y = $derived(box.y);
+    const width = $derived(box.width);
+    const height = $derived(box.height);
     const handleSelect = () => {
         onSelect(groupId);
     };

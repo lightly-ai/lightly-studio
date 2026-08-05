@@ -145,7 +145,7 @@
     } = useAnnotationsInfinite(() => queryParams);
 
     const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
-        collectionId: collection_id
+        getCollectionId: () => collection_id
     });
     let infiniteLoaderIdentifier = $derived(
         $selectedAnnotationFilterIds.join(',') +

@@ -28,6 +28,7 @@ from lightly_studio.models.export_format import ExportFormat
 from lightly_studio.resolvers import collection_resolver, export_job_resolver
 from lightly_studio.resolvers.collection_resolver.export import ExportFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 export_router = APIRouter(prefix="/collections/{collection_id}", tags=["export"])
 _STREAM_CHUNK_SIZE_BYTES = 64 * 1024
@@ -214,6 +215,26 @@ class ExportKeyResponse(BaseModel):
     export_key: UUID
 
 
+class ExportYoutubeVisPrepareBody(BaseModel):
+    """Request body for the YouTube-VIS prepare endpoint."""
+
+    video_filter: VideoFilter | None = None
+
+
+class ExportAnnotationsPrepareBody(BaseModel):
+    """Request body for the annotations prepare endpoint."""
+
+    export_format: ExportFormat = ExportFormat.OBJECT_DETECTION_COCO
+    annotation_collection_id: UUID | None = None
+    image_filter: ImageFilter | None = None
+
+
+class ExportCaptionsPrepareBody(BaseModel):
+    """Request body for the captions prepare endpoint."""
+
+    image_filter: ImageFilter | None = None
+
+
 # This endpoint should be a GET, however due to the potential huge size
 # of sample_ids, it is a POST request to avoid URL length limitations.
 # A body with a GET request is supported by fastAPI however it has undefined
@@ -350,6 +371,113 @@ def export_collection_prepare(
     return ExportKeyResponse(export_key=export.export_key)
 
 
+@export_router.post("/export/youtube-vis/prepare")
+def export_collection_youtube_vis_prepare(
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(collection_api.get_and_validate_collection_id),
+    ],
+    session: SessionDep,
+    body: ExportYoutubeVisPrepareBody,
+) -> ExportKeyResponse:
+    """Generate the YouTube-VIS export and persist its path."""
+    if collection.sample_type != SampleType.VIDEO:
+        raise ValueError("YouTube-VIS export is only supported for video collections.")
+
+    dataset_query = DatasetQuery(dataset=collection, session=session, sample_class=VideoSample)
+    if body.video_filter is not None:
+        dataset_query.filter_by_sample_ids(
+            body.video_filter.build_sample_ids_query(collection.collection_id)
+        )
+
+    temp_dir = PathlibPath(tempfile.mkdtemp())
+    output_path = temp_dir / "youtube_vis_segmentation_mask_export.json"
+    try:
+        video_dataset_export.to_youtube_vis_segmentation_mask(
+            session=session,
+            samples=dataset_query,
+            output_json=output_path,
+        )
+        export = export_job_resolver.create(session=session, export_path=str(output_path))
+    except Exception:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise
+
+    return ExportKeyResponse(export_key=export.export_key)
+
+
+@export_router.post("/export/annotations/prepare")
+def export_collection_annotations_prepare(
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(collection_api.get_and_validate_collection_id),
+    ],
+    session: SessionDep,
+    body: ExportAnnotationsPrepareBody,
+) -> ExportKeyResponse:
+    """Generate the annotations export and persist its path."""
+    dataset_query = DatasetQuery(dataset=collection, session=session)
+    if body.image_filter is not None:
+        dataset_query.filter_by_sample_ids(
+            body.image_filter.build_sample_ids_query(collection.collection_id)
+        )
+    exporter = image_dataset_export.ImageDatasetExport(
+        session=session,
+        dataset_id=collection.dataset_id,
+        samples=dataset_query,
+    )
+
+    temp_dir = PathlibPath(tempfile.mkdtemp())
+    try:
+        export_path = _generate_annotations_export(
+            exporter=exporter,
+            export_format=body.export_format,
+            annotation_collection_id=body.annotation_collection_id,
+            temp_dir=temp_dir,
+        )
+        export = export_job_resolver.create(session=session, export_path=str(export_path))
+    except Exception:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise
+
+    return ExportKeyResponse(export_key=export.export_key)
+
+
+@export_router.post("/export/captions/prepare")
+def export_collection_captions_prepare(
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(collection_api.get_and_validate_collection_id),
+    ],
+    session: SessionDep,
+    body: ExportCaptionsPrepareBody,
+) -> ExportKeyResponse:
+    """Generate the captions export and persist its path."""
+    dataset_query = DatasetQuery(dataset=collection, session=session)
+    if body.image_filter is not None:
+        dataset_query.filter_by_sample_ids(
+            body.image_filter.build_sample_ids_query(collection.collection_id)
+        )
+
+    temp_dir = PathlibPath(tempfile.mkdtemp())
+    output_path = temp_dir / "coco_captions_export.json"
+    try:
+        image_dataset_export.ImageDatasetExport(
+            session=session,
+            dataset_id=collection.dataset_id,
+            samples=dataset_query,
+        ).to_coco_captions(output_json=output_path)
+        export = export_job_resolver.create(session=session, export_path=str(output_path))
+    except Exception:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise
+
+    return ExportKeyResponse(export_key=export.export_key)
+
+
 @export_router.get("/export/download/{export_key}")
 def export_download(
     _collection: Annotated[
@@ -385,6 +513,44 @@ def export_download(
             "Content-Disposition": f"attachment; filename={export_path.name}",
         },
     )
+
+
+def _generate_annotations_export(
+    exporter: image_dataset_export.ImageDatasetExport,
+    export_format: ExportFormat,
+    annotation_collection_id: UUID | None,
+    temp_dir: PathlibPath,
+) -> PathlibPath:
+    """Run the annotations export and return the output path."""
+    if export_format == ExportFormat.OBJECT_DETECTION_COCO:
+        output_path = temp_dir / "coco_export.json"
+        exporter.to_coco_object_detections(
+            output_json=output_path,
+            annotation_collection_id=annotation_collection_id,
+        )
+        return output_path
+    if export_format == ExportFormat.OBJECT_DETECTION_YOLO:
+        output_path = temp_dir / "yolo"
+        exporter.to_yolo_object_detections(
+            output_folder=output_path,
+            annotation_collection_id=annotation_collection_id,
+        )
+        return output_path
+    if export_format == ExportFormat.SEGMENTATION_MASK_COCO:
+        output_path = temp_dir / "coco_segmentation_mask_export.json"
+        exporter.to_coco_segmentation_masks(
+            output_json=output_path,
+            annotation_collection_id=annotation_collection_id,
+        )
+        return output_path
+    if export_format == ExportFormat.PASCAL_VOC:
+        output_path = temp_dir / "pascalvoc"
+        exporter.to_pascalvoc_segmentation_mask(
+            output_folder=output_path,
+            annotation_collection_id=annotation_collection_id,
+        )
+        return output_path
+    raise ValueError(f"Export format '{export_format.value}' is not supported for this endpoint.")
 
 
 def _stream_file_and_cleanup(

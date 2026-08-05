@@ -26,7 +26,7 @@
             : undefined
     );
     const { collection } = useCollectionWithChildren({
-        collectionId: data.params.dataset_id
+        getCollectionId: () => data.params.collection_id
     });
 </script>
 

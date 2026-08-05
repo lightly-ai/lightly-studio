@@ -9,16 +9,24 @@ We welcome contributions of all kinds, including:
 
 After you have your changes ready, and you create a new pull request, a maintainer will review your PR, may ask for changes, suggest improvements, or approve once ready.
 
-## Development Quickstart
+## Requirements
+- Python **3.9–3.14** (3.9 recommended)
+- Uv version **0.8.17+**
+- Node.js **24+** (exact version pinned in `lightly_studio_view/.nvmrc`)
+- Access to **Google Cloud Platform** (request permissions from @IgorSusmelj)
 
+## Development Quickstart
 
 ```bash
 git clone git@github.com:lightly-ai/lightly_studio.git
-cd lightly_studio/lightly_studio
+cd lightly_studio
+make download-example-dataset  # run from the repo root
+cd lightly_studio              # descend into the backend subdirectory (same name as repo root)
 make start
 ```
 
 This will:
+- Download the example dataset into `lightly_studio/datasets` (see [Clone the Repository with Test Data](#clone-the-repository-with-test-data))
 - Install dependencies (uv installs Python dependencies automatically, `npm ci` the frontend ones)
 - Build the frontend and the Python package
 - Start an example script, which serves the app on <http://localhost:8001>
@@ -104,11 +112,8 @@ formatting, see:
 
 ## Development Environment Setup
 
-### Requirements
-- Python **3.9+** (3.10 recommended)
-- Uv version **0.8.17+**
-- Node.js **24+** (exact version pinned in `lightly_studio_view/.nvmrc`)
-- Access to **Google Cloud Platform** (request permissions from @IgorSusmelj)
+See [Requirements](#requirements) above for the Python, Uv, and Node.js versions needed before
+following the steps below.
 
 ### Clone the Repository with Test Data
 
