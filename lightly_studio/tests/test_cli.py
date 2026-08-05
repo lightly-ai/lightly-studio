@@ -1,16 +1,21 @@
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Generator
 from pathlib import Path
+from typing import Any
 
 import pytest
 from click.testing import CliRunner
+from PIL import Image
 from pytest_mock import MockerFixture
 
 import lightly_studio
 from lightly_studio import cli
 from lightly_studio.database import db_manager
+from lightly_studio.models.evaluation_run import EvaluationTaskType
+from lightly_studio.resolvers import evaluation_run_resolver
 
 
 @pytest.fixture(autouse=True)
@@ -107,3 +112,108 @@ def test_gui__with_empty_db_file__complains_about_missing_dataset(
     assert result.exit_code != 0
     assert isinstance(result.exception, ValueError)
     assert "No datasets found" in str(result.exception)
+
+
+def _mock_demo_dependencies(mocker: MockerFixture) -> tuple[Any, Any, Any, Any]:
+    mock_download = mocker.patch.object(
+        lightly_studio.utils, "download_example_dataset", return_value="/dataset_examples"
+    )
+    mock_connect = mocker.patch.object(db_manager, "connect")
+    mock_dataset = mocker.MagicMock()
+    mock_create = mocker.patch.object(
+        lightly_studio.ImageDataset, "create", return_value=mock_dataset
+    )
+    mock_start_gui = mocker.patch.object(lightly_studio, "start_gui")
+    return mock_download, mock_connect, mock_create, mock_start_gui
+
+
+def test_demo(mocker: MockerFixture) -> None:
+    mock_download, mock_connect, _, mock_start_gui = _mock_demo_dependencies(mocker)
+    runner = CliRunner()
+    result = runner.invoke(cli=cli.main, args=["demo"])
+    assert result.exit_code == 0
+    mock_download.assert_called_once_with(download_dir="dataset_examples", force_redownload=False)
+    mock_connect.assert_called_once_with(db_file="demo.db", cleanup_existing=False)
+    mock_start_gui.assert_called_once_with(port=None)
+
+
+def test_demo__with_force_download(mocker: MockerFixture) -> None:
+    mock_download, mock_connect, _, _ = _mock_demo_dependencies(mocker)
+    runner = CliRunner()
+    result = runner.invoke(cli=cli.main, args=["demo", "--force-download"])
+    assert result.exit_code == 0
+    mock_download.assert_called_once_with(download_dir="dataset_examples", force_redownload=True)
+    mock_connect.assert_called_once_with(db_file="demo.db", cleanup_existing=True)
+
+
+def test_demo__with_port(mocker: MockerFixture) -> None:
+    _, _, _, mock_start_gui = _mock_demo_dependencies(mocker)
+    runner = CliRunner()
+    result = runner.invoke(cli=cli.main, args=["demo", "--port", "9999"])
+    assert result.exit_code == 0
+    mock_start_gui.assert_called_once_with(port=9999)
+
+
+def _coco_dict_with(file_names: list[str]) -> dict[str, Any]:
+    return {
+        "images": [
+            {"id": i + 1, "file_name": fn, "width": 10, "height": 10}
+            for i, fn in enumerate(file_names)
+        ],
+        "annotations": [
+            {
+                "id": i + 1,
+                "image_id": i + 1,
+                "category_id": 1,
+                "bbox": [1, 1, 2, 2],
+                "area": 4,
+                "iscrowd": 0,
+            }
+            for i in range(len(file_names))
+        ],
+        "categories": [{"id": 1, "name": "cat"}],
+    }
+
+
+def _build_demo_dataset_dir(root: Path) -> Path:
+    """Build a fixture dataset with the same layout as the real demo dataset."""
+    dataset_dir = root / "dataset_examples"
+    images_dir = dataset_dir / "coco_subset_128_images" / "images"
+    images_dir.mkdir(parents=True)
+    file_names = [f"image{i}.jpg" for i in range(3)]
+    for file_name in file_names:
+        Image.new("RGB", (10, 10)).save(images_dir / file_name)
+    coco_dir = dataset_dir / "coco_subset_128_images"
+    (coco_dir / "instances_train2017.json").write_text(json.dumps(_coco_dict_with(file_names)))
+    (coco_dir / "predictions_train2017.json").write_text(json.dumps(_coco_dict_with(file_names)))
+    return dataset_dir
+
+
+def test_demo__runs_real_evaluation_pipeline(
+    mocker: MockerFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Loads real images, real COCO annotations, and persists a real evaluation run.
+
+    Runs against its own isolated 'demo.db', without any network access.
+    """
+    monkeypatch.chdir(tmp_path)
+    dataset_dir = _build_demo_dataset_dir(tmp_path)
+    mocker.patch.object(
+        lightly_studio.utils, "download_example_dataset", return_value=str(dataset_dir)
+    )
+    mocker.patch.object(lightly_studio, "start_gui")
+
+    runner = CliRunner()
+    result = runner.invoke(cli=cli.main, args=["demo"])
+    assert result.exit_code == 0, result.output
+    assert (tmp_path / "demo.db").exists()
+
+    dataset = lightly_studio.ImageDataset.load()
+    assert len(dataset.query().to_list()) == 3
+
+    evaluation_runs = evaluation_run_resolver.get_all_by_dataset_id(
+        session=dataset.session, dataset_id=dataset.dataset_id
+    )
+    assert len(evaluation_runs) == 1
+    assert evaluation_runs[0].name == "od_evaluation"
+    assert evaluation_runs[0].task_type == EvaluationTaskType.OBJECT_DETECTION
