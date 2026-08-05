@@ -12,11 +12,17 @@
     >;
 
     interface Props {
+        /** The format used when exporting annotations. */
         exportFormat: ExportFormat;
+        /** Descriptive text shown above the export controls. */
         description: string;
+        /** List of available annotation sources to export from. */
         annotationSources: { id: string; name: string }[];
+        /** The ID of the currently selected annotation collection. Bindable. */
         selectedAnnotationCollectionId: string | undefined;
+        /** Test ID applied to the download button for automated testing. */
         testId: string;
+        /** Optional callback invoked when the download button is clicked. */
         onDownloadClick?: () => void;
     }
 
