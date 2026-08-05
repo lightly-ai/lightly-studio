@@ -275,9 +275,7 @@ def test_selection_overlap__multiple_tags_ordered_by_name(
     )
 
     assert response.status_code == HTTP_STATUS_OK
-    assert response.json() == {
-        "tags": [{"name": "train", "count": 3}, {"name": "val", "count": 1}]
-    }
+    assert response.json() == {"tags": [{"name": "train", "count": 3}, {"name": "val", "count": 1}]}
 
 
 def _tagged_sample_ids(session: Session, tag_id: UUID) -> set[UUID]:
