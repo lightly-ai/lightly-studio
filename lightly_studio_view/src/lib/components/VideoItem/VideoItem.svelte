@@ -3,7 +3,6 @@
     import { PUBLIC_VIDEOS_MEDIA_URL } from '$env/static/public';
     import {
         getAllFrames,
-        AnnotationType,
         type FrameView,
         type SampleView,
         type VideoFrameView,
@@ -11,7 +10,7 @@
     } from '$lib/api/lightly_studio_local';
     import SampleClassificationPills from '$lib/components/SampleClassificationPills/SampleClassificationPills.svelte';
     import { routeHelpers } from '$lib/routes';
-    import { getSimilarityColor } from '$lib/utils';
+    import { getSimilarityColor, isWholeVideoClassificationAnnotation } from '$lib/utils';
     import VideoFrameAnnotationItem from '../VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
     import { goto } from '$app/navigation';
     import Video from '../Video/Video.svelte';
@@ -147,11 +146,7 @@
     );
 
     const videoClassificationAnnotations = $derived(
-        (video.sample.annotations ?? []).filter(
-            (a) =>
-                a.annotation_type === AnnotationType.CLASSIFICATION &&
-                a.temporal_span_details == null
-        )
+        (video.sample.annotations ?? []).filter(isWholeVideoClassificationAnnotation)
     );
 </script>
 

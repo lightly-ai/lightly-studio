@@ -14,7 +14,12 @@
         type SampleView,
         type VideoView
     } from '$lib/api/lightly_studio_local';
-    import { getVideoURLById, toVideoEvents, type VideoEvent } from '$lib/utils';
+    import {
+        getVideoURLById,
+        isWholeVideoClassificationAnnotation,
+        toVideoEvents,
+        type VideoEvent
+    } from '$lib/utils';
     import VideoSampleMetadata from '$lib/components/VideoSampleMetadata/VideoSampleMetadata.svelte';
     import SampleDetailsCaptionSegment from '$lib/components/SampleDetails/SampleDetailsCaptionsSegment/SampleDetailsCaptionSegment.svelte';
     import SampleDetailsClassificationSegment from '$lib/components/SampleDetails/SampleDetailsClassificationSegment/SampleDetailsClassificationSegment.svelte';
@@ -54,11 +59,7 @@
 
     // Whole-video classification annotations (no time span) shown in the side panel.
     const videoClassificationAnnotations = $derived(
-        (video.sample.annotations ?? []).filter(
-            (a) =>
-                a.annotation_type === AnnotationType.CLASSIFICATION &&
-                a.temporal_span_details == null
-        )
+        (video.sample.annotations ?? []).filter(isWholeVideoClassificationAnnotation)
     );
 
     // Reuse the global "Edit annotations" toggle to enable event editing.
