@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Annotation class names no longer overflow in class selection.
 - Autofocus lets users create their first annotation faster.
 - Opening a DuckDB database that another lightly_studio process already has open now raises a clear error instead of a raw DuckDB traceback.
+- Coloring the 2D embedding plot by annotations or metadata now loads faster, especially for large datasets.
 
 ### Security
 
