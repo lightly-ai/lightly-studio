@@ -196,6 +196,10 @@ to explore embeddings, remove near-duplicates, auto-label, and train a model —
 
     [![Metadata](https://storage.googleapis.com/lightly-public/studio/docs_cards/metadata.png)](concepts_and_tools/metadata.md)
 
+-   **[Embeddings](concepts_and_tools/embeddings.md)**
+
+    [![Embeddings](https://storage.googleapis.com/lightly-public/studio/docs_cards/embeddings.png)](concepts_and_tools/embeddings.md)
+
 </div>
 
 ### Tools
