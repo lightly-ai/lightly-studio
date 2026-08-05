@@ -17,7 +17,12 @@
     import { GripVertical } from '@lucide/svelte';
     import { Pane, PaneGroup, PaneResizer } from 'paneforge';
     import { balanced, empty, longLabels, longTail, many80Classes } from '../BarChart/fixtures';
-    import { exampleSources, numericMetadataSources } from './sourceFixtures';
+    import {
+        categoricalMetadataSources,
+        exampleSources,
+        mixedSources,
+        numericMetadataSources
+    } from './sourceFixtures';
 </script>
 
 {#snippet sidePanel(args)}
@@ -49,6 +54,29 @@
 <Story
     name="Multi-source (class / tags / metadata / eval)"
     args={{ sources: exampleSources, title: 'Distribution', onClose: () => {} }}
+    template={sidePanel}
+/>
+
+<!-- Categorical metadata: location_type key with city / suburban / rural / village
+     values. Demonstrates value buckets, a missing-value bucket, and an active
+     filter (city + rural) with dimmed background bars for context. -->
+<Story
+    name="Categorical metadata (location_type)"
+    args={{
+        sources: categoricalMetadataSources,
+        title: 'Distribution',
+        onClose: () => {}
+    }}
+    template={sidePanel}
+/>
+
+<!-- Classes + categorical + numeric in one panel. Switching between sources
+     demonstrates chart-type transitions: bar chart (class labels) →
+     categorical bar chart with active filter (location_type) →
+     histogram (confidence). -->
+<Story
+    name="Mixed (class / categorical / numeric)"
+    args={{ sources: mixedSources, title: 'Distribution', onClose: () => {} }}
     template={sidePanel}
 />
 

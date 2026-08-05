@@ -47,7 +47,9 @@
     );
 
     const { dimensionsValues: dimensions } = useDimensions();
-    const { metadataValues } = $derived.by(() => useMetadataFilters(collection_id));
+    const { metadataValues, categoricalMetadataValues } = $derived.by(() =>
+        useMetadataFilters(collection_id)
+    );
 
     const {
         getCollectionVersion,
@@ -69,6 +71,7 @@
             dimensions: $dimensions ?? undefined
         },
         metadata_values: $metadataValues,
+        categorical_metadata_values: $categoricalMetadataValues,
         text_embedding: $textEmbedding?.embedding
     });
 
@@ -143,6 +146,7 @@
             `${$dimensions?.min_width}-${$dimensions?.max_width}`,
             `${$dimensions?.min_height}-${$dimensions?.max_height}`,
             JSON.stringify($metadataValues),
+            JSON.stringify($categoricalMetadataValues),
             $textEmbedding?.queryText || '',
             confusionCell ? JSON.stringify(confusionCell) : '',
             JSON.stringify($imageSortBy)
@@ -286,7 +290,8 @@
                             <SampleImageGridItem
                                 sample={samples[index]}
                                 {objectFit}
-                                sampleSize={width}
+                                tileWidth={width}
+                                tileHeight={height}
                                 {displayTextOnImage}
                             />
                         </GridItem>
