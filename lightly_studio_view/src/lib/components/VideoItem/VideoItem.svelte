@@ -183,6 +183,7 @@
         sample={{ annotations: videoClassificationAnnotations }}
         hasBottomOverlay={Boolean(caption)}
         hasRightOverlay={video.similarity_score !== undefined && video.similarity_score !== null}
+        selectedCollectionIds={[]}
     />
     {#if video.similarity_score !== undefined && video.similarity_score !== null}
         <div
