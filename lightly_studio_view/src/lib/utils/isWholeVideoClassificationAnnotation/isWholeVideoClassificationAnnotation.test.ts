@@ -21,7 +21,7 @@ describe('isWholeVideoClassificationAnnotation', () => {
     test('returns false for classification annotation with a temporal span', () => {
         const annotation = {
             annotation_type: AnnotationType.CLASSIFICATION,
-            temporal_span_details: { start: 0, end: 1 }
+            temporal_span_details: { start_time_s: 0, end_time_s: 1 }
         } as AnnotationView;
         expect(isWholeVideoClassificationAnnotation(annotation)).toBe(false);
     });
