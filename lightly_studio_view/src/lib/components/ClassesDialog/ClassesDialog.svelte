@@ -1,7 +1,6 @@
 <script lang="ts">
     import * as Dialog from '$lib/components/ui/dialog';
-    import { useClasses } from '$lib/hooks/useClasses/useClasses.svelte';
-    import { useClassesDialog } from '$lib/hooks/useClassesDialog/useClassesDialog';
+    import { useClasses, useClassesDialog } from '$lib/hooks';
     import AddClassesForm from './AddClassesForm.svelte';
     import ClassesDialogTable from './ClassesDialogTable.svelte';
 

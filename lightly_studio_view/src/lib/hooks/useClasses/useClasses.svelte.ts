@@ -1,6 +1,7 @@
 import {
     createAnnotationLabelsBatchMutation,
-    readAnnotationLabelsWithCountsOptions
+    readAnnotationLabelsWithCountsOptions,
+    readAnnotationLabelsWithCountsQueryKey
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
 
@@ -14,7 +15,12 @@ export function useClasses(getParams: () => { collectionId: string; enabled: boo
     }));
     const addMutation = createMutation(() => createAnnotationLabelsBatchMutation());
 
-    const refresh = () => client.invalidateQueries();
+    const refresh = () =>
+        client.invalidateQueries({
+            queryKey: readAnnotationLabelsWithCountsQueryKey({
+                path: { collection_id: getParams().collectionId }
+            })
+        });
     const addClasses = async (names: string[]) => {
         await addMutation.mutateAsync({
             path: { collection_id: getParams().collectionId },
