@@ -85,6 +85,36 @@ describe('useAnnotationCropPreview', () => {
         expect(preview.cropUrlByAnnotationId['ann-1']).toBeUndefined();
     });
 
+    it('keeps only the most recently started render when two drag starts overlap', async () => {
+        let resolveFirst: (url: string | null) => void = () => {};
+        let resolveSecond: (url: string | null) => void = () => {};
+        mocks.renderCropObjectUrl
+            .mockReturnValueOnce(
+                new Promise((resolve) => {
+                    resolveFirst = resolve;
+                })
+            )
+            .mockReturnValueOnce(
+                new Promise((resolve) => {
+                    resolveSecond = resolve;
+                })
+            );
+        const preview = useAnnotationCropPreview();
+        preview.handleCropWindowChange('ann-1', window);
+
+        // Two drags on the same tile in quick succession; the first render
+        // resolves *after* the second one, so it must not win.
+        const firstDragStart = preview.handleAnnotationDragStart('ann-1');
+        const secondDragStart = preview.handleAnnotationDragStart('ann-1');
+        resolveSecond('blob:crop-url-second');
+        await secondDragStart;
+        resolveFirst('blob:crop-url-first');
+        await firstDragStart;
+
+        expect(preview.cropUrlByAnnotationId['ann-1']).toBe('blob:crop-url-second');
+        expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:crop-url-first');
+    });
+
     it('revokes every held blob url on cleanup', async () => {
         mocks.renderCropObjectUrl
             .mockResolvedValueOnce('blob:crop-url-1')
