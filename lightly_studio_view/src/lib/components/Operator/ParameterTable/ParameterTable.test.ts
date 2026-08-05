@@ -136,6 +136,23 @@ describe('ParameterTable', () => {
         ).toBeInTheDocument();
     });
 
+    it('surfaces an incomplete row in an optional table', () => {
+        // The parameter is optional, so the hint must not ask for a row, but the row the user did add
+        // still blocks Execute and has to say so.
+        render(ParameterTable, {
+            props: {
+                ...defaultProps,
+                required: false,
+                value: [{ prompt: '', label: 'pedestrian' }],
+                isMissing: true,
+                onUpdate: vi.fn()
+            }
+        });
+
+        expect(screen.getByText('Fill in every required cell.')).toBeInTheDocument();
+        expect(screen.getByTestId('parameter-table-prompts-prompt-0')).toBeInvalid();
+    });
+
     it('only flags the empty cells of required columns', () => {
         const columns = [column({ name: 'prompt' }), column({ name: 'label', required: false })];
 
@@ -163,6 +180,27 @@ describe('ParameterTable', () => {
         });
 
         expect(screen.getByTestId('parameter-table-prompts-limit-0')).toBeInvalid();
+    });
+
+    it('leaves a cell an API default omitted alone when its column is optional', () => {
+        // The backend fills the column's own default in, so the row is fine as it stands and opening
+        // the dialog on it must not look like an error.
+        const columns = [
+            column({ name: 'prompt' }),
+            column({ name: 'threshold', paramType: 'float', required: false, default: 0.5 })
+        ];
+
+        render(ParameterTable, {
+            props: {
+                ...defaultProps,
+                columns,
+                value: [{ prompt: 'person' }],
+                isMissing: true,
+                onUpdate: vi.fn()
+            }
+        });
+
+        expect(screen.getByTestId('parameter-table-prompts-threshold-0')).toBeValid();
     });
 
     it('never flags an unchecked boolean cell', () => {

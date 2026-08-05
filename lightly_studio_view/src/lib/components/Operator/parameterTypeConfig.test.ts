@@ -169,20 +169,21 @@ describe('isValueSubmittable', () => {
         expect(isValueSubmittable('', { type: 'string', required: false })).toBe(true);
     });
 
+    it('still validates an optional value the user did enter', () => {
+        // Optional means it may be left empty, not that anything goes once it holds something.
+        expect(isValueSubmittable('   ', { type: 'string', required: false })).toBe(false);
+        expect(isValueSubmittable(Number.NaN, { type: 'int', required: false })).toBe(false);
+        expect(isValueSubmittable(3, { type: 'int', required: false })).toBe(true);
+        // A table value that is not a row list at all cannot be sent either.
+        expect(isValueSubmittable('oops' as never, table(false))).toBe(false);
+    });
+
     it('still rejects incomplete rows in an optional table', () => {
         // The rows are optional as a whole, but each one the user added has to be submittable.
         expect(isValueSubmittable([{ prompt: 'person', label: '' }], table(false))).toBe(false);
         expect(isValueSubmittable([{ prompt: 'person', label: 'pedestrian' }], table(false))).toBe(
             true
         );
-    });
-
-    it('rejects an empty numeric cell in an optional table', () => {
-        const columns = [column({ name: 'threshold', paramType: 'float', required: false })];
-        const param = { type: 'table' as const, columns, required: false };
-
-        expect(isValueSubmittable([{ threshold: '' }], param)).toBe(false);
-        expect(isValueSubmittable([{ threshold: 0.5 }], param)).toBe(true);
     });
 });
 
@@ -227,11 +228,28 @@ describe('isValueFilled for a table', () => {
         expect(isValueFilled([{ enabled: false }], 'table', columns)).toBe(true);
         // An API default can omit the key altogether, which would submit a row without it.
         expect(isValueFilled([{}], 'table', columns)).toBe(false);
-        expect(
-            isValueFilled([{}], 'table', [
-                column({ name: 'enabled', paramType: 'bool', required: false })
-            ])
-        ).toBe(true);
+    });
+
+    it('rejects a boolean cell holding something other than a boolean', () => {
+        // A checkbox only ever emits a boolean, but an operator's declared default is free to put
+        // anything in the row, and the backend would refuse it.
+        for (const required of [true, false]) {
+            const columns = [column({ name: 'enabled', paramType: 'bool', required })];
+
+            expect(isValueFilled([{ enabled: 'false' }], 'table', columns)).toBe(false);
+            expect(isValueFilled([{ enabled: 1 }], 'table', columns)).toBe(false);
+            expect(isValueFilled([{ enabled: true }], 'table', columns)).toBe(true);
+        }
+    });
+
+    it('lets an API default omit a cell of an optional column, whatever its type', () => {
+        // The backend applies the column's own default for a key that is absent, so the row is
+        // submittable as it stands. Every type is treated alike here.
+        for (const paramType of ['str', 'int', 'float', 'bool']) {
+            const columns = [column({ name: 'extra', paramType, required: false })];
+
+            expect(isValueFilled([{}], 'table', columns)).toBe(true);
+        }
     });
 });
 

@@ -44,7 +44,7 @@ describe('buildGridStyle', () => {
 
 describe('isCellInvalid', () => {
     // The table is valid overall here, so only the backend contract can flag a cell.
-    const submittable = { required: true, isMissing: false };
+    const submittable = { isMissing: false };
 
     it('flags an empty numeric cell even when its column is optional', () => {
         // The backend validates every cell against its column type regardless of `required`, so an
@@ -70,9 +70,11 @@ describe('isCellInvalid', () => {
     });
 
     it('flags an empty required cell only once the table is missing a value', () => {
+        // `isMissing` already accounts for whether the table is required, so the cell needs no
+        // second check against it: an optional table that is simply empty never reports missing.
         const text = column({ name: 'prompt' });
 
         expect(isCellInvalid({ prompt: '' }, text, submittable)).toBe(false);
-        expect(isCellInvalid({ prompt: '' }, text, { required: true, isMissing: true })).toBe(true);
+        expect(isCellInvalid({ prompt: '' }, text, { isMissing: true })).toBe(true);
     });
 });
