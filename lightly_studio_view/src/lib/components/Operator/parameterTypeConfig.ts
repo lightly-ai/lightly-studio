@@ -110,12 +110,14 @@ export function isCellSubmittable(
     value: ParameterTableRow[string] | undefined,
     column: Pick<OperatorParameterColumn, 'paramType' | 'required'>
 ): boolean {
+    // An absent key leaves the column to its own backend default, so only a required column minds.
+    if (value === undefined) return !column.required;
     const type = toParameterType(column.paramType);
-    // `isCellFilled` counts any boolean column as filled, since `false` is an answer. A required one
-    // still needs the key present, or a row from an API default would submit without it.
-    if (type === 'bool') return !column.required || typeof value === 'boolean';
-    if (column.required) return isCellFilled(value, column);
-    if (type === 'string') return typeof value === 'string';
+    // `isCellFilled` reports every boolean column as filled, since `false` is an answer, so it cannot
+    // tell a real boolean from a stray value an operator's default may have put there.
+    if (type === 'bool') return typeof value === 'boolean';
+    // An optional text cell may be blank; every other cell has to hold a value of its type.
+    if (type === 'string' && !column.required) return typeof value === 'string';
     return isCellFilled(value, column);
 }
 
@@ -140,6 +142,13 @@ export function isValueFilled(
     return config.validate(value, columns);
 }
 
+/** Whether the user has left a parameter alone, which is the one state an optional one may be in. */
+const isEmpty = (value: ParameterValue): boolean =>
+    value === undefined ||
+    value === null ||
+    value === '' ||
+    (Array.isArray(value) && !value.length);
+
 /**
  * Whether a value can be sent to the backend, which is weaker than being filled in: an optional
  * parameter may be left empty. A table is the one type where empty and incomplete differ, because it
@@ -150,8 +159,10 @@ export function isValueSubmittable(
     param: Pick<OperatorParameter, 'type' | 'columns' | 'required'>
 ): boolean {
     if (param.required ?? true) return isValueFilled(value, param.type, param.columns);
-    if (!Array.isArray(value) || value.length === 0) return true;
-    return value.every((row) => isRowFilled(row, param.columns));
+    // Only an actually empty optional value is waved through; anything the user did enter still has
+    // to hold up, so a half-typed number or an incomplete table row cannot slip past unvalidated.
+    if (isEmpty(value)) return true;
+    return isValueFilled(value, param.type, param.columns);
 }
 
 export function buildInitialParameters(selectedOperator: Operator): ParameterValues {

@@ -74,8 +74,6 @@ export const replaceCell = (
 
 /** Validation state of the table parameter the cell belongs to. */
 interface TableValidationState {
-    /** Whether the table parameter itself is required. */
-    required: boolean;
     /** Whether the table parameter is currently blocking submission. */
     isMissing: boolean;
 }
@@ -87,8 +85,8 @@ interface TableValidationState {
 export const isCellInvalid = (
     row: ParameterTableRow,
     column: OperatorParameterColumn,
-    { required, isMissing }: TableValidationState
+    { isMissing }: TableValidationState
 ): boolean => {
     if (isCellSubmittable(row[column.name], column)) return false;
-    return !column.required || (required && isMissing);
+    return !column.required || isMissing;
 };

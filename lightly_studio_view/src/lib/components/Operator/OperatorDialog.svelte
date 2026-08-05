@@ -15,7 +15,6 @@
     import {
         type ParameterValue,
         type ParameterValues,
-        isValueFilled,
         isValueSubmittable,
         buildInitialParameters,
         getParameterConfig
@@ -210,9 +209,9 @@
                 {#each operator.parameters as param}
                     {@const config = getParameterConfig(param.type, param.columns)}
                     {@const required = param.required ?? true}
-                    {@const isMissing =
-                        required &&
-                        !isValueFilled(parameters[param.name], param.type, param.columns)}
+                    <!-- Mirrors isFormValid: whatever blocks Execute is what the control must show,
+                         including an optional table holding an incomplete row. -->
+                    {@const isMissing = !isValueSubmittable(parameters[param.name], param)}
 
                     <config.component
                         name={param.name}
