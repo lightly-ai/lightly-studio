@@ -83,20 +83,21 @@ describe('SplitDialog', () => {
         const names = screen.getAllByTestId('split-name-input') as HTMLInputElement[];
         expect(names.map((input) => input.value)).toEqual(['train', 'val', 'test']);
 
-        const previews = screen.getAllByTestId('split-preview');
-        expect(previews.map((el) => el.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
-            '80% · 800 samples',
-            '10% · 100 samples',
-            '10% · 100 samples'
-        ]);
+        const shares = screen.getAllByTestId('split-share');
+        expect(shares.map((el) => el.textContent?.trim())).toEqual(['80%', '10%', '10%']);
+
+        const counts = screen.getAllByTestId('split-count');
+        expect(counts.map((el) => el.textContent?.trim())).toEqual(['800', '100', '100']);
     });
 
-    it('informs which target splits will be created', () => {
+    it('lists the tags that will be created in a callout', () => {
         render(SplitDialog);
 
-        expect(screen.getByTestId('split-created-info').textContent).toContain(
-            'train, val and test will be created.'
+        const created = (screen.getByTestId('split-created-info').textContent ?? '').replace(
+            /\s+/g,
+            ' '
         );
+        expect(created).toContain('Tags train, val and test will be created.');
     });
 
     it('submits the split sizes when valid', async () => {
@@ -116,9 +117,12 @@ describe('SplitDialog', () => {
         overlapData = { tags: [{ name: 'train', count: 120 }] };
         render(SplitDialog);
 
-        expect(screen.getByTestId('split-cleared-warning').textContent).toContain(
-            'train (120 samples) will be cleared and reassigned.'
+        const warning = (screen.getByTestId('split-cleared-warning').textContent ?? '').replace(
+            /\s+/g,
+            ' '
         );
+        expect(warning).toContain('Tag train will be cleared before assignment.');
+        expect(warning).not.toContain('120');
 
         // First submit only arms the overwrite confirmation, without calling submit.
         await fireEvent.submit(screen.getByTestId('split-submit').closest('form')!);

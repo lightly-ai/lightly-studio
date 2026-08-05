@@ -13,7 +13,6 @@
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import type { SplitCreateBody } from '$lib/api/lightly_studio_local/types.gen';
     import { useSplitForm } from './useSplitForm';
-    import { formatClearedMessage, formatCreatedMessage } from './splitDialogMessages';
 
     const collectionId = $derived(page.params.collection_id!);
     const isVideoCollection = $derived(
@@ -77,19 +76,24 @@
 
     const targetNames = $derived($rows.map((row) => row.name.trim()).filter((name) => name.length));
 
-    // Target splits already carrying selected samples — these get overwritten.
-    const clearedTags = $derived(
-        targetNames
-            .filter((name) => (overlapCounts.get(name) ?? 0) > 0)
-            .map((name) => ({ name, count: overlapCounts.get(name)! }))
-    );
-
-    // Target splits that do not yet exist as sample tags in the collection.
+    // Existing sample tags in the collection, so we can tell new tags apart from
+    // ones that will be overwritten.
     const existingTagNames = $derived(new Set($tags.map((tag) => tag.name)));
+
+    // Target tags that do not exist yet — they will be created.
     const createdNames = $derived(targetNames.filter((name) => !existingTagNames.has(name)));
 
-    const clearedMessage = $derived(formatClearedMessage(clearedTags));
-    const createdMessage = $derived(formatCreatedMessage(createdNames));
+    // Target tags that already hold selected samples — wiped before reassignment.
+    const clearedNames = $derived(
+        overlapQuery.isLoading
+            ? []
+            : targetNames.filter(
+                  (name) => existingTagNames.has(name) && (overlapCounts.get(name) ?? 0) > 0
+              )
+    );
+
+    // Cleared tags gate the overwrite confirmation.
+    const clearedTags = $derived(clearedNames);
 
     async function handleSubmit(event: Event) {
         event.preventDefault();
@@ -110,6 +114,13 @@
     }
 </script>
 
+<!-- Renders tag names in bold, comma-separated with a trailing "and": "a, b and c". -->
+{#snippet tagNames(names: string[])}
+    {#each names as name, i (name)}{#if i > 0}{i === names.length - 1 ? ' and ' : ', '}{/if}<strong
+            class="font-semibold">{name}</strong
+        >{/each}
+{/snippet}
+
 <Dialog.Root
     open={$isSplitDialogOpen}
     onOpenChange={(open) => (open ? undefined : closeSplitDialog())}
@@ -124,61 +135,78 @@
                         Randomly assign the
                         <strong class="font-semibold text-primary">{$filteredSampleCount}</strong>
                         {isFiltered ? 'filtered' : ''}
-                        {$filteredSampleCount === 1 ? 'sample' : 'samples'} to named split tags. Sizes
-                        are relative parts — the share and sample count are shown alongside.
+                        {$filteredSampleCount === 1 ? 'sample' : 'samples'} to named split tags.
                     </Dialog.Description>
                 </Dialog.Header>
 
-                <div class="grid max-h-[60vh] gap-4 overflow-y-auto p-2 py-4">
-                    <div class="grid gap-2">
+                <div class="flex max-h-[60vh] flex-col gap-4 overflow-y-auto p-2 py-4">
+                    <div
+                        class="grid grid-cols-[minmax(0,1fr)_5.5rem_auto_auto_2rem] items-center gap-x-3 gap-y-2"
+                    >
+                        <span class="text-xs font-medium text-muted-foreground">Tag</span>
+                        <span class="text-xs font-medium text-muted-foreground">Relative size</span>
+                        <span class="text-right text-xs font-medium text-muted-foreground"
+                            >Share</span
+                        >
+                        <span class="text-right text-xs font-medium text-muted-foreground">
+                            Samples
+                        </span>
+                        <span></span>
+
                         {#each $rows as row (row.id)}
                             {@const info = $preview[row.id] ?? { percentage: 0, count: 0 }}
-                            <div class="flex items-center gap-2">
-                                <Input
-                                    type="text"
-                                    class="flex-1"
-                                    placeholder="Split name"
-                                    value={row.name}
-                                    oninput={(e) => updateName(row.id, e.currentTarget.value)}
-                                    data-testid="split-name-input"
-                                />
-                                <Input
-                                    type="number"
-                                    class="w-16"
-                                    min="1"
-                                    step="1"
-                                    value={row.parts}
-                                    oninput={(e) =>
-                                        updateParts(row.id, e.currentTarget.valueAsNumber)}
-                                    aria-label={`Parts for ${row.name || 'split'}`}
-                                    data-testid="split-parts-input"
-                                />
-                                <span
-                                    class="shrink-0 whitespace-nowrap text-right text-xs text-muted-foreground"
-                                    data-testid="split-preview"
-                                >
-                                    {info.percentage}% · {info.count}
-                                    {info.count === 1 ? 'sample' : 'samples'}
-                                </span>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    type="button"
-                                    disabled={$rows.length <= 1}
-                                    onclick={() => removeRow(row.id)}
-                                    aria-label="Remove split"
-                                >
-                                    <Trash2 class="size-4" />
-                                </Button>
-                            </div>
+                            <Input
+                                type="text"
+                                class="w-full"
+                                placeholder="Split name"
+                                value={row.name}
+                                oninput={(e) => updateName(row.id, e.currentTarget.value)}
+                                data-testid="split-name-input"
+                            />
+                            <Input
+                                type="number"
+                                class="w-full"
+                                min="1"
+                                step="1"
+                                value={row.parts}
+                                oninput={(e) => updateParts(row.id, e.currentTarget.valueAsNumber)}
+                                aria-label={`Parts for ${row.name || 'split'}`}
+                                data-testid="split-parts-input"
+                            />
+                            <span
+                                class="justify-self-end whitespace-nowrap text-right text-xs tabular-nums text-muted-foreground"
+                                data-testid="split-share"
+                            >
+                                {info.percentage}%
+                            </span>
+                            <span
+                                class="justify-self-end whitespace-nowrap text-right text-xs tabular-nums text-muted-foreground"
+                                data-testid="split-count"
+                            >
+                                {info.count}
+                            </span>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                type="button"
+                                disabled={$rows.length <= 1}
+                                onclick={() => removeRow(row.id)}
+                                aria-label="Remove split"
+                            >
+                                <Trash2 class="size-4" />
+                            </Button>
                         {/each}
                     </div>
 
-                    <div class="flex items-center justify-between">
-                        <Button variant="outline" size="sm" type="button" onclick={addRow}>
-                            <Plus class="mr-1 size-4" /> Add split
-                        </Button>
-                    </div>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        class="self-start"
+                        onclick={addRow}
+                    >
+                        <Plus class="mr-1 size-4" /> Add split
+                    </Button>
 
                     {#if $errorMessage}
                         <p class="text-sm text-destructive-text" data-testid="split-error">
@@ -186,18 +214,25 @@
                         </p>
                     {/if}
 
-                    {#if !overlapQuery.isLoading && clearedMessage}
+                    {#if createdNames.length > 0}
                         <p
-                            class="text-sm text-destructive-text"
-                            data-testid="split-cleared-warning"
+                            class="rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground"
+                            data-testid="split-created-info"
                         >
-                            {clearedMessage}
+                            {createdNames.length === 1 ? 'Tag' : 'Tags'}
+                            {@render tagNames(createdNames)}
+                            will be created.
                         </p>
                     {/if}
 
-                    {#if createdMessage}
-                        <p class="text-sm text-muted-foreground" data-testid="split-created-info">
-                            {createdMessage}
+                    {#if clearedNames.length > 0}
+                        <p
+                            class="rounded-md border border-destructive-text/40 bg-destructive-text/10 p-3 text-sm text-destructive-text"
+                            data-testid="split-cleared-warning"
+                        >
+                            {clearedNames.length === 1 ? 'Tag' : 'Tags'}
+                            {@render tagNames(clearedNames)}
+                            will be cleared before assignment.
                         </p>
                     {/if}
                 </div>
