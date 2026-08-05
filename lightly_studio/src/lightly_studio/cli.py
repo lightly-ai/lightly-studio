@@ -7,7 +7,9 @@ from importlib import metadata
 import click
 
 import lightly_studio
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.database import db_manager
+from lightly_studio.evaluation.image_dataset_evaluate import ObjectDetectionEvaluationConfig
 
 
 @click.group()
@@ -25,18 +27,42 @@ def main() -> None:
     help="Re-download the demo dataset even if already cached.",
 )
 def demo(port: int | None, force_download: bool) -> None:
-    """Launch the GUI preloaded with the COCO demo dataset."""
+    """Launch the GUI preloaded with a COCO object detection evaluation demo dataset."""
     dataset_path = lightly_studio.utils.download_example_dataset(
         download_dir="dataset_examples",
         force_redownload=force_download,
     )
+    images_path = f"{dataset_path}/coco_subset_128_images/images"
+    evaluation_config = ObjectDetectionEvaluationConfig(
+        iou_threshold=0.5,
+        classwise=True,
+    )
+
     db_manager.connect(db_file="demo.db", cleanup_existing=force_download)
     dataset = lightly_studio.ImageDataset.create()
-    dataset.add_samples_from_coco(
+    dataset.add_images_from_path(path=images_path)
+    dataset.add_annotations_from_coco(
         annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
-        images_path=f"{dataset_path}/coco_subset_128_images/images",
-        annotation_type=lightly_studio.AnnotationType.SEGMENTATION_MASK,
+        images_root=images_path,
+        annotation_source="ground_truth",
     )
+    dataset.add_annotations_from_coco(
+        annotations_json=f"{dataset_path}/coco_subset_128_images/predictions_train2017.json",
+        images_root=images_path,
+        annotation_source="predictions",
+    )
+    # Tag a subset of samples to run the evaluation on.
+    dataset.query()[:10].add_tag("evaluated_samples")
+    tagged_evaluation_query = dataset.query().match(
+        ImageSampleField.tags.contains("evaluated_samples")
+    )
+    dataset.evaluate(query=tagged_evaluation_query).object_detection(
+        name="od_evaluation",
+        gt_annotation_source="ground_truth",
+        pred_annotation_source="predictions",
+        config=evaluation_config,
+    )
+
     lightly_studio.start_gui(port=port)
 
 
