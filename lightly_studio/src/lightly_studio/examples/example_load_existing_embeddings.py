@@ -3,6 +3,9 @@
 Implement a class inheriting from ls.ImageEmbeddingGenerator. For image datasets,
 only `get_embedding_model_input` and `embed_images` functions are necessary.
 Register the generator with `ls.set_default_embedding_model`.
+
+For video datasets, implement ls.VideoEmbeddingGenerator as well to override the
+video model.
 """
 
 from __future__ import annotations
@@ -27,7 +30,9 @@ EMBEDDING_DIMENSION = 64
 def create_mock_embeddings(dataset_path: Path) -> dict[str, NDArray[np.float32]]:
     """Return a dictionary that maps each filepath to a random vector.
 
-    The embeddings are mocked here, a real implementation would read them from a file.
+    The returned dictionary is conceptually just `filepath -> vector`, for example
+    `{"/data/images/cat.jpg": [0.1, 0.2, ...]}`. The embeddings are mocked here, a
+    real implementation would read them from a file.
     """
     # Key by the same absolute posix path the backend stores as file_path_abs, so
     # the lookup in embed_images matches. A relative key here would never match.
@@ -126,8 +131,7 @@ embeddings_by_filepath = create_mock_embeddings(dataset_path=dataset_path)
 # from LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE for every collection.
 ls.set_default_embedding_model(LoadExistingEmbeddingsGenerator(embeddings_by_filepath))
 
-# Create a dataset from a path. The images reuse the precomputed embeddings
-# instead of new ones.
+# Create a dataset from a path. The embedding generator is invoked here.
 dataset = ls.ImageDataset.create()
 dataset.add_images_from_path(path=str(dataset_path))
 
