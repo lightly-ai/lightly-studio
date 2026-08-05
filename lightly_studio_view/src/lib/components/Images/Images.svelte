@@ -290,7 +290,8 @@
                             <SampleImageGridItem
                                 sample={samples[index]}
                                 {objectFit}
-                                sampleSize={width}
+                                tileWidth={width}
+                                tileHeight={height}
                                 {displayTextOnImage}
                             />
                         </GridItem>
