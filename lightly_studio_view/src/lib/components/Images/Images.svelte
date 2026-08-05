@@ -47,7 +47,9 @@
     );
 
     const { dimensionsValues: dimensions } = useDimensions();
-    const { metadataValues, categoricalMetadataValues } = useMetadataFilters(collection_id);
+    const { metadataValues, categoricalMetadataValues } = $derived.by(() =>
+        useMetadataFilters(collection_id)
+    );
 
     const {
         getCollectionVersion,
