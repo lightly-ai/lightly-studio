@@ -111,6 +111,7 @@ plugins:
             docstring_style: google
             docstring_options:
               ignore_init_summary: true
+              returns_multiple_items: false
             heading_level: 2
             merge_init_into_class: true
             show_source: false

@@ -11,11 +11,7 @@ implement one of the generator protocols below and register it with
 [`set_default_embedding_model`](#set_default_embedding_model) before you create or
 ingest a dataset.
 
-See the [Embeddings concept page](../concepts_and_tools/embeddings.md) for an overview,
-and the runnable examples for full implementations:
-
-- `example_custom_embedding_model.py` — compute embeddings on the fly.
-- `example_load_existing_embeddings.py` — load precomputed embeddings.
+See the [Embeddings page](../concepts_and_tools/embeddings.md) for more details.
 
 ## set_default_embedding_model
 
