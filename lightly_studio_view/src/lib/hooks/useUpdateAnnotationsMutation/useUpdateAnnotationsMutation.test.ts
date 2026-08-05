@@ -29,7 +29,9 @@ describe('useUpdateAnnotationsMutation', () => {
             }
         } as unknown as ReturnType<typeof createMutation>);
 
-        const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId: 'col-1' });
+        const { updateAnnotations } = useUpdateAnnotationsMutation({
+            getCollectionId: () => 'col-1'
+        });
         await updateAnnotations([
             { annotation_id: 'ann-1', collection_id: 'col-1', label_name: 'dog' }
         ]);
@@ -48,7 +50,9 @@ describe('useUpdateAnnotationsMutation', () => {
             }
         } as unknown as ReturnType<typeof createMutation>);
 
-        const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId: 'col-1' });
+        const { updateAnnotations } = useUpdateAnnotationsMutation({
+            getCollectionId: () => 'col-1'
+        });
         await updateAnnotations([
             { annotation_id: 'ann-1', collection_id: 'col-1', label_name: 'dog' },
             { annotation_id: 'ann-2', collection_id: 'col-1', label_name: 'cat' }
@@ -68,7 +72,9 @@ describe('useUpdateAnnotationsMutation', () => {
             }
         } as unknown as ReturnType<typeof createMutation>);
 
-        const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId: 'col-1' });
+        const { updateAnnotations } = useUpdateAnnotationsMutation({
+            getCollectionId: () => 'col-1'
+        });
         await updateAnnotations([
             {
                 annotation_id: 'ann-1',

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import { useGroupComponents } from '$lib/hooks/useGroupComponents/useGroupComponents';
     import { SampleType, type GroupComponentView } from '$lib/api/lightly_studio_local';
     import { GroupComponents } from '$lib/components/GroupComponents';
@@ -19,9 +20,9 @@
         collectionId: string;
     } = $props();
 
-    const { groupComponents } = useGroupComponents({ groupId });
+    const { groupComponents } = useGroupComponents({ getGroupId: () => groupId });
     const components = $derived<GroupComponentView[]>(groupComponents.data ?? []);
-    let selectedComponentId = $state(componentId);
+    let selectedComponentId = $state(untrack(() => componentId));
     const selectedIndex = $derived(
         components.findIndex((c) => c.details?.sample_id === selectedComponentId)
     );

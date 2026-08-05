@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import { page } from '$app/stores';
     import { derived as storeDerived } from 'svelte/store';
     import { Button } from '$lib/components/ui/button';
@@ -10,8 +11,7 @@
         type RegisteredOperatorMetadata
     } from '$lib/api/lightly_studio_local';
     import { toast } from 'svelte-sonner';
-    import type { Operator } from '$lib/hooks/useOperators/useOperators';
-    import { createOperatorFromMetadata } from '$lib/hooks/useOperators/useOperators';
+    import { createOperatorFromMetadata, type Operator } from '$lib/hooks';
     import {
         type ParameterValue,
         type ParameterValues,
@@ -48,7 +48,7 @@
         ($p) =>
             ({
                 routeId: $p.route.id,
-                collectionId: $p.params.collection_id,
+                collectionId: $p.params.collection_id!,
                 sampleId: $p.params.sampleId || $p.params.sample_id || null,
                 annotationId: $p.params.annotationId || null,
                 sampleType: ($p.params.collection_type as SampleType) ?? null
@@ -58,7 +58,7 @@
     const queryClient = useQueryClient();
     const { setPluginExecuting } = useOperatorsDialog();
 
-    const collectionId = $page.params.collection_id;
+    const collectionId = $page.params.collection_id!;
 
     const { tagsSelected } = useTags({ collection_id: collectionId, kind: ['annotation'] });
 
@@ -103,7 +103,7 @@
         }
     });
 
-    let previousIsOpen = isOpen;
+    let previousIsOpen = $state(untrack(() => isOpen));
     $effect(() => {
         if (!isOpen && previousIsOpen) {
             parameters = operator ? buildInitialParameters(operator) : {};
@@ -176,7 +176,10 @@
 
 <Dialog.Root open={isOpen} {onOpenChange}>
     <Dialog.Overlay />
-    <Dialog.Content class="max-h-[85vh] overflow-y-auto sm:max-w-md">
+    <!-- overflow-x-hidden spells out that only the vertical axis scrolls: leaving it at `visible`
+         makes it compute to `auto` because the other axis is not `visible`, which lets a wide
+         parameter such as a table scroll the whole dialog sideways instead of scrolling itself. -->
+    <Dialog.Content class="max-h-[85vh] overflow-y-auto overflow-x-hidden sm:max-w-md">
         <Dialog.Header>
             <Dialog.Title>
                 {operator?.name || operatorMetadata?.name || 'Operator'}
@@ -201,7 +204,9 @@
                 {loadError}
             </div>
         {:else if operator && operator.parameters}
-            <div class="space-y-4">
+            <!-- Dialog.Content is a grid, so min-w-0 is what lets this item shrink below its widest
+                 parameter's min-content width instead of stretching the dialog past its max-width. -->
+            <div class="min-w-0 space-y-4">
                 {#each operator.parameters as param}
                     {@const config = getParameterConfig(param.type)}
                     {@const required = param.required ?? true}

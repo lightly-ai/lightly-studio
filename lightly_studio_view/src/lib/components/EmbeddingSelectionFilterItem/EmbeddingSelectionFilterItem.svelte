@@ -18,26 +18,30 @@
 
     const { setRangeSelectionForCollection } = useGlobalStorage();
 
-    // Instantiate all variants once and pick reactively: this component lives in the
-    // layout, which persists when switching between the images/annotations tabs.
-    const imagesEmbeddingFilter = useEmbeddingFilterForImages(
+    // Instantiate all variants once: this component lives in the layout, which persists
+    // when switching between the images/annotations tabs. collectionIdStore is a Svelte
+    // store (Readable<string>) consumed via get() inside the hooks, so it is not a stale
+    // capture — the svelte-ignore suppresses a false-positive state_referenced_locally warning.
+    // eslint-disable-next-line svelte/no-unused-svelte-ignore
+    // svelte-ignore state_referenced_locally
+    const imagesFilter = useEmbeddingFilterForImages(
         collectionIdStore,
         setRangeSelectionForCollection
     );
-    const videosEmbeddingFilter = useEmbeddingFilterForVideos(
+    // eslint-disable-next-line svelte/no-unused-svelte-ignore
+    // svelte-ignore state_referenced_locally
+    const videosFilter = useEmbeddingFilterForVideos(
         collectionIdStore,
         setRangeSelectionForCollection
     );
-    const annotationsEmbeddingFilter = useEmbeddingFilterForAnnotations(
+    // eslint-disable-next-line svelte/no-unused-svelte-ignore
+    // svelte-ignore state_referenced_locally
+    const annotationsFilter = useEmbeddingFilterForAnnotations(
         collectionIdStore,
         setRangeSelectionForCollection
     );
     const embeddingFilter = $derived(
-        isAnnotations
-            ? annotationsEmbeddingFilter
-            : isVideos
-              ? videosEmbeddingFilter
-              : imagesEmbeddingFilter
+        isAnnotations ? annotationsFilter : isVideos ? videosFilter : imagesFilter
     );
 
     const plotFilterCountStore = $derived(embeddingFilter.effectiveCount);

@@ -48,8 +48,9 @@ make static-checks
 make test
 ```
 
-When updating the code please follow our coding guidelines in [./ai_guidelines](./ai_guidelines).
-AI coding tools will be able to assist.
+When updating the code please follow our coding guidelines in [.agents/skills](./.agents/skills).
+They are [Agent Skills](https://agentskills.io), so Claude Code, Codex and Gemini CLI load the
+relevant one automatically as you work.
 
 ### End-to-End Testing
 
