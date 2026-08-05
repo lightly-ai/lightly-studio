@@ -15,9 +15,9 @@
         type VideoView
     } from '$lib/api/lightly_studio_local';
     import { getVideoURLById, toVideoEvents, type VideoEvent } from '$lib/utils';
-    import VideoSampleMetadata from '../VideoSampleMetadata/VideoSampleMetadata.svelte';
-    import SampleDetailsCaptionSegment from '../SampleDetails/SampleDetailsCaptionsSegment/SampleDetailsCaptionSegment.svelte';
-    import SampleDetailsClassificationSegment from '../SampleDetails/SampleDetailsClassificationSegment/SampleDetailsClassificationSegment.svelte';
+    import VideoSampleMetadata from '$lib/components/VideoSampleMetadata/VideoSampleMetadata.svelte';
+    import SampleDetailsCaptionSegment from '$lib/components/SampleDetails/SampleDetailsCaptionsSegment/SampleDetailsCaptionSegment.svelte';
+    import SampleDetailsClassificationSegment from '$lib/components/SampleDetails/SampleDetailsClassificationSegment/SampleDetailsClassificationSegment.svelte';
     import { createAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import SelectClassDialog from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
     import { useVideoFrames } from '$lib/hooks/useVideoFrames/useVideoFrames';
@@ -34,7 +34,7 @@
     import { routeHelpers } from '$lib/routes';
     import VideoFrameAnnotationItem, {
         type PrerenderedAnnotation
-    } from '../VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
+    } from '$lib/components/VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
 
     type VideoDetailsProps = {
         video: VideoView;
