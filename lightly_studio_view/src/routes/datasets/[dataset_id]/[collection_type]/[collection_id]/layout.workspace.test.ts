@@ -141,6 +141,12 @@ vi.mock('$lib/hooks', () => ({
     useImageAnnotationCounts: vi.fn(() => ({ data: undefined })),
     useImageAnnotationCountsQueryKey: ['imageAnnotationCounts'],
     useNumericMetadataDistribution: vi.fn(() => ({ data: undefined })),
+    useCategoricalMetadataDistribution: vi.fn(() => ({
+        data: undefined,
+        isFetching: false,
+        error: null,
+        refetch: vi.fn()
+    })),
     usePostHog: vi.fn(() => ({ trackEvent: vi.fn() })),
     useTrackSampleInspected: vi.fn()
 }));

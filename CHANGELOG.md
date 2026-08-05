@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Show indexed categorical metadata values in distribution panel
 
 - Export image classification annotations to CSV via Python SDK
 
