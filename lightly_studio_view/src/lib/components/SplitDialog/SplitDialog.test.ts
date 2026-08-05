@@ -36,6 +36,18 @@ vi.mock('$lib/hooks/useCreateSplit/useCreateSplit', () => ({
     useCreateSplit: () => ({ isSubmitting: isSubmittingStore, submit: submitMock })
 }));
 
+let overlapData: { tags: { name: string; count: number }[] };
+
+vi.mock('$lib/hooks/useSelectionTagOverlap/useSelectionTagOverlap.svelte', () => ({
+    useSelectionTagOverlap: () => ({
+        get data() {
+            return overlapData;
+        },
+        isLoading: false,
+        isSuccess: true
+    })
+}));
+
 let imageFilterStore: Writable<Record<string, unknown> | null>;
 let videoFilterStore: Writable<Record<string, unknown> | null>;
 let filteredSampleCountStore: Writable<number>;
@@ -61,17 +73,30 @@ describe('SplitDialog', () => {
         imageFilterStore = writable(null);
         videoFilterStore = writable(null);
         filteredSampleCountStore = writable(1000);
+        overlapData = { tags: [] };
         submitMock.mockResolvedValue(true);
     });
 
-    it('renders the default train/val/test rows with previewed counts', () => {
+    it('renders the default train/val/test rows with previewed sample counts', () => {
         render(SplitDialog);
 
         const names = screen.getAllByTestId('split-name-input') as HTMLInputElement[];
         expect(names.map((input) => input.value)).toEqual(['train', 'val', 'test']);
 
         const previews = screen.getAllByTestId('split-count-preview');
-        expect(previews.map((el) => el.textContent?.trim())).toEqual(['800', '100', '100']);
+        expect(previews.map((el) => el.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
+            '800 samples',
+            '100 samples',
+            '100 samples'
+        ]);
+    });
+
+    it('informs which target splits will be created', () => {
+        render(SplitDialog);
+
+        expect(screen.getByTestId('split-created-info').textContent).toContain(
+            'train, val and test will be created.'
+        );
     });
 
     it('submits the split sizes when valid', async () => {
@@ -82,20 +107,22 @@ describe('SplitDialog', () => {
         expect(submitMock).toHaveBeenCalledWith({
             collectionId: 'test-collection-id',
             sizes: { train: 80, val: 10, test: 10 },
-            filter: null,
-            seed: null
+            filter: null
         });
     });
 
-    it('requires confirmation before overwriting existing split tags', async () => {
+    it('warns and requires confirmation before clearing tags that overlap the selection', async () => {
         tagsStore.set([{ tag_id: 't-train', name: 'train', kind: 'sample' }]);
+        overlapData = { tags: [{ name: 'train', count: 120 }] };
         render(SplitDialog);
 
-        await fireEvent.submit(screen.getByTestId('split-submit').closest('form')!);
+        expect(screen.getByTestId('split-cleared-warning').textContent).toContain(
+            'train (120 samples) will be cleared and reassigned.'
+        );
 
-        // First submit only surfaces the overwrite warning, without calling submit.
+        // First submit only arms the overwrite confirmation, without calling submit.
+        await fireEvent.submit(screen.getByTestId('split-submit').closest('form')!);
         expect(submitMock).not.toHaveBeenCalled();
-        expect(screen.getByTestId('split-overwrite-warning')).toBeInTheDocument();
 
         await fireEvent.submit(screen.getByTestId('split-submit').closest('form')!);
         expect(submitMock).toHaveBeenCalledOnce();

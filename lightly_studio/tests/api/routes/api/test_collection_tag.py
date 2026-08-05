@@ -9,10 +9,11 @@ from sqlmodel import Session, col, select
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,
+    HTTP_STATUS_OK,
 )
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleTagLinkTable
-from lightly_studio.resolvers import collection_resolver
+from lightly_studio.resolvers import collection_resolver, tag_resolver
 from tests.helpers_resolvers import (
     ImageStub,
     create_annotation,
@@ -139,6 +140,144 @@ def test_add_samples_by_filter__wrong_collection_returns_404(
     )
 
     assert response.status_code == HTTP_STATUS_NOT_FOUND
+
+
+def test_selection_overlap__no_filter_uses_whole_collection(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    images = create_images(
+        db_session=db_session,
+        collection_id=collection_id,
+        images=[ImageStub(path=f"s{i}.png") for i in range(3)],
+    )
+    tag = create_tag(session=db_session, collection_id=collection_id, tag_name="train")
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session,
+        tag_id=tag.tag_id,
+        sample_ids=[image.sample_id for image in images[:2]],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/tags/selection-overlap",
+        json={"filter": None},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {"tags": [{"name": "train", "count": 2}]}
+
+
+def test_selection_overlap__with_filter_counts_only_matching(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    wide = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="wide.png", width=1920
+    )
+    narrow = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="narrow.png", width=10
+    )
+    tag = create_tag(session=db_session, collection_id=collection_id, tag_name="train")
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session,
+        tag_id=tag.tag_id,
+        sample_ids=[wide.sample_id, narrow.sample_id],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/tags/selection-overlap",
+        json={"filter": {"filter_type": "image", "width": {"min": 100}}},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    # Only the wide image matches the filter, so the tag overlaps a single sample.
+    assert response.json() == {"tags": [{"name": "train", "count": 1}]}
+
+
+def test_selection_overlap__excludes_tags_with_zero_overlap(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    images = create_images(
+        db_session=db_session,
+        collection_id=collection_id,
+        images=[ImageStub(path="s0.png"), ImageStub(path="s1.png")],
+    )
+    overlapping = create_tag(session=db_session, collection_id=collection_id, tag_name="train")
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=overlapping.tag_id, sample_ids=[images[0].sample_id]
+    )
+    # A tag with no linked samples must not appear in the response.
+    create_tag(session=db_session, collection_id=collection_id, tag_name="unused")
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/tags/selection-overlap",
+        json={"filter": None},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {"tags": [{"name": "train", "count": 1}]}
+
+
+def test_selection_overlap__returns_only_sample_kind_tags(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    image = create_image(session=db_session, collection_id=collection_id, file_path_abs="s.png")
+    sample_tag = create_tag(
+        session=db_session, collection_id=collection_id, tag_name="sample_tag", kind="sample"
+    )
+    annotation_tag = create_tag(
+        session=db_session,
+        collection_id=collection_id,
+        tag_name="annotation_tag",
+        kind="annotation",
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=sample_tag.tag_id, sample_ids=[image.sample_id]
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=annotation_tag.tag_id, sample_ids=[image.sample_id]
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/tags/selection-overlap",
+        json={"filter": None},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {"tags": [{"name": "sample_tag", "count": 1}]}
+
+
+def test_selection_overlap__multiple_tags_ordered_by_name(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    images = create_images(
+        db_session=db_session,
+        collection_id=collection_id,
+        images=[ImageStub(path=f"s{i}.png") for i in range(3)],
+    )
+    tag_val = create_tag(session=db_session, collection_id=collection_id, tag_name="val")
+    tag_train = create_tag(session=db_session, collection_id=collection_id, tag_name="train")
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session,
+        tag_id=tag_train.tag_id,
+        sample_ids=[image.sample_id for image in images],
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=tag_val.tag_id, sample_ids=[images[0].sample_id]
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/tags/selection-overlap",
+        json={"filter": None},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {
+        "tags": [{"name": "train", "count": 3}, {"name": "val", "count": 1}]
+    }
 
 
 def _tagged_sample_ids(session: Session, tag_id: UUID) -> set[UUID]:

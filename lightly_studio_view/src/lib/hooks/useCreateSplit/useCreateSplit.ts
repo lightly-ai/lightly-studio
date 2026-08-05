@@ -21,7 +21,6 @@ interface SubmitParams {
     collectionId: string;
     sizes: SplitCreateBody['sizes'];
     filter: SplitCreateBody['filter'];
-    seed: number | null;
 }
 
 export function useCreateSplit(params: UseCreateSplitParams) {
@@ -29,13 +28,14 @@ export function useCreateSplit(params: UseCreateSplitParams) {
 
     async function submit(submitParams: SubmitParams): Promise<boolean> {
         if (get(_isSubmitting)) return false;
-        const { collectionId, sizes, filter, seed } = submitParams;
+        const { collectionId, sizes, filter } = submitParams;
         _isSubmitting.set(true);
 
         try {
+            // Omitting seed lets the backend pick a random seed for each split.
             const response = await createSplit({
                 path: { collection_id: collectionId },
-                body: { sizes, filter: filter ?? undefined, seed: seed ?? undefined }
+                body: { sizes, filter: filter ?? undefined }
             });
 
             if (response.error || !response.data) {

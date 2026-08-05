@@ -8,6 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Path
 from pydantic import BaseModel, Field
 from sqlmodel import Session, col, select
+from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import (
@@ -83,12 +84,21 @@ def create_split(
     return SplitResultView(splits=splits, seed=result.seed)
 
 
+def build_selected_sample_ids_query(
+    collection_id: UUID, grid_filter: GridFilter | None
+) -> SelectOfScalar[UUID]:
+    """Build the query selecting the sample ids of the current selection.
+
+    Uses the filter when given, otherwise selects the whole collection.
+    """
+    if grid_filter is not None:
+        return grid_filter.build_sample_ids_query(collection_id=collection_id)
+    return select(SampleTable.sample_id).where(col(SampleTable.collection_id) == collection_id)
+
+
 def _resolve_sample_ids(
     session: Session, collection_id: UUID, grid_filter: GridFilter | None
 ) -> list[UUID]:
     """Resolve the input sample ids, using the filter or the whole collection."""
-    if grid_filter is not None:
-        query = grid_filter.build_sample_ids_query(collection_id=collection_id)
-    else:
-        query = select(SampleTable.sample_id).where(col(SampleTable.collection_id) == collection_id)
+    query = build_selected_sample_ids_query(collection_id=collection_id, grid_filter=grid_filter)
     return [sample_id for sample_id in session.exec(query).all() if sample_id is not None]

@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 import sqlmodel
-from sqlalchemy import literal
+from sqlalchemy import func, literal
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
@@ -273,6 +273,33 @@ def get_tags_by_sample(
         assert tag_id is not None
         result.setdefault(sample_id, set()).add(tag_id)
     return result
+
+
+def get_selection_tag_overlap(
+    session: Session,
+    sample_ids_query: SelectOfScalar[UUID],
+) -> list[tuple[str, int]]:
+    """Return the sample-kind tags overlapping a selection, with counts.
+
+    ``sample_ids_query`` must select a single ``sample_id`` column describing the
+    selection. Only ``kind='sample'`` tags that link at least one selected sample
+    are returned; ``count`` is the number of selected samples carrying the tag.
+    Results are ordered by tag name for determinism, computed in a single grouped
+    query with the selection applied as a subquery.
+
+    Returns:
+        A list of ``(tag_name, count)`` tuples ordered by ``tag_name`` ascending.
+    """
+    stmt = (
+        select(TagTable.name, func.count(col(SampleTagLinkTable.sample_id)))
+        .select_from(SampleTagLinkTable)
+        .join(TagTable, col(TagTable.tag_id) == col(SampleTagLinkTable.tag_id))
+        .where(col(SampleTagLinkTable.sample_id).in_(sample_ids_query))
+        .where(col(TagTable.kind) == "sample")
+        .group_by(col(TagTable.name))
+        .order_by(col(TagTable.name).asc())
+    )
+    return [(name, int(count)) for name, count in session.exec(stmt).all()]
 
 
 def get_or_create_sample_tag_by_name(
