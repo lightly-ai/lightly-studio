@@ -4,14 +4,18 @@ import CaptionMatchScore from './CaptionMatchScore.svelte';
 import { CAPTION_SEGMENT_MATCH_SCORE_KEY } from '$lib/constants';
 
 describe('CaptionMatchScore', () => {
-    it('renders the match score of the caption', () => {
+    it('renders the match score of the caption with a band label', () => {
         render(CaptionMatchScore, {
             props: {
                 metadataDict: { data: { [CAPTION_SEGMENT_MATCH_SCORE_KEY]: 0.4567 } }
             }
         });
 
-        expect(screen.getByTestId('caption-match-score')).toHaveTextContent('Match 0.457');
+        const badge = screen.getByTestId('caption-match-score');
+        expect(badge).toHaveTextContent('Match 0.457');
+        expect(badge).toHaveTextContent('Med');
+        expect(badge).toHaveAttribute('data-match-band', 'medium');
+        expect(screen.getByTestId('caption-match-score-dot')).toBeInTheDocument();
     });
 
     it('renders nothing without a match score', () => {

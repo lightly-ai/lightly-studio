@@ -154,6 +154,30 @@ describe('VideoPlayer', () => {
         expect(getByText('Jump')).toBeTruthy();
     });
 
+    it('should render a captions track when captionEvents are given', () => {
+        const { getAllByTestId, getByText } = render(VideoPlayer, {
+            props: {
+                src: 'test-video.mp4',
+                durationS: 10,
+                captionEvents: [
+                    {
+                        id: 'c1',
+                        annotationCollectionId: '',
+                        label: '0.20 · A red car',
+                        startTimeS: 1,
+                        endTimeS: 3,
+                        color: 'hsla(24, 80%, 50%, 0.7)',
+                        contrastColor: 'rgba(255, 255, 255, 0.95)'
+                    }
+                ]
+            }
+        });
+
+        expect(getAllByTestId('video-event-timeline')).toHaveLength(1);
+        expect(getByText('Captions')).toBeTruthy();
+        expect(getByText('0.20 · A red car')).toBeTruthy();
+    });
+
     it('shows the event bar with an add button in edit mode even without events', () => {
         const { getByTestId } = render(VideoPlayer, {
             props: {

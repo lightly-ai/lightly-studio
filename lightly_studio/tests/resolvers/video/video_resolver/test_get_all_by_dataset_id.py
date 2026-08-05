@@ -355,6 +355,105 @@ def test_get_all_by_collection_id__with_metadata_filter(
     assert sample.sample.metadata_dict.data["rotation"] == 90
 
 
+def test_get_all_by_collection_id__sort_by_min_caption_match_score(db_session: Session) -> None:
+    from lightly_studio.core.dataset_query.order_by import OrderByMetadataField
+    from lightly_studio.dataset.caption_segment_matching import MIN_CAPTION_SEGMENT_MATCH_SCORE_KEY
+
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection_id = collection.collection_id
+
+    high = create_video_with_frames(
+        session=db_session,
+        collection_id=collection_id,
+        video=VideoStub(path="/path/to/high.mp4"),
+    )
+    low = create_video_with_frames(
+        session=db_session,
+        collection_id=collection_id,
+        video=VideoStub(path="/path/to/low.mp4"),
+    )
+    mid = create_video_with_frames(
+        session=db_session,
+        collection_id=collection_id,
+        video=VideoStub(path="/path/to/mid.mp4"),
+    )
+
+    metadata_resolver.set_value_for_sample(
+        session=db_session,
+        sample_id=high.video_sample_id,
+        key=MIN_CAPTION_SEGMENT_MATCH_SCORE_KEY,
+        value=0.9,
+    )
+    metadata_resolver.set_value_for_sample(
+        session=db_session,
+        sample_id=low.video_sample_id,
+        key=MIN_CAPTION_SEGMENT_MATCH_SCORE_KEY,
+        value=0.1,
+    )
+    metadata_resolver.set_value_for_sample(
+        session=db_session,
+        sample_id=mid.video_sample_id,
+        key=MIN_CAPTION_SEGMENT_MATCH_SCORE_KEY,
+        value=0.4,
+    )
+
+    result = video_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        order_by=[OrderByMetadataField(MIN_CAPTION_SEGMENT_MATCH_SCORE_KEY, cast_to_float=True)],
+    )
+
+    assert [sample.file_name for sample in result.samples] == ["low.mp4", "mid.mp4", "high.mp4"]
+    assert result.samples[0].order_value == pytest.approx(0.1)
+    assert result.samples[1].order_value == pytest.approx(0.4)
+    assert result.samples[2].order_value == pytest.approx(0.9)
+
+
+def test_get_all_by_collection_id__filter_low_caption_match(db_session: Session) -> None:
+    from lightly_studio.dataset.caption_segment_matching import MIN_CAPTION_SEGMENT_MATCH_SCORE_KEY
+
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection_id = collection.collection_id
+
+    high = create_video_with_frames(
+        session=db_session,
+        collection_id=collection_id,
+        video=VideoStub(path="/path/to/high.mp4"),
+    )
+    low = create_video_with_frames(
+        session=db_session,
+        collection_id=collection_id,
+        video=VideoStub(path="/path/to/low.mp4"),
+    )
+
+    metadata_resolver.set_value_for_sample(
+        session=db_session,
+        sample_id=high.video_sample_id,
+        key=MIN_CAPTION_SEGMENT_MATCH_SCORE_KEY,
+        value=0.9,
+    )
+    metadata_resolver.set_value_for_sample(
+        session=db_session,
+        sample_id=low.video_sample_id,
+        key=MIN_CAPTION_SEGMENT_MATCH_SCORE_KEY,
+        value=0.2,
+    )
+
+    result = video_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        filters=VideoFilter(
+            sample_filter=SampleFilter(
+                metadata_filters=[
+                    MetadataFilter(key=MIN_CAPTION_SEGMENT_MATCH_SCORE_KEY, op="<", value=0.35)
+                ]
+            ),
+        ),
+    )
+
+    assert [sample.file_name for sample in result.samples] == ["low.mp4"]
+
+
 def test_get_all_by_collection_id__with_fps_filter(
     db_session: Session,
 ) -> None:

@@ -13,6 +13,7 @@ from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.frame import build_frame_view
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.core.dataset_query.order_by import OrderByExpression, get_order_value
 from lightly_studio.database import db_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.sample import SampleTable, SampleView
@@ -28,6 +29,40 @@ from lightly_studio.resolvers.similarity_utils import (
     get_distance_expression,
 )
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
+
+
+def _coerce_order_value(value: object) -> float | None:
+    """Convert a raw SQL sort value to a float suitable for ``VideoView.order_value``."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
+
+
+def _apply_order_by(
+    samples_query: Any,
+    order_by: list[OrderByExpression] | None,
+) -> Any:
+    """Apply dataset sort expressions with a file_path_abs tiebreaker.
+
+    When ``order_by`` is set, the primary sort value is appended to the SELECT via
+    ``apply_with_order_value`` so callers can read it with ``get_order_value``.
+    """
+    if not order_by:
+        return samples_query.order_by(col(VideoTable.file_path_abs).asc())
+
+    # Primary expression contributes joins, ORDER BY, and a selected sort value.
+    ordered = order_by[0].apply_with_order_value(samples_query)
+    for expr in order_by[1:]:
+        ordered = expr.apply_joins(ordered)
+        ordered = ordered.order_by(expr.to_column_element())
+    tiebreaker = (
+        col(VideoTable.file_path_abs).asc()
+        if order_by[0].ascending
+        else col(VideoTable.file_path_abs).desc()
+    )
+    return ordered.order_by(tiebreaker)
 
 
 def _get_load_options() -> list[LoaderOption]:
@@ -84,6 +119,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
     sample_ids: list[UUID] | None = None,
     filters: VideoFilter | None = None,
     text_embedding: list[float] | None = None,
+    order_by: list[OrderByExpression] | None = None,
 ) -> VideoViewsWithCount:
     """Retrieve samples for a specific collection with optional filtering."""
     embedding_model_id, distance_expr = get_distance_expression(
@@ -108,6 +144,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
         pagination=pagination,
         sample_ids=sample_ids,
         filters=filters,
+        order_by=order_by,
     )
 
 
@@ -195,12 +232,13 @@ def _get_all_with_similarity(  # noqa: PLR0913
     )
 
 
-def _get_all_without_similarity(
+def _get_all_without_similarity(  # noqa: PLR0913
     session: Session,
     collection_id: UUID,
     pagination: Paginated | None,
     sample_ids: list[UUID] | None,
     filters: VideoFilter | None,
+    order_by: list[OrderByExpression] | None,
 ) -> VideoViewsWithCount:
     """Get videos without similarity search - returns (VideoTable, VideoFrameTable) tuples."""
     load_options = _get_load_options()
@@ -243,18 +281,30 @@ def _get_all_without_similarity(
         samples_query = filters.apply(samples_query)
         total_count_query = filters.apply(total_count_query)
 
-    samples_query = samples_query.order_by(col(VideoTable.file_path_abs).asc())
+    samples_query = _apply_order_by(samples_query, order_by)
 
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
 
     total_count = session.exec(total_count_query).one()
-    results = session.exec(samples_query).all()
 
-    video_views = [
-        convert_video_table_to_view(video=video, first_frame=first_frame)
-        for video, first_frame in results
-    ]
+    if order_by:
+        # Multi-column rows: VideoTable, VideoFrameTable, then labeled order_value.
+        rows = session.execute(samples_query).all()
+        video_views = [
+            convert_video_table_to_view(
+                video=row[0],
+                first_frame=row[1],
+                order_value=_coerce_order_value(get_order_value(row)),
+            )
+            for row in rows
+        ]
+    else:
+        results = session.exec(samples_query).all()
+        video_views = [
+            convert_video_table_to_view(video=video, first_frame=first_frame)
+            for video, first_frame in results
+        ]
 
     return VideoViewsWithCount(
         samples=video_views,
@@ -281,6 +331,7 @@ def convert_video_table_to_view(
     video: VideoTable,
     first_frame: VideoFrameTable | None,
     similarity_score: float | None = None,
+    order_value: float | None = None,
 ) -> VideoView:
     """Convert VideoTable to VideoView with only the first frame."""
     first_frame_view = None
@@ -298,4 +349,5 @@ def convert_video_table_to_view(
         sample=SampleView.model_validate(video.sample),
         frame=first_frame_view,
         similarity_score=similarity_score,
+        order_value=order_value,
     )

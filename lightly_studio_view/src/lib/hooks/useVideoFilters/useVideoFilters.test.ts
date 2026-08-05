@@ -131,6 +131,47 @@ describe('useVideoFilters', () => {
                 { key: 'temp', value: 10, op: '>=' }
             ]);
         });
+
+        it('adds a Low caption match metadata filter when low_caption_match is set', () => {
+            const { videoFilter, updateFilterParams } = useVideoFilters();
+
+            updateFilterParams({
+                collection_id: 'coll-1',
+                filters: { low_caption_match: true }
+            });
+
+            expect(get(videoFilter)?.sample_filter?.metadata_filters).toEqual([
+                {
+                    key: 'min_caption_segment_match_score',
+                    op: '<',
+                    value: 0.35
+                }
+            ]);
+        });
+    });
+
+    describe('updateSortBy', () => {
+        it('stores video sort expressions', () => {
+            const { videoSortBy, updateSortBy } = useVideoFilters();
+
+            updateSortBy([
+                {
+                    source: 'metadata',
+                    field_name: 'min_caption_segment_match_score',
+                    direction: 'asc',
+                    is_numeric: true
+                }
+            ]);
+
+            expect(get(videoSortBy)).toEqual([
+                {
+                    source: 'metadata',
+                    field_name: 'min_caption_segment_match_score',
+                    direction: 'asc',
+                    is_numeric: true
+                }
+            ]);
+        });
     });
 
     describe('updateSampleIds', () => {

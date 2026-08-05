@@ -77,12 +77,16 @@ def get_adjacent_samples(
                 "Invalid filter provided. Expected VideoFilter"
                 f" for sample type '{request.sample_type.value}'."
             )
+        order_by = (
+            [sort_expr_to_order_by(expr) for expr in request.sort_by] if request.sort_by else None
+        )
         return video_resolver.get_adjacent_videos(
             session=session,
             sample_id=sample_id,
             collection_id=request.collection_id,
             filters=request.filters,
             text_embedding=request.text_embedding,
+            order_by=order_by,
         )
     if request.sample_type == SampleType.VIDEO_FRAME:
         if not isinstance(request.filters, VideoFrameAdjacentFilter):

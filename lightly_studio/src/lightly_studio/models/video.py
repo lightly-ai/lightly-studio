@@ -64,6 +64,7 @@ class VideoView(SQLModel):
     sample: SampleView
     frame: Optional["FrameView"] = None
     similarity_score: Optional[float] = None
+    order_value: Optional[float] = None
 
 
 class VideoViewsWithCount(BaseModel):

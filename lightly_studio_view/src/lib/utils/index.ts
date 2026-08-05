@@ -27,6 +27,20 @@ export {
     type VideoEvent,
     type LaneAssignedEvent
 } from './videoEvents/videoEvents';
+export {
+    MATCH_SCORE_LOW_MAX,
+    MATCH_SCORE_HIGH_MIN,
+    getCaptionMatchScore,
+    getMatchScoreBand,
+    getMatchScoreTimelineColors,
+    filterCaptionsByMatchBand,
+    sortCaptionsByMatchScore,
+    triageCaptions,
+    findActiveCaptionAtTime,
+    toCaptionVideoEvents,
+    type MatchScoreBand,
+    type MatchScoreFilter
+} from './captionMatchScore/captionMatchScore';
 export { getURL } from './getURL/getURL';
 export { fetchCollection } from './fetchCollection';
 export { fetchCollectionHierarchy } from './fetchCollectionHierarchy';

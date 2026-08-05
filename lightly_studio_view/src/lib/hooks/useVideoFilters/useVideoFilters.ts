@@ -4,9 +4,13 @@ import type {
     AnnotationsFilter,
     SampleFilter,
     VideoFilter,
-    VideoFieldsBoundsView
+    VideoFieldsBoundsView,
+    SortFieldExpr
 } from '$lib/api/lightly_studio_local/types.gen';
 import type { CategoricalMetadataValues } from '$lib/services/types';
+import { MIN_CAPTION_SEGMENT_MATCH_SCORE_KEY } from '$lib/constants';
+import { MATCH_SCORE_LOW_MAX } from '$lib/utils/captionMatchScore/captionMatchScore';
+
 type MetadataValues = Record<string, { min: number; max: number }>;
 
 export type VideoFilterParams = {
@@ -17,11 +21,16 @@ export type VideoFilterParams = {
         sample_ids?: string[];
         metadata_values?: MetadataValues;
         categorical_metadata_values?: CategoricalMetadataValues;
+        /** When true, keep only videos whose worst caption match is Low. */
+        low_caption_match?: boolean;
     };
     video_bounds?: VideoFieldsBoundsView | null;
 };
 
+export type VideoSortExpr = SortFieldExpr;
+
 const filterParams = writable<VideoFilterParams | null>(null);
+const videoSortBy = writable<VideoSortExpr[] | null>(null);
 
 export const buildVideoFilter = ($filterParams: VideoFilterParams | null): VideoFilter | null => {
     if (!$filterParams?.collection_id) {
@@ -71,17 +80,21 @@ export const buildVideoFilter = ($filterParams: VideoFilterParams | null): Video
         sampleFilter.tag_ids = tagIds;
     }
 
-    if (
-        $filterParams.filters?.metadata_values ||
-        $filterParams.filters?.categorical_metadata_values
-    ) {
-        const metadataFilters = createMetadataFilters(
-            $filterParams.filters.metadata_values ?? {},
-            $filterParams.filters.categorical_metadata_values ?? {}
-        );
-        if (metadataFilters.length > 0) {
-            sampleFilter.metadata_filters = metadataFilters;
-        }
+    const metadataFilters = createMetadataFilters(
+        $filterParams.filters?.metadata_values ?? {},
+        $filterParams.filters?.categorical_metadata_values ?? {}
+    );
+
+    if ($filterParams.filters?.low_caption_match) {
+        metadataFilters.push({
+            key: MIN_CAPTION_SEGMENT_MATCH_SCORE_KEY,
+            op: '<',
+            value: MATCH_SCORE_LOW_MAX
+        });
+    }
+
+    if (metadataFilters.length > 0) {
+        sampleFilter.metadata_filters = metadataFilters;
     }
 
     if (Object.keys(sampleFilter).length > 0) {
@@ -123,10 +136,31 @@ export const useVideoFilters = () => {
         filterParams.set(newParams);
     };
 
+    const updateSortBy = (sort: VideoSortExpr[] | null) => {
+        videoSortBy.set(sort);
+    };
+
+    const setLowCaptionMatch = (enabled: boolean) => {
+        const params = get(filterParams);
+        if (!params || !params.collection_id) {
+            return;
+        }
+        filterParams.set({
+            ...params,
+            filters: {
+                ...params.filters,
+                low_caption_match: enabled || undefined
+            }
+        });
+    };
+
     return {
         filterParams,
         videoFilter,
+        videoSortBy,
         updateFilterParams,
-        updateSampleIds
+        updateSampleIds,
+        updateSortBy,
+        setLowCaptionMatch
     };
 };

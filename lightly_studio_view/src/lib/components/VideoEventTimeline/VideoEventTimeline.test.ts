@@ -58,6 +58,22 @@ describe('VideoEventTimeline', () => {
         expect(onSeek).toHaveBeenCalledWith(7);
     });
 
+    it('calls onSelectEvent with the clicked event', async () => {
+        const onSelectEvent = vi.fn();
+        const { getByText } = render(VideoEventTimeline, {
+            props: {
+                events: [makeEvent({ id: 'picked', label: 'Clip', startTimeS: 1, endTimeS: 2 })],
+                durationS: 10,
+                onSelectEvent
+            }
+        });
+
+        await fireEvent.click(getByText('Clip'));
+        expect(onSelectEvent).toHaveBeenCalledWith(
+            expect.objectContaining({ id: 'picked', label: 'Clip', startTimeS: 1, endTimeS: 2 })
+        );
+    });
+
     it('shows a placeholder when there are no events', () => {
         const { getByText, queryAllByRole } = render(VideoEventTimeline, {
             props: { events: [], durationS: 10 }

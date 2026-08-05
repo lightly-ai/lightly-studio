@@ -72,7 +72,7 @@ class TestOrderByMetadataField:
 
     def test_apply_joins__metadata_join(self) -> None:
         """Test that apply_joins adds the metadata outer join."""
-        query = select(ImageTable)
+        query = select(ImageTable).join(ImageTable.sample)
         order_by = OrderByMetadataField("brightness", cast_to_float=False)
 
         returned_query = order_by.apply_joins(query)
@@ -81,10 +81,11 @@ class TestOrderByMetadataField:
             returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
         ).lower()
         assert "left outer join metadata" in sql
+        assert "sample.sample_id" in sql
 
     def test_apply_with_order_value(self) -> None:
         """Test that apply_with_order_value selects the labeled JSON extract expression."""
-        query = select(ImageTable)
+        query = select(ImageTable).join(ImageTable.sample)
         order_by = OrderByMetadataField("score", cast_to_float=True)
 
         returned_query = order_by.apply_with_order_value(query)
@@ -98,7 +99,7 @@ class TestOrderByMetadataField:
 
     def test_apply__default_ascending(self) -> None:
         """Test that default ordering is ascending."""
-        query = select(ImageTable)
+        query = select(ImageTable).join(ImageTable.sample)
         order_by = OrderByMetadataField("brightness", cast_to_float=False)
 
         returned_query = order_by.apply(query)
@@ -110,7 +111,7 @@ class TestOrderByMetadataField:
 
     def test_apply__descending(self) -> None:
         """Test descending ordering via desc() method."""
-        query = select(ImageTable)
+        query = select(ImageTable).join(ImageTable.sample)
         order_by = OrderByMetadataField("brightness", cast_to_float=False).desc()
 
         returned_query = order_by.apply(query)
@@ -122,7 +123,7 @@ class TestOrderByMetadataField:
 
     def test_apply__desc_then_asc(self) -> None:
         """Test that desc().asc() returns to ascending order."""
-        query = select(ImageTable)
+        query = select(ImageTable).join(ImageTable.sample)
         order_by = OrderByMetadataField("brightness", cast_to_float=False).desc().asc()
 
         returned_query = order_by.apply(query)
@@ -134,7 +135,7 @@ class TestOrderByMetadataField:
 
     def test_apply__cast_to_float(self) -> None:
         """Test that cast_to_float produces a CAST expression in the ORDER BY clause."""
-        query = select(ImageTable)
+        query = select(ImageTable).join(ImageTable.sample)
         order_by = OrderByMetadataField("score", cast_to_float=True)
 
         returned_query = order_by.apply(query)

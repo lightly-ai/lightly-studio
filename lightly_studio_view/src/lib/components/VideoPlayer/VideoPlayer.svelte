@@ -64,6 +64,12 @@
         events?: VideoEvent[];
 
         /**
+         * Timed caption segments rendered as a second score-colored track.
+         * When empty, the captions track is hidden.
+         */
+        captionEvents?: VideoEvent[];
+
+        /**
          * Total video duration in seconds, used to position the event bars and
          * the scrubber. Falls back to the element's own duration once metadata
          * loads.
@@ -81,6 +87,9 @@
 
         /** Called when the user deletes an event. */
         onEventDelete?: (event: VideoEvent) => void;
+
+        /** Called when a caption timeline bar is clicked. */
+        onCaptionEventSelect?: (event: VideoEvent) => void;
     }
 
     let {
@@ -90,11 +99,13 @@
         hoverClass = 'outline outline-2 outline-blue-500',
         startTimeS = 0,
         events = [],
+        captionEvents = [],
         durationS,
         editableEvents = false,
         onEventResize,
         onEventAdd,
-        onEventDelete
+        onEventDelete,
+        onCaptionEventSelect
     }: VideoPlayerProps = $props();
 
     const defaultVideoProps: HTMLVideoAttributes = {
@@ -139,6 +150,7 @@
     // and the event bar, so both share the same coordinate system.
     const effectiveDurationS = $derived(durationS ?? playback.durationS);
     const showEvents = $derived(events.length > 0);
+    const showCaptionEvents = $derived(captionEvents.length > 0);
 
     function handleVideoError() {
         const errorCode = videoEl?.error?.code;
@@ -230,6 +242,18 @@
                 onAddEvent={onEventAdd}
                 onDelete={onEventDelete}
                 showHeader={false}
+            />
+        {/if}
+        {#if showCaptionEvents}
+            <VideoEventTimeline
+                class="w-full"
+                events={captionEvents}
+                durationS={effectiveDurationS}
+                currentTimeS={playback.currentTimeS}
+                onSeek={playback.seekTo}
+                onSelectEvent={onCaptionEventSelect}
+                title="Captions"
+                showHeader={true}
             />
         {/if}
     </VideoControls>

@@ -14,7 +14,7 @@
         type SampleView,
         type VideoView
     } from '$lib/api/lightly_studio_local';
-    import { getVideoURLById, toVideoEvents, type VideoEvent } from '$lib/utils';
+    import { getVideoURLById, toCaptionVideoEvents, toVideoEvents, type VideoEvent } from '$lib/utils';
     import VideoSampleMetadata from '../VideoSampleMetadata/VideoSampleMetadata.svelte';
     import SampleDetailsCaptionSegment from '../SampleDetails/SampleDetailsCaptionsSegment/SampleDetailsCaptionSegment.svelte';
     import SelectClassDialog from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
@@ -44,10 +44,18 @@
 
     let videoEl: HTMLVideoElement | null = $state(null);
     let frameRequestId: number | null = $state(null);
+    let currentTimeS = $state(0);
+    let selectedCaptionId = $state<string | null>(null);
 
     // Imported events: classification annotations on the video carrying a time span.
     const videoEvents = $derived(toVideoEvents(video.sample.annotations ?? []));
-
+    const captionEvents = $derived(toCaptionVideoEvents(video.sample.captions ?? []));
+    const captions = $derived(video.sample.captions ?? []);
+    const loopCaption = $derived(
+        selectedCaptionId
+            ? (captions.find((caption) => caption.sample_id === selectedCaptionId) ?? null)
+            : null
+    );
     // Reuse the global "Edit annotations" toggle to enable event editing.
     const { isEditingMode } = useGlobalStorage();
 
@@ -130,6 +138,59 @@
             console.error('Error deleting event:', error);
         }
     }
+
+    function seekVideoTo(timeS: number) {
+        if (!videoEl) return;
+        videoEl.currentTime = timeS;
+        currentTimeS = timeS;
+    }
+
+    function selectCaptionForReview(captionId: string) {
+        const caption = captions.find((item) => item.sample_id === captionId);
+        selectedCaptionId = captionId;
+        const span = caption?.temporal_span_details;
+        if (span) {
+            seekVideoTo(span.start_time_s);
+            void videoEl?.play();
+        }
+    }
+
+    function handleCaptionEventSelect(event: VideoEvent) {
+        selectCaptionForReview(event.id);
+    }
+
+    // Keep the side-panel caption list in sync with the playhead.
+    $effect(() => {
+        const el = videoEl;
+        if (!el) return;
+
+        const syncTime = () => {
+            currentTimeS = el.currentTime;
+        };
+        syncTime();
+        el.addEventListener('timeupdate', syncTime);
+        el.addEventListener('seeked', syncTime);
+        return () => {
+            el.removeEventListener('timeupdate', syncTime);
+            el.removeEventListener('seeked', syncTime);
+        };
+    });
+
+    // Loop the selected caption segment during review.
+    $effect(() => {
+        const el = videoEl;
+        if (!el) return;
+        const span = loopCaption?.temporal_span_details;
+        if (!span) return;
+
+        const loopSegment = () => {
+            if (el.currentTime >= span.end_time_s) {
+                el.currentTime = span.start_time_s;
+            }
+        };
+        el.addEventListener('timeupdate', loopSegment);
+        return () => el.removeEventListener('timeupdate', loopSegment);
+    });
 
     const {
         currentFrame,
@@ -264,11 +325,13 @@
                         bind:videoEl
                         {startTimeS}
                         events={videoEvents}
+                        captionEvents={captionEvents}
                         durationS={video.duration_s ?? undefined}
                         editableEvents={$isEditingMode}
                         onEventResize={handleEventResize}
                         onEventAdd={handleEventAdd}
                         onEventDelete={handleEventDelete}
+                        onCaptionEventSelect={handleCaptionEventSelect}
                         videoProps={{
                             muted: true,
                             class: 'object-contain',
@@ -314,8 +377,12 @@
                 {#if video?.sample?.sample_id}
                     <SampleDetailsCaptionSegment
                         refetch={onVideoUpdate}
-                        captions={video?.sample?.captions ?? []}
-                        sampleId={video?.sample?.sample_id}
+                        captions={captions}
+                        sampleId={video.sample.sample_id}
+                        videoId={video.sample_id}
+                        {currentTimeS}
+                        {selectedCaptionId}
+                        onSelectCaption={selectCaptionForReview}
                     />
                 {/if}
                 {#if $currentFrame}

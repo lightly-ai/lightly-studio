@@ -10,9 +10,10 @@
     interface Props {
         collectionId: string;
         datasetId: string;
+        mediaType?: 'image' | 'video';
     }
 
-    const { collectionId, datasetId }: Props = $props();
+    const { collectionId, datasetId, mediaType = 'image' }: Props = $props();
 
     const { textEmbedding } = useGlobalStorage();
     const { trackEvent } = usePostHog();
@@ -26,7 +27,7 @@
         handleFieldClick,
         toggleDirection,
         dispose
-    } = useOrderBy({ collectionId: () => collectionId, datasetId });
+    } = useOrderBy({ collectionId: () => collectionId, datasetId, mediaType });
 
     $effect(() => {
         return () => dispose();

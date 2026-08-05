@@ -1,6 +1,7 @@
 import { derived, get, type Readable } from 'svelte/store';
 import { SortDirection } from '$lib/api/lightly_studio_local';
 import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
 import { usePostHog } from '$lib/hooks';
 import {
     formatEvaluationMetricLabel,
@@ -13,6 +14,7 @@ import type { SortExpr } from '$lib/hooks/useImagesInfinite/types';
 interface UseOrderByParams {
     collectionId: () => string;
     datasetId: string;
+    mediaType?: 'image' | 'video';
 }
 
 interface UseOrderByReturn {
@@ -55,52 +57,56 @@ function sortExprAnalytics(expr: SortExpr): { sort_source: string; field_name: s
     };
 }
 
-export function useOrderBy({ collectionId, datasetId }: UseOrderByParams): UseOrderByReturn {
-    const { imageSortBy, updateSortBy } = useImageFilters();
-    const { allSortFields, dispose } = useSortFields({ datasetId });
+export function useOrderBy({
+    collectionId,
+    datasetId,
+    mediaType = 'image'
+}: UseOrderByParams): UseOrderByReturn {
+    const { imageSortBy, updateSortBy: updateImageSortBy } = useImageFilters();
+    const { videoSortBy, updateSortBy: updateVideoSortBy } = useVideoFilters();
+    const sortBy = mediaType === 'video' ? videoSortBy : imageSortBy;
+    const updateSortBy = mediaType === 'video' ? updateVideoSortBy : updateImageSortBy;
+    const { allSortFields, dispose } = useSortFields({ datasetId, mediaType });
     const { trackEvent } = usePostHog();
 
     const selectedDirection = derived(
-        imageSortBy,
-        ($imageSortBy) => $imageSortBy?.[0]?.direction ?? SortDirection.ASC
+        sortBy,
+        ($sortBy) => $sortBy?.[0]?.direction ?? SortDirection.ASC
     );
 
-    const selectedLabel = derived(
-        [imageSortBy, allSortFields],
-        ([$imageSortBy, $allSortFields]) => {
-            const current = $imageSortBy?.[0];
-            if (!current) return null;
-            if (current.source === 'evaluation_metric') {
-                return (
-                    $allSortFields.find(
-                        (field) =>
-                            field.source === 'evaluation_metric' &&
-                            field.evaluation_run_name === current.evaluation_run_name &&
-                            field.metric_name === current.metric_name
-                    )?.label ??
-                    formatEvaluationMetricLabel(current.evaluation_run_name, current.metric_name)
-                );
-            }
+    const selectedLabel = derived([sortBy, allSortFields], ([$sortBy, $allSortFields]) => {
+        const current = $sortBy?.[0];
+        if (!current) return null;
+        if (current.source === 'evaluation_metric') {
             return (
-                $allSortFields
-                    .filter((f): f is ImageSortField => f.source !== 'evaluation_metric')
-                    .find((f) => f.source === current.source && f.value === current.field_name)
-                    ?.label ?? null
+                $allSortFields.find(
+                    (field) =>
+                        field.source === 'evaluation_metric' &&
+                        field.evaluation_run_name === current.evaluation_run_name &&
+                        field.metric_name === current.metric_name
+                )?.label ??
+                formatEvaluationMetricLabel(current.evaluation_run_name, current.metric_name)
             );
         }
-    );
+        return (
+            $allSortFields
+                .filter((f): f is ImageSortField => f.source !== 'evaluation_metric')
+                .find((f) => f.source === current.source && f.value === current.field_name)
+                ?.label ?? null
+        );
+    });
 
     // Returns a checker function so the template can call $isFieldSelected(field)
-    // and reactively update when imageSortBy changes.
+    // and reactively update when sortBy changes.
     const isFieldSelected = derived(
-        imageSortBy,
-        ($imageSortBy) =>
+        sortBy,
+        ($sortBy) =>
             (field: SortField): boolean =>
-                checkIsFieldSelected(field, $imageSortBy?.[0])
+                checkIsFieldSelected(field, $sortBy?.[0])
     );
 
     function handleFieldClick(field: SortField) {
-        const current = get(imageSortBy)?.[0];
+        const current = get(sortBy)?.[0];
         if (checkIsFieldSelected(field, current)) {
             updateSortBy(null);
             return;
@@ -131,7 +137,7 @@ export function useOrderBy({ collectionId, datasetId }: UseOrderByParams): UseOr
     }
 
     function toggleDirection() {
-        const current = get(imageSortBy)?.[0];
+        const current = get(sortBy)?.[0];
         if (!current) return;
         const direction =
             get(selectedDirection) === SortDirection.ASC ? SortDirection.DESC : SortDirection.ASC;

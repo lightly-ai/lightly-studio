@@ -2,7 +2,11 @@ import { getAllVideosInfiniteOptions } from '$lib/api/lightly_studio_local/@tans
 
 import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
 import { writable } from 'svelte/store';
-import type { VideoFilter, VideoView } from '$lib/api/lightly_studio_local/types.gen';
+import type {
+    ReadVideosRequest,
+    VideoFilter,
+    VideoView
+} from '$lib/api/lightly_studio_local/types.gen';
 import { GRID_PAGE_SIZE } from '$lib/constants';
 
 export const useVideos = (
@@ -10,26 +14,27 @@ export const useVideos = (
         collection_id: string;
         filter: VideoFilter;
         text_embedding?: Array<number>;
+        sort_by?: ReadVideosRequest['sort_by'];
     }
 ) => {
     const query = createInfiniteQuery(() => {
-        const { collection_id, filter, text_embedding } = getParams();
+        const { collection_id, filter, text_embedding, sort_by } = getParams();
         return {
             ...getAllVideosInfiniteOptions({
                 path: { collection_id },
                 query: { limit: GRID_PAGE_SIZE },
-                body: { filter, text_embedding }
+                body: { filter, text_embedding, sort_by: sort_by ?? undefined }
             }),
             getNextPageParam: (lastPage) => lastPage.nextCursor || undefined
         };
     });
     const client = useQueryClient();
     const refresh = () => {
-        const { collection_id, filter, text_embedding } = getParams();
+        const { collection_id, filter, text_embedding, sort_by } = getParams();
         const options = getAllVideosInfiniteOptions({
             path: { collection_id },
             query: { limit: GRID_PAGE_SIZE },
-            body: { filter, text_embedding }
+            body: { filter, text_embedding, sort_by: sort_by ?? undefined }
         });
         client.invalidateQueries({ queryKey: options.queryKey });
     };

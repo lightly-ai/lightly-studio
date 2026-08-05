@@ -21,6 +21,8 @@ export type SortField = ImageSortField | EvalSortField;
 
 interface UseSortFieldsParams {
     datasetId: string;
+    /** When `video`, only metadata fields are exposed (no image/eval fields). */
+    mediaType?: 'image' | 'video';
 }
 
 interface UseSortFieldsReturn {
@@ -35,6 +37,22 @@ export const IMAGE_SORT_FIELDS: ImageSortField[] = [
     { source: 'image', value: 'created_at', label: 'created at' },
     { source: 'image', value: 'width', label: 'width' },
     { source: 'image', value: 'height', label: 'height' }
+];
+
+/** Always-available video triage sort (also appears via metadata info when present). */
+export const VIDEO_CAPTION_QUALITY_SORT_FIELDS: ImageSortField[] = [
+    {
+        source: 'metadata',
+        value: 'min_caption_segment_match_score',
+        label: 'min caption match',
+        is_numeric: true
+    },
+    {
+        source: 'metadata',
+        value: 'avg_caption_segment_match_score',
+        label: 'avg caption match',
+        is_numeric: true
+    }
 ];
 
 export function formatEvaluationMetricLabel(evaluationRunName: string, metricName: string): string {
@@ -54,7 +72,10 @@ function mapRunsToEvalFields(runs: EvaluationRunMetricsInfoView[]): EvalSortFiel
     );
 }
 
-export function useSortFields({ datasetId }: UseSortFieldsParams): UseSortFieldsReturn {
+export function useSortFields({
+    datasetId,
+    mediaType = 'image'
+}: UseSortFieldsParams): UseSortFieldsReturn {
     const { metadataInfo } = useMetadataFilters();
     const metricsInfo = useEvaluationSampleMetricsInfo({ datasetId });
 
@@ -85,11 +106,16 @@ export function useSortFields({ datasetId }: UseSortFieldsParams): UseSortFields
 
     const allSortFields = derived(
         [metadataSortFields, evalSortFields],
-        ([$metadataSortFields, $evalSortFields]) => [
-            ...IMAGE_SORT_FIELDS,
-            ...$metadataSortFields,
-            ...$evalSortFields
-        ]
+        ([$metadataSortFields, $evalSortFields]) => {
+            if (mediaType === 'video') {
+                const metadataNames = new Set($metadataSortFields.map((field) => field.value));
+                const captionFields = VIDEO_CAPTION_QUALITY_SORT_FIELDS.filter(
+                    (field) => !metadataNames.has(field.value)
+                );
+                return [...captionFields, ...$metadataSortFields];
+            }
+            return [...IMAGE_SORT_FIELDS, ...$metadataSortFields, ...$evalSortFields];
+        }
     );
 
     return { allSortFields, dispose: disposeEffect };

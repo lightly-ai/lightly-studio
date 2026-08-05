@@ -13,4 +13,8 @@ describe('getSimilarityColor', () => {
         expect(getSimilarityColor(-0.5)).toBe('hsl(0, 80%, 50%)');
         expect(getSimilarityColor(1.5)).toBe('hsl(120, 80%, 50%)');
     });
+
+    test('returns hsla when alpha is provided', () => {
+        expect(getSimilarityColor(0.5, 0.7)).toBe('hsla(60, 80%, 50%, 0.7)');
+    });
 });

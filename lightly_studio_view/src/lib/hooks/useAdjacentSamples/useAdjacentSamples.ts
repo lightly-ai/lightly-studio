@@ -23,6 +23,7 @@ export type AdjacentSamplesRequestBody =
           collection_id: string;
           filters?: ({ filter_type: 'video' } & VideoFilter) | null;
           text_embedding?: number[];
+          sort_by?: SortExpr[] | null;
       }
     | {
           sample_type: Extract<SampleType, 'video_frame'>;

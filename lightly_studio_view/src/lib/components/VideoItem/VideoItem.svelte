@@ -142,6 +142,19 @@
     const caption = $derived(
         showCaption && video.sample.captions?.length ? video.sample.captions[0] : null
     );
+
+    const orderValue = $derived(video.order_value ?? undefined);
+    const shouldShowOrderValue = $derived(orderValue !== undefined);
+    const orderValueLabel = $derived(
+        orderValue !== undefined
+            ? Number.isInteger(orderValue)
+                ? String(orderValue)
+                : orderValue.toFixed(2)
+            : ''
+    );
+    const hasSimilarityScore = $derived(
+        video.similarity_score !== undefined && video.similarity_score !== null
+    );
 </script>
 
 <div
@@ -173,9 +186,25 @@
             showLabel={false}
         />
     {/if}
-    {#if video.similarity_score !== undefined && video.similarity_score !== null}
+    {#if shouldShowOrderValue && orderValue !== undefined}
         <div
-            class="absolute bottom-1 right-1 z-10 box-border flex h-5 items-center rounded bg-black/60 px-1.5 text-xs font-medium text-white backdrop-blur-sm"
+            class="absolute right-1 z-10 box-border flex h-5 items-center rounded bg-black/60 px-1.5 text-xs font-medium text-white backdrop-blur-sm {caption
+                ? 'bottom-8'
+                : 'bottom-1'}"
+            data-testid="video-order-value"
+        >
+            <span
+                class="mr-1.5 block h-2 w-2 rounded-full"
+                style="background-color: {getSimilarityColor(orderValue)}"
+            ></span>
+            {orderValueLabel}
+        </div>
+    {:else if hasSimilarityScore && video.similarity_score != null}
+        <div
+            class="absolute right-1 z-10 box-border flex h-5 items-center rounded bg-black/60 px-1.5 text-xs font-medium text-white backdrop-blur-sm {caption
+                ? 'bottom-8'
+                : 'bottom-1'}"
+            data-testid="video-similarity-score"
         >
             <span
                 class="mr-1.5 block h-2 w-2 rounded-full"

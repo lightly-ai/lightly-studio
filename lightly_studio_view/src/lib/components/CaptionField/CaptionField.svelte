@@ -3,17 +3,25 @@
     import { useCaption } from '$lib/hooks/useCaption/useCaption';
     import { Check, Trash2 } from '@lucide/svelte';
     import type { CaptionView } from '$lib/api/lightly_studio_local';
+    import { cn } from '$lib/utils/shadcn.js';
+    import { formatTimestampS } from '$lib/components/CaptionSegmentRibbon/captionSegmentRibbon.helpers';
     import CaptionMatchScore from './CaptionMatchScore.svelte';
+
+    interface CaptionFieldProps {
+        caption: CaptionView;
+        onDeleteCaption: () => void;
+        onUpdate: () => void;
+        isActive?: boolean;
+        onSelect?: () => void;
+    }
 
     const {
         caption: captionProp,
         onDeleteCaption,
-        onUpdate
-    }: {
-        caption: CaptionView;
-        onDeleteCaption: () => void;
-        onUpdate: () => void;
-    } = $props();
+        onUpdate,
+        isActive = false,
+        onSelect
+    }: CaptionFieldProps = $props();
 
     const { isEditingMode } = page.data.globalStorage;
 
@@ -40,6 +48,7 @@
     });
 
     const isDirty = $derived(captionText !== (caption.text ?? ''));
+    const span = $derived(caption.temporal_span_details);
 
     const saveCaption = async () => {
         if (!isDirty || isSaving) {
@@ -77,11 +86,24 @@
     };
 </script>
 
+<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 <div
-    class="mb-2 gap-2 rounded-sm bg-card px-4 py-3 text-left align-baseline text-diffuse-foreground transition-colors"
+    class={cn(
+        'mb-2 gap-2 rounded-sm bg-card px-4 py-3 text-left align-baseline text-diffuse-foreground transition-colors',
+        onSelect && 'cursor-pointer hover:bg-accent/40',
+        isActive && 'ring-2 ring-primary'
+    )}
     data-caption-id={caption.sample_id}
+    data-testid="caption-field-row"
+    data-active={isActive ? 'true' : undefined}
+    onclick={onSelect}
 >
     <div class="flex flex-1 flex-col gap-1">
+        {#if span}
+            <span class="text-xs text-muted-foreground" data-testid="caption-field-time-range">
+                {formatTimestampS(span.start_time_s)} – {formatTimestampS(span.end_time_s)}
+            </span>
+        {/if}
         <div class="text-sm font-medium" data-testid="caption-field">
             {#if $isEditingMode}
                 <div class="flex items-center gap-2">
@@ -93,11 +115,15 @@
                         placeholder="Update caption"
                         use:preventViewerNavigation
                         data-testid="caption-input"
+                        onclick={(e) => e.stopPropagation()}
                     />
                     <button
                         type="button"
                         class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-primary bg-primary text-primary-foreground transition disabled:cursor-not-allowed disabled:border-input disabled:bg-background disabled:text-muted-foreground disabled:opacity-50"
-                        onclick={saveCaption}
+                        onclick={(e) => {
+                            e.stopPropagation();
+                            saveCaption();
+                        }}
                         disabled={!isDirty || isSaving}
                         aria-label="Save caption"
                         data-testid="save-caption-button"

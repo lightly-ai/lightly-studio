@@ -169,10 +169,14 @@ class OrderByMetadataField(OrderByExpression):
         )
 
     def apply_joins(self, query: SelectT) -> SelectT:
-        """Left-outer-join aliased ``SampleMetadataTable`` on ``sample_id``."""
+        """Left-outer-join aliased ``SampleMetadataTable`` on ``sample_id``.
+
+        Joins via ``SampleTable`` so the same expression works for image and
+        video queries (both join their sample before ordering).
+        """
         return query.outerjoin(
             self._metadata_alias,
-            col(self._metadata_alias.sample_id) == col(ImageTable.sample_id),
+            col(self._metadata_alias.sample_id) == col(SampleTable.sample_id),
         )
 
 

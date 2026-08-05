@@ -19,6 +19,7 @@ from lightly_studio.dataset import caption_embedding
 from lightly_studio.dataset.caption_segment_matching import (
     CAPTION_SEGMENT_MATCH_SCORE_KEY,
     score_caption_segments,
+    set_video_caption_match_aggregates,
 )
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
@@ -56,7 +57,7 @@ def add_captions_from_annotations(video: VideoSample) -> list[UUID]:
     captions.append(
             CaptionCreate(
                 parent_sample_id=video.sample_id,
-                text="the sun shines brightly in the morning shy",
+                text="UFO landing in a volcanno crater",
                 start_time_s=0.0,
                 end_time_s=1.5,
             )
@@ -129,6 +130,11 @@ def score_timed_captions_for_video(video: VideoSample, caption_ids: list[UUID]) 
             key=CAPTION_SEGMENT_MATCH_SCORE_KEY,
             value=score,
         )
+    set_video_caption_match_aggregates(
+        session=session,
+        video_sample_id=video.sample_id,
+        scores=scores,
+    )
 
 
 # Read environment variables
@@ -148,7 +154,7 @@ annotations_path = env.path(
 )
 
 dataset = VideoDataset.create()
-dataset.add_videos_from_path(path=videos_path, embed=True, embed_frames=False, target_fps=1)
+dataset.add_videos_from_path(path=videos_path, embed=False, embed_frames=False)
 dataset.add_annotations_from_activitynet(
     annotations_json=annotations_path,
     annotation_source="activitynet",

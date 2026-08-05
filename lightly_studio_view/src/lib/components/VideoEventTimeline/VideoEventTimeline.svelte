@@ -39,6 +39,8 @@
         currentTimeS?: number;
         /** Called with the target time in seconds when a bar is clicked. */
         onSeek?: (timeS: number) => void;
+        /** Called with the clicked event after seeking to its start. */
+        onSelectEvent?: (event: VideoEvent) => void;
         /** When true, event edges can be dragged to change their start/end time. */
         editable?: boolean;
         /** Called with the new span when an event edge finishes being edited. */
@@ -60,6 +62,7 @@
         durationS,
         currentTimeS = 0,
         onSeek,
+        onSelectEvent,
         editable = false,
         onResize,
         onAddEvent,
@@ -242,7 +245,10 @@
                         style={`background-color: ${event.color}; border-color: ${event.contrastColor};`}
                         title={`${event.label} · ${timeRange}`}
                         aria-label={`Seek to ${event.label} at ${timeRange}`}
-                        onclick={() => onSeek?.(span.startTimeS)}
+                        onclick={() => {
+                            onSeek?.(span.startTimeS);
+                            onSelectEvent?.(event);
+                        }}
                     >
                         <span class="truncate">{event.label}</span>
                     </button>
