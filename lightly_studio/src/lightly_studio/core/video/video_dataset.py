@@ -19,7 +19,7 @@ from lightly_studio.core.video import add_annotations, add_videos
 from lightly_studio.core.video.add_videos import VIDEO_EXTENSIONS
 from lightly_studio.core.video.video_frame_dataset import VideoFrameDataset
 from lightly_studio.core.video.video_sample import VideoSample
-from lightly_studio.dataset import fsspec_lister
+from lightly_studio.dataset import fsspec_lister, video_quality
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.export.video_dataset_export import VideoDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
@@ -261,6 +261,35 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             root_collection_id=self.collection_id,
             annotations_json=annotations_json,
             collection_name=annotation_source,
+        )
+
+    def compute_quality_scores(
+        self,
+        *,
+        num_frames: int | None = None,
+        max_edge: int | None = None,
+    ) -> int:
+        """Score blur, lighting, and motion for videos and store as metadata.
+
+        Samples a few frames per video, computes classical CV quality signals, and
+        writes aggregates under metadata keys such as ``blur_score``,
+        ``lighting_score``, and ``motion_score``. Use metadata filters in the GUI
+        or Python query API to screen low-quality videos.
+
+        Args:
+            num_frames: Number of uniformly spaced frames to sample per video.
+                Defaults to ``video_quality.DEFAULT_NUM_FRAMES``.
+            max_edge: Max longest-edge length after resize (stabilizes thresholds).
+                Defaults to ``video_quality.DEFAULT_MAX_EDGE``.
+
+        Returns:
+            Number of videos successfully scored.
+        """
+        return video_quality.compute_and_store_quality_metadata(
+            session=self.session,
+            collection_id=self.collection_id,
+            num_frames=num_frames if num_frames is not None else video_quality.DEFAULT_NUM_FRAMES,
+            max_edge=max_edge if max_edge is not None else video_quality.DEFAULT_MAX_EDGE,
         )
 
 

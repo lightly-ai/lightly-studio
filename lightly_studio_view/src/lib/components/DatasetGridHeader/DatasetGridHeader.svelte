@@ -2,6 +2,7 @@
     import { CollectionSearch, GridHeader, OrderBy } from '$lib/components';
     import GridHeaderSelectAllButton from '$lib/components/GridHeaderSelectAllButton/GridHeaderSelectAllButton.svelte';
     import LowCaptionMatchFilter from '$lib/components/LowCaptionMatchFilter/LowCaptionMatchFilter.svelte';
+    import VideoQualityFilters from '$lib/components/VideoQualityFilters/VideoQualityFilters.svelte';
 
     type SearchImage = { name: string; previewUrl: string };
 
@@ -60,6 +61,7 @@
     {#snippet auxControls()}
         {#if isVideos}
             <LowCaptionMatchFilter />
+            <VideoQualityFilters />
             <OrderBy {collectionId} datasetId={collectionDatasetId} mediaType="video" />
         {:else if isImages}
             <OrderBy {collectionId} datasetId={collectionDatasetId} />

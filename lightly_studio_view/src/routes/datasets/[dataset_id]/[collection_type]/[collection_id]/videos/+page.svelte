@@ -45,7 +45,10 @@
                 : undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
             metadata_values: $metadataValues,
-            low_caption_match: $filterParams?.filters?.low_caption_match
+            low_caption_match: $filterParams?.filters?.low_caption_match,
+            blurry: $filterParams?.filters?.blurry,
+            poor_lighting: $filterParams?.filters?.poor_lighting,
+            static_camera: $filterParams?.filters?.static_camera
         },
         video_bounds: $videoBoundsValues
     });

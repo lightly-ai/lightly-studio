@@ -156,6 +156,7 @@ annotations_path = env.path(
 
 dataset = VideoDataset.create()
 dataset.add_videos_from_path(path=videos_path, embed=False, embed_frames=False)
+dataset.compute_quality_scores()
 dataset.add_annotations_from_activitynet(
     annotations_json=annotations_path,
     annotation_source="activitynet",

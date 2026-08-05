@@ -41,6 +41,11 @@ export {
     type MatchScoreBand,
     type MatchScoreFilter
 } from './captionMatchScore/captionMatchScore';
+export {
+    BLUR_SCORE_LOW_MAX,
+    LIGHTING_SCORE_LOW_MAX,
+    MOTION_SCORE_LOW_MAX
+} from './videoQuality/videoQuality';
 export { getURL } from './getURL/getURL';
 export { fetchCollection } from './fetchCollection';
 export { fetchCollectionHierarchy } from './fetchCollectionHierarchy';

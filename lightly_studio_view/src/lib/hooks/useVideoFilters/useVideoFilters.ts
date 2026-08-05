@@ -8,8 +8,18 @@ import type {
     SortFieldExpr
 } from '$lib/api/lightly_studio_local/types.gen';
 import type { CategoricalMetadataValues } from '$lib/services/types';
-import { MIN_CAPTION_SEGMENT_MATCH_SCORE_KEY } from '$lib/constants';
+import {
+    BLUR_SCORE_KEY,
+    LIGHTING_SCORE_KEY,
+    MIN_CAPTION_SEGMENT_MATCH_SCORE_KEY,
+    MOTION_SCORE_KEY
+} from '$lib/constants';
 import { MATCH_SCORE_LOW_MAX } from '$lib/utils/captionMatchScore/captionMatchScore';
+import {
+    BLUR_SCORE_LOW_MAX,
+    LIGHTING_SCORE_LOW_MAX,
+    MOTION_SCORE_LOW_MAX
+} from '$lib/utils/videoQuality/videoQuality';
 
 type MetadataValues = Record<string, { min: number; max: number }>;
 
@@ -23,6 +33,12 @@ export type VideoFilterParams = {
         categorical_metadata_values?: CategoricalMetadataValues;
         /** When true, keep only videos whose worst caption match is Low. */
         low_caption_match?: boolean;
+        /** When true, keep only videos with blur_score below the default threshold. */
+        blurry?: boolean;
+        /** When true, keep only videos with lighting_score below the default threshold. */
+        poor_lighting?: boolean;
+        /** When true, keep only videos with motion_score below the default threshold. */
+        static_camera?: boolean;
     };
     video_bounds?: VideoFieldsBoundsView | null;
 };
@@ -93,6 +109,30 @@ export const buildVideoFilter = ($filterParams: VideoFilterParams | null): Video
         });
     }
 
+    if ($filterParams.filters?.blurry) {
+        metadataFilters.push({
+            key: BLUR_SCORE_KEY,
+            op: '<',
+            value: BLUR_SCORE_LOW_MAX
+        });
+    }
+
+    if ($filterParams.filters?.poor_lighting) {
+        metadataFilters.push({
+            key: LIGHTING_SCORE_KEY,
+            op: '<',
+            value: LIGHTING_SCORE_LOW_MAX
+        });
+    }
+
+    if ($filterParams.filters?.static_camera) {
+        metadataFilters.push({
+            key: MOTION_SCORE_KEY,
+            op: '<',
+            value: MOTION_SCORE_LOW_MAX
+        });
+    }
+
     if (metadataFilters.length > 0) {
         sampleFilter.metadata_filters = metadataFilters;
     }
@@ -114,6 +154,23 @@ export const buildVideoFilter = ($filterParams: VideoFilterParams | null): Video
 const videoFilter = derived(filterParams, ($filterParams): VideoFilter | null =>
     buildVideoFilter($filterParams)
 );
+
+const setQualityShortcut = (
+    key: 'blurry' | 'poor_lighting' | 'static_camera',
+    enabled: boolean
+) => {
+    const params = get(filterParams);
+    if (!params || !params.collection_id) {
+        return;
+    }
+    filterParams.set({
+        ...params,
+        filters: {
+            ...params.filters,
+            [key]: enabled || undefined
+        }
+    });
+};
 
 export const useVideoFilters = () => {
     const updateFilterParams = (params: VideoFilterParams) => {
@@ -161,6 +218,9 @@ export const useVideoFilters = () => {
         updateFilterParams,
         updateSampleIds,
         updateSortBy,
-        setLowCaptionMatch
+        setLowCaptionMatch,
+        setBlurry: (enabled: boolean) => setQualityShortcut('blurry', enabled),
+        setPoorLighting: (enabled: boolean) => setQualityShortcut('poor_lighting', enabled),
+        setStaticCamera: (enabled: boolean) => setQualityShortcut('static_camera', enabled)
     };
 };

@@ -15,3 +15,8 @@ export const CAPTION_SEGMENT_MATCH_SCORE_KEY = 'caption_segment_match_score';
 // Video-level aggregates written when scoring caption segments.
 export const MIN_CAPTION_SEGMENT_MATCH_SCORE_KEY = 'min_caption_segment_match_score';
 export const AVG_CAPTION_SEGMENT_MATCH_SCORE_KEY = 'avg_caption_segment_match_score';
+
+// Video quality screening metadata keys (written by compute_quality_scores).
+export const BLUR_SCORE_KEY = 'blur_score';
+export const LIGHTING_SCORE_KEY = 'lighting_score';
+export const MOTION_SCORE_KEY = 'motion_score';

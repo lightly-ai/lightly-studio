@@ -158,6 +158,7 @@ sentences_path = env.path("EXAMPLES_LEMONADE_SENTENCES_PATH", DEFAULT_SENTENCES_
 
 dataset = VideoDataset.create()
 dataset.add_videos_from_path(path=video_path, embed=False, embed_frames=False)
+dataset.compute_quality_scores()
 
 # Create captions from sentences, embed text, score segments per video.
 all_caption_ids: list[UUID] = []
