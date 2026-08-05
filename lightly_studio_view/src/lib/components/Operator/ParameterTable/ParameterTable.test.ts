@@ -132,7 +132,7 @@ describe('ParameterTable', () => {
         });
 
         expect(
-            screen.getByText('Add at least one row and fill in every required cell.')
+            screen.getByText('Add at least one row and fill in every highlighted cell.')
         ).toBeInTheDocument();
     });
 
@@ -149,7 +149,7 @@ describe('ParameterTable', () => {
             }
         });
 
-        expect(screen.getByText('Fill in every required cell.')).toBeInTheDocument();
+        expect(screen.getByText('Fill in every highlighted cell.')).toBeInTheDocument();
         expect(screen.getByTestId('parameter-table-prompts-prompt-0')).toBeInvalid();
     });
 
@@ -161,7 +161,6 @@ describe('ParameterTable', () => {
                 ...defaultProps,
                 columns,
                 value: [{ prompt: '', label: '' }],
-                isMissing: true,
                 onUpdate: vi.fn()
             }
         });
@@ -195,7 +194,6 @@ describe('ParameterTable', () => {
                 ...defaultProps,
                 columns,
                 value: [{ prompt: 'person' }],
-                isMissing: true,
                 onUpdate: vi.fn()
             }
         });
@@ -212,7 +210,6 @@ describe('ParameterTable', () => {
                 ...defaultProps,
                 columns,
                 value: [{ enabled: false }],
-                isMissing: true,
                 onUpdate: vi.fn()
             }
         });

@@ -72,21 +72,9 @@ export const replaceCell = (
 ): ParameterTableRow[] =>
     rows.map((row, rowIndex) => (rowIndex === index ? { ...row, [name]: value } : row));
 
-/** Validation state of the table parameter the cell belongs to. */
-interface TableValidationState {
-    /** Whether the table parameter is currently blocking submission. */
-    isMissing: boolean;
-}
-
 /**
- * Whether a cell should be flagged as invalid. An optional cell the backend would reject is flagged
- * on sight; an empty required one only once the table blocks submission, so new rows are not red.
+ * Whether a cell should be flagged as invalid. Every cell the operator cannot run with is flagged on
+ * sight, which includes the blank required cells of a row the user just added.
  */
-export const isCellInvalid = (
-    row: ParameterTableRow,
-    column: OperatorParameterColumn,
-    { isMissing }: TableValidationState
-): boolean => {
-    if (isCellSubmittable(row[column.name], column)) return false;
-    return !column.required || isMissing;
-};
+export const isCellInvalid = (row: ParameterTableRow, column: OperatorParameterColumn): boolean =>
+    !isCellSubmittable(row[column.name], column);

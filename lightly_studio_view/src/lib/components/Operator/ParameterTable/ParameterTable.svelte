@@ -167,7 +167,7 @@
                         <ParameterTableCell
                             column={cell}
                             value={row[cell.name]}
-                            isInvalid={isCellInvalid(row, cell, { isMissing })}
+                            isInvalid={isCellInvalid(row, cell)}
                             label={`${name} ${cell.name} row ${index + 1}`}
                             testId={`parameter-table-${name}-${cell.name}-${index}`}
                             onUpdate={(cellValue) => updateCell(index, cell.name, cellValue)}
@@ -198,8 +198,8 @@
     {#if isMissing}
         <p class="text-sm text-destructive-text">
             {required && rows.length === 0
-                ? 'Add at least one row and fill in every required cell.'
-                : 'Fill in every required cell.'}
+                ? 'Add at least one row and fill in every highlighted cell.'
+                : 'Fill in every highlighted cell.'}
         </p>
     {/if}
 </div>

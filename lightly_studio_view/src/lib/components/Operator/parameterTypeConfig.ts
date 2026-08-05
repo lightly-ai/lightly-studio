@@ -88,18 +88,15 @@ export function getCellConfig(column: Pick<OperatorParameterColumn, 'paramType'>
 }
 
 /**
- * Whether a single cell counts as filled in. Booleans are always filled, because `false` is a real
- * answer rather than a missing one, and a half-typed number input (which reads `''`) counts as
- * empty.
+ * Whether a cell holds a value of its column's type. Only reached for a value that is present and a
+ * column that is not boolean, so a half-typed number input (which reads `''`) counts as empty.
  */
-export function isCellFilled(
-    value: ParameterTableRow[string] | undefined,
+function isCellFilled(
+    value: ParameterTableRow[string],
     column: Pick<OperatorParameterColumn, 'paramType'>
 ): boolean {
-    const type = toParameterType(column.paramType);
-    if (type === 'bool') return true;
-    if (value === undefined || value === '') return false;
-    return TYPE_CONFIG[type].validate(value);
+    if (value === '') return false;
+    return TYPE_CONFIG[toParameterType(column.paramType)].validate(value);
 }
 
 /**
@@ -113,8 +110,8 @@ export function isCellSubmittable(
     // An absent key leaves the column to its own backend default, so only a required column minds.
     if (value === undefined) return !column.required;
     const type = toParameterType(column.paramType);
-    // `isCellFilled` reports every boolean column as filled, since `false` is an answer, so it cannot
-    // tell a real boolean from a stray value an operator's default may have put there.
+    // `false` is an answer rather than a blank, so a boolean cell only has to be a boolean — which a
+    // stray value from an operator's declared default is not.
     if (type === 'bool') return typeof value === 'boolean';
     // An optional text cell may be blank; every other cell has to hold a value of its type.
     if (type === 'string' && !column.required) return typeof value === 'string';
@@ -122,7 +119,7 @@ export function isCellSubmittable(
 }
 
 /** Whether every cell of a row can be submitted, including required cells being filled in. */
-function isRowFilled(row: ParameterTableRow, columns?: OperatorParameterColumn[]): boolean {
+function isRowSubmittable(row: ParameterTableRow, columns?: OperatorParameterColumn[]): boolean {
     // Without columns, fall back to the stricter reading: every cell required and checked as text.
     if (!columns) {
         return Object.values(row).every(
@@ -158,17 +155,16 @@ export function isValueSubmittable(
     value: ParameterValue,
     param: Pick<OperatorParameter, 'type' | 'columns' | 'required'>
 ): boolean {
-    if (param.required ?? true) return isValueFilled(value, param.type, param.columns);
+    const required = param.required ?? true;
     // Only an actually empty optional value is waved through; anything the user did enter still has
     // to hold up, so a half-typed number or an incomplete table row cannot slip past unvalidated.
-    if (isEmpty(value)) return true;
-    return isValueFilled(value, param.type, param.columns);
+    return (!required && isEmpty(value)) || isValueFilled(value, param.type, param.columns);
 }
 
 export function buildInitialParameters(selectedOperator: Operator): ParameterValues {
     const initial: ParameterValues = {};
     for (const param of selectedOperator.parameters) {
-        if (Array.isArray(param.default)) {
+        if (param.type === 'table' && Array.isArray(param.default)) {
             // Clone table rows so the default coming from the API is never mutated or shared.
             initial[param.name] = (param.default as ParameterTableRow[]).map((row) => ({ ...row }));
         } else if (param.default !== null) {
@@ -195,7 +191,7 @@ export function getParameterConfig(
     const config = TYPE_CONFIG[type] ?? TYPE_CONFIG.default;
     return {
         component: config.component,
-        props: config.component === ParameterTable ? { ...config.props, columns } : config.props
+        props: type === 'table' ? { ...config.props, columns } : config.props
     };
 }
 
@@ -231,7 +227,7 @@ const TYPE_CONFIG: Record<OperatorParameterType | 'default', TypeConfig> = {
         validate: (value, columns) =>
             Array.isArray(value) &&
             value.length > 0 &&
-            value.every((row) => isRowFilled(row, columns))
+            value.every((row) => isRowSubmittable(row, columns))
     },
     default: {
         component: ParameterInput,

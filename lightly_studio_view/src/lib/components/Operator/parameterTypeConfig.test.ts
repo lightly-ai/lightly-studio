@@ -9,7 +9,6 @@ import {
     buildInitialParameters,
     getCellConfig,
     getParameterConfig,
-    isCellFilled,
     isValueFilled,
     isValueSubmittable,
     toParameterType,
@@ -72,33 +71,6 @@ describe('getCellConfig', () => {
         expect(config.type).toBe('string');
         expect(config.inputType).toBe('text');
         expect(config.parse('2026-08-03')).toBe('2026-08-03');
-    });
-});
-
-describe('isCellFilled', () => {
-    it('treats a boolean cell as filled whether or not it is checked', () => {
-        // `false` is an answer rather than a blank, so a boolean column never blocks submission.
-        expect(isCellFilled(false, { paramType: 'bool' })).toBe(true);
-        expect(isCellFilled(true, { paramType: 'bool' })).toBe(true);
-        expect(isCellFilled(undefined, { paramType: 'bool' })).toBe(true);
-    });
-
-    it('rejects a missing or blank string cell', () => {
-        expect(isCellFilled(undefined, { paramType: 'str' })).toBe(false);
-        expect(isCellFilled('', { paramType: 'str' })).toBe(false);
-        expect(isCellFilled('   ', { paramType: 'str' })).toBe(false);
-    });
-
-    it('accepts a string cell with content', () => {
-        expect(isCellFilled('person', { paramType: 'str' })).toBe(true);
-    });
-
-    it('judges a numeric cell by its value rather than as text', () => {
-        expect(isCellFilled(3, { paramType: 'int' })).toBe(true);
-        expect(isCellFilled(0, { paramType: 'int' })).toBe(true);
-        expect(isCellFilled(0.5, { paramType: 'float' })).toBe(true);
-        // A half-typed number input reads as `''`.
-        expect(isCellFilled('', { paramType: 'int' })).toBe(false);
     });
 });
 
