@@ -102,7 +102,7 @@ export function useClassifiers(): UseClassifiersReturn {
 
         try {
             const response = await getAllClassifiers({
-                query: { collection_id: page.params.collection_id }
+                query: { collection_id: page.params.collection_id! }
             });
             if (response.data?.classifiers) {
                 // Extract just the classifiers array from the response.
@@ -234,7 +234,7 @@ export function useClassifiers(): UseClassifiersReturn {
                     await runClassifierRoute({
                         path: {
                             classifier_id: classifier_id,
-                            collection_id: page.params.collection_id
+                            collection_id: page.params.collection_id!
                         }
                     });
 

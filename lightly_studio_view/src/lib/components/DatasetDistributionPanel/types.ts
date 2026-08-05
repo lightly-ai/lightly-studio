@@ -7,6 +7,31 @@ import type { CategoricalMetadataValue } from '$lib/services/types';
 
 export type DistributionSortOption = 'count' | 'name';
 
+export type CategoricalBucket =
+    | {
+          id: string;
+          kind: 'value';
+          label: string;
+          count: number;
+          value: CategoricalMetadataValue;
+      }
+    | {
+          id: string;
+          kind: 'missing';
+          label: string;
+          count: number;
+          value: null;
+      }
+    | { id: string; kind: 'other'; label: string; count: number; value?: never };
+
+export interface CategoricalDistribution {
+    buckets: CategoricalBucket[];
+    filteredBuckets?: Pick<CategoricalBucket, 'id' | 'count'>[];
+    selectedValues: CategoricalMetadataValue[];
+    loading?: boolean;
+    error?: string;
+}
+
 export const DISTRIBUTION_SORT_LABELS: Record<DistributionSortOption, string> = {
     count: 'Count',
     name: 'Class name'

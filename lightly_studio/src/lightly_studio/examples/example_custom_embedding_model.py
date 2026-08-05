@@ -151,7 +151,7 @@ db_manager.connect(cleanup_existing=True)
 ls.set_default_embedding_model(CustomEmbeddingGenerator())
 
 # Define the path to the dataset directory
-dataset_path = env.path("EXAMPLES_DATASET_PATH", "/path/to/your/dataset")
+dataset_path = env.path("EXAMPLES_DATASET_PATH")
 
 # Create a Dataset from a path. Images are embedded with the custom model.
 dataset = ls.ImageDataset.create()

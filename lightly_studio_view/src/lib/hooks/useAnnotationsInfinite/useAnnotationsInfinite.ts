@@ -21,9 +21,8 @@ export const useAnnotationsInfinite = (getParams: () => AnnotationsInfiniteParam
         });
     };
 
-    const collection_id = getParams().collection_id;
     const { updateAnnotations } = useUpdateAnnotationsMutation({
-        collectionId: collection_id
+        getCollectionId: () => getParams().collection_id
     });
 
     return {
