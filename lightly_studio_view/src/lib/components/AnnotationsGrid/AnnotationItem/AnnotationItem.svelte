@@ -1,12 +1,12 @@
 <script lang="ts">
     import { untrack } from 'svelte';
     import type { AnnotationView } from '$lib/api/lightly_studio_local';
-    import { SampleAnnotationSegmentationRLE } from '$lib/components';
+    import { AnnotationCanvas } from '$lib/components';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { useAnnotationClassVisibility } from '$lib/hooks';
-    import { getColorByLabel } from '$lib/utils';
+    import { getColorByLabel, hexToRgba } from '$lib/utils';
     import type { CropWindow } from './renderCropObjectUrl';
 
     type Props = {
@@ -86,9 +86,10 @@
         () => $customLabelColorsStore[labelName]?.color ?? getColorByLabel(labelName, 1).color
     );
     const colorFill = $derived.by(() => {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const color = $customLabelColorsStore[labelName]?.color;
-        return getColorByLabel(labelName, 0.4).color;
+        const customColor = $customLabelColorsStore[labelName];
+        return customColor
+            ? hexToRgba(customColor.color, customColor.alpha * 0.4)
+            : getColorByLabel(labelName, 0.4).color;
     });
     const opacity = $derived($customLabelColorsStore[labelName]?.alpha ?? 0.4);
 
@@ -97,6 +98,12 @@
     // Calculate values for use in template
     const xOffset = $derived(getXOffset());
     const yOffset = $derived(getYOffset());
+    const sourceCrop = $derived({
+        x: annotationX - padding,
+        y: annotationY - padding,
+        width: annotationWidth + padding * 2,
+        height: annotationHeight + padding * 2
+    });
 
     // Captured by value at init: props are lazy getters, and reading `annotation` during
     // effect cleanup would re-evaluate `annotations[index]` in the grid against an
@@ -134,6 +141,29 @@
         background-repeat: no-repeat;
     `}
     >
+        {#if isRLESegmentation}
+            <div class:invisible={$isHidden || $isAnnotationClassHidden}>
+                <AnnotationCanvas
+                    sampleId={annotation.sample_id}
+                    sourceWidth={sample.width}
+                    sourceHeight={sample.height}
+                    outputWidth={containerWidth}
+                    outputHeight={containerHeight}
+                    objectFit="contain"
+                    {sourceCrop}
+                    annotations={[
+                        {
+                            annotation_type: 'segmentation_mask',
+                            annotation_label_name: labelName,
+                            segmentation_mask: segmentationMask,
+                            color: colorFill,
+                            opacity
+                        }
+                    ]}
+                    className="pointer-events-none absolute inset-0 z-[1]"
+                />
+            </div>
+        {/if}
         <div
             class="annotation-box"
             class:invisible={$isHidden || $isAnnotationClassHidden}
@@ -160,18 +190,6 @@
                         >
                     {/if}
                 </div>
-            {/if}
-            {#if isRLESegmentation}
-                <svg
-                    viewBox={`${annotationX} ${annotationY} ${annotationWidth} ${annotationHeight}`}
-                >
-                    <SampleAnnotationSegmentationRLE
-                        segmentation={segmentationMask!}
-                        width={sample.width}
-                        {colorFill}
-                        {opacity}
-                    />
-                </svg>
             {/if}
         </div>
     </div>
