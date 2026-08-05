@@ -90,6 +90,9 @@
 
         /** Called when a caption timeline bar is clicked. */
         onCaptionEventSelect?: (event: VideoEvent) => void;
+
+        /** Id of the active caption segment to highlight on the captions track. */
+        selectedCaptionEventId?: string | null;
     }
 
     let {
@@ -105,7 +108,8 @@
         onEventResize,
         onEventAdd,
         onEventDelete,
-        onCaptionEventSelect
+        onCaptionEventSelect,
+        selectedCaptionEventId = null
     }: VideoPlayerProps = $props();
 
     const defaultVideoProps: HTMLVideoAttributes = {
@@ -252,6 +256,7 @@
                 currentTimeS={playback.currentTimeS}
                 onSeek={playback.seekTo}
                 onSelectEvent={onCaptionEventSelect}
+                selectedEventId={selectedCaptionEventId}
                 title="Captions"
                 showHeader={true}
             />

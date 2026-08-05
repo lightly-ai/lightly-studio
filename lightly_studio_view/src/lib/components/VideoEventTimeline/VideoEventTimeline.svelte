@@ -41,6 +41,8 @@
         onSeek?: (timeS: number) => void;
         /** Called with the clicked event after seeking to its start. */
         onSelectEvent?: (event: VideoEvent) => void;
+        /** Id of the currently selected/active event to visually highlight. */
+        selectedEventId?: string | null;
         /** When true, event edges can be dragged to change their start/end time. */
         editable?: boolean;
         /** Called with the new span when an event edge finishes being edited. */
@@ -63,6 +65,7 @@
         currentTimeS = 0,
         onSeek,
         onSelectEvent,
+        selectedEventId = null,
         editable = false,
         onResize,
         onAddEvent,
@@ -233,6 +236,7 @@
                     toPercent(span.endTimeS) - leftPercent
                 )}
                 {@const timeRange = `${formatTime(span.startTimeS)}–${formatTime(span.endTimeS)}`}
+                {@const isSelected = selectedEventId === event.id}
                 <div
                     class="group absolute"
                     style={`left: ${leftPercent}%; width: ${widthPercent}%; top: ${
@@ -241,10 +245,15 @@
                 >
                     <button
                         type="button"
-                        class="flex h-full w-full items-center overflow-hidden rounded-sm border px-1.5 text-left text-[11px] leading-none transition-[filter] hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        class={cn(
+                            'flex h-full w-full items-center overflow-hidden rounded-sm border px-1.5 text-left text-[11px] leading-none transition-[filter] hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                            isSelected && 'z-10 ring-2 ring-primary brightness-110'
+                        )}
                         style={`background-color: ${event.color}; border-color: ${event.contrastColor};`}
                         title={`${event.label} · ${timeRange}`}
                         aria-label={`Seek to ${event.label} at ${timeRange}`}
+                        aria-pressed={isSelected}
+                        data-selected={isSelected ? 'true' : undefined}
                         onclick={() => {
                             onSeek?.(span.startTimeS);
                             onSelectEvent?.(event);

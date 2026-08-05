@@ -14,7 +14,13 @@
         type SampleView,
         type VideoView
     } from '$lib/api/lightly_studio_local';
-    import { getVideoURLById, toCaptionVideoEvents, toVideoEvents, type VideoEvent } from '$lib/utils';
+    import {
+        findActiveCaptionAtTime,
+        getVideoURLById,
+        toCaptionVideoEvents,
+        toVideoEvents,
+        type VideoEvent
+    } from '$lib/utils';
     import VideoSampleMetadata from '../VideoSampleMetadata/VideoSampleMetadata.svelte';
     import SampleDetailsCaptionSegment from '../SampleDetails/SampleDetailsCaptionsSegment/SampleDetailsCaptionSegment.svelte';
     import SelectClassDialog from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
@@ -55,6 +61,10 @@
         selectedCaptionId
             ? (captions.find((caption) => caption.sample_id === selectedCaptionId) ?? null)
             : null
+    );
+    // Prefer the caption under the playhead; fall back to an explicit review selection.
+    const activeCaptionId = $derived(
+        findActiveCaptionAtTime(captions, currentTimeS)?.sample_id ?? selectedCaptionId
     );
     // Reuse the global "Edit annotations" toggle to enable event editing.
     const { isEditingMode } = useGlobalStorage();
@@ -326,6 +336,7 @@
                         {startTimeS}
                         events={videoEvents}
                         captionEvents={captionEvents}
+                        selectedCaptionEventId={activeCaptionId}
                         durationS={video.duration_s ?? undefined}
                         editableEvents={$isEditingMode}
                         onEventResize={handleEventResize}
@@ -333,7 +344,7 @@
                         onEventDelete={handleEventDelete}
                         onCaptionEventSelect={handleCaptionEventSelect}
                         videoProps={{
-                            muted: true,
+                            muted: false,
                             class: 'object-contain',
                             onplay,
                             onpause,

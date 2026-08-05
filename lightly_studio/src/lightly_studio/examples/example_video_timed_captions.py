@@ -25,6 +25,7 @@ from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
+    annotation_resolver,
     caption_resolver,
     collection_resolver,
     metadata_resolver,
@@ -159,7 +160,6 @@ dataset.add_annotations_from_activitynet(
     annotations_json=annotations_path,
     annotation_source="activitynet",
 )
-
 # Mirror annotations as captions, embed text, score segments per video.
 all_caption_ids: list[UUID] = []
 captions_by_video: list[tuple[VideoSample, list[UUID]]] = []
@@ -189,4 +189,5 @@ for video, caption_ids in captions_by_video:
         score_text = f", match={match_score:.3f}" if match_score is not None else ""
         print(f"  - [{time_range}] {caption.text}{score_text}")
 
+annotation_resolver.delete_annotations(session=dataset.session,annotation_label_ids=None)
 ls.start_gui()

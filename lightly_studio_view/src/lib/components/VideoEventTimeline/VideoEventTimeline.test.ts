@@ -74,6 +74,26 @@ describe('VideoEventTimeline', () => {
         );
     });
 
+    it('highlights the selected event bar', () => {
+        const { getByText } = render(VideoEventTimeline, {
+            props: {
+                events: [
+                    makeEvent({ id: 'a', label: 'A' }),
+                    makeEvent({ id: 'b', label: 'B', startTimeS: 3, endTimeS: 5 })
+                ],
+                durationS: 10,
+                selectedEventId: 'b'
+            }
+        });
+
+        const selected = getByText('B').closest('button');
+        const other = getByText('A').closest('button');
+        expect(selected?.getAttribute('data-selected')).toBe('true');
+        expect(selected?.getAttribute('aria-pressed')).toBe('true');
+        expect(other?.getAttribute('data-selected')).toBeNull();
+        expect(other?.getAttribute('aria-pressed')).toBe('false');
+    });
+
     it('shows a placeholder when there are no events', () => {
         const { getByText, queryAllByRole } = render(VideoEventTimeline, {
             props: { events: [], durationS: 10 }
