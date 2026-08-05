@@ -121,7 +121,7 @@ def _mock_demo_dependencies(mocker: MockerFixture) -> tuple[Any, Any, Any, Any]:
     mock_connect = mocker.patch.object(db_manager, "connect")
     mock_dataset = mocker.MagicMock()
     mock_create = mocker.patch.object(
-        lightly_studio.ImageDataset, "create", return_value=mock_dataset
+        lightly_studio.ImageDataset, "load_or_create", return_value=mock_dataset
     )
     mock_start_gui = mocker.patch.object(lightly_studio, "start_gui")
     return mock_download, mock_connect, mock_create, mock_start_gui

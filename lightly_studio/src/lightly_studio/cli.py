@@ -39,7 +39,7 @@ def demo(port: int | None, force_download: bool) -> None:
     )
 
     db_manager.connect(db_file="demo.db", cleanup_existing=force_download)
-    dataset = lightly_studio.ImageDataset.create()
+    dataset = lightly_studio.ImageDataset.load_or_create()
     dataset.add_images_from_path(path=images_path)
     dataset.add_annotations_from_coco(
         annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
