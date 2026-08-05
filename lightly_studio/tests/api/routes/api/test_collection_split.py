@@ -99,7 +99,7 @@ def test_create_split__invalid_sizes_returns_422(
 
     response = test_client.post(
         f"/api/collections/{collection_id}/splits",
-        json={"sizes": {"train": 80, "val": 10}},
+        json={"sizes": {"train": 8, "val": 0}},
     )
 
     assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY

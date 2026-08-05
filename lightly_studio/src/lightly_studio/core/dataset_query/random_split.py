@@ -1,7 +1,7 @@
 """Random, proportional splitting of samples into named tags.
 
 A split assigns a set of input samples to named groups (e.g. ``train`` / ``val`` /
-``test``) at random, in proportions given as percentages. Splits are stored as
+``test``) at random, in proportions given as relative parts. Splits are stored as
 ordinary sample tags: each split name becomes a tag, and every input sample is
 linked to exactly one of the split tags. Re-running a split first removes the
 target split tags from the input samples, so the assignment is overwritten rather
@@ -18,10 +18,6 @@ from uuid import UUID
 from sqlmodel import Session
 
 from lightly_studio.resolvers import tag_resolver
-
-# Percentages are allowed to sum to 100 up to this absolute tolerance to account
-# for floating point representation of user-provided values.
-_SUM_TOLERANCE = 1e-6
 
 # Upper bound for a randomly chosen seed. Matches the range accepted by
 # ``random.Random`` and keeps the value comfortably within a 32-bit integer.
@@ -56,8 +52,8 @@ def random_split(
         session: Database session used to read and write tags.
         collection_id: Collection the split tags belong to.
         sample_ids: The input samples to partition.
-        sizes: Mapping of split name to percentage. Values must all be positive
-            and sum to 100 (within a small tolerance).
+        sizes: Mapping of split name to relative parts. Values must all be
+            positive; they need not sum to any particular total.
         seed: Seed for the deterministic shuffle. A random seed is chosen when
             ``None``; the effective seed is always reported in the result.
 
@@ -65,8 +61,8 @@ def random_split(
         A :class:`SplitResult` with the per-split counts and the effective seed.
 
     Raises:
-        ValueError: If ``sizes`` is empty, contains a non-positive value, has an
-            empty split name, or does not sum to 100.
+        ValueError: If ``sizes`` is empty, contains a non-positive value, or has
+            an empty split name.
     """
     validate_sizes(sizes)
     effective_seed = seed if seed is not None else random.randrange(_MAX_SEED)
@@ -87,11 +83,11 @@ def validate_sizes(sizes: Mapping[str, float]) -> None:
     """Validate split sizes.
 
     Args:
-        sizes: Mapping of split name to percentage.
+        sizes: Mapping of split name to relative parts.
 
     Raises:
-        ValueError: If ``sizes`` is empty, has an empty split name, contains a
-            non-positive value, or does not sum to 100 within tolerance.
+        ValueError: If ``sizes`` is empty, has an empty split name, or contains a
+            non-positive value.
     """
     if not sizes:
         raise ValueError("sizes must not be empty.")
@@ -101,10 +97,6 @@ def validate_sizes(sizes: Mapping[str, float]) -> None:
             raise ValueError("Split names must be non-empty.")
         if value <= 0:
             raise ValueError(f"Split size for '{name}' must be greater than 0, got {value}.")
-
-    total = sum(sizes.values())
-    if abs(total - 100) > _SUM_TOLERANCE:
-        raise ValueError(f"Split sizes must sum to 100, got {total}.")
 
 
 def partition_counts(total: int, sizes: Mapping[str, float]) -> dict[str, int]:
@@ -116,7 +108,7 @@ def partition_counts(total: int, sizes: Mapping[str, float]) -> dict[str, int]:
 
     Args:
         total: The number of items to distribute.
-        sizes: Mapping of split name to percentage.
+        sizes: Mapping of split name to relative parts.
 
     Returns:
         Mapping of split name to count, ordered the same as ``sizes`` and summing

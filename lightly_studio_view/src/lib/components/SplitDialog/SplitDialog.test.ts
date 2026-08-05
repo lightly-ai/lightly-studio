@@ -83,11 +83,11 @@ describe('SplitDialog', () => {
         const names = screen.getAllByTestId('split-name-input') as HTMLInputElement[];
         expect(names.map((input) => input.value)).toEqual(['train', 'val', 'test']);
 
-        const previews = screen.getAllByTestId('split-count-preview');
+        const previews = screen.getAllByTestId('split-preview');
         expect(previews.map((el) => el.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
-            '800 samples',
-            '100 samples',
-            '100 samples'
+            '80% · 800 samples',
+            '10% · 100 samples',
+            '10% · 100 samples'
         ]);
     });
 
@@ -106,7 +106,7 @@ describe('SplitDialog', () => {
 
         expect(submitMock).toHaveBeenCalledWith({
             collectionId: 'test-collection-id',
-            sizes: { train: 80, val: 10, test: 10 },
+            sizes: { train: 8, val: 1, test: 1 },
             filter: null
         });
     });

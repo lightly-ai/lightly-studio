@@ -31,7 +31,9 @@ class SplitCreateBody(BaseModel):
     is omitted, the whole collection is split.
     """
 
-    sizes: dict[str, float] = Field(description="Split name to percentage, summing to 100.")
+    sizes: dict[str, float] = Field(
+        description="Split name to relative parts (each positive; need not sum to any total)."
+    )
     filter: GridFilter | None = None
     seed: int | None = Field(default=None, description="Optional seed for a reproducible split.")
 

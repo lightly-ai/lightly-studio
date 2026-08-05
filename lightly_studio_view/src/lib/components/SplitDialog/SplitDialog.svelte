@@ -34,11 +34,11 @@
         rows,
         errorMessage,
         isValid,
-        previewCounts,
+        preview,
         addRow,
         removeRow,
         updateName,
-        updatePercentage,
+        updateParts,
         reset,
         getSizes
     } = useSplitForm({ filteredSampleCount });
@@ -124,14 +124,15 @@
                         Randomly assign the
                         <strong class="font-semibold text-primary">{$filteredSampleCount}</strong>
                         {isFiltered ? 'filtered' : ''}
-                        {$filteredSampleCount === 1 ? 'sample' : 'samples'} to named split tags.
+                        {$filteredSampleCount === 1 ? 'sample' : 'samples'} to named split tags. Sizes
+                        are relative parts — the share and sample count are shown alongside.
                     </Dialog.Description>
                 </Dialog.Header>
 
                 <div class="grid max-h-[60vh] gap-4 overflow-y-auto p-2 py-4">
                     <div class="grid gap-2">
                         {#each $rows as row (row.id)}
-                            {@const count = $previewCounts[row.name] ?? 0}
+                            {@const info = $preview[row.id] ?? { percentage: 0, count: 0 }}
                             <div class="flex items-center gap-2">
                                 <Input
                                     type="text"
@@ -141,25 +142,23 @@
                                     oninput={(e) => updateName(row.id, e.currentTarget.value)}
                                     data-testid="split-name-input"
                                 />
-                                <div class="flex items-center gap-1">
-                                    <Input
-                                        type="number"
-                                        class="w-20"
-                                        min="0"
-                                        max="100"
-                                        value={row.percentage}
-                                        oninput={(e) =>
-                                            updatePercentage(row.id, e.currentTarget.valueAsNumber)}
-                                        data-testid="split-percentage-input"
-                                    />
-                                    <span class="text-xs text-muted-foreground">%</span>
-                                </div>
+                                <Input
+                                    type="number"
+                                    class="w-16"
+                                    min="1"
+                                    step="1"
+                                    value={row.parts}
+                                    oninput={(e) =>
+                                        updateParts(row.id, e.currentTarget.valueAsNumber)}
+                                    aria-label={`Parts for ${row.name || 'split'}`}
+                                    data-testid="split-parts-input"
+                                />
                                 <span
-                                    class="w-24 text-right text-xs text-muted-foreground"
-                                    data-testid="split-count-preview"
+                                    class="shrink-0 whitespace-nowrap text-right text-xs text-muted-foreground"
+                                    data-testid="split-preview"
                                 >
-                                    {count}
-                                    {count === 1 ? 'sample' : 'samples'}
+                                    {info.percentage}% · {info.count}
+                                    {info.count === 1 ? 'sample' : 'samples'}
                                 </span>
                                 <Button
                                     variant="ghost"
