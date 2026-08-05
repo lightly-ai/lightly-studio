@@ -5,9 +5,7 @@
     import * as Tabs from '$lib/components/ui/tabs/index.js';
     import * as Dialog from '$lib/components/ui/dialog';
     import { ExportFormat } from '$lib/api/lightly_studio_local';
-    import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
-    import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
-    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useAnnotationCollections, useExportDialog, useGlobalStorage } from '$lib/hooks';
     import { useExportTracking } from './useExportTracking/useExportTracking';
     import SamplesTab from './SamplesTab/SamplesTab.svelte';
     import AnnotationsTab from './AnnotationsTab/AnnotationsTab.svelte';
