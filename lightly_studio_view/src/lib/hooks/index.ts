@@ -53,6 +53,7 @@ export {
     useImageAnnotationCountsQueryKey
 } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 export { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+export { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
 export {
     createOperatorFromMetadata,
     type Operator,
