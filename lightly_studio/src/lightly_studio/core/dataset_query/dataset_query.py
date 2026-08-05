@@ -413,8 +413,8 @@ class DatasetQuery(Generic[T]):
         ```
 
         Args:
-            sizes: Mapping of split name to percentage. Values must all be
-                positive and sum to 100 (within a small tolerance).
+            sizes: Mapping of split name to relative parts. Values must all be
+                positive; they need not sum to any particular total.
             seed: Seed for the deterministic shuffle. A random seed is chosen
                 when ``None``; the effective seed is reported in the result.
 

@@ -415,6 +415,23 @@ def test_get_or_create_sample_tag_by_name(db_session: Session) -> None:
     assert new_tag.kind == "sample"
 
 
+def test_get_or_create_sample_tag_by_name__ignores_annotation_tag(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+
+    # An annotation-kind tag with the same name must not be reused or collided with.
+    annotation_tag = create_tag(
+        session=db_session, collection_id=collection_id, tag_name="train", kind="annotation"
+    )
+
+    result_tag = tag_resolver.get_or_create_sample_tag_by_name(
+        session=db_session, collection_id=collection_id, tag_name="train"
+    )
+
+    assert result_tag.tag_id != annotation_tag.tag_id
+    assert result_tag.name == "train"
+    assert result_tag.kind == "sample"
+
+
 def test_add_tag_to_sample(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
