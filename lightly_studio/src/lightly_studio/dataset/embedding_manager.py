@@ -71,17 +71,16 @@ class EmbeddingManagerProvider:
 def set_default_embedding_model(embedding_generator: EmbeddingGenerator) -> None:
     """Register a custom embedding model that overrides the env-var default.
 
-    Call this before ingesting a dataset (e.g. before ImageDataset.load_or_create)
-    to use your own generator instead of the model selected by
+    Call this before you add a dataset (for example, before ImageDataset.load_or_create)
+    to use your own generator instead of the model set by
     LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE. The override applies to every collection.
 
-    Note: the registration lives in-process only. When re-launching the GUI via the
-    `lightly-studio gui` CLI without re-running this call, embeddings computed with the
-    custom model remain, but text search falls back to the env-var default model and
-    will not match them.
+    The registration lives in the current process only. If you restart the GUI with the
+    `lightly-studio gui` CLI and do not call this again, your embeddings stay, but text
+    search falls back to the env-var default model and will not match them.
 
     Args:
-        embedding_generator: A generator implementing ImageEmbeddingGenerator and/or
+        embedding_generator: A generator that implements ImageEmbeddingGenerator and/or
             VideoEmbeddingGenerator.
     """
     EmbeddingManagerProvider.get_embedding_manager().set_default_embedding_model(

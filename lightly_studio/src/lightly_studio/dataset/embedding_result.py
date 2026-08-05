@@ -17,10 +17,11 @@ from numpy.typing import NDArray
 class EmbeddingResult:
     """Embeddings for the inputs that could be read, plus which inputs they cover.
 
-    Broken inputs (unreadable/undecodable files) are skipped rather than aborting the
-    whole run, so ``embeddings`` may hold fewer rows than the input list. ``kept_indices``
-    maps each row back to its position in the input list, in input order, letting callers
-    realign any parallel per-input data (e.g. sample IDs) with the embeddings.
+    A generator skips broken inputs (files it cannot read or decode) instead of failing
+    the whole run, so ``embeddings`` can have fewer rows than the input list.
+    ``kept_indices`` gives the position of each row in the input list, in input order.
+    Use it to line up the embeddings with any per-input data you keep on the side, such
+    as sample IDs.
     """
 
     embeddings: NDArray[np.float32]

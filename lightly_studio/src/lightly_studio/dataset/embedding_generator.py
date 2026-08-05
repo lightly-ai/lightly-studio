@@ -39,12 +39,11 @@ class ImageCrop:
 class EmbeddingGenerator(Protocol):
     """Base protocol shared by every embedding generator.
 
-    A generator supplies the model metadata LightlyStudio stores per collection
-    (``get_embedding_model_input``) and embeds text queries (``embed_text``), which
-    powers text-based similarity search. Implement one of the more specific protocols
-    below (``ImageEmbeddingGenerator`` and/or ``VideoEmbeddingGenerator``) to embed
-    images or videos, then register it with ``set_default_embedding_model`` before
-    ingesting a dataset.
+    Every generator gives LightlyStudio the model metadata it stores for each collection
+    (``get_embedding_model_input``) and embeds text queries (``embed_text``). Text
+    embeddings power text search. To embed images or videos, implement one of the
+    protocols below (``ImageEmbeddingGenerator`` and/or ``VideoEmbeddingGenerator``) and
+    register it with ``set_default_embedding_model`` before you add a dataset.
     """
 
     def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
@@ -73,11 +72,11 @@ class EmbeddingGenerator(Protocol):
 class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
     """Protocol for embedding images, image crops, and text.
 
-    Implement this to plug your own image model into LightlyStudio, either by running
-    the model on the given file paths or by looking up precomputed vectors. A registered
-    image generator overrides image, annotation-crop, and text embeddings. It inherits
-    ``embed_text`` from ``EmbeddingGenerator``, so keep the text and image encoders
-    in the same space for text-based image search to work.
+    Implement this to use your own image model in LightlyStudio. Inside ``embed_images``
+    you can run the model on the given file paths or look up precomputed vectors. A
+    registered image generator replaces the built-in image, crop, and text embeddings.
+    It inherits ``embed_text`` from ``EmbeddingGenerator``, so keep the text and image
+    encoders in the same embedding space for text-based image search to work.
     """
 
     def embed_images(self, filepaths: list[str], show_progress: bool = True) -> EmbeddingResult:
@@ -129,11 +128,11 @@ class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
 class VideoEmbeddingGenerator(EmbeddingGenerator, Protocol):
     """Protocol for embedding videos (and text).
 
-    Implement this to plug your own video model into LightlyStudio. A registered video
-    generator overrides video and text embeddings. It inherits ``embed_text`` from
-    ``EmbeddingGenerator``; keep the text and video encoders in the same space for
-    text-based video search to work. Implement it alongside ``ImageEmbeddingGenerator``
-    on the same object to override both image and video.
+    Implement this to use your own video model in LightlyStudio. A registered video
+    generator replaces the built-in video and text embeddings. It inherits ``embed_text``
+    from ``EmbeddingGenerator``, so keep the text and video encoders in the same embedding
+    space for text-based video search to work. To replace both image and video, implement
+    ``ImageEmbeddingGenerator`` on the same object.
     """
 
     def embed_videos(self, filepaths: list[str]) -> EmbeddingResult:
