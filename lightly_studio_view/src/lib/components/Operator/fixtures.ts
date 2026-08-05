@@ -1,9 +1,8 @@
 import type { OperatorParameterColumn } from '$lib/hooks';
 
 /**
- * A table column shaped exactly as the backend mapper exposes it to operator components. Columns
- * arrive from the API mapper with every field present, so the factory fills in the parts a test does
- * not care about and keeps the fixtures readable.
+ * A table column as the API mapper exposes it, where every field is present. Overrides let a test
+ * name only the fields it cares about.
  */
 export const column = (
     overrides: Partial<OperatorParameterColumn> = {}

@@ -98,10 +98,8 @@ export function isCellFilled(
 }
 
 /**
- * Whether a cell holds a value the operator can be run with. A required cell has to be filled in. An
- * optional one may be left blank, but only where blank is a value the backend accepts: a text column
- * takes an empty string, while a number input reading `''` while empty or mid-edit is not a number
- * and would be rejected.
+ * Whether a cell holds a value the operator can run with. Required cells must be filled; optional
+ * ones may be blank only where the backend accepts blank, which a number reading `''` is not.
  */
 export function isCellSubmittable(
     value: ParameterTableRow[string] | undefined,
@@ -114,8 +112,7 @@ export function isCellSubmittable(
 
 /** Whether every cell of a row can be submitted, including required cells being filled in. */
 function isRowFilled(row: ParameterTableRow, columns?: OperatorParameterColumn[]): boolean {
-    // Without column information every cell counts as required and is checked as text, which is the
-    // stricter fallback.
+    // Without columns, fall back to the stricter reading: every cell required and checked as text.
     if (!columns) {
         return Object.values(row).every(
             (value) => typeof value !== 'string' || value.trim().length > 0

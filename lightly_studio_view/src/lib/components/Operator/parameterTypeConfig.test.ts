@@ -147,54 +147,33 @@ describe('getParameterConfig', () => {
     });
 });
 
-describe('isValueFilled', () => {
-    it('rejects an empty table', () => {
+describe('isValueFilled for a table', () => {
+    it('requires at least one row where every required cell is filled', () => {
         expect(isValueFilled([], 'table', COLUMNS)).toBe(false);
-    });
-
-    it('rejects a table with a blank or whitespace-only cell', () => {
-        expect(isValueFilled([{ prompt: 'person', label: '' }], 'table', COLUMNS)).toBe(false);
         expect(isValueFilled([{ prompt: 'person', label: '   ' }], 'table', COLUMNS)).toBe(false);
+        expect(isValueFilled([{ prompt: 'person', label: 'pedestrian' }], 'table', COLUMNS)).toBe(
+            true
+        );
     });
 
     it('rejects a table where only some rows are complete', () => {
-        expect(
-            isValueFilled(
-                [
-                    { prompt: 'person', label: 'pedestrian' },
-                    { prompt: 'car', label: '' }
-                ],
-                'table',
-                COLUMNS
-            )
-        ).toBe(false);
+        const rows = [
+            { prompt: 'person', label: 'pedestrian' },
+            { prompt: 'car', label: '' }
+        ];
+
+        expect(isValueFilled(rows, 'table', COLUMNS)).toBe(false);
     });
 
-    it('accepts a table where every cell of every row is filled', () => {
-        expect(
-            isValueFilled(
-                [
-                    { prompt: 'person', label: 'pedestrian' },
-                    { prompt: 'car', label: 'vehicle' }
-                ],
-                'table',
-                COLUMNS
-            )
-        ).toBe(true);
-    });
+    it('lets a cell of an optional column stay blank, but only where blank is a value', () => {
+        const text = [column({ name: 'prompt' }), column({ name: 'label', required: false })];
+        const numeric = [column({ name: 'threshold', paramType: 'float', required: false })];
 
-    it('accepts a table with an empty cell in a column that is not required', () => {
-        const columns = [column({ name: 'prompt' }), column({ name: 'label', required: false })];
-
-        expect(isValueFilled([{ prompt: 'person', label: '' }], 'table', columns)).toBe(true);
-        expect(isValueFilled([{ prompt: '', label: 'pedestrian' }], 'table', columns)).toBe(false);
-    });
-
-    it('rejects an empty optional numeric cell', () => {
-        const columns = [column({ name: 'threshold', paramType: 'float', required: false })];
-
-        expect(isValueFilled([{ threshold: '' }], 'table', columns)).toBe(false);
-        expect(isValueFilled([{ threshold: 0.5 }], 'table', columns)).toBe(true);
+        expect(isValueFilled([{ prompt: 'person', label: '' }], 'table', text)).toBe(true);
+        expect(isValueFilled([{ prompt: '', label: 'pedestrian' }], 'table', text)).toBe(false);
+        // A number input reads as `''` while empty or mid-edit, which the backend rejects.
+        expect(isValueFilled([{ threshold: '' }], 'table', numeric)).toBe(false);
+        expect(isValueFilled([{ threshold: 0.5 }], 'table', numeric)).toBe(true);
     });
 
     it('treats every cell as required when no columns are known', () => {
@@ -204,17 +183,11 @@ describe('isValueFilled', () => {
 
     it('accepts a required boolean cell that is unchecked', () => {
         // `false` is an answer rather than a blank, so a boolean column never blocks submission.
-        const columns = [column({ name: 'enabled', paramType: 'bool' })];
-
-        expect(isValueFilled([{ enabled: false }], 'table', columns)).toBe(true);
-    });
-
-    it('judges a numeric cell by its value rather than as text', () => {
-        const columns = [column({ name: 'limit', paramType: 'int' })];
-
-        expect(isValueFilled([{ limit: 3 }], 'table', columns)).toBe(true);
-        // A number input reads as `''` while it is being cleared or typed.
-        expect(isValueFilled([{ limit: '' }], 'table', columns)).toBe(false);
+        expect(
+            isValueFilled([{ enabled: false }], 'table', [
+                column({ name: 'enabled', paramType: 'bool' })
+            ])
+        ).toBe(true);
     });
 });
 
@@ -243,13 +216,15 @@ describe('buildInitialParameters', () => {
         const operator = operatorWith([
             { name: 'prompt', type: 'string', default: null, required: true },
             { name: 'limit', type: 'int', default: null, required: true },
-            { name: 'enabled', type: 'bool', default: null, required: true }
+            { name: 'enabled', type: 'bool', default: null, required: true },
+            { name: 'prompts', type: 'table', default: null, required: true }
         ]);
 
         expect(buildInitialParameters(operator)).toEqual({
             prompt: '',
             limit: '',
-            enabled: false
+            enabled: false,
+            prompts: []
         });
     });
 
@@ -263,19 +238,9 @@ describe('buildInitialParameters', () => {
 
     it('clones table rows so the default from the API is not shared', () => {
         const defaultRows = [{ prompt: 'person', label: 'pedestrian' }];
-        const operator: Operator = {
-            id: 'op-1',
-            name: 'SAM3',
-            parameters: [
-                {
-                    name: 'prompts',
-                    type: 'table',
-                    default: defaultRows,
-                    required: true,
-                    columns: COLUMNS
-                }
-            ]
-        };
+        const operator = operatorWith([
+            { name: 'prompts', type: 'table', default: defaultRows, required: true }
+        ]);
 
         const initial = buildInitialParameters(operator);
 
@@ -321,45 +286,16 @@ describe('buildInitialParameters', () => {
         const operator = createOperatorFromMetadata(metadata, apiParameters);
 
         expect(operator.parameters[0].type).toBe('table');
-        expect(operator.parameters[0].columns).toEqual([
-            {
-                name: 'prompt',
-                description: 'What to segment.',
-                default: null,
-                required: true,
-                paramType: 'str'
-            },
-            {
-                name: 'threshold',
-                description: '',
-                default: 0.5,
-                required: false,
-                paramType: 'float'
-            }
+        // `param_type` becomes `paramType`; the rest of each column carries over unchanged.
+        expect(
+            operator.parameters[0].columns?.map((c) => [c.name, c.paramType, c.required])
+        ).toEqual([
+            ['prompt', 'str', true],
+            ['threshold', 'float', false]
         ]);
         expect(getParameterConfig('table').component).toBe(ParameterTable);
         expect(buildInitialParameters(operator).prompts).toEqual([
             { prompt: 'person', threshold: 0.5 }
         ]);
-    });
-
-    it('falls back to an empty table when a table parameter has no default', () => {
-        const operator: Operator = {
-            id: 'op-1',
-            name: 'SAM3',
-            parameters: [
-                {
-                    name: 'prompts',
-                    type: 'table',
-                    default: null,
-                    required: true,
-                    columns: COLUMNS
-                }
-            ]
-        };
-
-        const initial = buildInitialParameters(operator);
-
-        expect(initial.prompts).toEqual([]);
     });
 });

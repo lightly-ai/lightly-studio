@@ -81,15 +81,8 @@ interface TableValidationState {
 }
 
 /**
- * Whether a cell should be flagged as invalid. Only cells that block submission are flagged, and the
- * two kinds differ in when the user gets told:
- *
- * A cell the backend would reject outright is flagged straight away. That is a numeric cell reading
- * `''` — empty or mid-edit — on a column of any kind, because the backend validates every cell
- * against its column type whether or not it is required.
- *
- * An empty required cell is only flagged once the table itself is blocking submission, so a row the
- * user is still filling in is not red from the moment it is added.
+ * Whether a cell should be flagged as invalid. An optional cell the backend would reject is flagged
+ * on sight; an empty required one only once the table blocks submission, so new rows are not red.
  */
 export const isCellInvalid = (
     row: ParameterTableRow,
