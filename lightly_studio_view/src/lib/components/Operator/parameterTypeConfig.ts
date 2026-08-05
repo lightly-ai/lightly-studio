@@ -1,4 +1,9 @@
-import type { OperatorParameterColumn, OperatorParameterType, Operator } from '$lib/hooks';
+import type {
+    OperatorParameter,
+    OperatorParameterColumn,
+    OperatorParameterType,
+    Operator
+} from '$lib/hooks';
 import type { Component } from 'svelte';
 import ParameterCheckbox from './ParameterCheckbox.svelte';
 import ParameterInput from './ParameterInput.svelte';
@@ -105,8 +110,12 @@ export function isCellSubmittable(
     value: ParameterTableRow[string] | undefined,
     column: Pick<OperatorParameterColumn, 'paramType' | 'required'>
 ): boolean {
+    const type = toParameterType(column.paramType);
+    // `isCellFilled` counts any boolean column as filled, since `false` is an answer. A required one
+    // still needs the key present, or a row from an API default would submit without it.
+    if (type === 'bool') return !column.required || typeof value === 'boolean';
     if (column.required) return isCellFilled(value, column);
-    if (toParameterType(column.paramType) === 'string') return typeof value === 'string';
+    if (type === 'string') return typeof value === 'string';
     return isCellFilled(value, column);
 }
 
@@ -131,6 +140,20 @@ export function isValueFilled(
     return config.validate(value, columns);
 }
 
+/**
+ * Whether a value can be sent to the backend, which is weaker than being filled in: an optional
+ * parameter may be left empty. A table is the one type where empty and incomplete differ, because it
+ * may hold rows the backend would reject even when the parameter itself is optional.
+ */
+export function isValueSubmittable(
+    value: ParameterValue,
+    param: Pick<OperatorParameter, 'type' | 'columns' | 'required'>
+): boolean {
+    if (param.required ?? true) return isValueFilled(value, param.type, param.columns);
+    if (!Array.isArray(value) || value.length === 0) return true;
+    return value.every((row) => isRowFilled(row, param.columns));
+}
+
 export function buildInitialParameters(selectedOperator: Operator): ParameterValues {
     const initial: ParameterValues = {};
     for (const param of selectedOperator.parameters) {
@@ -147,14 +170,21 @@ export function buildInitialParameters(selectedOperator: Operator): ParameterVal
     return initial;
 }
 
-export function getParameterConfig(type: OperatorParameterType): {
+/**
+ * The component to render a parameter with, plus the props only that type takes. `columns` goes in
+ * here rather than on every control, so a text input or checkbox is never handed a table-only prop.
+ */
+export function getParameterConfig(
+    type: OperatorParameterType,
+    columns?: OperatorParameterColumn[]
+): {
     component: Component<ParameterComponentProps>;
     props: Record<string, unknown>;
 } {
     const config = TYPE_CONFIG[type] ?? TYPE_CONFIG.default;
     return {
         component: config.component,
-        props: config.props
+        props: config.component === ParameterTable ? { ...config.props, columns } : config.props
     };
 }
 

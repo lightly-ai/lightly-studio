@@ -11,6 +11,7 @@ import {
     getParameterConfig,
     isCellFilled,
     isValueFilled,
+    isValueSubmittable,
     toParameterType,
     type ParameterTableRow
 } from './parameterTypeConfig';
@@ -145,6 +146,44 @@ describe('getParameterConfig', () => {
         expect(config.component).toBe(ParameterInput);
         expect(config.props).toMatchObject({ inputType: 'text' });
     });
+
+    it('passes columns to the table only, so other controls take no table-only prop', () => {
+        expect(getParameterConfig('table', COLUMNS).props).toMatchObject({ columns: COLUMNS });
+        expect(getParameterConfig('string', COLUMNS).props).not.toHaveProperty('columns');
+        expect(getParameterConfig('bool', COLUMNS).props).not.toHaveProperty('columns');
+    });
+});
+
+describe('isValueSubmittable', () => {
+    const table = (required: boolean) => ({ type: 'table' as const, columns: COLUMNS, required });
+
+    it('requires a required parameter to be filled in', () => {
+        expect(isValueSubmittable([], table(true))).toBe(false);
+        expect(isValueSubmittable('', { type: 'string', required: true })).toBe(false);
+        expect(isValueSubmittable('person', { type: 'string', required: true })).toBe(true);
+    });
+
+    it('lets an optional parameter be empty', () => {
+        expect(isValueSubmittable([], table(false))).toBe(true);
+        expect(isValueSubmittable(null, table(false))).toBe(true);
+        expect(isValueSubmittable('', { type: 'string', required: false })).toBe(true);
+    });
+
+    it('still rejects incomplete rows in an optional table', () => {
+        // The rows are optional as a whole, but each one the user added has to be submittable.
+        expect(isValueSubmittable([{ prompt: 'person', label: '' }], table(false))).toBe(false);
+        expect(isValueSubmittable([{ prompt: 'person', label: 'pedestrian' }], table(false))).toBe(
+            true
+        );
+    });
+
+    it('rejects an empty numeric cell in an optional table', () => {
+        const columns = [column({ name: 'threshold', paramType: 'float', required: false })];
+        const param = { type: 'table' as const, columns, required: false };
+
+        expect(isValueSubmittable([{ threshold: '' }], param)).toBe(false);
+        expect(isValueSubmittable([{ threshold: 0.5 }], param)).toBe(true);
+    });
 });
 
 describe('isValueFilled for a table', () => {
@@ -181,11 +220,16 @@ describe('isValueFilled for a table', () => {
         expect(isValueFilled([{ prompt: 'person', label: 'pedestrian' }], 'table')).toBe(true);
     });
 
-    it('accepts a required boolean cell that is unchecked', () => {
-        // `false` is an answer rather than a blank, so a boolean column never blocks submission.
+    it('accepts an unchecked boolean cell but not a missing one', () => {
+        const columns = [column({ name: 'enabled', paramType: 'bool' })];
+
+        // `false` is an answer rather than a blank, so an unchecked box is submittable.
+        expect(isValueFilled([{ enabled: false }], 'table', columns)).toBe(true);
+        // An API default can omit the key altogether, which would submit a row without it.
+        expect(isValueFilled([{}], 'table', columns)).toBe(false);
         expect(
-            isValueFilled([{ enabled: false }], 'table', [
-                column({ name: 'enabled', paramType: 'bool' })
+            isValueFilled([{}], 'table', [
+                column({ name: 'enabled', paramType: 'bool', required: false })
             ])
         ).toBe(true);
     });
