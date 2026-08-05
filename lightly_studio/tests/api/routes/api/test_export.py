@@ -1116,3 +1116,140 @@ def test_export_collection_captions_prepare__image_filter(
     assert content["images"][0]["file_name"] == "img_a.jpg"
     assert len(content["annotations"]) == 1
     assert content["annotations"][0]["caption"] == "caption for a"
+
+
+def test_export_collection_youtube_vis_prepare(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    video_with_frames = create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="video_001.mp4", width=3, height=2, duration_s=2.0, fps=1.0),
+    )
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="cat",
+    )
+    object_track_id = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[
+            ObjectTrackCreate(
+                object_track_number=99,
+                dataset_id=collection.dataset_id,
+            )
+        ],
+    )[0]
+    frame_0, _frame_1 = video_with_frames.frame_sample_ids
+    annotation_resolver.create_many(
+        session=db_session,
+        parent_collection_id=video_with_frames.video_frames_collection_id,
+        annotations=[
+            AnnotationCreate(
+                parent_sample_id=frame_0,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.SEGMENTATION_MASK,
+                x=0,
+                y=1,
+                width=1,
+                height=1,
+                segmentation_mask=[1, 1, 4],
+                object_track_id=object_track_id,
+            )
+        ],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/youtube-vis/prepare",
+        json={},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    export_key = UUID(response.json()["export_key"])
+
+    export_job = db_session.get(ExportJobTable, export_key)
+    assert export_job is not None
+    content = json.loads(Path(export_job.export_path).read_text())
+    assert content == {
+        "info": {"description": "YouTube-VIS export"},
+        "categories": [{"id": 1, "name": "cat"}],
+        "videos": [
+            {
+                "id": 1,
+                "file_names": ["video_001.mp4/00000.jpg", "video_001.mp4/00001.jpg"],
+                "width": 3,
+                "height": 2,
+                "length": 2,
+            }
+        ],
+        "annotations": [
+            {
+                "id": 99,
+                "video_id": 1,
+                "category_id": 1,
+                "bboxes": [[0.0, 1.0, 1.0, 1.0], None],
+                "segmentations": [
+                    {"counts": [2, 1, 3], "size": [2, 3]},
+                    None,
+                ],
+                "areas": [1.0, None],
+                "iscrowd": 1,
+                "height": 2,
+                "width": 3,
+                "length": 2,
+            }
+        ],
+    }
+
+
+def test_export_collection_youtube_vis_prepare__wrong_collection_type(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/youtube-vis/prepare",
+        json={},
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+
+
+def test_export_collection_youtube_vis_prepare__video_filter(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    # video_a is included via video_filter; video_b is excluded.
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    video_a = create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="video_a.mp4", width=3, height=2, duration_s=1.0, fps=1.0),
+    )
+    create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="video_b.mp4", width=3, height=2, duration_s=1.0, fps=1.0),
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/youtube-vis/prepare",
+        json={
+            "video_filter": {
+                "filter_type": "video",
+                "sample_filter": {"sample_ids": [str(video_a.video_sample_id)]},
+            },
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    export_key = UUID(response.json()["export_key"])
+
+    export_job = db_session.get(ExportJobTable, export_key)
+    assert export_job is not None
+    content = json.loads(Path(export_job.export_path).read_text())
+    assert len(content["videos"]) == 1
+    assert content["videos"][0]["file_names"] == ["video_a.mp4/00000.jpg"]

@@ -28,6 +28,7 @@ from lightly_studio.models.export_format import ExportFormat
 from lightly_studio.resolvers import collection_resolver, export_job_resolver
 from lightly_studio.resolvers.collection_resolver.export import ExportFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 export_router = APIRouter(prefix="/collections/{collection_id}", tags=["export"])
 _STREAM_CHUNK_SIZE_BYTES = 64 * 1024
@@ -214,6 +215,12 @@ class ExportKeyResponse(BaseModel):
     export_key: UUID
 
 
+class ExportYoutubeVisPrepareBody(BaseModel):
+    """Request body for the YouTube-VIS prepare endpoint."""
+
+    video_filter: VideoFilter | None = None
+
+
 class ExportAnnotationsPrepareBody(BaseModel):
     """Request body for the annotations prepare endpoint."""
 
@@ -361,6 +368,42 @@ def export_collection_prepare(
     except Exception:
         shutil.rmtree(temp_dir, ignore_errors=True)
         raise
+    return ExportKeyResponse(export_key=export.export_key)
+
+
+@export_router.post("/export/youtube-vis/prepare")
+def export_collection_youtube_vis_prepare(
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(collection_api.get_and_validate_collection_id),
+    ],
+    session: SessionDep,
+    body: ExportYoutubeVisPrepareBody,
+) -> ExportKeyResponse:
+    """Generate the YouTube-VIS export and persist its path."""
+    if collection.sample_type != SampleType.VIDEO:
+        raise ValueError("YouTube-VIS export is only supported for video collections.")
+
+    dataset_query = DatasetQuery(dataset=collection, session=session, sample_class=VideoSample)
+    if body.video_filter is not None:
+        dataset_query.filter_by_sample_ids(
+            body.video_filter.build_sample_ids_query(collection.collection_id)
+        )
+
+    temp_dir = PathlibPath(tempfile.mkdtemp())
+    output_path = temp_dir / "youtube_vis_segmentation_mask_export.json"
+    try:
+        video_dataset_export.to_youtube_vis_segmentation_mask(
+            session=session,
+            samples=dataset_query,
+            output_json=output_path,
+        )
+        export = export_job_resolver.create(session=session, export_path=str(output_path))
+    except Exception:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise
+
     return ExportKeyResponse(export_key=export.export_key)
 
 
