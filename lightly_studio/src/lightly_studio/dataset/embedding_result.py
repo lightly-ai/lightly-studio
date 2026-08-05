@@ -1,6 +1,6 @@
 """Result type shared by the batched embedding paths.
 
-Holds :class:`EmbeddingResult`, the model-agnostic return type used across the
+Holds ``EmbeddingResult``, the model-agnostic return type used across the
 image, image-crop, and video embedding paths. It lives in its own module so any
 embedding path can depend on it without pulling in a path-specific module.
 """
