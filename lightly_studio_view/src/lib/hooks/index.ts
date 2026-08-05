@@ -52,3 +52,10 @@ export {
     useImageAnnotationCounts,
     useImageAnnotationCountsQueryKey
 } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
+export {
+    createOperatorFromMetadata,
+    type Operator,
+    type OperatorParameter,
+    type OperatorParameterColumn,
+    type OperatorParameterType
+} from '$lib/hooks/useOperators';
