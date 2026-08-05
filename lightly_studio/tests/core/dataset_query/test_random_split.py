@@ -26,13 +26,10 @@ class TestValidateSizes:
         with pytest.raises(ValueError, match="non-empty"):
             random_split.validate_sizes({"  ": 100})
 
-    def test_validate_sizes__does_not_sum_to_100(self) -> None:
-        with pytest.raises(ValueError, match="sum to 100"):
-            random_split.validate_sizes({"train": 80, "val": 10})
-
-    def test_validate_sizes__float_tolerance(self) -> None:
-        # Three thirds should be accepted despite floating point imprecision.
-        random_split.validate_sizes({"a": 100 / 3, "b": 100 / 3, "c": 100 / 3})
+    def test_validate_sizes__parts_need_not_sum_to_100(self) -> None:
+        # Sizes are relative parts, so any positive totals are accepted.
+        random_split.validate_sizes({"train": 8, "val": 1, "test": 1})
+        random_split.validate_sizes({"train": 3, "val": 1})
 
 
 class TestPartitionCounts:
@@ -55,6 +52,11 @@ class TestPartitionCounts:
     def test_partition_counts__zero_total(self) -> None:
         counts = random_split.partition_counts(total=0, sizes={"train": 80, "val": 20})
         assert counts == {"train": 0, "val": 0}
+
+    def test_partition_counts__unnormalized_parts(self) -> None:
+        # Parts are normalized by their sum, so 8/1/1 matches 80/10/10.
+        counts = random_split.partition_counts(total=1000, sizes={"train": 8, "val": 1, "test": 1})
+        assert counts == {"train": 800, "val": 100, "test": 100}
 
 
 class TestRandomSplit:
@@ -176,12 +178,12 @@ class TestRandomSplit:
 
     def test_random_split__invalid_sizes_raises(self, db_session: Session) -> None:
         collection = create_collection(session=db_session)
-        with pytest.raises(ValueError, match="sum to 100"):
+        with pytest.raises(ValueError, match="greater than 0"):
             random_split.random_split(
                 session=db_session,
                 collection_id=collection.collection_id,
                 sample_ids=[],
-                sizes={"train": 80},
+                sizes={"train": 8, "val": 0},
             )
 
 
