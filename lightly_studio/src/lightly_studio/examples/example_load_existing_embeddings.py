@@ -29,8 +29,12 @@ def create_mock_embeddings(dataset_path: Path) -> dict[str, NDArray[np.float32]]
 
     The embeddings are mocked here, a real implementation would read them from a file.
     """
+    # Key by the same absolute posix path the backend stores as file_path_abs, so
+    # the lookup in embed_images matches. A relative key here would never match.
     filepaths = sorted(
-        str(path) for path in dataset_path.rglob("*") if path.suffix.lower() in IMAGE_SUFFIXES
+        path.absolute().as_posix()
+        for path in dataset_path.rglob("*")
+        if path.suffix.lower() in IMAGE_SUFFIXES
     )
     rng = np.random.default_rng(seed=0)
     return {filepath: rng.random(EMBEDDING_DIMENSION, dtype=np.float32) for filepath in filepaths}
