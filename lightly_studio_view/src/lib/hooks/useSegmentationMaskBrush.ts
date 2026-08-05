@@ -5,7 +5,6 @@ import {
 } from '$lib/components/SampleAnnotation/utils';
 import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
-import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
 import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
 import type { BoundingBox } from '$lib/types';
 import { toast } from 'svelte-sonner';
@@ -17,7 +16,6 @@ import { restoreOverriddenSegmentationAnnotationsForUndo } from '$lib/services/r
 
 export function useSegmentationMaskBrush({
     collectionId,
-    datasetId,
     sampleId,
     sample,
     annotations = [],
@@ -40,7 +38,6 @@ export function useSegmentationMaskBrush({
      *  the chosen class, or null if the user cancelled. */
     requestLabel?: () => Promise<{ label: string } | null>;
 }) {
-    const { createLabel } = useCreateLabel({ getCollectionId: () => collectionId });
     const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
     const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
     const {
@@ -157,13 +154,11 @@ export function useSegmentationMaskBrush({
             }
         }
 
-        let label = labels?.find((l) => l.annotation_label_name === annotationLabelName);
+        const label = labels?.find((l) => l.annotation_label_name === annotationLabelName);
 
         if (!label) {
-            label = await createLabel({
-                dataset_id: datasetId,
-                annotation_label_name: annotationLabelName!
-            });
+            toast.error('This class no longer exists. Choose another class.');
+            return;
         }
 
         const newAnnotation = await createAnnotation({

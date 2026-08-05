@@ -4,6 +4,7 @@
     import { SettingsDialog } from '$lib/components/Settings';
     import OperatorsMenu from '$lib/components/Operator/OperatorsMenu.svelte';
     import type { CollectionView } from '$lib/api/lightly_studio_local';
+    import ClassesDialog from '$lib/components/ClassesDialog/ClassesDialog.svelte';
 
     let {
         isImages = false,
@@ -38,4 +39,5 @@
 {/if}
 
 <OperatorsMenu />
+<ClassesDialog collectionId={collection.collection_id} />
 <SettingsDialog />

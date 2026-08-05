@@ -1,9 +1,13 @@
-"""Example of how to load samples from path with the dataset class."""
+"""Example of how to load videos with annotations in YouTube-VIS format."""
+
+from __future__ import annotations
 
 from environs import Env
 
 import lightly_studio as ls
+from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.database import db_manager
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 
 # Read environment variables
 env = Env()
@@ -13,13 +17,16 @@ env.read_env()
 db_manager.connect(cleanup_existing=True)
 
 # Define the path to the dataset directory
-dataset_path = env.path("EXAMPLES_DATASET_PATH")
+dataset_path = env.path("EXAMPLES_VIDEO_DATASET_PATH")
+annotations_path = env.path("EXAMPLES_VIDEO_YVIS_JSON_PATH")
 
 # Create a Dataset from a path
-dataset = ls.ImageDataset.create()
-dataset.add_images_from_path(path=dataset_path)
+dataset = VideoDataset.create()
+dataset.add_videos_from_youtube_vis(
+    annotations_json=annotations_path,
+    videos_path=dataset_path,
+    annotation_type=AnnotationType.SEGMENTATION_MASK,
+)
 
-for sample in dataset:
-    print(sample)
-
+# Start the GUI
 ls.start_gui()
