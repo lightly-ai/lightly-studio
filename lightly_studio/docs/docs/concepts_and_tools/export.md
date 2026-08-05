@@ -17,8 +17,6 @@ The following export formats are supported:
 | Pascal VOC Semantic Segmentation | Per-pixel class masks | PNG masks + class map |
 | YouTube-VIS Segmentation Mask | Video segmentation mask tracks | JSON |
 
-Classification CSV export is currently available through the Python API.
-
 ## Export in the GUI
 
 Open the export dialog from the `Menu` button in the top-right corner of any grid view
@@ -28,7 +26,8 @@ and select `Export`. The dialog shows a dropdown with all available formats for 
 
 ### Exporting annotations
 
-For annotation formats (`Image Object Detections (COCO)`, `Image Object Detections (YOLO)`,
+For annotation formats (`Image Classifications (CSV)`, `Image Object Detections (COCO)`,
+`Image Object Detections (YOLO)`,
 `Image Segmentation Mask (COCO)`, `Image Segmentation Mask (PASCAL VOC)`, `Image Captions`,
 `YouTube-VIS Video Segmentation Masks`),
 select the format and click `Download`. A zip file is created if the export includes multiple files.
