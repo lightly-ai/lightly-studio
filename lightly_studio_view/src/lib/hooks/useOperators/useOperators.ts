@@ -1,22 +1,18 @@
-import type {
-    ParameterColumnView,
-    ParameterView,
-    RegisteredOperatorMetadata
-} from '$lib/api/lightly_studio_local';
+import type { ParameterView, RegisteredOperatorMetadata } from '$lib/api/lightly_studio_local';
 
 export type OperatorParameterType = 'string' | 'int' | 'float' | 'bool';
 
-const mapColumn = (column: ParameterColumnView) => ({
-    name: column.name,
-    description: column.description,
-    default: column.default as unknown,
-    required: column.required,
-    /**
-     * Python type name of the column, e.g. `'str'`, `'int'`, `'float'` or `'bool'`. Columns accept
-     * any built-in parameter type, so this is not an `OperatorParameterType`.
-     */
-    paramType: column.param_type ?? undefined
-});
+/**
+ * A single column of a table parameter as consumed by the GUI.
+ */
+export type OperatorParameterColumn = {
+    name: string;
+    description?: string;
+    default?: unknown;
+    required?: boolean;
+    /** Python type name, e.g. `'str'`, `'int'`, `'float'` or `'bool'`. */
+    paramType?: string;
+};
 
 export type OperatorParameter = {
     name: string;
@@ -24,7 +20,7 @@ export type OperatorParameter = {
     default?: unknown;
     required?: boolean;
     type: OperatorParameterType;
-    columns?: ReturnType<typeof mapColumn>[];
+    columns?: OperatorParameterColumn[];
 };
 
 export type Operator = {
@@ -38,8 +34,7 @@ const mapParameter = (parameter: ParameterView): OperatorParameter => ({
     description: parameter.description,
     default: parameter.default,
     required: parameter.required,
-    type: (parameter.param_type as OperatorParameterType) ?? 'string',
-    columns: parameter.columns?.map(mapColumn)
+    type: (parameter.param_type as OperatorParameterType) ?? 'string'
 });
 
 export const createOperatorFromMetadata = (

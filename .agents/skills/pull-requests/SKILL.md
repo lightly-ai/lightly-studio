@@ -1,3 +1,8 @@
+---
+name: pull-requests
+description: Read when opening a pull request, writing a PR description, splitting work into PRs, or deciding whether a change is too large to review. Covers the size targets, the one-purpose-per-PR rule, what makes a PR reviewable on its own, and the exceptions for dependency bumps, codemods, migrations, and generated files.
+---
+
 # Pull Request Guidelines
 
 Break changes down into small, focused pull requests that can be easily reviewed.

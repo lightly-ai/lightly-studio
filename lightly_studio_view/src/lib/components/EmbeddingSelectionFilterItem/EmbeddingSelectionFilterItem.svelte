@@ -19,17 +19,22 @@
     const { setRangeSelectionForCollection } = useGlobalStorage();
 
     // Instantiate all variants once: this component lives in the layout, which persists
-    // when switching between the images/annotations tabs.
+    // when switching between the images/annotations tabs. collectionIdStore is a Svelte
+    // store (Readable<string>) consumed via get() inside the hooks, so it is not a stale
+    // capture — the svelte-ignore suppresses a false-positive state_referenced_locally warning.
+    // eslint-disable-next-line svelte/no-unused-svelte-ignore
     // svelte-ignore state_referenced_locally
     const imagesFilter = useEmbeddingFilterForImages(
         collectionIdStore,
         setRangeSelectionForCollection
     );
+    // eslint-disable-next-line svelte/no-unused-svelte-ignore
     // svelte-ignore state_referenced_locally
     const videosFilter = useEmbeddingFilterForVideos(
         collectionIdStore,
         setRangeSelectionForCollection
     );
+    // eslint-disable-next-line svelte/no-unused-svelte-ignore
     // svelte-ignore state_referenced_locally
     const annotationsFilter = useEmbeddingFilterForAnnotations(
         collectionIdStore,
