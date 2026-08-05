@@ -124,11 +124,12 @@ describe('SplitDialog', () => {
         expect(warning).toContain('Tag train will be cleared before assignment.');
         expect(warning).not.toContain('120');
 
-        // First submit only arms the overwrite confirmation, without calling submit.
+        // Submitting opens the confirmation popup instead of splitting immediately.
         await fireEvent.submit(screen.getByTestId('split-submit').closest('form')!);
         expect(submitMock).not.toHaveBeenCalled();
 
-        await fireEvent.submit(screen.getByTestId('split-submit').closest('form')!);
+        // Confirming in the popup runs the split.
+        await fireEvent.click(screen.getByTestId('split-confirm-clear'));
         expect(submitMock).toHaveBeenCalledOnce();
     });
 });

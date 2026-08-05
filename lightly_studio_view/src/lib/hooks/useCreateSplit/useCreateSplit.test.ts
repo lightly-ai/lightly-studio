@@ -61,7 +61,11 @@ describe('useCreateSplit', () => {
             path: { collection_id: 'col-1' },
             body: { sizes: { train: 80, val: 20 }, filter: undefined }
         });
-        expect(toast.success).toHaveBeenCalled();
+        // The toast names the split tags but not the seed or per-split counts.
+        const message = vi.mocked(toast.success).mock.calls[0][0] as string;
+        expect(message).toContain('train and val');
+        expect(message).not.toContain('42');
+        expect(message).not.toContain('8');
         expect(defaultParams.loadTags).toHaveBeenCalled();
         expect(defaultParams.setTagSelected).toHaveBeenCalledWith('t-train', true);
         expect(defaultParams.setTagSelected).toHaveBeenCalledWith('t-val', true);

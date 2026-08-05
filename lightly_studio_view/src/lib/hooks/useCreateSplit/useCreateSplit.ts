@@ -43,10 +43,8 @@ export function useCreateSplit(params: UseCreateSplitParams) {
                 return false;
             }
 
-            const summary = response.data.splits
-                .map((split) => `${split.name}: ${split.count}`)
-                .join(', ');
-            toast.success(`Dataset split (seed ${response.data.seed}) — ${summary}`);
+            const names = response.data.splits.map((split) => split.name);
+            toast.success(`Dataset split into ${joinNatural(names)}.`);
 
             await params.loadTags();
             selectSplitTags(
@@ -71,6 +69,12 @@ export function useCreateSplit(params: UseCreateSplitParams) {
         isSubmitting: readonly(_isSubmitting),
         submit
     };
+}
+
+// Joins names into a natural-language list: "a", "a and b", "a, b and c".
+function joinNatural(items: string[]): string {
+    if (items.length <= 1) return items.join('');
+    return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
 }
 
 function selectSplitTags(

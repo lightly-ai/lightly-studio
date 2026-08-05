@@ -49,7 +49,7 @@
         closeSplitDialog
     });
 
-    let confirmingOverwrite = $state(false);
+    let showClearConfirm = $state(false);
 
     const currentFilter = $derived.by((): SplitCreateBody['filter'] => {
         if (isVideoCollection) {
@@ -98,19 +98,26 @@
     async function handleSubmit(event: Event) {
         event.preventDefault();
         if (!$isValid || $isSubmitting || overlapQuery.isLoading) return;
-        if (clearedTags.length > 0 && !confirmingOverwrite) {
-            confirmingOverwrite = true;
+        // Clearing existing tags is destructive, so confirm it in a popup first.
+        if (clearedTags.length > 0) {
+            showClearConfirm = true;
             return;
         }
+        await runSplit();
+    }
+
+    async function runSplit() {
         const success = await submit({
             collectionId,
             sizes: getSizes(),
             filter: currentFilter
         });
-        if (success) {
-            reset();
-            confirmingOverwrite = false;
-        }
+        if (success) reset();
+    }
+
+    async function confirmClearAndSplit() {
+        showClearConfirm = false;
+        await runSplit();
     }
 </script>
 
@@ -251,16 +258,48 @@
                         disabled={!$isValid || $isSubmitting}
                         data-testid="split-submit"
                     >
-                        {#if $isSubmitting}
-                            Splitting...
-                        {:else if confirmingOverwrite && clearedTags.length > 0}
-                            Overwrite &amp; split
-                        {:else}
-                            Split
-                        {/if}
+                        {$isSubmitting ? 'Splitting...' : 'Split'}
                     </Button>
                 </Dialog.Footer>
             </form>
+        </Dialog.Content>
+    </Dialog.Portal>
+</Dialog.Root>
+
+<!-- Confirmation popup shown before clearing tags that already hold selected samples. -->
+<Dialog.Root open={showClearConfirm} onOpenChange={(open) => (showClearConfirm = open)}>
+    <Dialog.Portal>
+        <Dialog.Overlay />
+        <Dialog.Content class="border-border bg-background sm:max-w-[440px]">
+            <Dialog.Header>
+                <Dialog.Title class="text-foreground">Clear existing tags?</Dialog.Title>
+                <Dialog.Description class="text-foreground">
+                    {clearedNames.length === 1 ? 'Tag' : 'Tags'}
+                    <span class="text-destructive-text">{@render tagNames(clearedNames)}</span>
+                    already {clearedNames.length === 1 ? 'has' : 'have'} assigned samples. Splitting will
+                    clear {clearedNames.length === 1 ? 'it' : 'them'} first, then reassign. This cannot
+                    be undone.
+                </Dialog.Description>
+            </Dialog.Header>
+            <Dialog.Footer class="mt-4">
+                <Button
+                    variant="outline"
+                    type="button"
+                    onclick={() => (showClearConfirm = false)}
+                    disabled={$isSubmitting}
+                >
+                    Cancel
+                </Button>
+                <Button
+                    variant="destructive"
+                    type="button"
+                    onclick={confirmClearAndSplit}
+                    disabled={$isSubmitting}
+                    data-testid="split-confirm-clear"
+                >
+                    {$isSubmitting ? 'Splitting...' : 'Clear and split'}
+                </Button>
+            </Dialog.Footer>
         </Dialog.Content>
     </Dialog.Portal>
 </Dialog.Root>
