@@ -56,7 +56,7 @@
             aria-label="Class names"
             placeholder="e.g. dogs, cats, people"
             disabled={isAdding}
-            oninput={() => onValueChange?.(value)}
+            oninput={(e) => onValueChange?.((e.currentTarget as HTMLInputElement).value)}
         />
         <Button type="submit" {disabled}>
             {#if isAdding}<LoaderCircle class="animate-spin" />{:else}<Plus />{/if}
