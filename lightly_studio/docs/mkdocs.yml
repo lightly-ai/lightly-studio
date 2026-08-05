@@ -63,6 +63,7 @@ nav:
       - Sample: api/sample.md
       - DatasetQuery: api/dataset_query.md
       - Sampling: api/sampling.md
+      - Embeddings: api/embeddings.md
       - Plugin: api/plugin.md
       - Annotation: api/annotation.md
       - Model Evaluation: api/evaluation.md

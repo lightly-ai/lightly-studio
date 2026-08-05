@@ -17,22 +17,34 @@ from lightly_studio.models.embedding_model import EmbeddingModelCreate
 
 @dataclass(frozen=True)
 class ImageCrop:
-    """Image crop to embed."""
+    """A rectangular region of an image to embed, given in pixel coordinates."""
 
     filepath: str
+    """Path to the image the crop is taken from."""
+
     x: int
+    """Left edge of the crop, in pixels from the image's left."""
+
     y: int
+    """Top edge of the crop, in pixels from the image's top."""
+
     width: int
+    """Crop width in pixels."""
+
     height: int
+    """Crop height in pixels."""
 
 
 @runtime_checkable
 class EmbeddingGenerator(Protocol):
-    """Protocol defining the interface for embedding models.
+    """Base protocol shared by every embedding generator.
 
-    This protocol defines the interface that all embedding models must
-    implement. Concrete implementations will use different techniques
-    for creating embeddings.
+    A generator supplies the model metadata LightlyStudio stores per collection
+    (``get_embedding_model_input``) and embeds text queries (``embed_text``), which
+    powers text-based similarity search. Implement one of the more specific protocols
+    below (``ImageEmbeddingGenerator`` and/or ``VideoEmbeddingGenerator``) to embed
+    images or videos, then register it with
+    :func:`~lightly_studio.set_default_embedding_model` before ingesting a dataset.
     """
 
     def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
@@ -59,17 +71,17 @@ class EmbeddingGenerator(Protocol):
 
 @runtime_checkable
 class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
-    """Protocol defining the interface for image embedding models.
+    """Protocol for embedding images, image crops, and text.
 
-    This protocol defines the interface that all image embedding models must
-    implement. Concrete implementations will use different techniques
-    for creating embeddings.
+    Implement this to plug your own image model into LightlyStudio, either by running
+    the model on the given file paths or by looking up precomputed vectors. A registered
+    image generator overrides image, annotation-crop, and text embeddings. It inherits
+    ``embed_text`` from :class:`EmbeddingGenerator`, so keep the text and image encoders
+    in the same space for text-based image search to work.
     """
 
     def embed_images(self, filepaths: list[str], show_progress: bool = True) -> EmbeddingResult:
         """Generate embeddings for multiple image samples.
-
-        TODO(Michal, 04/2025): Use DatasetLoader as input instead.
 
         Args:
             filepaths: A list of file paths to the images to embed.
@@ -77,7 +89,8 @@ class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
 
         Returns:
             An ``EmbeddingResult`` with embeddings for the readable files, in the same
-            order as the corresponding input file paths.
+            order as the corresponding input file paths. Use ``kept_indices`` to skip
+            any file paths you cannot or do not want to embed.
         """
         ...
 
@@ -114,11 +127,13 @@ class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
 
 @runtime_checkable
 class VideoEmbeddingGenerator(EmbeddingGenerator, Protocol):
-    """Protocol defining the interface for video embedding models.
+    """Protocol for embedding videos (and text).
 
-    This protocol defines the interface that all video embedding models must
-    implement. Concrete implementations will use different techniques
-    for creating embeddings.
+    Implement this to plug your own video model into LightlyStudio. A registered video
+    generator overrides video and text embeddings. It inherits ``embed_text`` from
+    :class:`EmbeddingGenerator`; keep the text and video encoders in the same space for
+    text-based video search to work. Implement it alongside
+    :class:`ImageEmbeddingGenerator` on the same object to override both image and video.
     """
 
     def embed_videos(self, filepaths: list[str]) -> EmbeddingResult:
