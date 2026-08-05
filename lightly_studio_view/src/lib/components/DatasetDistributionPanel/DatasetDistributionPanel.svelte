@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import { Maximize2 as Maximize2Icon, X } from '@lucide/svelte';
     import { Button } from '$lib/components';
     import Typography from '$lib/components/Typography/Typography.svelte';
@@ -167,11 +168,11 @@
     // vertical bars produce once there are more than a handful of classes.
     let config: DistributionConfig = $state({
         mode: 'topN',
-        n: topN,
+        n: untrack(() => topN),
         sortBy: 'count',
         manualClasses: [],
         orientation: 'horizontal',
-        countMode: initialCountMode
+        countMode: untrack(() => initialCountMode)
     });
     const defaultCategoricalConfig: DistributionConfig = {
         mode: 'topN',

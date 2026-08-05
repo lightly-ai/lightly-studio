@@ -39,10 +39,12 @@
     const { selectedAnnotationFilterIdsArray: selectedAnnotationFilterIds } =
         useSelectedAnnotationsFilter();
 
-    const { tagsSelected } = useTags({
-        collection_id,
-        kind: ['sample']
-    });
+    const { tagsSelected } = $derived.by(() =>
+        useTags({
+            collection_id,
+            kind: ['sample']
+        })
+    );
 
     const { dimensionsValues: dimensions } = useDimensions();
     const { metadataValues, categoricalMetadataValues } = useMetadataFilters(collection_id);
@@ -108,7 +110,7 @@
             ? infiniteSamples.data.pages.flatMap((page: { data?: ImageView[] }) => page.data ?? [])
             : []
     );
-    const selectedSampleIds = getSelectedSampleIds(collection_id);
+    const selectedSampleIds = $derived(getSelectedSampleIds(collection_id));
     let selectionAnchorSampleId = $state<string | null>(null);
 
     let isReady = $state(false);

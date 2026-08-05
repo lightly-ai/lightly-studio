@@ -20,7 +20,7 @@
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
     import { onMount } from 'svelte';
 
-    const collectionId = $derived(page.params.collection_id);
+    const collectionId = $derived(page.params.collection_id!);
 
     const { metadataValues, categoricalMetadataValues } = $derived(
         useMetadataFilters(collectionId)

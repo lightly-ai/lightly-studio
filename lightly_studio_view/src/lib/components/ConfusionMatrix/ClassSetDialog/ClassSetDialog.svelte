@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import { ClassSetConfigDialog } from '$lib/components/ClassSetConfig';
     import type { SelectItem } from '$lib/components/Select';
     import { CLASS_SORT_LABELS, type ClassSortOption } from '../topNMatrix';
@@ -22,7 +23,7 @@
 
     // Coloring is confusion-matrix-specific; it lives here and commits together
     // with the class selection when the shared dialog fires Apply.
-    let colorDraft: ColorConfig = $state({ ...color });
+    let colorDraft: ColorConfig = $state(untrack(() => ({ ...color })));
     $effect(() => {
         if (open) colorDraft = { ...color };
     });

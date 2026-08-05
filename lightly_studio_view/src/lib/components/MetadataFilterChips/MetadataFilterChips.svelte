@@ -9,7 +9,7 @@
 
     const { collectionId }: Props = $props();
 
-    const hook = useMetadataFilterChips(collectionId);
+    const hook = $derived.by(() => useMetadataFilterChips(collectionId));
 </script>
 
 {#if hook.chips.length > 0}

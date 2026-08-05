@@ -30,7 +30,7 @@ from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 # Environment variables
 env = Env()
 env.read_env()
-dataset_path = env.path("EXAMPLES_DATASET_PATH", "/path/to/your/dataset")
+dataset_path = env.path("EXAMPLES_DATASET_PATH")
 
 
 def load_existing_dataset() -> tuple[ls.ImageDataset, list[ImageSample]]:
