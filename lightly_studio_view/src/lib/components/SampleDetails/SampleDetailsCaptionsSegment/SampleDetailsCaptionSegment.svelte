@@ -3,7 +3,6 @@
     import Segment from '$lib/components/Segment/Segment.svelte';
     import CaptionField from '$lib/components/CaptionField/CaptionField.svelte';
     import CreateCaptionField from '$lib/components/CaptionField/CreateCaptionField.svelte';
-    import CaptionSegmentRibbon from '$lib/components/CaptionSegmentRibbon/CaptionSegmentRibbon.svelte';
     import MatchScoreFilterChips from './MatchScoreFilterChips.svelte';
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
@@ -23,8 +22,6 @@
         captions: CaptionView[] | undefined;
         refetch: () => void;
         sampleId: string;
-        /** Parent video id for segment frame ribbons (video details only). */
-        videoId?: string;
         /** Current playback time used to highlight the active caption. */
         currentTimeS?: number;
         /** Caption id selected for segment-loop review. */
@@ -37,7 +34,6 @@
         captions,
         refetch,
         sampleId,
-        videoId,
         currentTimeS,
         selectedCaptionId = null,
         onSelectCaption
@@ -65,11 +61,6 @@
             : (findActiveCaptionAtTime(captionList, currentTimeS)?.sample_id ?? null)
     );
     const activeCaptionId = $derived(playheadCaptionId ?? selectedCaptionId);
-    const ribbonCaption = $derived(
-        videoId
-            ? (captionList.find((caption) => caption.sample_id === activeCaptionId) ?? null)
-            : null
-    );
 
     $effect(() => {
         if (!activeCaptionId) return;
@@ -118,14 +109,6 @@
     <div class="flex flex-col gap-3 space-y-4">
         {#if hasMatchScores}
             <MatchScoreFilterChips value={matchFilter} onChange={(filter) => (matchFilter = filter)} />
-        {/if}
-
-        {#if ribbonCaption?.temporal_span_details && videoId}
-            <CaptionSegmentRibbon
-                {videoId}
-                startTimeS={ribbonCaption.temporal_span_details.start_time_s}
-                endTimeS={ribbonCaption.temporal_span_details.end_time_s}
-            />
         {/if}
 
         <div class="flex flex-col gap-2" data-testid="captions-list">

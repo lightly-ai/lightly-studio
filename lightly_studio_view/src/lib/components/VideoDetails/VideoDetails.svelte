@@ -390,7 +390,6 @@
                         refetch={onVideoUpdate}
                         captions={captions}
                         sampleId={video.sample.sample_id}
-                        videoId={video.sample_id}
                         {currentTimeS}
                         {selectedCaptionId}
                         onSelectCaption={selectCaptionForReview}
