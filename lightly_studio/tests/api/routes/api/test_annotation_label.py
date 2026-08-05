@@ -4,12 +4,19 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_CONFLICT,
     HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_OK,
+    HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
 from lightly_studio.resolvers import annotation_label_resolver
-from tests.helpers_resolvers import create_annotation_label, create_collection
+from tests.helpers_resolvers import (
+    create_annotation,
+    create_annotation_label,
+    create_collection,
+    create_image,
+)
 
 
 def test_create_annotation_label(db_session: Session, test_client: TestClient) -> None:
@@ -31,6 +38,25 @@ def test_create_annotation_label(db_session: Session, test_client: TestClient) -
     assert all_labels[0].annotation_label_name == "cat"
 
 
+def test_create_annotation_label__duplicate(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+    create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="cat",
+    )
+
+    result = test_client.post(
+        f"/api/collections/{collection.collection_id!s}/annotation_labels",
+        json={"annotation_label_name": "cat"},
+    )
+
+    assert result.status_code == HTTP_STATUS_CONFLICT
+
+
 def test_get_annotation_labels(db_session: Session, test_client: TestClient) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
@@ -42,6 +68,88 @@ def test_get_annotation_labels(db_session: Session, test_client: TestClient) -> 
     assert len(labels_result.json()) == 1
     label = labels_result.json()[0]
     assert label["annotation_label_name"] == "cat"
+
+
+def test_get_annotation_labels_with_counts(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="cat",
+    )
+    image = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/tmp/api-count.png",
+    )
+    create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+    )
+
+    result = test_client.get(
+        f"/api/collections/{collection.collection_id!s}/annotation_labels/with_counts"
+    )
+
+    assert result.status_code == HTTP_STATUS_OK
+    assert result.json()[0]["annotation_count"] == 1
+
+
+def test_create_annotation_labels_batch(db_session: Session, test_client: TestClient) -> None:
+    collection = create_collection(session=db_session)
+    create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="cat",
+    )
+
+    result = test_client.post(
+        f"/api/collections/{collection.collection_id!s}/annotation_labels/batch",
+        json={"annotation_label_names": ["cat", " dog ", "", "bird", "dog"]},
+    )
+
+    assert result.status_code == HTTP_STATUS_CREATED
+    assert [label["annotation_label_name"] for label in result.json()] == ["dog", "bird"]
+    assert all(label["annotation_count"] == 0 for label in result.json())
+
+
+def test_create_annotation_labels_batch__all_exist(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+    create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="cat",
+    )
+
+    result = test_client.post(
+        f"/api/collections/{collection.collection_id!s}/annotation_labels/batch",
+        json={"annotation_label_names": ["cat"]},
+    )
+
+    assert result.status_code == HTTP_STATUS_OK
+    assert result.json() == []
+
+
+def test_create_annotation_labels_batch__name_too_long(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+
+    result = test_client.post(
+        f"/api/collections/{collection.collection_id!s}/annotation_labels/batch",
+        json={"annotation_label_names": ["a" * 256]},
+    )
+
+    assert result.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
 
 
 def test_get_annotation_label(db_session: Session, test_client: TestClient) -> None:

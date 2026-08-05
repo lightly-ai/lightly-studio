@@ -24,7 +24,6 @@
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
-    import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
     import { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { onMount, untrack } from 'svelte';
@@ -59,7 +58,6 @@
         getCollectionId: () => eventCollectionId
     });
     const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => eventCollectionId });
-    const { createLabel } = useCreateLabel({ getCollectionId: () => eventCollectionId });
     const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => eventCollectionId });
     const annotationLabels = useAnnotationLabels(() => ({ collectionId: eventCollectionId }));
 
@@ -99,14 +97,12 @@
         if (!result?.label) return;
 
         try {
-            let label = annotationLabels.data?.find(
+            const label = annotationLabels.data?.find(
                 (item) => item.annotation_label_name === result.label
             );
             if (!label) {
-                label = await createLabel({
-                    dataset_id: datasetId,
-                    annotation_label_name: result.label
-                });
+                toast.error('This class no longer exists. Choose another class.');
+                return;
             }
 
             await createAnnotation({

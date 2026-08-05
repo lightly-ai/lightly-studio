@@ -58,9 +58,7 @@
     <Dialog.Content class="max-w-sm">
         <Dialog.Header>
             <Dialog.Title>Select a Class</Dialog.Title>
-            <Dialog.Description>
-                Choose an existing class or type a new one to create it.
-            </Dialog.Description>
+            <Dialog.Description>Choose an existing annotation class.</Dialog.Description>
         </Dialog.Header>
 
         <div class="min-w-0 space-y-1 py-2">
@@ -68,7 +66,8 @@
                 bind:selectedItem
                 {items}
                 label="Select a class..."
-                placeholder="Search or create a class..."
+                placeholder="Search classes..."
+                allowCreate={false}
                 className="w-full"
                 autoOpen
                 autoFocus

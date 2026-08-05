@@ -69,6 +69,20 @@ describe('SelectList', () => {
         expect(screen.getByText('nonexistent')).toBeInTheDocument();
     });
 
+    it('does not offer or create new items when creation is disabled', async () => {
+        const user = userEvent.setup();
+        const onSelect = vi.fn();
+        render(SelectList, {
+            props: { items: [...mockItems], onSelect, allowCreate: false }
+        });
+
+        await user.click(screen.getByTestId('select-list-trigger'));
+        await user.type(screen.getByTestId('select-list-input'), 'nonexistent{Enter}');
+
+        expect(screen.queryByText('Create:')).not.toBeInTheDocument();
+        expect(onSelect).not.toHaveBeenCalled();
+    });
+
     it('renders all items in the list', async () => {
         const user = userEvent.setup();
         render(SelectList, {

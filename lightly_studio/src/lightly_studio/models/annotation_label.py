@@ -1,8 +1,10 @@
 """This module defines the AnnotationLabel model for the application."""
 
 from datetime import datetime, timezone
+from typing import Annotated
 from uuid import UUID, uuid4
 
+from pydantic import StringConstraints
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel, UniqueConstraint
 
@@ -28,6 +30,19 @@ class AnnotationLabelView(AnnotationLabelBase):
     """Model used when retrieving an annotation label."""
 
     annotation_label_id: UUID
+
+
+class AnnotationLabelWithCountView(AnnotationLabelView):
+    """Model used when retrieving an annotation label with its annotation count."""
+
+    created_at: str
+    annotation_count: int
+
+
+class AnnotationLabelBatchCreateRequest(SQLModel):
+    """Model used when creating multiple annotation labels."""
+
+    annotation_label_names: list[Annotated[str, StringConstraints(max_length=255)]]
 
 
 class AnnotationLabelTable(AnnotationLabelBase, table=True):

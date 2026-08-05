@@ -344,7 +344,9 @@ describe('useSegmentationMaskBrush', () => {
             requestLabel
         });
 
-        await finishBrush(mask, null, []);
+        await finishBrush(mask, null, [
+            { annotation_label_id: 'car-label-id', annotation_label_name: 'car' }
+        ]);
 
         expect(annotationLabelContext.annotationLabel).toBe('car');
         // The label choice is persisted to the session store, keyed by collection id.
@@ -380,7 +382,7 @@ describe('useSegmentationMaskBrush', () => {
         );
     });
 
-    it('creates a new label with the selected name when label does not exist yet', async () => {
+    it('does not create an annotation when the selected class no longer exists', async () => {
         const refetch = vi.fn();
 
         annotationLabelContext.annotationLabel = 'car';
@@ -396,13 +398,12 @@ describe('useSegmentationMaskBrush', () => {
 
         await finishBrush(mask, null, []);
 
-        expect(createLabel).toHaveBeenCalledWith({
-            dataset_id: datasetId,
-            annotation_label_name: 'car'
-        });
-
-        expect(createAnnotation).toHaveBeenCalled();
-        expect(refetch).toHaveBeenCalled();
+        expect(createLabel).not.toHaveBeenCalled();
+        expect(createAnnotation).not.toHaveBeenCalled();
+        expect(refetch).not.toHaveBeenCalled();
+        expect(toast.error).toHaveBeenCalledWith(
+            'This class no longer exists. Choose another class.'
+        );
     });
 
     it('adds a create-annotation undo action to the stack when a new annotation is created with a brush stroke', async () => {

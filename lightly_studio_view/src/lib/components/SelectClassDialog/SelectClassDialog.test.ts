@@ -42,9 +42,7 @@ describe('SelectClassDialog', () => {
         renderDialog();
 
         expect(screen.getByText('Select a Class')).toBeInTheDocument();
-        expect(
-            screen.getByText('Choose an existing class or type a new one to create it.')
-        ).toBeInTheDocument();
+        expect(screen.getByText('Choose an existing annotation class.')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
         expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled();
     });
@@ -71,7 +69,7 @@ describe('SelectClassDialog', () => {
         expect(onCancel).not.toHaveBeenCalled();
     });
 
-    it('confirms a newly typed class name when Enter is pressed', async () => {
+    it('does not confirm a newly typed class name when Enter is pressed', async () => {
         const user = userEvent.setup();
         const { onConfirm } = renderDialog();
         const input = await screen.findByTestId('select-list-input');
@@ -80,8 +78,7 @@ describe('SelectClassDialog', () => {
 
         await user.type(input, 'fish{Enter}');
 
-        expect(onConfirm).toHaveBeenCalledTimes(1);
-        expect(onConfirm).toHaveBeenCalledWith('fish');
+        expect(onConfirm).not.toHaveBeenCalled();
     });
 
     it('confirms the keyboard-highlighted class instead of the filter text', async () => {
@@ -112,18 +109,14 @@ describe('SelectClassDialog', () => {
         expect(onConfirm).not.toHaveBeenCalled();
     });
 
-    it('selects a newly typed class name before explicit mouse confirmation', async () => {
+    it('does not offer a create option for a newly typed class name', async () => {
         const user = userEvent.setup();
         const { onConfirm } = renderDialog();
 
         await user.type(await screen.findByTestId('select-list-input'), 'fish');
-        await user.click(screen.getByRole('option', { name: /Create:\s*fish/i }));
 
-        const confirmButton = screen.getByRole('button', { name: 'Confirm' });
-        await waitFor(() => expect(confirmButton).toBeEnabled());
-        await user.click(confirmButton);
-
-        expect(onConfirm).toHaveBeenCalledWith('fish');
+        expect(screen.queryByRole('option', { name: /Create:\s*fish/i })).not.toBeInTheDocument();
+        expect(onConfirm).not.toHaveBeenCalled();
     });
 
     it('does not render an annotation source selector', () => {
