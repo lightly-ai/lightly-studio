@@ -13,7 +13,8 @@ from lightly_studio.models.annotation_label import (
     AnnotationLabelTable,
 )
 
-from . import create, get_by_label_name
+from .create import create
+from .get_by_label_name import get_by_label_name
 
 
 def create_batch(
@@ -34,12 +35,10 @@ def create_batch(
     normalized_names = list(dict.fromkeys(name.strip() for name in label_names if name.strip()))
     created_labels: list[AnnotationLabelTable] = []
     for name in normalized_names:
-        if get_by_label_name.get_by_label_name(
-            session=session, dataset_id=dataset_id, label_name=name
-        ):
+        if get_by_label_name(session=session, dataset_id=dataset_id, label_name=name):
             continue
         try:
-            created_label = create.create(
+            created_label = create(
                 session=session,
                 label=AnnotationLabelCreate(
                     dataset_id=dataset_id,
