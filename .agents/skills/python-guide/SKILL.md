@@ -1,5 +1,5 @@
 ---
-name: python
+name: python-guide
 description: Read before writing or reviewing any Python code in this repository. Covers import style (modules for functions, direct for classes), file layout ordering, protocols vs ABCs, TODO and comment format, assertions, positional vs keyword arguments, docstrings including tensor shapes, typing, and pytest conventions.
 ---
 

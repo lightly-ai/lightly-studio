@@ -1,5 +1,5 @@
 ---
-name: backend
+name: backend-guide
 description: Read before adding or changing backend code in lightly_studio - FastAPI routes, services, resolvers, SQLModel tables, or database access. Explains the api/services/resolvers/models layering, the Base/Create/Table/View model split, request flow, error handling, DuckDB and PostgreSQL persistence, Alembic migrations, and how to navigate the package.
 ---
 

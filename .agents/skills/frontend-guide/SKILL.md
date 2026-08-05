@@ -1,5 +1,5 @@
 ---
-name: frontend
+name: frontend-guide
 description: Read before writing or reviewing any frontend code in lightly_studio_view - Svelte, TypeScript, or SvelteKit files. Covers component structure and naming, stores vs runes, absolute vs relative imports, Shadcn and Tailwind usage, Svelte 5 syntax, TanStack Query hooks, bundle size limits, Storybook stories, and vitest conventions.
 ---
 

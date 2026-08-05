@@ -6,9 +6,9 @@ Our coding guidelines are [Agent Skills](https://agentskills.io) in [`.agents/sk
 Claude Code, Codex and Gemini CLI load them automatically when a task matches. If your tool does not
 support skills, read the relevant `SKILL.md` yourself before changing code:
 
-- [Frontend](./.agents/skills/frontend/SKILL.md): TypeScript and SvelteKit standards. Read before touching `lightly_studio_view`.
-- [Python](./.agents/skills/python/SKILL.md): Python style. Read before touching any Python file.
-- [Backend](./.agents/skills/backend/SKILL.md): FastAPI and SQLModel architecture. Read before touching `lightly_studio`.
+- [Frontend](./.agents/skills/frontend-guide/SKILL.md): TypeScript and SvelteKit standards. Read before touching `lightly_studio_view`.
+- [Python](./.agents/skills/python-guide/SKILL.md): Python style. Read before touching any Python file.
+- [Backend](./.agents/skills/backend-guide/SKILL.md): FastAPI and SQLModel architecture. Read before touching `lightly_studio`.
 - [Best Practices](./.agents/skills/best-practices/SKILL.md): General principles for readability, maintainability, and performance.
 - [Glossary](./.agents/skills/glossary/SKILL.md): Terminology and naming conventions.
 - [Pull Requests](./.agents/skills/pull-requests/SKILL.md): Guidelines for submitting a pull request.
