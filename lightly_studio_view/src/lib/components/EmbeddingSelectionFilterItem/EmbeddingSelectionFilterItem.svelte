@@ -20,14 +20,17 @@
 
     // Instantiate all variants once: this component lives in the layout, which persists
     // when switching between the images/annotations tabs.
+    // svelte-ignore state_referenced_locally
     const imagesFilter = useEmbeddingFilterForImages(
         collectionIdStore,
         setRangeSelectionForCollection
     );
+    // svelte-ignore state_referenced_locally
     const videosFilter = useEmbeddingFilterForVideos(
         collectionIdStore,
         setRangeSelectionForCollection
     );
+    // svelte-ignore state_referenced_locally
     const annotationsFilter = useEmbeddingFilterForAnnotations(
         collectionIdStore,
         setRangeSelectionForCollection
