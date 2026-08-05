@@ -5,11 +5,9 @@ from __future__ import annotations
 import csv
 from collections.abc import Iterable
 from pathlib import Path
-from typing import cast
 from uuid import UUID
 
 from lightly_studio.core.image.image_sample import ImageSample
-from lightly_studio.core.sample import Sample
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 
 CSV_FIELDNAMES = (
@@ -21,7 +19,7 @@ CSV_FIELDNAMES = (
 
 
 def write_classifications_csv(
-    samples: Iterable[Sample],
+    samples: Iterable[ImageSample],
     output_csv: Path,
     annotation_collection_id: UUID | None,
 ) -> None:
@@ -37,8 +35,7 @@ def write_classifications_csv(
         writer = csv.DictWriter(file, fieldnames=CSV_FIELDNAMES)
         writer.writeheader()
         for sample in samples:
-            image_sample = cast(ImageSample, sample)
-            for annotation in image_sample.sample_table.annotations:
+            for annotation in sample.sample_table.annotations:
                 if annotation.annotation_type != AnnotationType.CLASSIFICATION:
                     continue
                 if (
@@ -48,7 +45,7 @@ def write_classifications_csv(
                     continue
                 writer.writerow(
                     {
-                        "file_path_abs": image_sample.file_path_abs,
+                        "file_path_abs": sample.file_path_abs,
                         "class_name": annotation.annotation_label.annotation_label_name,
                         "confidence": annotation.confidence,
                         "annotation_source": annotation.sample.collection.name,
