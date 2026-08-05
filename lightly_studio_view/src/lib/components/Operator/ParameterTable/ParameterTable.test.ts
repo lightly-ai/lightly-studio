@@ -181,9 +181,9 @@ describe('ParameterTable', () => {
         expect(screen.getByTestId('parameter-table-prompts-limit-0')).toBeInvalid();
     });
 
-    it('leaves a cell an API default omitted alone when its column is optional', () => {
-        // The backend fills the column's own default in, so the row is fine as it stands and opening
-        // the dialog on it must not look like an error.
+    it('flags a cell an API default omitted, even where its column is optional', () => {
+        // The backend refuses a row that does not hold every declared column and fills nothing in for
+        // the missing key, so the cell has to be flagged for the user to fill in.
         const columns = [
             column({ name: 'prompt' }),
             column({ name: 'threshold', paramType: 'float', required: false, default: 0.5 })
@@ -198,7 +198,7 @@ describe('ParameterTable', () => {
             }
         });
 
-        expect(screen.getByTestId('parameter-table-prompts-threshold-0')).toBeValid();
+        expect(screen.getByTestId('parameter-table-prompts-threshold-0')).toBeInvalid();
     });
 
     it('never flags an unchecked boolean cell', () => {

@@ -181,6 +181,7 @@ describe('isValueFilled for a table', () => {
         const text = [column({ name: 'prompt' }), column({ name: 'label', required: false })];
         const numeric = [column({ name: 'threshold', paramType: 'float', required: false })];
 
+        // A blank optional cell is a value the backend takes; an absent one is not (covered below).
         expect(isValueFilled([{ prompt: 'person', label: '' }], 'table', text)).toBe(true);
         expect(isValueFilled([{ prompt: '', label: 'pedestrian' }], 'table', text)).toBe(false);
         // A number input reads as `''` while empty or mid-edit, which the backend rejects.
@@ -214,13 +215,14 @@ describe('isValueFilled for a table', () => {
         }
     });
 
-    it('lets an API default omit a cell of an optional column, whatever its type', () => {
-        // The backend applies the column's own default for a key that is absent, so the row is
-        // submittable as it stands. Every type is treated alike here.
+    it('rejects a row missing a cell even where the column is optional', () => {
+        // The backend wants every row to hold exactly the declared columns and fills nothing in for an
+        // absent key, so an API default that omits one leaves a row it would refuse. Blank and absent
+        // differ here: the optional text cell above is submittable, this one is not.
         for (const paramType of ['str', 'int', 'float', 'bool']) {
             const columns = [column({ name: 'extra', paramType, required: false })];
 
-            expect(isValueFilled([{}], 'table', columns)).toBe(true);
+            expect(isValueFilled([{}], 'table', columns)).toBe(false);
         }
     });
 });

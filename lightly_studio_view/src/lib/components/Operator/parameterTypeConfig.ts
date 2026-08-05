@@ -107,8 +107,9 @@ export function isCellSubmittable(
     value: ParameterTableRow[string] | undefined,
     column: Pick<OperatorParameterColumn, 'paramType' | 'required'>
 ): boolean {
-    // An absent key leaves the column to its own backend default, so only a required column minds.
-    if (value === undefined) return !column.required;
+    // The backend wants every row to hold exactly the declared columns and fills nothing in for a key
+    // that is absent, so a missing cell blocks the row whether or not its column is optional.
+    if (value === undefined) return false;
     const type = toParameterType(column.paramType);
     // `false` is an answer rather than a blank, so a boolean cell only has to be a boolean — which a
     // stray value from an operator's declared default is not.
