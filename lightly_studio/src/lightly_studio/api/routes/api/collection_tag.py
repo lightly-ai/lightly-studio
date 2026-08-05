@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Field
 
+from lightly_studio.api.routes.api import collection_split
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_CONFLICT,
@@ -239,6 +240,57 @@ def add_samples_to_tag_by_filter(
         session=session, tag_id=tag_id, sample_ids_query=sample_ids_query
     )
     return True
+
+
+class TagSelectionOverlapBody(BaseModel):
+    """Body for reporting which tags overlap a filtered selection.
+
+    ``filter`` reuses the same grid filter payload the images grid sends. When it
+    is ``null``, the whole collection is used as the selection.
+    """
+
+    filter: GridFilter | None = None
+
+
+class TagOverlapCountView(BaseModel):
+    """The number of selected samples carrying a single tag."""
+
+    name: str
+    count: int
+
+
+class TagSelectionOverlapView(BaseModel):
+    """Response model listing sample tags overlapping a selection, with counts."""
+
+    tags: list[TagOverlapCountView]
+
+
+@tag_router.post(
+    "/collections/{collection_id}/tags/selection-overlap",
+    response_model=TagSelectionOverlapView,
+)
+def get_tag_selection_overlap(
+    session: SessionDep,
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+    body: TagSelectionOverlapBody,
+) -> TagSelectionOverlapView:
+    """Report which sample tags overlap a selection, with per-tag counts.
+
+    Only ``kind='sample'`` tags carrying at least one selected sample are
+    returned. Used to warn before a dataset split overwrites existing tags.
+    """
+    sample_ids_query = collection_split.build_selected_sample_ids_query(
+        collection_id=collection.collection_id, grid_filter=body.filter
+    )
+    overlap = tag_resolver.get_selection_tag_overlap(
+        session=session, sample_ids_query=sample_ids_query
+    )
+    tags = [TagOverlapCountView(name=name, count=count) for name, count in overlap]
+    return TagSelectionOverlapView(tags=tags)
 
 
 @tag_router.delete(

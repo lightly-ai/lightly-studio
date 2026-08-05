@@ -40,6 +40,7 @@ export { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotatio
 export { useSegmentationMaskPreview } from '$lib/hooks/useSegmentationMaskPreview';
 export { useCreateSampling } from '$lib/hooks/useCreateSampling/useCreateSampling';
 export { useCreateSplit } from '$lib/hooks/useCreateSplit/useCreateSplit';
+export { useSelectionTagOverlap } from '$lib/hooks/useSelectionTagOverlap/useSelectionTagOverlap.svelte';
 export { useSplitDialog } from '$lib/hooks/useSplitDialog/useSplitDialog';
 export { useColorPicker } from '$lib/hooks/useColorPicker/useColorPicker.svelte';
 export { useSubmitCombinationSelection } from '$lib/hooks/useSubmitCombinationSelection/useSubmitCombinationSelection';

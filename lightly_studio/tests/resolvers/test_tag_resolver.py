@@ -334,6 +334,61 @@ def test_get_tags_by_sample__no_memberships(db_session: Session) -> None:
     assert result == {}
 
 
+def test_get_selection_tag_overlap(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    cid = collection.collection_id
+
+    img_a = create_image(session=db_session, collection_id=cid, file_path_abs="a.png")
+    img_b = create_image(session=db_session, collection_id=cid, file_path_abs="b.png")
+    img_c = create_image(session=db_session, collection_id=cid, file_path_abs="c.png")
+
+    tag_train = create_tag(session=db_session, collection_id=cid, tag_name="train", kind="sample")
+    tag_val = create_tag(session=db_session, collection_id=cid, tag_name="val", kind="sample")
+    tag_annotation = create_tag(
+        session=db_session, collection_id=cid, tag_name="ann", kind="annotation"
+    )
+    # A tag with no linked samples must be excluded from the overlap.
+    create_tag(session=db_session, collection_id=cid, tag_name="unused", kind="sample")
+
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session,
+        tag_id=tag_train.tag_id,
+        sample_ids=[img_a.sample_id, img_b.sample_id, img_c.sample_id],
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=tag_val.tag_id, sample_ids=[img_a.sample_id]
+    )
+    # Annotation-kind tags must not appear in the result.
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=tag_annotation.tag_id, sample_ids=[img_a.sample_id]
+    )
+
+    # Select only two of the three samples.
+    query = select(SampleTable.sample_id).where(
+        col(SampleTable.sample_id).in_([img_a.sample_id, img_b.sample_id])
+    )
+    result = tag_resolver.get_selection_tag_overlap(session=db_session, sample_ids_query=query)
+
+    # Ordered by name; counts reflect only the selected samples.
+    assert result == [("train", 2), ("val", 1)]
+
+
+def test_get_selection_tag_overlap__empty_selection(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    cid = collection.collection_id
+    tag = create_tag(session=db_session, collection_id=cid, tag_name="train", kind="sample")
+    image = create_image(session=db_session, collection_id=cid, file_path_abs="a.png")
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=tag.tag_id, sample_ids=[image.sample_id]
+    )
+
+    # A selection matching no samples yields no overlap.
+    query = select(SampleTable.sample_id).where(col(SampleTable.sample_id).in_([uuid4()]))
+    result = tag_resolver.get_selection_tag_overlap(session=db_session, sample_ids_query=query)
+
+    assert result == []
+
+
 def test_get_or_create_sample_tag_by_name(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id

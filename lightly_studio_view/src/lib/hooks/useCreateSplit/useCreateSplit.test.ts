@@ -34,8 +34,7 @@ describe('useCreateSplit', () => {
     const submitInput = {
         collectionId: 'col-1',
         sizes: { train: 80, val: 20 },
-        filter: null,
-        seed: 42
+        filter: null
     };
 
     beforeEach(() => {
@@ -60,7 +59,7 @@ describe('useCreateSplit', () => {
         expect(success).toBe(true);
         expect(createSplit).toHaveBeenCalledWith({
             path: { collection_id: 'col-1' },
-            body: { sizes: { train: 80, val: 20 }, filter: undefined, seed: 42 }
+            body: { sizes: { train: 80, val: 20 }, filter: undefined }
         });
         expect(toast.success).toHaveBeenCalled();
         expect(defaultParams.loadTags).toHaveBeenCalled();

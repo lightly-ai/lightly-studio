@@ -9,10 +9,9 @@ export interface SplitRow {
 
 interface UseSplitFormParams {
     filteredSampleCount: Readable<number>;
-    existingTagNames: Readable<string[]>;
 }
 
-// Percentages are integers in the UI, so an exact sum of 100 is required.
+// Percentages are integers that always sum to exactly 100.
 const REQUIRED_SUM = 100;
 
 const DEFAULT_ROWS: SplitRow[] = [
@@ -21,16 +20,10 @@ const DEFAULT_ROWS: SplitRow[] = [
     { id: 'test', name: 'test', percentage: 10 }
 ];
 
-export function useSplitForm({ filteredSampleCount, existingTagNames }: UseSplitFormParams) {
+export function useSplitForm({ filteredSampleCount }: UseSplitFormParams) {
     const rows = writable<SplitRow[]>(cloneDefaultRows());
 
-    const percentageSum = derived(rows, ($rows) =>
-        $rows.reduce((sum, row) => sum + (Number.isFinite(row.percentage) ? row.percentage : 0), 0)
-    );
-
-    const errorMessage = derived([rows, percentageSum], ([$rows, $sum]) =>
-        computeErrorMessage($rows, $sum)
-    );
+    const errorMessage = derived(rows, ($rows) => computeErrorMessage($rows));
 
     const isValid = derived(errorMessage, ($error) => $error === null);
 
@@ -43,19 +36,34 @@ export function useSplitForm({ filteredSampleCount, existingTagNames }: UseSplit
         )
     );
 
-    // Names of target splits that already exist as tags, so the caller can warn
-    // that they will be cleared and reassigned.
-    const overwrittenTagNames = derived([rows, existingTagNames], ([$rows, $existing]) => {
-        const existingSet = new Set($existing);
-        return $rows.map((row) => row.name).filter((name) => existingSet.has(name));
-    });
-
     function addRow(): void {
-        rows.update(($rows) => [...$rows, { id: crypto.randomUUID(), name: '', percentage: 0 }]);
+        // Carve the new row's share out of the current last row so the total
+        // stays at 100.
+        rows.update(($rows) => {
+            const last = $rows[$rows.length - 1];
+            const take = last ? Math.floor(last.percentage / 2) : 0;
+            const next = $rows.map((row, index) =>
+                index === $rows.length - 1 ? { ...row, percentage: row.percentage - take } : row
+            );
+            return [...next, { id: crypto.randomUUID(), name: '', percentage: take }];
+        });
     }
 
     function removeRow(id: string): void {
-        rows.update(($rows) => $rows.filter((row) => row.id !== id));
+        // Hand the removed row's share to the following row (wrapping to the
+        // first) so the total stays at 100.
+        rows.update(($rows) => {
+            const index = $rows.findIndex((row) => row.id === id);
+            if (index === -1 || $rows.length <= 1) return $rows;
+
+            const donated = $rows[index].percentage;
+            const recipientId = $rows[(index + 1) % $rows.length].id;
+            return $rows
+                .filter((row) => row.id !== id)
+                .map((row) =>
+                    row.id === recipientId ? { ...row, percentage: row.percentage + donated } : row
+                );
+        });
     }
 
     function updateName(id: string, name: string): void {
@@ -63,10 +71,7 @@ export function useSplitForm({ filteredSampleCount, existingTagNames }: UseSplit
     }
 
     function updatePercentage(id: string, percentage: number): void {
-        const safe = Number.isFinite(percentage) ? percentage : 0;
-        rows.update(($rows) =>
-            $rows.map((row) => (row.id === id ? { ...row, percentage: safe } : row))
-        );
+        rows.update(($rows) => rebalanceOnEdit($rows, id, percentage));
     }
 
     function reset(): void {
@@ -79,11 +84,9 @@ export function useSplitForm({ filteredSampleCount, existingTagNames }: UseSplit
 
     return {
         rows,
-        percentageSum,
         errorMessage,
         isValid,
         previewCounts,
-        overwrittenTagNames,
         addRow,
         removeRow,
         updateName,
@@ -93,18 +96,42 @@ export function useSplitForm({ filteredSampleCount, existingTagNames }: UseSplit
     };
 }
 
+// Applies an edit to row `id`, absorbing the delta into the NEXT row (wrapping
+// to the first). The edited value is clamped so the neighbour stays within
+// [0, 100], which keeps the visible percentages summing to exactly 100.
+function rebalanceOnEdit(rows: SplitRow[], id: string, percentage: number): SplitRow[] {
+    const index = rows.findIndex((row) => row.id === id);
+    if (index === -1) return rows;
+
+    const neighbourIndex = (index + 1) % rows.length;
+    // A single row can only ever be 100; nothing to rebalance against.
+    if (neighbourIndex === index) return rows;
+
+    const safe = Number.isFinite(percentage) ? percentage : 0;
+    const current = rows[index].percentage;
+    const neighbour = rows[neighbourIndex].percentage;
+    const lower = Math.max(0, current + neighbour - REQUIRED_SUM);
+    const upper = Math.min(REQUIRED_SUM, current + neighbour);
+    const clamped = Math.min(Math.max(safe, lower), upper);
+
+    return rows.map((row, i) => {
+        if (i === index) return { ...row, percentage: clamped };
+        if (i === neighbourIndex) return { ...row, percentage: current + neighbour - clamped };
+        return row;
+    });
+}
+
 function cloneDefaultRows(): SplitRow[] {
     return DEFAULT_ROWS.map((row) => ({ ...row }));
 }
 
-function computeErrorMessage(rows: SplitRow[], sum: number): string | null {
+function computeErrorMessage(rows: SplitRow[]): string | null {
     if (rows.length === 0) return 'Add at least one split.';
 
     const names = rows.map((row) => row.name.trim());
     if (names.some((name) => name.length === 0)) return 'Every split needs a name.';
     if (new Set(names).size !== names.length) return 'Split names must be unique.';
     if (rows.some((row) => row.percentage <= 0)) return 'Every percentage must be greater than 0.';
-    if (sum !== REQUIRED_SUM) return `Percentages must sum to 100 (currently ${sum}).`;
 
     return null;
 }
