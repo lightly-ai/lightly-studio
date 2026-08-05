@@ -3,11 +3,13 @@
     import { PUBLIC_VIDEOS_MEDIA_URL } from '$env/static/public';
     import {
         getAllFrames,
+        AnnotationType,
         type FrameView,
         type SampleView,
         type VideoFrameView,
         type VideoView
     } from '$lib/api/lightly_studio_local';
+    import SampleClassificationPills from '$lib/components/SampleClassificationPills/SampleClassificationPills.svelte';
     import { routeHelpers } from '$lib/routes';
     import { getSimilarityColor } from '$lib/utils';
     import VideoFrameAnnotationItem from '../VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
@@ -143,6 +145,14 @@
     const caption = $derived(
         showCaption && video.sample.captions?.length ? video.sample.captions[0] : null
     );
+
+    const videoClassificationAnnotations = $derived(
+        (video.sample.annotations ?? []).filter(
+            (a) =>
+                a.annotation_type === AnnotationType.CLASSIFICATION &&
+                a.temporal_span_details == null
+        )
+    );
 </script>
 
 <div
@@ -174,6 +184,11 @@
             showLabel={false}
         />
     {/if}
+    <SampleClassificationPills
+        sample={{ annotations: videoClassificationAnnotations }}
+        hasBottomOverlay={Boolean(caption)}
+        hasRightOverlay={video.similarity_score !== undefined && video.similarity_score !== null}
+    />
     {#if video.similarity_score !== undefined && video.similarity_score !== null}
         <div
             class="absolute bottom-1 right-1 z-10 box-border flex h-5 items-center rounded bg-black/60 px-1.5 text-xs font-medium text-white backdrop-blur-sm"

@@ -51,6 +51,10 @@ def _get_load_options() -> list[LoaderOption]:
             # Ignore type checker error - false positive from TYPE_CHECKING.
             joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
             selectinload(SampleTable.captions),
+            selectinload(SampleTable.annotations).options(
+                joinedload(AnnotationBaseTable.annotation_label),
+                selectinload(AnnotationBaseTable.sample).options(selectinload(SampleTable.tags)),
+            ),
         ),
     ]
 
