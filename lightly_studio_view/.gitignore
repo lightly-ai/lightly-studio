@@ -36,3 +36,6 @@ src/lib/components/QueryEditor/language/monarch.generated.ts
 
 build-chunk-sizes.log
 storybook-static
+
+# Coverage artifacts from `make test-coverage`
+coverage
