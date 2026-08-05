@@ -2,13 +2,18 @@ from __future__ import annotations
 
 import uuid
 from pathlib import Path
+from unittest.mock import MagicMock
 
+import fsspec
 import numpy as np
 import pytest
 import torch
+from av import container
 from PIL import Image
+from pytest_mock import MockerFixture
 
 from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
+from lightly_studio.dataset import perception_encoder_embedding_generator as pe_mod
 from lightly_studio.dataset.embedding_generator import ImageCrop
 from lightly_studio.dataset.perception_encoder_embedding_generator import (
     PerceptionEncoderEmbeddingGenerator,
@@ -151,6 +156,103 @@ class TestPerceptionEncoderEmbeddingGenerator:
 
         with pytest.raises(AllInputFilesFailedError):
             perception_encoder.embed_videos([str(broken_path), str(broken_path)])
+
+    def test_embed_video_segments__empty(self) -> None:
+        perception_encoder = PerceptionEncoderEmbeddingGenerator()
+        embeddings = perception_encoder.embed_video_segments(
+            filepath="unused.mp4",
+            intervals=[],
+        )
+        assert embeddings.shape == (0, 512)
+
+    def test_embed_video_segments__invalid_interval(self) -> None:
+        perception_encoder = PerceptionEncoderEmbeddingGenerator()
+        with pytest.raises(ValueError, match="Invalid interval"):
+            perception_encoder.embed_video_segments(
+                filepath="unused.mp4",
+                intervals=[(-1.0, 1.0)],
+            )
+
+    def test_embed_video_segments(self) -> None:
+        perception_encoder = PerceptionEncoderEmbeddingGenerator()
+        dog_video_path = FIXTURES_DIR / "dog.mp4"
+
+        embeddings = perception_encoder.embed_video_segments(
+            filepath=str(dog_video_path),
+            intervals=[(0.0, 0.5), (0.5, 1.0)],
+        )
+
+        assert embeddings.shape == (2, 512)
+        # Distinct intervals should generally produce distinct embeddings.
+        assert not np.allclose(embeddings[0], embeddings[1])
+
+    def test_embed_video_segments__matches_full_video_when_covering_duration(self) -> None:
+        perception_encoder = PerceptionEncoderEmbeddingGenerator()
+        dog_video_path = FIXTURES_DIR / "dog.mp4"
+
+        fs, fs_path = fsspec.core.url_to_fs(url=str(dog_video_path))
+        with fs.open(path=fs_path, mode="rb") as video_file, container.open(file=video_file) as vc:
+            stream = vc.streams.video[0]
+            duration_s = float(stream.duration) * float(stream.time_base)
+
+        full_video = perception_encoder.embed_videos([str(dog_video_path)]).embeddings[0]
+        segment = perception_encoder.embed_video_segments(
+            filepath=str(dog_video_path),
+            intervals=[(0.0, duration_s)],
+        )[0]
+        assert np.allclose(full_video, segment, atol=1e-4)
+
+    def test_load_video_frames__interval_timestamps_within_bounds(
+        self, mocker: MockerFixture
+    ) -> None:
+        seek_offsets: list[int] = []
+
+        class FakeFrame:
+            def to_image(self) -> Image.Image:
+                return Image.new("RGB", (8, 8), color=(0, 0, 0))
+
+        class FakeStream:
+            duration = 100
+            time_base = 0.1  # duration_seconds = 10.0
+
+        class FakeStreams:
+            def __init__(self) -> None:
+                self.video = [FakeStream()]
+
+        class FakeContainer:
+            def __init__(self) -> None:
+                self.streams = FakeStreams()
+
+            def seek(self, offset: int, stream: object) -> None:  # noqa: ARG002
+                seek_offsets.append(offset)
+
+            def decode(self, video: int = 0):  # noqa: ARG002
+                yield FakeFrame()
+
+            def __enter__(self) -> FakeContainer:
+                return self
+
+            def __exit__(self, *args: object) -> None:
+                return None
+
+        fake_fs = MagicMock()
+        fake_fs.exists.return_value = True
+        fake_fs.open.return_value.__enter__.return_value = MagicMock()
+        mocker.patch.object(pe_mod.fsspec.core, "url_to_fs", return_value=(fake_fs, "path"))
+        mocker.patch.object(pe_mod.container, "open", return_value=FakeContainer())
+
+        preprocess = MagicMock(side_effect=lambda _image: torch.zeros(3, 4, 4))
+        pe_mod._load_video_frames(
+            filepath="fake.mp4",
+            preprocess=preprocess,
+            start_time_s=2.0,
+            end_time_s=4.0,
+        )
+
+        time_base = 0.1
+        timestamps = [offset * time_base for offset in seek_offsets]
+        assert len(timestamps) == pe_mod.VIDEO_FRAMES_PER_SAMPLE
+        assert all(2.0 <= ts < 4.0 for ts in timestamps)
 
     def test_classification(self) -> None:
         """End-to-end test for embedding consistency.

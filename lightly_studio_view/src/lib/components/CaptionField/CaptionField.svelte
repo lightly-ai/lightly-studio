@@ -3,6 +3,7 @@
     import { useCaption } from '$lib/hooks/useCaption/useCaption';
     import { Check, Trash2 } from '@lucide/svelte';
     import type { CaptionView } from '$lib/api/lightly_studio_local';
+    import CaptionMatchScore from './CaptionMatchScore.svelte';
 
     const {
         caption: captionProp,
@@ -118,5 +119,6 @@
                 <span class="text-sm">{caption.text}</span>
             {/if}
         </div>
+        <CaptionMatchScore metadataDict={caption.metadata_dict} />
     </div>
 </div>

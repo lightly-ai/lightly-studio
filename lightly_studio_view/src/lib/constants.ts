@@ -9,3 +9,6 @@ export const ANNOTATION_TYPES: Record<Annotation['annotation_type'], string> = {
 } as const;
 
 export const AUTHENTICATION_SESSION_STORAGE_KEY = 'lightlyEnterprise';
+
+// Metadata key holding the similarity between a caption and its video segment.
+export const CAPTION_SEGMENT_MATCH_SCORE_KEY = 'caption_segment_match_score';

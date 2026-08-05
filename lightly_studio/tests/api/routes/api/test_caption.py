@@ -10,7 +10,8 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_OK,
 )
-from lightly_studio.resolvers import caption_resolver
+from lightly_studio.dataset.caption_segment_matching import CAPTION_SEGMENT_MATCH_SCORE_KEY
+from lightly_studio.resolvers import caption_resolver, metadata_resolver
 from tests.helpers_resolvers import create_caption, create_collection, create_image
 
 
@@ -65,6 +66,31 @@ def test_get_caption(db_session: Session, test_client: TestClient) -> None:
     result = response.json()
     assert result["sample_id"] == str(sample_id)
     assert result["text"] == "test caption"
+
+
+def test_get_caption__with_metadata(db_session: Session, test_client: TestClient) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    parent_sample = create_image(session=db_session, collection_id=collection_id)
+    caption = create_caption(
+        session=db_session,
+        collection_id=collection_id,
+        parent_sample_id=parent_sample.sample_id,
+    )
+    metadata_resolver.set_value_for_sample(
+        session=db_session,
+        sample_id=caption.sample_id,
+        key=CAPTION_SEGMENT_MATCH_SCORE_KEY,
+        value=0.75,
+    )
+
+    response = test_client.get(
+        f"/api/collections/{collection_id}/captions/{caption.sample_id}",
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert result["metadata_dict"]["data"] == {CAPTION_SEGMENT_MATCH_SCORE_KEY: 0.75}
 
 
 def test_create_caption(db_session: Session, test_client: TestClient) -> None:

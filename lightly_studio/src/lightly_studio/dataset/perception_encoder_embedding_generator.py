@@ -10,6 +10,7 @@ import fsspec
 import numpy as np
 import torch
 from av import FFmpegError, container
+from av.container import InputContainer
 from numpy.typing import NDArray
 from PIL import Image
 from tqdm import tqdm
@@ -243,12 +244,67 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
 
         return EmbeddingResult(embeddings=embeddings[:position], kept_indices=kept_indices)
 
+    def embed_video_segments(
+        self,
+        filepath: str,
+        intervals: Sequence[tuple[float, float]],
+    ) -> NDArray[np.float32]:
+        """Embed temporal segments of a single video, opening the file once.
+
+        Args:
+            filepath: Path or URL of the video.
+            intervals: ``(start_time_s, end_time_s)`` pairs. Each interval must satisfy
+                ``0 <= start < end``.
+
+        Returns:
+            Array of shape ``(len(intervals), embedding_dim)`` with L2-normalized
+            embeddings in the same order as ``intervals``.
+
+        Raises:
+            ValueError: If an interval is invalid.
+            MissingInputFileError: If the video path does not resolve.
+            BrokenInputFileError: If the video is present but unreadable/undecodable.
+        """
+        _validate_intervals(intervals)
+        if not intervals:
+            return np.empty((0, self._model.output_dim), dtype=np.float32)
+
+        segment_frames = _load_video_segment_frames(
+            filepath=filepath,
+            intervals=intervals,
+            preprocess=self._preprocess,
+        )
+        embeddings = np.empty((len(intervals), self._model.output_dim), dtype=np.float32)
+        position = 0
+        with torch.no_grad():
+            for batch in batching.batched(segment_frames, batch_size=MAX_BATCH_SIZE):
+                videos_tensor = torch.stack(batch).to(self._device)
+                batch_embeddings = (
+                    self._model.encode_video(videos_tensor, normalize=True).cpu().numpy()
+                )
+                batch_size = videos_tensor.size(0)
+                embeddings[position : position + batch_size] = batch_embeddings
+                position += batch_size
+        return embeddings
+
+
+def _validate_intervals(intervals: Sequence[tuple[float, float]]) -> None:
+    """Raise ``ValueError`` if any interval is not ``0 <= start < end``."""
+    for index, (start_time_s, end_time_s) in enumerate(intervals):
+        if not (0.0 <= start_time_s < end_time_s):
+            raise ValueError(
+                f"Invalid interval at index {index}: "
+                f"expected 0 <= start < end, got ({start_time_s}, {end_time_s})."
+            )
+
 
 def _load_video_frames(
     filepath: str,
     preprocess: Callable[[Image.Image], torch.Tensor],
+    start_time_s: float | None = None,
+    end_time_s: float | None = None,
 ) -> torch.Tensor:
-    """Sample uniformly spaced frames from a video and stack them into a model input.
+    """Sample uniformly spaced frames from a video (or a time range) and stack them.
 
     As in the original paper we subsample N frames from a video and stack them to a tensor.
     As in the paper, we use a default of 8 frames per video (VIDEO_FRAMES_PER_SAMPLE).
@@ -262,14 +318,50 @@ def _load_video_frames(
     Args:
         filepath: Path or URL of the video to sample frames from.
         preprocess: Transform applied to each sampled frame to produce a model input tensor.
+        start_time_s: Optional inclusive start of the sampling window in seconds. Defaults to
+            the beginning of the video.
+        end_time_s: Optional exclusive end of the sampling window in seconds. Defaults to the
+            video duration. When both bounds are set they must satisfy ``0 <= start < end``.
 
     Returns:
         Tensor of shape ``[VIDEO_FRAMES_PER_SAMPLE, C, H, W]``.
 
     Raises:
+        ValueError: If the provided time window is invalid.
         MissingInputFileError: If the video path does not resolve.
         BrokenInputFileError: If the video is present but unreadable/undecodable (corrupt,
             has no video stream, or has no usable duration).
+    """
+    if (start_time_s is None) != (end_time_s is None):
+        raise ValueError("Both start_time_s and end_time_s must be set together.")
+
+    intervals: Sequence[tuple[float, float]] | None = None
+    if start_time_s is not None and end_time_s is not None:
+        intervals = [(start_time_s, end_time_s)]
+        _validate_intervals(intervals)
+
+    return _load_video_segment_frames(
+        filepath=filepath,
+        intervals=intervals,
+        preprocess=preprocess,
+    )[0]
+
+
+def _load_video_segment_frames(
+    filepath: str,
+    intervals: Sequence[tuple[float, float]] | None,
+    preprocess: Callable[[Image.Image], torch.Tensor],
+) -> list[torch.Tensor]:
+    """Open a video once and sample frames for each interval (or the full video).
+
+    Args:
+        filepath: Path or URL of the video.
+        intervals: Time ranges to sample. ``None`` means a single full-video interval
+            ``[0, duration)``.
+        preprocess: Transform applied to each sampled frame.
+
+    Returns:
+        One tensor of shape ``[VIDEO_FRAMES_PER_SAMPLE, C, H, W]`` per interval.
     """
     fs, fs_path = fsspec.core.url_to_fs(url=filepath)
     if not fs.exists(fs_path):
@@ -287,29 +379,50 @@ def _load_video_frames(
                 raise BrokenInputFileError(f"Unable to read frames from video '{filepath}'.")
 
             duration_seconds = duration_pts * time_base
+            resolved_intervals = [(0.0, duration_seconds)] if intervals is None else list(intervals)
 
-            # Sample VIDEO_FRAMES_PER_SAMPLE evenly spaced inside [0, duration_seconds)
-            ts_to_sample = np.linspace(
-                0.0,
-                duration_seconds,
-                num=VIDEO_FRAMES_PER_SAMPLE,
-                endpoint=False,
-                dtype=np.float64,
-            )
-
-            frames: list[Image.Image] = []
-            for ts_target in ts_to_sample:
-                pts_target = int(ts_target / time_base)
-                video_container.seek(offset=pts_target, stream=video_stream)
-                try:
-                    frame = next(video_container.decode(video=DEFAULT_VIDEO_CHANNEL))
-                except StopIteration as error:
-                    raise BrokenInputFileError(
-                        f"Unable to decode frame at {ts_target:.3f}s from video '{filepath}'."
-                    ) from error
-                frames.append(frame.to_image())
+            segment_tensors: list[torch.Tensor] = []
+            for start_time_s, end_time_s in resolved_intervals:
+                frames = _decode_frames_in_interval(
+                    video_container=video_container,
+                    time_base=time_base,
+                    interval=(start_time_s, end_time_s),
+                    filepath=filepath,
+                )
+                processed_frames = [preprocess(frame) for frame in frames]
+                segment_tensors.append(torch.stack(processed_frames))
     except (OSError, FFmpegError, IndexError) as error:
         raise BrokenInputFileError(f"Unable to read frames from video '{filepath}'.") from error
 
-    processed_frames = [preprocess(frame) for frame in frames]
-    return torch.stack(processed_frames)
+    return segment_tensors
+
+
+def _decode_frames_in_interval(
+    video_container: InputContainer,
+    time_base: float,
+    interval: tuple[float, float],
+    filepath: str,
+) -> list[Image.Image]:
+    """Seek and decode ``VIDEO_FRAMES_PER_SAMPLE`` frames uniformly in ``[start, end)``."""
+    start_time_s, end_time_s = interval
+    video_stream = video_container.streams.video[DEFAULT_VIDEO_CHANNEL]
+    ts_to_sample = np.linspace(
+        start_time_s,
+        end_time_s,
+        num=VIDEO_FRAMES_PER_SAMPLE,
+        endpoint=False,
+        dtype=np.float64,
+    )
+
+    frames: list[Image.Image] = []
+    for ts_target in ts_to_sample:
+        pts_target = int(ts_target / time_base)
+        video_container.seek(offset=pts_target, stream=video_stream)
+        try:
+            frame = next(video_container.decode(video=DEFAULT_VIDEO_CHANNEL))
+        except StopIteration as error:
+            raise BrokenInputFileError(
+                f"Unable to decode frame at {ts_target:.3f}s from video '{filepath}'."
+            ) from error
+        frames.append(frame.to_image())  # type: ignore[no-untyped-call]
+    return frames

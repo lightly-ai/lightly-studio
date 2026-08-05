@@ -1,11 +1,13 @@
-"""Example of adding captions with temporal spans to videos.
+"""Example of timed captions with segment-caption match scores.
 
-Loads videos together with their ActivityNet annotations and mirrors every annotation as a
-caption: the annotation label becomes the caption text and the annotation's temporal span
-becomes the caption's span. Useful to exercise the caption segment UI.
+Loads videos with ActivityNet annotations, mirrors annotations as captions with temporal
+spans, embeds caption text with PE, scores each span against the video segment embedding,
+and stores ``caption_segment_match_score`` on each caption sample.
 """
 
 from __future__ import annotations
+
+from uuid import UUID
 
 from environs import Env
 
@@ -13,11 +15,23 @@ import lightly_studio as ls
 from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.database import db_manager
-from lightly_studio.models.caption import CaptionCreate
-from lightly_studio.resolvers import caption_resolver
+from lightly_studio.dataset import caption_embedding
+from lightly_studio.dataset.caption_segment_matching import (
+    CAPTION_SEGMENT_MATCH_SCORE_KEY,
+    score_caption_segments,
+)
+from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
+from lightly_studio.models.caption import CaptionCreate, CaptionTable
+from lightly_studio.models.collection import SampleType
+from lightly_studio.resolvers import (
+    caption_resolver,
+    collection_resolver,
+    metadata_resolver,
+    sample_embedding_resolver,
+)
 
 
-def add_captions_from_annotations(video: VideoSample) -> list[CaptionCreate]:
+def add_captions_from_annotations(video: VideoSample) -> list[UUID]:
     """Mirror the annotations of a video as captions with the same temporal spans.
 
     Annotations without a temporal span are mirrored as captions without a span.
@@ -26,7 +40,7 @@ def add_captions_from_annotations(video: VideoSample) -> list[CaptionCreate]:
         video: The video sample whose annotations are mirrored.
 
     Returns:
-        The created captions, ordered by start time.
+        Created caption sample IDs, ordered by start time.
     """
     captions = []
     for annotation in video.annotations:
@@ -39,14 +53,82 @@ def add_captions_from_annotations(video: VideoSample) -> list[CaptionCreate]:
                 end_time_s=span.end_time_s if span is not None else None,
             )
         )
+    captions.append(
+            CaptionCreate(
+                parent_sample_id=video.sample_id,
+                text="the sun shines brightly in the morning shy",
+                start_time_s=0.0,
+                end_time_s=1.5,
+            )
+        )
     captions.sort(key=lambda caption: caption.start_time_s if caption.start_time_s else 0.0)
 
-    caption_resolver.create_many(
+
+    return caption_resolver.create_many(
         session=video.get_object_session(),
         parent_collection_id=video.collection_id,
         captions=captions,
     )
-    return captions
+
+
+def score_timed_captions_for_video(video: VideoSample, caption_ids: list[UUID]) -> None:
+    """Score timed captions against video segments and write match scores as metadata."""
+    session = video.get_object_session()
+    captions = caption_resolver.get_by_ids(session=session, sample_ids=caption_ids)
+    timed: list[CaptionTable] = [
+        caption for caption in captions if caption.temporal_span_details is not None
+    ]
+    if not timed:
+        return
+
+    caption_collection_id = collection_resolver.get_by_name(
+        session=session,
+        name=SampleType.CAPTION.value.lower(),
+        parent_collection_id=video.collection_id,
+    )
+    assert caption_collection_id is not None
+
+    model_id = EmbeddingManagerProvider.get_embedding_manager().load_or_get_default_model(
+        session=session,
+        collection_id=caption_collection_id,
+    )
+    assert model_id is not None
+
+    timed_ids = [caption.sample_id for caption in timed]
+    embedding_rows = sample_embedding_resolver.get_by_sample_ids(
+        session=session,
+        sample_ids=timed_ids,
+        embedding_model_id=model_id,
+    )
+    embedding_by_id = {row.sample_id: row.embedding for row in embedding_rows}
+
+    intervals: list[tuple[float, float]] = []
+    caption_embeddings: list[list[float]] = []
+    scored_ids: list[UUID] = []
+    for caption in timed:
+        embedding = embedding_by_id.get(caption.sample_id)
+        span = caption.temporal_span_details
+        if embedding is None or span is None:
+            continue
+        intervals.append((span.start_time_s, span.end_time_s))
+        caption_embeddings.append(list(embedding))
+        scored_ids.append(caption.sample_id)
+
+    if not intervals:
+        return
+
+    scores = score_caption_segments(
+        video_path=video.file_path_abs,
+        intervals=intervals,
+        caption_embeddings=caption_embeddings,
+    )
+    for caption_id, score in zip(scored_ids, scores):
+        metadata_resolver.set_value_for_sample(
+            session=session,
+            sample_id=caption_id,
+            key=CAPTION_SEGMENT_MATCH_SCORE_KEY,
+            value=score,
+        )
 
 
 # Read environment variables
@@ -72,16 +154,33 @@ dataset.add_annotations_from_activitynet(
     annotation_source="activitynet",
 )
 
-# Mirror the loaded annotations as captions and print them per video.
+# Mirror annotations as captions, embed text, score segments per video.
+all_caption_ids: list[UUID] = []
+captions_by_video: list[tuple[VideoSample, list[UUID]]] = []
 for video in dataset:
-    created_captions = add_captions_from_annotations(video=video)
-    print(f"{video.file_name} ({video.duration_s}s): {len(created_captions)} caption(s)")
-    for caption in created_captions:
+    caption_ids = add_captions_from_annotations(video=video)
+    all_caption_ids.extend(caption_ids)
+    captions_by_video.append((video, caption_ids))
+
+caption_embedding.embed_captions(session=dataset.session, caption_sample_ids=all_caption_ids)
+
+for video, caption_ids in captions_by_video:
+    score_timed_captions_for_video(video=video, caption_ids=caption_ids)
+    captions = caption_resolver.get_by_ids(session=dataset.session, sample_ids=caption_ids)
+    print(f"{video.file_name} ({video.duration_s}s): {len(captions)} caption(s)")
+    for caption in captions:
+        span = caption.temporal_span_details
         time_range = (
-            f"{caption.start_time_s:.2f}s - {caption.end_time_s:.2f}s"
-            if caption.start_time_s is not None and caption.end_time_s is not None
-            else "no span"
+            f"{span.start_time_s:.2f}s - {span.end_time_s:.2f}s" if span is not None else "no span"
         )
-        print(f"  - [{time_range}] {caption.text}")
+        match_score = None
+        if span is not None:
+            match_score = metadata_resolver.get_value_for_sample(
+                session=dataset.session,
+                sample_id=caption.sample_id,
+                key=CAPTION_SEGMENT_MATCH_SCORE_KEY,
+            )
+        score_text = f", match={match_score:.3f}" if match_score is not None else ""
+        print(f"  - [{time_range}] {caption.text}{score_text}")
 
 ls.start_gui()
