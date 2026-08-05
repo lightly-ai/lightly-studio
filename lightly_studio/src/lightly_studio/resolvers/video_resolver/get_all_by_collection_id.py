@@ -51,6 +51,8 @@ def _get_load_options() -> list[LoaderOption]:
             # Ignore type checker error - false positive from TYPE_CHECKING.
             joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
             selectinload(SampleTable.captions),
+            # Videos only support classification annotations directly, so there is no need
+            # to join object_detection_details or segmentation_details here.
             selectinload(SampleTable.annotations).options(
                 joinedload(AnnotationBaseTable.annotation_label),
                 selectinload(AnnotationBaseTable.sample).options(selectinload(SampleTable.tags)),
