@@ -29,6 +29,12 @@ vi.mock(
         default: (await import('./VideoDetails.stub.svelte')).default
     })
 );
+vi.mock(
+    '../SampleDetails/SampleDetailsClassificationSegment/SampleDetailsClassificationSegment.svelte',
+    async () => ({
+        default: (await import('./VideoDetails.stub.svelte')).default
+    })
+);
 vi.mock('../VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte', async () => ({
     default: (await import('./VideoDetails.stub.svelte')).default
 }));
