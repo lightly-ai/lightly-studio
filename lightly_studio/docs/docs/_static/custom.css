@@ -327,3 +327,24 @@ code.doc-symbol-module {
   -webkit-mask-size: contain;
   mask-size: contain;
 }
+
+/* Pin the badge to the top-right of its member block so it sits on the
+   heading row instead of below the summary. The badge is anchored to its own
+   `.doc-object` wrapper, so class and method badges each align to their own
+   heading. */
+.md-typeset .doc-object {
+  position: relative;
+}
+
+.md-typeset .doc-badge--beta {
+  position: absolute;
+  top: 0.35rem;
+  right: 0;
+}
+
+/* The badge is now out of flow, so collapse the otherwise-empty paragraph it
+   used to occupy and avoid a blank line between the summary and the body. */
+.md-typeset .doc-contents > p:has(> .doc-badge--beta:only-child) {
+  margin: 0;
+  line-height: 0;
+}
