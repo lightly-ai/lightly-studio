@@ -28,6 +28,7 @@
 
     let exportType = $state<
         | 'samples'
+        | 'classifications'
         | 'object_detections_coco'
         | 'object_detections_yolo'
         | 'segmentation'
@@ -149,6 +150,18 @@
 
                     <Tabs.Content value="samples" class="pt-0">
                         <SamplesTab
+                            onDownloadClick={() =>
+                                tracking.handleAnnotationDownloadClick(exportType)}
+                        />
+                    </Tabs.Content>
+
+                    <Tabs.Content value="classifications" class="pt-0">
+                        <AnnotationsTab
+                            exportFormat={ExportFormat.CLASSIFICATION_CSV}
+                            description="The classification annotations will be exported in CSV format."
+                            {annotationSources}
+                            bind:selectedAnnotationCollectionId
+                            testId="submit-button-classifications"
                             onDownloadClick={() =>
                                 tracking.handleAnnotationDownloadClick(exportType)}
                         />
