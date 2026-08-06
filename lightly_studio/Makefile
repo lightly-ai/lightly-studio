@@ -7,6 +7,7 @@ POSTGRES_DB := lightly_studio
 POSTGRES_IMAGE := pgvector/pgvector:0.8.1-pg18-bookworm
 POSTGRES_SHM_SIZE ?= 2g
 POSTGRES_URL ?= postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@localhost:$(POSTGRES_PORT)/$(POSTGRES_DB)
+POSTGRES_STARTUP_TIMEOUT_SECONDS ?= 60
 
 .PHONY: install-uv
 install-uv:
@@ -119,11 +120,21 @@ start-postgres: stop-postgres
 		-e POSTGRES_DB=$(POSTGRES_DB) \
 		-p $(POSTGRES_PORT):5432 \
 		$(POSTGRES_IMAGE)
-ifeq ($(OS),Windows_NT)
-	@powershell -Command "Start-Sleep -Seconds 3"
-else
 	@echo "Waiting for PostgreSQL to be ready..."
-	@until docker exec $(POSTGRES_CONTAINER_NAME) pg_isready -U $(POSTGRES_USER) -d $(POSTGRES_DB) > /dev/null 2>&1; do \
+# Query $(POSTGRES_DB) instead of using pg_isready: pg_isready only pings the postmaster and
+# reports success even while the entrypoint's temporary bootstrap server is still creating the
+# database, which lets callers connect before $(POSTGRES_DB) exists.
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "$$remaining = $(POSTGRES_STARTUP_TIMEOUT_SECONDS); while ($$remaining -gt 0) { docker exec $(POSTGRES_CONTAINER_NAME) psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c 'SELECT 1' *> $$null; if ($$LASTEXITCODE -eq 0) { exit 0 }; Start-Sleep -Seconds 1; $$remaining-- }; Write-Host 'PostgreSQL did not become ready within $(POSTGRES_STARTUP_TIMEOUT_SECONDS) seconds'; docker logs $(POSTGRES_CONTAINER_NAME); exit 1"
+else
+	@remaining=$(POSTGRES_STARTUP_TIMEOUT_SECONDS); \
+	until docker exec $(POSTGRES_CONTAINER_NAME) psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c 'SELECT 1' > /dev/null 2>&1; do \
+		remaining=$$((remaining - 1)); \
+		if [ $$remaining -le 0 ]; then \
+			echo "PostgreSQL did not become ready within $(POSTGRES_STARTUP_TIMEOUT_SECONDS) seconds"; \
+			docker logs $(POSTGRES_CONTAINER_NAME); \
+			exit 1; \
+		fi; \
 		sleep 1; \
 	done
 endif
