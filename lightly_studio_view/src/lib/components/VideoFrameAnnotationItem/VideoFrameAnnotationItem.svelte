@@ -53,6 +53,8 @@
             annotations: annotations
         }}
         objectFit={sampleImageObjectFit}
+        outputWidth={width}
+        outputHeight={height}
     />
 {:else}
     <VideoFrameAnnotationSvg
