@@ -76,20 +76,23 @@ def _remove_stale_provider_env_vars(credentials: dict[str, str]) -> None:
     """Remove previously managed env vars for each provider present in the new payload.
 
     Ensures that keys omitted from a rotation (e.g. AWS_SESSION_TOKEN dropped
-    when switching from temporary to long-term credentials) do not linger in the
-    process environment and mislead later cloud clients.
+    when switching from temporary to long-term credentials, or a removed
+    FSSPEC_* key) do not linger in the process environment and mislead later
+    cloud clients.
 
     Only provider families that appear in the incoming payload are touched, so a
     GCS-only refresh never clears AWS variables.
     """
     has_aws = any(key.startswith("AWS_") for key in credentials)
     has_gcs = "GOOGLE_APPLICATION_CREDENTIALS" in credentials
+    has_fsspec = any(key.startswith("FSSPEC_") for key in credentials)
 
     stale_keys = [
         key
         for key in os.environ
         if (has_aws and key.startswith("AWS_") and _ALLOWED_KEY_PATTERN.match(key))
         or (has_gcs and key == "GOOGLE_APPLICATION_CREDENTIALS")
+        or (has_fsspec and key.startswith("FSSPEC_") and _ALLOWED_KEY_PATTERN.match(key))
     ]
     for key in stale_keys:
         del os.environ[key]
