@@ -15,7 +15,7 @@ import lightly_studio
 from lightly_studio import cli
 from lightly_studio.database import db_manager
 from lightly_studio.models.evaluation_run import EvaluationTaskType
-from lightly_studio.resolvers import evaluation_run_resolver
+from lightly_studio.resolvers import annotation_resolver, evaluation_run_resolver
 
 
 @pytest.fixture(autouse=True)
@@ -121,19 +121,20 @@ def _mock_demo_dependencies(mocker: MockerFixture) -> tuple[Any, Any, Any, Any]:
     mock_connect = mocker.patch.object(db_manager, "connect")
     mock_dataset = mocker.MagicMock()
     mock_create = mocker.patch.object(
-        lightly_studio.ImageDataset, "load_or_create", return_value=mock_dataset
+        lightly_studio.ImageDataset, "create", return_value=mock_dataset
     )
     mock_start_gui = mocker.patch.object(lightly_studio, "start_gui")
     return mock_download, mock_connect, mock_create, mock_start_gui
 
 
 def test_demo(mocker: MockerFixture) -> None:
-    mock_download, mock_connect, _, mock_start_gui = _mock_demo_dependencies(mocker)
+    mock_download, mock_connect, mock_create, mock_start_gui = _mock_demo_dependencies(mocker)
     runner = CliRunner()
     result = runner.invoke(cli=cli.main, args=["demo"])
     assert result.exit_code == 0
     mock_download.assert_called_once_with(download_dir="dataset_examples", force_redownload=False)
-    mock_connect.assert_called_once_with(db_file="demo.db", cleanup_existing=False)
+    mock_connect.assert_called_once_with(db_file="demo.db", cleanup_existing=True)
+    mock_create.assert_called_once_with()
     mock_start_gui.assert_called_once_with(port=None)
 
 
@@ -217,3 +218,43 @@ def test_demo__runs_real_evaluation_pipeline(
     assert len(evaluation_runs) == 1
     assert evaluation_runs[0].name == "od_evaluation"
     assert evaluation_runs[0].task_type == EvaluationTaskType.OBJECT_DETECTION
+
+
+def test_demo__second_run_without_force_download_does_not_duplicate_or_crash(
+    mocker: MockerFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression test for a bug where demo crashed on a second run.
+
+    Previously demo.db was only wiped for --force-download, so a second run duplicated
+    annotations and then crashed with an IntegrityError on the evaluation run insert.
+    """
+    monkeypatch.chdir(tmp_path)
+    dataset_dir = _build_demo_dataset_dir(tmp_path)
+    mocker.patch.object(
+        lightly_studio.utils, "download_example_dataset", return_value=str(dataset_dir)
+    )
+    mocker.patch.object(lightly_studio, "start_gui")
+
+    runner = CliRunner()
+    assert runner.invoke(cli=cli.main, args=["demo"]).exit_code == 0
+    # Each `lightly-studio demo` invocation is normally its own process, starting with no
+    # engine set. Close the engine here to reproduce that between the two invokes below.
+    db_manager.close()
+    result_second = runner.invoke(cli=cli.main, args=["demo"])
+    assert result_second.exit_code == 0, result_second.output
+
+    dataset = lightly_studio.ImageDataset.load()
+    assert len(dataset.query().to_list()) == 3
+
+    evaluation_runs = evaluation_run_resolver.get_all_by_dataset_id(
+        session=dataset.session, dataset_id=dataset.dataset_id
+    )
+    assert len(evaluation_runs) == 1
+
+    ground_truth = annotation_resolver.get_all_by_collection_name(
+        session=dataset.session,
+        collection_name="ground_truth",
+        parent_collection_id=dataset.collection_id,
+    )
+    # 3 fixture images x 1 annotation each in _coco_dict_with — must stay at 3, not double to 6.
+    assert len(ground_truth.annotations) == 3

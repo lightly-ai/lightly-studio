@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from importlib import metadata
+from pathlib import Path
 
 import click
 
@@ -28,26 +29,29 @@ def main() -> None:
 )
 def demo(port: int | None, force_download: bool) -> None:
     """Launch the GUI preloaded with a COCO object detection evaluation demo dataset."""
-    dataset_path = lightly_studio.utils.download_example_dataset(
-        download_dir="dataset_examples",
-        force_redownload=force_download,
+    dataset_path = Path(
+        lightly_studio.utils.download_example_dataset(
+            download_dir="dataset_examples",
+            force_redownload=force_download,
+        )
     )
-    images_path = f"{dataset_path}/coco_subset_128_images/images"
+    coco_dir = dataset_path / "coco_subset_128_images"
+    images_path = coco_dir / "images"
     evaluation_config = ObjectDetectionEvaluationConfig(
         iou_threshold=0.5,
         classwise=True,
     )
 
-    db_manager.connect(db_file="demo.db", cleanup_existing=force_download)
-    dataset = lightly_studio.ImageDataset.load_or_create()
+    db_manager.connect(db_file="demo.db", cleanup_existing=True)
+    dataset = lightly_studio.ImageDataset.create()
     dataset.add_images_from_path(path=images_path)
     dataset.add_annotations_from_coco(
-        annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
+        annotations_json=coco_dir / "instances_train2017.json",
         images_root=images_path,
         annotation_source="ground_truth",
     )
     dataset.add_annotations_from_coco(
-        annotations_json=f"{dataset_path}/coco_subset_128_images/predictions_train2017.json",
+        annotations_json=coco_dir / "predictions_train2017.json",
         images_root=images_path,
         annotation_source="predictions",
     )
