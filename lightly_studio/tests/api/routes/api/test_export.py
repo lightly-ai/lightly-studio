@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import logging
 import zipfile
 from pathlib import Path
 from unittest import mock
@@ -393,6 +394,35 @@ def test_export_collection_pascalvoc_from_segmentation_masks(
         ) as mask:
             mask_values = list(mask.getdata())
         assert mask_values == [0, 1, 0, 0, 0, 0]
+
+
+def test_export_collection_annotations__logs_and_cleans_up_on_generation_failure(
+    tmp_path: Path,
+    db_session: Session,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    collection = create_collection(session=db_session)
+    temp_dir = tmp_path / "annotations-export"
+    temp_dir.mkdir()
+    monkeypatch.setattr(export_api.tempfile, "mkdtemp", lambda *_args, **_kwargs: str(temp_dir))
+
+    def generate_annotations_export(**_: object) -> Path:
+        raise RuntimeError("export failed")
+
+    monkeypatch.setattr(export_api, "_generate_annotations_export", generate_annotations_export)
+
+    with (
+        caplog.at_level(logging.ERROR, logger=export_api.logger.name),
+        pytest.raises(RuntimeError, match="export failed"),
+    ):
+        export_api.export_collection_annotations(collection=collection, session=db_session)
+
+    assert not temp_dir.exists()
+    record = caplog.records[-1]
+    assert record.getMessage() == "Cannot generate annotations export"
+    assert record.exc_info is not None
+    assert record.exc_info[0] is RuntimeError
 
 
 def test_export_collection_captions(

@@ -75,6 +75,7 @@ def export_collection_annotations(
         )
     except Exception:
         temp_dir.cleanup()
+        logger.exception("Cannot generate annotations export")
         raise
 
     if output_path.is_dir():
