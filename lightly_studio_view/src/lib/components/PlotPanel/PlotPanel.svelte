@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { Button } from '$lib/components/ui/button';
     import {
@@ -49,7 +50,7 @@
     const { trackEvent } = usePostHog();
     const { setShowEmbeddingPlot, getRangeSelection, setRangeSelectionForCollection } =
         useGlobalStorage();
-    const rangeSelection = getRangeSelection(collectionId);
+    const rangeSelection = $derived(getRangeSelection(collectionId));
     const setRangeSelection = (selection: Point[] | null) => {
         setRangeSelectionForCollection(collectionId, selection);
     };
@@ -79,8 +80,9 @@
     );
 
     // The active annotation label/tag filter, mirroring what the annotations grid applies.
-    const { annotationFilter: selectedAnnotationsFilter } =
-        useSelectedAnnotationsFilter(collectionId);
+    const { annotationFilter: selectedAnnotationsFilter } = $derived.by(() =>
+        useSelectedAnnotationsFilter(collectionId)
+    );
 
     // Prepare filter for embeddings API - use VideoFilter for videos, ImageFilter for images
     const filter = $derived.by(() => {
@@ -108,11 +110,11 @@
         };
     });
 
-    const { selectedColorByType } = usePlotColorByType(collectionId);
+    const { selectedColorByType } = usePlotColorByType(untrack(() => collectionId));
     // Annotation samples carry annotation-kind tags. Captured once at mount, like
     // collectionId above.
     const { tags } = useTags({
-        collection_id: collectionId,
+        collection_id: untrack(() => collectionId),
         kind: isAnnotationsRoute(page.route?.id ?? null) ? ['annotation'] : ['sample']
     });
     const annotationLabelsQuery = useAnnotationLabels(() => ({ collectionId }));

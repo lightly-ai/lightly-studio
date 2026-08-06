@@ -22,9 +22,10 @@
     let { collectionId, selectedKey, onSelectedKeyChange, withTags, withAnnotationLabels }: Props =
         $props();
 
-    const { metadataInfo } = useMetadataFilters(collectionId);
-    const { selectedColorByType, setSelectedColorByType, clearSelectedColorByType } =
-        usePlotColorByType(collectionId);
+    const { metadataInfo } = $derived.by(() => useMetadataFilters(collectionId));
+    const { selectedColorByType, setSelectedColorByType, clearSelectedColorByType } = $derived.by(
+        () => usePlotColorByType(collectionId)
+    );
     const { trackEvent } = usePostHog();
 
     const colorableFields = $derived(

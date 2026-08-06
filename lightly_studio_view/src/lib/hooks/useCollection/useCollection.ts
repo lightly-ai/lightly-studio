@@ -28,11 +28,16 @@ export const useCollection = ({ collectionId }: { collectionId: string }) => {
  * Use this when you need the root collection with all child collections populated
  * (e.g., for navigation menus that need to show all available collections).
  */
-export const useCollectionWithChildren = ({ collectionId }: { collectionId: string }) => {
-    const options = readCollectionHierarchyOptions({ path: { collection_id: collectionId } });
+export const useCollectionWithChildren = ({
+    getCollectionId
+}: {
+    getCollectionId: () => string;
+}) => {
     const client = useQueryClient();
 
-    const hierarchyQuery = createQuery(() => options);
+    const hierarchyQuery = createQuery(() =>
+        readCollectionHierarchyOptions({ path: { collection_id: getCollectionId() } })
+    );
 
     // readCollectionHierarchy returns an array starting from the root
     // We need to get the first item (root collection) which has all children
@@ -49,7 +54,10 @@ export const useCollectionWithChildren = ({ collectionId }: { collectionId: stri
     }) as typeof hierarchyQuery & { data: CollectionView | undefined };
 
     const refetch = () => {
-        client.invalidateQueries({ queryKey: options.queryKey });
+        client.invalidateQueries({
+            queryKey: readCollectionHierarchyOptions({ path: { collection_id: getCollectionId() } })
+                .queryKey
+        });
     };
 
     return {

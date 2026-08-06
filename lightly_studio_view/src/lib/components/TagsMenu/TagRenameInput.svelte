@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { tick } from 'svelte';
+    import { tick, untrack } from 'svelte';
     import { Checkbox as CheckboxPrimitive } from '$lib/components/ui/checkbox';
     import { Input } from '$lib/components/ui/input';
     import { Check } from '@lucide/svelte';
@@ -21,7 +21,7 @@
         onCancel: () => void;
     } = $props();
 
-    let renameValue = $state(tag.name);
+    let renameValue = $state(untrack(() => tag.name));
     let renameInputRef = $state<HTMLInputElement | null>(null);
 
     const trimmedRenameValue = $derived(renameValue.trim());

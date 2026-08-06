@@ -3,7 +3,7 @@ import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 import { usePostHog } from '$lib/hooks';
 
-export const useDeleteAnnotation = ({ collectionId }: { collectionId: string }) => {
+export const useDeleteAnnotation = ({ getCollectionId }: { getCollectionId: () => string }) => {
     const mutation = createMutation(() => deleteAnnotationMutation());
 
     const client = useQueryClient();
@@ -17,6 +17,7 @@ export const useDeleteAnnotation = ({ collectionId }: { collectionId: string }) 
 
     const deleteAnnotation = (annotationId: string, annotationType: string) =>
         new Promise<void>((resolve, reject) => {
+            const collectionId = getCollectionId();
             mutation.mutate(
                 {
                     path: {

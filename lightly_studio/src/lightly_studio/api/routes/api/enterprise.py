@@ -17,9 +17,11 @@ def refresh_cloud_credentials(credentials: dict[str, str]) -> None:
     configuration, and clears affected filesystem caches so subsequent file
     operations pick up the new credentials.
 
-    TODO Mihnea (04/2026) Security:
-     This endpoint has no authentication and accepts arbitrary env var
-     keys. This is acceptable for air-gapped on-prem (behind Docker isolation with no internet).
-     For the hosted version, this endpoint must be secured with authentication and input validation.
+    Only ``AWS_*``, ``GOOGLE_APPLICATION_CREDENTIALS``, and ``FSSPEC_*`` keys
+    are accepted; any other key is rejected with 400.
+
+    Note: This endpoint has no bearer-token authentication. The deployment
+    boundary (Docker network isolation, no public internet exposure) is the
+    primary access control for on-prem installs.
     """
     apply_cloud_credentials(credentials=credentials)
