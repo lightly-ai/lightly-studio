@@ -121,16 +121,18 @@ start-postgres: stop-postgres
 		-p $(POSTGRES_PORT):5432 \
 		$(POSTGRES_IMAGE)
 	@echo "Waiting for PostgreSQL to be ready..."
-# Query $(POSTGRES_DB) instead of using pg_isready: pg_isready only pings the postmaster and
-# reports success even while the entrypoint's temporary bootstrap server is still creating the
-# database, which lets callers connect before $(POSTGRES_DB) exists.
+# Probe over TCP (-h 127.0.0.1) with a real query against $(POSTGRES_DB). Both details matter:
+# pg_isready only pings the postmaster and reports success even when the database is missing, and
+# the entrypoint's temporary bootstrap server -- which creates $(POSTGRES_DB), then runs the init
+# scripts and shuts down again -- listens on the Unix socket only. A socket probe therefore
+# answers from that short-lived server, so callers reach $(POSTGRES_URL) before the real server
+# accepts TCP connections.
 ifeq ($(OS),Windows_NT)
-	@powershell -Command "$$remaining = $(POSTGRES_STARTUP_TIMEOUT_SECONDS); while ($$remaining -gt 0) { docker exec $(POSTGRES_CONTAINER_NAME) psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c 'SELECT 1' *> $$null; if ($$LASTEXITCODE -eq 0) { exit 0 }; Start-Sleep -Seconds 1; $$remaining-- }; Write-Host 'PostgreSQL did not become ready within $(POSTGRES_STARTUP_TIMEOUT_SECONDS) seconds'; docker logs $(POSTGRES_CONTAINER_NAME); exit 1"
+	@powershell -Command "$$deadline = (Get-Date).AddSeconds($(POSTGRES_STARTUP_TIMEOUT_SECONDS)); while ($$true) { docker exec -e PGPASSWORD=$(POSTGRES_PASSWORD) $(POSTGRES_CONTAINER_NAME) psql -h 127.0.0.1 -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c 'SELECT 1' *> $$null; if ($$LASTEXITCODE -eq 0) { break }; if ((Get-Date) -ge $$deadline) { Write-Host 'PostgreSQL did not become ready within $(POSTGRES_STARTUP_TIMEOUT_SECONDS) seconds'; docker logs $(POSTGRES_CONTAINER_NAME); exit 1 }; Start-Sleep -Seconds 1 }"
 else
-	@remaining=$(POSTGRES_STARTUP_TIMEOUT_SECONDS); \
-	until docker exec $(POSTGRES_CONTAINER_NAME) psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c 'SELECT 1' > /dev/null 2>&1; do \
-		remaining=$$((remaining - 1)); \
-		if [ $$remaining -le 0 ]; then \
+	@deadline=$$(($$(date +%s) + $(POSTGRES_STARTUP_TIMEOUT_SECONDS))); \
+	until docker exec -e PGPASSWORD=$(POSTGRES_PASSWORD) $(POSTGRES_CONTAINER_NAME) psql -h 127.0.0.1 -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c 'SELECT 1' > /dev/null 2>&1; do \
+		if [ $$(date +%s) -ge $$deadline ]; then \
 			echo "PostgreSQL did not become ready within $(POSTGRES_STARTUP_TIMEOUT_SECONDS) seconds"; \
 			docker logs $(POSTGRES_CONTAINER_NAME); \
 			exit 1; \
