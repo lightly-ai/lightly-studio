@@ -1,3 +1,8 @@
+---
+name: glossary
+description: Read when naming anything user-facing - GUI text, docs, public Python API names, arguments, docstrings, or error messages. Gives the approved LightlyStudio term for each concept and the wording to avoid, currently covering annotations, annotation classes, annotation sources, and labeling.
+---
+
 # Glossary and Naming
 
 Terminology for LightlyStudio.

@@ -1,3 +1,8 @@
+---
+name: backend-guide
+description: Read before adding or changing backend code in lightly_studio - FastAPI routes, services, resolvers, SQLModel tables, or database access. Explains the api/services/resolvers/models layering, the Base/Create/Table/View model split, request flow, error handling, DuckDB and PostgreSQL persistence, Alembic migrations, and how to navigate the package.
+---
+
 # Backend Architecture Overview
 
 The backend lives in `lightly_studio/src/lightly_studio`. It is a Python package that can run as a local app, expose a FastAPI server, and serve the built web UI.
@@ -64,7 +69,7 @@ Schema is created with `SQLModel.metadata.create_all()` on startup.
 
 ### PostgreSQL and Alembic
 
-See [DB Migrations](../lightly_studio/MIGRATIONS.md) for full details on Alembic setup, startup behavior, adding schema changes, and validation.
+See `lightly_studio/MIGRATIONS.md` for full details on Alembic setup, startup behavior, adding schema changes, and validation.
 
 ## Build and generated artifacts
 

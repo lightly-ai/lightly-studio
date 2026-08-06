@@ -40,8 +40,8 @@ export function useSegmentationMaskBrush({
      *  the chosen class, or null if the user cancelled. */
     requestLabel?: () => Promise<{ label: string } | null>;
 }) {
-    const { createLabel } = useCreateLabel({ collectionId });
-    const { createAnnotation } = useCreateAnnotation({ collectionId });
+    const { createLabel } = useCreateLabel({ getCollectionId: () => collectionId });
+    const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
     const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
     const {
         context: annotationLabelContext,
@@ -51,7 +51,9 @@ export function useSegmentationMaskBrush({
         setAnnotationId,
         setAnnotationType
     } = useAnnotationLabelContext();
-    const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId });
+    const { updateAnnotations } = useUpdateAnnotationsMutation({
+        getCollectionId: () => collectionId
+    });
 
     const finishBrush = async (
         workingMask: Uint8Array | null,
