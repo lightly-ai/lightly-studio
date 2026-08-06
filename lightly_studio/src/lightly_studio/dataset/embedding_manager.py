@@ -72,12 +72,8 @@ def set_default_embedding_model(embedding_generator: EmbeddingGenerator) -> None
     """Register a custom embedding model that overrides the env-var default.
 
     Call this before you add a dataset (for example, before ImageDataset.load_or_create)
-    to use your own generator instead of the model set by
+    or before you launch the GUI to use your own generator instead of the model set by
     LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE. The override applies to every collection.
-
-    The registration lives in the current process only. If you restart the GUI with the
-    `lightly-studio gui` CLI and do not call this again, your embeddings stay, but text
-    search falls back to the env-var default model and will not match them.
 
     Args:
         embedding_generator: A generator that implements ImageEmbeddingGenerator and/or

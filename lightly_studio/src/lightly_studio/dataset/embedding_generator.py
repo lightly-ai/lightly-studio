@@ -39,15 +39,27 @@ class ImageCrop:
 class EmbeddingGenerator(Protocol):
     """Base protocol shared by every embedding generator.
 
-    Every generator gives LightlyStudio the model metadata it stores for each collection
-    (``get_embedding_model_input``) and embeds text queries (``embed_text``). Text
-    embeddings power text search. To embed images or videos, implement one of the
-    protocols below (``ImageEmbeddingGenerator`` and/or ``VideoEmbeddingGenerator``) and
-    register it with ``set_default_embedding_model`` before you add a dataset.
+    An EmbeddingGenerator provides embeddings for images, image crops, videos, video frames
+    or other sample types. Every sample collection can have a different associated embedding
+    generator. The generator is used at two points:
+
+    - During data loading to compute sample embeddings
+    - During a GUI run to embed text or image search queries
+
+    Generators are loaded at startup and need to identify themselves with
+    `get_embedding_model_input` which returns metadata about the loaded model.
+
+    To provide custom embeddings, implement one of the protocols below (``ImageEmbeddingGenerator``
+    and/or ``VideoEmbeddingGenerator``) and register it with ``set_default_embedding_model``
+    before you add a dataset or start the GUI.
     """
 
     def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
         """Generate an EmbeddingModelCreate instance.
+
+        Returns metadata about the model to be stored in the database.
+        The `embedding_model_hash` field is used to match the same EmbeddingGenerator
+        across multiple LightlyStudio runs.
 
         Args:
             collection_id: The ID of the collection.
@@ -76,14 +88,16 @@ class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
     you can run the model on the given file paths or look up precomputed vectors. A
     registered image generator replaces the built-in image, crop, and text embeddings.
     It inherits ``embed_text`` from ``EmbeddingGenerator``, so keep the text and image
-    encoders in the same embedding space for text-based image search to work.
+    encoders in the same embedding space for text-based image and crop search to work.
     """
 
     def embed_images(self, filepaths: list[str], show_progress: bool = True) -> EmbeddingResult:
         """Generate embeddings for multiple image samples.
 
         Args:
-            filepaths: A list of file paths to the images to embed.
+            filepaths: A list of ``fsspec``-compatible file paths to the images to embed.
+                Each one is an absolute local path with forward slashes (e.g. ``/data/cat.jpg``)
+                or a remote URI (e.g. ``s3://bucket/cat.jpg``).
             show_progress: Whether to show a progress bar during embedding.
 
         Returns:
@@ -113,6 +127,8 @@ class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
     ) -> NDArray[np.float32]:
         """Generate embeddings for in-memory PIL images.
 
+        Used for video frame embedding.
+
         Args:
             images: PIL images to embed.
             show_progress: Whether to show a progress bar during embedding.
@@ -131,15 +147,16 @@ class VideoEmbeddingGenerator(EmbeddingGenerator, Protocol):
     Implement this to use your own video model in LightlyStudio. A registered video
     generator replaces the built-in video and text embeddings. It inherits ``embed_text``
     from ``EmbeddingGenerator``, so keep the text and video encoders in the same embedding
-    space for text-based video search to work. To replace both image and video, implement
-    ``ImageEmbeddingGenerator`` on the same object.
+    space for text-based video search to work.
     """
 
     def embed_videos(self, filepaths: list[str]) -> EmbeddingResult:
         """Generate embeddings for multiple video samples.
 
         Args:
-            filepaths: A list of file paths to the videos to embed.
+            filepaths: A list of ``fsspec``-compatible file paths to the videos to embed.
+                Each one is an absolute local path with forward slashes (e.g. ``/data/clip.mp4``)
+                or a remote URI (e.g. ``s3://bucket/clip.mp4``).
 
         Returns:
             An ``EmbeddingResult`` with embeddings for the readable videos, in the same
