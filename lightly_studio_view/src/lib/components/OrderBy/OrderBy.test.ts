@@ -14,7 +14,8 @@ const mocks = vi.hoisted(() => ({
     updateSortBy: vi.fn(),
     metadataInfoValue: [] as MetadataInfoView[],
     metricsProxy: { data: null as EvaluationRunMetricsInfoView[] | null, dataUpdatedAt: 0 },
-    textEmbeddingValue: undefined as TextEmbedding | undefined
+    textEmbeddingValue: undefined as TextEmbedding | undefined,
+    capturedDatasetIdGetter: undefined as (() => string) | undefined
 }));
 
 vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
@@ -31,7 +32,10 @@ vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
 }));
 
 vi.mock('$lib/hooks/useEvaluationSampleMetricsInfo/useEvaluationSampleMetricsInfo', () => ({
-    useEvaluationSampleMetricsInfo: () => mocks.metricsProxy
+    useEvaluationSampleMetricsInfo: ({ datasetId }: { datasetId: () => string }) => {
+        mocks.capturedDatasetIdGetter = datasetId;
+        return mocks.metricsProxy;
+    }
 }));
 
 vi.mock('$lib/hooks/useGlobalStorage', () => ({
@@ -55,6 +59,7 @@ describe('OrderBy', () => {
         mocks.metricsProxy.data = null;
         mocks.metricsProxy.dataUpdatedAt = 0;
         mocks.textEmbeddingValue = undefined;
+        mocks.capturedDatasetIdGetter = undefined;
     });
 
     it('shows placeholder text when no field is selected', () => {
@@ -499,5 +504,15 @@ describe('OrderBy', () => {
                 direction: SortDirection.DESC
             }
         ]);
+    });
+
+    it('passes a reactive datasetId getter that tracks the current prop after navigation', async () => {
+        const { rerender } = render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
+
+        expect(mocks.capturedDatasetIdGetter!()).toBe('ds1');
+
+        await rerender({ collectionId: 'col1', datasetId: 'ds2' });
+
+        expect(mocks.capturedDatasetIdGetter!()).toBe('ds2');
     });
 });

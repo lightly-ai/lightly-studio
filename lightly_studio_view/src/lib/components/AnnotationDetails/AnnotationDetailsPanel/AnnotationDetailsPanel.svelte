@@ -26,9 +26,7 @@
 
     const { isEditingMode } = page.data.globalStorage;
 
-    const { deleteAnnotation } = useDeleteAnnotation({
-        collectionId
-    });
+    const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
 
     const handleDeleteAnnotation = async () => {
         try {

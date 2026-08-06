@@ -28,6 +28,7 @@ from lightly_studio.models.export_format import ExportFormat
 from lightly_studio.resolvers import collection_resolver, export_job_resolver
 from lightly_studio.resolvers.collection_resolver.export import ExportFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 export_router = APIRouter(prefix="/collections/{collection_id}", tags=["export"])
 _STREAM_CHUNK_SIZE_BYTES = 64 * 1024
@@ -42,7 +43,7 @@ def export_collection_annotations(
         Depends(collection_api.get_and_validate_collection_id),
     ],
     session: SessionDep,
-    annotation_collection_id: UUID | None,
+    annotation_collection_id: UUID | None = None,
     export_format: ExportFormat = ExportFormat.OBJECT_DETECTION_COCO,
 ) -> StreamingResponse:
     """Export collection annotations in the selected export format."""
@@ -58,85 +59,36 @@ def export_collection_annotations(
     # because the directory should be deleted only after the file has finished streaming.
     temp_dir = TemporaryDirectory()
 
-    if export_format == ExportFormat.OBJECT_DETECTION_COCO:
-        output_path = PathlibPath(temp_dir.name) / "coco_export.json"
-        try:
-            exporter.to_coco_object_detections(
-                output_json=output_path,
-                annotation_collection_id=annotation_collection_id,
-            )
-        except Exception:
-            temp_dir.cleanup()
-            # Reraise.
-            raise
-    elif export_format == ExportFormat.OBJECT_DETECTION_YOLO:
-        output_path = PathlibPath(temp_dir.name) / "yolo"
-
-        try:
-            exporter.to_yolo_object_detections(
-                output_folder=output_path,
-                annotation_collection_id=annotation_collection_id,
-            )
-        except Exception:
-            temp_dir.cleanup()
-            # Reraise.
-            raise
-
-        # For YOLO export, the exporter produces a directory (data.yaml + labels/),
-        # so this route streams the folder as a .zip instead of streaming a single file.
-        return StreamingResponse(
-            content=_stream_export_dir(
-                temp_dir=temp_dir,
-                dir_path=output_path,
-            ),
-            media_type="application/zip",
-            headers={
-                "Access-Control-Expose-Headers": "Content-Disposition",
-                "Content-Disposition": f"attachment; filename={output_path.name}.zip",
-            },
-        )
-    elif export_format == ExportFormat.SEGMENTATION_MASK_COCO:
-        output_path = PathlibPath(temp_dir.name) / "coco_segmentation_mask_export.json"
-
-        try:
-            exporter.to_coco_segmentation_masks(
-                output_json=output_path,
-                annotation_collection_id=annotation_collection_id,
-            )
-        except Exception:
-            temp_dir.cleanup()
-            # Reraise.
-            raise
-    elif export_format == ExportFormat.PASCAL_VOC:
-        output_path = PathlibPath(temp_dir.name) / "pascalvoc"
-
-        try:
-            exporter.to_pascalvoc_segmentation_mask(
-                output_folder=output_path,
-                annotation_collection_id=annotation_collection_id,
-            )
-        except Exception:
-            temp_dir.cleanup()
-            # Reraise.
-            raise
-
-        # For Pascal VOC export, the exporter produces a directory,
-        # so this route should stream the folder as a .zip instead of streaming a single file.
-        return StreamingResponse(
-            content=_stream_export_dir(
-                temp_dir=temp_dir,
-                dir_path=output_path,
-            ),
-            media_type="application/zip",
-            headers={
-                "Access-Control-Expose-Headers": "Content-Disposition",
-                "Content-Disposition": f"attachment; filename={output_path.name}.zip",
-            },
-        )
-    else:
+    if export_format == ExportFormat.YOUTUBE_VIS_SEGMENTATION:
+        temp_dir.cleanup()
         raise HTTPException(
             status_code=400,
             detail=f"Export format '{export_format.value}' is not supported for this endpoint.",
+        )
+
+    try:
+        output_path = _generate_annotations_export(
+            exporter=exporter,
+            export_format=export_format,
+            annotation_collection_id=annotation_collection_id,
+            temp_dir=PathlibPath(temp_dir.name),
+        )
+    except Exception:
+        temp_dir.cleanup()
+        logger.exception("Cannot generate annotations export")
+        raise
+
+    if output_path.is_dir():
+        return StreamingResponse(
+            content=_stream_export_dir(
+                temp_dir=temp_dir,
+                dir_path=output_path,
+            ),
+            media_type="application/zip",
+            headers={
+                "Access-Control-Expose-Headers": "Content-Disposition",
+                "Content-Disposition": f"attachment; filename={output_path.name}.zip",
+            },
         )
 
     return StreamingResponse(
@@ -144,7 +96,7 @@ def export_collection_annotations(
             temp_dir=temp_dir,
             file_path=output_path,
         ),
-        media_type="application/json",
+        media_type=_media_type_for_path(output_path),
         headers={
             "Access-Control-Expose-Headers": "Content-Disposition",
             "Content-Disposition": f"attachment; filename={output_path.name}",
@@ -212,6 +164,12 @@ class ExportKeyResponse(BaseModel):
     """Response body for all prepare endpoints."""
 
     export_key: UUID
+
+
+class ExportYoutubeVisPrepareBody(BaseModel):
+    """Request body for the YouTube-VIS prepare endpoint."""
+
+    video_filter: VideoFilter | None = None
 
 
 class ExportAnnotationsPrepareBody(BaseModel):
@@ -364,6 +322,42 @@ def export_collection_prepare(
     return ExportKeyResponse(export_key=export.export_key)
 
 
+@export_router.post("/export/youtube-vis/prepare")
+def export_collection_youtube_vis_prepare(
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(collection_api.get_and_validate_collection_id),
+    ],
+    session: SessionDep,
+    body: ExportYoutubeVisPrepareBody,
+) -> ExportKeyResponse:
+    """Generate the YouTube-VIS export and persist its path."""
+    if collection.sample_type != SampleType.VIDEO:
+        raise ValueError("YouTube-VIS export is only supported for video collections.")
+
+    dataset_query = DatasetQuery(dataset=collection, session=session, sample_class=VideoSample)
+    if body.video_filter is not None:
+        dataset_query.filter_by_sample_ids(
+            body.video_filter.build_sample_ids_query(collection.collection_id)
+        )
+
+    temp_dir = PathlibPath(tempfile.mkdtemp())
+    output_path = temp_dir / "youtube_vis_segmentation_mask_export.json"
+    try:
+        video_dataset_export.to_youtube_vis_segmentation_mask(
+            session=session,
+            samples=dataset_query,
+            output_json=output_path,
+        )
+        export = export_job_resolver.create(session=session, export_path=str(output_path))
+    except Exception:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise
+
+    return ExportKeyResponse(export_key=export.export_key)
+
+
 @export_router.post("/export/annotations/prepare")
 def export_collection_annotations_prepare(
     collection: Annotated[
@@ -375,6 +369,14 @@ def export_collection_annotations_prepare(
     body: ExportAnnotationsPrepareBody,
 ) -> ExportKeyResponse:
     """Generate the annotations export and persist its path."""
+    if body.export_format == ExportFormat.YOUTUBE_VIS_SEGMENTATION:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Export format '{body.export_format.value}' is not supported for this endpoint."
+            ),
+        )
+
     dataset_query = DatasetQuery(dataset=collection, session=session)
     if body.image_filter is not None:
         dataset_query.filter_by_sample_ids(
@@ -479,6 +481,13 @@ def _generate_annotations_export(
     temp_dir: PathlibPath,
 ) -> PathlibPath:
     """Run the annotations export and return the output path."""
+    if export_format == ExportFormat.CLASSIFICATION_CSV:
+        output_path = temp_dir / "classification_export.csv"
+        exporter.to_csv_classifications(
+            output_csv=output_path,
+            annotation_collection_id=annotation_collection_id,
+        )
+        return output_path
     if export_format == ExportFormat.OBJECT_DETECTION_COCO:
         output_path = temp_dir / "coco_export.json"
         exporter.to_coco_object_detections(
@@ -561,6 +570,8 @@ def _stream_dir_and_cleanup(
 
 
 def _media_type_for_path(path: PathlibPath) -> str:
+    if path.suffix == ".csv":
+        return "text/csv"
     if path.suffix == ".json":
         return "application/json"
     if path.suffix == ".txt":

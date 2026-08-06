@@ -19,6 +19,7 @@
 
 <div
     class="relative"
+    role="region"
     onpointerenter={() => (visible = true)}
     onpointerleave={() => (visible = false)}
     onpointerdown={() => (visible = false)}

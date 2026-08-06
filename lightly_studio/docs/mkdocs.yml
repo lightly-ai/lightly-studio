@@ -73,6 +73,7 @@ nav:
       - Tags: concepts_and_tools/tags.md
       - Captions: concepts_and_tools/captions.md
       - Metadata: concepts_and_tools/metadata.md
+      - Embeddings: concepts_and_tools/embeddings.md
     - Tools:
       - Search and Filter: concepts_and_tools/search_and_filter.md
       - Dataset Distributions: concepts_and_tools/dataset_distributions.md
