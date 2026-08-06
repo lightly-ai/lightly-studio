@@ -7,6 +7,7 @@
     import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
+    import { useClassesDialog } from '$lib/hooks/useClassesDialog/useClassesDialog';
     import { get } from 'svelte/store';
     import { useGlobalStorage } from '$lib/hooks';
     import {
@@ -15,7 +16,8 @@
         Settings as SettingsIcon,
         BrainCircuit as BrainCircuitIcon,
         WandSparkles as WandSparklesIcon,
-        SplitSquareHorizontal as SplitSquareHorizontalIcon
+        SplitSquareHorizontal as SplitSquareHorizontalIcon,
+        Tags as TagsIcon
     } from '@lucide/svelte';
 
     import type { CollectionView } from '$lib/api/lightly_studio_local';
@@ -43,6 +45,7 @@
     const { openExportDialog } = useExportDialog();
     const { openSettingsDialog } = useSettingsDialog();
     const { openOperatorsDialog } = useOperatorsDialog();
+    const { openClassesDialog } = useClassesDialog();
 
     type MenuAction = SelectItem & { onSelect: () => void };
 
@@ -102,6 +105,14 @@
                 onSelect: openOperatorsDialog
             });
         }
+
+        items.push({
+            value: 'menu-classes',
+            label: 'Classes',
+            icon: TagsIcon,
+            testId: 'menu-classes',
+            onSelect: openClassesDialog
+        });
 
         if (hasExport) {
             items.push({

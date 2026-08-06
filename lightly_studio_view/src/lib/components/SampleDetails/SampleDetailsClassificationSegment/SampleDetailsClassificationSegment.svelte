@@ -17,7 +17,6 @@
     } from '../SampleDetailsAnnotationSegment/SampleDetailsAnnotationSegment.helpers';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
-    import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
@@ -44,7 +43,6 @@
     const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
     const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
     const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
-    const { createLabel } = useCreateLabel({ getCollectionId: () => collectionId });
     const { updateAnnotations } = useUpdateAnnotationsMutation({
         getCollectionId: () => collectionId
     });
@@ -121,15 +119,13 @@
     const createClassificationAnnotation = async (labelName: string) => {
         if (!annotationLabels.data) return false;
 
-        let label = annotationLabels.data.find(
+        const label = annotationLabels.data.find(
             (labelItem) => labelItem.annotation_label_name === labelName
         );
 
         if (!label) {
-            label = await createLabel({
-                dataset_id: datasetId,
-                annotation_label_name: labelName
-            });
+            toast.error('This class no longer exists. Choose another class.');
+            return false;
         }
 
         try {
@@ -243,7 +239,8 @@
                                 (i) => i.value === getLabelValue(annotation)?.value
                             )}
                             name="classification-label"
-                            placeholder="Select or create a class"
+                            placeholder="Select a class"
+                            allowCreate={false}
                             className="w-full min-w-0"
                             contentClassName="w-full min-w-0"
                             onSelect={async (item) => {
@@ -251,7 +248,7 @@
                             }}
                         >
                             {#snippet notFound({ inputValue })}
-                                <LabelNotFound label={inputValue} />
+                                <LabelNotFound label={inputValue} allowCreate={false} />
                             {/snippet}
                         </SelectList>
                     {:else}
@@ -334,7 +331,8 @@
                                 <SelectList
                                     {items}
                                     name="classification-label"
-                                    placeholder="Select or create a class"
+                                    placeholder="Select a class"
+                                    allowCreate={false}
                                     className="w-full min-w-0"
                                     contentClassName="w-full min-w-0"
                                     onSelect={async (item) => {
@@ -347,7 +345,7 @@
                                     }}
                                 >
                                     {#snippet notFound({ inputValue })}
-                                        <LabelNotFound label={inputValue} />
+                                        <LabelNotFound label={inputValue} allowCreate={false} />
                                     {/snippet}
                                 </SelectList>
                             </span>

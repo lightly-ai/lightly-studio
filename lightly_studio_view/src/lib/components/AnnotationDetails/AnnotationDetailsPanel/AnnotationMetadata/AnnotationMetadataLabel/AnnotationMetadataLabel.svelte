@@ -56,7 +56,8 @@
             {items}
             selectedItem={items.find((i) => i.value === value?.value)}
             name="annotation-label"
-            placeholder="Select or create a class"
+            placeholder="Select a class"
+            allowCreate={false}
             className="w-full min-w-0"
             contentClassName="w-full min-w-0"
             onSelect={(item) => {
@@ -81,7 +82,7 @@
             }}
         >
             {#snippet notFound({ inputValue })}
-                <LabelNotFound label={inputValue} />
+                <LabelNotFound label={inputValue} allowCreate={false} />
             {/snippet}
         </SelectList>
     </div>

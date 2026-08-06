@@ -49,6 +49,8 @@ export { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDi
 export { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
 export { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
 export { useSettings } from '$lib/hooks/useSettings';
+export { useClassesDialog } from '$lib/hooks/useClassesDialog/useClassesDialog';
+export { useClasses } from '$lib/hooks/useClasses/useClasses.svelte';
 export { useTrackSampleInspected } from '$lib/hooks/useTrackSampleInspected';
 export { useAnnotationClassVisibility } from '$lib/hooks/useAnnotationClassVisibility/useAnnotationClassVisibility';
 export {

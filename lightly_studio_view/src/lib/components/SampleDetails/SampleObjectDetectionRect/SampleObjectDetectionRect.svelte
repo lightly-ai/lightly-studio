@@ -2,7 +2,6 @@
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
-    import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
     import type { BoundingBox } from '$lib/types';
     import { drag, type D3DragEvent } from 'd3-drag';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
@@ -64,7 +63,6 @@
         handleCancel: handleClassDialogCancel
     } = useSelectClassDialog();
 
-    const { createLabel } = useCreateLabel({ getCollectionId: () => collectionId });
     const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
     const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
     const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
@@ -200,16 +198,13 @@
                 updateLastAnnotationLabel(collectionId, selectedLabelName);
             }
 
-            let label = labels.data?.find(
+            const label = labels.data?.find(
                 (label) => label.annotation_label_name === selectedLabelName
             );
 
-            // Create label if it does not exist yet
             if (!label) {
-                label = await createLabel({
-                    dataset_id: datasetId,
-                    annotation_label_name: selectedLabelName
-                });
+                toast.error('This class no longer exists. Choose another class.');
+                return;
             }
 
             const newAnnotation = await createAnnotation({

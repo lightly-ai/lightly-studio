@@ -5,18 +5,23 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Path
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Path, Response
+from pydantic import BaseModel, StringConstraints
+from sqlalchemy.exc import IntegrityError
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_CONFLICT,
     HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,
+    HTTP_STATUS_OK,
 )
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.annotation_label import (
+    AnnotationLabelBatchCreateRequest,
     AnnotationLabelCreate,
     AnnotationLabelTable,
+    AnnotationLabelWithCountView,
 )
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.resolvers import annotation_label_resolver
@@ -27,7 +32,10 @@ annotations_label_router = APIRouter()
 class AnnotationLabelCreateRequest(BaseModel):
     """Request model for creating or updating an annotation label."""
 
-    annotation_label_name: str
+    annotation_label_name: Annotated[
+        str,
+        StringConstraints(strip_whitespace=True, min_length=1, max_length=255),
+    ]
 
 
 @annotations_label_router.post(
@@ -44,14 +52,29 @@ def create_annotation_label(
     ],
 ) -> AnnotationLabelTable:
     """Create a new annotation label in the database."""
-    # TODO(Michal, 12/2025): Use a different model for label creation from the frontend.
-    return annotation_label_resolver.create(
+    if annotation_label_resolver.get_by_label_name(
         session=session,
-        label=AnnotationLabelCreate(
-            dataset_id=collection.dataset_id,
-            annotation_label_name=input_label.annotation_label_name,
-        ),
-    )
+        dataset_id=collection.dataset_id,
+        label_name=input_label.annotation_label_name,
+    ):
+        raise HTTPException(
+            status_code=HTTP_STATUS_CONFLICT,
+            detail="Annotation class name already in use",
+        )
+    try:
+        return annotation_label_resolver.create(
+            session=session,
+            label=AnnotationLabelCreate(
+                dataset_id=collection.dataset_id,
+                annotation_label_name=input_label.annotation_label_name,
+            ),
+        )
+    except IntegrityError as error:
+        session.rollback()
+        raise HTTPException(
+            status_code=HTTP_STATUS_CONFLICT,
+            detail="Annotation class name already in use",
+        ) from error
 
 
 @annotations_label_router.get("/collections/{collection_id}/annotation_labels")
@@ -65,6 +88,57 @@ def read_annotation_labels(
 ) -> list[AnnotationLabelTable]:
     """Retrieve a list of annotation labels from the database."""
     return annotation_label_resolver.get_all(session=session, dataset_id=collection.dataset_id)
+
+
+@annotations_label_router.get("/collections/{collection_id}/annotation_labels/with_counts")
+def read_annotation_labels_with_counts(
+    session: SessionDep,
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+) -> list[AnnotationLabelWithCountView]:
+    """Retrieve annotation labels and their annotation counts."""
+    return annotation_label_resolver.get_all_with_counts(
+        session=session,
+        dataset_id=collection.dataset_id,
+    )
+
+
+@annotations_label_router.post(
+    "/collections/{collection_id}/annotation_labels/batch",
+    status_code=HTTP_STATUS_CREATED,
+)
+def create_annotation_labels_batch(
+    input_labels: AnnotationLabelBatchCreateRequest,
+    session: SessionDep,
+    response: Response,
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+) -> list[AnnotationLabelWithCountView]:
+    """Create multiple annotation labels, skipping duplicate names."""
+    created_labels = annotation_label_resolver.create_batch(
+        session=session,
+        dataset_id=collection.dataset_id,
+        label_names=input_labels.annotation_label_names,
+    )
+    if not created_labels:
+        response.status_code = HTTP_STATUS_OK
+        return []
+    return [
+        AnnotationLabelWithCountView(
+            annotation_label_id=label.annotation_label_id,
+            dataset_id=label.dataset_id,
+            annotation_label_name=label.annotation_label_name,
+            created_at=label.created_at,
+            annotation_count=0,
+        )
+        for label in created_labels
+    ]
 
 
 @annotations_label_router.get("/annotation_labels/{label_id}")

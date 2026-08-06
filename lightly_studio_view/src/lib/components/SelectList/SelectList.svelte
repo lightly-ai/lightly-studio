@@ -42,6 +42,7 @@
         autoFocus = false,
         disabled = false,
         isLoading = false,
+        allowCreate = true,
         onKeyboardConfirm
     }: {
         placeholder?: string;
@@ -57,6 +58,7 @@
         onSelect?: (item: ListItem) => void;
         disabled?: boolean;
         isLoading?: boolean;
+        allowCreate?: boolean;
         onKeyboardConfirm?: (item: ListItem) => void;
     } = $props();
 
@@ -100,7 +102,7 @@
 
     const handleKeyDown = (event: KeyboardEvent) => {
         if (event.key !== 'Enter' || !onKeyboardConfirm) {
-            if (event.key === 'Enter' && !highlightedValue && inputValue) {
+            if (event.key === 'Enter' && allowCreate && !highlightedValue && inputValue) {
                 createNewItem(inputValue);
                 event.preventDefault();
                 event.stopPropagation();
@@ -118,8 +120,9 @@
             const existingItem = items.find(
                 (item) => item.value.toLowerCase() === inputValue.toLowerCase()
             );
-            const item = existingItem ?? { value: inputValue, label: inputValue };
+            if (!existingItem && !allowCreate) return;
 
+            const item = existingItem ?? { value: inputValue, label: inputValue };
             if (!existingItem) items.push(item);
 
             confirmWithKeyboard(item);
@@ -201,7 +204,7 @@
                         </Command.Item>
                     {/each}
                 </Command.Group>
-                {#if inputValue.trim()}
+                {#if allowCreate && inputValue.trim()}
                     <div class="border-t">
                         <Command.Item
                             value="__create__"
