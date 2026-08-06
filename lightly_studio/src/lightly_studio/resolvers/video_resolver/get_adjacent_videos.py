@@ -96,9 +96,7 @@ def _base_query(
             func.lag(col(VideoTable.sample_id))
             .over(order_by=order_col)
             .label("previous_sample_id"),
-            func.lead(col(VideoTable.sample_id))
-            .over(order_by=order_col)
-            .label("next_sample_id"),
+            func.lead(col(VideoTable.sample_id)).over(order_by=order_col).label("next_sample_id"),
             func.row_number().over(order_by=order_col).label("row_number"),
         )
         .select_from(VideoTable)
