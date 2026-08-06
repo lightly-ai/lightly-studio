@@ -368,6 +368,14 @@ def export_collection_annotations_prepare(
     body: ExportAnnotationsPrepareBody,
 ) -> ExportKeyResponse:
     """Generate the annotations export and persist its path."""
+    if body.export_format == ExportFormat.YOUTUBE_VIS_SEGMENTATION:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Export format '{body.export_format.value}' is not supported for this endpoint."
+            ),
+        )
+
     dataset_query = DatasetQuery(dataset=collection, session=session)
     if body.image_filter is not None:
         dataset_query.filter_by_sample_ids(

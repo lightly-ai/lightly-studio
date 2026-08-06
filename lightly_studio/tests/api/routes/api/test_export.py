@@ -7,13 +7,16 @@ import io
 import json
 import zipfile
 from pathlib import Path
+from unittest import mock
 from uuid import UUID, uuid4
 
+import pytest
 import yaml
 from fastapi.testclient import TestClient
 from PIL import Image as PILImage
 from sqlmodel import Session
 
+from lightly_studio.api.routes.api import export as export_api
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_NOT_FOUND,
@@ -1118,8 +1121,13 @@ def test_export_collection_annotations_prepare__pascal_voc(
 def test_export_collection_annotations_prepare__unsupported_format(
     db_session: Session,
     test_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     collection = create_collection(session=db_session)
+    generate_annotations_export = mock.Mock()
+    make_temp_dir = mock.Mock()
+    monkeypatch.setattr(export_api, "_generate_annotations_export", generate_annotations_export)
+    monkeypatch.setattr(export_api.tempfile, "mkdtemp", make_temp_dir)
 
     response = test_client.post(
         f"/api/collections/{collection.collection_id}/export/annotations/prepare",
@@ -1127,6 +1135,11 @@ def test_export_collection_annotations_prepare__unsupported_format(
     )
 
     assert response.status_code == HTTP_STATUS_BAD_REQUEST
+    assert response.json() == {
+        "detail": "Export format 'youtube_vis_segmentation' is not supported for this endpoint."
+    }
+    generate_annotations_export.assert_not_called()
+    make_temp_dir.assert_not_called()
 
 
 def test_export_collection_annotations_prepare__image_filter(
