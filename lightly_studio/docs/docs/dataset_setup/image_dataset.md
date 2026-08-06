@@ -34,8 +34,9 @@ supported, see [Using Cloud Storage](cloud_storage.md) for more details.
 Added images are automatically embedded so that embedding plot and image search are enabled.
 To skip embedding, pass `embed=False` to the method.
 
-The method supports additional arguments, e.g. you can pass `tag_depth=1` to add the image parent
-folder name as a tag to each sample. See the [API reference](../api/dataset.md#lightly_studio.ImageDataset.add_images_from_path) for full details.
+The method supports additional arguments, e.g. you can pass `tag_depth=1` to tag each image with its
+top-level folder name, or a larger `tag_depth` to tag by several nested folder levels. See the
+[API reference](../api/dataset.md#lightly_studio.ImageDataset.add_images_from_path) for full details.
 
 ### From an Annotation Format
 
