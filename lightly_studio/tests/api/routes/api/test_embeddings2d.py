@@ -26,8 +26,10 @@ from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from tests.helpers_resolvers import (
+    create_caption,
     create_collection,
     create_embedding_model,
+    create_image,
     create_sample_embedding,
     fill_db_with_samples_and_embeddings,
 )
@@ -263,6 +265,47 @@ def test_get_embeddings2d__rejects_mismatched_filter_type(
 
     assert response.status_code == 400
     assert "Invalid filter type" in response.json()["detail"]
+
+
+def test_get_embeddings2d__caption_collection(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    """Caption collections accept the image filter payload and return 2D points."""
+    parent = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=parent.collection_id)
+    caption = create_caption(
+        session=db_session,
+        collection_id=parent.collection_id,
+        parent_sample_id=image.sample_id,
+        text="a person walks",
+    )
+    caption_collection_id = caption.sample.collection_id
+
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=caption_collection_id,
+        embedding_model_name="caption_model",
+        embedding_dimension=EMBEDDING_DIMENSION,
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=caption.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[0.1] * EMBEDDING_DIMENSION,
+    )
+
+    response = test_client.post(
+        f"/api/collections/{caption_collection_id}/embeddings2d/default",
+        json={"filters": {}},
+    )
+
+    assert response.status_code == 200
+    table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
+    assert table.num_rows == 1
+    assert table.column("sample_id").to_pylist() == [str(caption.sample_id)]
+    fulfils_filter = table.column("fulfils_filter").to_numpy(zero_copy_only=False)
+    np.testing.assert_array_equal(fulfils_filter, np.ones(1, dtype=np.uint8))
 
 
 """Benchmark for the /embeddings2d/default endpoint.

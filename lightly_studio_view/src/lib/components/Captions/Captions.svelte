@@ -5,6 +5,8 @@
 
     import { useSamplesInfinite, useGlobalStorage } from '$lib/hooks';
     import { LazyTrigger, Spinner, GridHeader, Separator, CaptionsItem } from '$lib/components';
+    import { usePlotPointFocus } from '$lib/hooks/usePlotPointFocus/usePlotPointFocus';
+    import { findParentSampleIndexForCaption } from './findParentSampleIndexForCaption';
 
     const {
         collectionId
@@ -35,7 +37,10 @@
         body: { filters: { has_captions: true } }
     }));
 
+    const { focusedPlotSampleId } = usePlotPointFocus(collectionId);
+
     let viewport: HTMLElement | null = $state(null);
+    let list: List | null = $state(null);
 
     const { sampleSize, setfilteredSampleCount } = useGlobalStorage();
 
@@ -86,6 +91,31 @@
             activeDraftSampleId = null;
         }
     };
+
+    // Scroll the parent row into view when a caption embedding point is clicked.
+    // If the parent is not loaded yet, keep fetching pages until it appears.
+    let lastScrolledCaptionId: string | null = null;
+    $effect(() => {
+        const captionSampleId = $focusedPlotSampleId;
+        if (!captionSampleId) {
+            lastScrolledCaptionId = null;
+            return;
+        }
+
+        const index = findParentSampleIndexForCaption(items, captionSampleId);
+        if (index >= 0) {
+            if (lastScrolledCaptionId !== captionSampleId) {
+                list?.scrollToIndex(index, 'center');
+                lastScrolledCaptionId = captionSampleId;
+            }
+            return;
+        }
+
+        lastScrolledCaptionId = null;
+        if (query.hasNextPage && !query.isFetchingNextPage) {
+            loadMore();
+        }
+    });
 </script>
 
 <div class="flex flex-1 flex-col space-y-4">
@@ -100,6 +130,7 @@
             </div>
         {:else if query.isSuccess && items.length > 0}
             <List
+                bind:this={list}
                 itemCount={items.length}
                 {height}
                 itemSize={captionSize + GridGap}
@@ -119,6 +150,7 @@
                                     maxHeight={`${captionSize}px`}
                                     item={items[index]}
                                     onUpdate={refresh}
+                                    highlightedCaptionId={$focusedPlotSampleId}
                                     isCreatingCaption={activeDraftSampleId ===
                                         items[index].sample_id}
                                     canStartDraft={activeDraftSampleId === null ||

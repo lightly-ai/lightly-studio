@@ -499,4 +499,27 @@ describe('SidePanelTabs availability', () => {
 
         expect(screen.getByTestId('side-panel-tabs')).toBeInTheDocument();
     });
+
+    it('is present on captions route when embeddings exist', async () => {
+        setPageRoute(APP_ROUTES.captions);
+        vi.mocked(useHasEmbeddingsModule.useHasEmbeddings).mockReturnValue({
+            data: true
+        } as Partial<ReturnType<typeof useHasEmbeddingsModule.useHasEmbeddings>> as ReturnType<
+            typeof useHasEmbeddingsModule.useHasEmbeddings
+        >);
+
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        expect(screen.getByTestId('side-panel-tabs')).toBeInTheDocument();
+    });
+
+    it('is absent on captions route without embeddings', async () => {
+        setPageRoute(APP_ROUTES.captions);
+
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        expect(screen.queryByTestId('side-panel-tabs')).not.toBeInTheDocument();
+    });
 });

@@ -10,10 +10,7 @@
     const { checked, onCheckedChange }: ColorByRepeatGroupCheckboxProps = $props();
 </script>
 
-<div
-    class="flex items-center gap-2"
-    data-testid="color-by-repeat-group-checkbox"
->
+<div class="flex items-center gap-2" data-testid="color-by-repeat-group-checkbox">
     <Checkbox
         id="color-by-repeat-group"
         {checked}
@@ -24,6 +21,6 @@
         for="color-by-repeat-group"
         class="cursor-pointer text-xs font-normal text-muted-foreground"
     >
-        Color by repeat group
+        Group by similarity
     </Label>
 </div>

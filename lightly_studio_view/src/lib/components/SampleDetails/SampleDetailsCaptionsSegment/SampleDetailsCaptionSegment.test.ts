@@ -204,6 +204,35 @@ describe('SampleDetailsCaptionSegment', () => {
         );
     });
 
+    it('groups captions by repeat group when colorByRepeatGroup is enabled', () => {
+        render(SampleDetailsCaptionSegment, {
+            props: {
+                captions: [
+                    makeCaption({ sample_id: 'cap-g0-a', text: 'First repeat', groupId: 0 }),
+                    makeCaption({ sample_id: 'cap-g0-b', text: 'Second repeat', groupId: 0 }),
+                    makeCaption({ sample_id: 'cap-g1-a', text: 'Another repeat', groupId: 1 }),
+                    makeCaption({ sample_id: 'cap-none', text: 'No group' })
+                ],
+                sampleId: 'sample-1',
+                refetch: vi.fn(),
+                colorByRepeatGroup: true,
+                onColorByRepeatGroupChange: vi.fn()
+            }
+        });
+
+        const headers = screen.getAllByTestId('caption-group-header');
+        expect(headers).toHaveLength(2);
+        expect(headers[0]).toHaveTextContent('Repeat Group 0');
+        expect(headers[1]).toHaveTextContent('Repeat Group 1');
+
+        const captionRows = screen.getAllByTestId('caption-field-row');
+        expect(captionRows).toHaveLength(4);
+        expect(captionRows[0]).toHaveAttribute('data-caption-id', 'cap-g0-a');
+        expect(captionRows[1]).toHaveAttribute('data-caption-id', 'cap-g0-b');
+        expect(captionRows[2]).toHaveAttribute('data-caption-id', 'cap-g1-a');
+        expect(captionRows[3]).toHaveAttribute('data-caption-id', 'cap-none');
+    });
+
     it('highlights the caption under the playhead and calls onSelectCaption', async () => {
         const onSelectCaption = vi.fn();
         render(SampleDetailsCaptionSegment, {

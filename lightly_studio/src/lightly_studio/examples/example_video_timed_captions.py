@@ -16,6 +16,13 @@ from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.database import db_manager
 from lightly_studio.dataset import caption_embedding
+from lightly_studio.dataset.caption_repetition import (
+    DEFAULT_SIMILARITY_THRESHOLD,
+    REPEATED_CAPTION_GROUP_ID_KEY,
+    REPEATED_CAPTION_MAX_SIMILARITY_KEY,
+    find_repeated_captions,
+    write_caption_repetition_metadata,
+)
 from lightly_studio.dataset.caption_segment_matching import (
     CAPTION_SEGMENT_MATCH_SCORE_KEY,
     score_caption_segments,
@@ -138,6 +145,73 @@ def score_timed_captions_for_video(video: VideoSample, caption_ids: list[UUID]) 
     )
 
 
+def detect_repeated_captions_for_video(
+    video: VideoSample,
+    caption_ids: list[UUID],
+    *,
+    similarity_threshold: float = DEFAULT_SIMILARITY_THRESHOLD,
+    min_gap_s: float = 0.0,
+) -> None:
+    """Cluster temporally separated captions with similar text embeddings."""
+    session = video.get_object_session()
+    captions = caption_resolver.get_by_ids(session=session, sample_ids=caption_ids)
+    timed: list[CaptionTable] = [
+        caption for caption in captions if caption.temporal_span_details is not None
+    ]
+    if len(timed) < 2:
+        return
+
+    caption_collection_id = collection_resolver.get_by_name(
+        session=session,
+        name=SampleType.CAPTION.value.lower(),
+        parent_collection_id=video.collection_id,
+    )
+    assert caption_collection_id is not None
+
+    model_id = EmbeddingManagerProvider.get_embedding_manager().load_or_get_default_model(
+        session=session,
+        collection_id=caption_collection_id,
+    )
+    assert model_id is not None
+
+    timed_ids = [caption.sample_id for caption in timed]
+    embedding_rows = sample_embedding_resolver.get_by_sample_ids(
+        session=session,
+        sample_ids=timed_ids,
+        embedding_model_id=model_id,
+    )
+    embedding_by_id = {row.sample_id: row.embedding for row in embedding_rows}
+
+    intervals: list[tuple[float, float]] = []
+    caption_embeddings: list[list[float]] = []
+    scored_ids: list[UUID] = []
+    for caption in timed:
+        embedding = embedding_by_id.get(caption.sample_id)
+        span = caption.temporal_span_details
+        if embedding is None or span is None:
+            continue
+        intervals.append((span.start_time_s, span.end_time_s))
+        caption_embeddings.append(list(embedding))
+        scored_ids.append(caption.sample_id)
+
+    if len(intervals) < 2:
+        return
+
+    result = find_repeated_captions(
+        caption_embeddings=caption_embeddings,
+        intervals=intervals,
+        similarity_threshold=similarity_threshold,
+        min_gap_s=min_gap_s,
+    )
+    write_caption_repetition_metadata(
+        session=session,
+        caption_sample_ids=scored_ids,
+        video_sample_id=video.sample_id,
+        result=result,
+        caption_embeddings=caption_embeddings,
+    )
+
+
 # Read environment variables
 env = Env()
 env.read_env()
@@ -173,6 +247,7 @@ caption_embedding.embed_captions(session=dataset.session, caption_sample_ids=all
 
 for video, caption_ids in captions_by_video:
     score_timed_captions_for_video(video=video, caption_ids=caption_ids)
+    detect_repeated_captions_for_video(video=video, caption_ids=caption_ids)
     captions = caption_resolver.get_by_ids(session=dataset.session, sample_ids=caption_ids)
     print(f"{video.file_name} ({video.duration_s}s): {len(captions)} caption(s)")
     for caption in captions:
@@ -181,14 +256,33 @@ for video, caption_ids in captions_by_video:
             f"{span.start_time_s:.2f}s - {span.end_time_s:.2f}s" if span is not None else "no span"
         )
         match_score = None
+        group_id = None
+        max_sim = None
         if span is not None:
             match_score = metadata_resolver.get_value_for_sample(
                 session=dataset.session,
                 sample_id=caption.sample_id,
                 key=CAPTION_SEGMENT_MATCH_SCORE_KEY,
             )
-        score_text = f", match={match_score:.3f}" if match_score is not None else ""
-        print(f"  - [{time_range}] {caption.text}{score_text}")
+            group_id = metadata_resolver.get_value_for_sample(
+                session=dataset.session,
+                sample_id=caption.sample_id,
+                key=REPEATED_CAPTION_GROUP_ID_KEY,
+            )
+            max_sim = metadata_resolver.get_value_for_sample(
+                session=dataset.session,
+                sample_id=caption.sample_id,
+                key=REPEATED_CAPTION_MAX_SIMILARITY_KEY,
+            )
+        extras: list[str] = []
+        if match_score is not None:
+            extras.append(f"match={match_score:.3f}")
+        if group_id is not None:
+            extras.append(f"repeat_group={group_id}")
+        if max_sim is not None:
+            extras.append(f"max_sim={max_sim:.3f}")
+        extra_text = f", {', '.join(extras)}" if extras else ""
+        print(f"  - [{time_range}] {caption.text}{extra_text}")
 
 annotation_resolver.delete_annotations(session=dataset.session,annotation_label_ids=None)
 ls.start_gui()

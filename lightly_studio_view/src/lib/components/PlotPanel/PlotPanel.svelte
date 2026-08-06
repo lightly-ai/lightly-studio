@@ -36,7 +36,7 @@
         NO_CATEGORY_LABEL
     } from './plotCategories';
     import { page } from '$app/state';
-    import { isAnnotationsRoute, isVideosRoute } from '$lib/routes';
+    import { isAnnotationsRoute, isCaptionsRoute, isVideosRoute } from '$lib/routes';
     import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { usePlotColorBy } from './usePlotColorBy/usePlotColorBy';
@@ -44,11 +44,13 @@
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { writable, get } from 'svelte/store';
     import { usePostHog } from '$lib/hooks';
+    import { usePlotPointFocus } from '$lib/hooks/usePlotPointFocus/usePlotPointFocus';
 
     let { collectionId }: { collectionId: string } = $props();
     const { trackEvent } = usePostHog();
     const { setShowEmbeddingPlot, getRangeSelection, setRangeSelectionForCollection } =
         useGlobalStorage();
+    const { setFocusedPlotSampleId } = usePlotPointFocus(collectionId);
     const rangeSelection = getRangeSelection(collectionId);
     const setRangeSelection = (selection: Point[] | null) => {
         setRangeSelectionForCollection(collectionId, selection);
@@ -62,6 +64,7 @@
     const isVideos = $derived(isVideosRoute(page.route?.id ?? null));
     // Detect if we're on the annotations route
     const isAnnotations = $derived(isAnnotationsRoute(page.route?.id ?? null));
+    const isCaptions = $derived(isCaptionsRoute(page.route?.id ?? null));
     // Everything that isn't videos or annotations is the images grid.
     const isImages = $derived(!isVideos && !isAnnotations);
 
@@ -301,11 +304,22 @@
     const MIN_RENDER_SIZE = 50;
     const embeddingConfig = {
         colorScheme: 'dark',
-        autoLabelEnabled: false
+        autoLabelEnabled: false,
+        identifier: 'sample_id'
     } as const;
     const embeddingTheme = {
         brandingLink: null
     } as const;
+
+    const onPointSelection = (points: DataPoint[] | null) => {
+        if (!isCaptions) return;
+        const lastPoint = points?.at(-1);
+        const sampleId =
+            lastPoint?.identifier === undefined || lastPoint.identifier === null
+                ? null
+                : String(lastPoint.identifier);
+        setFocusedPlotSampleId(sampleId);
+    };
 
     const setPlotSize = (nextWidth: number, nextHeight: number) => {
         const normalizedWidth = Math.max(0, Math.floor(nextWidth));
@@ -513,6 +527,7 @@
                             customOverlay={OverlayProxyReporter}
                             theme={embeddingTheme}
                             {onRangeSelection}
+                            onSelection={onPointSelection}
                             {onViewportState}
                             {viewportState}
                             rangeSelection={$rangeSelection}

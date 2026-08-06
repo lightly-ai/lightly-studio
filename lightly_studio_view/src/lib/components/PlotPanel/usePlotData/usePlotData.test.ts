@@ -55,7 +55,8 @@ describe('usePlotData', () => {
         expect(data).toEqual({
             x: mockData.x,
             y: mockData.y,
-            category: new Uint8Array([2, 3, 1, 4])
+            category: new Uint8Array([2, 3, 1, 4]),
+            sample_id: ['sample1', 'sample2', 'sample3', 'sample4']
         });
         expect(get(result.selectedSampleIds)).toEqual([]);
     });

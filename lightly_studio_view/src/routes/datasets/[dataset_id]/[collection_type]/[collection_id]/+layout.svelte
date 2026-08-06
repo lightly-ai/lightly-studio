@@ -294,7 +294,7 @@
     const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId }));
     const hasEmbeddings = $derived(!!hasEmbeddingsQuery.data);
     const hasMediaWithEmbeddings = $derived(
-        (isImages || isVideos || isAnnotations) && hasEmbeddings
+        (isImages || isVideos || isAnnotations || isCaptions) && hasEmbeddings
     );
     const collectionSearchPlaceholder = $derived(
         isAnnotations
@@ -859,7 +859,7 @@
                     {@render mainContent()}
                 </div>
             {/if}
-            {#if isCollectionGrid && (isImages || hasMediaWithEmbeddings)}
+            {#if (isCollectionGrid || isCaptions) && (isImages || hasMediaWithEmbeddings)}
                 <div data-testid="side-panel-tabs" class="contents">
                     <SidePanelTabs
                         {collectionId}

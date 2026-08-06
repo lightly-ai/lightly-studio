@@ -17,6 +17,8 @@
         getCaptionMatchScore,
         hasRepeatedCaptionGroups,
         triageCaptions,
+        getCaptionRepeatGroupId,
+        getRepeatGroupColors,
         type MatchScoreFilter
     } from '$lib/utils';
 
@@ -69,6 +71,36 @@
             : (findActiveCaptionAtTime(captionList, currentTimeS)?.sample_id ?? null)
     );
     const activeCaptionId = $derived(playheadCaptionId ?? selectedCaptionId);
+
+    interface CaptionGroup {
+        groupId: number | null;
+        captions: typeof visibleCaptions;
+        color?: string;
+    }
+
+    const groupedCaptions = $derived.by(() => {
+        if (!colorByRepeatGroup) {
+            return [{ groupId: null, captions: visibleCaptions }] as CaptionGroup[];
+        }
+
+        const groups = new Map<number | null, typeof visibleCaptions>();
+        const groupOrder: (number | null)[] = [];
+
+        for (const caption of visibleCaptions) {
+            const gid = getCaptionRepeatGroupId(caption.metadata_dict);
+            if (!groups.has(gid)) {
+                groups.set(gid, []);
+                groupOrder.push(gid);
+            }
+            groups.get(gid)!.push(caption);
+        }
+
+        return groupOrder.map((gid) => ({
+            groupId: gid,
+            captions: groups.get(gid) || [],
+            color: gid !== null ? getRepeatGroupColors(gid).color : undefined
+        }));
+    });
 
     $effect(() => {
         if (!activeCaptionId) return;
@@ -133,17 +165,32 @@
         {/if}
 
         <div class="flex flex-col gap-2" data-testid="captions-list">
-            {#each visibleCaptions as caption (caption.sample_id)}
-                <CaptionField
-                    {caption}
-                    {colorByRepeatGroup}
-                    isActive={caption.sample_id === activeCaptionId}
-                    onSelect={onSelectCaption
-                        ? () => onSelectCaption(caption.sample_id)
-                        : undefined}
-                    onDeleteCaption={() => handleDeleteCaption(caption.sample_id)}
-                    onUpdate={refetch}
-                />
+            {#each groupedCaptions as group (group.groupId)}
+                {#if colorByRepeatGroup && group.groupId !== null}
+                    <div
+                        class="mt-2 flex items-center gap-2 px-4 py-2 text-xs font-semibold"
+                        style={group.color ? `color: ${group.color};` : undefined}
+                        data-testid="caption-group-header"
+                    >
+                        <div
+                            class="h-2 w-2 rounded-full"
+                            style={group.color ? `background-color: ${group.color};` : undefined}
+                        ></div>
+                        Repeat Group {group.groupId}
+                    </div>
+                {/if}
+                {#each group.captions as caption (caption.sample_id)}
+                    <CaptionField
+                        {caption}
+                        {colorByRepeatGroup}
+                        isActive={caption.sample_id === activeCaptionId}
+                        onSelect={onSelectCaption
+                            ? () => onSelectCaption(caption.sample_id)
+                            : undefined}
+                        onDeleteCaption={() => handleDeleteCaption(caption.sample_id)}
+                        onUpdate={refetch}
+                    />
+                {/each}
             {/each}
             {#if visibleCaptions.length === 0 && captionList.length > 0}
                 <p class="text-sm text-muted-foreground" data-testid="captions-filter-empty">

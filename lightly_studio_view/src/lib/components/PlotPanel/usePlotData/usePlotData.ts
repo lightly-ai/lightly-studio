@@ -11,7 +11,7 @@ import {
     isUnselectableCategory
 } from '../plotCategories';
 
-type PlotColumn = 'x' | 'y' | 'category';
+type PlotColumn = 'x' | 'y' | 'category' | 'sample_id';
 
 type UsePlotDataReturn = {
     data: ComponentProps<typeof EmbeddingView>['data'];
@@ -120,7 +120,9 @@ export function usePlotData({
     plotData.set({
         x: data.x,
         y: data.y,
-        category
+        category,
+        // Expose ids so EmbeddingView click selection can return `identifier`.
+        sample_id: sampleIds
     });
 
     return {

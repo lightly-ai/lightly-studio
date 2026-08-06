@@ -47,6 +47,7 @@ export { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnn
 export { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
 export { useSettings } from '$lib/hooks/useSettings';
 export { useTrackSampleInspected } from '$lib/hooks/useTrackSampleInspected';
+export { usePlotPointFocus } from '$lib/hooks/usePlotPointFocus/usePlotPointFocus';
 export { useAnnotationClassVisibility } from '$lib/hooks/useAnnotationClassVisibility/useAnnotationClassVisibility';
 export {
     useImageAnnotationCounts,
