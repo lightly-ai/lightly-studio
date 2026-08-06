@@ -10,6 +10,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from PIL import Image as PILImage
+
 from lightly_studio.core.dataset_query import VideoFrameSampleField
 from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.export import video_frame_dataset_export
@@ -19,7 +21,11 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.resolvers import annotation_resolver
 from tests.helpers_resolvers import create_annotation_label
-from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
+from tests.resolvers.video.helpers import (
+    VideoStub,
+    create_video_file,
+    create_video_with_frames,
+)
 
 
 class TestVideoFrameDatasetExport:
@@ -121,3 +127,99 @@ def test_video_frame_to_image__yolo_pascal_use_relative_video_name(
     assert image.filename == "video_001.mp4/000000000.jpg"
     assert image.width == 640
     assert image.height == 480
+
+
+class TestVideoFrameDatasetExportToJpeg:
+    def test_to_jpeg_files__exports_frames_locally(
+        self,
+        tmp_path: Path,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        """Tests that to_jpeg_files exports frames as JPEG files to a local directory."""
+        dataset = VideoDataset.create(name="test_video_dataset")
+        video_path = tmp_path / "test_video.mp4"
+        create_video_file(video_path, width=100, height=100, num_frames=3, fps=30)
+        create_video_with_frames(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            video=VideoStub(
+                path=str(video_path),
+                width=100,
+                height=100,
+                duration_s=0.1,
+                fps=30.0,
+            ),
+        )
+
+        output_dir = tmp_path / "exported_frames"
+        frames = dataset.frames()
+        frames.export(frames.query()).to_jpeg_files(output_dir=output_dir)
+
+        assert output_dir.exists()
+        exported_files = list(output_dir.glob("**/*.jpg"))
+        assert len(exported_files) > 0
+
+        for jpg_file in exported_files:
+            assert jpg_file.suffix == ".jpg"
+            img = PILImage.open(jpg_file)
+            assert img.size == (100, 100)
+
+    def test_to_jpeg_files__creates_output_directory(
+        self,
+        tmp_path: Path,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        """Tests that to_jpeg_files creates the output directory if it doesn't exist."""
+        dataset = VideoDataset.create(name="test_video_dataset")
+        video_path = tmp_path / "test_video.mp4"
+        create_video_file(video_path, width=100, height=100, num_frames=3, fps=30)
+        create_video_with_frames(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            video=VideoStub(
+                path=str(video_path),
+                width=100,
+                height=100,
+                duration_s=0.1,
+                fps=30.0,
+            ),
+        )
+
+        output_dir = tmp_path / "new_directory" / "frames"
+        assert not output_dir.exists()
+
+        frames = dataset.frames()
+        frames.export(frames.query()).to_jpeg_files(output_dir=output_dir)
+
+        assert output_dir.exists()
+        assert list(output_dir.glob("**/*.jpg"))
+
+    def test_to_jpeg_files__respects_query_filter(
+        self,
+        tmp_path: Path,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        """Tests that to_jpeg_files only exports frames matching the query."""
+        dataset = VideoDataset.create(name="test_video_dataset")
+        video_path = tmp_path / "test_video.mp4"
+        create_video_file(video_path, width=100, height=100, num_frames=3, fps=30)
+        create_video_with_frames(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            video=VideoStub(
+                path=str(video_path),
+                width=100,
+                height=100,
+                duration_s=0.1,
+                fps=30.0,
+            ),
+        )
+
+        output_dir = tmp_path / "exported_frames"
+        frames = dataset.frames()
+        query = frames.query().match(VideoFrameSampleField.frame_number <= 0)
+        frames.export(query).to_jpeg_files(output_dir=output_dir)
+
+        exported_files = list(output_dir.glob("**/*.jpg"))
+        assert len(exported_files) == 1
+        assert "000000000.jpg" in str(exported_files[0])
