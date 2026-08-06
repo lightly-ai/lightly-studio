@@ -79,3 +79,35 @@ def test_remove_stale_provider_env_vars__does_not_touch_other_providers(
 
     assert "AWS_ACCESS_KEY_ID" not in os.environ
     assert os.environ["GOOGLE_APPLICATION_CREDENTIALS"] == "/path/to/key.json"
+
+
+def test_remove_stale_provider_env_vars__drops_omitted_fsspec_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("FSSPEC_S3_KEY", "key")
+    monkeypatch.setenv("FSSPEC_S3_SECRET", "secret")
+    monkeypatch.setenv("FSSPEC_S3_TOKEN", "token")
+
+    # Rotation payload does not include FSSPEC_S3_TOKEN.
+    cloud_credentials._remove_stale_provider_env_vars(
+        credentials={"FSSPEC_S3_KEY": "new-key", "FSSPEC_S3_SECRET": "new-secret"}
+    )
+
+    assert "FSSPEC_S3_KEY" not in os.environ
+    assert "FSSPEC_S3_SECRET" not in os.environ
+    assert "FSSPEC_S3_TOKEN" not in os.environ
+
+
+def test_remove_stale_provider_env_vars__fsspec_only_does_not_touch_other_providers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("FSSPEC_S3_KEY", "key")
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "aws-key")
+    monkeypatch.setenv("GOOGLE_APPLICATION_CREDENTIALS", "/path/to/key.json")
+
+    # FSSPEC-only payload — AWS and GCS variables must be left alone.
+    cloud_credentials._remove_stale_provider_env_vars(credentials={"FSSPEC_S3_KEY": "new-key"})
+
+    assert "FSSPEC_S3_KEY" not in os.environ
+    assert os.environ["AWS_ACCESS_KEY_ID"] == "aws-key"
+    assert os.environ["GOOGLE_APPLICATION_CREDENTIALS"] == "/path/to/key.json"
