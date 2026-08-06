@@ -101,4 +101,7 @@ export const isCellInvalid = (
     { required, isMissing }: TableValidationState
 ): boolean =>
     isCellUnsubmittable(row, column) ||
-    (required && isMissing && column.required && !isCellFilled(row[column.name], column));
+    (required &&
+        isMissing &&
+        (column.required ?? false) &&
+        !isCellFilled(row[column.name], column));
