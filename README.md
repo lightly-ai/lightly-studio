@@ -31,7 +31,7 @@
   <img src="assets/readme/hero_showcase.gif" alt="LightlyStudio: an image grid with annotations next to an embedding plot, a cluster selection filtering the grid, and the annotation editor open on one image" width="100%" />
 </p>
 
-<p align="center">The grid shows your images with their annotations. A lasso selection in the embedding plot filters the grid to one cluster. The annotation editor opens on any image.</p>
+<p align="center">The embedding plot shows how images relate to each other, with a preview on hover. A lasso selection filters the grid to one cluster. A search for "coffee" finds a match, and the annotation editor opens to label it.</p>
 <p align="center"><strong>⚡ Tested with 2M+ images, embeddings included, on a single MacBook (M1, 16GB RAM).</strong></p>
 
 ## 🚀 Try it in 60 seconds
