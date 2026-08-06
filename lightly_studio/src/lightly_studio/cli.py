@@ -67,6 +67,8 @@ def quickstart(port: int | None, force_download: bool) -> None:
         config=evaluation_config,
     )
 
+    # TODO(Gabriel, 08/2026): Open the browser automatically once the server is ready.
+    # See LIG-10436.
     lightly_studio.start_gui(port=port)
 
 
