@@ -1,15 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { OperatorParameterColumn } from '$lib/hooks';
 import { buildCellDefault, buildGridStyle, isCellInvalid } from './ParameterTable.helpers';
-
-const column = (overrides: Partial<OperatorParameterColumn>): OperatorParameterColumn => ({
-    name: 'prompt',
-    description: 'What to segment',
-    default: undefined,
-    required: true,
-    paramType: 'str',
-    ...overrides
-});
+import { column } from '../fixtures';
 
 describe('buildCellDefault', () => {
     it('keeps a default that matches the column type', () => {
@@ -52,36 +43,30 @@ describe('buildGridStyle', () => {
 });
 
 describe('isCellInvalid', () => {
-    // The table is valid overall here, so only the backend contract can flag a cell.
-    const submittable = { required: true, isMissing: false };
-
     it('flags an empty numeric cell even when its column is optional', () => {
         // The backend validates every cell against its column type regardless of `required`, so an
         // empty number cell would be rejected as a string rather than skipped.
         for (const paramType of ['int', 'float']) {
             const numeric = column({ name: 'limit', paramType, required: false });
 
-            expect(isCellInvalid({ limit: '' }, numeric, submittable)).toBe(true);
+            expect(isCellInvalid({ limit: '' }, numeric)).toBe(true);
         }
     });
 
     it('accepts a numeric cell that holds a number', () => {
         const numeric = column({ name: 'limit', paramType: 'int', required: false });
 
-        expect(isCellInvalid({ limit: 0 }, numeric, submittable)).toBe(false);
+        expect(isCellInvalid({ limit: 0 }, numeric)).toBe(false);
     });
 
     it('leaves an empty optional text cell alone', () => {
         // '' is a valid string, so the backend accepts it and the user need not fill it in.
         const text = column({ name: 'label', required: false });
 
-        expect(isCellInvalid({ label: '' }, text, submittable)).toBe(false);
+        expect(isCellInvalid({ label: '' }, text)).toBe(false);
     });
 
-    it('flags an empty required cell only once the table is missing a value', () => {
-        const text = column({ name: 'prompt' });
-
-        expect(isCellInvalid({ prompt: '' }, text, submittable)).toBe(false);
-        expect(isCellInvalid({ prompt: '' }, text, { required: true, isMissing: true })).toBe(true);
+    it('flags an empty required cell', () => {
+        expect(isCellInvalid({ prompt: '' }, column({ name: 'prompt' }))).toBe(true);
     });
 });

@@ -2,14 +2,17 @@ import { deleteAnnotationMutation } from '$lib/api/lightly_studio_local/@tanstac
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 import { usePostHog } from '$lib/hooks';
+import { useInvalidateAnnotationGridQueries } from '$lib/hooks/useInvalidateAnnotationGridQueries';
 
 export const useDeleteAnnotation = ({ getCollectionId }: { getCollectionId: () => string }) => {
     const mutation = createMutation(() => deleteAnnotationMutation());
 
     const client = useQueryClient();
     const { trackEvent } = usePostHog();
+    const invalidateAnnotationGridQueries = useInvalidateAnnotationGridQueries();
 
-    const refetch = () => {
+    const refetch = (collectionId: string) => {
+        invalidateAnnotationGridQueries(collectionId);
         client.invalidateQueries({
             queryKey: useImageAnnotationCountsQueryKey
         });
@@ -27,7 +30,7 @@ export const useDeleteAnnotation = ({ getCollectionId }: { getCollectionId: () =
                 },
                 {
                     onSuccess: () => {
-                        refetch();
+                        refetch(collectionId);
                         trackEvent('annotation_deleted', {
                             collection_id: collectionId,
                             annotation_type: annotationType

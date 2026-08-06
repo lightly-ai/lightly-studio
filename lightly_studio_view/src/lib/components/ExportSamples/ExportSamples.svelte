@@ -51,6 +51,7 @@
 
     const exportTypeLabels: Record<typeof exportType, string> = {
         samples: 'Image Filenames',
+        classifications: 'Image Classifications (CSV)',
         object_detections_coco: 'Image Object Detections (COCO)',
         object_detections_yolo: 'Image Object Detections (YOLO)',
         segmentation: 'Image Segmentation Mask (COCO)',
@@ -112,6 +113,11 @@
                                 {:else}
                                     <SelectMenuItem value="samples" label="Image Filenames"
                                         >Image Filenames</SelectMenuItem
+                                    >
+                                    <SelectMenuItem
+                                        value="classifications"
+                                        label="Image Classifications (CSV)"
+                                        >Image Classifications (CSV)</SelectMenuItem
                                     >
                                     <SelectMenuItem
                                         value="object_detections_coco"
