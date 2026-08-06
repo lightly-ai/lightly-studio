@@ -6,6 +6,7 @@ import csv
 import io
 import json
 import logging
+import tempfile
 import zipfile
 from pathlib import Path
 from unittest import mock
@@ -405,7 +406,7 @@ def test_export_collection_annotations__logs_and_cleans_up_on_generation_failure
     collection = create_collection(session=db_session)
     temp_dir = tmp_path / "annotations-export"
     temp_dir.mkdir()
-    monkeypatch.setattr(export_api.tempfile, "mkdtemp", lambda *_args, **_kwargs: str(temp_dir))
+    monkeypatch.setattr(tempfile, "mkdtemp", lambda *_args, **_kwargs: str(temp_dir))
 
     def generate_annotations_export(**_: object) -> Path:
         raise RuntimeError("export failed")
@@ -1157,7 +1158,7 @@ def test_export_collection_annotations_prepare__unsupported_format(
     generate_annotations_export = mock.Mock()
     make_temp_dir = mock.Mock()
     monkeypatch.setattr(export_api, "_generate_annotations_export", generate_annotations_export)
-    monkeypatch.setattr(export_api.tempfile, "mkdtemp", make_temp_dir)
+    monkeypatch.setattr(tempfile, "mkdtemp", make_temp_dir)
 
     response = test_client.post(
         f"/api/collections/{collection.collection_id}/export/annotations/prepare",
