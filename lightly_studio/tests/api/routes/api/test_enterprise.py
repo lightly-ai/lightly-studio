@@ -129,7 +129,7 @@ def test_refresh_cloud_credentials__accepts_google_credentials(
     mocker: MockerFixture,
 ) -> None:
     mocker.patch.dict(os.environ, clear=False)
-    mocker.patch("gcsfs.GCSFileSystem.clear_instance_cache")
+    clear_cache = mocker.patch("gcsfs.GCSFileSystem.clear_instance_cache")
 
     response = test_client.put(
         "/api/cloud-credentials",
@@ -137,3 +137,5 @@ def test_refresh_cloud_credentials__accepts_google_credentials(
     )
 
     assert response.status_code == 204
+    assert os.environ["GOOGLE_APPLICATION_CREDENTIALS"] == "/path/to/key.json"
+    clear_cache.assert_called_once()
