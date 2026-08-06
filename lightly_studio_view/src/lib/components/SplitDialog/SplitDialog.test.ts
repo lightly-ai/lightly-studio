@@ -107,7 +107,7 @@ describe('SplitDialog', () => {
 
         expect(submitMock).toHaveBeenCalledWith({
             collectionId: 'test-collection-id',
-            sizes: { train: 8, val: 1, test: 1 },
+            sizes: { train: 80, val: 10, test: 10 },
             filter: null
         });
     });

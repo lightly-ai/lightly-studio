@@ -16,12 +16,12 @@ interface UseSplitFormParams {
     filteredSampleCount: Readable<number>;
 }
 
-// Splits are sized by relative parts (e.g. 8 : 1 : 1), so they never need to
-// sum to any particular total.
+// Splits are sized by relative parts (e.g. 80 : 10 : 10), so they never need to
+// sum to any particular total. The defaults are chosen to read as percentages.
 const DEFAULT_ROWS: SplitRow[] = [
-    { id: 'train', name: 'train', parts: 8 },
-    { id: 'val', name: 'val', parts: 1 },
-    { id: 'test', name: 'test', parts: 1 }
+    { id: 'train', name: 'train', parts: 80 },
+    { id: 'val', name: 'val', parts: 10 },
+    { id: 'test', name: 'test', parts: 10 }
 ];
 
 export function useSplitForm({ filteredSampleCount }: UseSplitFormParams) {

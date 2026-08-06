@@ -9,9 +9,9 @@ function setup(sampleCount = 100) {
 }
 
 describe('useSplitForm', () => {
-    it('starts valid with the default train/val/test rows in 8:1:1 parts', () => {
+    it('starts valid with the default train/val/test rows in 80:10:10 parts', () => {
         const { form } = setup();
-        expect(get(form.rows).map((row) => row.parts)).toEqual([8, 1, 1]);
+        expect(get(form.rows).map((row) => row.parts)).toEqual([80, 10, 10]);
         expect(get(form.isValid)).toBe(true);
         expect(get(form.errorMessage)).toBeNull();
     });
@@ -20,7 +20,7 @@ describe('useSplitForm', () => {
         const { form } = setup();
         const [train] = get(form.rows);
         form.updateParts(train.id, 3);
-        expect(get(form.rows).map((row) => row.parts)).toEqual([3, 1, 1]);
+        expect(get(form.rows).map((row) => row.parts)).toEqual([3, 10, 10]);
         expect(get(form.isValid)).toBe(true);
     });
 
@@ -37,7 +37,7 @@ describe('useSplitForm', () => {
         const { form } = setup(100);
         const rows = get(form.rows);
         // 1:1:1 -> even thirds; largest-remainder hands the leftover to the first.
-        form.updateParts(rows[0].id, 1);
+        rows.forEach((row) => form.updateParts(row.id, 1));
         const preview = get(form.preview);
         expect(preview[rows[0].id]).toEqual({ percentage: 33, count: 34 });
         expect(preview[rows[1].id]).toEqual({ percentage: 33, count: 33 });
@@ -72,11 +72,11 @@ describe('useSplitForm', () => {
         form.removeRow(val.id);
         const rows = get(form.rows);
         expect(rows.map((row) => row.name)).toEqual(['train', 'test']);
-        expect(rows.map((row) => row.parts)).toEqual([8, 1]);
+        expect(rows.map((row) => row.parts)).toEqual([80, 10]);
     });
 
     it('exposes trimmed sizes for submission', () => {
         const { form } = setup();
-        expect(form.getSizes()).toEqual({ train: 8, val: 1, test: 1 });
+        expect(form.getSizes()).toEqual({ train: 80, val: 10, test: 10 });
     });
 });
