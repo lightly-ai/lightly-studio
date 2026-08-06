@@ -3,6 +3,7 @@
     import { Select, type SelectItem } from '$lib/components/Select';
     import { useClassifiersMenu } from '$lib/hooks/useClassifiers/useClassifiersMenu';
     import { useSamplingDialog } from '$lib/hooks/useSamplingDialog/useSamplingDialog';
+    import { useSplitDialog } from '$lib/hooks/useSplitDialog/useSplitDialog';
     import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
@@ -15,6 +16,7 @@
         Settings as SettingsIcon,
         BrainCircuit as BrainCircuitIcon,
         WandSparkles as WandSparklesIcon,
+        SplitSquareHorizontal as SplitSquareHorizontalIcon,
         Tags as TagsIcon
     } from '@lucide/svelte';
 
@@ -38,6 +40,7 @@
 
     const { openClassifiersMenu } = useClassifiersMenu();
     const { openSamplingDialog } = useSamplingDialog();
+    const { openSplitDialog } = useSplitDialog();
     const { filteredSampleCount } = useGlobalStorage();
     const { openExportDialog } = useExportDialog();
     const { openSettingsDialog } = useSettingsDialog();
@@ -80,6 +83,16 @@
                         collection_id: page.params.collection_id!,
                         filtered_sample_count: get(filteredSampleCount)
                     })
+            });
+        }
+
+        if (hasSampling && isEditor) {
+            items.push({
+                value: 'menu-split',
+                label: 'Split dataset',
+                icon: SplitSquareHorizontalIcon,
+                testId: 'menu-split',
+                onSelect: openSplitDialog
             });
         }
 

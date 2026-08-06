@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from typing import Generic, cast
 from uuid import UUID
 
@@ -11,9 +11,11 @@ from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 from typing_extensions import Self, TypeVar
 
+from lightly_studio.core.dataset_query import random_split
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
+from lightly_studio.core.dataset_query.random_split import SplitResult
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.core.sample import Sample
 from lightly_studio.models.collection import CollectionTable, SampleType
@@ -108,6 +110,13 @@ class DatasetQuery(Generic[T]):
     The filtered set can also be used to add a tag to all matching samples.
     ```python
     query.add_tag('my_tag')
+    ```
+
+    ## Splitting the matching samples into named tags
+    The filtered set can be split into named splits (e.g. train/val/test) by
+    proportion. Each split becomes a sample tag.
+    ```python
+    query.random_split({"train": 80, "val": 10, "test": 10}, seed=42)
     ```
 
     ## Selecting a subset of samples using sampling
@@ -386,6 +395,39 @@ class DatasetQuery(Generic[T]):
         # Use resolver to bulk assign tag (handles validation and edge cases)
         tag_resolver.add_sample_ids_to_tag_id(
             session=self.session, tag_id=tag.tag_id, sample_ids=sample_ids
+        )
+
+    def random_split(self, sizes: Mapping[str, float], seed: int | None = None) -> SplitResult:
+        """Randomly split the samples matched by this query into named tags.
+
+        Assigns the matched samples to named splits (e.g. ``train`` / ``val`` /
+        ``test``) at random, in the given proportions. Each split name becomes a
+        sample tag and every matched sample is linked to exactly one split tag.
+        Re-running removes the target split tags from the matched samples first,
+        overwriting any previous assignment.
+
+        ```python
+        result = dataset.query().random_split(
+            {"train": 80, "val": 10, "test": 10}, seed=42
+        )
+        ```
+
+        Args:
+            sizes: Mapping of split name to relative parts. Values must all be
+                positive; they need not sum to any particular total.
+            seed: Seed for the deterministic shuffle. A random seed is chosen
+                when ``None``; the effective seed is reported in the result.
+
+        Returns:
+            A :class:`SplitResult` with the per-split counts and effective seed.
+        """
+        sample_ids = [sample.sample_id for sample in self]
+        return random_split.random_split(
+            session=self.session,
+            collection_id=self.dataset.collection_id,
+            sample_ids=sample_ids,
+            sizes=sizes,
+            seed=seed,
         )
 
     def sampling(self) -> Sampling:

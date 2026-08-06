@@ -7,14 +7,14 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 import sqlmodel
-from sqlalchemy import literal
+from sqlalchemy import func, literal
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.database import db_array, db_insert
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
-from lightly_studio.models.tag import TagCreate, TagTable
+from lightly_studio.models.tag import TagCreate, TagKind, TagTable
 from lightly_studio.utils import batching
 
 
@@ -49,15 +49,30 @@ def get_by_id(session: Session, tag_id: UUID) -> TagTable | None:
     return session.exec(select(TagTable).where(TagTable.tag_id == tag_id)).one_or_none()
 
 
-def get_by_name(session: Session, tag_name: str, collection_id: UUID | None) -> TagTable | None:
-    """Retrieve a single tag by ID."""
+def get_by_name(
+    session: Session,
+    tag_name: str,
+    collection_id: UUID | None,
+    kind: TagKind | None = None,
+) -> TagTable | None:
+    """Retrieve a single tag by name.
+
+    Args:
+        session: Database session for executing queries.
+        tag_name: Name of the tag to look up.
+        collection_id: Restrict the lookup to this collection, if given.
+        kind: Restrict the lookup to this tag kind, if given. When omitted, tags
+            of every kind are considered.
+
+    Returns:
+        The matching tag, or ``None`` if no tag matches.
+    """
+    query = select(TagTable).where(TagTable.name == tag_name)
     if collection_id:
-        return session.exec(
-            select(TagTable)
-            .where(TagTable.collection_id == collection_id)
-            .where(TagTable.name == tag_name)
-        ).one_or_none()
-    return session.exec(select(TagTable).where(TagTable.name == tag_name)).one_or_none()
+        query = query.where(TagTable.collection_id == collection_id)
+    if kind is not None:
+        query = query.where(TagTable.kind == kind)
+    return session.exec(query).one_or_none()
 
 
 def rename(session: Session, tag_id: UUID, new_name: str) -> TagTable | None:
@@ -275,6 +290,33 @@ def get_tags_by_sample(
     return result
 
 
+def get_selection_tag_overlap(
+    session: Session,
+    sample_ids_query: SelectOfScalar[UUID],
+) -> list[tuple[str, int]]:
+    """Return the sample-kind tags overlapping a selection, with counts.
+
+    ``sample_ids_query`` must select a single ``sample_id`` column describing the
+    selection. Only ``kind='sample'`` tags that link at least one selected sample
+    are returned; ``count`` is the number of selected samples carrying the tag.
+    Results are ordered by tag name for determinism, computed in a single grouped
+    query with the selection applied as a subquery.
+
+    Returns:
+        A list of ``(tag_name, count)`` tuples ordered by ``tag_name`` ascending.
+    """
+    stmt = (
+        select(TagTable.name, func.count(col(SampleTagLinkTable.sample_id)))
+        .select_from(SampleTagLinkTable)
+        .join(TagTable, col(TagTable.tag_id) == col(SampleTagLinkTable.tag_id))
+        .where(col(SampleTagLinkTable.sample_id).in_(sample_ids_query))
+        .where(col(TagTable.kind) == "sample")
+        .group_by(col(TagTable.name))
+        .order_by(col(TagTable.name).asc())
+    )
+    return [(name, int(count)) for name, count in session.exec(stmt).all()]
+
+
 def get_or_create_sample_tag_by_name(
     session: Session,
     collection_id: UUID,
@@ -290,7 +332,9 @@ def get_or_create_sample_tag_by_name(
     Returns:
         The existing or newly created sample tag.
     """
-    existing_tag = get_by_name(session=session, tag_name=tag_name, collection_id=collection_id)
+    existing_tag = get_by_name(
+        session=session, tag_name=tag_name, collection_id=collection_id, kind="sample"
+    )
     if existing_tag:
         return existing_tag
 

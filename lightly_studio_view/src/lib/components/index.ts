@@ -70,4 +70,5 @@ export { default as CollectionSearchImage } from '$lib/components/CollectionSear
 export { default as CollectionSearchInput } from '$lib/components/CollectionSearch/SearchInput/CollectionSearchInput.svelte';
 export { default as OrderBy } from '$lib/components/OrderBy/OrderBy.svelte';
 export { default as SamplingCombinationDialog } from '$lib/components/Sampling/SamplingCombinationDialog.svelte';
+export { default as SplitDialog } from '$lib/components/SplitDialog/SplitDialog.svelte';
 export { default as MetadataFilterChips } from '$lib/components/MetadataFilterChips/MetadataFilterChips.svelte';
