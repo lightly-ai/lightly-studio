@@ -51,18 +51,35 @@ Object.defineProperty(Element.prototype, 'scrollIntoView', {
 
 Object.defineProperty(Element.prototype, 'animate', {
     writable: true,
-    value: vi.fn().mockImplementation(() => {
-        const animation = {
+    // Use a plain function (not vi.fn()) so vi.restoreAllMocks() cannot clear the
+    // implementation. If vi.fn() were used, afterEach(vi.restoreAllMocks) would reset it,
+    // causing microtask-queued onfinish callbacks to call element.animate() and get
+    // undefined back, then crash when Svelte sets animation.onfinish on the result.
+    value: function () {
+        const animation: {
+            finished: Promise<void>;
+            cancel: () => void;
+            finish: () => void;
+            pause: () => void;
+            play: () => void;
+            reverse: () => void;
+            addEventListener: () => void;
+            removeEventListener: () => void;
+            onfinish: ((event: Event) => void) | null;
+            oncancel: ((event: Event) => void) | null;
+            effect: unknown;
+        } = {
             finished: Promise.resolve(),
-            cancel: vi.fn(),
-            finish: vi.fn(),
-            pause: vi.fn(),
-            play: vi.fn(),
-            reverse: vi.fn(),
-            addEventListener: vi.fn(),
-            removeEventListener: vi.fn(),
-            onfinish: null as ((event: Event) => void) | null,
-            oncancel: null as ((event: Event) => void) | null
+            cancel: () => {},
+            finish: () => {},
+            pause: () => {},
+            play: () => {},
+            reverse: () => {},
+            addEventListener: () => {},
+            removeEventListener: () => {},
+            onfinish: null,
+            oncancel: null,
+            effect: null
         };
 
         queueMicrotask(() => {
@@ -70,5 +87,5 @@ Object.defineProperty(Element.prototype, 'animate', {
         });
 
         return animation;
-    })
+    }
 });

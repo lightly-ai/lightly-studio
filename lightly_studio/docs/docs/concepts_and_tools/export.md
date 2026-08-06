@@ -9,12 +9,15 @@ The following export formats are supported:
 | Format | Content | File type |
 |---|---|---|
 | Sample Filenames | Absolute file paths of selected samples | TXT |
+| Classification CSV | Image classification annotations and confidence scores | CSV |
 | COCO Object Detection | Bounding box annotations | JSON |
 | YOLO Object Detection | Bounding box annotations | TXT labels + `data.yaml` (zipped) |
 | COCO Segmentation Mask | Segmentation masks with bounding boxes | JSON |
 | COCO Captions | Image captions | JSON |
 | Pascal VOC Semantic Segmentation | Per-pixel class masks | PNG masks + class map |
 | YouTube-VIS Segmentation Mask | Video segmentation mask tracks | JSON |
+
+Classification CSV export is currently available through the Python API.
 
 ## Export in the GUI
 
@@ -54,6 +57,7 @@ import lightly_studio as ls
 
 # Image dataset export
 dataset = ls.ImageDataset.load()
+dataset.export().to_csv_classifications("classifications.csv")
 dataset.export().to_coco_object_detections("detections.json")
 dataset.export().to_yolo_object_detections("yolo_output_dir/")
 dataset.export().to_coco_segmentation_masks("segmentations.json")

@@ -28,6 +28,7 @@ export {
     type LaneAssignedEvent
 } from './videoEvents/videoEvents';
 export { getURL } from './getURL/getURL';
+export { isWholeVideoClassificationAnnotation } from './isWholeVideoClassificationAnnotation/isWholeVideoClassificationAnnotation';
 export { fetchCollection } from './fetchCollection';
 export { fetchCollectionHierarchy } from './fetchCollectionHierarchy';
 export {
