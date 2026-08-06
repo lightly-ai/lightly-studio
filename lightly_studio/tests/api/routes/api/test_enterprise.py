@@ -95,6 +95,35 @@ def test_refresh_cloud_credentials__rejects_mixed_disallowed_keys(
     assert response.status_code == 400
 
 
+def test_refresh_cloud_credentials__drops_omitted_aws_key_on_rotation(
+    test_client: TestClient,
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch.dict(
+        os.environ,
+        {
+            "AWS_ACCESS_KEY_ID": "old-key",
+            "AWS_SECRET_ACCESS_KEY": "old-secret",
+            "AWS_SESSION_TOKEN": "old-token",
+        },
+        clear=False,
+    )
+
+    # Rotation payload uses long-term credentials — no session token.
+    response = test_client.put(
+        "/api/cloud-credentials",
+        json={
+            "AWS_ACCESS_KEY_ID": "new-key",
+            "AWS_SECRET_ACCESS_KEY": "new-secret",
+        },
+    )
+
+    assert response.status_code == 204
+    assert os.environ["AWS_ACCESS_KEY_ID"] == "new-key"
+    assert os.environ["AWS_SECRET_ACCESS_KEY"] == "new-secret"
+    assert "AWS_SESSION_TOKEN" not in os.environ
+
+
 def test_refresh_cloud_credentials__accepts_google_credentials(
     test_client: TestClient,
     mocker: MockerFixture,

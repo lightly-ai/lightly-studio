@@ -51,6 +51,7 @@ def apply_cloud_credentials(credentials: dict[str, str]) -> None:
         _get_filesystem_class(protocol=protocol) for protocol in sorted(protocols)
     ]
 
+    _remove_stale_provider_env_vars(credentials=credentials)
     os.environ.update(credentials)
     for protocol, protocol_config in fsspec_config.items():
         # Replace instead of update so removed credential fields do not survive
@@ -69,6 +70,29 @@ def _validate_credential_keys(credentials: dict[str, str]) -> None:
             f"Credential keys are not allowed: {rejected}. "
             "Only AWS_*, GOOGLE_APPLICATION_CREDENTIALS, and FSSPEC_* keys are accepted."
         )
+
+
+def _remove_stale_provider_env_vars(credentials: dict[str, str]) -> None:
+    """Remove previously managed env vars for each provider present in the new payload.
+
+    Ensures that keys omitted from a rotation (e.g. AWS_SESSION_TOKEN dropped
+    when switching from temporary to long-term credentials) do not linger in the
+    process environment and mislead later cloud clients.
+
+    Only provider families that appear in the incoming payload are touched, so a
+    GCS-only refresh never clears AWS variables.
+    """
+    has_aws = any(key.startswith("AWS_") for key in credentials)
+    has_gcs = "GOOGLE_APPLICATION_CREDENTIALS" in credentials
+
+    stale_keys = [
+        key
+        for key in os.environ
+        if (has_aws and key.startswith("AWS_") and _ALLOWED_KEY_PATTERN.match(key))
+        or (has_gcs and key == "GOOGLE_APPLICATION_CREDENTIALS")
+    ]
+    for key in stale_keys:
+        del os.environ[key]
 
 
 def _parse_fsspec_config(credentials: dict[str, str]) -> dict[str, dict[str, Any]]:
