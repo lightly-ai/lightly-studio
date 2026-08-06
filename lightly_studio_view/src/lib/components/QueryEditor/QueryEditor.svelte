@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
+    import { onMount, untrack } from 'svelte';
     import { toast } from 'svelte-sonner';
     import { Button } from '$lib/components/ui/button';
 
@@ -26,7 +26,7 @@ AND object_detection(class_name = "person" AND x > 10)
         onSave
     }: QueryEditorProps = $props();
 
-    const initialValue = valueProp ?? LIGHTLY_QUERY_DEFAULT_VALUE;
+    const initialValue = $derived(valueProp ?? LIGHTLY_QUERY_DEFAULT_VALUE);
 
     let containerEl: HTMLDivElement | null = null;
 
@@ -55,8 +55,8 @@ AND object_detection(class_name = "person" AND x > 10)
         lastAppliedValue = draftValue;
     }
 
-    let draftValue = $state(initialValue);
-    let lastAppliedValue = $state<string | null>(valueProp ?? null);
+    let draftValue = $state(untrack(() => initialValue));
+    let lastAppliedValue = $state<string | null>(untrack(() => valueProp ?? null));
 
     onMount(() => {
         if (!containerEl) return;

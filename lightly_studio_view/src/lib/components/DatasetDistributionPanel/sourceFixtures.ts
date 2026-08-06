@@ -1,4 +1,6 @@
 import type { CategoryCount } from '$lib/components/BarChart';
+import type { CategoricalMetadataBucket } from '$lib/hooks/useCategoricalMetadataDistribution/types';
+import type { CategoricalMetadataValue } from '$lib/services/types';
 import type { DistributionSource } from './types';
 import { longTail } from '$lib/components/BarChart/fixtures';
 import {
@@ -76,6 +78,40 @@ const evalErrors: CategoryCount[] = counts([
     ['duplicate_pred', 176]
 ]);
 
+function categoricalBuckets(
+    entries: [string | boolean | null, number][]
+): CategoricalMetadataBucket[] {
+    return entries.map(([value, count], i) => {
+        const id = String(i);
+        if (value === null) return { id, kind: 'missing', value: null, label: '(missing)', count };
+        return { id, kind: 'value', value, label: String(value), count };
+    });
+}
+
+/** Location-type metadata: urban / rural classification per sample. */
+const locationTypeBuckets = categoricalBuckets([
+    ['city', 5840],
+    ['suburban', 3210],
+    ['rural', 2470],
+    ['village', 1390],
+    ['town', 980],
+    ['industrial', 540],
+    ['highway', 420],
+    [null, 115]
+]);
+
+/** Same distribution with an active filter on city + rural (foreground bars). */
+const locationTypeFilteredBuckets = categoricalBuckets([
+    ['city', 2910],
+    ['suburban', 3210],
+    ['rural', 1230],
+    ['village', 1390],
+    ['town', 980],
+    ['industrial', 540],
+    ['highway', 420],
+    [null, 115]
+]);
+
 /**
  * A metadata-only source list with a numeric key first, so the histogram
  * rendering is visible immediately. Switching to `weather` demonstrates the
@@ -91,6 +127,64 @@ export const numericMetadataSources: DistributionSource[] = [
             { id: 'confidence', label: 'confidence (numeric)', histogram: numericConfidence },
             { id: 'brightness', label: 'brightness (numeric)', histogram: numericBrightness },
             { id: 'weather', label: 'weather', data: metadataWeather }
+        ]
+    }
+];
+
+/**
+ * Single-source fixture for the categorical metadata story. Shows:
+ * - value / missing bucket kinds
+ * - active filter selection (city + rural) with filtered counts as foreground bars
+ */
+export const categoricalMetadataSources: DistributionSource[] = [
+    {
+        id: 'metadata',
+        label: 'Metadata',
+        groupLabel: 'Metadata key',
+        valueNoun: 'samples',
+        groups: [
+            {
+                id: 'location_type',
+                label: 'location_type',
+                categorical: {
+                    buckets: locationTypeBuckets,
+                    filteredBuckets: locationTypeFilteredBuckets,
+                    selectedValues: ['city', 'rural'] satisfies CategoricalMetadataValue[]
+                }
+            }
+        ]
+    }
+];
+
+/**
+ * All three data kinds in one panel: class labels (bar chart), categorical
+ * metadata with an active filter (location_type), and numeric metadata
+ * (confidence histogram). Useful for reviewing how source-switching feels
+ * when the chart type changes between selections.
+ */
+export const mixedSources: DistributionSource[] = [
+    {
+        id: 'class',
+        label: 'Class labels',
+        data: longTail,
+        valueNoun: 'annotations'
+    },
+    {
+        id: 'metadata',
+        label: 'Metadata',
+        groupLabel: 'Metadata key',
+        valueNoun: 'samples',
+        groups: [
+            {
+                id: 'location_type',
+                label: 'location_type',
+                categorical: {
+                    buckets: locationTypeBuckets,
+                    filteredBuckets: locationTypeFilteredBuckets,
+                    selectedValues: ['city', 'rural'] satisfies CategoricalMetadataValue[]
+                }
+            },
+            { id: 'confidence', label: 'confidence (numeric)', histogram: numericConfidence }
         ]
     }
 ];

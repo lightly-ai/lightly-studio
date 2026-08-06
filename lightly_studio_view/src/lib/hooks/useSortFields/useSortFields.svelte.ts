@@ -20,7 +20,7 @@ export interface EvalSortField {
 export type SortField = ImageSortField | EvalSortField;
 
 interface UseSortFieldsParams {
-    datasetId: string;
+    datasetId: () => string;
 }
 
 interface UseSortFieldsReturn {

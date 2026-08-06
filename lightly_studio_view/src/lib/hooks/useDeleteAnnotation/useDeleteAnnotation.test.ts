@@ -29,7 +29,7 @@ describe('useDeleteAnnotation', () => {
             }
         } as unknown as ReturnType<typeof createMutation>);
 
-        const { deleteAnnotation } = useDeleteAnnotation({ collectionId: 'col-1' });
+        const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => 'col-1' });
         await deleteAnnotation('ann-1', 'classification');
 
         expect(trackEvent).toHaveBeenCalledWith('annotation_deleted', {
@@ -45,7 +45,7 @@ describe('useDeleteAnnotation', () => {
             }
         } as unknown as ReturnType<typeof createMutation>);
 
-        const { deleteAnnotation } = useDeleteAnnotation({ collectionId: 'col-1' });
+        const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => 'col-1' });
         await deleteAnnotation('ann-1', 'object_detection');
 
         expect(trackEvent).toHaveBeenCalledWith('annotation_deleted', {
