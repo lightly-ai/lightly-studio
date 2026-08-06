@@ -1,3 +1,8 @@
+---
+name: best-practices
+description: Read when adding a new function, module, or component, or when a file is growing large enough that splitting it is worth considering. Covers SOLID design principles, minimal interfaces, composition over inheritance, and the size and complexity limits for functions, files, and nesting depth.
+---
+
 # Best Practices
 
 ## Design Principles
