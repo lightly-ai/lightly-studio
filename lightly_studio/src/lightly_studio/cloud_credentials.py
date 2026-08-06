@@ -3,10 +3,22 @@
 from __future__ import annotations
 
 import os
+import re
 import warnings
 from typing import Any, cast
 
 import fsspec
+
+# Keys accepted by apply_cloud_credentials. Only well-known cloud provider
+# environment variables are allowed to prevent arbitrary process-environment
+# injection through the enterprise credential endpoint.
+_ALLOWED_KEY_PATTERN = re.compile(
+    r"^("
+    r"AWS_[A-Z0-9_]+"
+    r"|GOOGLE_APPLICATION_CREDENTIALS"
+    r"|FSSPEC_[A-Z0-9_]+"
+    r")$"
+)
 
 
 def apply_cloud_credentials(credentials: dict[str, str]) -> None:
@@ -18,11 +30,15 @@ def apply_cloud_credentials(credentials: dict[str, str]) -> None:
 
     Args:
         credentials: Environment variables supplied by the enterprise service.
+            Keys must match one of the allowed cloud provider patterns
+            (``AWS_*``, ``GOOGLE_APPLICATION_CREDENTIALS``, ``FSSPEC_*``).
 
     Raises:
-        ValueError: If an FSSPEC_* value cannot be parsed by fsspec.
+        ValueError: If a key is not in the allowlist, or if an FSSPEC_* value
+            cannot be parsed by fsspec.
         ImportError: If a required cloud filesystem dependency is not installed.
     """
+    _validate_credential_keys(credentials=credentials)
     fsspec_config = _parse_fsspec_config(credentials=credentials)
 
     protocols = set(fsspec_config)
@@ -43,6 +59,16 @@ def apply_cloud_credentials(credentials: dict[str, str]) -> None:
 
     for filesystem_class in filesystem_classes:
         filesystem_class.clear_instance_cache()
+
+
+def _validate_credential_keys(credentials: dict[str, str]) -> None:
+    """Raise ValueError for any key not in the cloud provider allowlist."""
+    rejected = [key for key in credentials if not _ALLOWED_KEY_PATTERN.match(key)]
+    if rejected:
+        raise ValueError(
+            f"Credential keys are not allowed: {rejected}. "
+            "Only AWS_*, GOOGLE_APPLICATION_CREDENTIALS, and FSSPEC_* keys are accepted."
+        )
 
 
 def _parse_fsspec_config(credentials: dict[str, str]) -> dict[str, dict[str, Any]]:
