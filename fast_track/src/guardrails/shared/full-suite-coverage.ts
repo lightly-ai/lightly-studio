@@ -22,8 +22,14 @@ export interface CoverageConfig {
     coverageJsonEnvVar: string;
     /** Env var set to `false` when that test step ended red. */
     testsPassedEnvVar: string;
+    /** Which of the changed files this guardrail owns. */
     filterFiles(files: ChangedFile[]): ChangedFile[];
-    /** Normalises the raw report, mapping its keys to repo-relative paths. */
+    /**
+     * The only language-specific piece, implemented by each per-language guardrail
+     * for its own tool: `backend/coverage.ts` for `coverage.py`'s JSON,
+     * `frontend/coverage.ts` for vitest's. Maps the report's keys to
+     * repo-relative paths so the base only ever sees those.
+     */
     parseReport(raw: string): LineCoverage;
 }
 
@@ -32,6 +38,10 @@ export interface CoverageConfig {
  * workflow already produced; it never runs tests itself. Every changed source
  * file is judged on its own added lines, so one well-covered file cannot carry
  * an uncovered one.
+ *
+ * Env resolution, the skip/fail rules, added-line extraction, the per-file
+ * threshold and the summary all live here; a caller contributes only
+ * {@link CoverageConfig.filterFiles} and {@link CoverageConfig.parseReport}.
  */
 export function createCoverageGuardrail(config: CoverageConfig): Guardrail {
     return {
