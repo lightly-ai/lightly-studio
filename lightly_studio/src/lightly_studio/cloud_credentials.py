@@ -96,7 +96,18 @@ def _remove_stale_provider_env_vars(credentials: dict[str, str]) -> None:
 
 
 def _parse_fsspec_config(credentials: dict[str, str]) -> dict[str, dict[str, Any]]:
-    """Parse only the fsspec environment variables supplied in this refresh."""
+    """Parse only the fsspec environment variables supplied in this refresh.
+
+    Args:
+        credentials: Mapping of environment variable names to their values,
+            as returned by the credentials refresh endpoint.
+
+    Returns:
+        Nested fsspec config dict mapping protocol name to its settings.
+
+    Raises:
+        ValueError: If any credential key is not a valid fsspec environment variable.
+    """
     config: dict[str, dict[str, Any]] = {}
     try:
         with warnings.catch_warnings():
