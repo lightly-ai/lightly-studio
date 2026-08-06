@@ -5,6 +5,10 @@ description: Python API reference for LightlyStudio embeddings — register a cu
 
 # Embeddings
 
+!!! experimental "Beta API"
+    The Embeddings API is in beta. Its interface may change in future
+    releases without a deprecation period.
+
 LightlyStudio embeds your data automatically on ingestion. To supply your own
 embeddings — either computed on the fly or loaded from a precomputed store —
 implement one of the generator protocols below and register it with

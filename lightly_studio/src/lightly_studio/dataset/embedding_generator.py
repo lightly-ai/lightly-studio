@@ -17,7 +17,10 @@ from lightly_studio.models.embedding_model import EmbeddingModelCreate
 
 @dataclass(frozen=True)
 class ImageCrop:
-    """A rectangular region of an image to embed, given in pixel coordinates."""
+    """A rectangular region of an image to embed, given in pixel coordinates.
+
+    <span class="doc-badge doc-badge--beta">Beta</span>
+    """
 
     filepath: str
     """Path to the image the crop is taken from."""
@@ -39,6 +42,8 @@ class ImageCrop:
 class EmbeddingGenerator(Protocol):
     """Base protocol shared by every embedding generator.
 
+    <span class="doc-badge doc-badge--beta">Beta</span>
+
     An EmbeddingGenerator provides embeddings for images, image crops, videos, video frames
     or other sample types. Every sample collection can have a different associated embedding
     generator. The generator is used at two points:
@@ -57,6 +62,8 @@ class EmbeddingGenerator(Protocol):
     def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
         """Generate an EmbeddingModelCreate instance.
 
+        <span class="doc-badge doc-badge--beta">Beta</span>
+
         Returns metadata about the model to be stored in the database.
         The `embedding_model_hash` field is used to match the same EmbeddingGenerator
         across multiple LightlyStudio runs.
@@ -71,6 +78,8 @@ class EmbeddingGenerator(Protocol):
     def embed_text(self, text: str) -> list[float]:
         """Generate an embedding for a text sample.
 
+        <span class="doc-badge doc-badge--beta">Beta</span>
+
         Args:
             text: The text to embed.
 
@@ -84,6 +93,8 @@ class EmbeddingGenerator(Protocol):
 class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
     """Protocol for embedding images, image crops, and text.
 
+    <span class="doc-badge doc-badge--beta">Beta</span>
+
     Implement this to use your own image model in LightlyStudio. Inside ``embed_images``
     you can run the model on the given file paths or look up precomputed vectors. A
     registered image generator replaces the built-in image, crop, and text embeddings.
@@ -93,6 +104,8 @@ class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
 
     def embed_images(self, filepaths: list[str], show_progress: bool = True) -> EmbeddingResult:
         """Generate embeddings for multiple image samples.
+
+        <span class="doc-badge doc-badge--beta">Beta</span>
 
         Args:
             filepaths: A list of ``fsspec``-compatible file paths to the images to embed.
@@ -112,6 +125,8 @@ class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
     ) -> EmbeddingResult:
         """Generate embeddings for image crops.
 
+        <span class="doc-badge doc-badge--beta">Beta</span>
+
         Args:
             image_crops: A list of image crop definitions to embed.
             show_progress: Whether to show a progress bar during embedding.
@@ -126,6 +141,8 @@ class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
         self, images: list[Image.Image], show_progress: bool = True
     ) -> NDArray[np.float32]:
         """Generate embeddings for in-memory PIL images.
+
+        <span class="doc-badge doc-badge--beta">Beta</span>
 
         Used for video frame embedding.
 
@@ -144,6 +161,8 @@ class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
 class VideoEmbeddingGenerator(EmbeddingGenerator, Protocol):
     """Protocol for embedding videos (and text).
 
+    <span class="doc-badge doc-badge--beta">Beta</span>
+
     Implement this to use your own video model in LightlyStudio. A registered video
     generator replaces the built-in video and text embeddings. It inherits ``embed_text``
     from ``EmbeddingGenerator``, so keep the text and video encoders in the same embedding
@@ -152,6 +171,8 @@ class VideoEmbeddingGenerator(EmbeddingGenerator, Protocol):
 
     def embed_videos(self, filepaths: list[str]) -> EmbeddingResult:
         """Generate embeddings for multiple video samples.
+
+        <span class="doc-badge doc-badge--beta">Beta</span>
 
         Args:
             filepaths: A list of ``fsspec``-compatible file paths to the videos to embed.

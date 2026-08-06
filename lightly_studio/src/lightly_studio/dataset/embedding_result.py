@@ -17,6 +17,8 @@ from numpy.typing import NDArray
 class EmbeddingResult:
     """Embeddings for the inputs that could be read, plus which inputs they cover.
 
+    <span class="doc-badge doc-badge--beta">Beta</span>
+
     A generator skips broken inputs (files it cannot read or decode) instead of failing
     the whole run, so ``embeddings`` can have fewer rows than the input list.
     ``kept_indices`` gives the position of each row in the input list, in input order.

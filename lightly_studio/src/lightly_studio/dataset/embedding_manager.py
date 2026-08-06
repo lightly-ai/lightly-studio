@@ -71,6 +71,8 @@ class EmbeddingManagerProvider:
 def set_default_embedding_model(embedding_generator: EmbeddingGenerator) -> None:
     """Register a custom embedding model that overrides the env-var default.
 
+    <span class="doc-badge doc-badge--beta">Beta</span>
+
     Call this before you add a dataset (for example, before ImageDataset.load_or_create)
     or before you launch the GUI to use your own generator instead of the model set by
     LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE. The override applies to every collection.
