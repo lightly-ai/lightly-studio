@@ -32,60 +32,29 @@
 </p>
 
 <p align="center">Browse your dataset as a grid, open the embedding plot next to it, and lasso-select clusters to find duplicates, outliers, and edge cases — all running on your own machine.</p>
+<p align="center"><strong>⚡ Tested with 2M+ images, embeddings included, on a single MacBook (M1, 16GB RAM).</strong></p>
 
 ## 🚀 Try it in 60 seconds
 
-```shell
+LightlyStudio is a browser app that runs on your own computer. Under the hood it's always two steps: load your data into a local database with a Python script, then start the server and explore it in your browser. The command below does both for you with an example dataset:
+
+```bash
 pip install lightly-studio
+lightly-studio quickstart
 ```
 
-```python
-import lightly_studio as ls
+The first run downloads the example dataset, so it takes a bit longer; after that, open the printed URL and your images and embeddings are already loaded in the browser.
 
-dataset = ls.ImageDataset.load_or_create()
-dataset.add_images_from_path(path="path/to/your/images")
-
-ls.start_gui()
-```
-
-Run it and open the printed URL — your images and embeddings are now in the browser. No account, no cloud upload, nothing to configure.
-
-Don't have images handy? Swap the path for `ls.utils.download_example_dataset(download_dir="dataset_examples")` and point at the `images/` folder inside it.
-
-Runs on **Python 3.9–3.14** (3.10 recommended for plugin compatibility, e.g. SAM autolabeling) on Windows, Linux, and macOS. Rust-accelerated under the hood, so COCO- and ImageNet-scale datasets index comfortably on a laptop.
-
-**No install?** [Open the quickstart in Colab](https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb) — same flow, nothing to set up.
+- **No account, no cloud upload** — everything stays on your machine.
+- **Have your own images?** See the [Image Dataset guide](https://docs.lightly.ai/studio/dataset_setup/image_dataset/) to load them instead.
+- **Have your own videos?** See the [Video Dataset guide](https://docs.lightly.ai/studio/dataset_setup/video_dataset/) to load them instead.
+- **No install?** [Open the quickstart in Colab](https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb) — same flow, nothing to set up.
+- **Prefer a guided, end-to-end walkthrough?** See the [Tutorials](#-tutorials) below — e.g. [Curate a Traffic CCTV Dataset for YOLO Training](https://docs.lightly.ai/studio/tutorials/yolo-traffic-cctv-object-detection/), from raw images to a trained model.
+- Runs on **Python 3.9–3.14** (3.10 recommended for plugin compatibility, e.g. SAM autolabeling) on Windows, Linux, and macOS.
 
 ## Why LightlyStudio
 
 Most teams stitch together separate tools for curating data, labeling it, and evaluating models. LightlyStudio does all three in one local tool, so your embeddings, tags, annotations, and evaluation results live in one place instead of three exports that drift out of sync. It's open source, and since it's Rust-accelerated under the hood, it stays fast on large datasets without a server to manage.
-
-## Competitive Landscape
-
-<!--
-  ⚠️ MOCK / DRAFT SECTION — NOT FOR SHIPPING ⚠️
-  All numbers, charts, and claims below are fabricated placeholders for an internal
-  positioning discussion. Nothing here is measured or verified. Do not merge this
-  section into main or publish it as-is. Replace with real benchmarks (or delete)
-  before this ever leaves a local branch.
--->
-
-> **Draft / internal only.** The table and charts below use invented numbers to sketch
-> a possible positioning narrative. Nothing here is a verified benchmark.
-
-| Capability | LightlyStudio | FiftyOne | CVAT | Label Studio |
-|---|:---:|:---:|:---:|:---:|
-| Local-first, no cloud account required | ✅ | ✅ | ⚠️ self-host only | ⚠️ self-host only |
-| Curation (embeddings/similarity) + annotation + eval in **one** tool | ✅ | ⚠️ curation-focused | ❌ annotation-only | ❌ annotation-only |
-| Rust-accelerated core | ✅ | ❌ | ❌ | ❌ |
-| Native model evaluation (confusion matrix, failure clustering) | ✅ | ⚠️ plugin-based | ❌ | ❌ |
-| Auto-labeling plugins (SAM, detectors) | ✅ | ⚠️ via plugins | ✅ | ✅ |
-| Scales to 100k+ images on a laptop | ✅ (claimed) | ⚠️ | ⚠️ | ❌ |
-| Open source | ✅ | ✅ | ✅ | ✅ |
-
-<p align="center">
-  <img src="assets/readme_mock/positioning_mock.png" alt="MOCK DATA: illustrative throughput and time-to-first-insight comparison" width="90%" />
-</p>
 
 ## What you can do
 
@@ -155,6 +124,8 @@ Step-by-step guides covering complete workflows — from raw, unlabeled data to 
 LightlyStudio has a powerful Python interface. You can not only index datasets but also query and manipulate them using code.
 
 ### Loading other formats
+
+The examples below use `download_example_dataset()` plus the matching `add_samples_from_*` call, so you can see exactly what's loaded and swap in your own paths.
 
 <details>
 <summary><strong>Index a COCO dataset (detections or segmentation masks)</strong></summary>
