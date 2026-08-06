@@ -277,6 +277,9 @@ class AnnotationWithPayloadView(BaseModel):
     parent_sample_data: Union[ImageAnnotationView, VideoFrameAnnotationView]
     # Set when results are ordered by embedding similarity search.
     similarity_score: Optional[float] = None
+    # Set when results are ordered by a sort expression: the value ordered on. 0.0 for an
+    # annotation the evaluation run left unmatched, absent for one it never covered.
+    sort_value: Optional[float] = None
 
 
 class AnnotationWithPayloadAndCountView(BaseModel):
