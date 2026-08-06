@@ -70,6 +70,28 @@ class TestOrderByField:
 class TestOrderByMetadataField:
     dialect = DuckDBDialect()
 
+    def test_init__no_cast_by_default(self) -> None:
+        """Test that the float cast is off until it is resolved from the schema."""
+        assert OrderByMetadataField("score").cast_to_float is False
+
+    def test_infer_cast_to_float__numeric_types(self) -> None:
+        """Test that numerical schema types enable the float cast."""
+        for metadata_type in ["integer", "float"]:
+            order_by = OrderByMetadataField("score")
+
+            order_by.infer_cast_to_float(metadata_type=metadata_type)
+
+            assert order_by.cast_to_float is True
+
+    def test_infer_cast_to_float__non_numeric_types(self) -> None:
+        """Test that other schema types, and unknown fields, keep lexicographic ordering."""
+        for metadata_type in ["string", "boolean", "list", "dict", None]:
+            order_by = OrderByMetadataField("score", cast_to_float=True)
+
+            order_by.infer_cast_to_float(metadata_type=metadata_type)
+
+            assert order_by.cast_to_float is False
+
     def test_apply_joins__metadata_join(self) -> None:
         """Test that apply_joins adds the metadata outer join."""
         query = select(ImageTable)
@@ -143,6 +165,19 @@ class TestOrderByMetadataField:
             returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
         ).lower()
         assert "order by cast(json_extract(metadata_1.data, '$.score') as float) asc" in sql
+
+    def test_apply__no_cast_to_float(self) -> None:
+        """Test that an unresolved sort orders on the raw JSON value."""
+        query = select(ImageTable)
+        order_by = OrderByMetadataField("score")
+
+        returned_query = order_by.apply(query)
+
+        sql = str(
+            returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
+        ).lower()
+        assert "order by json_extract(metadata_1.data, '$.score') asc" in sql
+        assert "cast(" not in sql
 
 
 class TestOrderByEvaluationMetricField:

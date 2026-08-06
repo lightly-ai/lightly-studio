@@ -22,6 +22,7 @@ from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import tag_resolver
+from lightly_studio.resolvers.metadata_resolver.sample import metadata_sort_types
 from lightly_studio.sampling.sample import Sampling
 
 _SliceType = slice  # to avoid shadowing built-in slice in type annotations
@@ -334,6 +335,11 @@ class DatasetQuery(Generic[T]):
 
         # Apply ordering
         if self.order_by_expressions:
+            metadata_sort_types.resolve_cast_to_float(
+                session=self.session,
+                collection_id=self.dataset.collection_id,
+                order_by=self.order_by_expressions,
+            )
             for order_by in self.order_by_expressions:
                 query = order_by.apply(query)
         elif self.dataset.sample_type == SampleType.IMAGE:

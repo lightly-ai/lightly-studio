@@ -396,6 +396,46 @@ def test_get_adjacent_images__sort_by_metadata_field(db_session: Session) -> Non
     assert result.next_sample_id == image_a.sample_id
 
 
+def test_get_adjacent_images__sort_by_numeric_metadata_field_without_cast(
+    db_session: Session,
+) -> None:
+    """Numeric metadata sorts numerically without the caller declaring the type."""
+    collection = helpers_resolvers.create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    image_a = helpers_resolvers.create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/a.png"
+    )
+    image_b = helpers_resolvers.create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
+    )
+    image_c = helpers_resolvers.create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/c.png"
+    )
+
+    # Numeric order: b(9) < c(10) < a(100). Lexicographically it would be c, a, b.
+    metadata_resolver.bulk_update_metadata(
+        db_session,
+        [
+            (image_a.sample_id, {"score": 100}),
+            (image_b.sample_id, {"score": 9}),
+            (image_c.sample_id, {"score": 10}),
+        ],
+    )
+
+    result = image_resolver.get_adjacent_images(
+        session=db_session,
+        sample_id=image_c.sample_id,
+        collection_id=collection_id,
+        order_by=[OrderByMetadataField("score")],
+    )
+
+    assert result is not None
+    assert result.previous_sample_id == image_b.sample_id
+    assert result.sample_id == image_c.sample_id
+    assert result.next_sample_id == image_a.sample_id
+
+
 def test_get_adjacent_images__sort_by_evaluation_metric(db_session: Session) -> None:
     collection = helpers_resolvers.create_collection(session=db_session)
     collection_id = collection.collection_id

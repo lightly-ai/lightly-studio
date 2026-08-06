@@ -19,7 +19,7 @@ from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.image import ImageTable
-from lightly_studio.models.metadata import SampleMetadataTable
+from lightly_studio.models.metadata import NUMERIC_TYPE_NAMES, SampleMetadataTable
 from lightly_studio.models.sample import SampleTable
 
 T = TypeVar("T", default=ImageTable)
@@ -146,19 +146,30 @@ class OrderByMetadataField(OrderByExpression):
     Args:
         field_name: The key inside the JSON ``data`` column to sort by.
         cast_to_float: When True, the extracted value is cast to float before
-            ordering.  Use this for numerical metadata fields so that numeric
-            ordering is applied instead of lexicographic ordering.
+            ordering, so that numerical metadata fields order numerically instead of
+            lexicographically.  Callers normally leave this alone: query entry points
+            resolve it from the collection's stored metadata schema via
+            ``infer_cast_to_float``.
     """
 
-    def __init__(self, field_name: str, cast_to_float: bool) -> None:
+    def __init__(self, field_name: str, cast_to_float: bool = False) -> None:
         """Initialize with the metadata field name and float cast flag."""
         super().__init__()
         self.field_name = field_name
-        # TODO(Leonardo, 05/2026): Rework to avoid requiring callers to pass
-        # cast_to_float explicitly.
         self.cast_to_float = cast_to_float
         # Per-instance alias so sort joins do not collide with filter joins on metadata.
         self._metadata_alias = aliased(SampleMetadataTable)
+
+    def infer_cast_to_float(self, metadata_type: str | None) -> None:
+        """Set the float cast from the field's recorded metadata schema type.
+
+        Args:
+            metadata_type: The type name recorded for this field in
+                ``SampleMetadataTable.metadata_schema`` (e.g. ``"integer"`` or
+                ``"string"``), or ``None`` if the field is absent from the schema.
+                Anything non-numerical keeps lexicographic ordering.
+        """
+        self.cast_to_float = metadata_type in NUMERIC_TYPE_NAMES
 
     def _order_value_expression(self) -> ColumnElement[Any]:
         """Return the JSON-extract expression for the metadata field."""

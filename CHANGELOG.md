@@ -16,9 +16,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Deprecated
 
+- The `is_numeric` field on sort expressions in the images-list and adjacent-samples request
+  bodies is ignored and will be removed in the next major version. The value type is now taken
+  from the collection's metadata schema.
+
 ### Removed
 
 ### Fixed
+
+- Sorting by a numeric metadata field now orders numerically without the caller having to
+  declare the field type. Previously `9` sorted after `10`, unless `cast_to_float=True` was
+  passed to `OrderByMetadataField`.
 
 - Grid annotation overlays now render at tile resolution to bound memory usage for large source images.
 - Annotation class names no longer overflow in class selection.

@@ -16,6 +16,7 @@ from lightly_studio.resolvers.image_resolver.get_adjacent_images.get_adjacent_im
 from lightly_studio.resolvers.image_resolver.get_adjacent_images.get_adjacent_images_window import (
     get_adjacent_images_window,
 )
+from lightly_studio.resolvers.metadata_resolver.sample import metadata_sort_types
 
 
 def get_adjacent_images(  # noqa: PLR0913
@@ -46,6 +47,11 @@ def get_adjacent_images(  # noqa: PLR0913
         The adjacency result, or ``None`` if the anchor is not in the (filtered)
         collection.
     """
+    if order_by is not None:
+        metadata_sort_types.resolve_cast_to_float(
+            session=session, collection_id=collection_id, order_by=order_by
+        )
+
     embedding_model_id, distance_expr = similarity_utils.get_distance_expression(
         session=session,
         collection_id=collection_id,

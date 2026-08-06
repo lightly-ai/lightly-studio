@@ -26,6 +26,7 @@ from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import embedding_region_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.metadata_resolver.sample import metadata_sort_types
 from lightly_studio.resolvers.similarity_utils import (
     apply_similarity_join,
     distance_to_similarity,
@@ -98,6 +99,11 @@ def get_all_by_collection_id(  # noqa: PLR0913
     order_by: list[OrderByExpression] | None = None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Retrieve samples for a specific collection with optional filtering."""
+    if order_by is not None:
+        metadata_sort_types.resolve_cast_to_float(
+            session=session, collection_id=collection_id, order_by=order_by
+        )
+
     # Resolve any embedding-plot region selection to concrete sample ids on the filter before the
     # query is built (the point-in-polygon test needs the session, which `apply` lacks).
     if (
