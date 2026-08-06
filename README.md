@@ -17,7 +17,7 @@
     </picture>
   </a>
 </p>
-<p align="center"><strong>Curate, annotate, and evaluate computer vision datasets — locally, in your browser.</strong></p>
+<p align="center"><strong>Curate, Annotate, and Manage Your Data in LightlyStudio.</strong></p>
 <p align="center">
   <a href="https://pypi.org/project/lightly-studio"><img src="https://img.shields.io/pypi/pyversions/lightly-studio" alt="PyPI python" /></a>
   <a href="https://pypi.org/project/lightly-studio"><img src="https://badge.fury.io/py/lightly-studio.svg" alt="PyPI version" /></a>
