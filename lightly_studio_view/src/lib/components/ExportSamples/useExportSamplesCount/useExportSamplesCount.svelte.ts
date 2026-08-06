@@ -27,9 +27,8 @@ export function useExportSamplesCount(
 
         const hasIncludeFilter = includeFilter != null && Object.keys(includeFilter).length > 0;
         const hasExcludeFilter = excludeFilter != null && Object.keys(excludeFilter).length > 0;
-        const hasCollectionFilter = collectionFilter != null;
 
-        if (!hasIncludeFilter && !hasExcludeFilter && !hasCollectionFilter) {
+        if (!hasIncludeFilter && !hasExcludeFilter) {
             isLoading.set(false);
             error.set(undefined);
             count.set(0);
