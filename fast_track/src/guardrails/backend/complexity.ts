@@ -1,10 +1,9 @@
 import { existsSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import type { Guardrail, GuardrailContext, GuardrailOutcome } from '../context/types';
-import { REPO_ROOT, BACKEND_DIR } from './shared';
+import { REPO_ROOT, BACKEND_DIR, BACKEND_PREFIX } from './shared';
 import { extractStdoutOrThrow, runLoggedCommand } from '../shared/utils';
 
-const BACKEND_PREFIX = 'lightly_studio/';
 const NAME = 'backend/complexity';
 const COMPLEXITY_RULE = 'C901';
 const LINTER_TIMEOUT_MS = 60_000;

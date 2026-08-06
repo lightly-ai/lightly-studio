@@ -44,8 +44,8 @@ jobs:
           filters: |
             backend:
               - 'lightly_studio/**'
-            # Superset of the upcoming backend/coverage guardrail's own scope, so the
-            # full suite runs only for PRs that guardrail will actually judge.
+            # Superset of the backend/coverage guardrail's own scope, so the full
+            # suite runs only for PRs that guardrail will actually judge.
             backend_src:
               - 'lightly_studio/src/lightly_studio/**/*.py'
             frontend:
@@ -109,10 +109,9 @@ jobs:
         working-directory: lightly_studio
         run: make build-lightly_studio_view
 
-      # Produces the coverage report the upcoming backend/coverage guardrail reads; it
-      # will not run tests itself. A red suite must not kill the job — the guardrail
-      # turns it into a fail verdict, and the bot still needs the artifact to explain
-      # itself. Nothing consumes coverage.json yet.
+      # The backend/coverage guardrail only reads a report; the suite runs here. A red
+      # suite must not kill the job — the guardrail turns it into a fail verdict, and the
+      # bot still needs the artifact to explain itself.
       - name: Run backend tests with coverage
         id: backend-tests
         if: steps.changes.outputs.backend_src == 'true'
@@ -149,6 +148,12 @@ jobs:
       - name: Run Fast Track Guardrails
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          # backend/coverage reads the report the test step wrote. Both vars are set
+          # unconditionally: when that step is skipped the guardrail finds no file in
+          # scope and passes before consulting either. `!= 'failure'` (not `== 'success'`)
+          # so a skipped step does not read as a red suite.
+          BACKEND_COVERAGE_JSON: ${{ github.workspace }}/lightly_studio/coverage.json
+          BACKEND_TESTS_PASSED: ${{ steps.backend-tests.outcome != 'failure' }}
         run: npm run guardrails-ci
 
       # JS action, so defaults.run.working-directory doesn't apply — path is repo-root-relative.
