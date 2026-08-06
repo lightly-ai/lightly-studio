@@ -51,7 +51,7 @@ pip install lightly-studio
 Want to try LightlyStudio instantly? Run:
 
 ```shell
-lightly-studio demo
+lightly-studio quickstart
 ```
 
 This downloads the COCO example dataset on the first run (skipped on subsequent runs), loads it,
@@ -152,7 +152,7 @@ time you run them.
     1. Click on the printed URL to open the app in your browser.
 
 !!! tip
-    - Run `lightly-studio demo` to try LightlyStudio instantly — no Python script needed.
+    - Run `lightly-studio quickstart` to try LightlyStudio instantly — no Python script needed.
     - Call `lightly-studio gui` instead of `ls.start_gui()` in Python to skip reindexing
       an already-loaded dataset.
 

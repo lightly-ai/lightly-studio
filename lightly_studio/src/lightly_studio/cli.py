@@ -27,7 +27,7 @@ def main() -> None:
     default=False,
     help="Re-download the demo dataset even if already cached.",
 )
-def demo(port: int | None, force_download: bool) -> None:
+def quickstart(port: int | None, force_download: bool) -> None:
     """Launch the GUI preloaded with a COCO object detection evaluation demo dataset."""
     dataset_path = Path(
         lightly_studio.utils.download_example_dataset(
@@ -42,7 +42,7 @@ def demo(port: int | None, force_download: bool) -> None:
         classwise=True,
     )
 
-    db_manager.connect(db_file="demo.db", cleanup_existing=True)
+    db_manager.connect(db_file="quickstart.db", cleanup_existing=True)
     dataset = lightly_studio.ImageDataset.create()
     dataset.add_images_from_path(path=images_path)
     dataset.add_annotations_from_coco(

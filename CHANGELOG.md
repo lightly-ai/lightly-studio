@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Show indexed categorical metadata values in distribution panel
-- Add the `lightly-studio demo` CLI command, which downloads the COCO example dataset and launches the GUI in one step.
+- Add the `lightly-studio quickstart` CLI command, which downloads the COCO example dataset and launches the GUI in one step.
 
 - Export image classification annotations to CSV via the GUI and Python SDK
 

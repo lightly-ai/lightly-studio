@@ -114,7 +114,7 @@ def test_gui__with_empty_db_file__complains_about_missing_dataset(
     assert "No datasets found" in str(result.exception)
 
 
-def _mock_demo_dependencies(mocker: MockerFixture) -> tuple[Any, Any, Any, Any]:
+def _mock_quickstart_dependencies(mocker: MockerFixture) -> tuple[Any, Any, Any, Any]:
     mock_download = mocker.patch.object(
         lightly_studio.utils, "download_example_dataset", return_value="/dataset_examples"
     )
@@ -127,30 +127,30 @@ def _mock_demo_dependencies(mocker: MockerFixture) -> tuple[Any, Any, Any, Any]:
     return mock_download, mock_connect, mock_create, mock_start_gui
 
 
-def test_demo(mocker: MockerFixture) -> None:
-    mock_download, mock_connect, mock_create, mock_start_gui = _mock_demo_dependencies(mocker)
+def test_quickstart(mocker: MockerFixture) -> None:
+    mock_download, mock_connect, mock_create, mock_start_gui = _mock_quickstart_dependencies(mocker)
     runner = CliRunner()
-    result = runner.invoke(cli=cli.main, args=["demo"])
+    result = runner.invoke(cli=cli.main, args=["quickstart"])
     assert result.exit_code == 0
     mock_download.assert_called_once_with(download_dir="dataset_examples", force_redownload=False)
-    mock_connect.assert_called_once_with(db_file="demo.db", cleanup_existing=True)
+    mock_connect.assert_called_once_with(db_file="quickstart.db", cleanup_existing=True)
     mock_create.assert_called_once_with()
     mock_start_gui.assert_called_once_with(port=None)
 
 
-def test_demo__with_force_download(mocker: MockerFixture) -> None:
-    mock_download, mock_connect, _, _ = _mock_demo_dependencies(mocker)
+def test_quickstart__with_force_download(mocker: MockerFixture) -> None:
+    mock_download, mock_connect, _, _ = _mock_quickstart_dependencies(mocker)
     runner = CliRunner()
-    result = runner.invoke(cli=cli.main, args=["demo", "--force-download"])
+    result = runner.invoke(cli=cli.main, args=["quickstart", "--force-download"])
     assert result.exit_code == 0
     mock_download.assert_called_once_with(download_dir="dataset_examples", force_redownload=True)
-    mock_connect.assert_called_once_with(db_file="demo.db", cleanup_existing=True)
+    mock_connect.assert_called_once_with(db_file="quickstart.db", cleanup_existing=True)
 
 
-def test_demo__with_port(mocker: MockerFixture) -> None:
-    _, _, _, mock_start_gui = _mock_demo_dependencies(mocker)
+def test_quickstart__with_port(mocker: MockerFixture) -> None:
+    _, _, _, mock_start_gui = _mock_quickstart_dependencies(mocker)
     runner = CliRunner()
-    result = runner.invoke(cli=cli.main, args=["demo", "--port", "9999"])
+    result = runner.invoke(cli=cli.main, args=["quickstart", "--port", "9999"])
     assert result.exit_code == 0
     mock_start_gui.assert_called_once_with(port=9999)
 
@@ -176,7 +176,7 @@ def _coco_dict_with(file_names: list[str]) -> dict[str, Any]:
     }
 
 
-def _build_demo_dataset_dir(root: Path) -> Path:
+def _build_quickstart_dataset_dir(root: Path) -> Path:
     """Build a fixture dataset with the same layout as the real demo dataset."""
     dataset_dir = root / "dataset_examples"
     images_dir = dataset_dir / "coco_subset_128_images" / "images"
@@ -190,24 +190,24 @@ def _build_demo_dataset_dir(root: Path) -> Path:
     return dataset_dir
 
 
-def test_demo__runs_real_evaluation_pipeline(
+def test_quickstart__runs_real_evaluation_pipeline(
     mocker: MockerFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Loads real images, real COCO annotations, and persists a real evaluation run.
 
-    Runs against its own isolated 'demo.db', without any network access.
+    Runs against its own isolated 'quickstart.db', without any network access.
     """
     monkeypatch.chdir(tmp_path)
-    dataset_dir = _build_demo_dataset_dir(tmp_path)
+    dataset_dir = _build_quickstart_dataset_dir(tmp_path)
     mocker.patch.object(
         lightly_studio.utils, "download_example_dataset", return_value=str(dataset_dir)
     )
     mocker.patch.object(lightly_studio, "start_gui")
 
     runner = CliRunner()
-    result = runner.invoke(cli=cli.main, args=["demo"])
+    result = runner.invoke(cli=cli.main, args=["quickstart"])
     assert result.exit_code == 0, result.output
-    assert (tmp_path / "demo.db").exists()
+    assert (tmp_path / "quickstart.db").exists()
 
     dataset = lightly_studio.ImageDataset.load()
     assert len(dataset.query().to_list()) == 3
@@ -220,27 +220,27 @@ def test_demo__runs_real_evaluation_pipeline(
     assert evaluation_runs[0].task_type == EvaluationTaskType.OBJECT_DETECTION
 
 
-def test_demo__second_run_without_force_download_does_not_duplicate_or_crash(
+def test_quickstart__second_run_without_force_download_does_not_duplicate_or_crash(
     mocker: MockerFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Regression test for a bug where demo crashed on a second run.
+    """Regression test for a bug where quickstart crashed on a second run.
 
-    Previously demo.db was only wiped for --force-download, so a second run duplicated
+    Previously quickstart.db was only wiped for --force-download, so a second run duplicated
     annotations and then crashed with an IntegrityError on the evaluation run insert.
     """
     monkeypatch.chdir(tmp_path)
-    dataset_dir = _build_demo_dataset_dir(tmp_path)
+    dataset_dir = _build_quickstart_dataset_dir(tmp_path)
     mocker.patch.object(
         lightly_studio.utils, "download_example_dataset", return_value=str(dataset_dir)
     )
     mocker.patch.object(lightly_studio, "start_gui")
 
     runner = CliRunner()
-    assert runner.invoke(cli=cli.main, args=["demo"]).exit_code == 0
-    # Each `lightly-studio demo` invocation is normally its own process, starting with no
+    assert runner.invoke(cli=cli.main, args=["quickstart"]).exit_code == 0
+    # Each `lightly-studio quickstart` invocation is normally its own process, starting with no
     # engine set. Close the engine here to reproduce that between the two invokes below.
     db_manager.close()
-    result_second = runner.invoke(cli=cli.main, args=["demo"])
+    result_second = runner.invoke(cli=cli.main, args=["quickstart"])
     assert result_second.exit_code == 0, result_second.output
 
     dataset = lightly_studio.ImageDataset.load()

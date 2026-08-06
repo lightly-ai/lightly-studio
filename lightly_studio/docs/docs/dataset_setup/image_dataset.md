@@ -453,7 +453,7 @@ See the [API reference](../api/dataset.md#lightly_studio.ImageDataset) for `add_
 ## Image Dataset in the GUI
 
 !!! tip "Trying LightlyStudio for the first time?"
-    Run `lightly-studio demo` to download the COCO example dataset and open the GUI
+    Run `lightly-studio quickstart` to download the COCO example dataset and open the GUI
     in a single command — no Python script needed.
 
 Launch the GUI from your terminal:
