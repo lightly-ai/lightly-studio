@@ -287,68 +287,52 @@ code.doc-symbol-module {
   border-radius: 8px;
 }
 
-/* Inline status badges rendered inside a docstring (see the API reference).
-   Add `<span class="doc-badge doc-badge--beta">Beta</span>` at the top of a
-   class or method docstring; omit it for stable members. */
+/* Beta marker for the API reference. Author
+   `<span class="doc-badge doc-badge--beta">Beta</span>` at the top of an
+   experimental class or method docstring; omit it for stable members. The span
+   itself is hidden — its presence drives a "Beta" pill rendered inline, right
+   after the member name in the heading (see the rules below). */
 :root {
-  --doc-badge-icon--beta: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 19a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1c0-.21-.07-.41-.18-.57L13 8.35V4h-2v4.35l-5.82 10.08c-.11.16-.18.36-.18.57m1 3a3 3 0 0 1-3-3c0-.6.18-1.16.5-1.63L9 7.81V6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1v1.81l5.5 9.56c.32.47.5 1.03.5 1.63a3 3 0 0 1-3 3z"/></svg>');
+  --doc-badge-icon--beta: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24"><path d="M5 19a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1c0-.21-.07-.41-.18-.57L13 8.35V4h-2v4.35l-5.82 10.08c-.11.16-.18.36-.18.57m1 3a3 3 0 0 1-3-3c0-.6.18-1.16.5-1.63L9 7.81V6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1v1.81l5.5 9.56c.32.47.5 1.03.5 1.63a3 3 0 0 1-3 3z"/></svg>');
 }
 
-/* inline-flex + align-items: center vertically centers the icon and label;
-   a plain inline-block leaves the text riding above the pill's center. */
-.md-typeset .doc-badge {
+/* Hide the raw marker paragraph in the docstring body. */
+.md-typeset .doc-contents > p:has(> .doc-badge--beta:only-child) {
+  display: none;
+}
+
+/* Render the pill inline, after the member name and any mkdocstrings type
+   labels (e.g. `dataclass`), so status always comes last. It fires only for
+   members whose own docstring carries the marker; the `> .doc-contents > p >`
+   chain is direct-child only, so a class does not inherit its methods' badges.
+   Two selectors: attach to the label group when present, else to the name. */
+.md-typeset
+  .doc-object:has(> .doc-contents > p > .doc-badge--beta)
+  > .doc-heading
+  > .doc-object-name:not(:has(+ .doc-labels))::after,
+.md-typeset
+  .doc-object:has(> .doc-contents > p > .doc-badge--beta)
+  > .doc-heading
+  > .doc-labels::after {
+  content: "Beta";
   display: inline-flex;
   align-items: center;
-  gap: 0.28em;
-  padding: 0.2rem 0.45rem;
+  margin-left: 0.5rem;
+  /* Symmetric em padding: an asymmetric top/bottom bias rounds to different
+     whole pixels per instance at this tiny font size, which reads as
+     inconsistent centering. Keep it symmetric and let flex center the row. */
+  padding: 0.3em 0.55em 0.3em 1.55em;
   border-radius: 999px;
+  background-color: var(--md-accent-fg-color);
+  background-image: var(--doc-badge-icon--beta);
+  background-repeat: no-repeat;
+  background-position: 0.55em center;
+  background-size: 0.8em;
+  color: #fff;
   font-size: 0.5rem;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   line-height: 1;
   vertical-align: middle;
-}
-
-.md-typeset .doc-badge--beta {
-  color: #fff;
-  background-color: var(--md-accent-fg-color);
-}
-
-.md-typeset .doc-badge--beta::before {
-  content: "";
-  width: 0.9em;
-  height: 0.9em;
-  background-color: currentcolor;
-  -webkit-mask-image: var(--doc-badge-icon--beta);
-  mask-image: var(--doc-badge-icon--beta);
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-size: contain;
-  mask-size: contain;
-}
-
-/* Pin the badge to the left of its member heading so it sits before the
-   class/method name. The badge is anchored to its own `.doc-object` wrapper,
-   so class and method badges each align to their own heading. The heading is
-   indented to make room for the badge; the signature and body stay full width. */
-.md-typeset .doc-object {
-  position: relative;
-}
-
-.md-typeset .doc-heading {
-  padding-left: 3.4rem;
-}
-
-.md-typeset .doc-badge--beta {
-  position: absolute;
-  top: 0.35rem;
-  left: 0;
-}
-
-/* The badge is now out of flow, so collapse the otherwise-empty paragraph it
-   used to occupy and avoid a blank line between the summary and the body. */
-.md-typeset .doc-contents > p:has(> .doc-badge--beta:only-child) {
-  margin: 0;
-  line-height: 0;
 }
