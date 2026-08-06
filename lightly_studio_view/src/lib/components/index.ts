@@ -72,3 +72,5 @@ export { default as OrderBy } from '$lib/components/OrderBy/OrderBy.svelte';
 export { default as SamplingCombinationDialog } from '$lib/components/Sampling/SamplingCombinationDialog.svelte';
 export { default as SplitDialog } from '$lib/components/SplitDialog/SplitDialog.svelte';
 export { default as MetadataFilterChips } from '$lib/components/MetadataFilterChips/MetadataFilterChips.svelte';
+export { default as FormField } from '$lib/components/FormField/FormField.svelte';
+export { default as AnnotationSourceSelect } from '$lib/components/AnnotationSourceSelect/AnnotationSourceSelect.svelte';

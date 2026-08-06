@@ -15,7 +15,7 @@
     import AnnotationSourceSelect from '$lib/components/AnnotationSourceSelect/AnnotationSourceSelect.svelte';
     import type { ExportFilter } from '$lib/services/types';
     import { exportCollection } from '$lib/services/exportCollection';
-    import { useExportSamplesCount } from './useExportSamplesCount/useExportSamplesCount';
+    import { useExportSamplesCount } from './useExportSamplesCount/useExportSamplesCount.svelte';
     import { useExportTracking } from './useExportTracking/useExportTracking';
     import { PUBLIC_LIGHTLY_STUDIO_API_URL } from '$env/static/public';
     import * as Dialog from '$lib/components/ui/dialog';
@@ -52,6 +52,7 @@
 
     let exportType = $state<
         | 'samples'
+        | 'classifications'
         | 'object_detections_coco'
         | 'object_detections_yolo'
         | 'segmentation'
@@ -61,6 +62,7 @@
     >('samples');
     const exportTypeLabels: Record<typeof exportType, string> = {
         samples: 'Image Filenames',
+        classifications: 'Image Classifications (CSV)',
         object_detections_coco: 'Image Object Detections (COCO)',
         object_detections_yolo: 'Image Object Detections (YOLO)',
         segmentation: 'Image Segmentation Mask (COCO)',
@@ -124,14 +126,12 @@
         count,
         isLoading,
         error: statError
-    } = $derived(
-        useExportSamplesCount({
-            collection_id: collectionId,
-            includeFilter,
-            excludeFilter,
-            collectionFilter: $imageFilter
-        })
-    );
+    } = useExportSamplesCount(() => ({
+        collection_id: collectionId,
+        includeFilter,
+        excludeFilter,
+        collectionFilter: $imageFilter
+    }));
 
     let errorMessage = $derived.by(() => {
         return $statError ? $statError : '';
@@ -175,6 +175,13 @@
     //
     const exportObjectDetectionCocoURL = $derived(
         `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=object_detection_coco${annotationCollectionParam}`
+    );
+
+    //
+    // Classification export
+    //
+    const exportClassificationsURL = $derived(
+        `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=classification_csv${annotationCollectionParam}`
     );
 
     //
@@ -252,6 +259,11 @@
                                 {:else}
                                     <SelectMenuItem value="samples" label="Image Filenames"
                                         >Image Filenames</SelectMenuItem
+                                    >
+                                    <SelectMenuItem
+                                        value="classifications"
+                                        label="Image Classifications (CSV)"
+                                        >Image Classifications (CSV)</SelectMenuItem
                                     >
                                     <SelectMenuItem
                                         value="object_detections_coco"
@@ -383,6 +395,35 @@
                                     <Loader2 class="animate-spin" />
                                 </div>
                             {/if}
+                        </Button>
+                    </Tabs.Content>
+
+                    <!-- Classifications tab -->
+                    <Tabs.Content value="classifications" class="pt-2">
+                        <p class="text-sm text-muted-foreground">
+                            The classification annotations will be exported in CSV format.
+                        </p>
+
+                        {#if annotationSources.length > 1}
+                            <div class="mt-6">
+                                <FormField label="Annotation Source">
+                                    <AnnotationSourceSelect
+                                        sourceOptions={annotationSources}
+                                        placeholder="Only annotations from the selected source will be exported"
+                                        bind:selectedSource={selectedAnnotationCollectionId}
+                                    />
+                                </FormField>
+                            </div>
+                        {/if}
+
+                        <Button
+                            class="relative my-4 w-full"
+                            href={exportClassificationsURL}
+                            target="_blank"
+                            data-testid="submit-button-classifications"
+                            onclick={() => tracking.handleAnnotationDownloadClick(exportType)}
+                        >
+                            Download
                         </Button>
                     </Tabs.Content>
 
