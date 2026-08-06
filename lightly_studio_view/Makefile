@@ -71,3 +71,16 @@ else
 	nvm use; \
 	npm run test:unit -- --run'
 endif
+
+# Full-suite line coverage for the Fast Track coverage guardrail, which reads
+# coverage/coverage-final.json rather than running tests itself.
+.PHONY: test-coverage
+test-coverage:
+ifeq ($(OS),Windows_NT)
+	npm run test:unit -- --run --coverage --coverage.reporter=json --coverage.reportOnFailure
+else
+	bash -c 'export NVM_DIR="$${HOME}/.nvm"; \
+	[ -s "$$NVM_DIR/nvm.sh" ] && . "$$NVM_DIR/nvm.sh"; \
+	nvm use; \
+	npm run test:unit -- --run --coverage --coverage.reporter=json --coverage.reportOnFailure'
+endif

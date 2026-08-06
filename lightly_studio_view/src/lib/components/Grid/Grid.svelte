@@ -1,6 +1,6 @@
 <script lang="ts">
     import VirtualGrid from 'svelte-virtual/grid';
-    import type { ComponentProps, Snippet } from 'svelte';
+    import { untrack, type ComponentProps, type Snippet } from 'svelte';
     import type { HTMLAttributes } from 'svelte/elements';
     import { cn } from '$lib/utils';
 
@@ -52,7 +52,7 @@
         gridProps?: Partial<ComponentProps<typeof VirtualGrid>>;
     } = $props();
 
-    let previousScrollResetKey = scrollResetKey;
+    let previousScrollResetKey = $state(untrack(() => scrollResetKey));
     let previousInitialScrollPosition = $state<number | undefined>(undefined);
     let pendingRestoreRaf: number | undefined;
 

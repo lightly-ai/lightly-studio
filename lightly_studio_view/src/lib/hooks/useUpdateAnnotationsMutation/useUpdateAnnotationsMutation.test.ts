@@ -38,15 +38,15 @@ describe('useUpdateAnnotationsMutation', () => {
             }
         } as unknown as ReturnType<typeof createMutation>);
 
-        const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId: 'col-1' });
+        const { updateAnnotations } = useUpdateAnnotationsMutation({
+            getCollectionId: () => 'col-1'
+        });
         await updateAnnotations([
             { annotation_id: 'ann-1', collection_id: 'col-1', label_name: 'dog' }
         ]);
 
-        expect(useInvalidateAnnotationGridQueries).toHaveBeenCalledWith({
-            collectionId: 'col-1'
-        });
-        expect(invalidateAnnotationGridQueries).toHaveBeenCalledOnce();
+        expect(useInvalidateAnnotationGridQueries).toHaveBeenCalledWith();
+        expect(invalidateAnnotationGridQueries).toHaveBeenCalledWith('col-1');
     });
 
     it('fires annotation_label_updated when a single update with label_name succeeds', async () => {
@@ -56,7 +56,9 @@ describe('useUpdateAnnotationsMutation', () => {
             }
         } as unknown as ReturnType<typeof createMutation>);
 
-        const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId: 'col-1' });
+        const { updateAnnotations } = useUpdateAnnotationsMutation({
+            getCollectionId: () => 'col-1'
+        });
         await updateAnnotations([
             { annotation_id: 'ann-1', collection_id: 'col-1', label_name: 'dog' }
         ]);
@@ -75,7 +77,9 @@ describe('useUpdateAnnotationsMutation', () => {
             }
         } as unknown as ReturnType<typeof createMutation>);
 
-        const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId: 'col-1' });
+        const { updateAnnotations } = useUpdateAnnotationsMutation({
+            getCollectionId: () => 'col-1'
+        });
         await updateAnnotations([
             { annotation_id: 'ann-1', collection_id: 'col-1', label_name: 'dog' },
             { annotation_id: 'ann-2', collection_id: 'col-1', label_name: 'cat' }
@@ -95,7 +99,9 @@ describe('useUpdateAnnotationsMutation', () => {
             }
         } as unknown as ReturnType<typeof createMutation>);
 
-        const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId: 'col-1' });
+        const { updateAnnotations } = useUpdateAnnotationsMutation({
+            getCollectionId: () => 'col-1'
+        });
         await updateAnnotations([
             {
                 annotation_id: 'ann-1',

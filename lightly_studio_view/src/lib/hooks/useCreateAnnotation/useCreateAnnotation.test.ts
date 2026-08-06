@@ -51,7 +51,7 @@ describe('useCreateAnnotation', () => {
             }
         } as unknown as ReturnType<typeof createMutation>);
 
-        const { createAnnotation } = useCreateAnnotation({ collectionId: 'col-1' });
+        const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => 'col-1' });
         await createAnnotation({
             parent_sample_id: 's1',
             annotation_type: 'classification',
@@ -61,10 +61,8 @@ describe('useCreateAnnotation', () => {
         expect(invalidateQueries).toHaveBeenCalledWith({
             queryKey: useImageAnnotationCountsQueryKey
         });
-        expect(useInvalidateAnnotationGridQueries).toHaveBeenCalledWith({
-            collectionId: 'col-1'
-        });
-        expect(invalidateAnnotationGridQueries).toHaveBeenCalledOnce();
+        expect(useInvalidateAnnotationGridQueries).toHaveBeenCalledWith();
+        expect(invalidateAnnotationGridQueries).toHaveBeenCalledWith('col-1');
         expect(invalidateQueries).toHaveBeenCalledWith({
             queryKey: readAnnotationCollectionsQueryKey({ path: { collection_id: 'col-1' } })
         });
@@ -81,7 +79,7 @@ describe('useCreateAnnotation', () => {
             }
         } as unknown as ReturnType<typeof createMutation>);
 
-        const { createAnnotation } = useCreateAnnotation({ collectionId: 'col-1' });
+        const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => 'col-1' });
         await createAnnotation({
             parent_sample_id: 's1',
             annotation_type: 'object_detection',

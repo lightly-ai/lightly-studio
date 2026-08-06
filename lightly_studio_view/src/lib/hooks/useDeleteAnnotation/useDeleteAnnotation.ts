@@ -4,15 +4,15 @@ import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationC
 import { usePostHog } from '$lib/hooks';
 import { useInvalidateAnnotationGridQueries } from '$lib/hooks/useInvalidateAnnotationGridQueries';
 
-export const useDeleteAnnotation = ({ collectionId }: { collectionId: string }) => {
+export const useDeleteAnnotation = ({ getCollectionId }: { getCollectionId: () => string }) => {
     const mutation = createMutation(() => deleteAnnotationMutation());
 
     const client = useQueryClient();
     const { trackEvent } = usePostHog();
-    const invalidateAnnotationGridQueries = useInvalidateAnnotationGridQueries({ collectionId });
+    const invalidateAnnotationGridQueries = useInvalidateAnnotationGridQueries();
 
-    const refetch = () => {
-        invalidateAnnotationGridQueries();
+    const refetch = (collectionId: string) => {
+        invalidateAnnotationGridQueries(collectionId);
         client.invalidateQueries({
             queryKey: useImageAnnotationCountsQueryKey
         });
@@ -20,6 +20,7 @@ export const useDeleteAnnotation = ({ collectionId }: { collectionId: string }) 
 
     const deleteAnnotation = (annotationId: string, annotationType: string) =>
         new Promise<void>((resolve, reject) => {
+            const collectionId = getCollectionId();
             mutation.mutate(
                 {
                     path: {
@@ -29,7 +30,7 @@ export const useDeleteAnnotation = ({ collectionId }: { collectionId: string }) 
                 },
                 {
                     onSuccess: () => {
-                        refetch();
+                        refetch(collectionId);
                         trackEvent('annotation_deleted', {
                             collection_id: collectionId,
                             annotation_type: annotationType

@@ -1,6 +1,18 @@
-import type { BaseParameter, RegisteredOperatorMetadata } from '$lib/api/lightly_studio_local';
+import type { ParameterView, RegisteredOperatorMetadata } from '$lib/api/lightly_studio_local';
 
 export type OperatorParameterType = 'string' | 'int' | 'float' | 'bool';
+
+/**
+ * A single column of a table parameter as consumed by the GUI.
+ */
+export type OperatorParameterColumn = {
+    name: string;
+    description?: string;
+    default?: unknown;
+    required?: boolean;
+    /** Python type name, e.g. `'str'`, `'int'`, `'float'` or `'bool'`. */
+    paramType?: string;
+};
 
 export type OperatorParameter = {
     name: string;
@@ -8,6 +20,7 @@ export type OperatorParameter = {
     default?: unknown;
     required?: boolean;
     type: OperatorParameterType;
+    columns?: OperatorParameterColumn[];
 };
 
 export type Operator = {
@@ -16,7 +29,7 @@ export type Operator = {
     parameters: OperatorParameter[];
 };
 
-const mapParameter = (parameter: BaseParameter): OperatorParameter => ({
+const mapParameter = (parameter: ParameterView): OperatorParameter => ({
     name: parameter.name,
     description: parameter.description,
     default: parameter.default,
@@ -26,7 +39,7 @@ const mapParameter = (parameter: BaseParameter): OperatorParameter => ({
 
 export const createOperatorFromMetadata = (
     metadata: RegisteredOperatorMetadata,
-    parameters: BaseParameter[]
+    parameters: ParameterView[]
 ): Operator => ({
     id: metadata.operator_id,
     name: metadata.name,

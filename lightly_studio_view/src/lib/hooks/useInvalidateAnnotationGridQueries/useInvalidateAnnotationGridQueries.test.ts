@@ -28,7 +28,7 @@ describe('useInvalidateAnnotationGridQueries', () => {
             invalidateQueries
         } as unknown as ReturnType<typeof useQueryClient>);
 
-        useInvalidateAnnotationGridQueries({ collectionId: 'col-1' })();
+        useInvalidateAnnotationGridQueries()('col-1');
 
         expect(invalidateQueries.mock.calls).toEqual(
             getAnnotationGridQueryKeyPrefixes('col-1').map((queryKey) => [{ queryKey }])

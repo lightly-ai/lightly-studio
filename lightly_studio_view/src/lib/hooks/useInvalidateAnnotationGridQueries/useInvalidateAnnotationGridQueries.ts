@@ -3,22 +3,16 @@ import { getAnnotationsInfiniteQueryKeyPrefix } from '$lib/hooks/useAnnotationsI
 import { getFramesInfiniteQueryKeyPrefix } from '$lib/hooks/useFrames/getFramesInfiniteQueryKeyPrefix';
 import { getImagesInfiniteQueryKeyPrefix } from '$lib/hooks/useImagesInfinite/createImagesInfiniteOptions';
 
-interface UseInvalidateAnnotationGridQueriesParams {
-    collectionId: string;
-}
-
 export const getAnnotationGridQueryKeyPrefixes = (collectionId: string) => [
     getImagesInfiniteQueryKeyPrefix(collectionId),
     getFramesInfiniteQueryKeyPrefix(collectionId),
     getAnnotationsInfiniteQueryKeyPrefix(collectionId)
 ];
 
-export const useInvalidateAnnotationGridQueries = ({
-    collectionId
-}: UseInvalidateAnnotationGridQueriesParams) => {
+export const useInvalidateAnnotationGridQueries = () => {
     const client = useQueryClient();
 
-    return () => {
+    return (collectionId: string) => {
         for (const queryKey of getAnnotationGridQueryKeyPrefixes(collectionId)) {
             client.invalidateQueries({ queryKey });
         }

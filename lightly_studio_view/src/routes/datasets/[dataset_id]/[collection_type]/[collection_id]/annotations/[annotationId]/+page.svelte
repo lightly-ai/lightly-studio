@@ -12,7 +12,7 @@
 
     const collectionId = $derived(page.params.collection_id!);
 
-    const annotationId = $derived(page.params.annotationId);
+    const annotationId = $derived(page.params.annotationId!);
 
     const {
         annotation: annotationDetailsResponse,
