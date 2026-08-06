@@ -1,7 +1,9 @@
+import json
 import os
 
 import fsspec
 from fastapi.testclient import TestClient
+from gcsfs import GCSFileSystem  # type: ignore[import-untyped]
 from pytest_mock import MockerFixture
 from s3fs import S3FileSystem  # type: ignore[import-untyped]
 
@@ -39,6 +41,25 @@ def test_refresh_cloud_credentials__clears_s3_cache(
 
     assert response.status_code == 204
     spy.assert_called_once()
+
+
+def test_refresh_cloud_credentials__applies_gcs_config(
+    test_client: TestClient,
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch.dict(os.environ, clear=False)
+    mocker.patch.dict(fsspec.config.conf, {}, clear=True)
+    clear_cache = mocker.spy(GCSFileSystem, "clear_instance_cache")
+    storage_options = {"project": "test-project", "token": "anon"}
+
+    response = test_client.put(
+        "/api/cloud-credentials",
+        json={"FSSPEC_GCS": json.dumps(storage_options)},
+    )
+
+    assert response.status_code == 204
+    assert fsspec.config.conf["gcs"] == storage_options
+    clear_cache.assert_called_once_with()
 
 
 def test_refresh_cloud_credentials__invalidates_cached_s3_filesystem(
