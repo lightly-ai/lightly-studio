@@ -15,7 +15,7 @@
     import AnnotationSourceSelect from '$lib/components/AnnotationSourceSelect/AnnotationSourceSelect.svelte';
     import type { ExportFilter } from '$lib/services/types';
     import { exportCollection } from '$lib/services/exportCollection';
-    import { useExportSamplesCount } from './useExportSamplesCount/useExportSamplesCount';
+    import { useExportSamplesCount } from './useExportSamplesCount/useExportSamplesCount.svelte';
     import { useExportTracking } from './useExportTracking/useExportTracking';
     import { PUBLIC_LIGHTLY_STUDIO_API_URL } from '$env/static/public';
     import * as Dialog from '$lib/components/ui/dialog';
@@ -124,14 +124,12 @@
         count,
         isLoading,
         error: statError
-    } = $derived(
-        useExportSamplesCount({
-            collection_id: collectionId,
-            includeFilter,
-            excludeFilter,
-            collectionFilter: $imageFilter
-        })
-    );
+    } = useExportSamplesCount(() => ({
+        collection_id: collectionId,
+        includeFilter,
+        excludeFilter,
+        collectionFilter: $imageFilter
+    }));
 
     let errorMessage = $derived.by(() => {
         return $statError ? $statError : '';

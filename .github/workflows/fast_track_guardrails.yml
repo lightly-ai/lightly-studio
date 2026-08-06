@@ -44,8 +44,15 @@ jobs:
           filters: |
             backend:
               - 'lightly_studio/**'
+            # Superset of the upcoming backend/coverage guardrail's own scope, so the
+            # full suite runs only for PRs that guardrail will actually judge.
+            backend_src:
+              - 'lightly_studio/src/lightly_studio/**/*.py'
             frontend:
               - 'lightly_studio_view/**'
+            # Same idea as backend_src, for the frontend/coverage guardrail.
+            frontend_src:
+              - 'lightly_studio_view/src/**'
 
       # --- Backend toolchain -------------------------------------------------
       # Full backend venv for backend guardrails (e.g. backend/complexity, backend/coverage);
@@ -102,6 +109,17 @@ jobs:
         working-directory: lightly_studio
         run: make build-lightly_studio_view
 
+      # Produces the coverage report the upcoming backend/coverage guardrail reads; it
+      # will not run tests itself. A red suite must not kill the job — the guardrail
+      # turns it into a fail verdict, and the bot still needs the artifact to explain
+      # itself. Nothing consumes coverage.json yet.
+      - name: Run backend tests with coverage
+        id: backend-tests
+        if: steps.changes.outputs.backend_src == 'true'
+        continue-on-error: true
+        working-directory: lightly_studio
+        run: make test-coverage
+
       # --- Frontend toolchain ------------------------------------------------
       # Deps and generated API client for frontend guardrails (e.g. frontend/complexity,
       # frontend/coverage). prebuild is the app build's generation step, without the
@@ -112,6 +130,16 @@ jobs:
         run: |
           npm ci
           npm run prebuild
+
+      # Same arrangement as the backend step above, for frontend/coverage. That guardrail
+      # still runs its own per-file vitest subset until it migrates onto the shared base,
+      # so nothing reads this report yet.
+      - name: Run frontend tests with coverage
+        id: frontend-tests
+        if: steps.changes.outputs.frontend_src == 'true'
+        continue-on-error: true
+        working-directory: lightly_studio_view
+        run: make test-coverage
 
       # --- Fast Track toolchain ----------------------------------------------
       - name: Install dependencies
