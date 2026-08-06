@@ -12,8 +12,8 @@ description: Python API reference for LightlyStudio embeddings — register a cu
 LightlyStudio embeds your data automatically on ingestion. To supply your own
 embeddings — either computed on the fly or loaded from a precomputed store —
 implement one of the generator protocols below and register it with
-[`set_default_embedding_model`](#set_default_embedding_model) before you create or
-ingest a dataset.
+[`set_default_embedding_model`](#set_default_embedding_model). The registration
+must happen before you load a dataset or before the GUI is started.
 
 See the [Embeddings page](../concepts_and_tools/embeddings.md) for more details.
 
