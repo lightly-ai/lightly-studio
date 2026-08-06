@@ -17,6 +17,8 @@ The following export formats are supported:
 | Pascal VOC Semantic Segmentation | Per-pixel class masks | PNG masks + class map |
 | YouTube-VIS Segmentation Mask | Video segmentation mask tracks | JSON |
 
+Classification CSV export is currently available through the Python API.
+
 ## Export in the GUI
 
 Open the export dialog from the `Menu` button in the top-right corner of any grid view

@@ -14,9 +14,16 @@
         type SampleView,
         type VideoView
     } from '$lib/api/lightly_studio_local';
-    import { getVideoURLById, toVideoEvents, type VideoEvent } from '$lib/utils';
-    import VideoSampleMetadata from '../VideoSampleMetadata/VideoSampleMetadata.svelte';
-    import SampleDetailsCaptionSegment from '../SampleDetails/SampleDetailsCaptionsSegment/SampleDetailsCaptionSegment.svelte';
+    import {
+        getVideoURLById,
+        isWholeVideoClassificationAnnotation,
+        toVideoEvents,
+        type VideoEvent
+    } from '$lib/utils';
+    import VideoSampleMetadata from '$lib/components/VideoSampleMetadata/VideoSampleMetadata.svelte';
+    import SampleDetailsCaptionSegment from '$lib/components/SampleDetails/SampleDetailsCaptionsSegment/SampleDetailsCaptionSegment.svelte';
+    import SampleDetailsClassificationSegment from '$lib/components/SampleDetails/SampleDetailsClassificationSegment/SampleDetailsClassificationSegment.svelte';
+    import { createAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import SelectClassDialog from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
     import { useVideoFrames } from '$lib/hooks/useVideoFrames/useVideoFrames';
     import { useVideoFrameAnnotations } from '$lib/hooks/useVideoFrameAnnotations/useVideoFrameAnnotations';
@@ -32,7 +39,7 @@
     import { routeHelpers } from '$lib/routes';
     import VideoFrameAnnotationItem, {
         type PrerenderedAnnotation
-    } from '../VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
+    } from '$lib/components/VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
 
     type VideoDetailsProps = {
         video: VideoView;
@@ -45,8 +52,15 @@
     let videoEl: HTMLVideoElement | null = $state(null);
     let frameRequestId: number | null = $state(null);
 
+    createAnnotationLabelContext();
+
     // Imported events: classification annotations on the video carrying a time span.
     const videoEvents = $derived(toVideoEvents(video.sample.annotations ?? []));
+
+    // Whole-video classification annotations (no time span) shown in the side panel.
+    const videoClassificationAnnotations = $derived(
+        (video.sample.annotations ?? []).filter(isWholeVideoClassificationAnnotation)
+    );
 
     // Reuse the global "Edit annotations" toggle to enable event editing.
     const { isEditingMode } = useGlobalStorage();
@@ -313,6 +327,14 @@
                 {/if}
                 <VideoSampleMetadata {video} />
                 <MetadataSegment metadata_dict={(video?.sample as SampleView).metadata_dict} />
+                {#if video?.sample?.sample_id}
+                    <SampleDetailsClassificationSegment
+                        collectionId={(video.sample as SampleView).collection_id!}
+                        annotations={videoClassificationAnnotations}
+                        sampleId={video.sample_id}
+                        refetch={onVideoUpdate}
+                    />
+                {/if}
                 {#if video?.sample?.sample_id}
                     <SampleDetailsCaptionSegment
                         refetch={onVideoUpdate}

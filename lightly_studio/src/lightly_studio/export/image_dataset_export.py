@@ -26,6 +26,8 @@ class ImageDatasetExport(DatasetExport):
     It allows exporting data in various formats.
     """
 
+    samples: Iterable[ImageSample]
+
     def __init__(
         self,
         session: Session,
