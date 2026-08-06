@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { CaptionView } from '$lib/api/lightly_studio_local';
-import { CAPTION_SEGMENT_MATCH_SCORE_KEY } from '$lib/constants';
+import {
+    CAPTION_SEGMENT_MATCH_SCORE_KEY,
+    REPEATED_CAPTION_GROUP_ID_KEY
+} from '$lib/constants';
 import {
     findActiveCaptionAtTime,
     filterCaptionsByMatchBand,
@@ -14,14 +17,19 @@ import {
     triageCaptions
 } from './captionMatchScore';
 
-function makeCaption(overrides: Partial<CaptionView> & { score?: number | null }): CaptionView {
-    const { score, metadata_dict, ...rest } = overrides;
-    const data =
+function makeCaption(
+    overrides: Partial<CaptionView> & { score?: number | null; groupId?: number }
+): CaptionView {
+    const { score, groupId, metadata_dict, ...rest } = overrides;
+    const data: Record<string, number> =
         score === undefined
-            ? (metadata_dict?.data ?? {})
+            ? { ...(metadata_dict?.data as Record<string, number> | undefined) }
             : score === null
               ? {}
               : { [CAPTION_SEGMENT_MATCH_SCORE_KEY]: score };
+    if (groupId !== undefined) {
+        data[REPEATED_CAPTION_GROUP_ID_KEY] = groupId;
+    }
 
     return {
         sample_id: 'cap-1',
@@ -174,5 +182,32 @@ describe('toCaptionVideoEvents', () => {
         ]);
 
         expect(events.map((e) => e.id)).toEqual(['early', 'late']);
+    });
+
+    it('colors by repeat group when enabled', () => {
+        const matchColored = toCaptionVideoEvents([
+            makeCaption({
+                sample_id: 'a',
+                temporal_span_details: { start_time_s: 1, end_time_s: 2 },
+                score: 0.2,
+                groupId: 0
+            })
+        ]);
+        const groupColored = toCaptionVideoEvents(
+            [
+                makeCaption({
+                    sample_id: 'a',
+                    temporal_span_details: { start_time_s: 1, end_time_s: 2 },
+                    score: 0.2,
+                    groupId: 0
+                })
+            ],
+            { colorByRepeatGroup: true }
+        );
+
+        expect(matchColored[0].color).toContain('hsla(');
+        expect(groupColored[0].color).toContain('rgba(');
+        expect(groupColored[0].label).toContain('G0');
+        expect(groupColored[0].color).not.toBe(matchColored[0].color);
     });
 });

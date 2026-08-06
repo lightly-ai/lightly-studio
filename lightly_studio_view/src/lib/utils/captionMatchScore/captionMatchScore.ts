@@ -1,5 +1,9 @@
 import type { CaptionView } from '$lib/api/lightly_studio_local';
 import { CAPTION_SEGMENT_MATCH_SCORE_KEY } from '$lib/constants';
+import {
+    getCaptionRepeatGroupId,
+    getRepeatGroupColors
+} from '$lib/utils/captionRepetition/captionRepetition';
 import { getSimilarityColor } from '$lib/utils/getSimilarityColor';
 import type { VideoEvent } from '$lib/utils/videoEvents/videoEvents';
 
@@ -13,6 +17,11 @@ export type MatchScoreFilter = 'all' | MatchScoreBand;
 
 const EVENT_FILL_ALPHA = 0.7;
 const MAX_TIMELINE_LABEL_LENGTH = 36;
+
+export interface ToCaptionVideoEventsOptions {
+    /** When true, color timed captions by `repeated_caption_group_id` instead of match score. */
+    colorByRepeatGroup?: boolean;
+}
 
 /**
  * Reads `caption_segment_match_score` from caption metadata, if present.
@@ -120,25 +129,37 @@ export function findActiveCaptionAtTime(
 }
 
 /**
- * Maps timed captions to {@link VideoEvent}s colored by match score for the
- * timeline. Untimed captions are skipped. Missing scores use a neutral gray.
+ * Maps timed captions to {@link VideoEvent}s for the timeline.
+ * Default colors use match score; pass ``colorByRepeatGroup`` to color by
+ * repetition group instead (ungrouped captions stay gray / match-colored).
  */
-export function toCaptionVideoEvents(captions: CaptionView[] = []): VideoEvent[] {
+export function toCaptionVideoEvents(
+    captions: CaptionView[] = [],
+    options: ToCaptionVideoEventsOptions = {}
+): VideoEvent[] {
+    const colorByRepeatGroup = options.colorByRepeatGroup === true;
+
     return captions
         .filter((caption) => caption.temporal_span_details != null)
         .map((caption) => {
             const span = caption.temporal_span_details!;
             const score = getCaptionMatchScore(caption.metadata_dict);
-            const colors =
-                score !== null
-                    ? getMatchScoreTimelineColors(score)
-                    : {
-                          color: 'rgba(120, 120, 120, 0.7)',
-                          contrastColor: 'rgba(255, 255, 255, 0.95)'
-                      };
+            const groupId = getCaptionRepeatGroupId(caption.metadata_dict);
+            const colors = resolveTimelineColors({
+                colorByRepeatGroup,
+                groupId,
+                score
+            });
             const text = caption.text?.trim() || 'Caption';
-            const scorePrefix = score !== null ? `${score.toFixed(2)} · ` : '';
-            const label = truncateLabel(`${scorePrefix}${text}`);
+            const prefixes: string[] = [];
+            if (colorByRepeatGroup && groupId !== null) {
+                prefixes.push(`G${groupId}`);
+            }
+            if (score !== null && !colorByRepeatGroup) {
+                prefixes.push(score.toFixed(2));
+            }
+            const prefix = prefixes.length > 0 ? `${prefixes.join(' · ')} · ` : '';
+            const label = truncateLabel(`${prefix}${text}`);
 
             return {
                 id: caption.sample_id,
@@ -151,6 +172,27 @@ export function toCaptionVideoEvents(captions: CaptionView[] = []): VideoEvent[]
             } satisfies VideoEvent;
         })
         .sort((a, b) => a.startTimeS - b.startTimeS);
+}
+
+function resolveTimelineColors({
+    colorByRepeatGroup,
+    groupId,
+    score
+}: {
+    colorByRepeatGroup: boolean;
+    groupId: number | null;
+    score: number | null;
+}): { color: string; contrastColor: string } {
+    if (colorByRepeatGroup && groupId !== null) {
+        return getRepeatGroupColors(groupId);
+    }
+    if (score !== null) {
+        return getMatchScoreTimelineColors(score);
+    }
+    return {
+        color: 'rgba(120, 120, 120, 0.7)',
+        contrastColor: 'rgba(255, 255, 255, 0.95)'
+    };
 }
 
 function compareByStartTime(a: CaptionView, b: CaptionView): number {

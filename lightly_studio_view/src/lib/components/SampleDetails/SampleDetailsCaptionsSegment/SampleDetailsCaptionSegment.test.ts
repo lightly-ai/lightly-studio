@@ -2,7 +2,11 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import { writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CaptionView } from '$lib/api/lightly_studio_local';
-import { CAPTION_SEGMENT_MATCH_SCORE_KEY } from '$lib/constants';
+import {
+    CAPTION_SEGMENT_MATCH_SCORE_KEY,
+    REPEATED_CAPTION_GROUP_ID_KEY,
+    REPEATED_CAPTION_MAX_SIMILARITY_KEY
+} from '$lib/constants';
 import SampleDetailsCaptionSegment from './SampleDetailsCaptionSegment.svelte';
 
 const { createCaptionMock } = vi.hoisted(() => ({
@@ -60,17 +64,24 @@ vi.mock('svelte-sonner', () => ({
     }
 }));
 
-function makeCaption(overrides: Partial<CaptionView> & { score?: number }): CaptionView {
-    const { score, ...rest } = overrides;
+function makeCaption(
+    overrides: Partial<CaptionView> & {
+        score?: number;
+        groupId?: number;
+        maxSim?: number;
+    }
+): CaptionView {
+    const { score, groupId, maxSim, ...rest } = overrides;
+    const data: Record<string, number> = {};
+    if (score !== undefined) data[CAPTION_SEGMENT_MATCH_SCORE_KEY] = score;
+    if (groupId !== undefined) data[REPEATED_CAPTION_GROUP_ID_KEY] = groupId;
+    if (maxSim !== undefined) data[REPEATED_CAPTION_MAX_SIMILARITY_KEY] = maxSim;
     return {
         sample_id: 'cap-1',
         parent_sample_id: 'sample-1',
         text: 'Caption text',
         temporal_span_details: { start_time_s: 1, end_time_s: 3 },
-        metadata_dict:
-            score === undefined
-                ? { data: {} }
-                : { data: { [CAPTION_SEGMENT_MATCH_SCORE_KEY]: score } },
+        metadata_dict: { data },
         ...rest
     } as CaptionView;
 }
@@ -131,6 +142,66 @@ describe('SampleDetailsCaptionSegment', () => {
 
         expect(screen.getAllByTestId('caption-field-row')).toHaveLength(1);
         expect(screen.getByTestId('caption-field-row')).toHaveAttribute('data-caption-id', 'low');
+    });
+
+    it('shows repetition metadata on caption rows', () => {
+        render(SampleDetailsCaptionSegment, {
+            props: {
+                captions: [
+                    makeCaption({
+                        sample_id: 'repeat',
+                        text: 'Typing',
+                        groupId: 0,
+                        maxSim: 0.88
+                    })
+                ],
+                sampleId: 'sample-1',
+                refetch: vi.fn()
+            }
+        });
+
+        expect(screen.getByTestId('caption-repeat-group')).toHaveTextContent('Repeat G0');
+        expect(screen.getByTestId('caption-repeat-max-sim')).toHaveTextContent('Max sim 0.880');
+    });
+
+    it('toggles color-by-repeat-group via checkbox', async () => {
+        const onColorByRepeatGroupChange = vi.fn();
+        render(SampleDetailsCaptionSegment, {
+            props: {
+                captions: [
+                    makeCaption({ sample_id: 'repeat', text: 'Typing', groupId: 0, maxSim: 0.9 })
+                ],
+                sampleId: 'sample-1',
+                refetch: vi.fn(),
+                colorByRepeatGroup: false,
+                onColorByRepeatGroupChange
+            }
+        });
+
+        expect(screen.getByTestId('color-by-repeat-group-checkbox')).toBeInTheDocument();
+        expect(screen.getByTestId('caption-field-row')).not.toHaveAttribute('data-repeat-colored');
+
+        await fireEvent.click(screen.getByTestId('color-by-repeat-group-input'));
+        expect(onColorByRepeatGroupChange).toHaveBeenCalledWith(true);
+    });
+
+    it('colors caption rows when colorByRepeatGroup is enabled', () => {
+        render(SampleDetailsCaptionSegment, {
+            props: {
+                captions: [
+                    makeCaption({ sample_id: 'repeat', text: 'Typing', groupId: 0, maxSim: 0.9 })
+                ],
+                sampleId: 'sample-1',
+                refetch: vi.fn(),
+                colorByRepeatGroup: true,
+                onColorByRepeatGroupChange: vi.fn()
+            }
+        });
+
+        expect(screen.getByTestId('caption-field-row')).toHaveAttribute(
+            'data-repeat-colored',
+            'true'
+        );
     });
 
     it('highlights the caption under the playhead and calls onSelectCaption', async () => {

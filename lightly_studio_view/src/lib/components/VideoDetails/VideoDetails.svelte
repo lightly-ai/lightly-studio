@@ -52,11 +52,14 @@
     let frameRequestId: number | null = $state(null);
     let currentTimeS = $state(0);
     let selectedCaptionId = $state<string | null>(null);
+    let colorByRepeatGroup = $state(false);
 
     // Imported events: classification annotations on the video carrying a time span.
     const videoEvents = $derived(toVideoEvents(video.sample.annotations ?? []));
-    const captionEvents = $derived(toCaptionVideoEvents(video.sample.captions ?? []));
     const captions = $derived(video.sample.captions ?? []);
+    const captionEvents = $derived(
+        toCaptionVideoEvents(captions, { colorByRepeatGroup })
+    );
     const loopCaption = $derived(
         selectedCaptionId
             ? (captions.find((caption) => caption.sample_id === selectedCaptionId) ?? null)
@@ -393,6 +396,8 @@
                         {currentTimeS}
                         {selectedCaptionId}
                         onSelectCaption={selectCaptionForReview}
+                        {colorByRepeatGroup}
+                        onColorByRepeatGroupChange={(enabled) => (colorByRepeatGroup = enabled)}
                     />
                 {/if}
                 {#if $currentFrame}

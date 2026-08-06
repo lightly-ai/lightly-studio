@@ -16,6 +16,11 @@ export const CAPTION_SEGMENT_MATCH_SCORE_KEY = 'caption_segment_match_score';
 export const MIN_CAPTION_SEGMENT_MATCH_SCORE_KEY = 'min_caption_segment_match_score';
 export const AVG_CAPTION_SEGMENT_MATCH_SCORE_KEY = 'avg_caption_segment_match_score';
 
+// Within-video caption repetition metadata (written by caption_repetition).
+export const REPEATED_CAPTION_GROUP_ID_KEY = 'repeated_caption_group_id';
+export const REPEATED_CAPTION_MAX_SIMILARITY_KEY = 'repeated_caption_max_similarity';
+export const REPEATED_CAPTION_GROUP_COUNT_KEY = 'repeated_caption_group_count';
+
 // Video quality screening metadata keys (written by compute_quality_scores).
 export const BLUR_SCORE_KEY = 'blur_score';
 export const LIGHTING_SCORE_KEY = 'lighting_score';

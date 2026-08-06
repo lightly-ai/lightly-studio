@@ -39,8 +39,15 @@ export {
     findActiveCaptionAtTime,
     toCaptionVideoEvents,
     type MatchScoreBand,
-    type MatchScoreFilter
+    type MatchScoreFilter,
+    type ToCaptionVideoEventsOptions
 } from './captionMatchScore/captionMatchScore';
+export {
+    getCaptionRepeatGroupId,
+    getCaptionRepeatMaxSimilarity,
+    getRepeatGroupColors,
+    hasRepeatedCaptionGroups
+} from './captionRepetition/captionRepetition';
 export {
     BLUR_SCORE_LOW_MAX,
     LIGHTING_SCORE_LOW_MAX,

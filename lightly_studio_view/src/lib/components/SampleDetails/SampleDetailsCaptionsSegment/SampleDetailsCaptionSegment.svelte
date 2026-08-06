@@ -4,6 +4,7 @@
     import CaptionField from '$lib/components/CaptionField/CaptionField.svelte';
     import CreateCaptionField from '$lib/components/CaptionField/CreateCaptionField.svelte';
     import MatchScoreFilterChips from './MatchScoreFilterChips.svelte';
+    import ColorByRepeatGroupCheckbox from './ColorByRepeatGroupCheckbox.svelte';
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -14,6 +15,7 @@
     import {
         findActiveCaptionAtTime,
         getCaptionMatchScore,
+        hasRepeatedCaptionGroups,
         triageCaptions,
         type MatchScoreFilter
     } from '$lib/utils';
@@ -28,6 +30,9 @@
         selectedCaptionId?: string | null;
         /** Called when the user picks a caption row for review. */
         onSelectCaption?: (captionId: string) => void;
+        /** When true, tint caption rows (and timeline, if wired) by repeat group. */
+        colorByRepeatGroup?: boolean;
+        onColorByRepeatGroupChange?: (enabled: boolean) => void;
     }
 
     let {
@@ -36,7 +41,9 @@
         sampleId,
         currentTimeS,
         selectedCaptionId = null,
-        onSelectCaption
+        onSelectCaption,
+        colorByRepeatGroup = false,
+        onColorByRepeatGroupChange
     }: SampleDetailsCaptionSegmentProps = $props();
 
     const { isEditingMode, addReversibleAction } = useGlobalStorage();
@@ -54,6 +61,7 @@
     const hasMatchScores = $derived(
         captionList.some((caption) => getCaptionMatchScore(caption.metadata_dict) !== null)
     );
+    const hasRepeatGroups = $derived(hasRepeatedCaptionGroups(captionList));
     const visibleCaptions = $derived(triageCaptions(captionList, matchFilter));
     const playheadCaptionId = $derived(
         currentTimeS === undefined
@@ -107,14 +115,28 @@
 
 <Segment title="Captions">
     <div class="flex flex-col gap-3 space-y-4">
-        {#if hasMatchScores}
-            <MatchScoreFilterChips value={matchFilter} onChange={(filter) => (matchFilter = filter)} />
+        {#if hasMatchScores || hasRepeatGroups}
+            <div class="flex flex-wrap items-center gap-3">
+                {#if hasMatchScores}
+                    <MatchScoreFilterChips
+                        value={matchFilter}
+                        onChange={(filter) => (matchFilter = filter)}
+                    />
+                {/if}
+                {#if hasRepeatGroups && onColorByRepeatGroupChange}
+                    <ColorByRepeatGroupCheckbox
+                        checked={colorByRepeatGroup}
+                        onCheckedChange={onColorByRepeatGroupChange}
+                    />
+                {/if}
+            </div>
         {/if}
 
         <div class="flex flex-col gap-2" data-testid="captions-list">
             {#each visibleCaptions as caption (caption.sample_id)}
                 <CaptionField
                     {caption}
+                    {colorByRepeatGroup}
                     isActive={caption.sample_id === activeCaptionId}
                     onSelect={onSelectCaption
                         ? () => onSelectCaption(caption.sample_id)

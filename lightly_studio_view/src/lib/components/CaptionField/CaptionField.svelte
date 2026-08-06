@@ -5,7 +5,12 @@
     import type { CaptionView } from '$lib/api/lightly_studio_local';
     import { cn } from '$lib/utils/shadcn.js';
     import { formatTimestampS } from '$lib/components/CaptionSegmentRibbon/captionSegmentRibbon.helpers';
+    import {
+        getCaptionRepeatGroupId,
+        getRepeatGroupColors
+    } from '$lib/utils';
     import CaptionMatchScore from './CaptionMatchScore.svelte';
+    import CaptionRepetitionBadge from './CaptionRepetitionBadge.svelte';
 
     interface CaptionFieldProps {
         caption: CaptionView;
@@ -13,6 +18,8 @@
         onUpdate: () => void;
         isActive?: boolean;
         onSelect?: () => void;
+        /** When true, tint the row by `repeated_caption_group_id`. */
+        colorByRepeatGroup?: boolean;
     }
 
     const {
@@ -20,7 +27,8 @@
         onDeleteCaption,
         onUpdate,
         isActive = false,
-        onSelect
+        onSelect,
+        colorByRepeatGroup = false
     }: CaptionFieldProps = $props();
 
     const { isEditingMode } = page.data.globalStorage;
@@ -49,6 +57,12 @@
 
     const isDirty = $derived(captionText !== (caption.text ?? ''));
     const span = $derived(caption.temporal_span_details);
+    const repeatGroupId = $derived(getCaptionRepeatGroupId(caption.metadata_dict));
+    const repeatGroupColor = $derived(
+        colorByRepeatGroup && repeatGroupId !== null
+            ? getRepeatGroupColors(repeatGroupId).color
+            : null
+    );
 
     const saveCaption = async () => {
         if (!isDirty || isSaving) {
@@ -91,11 +105,14 @@
     class={cn(
         'mb-2 gap-2 rounded-sm bg-card px-4 py-3 text-left align-baseline text-diffuse-foreground transition-colors',
         onSelect && 'cursor-pointer hover:bg-accent/40',
-        isActive && 'ring-2 ring-primary'
+        isActive && 'ring-2 ring-primary',
+        repeatGroupColor && 'border-l-4'
     )}
+    style={repeatGroupColor ? `border-left-color: ${repeatGroupColor}` : undefined}
     data-caption-id={caption.sample_id}
     data-testid="caption-field-row"
     data-active={isActive ? 'true' : undefined}
+    data-repeat-colored={repeatGroupColor ? 'true' : undefined}
     onclick={onSelect}
 >
     <div class="flex flex-1 flex-col gap-1">
@@ -145,6 +162,9 @@
                 <span class="text-sm">{caption.text}</span>
             {/if}
         </div>
-        <CaptionMatchScore metadataDict={caption.metadata_dict} />
+        <div class="flex flex-wrap gap-1.5">
+            <CaptionMatchScore metadataDict={caption.metadata_dict} />
+            <CaptionRepetitionBadge metadataDict={caption.metadata_dict} />
+        </div>
     </div>
 </div>
