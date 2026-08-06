@@ -10,21 +10,35 @@
     } from '../AnnotationsGrid.helpers';
 
     interface Props {
+        /** The annotation with its parent sample data. */
         annotation: AnnotationWithPayloadView;
+        /** Position of this tile within the grid, used for shift-click range selection. */
         index: number;
+        /** Width of the grid tile in pixels. */
         width: number;
+        /** Height of the grid tile in pixels. */
         height: number;
+        /** Positioning style forwarded to the underlying GridItem. */
         style?: string;
+        /** Whether this tile is currently selected. */
         selected: boolean;
+        /** Whether to show the annotation label text on the tile. */
         showLabel: boolean;
+        /** Collection version cache-buster (same as AnnotationImageGridItem). */
         cachedCollectionVersion: string;
         /** Whether the current user is allowed to see the selection overlay. */
         canShowSelectionOverlay: boolean;
+        /** Crop geometry reported by the tile, once available; undefined until then. */
         cropWindow: CropWindow | undefined;
+        /** Rendered crop blob URL, populated lazily once a drag actually starts. */
         cropUrl: string | undefined;
+        /** Reports full-image crop geometry for drag-to-search (same contract as AnnotationItem). */
         onCropWindowChange: (annotationId: string, window: CropWindow | null) => void;
+        /** Fires once a drag on this tile passes the movement threshold. */
         onDragStart: (annotationId: string) => void;
+        /** Fires on click or Enter/Space; `event.shiftKey` drives range selection. */
         onSelect: (event: MouseEvent | KeyboardEvent, annotationId: string, index: number) => void;
+        /** Fires on double-click, navigating to the sample detail view. */
         onDoubleClick: (annotationId: string) => void;
     }
 
