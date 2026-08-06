@@ -21,7 +21,7 @@
 
     let { tags, collectionId, sampleId, onRefetch = () => {} }: Props = $props();
 
-    const { removeTagFromSample } = useRemoveTagFromSample({ collectionId });
+    const { removeTagFromSample } = useRemoveTagFromSample({ getCollectionId: () => collectionId });
 
     async function handleRemoveTag(tagId: string) {
         try {
@@ -47,10 +47,10 @@
         addExisting,
         createAndAdd
     } = useAddTagToSample({
-        collectionId,
-        sampleId,
+        getCollectionId: () => collectionId,
+        getSampleId: () => sampleId,
         getTagKind: () => tagKind,
-        onRefetch,
+        onRefetch: (...args) => onRefetch(...args),
         onTagsRefetch: () => loadTags()
     });
 

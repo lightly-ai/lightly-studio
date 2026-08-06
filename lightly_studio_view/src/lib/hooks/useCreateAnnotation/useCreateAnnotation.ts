@@ -11,12 +11,12 @@ import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationC
 import { usePostHog } from '$lib/hooks';
 import { page } from '$app/state';
 
-export const useCreateAnnotation = ({ collectionId }: { collectionId: string }) => {
+export const useCreateAnnotation = ({ getCollectionId }: { getCollectionId: () => string }) => {
     const mutation = createMutation(() => createAnnotationMutation());
     const client = useQueryClient();
     const { trackEvent } = usePostHog();
 
-    const refetch = () => {
+    const refetch = (collectionId: string) => {
         client.invalidateQueries({
             queryKey: useImageAnnotationCountsQueryKey
         });
@@ -29,6 +29,7 @@ export const useCreateAnnotation = ({ collectionId }: { collectionId: string }) 
 
     const createAnnotation = (inputs: AnnotationCreateInput) =>
         new Promise<CreateAnnotationResponse>((resolve, reject) => {
+            const collectionId = getCollectionId();
             mutation.mutate(
                 {
                     path: {
@@ -38,7 +39,7 @@ export const useCreateAnnotation = ({ collectionId }: { collectionId: string }) 
                 },
                 {
                     onSuccess: (data) => {
-                        refetch();
+                        refetch(collectionId);
                         trackEvent('annotation_created', {
                             collection_id: collectionId,
                             annotation_type: data.annotation_type,

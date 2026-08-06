@@ -14,7 +14,7 @@
     const { createClassifier } = useClassifiers();
 
     let classifierName = $state('');
-    let collectionId = page.params.collection_id;
+    let collectionId = page.params.collection_id!;
     let isSubmitting = $state(false);
     let submitError = $state<string | null>(null);
 
