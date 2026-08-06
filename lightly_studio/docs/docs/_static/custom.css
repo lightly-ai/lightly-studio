@@ -328,18 +328,22 @@ code.doc-symbol-module {
   mask-size: contain;
 }
 
-/* Pin the badge to the top-right of its member block so it sits on the
-   heading row instead of below the summary. The badge is anchored to its own
-   `.doc-object` wrapper, so class and method badges each align to their own
-   heading. */
+/* Pin the badge to the left of its member heading so it sits before the
+   class/method name. The badge is anchored to its own `.doc-object` wrapper,
+   so class and method badges each align to their own heading. The heading is
+   indented to make room for the badge; the signature and body stay full width. */
 .md-typeset .doc-object {
   position: relative;
+}
+
+.md-typeset .doc-heading {
+  padding-left: 3.4rem;
 }
 
 .md-typeset .doc-badge--beta {
   position: absolute;
   top: 0.35rem;
-  right: 0;
+  left: 0;
 }
 
 /* The badge is now out of flow, so collapse the otherwise-empty paragraph it
