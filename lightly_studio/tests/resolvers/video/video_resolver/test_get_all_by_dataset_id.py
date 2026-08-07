@@ -2,6 +2,7 @@ import pytest
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.range import FloatRange
 from lightly_studio.resolvers import (
@@ -14,8 +15,10 @@ from lightly_studio.resolvers.metadata_resolver.metadata_filter import MetadataF
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from tests.helpers_resolvers import (
+    AnnotationDetails,
     create_annotation,
     create_annotation_label,
+    create_annotations,
     create_collection,
     create_embedding_model,
     create_sample_embedding,
@@ -507,3 +510,41 @@ def test_get_all_by_collection_id__with_embedding_sort(db_session: Session) -> N
     assert result.samples[0].similarity_score == pytest.approx(1.0, abs=0.01)
     assert result.samples[0].similarity_score >= result.samples[1].similarity_score
     assert result.samples[1].similarity_score >= result.samples[2].similarity_score
+
+
+def test_get_all_by_collection_id__with_classification_annotation(db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="car",
+    )
+    video_ids = create_videos(
+        session=db_session,
+        collection_id=collection.collection_id,
+        videos=[VideoStub(path="/path/to/sample1.mp4")],
+    )
+    create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=video_ids[0],
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+            )
+        ],
+    )
+
+    result = video_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection.collection_id,
+    )
+
+    assert len(result.samples) == 1
+    video = result.samples[0]
+    assert len(video.sample.annotations) == 1
+    assert video.sample.annotations[0].annotation_type == AnnotationType.CLASSIFICATION
+    assert video.sample.annotations[0].annotation_label.annotation_label_name == "car"
+    assert video.sample.annotations[0].object_detection_details is None
+    assert video.sample.annotations[0].segmentation_details is None

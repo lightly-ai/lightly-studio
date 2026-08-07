@@ -3,6 +3,29 @@ import { cocoDataset } from './fixtures';
 import fs from 'node:fs/promises';
 
 test.describe('Export Annotations', () => {
+    test('Download classification annotations export CSV', async ({ page }) => {
+        await gotoFirstPage(page);
+
+        await page.getByTestId('menu-trigger').click();
+        await page.getByTestId('menu-export').click();
+        await page.getByTestId('export-type-select').click();
+        await page.getByRole('option', { name: 'Image Classifications (CSV)' }).click();
+
+        const downloadButton = page.getByTestId('submit-button-classifications');
+        const [download] = await Promise.all([
+            page.context().waitForEvent('download'),
+            downloadButton.click()
+        ]);
+
+        expect(download.suggestedFilename()).toBe(cocoDataset.classificationExportFilename);
+        const filePath = await download.path();
+        if (!filePath) throw new Error('Download path is undefined');
+        const csvText = await fs.readFile(filePath, 'utf-8');
+        expect(csvText.split(/\r?\n/, 1)[0]).toBe(
+            'file_path_abs,class_name,confidence,annotation_source'
+        );
+    });
+
     test('Download annotations export JSON', async ({ page }) => {
         await gotoFirstPage(page);
 
