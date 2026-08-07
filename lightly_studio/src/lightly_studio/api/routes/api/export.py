@@ -25,7 +25,6 @@ from lightly_studio.export import image_dataset_export, video_dataset_export
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.export_format import ExportFormat
 from lightly_studio.resolvers import collection_resolver, export_job_resolver
-from lightly_studio.resolvers.collection_resolver.export import ExportFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
@@ -35,16 +34,10 @@ logger = logging.getLogger(__name__)
 
 
 class ExportBody(BaseModel):
-    """body parameters for including or excluding tag_ids or sample_ids."""
+    """Body parameters for exporting samples."""
 
-    include: ExportFilter | None = Field(
-        None, description="include filter for sample_ids or tag_ids"
-    )
-    exclude: ExportFilter | None = Field(
-        None, description="exclude filter for sample_ids or tag_ids"
-    )
     collection_filter: ImageFilter | None = Field(
-        None, description="active view filter applied on top of include/exclude"
+        None, description="Active view filter for selecting samples to export."
     )
 
 
@@ -90,8 +83,6 @@ def export_collection_stats(
     return collection_resolver.get_filtered_samples_count(
         session=session,
         collection_id=collection.collection_id,
-        include=body.include,
-        exclude=body.exclude,
         collection_filter=body.collection_filter,
     )
 
@@ -110,8 +101,6 @@ def export_collection_prepare(
     exported = collection_resolver.export(
         session=session,
         collection_id=collection.collection_id,
-        include=body.include,
-        exclude=body.exclude,
         collection_filter=body.collection_filter,
     )
 
