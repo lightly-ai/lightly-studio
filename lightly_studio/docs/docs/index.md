@@ -58,8 +58,8 @@ This downloads the COCO example dataset on the first run (skipped on subsequent 
 and starts the GUI server. Click the printed URL to open it in your browser. Use
 `--force-download` to re-fetch the dataset, or `--port <N>` to serve on a custom port.
 
-The examples below let you load your own data. They download the required example data the first
-time you run them.
+The examples below use the same example dataset by default, downloaded on the first run. Point
+them at your own image, video, or YOLO/COCO dataset by changing the input path.
 
 === "COCO Object Detection"
 
