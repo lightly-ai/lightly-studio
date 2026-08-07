@@ -22,11 +22,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- The `cast_to_float` argument of `OrderByMetadataField`. Numerical metadata fields are now
+  detected automatically, so the argument no longer had anything to control. Drop it from any
+  call: `OrderByMetadataField("score", cast_to_float=True)` becomes `OrderByMetadataField("score")`.
+
 ### Fixed
 
 - Sorting by a numeric metadata field now orders numerically without the caller having to
-  declare the field type. Previously `9` sorted after `10`, unless `cast_to_float=True` was
-  passed to `OrderByMetadataField`.
+  declare the field type. Previously `9` sorted after `10` unless the caller passed
+  `cast_to_float=True`.
 
 - Grid annotation overlays now render at tile resolution to bound memory usage for large source images.
 - Annotation class names no longer overflow in class selection.

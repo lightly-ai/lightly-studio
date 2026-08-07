@@ -815,7 +815,7 @@ def test_get_all_by_collection_id__sort_by_metadata_field_asc(db_session: Sessio
     result = image_resolver.get_all_by_collection_id(
         session=db_session,
         collection_id=collection_id,
-        order_by=[OrderByMetadataField("score", cast_to_float=True)],
+        order_by=[OrderByMetadataField("score")],
     )
 
     assert [s.file_name for s in result.samples] == ["b.png", "c.png", "a.png"]

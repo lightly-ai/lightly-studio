@@ -387,7 +387,7 @@ def test_get_adjacent_images__sort_by_metadata_field(db_session: Session) -> Non
         session=db_session,
         sample_id=image_c.sample_id,
         collection_id=collection_id,
-        order_by=[OrderByMetadataField("score", cast_to_float=True)],
+        order_by=[OrderByMetadataField("score")],
     )
 
     assert result is not None

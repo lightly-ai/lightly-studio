@@ -102,7 +102,6 @@ def test_sort_field_expr_to_order_by__metadata_ascending() -> None:
     assert isinstance(order_by, OrderByMetadataField)
     assert order_by.field_name == "brightness"
     assert order_by.ascending is True
-    assert order_by.cast_to_float is False
 
 
 def test_sort_field_expr_to_order_by__metadata_descending() -> None:
@@ -115,7 +114,6 @@ def test_sort_field_expr_to_order_by__metadata_descending() -> None:
     assert isinstance(order_by, OrderByMetadataField)
     assert order_by.field_name == "score"
     assert order_by.ascending is False
-    assert order_by.cast_to_float is False
 
 
 def test_sort_field_expr_to_order_by__metadata_arbitrary_field() -> None:
@@ -133,10 +131,10 @@ def test_sort_field_expr_to_order_by__metadata_arbitrary_field() -> None:
 def test_sort_field_expr_to_order_by__metadata_ignores_is_numeric(
     is_numeric: bool | None,
 ) -> None:
-    """Test that the deprecated is_numeric field no longer drives the float cast.
+    """Test that the deprecated is_numeric field no longer affects the translation.
 
-    Whatever an older client sends, the cast is resolved from the collection's stored
-    metadata schema when the query runs, so translation always leaves it off.
+    Whatever an older client sends, the same expression comes out; numerical fields
+    are detected in SQL from the collection's stored metadata schema.
     """
     expr = SortFieldExpr(
         source=SortFieldSource.metadata,
@@ -146,7 +144,8 @@ def test_sort_field_expr_to_order_by__metadata_ignores_is_numeric(
     )
     order_by = sort_field_expr_to_order_by(expr)
     assert isinstance(order_by, OrderByMetadataField)
-    assert order_by.cast_to_float is False
+    assert order_by.field_name == "score"
+    assert order_by.ascending is True
 
 
 def test_sort_expr_to_order_by__evaluation_metric_ascending() -> None:

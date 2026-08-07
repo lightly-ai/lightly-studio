@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pytest
 from duckdb_engine import Dialect as DuckDBDialect
 from sqlmodel import select
 
@@ -71,119 +70,100 @@ class TestOrderByField:
 class TestOrderByMetadataField:
     dialect = DuckDBDialect()
 
-    def test_init__no_cast_by_default(self) -> None:
-        """Test that the float cast is off until it is resolved from the schema."""
-        assert OrderByMetadataField("score").cast_to_float is False
-
-    @pytest.mark.parametrize(
-        ("metadata_type", "expected_cast_to_float"),
-        [
-            ("integer", True),
-            ("float", True),
-            ("string", False),
-            ("boolean", False),
-            ("list", False),
-            ("dict", False),
-            (None, False),  # Field absent from the schema.
-        ],
+    _NUMERIC_KEY = (
+        "cast(case when (json_extract_string(metadata_1.metadata_schema, '/brightness')"
+        " in ('integer', 'float')) then json_extract(metadata_1.data, '$.brightness') end"
+        " as float)"
     )
-    def test_infer_cast_to_float(
-        self, metadata_type: str | None, expected_cast_to_float: bool
-    ) -> None:
-        """Test that only numerical schema types enable the float cast."""
-        # Start from the opposite value so the assertion cannot pass by accident.
-        order_by = OrderByMetadataField("score", cast_to_float=not expected_cast_to_float)
+    _RAW_KEY = "json_extract(metadata_1.data, '$.brightness')"
 
-        order_by.infer_cast_to_float(metadata_type=metadata_type)
-
-        assert order_by.cast_to_float is expected_cast_to_float
+    def _compile(self, query: object) -> str:
+        return str(
+            query.compile(  # type: ignore[attr-defined]
+                dialect=self.dialect, compile_kwargs={"literal_binds": True}
+            )
+        ).lower()
 
     def test_apply_joins__metadata_join(self) -> None:
         """Test that apply_joins adds the metadata outer join."""
         query = select(ImageTable)
-        order_by = OrderByMetadataField("brightness", cast_to_float=False)
+        order_by = OrderByMetadataField("brightness")
 
         returned_query = order_by.apply_joins(query)
 
-        sql = str(
-            returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
-        ).lower()
-        assert "left outer join metadata" in sql
+        assert "left outer join metadata" in self._compile(returned_query)
 
     def test_apply_with_order_value(self) -> None:
-        """Test that apply_with_order_value selects the labeled JSON extract expression."""
+        """Test that the labeled order value is the numerical value of the field."""
         query = select(ImageTable)
-        order_by = OrderByMetadataField("score", cast_to_float=True)
+        order_by = OrderByMetadataField("brightness")
 
         returned_query = order_by.apply_with_order_value(query)
 
-        sql = str(
-            returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
-        ).lower()
+        sql = self._compile(returned_query)
         assert "left outer join metadata" in sql
-        assert "json_extract(metadata_1.data, '$.score')" in sql
-        assert f"as {ORDER_VALUE_LABEL}" in sql
+        assert f"{self._NUMERIC_KEY} as {ORDER_VALUE_LABEL}" in sql
 
     def test_apply__default_ascending(self) -> None:
-        """Test that default ordering is ascending."""
+        """Test that the numerical key leads and the raw value breaks ties, both ascending."""
         query = select(ImageTable)
-        order_by = OrderByMetadataField("brightness", cast_to_float=False)
+        order_by = OrderByMetadataField("brightness")
 
         returned_query = order_by.apply(query)
 
-        sql = str(
-            returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
-        ).lower()
-        assert "order by json_extract(metadata_1.data, '$.brightness') asc" in sql
+        assert f"order by {self._NUMERIC_KEY} asc, {self._RAW_KEY} asc" in self._compile(
+            returned_query
+        )
 
     def test_apply__descending(self) -> None:
-        """Test descending ordering via desc() method."""
+        """Test that desc() applies to every sort key, not just the first."""
         query = select(ImageTable)
-        order_by = OrderByMetadataField("brightness", cast_to_float=False).desc()
+        order_by = OrderByMetadataField("brightness").desc()
 
         returned_query = order_by.apply(query)
 
-        sql = str(
-            returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
-        ).lower()
-        assert "order by json_extract(metadata_1.data, '$.brightness') desc" in sql
+        assert f"order by {self._NUMERIC_KEY} desc, {self._RAW_KEY} desc" in self._compile(
+            returned_query
+        )
 
     def test_apply__desc_then_asc(self) -> None:
         """Test that desc().asc() returns to ascending order."""
         query = select(ImageTable)
-        order_by = OrderByMetadataField("brightness", cast_to_float=False).desc().asc()
+        order_by = OrderByMetadataField("brightness").desc().asc()
 
         returned_query = order_by.apply(query)
 
-        sql = str(
-            returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
-        ).lower()
-        assert "order by json_extract(metadata_1.data, '$.brightness') asc" in sql
+        assert f"order by {self._NUMERIC_KEY} asc, {self._RAW_KEY} asc" in self._compile(
+            returned_query
+        )
 
-    def test_apply__cast_to_float(self) -> None:
-        """Test that cast_to_float produces a CAST expression in the ORDER BY clause."""
+    def test_apply__cast_wraps_the_case(self) -> None:
+        """Test that the cast is applied to the CASE result, not inside a branch.
+
+        A non-numerical value must never reach the cast, whatever order the engine
+        chooses to evaluate in.
+        """
         query = select(ImageTable)
-        order_by = OrderByMetadataField("score", cast_to_float=True)
+        order_by = OrderByMetadataField("brightness")
 
         returned_query = order_by.apply(query)
 
-        sql = str(
-            returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
+        sql = self._compile(returned_query)
+        assert "cast(case when" in sql
+        assert "case when" not in sql.replace("cast(case when", "")
+
+    def test_to_column_elements__two_keys(self) -> None:
+        """Test that a metadata sort contributes both keys, without any JOIN."""
+        order_by = OrderByMetadataField("brightness")
+
+        elements = order_by.to_column_elements()
+
+        assert len(elements) == 2
+        sql = " ".join(
+            str(element.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True}))
+            for element in elements
         ).lower()
-        assert "order by cast(json_extract(metadata_1.data, '$.score') as float) asc" in sql
-
-    def test_apply__no_cast_to_float(self) -> None:
-        """Test that an unresolved sort orders on the raw JSON value."""
-        query = select(ImageTable)
-        order_by = OrderByMetadataField("score")
-
-        returned_query = order_by.apply(query)
-
-        sql = str(
-            returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
-        ).lower()
-        assert "order by json_extract(metadata_1.data, '$.score') asc" in sql
-        assert "cast(" not in sql
+        assert "join" not in sql
 
 
 class TestOrderByEvaluationMetricField:
@@ -242,11 +222,11 @@ class TestOrderByEvaluationMetricField:
         ).lower()
         assert "order by evaluation_sample_metric_1.value asc" in sql
 
-    def test_to_column_element__ascending(self) -> None:
-        """Test that to_column_element returns only the column element without any JOIN."""
+    def test_to_column_elements__ascending(self) -> None:
+        """Test that to_column_elements returns only the column element without any JOIN."""
         order_by = OrderByEvaluationMetricField("run1", "score")
 
-        col_element = order_by.to_column_element()
+        (col_element,) = order_by.to_column_elements()
 
         sql = str(col_element.compile(compile_kwargs={"literal_binds": True})).lower()
         assert "evaluation_sample_metric_1.value asc" in sql
