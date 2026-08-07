@@ -145,26 +145,38 @@ describe('useExportSamplesCount', () => {
         await waitFor(() => expect(get(count)).toBe(7));
     });
 
-    it('calls the API with collectionFilter only', async () => {
+    it('resets state without requesting stats when only collectionFilter remains', async () => {
         exportCollectionStats.mockResolvedValue({ data: 4 });
-        const collectionFilter = { score: { min: 0.8, max: 1.0 } };
+        const collectionFilter = { width: { min: 800, max: 1600 } };
 
-        const { count } = renderHook({
+        let hookResult: HookResult | undefined;
+        const onReady = (result: HookResult) => {
+            hookResult = result;
+        };
+        const { rerender } = render(UseExportSamplesCountHarness, {
             collectionId: 'col-1',
-            collectionFilter
+            includeFilter: { tag_ids: ['tag-1'] },
+            collectionFilter,
+            onReady
+        });
+        flushSync();
+        if (!hookResult) throw new Error('UseExportSamplesCountHarness did not initialize');
+        const { count, isLoading, error } = hookResult;
+
+        await waitFor(() => expect(get(count)).toBe(4));
+
+        await rerender({
+            collectionId: 'col-1',
+            includeFilter: undefined,
+            collectionFilter,
+            onReady
         });
 
         await waitFor(() => {
-            expect(exportCollectionStats).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    body: {
-                        include: undefined,
-                        exclude: undefined,
-                        collection_filter: collectionFilter
-                    }
-                })
-            );
+            expect(exportCollectionStats).toHaveBeenCalledTimes(1);
+            expect(get(count)).toBe(0);
+            expect(get(isLoading)).toBe(false);
+            expect(get(error)).toBeUndefined();
         });
-        await waitFor(() => expect(get(count)).toBe(4));
     });
 });
