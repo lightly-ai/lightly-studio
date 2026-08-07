@@ -17,8 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Deprecated
 
 - The `is_numeric` field on sort expressions in the images-list and adjacent-samples request
-  bodies is ignored and will be removed in the next major version. The value type is now taken
-  from the collection's metadata schema.
+  bodies is ignored and will be removed in a future release. The value type is now taken from
+  the collection's metadata schema. Requests may keep sending the field until then.
 
 ### Removed
 
