@@ -49,7 +49,7 @@ from tests.helpers_resolvers import (
     create_images,
     create_tag,
 )
-from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
+from tests.resolvers.video.helpers import VideoStub, create_video, create_video_with_frames
 
 
 def test_export_collection_coco(
@@ -203,6 +203,51 @@ def test_export_collection_classifications_csv__annotation_source(
 
     rows = list(csv.DictReader(io.StringIO(response.text)))
     assert [row["annotation_source"] for row in rows] == ["selected"]
+
+
+def test_export_collection_classifications_csv__video(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    video = create_video(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="/data/video.mp4"),
+    )
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="cat",
+    )
+    create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=video.sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+                confidence=0.75,
+            )
+        ],
+        collection_name="model",
+    )
+
+    response = test_client.get(
+        f"/api/collections/{collection.collection_id}/export/annotations",
+        params={"export_format": "classification_csv"},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert list(csv.DictReader(io.StringIO(response.text))) == [
+        {
+            "file_path_abs": "/data/video.mp4",
+            "class_name": "cat",
+            "confidence": "0.75",
+            "annotation_source": "model",
+        }
+    ]
 
 
 def test_export_collection_yolo(
@@ -970,6 +1015,77 @@ def test_export_collection_annotations_prepare__classification_csv(
             "class_name": "cat",
             "confidence": "0.5",
             "annotation_source": "model",
+        }
+    ]
+
+
+def test_export_collection_annotations_prepare__video_classification_filter(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    included = create_video(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="/data/included.mp4"),
+    )
+    excluded = create_video(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="/data/excluded.mp4"),
+    )
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="cat",
+    )
+    selected = create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+            )
+            for sample_id in (included.sample_id, excluded.sample_id)
+        ],
+        collection_name="selected",
+    )
+    create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=included.sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+            )
+        ],
+        collection_name="excluded-source",
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/annotations/prepare",
+        json={
+            "export_format": "classification_csv",
+            "annotation_collection_id": str(selected[0].annotation_collection_id),
+            "video_filter": {
+                "filter_type": "video",
+                "sample_filter": {"sample_ids": [str(included.sample_id)]},
+            },
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    export_job = db_session.get(ExportJobTable, UUID(response.json()["export_key"]))
+    assert export_job is not None
+    assert list(csv.DictReader(io.StringIO(Path(export_job.export_path).read_text()))) == [
+        {
+            "file_path_abs": "/data/included.mp4",
+            "class_name": "cat",
+            "confidence": "",
+            "annotation_source": "selected",
         }
     ]
 
