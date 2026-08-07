@@ -170,10 +170,8 @@ class OrderByMetadataField(OrderByExpression):
 
     def _order_value_expression(self) -> ColumnElement[Any]:
         """Return the numerical value of the field, or NULL if it is not numerical."""
-        # The CAST wraps the CASE rather than sitting inside it, so the cast operand is
-        # NULL for exactly the rows that would fail it, whatever order the engine
-        # evaluates in. Double, not Float: DuckDB's FLOAT is single precision and
-        # silently mangles large values such as epoch milliseconds.
+        # The CAST wraps the CASE so its operand is NULL for rows that would fail it.
+        # Double, not Float: DuckDB's FLOAT is single precision.
         return sqlalchemy.cast(
             sqlalchemy.case(
                 (self._is_numerical_field(), self._extracted_value()),
@@ -183,28 +181,16 @@ class OrderByMetadataField(OrderByExpression):
         )
 
     def _sort_key_expressions(self) -> list[ColumnElement[Any]]:
-        """Return the numerical key, then the raw value.
-
-        The numerical key is NULL for every row of a non-numerical field, so it
-        cannot affect their order and the raw value decides.
-        """
+        """Return the numerical key, NULL for non-numerical fields, then the raw value."""
         return [self._order_value_expression(), self._extracted_value()]
 
     def to_column_elements(self) -> list[ColumnElement[Any]]:
-        """Pin NULLs last so both dialects agree and ``desc()`` reverses fully.
-
-        DuckDB puts NULLs last in both directions while PostgreSQL puts them first
-        when descending, which would otherwise make samples without a value land in
-        different places per backend.
-        """
+        """Pin NULLs last; the two dialects disagree on where they go by default."""
         return [sqlalchemy.nullslast(element) for element in super().to_column_elements()]
 
     def _is_numerical_field(self) -> ColumnElement[bool]:
-        """Return whether ``metadata_schema`` records this field as a number.
-
-        Looked up with the same path syntax used to read the value, so the two can
-        never disagree and hand a non-numerical value to the cast.
-        """
+        """Return whether ``metadata_schema`` records this field as a number."""
+        # Same path syntax as the value, so the two cannot disagree.
         return db_json.json_extract(
             column=self._metadata_alias.metadata_schema,
             field=self.field_name,
