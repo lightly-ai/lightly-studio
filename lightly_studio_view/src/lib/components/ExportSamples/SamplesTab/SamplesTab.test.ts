@@ -45,19 +45,4 @@ describe('SamplesTab', () => {
 
         expect(onDownloadClick).toHaveBeenCalledOnce();
     });
-
-    it('calls onDownloadClick when the download button is clicked', async () => {
-        tagsStore = writable([{ tag_id: 'tag-1', name: 'My Tag', kind: 'sample' }]);
-        const onDownloadClick = vi.fn();
-        render(SamplesTab, { props: { onDownloadClick } });
-
-        const user = userEvent.setup();
-        await user.click(screen.getByText('Select a tag to export its samples (required)'));
-        const option = await waitFor(() => screen.getByRole('option', { name: 'My Tag' }));
-        await user.click(option);
-        await waitFor(() => expect(screen.getByTestId('submit-button-samples')).not.toBeDisabled());
-        await fireEvent.click(screen.getByTestId('submit-button-samples'));
-
-        expect(onDownloadClick).toHaveBeenCalledOnce();
-    });
 });
