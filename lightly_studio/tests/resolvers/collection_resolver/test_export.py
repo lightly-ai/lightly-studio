@@ -76,9 +76,7 @@ def test_get_filtered_samples_count__collection_filter__returns_matching_count(
     create_image(session=db_session, collection_id=collection_id, file_path_abs="/path/b.png")
     create_image(session=db_session, collection_id=collection_id, file_path_abs="/path/c.png")
 
-    collection_filter = ImageFilter(
-        sample_filter=SampleFilter(sample_ids=[image_a.sample_id])
-    )
+    collection_filter = ImageFilter(sample_filter=SampleFilter(sample_ids=[image_a.sample_id]))
     count = collection_resolver.get_filtered_samples_count(
         session=db_session,
         collection_id=collection_id,
