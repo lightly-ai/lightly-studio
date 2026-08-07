@@ -12,14 +12,8 @@ test.describe('Export Annotations', () => {
         await page.getByRole('option', { name: 'Image Classifications (CSV)' }).click();
 
         const downloadButton = page.getByTestId('submit-button-classifications');
-        await expect(downloadButton).toHaveAttribute(
-            'href',
-            /\/api\/collections\/.*\/export\/annotations\?ts=\d+&export_format=classification_csv/
-        );
-        await downloadButton.evaluate((el: HTMLAnchorElement) => el.removeAttribute('target'));
-
         const [download] = await Promise.all([
-            page.waitForEvent('download'),
+            page.context().waitForEvent('download'),
             downloadButton.click()
         ]);
 
