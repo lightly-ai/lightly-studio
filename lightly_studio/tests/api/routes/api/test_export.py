@@ -30,16 +30,12 @@ from lightly_studio.resolvers import (
     collection_resolver,
     export_job_resolver,
     object_track_resolver,
-    tag_resolver,
 )
 from tests.helpers_resolvers import (
-    ImageStub,
     create_annotation_label,
     create_caption,
     create_collection,
     create_image,
-    create_images,
-    create_tag,
 )
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
@@ -329,71 +325,6 @@ def test_export_collection_captions(
     )
 
 
-def test_export_collection_samples__image_filter__tag__returns_intersection(
-    db_session: Session, test_client: TestClient
-) -> None:
-    # Tag covers A and B; ImageFilter covers B and C → export returns B only.
-    collection_id = create_collection(session=db_session).collection_id
-    image_a = create_image(
-        session=db_session, collection_id=collection_id, file_path_abs="path/a.png"
-    )
-    image_b = create_image(
-        session=db_session, collection_id=collection_id, file_path_abs="path/b.png"
-    )
-    image_c = create_image(
-        session=db_session, collection_id=collection_id, file_path_abs="path/c.png"
-    )
-
-    tag = create_tag(session=db_session, collection_id=collection_id)
-    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=image_a.sample)
-    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=image_b.sample)
-
-    response = test_client.post(
-        f"/api/collections/{collection_id}/export",
-        json={
-            "include": {"tag_ids": [str(tag.tag_id)]},
-            "collection_filter": {
-                "filter_type": "image",
-                "sample_filter": {"sample_ids": [str(image_b.sample_id), str(image_c.sample_id)]},
-            },
-        },
-    )
-
-    assert response.status_code == HTTP_STATUS_OK
-    assert response.text == image_b.file_path_abs
-
-
-def test_export_collection_samples(db_session: Session, test_client: TestClient) -> None:
-    client = test_client
-    collection_id = create_collection(
-        session=db_session, collection_name="example_collection"
-    ).collection_id
-    images = create_images(
-        db_session=db_session,
-        collection_id=collection_id,
-        images=[
-            ImageStub(path="path/to/image0.jpg"),
-            ImageStub(path="path/to/image1.jpg"),
-            ImageStub(path="path/to/image2.jpg"),
-        ],
-    )
-
-    # Tag two samples.
-    tag = create_tag(session=db_session, collection_id=collection_id)
-    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=images[0].sample)
-    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=images[2].sample)
-
-    # Export the collection
-    response = client.post(
-        f"/api/collections/{collection_id}/export",
-        json={"include": {"tag_ids": [str(tag.tag_id)]}},
-    )
-    assert response.status_code == HTTP_STATUS_OK
-
-    lines = response.text.split("\n")
-    assert lines == ["path/to/image0.jpg", "path/to/image2.jpg"]
-
-
 def test_export_collection_youtube_vis(
     db_session: Session,
     test_client: TestClient,
@@ -526,7 +457,7 @@ def test_export_collection_prepare(
 
     response = test_client.post(
         f"/api/collections/{collection.collection_id}/export/prepare",
-        json={"include": {"sample_ids": [str(image_a.sample_id), str(image_b.sample_id)]}},
+        json={},
     )
 
     assert response.status_code == HTTP_STATUS_OK
@@ -538,46 +469,7 @@ def test_export_collection_prepare(
     assert file_content == "path/a.png\npath/b.png"
 
 
-def test_export_collection_prepare__with_tag_filter(
-    db_session: Session,
-    test_client: TestClient,
-) -> None:
-    collection = create_collection(session=db_session)
-    image_a = create_image(
-        session=db_session,
-        collection_id=collection.collection_id,
-        file_path_abs="path/a.png",
-    )
-    create_image(
-        session=db_session,
-        collection_id=collection.collection_id,
-        file_path_abs="path/b.png",
-    )
-    image_c = create_image(
-        session=db_session,
-        collection_id=collection.collection_id,
-        file_path_abs="path/c.png",
-    )
-
-    tag = create_tag(session=db_session, collection_id=collection.collection_id)
-    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=image_a.sample)
-    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=image_c.sample)
-
-    response = test_client.post(
-        f"/api/collections/{collection.collection_id}/export/prepare",
-        json={"include": {"tag_ids": [str(tag.tag_id)]}},
-    )
-
-    assert response.status_code == HTTP_STATUS_OK
-    export_key = UUID(response.json()["export_key"])
-
-    export_job = db_session.get(ExportJobTable, export_key)
-    assert export_job is not None
-    file_content = Path(export_job.export_path).read_text()
-    assert file_content == "path/a.png\npath/c.png"
-
-
-def test_export_collection_prepare__exclude_filter(
+def test_export_collection_prepare__with_collection_filter(
     db_session: Session,
     test_client: TestClient,
 ) -> None:
@@ -595,7 +487,12 @@ def test_export_collection_prepare__exclude_filter(
 
     response = test_client.post(
         f"/api/collections/{collection.collection_id}/export/prepare",
-        json={"exclude": {"sample_ids": [str(image_a.sample_id)]}},
+        json={
+            "collection_filter": {
+                "filter_type": "image",
+                "sample_filter": {"sample_ids": [str(image_a.sample_id)]},
+            }
+        },
     )
 
     assert response.status_code == HTTP_STATUS_OK
@@ -603,7 +500,7 @@ def test_export_collection_prepare__exclude_filter(
 
     export_job = db_session.get(ExportJobTable, export_key)
     assert export_job is not None
-    assert Path(export_job.export_path).read_text() == "path/b.png"
+    assert Path(export_job.export_path).read_text() == "path/a.png"
 
 
 def test_export_download__not_found_returns_404(

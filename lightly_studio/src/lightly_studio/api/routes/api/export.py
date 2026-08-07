@@ -13,7 +13,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path
-from fastapi.responses import PlainTextResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlmodel import Field, Session
 
@@ -26,7 +26,6 @@ from lightly_studio.export import image_dataset_export, video_dataset_export
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.export_format import ExportFormat
 from lightly_studio.resolvers import collection_resolver, export_job_resolver
-from lightly_studio.resolvers.collection_resolver.export import ExportFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
@@ -196,16 +195,10 @@ def export_collection_captions(
 
 
 class ExportBody(BaseModel):
-    """body parameters for including or excluding tag_ids or sample_ids."""
+    """Body parameters for exporting samples."""
 
-    include: ExportFilter | None = Field(
-        None, description="include filter for sample_ids or tag_ids"
-    )
-    exclude: ExportFilter | None = Field(
-        None, description="exclude filter for sample_ids or tag_ids"
-    )
     collection_filter: ImageFilter | None = Field(
-        None, description="active view filter applied on top of include/exclude"
+        None, description="Active view filter for selecting samples to export."
     )
 
 
@@ -235,43 +228,6 @@ class ExportCaptionsPrepareBody(BaseModel):
     image_filter: ImageFilter | None = None
 
 
-# This endpoint should be a GET, however due to the potential huge size
-# of sample_ids, it is a POST request to avoid URL length limitations.
-# A body with a GET request is supported by fastAPI however it has undefined
-# behavior: https://fastapi.tiangolo.com/tutorial/body/
-@export_router.post(
-    "/export",
-)
-def export_collection_to_absolute_paths(
-    session: SessionDep,
-    collection: Annotated[
-        CollectionTable,
-        Path(title="collection Id"),
-        Depends(collection_api.get_and_validate_collection_id),
-    ],
-    body: ExportBody,
-) -> PlainTextResponse:
-    """Export collection from the database."""
-    # export collection to absolute paths
-    exported = collection_resolver.export(
-        session=session,
-        collection_id=collection.collection_id,
-        include=body.include,
-        exclude=body.exclude,
-        collection_filter=body.collection_filter,
-    )
-
-    # Create a response with the exported data
-    response = PlainTextResponse("\n".join(exported))
-
-    # Add the Content-Disposition header to force download
-    filename = f"{collection.name}_exported_{datetime.now(timezone.utc)}.txt"
-    response.headers["Access-Control-Expose-Headers"] = "Content-Disposition"
-    response.headers["Content-Disposition"] = f"attachment; filename={filename}"
-
-    return response
-
-
 @export_router.post(
     "/export/stats",
 )
@@ -288,8 +244,6 @@ def export_collection_stats(
     return collection_resolver.get_filtered_samples_count(
         session=session,
         collection_id=collection.collection_id,
-        include=body.include,
-        exclude=body.exclude,
         collection_filter=body.collection_filter,
     )
 
@@ -354,8 +308,6 @@ def export_collection_prepare(
     exported = collection_resolver.export(
         session=session,
         collection_id=collection.collection_id,
-        include=body.include,
-        exclude=body.exclude,
         collection_filter=body.collection_filter,
     )
 
