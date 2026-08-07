@@ -85,6 +85,7 @@
     import { GRID_IMAGE_SEARCH_DROP_EVENT, type GridItemDragData } from '$lib/components/GridItem';
     import { readAnnotationEmbedding } from '$lib/api/lightly_studio_local/sdk.gen';
     import { useSearchEmbedding } from '$lib/hooks/useSearchEmbedding/useSearchEmbedding';
+    import { useEmbeddingService } from '$lib/hooks/useEmbeddingService/useEmbeddingService.svelte';
     import { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
     import { clearAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
     import { isPanelVisible } from './panelVisibility';
@@ -165,9 +166,15 @@
     // Instantiate once (not `$derived`) so the active search survives collection changes: the image
     // and annotation tabs are separate collections, and re-creating the hook per collection would
     // reset the preview chip. `collectionId` is read lazily via the getter when a request fires.
+    // Resolves whether this collection's queries must be embedded by a service on the
+    // customer's network instead of by the backend. Probed on collection open so
+    // capabilities are known before the search bar renders.
+    const embeddingService = useEmbeddingService({ getCollectionId: () => collectionId });
+
     const search = useSearchEmbedding({
         getCollectionId: () => collectionId,
-        embedding: textEmbedding
+        embedding: textEmbedding,
+        service: embeddingService
     });
     const searchImage = search.image;
     const searchPending = search.isPending;

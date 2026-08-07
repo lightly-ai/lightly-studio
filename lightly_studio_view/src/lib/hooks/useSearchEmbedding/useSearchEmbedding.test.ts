@@ -31,6 +31,8 @@ const mocks = vi.hoisted(() => {
         clearImage: vi.fn(),
         setPreview: vi.fn(),
         embedText: vi.fn(),
+        embedTextViaService: vi.fn(),
+        embedImageViaService: vi.fn(),
         imageName: createStore<string | undefined>(undefined),
         previewUrl: createStore<string | undefined>(undefined),
         isUploading: createStore(false),
@@ -56,6 +58,11 @@ vi.mock('$lib/hooks/useImageUpload/useImageUpload', () => ({
             setPreview: mocks.setPreview
         };
     }
+}));
+
+vi.mock('$lib/api/embeddingService/embeddingServiceClient', () => ({
+    embedTextViaService: mocks.embedTextViaService,
+    embedImageViaService: mocks.embedImageViaService
 }));
 
 vi.mock('$lib/hooks/useTextEmbedding/useTextEmbedding', () => ({
@@ -211,5 +218,143 @@ describe('useSearchEmbedding', () => {
 
         expect(get(embedding)).toBeUndefined();
         expect(mocks.clearImage).toHaveBeenCalled();
+    });
+
+    describe('with a customer-hosted embedding service', () => {
+        const readyService = () => ({
+            servingUrl: 'https://gpu-box:8123',
+            status: 'ready' as const,
+            canSearchText: true,
+            canSearchImage: true,
+            textDisabledReason: undefined,
+            imageDisabledReason: undefined,
+            reprobe: vi.fn()
+        });
+
+        it('embeds text against the service instead of the backend', async () => {
+            mocks.embedTextViaService.mockResolvedValue([7, 8, 9]);
+            useSearchEmbedding({
+                getCollectionId: () => 'collection-id',
+                embedding,
+                service: readyService()
+            });
+
+            const opts = mocks.useTextEmbeddingOptions as {
+                getEmbed: () => ((p: { text: string }) => Promise<number[]>) | undefined;
+            };
+            const embed = opts.getEmbed();
+            expect(embed).toBeDefined();
+            await expect(embed!({ text: 'a red car' })).resolves.toEqual([7, 8, 9]);
+            expect(mocks.embedTextViaService).toHaveBeenCalledWith({
+                servingUrl: 'https://gpu-box:8123',
+                text: 'a red car'
+            });
+        });
+
+        it('embeds images against the service instead of the backend', async () => {
+            mocks.embedImageViaService.mockResolvedValue([1, 1, 1]);
+            const file = new File(['x'], 'query.png', { type: 'image/png' });
+            useSearchEmbedding({
+                getCollectionId: () => 'collection-id',
+                embedding,
+                service: readyService()
+            });
+
+            const opts = mocks.useImageUploadOptions as {
+                getEmbed: () => ((p: { file: File }) => Promise<number[]>) | undefined;
+            };
+            await expect(opts.getEmbed()!({ file })).resolves.toEqual([1, 1, 1]);
+            expect(mocks.embedImageViaService).toHaveBeenCalledWith({
+                servingUrl: 'https://gpu-box:8123',
+                file
+            });
+        });
+
+        it('uses the backend when the collection has no service', () => {
+            useSearchEmbedding({
+                getCollectionId: () => 'collection-id',
+                embedding,
+                service: { ...readyService(), servingUrl: undefined, status: 'builtin' }
+            });
+
+            const textOpts = mocks.useTextEmbeddingOptions as { getEmbed: () => unknown };
+            const imageOpts = mocks.useImageUploadOptions as { getEmbed: () => unknown };
+            expect(textOpts.getEmbed()).toBeUndefined();
+            expect(imageOpts.getEmbed()).toBeUndefined();
+        });
+
+        it('refuses a text search instead of falling back to the built-in model', async () => {
+            const service = {
+                ...readyService(),
+                status: 'model-mismatch' as const,
+                canSearchText: false,
+                textDisabledReason: 'Search is unavailable: wrong model.'
+            };
+            const search = useSearchEmbedding({
+                getCollectionId: () => 'collection-id',
+                embedding,
+                service
+            });
+
+            await search.setText('a red car');
+
+            expect(mocks.embedText).not.toHaveBeenCalled();
+            expect(mocks.toastError).toHaveBeenCalledWith('Error', {
+                description: 'Search is unavailable: wrong model.'
+            });
+        });
+
+        it('still clears the search when the query is emptied on a disabled service', async () => {
+            embedding.set({ queryText: 'foo', embedding: [1] });
+            const search = useSearchEmbedding({
+                getCollectionId: () => 'collection-id',
+                embedding,
+                service: {
+                    ...readyService(),
+                    status: 'unreachable' as const,
+                    canSearchText: false,
+                    textDisabledReason: 'Search is unavailable: no response.'
+                }
+            });
+
+            await search.setText('   ');
+
+            expect(get(embedding)).toBeUndefined();
+            expect(mocks.toastError).not.toHaveBeenCalled();
+        });
+
+        it('refuses an image search when the model cannot embed images', async () => {
+            const file = new File(['x'], 'query.png', { type: 'image/png' });
+            const search = useSearchEmbedding({
+                getCollectionId: () => 'collection-id',
+                embedding,
+                service: {
+                    ...readyService(),
+                    canSearchImage: false,
+                    imageDisabledReason: 'This model cannot embed images.'
+                }
+            });
+
+            await search.setImage(file);
+
+            expect(mocks.upload).not.toHaveBeenCalled();
+            expect(mocks.toastError).toHaveBeenCalledWith('Error', {
+                description: 'This model cannot embed images.'
+            });
+        });
+
+        it('re-probes the service when a search fails', () => {
+            const service = readyService();
+            useSearchEmbedding({
+                getCollectionId: () => 'collection-id',
+                embedding,
+                service
+            });
+
+            const opts = mocks.useTextEmbeddingOptions as EmbedOptions;
+            opts.onError('boom');
+
+            expect(service.reprobe).toHaveBeenCalled();
+        });
     });
 });

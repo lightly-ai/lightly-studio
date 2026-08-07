@@ -225,6 +225,28 @@ def get_embedding_count(session: Session, collection_id: UUID, embedding_model_i
     return session.exec(query).one()
 
 
+def has_any_embeddings(session: Session, collection_id: UUID) -> bool:
+    """Check whether the collection has at least one sample embedding.
+
+    Deliberately model-free: the caller only wants to know whether embeddings exist,
+    and resolving a model would register one as a side effect.
+
+    Args:
+        session: The database session.
+        collection_id: The collection ID to filter by.
+
+    Returns:
+        True if any sample in the collection has an embedding.
+    """
+    query = (
+        select(SampleEmbeddingTable.sample_id)
+        .join(SampleTable, col(SampleEmbeddingTable.sample_id) == col(SampleTable.sample_id))
+        .where(SampleTable.collection_id == collection_id)
+        .limit(1)
+    )
+    return session.exec(query).first() is not None
+
+
 def _read_embedding_rows_binary(
     session: Session, sql: str, params: Sequence[Any] | Mapping[str, Any]
 ) -> list[SampleEmbeddingRow]:

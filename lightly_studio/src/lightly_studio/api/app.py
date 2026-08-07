@@ -27,6 +27,7 @@ from lightly_studio.api.routes.api import (
     classifier,
     collection,
     collection_tag,
+    embedding_model,
     embeddings2d,
     enterprise,
     evaluation,
@@ -147,6 +148,7 @@ api_router.include_router(text_embedding.text_embedding_router)
 api_router.include_router(image_embedding.image_embedding_router)
 api_router.include_router(settings.settings_router)
 api_router.include_router(classifier.classifier_router)
+api_router.include_router(embedding_model.embedding_model_router)
 api_router.include_router(embeddings2d.embeddings2d_router)
 api_router.include_router(features.features_router)
 api_router.include_router(evaluation.evaluation_router)

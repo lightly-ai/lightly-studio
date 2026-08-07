@@ -164,6 +164,17 @@ vi.mock('$lib/hooks/useSearchEmbedding/useSearchEmbedding', () => ({
         onError: vi.fn()
     }))
 }));
+vi.mock('$lib/hooks/useEmbeddingService/useEmbeddingService.svelte', () => ({
+    useEmbeddingService: vi.fn(() => ({
+        servingUrl: undefined,
+        status: 'builtin',
+        canSearchText: true,
+        canSearchImage: true,
+        textDisabledReason: undefined,
+        imageDisabledReason: undefined,
+        reprobe: vi.fn()
+    }))
+}));
 vi.mock('$lib/hooks/useEvaluationRuns/useEvaluationRuns', () => ({
     useEvaluationRuns: vi.fn(() => ({ data: undefined, isLoading: false, error: null }))
 }));

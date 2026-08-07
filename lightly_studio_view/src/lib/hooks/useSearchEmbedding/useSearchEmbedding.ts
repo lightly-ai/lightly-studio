@@ -2,6 +2,11 @@ import { useImageUpload } from '$lib/hooks/useImageUpload/useImageUpload';
 import { useTextEmbedding } from '$lib/hooks/useTextEmbedding/useTextEmbedding';
 import type { TextEmbedding } from '$lib/hooks/useGlobalStorage';
 import { usePostHog } from '$lib/hooks';
+import type { useEmbeddingService } from '$lib/hooks/useEmbeddingService/useEmbeddingService.svelte';
+import {
+    embedImageViaService,
+    embedTextViaService
+} from '$lib/api/embeddingService/embeddingServiceClient';
 import { toast } from 'svelte-sonner';
 import { derived, readonly, type Readable, type Writable } from 'svelte/store';
 
@@ -20,6 +25,11 @@ interface Params {
     getCollectionId: () => string;
     /** External writable that receives the resulting embedding. */
     embedding: Writable<TextEmbedding | undefined>;
+    /**
+     * Routes queries to a customer-hosted embedding service for collections indexed with a
+     * model the backend does not run. Omit to always embed via the backend.
+     */
+    service?: ReturnType<typeof useEmbeddingService>;
 }
 
 interface Return {
@@ -45,16 +55,23 @@ interface Return {
     onError: (message: string) => void;
 }
 
-export function useSearchEmbedding({ getCollectionId, embedding }: Params): Return {
+export function useSearchEmbedding({ getCollectionId, embedding, service }: Params): Return {
     const { trackEvent } = usePostHog();
 
     const onError = (message: string) => {
         toast.error('Error', { description: message });
+        // Contact the service again so a restarted box recovers without a page reload.
+        service?.reprobe();
     };
 
     const upload = useImageUpload({
         getCollectionId,
         onError,
+        getEmbed: () => {
+            const servingUrl = service?.servingUrl;
+            if (!servingUrl) return undefined;
+            return ({ file }) => embedImageViaService({ servingUrl, file });
+        },
         onSuccess: ({ fileName, embedding: vector, collectionId }) => {
             embedding.set({ queryText: fileName, embedding: vector });
             trackEvent('search_executed', {
@@ -67,6 +84,11 @@ export function useSearchEmbedding({ getCollectionId, embedding }: Params): Retu
     const text = useTextEmbedding({
         getCollectionId,
         onError,
+        getEmbed: () => {
+            const servingUrl = service?.servingUrl;
+            if (!servingUrl) return undefined;
+            return ({ text: query }) => embedTextViaService({ servingUrl, text: query });
+        },
         onSuccess: ({ queryText, embedding: vector, collectionId }) => {
             embedding.set({ queryText, embedding: vector });
             trackEvent('search_executed', {
@@ -89,6 +111,11 @@ export function useSearchEmbedding({ getCollectionId, embedding }: Params): Retu
 
     const setText = async (input: string) => {
         upload.clear();
+        // Refuse rather than let the request reach the built-in model. See useEmbeddingService.
+        if (input.trim() && service?.textDisabledReason) {
+            onError(service.textDisabledReason);
+            return;
+        }
         if (!input.trim()) {
             embedding.set(undefined);
         } else {
@@ -103,6 +130,10 @@ export function useSearchEmbedding({ getCollectionId, embedding }: Params): Retu
     };
 
     const setImage = async (file: File) => {
+        if (service?.imageDisabledReason) {
+            onError(service.imageDisabledReason);
+            return;
+        }
         trackEvent('search_initiated', {
             collection_id: getCollectionId(),
             search_type: 'image'

@@ -17,6 +17,14 @@ type UseImageUploadParams = {
     onSuccess: (result: UploadSuccessResult) => void;
     /** Maximum accepted upload size in MB. Defaults to `50`. */
     maxSizeMb?: number;
+    /**
+     * Returns an embedder to use instead of the LightlyStudio backend, or `undefined` to
+     * use the backend. Consulted per upload, because whether a collection has a
+     * customer-hosted embedding service is resolved after this hook is created.
+     */
+    getEmbed?: () =>
+        | ((params: { file: File; collectionId: string }) => Promise<number[]>)
+        | undefined;
 };
 
 type UseImageUploadReturn = {
@@ -39,7 +47,8 @@ export function useImageUpload({
     getCollectionId,
     onError,
     onSuccess,
-    maxSizeMb = 50
+    maxSizeMb = 50,
+    getEmbed
 }: UseImageUploadParams): UseImageUploadReturn {
     const mutation = createMutation(() => embedImageFromFileMutation());
 
@@ -87,26 +96,29 @@ export function useImageUpload({
                 throw new Error('Collection ID is not available');
             }
 
-            const embedding = await new Promise<number[]>((resolve, reject) => {
-                mutation.mutate(
-                    {
-                        path: {
-                            collection_id: collectionId
-                        },
-                        body: {
-                            file
-                        }
-                    },
-                    {
-                        onSuccess: (data) => {
-                            resolve(data);
-                        },
-                        onError: (error) => {
-                            reject(error);
-                        }
-                    }
-                );
-            });
+            const embedViaService = getEmbed?.();
+            const embedding = embedViaService
+                ? await embedViaService({ file, collectionId })
+                : await new Promise<number[]>((resolve, reject) => {
+                      mutation.mutate(
+                          {
+                              path: {
+                                  collection_id: collectionId
+                              },
+                              body: {
+                                  file
+                              }
+                          },
+                          {
+                              onSuccess: (data) => {
+                                  resolve(data);
+                              },
+                              onError: (error) => {
+                                  reject(error);
+                              }
+                          }
+                      );
+                  });
 
             setPreview(file.name, URL.createObjectURL(file));
             onSuccess({ fileName: file.name, embedding, collectionId });

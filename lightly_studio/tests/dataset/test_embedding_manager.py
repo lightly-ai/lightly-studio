@@ -30,6 +30,7 @@ from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.resolvers import (
     collection_resolver,
     embedding_model_resolver,
+    embedding_model_service_resolver,
     sample_embedding_resolver,
 )
 from tests.helpers_resolvers import (
@@ -571,6 +572,70 @@ def test_load_or_get_default_model__cant_load(
     assert model_id is None
 
 
+def test_load_or_get_default_model__existing_row_from_another_model(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """A collection embedded by a model we cannot load reports no default model.
+
+    Registering the env default here would attribute the stored vectors to the wrong
+    model and let search compare query vectors against a different embedding space.
+    """
+    collection = create_collection(session=db_session)
+    embedding_model_resolver.create(
+        session=db_session,
+        embedding_model=EmbeddingModelCreate(
+            name="customer-model",
+            embedding_model_hash="customer-model-v1",
+            embedding_dimension=512,
+            collection_id=collection.collection_id,
+        ),
+    )
+    manager = EmbeddingManager()
+    mocker.patch.object(
+        embedding_manager,
+        "_load_embedding_generator_from_env",
+        return_value=RandomEmbeddingGenerator(),
+    )
+
+    model_id = manager.load_or_get_default_model(
+        session=db_session, collection_id=collection.collection_id
+    )
+
+    assert model_id is None
+    # No second row was written for the collection.
+    models = embedding_model_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    )
+    assert [model.embedding_model_hash for model in models] == ["customer-model-v1"]
+
+
+def test_load_or_get_default_model__existing_row_from_same_model(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """A collection embedded by the loadable default reuses its existing row."""
+    collection = create_collection(session=db_session)
+    generator = RandomEmbeddingGenerator()
+    existing = embedding_model_resolver.create(
+        session=db_session,
+        embedding_model=generator.get_embedding_model_input(collection_id=collection.collection_id),
+    )
+    manager = EmbeddingManager()
+    mocker.patch.object(
+        embedding_manager,
+        "_load_embedding_generator_from_env",
+        return_value=generator,
+    )
+
+    model_id = manager.load_or_get_default_model(
+        session=db_session, collection_id=collection.collection_id
+    )
+
+    assert model_id == existing.embedding_model_id
+    assert manager._models[existing.embedding_model_id] is generator
+
+
 def test_set_default_embedding_model_overrides_env(
     db_session: Session,
     mocker: MockerFixture,
@@ -591,6 +656,68 @@ def test_set_default_embedding_model_overrides_env(
     assert manager._models[model_id] is override
     # The env loader is never consulted when an override is registered.
     mock_load.assert_not_called()
+
+
+def test_set_default_embedding_model__persists_serving_url(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """The serving URL is written where the model row is written, so the two cannot drift."""
+    collection = create_collection(session=db_session)
+    manager = EmbeddingManager()
+    mocker.patch.object(embedding_manager, "_load_embedding_generator_from_env")
+
+    manager.set_default_embedding_model(
+        embedding_generator=RandomEmbeddingGenerator(),
+        serving_url="https://embeddings.corp.example/",
+    )
+    manager.load_or_get_default_model(session=db_session, collection_id=collection.collection_id)
+
+    service = embedding_model_service_resolver.get_by_model_hash(
+        session=db_session, embedding_model_hash="random_model"
+    )
+    assert service is not None
+    assert service.serving_url == "https://embeddings.corp.example"
+
+
+def test_set_default_embedding_model__rejects_invalid_serving_url() -> None:
+    """The URL is checked at the call site, not first seen during a search."""
+    manager = EmbeddingManager()
+
+    with pytest.raises(ValueError, match="must use https"):
+        manager.set_default_embedding_model(
+            embedding_generator=RandomEmbeddingGenerator(),
+            serving_url="http://192.168.1.20:8123",
+        )
+
+
+def test_register_embedding_model__serving_url_without_model_hash(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """A serving URL is keyed on the model hash, so the generator must declare one."""
+
+    class UnnamedGenerator(RandomEmbeddingGenerator):
+        def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
+            return EmbeddingModelCreate(
+                name="Unnamed",
+                embedding_model_hash="",
+                embedding_dimension=3,
+                collection_id=collection_id,
+            )
+
+    manager = EmbeddingManager()
+    generator = UnnamedGenerator()
+    manager.set_default_embedding_model(
+        embedding_generator=generator, serving_url="https://embeddings.corp.example"
+    )
+
+    with pytest.raises(ValueError, match="embedding_model_hash"):
+        manager.register_embedding_model(
+            session=db_session,
+            collection_id=collection.collection_id,
+            embedding_generator=generator,
+        )
 
 
 def test_set_default_embedding_model_fills_both_slots() -> None:

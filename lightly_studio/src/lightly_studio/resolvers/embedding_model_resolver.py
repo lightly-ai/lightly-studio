@@ -95,6 +95,18 @@ def get_by_model_hash(
     return session.exec(query).one_or_none()
 
 
+def exists_by_model_hash(session: Session, embedding_model_hash: str) -> bool:
+    """Check whether any collection was embedded with the model of the given hash."""
+    return (
+        session.exec(
+            select(EmbeddingModelTable.embedding_model_id)
+            .where(EmbeddingModelTable.embedding_model_hash == embedding_model_hash)
+            .limit(1)
+        ).first()
+        is not None
+    )
+
+
 def get_by_name(
     session: Session, collection_id: UUID, embedding_model_name: str | None
 ) -> EmbeddingModelTable:
