@@ -47,13 +47,7 @@ def export_collection_annotations(
     export_format: ExportFormat = ExportFormat.OBJECT_DETECTION_COCO,
 ) -> StreamingResponse:
     """Export collection annotations in the selected export format."""
-    # Query to export - all samples in the collection.
-    dataset_query = DatasetQuery(dataset=collection, session=session)
-    exporter = image_dataset_export.ImageDatasetExport(
-        session=session,
-        dataset_id=collection.dataset_id,
-        samples=dataset_query,
-    )
+    exporter = _annotations_exporter(collection=collection, session=session)
 
     # Create the export in a temporary directory. We cannot use a context manager
     # because the directory should be deleted only after the file has finished streaming.
@@ -178,6 +172,7 @@ class ExportAnnotationsPrepareBody(BaseModel):
     export_format: ExportFormat = ExportFormat.OBJECT_DETECTION_COCO
     annotation_collection_id: UUID | None = None
     image_filter: ImageFilter | None = None
+    video_filter: VideoFilter | None = None
 
 
 class ExportCaptionsPrepareBody(BaseModel):
@@ -377,15 +372,11 @@ def export_collection_annotations_prepare(
             ),
         )
 
-    dataset_query = DatasetQuery(dataset=collection, session=session)
-    if body.image_filter is not None:
-        dataset_query.filter_by_sample_ids(
-            body.image_filter.build_sample_ids_query(collection.collection_id)
-        )
-    exporter = image_dataset_export.ImageDatasetExport(
+    exporter = _annotations_exporter(
+        collection=collection,
         session=session,
-        dataset_id=collection.dataset_id,
-        samples=dataset_query,
+        image_filter=body.image_filter,
+        video_filter=body.video_filter,
     )
 
     temp_dir = PathlibPath(tempfile.mkdtemp())
@@ -475,7 +466,7 @@ def export_download(
 
 
 def _generate_annotations_export(
-    exporter: image_dataset_export.ImageDatasetExport,
+    exporter: image_dataset_export.ImageDatasetExport | video_dataset_export.VideoDatasetExport,
     export_format: ExportFormat,
     annotation_collection_id: UUID | None,
     temp_dir: PathlibPath,
@@ -488,6 +479,8 @@ def _generate_annotations_export(
             annotation_collection_id=annotation_collection_id,
         )
         return output_path
+    if not isinstance(exporter, image_dataset_export.ImageDatasetExport):
+        raise ValueError(f"Export format '{export_format.value}' is only supported for images.")
     if export_format == ExportFormat.OBJECT_DETECTION_COCO:
         output_path = temp_dir / "coco_export.json"
         exporter.to_coco_object_detections(
@@ -517,6 +510,40 @@ def _generate_annotations_export(
         )
         return output_path
     raise ValueError(f"Export format '{export_format.value}' is not supported for this endpoint.")
+
+
+def _annotations_exporter(
+    collection: CollectionTable,
+    session: Session,
+    image_filter: ImageFilter | None = None,
+    video_filter: VideoFilter | None = None,
+) -> image_dataset_export.ImageDatasetExport | video_dataset_export.VideoDatasetExport:
+    """Create the annotations exporter and apply the collection's active filter."""
+    if collection.sample_type == SampleType.VIDEO:
+        video_query = DatasetQuery(
+            dataset=collection,
+            session=session,
+            sample_class=VideoSample,
+        )
+        if video_filter is not None:
+            video_query.filter_by_sample_ids(
+                video_filter.build_sample_ids_query(collection.collection_id)
+            )
+        return video_dataset_export.VideoDatasetExport(
+            session=session,
+            samples=video_query,
+        )
+
+    image_query = DatasetQuery(dataset=collection, session=session)
+    if image_filter is not None:
+        image_query.filter_by_sample_ids(
+            image_filter.build_sample_ids_query(collection.collection_id)
+        )
+    return image_dataset_export.ImageDatasetExport(
+        session=session,
+        dataset_id=collection.dataset_id,
+        samples=image_query,
+    )
 
 
 def _stream_file_and_cleanup(
