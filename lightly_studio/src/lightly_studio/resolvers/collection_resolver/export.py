@@ -105,7 +105,6 @@ def _build_export_query(
         .join(ImageTable.sample)
         .where(SampleTable.collection_id == collection_id)
         .order_by(col(ImageTable.created_at).asc())
-        .distinct()
     )
 
     if active_view_subquery is not None:
