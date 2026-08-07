@@ -22,9 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
-- The `cast_to_float` argument of `OrderByMetadataField`. Numerical metadata fields are now
-  detected automatically, so the argument no longer had anything to control. Drop it from any
-  call: `OrderByMetadataField("score", cast_to_float=True)` becomes `OrderByMetadataField("score")`.
+- The `cast_to_float` argument of `OrderByMetadataField`. Top-level numerical fields are now
+  detected automatically, so passing it is no longer needed: `OrderByMetadataField("score",
+  cast_to_float=True)` becomes `OrderByMetadataField("score")`. Sorting a *nested* numerical
+  field numerically is no longer possible, as `metadata_schema` records only top-level keys;
+  a dotted path such as `stats.score` now sorts lexicographically.
 
 ### Fixed
 

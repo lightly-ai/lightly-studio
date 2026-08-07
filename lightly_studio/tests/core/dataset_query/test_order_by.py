@@ -71,9 +71,9 @@ class TestOrderByMetadataField:
     dialect = DuckDBDialect()
 
     _NUMERIC_KEY = (
-        "cast(case when (json_extract_string(metadata_1.metadata_schema, '/brightness')"
-        " in ('integer', 'float')) then json_extract(metadata_1.data, '$.brightness') end"
-        " as float)"
+        "cast(case when (json_extract(metadata_1.metadata_schema, '$.brightness')"
+        " in ('\"integer\"', '\"float\"')) then json_extract(metadata_1.data, '$.brightness') end"
+        " as double precision)"
     )
     _RAW_KEY = "json_extract(metadata_1.data, '$.brightness')"
 
@@ -111,8 +111,9 @@ class TestOrderByMetadataField:
 
         returned_query = order_by.apply(query)
 
-        assert f"order by {self._NUMERIC_KEY} asc, {self._RAW_KEY} asc" in self._compile(
-            returned_query
+        assert (
+            f"order by {self._NUMERIC_KEY} asc nulls last, {self._RAW_KEY} asc nulls last"
+            in self._compile(returned_query)
         )
 
     def test_apply__descending(self) -> None:
@@ -122,8 +123,9 @@ class TestOrderByMetadataField:
 
         returned_query = order_by.apply(query)
 
-        assert f"order by {self._NUMERIC_KEY} desc, {self._RAW_KEY} desc" in self._compile(
-            returned_query
+        assert (
+            f"order by {self._NUMERIC_KEY} desc nulls last, {self._RAW_KEY} desc nulls last"
+            in self._compile(returned_query)
         )
 
     def test_apply__desc_then_asc(self) -> None:
@@ -133,8 +135,9 @@ class TestOrderByMetadataField:
 
         returned_query = order_by.apply(query)
 
-        assert f"order by {self._NUMERIC_KEY} asc, {self._RAW_KEY} asc" in self._compile(
-            returned_query
+        assert (
+            f"order by {self._NUMERIC_KEY} asc nulls last, {self._RAW_KEY} asc nulls last"
+            in self._compile(returned_query)
         )
 
     def test_apply__cast_wraps_the_case(self) -> None:
