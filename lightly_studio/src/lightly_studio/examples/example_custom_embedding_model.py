@@ -30,6 +30,10 @@ from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.vendor import mobileclip
 
 MODEL_NAME = "mobileclip_s0"
+# Identifies the embedding space, not the weights file. Bump it whenever the model starts
+# producing different vectors. An embedding service serving this model must report the same
+# string as its model_id, otherwise LightlyStudio disables search.
+MODEL_ID = MODEL_NAME
 MOBILECLIP_DOWNLOAD_URL = (
     f"https://docs-assets.developer.apple.com/ml-research/datasets/mobileclip/{MODEL_NAME}.pt"
 )
@@ -64,17 +68,16 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
         )
         self._model = self._model.to(self._device)
         self._tokenizer = mobileclip.get_tokenizer(model_name=MODEL_NAME)
-        self._model_hash = file_utils.get_file_xxhash(model_path)
 
     def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
         """Describe the model so it can be recorded in the database.
 
-        The name shows up in the GUI and the hash lets Lightly Studio detect when
-        the same model has been used before.
+        The name shows up in the GUI and the hash identifies the embedding space, so
+        Lightly Studio can tell when the same model has been used before.
         """
         return EmbeddingModelCreate(
             name="Custom Embedding Model",
-            embedding_model_hash=self._model_hash,
+            embedding_model_hash=MODEL_ID,
             embedding_dimension=EMBEDDING_DIMENSION,
             collection_id=collection_id,
         )
