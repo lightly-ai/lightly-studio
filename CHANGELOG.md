@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Python SDK: `MobileCLIPEmbeddingGenerator` now accepts a `model_name` parameter to pick a bigger MobileCLIP variant (`mobileclip_s1`, `mobileclip_s2`, `mobileclip_b`) for higher-quality image embeddings.
+
 ### Changed
 
 ### Deprecated
