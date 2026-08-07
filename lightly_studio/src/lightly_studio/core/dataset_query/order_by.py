@@ -169,9 +169,11 @@ class OrderByMetadataField(OrderByExpression):
         self._metadata_alias = aliased(SampleMetadataTable)
 
     def _order_value_expression(self) -> ColumnElement[Any]:
-        """Return the numerical value of the field, or NULL if it is not numerical."""
-        # The CAST wraps the CASE so its operand is NULL for rows that would fail it.
-        # Double, not Float: DuckDB's FLOAT is single precision.
+        """Return the numerical value of the field, or NULL if it is not numerical.
+
+        The CAST wraps the CASE so its operand is NULL for rows that would fail it,
+        and casts to Double because DuckDB's FLOAT is single precision.
+        """
         return sqlalchemy.cast(
             sqlalchemy.case(
                 (self._is_numerical_field(), self._extracted_value()),
@@ -189,8 +191,10 @@ class OrderByMetadataField(OrderByExpression):
         return [sqlalchemy.nullslast(element) for element in super().to_column_elements()]
 
     def _is_numerical_field(self) -> ColumnElement[bool]:
-        """Return whether ``metadata_schema`` records this field as a number."""
-        # Same path syntax as the value, so the two cannot disagree.
+        """Return whether ``metadata_schema`` records this field as a number.
+
+        Uses the same path syntax as the value, so the two cannot disagree.
+        """
         return db_json.json_extract(
             column=self._metadata_alias.metadata_schema,
             field=self.field_name,
