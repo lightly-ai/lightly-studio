@@ -198,8 +198,8 @@
     {#if isMissing}
         <p class="text-sm text-destructive-text">
             {required && rows.length === 0
-                ? 'Add at least one row and fill in every highlighted cell.'
-                : 'Fill in every highlighted cell.'}
+                ? 'Add at least one row and fill in every empty cell.'
+                : 'Fill in every empty cell.'}
         </p>
     {/if}
 </div>
