@@ -14,6 +14,14 @@ type UseTextEmbeddingParams = {
     onError: (message: string) => void;
     /** Called after successful embedding with trimmed query text and embedding vector. */
     onSuccess: (result: EmbedSuccessResult) => void;
+    /**
+     * Returns an embedder to use instead of the LightlyStudio backend, or `undefined` to
+     * use the backend. Consulted per request, because whether a collection has a
+     * customer-hosted embedding service is resolved after this hook is created.
+     */
+    getEmbed?: () =>
+        | ((params: { text: string; collectionId: string }) => Promise<number[]>)
+        | undefined;
 };
 
 type UseTextEmbeddingReturn = {
@@ -27,7 +35,8 @@ type UseTextEmbeddingReturn = {
 export function useTextEmbedding({
     getCollectionId,
     onError,
-    onSuccess
+    onSuccess,
+    getEmbed
 }: UseTextEmbeddingParams): UseTextEmbeddingReturn {
     const isEmbedding = writable(false);
     let latestRequestId = 0;
@@ -42,17 +51,12 @@ export function useTextEmbedding({
         pendingRequests += 1;
         isEmbedding.set(true);
         try {
-            const { data, error } = await embedText({
-                path: { collection_id: collectionId },
-                query: { query_text: trimmed, embedding_model_id: null }
-            });
+            const embedViaService = getEmbed?.();
+            const vector = embedViaService
+                ? await embedViaService({ text: trimmed, collectionId })
+                : await embedViaBackend({ text: trimmed, collectionId });
             if (requestId !== latestRequestId) return;
-            if (error) {
-                const errObj = error as { error?: unknown; message?: string };
-                throw new Error(String(errObj.error ?? errObj.message ?? 'Failed to embed text'));
-            }
-            if (!data) throw new Error('Failed to embed text');
-            onSuccess({ queryText: trimmed, embedding: data, collectionId });
+            onSuccess({ queryText: trimmed, embedding: vector, collectionId });
         } catch (err) {
             if (requestId !== latestRequestId) return;
             const message = err instanceof Error ? err.message : 'Failed to embed text';
@@ -64,4 +68,23 @@ export function useTextEmbedding({
     };
 
     return { isEmbedding, embed };
+}
+
+async function embedViaBackend({
+    text,
+    collectionId
+}: {
+    text: string;
+    collectionId: string;
+}): Promise<number[]> {
+    const { data, error } = await embedText({
+        path: { collection_id: collectionId },
+        query: { query_text: text, embedding_model_id: null }
+    });
+    if (error) {
+        const errObj = error as { error?: unknown; message?: string };
+        throw new Error(String(errObj.error ?? errObj.message ?? 'Failed to embed text'));
+    }
+    if (!data) throw new Error('Failed to embed text');
+    return data;
 }

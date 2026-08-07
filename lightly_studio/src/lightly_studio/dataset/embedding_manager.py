@@ -12,7 +12,7 @@ from PIL import Image
 from sqlmodel import Session
 from tqdm import tqdm
 
-from lightly_studio.dataset import env
+from lightly_studio.dataset import embedding_service, env
 from lightly_studio.dataset.embedding_generator import (
     EmbeddingGenerator,
     ImageEmbeddingGenerator,
@@ -25,6 +25,7 @@ from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
     embedding_model_resolver,
+    embedding_model_service_resolver,
     image_resolver,
     sample_embedding_resolver,
     video_resolver,
@@ -68,7 +69,9 @@ class EmbeddingManagerProvider:
         return cls._instance
 
 
-def set_default_embedding_model(embedding_generator: EmbeddingGenerator) -> None:
+def set_default_embedding_model(
+    embedding_generator: EmbeddingGenerator, serving_url: str | None = None
+) -> None:
     """Register a custom embedding model that overrides the env-var default.
 
     Call this before ingesting a dataset (e.g. before ImageDataset.load_or_create)
@@ -77,15 +80,22 @@ def set_default_embedding_model(embedding_generator: EmbeddingGenerator) -> None
 
     Note: the registration lives in-process only. When re-launching the GUI via the
     `lightly-studio gui` CLI without re-running this call, embeddings computed with the
-    custom model remain, but text search falls back to the env-var default model and
-    will not match them.
+    custom model remain, and text search is disabled rather than answered by a different
+    model. Pass `serving_url` to keep search working in that case.
 
     Args:
         embedding_generator: A generator implementing ImageEmbeddingGenerator and/or
             VideoEmbeddingGenerator.
+        serving_url: Base URL of an HTTP service that serves this same model for search
+            queries, e.g. `https://gpu-box.corp.example:8123`. The browser calls it
+            directly, so it must be reachable from the user's machine, not from the
+            LightlyStudio backend. See docs/enterprise/custom_embedding_model.md.
+
+    Raises:
+        ValueError: If serving_url is not a valid embedding service URL.
     """
     EmbeddingManagerProvider.get_embedding_manager().set_default_embedding_model(
-        embedding_generator=embedding_generator
+        embedding_generator=embedding_generator, serving_url=serving_url
     )
 
 
@@ -109,8 +119,12 @@ class EmbeddingManager:
         # Keyed by generator sample type (IMAGE or VIDEO) and consulted before
         # loading a generator from the environment.
         self._override_generators: dict[SampleType, EmbeddingGenerator] = {}
+        # Serving URLs declared alongside those generators, keyed by sample type.
+        self._override_serving_urls: dict[SampleType, str] = {}
 
-    def set_default_embedding_model(self, embedding_generator: EmbeddingGenerator) -> None:
+    def set_default_embedding_model(
+        self, embedding_generator: EmbeddingGenerator, serving_url: str | None = None
+    ) -> None:
         """Register a generator that overrides the env-var default for all collections.
 
         The generator's sample-type slot(s) are inferred from the protocols it
@@ -121,19 +135,30 @@ class EmbeddingManager:
 
         Args:
             embedding_generator: The generator to use instead of the env-var default.
+            serving_url: Base URL of an HTTP service serving this same model for search
+                queries. Persisted when the model is registered for a collection.
 
         Raises:
             TypeError: If the generator implements neither the image nor the video
                 embedding protocol.
+            ValueError: If serving_url is not a valid embedding service URL.
         """
+        validated_url = embedding_service.validate_serving_url(serving_url) if serving_url else None
+
         matched = False
         if isinstance(embedding_generator, ImageEmbeddingGenerator):
-            self._override_generators[SampleType.IMAGE] = embedding_generator
-            self._sample_type_to_model_id.pop(SampleType.IMAGE, None)
+            self._register_override(
+                sample_type=SampleType.IMAGE,
+                embedding_generator=embedding_generator,
+                serving_url=validated_url,
+            )
             matched = True
         if isinstance(embedding_generator, VideoEmbeddingGenerator):
-            self._override_generators[SampleType.VIDEO] = embedding_generator
-            self._sample_type_to_model_id.pop(SampleType.VIDEO, None)
+            self._register_override(
+                sample_type=SampleType.VIDEO,
+                embedding_generator=embedding_generator,
+                serving_url=validated_url,
+            )
             matched = True
         if not matched:
             raise TypeError(
@@ -162,6 +187,10 @@ class EmbeddingManager:
 
         Returns:
             The created EmbeddingModel.
+
+        Raises:
+            ValueError: If a serving URL was declared for a generator that does not
+                declare an embedding_model_hash.
         """
         # Get or create embedding model record in the database.
         db_model = embedding_model_resolver.get_or_create(
@@ -171,6 +200,22 @@ class EmbeddingManager:
             ),
         )
         model_id = db_model.embedding_model_id
+
+        # Write the serving URL next to the model row so the record of "what produced
+        # these vectors" and "where do I get more" cannot drift apart.
+        serving_url = self._get_declared_serving_url(embedding_generator)
+        if serving_url is not None:
+            if not db_model.embedding_model_hash:
+                raise ValueError(
+                    "A serving URL is keyed on the model identity, so the generator must "
+                    "return a non-empty embedding_model_hash from "
+                    "get_embedding_model_input()."
+                )
+            embedding_model_service_resolver.set_serving_url(
+                session=session,
+                embedding_model_hash=db_model.embedding_model_hash,
+                serving_url=serving_url,
+            )
 
         # Store the model in our dictionary
         self._models[model_id] = embedding_generator
@@ -442,7 +487,8 @@ class EmbeddingManager:
             collection_id: Collection identifier the model should belong to.
 
         Returns:
-            UUID of the default embedding model or None if the model cannot be loaded.
+            UUID of the default embedding model, or None if no generator matching the
+            collection's stored embeddings can be loaded.
         """
         # Return the existing default model ID if available.
         if collection_id in self._collection_id_to_default_model_id:
@@ -471,6 +517,11 @@ class EmbeddingManager:
         if embedding_generator is None:
             return None
 
+        if not _matches_stored_model(
+            session=session, collection_id=collection_id, embedding_generator=embedding_generator
+        ):
+            return None
+
         # Register the embedding model and set it as default.
         embedding_model = self.register_embedding_model(
             session=session,
@@ -482,6 +533,27 @@ class EmbeddingManager:
         self._sample_type_to_model_id[generator_sample_type] = embedding_model.embedding_model_id
 
         return embedding_model.embedding_model_id
+
+    def _register_override(
+        self,
+        sample_type: SampleType,
+        embedding_generator: EmbeddingGenerator,
+        serving_url: str | None,
+    ) -> None:
+        """Fill one sample-type override slot and forget any model loaded for it."""
+        self._override_generators[sample_type] = embedding_generator
+        self._sample_type_to_model_id.pop(sample_type, None)
+        if serving_url is None:
+            self._override_serving_urls.pop(sample_type, None)
+        else:
+            self._override_serving_urls[sample_type] = serving_url
+
+    def _get_declared_serving_url(self, embedding_generator: EmbeddingGenerator) -> str | None:
+        """Return the serving URL declared for this generator, if any."""
+        for sample_type, override in self._override_generators.items():
+            if override is embedding_generator:
+                return self._override_serving_urls.get(sample_type)
+        return None
 
     def _get_default_or_validate(
         self, collection_id: UUID, embedding_model_id: UUID | None
@@ -554,6 +626,37 @@ def _store_embeddings(
             progress.update(len(sample_embeddings))
 
     session.commit()
+
+
+def _matches_stored_model(
+    session: Session, collection_id: UUID, embedding_generator: EmbeddingGenerator
+) -> bool:
+    """Check that the generator produced the collection's already-stored embeddings.
+
+    Returns True when the collection has no embedding model yet, so a fresh collection
+    can register one. Returns False when the collection was embedded by a different
+    model: registering the generator then would attribute the stored vectors to it and
+    let search compare query vectors against a different embedding space.
+    """
+    stored_model = embedding_model_resolver.get_default_by_collection_id(
+        session=session, collection_id=collection_id
+    )
+    if stored_model is None:
+        return True
+
+    generator_hash = embedding_generator.get_embedding_model_input(
+        collection_id=collection_id
+    ).embedding_model_hash
+    if stored_model.embedding_model_hash == generator_hash:
+        return True
+
+    logger.warning(
+        f"Collection {collection_id} was embedded with model "
+        f"'{stored_model.name}' (hash '{stored_model.embedding_model_hash}'), which is not "
+        f"loaded. Embedding is disabled for this collection to avoid mixing embedding spaces. "
+        f"Register the matching model with set_default_embedding_model()."
+    )
+    return False
 
 
 def _load_embedding_generator_from_env(sample_type: SampleType) -> EmbeddingGenerator | None:

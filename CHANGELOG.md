@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Export image classification annotations to CSV via the GUI and Python SDK
 
+- Python SDK: Keep text and image search working for datasets indexed with a custom embedding model, by pointing LightlyStudio at an HTTP service serving that model with the new `serving_url` parameter of `set_default_embedding_model`.
+
 ### Changed
 
 ### Deprecated
@@ -25,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Autofocus lets users create their first annotation faster.
 - Opening a DuckDB database that another lightly_studio process already has open now raises a clear error instead of a raw DuckDB traceback.
 - Coloring the 2D embedding plot by annotations or metadata now loads faster, especially for large datasets.
+- Opening a collection no longer records the default embedding model against it, which previously overwrote the record of which model produced its stored embeddings and hid search for datasets indexed with a custom model.
 
 ### Security
 

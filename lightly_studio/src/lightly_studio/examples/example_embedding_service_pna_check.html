@@ -1,0 +1,174 @@
+<!doctype html>
+<!--
+  Private Network Access check for the LightlyStudio embedding service contract.
+
+  Answers one question: can a page on a public HTTPS origin reach an embedding service on a
+  private network address, or does the browser block it? This is the single assumption the
+  browser-calls-the-service design rests on, so test it before building on top.
+
+  It deliberately tests nothing else. Give the service a PUBLIC DNS name whose A record points at
+  its PRIVATE address (e.g. embed.corp.example -> 192.168.1.20) with a real certificate issued via
+  a DNS-01 challenge. That satisfies HTTPS and name resolution, leaving Private Network Access as
+  the only variable. A self-signed or mkcert certificate also works, but only on machines with the
+  local CA installed, which is not how a customer's setup looks.
+
+  How to run:
+
+    1. Start the service on the private host:
+         uv run uvicorn lightly_studio.examples.example_embedding_service:app \
+           --host 0.0.0.0 --port 8123 --ssl-certfile cert.pem --ssl-keyfile key.pem
+
+    2. Serve THIS file from a public HTTPS origin. Any static host works; it must not be
+       localhost, because a page on localhost is in the same address space as the service and
+       the browser sends no private-network preflight at all.
+
+    3. Open it in Chrome, with DevTools -> Network open, and enter the service URL.
+
+  What to look for in the Network tab:
+
+    - An OPTIONS request to /info that precedes the GET. Its request headers must include
+      `Access-Control-Request-Private-Network: true`. If that header is absent, Chrome did not
+      classify the target as private and this check proves nothing - confirm the hostname really
+      resolves to a private address.
+    - The OPTIONS response must carry `Access-Control-Allow-Private-Network: true`. The example
+      service sends it.
+    - PASS means the whole approach is viable. A blocked preflight means it is not, and no amount
+      of work on the LightlyStudio side changes that.
+
+  Do not reach for --unsafely-treat-insecure-origin-as-secure or chrome://flags to force a pass.
+  Those change the answer without changing what a customer will experience.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Embedding service — Private Network Access check</title>
+    <style>
+      body {
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          sans-serif;
+        max-width: 44rem;
+        margin: 3rem auto;
+        padding: 0 1.5rem;
+        line-height: 1.5;
+      }
+      input {
+        width: 100%;
+        padding: 0.6rem;
+        font-family: ui-monospace, monospace;
+        font-size: 1rem;
+        box-sizing: border-box;
+      }
+      button {
+        padding: 0.6rem 1.2rem;
+        font: inherit;
+        margin-top: 0.75rem;
+        cursor: pointer;
+      }
+      pre {
+        background: #f4f4f5;
+        padding: 1rem;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        border-radius: 4px;
+      }
+      .pass {
+        color: #15803d;
+        font-weight: 600;
+      }
+      .fail {
+        color: #b91c1c;
+        font-weight: 600;
+      }
+      .origin {
+        font-family: ui-monospace, monospace;
+        font-size: 0.9rem;
+        color: #52525b;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Private Network Access check</h1>
+    <p>
+      Calls <code>GET /info</code> on an embedding service exactly the way the
+      LightlyStudio frontend does, so a failure here is a failure there.
+    </p>
+    <p class="origin">This page is served from: <span id="origin"></span></p>
+
+    <label for="url"><strong>Embedding service base URL</strong></label>
+    <input
+      id="url"
+      value="https://embed.corp.example:8123"
+      spellcheck="false"
+    />
+    <button id="run">Probe /info</button>
+
+    <h2>Result</h2>
+    <pre id="out">Not run yet.</pre>
+
+    <script>
+      const out = document.getElementById("out");
+      document.getElementById("origin").textContent = window.location.origin;
+
+      if (window.location.protocol !== "https:") {
+        out.innerHTML =
+          '<span class="fail">This page is not on HTTPS.</span>\n\n' +
+          "Serve it from a public HTTPS origin. On http:// or localhost the browser " +
+          "does not send a private-network preflight, so the check would pass " +
+          "regardless and tell you nothing.";
+      }
+
+      document.getElementById("run").addEventListener("click", async () => {
+        const base = document
+          .getElementById("url")
+          .value.trim()
+          .replace(/\/+$/, "");
+        const target = `${base}/info`;
+        out.textContent = `Requesting ${target} ...`;
+
+        // Same 3s budget the frontend probe uses.
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 3000);
+        const started = performance.now();
+        try {
+          const response = await fetch(target, {
+            method: "GET",
+            mode: "cors",
+            signal: controller.signal,
+          });
+          const elapsed = Math.round(performance.now() - started);
+          const body = await response.text();
+          out.innerHTML =
+            `<span class="pass">PASS — the browser allowed the request.</span>\n\n` +
+            `${response.status} ${response.statusText} in ${elapsed}ms\n\n${body}\n\n` +
+            `Now confirm in the Network tab that an OPTIONS preflight carried\n` +
+            `Access-Control-Request-Private-Network: true. Without that header the\n` +
+            `target was not treated as private and this result proves nothing.`;
+        } catch (error) {
+          const elapsed = Math.round(performance.now() - started);
+          const blocked = error instanceof TypeError;
+          out.innerHTML =
+            `<span class="fail">FAIL — ${error.name}: ${error.message}</span>\n\n` +
+            `after ${elapsed}ms\n\n` +
+            (blocked
+              ? `An opaque TypeError is what a blocked request looks like: the page\n` +
+                `never sees the response. Open the Network tab and read the OPTIONS\n` +
+                `request to tell the causes apart:\n\n` +
+                `  - preflight missing Access-Control-Allow-Private-Network\n` +
+                `      -> Private Network Access blocked it. This is the finding.\n` +
+                `  - preflight missing Access-Control-Allow-Origin\n` +
+                `      -> plain CORS misconfiguration, not a PNA result.\n` +
+                `  - certificate or mixed-content error in the Console\n` +
+                `      -> TLS problem. Fix it and re-run; PNA is untested until then.\n` +
+                `  - no request at all\n` +
+                `      -> DNS or routing. The host is not reachable from this machine.`
+              : `The request was not blocked by the browser; the service itself failed.`);
+        } finally {
+          clearTimeout(timer);
+        }
+      });
+    </script>
+  </body>
+</html>
