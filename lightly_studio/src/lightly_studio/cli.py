@@ -8,7 +8,6 @@ from pathlib import Path
 import click
 
 import lightly_studio
-from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.database import db_manager
 from lightly_studio.evaluation.image_dataset_evaluate import ObjectDetectionEvaluationConfig
 
@@ -39,7 +38,7 @@ def quickstart(port: int | None, force_download: bool) -> None:
     images_path = coco_dir / "images"
     evaluation_config = ObjectDetectionEvaluationConfig(
         iou_threshold=0.5,
-        classwise=True,
+        classwise=False,
     )
 
     db_manager.connect(db_file="quickstart.db", cleanup_existing=True)
@@ -55,12 +54,9 @@ def quickstart(port: int | None, force_download: bool) -> None:
         images_root=images_path,
         annotation_source="predictions",
     )
-    # Tag a subset of samples to run the evaluation on.
-    dataset.query()[:10].add_tag("evaluated_samples")
-    tagged_evaluation_query = dataset.query().match(
-        ImageSampleField.tags.contains("evaluated_samples")
-    )
-    dataset.evaluate(query=tagged_evaluation_query).object_detection(
+    # Tag a subset of samples to demonstrate tags in the GUI.
+    dataset.query()[:10].add_tag("sample_subset")
+    dataset.evaluate().object_detection(
         name="od_evaluation",
         gt_annotation_source="ground_truth",
         pred_annotation_source="predictions",
