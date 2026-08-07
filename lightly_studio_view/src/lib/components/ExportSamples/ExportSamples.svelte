@@ -24,6 +24,8 @@
     import { fade } from 'svelte/transition';
     import { useExportDialog } from '$lib/hooks';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import AnnotationsTab from './AnnotationsTab/AnnotationsTab.svelte';
+    import { getDefaultExportType, getExportOptions, type ExportType } from './exportOptions';
 
     const { isExportDialogOpen, openExportDialog, closeExportDialog } = useExportDialog();
     const { imageFilter } = useImageFilters();
@@ -36,7 +38,7 @@
     $effect(() => {
         const isOpen = $isExportDialogOpen;
         if (isOpen) {
-            const defaultExportType = isVideoCollection ? 'youtube_vis_segmentation' : 'samples';
+            const defaultExportType = getDefaultExportType(page.data.collection?.sample_type);
             exportType = defaultExportType;
             if (!prevIsDialogOpen) {
                 tracking.trackDialogDefaultFormatSet(defaultExportType);
@@ -49,28 +51,13 @@
         page.data.collection?.sample_type === 'video' ||
             page.data.collection?.sample_type === 'video_frame'
     );
+    const supportsVideoClassifications = $derived(page.data.collection?.sample_type === 'video');
 
-    let exportType = $state<
-        | 'samples'
-        | 'classifications'
-        | 'object_detections_coco'
-        | 'object_detections_yolo'
-        | 'segmentation'
-        | 'captions'
-        | 'youtube_vis_segmentation'
-        | 'semantic_segmentations'
-    >('samples');
-    const exportTypeLabels: Record<typeof exportType, string> = {
-        samples: 'Image Filenames',
-        classifications: 'Image Classifications (CSV)',
-        object_detections_coco: 'Image Object Detections (COCO)',
-        object_detections_yolo: 'Image Object Detections (YOLO)',
-        segmentation: 'Image Segmentation Mask (COCO)',
-        semantic_segmentations: 'Image Segmentation Mask (PASCAL VOC)',
-        captions: 'Image Captions',
-        youtube_vis_segmentation: 'YouTube-VIS Video Segmentation Masks'
-    };
-    const exportTypeTriggerContent = $derived(exportTypeLabels[exportType]);
+    let exportType = $state<ExportType>('samples');
+    const exportOptions = $derived(getExportOptions(page.data.collection?.sample_type));
+    const exportTypeTriggerContent = $derived(
+        exportOptions.find((option) => option.value === exportType)?.label ?? ''
+    );
 
     //
     // Annotation source selection
@@ -250,45 +237,11 @@
                             }}
                         >
                             {#snippet children()}
-                                {#if isVideoCollection}
-                                    <SelectMenuItem
-                                        value="youtube_vis_segmentation"
-                                        label="YouTube-VIS Video Segmentation Masks"
-                                        >YouTube-VIS Video Segmentation Masks</SelectMenuItem
+                                {#each exportOptions as option}
+                                    <SelectMenuItem value={option.value} label={option.label}
+                                        >{option.label}</SelectMenuItem
                                     >
-                                {:else}
-                                    <SelectMenuItem value="samples" label="Image Filenames"
-                                        >Image Filenames</SelectMenuItem
-                                    >
-                                    <SelectMenuItem
-                                        value="classifications"
-                                        label="Image Classifications (CSV)"
-                                        >Image Classifications (CSV)</SelectMenuItem
-                                    >
-                                    <SelectMenuItem
-                                        value="object_detections_coco"
-                                        label="Image Object Detections (COCO)"
-                                        >Image Object Detections (COCO)</SelectMenuItem
-                                    >
-                                    <SelectMenuItem
-                                        value="object_detections_yolo"
-                                        label="Image Object Detections (YOLO)"
-                                        >Image Object Detections (YOLO)</SelectMenuItem
-                                    >
-                                    <SelectMenuItem
-                                        value="segmentation"
-                                        label="Image Segmentation Mask (COCO)"
-                                        >Image Segmentation Mask (COCO)</SelectMenuItem
-                                    >
-                                    <SelectMenuItem
-                                        value="semantic_segmentations"
-                                        label="Image Segmentation Mask (PASCAL VOC)"
-                                        >Image Segmentation Mask (PASCAL VOC)</SelectMenuItem
-                                    >
-                                    <SelectMenuItem value="captions" label="Image Captions"
-                                        >Image Captions</SelectMenuItem
-                                    >
-                                {/if}
+                                {/each}
                             {/snippet}
                         </Select>
                     </FormField>
@@ -400,31 +353,44 @@
 
                     <!-- Classifications tab -->
                     <Tabs.Content value="classifications" class="pt-2">
-                        <p class="text-sm text-muted-foreground">
-                            The classification annotations will be exported in CSV format.
-                        </p>
+                        {#if supportsVideoClassifications}
+                            <AnnotationsTab
+                                exportFormat="classification_csv"
+                                description="The classification annotations will be exported in CSV format."
+                                {annotationSources}
+                                bind:selectedAnnotationCollectionId
+                                testId="submit-button-classifications"
+                                sampleType="video"
+                                onDownloadClick={() =>
+                                    tracking.handleAnnotationDownloadClick(exportType)}
+                            />
+                        {:else}
+                            <p class="text-sm text-muted-foreground">
+                                The classification annotations will be exported in CSV format.
+                            </p>
 
-                        {#if annotationSources.length > 1}
-                            <div class="mt-6">
-                                <FormField label="Annotation Source">
-                                    <AnnotationSourceSelect
-                                        sourceOptions={annotationSources}
-                                        placeholder="Only annotations from the selected source will be exported"
-                                        bind:selectedSource={selectedAnnotationCollectionId}
-                                    />
-                                </FormField>
-                            </div>
+                            {#if annotationSources.length > 1}
+                                <div class="mt-6">
+                                    <FormField label="Annotation Source">
+                                        <AnnotationSourceSelect
+                                            sourceOptions={annotationSources}
+                                            placeholder="Only annotations from the selected source will be exported"
+                                            bind:selectedSource={selectedAnnotationCollectionId}
+                                        />
+                                    </FormField>
+                                </div>
+                            {/if}
+
+                            <Button
+                                class="relative my-4 w-full"
+                                href={exportClassificationsURL}
+                                target="_blank"
+                                data-testid="submit-button-classifications"
+                                onclick={() => tracking.handleAnnotationDownloadClick(exportType)}
+                            >
+                                Download
+                            </Button>
                         {/if}
-
-                        <Button
-                            class="relative my-4 w-full"
-                            href={exportClassificationsURL}
-                            target="_blank"
-                            data-testid="submit-button-classifications"
-                            onclick={() => tracking.handleAnnotationDownloadClick(exportType)}
-                        >
-                            Download
-                        </Button>
                     </Tabs.Content>
 
                     <!-- Object Detections (COCO) tab -->
