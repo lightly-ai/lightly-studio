@@ -167,7 +167,7 @@
                         <ParameterTableCell
                             column={cell}
                             value={row[cell.name]}
-                            isInvalid={isCellInvalid(row, cell, { required, isMissing })}
+                            isInvalid={isCellInvalid(row, cell)}
                             label={`${name} ${cell.name} row ${index + 1}`}
                             testId={`parameter-table-${name}-${cell.name}-${index}`}
                             onUpdate={(cellValue) => updateCell(index, cell.name, cellValue)}
@@ -194,9 +194,12 @@
         </div>
     {/if}
 
-    {#if required && isMissing}
+    <!-- An optional table only blocks once it holds a row, so asking for one would be wrong there. -->
+    {#if isMissing}
         <p class="text-sm text-destructive-text">
-            Add at least one row and fill in every required cell.
+            {required && rows.length === 0
+                ? 'Add at least one row and fill in every highlighted cell.'
+                : 'Fill in every highlighted cell.'}
         </p>
     {/if}
 </div>

@@ -18,5 +18,11 @@ dataset_examples
 # Generated API schema
 openapi.json
 
+# Coverage artifacts from `make test-coverage`. `.coverage.*` are the per-worker
+# shards pytest-cov writes under `-n auto`; an interrupted run leaves them behind.
+coverage.json
+.coverage
+.coverage.*
+
 # docs build
 /docs/site

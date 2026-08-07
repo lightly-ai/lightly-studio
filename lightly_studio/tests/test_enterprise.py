@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import os
 
+import fsspec
 import pytest
 import requests
+from gcsfs import GCSFileSystem  # type: ignore[import-untyped]
 from pytest_mock import MockerFixture, MockType
 
 from lightly_studio import enterprise
@@ -204,6 +207,30 @@ def test_connect__sets_aws_env_vars(
 
     assert os.environ["AWS_ACCESS_KEY_ID"] == access_key_id
     assert os.environ["AWS_SECRET_ACCESS_KEY"] == secret_access_key
+
+
+def test_connect__applies_gcs_runtime_config(
+    mocker: MockerFixture,
+    patch_db_connect: MockType,  # noqa: ARG001
+) -> None:
+    mocker.patch.dict(fsspec.config.conf, {}, clear=True)
+    clear_cache = mocker.spy(GCSFileSystem, "clear_instance_cache")
+    storage_options = {"project": "test-project", "token": "anon"}
+    serialized_options = json.dumps(storage_options)
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.ok = True
+    mock_response.json.return_value = {
+        "engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio",
+        "cloud_credentials": {"FSSPEC_GCS": serialized_options},
+    }
+    mocker.patch.object(requests, "get", return_value=mock_response)
+
+    enterprise.connect(api_url="http://10.0.0.5:8100", token="token")
+
+    assert os.environ["FSSPEC_GCS"] == serialized_options
+    assert fsspec.config.conf["gcs"] == storage_options
+    clear_cache.assert_called_once_with()
 
 
 def test_connect__aws_missing_skips_env(

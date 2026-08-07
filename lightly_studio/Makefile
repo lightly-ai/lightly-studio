@@ -7,6 +7,7 @@ POSTGRES_DB := lightly_studio
 POSTGRES_IMAGE := pgvector/pgvector:0.8.1-pg18-bookworm
 POSTGRES_SHM_SIZE ?= 2g
 POSTGRES_URL ?= postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@localhost:$(POSTGRES_PORT)/$(POSTGRES_DB)
+POSTGRES_STARTUP_TIMEOUT_SECONDS ?= 60
 
 .PHONY: install-uv
 install-uv:
@@ -119,11 +120,23 @@ start-postgres: stop-postgres
 		-e POSTGRES_DB=$(POSTGRES_DB) \
 		-p $(POSTGRES_PORT):5432 \
 		$(POSTGRES_IMAGE)
-ifeq ($(OS),Windows_NT)
-	@powershell -Command "Start-Sleep -Seconds 3"
-else
 	@echo "Waiting for PostgreSQL to be ready..."
-	@until docker exec $(POSTGRES_CONTAINER_NAME) pg_isready -U $(POSTGRES_USER) -d $(POSTGRES_DB) > /dev/null 2>&1; do \
+# Probe over TCP (-h 127.0.0.1) with a real query against $(POSTGRES_DB). Both details matter:
+# pg_isready only pings the postmaster and reports success even when the database is missing, and
+# the entrypoint's temporary bootstrap server -- which creates $(POSTGRES_DB), then runs the init
+# scripts and shuts down again -- listens on the Unix socket only. A socket probe therefore
+# answers from that short-lived server, so callers reach $(POSTGRES_URL) before the real server
+# accepts TCP connections.
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "$$deadline = (Get-Date).AddSeconds($(POSTGRES_STARTUP_TIMEOUT_SECONDS)); while ($$true) { docker exec -e PGPASSWORD=$(POSTGRES_PASSWORD) $(POSTGRES_CONTAINER_NAME) psql -h 127.0.0.1 -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c 'SELECT 1' *> $$null; if ($$LASTEXITCODE -eq 0) { break }; if ((Get-Date) -ge $$deadline) { Write-Host 'PostgreSQL did not become ready within $(POSTGRES_STARTUP_TIMEOUT_SECONDS) seconds'; docker logs $(POSTGRES_CONTAINER_NAME); exit 1 }; Start-Sleep -Seconds 1 }"
+else
+	@deadline=$$(($$(date +%s) + $(POSTGRES_STARTUP_TIMEOUT_SECONDS))); \
+	until docker exec -e PGPASSWORD=$(POSTGRES_PASSWORD) $(POSTGRES_CONTAINER_NAME) psql -h 127.0.0.1 -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c 'SELECT 1' > /dev/null 2>&1; do \
+		if [ $$(date +%s) -ge $$deadline ]; then \
+			echo "PostgreSQL did not become ready within $(POSTGRES_STARTUP_TIMEOUT_SECONDS) seconds"; \
+			docker logs $(POSTGRES_CONTAINER_NAME); \
+			exit 1; \
+		fi; \
 		sleep 1; \
 	done
 endif
@@ -191,6 +204,16 @@ test: build
 test-ci:
 	@echo "Running tests..."
 	uv run pytest
+
+# Full-suite line coverage for the Fast Track coverage guardrail, which reads
+# coverage.json rather than running tests itself. Deliberately has no `build`
+# prerequisite: its `clean` step would delete a webapp build the caller made.
+.PHONY: test-coverage
+test-coverage:
+	@echo "Running tests with coverage..."
+	uv run pytest -n auto --cov=src/lightly_studio \
+	  --cov-report=json:coverage.json \
+	  --cov-report=term-missing:skip-covered
 
 .PHONY: test-postgres
 test-postgres: build
