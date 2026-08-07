@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+import json
 import uuid
 from pathlib import Path
 
 import numpy as np
+import pytest
 import torch
 from PIL import Image
 
 from lightly_studio.dataset.embedding_generator import ImageCrop
 from lightly_studio.dataset.mobileclip_embedding_generator import (
+    MOBILECLIP_CONFIGS_DIR,
     MobileCLIPEmbeddingGenerator,
 )
 
@@ -25,6 +28,36 @@ class TestMobileCLIPEmbeddingGenerator:
         assert embedding_model_input.embedding_dimension == 512
         assert embedding_model_input.collection_id == collection_id
         assert embedding_model_input.embedding_model_hash != ""
+
+    def test_get_embedding_model_input__custom_model_name(self) -> None:
+        mobileclip = MobileCLIPEmbeddingGenerator(model_name="mobileclip_s1")
+        collection_id = uuid.uuid4()
+        embedding_model_input = mobileclip.get_embedding_model_input(collection_id=collection_id)
+
+        assert embedding_model_input.name == "mobileclip_s1"
+        assert embedding_model_input.embedding_dimension == 512
+        assert embedding_model_input.collection_id == collection_id
+
+    def test_init__unsupported_model_name_raises(self) -> None:
+        with pytest.raises(ValueError, match="Unsupported model name"):
+            MobileCLIPEmbeddingGenerator(model_name="mobileclip_xl")
+
+    def test_vendored_configs__all_embed_dims_are_512(self) -> None:
+        """Guards EMBEDDING_DIMENSION and the per-instance derived dimension.
+
+        No network access: reads the vendored config JSON files directly instead of
+        constructing a generator (which would download a checkpoint per variant).
+        """
+        config_paths = sorted(MOBILECLIP_CONFIGS_DIR.glob("*.json"))
+        assert {path.stem for path in config_paths} == {
+            "mobileclip_s0",
+            "mobileclip_s1",
+            "mobileclip_s2",
+            "mobileclip_b",
+        }
+        for path in config_paths:
+            config = json.loads(path.read_text())
+            assert config["embed_dim"] == 512
 
     def test_embed_text(self) -> None:
         text = "a cat"

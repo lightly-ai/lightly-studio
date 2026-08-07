@@ -80,6 +80,17 @@ def set_default_embedding_model(embedding_generator: EmbeddingGenerator) -> None
     custom model remain, but text search falls back to the env-var default model and
     will not match them.
 
+    Note: calling this after a collection has already loaded its default model in
+    this process is a no-op for that collection — the cached default is returned
+    before this override is ever consulted. Call it once, before the first
+    add_images_from_path (or equivalent) call for that sample type.
+
+    Note: re-indexing an existing collection with a different model registers a
+    second embedding model for it. Anything that resolves "the" model without an
+    explicit name (e.g. compute_similarity_metadata, compute_typicality_metadata)
+    then raises ValueError instead of guessing which one to use — pass
+    embedding_model_name explicitly, or start a fresh dataset when switching models.
+
     Args:
         embedding_generator: A generator implementing ImageEmbeddingGenerator and/or
             VideoEmbeddingGenerator.
