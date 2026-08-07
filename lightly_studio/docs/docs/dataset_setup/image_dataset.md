@@ -37,6 +37,34 @@ To skip embedding, pass `embed=False` to the method.
 The method supports additional arguments, e.g. you can pass `tag_depth=1` to add the image parent
 folder name as a tag to each sample. See the [API reference](../api/dataset.md#lightly_studio.ImageDataset.add_images_from_path) for full details.
 
+### Using a Bigger Embedding Model
+
+Images are embedded with `mobileclip_s0` by default, the smallest MobileCLIP variant.
+For higher-quality embeddings (e.g. for retrieval), pick a bigger one before creating
+the dataset:
+
+```python title="Use a bigger MobileCLIP model"
+import lightly_studio as ls
+
+ls.set_default_embedding_model(
+    ls.MobileCLIPEmbeddingGenerator(model_name="mobileclip_s2")
+)
+
+dataset = ls.ImageDataset.create()
+dataset.add_images_from_path(path="...")
+```
+
+Valid names, from smallest to largest: `mobileclip_s0`, `mobileclip_s1`,
+`mobileclip_s2`, `mobileclip_b`. Bigger models mean a bigger download and slower
+embedding; pass `max_batch_size=...` to `MobileCLIPEmbeddingGenerator` to lower
+memory use if needed.
+
+`set_default_embedding_model` must be called before the dataset's first
+`add_images_from_path` call in that process — it has no effect afterwards. Pick one
+model per dataset: re-indexing an existing collection with a different model later
+requires passing `embedding_model_name` explicitly to similarity/typicality calls, or
+starting a fresh dataset.
+
 ### From an Annotation Format
 
 `ImageDataset` class exposes methods to load images with annotations from a number of

@@ -44,6 +44,7 @@ __all__ = [
     "ImageCrop",
     "ImageDataset",
     "ImageEmbeddingGenerator",
+    "MobileCLIPEmbeddingGenerator",
     "SampleType",
     "VideoDataset",
     "VideoEmbeddingGenerator",
@@ -56,3 +57,16 @@ __all__ = [
     "start_gui_background",
     "stop_gui_background",
 ]
+
+
+def __getattr__(name: str) -> object:
+    # Loaded lazily so `import lightly_studio` does not pull in torch/torchvision
+    # unless a caller actually reaches for a concrete embedding backend, matching
+    # the lazy-import convention in dataset/embedding_manager.py.
+    if name == "MobileCLIPEmbeddingGenerator":
+        from lightly_studio.dataset.mobileclip_embedding_generator import (  # noqa: PLC0415
+            MobileCLIPEmbeddingGenerator,
+        )
+
+        return MobileCLIPEmbeddingGenerator
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
