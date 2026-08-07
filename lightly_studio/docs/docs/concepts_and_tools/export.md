@@ -9,15 +9,13 @@ The following export formats are supported:
 | Format | Content | File type |
 |---|---|---|
 | Sample Filenames | Absolute file paths of selected samples | TXT |
-| Classification CSV | Image classification annotations and confidence scores | CSV |
+| Classification CSV | Image and whole-video classification annotations and confidence scores | CSV |
 | COCO Object Detection | Bounding box annotations | JSON |
 | YOLO Object Detection | Bounding box annotations | TXT labels + `data.yaml` (zipped) |
 | COCO Segmentation Mask | Segmentation masks with bounding boxes | JSON |
 | COCO Captions | Image captions | JSON |
 | Pascal VOC Semantic Segmentation | Per-pixel class masks | PNG masks + class map |
 | YouTube-VIS Segmentation Mask | Video segmentation mask tracks | JSON |
-
-Classification CSV export is currently available through the Python API.
 
 ## Export in the GUI
 
@@ -28,7 +26,8 @@ and select `Export`. The dialog shows a dropdown with all available formats for 
 
 ### Exporting annotations
 
-For annotation formats (`Image Classifications (CSV)`, `Image Object Detections (COCO)`,
+For annotation formats (`Image Classifications (CSV)`, `Video Classifications (CSV)`,
+`Image Object Detections (COCO)`,
 `Image Object Detections (YOLO)`,
 `Image Segmentation Mask (COCO)`, `Image Segmentation Mask (PASCAL VOC)`, `Image Captions`,
 `YouTube-VIS Video Segmentation Masks`),
@@ -68,6 +67,7 @@ dataset.export().to_pascalvoc_segmentation_mask("pascalvoc_output_dir/")
 
 # Video dataset export
 dataset = ls.VideoDataset.load()
+dataset.export().to_csv_classifications("classifications.csv")
 dataset.export().to_youtube_vis_segmentation_mask("youtube_vis.json")
 ```
 
