@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import threading
+import time
 import webbrowser
 from collections.abc import Generator
 from pathlib import Path
@@ -25,13 +26,18 @@ class FakeUvicornServer:
         self,
         stop_event: threading.Event,
         respect_should_exit: bool = False,
+        never_starts: bool = False,
     ) -> None:
         self.started = False
         self.should_exit = False
         self.stop_event = stop_event
         self._respect_should_exit = respect_should_exit
+        self._never_starts = never_starts
 
     def run(self) -> None:
+        if self._never_starts:
+            self.should_exit = True
+            return
         self.started = True
         if self._respect_should_exit:
             while not self.should_exit:
@@ -125,6 +131,33 @@ def test_start_gui__opens_browser_when_ready(
     start_gui(open_browser=True)
 
     mock_open.assert_called_once_with("http://127.0.0.1:8001")
+
+
+def test_start_gui__stops_polling_when_startup_aborts(
+    mocker: MockerFixture,
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    """Test that the browser-opener thread exits without opening a browser.
+
+    Covers the case where server startup aborts before becoming ready.
+    """
+    image_path = tmp_path / "sample.jpg"
+    Image.new("RGB", (10, 10)).save(image_path)
+
+    dataset = ImageDataset.create("test_dataset")
+    dataset.add_images_from_path(path=tmp_path)
+
+    stop_event = threading.Event()
+    fake_server = FakeUvicornServer(stop_event=stop_event, never_starts=True)
+    mock_server = mocker.patch.object(start_gui_module, "Server")
+    mock_server.return_value.create_uvicorn_server.return_value = fake_server
+    mock_open = mocker.patch.object(webbrowser, "open")
+
+    start_gui(open_browser=True)
+    time.sleep(0.2)  # let the daemon opener thread observe should_exit
+
+    mock_open.assert_not_called()
 
 
 def test_start_gui__does_not_open_browser_by_default(
