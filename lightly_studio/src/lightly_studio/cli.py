@@ -26,46 +26,23 @@ def main() -> None:
     default=False,
     help="Re-download the demo dataset even if already cached.",
 )
-def quickstart(port: int | None, force_download: bool) -> None:
-    """Launch the GUI preloaded with a COCO object detection evaluation demo dataset."""
-    dataset_path = Path(
-        lightly_studio.utils.download_example_dataset(
-            download_dir="dataset_examples",
-            force_redownload=force_download,
-        )
-    )
-    coco_dir = dataset_path / "coco_subset_128_images"
-    images_path = coco_dir / "images"
-    evaluation_config = ObjectDetectionEvaluationConfig(
-        iou_threshold=0.5,
-        classwise=False,
-    )
+@click.option(
+    "--no-browser",
+    is_flag=True,
+    default=False,
+    help="Do not open a browser automatically once the GUI server is ready.",
+)
+def quickstart(port: int | None, force_download: bool, no_browser: bool) -> None:
+    """Launch the GUI preloaded with a COCO object detection evaluation demo dataset.
 
+    Recreates ./quickstart.db in the current directory on every run, overwriting
+    any existing file with that name.
+    """
+    coco_dir, images_path = _download_quickstart_dataset(force_download=force_download)
     db_manager.connect(db_file="quickstart.db", cleanup_existing=True)
-    dataset = lightly_studio.ImageDataset.create()
-    dataset.add_images_from_path(path=images_path)
-    dataset.add_annotations_from_coco(
-        annotations_json=coco_dir / "instances_train2017.json",
-        images_root=images_path,
-        annotation_source="ground_truth",
-    )
-    dataset.add_annotations_from_coco(
-        annotations_json=coco_dir / "predictions_train2017.json",
-        images_root=images_path,
-        annotation_source="predictions",
-    )
-    # Tag a subset of samples to demonstrate tags in the GUI.
-    dataset.query()[:10].add_tag("sample_subset")
-    dataset.evaluate().object_detection(
-        name="od_evaluation",
-        gt_annotation_source="ground_truth",
-        pred_annotation_source="predictions",
-        config=evaluation_config,
-    )
-
-    # TODO(Gabriel, 08/2026): Open the browser automatically once the server is ready.
-    # See LIG-10436.
-    lightly_studio.start_gui(port=port)
+    dataset = _load_quickstart_dataset(coco_dir=coco_dir, images_path=images_path)
+    _evaluate_quickstart_dataset(dataset=dataset)
+    lightly_studio.start_gui(port=port, open_browser=not no_browser)
 
 
 @main.command()
@@ -96,3 +73,48 @@ def gui(
         raise click.UsageError("Options '--db-file' and '--db-url' are mutually exclusive.")
     db_manager.connect(db_file=db_file, db_url=db_url, must_exist=True)
     lightly_studio.start_gui(host=host, port=port)
+
+
+def _download_quickstart_dataset(force_download: bool) -> tuple[Path, Path]:
+    """Download the demo COCO dataset and return (coco_dir, images_path)."""
+    dataset_path = Path(
+        lightly_studio.utils.download_example_dataset(
+            download_dir="dataset_examples",
+            force_redownload=force_download,
+        )
+    )
+    coco_dir = dataset_path / "coco_subset_128_images"
+    return coco_dir, coco_dir / "images"
+
+
+def _load_quickstart_dataset(coco_dir: Path, images_path: Path) -> lightly_studio.ImageDataset:
+    """Create the quickstart dataset and import its ground-truth and prediction annotations."""
+    dataset = lightly_studio.ImageDataset.create()
+    dataset.add_images_from_path(path=images_path)
+    dataset.add_annotations_from_coco(
+        annotations_json=coco_dir / "instances_train2017.json",
+        images_root=images_path,
+        annotation_source="ground_truth",
+    )
+    dataset.add_annotations_from_coco(
+        annotations_json=coco_dir / "predictions_train2017.json",
+        images_root=images_path,
+        annotation_source="predictions",
+    )
+    # Tag a subset of samples to demonstrate tags in the GUI.
+    dataset.query()[:10].add_tag("sample_subset")
+    return dataset
+
+
+def _evaluate_quickstart_dataset(dataset: lightly_studio.ImageDataset) -> None:
+    """Run the object-detection evaluation used to showcase the evaluation GUI."""
+    evaluation_config = ObjectDetectionEvaluationConfig(
+        iou_threshold=0.5,
+        classwise=False,
+    )
+    dataset.evaluate().object_detection(
+        name="od_evaluation",
+        gt_annotation_source="ground_truth",
+        pred_annotation_source="predictions",
+        config=evaluation_config,
+    )
