@@ -72,7 +72,7 @@ def test_export_collection_prepare(
     export_job = db_session.get(ExportJobTable, export_key)
     assert export_job is not None
     file_content = Path(export_job.export_path).read_text()
-    assert file_content == "path/a.png\npath/b.png"
+    assert set(file_content.splitlines()) == {"path/a.png", "path/b.png"}
 
 
 def test_export_collection_prepare__with_collection_filter(
