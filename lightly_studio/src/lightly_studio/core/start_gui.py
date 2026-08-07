@@ -56,8 +56,10 @@ def start_gui(
 
 def _open_browser_when_ready(uvicorn_server: uvicorn.Server, url: str) -> None:
     """Open the browser at url once the uvicorn server starts accepting connections."""
-    while not uvicorn_server.started:
+    while not uvicorn_server.started and not uvicorn_server.should_exit:
         time.sleep(0.1)
+    if not uvicorn_server.started:
+        return
     try:
         webbrowser.open(url)
     except webbrowser.Error:
