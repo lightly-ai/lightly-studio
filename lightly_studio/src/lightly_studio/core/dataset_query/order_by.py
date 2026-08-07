@@ -153,15 +153,9 @@ class OrderByMetadataField(OrderByExpression):
     A LEFT OUTER JOIN to SampleMetadataTable is added automatically so that
     samples without metadata still appear in results (sorted last when ascending).
 
-    Numerical fields order numerically and everything else lexicographically, with
-    no help from the caller. Which one applies is decided in SQL from the type
-    recorded per key in ``metadata_schema``, which the same join already provides.
-    Sorting is by two keys: the value as a float for numerical fields (NULL for
-    every row of a non-numerical field, so it cannot affect them), then the raw
-    extracted value.
-
-    Note that ``metadata_schema`` only records top-level keys, so a dotted path
-    into a nested object sorts lexicographically.
+    Numerical fields order numerically and everything else lexicographically,
+    decided in SQL from the type recorded in ``metadata_schema``. Only top-level
+    keys are recorded there, so a dotted path sorts lexicographically.
 
     Args:
         field_name: The key inside the JSON ``data`` column to sort by.
@@ -187,7 +181,11 @@ class OrderByMetadataField(OrderByExpression):
         )
 
     def _sort_key_expressions(self) -> list[ColumnElement[Any]]:
-        """Return the numerical key, then the raw value for everything else."""
+        """Return the numerical key, then the raw value.
+
+        The numerical key is NULL for every row of a non-numerical field, so it
+        cannot affect their order and the raw value decides.
+        """
         return [self._order_value_expression(), self._extracted_value()]
 
     def _is_numerical_field(self) -> ColumnElement[bool]:
