@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
+import pytest
 from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
@@ -37,60 +38,27 @@ def _create_collection_with_metadata(session: Session) -> UUID:
     return collection_id
 
 
-def test_resolve_cast_to_float__integer_field(db_session: Session) -> None:
+@pytest.mark.parametrize(
+    ("metadata_key", "expected_cast_to_float"),
+    [
+        ("count", True),  # Integer.
+        ("score", True),  # Float.
+        ("label", False),  # String.
+        ("is_valid", False),  # Boolean.
+        ("does_not_exist", False),  # Absent from the schema.
+    ],
+)
+def test_resolve_cast_to_float(
+    db_session: Session, metadata_key: str, expected_cast_to_float: bool
+) -> None:
     collection_id = _create_collection_with_metadata(session=db_session)
-    order_by = OrderByMetadataField("count")
+    order_by = OrderByMetadataField(metadata_key)
 
     metadata_sort_types.resolve_cast_to_float(
         session=db_session, collection_id=collection_id, order_by=[order_by]
     )
 
-    assert order_by.cast_to_float is True
-
-
-def test_resolve_cast_to_float__float_field(db_session: Session) -> None:
-    collection_id = _create_collection_with_metadata(session=db_session)
-    order_by = OrderByMetadataField("score")
-
-    metadata_sort_types.resolve_cast_to_float(
-        session=db_session, collection_id=collection_id, order_by=[order_by]
-    )
-
-    assert order_by.cast_to_float is True
-
-
-def test_resolve_cast_to_float__string_field(db_session: Session) -> None:
-    collection_id = _create_collection_with_metadata(session=db_session)
-    order_by = OrderByMetadataField("label")
-
-    metadata_sort_types.resolve_cast_to_float(
-        session=db_session, collection_id=collection_id, order_by=[order_by]
-    )
-
-    assert order_by.cast_to_float is False
-
-
-def test_resolve_cast_to_float__boolean_field(db_session: Session) -> None:
-    collection_id = _create_collection_with_metadata(session=db_session)
-    order_by = OrderByMetadataField("is_valid")
-
-    metadata_sort_types.resolve_cast_to_float(
-        session=db_session, collection_id=collection_id, order_by=[order_by]
-    )
-
-    assert order_by.cast_to_float is False
-
-
-def test_resolve_cast_to_float__unknown_field(db_session: Session) -> None:
-    """A key absent from the schema keeps lexicographic ordering."""
-    collection_id = _create_collection_with_metadata(session=db_session)
-    order_by = OrderByMetadataField("does_not_exist")
-
-    metadata_sort_types.resolve_cast_to_float(
-        session=db_session, collection_id=collection_id, order_by=[order_by]
-    )
-
-    assert order_by.cast_to_float is False
+    assert order_by.cast_to_float is expected_cast_to_float
 
 
 def test_resolve_cast_to_float__resets_stale_cast(db_session: Session) -> None:

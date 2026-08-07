@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from duckdb_engine import Dialect as DuckDBDialect
 from sqlmodel import select
 
@@ -74,23 +75,28 @@ class TestOrderByMetadataField:
         """Test that the float cast is off until it is resolved from the schema."""
         assert OrderByMetadataField("score").cast_to_float is False
 
-    def test_infer_cast_to_float__numeric_types(self) -> None:
-        """Test that numerical schema types enable the float cast."""
-        for metadata_type in ["integer", "float"]:
-            order_by = OrderByMetadataField("score")
+    @pytest.mark.parametrize(
+        ("metadata_type", "expected_cast_to_float"),
+        [
+            ("integer", True),
+            ("float", True),
+            ("string", False),
+            ("boolean", False),
+            ("list", False),
+            ("dict", False),
+            (None, False),  # Field absent from the schema.
+        ],
+    )
+    def test_infer_cast_to_float(
+        self, metadata_type: str | None, expected_cast_to_float: bool
+    ) -> None:
+        """Test that only numerical schema types enable the float cast."""
+        # Start from the opposite value so the assertion cannot pass by accident.
+        order_by = OrderByMetadataField("score", cast_to_float=not expected_cast_to_float)
 
-            order_by.infer_cast_to_float(metadata_type=metadata_type)
+        order_by.infer_cast_to_float(metadata_type=metadata_type)
 
-            assert order_by.cast_to_float is True
-
-    def test_infer_cast_to_float__non_numeric_types(self) -> None:
-        """Test that other schema types, and unknown fields, keep lexicographic ordering."""
-        for metadata_type in ["string", "boolean", "list", "dict", None]:
-            order_by = OrderByMetadataField("score", cast_to_float=True)
-
-            order_by.infer_cast_to_float(metadata_type=metadata_type)
-
-            assert order_by.cast_to_float is False
+        assert order_by.cast_to_float is expected_cast_to_float
 
     def test_apply_joins__metadata_join(self) -> None:
         """Test that apply_joins adds the metadata outer join."""
