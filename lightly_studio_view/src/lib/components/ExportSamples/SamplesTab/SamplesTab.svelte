@@ -16,6 +16,12 @@
     import type { ExportFilter } from '$lib/services/types';
     import { PUBLIC_LIGHTLY_STUDIO_API_URL } from '$env/static/public';
 
+    interface Props {
+        onDownloadClick?: () => void;
+    }
+
+    let { onDownloadClick }: Props = $props();
+
     const collectionId = page.params.collection_id!;
     const { imageFilter } = useImageFilters();
     const { tags } = useTags({ collection_id: collectionId });
@@ -133,7 +139,10 @@
         isLoading={$exportIsLoading || $countIsLoading}
         disabled={isSubmitDisabled}
         errorMessage={$statError ?? $errorMessage}
-        onclick={handleExport}
+        onclick={() => {
+            onDownloadClick?.();
+            handleExport();
+        }}
         testId="submit-button-samples"
     />
 </div>

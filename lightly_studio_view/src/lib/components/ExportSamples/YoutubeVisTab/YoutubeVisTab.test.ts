@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { writable } from 'svelte/store';
 import type { VideoFilter } from '$lib/api/lightly_studio_local/types.gen';
 import YoutubeVisTab from './YoutubeVisTab.svelte';
-import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+import { useVideoFilters } from '$lib/hooks';
 
 const pageMock = vi.hoisted(() => ({ params: { collection_id: 'test-collection' } }));
 vi.mock('$app/state', () => ({ page: pageMock }));
@@ -15,7 +15,7 @@ vi.mock('$lib/api/lightly_studio_local', () => ({
     exportCollectionYoutubeVisPrepare: mocks.exportCollectionYoutubeVisPrepare
 }));
 
-vi.mock('$lib/hooks/useVideoFilters/useVideoFilters', () => ({
+vi.mock('$lib/hooks', () => ({
     useVideoFilters: vi.fn()
 }));
 
@@ -48,11 +48,11 @@ describe('YoutubeVisTab', () => {
         await fireEvent.click(
             screen.getByTestId('submit-button-youtube-vis-instance-segmentations')
         );
-        expect(mocks.exportCollectionYoutubeVisPrepare).toHaveBeenCalledWith({
-            path: { collection_id: 'test-collection' },
-            body: { video_filter: null }
-        });
         await waitFor(() => {
+            expect(mocks.exportCollectionYoutubeVisPrepare).toHaveBeenCalledWith({
+                path: { collection_id: 'test-collection' },
+                body: { video_filter: null }
+            });
             expect(openSpy).toHaveBeenCalledWith(
                 expect.stringContaining('/export/download/key123'),
                 '_blank'
