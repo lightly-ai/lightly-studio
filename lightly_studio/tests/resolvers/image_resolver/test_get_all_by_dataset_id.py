@@ -815,11 +815,86 @@ def test_get_all_by_collection_id__sort_by_metadata_field_asc(db_session: Sessio
     result = image_resolver.get_all_by_collection_id(
         session=db_session,
         collection_id=collection_id,
-        order_by=[OrderByMetadataField("score", cast_to_float=True)],
+        order_by=[OrderByMetadataField("score")],
     )
 
     assert [s.file_name for s in result.samples] == ["b.png", "c.png", "a.png"]
     assert result.order_values == [1.0, 2.0, 3.0]
+
+
+def test_get_all_by_collection_id__sort_by_numeric_metadata_field_without_cast(
+    db_session: Session,
+) -> None:
+    """Numeric metadata sorts numerically without the caller declaring the type.
+
+    Values are chosen to straddle a digit boundary, where lexicographic ordering
+    would put "10" and "100" before "9".
+    """
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    image_a = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/a.png"
+    )
+    image_b = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
+    )
+    image_c = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/c.png"
+    )
+
+    metadata_resolver.bulk_update_metadata(
+        db_session,
+        [
+            (image_a.sample_id, {"score": 100}),
+            (image_b.sample_id, {"score": 9}),
+            (image_c.sample_id, {"score": 10}),
+        ],
+    )
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        order_by=[OrderByMetadataField("score")],
+    )
+
+    assert [s.file_name for s in result.samples] == ["b.png", "c.png", "a.png"]
+    assert result.order_values == [9.0, 10.0, 100.0]
+
+
+def test_get_all_by_collection_id__sort_by_string_metadata_field_without_cast(
+    db_session: Session,
+) -> None:
+    """String metadata keeps lexicographic ordering."""
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    image_a = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/a.png"
+    )
+    image_b = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
+    )
+    image_c = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/c.png"
+    )
+
+    metadata_resolver.bulk_update_metadata(
+        db_session,
+        [
+            (image_a.sample_id, {"label": "cat"}),
+            (image_b.sample_id, {"label": "ant"}),
+            (image_c.sample_id, {"label": "bee"}),
+        ],
+    )
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        order_by=[OrderByMetadataField("label")],
+    )
+
+    assert [s.file_name for s in result.samples] == ["b.png", "c.png", "a.png"]
 
 
 def test_get_all_by_collection_id__sort_by_width_asc(db_session: Session) -> None:
@@ -1170,3 +1245,111 @@ def test_get_all_by_collection_id__embedding_region_combined_with_dimension_filt
 )
 def test_coerce_order_value(value: object, expected: float | None) -> None:
     assert _coerce_order_value(value) == expected
+
+
+def test_get_all_by_collection_id__sort_by_large_numeric_metadata(db_session: Session) -> None:
+    """Large values must keep full precision when sorting.
+
+    These collapse to the same value in single precision, and the raw-value
+    tiebreaker would then order them lexicographically, i.e. backwards.
+    """
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    image_a = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/a.png"
+    )
+    image_b = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
+    )
+
+    metadata_resolver.bulk_update_metadata(
+        db_session,
+        [
+            (image_a.sample_id, {"timestamp_ms": 10000000000001}),
+            (image_b.sample_id, {"timestamp_ms": 9999999999999}),
+        ],
+    )
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        order_by=[OrderByMetadataField("timestamp_ms")],
+    )
+
+    assert [s.file_name for s in result.samples] == ["b.png", "a.png"]
+    assert result.order_values == [9999999999999.0, 10000000000001.0]
+
+
+def test_get_all_by_collection_id__sort_by_metadata_key_containing_a_dot(
+    db_session: Session,
+) -> None:
+    """A key containing a dot must not be mistaken for a path into a nested object.
+
+    ``a.b`` is a numerical key in its own right while ``a`` holds a nested string at
+    ``b``. Reading the type and the value with different syntaxes would declare the
+    field numerical and then hand ``"hello"`` to the cast, failing the query.
+    """
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    image_a = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/a.png"
+    )
+    image_b = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
+    )
+
+    metadata_resolver.bulk_update_metadata(
+        db_session,
+        [
+            (image_a.sample_id, {"a.b": 5, "a": {"b": "hello"}}),
+            (image_b.sample_id, {"a.b": 3, "a": {"b": "world"}}),
+        ],
+    )
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        order_by=[OrderByMetadataField("a.b")],
+    )
+
+    assert len(result.samples) == 2
+
+
+def test_get_all_by_collection_id__sort_by_metadata_places_missing_values_last(
+    db_session: Session,
+) -> None:
+    """Samples without a value sort last in both directions, on either backend."""
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    image_a = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/a.png"
+    )
+    image_b = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
+    )
+    create_image(session=db_session, collection_id=collection_id, file_path_abs="/images/c.png")
+
+    metadata_resolver.bulk_update_metadata(
+        db_session,
+        [
+            (image_a.sample_id, {"score": 9}),
+            (image_b.sample_id, {"score": 100}),
+        ],
+    )
+
+    ascending = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        order_by=[OrderByMetadataField("score")],
+    )
+    descending = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        order_by=[OrderByMetadataField("score").desc()],
+    )
+
+    assert [s.file_name for s in ascending.samples] == ["a.png", "b.png", "c.png"]
+    assert [s.file_name for s in descending.samples] == ["b.png", "a.png", "c.png"]
