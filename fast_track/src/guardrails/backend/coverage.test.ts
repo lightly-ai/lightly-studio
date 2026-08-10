@@ -18,7 +18,10 @@ const mockExistsSync = vi.mocked(existsSync);
 const mockReadFileSync = vi.mocked(readFileSync);
 
 const REPORT_PATH = '/tmp/lightly_studio/coverage.json';
-const PATCH = '@@ -0,0 +1,3 @@\n+line 1\n+line 2\n+line 3\n';
+
+/** The new-file line numbers `PATCH` adds, so a report can name the same lines. */
+const ADDED_LINES = [12, 13, 14];
+const PATCH = '@@ -12,0 +12,3 @@\n+added line 12\n+added line 13\n+added line 14\n';
 
 // The same file as coverage.py names it (cwd-relative) and as the diff names it.
 const COVERAGE_KEY = 'src/lightly_studio/service.py';
@@ -27,7 +30,7 @@ const REPO_RELATIVE_KEY = 'lightly_studio/' + COVERAGE_KEY;
 const BACKEND_FILE: ChangedFile = {
     path: REPO_RELATIVE_KEY,
     status: 'modified',
-    additions: 3,
+    additions: ADDED_LINES.length,
     deletions: 0,
     patch: PATCH
 };
@@ -140,7 +143,7 @@ describe('backendCoverageGuardrail', () => {
                 {
                     path: 'lightly_studio_view/src/lib/foo.ts',
                     status: 'modified',
-                    additions: 3,
+                    additions: ADDED_LINES.length,
                     deletions: 0,
                     patch: PATCH
                 }
@@ -150,14 +153,14 @@ describe('backendCoverageGuardrail', () => {
         expect(result.summary).toContain('0 file(s) checked');
     });
 
-    it('skips with a loud summary when BACKEND_COVERAGE_JSON is unset', async () => {
+    it('skips with an explanatory summary when BACKEND_COVERAGE_JSON is unset', async () => {
         const result = await backendCoverageGuardrail.run(makeCtx([BACKEND_FILE]));
         expect(result.status).toBe('pass');
         expect(result.summary).toContain('coverage skipped: BACKEND_COVERAGE_JSON not set');
     });
 
     it('fails when BACKEND_TESTS_PASSED is false', async () => {
-        setReport({ [COVERAGE_KEY]: { executed_lines: [1, 2, 3], missing_lines: [] } });
+        setReport({ [COVERAGE_KEY]: { executed_lines: ADDED_LINES, missing_lines: [] } });
         process.env.BACKEND_TESTS_PASSED = 'false';
         const result = await backendCoverageGuardrail.run(makeCtx([BACKEND_FILE]));
         expect(result.status).toBe('fail');
@@ -165,14 +168,14 @@ describe('backendCoverageGuardrail', () => {
     });
 
     it('passes when all added lines are covered', async () => {
-        setReport({ [COVERAGE_KEY]: { executed_lines: [1, 2, 3], missing_lines: [] } });
+        setReport({ [COVERAGE_KEY]: { executed_lines: ADDED_LINES, missing_lines: [] } });
         const result = await backendCoverageGuardrail.run(makeCtx([BACKEND_FILE]));
         expect(result.status).toBe('pass');
         expect(result.summary).toContain(`[PASS] ${BACKEND_FILE.path}`);
     });
 
     it('fails an untested new file instead of auto-passing it', async () => {
-        setReport({ [COVERAGE_KEY]: { executed_lines: [], missing_lines: [1, 2, 3] } });
+        setReport({ [COVERAGE_KEY]: { executed_lines: [], missing_lines: ADDED_LINES } });
         const result = await backendCoverageGuardrail.run(
             makeCtx([{ ...BACKEND_FILE, status: 'added' }])
         );
