@@ -1,21 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
-import type { OperatorParameterColumn } from '$lib/hooks';
 import ParameterTableCell from './ParameterTableCell.svelte';
-
-// Columns come from the API mapper, where every field is present. The factory fills in the parts a
-// test does not care about so the fixtures stay readable.
-const column = (overrides: Partial<OperatorParameterColumn>): OperatorParameterColumn => ({
-    name: 'prompt',
-    description: 'What to segment',
-    default: undefined,
-    required: true,
-    paramType: 'str',
-    ...overrides
-});
+import { column } from '../../fixtures';
 
 const defaultProps = {
-    column: column({}),
+    column: column(),
     value: '' as string | number | boolean | undefined,
     isInvalid: false,
     label: 'prompts prompt row 1',
