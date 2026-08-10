@@ -111,14 +111,18 @@ class TestVideoFrameDatasetExport:
         assert not output_dir.exists()
 
         frames = dataset.frames()
-        frames.export(frames.query()).to_image_files(output_dir=output_dir)
+        exported_paths = frames.export(frames.query()).to_image_files(output_dir=output_dir)
 
-        exported_files = sorted(output_dir.glob("*.png"))
-        assert [path.name for path in exported_files] == [
+        expected_names = [
             "test_video-0-mp4.png",
             "test_video-1-mp4.png",
             "test_video-2-mp4.png",
         ]
+        assert exported_paths == [
+            f"{output_dir}/{name}".replace("\\", "/") for name in expected_names
+        ]
+        exported_files = sorted(output_dir.glob("*.png"))
+        assert [path.name for path in exported_files] == expected_names
         for image_file in exported_files:
             with PILImage.open(image_file) as img:
                 assert img.size == (100, 100)
@@ -133,8 +137,9 @@ class TestVideoFrameDatasetExport:
         output_dir = tmp_path / "exported_frames"
         frames = dataset.frames()
         query = frames.query().match(VideoFrameSampleField.frame_number == 0)
-        frames.export(query).to_image_files(output_dir=output_dir)
+        exported_paths = frames.export(query).to_image_files(output_dir=output_dir)
 
+        assert exported_paths == [f"{output_dir}/test_video-0-mp4.png".replace("\\", "/")]
         exported_files = list(output_dir.glob("*.png"))
         assert len(exported_files) == 1
         assert exported_files[0].name == "test_video-0-mp4.png"
@@ -194,7 +199,7 @@ def test_video_frame_filename() -> None:
             video_filename="video_001.mp4",
             decode_index=7,
             zero_padding=2,
-            file_extension="jpg",
+            file_extension=".jpg",
         )
         == "video_001-07-mp4.jpg"
     )
