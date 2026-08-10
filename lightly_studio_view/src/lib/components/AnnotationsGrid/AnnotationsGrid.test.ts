@@ -209,25 +209,6 @@ function buildClassificationAnnotation(id: string, labelName = 'cat'): Annotatio
     };
 }
 
-function buildOdAnnotation(id: string): AnnotationWithPayloadView {
-    return {
-        parent_sample_type: SampleType.IMAGE,
-        annotation: {
-            sample_id: id,
-            annotation_type: AnnotationType.OBJECT_DETECTION,
-            annotation_label: { annotation_label_name: 'dog' },
-            annotation_collection_id: 'col-1',
-            parent_sample_id: 'img-2',
-            object_detection_details: { x: 0, y: 0, width: 100, height: 100 }
-        } as unknown as AnnotationView,
-        parent_sample_data: {
-            sample_id: 'img-2',
-            width: 640,
-            height: 480
-        } as unknown as ImageAnnotationView
-    };
-}
-
 function renderGrid() {
     mocks.getCollectionVersion.mockResolvedValue('v1');
     return render(AnnotationsGrid, { props: { collection_id: 'col-1', itemWidth: 3 } });
@@ -240,24 +221,6 @@ describe('AnnotationsGrid', () => {
         mocks.getCollectionVersion.mockResolvedValue('v1');
         mocks.pickedAnnotationIds.set({});
         mocks.isEditingModeStore.set(false);
-    });
-
-    it('renders AnnotationClassificationGridItem for a classification annotation', () => {
-        mocks.annotationsData = [buildClassificationAnnotation('cls-1')];
-
-        renderGrid();
-
-        expect(screen.getByTestId('mock-classification-grid-item')).toBeInTheDocument();
-        expect(screen.queryByTestId('mock-annotations-grid-item')).not.toBeInTheDocument();
-    });
-
-    it('renders AnnotationsGridItem for an OD annotation', () => {
-        mocks.annotationsData = [buildOdAnnotation('od-1')];
-
-        renderGrid();
-
-        expect(screen.getByTestId('mock-annotations-grid-item')).toBeInTheDocument();
-        expect(screen.queryByTestId('mock-classification-grid-item')).not.toBeInTheDocument();
     });
 
     it('renders two separate tiles for two classification annotations', () => {

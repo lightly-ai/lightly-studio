@@ -4,7 +4,7 @@ import type {
     RegisteredOperatorMetadata
 } from '$lib/api/lightly_studio_local';
 
-export type OperatorParameterType = 'string' | 'int' | 'float' | 'bool';
+export type OperatorParameterType = 'string' | 'int' | 'float' | 'bool' | 'table';
 
 const mapColumn = (column: ParameterColumnView) => ({
     name: column.name,
@@ -18,13 +18,19 @@ const mapColumn = (column: ParameterColumnView) => ({
     paramType: column.param_type ?? undefined
 });
 
+/**
+ * A single column of a table parameter as consumed by the GUI. Derived from `mapColumn` so the
+ * shape cannot drift from the mapper.
+ */
+export type OperatorParameterColumn = ReturnType<typeof mapColumn>;
+
 export type OperatorParameter = {
     name: string;
     description?: string;
     default?: unknown;
     required?: boolean;
     type: OperatorParameterType;
-    columns?: ReturnType<typeof mapColumn>[];
+    columns?: OperatorParameterColumn[];
 };
 
 export type Operator = {

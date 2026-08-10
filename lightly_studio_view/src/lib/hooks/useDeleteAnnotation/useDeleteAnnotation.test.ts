@@ -12,14 +12,37 @@ vi.mock('$lib/hooks/usePostHog', () => ({
     usePostHog: () => ({ trackEvent })
 }));
 
+const { invalidateAnnotationGridQueries, useInvalidateAnnotationGridQueries } = vi.hoisted(() => ({
+    invalidateAnnotationGridQueries: vi.fn(),
+    useInvalidateAnnotationGridQueries: vi.fn()
+}));
+vi.mock('$lib/hooks/useInvalidateAnnotationGridQueries', () => ({
+    useInvalidateAnnotationGridQueries
+}));
+
 describe('useDeleteAnnotation', () => {
     const invalidateQueries = vi.fn();
 
     beforeEach(() => {
         vi.clearAllMocks();
+        useInvalidateAnnotationGridQueries.mockReturnValue(invalidateAnnotationGridQueries);
         vi.mocked(useQueryClient).mockReturnValue({
             invalidateQueries
         } as unknown as ReturnType<typeof useQueryClient>);
+    });
+
+    it('invalidates annotation-bearing grids after a successful delete', async () => {
+        vi.mocked(createMutation).mockReturnValue({
+            mutate: (_vars: unknown, opts: { onSuccess: () => void }) => {
+                opts.onSuccess();
+            }
+        } as unknown as ReturnType<typeof createMutation>);
+
+        const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => 'col-1' });
+        await deleteAnnotation('ann-1', 'classification');
+
+        expect(useInvalidateAnnotationGridQueries).toHaveBeenCalledWith();
+        expect(invalidateAnnotationGridQueries).toHaveBeenCalledWith('col-1');
     });
 
     it('fires annotation_deleted with collection_id and annotation_type on success', async () => {
@@ -29,7 +52,7 @@ describe('useDeleteAnnotation', () => {
             }
         } as unknown as ReturnType<typeof createMutation>);
 
-        const { deleteAnnotation } = useDeleteAnnotation({ collectionId: 'col-1' });
+        const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => 'col-1' });
         await deleteAnnotation('ann-1', 'classification');
 
         expect(trackEvent).toHaveBeenCalledWith('annotation_deleted', {
@@ -45,7 +68,7 @@ describe('useDeleteAnnotation', () => {
             }
         } as unknown as ReturnType<typeof createMutation>);
 
-        const { deleteAnnotation } = useDeleteAnnotation({ collectionId: 'col-1' });
+        const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => 'col-1' });
         await deleteAnnotation('ann-1', 'object_detection');
 
         expect(trackEvent).toHaveBeenCalledWith('annotation_deleted', {

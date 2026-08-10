@@ -6,6 +6,7 @@ from enum import Enum
 class ExportFormat(str, Enum):
     """Supported export formats for API export endpoints."""
 
+    CLASSIFICATION_CSV = "classification_csv"
     OBJECT_DETECTION_COCO = "object_detection_coco"
     OBJECT_DETECTION_YOLO = "object_detection_yolo"
     SEGMENTATION_MASK_COCO = "segmentation_mask_coco"
