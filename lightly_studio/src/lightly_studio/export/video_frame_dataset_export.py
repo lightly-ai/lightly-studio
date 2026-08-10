@@ -161,6 +161,8 @@ def _export_frames_from_video(
     else:
         total_frame_count = max_frame_number
     zero_padding = len(str(total_frame_count))
+    # TODO(Horatiu 08/2026): Using the filename will overwrite files if two videos with the same
+    # name are in different directories. Add video sample id to the name.
     video_filename = Path(video_path).name
     pil_format = _EXTENSION_TO_PIL_FORMAT[extension]
     exported_paths: list[str] = []
