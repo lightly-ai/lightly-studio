@@ -64,6 +64,7 @@ nav:
       - Sample: api/sample.md
       - DatasetQuery: api/dataset_query.md
       - Sampling: api/sampling.md
+      - Embeddings: api/embeddings.md
       - Plugin: api/plugin.md
       - Annotation: api/annotation.md
       - Model Evaluation: api/evaluation.md
@@ -111,6 +112,7 @@ plugins:
             docstring_style: google
             docstring_options:
               ignore_init_summary: true
+              returns_multiple_items: false
             heading_level: 2
             merge_init_into_class: true
             show_source: false
