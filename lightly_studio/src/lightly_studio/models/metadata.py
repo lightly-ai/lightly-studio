@@ -36,6 +36,9 @@ NAME_TO_TYPE_MAP = {
     "dict": dict,
 }
 
+# Schema type names whose values are ordered and aggregated numerically.
+NUMERIC_TYPE_NAMES = ("integer", "float")
+
 
 def get_type_name(value: Any) -> str:
     """Get the type name for a value.
