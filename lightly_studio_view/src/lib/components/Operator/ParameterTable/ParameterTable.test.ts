@@ -132,7 +132,7 @@ describe('ParameterTable', () => {
         });
 
         expect(
-            screen.getByText('Add at least one row and fill in every highlighted cell.')
+            screen.getByText('Add at least one row and fill in every empty cell.')
         ).toBeInTheDocument();
     });
 
@@ -149,7 +149,7 @@ describe('ParameterTable', () => {
             }
         });
 
-        expect(screen.getByText('Fill in every highlighted cell.')).toBeInTheDocument();
+        expect(screen.getByText('Fill in every empty cell.')).toBeInTheDocument();
         expect(screen.getByTestId('parameter-table-prompts-prompt-0')).toBeInvalid();
     });
 
