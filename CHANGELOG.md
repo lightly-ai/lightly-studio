@@ -9,8 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Show indexed categorical metadata values in distribution panel
+- Add the `lightly-studio quickstart` CLI command, which downloads the COCO example dataset and launches the GUI in one step.
 
-- Export image classification annotations to CSV via Python SDK
+- Export image classification annotations to CSV via the GUI and Python SDK
 
 ### Changed
 
@@ -20,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Grid annotation overlays now render at tile resolution to bound memory usage for large source images.
 - Annotation class names no longer overflow in class selection.
 - Autofocus lets users create their first annotation faster.
 - Opening a DuckDB database that another lightly_studio process already has open now raises a clear error instead of a raw DuckDB traceback.

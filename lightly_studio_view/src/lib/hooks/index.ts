@@ -48,11 +48,13 @@ export { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
 export { useSettings } from '$lib/hooks/useSettings';
 export { useTrackSampleInspected } from '$lib/hooks/useTrackSampleInspected';
 export { useAnnotationClassVisibility } from '$lib/hooks/useAnnotationClassVisibility/useAnnotationClassVisibility';
+export { useInvalidateAnnotationGridQueries } from '$lib/hooks/useInvalidateAnnotationGridQueries';
 export {
     useImageAnnotationCounts,
     useImageAnnotationCountsQueryKey
 } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 export { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+export { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
 export {
     createOperatorFromMetadata,
     type Operator,

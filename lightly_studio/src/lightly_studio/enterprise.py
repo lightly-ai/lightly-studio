@@ -10,11 +10,11 @@ from __future__ import annotations
 
 import http
 import logging
-import os
 
 import requests
 from pydantic import BaseModel, ValidationError
 
+from lightly_studio.cloud_credentials import apply_cloud_credentials
 from lightly_studio.database import db_manager
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_API_URL, LIGHTLY_STUDIO_TOKEN
 
@@ -84,11 +84,10 @@ def connect(
     config = _fetch_connect_config(api_url=api_url, token=token)
 
     if config.cloud_credentials:
-        os.environ.update(config.cloud_credentials)
+        apply_cloud_credentials(credentials=config.cloud_credentials)
         logger.info("Applied cloud credentials from LightlyStudio enterprise configuration.")
-        for key, value in config.cloud_credentials.items():
-            masked = "*" * len(value)
-            logger.info(f"  {key}: {masked}")
+        for key in config.cloud_credentials:
+            logger.info(f"  {key}: configured")
 
     db_manager.connect(db_url=config.engine_url)
 

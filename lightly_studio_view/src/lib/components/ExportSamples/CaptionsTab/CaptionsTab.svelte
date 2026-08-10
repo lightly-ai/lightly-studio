@@ -1,10 +1,16 @@
 <script lang="ts">
     import { page } from '$app/state';
     import { exportCollectionCaptionsPrepare } from '$lib/api/lightly_studio_local';
-    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { useImageFilters } from '$lib/hooks';
     import { PUBLIC_LIGHTLY_STUDIO_API_URL } from '$env/static/public';
     import { useExportDownload } from '../useExportDownload/useExportDownload';
     import ExportDownloadButton from '../ExportDownloadButton/ExportDownloadButton.svelte';
+
+    interface Props {
+        onDownloadClick?: () => void;
+    }
+
+    let { onDownloadClick }: Props = $props();
 
     const collectionId = page.params.collection_id!;
     const { imageFilter } = useImageFilters();
@@ -29,7 +35,10 @@
     <ExportDownloadButton
         isLoading={$isLoading}
         errorMessage={$errorMessage}
-        onclick={handleDownload}
+        onclick={() => {
+            onDownloadClick?.();
+            handleDownload();
+        }}
         testId="submit-button-captions"
     />
 </div>
