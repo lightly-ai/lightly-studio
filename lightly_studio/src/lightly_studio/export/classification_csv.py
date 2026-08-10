@@ -1,4 +1,4 @@
-"""Export image classification annotations to CSV."""
+"""Export classification annotations to CSV."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from pathlib import Path
 from uuid import UUID
 
 from lightly_studio.core.image.image_sample import ImageSample
+from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 
 CSV_FIELDNAMES = (
@@ -19,14 +20,14 @@ CSV_FIELDNAMES = (
 
 
 def write_classifications_csv(
-    samples: Iterable[ImageSample],
+    samples: Iterable[ImageSample | VideoSample],
     output_csv: Path,
     annotation_collection_id: UUID | None,
 ) -> None:
-    """Write image classification annotations as long-form CSV.
+    """Write whole-sample classification annotations as long-form CSV.
 
     Args:
-        samples: Image samples whose classifications are exported.
+        samples: Image or video samples whose classifications are exported.
         output_csv: Destination CSV file.
         annotation_collection_id: If provided, only annotations from this annotation
             collection are exported. If ``None``, all annotation sources are exported.
@@ -37,6 +38,9 @@ def write_classifications_csv(
         for sample in samples:
             for annotation in sample.sample_table.annotations:
                 if annotation.annotation_type != AnnotationType.CLASSIFICATION:
+                    continue
+                # TODO(Igor, 08/2026): Add support for exporting temporal spans.
+                if annotation.temporal_span_details is not None:
                     continue
                 if (
                     annotation_collection_id is not None

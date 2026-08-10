@@ -12,14 +12,8 @@ test.describe('Export Annotations', () => {
         await page.getByRole('option', { name: 'Image Classifications (CSV)' }).click();
 
         const downloadButton = page.getByTestId('submit-button-classifications');
-        await expect(downloadButton).toHaveAttribute(
-            'href',
-            /\/api\/collections\/.*\/export\/annotations\?ts=\d+&export_format=classification_csv/
-        );
-        await downloadButton.evaluate((el: HTMLAnchorElement) => el.removeAttribute('target'));
-
         const [download] = await Promise.all([
-            page.waitForEvent('download'),
+            page.context().waitForEvent('download'),
             downloadButton.click()
         ]);
 
@@ -43,19 +37,10 @@ test.describe('Export Annotations', () => {
         // Switch to the correct export type
         await page.getByTestId('export-type-select').click();
         await page.getByRole('option', { name: 'Image Object Detections (COCO)' }).click();
-        await expect(page.getByTestId('submit-button-annotations-coco')).toHaveAttribute(
-            'href',
-            /\/api\/collections\/.*\/export\/annotations\?ts=\d+/
-        );
 
-        // Remove target to avoid popup and keep navigation in the same page context
-        await page
-            .getByTestId('submit-button-annotations-coco')
-            .evaluate((el: HTMLAnchorElement) => el.removeAttribute('target'));
-
-        // Click and wait for the download event deterministically
+        // Click and wait for the download triggered via window.open in a popup
         const [download] = await Promise.all([
-            page.waitForEvent('download'),
+            page.context().waitForEvent('download'),
             page.getByTestId('submit-button-annotations-coco').click()
         ]);
 
@@ -105,19 +90,10 @@ test.describe('Export Annotations', () => {
         // Switch to the YOLO export type
         await page.getByTestId('export-type-select').click();
         await page.getByRole('option', { name: 'Image Object Detections (YOLO)' }).click();
-        await expect(page.getByTestId('submit-button-annotations-yolo')).toHaveAttribute(
-            'href',
-            /\/api\/collections\/.*\/export\/annotations\?ts=\d+&export_format=object_detection_yolo/
-        );
 
-        // Remove target to avoid popup and keep navigation in the same page context
-        await page
-            .getByTestId('submit-button-annotations-yolo')
-            .evaluate((el: HTMLAnchorElement) => el.removeAttribute('target'));
-
-        // Click and wait for the download event deterministically
+        // Click and wait for the download triggered via window.open in a popup
         const [download] = await Promise.all([
-            page.waitForEvent('download'),
+            page.context().waitForEvent('download'),
             page.getByTestId('submit-button-annotations-yolo').click()
         ]);
 
