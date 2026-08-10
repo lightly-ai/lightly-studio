@@ -74,17 +74,17 @@ class TestVideoFrameDatasetExport:
 
         with open(output_json) as f:
             coco_data = json.load(f)
-        # Only frame 0 matches the query; it is referenced by the Lightly frame format
-        # with the parent video's dimensions.
+        # Only frame 0 matches the query; it is referenced by the parent video's absolute path
+        # and the frame number, with the parent video's dimensions.
         assert coco_data["images"] == [
-            {"id": 0, "file_name": "/abs/dir/video_001-0-mp4.jpg", "width": 3, "height": 2},
+            {"id": 0, "file_name": "/abs/dir/video_001.mp4/000000000.jpg", "width": 3, "height": 2},
         ]
 
 
 def test_video_frame_to_image__coco_uses_absolute_video_path(
     patch_collection: None,  # noqa: ARG001
 ) -> None:
-    """COCO exports reference the absolute video path in Lightly frame format."""
+    """COCO exports reference the absolute video path and the frame number."""
     dataset = VideoDataset.create(name="test_video_dataset")
     create_video_with_frames(
         session=dataset.session,
@@ -100,7 +100,7 @@ def test_video_frame_to_image__coco_uses_absolute_video_path(
     )
 
     assert image.id == 7
-    assert image.filename == "/abs/dir/video_001-0-mp4.jpg"
+    assert image.filename == "/abs/dir/video_001.mp4/000000000.jpg"
     assert image.width == 640
     assert image.height == 480
 
@@ -108,7 +108,7 @@ def test_video_frame_to_image__coco_uses_absolute_video_path(
 def test_video_frame_to_image__yolo_pascal_use_relative_video_name(
     patch_collection: None,  # noqa: ARG001
 ) -> None:
-    """YOLO and Pascal VOC exports reference the relative video name in Lightly frame format."""
+    """YOLO and Pascal VOC exports reference the relative video name and the frame number."""
     dataset = VideoDataset.create(name="test_video_dataset")
     create_video_with_frames(
         session=dataset.session,
@@ -124,7 +124,7 @@ def test_video_frame_to_image__yolo_pascal_use_relative_video_name(
     )
 
     assert image.id == 7
-    assert image.filename == "video_001-0-mp4.jpg"
+    assert image.filename == "video_001.mp4/000000000.jpg"
     assert image.width == 640
     assert image.height == 480
 

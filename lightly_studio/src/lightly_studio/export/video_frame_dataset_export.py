@@ -31,7 +31,7 @@ def get_video_frame_filename(
     video_filename: str,
     decode_index: int,
     zero_padding: int,
-    file_extension: str = "jpeg",
+    file_extension: str = "png",
 ) -> str:
     """Create a filename for a video frame in Lightly format.
 
@@ -41,7 +41,7 @@ def get_video_frame_filename(
         video_filename: Source video filename (e.g., "video_001.mp4")
         decode_index: Frame sequence number (0-indexed)
         zero_padding: Width of zero-padded decode_index
-        file_extension: Output frame format without leading dot (default: "jpeg")
+        file_extension: Output frame format without leading dot (default: "png")
 
     Returns:
         Frame filename in Lightly format
@@ -88,7 +88,8 @@ class VideoFrameDatasetExport(DatasetExport):
         """Export video frames as image files to a local or S3 directory.
 
         Decodes each frame from its parent video and writes it as an image file to
-        the output directory with a structured filename: {video_name}/{frame_number}.{extension}.
+        the output directory with a structured filename:
+        {video_name}-{decode_index:0{zero_padding}}-{video_format}.{file_extension}
         Frames from the same video are decoded in a single pass to avoid reopening
         the video file for every frame.
 
@@ -131,36 +132,15 @@ def video_frame_to_image(sample: Sample, image_id: int, use_relative_filename: b
     a `VideoFrameSample` here because this strategy is only used by `VideoFrameDatasetExport`.
 
     A frame has no file of its own, so the file name is synthesized from the parent video and
-    the frame number in Lightly format and the dimensions are the parent video's.
+    the frame number and the dimensions are the parent video's.
     COCO stores the absolute video path verbatim; YOLO and Pascal VOC need a relative video name.
     """
     frame_sample = cast(VideoFrameSample, sample)
     video = frame_sample.parent_video
     video_reference = video.file_name if use_relative_filename else video.file_path_abs
-
-    duration_s = video.duration_s or 0
-    fps = video.fps or 1
-    estimated_total_frames = max(1, int(duration_s * fps))
-    zero_padding = len(str(estimated_total_frames - 1))
-
-    video_filename = Path(video.file_name).name
-    frame_filename = get_video_frame_filename(
-        video_filename=video_filename,
-        decode_index=frame_sample.frame_number,
-        zero_padding=zero_padding,
-        file_extension="jpg",
-    )
-
-    if use_relative_filename:
-        result_filename = frame_filename
-    else:
-        video_path = video_reference.replace("\\", "/")
-        video_dir = video_path.rsplit("/", 1)[0]
-        result_filename = f"{video_dir}/{frame_filename}"
-
     return Image(
         id=image_id,
-        filename=result_filename,
+        filename=f"{video_reference}/{frame_sample.frame_number:09d}.jpg",
         width=video.width,
         height=video.height,
     )
