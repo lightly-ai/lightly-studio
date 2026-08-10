@@ -20,27 +20,49 @@ const REPORT_PATH = '/tmp/coverage.json';
 const MODEL = 'pkg/src/model.py';
 const SERVICE = 'pkg/src/service.py';
 
-/** A changed file whose diff adds `count` new lines, numbered 1..count. */
-function fileAddingLines(count: number, path = MODEL): ChangedFile {
-    const added = Array.from({ length: count }, (_, index) => `+line ${index + 1}\n`).join('');
+interface LineBlock {
+    start: number;
+    lines: number[];
+}
+
+/** Groups line numbers into blocks of consecutive ones, so each becomes one hunk. */
+function consecutiveBlocks(lineNumbers: number[]): LineBlock[] {
+    const blocks: LineBlock[] = [];
+    for (const line of [...lineNumbers].sort((left, right) => left - right)) {
+        const open = blocks.at(-1);
+        if (open !== undefined && line === (open.lines.at(-1) ?? 0) + 1) open.lines.push(line);
+        else blocks.push({ start: line, lines: [line] });
+    }
+    return blocks;
+}
+
+/** A changed file whose diff adds exactly `lineNumbers` in the new file. */
+function fileAddingLines(lineNumbers: number[], path = MODEL): ChangedFile {
+    const hunks = consecutiveBlocks(lineNumbers).map(({ start, lines }) => {
+        const added = lines.map((line) => `+added line ${line}\n`).join('');
+        return `@@ -${start},0 +${start},${lines.length} @@\n${added}`;
+    });
     return {
         path,
         status: 'modified',
-        additions: count,
+        additions: lineNumbers.length,
         deletions: 0,
-        patch: `@@ -0,0 +1,${count} @@\n${added}`
+        patch: hunks.join('')
     };
 }
 
-/** A changed file whose diff only removes lines, adding none. */
-function fileRemovingLines(count: number, path = MODEL): ChangedFile {
-    const removed = Array.from({ length: count }, (_, index) => `-line ${index + 1}\n`).join('');
+/** A changed file whose diff only removes `lineNumbers`, adding none. */
+function fileRemovingLines(lineNumbers: number[], path = MODEL): ChangedFile {
+    const hunks = consecutiveBlocks(lineNumbers).map(({ start, lines }) => {
+        const removed = lines.map((line) => `-removed line ${line}\n`).join('');
+        return `@@ -${start},${lines.length} +${start},0 @@\n${removed}`;
+    });
     return {
         path,
         status: 'modified',
         additions: 0,
-        deletions: count,
-        patch: `@@ -1,${count} +1,0 @@\n${removed}`
+        deletions: lineNumbers.length,
+        patch: hunks.join('')
     };
 }
 
@@ -82,7 +104,8 @@ function coverageGuardrail(overrides: Partial<CoverageConfig> = {}): Guardrail {
         coverageJsonEnvVar: COVERAGE_ENV,
         testsPassedEnvVar: PASSED_ENV,
         filterFiles: (files: ChangedFile[]): ChangedFile[] => files,
-        parseReport: (): LineCoverage => reportFor({ coveredLines: [1, 2, 3], uncoveredLines: [] }),
+        parseReport: (): LineCoverage =>
+            reportFor({ coveredLines: [12, 13, 14], uncoveredLines: [] }),
         ...overrides
     });
 }
@@ -132,7 +155,7 @@ describe('createCoverageGuardrail', () => {
         givenTheReportExists();
         const guardrail = coverageGuardrail({ filterFiles: () => [] });
 
-        const result = await runOn(guardrail, fileAddingLines(3));
+        const result = await runOn(guardrail, fileAddingLines([12, 13, 14]));
 
         expect(result.status).toBe('pass');
         expect(result.summary).toContain('0 file(s) checked');
@@ -140,7 +163,7 @@ describe('createCoverageGuardrail', () => {
     });
 
     it('skips deleted files', async () => {
-        const deleted: ChangedFile = { ...fileAddingLines(3), status: 'deleted' };
+        const deleted: ChangedFile = { ...fileAddingLines([12, 13, 14]), status: 'deleted' };
 
         const result = await runOn(coverageGuardrail(), deleted);
 
@@ -149,7 +172,7 @@ describe('createCoverageGuardrail', () => {
     });
 
     it('skips files without a patch', async () => {
-        const noPatch: ChangedFile = { ...fileAddingLines(3), patch: undefined };
+        const noPatch: ChangedFile = { ...fileAddingLines([12, 13, 14]), patch: undefined };
 
         const result = await runOn(coverageGuardrail(), noPatch);
 
@@ -158,14 +181,14 @@ describe('createCoverageGuardrail', () => {
     });
 
     it('skips files whose patch adds no lines', async () => {
-        const result = await runOn(coverageGuardrail(), fileRemovingLines(3));
+        const result = await runOn(coverageGuardrail(), fileRemovingLines([12, 13, 14]));
 
         expect(result.status).toBe('pass');
         expect(result.summary).toContain('0 file(s) checked');
     });
 
-    it('passes with a loud summary when the env var is unset (local run)', async () => {
-        const result = await runOn(coverageGuardrail(), fileAddingLines(3));
+    it('passes with an explanatory summary when the env var is unset (local run)', async () => {
+        const result = await runOn(coverageGuardrail(), fileAddingLines([12, 13, 14]));
 
         expect(result.status).toBe('pass');
         expect(result.summary).toContain(`coverage skipped: ${COVERAGE_ENV} not set`);
@@ -175,7 +198,7 @@ describe('createCoverageGuardrail', () => {
         givenTheReportExists();
         givenTheTestSuiteWasRed();
 
-        const result = await runOn(coverageGuardrail(), fileAddingLines(3));
+        const result = await runOn(coverageGuardrail(), fileAddingLines([12, 13, 14]));
 
         expect(result.status).toBe('fail');
         expect(result.summary).toContain('test suite failed');
@@ -185,7 +208,7 @@ describe('createCoverageGuardrail', () => {
     it('fails when the report is missing', async () => {
         givenTheReportPathIsSetButNothingIsThere();
 
-        const result = await runOn(coverageGuardrail(), fileAddingLines(3));
+        const result = await runOn(coverageGuardrail(), fileAddingLines([12, 13, 14]));
 
         expect(result.status).toBe('fail');
         expect(result.summary).toContain('coverage report missing');
@@ -195,7 +218,7 @@ describe('createCoverageGuardrail', () => {
     it('reads the report from the path in the env var', async () => {
         givenTheReportExists();
 
-        await runOn(coverageGuardrail(), fileAddingLines(3));
+        await runOn(coverageGuardrail(), fileAddingLines([12, 13, 14]));
 
         expect(mockReadFileSync).toHaveBeenCalledWith(REPORT_PATH, 'utf-8');
     });
@@ -203,10 +226,10 @@ describe('createCoverageGuardrail', () => {
     it('passes when every added line is covered', async () => {
         givenTheReportExists();
         const guardrail = coverageGuardrail({
-            parseReport: () => reportFor({ coveredLines: [1, 2, 3], uncoveredLines: [] })
+            parseReport: () => reportFor({ coveredLines: [12, 13, 14], uncoveredLines: [] })
         });
 
-        const result = await runOn(guardrail, fileAddingLines(3));
+        const result = await runOn(guardrail, fileAddingLines([12, 13, 14]));
 
         expect(result.status).toBe('pass');
         expect(result.summary).toContain(`[PASS] ${MODEL}`);
@@ -215,10 +238,10 @@ describe('createCoverageGuardrail', () => {
     it('passes at exactly the 90% threshold: 9 of 10 added lines covered', async () => {
         givenTheReportExists();
         const guardrail = coverageGuardrail({
-            parseReport: () => reportFor({ coveredLines: lineRange(1, 9), uncoveredLines: [10] })
+            parseReport: () => reportFor({ coveredLines: lineRange(20, 28), uncoveredLines: [29] })
         });
 
-        const result = await runOn(guardrail, fileAddingLines(10));
+        const result = await runOn(guardrail, fileAddingLines(lineRange(20, 29)));
 
         expect(result.status).toBe('pass');
         expect(result.summary).toContain('90.0%');
@@ -227,10 +250,10 @@ describe('createCoverageGuardrail', () => {
     it('fails below the 90% threshold: 2 of 3 added lines covered', async () => {
         givenTheReportExists();
         const guardrail = coverageGuardrail({
-            parseReport: () => reportFor({ coveredLines: [1, 2], uncoveredLines: [3] })
+            parseReport: () => reportFor({ coveredLines: [12, 13], uncoveredLines: [14] })
         });
 
-        const result = await runOn(guardrail, fileAddingLines(3));
+        const result = await runOn(guardrail, fileAddingLines([12, 13, 14]));
 
         expect(result.status).toBe('fail');
         expect(result.summary).toContain('66.7%');
@@ -242,12 +265,11 @@ describe('createCoverageGuardrail', () => {
     // are absent from it; a diff of nothing but those has no coverable code to judge.
     it('passes when no added line is an executable statement', async () => {
         givenTheReportExists();
-        // The file is in the report, but none of its added lines 1–3 is.
         const guardrail = coverageGuardrail({
-            parseReport: () => reportFor({ coveredLines: [10], uncoveredLines: [11] })
+            parseReport: () => reportFor({ coveredLines: [40], uncoveredLines: [41] })
         });
 
-        const result = await runOn(guardrail, fileAddingLines(3));
+        const result = await runOn(guardrail, fileAddingLines([12, 13, 14]));
 
         expect(result.status).toBe('pass');
         expect(result.summary).toContain('no executable added lines');
@@ -260,10 +282,10 @@ describe('createCoverageGuardrail', () => {
         // Added-line ratio 0/2 = 0%; whole-file would be 20/22 = 90.9% and pass.
         const guardrail = coverageGuardrail({
             parseReport: () =>
-                reportFor({ coveredLines: lineRange(10, 29), uncoveredLines: [1, 2] })
+                reportFor({ coveredLines: lineRange(40, 59), uncoveredLines: [12, 13] })
         });
 
-        const result = await runOn(guardrail, fileAddingLines(2));
+        const result = await runOn(guardrail, fileAddingLines([12, 13]));
 
         expect(result.status).toBe('fail');
         expect(result.summary).toContain('0.0%');
@@ -274,10 +296,23 @@ describe('createCoverageGuardrail', () => {
         // Added-line ratio 3/3 = 100%; whole-file would be 3/23 = 13% and fail.
         const guardrail = coverageGuardrail({
             parseReport: () =>
-                reportFor({ coveredLines: [1, 2, 3], uncoveredLines: lineRange(10, 29) })
+                reportFor({ coveredLines: [12, 13, 14], uncoveredLines: lineRange(40, 59) })
         });
 
-        const result = await runOn(guardrail, fileAddingLines(3));
+        const result = await runOn(guardrail, fileAddingLines([12, 13, 14]));
+
+        expect(result.status).toBe('pass');
+        expect(result.summary).toContain('100.0%');
+    });
+
+    it('judges a diff with a gap on its added lines only: 12, 13 and 15', async () => {
+        givenTheReportExists();
+        // Line 14 sits in the gap: untouched, uncovered, and not the author's to cover.
+        const guardrail = coverageGuardrail({
+            parseReport: () => reportFor({ coveredLines: [12, 13, 15], uncoveredLines: [14] })
+        });
+
+        const result = await runOn(guardrail, fileAddingLines([12, 13, 15]));
 
         expect(result.status).toBe('pass');
         expect(result.summary).toContain('100.0%');
@@ -287,7 +322,7 @@ describe('createCoverageGuardrail', () => {
         givenTheReportExists();
         const guardrail = coverageGuardrail({ parseReport: reportListingNoFiles });
 
-        const result = await runOn(guardrail, fileAddingLines(3));
+        const result = await runOn(guardrail, fileAddingLines([12, 13, 14]));
 
         expect(result.status).toBe('fail');
         expect(result.summary).toContain('not found in coverage report');
@@ -299,15 +334,15 @@ describe('createCoverageGuardrail', () => {
         const guardrail = coverageGuardrail({
             parseReport: () =>
                 reportFor(
-                    { path: MODEL, coveredLines: [1, 2, 3], uncoveredLines: [] },
-                    { path: SERVICE, coveredLines: [], uncoveredLines: [1, 2, 3] }
+                    { path: MODEL, coveredLines: [12, 13, 14], uncoveredLines: [] },
+                    { path: SERVICE, coveredLines: [], uncoveredLines: [30, 31, 32] }
                 )
         });
 
         const result = await runOn(
             guardrail,
-            fileAddingLines(3, MODEL),
-            fileAddingLines(3, SERVICE)
+            fileAddingLines([12, 13, 14], MODEL),
+            fileAddingLines([30, 31, 32], SERVICE)
         );
 
         expect(result.status).toBe('fail');
