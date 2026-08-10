@@ -1,7 +1,7 @@
 <script lang="ts">
     // TODO (Mihnea, 06/2026): Refactor this component, as it is way past the 100-line guideline.
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
-    import { SampleDetailsAnnotationSourceGroup, Segment } from '$lib/components';
+    import { Button, SampleDetailsAnnotationSourceGroup, Segment } from '$lib/components';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
@@ -275,16 +275,16 @@
         </span>
         <div class="flex shrink-0 items-center gap-3">
             {#if $isEditingMode}
-                <button
-                    type="button"
-                    aria-label="Delete classification"
-                    onclick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteAnnotation(annotation.sample_id);
+                <Button
+                    icon={Trash2}
+                    ariaLabel="Delete classification"
+                    buttonProps={{
+                        onclick: (e) => {
+                            e.stopPropagation();
+                            handleDeleteAnnotation(annotation.sample_id);
+                        }
                     }}
-                >
-                    <Trash2 class="size-6" />
-                </button>
+                />
             {/if}
         </div>
     </div>
@@ -362,14 +362,17 @@
                         </div>
                     </div>
                 {/each}
-                <button
-                    type="button"
-                    class="mb-2 flex h-8 items-center justify-center rounded-sm bg-card px-2 py-0 text-diffuse-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
-                    onclick={addDraftClassification}
-                    data-testid="add-classification-button"
+                <Button
+                    variant="ghost"
+                    buttonProps={{
+                        type: 'button',
+                        class: 'mb-2 h-8 justify-center rounded-sm bg-card px-2 py-0 text-diffuse-foreground hover:bg-primary hover:text-primary-foreground',
+                        onclick: addDraftClassification,
+                        'data-testid': 'add-classification-button'
+                    }}
                 >
                     +
-                </button>
+                </Button>
             {/if}
         </div>
     </div>
