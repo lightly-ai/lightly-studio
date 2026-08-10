@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import { tick } from 'svelte';
-import { afterEach, describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
 import { getColorByLabel, rgbaToHex } from '$lib/utils';
 import UseColorPickerTestWrapper from './useColorPickerTestWrapper.test.svelte';
@@ -11,7 +11,7 @@ afterEach(() => {
 
 describe('useColorPicker', () => {
     describe('without a custom color', () => {
-        test('uses getColorByLabel for border (alpha 1) and background (alpha 0.35)', () => {
+        it('uses getColorByLabel for border (alpha 1) and background (alpha 0.35)', () => {
             render(UseColorPickerTestWrapper, { props: { label: 'cat' } });
 
             expect(screen.getByTestId('border-color').textContent).toBe(
@@ -22,7 +22,7 @@ describe('useColorPicker', () => {
             );
         });
 
-        test('seeds the picker with the palette color in hex and full alpha', () => {
+        it('seeds the picker with the palette color in hex and full alpha', () => {
             render(UseColorPickerTestWrapper, { props: { label: 'cat' } });
 
             expect(screen.getByTestId('initial-color').textContent).toBe(
@@ -33,7 +33,7 @@ describe('useColorPicker', () => {
     });
 
     describe('with a custom color', () => {
-        test('border uses the override hex; background applies override alpha × 0.35', async () => {
+        it('border uses the override hex; background applies override alpha × 0.35', async () => {
             useCustomLabelColors().setCustomColor('cat', '#ff8040', 0.8);
 
             render(UseColorPickerTestWrapper, { props: { label: 'cat' } });
@@ -45,7 +45,7 @@ describe('useColorPicker', () => {
             );
         });
 
-        test('seeds the picker with the override hex and override alpha', async () => {
+        it('seeds the picker with the override hex and override alpha', async () => {
             useCustomLabelColors().setCustomColor('cat', '#ff8040', 0.8);
 
             render(UseColorPickerTestWrapper, { props: { label: 'cat' } });
@@ -55,7 +55,7 @@ describe('useColorPicker', () => {
             expect(screen.getByTestId('initial-alpha').textContent).toBe('0.8');
         });
 
-        test('reacts when the custom color is added after mount', async () => {
+        it('reacts when the custom color is added after mount', async () => {
             render(UseColorPickerTestWrapper, { props: { label: 'cat' } });
 
             const defaultBorder = getColorByLabel('cat', 1).color;
@@ -68,12 +68,44 @@ describe('useColorPicker', () => {
         });
     });
 
-    test('setColor persists the picked value against the current label', async () => {
+    it('setColor persists the picked value against the current label', async () => {
         render(UseColorPickerTestWrapper, { props: { label: 'cat' } });
 
         await fireEvent.click(screen.getByTestId('set-color'));
 
         const stored = useCustomLabelColors().getCustomColor('cat');
         expect(stored).toEqual({ color: '#abcdef', alpha: 0.5 });
+    });
+
+    it('removes a preview when the label had no custom color', async () => {
+        render(UseColorPickerTestWrapper, { props: { label: 'cat' } });
+
+        await fireEvent.click(screen.getByTestId('set-color'));
+        await fireEvent.click(screen.getByTestId('cancel-color'));
+
+        expect(useCustomLabelColors().getCustomColor('cat')).toBeUndefined();
+    });
+
+    it('restores the custom color that existed before a preview', async () => {
+        const customColors = useCustomLabelColors();
+        customColors.setCustomColor('cat', '#112233', 0.75);
+        render(UseColorPickerTestWrapper, { props: { label: 'cat' } });
+
+        await fireEvent.click(screen.getByTestId('set-color'));
+        await fireEvent.click(screen.getByTestId('cancel-color'));
+
+        expect(customColors.getCustomColor('cat')).toEqual({ color: '#112233', alpha: 0.75 });
+    });
+
+    it('uses the applied color as the baseline for the next preview', async () => {
+        const customColors = useCustomLabelColors();
+        render(UseColorPickerTestWrapper, { props: { label: 'cat' } });
+
+        await fireEvent.click(screen.getByTestId('set-color'));
+        await fireEvent.click(screen.getByTestId('apply-color'));
+        await fireEvent.click(screen.getByTestId('set-alternate-color'));
+        await fireEvent.click(screen.getByTestId('cancel-color'));
+
+        expect(customColors.getCustomColor('cat')).toEqual({ color: '#abcdef', alpha: 0.5 });
     });
 });

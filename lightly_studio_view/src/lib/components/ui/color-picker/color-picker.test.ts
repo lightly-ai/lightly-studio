@@ -1,6 +1,13 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { createRawSnippet } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import ColorPickerTestWrapper from './ColorPickerTestWrapper.test.svelte';
+import ColorPicker from './color-picker.svelte';
+
+const children = createRawSnippet(() => ({
+    render: () => '<span>Open color picker</span>'
+}));
+
+const defaultProps = { children };
 
 afterEach(() => {
     vi.restoreAllMocks();
@@ -8,7 +15,8 @@ afterEach(() => {
 
 describe('ColorPicker', () => {
     it('previews the selected color while dragging', async () => {
-        render(ColorPickerTestWrapper);
+        const onChange = vi.fn();
+        render(ColorPicker, { props: { ...defaultProps, onChange } });
         await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
 
         const picker = screen.getByRole('dialog', {
@@ -24,42 +32,44 @@ describe('ColorPicker', () => {
         await fireEvent.mouseDown(picker, { clientX: 100, clientY: 25 });
 
         await waitFor(() => {
-            expect(screen.getByTestId('latest-color')).toHaveTextContent('#ff8080:1');
+            expect(onChange).toHaveBeenLastCalledWith('#ff8080', 1);
         });
         await fireEvent.mouseUp(document);
     });
 
     it('restores the original color when cancelling a preview', async () => {
-        render(ColorPickerTestWrapper);
+        const onChange = vi.fn();
+        render(ColorPicker, { props: { ...defaultProps, onChange } });
         await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
 
         await fireEvent.click(screen.getByTitle('#0000ff'));
         await waitFor(() => {
-            expect(screen.getByTestId('latest-color')).toHaveTextContent('#0000ff:1');
+            expect(onChange).toHaveBeenLastCalledWith('#0000ff', 1);
         });
         await fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
-        expect(screen.getByTestId('latest-color')).toHaveTextContent('#ff0000:1');
+        expect(onChange).toHaveBeenLastCalledWith('#ff0000', 1);
     });
 
     it('restores the original color when dismissing a preview', async () => {
-        render(ColorPickerTestWrapper);
+        const onChange = vi.fn();
+        render(ColorPicker, { props: { ...defaultProps, onChange } });
         await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
 
         await fireEvent.click(screen.getByTitle('#0000ff'));
         await waitFor(() => {
-            expect(screen.getByTestId('latest-color')).toHaveTextContent('#0000ff:1');
+            expect(onChange).toHaveBeenLastCalledWith('#0000ff', 1);
         });
         await fireEvent.mouseDown(document.body);
 
-        expect(screen.getByTestId('latest-color')).toHaveTextContent('#ff0000:1');
+        expect(onChange).toHaveBeenLastCalledWith('#ff0000', 1);
         expect(screen.queryByRole('dialog', { name: 'Color picker' })).not.toBeInTheDocument();
     });
 
     it.each(['Saturation and lightness picker', 'Hue picker'])(
         'registers one mousemove listener for a drag on %s',
         async (pickerName) => {
-            render(ColorPickerTestWrapper);
+            render(ColorPicker, { props: defaultProps });
             await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
 
             const addEventListenerSpy = vi.spyOn(document, 'addEventListener');

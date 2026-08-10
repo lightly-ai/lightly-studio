@@ -9,8 +9,11 @@ import { fromStore } from 'svelte/store';
  * `getLabel` is a function so the hook stays reactive when the consumer's label changes.
  */
 export function useColorPicker(getLabel: () => string) {
-    const { setCustomColor, customLabelColorsStore } = useCustomLabelColors();
+    const { setCustomColor, getCustomColor, deleteCustomColor, customLabelColorsStore } =
+        useCustomLabelColors();
     const colors = fromStore(customLabelColorsStore);
+    let colorBeforePreview: ReturnType<typeof getCustomColor>;
+    let isPreviewing = false;
 
     const customColor = $derived(colors.current[getLabel()]);
     const defaultBorder = $derived(getColorByLabel(getLabel(), 1).color);
@@ -39,7 +42,26 @@ export function useColorPicker(getLabel: () => string) {
             return initialAlpha;
         },
         setColor(color: string, alpha: number) {
+            if (!isPreviewing) {
+                colorBeforePreview = getCustomColor(getLabel());
+                isPreviewing = true;
+            }
             setCustomColor(getLabel(), color, alpha);
+        },
+        cancelColor() {
+            if (!isPreviewing) return;
+
+            if (colorBeforePreview) {
+                setCustomColor(getLabel(), colorBeforePreview.color, colorBeforePreview.alpha);
+            } else {
+                deleteCustomColor(getLabel());
+            }
+            isPreviewing = false;
+            colorBeforePreview = undefined;
+        },
+        applyColor() {
+            isPreviewing = false;
+            colorBeforePreview = undefined;
         }
     };
 }
