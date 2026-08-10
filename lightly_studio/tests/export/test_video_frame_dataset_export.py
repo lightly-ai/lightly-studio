@@ -74,17 +74,17 @@ class TestVideoFrameDatasetExport:
 
         with open(output_json) as f:
             coco_data = json.load(f)
-        # Only frame 0 matches the query; it is referenced by the parent video's absolute path
-        # and the frame number, with the parent video's dimensions.
+        # Only frame 0 matches the query; it is referenced by the Lightly frame format
+        # with the parent video's dimensions.
         assert coco_data["images"] == [
-            {"id": 0, "file_name": "/abs/dir/video_001.mp4/000000000.jpg", "width": 3, "height": 2},
+            {"id": 0, "file_name": "/abs/dir/video_001-0-mp4.jpg", "width": 3, "height": 2},
         ]
 
 
 def test_video_frame_to_image__coco_uses_absolute_video_path(
     patch_collection: None,  # noqa: ARG001
 ) -> None:
-    """COCO exports reference the absolute video path and the frame number."""
+    """COCO exports reference the absolute video path in Lightly frame format."""
     dataset = VideoDataset.create(name="test_video_dataset")
     create_video_with_frames(
         session=dataset.session,
@@ -100,7 +100,7 @@ def test_video_frame_to_image__coco_uses_absolute_video_path(
     )
 
     assert image.id == 7
-    assert image.filename == "/abs/dir/video_001.mp4/000000000.jpg"
+    assert image.filename == "/abs/dir/video_001-0-mp4.jpg"
     assert image.width == 640
     assert image.height == 480
 
@@ -108,7 +108,7 @@ def test_video_frame_to_image__coco_uses_absolute_video_path(
 def test_video_frame_to_image__yolo_pascal_use_relative_video_name(
     patch_collection: None,  # noqa: ARG001
 ) -> None:
-    """YOLO and Pascal VOC exports reference the relative video name and the frame number."""
+    """YOLO and Pascal VOC exports reference the relative video name in Lightly frame format."""
     dataset = VideoDataset.create(name="test_video_dataset")
     create_video_with_frames(
         session=dataset.session,
@@ -124,18 +124,18 @@ def test_video_frame_to_image__yolo_pascal_use_relative_video_name(
     )
 
     assert image.id == 7
-    assert image.filename == "video_001.mp4/000000000.jpg"
+    assert image.filename == "video_001-0-mp4.jpg"
     assert image.width == 640
     assert image.height == 480
 
 
-class TestVideoFrameDatasetExportToJpeg:
-    def test_to_jpeg_files__exports_frames_locally(
+class TestVideoFrameDatasetExportToImageFiles:
+    def test_to_image_files__exports_frames_locally(
         self,
         tmp_path: Path,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        """Tests that to_jpeg_files exports frames as JPEG files to a local directory."""
+        """Tests that to_image_files exports frames as image files to a local directory."""
         dataset = VideoDataset.create(name="test_video_dataset")
         video_path = tmp_path / "test_video.mp4"
         create_video_file(video_path, width=100, height=100, num_frames=3, fps=30)
@@ -153,23 +153,23 @@ class TestVideoFrameDatasetExportToJpeg:
 
         output_dir = tmp_path / "exported_frames"
         frames = dataset.frames()
-        frames.export(frames.query()).to_jpeg_files(output_dir=output_dir)
+        frames.export(frames.query()).to_image_files(output_dir=output_dir)
 
         assert output_dir.exists()
-        exported_files = list(output_dir.glob("**/*.jpg"))
+        exported_files = list(output_dir.glob("**/*.png"))
         assert len(exported_files) > 0
 
-        for jpg_file in exported_files:
-            assert jpg_file.suffix == ".jpg"
-            img = PILImage.open(jpg_file)
+        for image_file in exported_files:
+            assert image_file.suffix == ".png"
+            img = PILImage.open(image_file)
             assert img.size == (100, 100)
 
-    def test_to_jpeg_files__creates_output_directory(
+    def test_to_image_files__creates_output_directory(
         self,
         tmp_path: Path,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        """Tests that to_jpeg_files creates the output directory if it doesn't exist."""
+        """Tests that to_image_files creates the output directory if it doesn't exist."""
         dataset = VideoDataset.create(name="test_video_dataset")
         video_path = tmp_path / "test_video.mp4"
         create_video_file(video_path, width=100, height=100, num_frames=3, fps=30)
@@ -189,17 +189,17 @@ class TestVideoFrameDatasetExportToJpeg:
         assert not output_dir.exists()
 
         frames = dataset.frames()
-        frames.export(frames.query()).to_jpeg_files(output_dir=output_dir)
+        frames.export(frames.query()).to_image_files(output_dir=output_dir)
 
         assert output_dir.exists()
-        assert list(output_dir.glob("**/*.jpg"))
+        assert list(output_dir.glob("**/*.png"))
 
-    def test_to_jpeg_files__respects_query_filter(
+    def test_to_image_files__respects_query_filter(
         self,
         tmp_path: Path,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        """Tests that to_jpeg_files only exports frames matching the query."""
+        """Tests that to_image_files only exports frames matching the query."""
         dataset = VideoDataset.create(name="test_video_dataset")
         video_path = tmp_path / "test_video.mp4"
         create_video_file(video_path, width=100, height=100, num_frames=3, fps=30)
@@ -218,8 +218,8 @@ class TestVideoFrameDatasetExportToJpeg:
         output_dir = tmp_path / "exported_frames"
         frames = dataset.frames()
         query = frames.query().match(VideoFrameSampleField.frame_number <= 0)
-        frames.export(query).to_jpeg_files(output_dir=output_dir)
+        frames.export(query).to_image_files(output_dir=output_dir)
 
-        exported_files = list(output_dir.glob("**/*.jpg"))
+        exported_files = list(output_dir.glob("**/*.png"))
         assert len(exported_files) == 1
-        assert "000000000.jpg" in str(exported_files[0])
+        assert "test_video-0-mp4.png" in str(exported_files[0])

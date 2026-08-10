@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Iterable, Sequence
+from pathlib import Path
 from typing import cast
 from uuid import UUID
 
@@ -24,6 +25,35 @@ logger = logging.getLogger(__name__)
 ROTATION_90_DEG = 90
 ROTATION_180_DEG = 180
 ROTATION_270_DEG = 270
+
+
+def get_video_frame_filename(
+    video_filename: str,
+    decode_index: int,
+    zero_padding: int,
+    file_extension: str = "jpeg",
+) -> str:
+    """Create a filename for a video frame in Lightly format.
+
+    Format: {video_name}-{decode_index:0{zero_padding}}-{video_format}.{file_extension}
+
+    Args:
+        video_filename: Source video filename (e.g., "video_001.mp4")
+        decode_index: Frame sequence number (0-indexed)
+        zero_padding: Width of zero-padded decode_index
+        file_extension: Output frame format without leading dot (default: "jpeg")
+
+    Returns:
+        Frame filename in Lightly format
+    """
+    video_path = Path(video_filename)
+    video_name = video_path.with_suffix("")
+    video_format = video_path.suffix[1:]
+
+    if "-" in video_format:
+        raise ValueError(f"Video format cannot contain '-' but found {video_format}")
+
+    return f"{video_name}-{decode_index:0{zero_padding}}-{video_format}.{file_extension}"
 
 
 class VideoFrameDatasetExport(DatasetExport):
@@ -54,16 +84,17 @@ class VideoFrameDatasetExport(DatasetExport):
             sample_to_image=video_frame_to_image,
         )
 
-    def to_jpeg_files(self, output_dir: PathLike) -> None:
-        """Export video frames as JPEG files to a local or S3 directory.
+    def to_image_files(self, output_dir: PathLike, extension: str = "png") -> None:
+        """Export video frames as image files to a local or S3 directory.
 
-        Decodes each frame from its parent video and writes it as a JPEG file to
-        the output directory with a structured filename: {video_name}/{frame_number}.jpg.
+        Decodes each frame from its parent video and writes it as an image file to
+        the output directory with a structured filename: {video_name}/{frame_number}.{extension}.
         Frames from the same video are decoded in a single pass to avoid reopening
         the video file for every frame.
 
         Args:
             output_dir: The output directory path (can be local or s3://bucket/prefix).
+            extension: Image file extension without leading dot (default: "png").
 
         Raises:
             ValueError: If a video file cannot be opened or a frame cannot be decoded.
@@ -87,6 +118,7 @@ class VideoFrameDatasetExport(DatasetExport):
                     frames=frame_samples,
                     fs=fs,
                     output_dir=fs_path,
+                    extension=extension,
                 )
             except Exception as e:
                 logger.warning(f"Failed to export frames from video {video_path}: {e}")
@@ -99,15 +131,36 @@ def video_frame_to_image(sample: Sample, image_id: int, use_relative_filename: b
     a `VideoFrameSample` here because this strategy is only used by `VideoFrameDatasetExport`.
 
     A frame has no file of its own, so the file name is synthesized from the parent video and
-    the frame number (``<video>/<frame_number>.jpg``) and the dimensions are the parent video's.
+    the frame number in Lightly format and the dimensions are the parent video's.
     COCO stores the absolute video path verbatim; YOLO and Pascal VOC need a relative video name.
     """
     frame_sample = cast(VideoFrameSample, sample)
     video = frame_sample.parent_video
     video_reference = video.file_name if use_relative_filename else video.file_path_abs
+
+    duration_s = video.duration_s or 0
+    fps = video.fps or 1
+    estimated_total_frames = max(1, int(duration_s * fps))
+    zero_padding = len(str(estimated_total_frames - 1))
+
+    video_filename = Path(video.file_name).name
+    frame_filename = get_video_frame_filename(
+        video_filename=video_filename,
+        decode_index=frame_sample.frame_number,
+        zero_padding=zero_padding,
+        file_extension="jpg",
+    )
+
+    if use_relative_filename:
+        result_filename = frame_filename
+    else:
+        video_path = video_reference.replace("\\", "/")
+        video_dir = video_path.rsplit("/", 1)[0]
+        result_filename = f"{video_dir}/{frame_filename}"
+
     return Image(
         id=image_id,
-        filename=f"{video_reference}/{frame_sample.frame_number:09d}.jpg",
+        filename=result_filename,
         width=video.width,
         height=video.height,
     )
@@ -137,16 +190,20 @@ def _decode_frame_to_pil(
     frames: Sequence[VideoFrameSample],
     fs: fsspec.AbstractFileSystem,
     output_dir: str,
+    extension: str = "png",
 ) -> None:
-    """Decode frames from a video and save them as JPEG files.
+    """Decode frames from a video and save them as image files.
 
     Opens the video once and exports all requested frames in a single decode pass.
+    Filenames follow Lightly format:
+    {video_name}-{decode_index:0{zero_padding}}-{video_format}.{extension}
 
     Args:
         video_path: Path to the video file (local or S3).
         frames: Frames from the same video to decode and export.
         fs: fsspec filesystem instance for the output directory.
         output_dir: Output directory path in the filesystem.
+        extension: Image file extension without leading dot (default: "png").
 
     Raises:
         ValueError: If the video cannot be opened or frames cannot be decoded.
@@ -157,6 +214,10 @@ def _decode_frame_to_pil(
     frames_by_number = {frame.frame_number: frame for frame in frames}
     max_frame_number = max(frames_by_number)
     total_frames = len(frames_by_number)
+
+    zero_padding = len(str(max_frame_number))
+
+    video_filename = Path(video_path).name
 
     video_fs, video_fs_path = fsspec.core.url_to_fs(url=video_path)
     video_file = video_fs.open(path=video_fs_path, mode="rb")
@@ -181,12 +242,18 @@ def _decode_frame_to_pil(
                             image=frame.to_image().convert("RGB"),
                             rotation_deg=frame_sample.rotation_deg,
                         )
-                        filename = f"{frame_sample.parent_video.file_name}/{frame_count:09d}.jpg"
-                        _save_jpeg_file(
+                        filename = get_video_frame_filename(
+                            video_filename=video_filename,
+                            decode_index=frame_count,
+                            zero_padding=zero_padding,
+                            file_extension=extension,
+                        )
+                        _save_image_file(
                             fs=fs,
                             output_dir=output_dir,
                             filename=filename,
                             image=pil_image,
+                            extension=extension,
                         )
                     except Exception as e:
                         logger.warning(
@@ -207,16 +274,21 @@ def _decode_frame_to_pil(
         raise ValueError(f"Frames [{missing}] not found in video {video_path}")
 
 
-def _save_jpeg_file(
-    fs: fsspec.AbstractFileSystem, output_dir: str, filename: str, image: PILImage.Image
+def _save_image_file(
+    fs: fsspec.AbstractFileSystem,
+    output_dir: str,
+    filename: str,
+    image: PILImage.Image,
+    extension: str = "png",
 ) -> None:
-    """Save a PIL Image as JPEG to a local or cloud path.
+    """Save a PIL Image to a local or cloud path.
 
     Args:
         fs: fsspec filesystem instance.
         output_dir: Output directory path in the filesystem.
         filename: Relative filename (can include subdirectories).
         image: PIL Image to save.
+        extension: Image file extension without leading dot (default: "png").
     """
     file_path = f"{output_dir}/{filename}".replace("\\", "/")
 
@@ -224,5 +296,15 @@ def _save_jpeg_file(
     if not fs.exists(dir_path):
         fs.makedirs(dir_path, exist_ok=True)
 
+    format_map = {
+        "jpg": "JPEG",
+        "jpeg": "JPEG",
+        "png": "PNG",
+        "webp": "WEBP",
+        "bmp": "BMP",
+        "tiff": "TIFF",
+    }
+    pil_format = format_map.get(extension.lower(), "PNG")
+
     with fs.open(file_path, "wb") as f:
-        image.save(f, format="JPEG", quality=95)
+        image.save(f, format=pil_format)
