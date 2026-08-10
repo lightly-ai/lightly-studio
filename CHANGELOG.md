@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Export image classification annotations to CSV via the GUI and Python SDK
 
+- Python SDK: Export video frames as image files via `VideoFrameDataset.export().to_image_files()` with support for PNG, JPEG, WEBP, BMP, and TIFF formats.
+
 ### Changed
 
 ### Deprecated
