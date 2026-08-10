@@ -5,13 +5,18 @@ from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
-from lightly_studio.core.dataset_query.order_by import OrderByEvaluationMetricField, OrderByField
+from lightly_studio.core.dataset_query.order_by import (
+    OrderByEvaluationMetricField,
+    OrderByField,
+    OrderByMetadataField,
+)
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.resolvers import (
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
+    metadata_resolver,
 )
 from tests.helpers_resolvers import create_collection, create_image
 
@@ -211,5 +216,87 @@ class TestDatasetQueryOrderBy:
 
         assert [sample.sample_id for sample in result_samples] == [
             image_b.sample_id,
+            image_a.sample_id,
+        ]
+
+    def test_order_by__numeric_metadata_field(self, db_session: Session) -> None:
+        """Test that numeric metadata orders numerically without declaring the type.
+
+        Values straddle a digit boundary, where lexicographic ordering would put
+        "10" and "100" before "9".
+        """
+        dataset = create_collection(session=db_session)
+        image_a = create_image(
+            session=db_session,
+            collection_id=dataset.collection_id,
+            file_path_abs="/path/to/a.jpg",
+        )
+        image_b = create_image(
+            session=db_session,
+            collection_id=dataset.collection_id,
+            file_path_abs="/path/to/b.jpg",
+        )
+        image_c = create_image(
+            session=db_session,
+            collection_id=dataset.collection_id,
+            file_path_abs="/path/to/c.jpg",
+        )
+        metadata_resolver.bulk_update_metadata(
+            db_session,
+            [
+                (image_a.sample_id, {"score": 100}),
+                (image_b.sample_id, {"score": 9}),
+                (image_c.sample_id, {"score": 10}),
+            ],
+        )
+
+        result_samples = (
+            DatasetQuery(dataset=dataset, session=db_session)
+            .order_by(OrderByMetadataField("score"))
+            .to_list()
+        )
+
+        assert [sample.sample_id for sample in result_samples] == [
+            image_b.sample_id,
+            image_c.sample_id,
+            image_a.sample_id,
+        ]
+
+    def test_order_by__string_metadata_field(self, db_session: Session) -> None:
+        """Test that string metadata keeps lexicographic ordering."""
+        dataset = create_collection(session=db_session)
+        image_a = create_image(
+            session=db_session,
+            collection_id=dataset.collection_id,
+            file_path_abs="/path/to/a.jpg",
+        )
+        image_b = create_image(
+            session=db_session,
+            collection_id=dataset.collection_id,
+            file_path_abs="/path/to/b.jpg",
+        )
+        image_c = create_image(
+            session=db_session,
+            collection_id=dataset.collection_id,
+            file_path_abs="/path/to/c.jpg",
+        )
+        metadata_resolver.bulk_update_metadata(
+            db_session,
+            [
+                (image_a.sample_id, {"label": "cat"}),
+                (image_b.sample_id, {"label": "ant"}),
+                (image_c.sample_id, {"label": "bee"}),
+            ],
+        )
+
+        result_samples = (
+            DatasetQuery(dataset=dataset, session=db_session)
+            .order_by(OrderByMetadataField("label"))
+            .to_list()
+        )
+
+        assert [sample.sample_id for sample in result_samples] == [
+            image_b.sample_id,
+            image_c.sample_id,
             image_a.sample_id,
         ]
