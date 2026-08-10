@@ -5,7 +5,7 @@ description: Python API reference for LightlyStudio embeddings — register a cu
 
 # Embeddings
 
-!!! experimental "Beta API"
+!!! example "Beta API"
     The Embeddings API is in beta. Its interface may change in future
     releases without a deprecation period.
 
