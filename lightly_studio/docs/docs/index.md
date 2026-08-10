@@ -6,7 +6,7 @@ efficiency, it lets you work seamlessly with datasets like COCO and ImageNet, ev
 with an M1 chip and 16 GB of memory.
 
 <p align="center">
-  <img src="_static/hero_showcase.gif" alt="LightlyStudio: an image grid with annotations next to an embedding plot, a cluster selection filtering the grid, and the annotation editor open on one image" width="100%" />
+  <video src="_static/hero_showcase.mp4" width="100%" autoplay loop muted playsinline></video>
 </p>
 
 <p align="center">The embedding plot shows how images relate to each other, with a preview on hover. A lasso selection filters the grid to one cluster. A search for "coffee" finds a match, and the annotation editor opens to label it.</p>
