@@ -35,23 +35,13 @@
 <p align="center">The embedding plot shows how images relate to each other, with a preview on hover. A lasso selection filters the grid to one cluster. A search for "coffee" finds a match, and the annotation editor opens to label it.</p>
 <p align="center"><strong>⚡ Tested with 2M+ images, embeddings included, on a single MacBook (M1, 16GB RAM).</strong></p>
 
-## 🚀 Try it in 60 seconds
+## 💻 Installation
 
-LightlyStudio runs on your computer and opens in your browser. Two commands give you an example dataset with images, embeddings, and annotations. You do not need an account.
+Runs on **Python 3.9 to 3.14** on Windows, Linux and MacOS. We recommend **Python 3.10** for the best compatibility with plugins such as SAM autolabeling.
 
-```bash
+```shell
 pip install lightly-studio
-lightly-studio quickstart
 ```
-
-The first run downloads the example dataset. Then open the URL that the command prints. Your images and embeddings are ready in the browser.
-
-- **Local only:** all data stays on your machine. LightlyStudio uploads nothing.
-- **Your own images:** one Python call indexes them. Then start the server. See the [Image Dataset guide](https://docs.lightly.ai/studio/dataset_setup/image_dataset/).
-- **Your own videos:** see the [Video Dataset guide](https://docs.lightly.ai/studio/dataset_setup/video_dataset/).
-- **No install:** [open the quickstart in Colab](https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb). The flow is the same.
-- **A guided walkthrough:** read the [Tutorials](#-tutorials) below. [Curate a Traffic CCTV Dataset for YOLO Training](https://docs.lightly.ai/studio/tutorials/yolo-traffic-cctv-object-detection/) goes from raw images to a trained model.
-- LightlyStudio runs on **Python 3.9 to 3.14** on Windows, Linux, and macOS. Use Python 3.10 for plugin compatibility, for example SAM autolabeling.
 
 ## Workflows
 
@@ -98,7 +88,16 @@ The first run downloads the example dataset. Then open the URL that the command 
   </tr>
 </table>
 
-## 🚀 Example workflows
+## 🚀 Quickstart
+
+LightlyStudio is a browser app that runs on your own computer. Use it in two simple steps:
+
+1. Load your data into the local database with a Python script.
+2. Start the server and explore the data in your browser.
+
+Prefer a guided, end-to-end walkthrough? Follow the tutorial
+[Curate a Traffic CCTV Dataset for YOLO Training](https://docs.lightly.ai/studio/tutorials/yolo-traffic-cctv-object-detection/) — from raw images to a trained model.
+Or try LightlyStudio without installing anything: [open the example notebook in Colab](https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb).
 
 Get started with one of these example workflows:
 
