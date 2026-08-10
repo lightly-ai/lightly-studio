@@ -8,12 +8,11 @@ import tempfile
 from collections.abc import Generator
 from datetime import datetime, timezone
 from pathlib import Path as PathlibPath
-from tempfile import TemporaryDirectory
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path
-from fastapi.responses import PlainTextResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlmodel import Field, Session
 
@@ -26,7 +25,6 @@ from lightly_studio.export import image_dataset_export, video_dataset_export
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.export_format import ExportFormat
 from lightly_studio.resolvers import collection_resolver, export_job_resolver
-from lightly_studio.resolvers.collection_resolver.export import ExportFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
@@ -35,128 +33,11 @@ _STREAM_CHUNK_SIZE_BYTES = 64 * 1024
 logger = logging.getLogger(__name__)
 
 
-@export_router.get("/export/annotations")
-def export_collection_annotations(
-    collection: Annotated[
-        CollectionTable,
-        Path(title="collection Id"),
-        Depends(collection_api.get_and_validate_collection_id),
-    ],
-    session: SessionDep,
-    annotation_collection_id: UUID | None = None,
-    export_format: ExportFormat = ExportFormat.OBJECT_DETECTION_COCO,
-) -> StreamingResponse:
-    """Export collection annotations in the selected export format."""
-    # Query to export - all samples in the collection.
-    dataset_query = DatasetQuery(dataset=collection, session=session)
-    exporter = image_dataset_export.ImageDatasetExport(
-        session=session,
-        dataset_id=collection.dataset_id,
-        samples=dataset_query,
-    )
-
-    # Create the export in a temporary directory. We cannot use a context manager
-    # because the directory should be deleted only after the file has finished streaming.
-    temp_dir = TemporaryDirectory()
-
-    if export_format == ExportFormat.YOUTUBE_VIS_SEGMENTATION:
-        temp_dir.cleanup()
-        raise HTTPException(
-            status_code=400,
-            detail=f"Export format '{export_format.value}' is not supported for this endpoint.",
-        )
-
-    try:
-        output_path = _generate_annotations_export(
-            exporter=exporter,
-            export_format=export_format,
-            annotation_collection_id=annotation_collection_id,
-            temp_dir=PathlibPath(temp_dir.name),
-        )
-    except Exception:
-        temp_dir.cleanup()
-        logger.exception("Cannot generate annotations export")
-        raise
-
-    if output_path.is_dir():
-        return StreamingResponse(
-            content=_stream_export_dir(
-                temp_dir=temp_dir,
-                dir_path=output_path,
-            ),
-            media_type="application/zip",
-            headers={
-                "Access-Control-Expose-Headers": "Content-Disposition",
-                "Content-Disposition": f"attachment; filename={output_path.name}.zip",
-            },
-        )
-
-    return StreamingResponse(
-        content=_stream_export_file(
-            temp_dir=temp_dir,
-            file_path=output_path,
-        ),
-        media_type=_media_type_for_path(output_path),
-        headers={
-            "Access-Control-Expose-Headers": "Content-Disposition",
-            "Content-Disposition": f"attachment; filename={output_path.name}",
-        },
-    )
-
-
-@export_router.get("/export/captions")
-def export_collection_captions(
-    collection: Annotated[
-        CollectionTable,
-        Path(title="collection Id"),
-        Depends(collection_api.get_and_validate_collection_id),
-    ],
-    session: SessionDep,
-) -> StreamingResponse:
-    """Export collection captions in COCO format."""
-    # Query to export - all samples in the collection.
-    dataset_query = DatasetQuery(dataset=collection, session=session)
-
-    # Create the export in a temporary directory. We cannot use a context manager
-    # because the directory should be deleted only after the file has finished streaming.
-    temp_dir = TemporaryDirectory()
-    output_path = PathlibPath(temp_dir.name) / "coco_captions_export.json"
-
-    try:
-        image_dataset_export.ImageDatasetExport(
-            session=session,
-            dataset_id=collection.dataset_id,
-            samples=dataset_query,
-        ).to_coco_captions(output_json=output_path)
-    except Exception:
-        temp_dir.cleanup()
-        # Reraise.
-        raise
-
-    return StreamingResponse(
-        content=_stream_export_file(
-            temp_dir=temp_dir,
-            file_path=output_path,
-        ),
-        media_type="application/json",
-        headers={
-            "Access-Control-Expose-Headers": "Content-Disposition",
-            "Content-Disposition": f"attachment; filename={output_path.name}",
-        },
-    )
-
-
 class ExportBody(BaseModel):
-    """body parameters for including or excluding tag_ids or sample_ids."""
+    """Body parameters for exporting samples."""
 
-    include: ExportFilter | None = Field(
-        None, description="include filter for sample_ids or tag_ids"
-    )
-    exclude: ExportFilter | None = Field(
-        None, description="exclude filter for sample_ids or tag_ids"
-    )
     collection_filter: ImageFilter | None = Field(
-        None, description="active view filter applied on top of include/exclude"
+        None, description="Active view filter for selecting samples to export."
     )
 
 
@@ -178,49 +59,13 @@ class ExportAnnotationsPrepareBody(BaseModel):
     export_format: ExportFormat = ExportFormat.OBJECT_DETECTION_COCO
     annotation_collection_id: UUID | None = None
     image_filter: ImageFilter | None = None
+    video_filter: VideoFilter | None = None
 
 
 class ExportCaptionsPrepareBody(BaseModel):
     """Request body for the captions prepare endpoint."""
 
     image_filter: ImageFilter | None = None
-
-
-# This endpoint should be a GET, however due to the potential huge size
-# of sample_ids, it is a POST request to avoid URL length limitations.
-# A body with a GET request is supported by fastAPI however it has undefined
-# behavior: https://fastapi.tiangolo.com/tutorial/body/
-@export_router.post(
-    "/export",
-)
-def export_collection_to_absolute_paths(
-    session: SessionDep,
-    collection: Annotated[
-        CollectionTable,
-        Path(title="collection Id"),
-        Depends(collection_api.get_and_validate_collection_id),
-    ],
-    body: ExportBody,
-) -> PlainTextResponse:
-    """Export collection from the database."""
-    # export collection to absolute paths
-    exported = collection_resolver.export(
-        session=session,
-        collection_id=collection.collection_id,
-        include=body.include,
-        exclude=body.exclude,
-        collection_filter=body.collection_filter,
-    )
-
-    # Create a response with the exported data
-    response = PlainTextResponse("\n".join(exported))
-
-    # Add the Content-Disposition header to force download
-    filename = f"{collection.name}_exported_{datetime.now(timezone.utc)}.txt"
-    response.headers["Access-Control-Expose-Headers"] = "Content-Disposition"
-    response.headers["Content-Disposition"] = f"attachment; filename={filename}"
-
-    return response
 
 
 @export_router.post(
@@ -239,55 +84,7 @@ def export_collection_stats(
     return collection_resolver.get_filtered_samples_count(
         session=session,
         collection_id=collection.collection_id,
-        include=body.include,
-        exclude=body.exclude,
         collection_filter=body.collection_filter,
-    )
-
-
-@export_router.get("/export/youtube-vis")
-def export_collection_youtube_vis(
-    collection: Annotated[
-        CollectionTable,
-        Path(title="collection Id"),
-        Depends(collection_api.get_and_validate_collection_id),
-    ],
-    session: SessionDep,
-    export_format: ExportFormat = ExportFormat.YOUTUBE_VIS_SEGMENTATION,
-) -> StreamingResponse:
-    """Export collection video annotations in the selected export format."""
-    if collection.sample_type != SampleType.VIDEO:
-        raise HTTPException(
-            status_code=400, detail="YouTube-VIS export is only supported for video collections."
-        )
-
-    if export_format != ExportFormat.YOUTUBE_VIS_SEGMENTATION:
-        raise HTTPException(
-            status_code=400,
-            detail="Only YouTube-VIS segmentation format is supported for this endpoint.",
-        )
-    dataset_query = DatasetQuery(dataset=collection, session=session, sample_class=VideoSample)
-
-    temp_dir = TemporaryDirectory()
-    output_path = PathlibPath(temp_dir.name) / "youtube_vis_segmentation_mask_export.json"
-
-    try:
-        video_dataset_export.to_youtube_vis_segmentation_mask(
-            session=session,
-            samples=dataset_query,
-            output_json=output_path,
-        )
-    except Exception:
-        temp_dir.cleanup()
-        raise
-
-    return StreamingResponse(
-        content=_stream_export_file(temp_dir=temp_dir, file_path=output_path),
-        media_type="application/json",
-        headers={
-            "Access-Control-Expose-Headers": "Content-Disposition",
-            "Content-Disposition": f"attachment; filename={output_path.name}",
-        },
     )
 
 
@@ -305,8 +102,6 @@ def export_collection_prepare(
     exported = collection_resolver.export(
         session=session,
         collection_id=collection.collection_id,
-        include=body.include,
-        exclude=body.exclude,
         collection_filter=body.collection_filter,
     )
 
@@ -377,15 +172,11 @@ def export_collection_annotations_prepare(
             ),
         )
 
-    dataset_query = DatasetQuery(dataset=collection, session=session)
-    if body.image_filter is not None:
-        dataset_query.filter_by_sample_ids(
-            body.image_filter.build_sample_ids_query(collection.collection_id)
-        )
-    exporter = image_dataset_export.ImageDatasetExport(
+    exporter = _annotations_exporter(
+        collection=collection,
         session=session,
-        dataset_id=collection.dataset_id,
-        samples=dataset_query,
+        image_filter=body.image_filter,
+        video_filter=body.video_filter,
     )
 
     temp_dir = PathlibPath(tempfile.mkdtemp())
@@ -475,7 +266,7 @@ def export_download(
 
 
 def _generate_annotations_export(
-    exporter: image_dataset_export.ImageDatasetExport,
+    exporter: image_dataset_export.ImageDatasetExport | video_dataset_export.VideoDatasetExport,
     export_format: ExportFormat,
     annotation_collection_id: UUID | None,
     temp_dir: PathlibPath,
@@ -488,6 +279,8 @@ def _generate_annotations_export(
             annotation_collection_id=annotation_collection_id,
         )
         return output_path
+    if not isinstance(exporter, image_dataset_export.ImageDatasetExport):
+        raise ValueError(f"Export format '{export_format.value}' is only supported for images.")
     if export_format == ExportFormat.OBJECT_DETECTION_COCO:
         output_path = temp_dir / "coco_export.json"
         exporter.to_coco_object_detections(
@@ -517,6 +310,40 @@ def _generate_annotations_export(
         )
         return output_path
     raise ValueError(f"Export format '{export_format.value}' is not supported for this endpoint.")
+
+
+def _annotations_exporter(
+    collection: CollectionTable,
+    session: Session,
+    image_filter: ImageFilter | None = None,
+    video_filter: VideoFilter | None = None,
+) -> image_dataset_export.ImageDatasetExport | video_dataset_export.VideoDatasetExport:
+    """Create the annotations exporter and apply the collection's active filter."""
+    if collection.sample_type == SampleType.VIDEO:
+        video_query = DatasetQuery(
+            dataset=collection,
+            session=session,
+            sample_class=VideoSample,
+        )
+        if video_filter is not None:
+            video_query.filter_by_sample_ids(
+                video_filter.build_sample_ids_query(collection.collection_id)
+            )
+        return video_dataset_export.VideoDatasetExport(
+            session=session,
+            samples=video_query,
+        )
+
+    image_query = DatasetQuery(dataset=collection, session=session)
+    if image_filter is not None:
+        image_query.filter_by_sample_ids(
+            image_filter.build_sample_ids_query(collection.collection_id)
+        )
+    return image_dataset_export.ImageDatasetExport(
+        session=session,
+        dataset_id=collection.dataset_id,
+        samples=image_query,
+    )
 
 
 def _stream_file_and_cleanup(
@@ -577,38 +404,3 @@ def _media_type_for_path(path: PathlibPath) -> str:
     if path.suffix == ".txt":
         return "text/plain"
     return "application/octet-stream"
-
-
-def _stream_export_file(
-    temp_dir: TemporaryDirectory[str],
-    file_path: PathlibPath,
-) -> Generator[bytes, None, None]:
-    """Stream the export file and clean up the temporary directory afterwards."""
-    try:
-        with file_path.open("rb") as file:
-            while chunk := file.read(_STREAM_CHUNK_SIZE_BYTES):
-                yield chunk
-    finally:
-        temp_dir.cleanup()
-
-
-def _stream_export_dir(
-    temp_dir: TemporaryDirectory[str],
-    dir_path: PathlibPath,
-) -> Generator[bytes, None, None]:
-    """Zip and stream an export directory, then clean up the temporary directory."""
-    try:
-        archive_path = PathlibPath(
-            shutil.make_archive(
-                base_name=str(dir_path),
-                format="zip",
-                root_dir=dir_path.parent,
-                base_dir=dir_path.name,
-            )
-        )
-    except Exception:
-        temp_dir.cleanup()
-        # Reraise.
-        raise
-
-    yield from _stream_export_file(temp_dir=temp_dir, file_path=archive_path)
