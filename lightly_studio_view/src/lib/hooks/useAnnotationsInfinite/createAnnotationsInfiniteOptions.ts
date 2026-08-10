@@ -20,7 +20,10 @@ export const createAnnotationsInfiniteOptions = (params: AnnotationsInfinitePara
             tag_ids: params.tag_ids,
             sample_ids: params.sample_ids,
             embedding_region: params.embedding_region,
-            text_embedding: params.text_embedding
+            text_embedding: params.text_embedding,
+            // Part of the cache key, not only the body: omitting it here serves cached
+            // pages and the grid refuses to reorder.
+            sort_by: params.sort_by
         }
     ];
 
@@ -41,7 +44,8 @@ export const createAnnotationsInfiniteOptions = (params: AnnotationsInfinitePara
                     tag_ids: params.tag_ids,
                     sample_ids: params.sample_ids,
                     embedding_region: params.embedding_region,
-                    text_embedding: params.text_embedding
+                    text_embedding: params.text_embedding,
+                    sort_by: params.sort_by
                 },
                 signal,
                 throwOnError: true

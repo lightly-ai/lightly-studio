@@ -2,9 +2,20 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from uuid import UUID, uuid4
 
+from pydantic import BaseModel
 from sqlmodel import Field, SQLModel
+
+from lightly_studio.models.evaluation_run import EvaluationTaskType
+
+
+class EvaluationAnnotationSide(str, Enum):
+    """Which side of an evaluation run's pairing an annotation collection is."""
+
+    GROUND_TRUTH = "ground_truth"
+    PREDICTION = "prediction"
 
 
 class EvaluationAnnotationMetricTable(SQLModel, table=True):
@@ -33,6 +44,19 @@ class EvaluationAnnotationMetricTable(SQLModel, table=True):
     )
     metric_name: str | None = Field(default=None, index=True)
     value: float | None = Field(default=None)
+
+
+class EvaluationRunAnnotationMetricsInfoView(BaseModel):
+    """Per-annotation metrics recorded by one evaluation run.
+
+    Carries no value bounds: how bounds interact with unmatched annotations, whose
+    ordering value is coalesced to zero, is decided by the threshold filter (LIG-10116).
+    """
+
+    run_id: UUID
+    run_name: str
+    task_type: EvaluationTaskType
+    metric_names: list[str]
 
 
 class EvaluationAnnotationMetricCreate(SQLModel):

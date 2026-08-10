@@ -1,5 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AnnotationEvaluationMetricSortExpr } from '$lib/api/lightly_studio_local';
 import { createAnnotationsInfiniteOptions } from './createAnnotationsInfiniteOptions';
+
+const SORT_BY: AnnotationEvaluationMetricSortExpr = {
+    source: 'annotation_evaluation_metric',
+    evaluation_run_id: 'run-1',
+    metric_name: 'iou',
+    direction: 'asc'
+};
 
 type Options = ReturnType<typeof createAnnotationsInfiniteOptions>;
 type QueryFnContext = { pageParam: number; signal: AbortSignal };
@@ -65,6 +73,26 @@ describe('createAnnotationsInfiniteOptions', () => {
             const options2 = createAnnotationsInfiniteOptions({
                 collection_id: 'col-1',
                 sample_ids: ['s2']
+            });
+            expect(options1.queryKey).not.toEqual(options2.queryKey);
+        });
+
+        it('puts sort_by in query key', () => {
+            const options = createAnnotationsInfiniteOptions({
+                collection_id: 'col-1',
+                sort_by: SORT_BY
+            });
+            expect(options.queryKey[2]).toEqual({ sort_by: SORT_BY });
+        });
+
+        it('produces different keys for different sort_by values', () => {
+            const options1 = createAnnotationsInfiniteOptions({
+                collection_id: 'col-1',
+                sort_by: SORT_BY
+            });
+            const options2 = createAnnotationsInfiniteOptions({
+                collection_id: 'col-1',
+                sort_by: { ...SORT_BY, direction: 'desc' }
             });
             expect(options1.queryKey).not.toEqual(options2.queryKey);
         });
@@ -163,6 +191,21 @@ describe('createAnnotationsInfiniteOptions', () => {
             expect(readAnnotationsWithPayloadMock).toHaveBeenCalledWith(
                 expect.objectContaining({
                     body: expect.objectContaining({ embedding_region })
+                })
+            );
+        });
+
+        it('passes sort_by to readAnnotationsWithPayload body', async () => {
+            const options = createAnnotationsInfiniteOptions({
+                collection_id: 'col-1',
+                sort_by: SORT_BY
+            });
+
+            await callQueryFn(options, { pageParam: 0, signal: new AbortController().signal });
+
+            expect(readAnnotationsWithPayloadMock).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    body: expect.objectContaining({ sort_by: SORT_BY })
                 })
             );
         });

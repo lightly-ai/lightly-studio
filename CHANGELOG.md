@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Export image classification annotations to CSV via the GUI and Python SDK
 
+- Sort the annotations grid by a per-annotation evaluation metric, such as IoU.
+
 ### Changed
 
 ### Deprecated
