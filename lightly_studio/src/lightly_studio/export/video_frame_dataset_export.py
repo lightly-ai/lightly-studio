@@ -2,42 +2,39 @@
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
 from uuid import UUID
 
-import cv2
 import fsspec
 from av import FFmpegError, container
+from av.video.frame import VideoFrame as AVVideoFrame
 from labelformat.model.image import Image
 from PIL import Image as PILImage
 from sqlmodel import Session
 from tqdm import tqdm
 
-from lightly_studio.api.routes.video_frames_media import ROTATION_MAP
 from lightly_studio.core.sample import Sample
 from lightly_studio.core.video.video_frame_sample import VideoFrameSample
 from lightly_studio.export.dataset_export import DatasetExport
 from lightly_studio.type_definitions import PathLike
 
-logger = logging.getLogger(__name__)
+# Counter-rotation matching the DISPLAYMATRIX side-data convention used at ingest.
+_PIL_ROTATION: dict[int, PILImage.Transpose] = {
+    90: PILImage.Transpose.ROTATE_90,
+    180: PILImage.Transpose.ROTATE_180,
+    270: PILImage.Transpose.ROTATE_270,
+}
 
-
-@dataclass
-class _FrameExportContext:
-    """Context for exporting frames from a video."""
-
-    video_path: str
-    video_filename: str
-    frames_by_number: dict[int, VideoFrameSample]
-    max_frame_number: int
-    zero_padding: int
-    fs: fsspec.AbstractFileSystem
-    output_dir: str
-    extension: str
+_EXTENSION_TO_PIL_FORMAT = {
+    "jpg": "JPEG",
+    "jpeg": "JPEG",
+    "png": "PNG",
+    "webp": "WEBP",
+    "bmp": "BMP",
+    "tiff": "TIFF",
+}
 
 
 class VideoFrameDatasetExport(DatasetExport):
@@ -46,6 +43,8 @@ class VideoFrameDatasetExport(DatasetExport):
     This class is typically not instantiated directly but returned by
     `VideoFrameDataset.export()`. It allows exporting data in various formats.
     """
+
+    samples: Iterable[VideoFrameSample]
 
     def __init__(
         self,
@@ -60,53 +59,52 @@ class VideoFrameDatasetExport(DatasetExport):
             dataset_id: The dataset ID for label retrieval.
             samples: Samples to export.
         """
-        self.samples_list = list(samples)
         super().__init__(
             session=session,
             dataset_id=dataset_id,
-            samples=self.samples_list,
+            samples=samples,
             sample_to_image=video_frame_to_image,
         )
 
     def to_image_files(self, output_dir: PathLike, extension: str = "png") -> None:
         """Export video frames as image files to a local or S3 directory.
 
-        Decodes each frame from its parent video and writes it as an image file to
-        the output directory with a structured filename:
-        {video_name}-{decode_index:0{zero_padding}}-{video_format}.{file_extension}
-        Frames from the same video are decoded in a single pass to avoid reopening
-        the video file for every frame.
+        Decodes each frame from its parent video and writes it as an image file:
+        ``{video_name}-{decode_index:0{zero_padding}}-{video_format}.{extension}``.
+        Frames from the same video are decoded in a single pass.
 
         Args:
             output_dir: The output directory path (can be local or s3://bucket/prefix).
             extension: Image file extension without leading dot (default: "png").
 
         Raises:
-            ValueError: If a video file cannot be opened or a frame cannot be decoded.
+            ValueError: If the extension is unsupported, a video cannot be opened,
+                a frame cannot be decoded, or a requested frame is missing.
         """
-        output_dir_str = str(output_dir)
-        fs, fs_path = fsspec.core.url_to_fs(url=output_dir_str)
+        extension_lower = extension.lower()
+        if extension_lower not in _EXTENSION_TO_PIL_FORMAT:
+            supported = ", ".join(sorted(_EXTENSION_TO_PIL_FORMAT))
+            raise ValueError(
+                f"Unsupported image extension '{extension}'. Supported extensions: {supported}"
+            )
 
+        fs, fs_path = fsspec.core.url_to_fs(url=str(output_dir))
         if not fs.exists(fs_path):
             fs.makedirs(fs_path, exist_ok=True)
 
-        # Group frames by their parent video to minimize video file openings.
         frames_by_video: dict[str, list[VideoFrameSample]] = {}
-        for frame_sample in self.samples_list:
+        for frame_sample in self.samples:
             video_path = frame_sample.parent_video.file_path_abs
             frames_by_video.setdefault(video_path, []).append(frame_sample)
 
         for video_path, frame_samples in frames_by_video.items():
-            try:
-                _decode_frame_to_pil(
-                    video_path=video_path,
-                    frames=frame_samples,
-                    fs=fs,
-                    output_dir=fs_path,
-                    extension=extension,
-                )
-            except Exception as e:
-                logger.warning(f"Failed to export frames from video {video_path}: {e}")
+            _export_frames_from_video(
+                video_path=video_path,
+                frames=frame_samples,
+                fs=fs,
+                output_dir=fs_path,
+                extension=extension_lower,
+            )
 
 
 def video_frame_to_image(sample: Sample, image_id: int, use_relative_filename: bool) -> Image:
@@ -130,71 +128,14 @@ def video_frame_to_image(sample: Sample, image_id: int, use_relative_filename: b
     )
 
 
-def _process_video_frames(
-    context: _FrameExportContext,
-    video_stream,
-    video_container,
-) -> None:
-    """Process and export frames from a video stream."""
-    total_frames = len(context.frames_by_number)
-    with tqdm(total=total_frames, desc="Exporting frames", unit=" frames") as pbar:
-        for frame_count, frame in enumerate(video_container.decode(video_stream)):
-            if frame_count > context.max_frame_number:
-                break
-            if frame_count not in context.frames_by_number:
-                continue
-
-            frame_sample = context.frames_by_number.pop(frame_count)
-            try:
-                rotate_code = ROTATION_MAP[frame_sample.rotation_deg]
-                pil_image = frame.to_image().convert("RGB")
-                if rotate_code is not None:
-                    pil_image = cv2.rotate(src=pil_image, rotateCode=rotate_code)
-                filename = _get_video_frame_filename(
-                    video_filename=context.video_filename,
-                    decode_index=frame_count,
-                    zero_padding=context.zero_padding,
-                    file_extension=context.extension,
-                )
-                _save_image_file(
-                    fs=context.fs,
-                    output_dir=context.output_dir,
-                    filename=filename,
-                    image=pil_image,
-                    extension=context.extension,
-                )
-            except Exception as e:
-                logger.warning(
-                    f"Failed to export frame {frame_count} from video {context.video_path}: {e}"
-                )
-            pbar.update(1)
-            if not context.frames_by_number:
-                break
-
-
-def _decode_frame_to_pil(
+def _export_frames_from_video(
     video_path: str,
     frames: Sequence[VideoFrameSample],
     fs: fsspec.AbstractFileSystem,
     output_dir: str,
-    extension: str = "png",
+    extension: str,
 ) -> None:
-    """Decode frames from a video and save them as image files.
-
-    Opens the video once and exports all requested frames in a single decode pass.
-    Filenames follow Lightly format:
-    {video_name}-{decode_index:0{zero_padding}}-{video_format}.{extension}
-
-    Args:
-        video_path: Path to the video file (local or S3).
-        frames: Frames from the same video to decode and export.
-        fs: fsspec filesystem instance for the output directory.
-        output_dir: Output directory path in the filesystem.
-        extension: Image file extension without leading dot (default: "png").
-
-    Raises:
-        ValueError: If the video cannot be opened or frames cannot be decoded.
-    """
+    """Open a video once and export the requested frames as image files."""
     if not frames:
         return
 
@@ -202,6 +143,7 @@ def _decode_frame_to_pil(
     max_frame_number = max(frames_by_number)
     zero_padding = len(str(max_frame_number))
     video_filename = Path(video_path).name
+    pil_format = _EXTENSION_TO_PIL_FORMAT[extension]
 
     video_fs, video_fs_path = fsspec.core.url_to_fs(url=video_path)
     video_file = video_fs.open(path=video_fs_path, mode="rb")
@@ -213,21 +155,28 @@ def _decode_frame_to_pil(
 
         try:
             video_stream = video_container.streams.video[0]
-            context = _FrameExportContext(
-                video_path=video_path,
-                video_filename=video_filename,
-                frames_by_number=frames_by_number,
-                max_frame_number=max_frame_number,
-                zero_padding=zero_padding,
-                fs=fs,
-                output_dir=output_dir,
-                extension=extension,
-            )
-            _process_video_frames(
-                context=context,
-                video_stream=video_stream,
-                video_container=video_container,
-            )
+            with tqdm(total=len(frames_by_number), desc="Exporting frames", unit=" frames") as pbar:
+                for frame_count, frame in enumerate(video_container.decode(video_stream)):
+                    if frame_count > max_frame_number:
+                        break
+                    if frame_count not in frames_by_number:
+                        continue
+
+                    frame_sample = frames_by_number.pop(frame_count)
+                    pil_image = _frame_to_pil_image(
+                        frame=frame, rotation_deg=frame_sample.rotation_deg
+                    )
+                    filename = _video_frame_filename(
+                        video_filename=video_filename,
+                        decode_index=frame_count,
+                        zero_padding=zero_padding,
+                        file_extension=extension,
+                    )
+                    with fs.open(f"{output_dir}/{filename}".replace("\\", "/"), "wb") as f:
+                        pil_image.save(f, format=pil_format)
+                    pbar.update(1)
+                    if not frames_by_number:
+                        break
         except (OSError, FFmpegError) as e:
             raise ValueError(f"Could not decode frames from {video_path}: {e}") from e
         finally:
@@ -240,75 +189,30 @@ def _decode_frame_to_pil(
         raise ValueError(f"Frames [{missing}] not found in video {video_path}")
 
 
-def _save_image_file(
-    fs: fsspec.AbstractFileSystem,
-    output_dir: str,
-    filename: str,
-    image: PILImage.Image,
-    extension: str = "png",
-) -> None:
-    """Save a PIL Image to a local or cloud path.
-
-    Args:
-        fs: fsspec filesystem instance.
-        output_dir: Output directory path in the filesystem.
-        filename: Relative filename (can include subdirectories).
-        image: PIL Image to save.
-        extension: Image file extension without leading dot (default: "png").
-
-    Raises:
-        ValueError: If extension is not supported.
-    """
-    format_map = {
-        "jpg": "JPEG",
-        "jpeg": "JPEG",
-        "png": "PNG",
-        "webp": "WEBP",
-        "bmp": "BMP",
-        "tiff": "TIFF",
-    }
-    extension_lower = extension.lower()
-    if extension_lower not in format_map:
-        supported = ", ".join(sorted(format_map.keys()))
-        raise ValueError(
-            f"Unsupported image extension '{extension}'. Supported extensions: {supported}"
-        )
-    pil_format = format_map[extension_lower]
-
-    file_path = f"{output_dir}/{filename}".replace("\\", "/")
-
-    dir_path = file_path.rsplit("/", 1)[0]
-    if not fs.exists(dir_path):
-        fs.makedirs(dir_path, exist_ok=True)
-
-    with fs.open(file_path, "wb") as f:
-        image.save(f, format=pil_format)
+def _frame_to_pil_image(frame: AVVideoFrame, rotation_deg: int) -> PILImage.Image:
+    """Convert a decoded AV frame to RGB PIL, applying counter-rotation if needed."""
+    pil_image = cast(
+        PILImage.Image,
+        frame.to_image().convert("RGB"),  # type: ignore[no-untyped-call]
+    )
+    if rotation_deg == 0:
+        return pil_image
+    try:
+        return pil_image.transpose(_PIL_ROTATION[rotation_deg])
+    except KeyError as e:
+        raise ValueError(f"Unsupported rotation_deg={rotation_deg}") from e
 
 
-def _get_video_frame_filename(
+def _video_frame_filename(
     video_filename: str,
     decode_index: int,
     zero_padding: int,
-    file_extension: str = "png",
+    file_extension: str,
 ) -> str:
-    """Create a filename for a video frame in Lightly format.
-
-    Format: {video_name}-{decode_index:0{zero_padding}}-{video_format}.{file_extension}
-
-    Args:
-        video_filename: Source video filename (e.g., "video_001.mp4")
-        decode_index: Frame sequence number (0-indexed)
-        zero_padding: Width of zero-padded decode_index
-        file_extension: Output frame format without leading dot (default: "png")
-
-    Returns:
-        Frame filename in Lightly format
-    """
+    """Build ``{video_name}-{decode_index}-{video_format}.{extension}``."""
     video_path = Path(video_filename)
     video_name = video_path.with_suffix("")
     video_format = video_path.suffix[1:]
-
     if "-" in video_format:
         raise ValueError(f"Video format cannot contain '-' but found {video_format}")
-
     return f"{video_name}-{decode_index:0{zero_padding}}-{video_format}.{file_extension}"
