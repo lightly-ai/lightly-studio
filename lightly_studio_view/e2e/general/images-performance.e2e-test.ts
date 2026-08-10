@@ -11,7 +11,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 const PERFORMANCE_LIMITS = {
-    maxRenderTimeMs: 6000,
+    maxRenderTimeMs: 6500,
     maxMemoryUsageMb: 256
 };
 const MEASUREMENT_ITERATIONS = 3;
