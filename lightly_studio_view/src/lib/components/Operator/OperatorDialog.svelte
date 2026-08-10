@@ -15,7 +15,7 @@
     import {
         type ParameterValue,
         type ParameterValues,
-        isValueFilled,
+        isValueSubmittable,
         buildInitialParameters,
         getParameterConfig
     } from './parameterTypeConfig';
@@ -163,10 +163,9 @@
 
     const isFormValid = $derived.by(() => {
         if (!operator) return false;
-        return operator.parameters.every((param) => {
-            if (!(param.required ?? true)) return true;
-            return isValueFilled(parameters[param.name], param.type);
-        });
+        return operator.parameters.every((param) =>
+            isValueSubmittable(parameters[param.name], param)
+        );
     });
 
     function updateParameter(paramName: string, value: ParameterValue) {
@@ -208,10 +207,11 @@
                  parameter's min-content width instead of stretching the dialog past its max-width. -->
             <div class="min-w-0 space-y-4">
                 {#each operator.parameters as param}
-                    {@const config = getParameterConfig(param.type)}
+                    {@const config = getParameterConfig(param.type, param.columns)}
                     {@const required = param.required ?? true}
-                    {@const isMissing =
-                        required && !isValueFilled(parameters[param.name], param.type)}
+                    <!-- Mirrors isFormValid: whatever blocks Execute is what the control must show,
+                         including an optional table holding an incomplete row. -->
+                    {@const isMissing = !isValueSubmittable(parameters[param.name], param)}
 
                     <config.component
                         name={param.name}

@@ -2,7 +2,7 @@
 
 Export lets you save annotations and file paths from your dataset in common formats.
 Exports can be triggered from the GUI or through the Python API. You can export an entire dataset
-or a filtered subset based on tags, or other criteria when using the Python API.
+or a filtered subset using collection filters, or other criteria when using the Python API.
 
 The following export formats are supported:
 
@@ -28,7 +28,8 @@ and select `Export`. The dialog shows a dropdown with all available formats for 
 
 ### Exporting annotations
 
-For annotation formats (`Image Object Detections (COCO)`, `Image Object Detections (YOLO)`,
+For annotation formats (`Image Classifications (CSV)`, `Image Object Detections (COCO)`,
+`Image Object Detections (YOLO)`,
 `Image Segmentation Mask (COCO)`, `Image Segmentation Mask (PASCAL VOC)`, `Image Captions`,
 `YouTube-VIS Video Segmentation Masks`),
 select the format and click `Download`. A zip file is created if the export includes multiple files.
@@ -36,12 +37,13 @@ The export includes all samples in the dataset.
 
 ![Export object detections](https://storage.googleapis.com/lightly-public/studio/export_dialog_object_detections.png){width=60%}
 
-### Exporting sample filenames by tag
+### Exporting sample filenames
 
-The `Image Filenames` option supports tag-based filtering. Tick `Inverse selection` to export
-samples that do not have the selected tag.
+The `Image Filenames` option exports the filenames of all samples that match the active collection
+filters. Apply filters in the collection view before opening the export dialog to limit the export
+to a specific subset.
 
-![Export filenames by tag](https://storage.googleapis.com/lightly-public/studio/export_dialog_filenames.png){width=60%}
+![Export sample filenames](https://storage.googleapis.com/lightly-public/studio/export_dialog_filenames.png){width=60%}
 
 ## Export in Python
 

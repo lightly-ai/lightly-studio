@@ -45,6 +45,7 @@ nav:
     - Cloud Storage:
       - enterprise/cloud_storage/index.md
       - AWS S3: enterprise/cloud_storage/aws.md
+      - Google Cloud Storage: enterprise/cloud_storage/gcs.md
   - Tutorials:
     - tutorials/index.md
     - "Tutorial 1: Curate a Traffic CCTV Dataset for YOLO Training": tutorials/yolo-traffic-cctv-object-detection.md
