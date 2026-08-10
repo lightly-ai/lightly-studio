@@ -1,8 +1,8 @@
 """Tests for the frame-specific export wiring in `video_frame_dataset_export`.
 
 The sample-type-agnostic export format logic is tested in the `test_dataset_export__*.py`
-files. Here we only cover what is frame-specific: the `video_frame_to_image` mapping and that
-`VideoFrameDataset.export()` uses it and forwards the query.
+files. Here we only cover what is frame-specific: the `video_frame_to_image` mapping,
+`to_image_files`, and that `VideoFrameDataset.export()` uses it and forwards the query.
 """
 
 from __future__ import annotations
@@ -27,6 +27,25 @@ from tests.resolvers.video.helpers import (
     create_video_file,
     create_video_with_frames,
 )
+
+
+def _create_dataset_with_local_video(tmp_path: Path, *, num_frames: int = 3) -> VideoDataset:
+    """Create a video dataset backed by a real local mp4 with ``num_frames`` frames."""
+    dataset = VideoDataset.create(name="test_video_dataset")
+    video_path = tmp_path / "test_video.mp4"
+    create_video_file(video_path, width=100, height=100, num_frames=num_frames, fps=30)
+    create_video_with_frames(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        video=VideoStub(
+            path=str(video_path),
+            width=100,
+            height=100,
+            duration_s=num_frames / 30.0,
+            fps=30.0,
+        ),
+    )
+    return dataset
 
 
 class TestVideoFrameDatasetExport:
@@ -81,6 +100,45 @@ class TestVideoFrameDatasetExport:
             {"id": 0, "file_name": "/abs/dir/video_001.mp4/000000000.jpg", "width": 3, "height": 2},
         ]
 
+    def test_to_image_files__exports_frames_locally(
+        self,
+        tmp_path: Path,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        """Exports all frames as PNGs and creates the output directory if needed."""
+        dataset = _create_dataset_with_local_video(tmp_path, num_frames=3)
+        output_dir = tmp_path / "new_directory" / "frames"
+        assert not output_dir.exists()
+
+        frames = dataset.frames()
+        frames.export(frames.query()).to_image_files(output_dir=output_dir)
+
+        exported_files = sorted(output_dir.glob("*.png"))
+        assert [path.name for path in exported_files] == [
+            "test_video-0-mp4.png",
+            "test_video-1-mp4.png",
+            "test_video-2-mp4.png",
+        ]
+        for image_file in exported_files:
+            with PILImage.open(image_file) as img:
+                assert img.size == (100, 100)
+
+    def test_to_image_files__respects_query_filter(
+        self,
+        tmp_path: Path,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        """Only exports frames matching the query."""
+        dataset = _create_dataset_with_local_video(tmp_path, num_frames=3)
+        output_dir = tmp_path / "exported_frames"
+        frames = dataset.frames()
+        query = frames.query().match(VideoFrameSampleField.frame_number == 0)
+        frames.export(query).to_image_files(output_dir=output_dir)
+
+        exported_files = list(output_dir.glob("*.png"))
+        assert len(exported_files) == 1
+        assert exported_files[0].name == "test_video-0-mp4.png"
+
 
 def test_video_frame_to_image__coco_uses_absolute_video_path(
     patch_collection: None,  # noqa: ARG001
@@ -128,66 +186,6 @@ def test_video_frame_to_image__yolo_pascal_use_relative_video_name(
     assert image.filename == "video_001.mp4/000000000.jpg"
     assert image.width == 640
     assert image.height == 480
-
-
-def _create_dataset_with_local_video(tmp_path: Path, *, num_frames: int = 3) -> VideoDataset:
-    """Create a video dataset backed by a real local mp4 with ``num_frames`` frames."""
-    dataset = VideoDataset.create(name="test_video_dataset")
-    video_path = tmp_path / "test_video.mp4"
-    create_video_file(video_path, width=100, height=100, num_frames=num_frames, fps=30)
-    create_video_with_frames(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        video=VideoStub(
-            path=str(video_path),
-            width=100,
-            height=100,
-            duration_s=num_frames / 30.0,
-            fps=30.0,
-        ),
-    )
-    return dataset
-
-
-class TestVideoFrameDatasetExportToImageFiles:
-    def test_to_image_files__exports_frames_locally(
-        self,
-        tmp_path: Path,
-        patch_collection: None,  # noqa: ARG002
-    ) -> None:
-        """Exports all frames as PNGs and creates the output directory if needed."""
-        dataset = _create_dataset_with_local_video(tmp_path, num_frames=3)
-        output_dir = tmp_path / "new_directory" / "frames"
-        assert not output_dir.exists()
-
-        frames = dataset.frames()
-        frames.export(frames.query()).to_image_files(output_dir=output_dir)
-
-        exported_files = sorted(output_dir.glob("*.png"))
-        assert [path.name for path in exported_files] == [
-            "test_video-0-mp4.png",
-            "test_video-1-mp4.png",
-            "test_video-2-mp4.png",
-        ]
-        for image_file in exported_files:
-            with PILImage.open(image_file) as img:
-                assert img.size == (100, 100)
-
-    def test_to_image_files__respects_query_filter(
-        self,
-        tmp_path: Path,
-        patch_collection: None,  # noqa: ARG002
-    ) -> None:
-        """Only exports frames matching the query."""
-        dataset = _create_dataset_with_local_video(tmp_path, num_frames=3)
-        output_dir = tmp_path / "exported_frames"
-        frames = dataset.frames()
-        query = frames.query().match(VideoFrameSampleField.frame_number <= 0)
-        frames.export(query).to_image_files(output_dir=output_dir)
-
-        exported_files = list(output_dir.glob("*.png"))
-        assert len(exported_files) == 1
-        assert exported_files[0].name == "test_video-0-mp4.png"
 
 
 def test_video_frame_filename() -> None:
