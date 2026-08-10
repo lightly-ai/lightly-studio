@@ -30,15 +30,17 @@ class SortFieldExpr(BaseModel):
         source: The source of the field (e.g., "image" or "metadata").
         field_name: The field to sort by.
         direction: The sort direction, either ascending or descending.
-        is_numeric: Whether the field holds numeric values.  When ``True``,
-            the extracted value is cast to float for correct numeric ordering.
-            Only relevant when ``source`` is ``"metadata"``.
+        is_numeric: Deprecated and ignored.  Numeric metadata fields are detected
+            from the collection's stored metadata schema.
     """
 
     source: Literal[SortFieldSource.image, SortFieldSource.metadata]
     field_name: str
     direction: SortDirection
-    is_numeric: bool
+    is_numeric: bool | None = Field(
+        default=None,
+        description="Deprecated and ignored, will be removed in the next major version.",
+    )
 
 
 class EvaluationMetricSortExpr(BaseModel):
@@ -49,13 +51,17 @@ class EvaluationMetricSortExpr(BaseModel):
         evaluation_run_name: The name of the evaluation run to sort by.
         metric_name: The metric name to sort by.
         direction: The sort direction, either ascending or descending.
+        is_numeric: Deprecated and ignored.  Evaluation metrics are always numeric.
     """
 
     source: Literal[SortFieldSource.evaluation_metric] = SortFieldSource.evaluation_metric
     evaluation_run_name: str
     metric_name: str
     direction: SortDirection
-    is_numeric: bool = False
+    is_numeric: bool | None = Field(
+        default=None,
+        description="Deprecated and ignored, will be removed in the next major version.",
+    )
 
 
 SortExpr = Annotated[
@@ -76,7 +82,6 @@ def sort_field_expr_to_order_by(expr: SortFieldExpr) -> OrderByExpression:
     return sort_to_order_by(
         key=(expr.source, expr.field_name),
         direction=expr.direction,
-        cast_to_float=expr.is_numeric,
     )
 
 

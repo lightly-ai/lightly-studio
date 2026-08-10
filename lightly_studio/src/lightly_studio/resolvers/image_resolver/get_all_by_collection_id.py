@@ -275,7 +275,7 @@ def _get_all_without_similarity(  # noqa: PLR0913
     ordered_query = order_by[0].apply_with_order_value(samples_query)
     for expr in order_by[1:]:
         ordered_query = expr.apply_joins(ordered_query)
-        ordered_query = ordered_query.order_by(expr.to_column_element())
+        ordered_query = ordered_query.order_by(*expr.to_column_elements())
     if pagination is not None:
         ordered_query = ordered_query.offset(pagination.offset).limit(pagination.limit)
 
