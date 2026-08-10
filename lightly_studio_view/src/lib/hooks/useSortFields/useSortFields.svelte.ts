@@ -7,7 +7,6 @@ export interface ImageSortField {
     source: SortFieldExpr['source'];
     value: string;
     label: string;
-    is_numeric?: boolean;
 }
 
 export interface EvalSortField {
@@ -65,8 +64,7 @@ export function useSortFields({ datasetId }: UseSortFieldsParams): UseSortFields
                 (info): ImageSortField => ({
                     source: 'metadata' as SortFieldExpr['source'],
                     value: info.name,
-                    label: `metadata.${info.name}`,
-                    is_numeric: info.type === 'integer' || info.type === 'float'
+                    label: `metadata.${info.name}`
                 })
             )
     );
