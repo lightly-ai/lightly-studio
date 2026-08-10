@@ -46,10 +46,10 @@ lightly-studio quickstart
 
 The first run downloads the example dataset. Then open the URL the command prints.
 
-- **Local only:** all data stays on your machine. LightlyStudio uploads nothing.
+- **Local only:** your images and datasets never leave your machine.
 - **Your own images:** one Python call indexes them, then start the server. See the [Image Dataset guide](https://docs.lightly.ai/studio/dataset_setup/image_dataset/).
 - **Your own videos:** see the [Video Dataset guide](https://docs.lightly.ai/studio/dataset_setup/video_dataset/).
-- **No install:** [open the quickstart in Colab](https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb). The flow is the same.
+- **No install:** [open the quickstart in Colab](https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb)
 - **A guided walkthrough:** read the [Tutorials](#-tutorials) below. [Curate a Traffic CCTV Dataset for YOLO Training](https://docs.lightly.ai/studio/tutorials/yolo-traffic-cctv-object-detection/) goes from raw images to a trained model.
 - Runs on **Python 3.9 to 3.14** on Windows, Linux, and macOS. Use Python 3.10 for plugin compatibility, for example SAM autolabeling.
 
