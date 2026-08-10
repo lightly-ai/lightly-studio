@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
 from uuid import UUID
 
+import cv2
 import fsspec
 from av import FFmpegError, container
 from labelformat.model.image import Image
@@ -15,6 +17,7 @@ from PIL import Image as PILImage
 from sqlmodel import Session
 from tqdm import tqdm
 
+from lightly_studio.api.routes.video_frames_media import ROTATION_MAP
 from lightly_studio.core.sample import Sample
 from lightly_studio.core.video.video_frame_sample import VideoFrameSample
 from lightly_studio.export.dataset_export import DatasetExport
@@ -22,38 +25,19 @@ from lightly_studio.type_definitions import PathLike
 
 logger = logging.getLogger(__name__)
 
-ROTATION_90_DEG = 90
-ROTATION_180_DEG = 180
-ROTATION_270_DEG = 270
 
+@dataclass
+class _FrameExportContext:
+    """Context for exporting frames from a video."""
 
-def get_video_frame_filename(
-    video_filename: str,
-    decode_index: int,
-    zero_padding: int,
-    file_extension: str = "png",
-) -> str:
-    """Create a filename for a video frame in Lightly format.
-
-    Format: {video_name}-{decode_index:0{zero_padding}}-{video_format}.{file_extension}
-
-    Args:
-        video_filename: Source video filename (e.g., "video_001.mp4")
-        decode_index: Frame sequence number (0-indexed)
-        zero_padding: Width of zero-padded decode_index
-        file_extension: Output frame format without leading dot (default: "png")
-
-    Returns:
-        Frame filename in Lightly format
-    """
-    video_path = Path(video_filename)
-    video_name = video_path.with_suffix("")
-    video_format = video_path.suffix[1:]
-
-    if "-" in video_format:
-        raise ValueError(f"Video format cannot contain '-' but found {video_format}")
-
-    return f"{video_name}-{decode_index:0{zero_padding}}-{video_format}.{file_extension}"
+    video_path: str
+    video_filename: str
+    frames_by_number: dict[int, VideoFrameSample]
+    max_frame_number: int
+    zero_padding: int
+    fs: fsspec.AbstractFileSystem
+    output_dir: str
+    extension: str
 
 
 class VideoFrameDatasetExport(DatasetExport):
@@ -132,7 +116,7 @@ def video_frame_to_image(sample: Sample, image_id: int, use_relative_filename: b
     a `VideoFrameSample` here because this strategy is only used by `VideoFrameDatasetExport`.
 
     A frame has no file of its own, so the file name is synthesized from the parent video and
-    the frame number and the dimensions are the parent video's.
+    the frame number (``<video>/<frame_number>.jpg``) and the dimensions are the parent video's.
     COCO stores the absolute video path verbatim; YOLO and Pascal VOC need a relative video name.
     """
     frame_sample = cast(VideoFrameSample, sample)
@@ -146,23 +130,46 @@ def video_frame_to_image(sample: Sample, image_id: int, use_relative_filename: b
     )
 
 
-def _apply_rotation(image: PILImage.Image, rotation_deg: int) -> PILImage.Image:
-    """Apply counter-rotation to an image based on metadata rotation.
+def _process_video_frames(
+    context: _FrameExportContext,
+    video_stream,
+    video_container,
+) -> None:
+    """Process and export frames from a video stream."""
+    total_frames = len(context.frames_by_number)
+    with tqdm(total=total_frames, desc="Exporting frames", unit=" frames") as pbar:
+        for frame_count, frame in enumerate(video_container.decode(video_stream)):
+            if frame_count > context.max_frame_number:
+                break
+            if frame_count not in context.frames_by_number:
+                continue
 
-    Args:
-        image: PIL Image to rotate.
-        rotation_deg: Rotation in degrees (0, 90, 180, 270).
-
-    Returns:
-        Rotated PIL Image.
-    """
-    if rotation_deg == ROTATION_90_DEG:
-        return image.rotate(-ROTATION_90_DEG, expand=True)
-    if rotation_deg == ROTATION_180_DEG:
-        return image.rotate(-ROTATION_180_DEG, expand=True)
-    if rotation_deg == ROTATION_270_DEG:
-        return image.rotate(-ROTATION_270_DEG, expand=True)
-    return image
+            frame_sample = context.frames_by_number.pop(frame_count)
+            try:
+                rotate_code = ROTATION_MAP[frame_sample.rotation_deg]
+                pil_image = frame.to_image().convert("RGB")
+                if rotate_code is not None:
+                    pil_image = cv2.rotate(src=pil_image, rotateCode=rotate_code)
+                filename = _get_video_frame_filename(
+                    video_filename=context.video_filename,
+                    decode_index=frame_count,
+                    zero_padding=context.zero_padding,
+                    file_extension=context.extension,
+                )
+                _save_image_file(
+                    fs=context.fs,
+                    output_dir=context.output_dir,
+                    filename=filename,
+                    image=pil_image,
+                    extension=context.extension,
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Failed to export frame {frame_count} from video {context.video_path}: {e}"
+                )
+            pbar.update(1)
+            if not context.frames_by_number:
+                break
 
 
 def _decode_frame_to_pil(
@@ -193,10 +200,7 @@ def _decode_frame_to_pil(
 
     frames_by_number = {frame.frame_number: frame for frame in frames}
     max_frame_number = max(frames_by_number)
-    total_frames = len(frames_by_number)
-
     zero_padding = len(str(max_frame_number))
-
     video_filename = Path(video_path).name
 
     video_fs, video_fs_path = fsspec.core.url_to_fs(url=video_path)
@@ -209,39 +213,21 @@ def _decode_frame_to_pil(
 
         try:
             video_stream = video_container.streams.video[0]
-            with tqdm(total=total_frames, desc="Exporting frames", unit=" frames") as pbar:
-                for frame_count, frame in enumerate(video_container.decode(video_stream)):
-                    if frame_count > max_frame_number:
-                        break
-                    if frame_count not in frames_by_number:
-                        continue
-
-                    frame_sample = frames_by_number.pop(frame_count)
-                    try:
-                        pil_image = _apply_rotation(
-                            image=frame.to_image().convert("RGB"),
-                            rotation_deg=frame_sample.rotation_deg,
-                        )
-                        filename = get_video_frame_filename(
-                            video_filename=video_filename,
-                            decode_index=frame_count,
-                            zero_padding=zero_padding,
-                            file_extension=extension,
-                        )
-                        _save_image_file(
-                            fs=fs,
-                            output_dir=output_dir,
-                            filename=filename,
-                            image=pil_image,
-                            extension=extension,
-                        )
-                    except Exception as e:
-                        logger.warning(
-                            f"Failed to export frame {frame_count} from video {video_path}: {e}"
-                        )
-                    pbar.update(1)
-                    if not frames_by_number:
-                        break
+            context = _FrameExportContext(
+                video_path=video_path,
+                video_filename=video_filename,
+                frames_by_number=frames_by_number,
+                max_frame_number=max_frame_number,
+                zero_padding=zero_padding,
+                fs=fs,
+                output_dir=output_dir,
+                extension=extension,
+            )
+            _process_video_frames(
+                context=context,
+                video_stream=video_stream,
+                video_container=video_container,
+            )
         except (OSError, FFmpegError) as e:
             raise ValueError(f"Could not decode frames from {video_path}: {e}") from e
         finally:
@@ -269,13 +255,10 @@ def _save_image_file(
         filename: Relative filename (can include subdirectories).
         image: PIL Image to save.
         extension: Image file extension without leading dot (default: "png").
+
+    Raises:
+        ValueError: If extension is not supported.
     """
-    file_path = f"{output_dir}/{filename}".replace("\\", "/")
-
-    dir_path = file_path.rsplit("/", 1)[0]
-    if not fs.exists(dir_path):
-        fs.makedirs(dir_path, exist_ok=True)
-
     format_map = {
         "jpg": "JPEG",
         "jpeg": "JPEG",
@@ -284,7 +267,48 @@ def _save_image_file(
         "bmp": "BMP",
         "tiff": "TIFF",
     }
-    pil_format = format_map.get(extension.lower(), "PNG")
+    extension_lower = extension.lower()
+    if extension_lower not in format_map:
+        supported = ", ".join(sorted(format_map.keys()))
+        raise ValueError(
+            f"Unsupported image extension '{extension}'. Supported extensions: {supported}"
+        )
+    pil_format = format_map[extension_lower]
+
+    file_path = f"{output_dir}/{filename}".replace("\\", "/")
+
+    dir_path = file_path.rsplit("/", 1)[0]
+    if not fs.exists(dir_path):
+        fs.makedirs(dir_path, exist_ok=True)
 
     with fs.open(file_path, "wb") as f:
         image.save(f, format=pil_format)
+
+
+def _get_video_frame_filename(
+    video_filename: str,
+    decode_index: int,
+    zero_padding: int,
+    file_extension: str = "png",
+) -> str:
+    """Create a filename for a video frame in Lightly format.
+
+    Format: {video_name}-{decode_index:0{zero_padding}}-{video_format}.{file_extension}
+
+    Args:
+        video_filename: Source video filename (e.g., "video_001.mp4")
+        decode_index: Frame sequence number (0-indexed)
+        zero_padding: Width of zero-padded decode_index
+        file_extension: Output frame format without leading dot (default: "png")
+
+    Returns:
+        Frame filename in Lightly format
+    """
+    video_path = Path(video_filename)
+    video_name = video_path.with_suffix("")
+    video_format = video_path.suffix[1:]
+
+    if "-" in video_format:
+        raise ValueError(f"Video format cannot contain '-' but found {video_format}")
+
+    return f"{video_name}-{decode_index:0{zero_padding}}-{video_format}.{file_extension}"
