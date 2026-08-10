@@ -4,6 +4,7 @@
     import { cn } from '$lib/utils/shadcn.js';
     import { X } from '@lucide/svelte';
     import { Dialog as DialogPrimitive } from 'bits-ui';
+    import { onDestroy } from 'svelte';
     import type { Snippet } from 'svelte';
     import { fly } from 'svelte/transition';
 
@@ -27,6 +28,10 @@
     let triggerElement: HTMLElement;
     let colorValue = $state(initialColor);
     let alphaValue = $state(initialAlpha);
+    let originalColor = initialColor;
+    let originalAlpha = initialAlpha;
+    let previewFrame: number | undefined;
+    let hasPreviewed = false;
 
     // Predefined colors for quick selection
     const presetColors = [
@@ -145,8 +150,7 @@
         return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
     }
 
-    // Handle saturation/lightness picker interaction
-    function handleSaturationPick(e: MouseEvent) {
+    function updateSaturationAndLightness(e: MouseEvent) {
         if (!saturationRef) return;
 
         const rect = saturationRef.getBoundingClientRect();
@@ -155,10 +159,13 @@
 
         saturation = Math.round(x * 100);
         lightness = Math.round((1 - y) * 100);
+        schedulePreview();
+    }
 
-        if (e.buttons !== 1 && e.type !== 'mousedown') return;
-
-        const onMouseMove = (moveEvent: MouseEvent) => handleSaturationPick(moveEvent);
+    // Mousemove calls only the updater so a drag cannot register additional listeners.
+    function handleSaturationPick(e: MouseEvent) {
+        updateSaturationAndLightness(e);
+        const onMouseMove = (moveEvent: MouseEvent) => updateSaturationAndLightness(moveEvent);
 
         document.addEventListener('mousemove', onMouseMove);
         document.addEventListener(
@@ -170,18 +177,20 @@
         );
     }
 
-    // Handle hue slider interaction
-    function handleHuePick(e: MouseEvent) {
+    function updateHue(e: MouseEvent) {
         if (!hueRef) return;
 
         const rect = hueRef.getBoundingClientRect();
         const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
 
         hue = Math.round(x * 360);
+        schedulePreview();
+    }
 
-        if (e.buttons !== 1 && e.type !== 'mousedown') return;
-
-        const onMouseMove = (moveEvent: MouseEvent) => handleHuePick(moveEvent);
+    // Mousemove calls only the updater so a drag cannot register additional listeners.
+    function handleHuePick(e: MouseEvent) {
+        updateHue(e);
+        const onMouseMove = (moveEvent: MouseEvent) => updateHue(moveEvent);
 
         document.addEventListener('mousemove', onMouseMove);
         document.addEventListener(
@@ -196,6 +205,7 @@
     // Handle preset color selection
     function selectPresetColor(color: string) {
         colorValue = color;
+        schedulePreview();
     }
 
     // Handle manual hex input
@@ -205,13 +215,34 @@
         // Simple validation for hex color format
         if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
             colorValue = value;
+            schedulePreview();
         }
     }
 
     // Handle transparency slider
     function handleTransparencyChange(values: number[]) {
         alphaValue = values[0];
+        schedulePreview();
     }
+
+    // Coalesce canvas redraws to the browser's paint cadence while preserving live feedback.
+    function schedulePreview() {
+        if (!onChange || previewFrame !== undefined) return;
+
+        previewFrame = requestAnimationFrame(() => {
+            previewFrame = undefined;
+            hasPreviewed = true;
+            onChange(colorValue, alphaValue);
+        });
+    }
+
+    function cancelScheduledPreview() {
+        if (previewFrame === undefined) return;
+        cancelAnimationFrame(previewFrame);
+        previewFrame = undefined;
+    }
+
+    onDestroy(cancelScheduledPreview);
 
     // Make sure events don't propagate out from the color picker
     function preventPropagation(e: Event) {
@@ -223,24 +254,40 @@
     function togglePicker(e: Event) {
         e.stopPropagation();
         e.preventDefault();
-        isOpen = !isOpen;
 
         if (isOpen) {
-            // Position the picker in the next frame after it's rendered
-            setTimeout(updatePickerPosition, 0);
+            cancelChanges();
+            return;
         }
+
+        originalColor = initialColor;
+        originalAlpha = initialAlpha;
+        colorValue = initialColor;
+        alphaValue = initialAlpha;
+        hasPreviewed = false;
+        isOpen = true;
+
+        // Position the picker in the next frame after it's rendered
+        setTimeout(updatePickerPosition, 0);
     }
 
     // Apply changes and close
     function applyChanges() {
+        cancelScheduledPreview();
         if (onChange) {
             onChange(colorValue, alphaValue);
         }
+        hasPreviewed = false;
         isOpen = false;
     }
 
     // Close without applying
     function cancelChanges() {
+        cancelScheduledPreview();
+        if (hasPreviewed && onChange) {
+            onChange(originalColor, originalAlpha);
+        }
+        hasPreviewed = false;
         isOpen = false;
     }
 
@@ -261,7 +308,7 @@
                     !pickerElement.contains(e.target as Node) &&
                     !triggerElement.contains(e.target as Node)
                 ) {
-                    isOpen = false;
+                    cancelChanges();
                 }
             }
         }
@@ -330,11 +377,11 @@
         });
     }
 
-    $effect.root(() => {
-        if (isOpen) {
-            const cleanup = setupClickOutside();
-            return cleanup.destroy;
-        }
+    $effect(() => {
+        if (!isOpen) return;
+
+        const cleanup = setupClickOutside();
+        return cleanup.destroy;
     });
 </script>
 
