@@ -1,19 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
-import type { OperatorParameterColumn } from '$lib/hooks';
 import ParameterTable from './ParameterTable.svelte';
 import type { ParameterTableRow } from '../parameterTypeConfig';
-
-// Columns come from the API mapper, where every field is present. The factory fills in the parts a
-// test does not care about so the fixtures stay readable.
-const column = (overrides: Partial<OperatorParameterColumn>): OperatorParameterColumn => ({
-    name: 'prompt',
-    description: 'What to segment',
-    default: undefined,
-    required: true,
-    paramType: 'str',
-    ...overrides
-});
+import { column } from '../fixtures';
 
 const defaultProps = {
     name: 'prompts',
@@ -143,8 +132,25 @@ describe('ParameterTable', () => {
         });
 
         expect(
-            screen.getByText('Add at least one row and fill in every required cell.')
+            screen.getByText('Add at least one row and fill in every empty cell.')
         ).toBeInTheDocument();
+    });
+
+    it('surfaces an incomplete row in an optional table', () => {
+        // The parameter is optional, so the hint must not ask for a row, but the row the user did add
+        // still blocks Execute and has to say so.
+        render(ParameterTable, {
+            props: {
+                ...defaultProps,
+                required: false,
+                value: [{ prompt: '', label: 'pedestrian' }],
+                isMissing: true,
+                onUpdate: vi.fn()
+            }
+        });
+
+        expect(screen.getByText('Fill in every empty cell.')).toBeInTheDocument();
+        expect(screen.getByTestId('parameter-table-prompts-prompt-0')).toBeInvalid();
     });
 
     it('only flags the empty cells of required columns', () => {
@@ -155,7 +161,6 @@ describe('ParameterTable', () => {
                 ...defaultProps,
                 columns,
                 value: [{ prompt: '', label: '' }],
-                isMissing: true,
                 onUpdate: vi.fn()
             }
         });
@@ -176,6 +181,26 @@ describe('ParameterTable', () => {
         expect(screen.getByTestId('parameter-table-prompts-limit-0')).toBeInvalid();
     });
 
+    it('flags a cell an API default omitted, even where its column is optional', () => {
+        // The backend refuses a row that does not hold every declared column and fills nothing in for
+        // the missing key, so the cell has to be flagged for the user to fill in.
+        const columns = [
+            column({ name: 'prompt' }),
+            column({ name: 'threshold', paramType: 'float', required: false, default: 0.5 })
+        ];
+
+        render(ParameterTable, {
+            props: {
+                ...defaultProps,
+                columns,
+                value: [{ prompt: 'person' }],
+                onUpdate: vi.fn()
+            }
+        });
+
+        expect(screen.getByTestId('parameter-table-prompts-threshold-0')).toBeInvalid();
+    });
+
     it('never flags an unchecked boolean cell', () => {
         // A checkbox always has a value, so a boolean column must not block submission.
         const columns = [column({ name: 'enabled', paramType: 'bool' })];
@@ -185,7 +210,6 @@ describe('ParameterTable', () => {
                 ...defaultProps,
                 columns,
                 value: [{ enabled: false }],
-                isMissing: true,
                 onUpdate: vi.fn()
             }
         });

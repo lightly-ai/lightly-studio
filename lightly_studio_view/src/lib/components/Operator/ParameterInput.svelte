@@ -41,7 +41,7 @@
         type={inputType}
         {step}
         value={value ?? ''}
-        aria-invalid={required && isMissing}
+        aria-invalid={isMissing}
         oninput={(e: Event) => {
             const val = (e.currentTarget as HTMLInputElement).value;
             const parser = parse ?? ((v) => v);
@@ -55,7 +55,11 @@
             {description}
         </p>
     {/if}
-    {#if required && isMissing}
-        <p class="text-sm text-destructive-text">This field is required.</p>
+    <!-- An optional field only blocks once the user typed something unusable — whitespace, or a number
+         input still reading '' mid-edit — so asking for a value would be wrong there. -->
+    {#if isMissing}
+        <p class="text-sm text-destructive-text">
+            {required ? 'This field is required.' : 'Enter a valid value or clear this field.'}
+        </p>
     {/if}
 </div>

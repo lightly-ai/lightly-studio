@@ -49,9 +49,55 @@ sample.add_annotation(
     CreateClassification(
         class_name="cat",
         confidence=0.95,  # optional
-    )
+    ),
+    annotation_source="model-v1",
 )
 ```
+
+Model predictions can be added as multi-label classifications by passing all predictions for a
+sample at once:
+
+```python
+from lightly_studio.core.annotation import CreateClassification
+
+predictions = {
+    "/data/cat.jpg": [("cat", 0.95), ("indoor", 0.81)],
+    "/data/dog.jpg": [("dog", 0.91)],
+}
+
+for sample in dataset:
+    sample_predictions = predictions.get(sample.file_path_abs, [])
+    if not sample_predictions:
+        continue
+    sample.add_annotations(
+        annotations=[
+            CreateClassification(class_name=class_name, confidence=confidence)
+            for class_name, confidence in sample_predictions
+        ],
+        annotation_source="model-v1",
+    )
+```
+
+Calling `add_annotation(...)` or `add_annotations(...)` again appends annotations to the selected
+annotation source.
+
+The same API attaches classifications directly to whole video samples:
+
+```python
+from lightly_studio import VideoDataset
+from lightly_studio.core.annotation import CreateClassification
+
+dataset = VideoDataset.load()
+video = next(iter(dataset))
+video.add_annotation(
+    CreateClassification(class_name="sports", confidence=0.92),
+    annotation_source="model-v1",
+)
+```
+
+Whole-video classifications can be exported with
+`dataset.export().to_csv_classifications("classifications.csv")`. Classifications with temporal
+spans represent events within a video and are not included in this export.
 
 ### Object Detection
 
