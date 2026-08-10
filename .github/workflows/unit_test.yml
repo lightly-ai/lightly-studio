@@ -40,7 +40,7 @@ jobs:
             # List paths in `lightly_studio/` to exclude triggering on docs.
             # E2E tests and examples are included for static checks.
             backend:
-              - '.github/workflows/test_and_release.yml'
+              - '.github/workflows/unit_test.yml'
               - 'lightly_studio/src/**'
               - 'lightly_studio/tests/**'
               - 'lightly_studio/e2e-tests/**'
@@ -52,14 +52,14 @@ jobs:
               - 'lightly_studio/Makefile'
               - 'lightly_studio/alembic.ini'
             frontend:
-              - '.github/workflows/test_and_release.yml'
+              - '.github/workflows/unit_test.yml'
               - 'lightly_studio_view/**'
             docs:
-              - '.github/workflows/test_and_release.yml'
+              - '.github/workflows/unit_test.yml'
               - 'lightly_studio/docs/**'
             # Self-contained Node package (guardrails + bot); Node-only toolchain.
             fast_track:
-              - '.github/workflows/test_and_release.yml'
+              - '.github/workflows/unit_test.yml'
               - 'fast_track/**'
 
   check-python:

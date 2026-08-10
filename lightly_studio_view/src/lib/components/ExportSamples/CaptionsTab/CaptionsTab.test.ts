@@ -14,7 +14,7 @@ vi.mock('$lib/api/lightly_studio_local', () => ({
 }));
 
 const imageFilterStore = writable(null);
-vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
+vi.mock('$lib/hooks', () => ({
     useImageFilters: () => ({ imageFilter: imageFilterStore })
 }));
 
