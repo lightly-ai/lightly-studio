@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Show a busy indicator on save/delete/export/execute buttons while their action is running (caption, tag, operator, evaluation, and export actions).
+
 ### Deprecated
 
 - The `is_numeric` field on sort expressions in the images-list and adjacent-samples request

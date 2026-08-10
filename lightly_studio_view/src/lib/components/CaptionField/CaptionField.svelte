@@ -3,6 +3,7 @@
     import { useCaption } from '$lib/hooks/useCaption/useCaption';
     import { Check, Trash2 } from '@lucide/svelte';
     import type { CaptionView } from '$lib/api/lightly_studio_local';
+    import { Button } from '$lib/components';
 
     const {
         caption: captionProp,
@@ -93,16 +94,18 @@
                         use:preventViewerNavigation
                         data-testid="caption-input"
                     />
-                    <button
-                        type="button"
-                        class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-primary bg-primary text-primary-foreground transition disabled:cursor-not-allowed disabled:border-input disabled:bg-background disabled:text-muted-foreground disabled:opacity-50"
-                        onclick={saveCaption}
-                        disabled={!isDirty || isSaving}
-                        aria-label="Save caption"
-                        data-testid="save-caption-button"
-                    >
-                        <Check class="size-5" />
-                    </button>
+                    <Button
+                        icon={Check}
+                        ariaLabel="Save caption"
+                        isPending={isSaving}
+                        buttonProps={{
+                            type: 'button',
+                            class: 'h-9 w-9 border border-primary bg-primary text-primary-foreground disabled:border-input disabled:bg-background disabled:text-muted-foreground',
+                            onclick: saveCaption,
+                            disabled: !isDirty || isSaving,
+                            'data-testid': 'save-caption-button'
+                        }}
+                    />
                     <button
                         type="button"
                         onclick={(e) => {

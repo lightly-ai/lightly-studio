@@ -1,5 +1,6 @@
 <script lang="ts">
     import { Check, X } from '@lucide/svelte';
+    import { Button } from '$lib/components';
 
     const {
         onCreate,
@@ -15,6 +16,7 @@
 
     let internalIsCreatingCaption = $state(false);
     let newCaptionText = $state('');
+    let isSubmitting = $state(false);
     const isCreatingCaption = $derived(controlledIsCreatingCaption ?? internalIsCreatingCaption);
 
     const setIsCreatingCaption = (isOpen: boolean) => {
@@ -43,11 +45,16 @@
         const text = newCaptionText.trim();
         if (!text) return;
 
-        const shouldClose = await onCreate(text);
-        if (shouldClose === false) return;
+        isSubmitting = true;
+        try {
+            const shouldClose = await onCreate(text);
+            if (shouldClose === false) return;
 
-        setIsCreatingCaption(false);
-        newCaptionText = '';
+            setIsCreatingCaption(false);
+            newCaptionText = '';
+        } finally {
+            isSubmitting = false;
+        }
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -86,16 +93,18 @@
             use:focusOnMount
             data-testid="new-caption-input"
         />
-        <button
-            type="button"
-            class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-primary bg-primary text-primary-foreground transition disabled:cursor-not-allowed disabled:border-input disabled:bg-background disabled:text-muted-foreground disabled:opacity-50"
-            onclick={submitCreateCaption}
-            disabled={!newCaptionText.trim()}
-            aria-label="Save new caption"
-            data-testid="save-new-caption-button"
-        >
-            <Check class="size-5" />
-        </button>
+        <Button
+            icon={Check}
+            ariaLabel="Save new caption"
+            isPending={isSubmitting}
+            buttonProps={{
+                type: 'button',
+                class: 'h-9 w-9 border border-primary bg-primary text-primary-foreground disabled:border-input disabled:bg-background disabled:text-muted-foreground',
+                onclick: submitCreateCaption,
+                disabled: !newCaptionText.trim(),
+                'data-testid': 'save-new-caption-button'
+            }}
+        />
         <button
             type="button"
             class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-input bg-background text-foreground transition hover:bg-muted"
