@@ -3,17 +3,69 @@
 from __future__ import annotations
 
 from importlib import metadata
+from pathlib import Path
 
 import click
 
 import lightly_studio
 from lightly_studio.database import db_manager
+from lightly_studio.evaluation.image_dataset_evaluate import ObjectDetectionEvaluationConfig
 
 
 @click.group()
 @click.version_option(version=metadata.version("lightly-studio"), prog_name="lightly-studio")
 def main() -> None:
     """LightlyStudio CLI."""
+
+
+@main.command()
+@click.option("--port", default=None, type=int, help="Port to bind the server to.")
+@click.option(
+    "--force-download",
+    is_flag=True,
+    default=False,
+    help="Re-download the demo dataset even if already cached.",
+)
+def quickstart(port: int | None, force_download: bool) -> None:
+    """Launch the GUI preloaded with a COCO object detection evaluation demo dataset."""
+    dataset_path = Path(
+        lightly_studio.utils.download_example_dataset(
+            download_dir="dataset_examples",
+            force_redownload=force_download,
+        )
+    )
+    coco_dir = dataset_path / "coco_subset_128_images"
+    images_path = coco_dir / "images"
+    evaluation_config = ObjectDetectionEvaluationConfig(
+        iou_threshold=0.5,
+        classwise=False,
+    )
+
+    db_manager.connect(db_file="quickstart.db", cleanup_existing=True)
+    dataset = lightly_studio.ImageDataset.create()
+    dataset.add_images_from_path(path=images_path)
+    dataset.add_annotations_from_coco(
+        annotations_json=coco_dir / "instances_train2017.json",
+        images_root=images_path,
+        annotation_source="ground_truth",
+    )
+    dataset.add_annotations_from_coco(
+        annotations_json=coco_dir / "predictions_train2017.json",
+        images_root=images_path,
+        annotation_source="predictions",
+    )
+    # Tag a subset of samples to demonstrate tags in the GUI.
+    dataset.query()[:10].add_tag("sample_subset")
+    dataset.evaluate().object_detection(
+        name="od_evaluation",
+        gt_annotation_source="ground_truth",
+        pred_annotation_source="predictions",
+        config=evaluation_config,
+    )
+
+    # TODO(Gabriel, 08/2026): Open the browser automatically once the server is ready.
+    # See LIG-10436.
+    lightly_studio.start_gui(port=port)
 
 
 @main.command()
