@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
-    import { Button } from '$lib/components/ui/button';
+    import { Button } from '$lib/components';
     import * as Dialog from '$lib/components/ui/dialog';
     import { Input } from '$lib/components/ui/input';
     import * as Tabs from '$lib/components/ui/tabs';
@@ -106,10 +106,12 @@
                             {#if showAllButton}
                                 <Button
                                     variant="ghost"
-                                    size="sm"
-                                    class="h-8"
-                                    onclick={() => (draft.n = maxN!)}
-                                    data-testid={`${testIdPrefix}-all`}
+                                    buttonProps={{
+                                        size: 'sm',
+                                        class: 'h-8',
+                                        onclick: () => (draft.n = maxN!),
+                                        'data-testid': `${testIdPrefix}-all`
+                                    }}
                                 >
                                     All
                                 </Button>
@@ -142,8 +144,15 @@
         </Tabs.Root>
         {@render extraSections?.()}
         <Dialog.Footer>
-            <Button variant="ghost" onclick={() => (open = false)}>Cancel</Button>
-            <Button onclick={apply} disabled={!canApply} data-testid={`${testIdPrefix}-apply`}>
+            <Button variant="ghost" buttonProps={{ onclick: () => (open = false) }}>Cancel</Button>
+            <Button
+                variant="default"
+                buttonProps={{
+                    onclick: apply,
+                    disabled: !canApply,
+                    'data-testid': `${testIdPrefix}-apply`
+                }}
+            >
                 Apply
             </Button>
         </Dialog.Footer>

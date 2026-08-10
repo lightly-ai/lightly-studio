@@ -1,7 +1,7 @@
 <script lang="ts">
     import { page } from '$app/stores';
     import { client } from '$lib/api/lightly_studio_local/client.gen';
-    import { Button } from '$lib/components/ui/button';
+    import Button from '$lib/components/Button/Button.svelte';
     import { derived } from 'svelte/store';
 
     const error = derived(page, ($page) => $page.error);
@@ -59,7 +59,10 @@
             </p>
         {/if}
 
-        <Button onclick={() => window.location.reload()} class="px-8 py-6 text-base">
+        <Button
+            variant="default"
+            buttonProps={{ onclick: () => window.location.reload(), class: 'px-8 py-6 text-base' }}
+        >
             Refresh Page
         </Button>
     </div>

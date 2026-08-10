@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Trash2 } from '@lucide/svelte';
-    import { Button } from '$lib/components/ui/button';
+    import { Button } from '$lib/components';
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
     import { Select, type SelectItem } from '$lib/components/Select';
@@ -41,11 +41,13 @@
             />
         </div>
         <Button
-            type="button"
             variant="outline"
-            size="sm"
-            onclick={addRow}
-            data-testid="class-balancing-add-row"
+            buttonProps={{
+                type: 'button',
+                size: 'sm',
+                onclick: addRow,
+                'data-testid': 'class-balancing-add-row'
+            }}
         >
             Add class
         </Button>
@@ -86,15 +88,16 @@
                 data-testid={`class-balancing-weight-${index}`}
             />
             <Button
-                type="button"
                 variant="ghost"
-                size="icon"
-                aria-label={`Remove class ${index + 1}`}
-                onclick={() => removeRow(index)}
-                data-testid={`class-balancing-remove-row-${index}`}
-            >
-                <Trash2 class="size-4" />
-            </Button>
+                icon={Trash2}
+                ariaLabel={`Remove class ${index + 1}`}
+                buttonProps={{
+                    type: 'button',
+                    size: 'icon',
+                    onclick: () => removeRow(index),
+                    'data-testid': `class-balancing-remove-row-${index}`
+                }}
+            />
         </div>
     {/each}
 </div>

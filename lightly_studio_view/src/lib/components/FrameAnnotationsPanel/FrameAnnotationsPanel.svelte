@@ -1,12 +1,11 @@
 <script lang="ts">
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-    import { Segment } from '..';
+    import { Button, Segment } from '..';
     import LabelNotFound from '../LabelNotFound/LabelNotFound.svelte';
     import SampleDetailsSidePanelAnnotation from '../SampleDetails/SampleDetailsSidePanel/SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
     import { getSelectionItems } from '../SelectList/getSelectionItems';
     import SelectList from '../SelectList/SelectList.svelte';
     import type { ListItem } from '../SelectList/types';
-    import { Button } from '../ui';
     import { page } from '$app/state';
     import { type SampleView, type VideoFrameView } from '$lib/api/lightly_studio_local';
     import MetadataSegment from '../MetadataSegment/MetadataSegment.svelte';
@@ -56,12 +55,14 @@
             <div class="items-left mb-2 flex flex-col justify-between space-y-2 bg-muted p-2">
                 <div class="mb-2 w-full">
                     <Button
-                        title="Add annotation"
                         variant={addAnnotationEnabled ? 'default' : 'outline'}
-                        data-testid="create-rectangle"
-                        class="w-full"
-                        onclick={() => {
-                            addAnnotationEnabled = !addAnnotationEnabled;
+                        buttonProps={{
+                            title: 'Add annotation',
+                            'data-testid': 'create-rectangle',
+                            class: 'w-full',
+                            onclick: () => {
+                                addAnnotationEnabled = !addAnnotationEnabled;
+                            }
                         }}
                     >
                         Add annotation

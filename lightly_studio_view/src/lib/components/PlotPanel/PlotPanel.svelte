@@ -1,7 +1,7 @@
 <script lang="ts">
     import { untrack } from 'svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { Button } from '$lib/components/ui/button';
+    import { Button } from '$lib/components';
     import {
         EmbeddingView,
         type DataPoint,
@@ -477,10 +477,12 @@
         <div class="text-lg font-semibold">Embedding Plot</div>
         <Button
             variant="ghost"
-            size="icon"
-            onclick={handleClose}
-            class="h-8 w-8"
-            data-testid="plot-close-button"
+            buttonProps={{
+                size: 'icon',
+                onclick: handleClose,
+                class: 'h-8 w-8',
+                'data-testid': 'plot-close-button'
+            }}
         >
             ✕
         </Button>
@@ -571,11 +573,13 @@
             />
             <Button
                 variant="outline"
-                size="sm"
-                onclick={reset}
-                data-testid="plot-reset-zoom-button"
-                class="px-2.5"
-                title="Reset zoom"
+                buttonProps={{
+                    size: 'sm',
+                    onclick: reset,
+                    'data-testid': 'plot-reset-zoom-button',
+                    class: 'px-2.5',
+                    title: 'Reset zoom'
+                }}
             >
                 Reset zoom
             </Button>

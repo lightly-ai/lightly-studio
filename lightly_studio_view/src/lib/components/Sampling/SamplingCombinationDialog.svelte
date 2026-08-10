@@ -6,7 +6,7 @@
     import AddStrategyButton from '$lib/components/Sampling/AddStrategyButton.svelte';
     import StrategyCard from '$lib/components/Sampling/StrategyCard/StrategyCard.svelte';
     import FieldTooltip from '$lib/components/FieldTooltip/FieldTooltip.svelte';
-    import { Button } from '$lib/components/ui/button';
+    import { Button } from '$lib/components';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import * as Dialog from '$lib/components/ui/dialog';
     import { Input } from '$lib/components/ui/input';
@@ -252,10 +252,12 @@
                     </a>
                     <Button
                         variant="outline"
-                        type="button"
-                        onclick={handleCloseDialog}
-                        disabled={$isSubmitting}
-                        data-testid="sampling-dialog-cancel"
+                        buttonProps={{
+                            type: 'button',
+                            onclick: handleCloseDialog,
+                            disabled: $isSubmitting,
+                            'data-testid': 'sampling-dialog-cancel'
+                        }}
                     >
                         Cancel
                     </Button>
@@ -265,12 +267,16 @@
                         triggerClass="inline-block"
                     >
                         <Button
-                            type="submit"
-                            disabled={!$isFormValid ||
-                                $isSubmitting ||
-                                $notEnoughSamples ||
-                                $noSamples}
-                            data-testid="sampling-dialog-submit"
+                            variant="default"
+                            buttonProps={{
+                                type: 'submit',
+                                disabled:
+                                    !$isFormValid ||
+                                    $isSubmitting ||
+                                    $notEnoughSamples ||
+                                    $noSamples,
+                                'data-testid': 'sampling-dialog-submit'
+                            }}
                         >
                             {$isSubmitting ? $loadingMessage || 'Creating...' : 'Create Selection'}
                         </Button>

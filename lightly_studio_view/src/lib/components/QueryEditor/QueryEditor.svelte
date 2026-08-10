@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount, untrack } from 'svelte';
     import { toast } from 'svelte-sonner';
-    import { Button } from '$lib/components/ui/button';
+    import { Button } from '$lib/components';
 
     import { useQueryEditor } from './useQueryEditor';
     import type { QueryExprTranslationResult } from './language/query-expr-translation';
@@ -85,10 +85,13 @@ AND object_detection(class_name = "person" AND x > 10)
             class="flex items-center justify-end gap-2 border-b border-[#3c3c3c] bg-[#252526] px-4 py-2"
         >
             <Button
-                type="button"
-                disabled={readOnly || !canApply}
-                data-testid="query-editor-apply-button"
-                onclick={handleSave}>Apply</Button
+                variant="default"
+                buttonProps={{
+                    type: 'button',
+                    disabled: readOnly || !canApply,
+                    'data-testid': 'query-editor-apply-button',
+                    onclick: handleSave
+                }}>Apply</Button
             >
         </div>
     {/if}

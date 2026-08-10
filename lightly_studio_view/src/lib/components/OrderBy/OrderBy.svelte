@@ -3,7 +3,7 @@
     import { useOrderBy } from '$lib/hooks/useOrderBy/useOrderBy';
     import { useGlobalStorage, usePostHog } from '$lib/hooks';
     import { Select, type SelectItem } from '$lib/components/Select';
-    import { Button } from '$lib/components/ui/button';
+    import { Button } from '$lib/components';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { ArrowDown, ArrowUp } from '@lucide/svelte';
 
@@ -86,18 +86,15 @@
     <Tooltip content={directionTooltip} position="top">
         <Button
             variant="ghost"
-            size="icon"
-            disabled={!$selectedLabel || isSimilaritySearchActive}
-            onclick={toggleDirection}
-            class="size-auto p-0 hover:bg-transparent [&>svg]:text-foreground [&>svg]:hover:text-muted-foreground"
-            data-testid="sort-direction-button"
-            aria-label={directionTooltip}
-        >
-            {#if $selectedDirection === SortDirection.DESC}
-                <ArrowDown class="size-4" />
-            {:else}
-                <ArrowUp class="size-4" />
-            {/if}
-        </Button>
+            icon={$selectedDirection === SortDirection.DESC ? ArrowDown : ArrowUp}
+            ariaLabel={directionTooltip}
+            buttonProps={{
+                size: 'icon',
+                disabled: !$selectedLabel || isSimilaritySearchActive,
+                onclick: toggleDirection,
+                class: 'size-auto p-0 hover:bg-transparent [&>svg]:text-foreground [&>svg]:hover:text-muted-foreground',
+                'data-testid': 'sort-direction-button'
+            }}
+        />
     </Tooltip>
 </div>
