@@ -8,27 +8,23 @@
     import type { Snippet } from 'svelte';
     import { fly } from 'svelte/transition';
 
-    interface Props {
-        initialColor?: string;
-        initialAlpha?: number;
-        onChange?: (color: string, alpha: number) => void;
-        onCancel?: () => void;
-        onApply?: () => void;
-        position?: 'top' | 'bottom' | 'left' | 'right';
-        class?: string;
-        children: Snippet;
-    }
-
     let {
         initialColor = '#ff0000',
         initialAlpha = 1,
         onChange,
-        onCancel,
-        onApply,
+        onClose,
         position = 'right',
         class: className,
         children
-    }: Props = $props();
+    }: {
+        initialColor?: string;
+        initialAlpha?: number;
+        onChange?: (color: string, alpha: number) => void;
+        onClose?: (applied: boolean) => void;
+        position?: 'top' | 'bottom' | 'left' | 'right';
+        class?: string;
+        children: Snippet;
+    } = $props();
 
     let isOpen = $state(false);
     let triggerElement: HTMLElement;
@@ -281,7 +277,7 @@
     function applyChanges() {
         cancelScheduledPreview();
         onChange?.(colorValue, alphaValue);
-        onApply?.();
+        onClose?.(true);
         hasPreviewed = false;
         isOpen = false;
     }
@@ -290,8 +286,8 @@
     function cancelChanges() {
         cancelScheduledPreview();
         if (hasPreviewed) {
-            if (onCancel) {
-                onCancel();
+            if (onClose) {
+                onClose(false);
             } else {
                 onChange?.(originalColor, originalAlpha);
             }

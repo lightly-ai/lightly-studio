@@ -20,8 +20,7 @@
         initialColor={picker.initialColor}
         initialAlpha={picker.initialAlpha}
         onChange={picker.setColor}
-        onCancel={picker.cancelColor}
-        onApply={picker.applyColor}
+        onClose={picker.finishColorChange}
     >
         <span
             class="inline-block h-3 w-3 shrink-0 cursor-pointer rounded-sm border"

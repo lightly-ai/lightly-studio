@@ -48,18 +48,16 @@ export function useColorPicker(getLabel: () => string) {
             }
             setCustomColor(getLabel(), color, alpha);
         },
-        cancelColor() {
+        finishColorChange(applied: boolean) {
             if (!isPreviewing) return;
 
-            if (colorBeforePreview) {
-                setCustomColor(getLabel(), colorBeforePreview.color, colorBeforePreview.alpha);
-            } else {
-                deleteCustomColor(getLabel());
+            if (!applied) {
+                if (colorBeforePreview) {
+                    setCustomColor(getLabel(), colorBeforePreview.color, colorBeforePreview.alpha);
+                } else {
+                    deleteCustomColor(getLabel());
+                }
             }
-            isPreviewing = false;
-            colorBeforePreview = undefined;
-        },
-        applyColor() {
             isPreviewing = false;
             colorBeforePreview = undefined;
         }

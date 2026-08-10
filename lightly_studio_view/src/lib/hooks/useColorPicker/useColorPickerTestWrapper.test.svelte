@@ -13,10 +13,3 @@
 <button data-testid="set-color" type="button" onclick={() => picker.setColor('#abcdef', 0.5)}
     >set</button
 >
-<button
-    data-testid="set-alternate-color"
-    type="button"
-    onclick={() => picker.setColor('#fedcba', 0.25)}>set alternate</button
->
-<button data-testid="cancel-color" type="button" onclick={picker.cancelColor}>cancel</button>
-<button data-testid="apply-color" type="button" onclick={picker.applyColor}>apply</button>
