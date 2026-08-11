@@ -76,8 +76,10 @@ export function fileCoverageRatio(
 export function parseFrontendReport(raw: string): LineCoverage {
     const data = JSON.parse(raw) as RawCoverage;
     const coverage: LineCoverage = new Map();
-    for (const [absPath, entry] of Object.entries(data)) {
-        // Istanbul keys are absolute paths; map to the repo-relative suffix.
+    for (const [rawPath, entry] of Object.entries(data)) {
+        // Istanbul keys are absolute paths; map to the repo-relative suffix,
+        // normalising Windows separators so the slash-based prefix still matches.
+        const absPath = rawPath.replace(/\\/g, '/');
         const idx = absPath.indexOf(FRONTEND_PREFIX);
         if (idx === -1) continue;
         coverage.set(absPath.slice(idx), toFileLineCoverage(entry));

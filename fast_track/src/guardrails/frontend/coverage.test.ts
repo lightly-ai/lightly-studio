@@ -162,6 +162,20 @@ describe('parseFrontendReport', () => {
         expect([...report.keys()]).toEqual([`${FRONTEND_PREFIX}src/lib/foo.ts`]);
     });
 
+    it('normalises Windows separators before matching the frontend prefix', () => {
+        const report = parseFrontendReport(
+            JSON.stringify({
+                [`C:\\repo\\${FRONTEND_PREFIX.replace(/\//g, '\\')}src\\lib\\foo.ts`]: {
+                    statementMap: {
+                        '0': { start: { line: 1, column: 0 }, end: { line: 1, column: 5 } }
+                    },
+                    s: { '0': 1 }
+                }
+            })
+        );
+        expect([...report.keys()]).toEqual([`${FRONTEND_PREFIX}src/lib/foo.ts`]);
+    });
+
     it('skips entries whose path is outside the frontend prefix', () => {
         const report = parseFrontendReport(
             JSON.stringify({
