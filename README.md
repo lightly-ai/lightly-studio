@@ -49,7 +49,7 @@ lightly-studio quickstart
 - **Your own videos:** see the [Video Dataset guide](https://docs.lightly.ai/studio/dataset_setup/video_dataset/).
 - **No install:** [open the quickstart in Colab](https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb)
 - **A guided walkthrough:** read the [Tutorials](#-tutorials) below. [Curate a Traffic CCTV Dataset for YOLO Training](https://docs.lightly.ai/studio/tutorials/yolo-traffic-cctv-object-detection/) goes from raw images to a trained model.
-- Runs on **Python 3.9 to 3.14** on Windows, Linux, and macOS. Use Python 3.10 for plugin compatibility, for example [SAM autolabeling](https://docs.lightly.ai/studio/concepts_and_tools/plugins/).
+- Runs on **Python 3.9 to 3.14** on Windows, Linux, and macOS. Use Python 3.10 for plugin compatibility, for example [SAM autolabeling](https://docs.lightly.ai/studio/concepts_and_tools/plugins/#example-lightlystudio-sam3-plugin).
 
 ## Workflows
 
