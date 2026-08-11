@@ -54,9 +54,8 @@ Want to try LightlyStudio instantly? Run:
 lightly-studio quickstart
 ```
 
-This downloads the COCO example dataset on the first run (skipped on subsequent runs), loads it,
-and starts the GUI server. Click the printed URL to open it in your browser. Use
-`--force-download` to re-fetch the dataset, or `--port <N>` to serve on a custom port.
+This downloads the COCO example dataset, loads it, and opens the GUI in your browser. Run
+`lightly-studio quickstart --help` for the available options.
 
 The examples below use the same example dataset by default, downloaded on the first run. Point
 them at your own image, video, or YOLO/COCO dataset by changing the input path.
