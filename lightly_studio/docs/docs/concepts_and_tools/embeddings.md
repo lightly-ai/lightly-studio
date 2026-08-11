@@ -95,8 +95,9 @@ You may want to replace the built-in models — for example to use a domain-spec
 model, or to reuse vectors you already computed in another pipeline.
 
 Both cases use the same mechanism: e.g. for images, implement the `ImageEmbeddingGenerator`
-protocol and register it with `ls.set_default_embedding_model(...)` **before** you create or
-add to a dataset. The only difference is what your implementation of `embed_images` does inside.
+protocol and register it with `ls.set_default_embedding_model(...)` **before** you add to
+a dataset and launch the GUI. The only difference is what your implementation of `embed_images`
+does inside.
 
 | Use-case | What `embed_images` does | Example |
 |---|---|---|
@@ -111,13 +112,13 @@ Implement these protocol methods based on your needs. The
     - `embed_text` to override the text search model.
 - **`ImageEmbeddingGenerator`**:
     - `embed_images` to override the image embedding model.
-    - `embed_image_crops` to override the model for embeding annotations.
+    - `embed_image_crops` to override the model for embedding annotations.
     - `embed_pil_images` to override the model to embed video frames.
 - **`VideoEmbeddingGenerator`**:
-    - `embed_videos`. To override the video embedding model.
+    - `embed_videos` to override the video embedding model.
 
 `ImageEmbeddingGenerator` and `VideoEmbeddingGenerator` both extend the base protocol.
-If you don't need an embedding method raise the `NotImplemented` exception.
+If you don't need an embedding method raise the `NotImplementedError` exception.
 
 Examples below show how an override is done for `ImageEmbeddingGenerator`.
 
@@ -192,6 +193,8 @@ import numpy as np
 import lightly_studio as ls
 from lightly_studio.dataset.embedding_result import EmbeddingResult
 
+EMBEDDING_DIMENSION = 512
+
 
 class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
     def __init__(self):
@@ -213,11 +216,15 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
                 continue
             vectors.append(self._model.encode(image))
             kept_indices.append(index)
-        embeddings = np.stack(vectors).astype(np.float32)
+        embeddings = (
+            np.stack(vectors).astype(np.float32)
+            if vectors
+            else np.empty((0, EMBEDDING_DIMENSION), dtype=np.float32)
+        )
         return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
 
 
-ls.set_default_embedding_model(CustomEmbeddingsGenerator())
+ls.set_default_embedding_model(CustomEmbeddingGenerator())
 ```
 
 For the full runnable version, which wraps MobileCLIP and also implements
