@@ -121,10 +121,6 @@ describe('parseBackendReport', () => {
 });
 
 describe('backendCoverageGuardrail', () => {
-    // Every case below changes the same file, adding new-file lines 12, 13 and 14 —
-    // the line numbers the reports name as executed or missing.
-    const PATCH = '@@ -12,0 +12,3 @@\n+added line 12\n+added line 13\n+added line 14\n';
-
     it('passes immediately when no backend source file changed', async () => {
         const result = await backendCoverageGuardrail.run(
             makeCtx([
@@ -133,7 +129,7 @@ describe('backendCoverageGuardrail', () => {
                     status: 'modified',
                     additions: 3,
                     deletions: 0,
-                    patch: PATCH
+                    patch: '@@ -12,0 +12,3 @@\n+added line 12\n+added line 13\n+added line 14\n'
                 }
             ])
         );
@@ -149,7 +145,7 @@ describe('backendCoverageGuardrail', () => {
                     status: 'modified',
                     additions: 3,
                     deletions: 0,
-                    patch: PATCH
+                    patch: '@@ -12,0 +12,3 @@\n+added line 12\n+added line 13\n+added line 14\n'
                 }
             ])
         );
@@ -169,7 +165,7 @@ describe('backendCoverageGuardrail', () => {
                     status: 'modified',
                     additions: 3,
                     deletions: 0,
-                    patch: PATCH
+                    patch: '@@ -12,0 +12,3 @@\n+added line 12\n+added line 13\n+added line 14\n'
                 }
             ])
         );
@@ -188,7 +184,7 @@ describe('backendCoverageGuardrail', () => {
                     status: 'modified',
                     additions: 3,
                     deletions: 0,
-                    patch: PATCH
+                    patch: '@@ -12,0 +12,3 @@\n+added line 12\n+added line 13\n+added line 14\n'
                 }
             ])
         );
@@ -207,7 +203,7 @@ describe('backendCoverageGuardrail', () => {
                     status: 'added',
                     additions: 3,
                     deletions: 0,
-                    patch: PATCH
+                    patch: '@@ -12,0 +12,3 @@\n+added line 12\n+added line 13\n+added line 14\n'
                 }
             ])
         );
@@ -224,7 +220,7 @@ describe('backendCoverageGuardrail', () => {
                     status: 'modified',
                     additions: 3,
                     deletions: 0,
-                    patch: PATCH
+                    patch: '@@ -12,0 +12,3 @@\n+added line 12\n+added line 13\n+added line 14\n'
                 }
             ])
         );
