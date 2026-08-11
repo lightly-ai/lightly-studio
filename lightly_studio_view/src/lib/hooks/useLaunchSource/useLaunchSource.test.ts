@@ -4,18 +4,18 @@ import type { LaunchSource } from '$lib/api/lightly_studio_local';
 import * as sdkModule from '$lib/api/lightly_studio_local/sdk.gen';
 
 const mockTrackEvent = vi.fn();
-const mockRegisterSuperProperties = vi.fn();
+const mockRegisterSessionProperties = vi.fn();
 
 vi.mock('$lib/hooks/usePostHog', () => ({
     usePostHog: () => ({
         trackEvent: mockTrackEvent,
-        registerSuperProperties: mockRegisterSuperProperties
+        registerSessionProperties: mockRegisterSessionProperties
     })
 }));
 
-const mockLaunchSourceResponse = (launch_source: LaunchSource) =>
+const mockLaunchSourceResponse = (launchSource: LaunchSource) =>
     vi.spyOn(sdkModule, 'getLaunchSource').mockResolvedValueOnce({
-        data: { launch_source },
+        data: { launch_source: launchSource },
         request: new Request('http://localhost'),
         response: new Response()
     });
@@ -30,7 +30,7 @@ describe('useLaunchSource', () => {
 
         await useLaunchSource().trackLaunchSource();
 
-        expect(mockRegisterSuperProperties).toHaveBeenCalledWith({ launch_source: 'quickstart' });
+        expect(mockRegisterSessionProperties).toHaveBeenCalledWith({ launch_source: 'quickstart' });
         expect(mockTrackEvent).toHaveBeenCalledWith('quickstart_launched');
     });
 
@@ -39,7 +39,7 @@ describe('useLaunchSource', () => {
 
         await useLaunchSource().trackLaunchSource();
 
-        expect(mockRegisterSuperProperties).toHaveBeenCalledWith({ launch_source: 'sdk' });
+        expect(mockRegisterSessionProperties).toHaveBeenCalledWith({ launch_source: 'sdk' });
         expect(mockTrackEvent).not.toHaveBeenCalled();
     });
 
@@ -48,7 +48,7 @@ describe('useLaunchSource', () => {
 
         await expect(useLaunchSource().trackLaunchSource()).resolves.toBeUndefined();
 
-        expect(mockRegisterSuperProperties).not.toHaveBeenCalled();
+        expect(mockRegisterSessionProperties).not.toHaveBeenCalled();
         expect(mockTrackEvent).not.toHaveBeenCalled();
     });
 });

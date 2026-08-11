@@ -18,12 +18,14 @@ vi.mock('$lib/version.json', () => ({
 const mockInit = vi.fn();
 const mockCapture = vi.fn();
 const mockRegister = vi.fn();
+const mockRegisterForSession = vi.fn();
 
 vi.mock('posthog-js', () => ({
     default: {
         init: (...args: unknown[]) => mockInit(...args),
         capture: (...args: unknown[]) => mockCapture(...args),
-        register: (...args: unknown[]) => mockRegister(...args)
+        register: (...args: unknown[]) => mockRegister(...args),
+        register_for_session: (...args: unknown[]) => mockRegisterForSession(...args)
     }
 }));
 
@@ -32,6 +34,7 @@ describe('usePostHog', () => {
         mockInit.mockClear();
         mockCapture.mockClear();
         mockRegister.mockClear();
+        mockRegisterForSession.mockClear();
     });
 
     it('should initialize PostHog with correct configuration', () => {
@@ -56,21 +59,21 @@ describe('usePostHog', () => {
         expect(mockCapture).toHaveBeenCalledWith('test_event', { test: 'data' });
     });
 
-    it('should register super properties after initialization', () => {
-        const { init, registerSuperProperties } = usePostHog();
+    it('should register session properties after initialization', () => {
+        const { init, registerSessionProperties } = usePostHog();
         init();
-        registerSuperProperties({ launch_source: 'quickstart' });
+        registerSessionProperties({ launch_source: 'quickstart' });
 
-        expect(mockRegister).toHaveBeenCalledWith({ launch_source: 'quickstart' });
+        expect(mockRegisterForSession).toHaveBeenCalledWith({ launch_source: 'quickstart' });
     });
 
-    it('should ignore super properties before initialization', async () => {
+    it('should ignore session properties before initialization', async () => {
         // The initialized flag is module scoped, so reload the module to get an uninitialized one.
         vi.resetModules();
         const { usePostHog: useFreshPostHog } = await import('./usePostHog');
 
-        useFreshPostHog().registerSuperProperties({ launch_source: 'quickstart' });
+        useFreshPostHog().registerSessionProperties({ launch_source: 'quickstart' });
 
-        expect(mockRegister).not.toHaveBeenCalled();
+        expect(mockRegisterForSession).not.toHaveBeenCalled();
     });
 });
