@@ -74,8 +74,8 @@ describe('filterBackendFiles', () => {
         expect(filterBackendFiles(files)).toHaveLength(0);
     });
 
-    // coverage.py cannot see examples/ or the vendored trees (no __init__.py), and
-    // neither is code we hold to a coverage bar.
+    // examples/ has no __init__.py, so coverage.py cannot see it; vendored code is
+    // third-party.
     it.each(['migrations/001_add_table.py', 'examples/example_yolo.py', 'vendor/clip/model.py'])(
         'excludes %s',
         (relative) => {

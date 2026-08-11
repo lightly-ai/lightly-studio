@@ -44,8 +44,8 @@ export const backendCoverageGuardrail: Guardrail = createCoverageGuardrail({
     parseReport: parseBackendReport
 });
 
-// coverage.py's source scan only descends into importable packages. `examples/` and
-// `vendor/` trees are excluded here.
+// `examples/` has no `__init__.py`, so coverage.py's source scan never reaches it.
+// `vendor/` is third-party code we do not hold to a coverage bar.
 const EXCLUDED_DIRS = ['migrations', 'examples', 'vendor'];
 
 function isExcludedBackendPath(path: string): boolean {
