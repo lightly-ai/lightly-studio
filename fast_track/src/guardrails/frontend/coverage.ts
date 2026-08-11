@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import type { ChangedFile, Guardrail } from '../context/types';
 import { FRONTEND_ABS, FRONTEND_PREFIX } from './eslint-runner';
 import { createCoverageGuardrail } from '../shared/coverage-base';
+import type { FileLineCoverage, LineCoverage } from '../shared/full-suite-coverage';
 import { runLoggedCommand } from '../shared/utils';
 
 const SRC_PREFIX = FRONTEND_PREFIX + 'src/';
@@ -64,6 +65,37 @@ export function fileCoverageRatio(
         }
     }
     return executable === 0 ? null : covered / executable;
+}
+
+/**
+ * Normalises a vitest (Istanbul/v8) coverage report into repo-relative per-line
+ * coverage. Each statement is collapsed to the lines it spans: a line is
+ * `executable` if any statement covers it, `covered` if any covering statement
+ * has a hit count > 0.
+ */
+export function parseFrontendReport(raw: string): LineCoverage {
+    const data = JSON.parse(raw) as RawCoverage;
+    const coverage: LineCoverage = new Map();
+    for (const [absPath, entry] of Object.entries(data)) {
+        // Istanbul keys are absolute paths; map to the repo-relative suffix.
+        const idx = absPath.indexOf(FRONTEND_PREFIX);
+        if (idx === -1) continue;
+        coverage.set(absPath.slice(idx), toFileLineCoverage(entry));
+    }
+    return coverage;
+}
+
+function toFileLineCoverage(entry: IstanbulFileCoverage): FileLineCoverage {
+    const executable = new Set<number>();
+    const covered = new Set<number>();
+    for (const [idx, loc] of Object.entries(entry.statementMap)) {
+        const hit = (entry.s[idx] ?? 0) > 0;
+        for (let line = loc.start.line; line <= loc.end.line; line++) {
+            executable.add(line);
+            if (hit) covered.add(line);
+        }
+    }
+    return { executable, covered };
 }
 
 export const frontendCoverageGuardrail: Guardrail = createCoverageGuardrail<RawCoverage>({
