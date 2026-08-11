@@ -1,7 +1,10 @@
 <script lang="ts">
     import { page } from '$app/stores';
     import { client } from '$lib/api/lightly_studio_local/client.gen';
-    import Button from '$lib/components/Button/Button.svelte';
+    // Imported from the Button module rather than the `$lib/components` barrel:
+    // the barrel pulls in components that need a query client, which the error
+    // boundary renders without.
+    import { Button } from '$lib/components/Button';
     import { derived } from 'svelte/store';
 
     const error = derived(page, ($page) => $page.error);
