@@ -19,14 +19,37 @@ from lightly_studio.database import db_json
         ("test_dict.nested_list[0]", ["test_dict", "nested_list", 0]),
         ("nested_list[10][2]", ["nested_list", 10, 2]),
         # Only non-negative integer brackets are indices; anything else stays part of
-        # the key, including "[-1]", which JSON Pointer cannot express.
+        # the key. Negative indices are covered separately below.
         ("weird[key]", ["weird", "[key]"]),
         ("weird[0x1]", ["weird", "[0x1]"]),
-        ("nested_list[-1]", ["nested_list", "[-1]"]),
     ],
 )
 def test_parse_field_path(field: str, expected: list[str | int]) -> None:
     assert db_json._parse_field_path(field) == expected
+
+
+@pytest.mark.parametrize("index", ["-1", "-3"])
+def test_parse_field_path__negative_index_stays_a_key(index: str) -> None:
+    """JSON Pointer has no negative index, so the bracket group stays part of the key."""
+    assert db_json._parse_field_path(f"nested_list[{index}]") == ["nested_list", f"[{index}]"]
+
+
+@pytest.mark.parametrize("index", ["-1", "-3"])
+def test_json_extract__duckdb_negative_index_is_a_key(index: str) -> None:
+    """The pointer addresses a key named "[-1]", which no document has, so the value is NULL."""
+    expr = db_json.json_extract(column=sqlalchemy.column("data"), field=f"nested_list[{index}]")
+    result = expr.compile(dialect=Dialect())
+    assert str(result) == "json_extract(data, %(param_1)s)"
+    assert result.params == {"param_1": f"/nested_list/[{index}]"}
+
+
+@pytest.mark.parametrize("index", ["-1", "-3"])
+def test_json_extract__pg_negative_index_is_a_bound_key(index: str) -> None:
+    """The index is bound as a key rather than rendered as ``->-1``, matching DuckDB."""
+    expr = db_json.json_extract(column=sqlalchemy.column("data"), field=f"nested_list[{index}]")
+    result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
+    assert str(result) == "data->%(param_1)s->>%(param_2)s"
+    assert result.params == {"param_1": "nested_list", "param_2": f"[{index}]"}
 
 
 @pytest.mark.parametrize(

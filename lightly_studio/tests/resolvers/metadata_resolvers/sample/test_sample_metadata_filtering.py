@@ -1,5 +1,6 @@
 """Test metadata resolver."""
 
+import pytest
 from sqlmodel import Session
 
 from lightly_studio.resolvers import sample_resolver
@@ -175,6 +176,25 @@ def test_metadata_in_filter__missing(db_session: Session) -> None:
         other_metadata.sample_id,
         no_metadata.sample_id,
     }
+
+
+@pytest.mark.parametrize("index", [-1, -3])
+def test_metadata_filter__negative_index_matches_nothing(db_session: Session, index: int) -> None:
+    """Indices count from the front only, so a negative one reads as a missing key."""
+    collection = create_collection(session=db_session)
+    sample = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/sample.png",
+    ).sample
+    sample["test_dict"] = {"nested_list": [1, 2, 3]}
+
+    filters = SampleFilter(metadata_filters=[Metadata(f"test_dict.nested_list[{index}]") == 3])
+    samples = sample_resolver.get_filtered_samples(
+        session=db_session, collection_id=collection.collection_id, filters=filters
+    ).samples
+
+    assert samples == []
 
 
 def test_metadata_filter__key_with_quote(db_session: Session) -> None:
