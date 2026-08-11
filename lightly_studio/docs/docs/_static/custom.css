@@ -1,3 +1,40 @@
+/* Keyboard shortcut hint inside the search input */
+.md-search__form {
+    position: relative;
+}
+
+.search-shortcut-hint {
+    position: absolute;
+    right: 0.6rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    pointer-events: none;
+    opacity: 0.55;
+    transition: opacity 0.2s;
+}
+
+.search-shortcut-hint kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.1rem 0.35rem;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 0.25rem;
+    font-family: inherit;
+    font-size: 0.6rem;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: none;
+}
+
+/* Hide hint while search overlay is open */
+.md-search--active .search-shortcut-hint {
+    display: none;
+}
+
 /* Card styling with rounded corners */
 .md-typeset .grid.cards > ol > li,
 .md-typeset .grid.cards > ul > li {
