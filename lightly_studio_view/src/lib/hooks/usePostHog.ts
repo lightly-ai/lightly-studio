@@ -67,8 +67,27 @@ export const usePostHog = () => {
         posthog.capture(eventName, properties);
     };
 
+    /**
+     * Register properties that are attached to every subsequent event in this session.
+     *
+     * Use this for session-wide context that should be available when segmenting any event,
+     * rather than for one-off metadata belonging to a single action.
+     *
+     * @param properties - Properties to attach to all following events (e.g., launch_source)
+     *
+     * @example
+     * ```ts
+     * registerSuperProperties({ launch_source: 'quickstart' });
+     * ```
+     */
+    const registerSuperProperties = (properties: Record<string, unknown>) => {
+        if (!initialized) return;
+        posthog.register(properties);
+    };
+
     return {
         init,
-        trackEvent
+        trackEvent,
+        registerSuperProperties
     };
 };

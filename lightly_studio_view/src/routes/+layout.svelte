@@ -1,7 +1,7 @@
 <script lang="ts">
     import { browser } from '$app/environment';
     import { useSettings } from '$lib/hooks/useSettings';
-    import { usePostHog } from '$lib/hooks';
+    import { useLaunchSource, usePostHog } from '$lib/hooks';
     import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
     import { onMount } from 'svelte';
     import '../app.css';
@@ -44,6 +44,8 @@
         if (browser) {
             useSettings().initSettings();
             usePostHog().init();
+            // Must run after init(), it reports through the initialized PostHog client.
+            void useLaunchSource().trackLaunchSource();
         }
     });
 

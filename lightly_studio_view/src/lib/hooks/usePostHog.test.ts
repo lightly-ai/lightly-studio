@@ -55,4 +55,22 @@ describe('usePostHog', () => {
 
         expect(mockCapture).toHaveBeenCalledWith('test_event', { test: 'data' });
     });
+
+    it('should register super properties after initialization', () => {
+        const { init, registerSuperProperties } = usePostHog();
+        init();
+        registerSuperProperties({ launch_source: 'quickstart' });
+
+        expect(mockRegister).toHaveBeenCalledWith({ launch_source: 'quickstart' });
+    });
+
+    it('should ignore super properties before initialization', async () => {
+        // The initialized flag is module scoped, so reload the module to get an uninitialized one.
+        vi.resetModules();
+        const { usePostHog: useFreshPostHog } = await import('./usePostHog');
+
+        useFreshPostHog().registerSuperProperties({ launch_source: 'quickstart' });
+
+        expect(mockRegister).not.toHaveBeenCalled();
+    });
 });
