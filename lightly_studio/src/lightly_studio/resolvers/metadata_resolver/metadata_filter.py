@@ -174,8 +174,8 @@ def _build_in_condition(
     metadata_model: type[M], metadata_filter: MetadataFilter
 ) -> ColumnElement[bool]:
     """Build an OR predicate for a validated categorical ``in`` filter."""
-    extract_expr = db_json.json_extract_string(
-        column=metadata_model.data, field=metadata_filter.key
+    extract_expr = db_json.json_extract_key_as_text(
+        column=metadata_model.data, key=metadata_filter.key
     )
     values = [
         str(value).lower() if isinstance(value, bool) else value

@@ -38,7 +38,7 @@ def _every_entry_point(field: str) -> list[Any]:
         db_json.json_extract(column=_COLUMN, field=field),
         db_json.json_extract_as_text(column=_COLUMN, field=field),
         db_json.json_extract_as_float(column=_COLUMN, field=field),
-        db_json.json_extract_string(column=_COLUMN, field=field),
+        db_json.json_extract_key_as_text(column=_COLUMN, key=field),
     ]
 
 
@@ -140,12 +140,12 @@ def test_json_extract_as_text(dialect: Any) -> None:
 
 
 @pytest.mark.parametrize("dialect", _DIALECTS)
-@pytest.mark.parametrize("field", ["site.name", *_SPECIAL_KEYS])
-def test_json_extract_string__key_is_literal_and_bound(dialect: Any, field: str) -> None:
-    """The whole field is one key, so a dot in it does not step into a nested object."""
-    result = _compile(db_json.json_extract_string(column=_COLUMN, field=field), dialect)
+@pytest.mark.parametrize("key", ["site.name", *_SPECIAL_KEYS])
+def test_json_extract_key_as_text__key_is_literal_and_bound(dialect: Any, key: str) -> None:
+    """The whole argument is one key, so a dot in it does not step into a nested object."""
+    result = _compile(db_json.json_extract_key_as_text(column=_COLUMN, key=key), dialect)
     assert str(result) == "CAST(data ->> %(param_1)s AS VARCHAR)"
-    assert result.params == {"param_1": field}
+    assert result.params == {"param_1": key}
 
 
 @pytest.mark.parametrize(
@@ -194,9 +194,9 @@ def test_json_extract__payload_never_reaches_the_statement(dialect: Any, payload
 
 @pytest.mark.parametrize("dialect", _DIALECTS)
 @pytest.mark.parametrize("payload", helpers_sql_injection.PAYLOADS)
-def test_json_extract_string__payload_is_one_bound_key(dialect: Any, payload: str) -> None:
+def test_json_extract_key_as_text__payload_is_one_bound_key(dialect: Any, payload: str) -> None:
     """The payload reaches the database as a key to look up, not as SQL to run."""
-    result = _compile(db_json.json_extract_string(column=_COLUMN, field=payload), dialect)
+    result = _compile(db_json.json_extract_key_as_text(column=_COLUMN, key=payload), dialect)
 
     assert str(result) == "CAST(data ->> %(param_1)s AS VARCHAR)"
     assert result.params == {"param_1": payload}

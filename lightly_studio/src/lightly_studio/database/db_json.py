@@ -1,12 +1,14 @@
 """Dialect-aware JSON extraction functions.
 
-Thin wrappers over SQLAlchemy's JSON indexing, which compiles to the right
-operator chain for DuckDB and PostgreSQL and binds every key as a parameter.
+Thin wrappers over SQLAlchemy's JSON indexing, which compiles to the right operator
+chain for DuckDB and PostgreSQL and binds every key as a parameter.
 
-The raw expression yields ``json`` on both databases, which neither compares
-against a bare string nor (on PostgreSQL) orders or casts. Reach for
-:func:`json_extract` only to test for presence; compare and sort with the
-``_as_text`` and ``_as_float`` variants.
+Two things decide which function to call. A *field* is a path (``a.b``, ``a.list[0]``)
+while a *key* is one literal name, so ``json_extract_key_as_text`` reads ``a.b`` as a
+key that contains a dot. And the raw expression from :func:`json_extract` yields
+``json``, which neither database compares against a plain value and which PostgreSQL
+cannot order or cast, so use it only to test for presence and reach for the
+``_as_text`` and ``_as_float`` variants everywhere else.
 """
 
 from __future__ import annotations
@@ -22,6 +24,7 @@ from sqlalchemy.engine.interfaces import Dialect
 from sqlalchemy.types import TypeDecorator
 
 _ARRAY_INDEX_PATTERN = re.compile(r"^\[(-?[0-9]+)\]$")
+
 # PostgreSQL's "->" subscript takes a 32-bit integer; a wider one raises rather than
 # missing. Out-of-range indices address nothing anyway.
 _INT32_MIN = -(2**31)
@@ -32,8 +35,7 @@ def json_extract(column: Any, field: str) -> ColumnElement[Any]:
     """Index into a JSON column by field path.
 
     Compiles to a ``col -> :key`` chain, so keys are bound rather than interpolated
-    into SQL and quotes or dots in them cannot alter the statement or be read as
-    path syntax.
+    into SQL and quotes or dots in them cannot alter the statement.
 
     ``field`` supports dot-separated paths (``a.b.c``) and array indices
     (``a.list[0]``), including negative indices counting from the end
@@ -56,35 +58,49 @@ def json_extract(column: Any, field: str) -> ColumnElement[Any]:
 def json_extract_as_text(column: Any, field: str) -> ColumnElement[str]:
     """Index into a JSON column by field path and read the value as text.
 
-    Takes the same paths as :func:`json_extract`. Text is what comparisons and
-    ``ORDER BY`` need, and it is undecorated on both databases.
+    Text is what comparisons and ``ORDER BY`` need, and it is undecorated on both
+    databases.
+
+    Args:
+        column: The JSON column expression.
+        field: Dot-separated path into the JSON object, as in :func:`json_extract`.
+
+    Returns:
+        The extracted value as text.
     """
-    return cast(ColumnElement[str], json_extract(column, field).as_string())
+    return cast(ColumnElement[str], json_extract(column=column, field=field).as_string())
 
 
 def json_extract_as_float(column: Any, field: str) -> ColumnElement[float]:
     """Index into a JSON column by field path and read the value as a float.
 
-    Takes the same paths as :func:`json_extract`. Casting a non-numeric value fails
-    on PostgreSQL, so guard the call when the field's type is not known.
-    """
-    return cast(ColumnElement[float], json_extract(column, field).as_float())
-
-
-def json_extract_string(column: Any, field: str) -> ColumnElement[str]:
-    """Read a top-level JSON scalar as text.
-
-    The key is bound and treated literally, so unlike :func:`json_extract_as_text` a
-    dot in it stays part of the key rather than stepping into a nested object.
+    Casting a non-numeric value fails on PostgreSQL, so guard the call when the
+    field's type is not known.
 
     Args:
         column: The JSON column expression.
-        field: The top-level key to read.
+        field: Dot-separated path into the JSON object, as in :func:`json_extract`.
+
+    Returns:
+        The extracted value as a float.
+    """
+    return cast(ColumnElement[float], json_extract(column=column, field=field).as_float())
+
+
+def json_extract_key_as_text(column: Any, key: str) -> ColumnElement[str]:
+    """Read one top-level JSON key as text.
+
+    The key is taken literally, so unlike :func:`json_extract_as_text` a dot in it
+    stays part of the key rather than stepping into a nested object.
+
+    Args:
+        column: The JSON column expression.
+        key: The top-level key to read, dots and all.
 
     Returns:
         The extracted value as text.
     """
-    return cast(ColumnElement[str], column[_bind_key(field)].as_string())
+    return cast(ColumnElement[str], column[_bind_key(key)].as_string())
 
 
 class _JsonKeyType(TypeDecorator[str]):
@@ -102,7 +118,15 @@ class _JsonKeyType(TypeDecorator[str]):
     cache_ok = True
 
     def process_bind_param(self, value: str | None, dialect: Dialect) -> str | None:
-        """Convert DuckDB keys to a JSON Pointer and leave PostgreSQL keys raw."""
+        """Convert a DuckDB key to a JSON Pointer and leave a PostgreSQL key raw.
+
+        Args:
+            value: The key to bind, or None.
+            dialect: The dialect the statement compiles for.
+
+        Returns:
+            The value to send to the database.
+        """
         if value is None or dialect.name != "duckdb":
             return value
         escaped = value.replace("~", "~0").replace("/", "~1")
@@ -110,7 +134,14 @@ class _JsonKeyType(TypeDecorator[str]):
 
 
 def _bind_key(key: str) -> ColumnElement[str]:
-    """Return the key as a bound parameter that each database reads literally."""
+    """Return the key as a bound parameter that each database reads literally.
+
+    Args:
+        key: One object key, taken literally.
+
+    Returns:
+        The bound key.
+    """
     return sqlalchemy.literal(key, type_=_JsonKeyType())
 
 
@@ -121,6 +152,12 @@ def _parse_field_path(field: str) -> list[str | int]:
     index becomes a literal key segment of its own: ``"weird[key]"`` becomes
     ``["weird", "[key]"]``, so it cannot reach SQL as an index. Indices outside the
     32-bit range PostgreSQL subscripts accept are literal keys for the same reason.
+
+    Args:
+        field: Dot-separated path into a JSON object.
+
+    Returns:
+        The segments, in path order, with array indices as integers.
     """
     segments: list[str | int] = []
     # Split on '.' but keep bracket notation (e.g. "nested_list[0]" -> "nested_list", "[0]")
