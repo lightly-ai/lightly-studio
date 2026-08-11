@@ -52,7 +52,7 @@ lines at **90%**, per file, not pooled.
 
 Full-suite coverage inflates numbers via incidental execution — `conftest.py`
 imports the whole app, so imports, decorators and class bodies read as covered
-whether or not a test exercises them. Hence 90% rather than 80%.
+whether or not a test exercises them.
 
 Verdicts:
 
@@ -75,15 +75,6 @@ cd ../fast_track
 BACKEND_COVERAGE_JSON=$PWD/../lightly_studio/coverage.json \
   GUARDRAILS=backend/coverage make run-guardrails
 ```
-
-A branch of its own often changes no backend source, which just reports
-`0 file(s) checked`. Add `BASE_REF=origin/main~20` to judge the last 20 commits'
-worth of real backend changes instead — the quickest way to see how the
-threshold behaves on merged code.
-
-`backend/coverage` is built on `shared/full-suite-coverage.ts`. `frontend/coverage`
-still uses the older per-file test-matching factory (`shared/coverage-base.ts`)
-until it migrates, at which point that file can go.
 
 ## Toolchain
 

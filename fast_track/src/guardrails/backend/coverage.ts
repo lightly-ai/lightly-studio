@@ -44,11 +44,8 @@ export const backendCoverageGuardrail: Guardrail = createCoverageGuardrail({
     parseReport: parseBackendReport
 });
 
-// coverage.py's source scan only descends into importable packages, so a file in a
-// directory without `__init__.py` reaches the report solely by being imported at
-// runtime. `examples/` is such a directory, and vendored trees hang off one — both are
-// excluded here on their own merits (demo scripts and third-party code, which mypy also
-// skips), which happens to leave every in-scope file judgeable.
+// coverage.py's source scan only descends into importable packages. `examples/` and
+// `vendor/` trees are excluded here.
 const EXCLUDED_DIRS = ['migrations', 'examples', 'vendor'];
 
 function isExcludedBackendPath(path: string): boolean {
