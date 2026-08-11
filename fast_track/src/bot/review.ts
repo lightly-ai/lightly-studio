@@ -15,14 +15,7 @@ interface ApproveParams extends ReviewParams {
 }
 
 /**
- * Ensure the bot has an active approval, without churning reviews on a pass.
- *
- * A passing run must not dismiss and re-create the approval on every push: that
- * generates downstream review events for no gain. So an existing bot approval is
- * left in place, even when it is bound to an earlier commit — the fresh pass
- * confirms it still holds, and the status comment carries the new head SHA. Only
- * a failing run dismisses (see `dismissApproval`). An approval is created only
- * when none exists yet, binding it to the validated head.
+ * Approve only when no bot approval exists yet.
  */
 export async function approve(params: ApproveParams): Promise<'approved' | 'noop'> {
     const reviews = await listBotApprovals(params);
