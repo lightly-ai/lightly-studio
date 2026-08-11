@@ -154,9 +154,7 @@ EMBEDDING_DIMENSION = 512
 
 class CustomEmbeddingsGenerator(ls.ImageEmbeddingGenerator):
     def __init__(self) -> None:
-        self._filepath_to_embedding: dict[str, NDArray[np.float32]] = (
-            ...  # Implement the loading logic here.
-        )
+        self._filepath_to_embedding: dict[str, NDArray[np.float32]] = ...  # Implement the loading logic here.
 
     def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate: ...
 
