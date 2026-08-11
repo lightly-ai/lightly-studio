@@ -13,7 +13,6 @@
         TagsMenu
     } from '$lib/components';
     import { Tooltip } from '$lib/components/ui/tooltip';
-    import QueryEditorPanel from '$lib/components/QueryEditorPanel/QueryEditorPanel.svelte';
     import { SidePanelTabs } from '$lib/components';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { GripVertical, PanelLeftClose, SlidersHorizontal } from '@lucide/svelte';
@@ -87,6 +86,8 @@
     import { useSearchEmbedding } from '$lib/hooks/useSearchEmbedding/useSearchEmbedding';
     import { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
     import { clearAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
+    import { useCreateClassifiersPanel } from '$lib/hooks/useClassifiers/useCreateClassifiersPanel';
+    import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineClassifiersPanel';
     import { isPanelVisible } from './panelVisibility';
     const { data, children } = $props();
     const {
@@ -95,6 +96,8 @@
     } = $derived(data);
 
     const { trackEvent } = usePostHog();
+    const { isCreateClassifiersPanelOpen } = useCreateClassifiersPanel();
+    const { isRefineClassifiersPanelOpen } = useRefineClassifiersPanel();
 
     // The dataset ID actually contains the collection ID.
     const datasetId = $derived(page.params.dataset_id!);
@@ -912,7 +915,9 @@
                                     {/key}
                                 {/await}
                             {:else if $activePanel === 'queryEditor' && isImages}
-                                <QueryEditorPanel onClose={() => setActivePanel('none')} />
+                                {#await import('$lib/components/QueryEditorPanel/QueryEditorPanel.svelte') then { default: QueryEditorPanel }}
+                                    <QueryEditorPanel onClose={() => setActivePanel('none')} />
+                                {/await}
                             {:else if distributionPanelVisible}
                                 {#await import('$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte') then { default: DatasetDistributionPanel }}
                                     {#key collectionId}
@@ -956,10 +961,12 @@
                     />
                 </div>
             {/if}
-            {#if hasEmbeddings}
+            {#if hasEmbeddings && $isCreateClassifiersPanelOpen}
                 {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then { default: CreateClassifierDialog }}
                     <CreateClassifierDialog />
                 {/await}
+            {/if}
+            {#if hasEmbeddings && $isRefineClassifiersPanelOpen}
                 {#await import('$lib/components/FewShotClassifier/RefineClassifierDialog.svelte') then { default: RefineClassifierDialog }}
                     <RefineClassifierDialog />
                 {/await}
