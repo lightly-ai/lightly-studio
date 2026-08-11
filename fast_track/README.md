@@ -32,7 +32,7 @@ Files-changed view; default `origin/main`) and exits non-zero on a fail. It sees
 
 ```bash
 # Run only selected guardrails (comma-separated; an unknown name errors out).
-GUARDRAILS=dummy make run-guardrails
+GUARDRAILS=diff-size make run-guardrails
 
 # Diff against a different base (e.g. the parent branch of a stacked PR).
 BASE_REF=origin/develop make run-guardrails
