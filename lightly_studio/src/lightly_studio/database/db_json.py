@@ -23,8 +23,6 @@ from sqlalchemy import ColumnElement, Text
 from sqlalchemy.engine.interfaces import Dialect
 from sqlalchemy.types import TypeDecorator
 
-# Not DatabaseBackend.DUCKDB from db_manager: importing it here closes an import cycle
-# through api.db_tables and the resolvers.
 _DUCKDB_DIALECT = "duckdb"
 
 _ARRAY_INDEX_PATTERN = re.compile(r"^\[(-?[0-9]+)\]$")
