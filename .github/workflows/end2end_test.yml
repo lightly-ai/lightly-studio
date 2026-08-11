@@ -158,21 +158,29 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: General 1 of 2
+          - name: General 1 of 3
             index_script: index_general.py
             playwright_project: general
-            shard: "1/2"
+            shard: "1/3"
             success_marker: .e2e-success-general-1
             success_key: e2e-success-general-1
             artifact_name: Playwright Report (General 1)
             postgres: false
-          - name: General 2 of 2
+          - name: General 2 of 3
             index_script: index_general.py
             playwright_project: general
-            shard: "2/2"
+            shard: "2/3"
             success_marker: .e2e-success-general-2
             success_key: e2e-success-general-2
             artifact_name: Playwright Report (General 2)
+            postgres: false
+          - name: General 3 of 3
+            index_script: index_general.py
+            playwright_project: general
+            shard: "3/3"
+            success_marker: .e2e-success-general-3
+            success_key: e2e-success-general-3
+            artifact_name: Playwright Report (General 3)
             postgres: false
           - name: Videos
             index_script: index_video.py
@@ -198,21 +206,29 @@ jobs:
             success_key: e2e-success-evaluations
             artifact_name: Playwright Report (Evaluations)
             postgres: false
-          - name: General Postgres 1 of 2
+          - name: General Postgres 1 of 3
             index_script: index_general.py
             playwright_project: general
-            shard: "1/2"
+            shard: "1/3"
             success_marker: .e2e-success-general-postgres-1
             success_key: e2e-success-general-postgres-1
             artifact_name: Playwright Report (General Postgres 1)
             postgres: true
-          - name: General Postgres 2 of 2
+          - name: General Postgres 2 of 3
             index_script: index_general.py
             playwright_project: general
-            shard: "2/2"
+            shard: "2/3"
             success_marker: .e2e-success-general-postgres-2
             success_key: e2e-success-general-postgres-2
             artifact_name: Playwright Report (General Postgres 2)
+            postgres: true
+          - name: General Postgres 3 of 3
+            index_script: index_general.py
+            playwright_project: general
+            shard: "3/3"
+            success_marker: .e2e-success-general-postgres-3
+            success_key: e2e-success-general-postgres-3
+            artifact_name: Playwright Report (General Postgres 3)
             postgres: true
           - name: Videos Postgres
             index_script: index_video.py
@@ -375,7 +391,7 @@ jobs:
         working-directory: lightly_studio_view
         run: >-
           npx playwright test
-          --reporter=html
+          --reporter=html,list
           --trace=on
           --project=${{ matrix.playwright_project }}
           --shard=${{ matrix.shard }}

@@ -3,6 +3,7 @@
     import { FormField, AnnotationSourceSelect } from '$lib/components';
     import { exportCollectionAnnotationsPrepare } from '$lib/api/lightly_studio_local';
     import { useImageFilters } from '$lib/hooks';
+    import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { PUBLIC_LIGHTLY_STUDIO_API_URL } from '$env/static/public';
     import { useExportDownload } from '../useExportDownload/useExportDownload';
     import ExportDownloadButton from '../ExportDownloadButton/ExportDownloadButton.svelte';
@@ -22,6 +23,8 @@
         selectedAnnotationCollectionId: string | undefined;
         /** Test ID applied to the download button for automated testing. */
         testId: string;
+        /** Sample type whose annotations are being exported. */
+        sampleType: 'image' | 'video';
         /** Optional callback invoked when the download button is clicked. */
         onDownloadClick?: () => void;
     }
@@ -32,20 +35,26 @@
         annotationSources,
         selectedAnnotationCollectionId = $bindable(),
         testId,
+        sampleType,
         onDownloadClick
     }: Props = $props();
 
     const collectionId = page.params.collection_id!;
     const { imageFilter } = useImageFilters();
+    const { videoFilter } = useVideoFilters();
 
     const { isLoading, errorMessage, handleDownload } = useExportDownload(async () => {
+        const activeFilter =
+            sampleType === 'video'
+                ? { video_filter: $videoFilter }
+                : { image_filter: $imageFilter };
         const response = await exportCollectionAnnotationsPrepare({
             path: { collection_id: collectionId },
             body: {
                 export_format: exportFormat,
                 annotation_collection_id:
                     selectedAnnotationCollectionId ?? annotationSources[0]?.id ?? undefined,
-                image_filter: $imageFilter
+                ...activeFilter
             }
         });
         if (response.error) throw new Error(JSON.stringify(response.error));
