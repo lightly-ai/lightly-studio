@@ -5,6 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, cast
 
+import sqlalchemy
 from sqlalchemy import ColumnElement, and_
 from sqlalchemy import Select as SQLAlchemySelect
 from sqlalchemy.engine import Row
@@ -19,7 +20,7 @@ from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.image import ImageTable
-from lightly_studio.models.metadata import SampleMetadataTable
+from lightly_studio.models.metadata import NUMERIC_TYPE_NAMES, SampleMetadataTable
 from lightly_studio.models.sample import SampleTable
 
 T = TypeVar("T", default=ImageTable)
@@ -42,7 +43,15 @@ class OrderByExpression(ABC):
 
     @abstractmethod
     def _order_value_expression(self) -> ColumnElement[Any]:
-        """Return the SQL expression used for sorting (no ASC/DESC)."""
+        """Return the value surfaced by ``apply_with_order_value`` (no ASC/DESC)."""
+
+    def _sort_key_expressions(self) -> list[ColumnElement[Any]]:
+        """Return the SQL expressions to sort by, most significant first (no ASC/DESC).
+
+        Defaults to the order value alone. Override when correct ordering needs more
+        than one key.
+        """
+        return [self._order_value_expression()]
 
     @abstractmethod
     def apply_joins(self, query: SelectT) -> SelectT:
@@ -55,16 +64,17 @@ class OrderByExpression(ABC):
         Use per-instance aliases when joining the same table more than once.
         """
 
-    def to_column_element(self) -> ColumnElement[Any]:
-        """Return the SQLAlchemy column element with direction applied.
+    def to_column_elements(self) -> list[ColumnElement[Any]]:
+        """Return the SQLAlchemy column elements with direction applied.
 
-        For use in ``query.order_by()`` or window ``over(order_by=...)``. Does not
-        apply joins; call ``apply`` first when joins are required.
+        For use in ``query.order_by()`` or window ``over(order_by=...)``. Usually a
+        single element; a sort may return several when one key cannot express the
+        required ordering. Does not apply joins; call ``apply`` first when joins are
+        required.
         """
-        order_expr = self._order_value_expression()
         if self.ascending:
-            return order_expr.asc()
-        return order_expr.desc()
+            return [expr.asc() for expr in self._sort_key_expressions()]
+        return [expr.desc() for expr in self._sort_key_expressions()]
 
     def apply(self, query: SelectOfScalar[T]) -> SelectOfScalar[T]:
         """Apply joins for this sort and append the ``ORDER BY``.
@@ -76,7 +86,7 @@ class OrderByExpression(ABC):
             The modified query after joining and ordering.
         """
         joined = self.apply_joins(query)
-        return joined.order_by(self.to_column_element())
+        return joined.order_by(*self.to_column_elements())
 
     def apply_with_order_value(self, query: SelectOfScalar[T]) -> SQLAlchemySelect[tuple[T, Any]]:
         """Apply this sort and append its value to the SELECT list.
@@ -94,7 +104,7 @@ class OrderByExpression(ABC):
         """
         joined = self.apply_joins(query)
         order_value = self._order_value_expression().label(ORDER_VALUE_LABEL)
-        return joined.add_columns(order_value).order_by(self.to_column_element())
+        return joined.add_columns(order_value).order_by(*self.to_column_elements())
 
     def asc(self) -> Self:
         """Set the ordering to ascending.
@@ -143,30 +153,56 @@ class OrderByMetadataField(OrderByExpression):
     A LEFT OUTER JOIN to SampleMetadataTable is added automatically so that
     samples without metadata still appear in results (sorted last when ascending).
 
+    Numerical fields order numerically and everything else lexicographically,
+    decided in SQL from the type recorded in ``metadata_schema``. Only top-level
+    keys are recorded there, so a dotted path sorts lexicographically.
+
     Args:
         field_name: The key inside the JSON ``data`` column to sort by.
-        cast_to_float: When True, the extracted value is cast to float before
-            ordering.  Use this for numerical metadata fields so that numeric
-            ordering is applied instead of lexicographic ordering.
     """
 
-    def __init__(self, field_name: str, cast_to_float: bool) -> None:
-        """Initialize with the metadata field name and float cast flag."""
+    def __init__(self, field_name: str) -> None:
+        """Initialize with the metadata field name."""
         super().__init__()
         self.field_name = field_name
-        # TODO(Leonardo, 05/2026): Rework to avoid requiring callers to pass
-        # cast_to_float explicitly.
-        self.cast_to_float = cast_to_float
         # Per-instance alias so sort joins do not collide with filter joins on metadata.
         self._metadata_alias = aliased(SampleMetadataTable)
 
     def _order_value_expression(self) -> ColumnElement[Any]:
-        """Return the JSON-extract expression for the metadata field."""
-        return db_json.json_extract(
-            column=self._metadata_alias.data,
-            field=self.field_name,
-            cast_to_float=self.cast_to_float,
+        """Return the numerical value of the field, or NULL if it is not numerical.
+
+        The CAST wraps the CASE so its operand is NULL for rows that would fail it,
+        and casts to Double because DuckDB's FLOAT is single precision.
+        """
+        return sqlalchemy.cast(
+            sqlalchemy.case(
+                (self._is_numerical_field(), self._extracted_value()),
+                else_=None,
+            ),
+            sqlalchemy.Double,
         )
+
+    def _sort_key_expressions(self) -> list[ColumnElement[Any]]:
+        """Return the numerical key, NULL for non-numerical fields, then the raw value."""
+        return [self._order_value_expression(), self._extracted_value()]
+
+    def to_column_elements(self) -> list[ColumnElement[Any]]:
+        """Pin NULLs last; the two dialects disagree on where they go by default."""
+        return [sqlalchemy.nullslast(element) for element in super().to_column_elements()]
+
+    def _is_numerical_field(self) -> ColumnElement[bool]:
+        """Return whether ``metadata_schema`` records this field as a number.
+
+        Uses the same path syntax as the value, so the two cannot disagree.
+        """
+        return db_json.json_extract(
+            column=self._metadata_alias.metadata_schema,
+            field=self.field_name,
+        ).in_([db_json.json_literal(type_name) for type_name in NUMERIC_TYPE_NAMES])
+
+    def _extracted_value(self) -> ColumnElement[Any]:
+        """Return the raw JSON value of the field."""
+        return db_json.json_extract(column=self._metadata_alias.data, field=self.field_name)
 
     def apply_joins(self, query: SelectT) -> SelectT:
         """Left-outer-join aliased ``SampleMetadataTable`` on ``sample_id``."""
