@@ -31,6 +31,7 @@ def cleanup_db_manager() -> Generator[None, None, None]:
 @pytest.fixture(autouse=True)
 def reset_launch_source() -> Generator[None, None, None]:
     """Reset the process-global launch source so tests do not leak into each other."""
+    launch_source.set_launch_source(source=LaunchSource.SDK)
     yield
     launch_source.set_launch_source(source=LaunchSource.SDK)
 
