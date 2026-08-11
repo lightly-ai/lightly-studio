@@ -9,7 +9,6 @@ from lightly_studio.resolvers.metadata_resolver.metadata_filter import (
     MetadataFilter,
 )
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
-from tests import helpers_sql_injection
 from tests.helpers_resolvers import (
     create_collection,
     create_image,
@@ -208,7 +207,23 @@ def test_metadata_filter__negative_index(
     assert [sample.sample_id for sample in samples] == [matching.sample_id]
 
 
-@pytest.mark.parametrize("payload", helpers_sql_injection.PAYLOADS)
+@pytest.mark.parametrize(
+    "payload",
+    [
+        # Closes the string literal and starts a new statement.
+        "x'); DROP TABLE victim; --",
+        # Closes the DuckDB json_extract call and appends a subquery.
+        "x') AS FLOAT), (SELECT 1 FROM victim) --",
+        # Turns the comparison into a tautology.
+        "temp' OR '1'='1",
+        # Rides in through the array-index brackets, which once rendered unquoted.
+        "a[0; DROP TABLE victim]",
+        # Reads as JSONPath rather than as a key name.
+        "$.temp",
+        # Concatenates a subquery into the value.
+        "'||(SELECT count(*) FROM victim)||'",
+    ],
+)
 def test_metadata_filter__injection_payload_is_inert(db_session: Session, payload: str) -> None:
     """A payload key runs as a lookup that finds nothing and leaves the data alone."""
     collection = create_collection(session=db_session)

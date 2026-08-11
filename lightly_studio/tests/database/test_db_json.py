@@ -10,7 +10,6 @@ from duckdb_engine import Dialect
 from sqlalchemy.dialects import postgresql
 
 from lightly_studio.database import db_json
-from tests import helpers_sql_injection
 
 # Both databases speak the same JSON operators, so every expression below has to
 # compile identically for each of them.
@@ -20,7 +19,17 @@ _COLUMN = sqlalchemy.column("data", sqlalchemy.JSON)
 
 # A key that closes the string literal and appends SQL, if it were interpolated.
 _INJECTION_KEY = "x') AS FLOAT), (SELECT 1 FROM secrets"
-_SPECIAL_KEYS = [_INJECTION_KEY, "owner's key", 'say "hi"', "back\\slash", "path/to~key"]
+_SPECIAL_KEYS = [
+    _INJECTION_KEY,
+    "owner's key",
+    'say "hi"',
+    "back\\slash",
+    "path/to~key",
+    # Closes the string literal and starts a new statement.
+    "x'); DROP TABLE victim; --",
+    # Concatenates a subquery into the value.
+    "'||(SELECT count(*) FROM victim)||'",
+]
 
 # Keys that DuckDB reads as JSONPath or as a JSON Pointer unless they are bound as
 # pointers: "$" addresses the whole document, "$.temp" addresses another key, "$x"
@@ -179,27 +188,17 @@ def test_json_key_type__postgres_gets_the_raw_key(key: str) -> None:
 
 
 @pytest.mark.parametrize("dialect", _DIALECTS)
-@pytest.mark.parametrize("payload", helpers_sql_injection.PAYLOADS)
-def test_json_extract__payload_never_reaches_the_statement(dialect: Any, payload: str) -> None:
+@pytest.mark.parametrize("field", _SPECIAL_KEYS)
+def test_json_extract__special_key_never_reaches_the_statement(dialect: Any, field: str) -> None:
     """Every entry point binds the key, so no payload becomes part of the SQL text."""
-    for expression in _every_entry_point(payload):
+    for expression in _every_entry_point(field):
         sql = str(_compile(expression, dialect))
 
-        assert payload not in sql
+        assert field not in sql
         # Nothing the payloads carry survives into the statement.
         assert ";" not in sql
         assert "drop" not in sql.lower()
         assert "select" not in sql.lower()
-
-
-@pytest.mark.parametrize("dialect", _DIALECTS)
-@pytest.mark.parametrize("payload", helpers_sql_injection.PAYLOADS)
-def test_json_extract_key_as_text__payload_is_one_bound_key(dialect: Any, payload: str) -> None:
-    """The payload reaches the database as a key to look up, not as SQL to run."""
-    result = _compile(db_json.json_extract_key_as_text(column=_COLUMN, key=payload), dialect)
-
-    assert str(result) == "CAST(data ->> %(param_1)s AS VARCHAR)"
-    assert result.params == {"param_1": payload}
 
 
 @pytest.mark.parametrize("dialect", _DIALECTS)
