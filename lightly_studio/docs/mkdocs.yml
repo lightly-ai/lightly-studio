@@ -101,6 +101,9 @@ validation:
 extra_css:
   - _static/custom.css
 
+extra_javascript:
+  - _static/custom.js
+
 plugins:
   - search
   - mkdocstrings:
