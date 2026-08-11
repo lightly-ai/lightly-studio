@@ -10,6 +10,7 @@ from duckdb_engine import Dialect
 from sqlalchemy.dialects import postgresql
 
 from lightly_studio.database import db_json
+from tests import helpers_sql_injection
 
 # Both databases speak the same JSON operators, so every expression below has to
 # compile identically for each of them.
@@ -21,9 +22,24 @@ _COLUMN = sqlalchemy.column("data", sqlalchemy.JSON)
 _INJECTION_KEY = "x') AS FLOAT), (SELECT 1 FROM secrets"
 _SPECIAL_KEYS = [_INJECTION_KEY, "owner's key", 'say "hi"', "back\\slash", "path/to~key"]
 
+# Keys that DuckDB reads as JSONPath or as a JSON Pointer unless they are bound as
+# pointers: "$" addresses the whole document, "$.temp" addresses another key, "$x"
+# raises, and a leading "/" starts a pointer. PostgreSQL reads all of them as keys.
+_PATH_SYNTAX_KEYS = ["$", "$.temp", "$x", "$[0]", "/a", "/", "~1"]
+
 
 def _compile(expression: Any, dialect: Any) -> Any:
     return expression.compile(dialect=dialect)
+
+
+def _every_entry_point(field: str) -> list[Any]:
+    """Return one expression per public function, all reading the same field."""
+    return [
+        db_json.json_extract(column=_COLUMN, field=field),
+        db_json.json_extract_as_text(column=_COLUMN, field=field),
+        db_json.json_extract_as_float(column=_COLUMN, field=field),
+        db_json.json_extract_string(column=_COLUMN, field=field),
+    ]
 
 
 @pytest.mark.parametrize(
@@ -56,23 +72,23 @@ def test_parse_field_path__out_of_range_index_stays_a_key(index: str) -> None:
 @pytest.mark.parametrize("dialect", _DIALECTS)
 def test_json_extract__simple_key(dialect: Any) -> None:
     result = _compile(db_json.json_extract(column=_COLUMN, field="temperature"), dialect)
-    assert str(result) == "data -> %(data_1)s"
-    assert result.params == {"data_1": "temperature"}
+    assert str(result) == "data -> %(param_1)s"
+    assert result.params == {"param_1": "temperature"}
 
 
 @pytest.mark.parametrize("dialect", _DIALECTS)
 def test_json_extract__nested_key(dialect: Any) -> None:
     """Each segment is its own bound step, so no key can be read as path syntax."""
     result = _compile(db_json.json_extract(column=_COLUMN, field="test_dict.int_key"), dialect)
-    assert str(result) == "(data -> %(data_1)s) -> %(param_1)s"
-    assert result.params == {"data_1": "test_dict", "param_1": "int_key"}
+    assert str(result) == "(data -> %(param_1)s) -> %(param_2)s"
+    assert result.params == {"param_1": "test_dict", "param_2": "int_key"}
 
 
 @pytest.mark.parametrize("dialect", _DIALECTS)
 def test_json_extract__array_index(dialect: Any) -> None:
     result = _compile(db_json.json_extract(column=_COLUMN, field="nested_list[0]"), dialect)
-    assert str(result) == "(data -> %(data_1)s) -> %(param_1)s"
-    assert result.params == {"data_1": "nested_list", "param_1": 0}
+    assert str(result) == "(data -> %(param_1)s) -> %(param_2)s"
+    assert result.params == {"param_1": "nested_list", "param_2": 0}
 
 
 @pytest.mark.parametrize("dialect", _DIALECTS)
@@ -80,7 +96,7 @@ def test_json_extract__array_index(dialect: Any) -> None:
 def test_json_extract__negative_index(dialect: Any, index: int) -> None:
     """Both databases subscript from the end natively, so the index passes straight through."""
     result = _compile(db_json.json_extract(column=_COLUMN, field=f"nested_list[{index}]"), dialect)
-    assert result.params == {"data_1": "nested_list", "param_1": index}
+    assert result.params == {"param_1": "nested_list", "param_2": index}
 
 
 @pytest.mark.parametrize("dialect", _DIALECTS)
@@ -89,7 +105,7 @@ def test_json_extract__out_of_range_index_is_a_bound_key(dialect: Any) -> None:
     result = _compile(
         db_json.json_extract(column=_COLUMN, field="nested_list[2147483648]"), dialect
     )
-    assert result.params == {"data_1": "nested_list", "param_1": "[2147483648]"}
+    assert result.params == {"param_1": "nested_list", "param_2": "[2147483648]"}
 
 
 @pytest.mark.parametrize("dialect", _DIALECTS)
@@ -97,8 +113,8 @@ def test_json_extract__out_of_range_index_is_a_bound_key(dialect: Any) -> None:
 def test_json_extract__special_key_is_bound(dialect: Any, field: str) -> None:
     """Special characters stay inside the parameter and never reach the statement."""
     result = _compile(db_json.json_extract(column=_COLUMN, field=field), dialect)
-    assert str(result) == "data -> %(data_1)s"
-    assert result.params == {"data_1": field}
+    assert str(result) == "data -> %(param_1)s"
+    assert result.params == {"param_1": field}
 
 
 @pytest.mark.parametrize("dialect", _DIALECTS)
@@ -106,21 +122,21 @@ def test_json_extract__special_key_is_bound(dialect: Any, field: str) -> None:
 def test_json_extract__non_integer_index_is_bound(dialect: Any, field: str) -> None:
     """Brackets holding anything but an integer are bound as keys, so they smuggle nothing."""
     result = _compile(db_json.json_extract(column=_COLUMN, field=field), dialect)
-    assert str(result) == "(data -> %(data_1)s) -> %(param_1)s"
+    assert str(result) == "(data -> %(param_1)s) -> %(param_2)s"
 
 
 @pytest.mark.parametrize("dialect", _DIALECTS)
 def test_json_extract_as_float(dialect: Any) -> None:
     result = _compile(db_json.json_extract_as_float(column=_COLUMN, field="temperature"), dialect)
-    assert str(result) == "CAST(data ->> %(data_1)s AS FLOAT)"
-    assert result.params == {"data_1": "temperature"}
+    assert str(result) == "CAST(data ->> %(param_1)s AS FLOAT)"
+    assert result.params == {"param_1": "temperature"}
 
 
 @pytest.mark.parametrize("dialect", _DIALECTS)
 def test_json_extract_as_text(dialect: Any) -> None:
     result = _compile(db_json.json_extract_as_text(column=_COLUMN, field="temperature"), dialect)
-    assert str(result) == "CAST(data ->> %(data_1)s AS VARCHAR)"
-    assert result.params == {"data_1": "temperature"}
+    assert str(result) == "CAST(data ->> %(param_1)s AS VARCHAR)"
+    assert result.params == {"param_1": "temperature"}
 
 
 @pytest.mark.parametrize("dialect", _DIALECTS)
@@ -128,8 +144,62 @@ def test_json_extract_as_text(dialect: Any) -> None:
 def test_json_extract_string__key_is_literal_and_bound(dialect: Any, field: str) -> None:
     """The whole field is one key, so a dot in it does not step into a nested object."""
     result = _compile(db_json.json_extract_string(column=_COLUMN, field=field), dialect)
-    assert str(result) == "CAST(data ->> %(data_1)s AS VARCHAR)"
-    assert result.params == {"data_1": field}
+    assert str(result) == "CAST(data ->> %(param_1)s AS VARCHAR)"
+    assert result.params == {"param_1": field}
+
+
+@pytest.mark.parametrize(
+    ("key", "expected"),
+    [
+        ("$", "/$"),
+        ("$.temp", "/$.temp"),
+        ("$x", "/$x"),
+        ("/a", "/~1a"),
+        ("/", "/~1"),
+        ("~1", "/~01"),
+        ("path/to~key", "/path~1to~0key"),
+        ("temp", "/temp"),
+    ],
+)
+def test_json_key_type__duckdb_gets_a_pointer(key: str, expected: str) -> None:
+    """DuckDB reads a leading "$" as JSONPath and a leading "/" as a pointer.
+
+    Binding every key as a one-segment pointer removes the ambiguity.
+    """
+    key_type = db_json._JsonKeyType()
+    assert key_type.process_bind_param(value=key, dialect=Dialect()) == expected
+
+
+@pytest.mark.parametrize("key", _PATH_SYNTAX_KEYS)
+def test_json_key_type__postgres_gets_the_raw_key(key: str) -> None:
+    """PostgreSQL reads a key and nothing else, so it needs no pointer."""
+    key_type = db_json._JsonKeyType()
+    postgres = postgresql.dialect()  # type: ignore[no-untyped-call]
+    assert key_type.process_bind_param(value=key, dialect=postgres) == key
+
+
+@pytest.mark.parametrize("dialect", _DIALECTS)
+@pytest.mark.parametrize("payload", helpers_sql_injection.PAYLOADS)
+def test_json_extract__payload_never_reaches_the_statement(dialect: Any, payload: str) -> None:
+    """Every entry point binds the key, so no payload becomes part of the SQL text."""
+    for expression in _every_entry_point(payload):
+        sql = str(_compile(expression, dialect))
+
+        assert payload not in sql
+        # Nothing the payloads carry survives into the statement.
+        assert ";" not in sql
+        assert "drop" not in sql.lower()
+        assert "select" not in sql.lower()
+
+
+@pytest.mark.parametrize("dialect", _DIALECTS)
+@pytest.mark.parametrize("payload", helpers_sql_injection.PAYLOADS)
+def test_json_extract_string__payload_is_one_bound_key(dialect: Any, payload: str) -> None:
+    """The payload reaches the database as a key to look up, not as SQL to run."""
+    result = _compile(db_json.json_extract_string(column=_COLUMN, field=payload), dialect)
+
+    assert str(result) == "CAST(data ->> %(param_1)s AS VARCHAR)"
+    assert result.params == {"param_1": payload}
 
 
 @pytest.mark.parametrize("dialect", _DIALECTS)

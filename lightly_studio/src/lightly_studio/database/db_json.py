@@ -16,7 +16,10 @@ import operator
 import re
 from typing import Any, cast
 
-from sqlalchemy import ColumnElement
+import sqlalchemy
+from sqlalchemy import ColumnElement, Text
+from sqlalchemy.engine.interfaces import Dialect
+from sqlalchemy.types import TypeDecorator
 
 _ARRAY_INDEX_PATTERN = re.compile(r"^\[(-?[0-9]+)\]$")
 # PostgreSQL's "->" subscript takes a 32-bit integer; a wider one raises rather than
@@ -43,10 +46,11 @@ def json_extract(column: Any, field: str) -> ColumnElement[Any]:
     Returns:
         The indexed JSON expression.
     """
-    return cast(
-        ColumnElement[Any],
-        functools.reduce(operator.getitem, _parse_field_path(field), column),
-    )
+    segments = [
+        segment if isinstance(segment, int) else _bind_key(segment)
+        for segment in _parse_field_path(field)
+    ]
+    return cast(ColumnElement[Any], functools.reduce(operator.getitem, segments, column))
 
 
 def json_extract_as_text(column: Any, field: str) -> ColumnElement[str]:
@@ -80,7 +84,34 @@ def json_extract_string(column: Any, field: str) -> ColumnElement[str]:
     Returns:
         The extracted value as text.
     """
-    return cast(ColumnElement[str], column[field].as_string())
+    return cast(ColumnElement[str], column[_bind_key(field)].as_string())
+
+
+class _JsonKeyType(TypeDecorator[str]):
+    """Bind one object key so that each database reads it as a key and nothing else.
+
+    DuckDB's ``->`` is ``json_extract``, which reads a leading ``$`` as JSONPath and a
+    leading ``/`` as a JSON Pointer. A key such as ``$.temp`` would therefore address
+    another part of the document, and ``$x`` would raise. Sending a one-segment JSON
+    Pointer removes the ambiguity, because a pointer states where each segment ends.
+
+    PostgreSQL's ``->`` takes a key and nothing else, so the key passes through.
+    """
+
+    impl = Text
+    cache_ok = True
+
+    def process_bind_param(self, value: str | None, dialect: Dialect) -> str | None:
+        """Convert DuckDB keys to a JSON Pointer and leave PostgreSQL keys raw."""
+        if value is None or dialect.name != "duckdb":
+            return value
+        escaped = value.replace("~", "~0").replace("/", "~1")
+        return f"/{escaped}"
+
+
+def _bind_key(key: str) -> ColumnElement[str]:
+    """Return the key as a bound parameter that each database reads literally."""
+    return sqlalchemy.literal(key, type_=_JsonKeyType())
 
 
 def _parse_field_path(field: str) -> list[str | int]:

@@ -9,6 +9,7 @@ from lightly_studio.resolvers.metadata_resolver.metadata_filter import (
     MetadataFilter,
 )
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+from tests import helpers_sql_injection
 from tests.helpers_resolvers import (
     create_collection,
     create_image,
@@ -205,6 +206,56 @@ def test_metadata_filter__negative_index(
     ).samples
 
     assert [sample.sample_id for sample in samples] == [matching.sample_id]
+
+
+@pytest.mark.parametrize("payload", helpers_sql_injection.PAYLOADS)
+def test_metadata_filter__injection_payload_is_inert(db_session: Session, payload: str) -> None:
+    """A payload key runs as a lookup that finds nothing and leaves the data alone."""
+    collection = create_collection(session=db_session)
+    sample = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/sample.png",
+    ).sample
+    sample["temp"] = 25
+
+    payload_filter = SampleFilter(metadata_filters=[Metadata(payload) == 25])
+    matched = sample_resolver.get_filtered_samples(
+        session=db_session, collection_id=collection.collection_id, filters=payload_filter
+    ).samples
+
+    assert matched == []
+
+    # The sample and its metadata survived, so nothing the payload carried ran.
+    intact_filter = SampleFilter(metadata_filters=[Metadata("temp") == 25])
+    still_there = sample_resolver.get_filtered_samples(
+        session=db_session, collection_id=collection.collection_id, filters=intact_filter
+    ).samples
+
+    assert [found.sample_id for found in still_there] == [sample.sample_id]
+
+
+@pytest.mark.parametrize("key", ["$", "$.temp", "$x", "/temp", "/"])
+def test_metadata_filter__path_syntax_key_is_a_key(db_session: Session, key: str) -> None:
+    """DuckDB reads these as paths unless they are bound as pointers.
+
+    Without that, `$.temp` reads the `temp` field of the same document and matches,
+    and `$x` raises. Neither database has a `key` field here, so nothing matches.
+    """
+    collection = create_collection(session=db_session)
+    sample = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/sample.png",
+    ).sample
+    sample["temp"] = 25
+
+    filters = SampleFilter(metadata_filters=[Metadata(key) == 25])
+    matched = sample_resolver.get_filtered_samples(
+        session=db_session, collection_id=collection.collection_id, filters=filters
+    ).samples
+
+    assert matched == []
 
 
 def test_metadata_filter__key_with_quote(db_session: Session) -> None:
