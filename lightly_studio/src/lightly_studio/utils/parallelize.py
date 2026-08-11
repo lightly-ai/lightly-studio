@@ -119,6 +119,35 @@ def thread_imap_unordered_lazy(
                 yield future.result()
 
 
+def thread_map_count(
+    function: Callable[[_T], bool],
+    iterable: Iterable[_T],
+    max_workers: int,
+) -> int:
+    """Count the items for which ``function`` returns True, evaluated on a thread pool.
+
+    Args:
+        function: Predicate applied to each item. Called concurrently from worker
+            threads, so it must be thread-safe with respect to any shared state.
+        iterable: Items to test. Consumed lazily.
+        max_workers: Number of worker threads. Must be at least 1.
+
+    Returns:
+        The number of items for which ``function`` returned True.
+
+    Raises:
+        ValueError: If ``max_workers`` is less than 1.
+    """
+    matches = 0
+    results = thread_imap_unordered_lazy(
+        function=function, iterable=iterable, max_workers=max_workers
+    )
+    for result in results:
+        if result:
+            matches += 1
+    return matches
+
+
 def _resolve_buffer_size(max_workers: int, buffer_size: int | None) -> int:
     """Validate the pool sizing and resolve a ``None`` buffer size to ``max_workers``."""
     if max_workers < 1:

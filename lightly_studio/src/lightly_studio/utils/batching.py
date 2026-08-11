@@ -22,3 +22,23 @@ def batched(items: Iterable[_T], batch_size: int = DEFAULT_BATCH_SIZE) -> Iterat
     iterator = iter(items)
     while batch := list(itertools.islice(iterator, batch_size)):
         yield batch
+
+
+def batch_count(total_items: int, batch_size: int = DEFAULT_BATCH_SIZE) -> int:
+    """Number of batches ``batched`` yields for ``total_items`` items.
+
+    Args:
+        total_items: Number of items to be batched. Must not be negative.
+        batch_size: Maximum items per batch. Must be at least 1.
+
+    Returns:
+        The number of batches, rounding a partial final batch up.
+
+    Raises:
+        ValueError: If ``batch_size`` is less than 1 or ``total_items`` is negative.
+    """
+    if batch_size < 1:
+        raise ValueError(f"batch_size must be >= 1, got {batch_size}.")
+    if total_items < 0:
+        raise ValueError(f"total_items must be >= 0, got {total_items}.")
+    return (total_items + batch_size - 1) // batch_size
