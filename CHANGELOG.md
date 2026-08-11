@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `lightly-studio quickstart` now opens your browser automatically once the GUI server is ready. Pass `--no-browser` to skip that.
+
 ### Deprecated
 
 - The `is_numeric` field on sort expressions in the images-list and adjacent-samples request
