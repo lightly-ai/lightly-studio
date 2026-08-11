@@ -193,10 +193,9 @@ class OrderByMetadataField(OrderByExpression):
     def _is_numerical_field(self) -> ColumnElement[bool]:
         """Return whether ``metadata_schema`` records this field as a number.
 
-        ``metadata_schema`` maps a top-level key to the name of its type, so the read
-        below yields a type name rather than a value. It is read with the same path
-        syntax as the value so that the two cannot disagree: a dotted path finds nothing
-        here and sorts lexicographically, which is what a nested value has to do anyway.
+        ``metadata_schema`` maps a key to the name of its type, so this reads a type name
+        rather than a value. Uses the same path syntax as the value so the two cannot
+        disagree.
         """
         schema_type_name = db_json.json_extract_as_text(
             column=self._metadata_alias.metadata_schema,
@@ -205,11 +204,7 @@ class OrderByMetadataField(OrderByExpression):
         return schema_type_name.in_(NUMERIC_TYPE_NAMES)
 
     def _extracted_value(self) -> ColumnElement[Any]:
-        """Return the field's value as text.
-
-        Text rather than raw JSON because PostgreSQL can neither order by nor cast a
-        ``json`` value, and because it makes both databases sort undecorated values.
-        """
+        """Return the field's value as text, which is what ``ORDER BY`` can sort."""
         return db_json.json_extract_as_text(column=self._metadata_alias.data, field=self.field_name)
 
     def apply_joins(self, query: SelectT) -> SelectT:
