@@ -67,12 +67,7 @@ export function fileCoverageRatio(
     return executable === 0 ? null : covered / executable;
 }
 
-/**
- * Normalises a vitest (Istanbul/v8) coverage report into repo-relative per-line
- * coverage. Each statement is collapsed to the lines it spans: a line is
- * `executable` if any statement covers it, `covered` if any covering statement
- * has a hit count > 0.
- */
+/** Reads a vitest (Istanbul/v8) report into per-line coverage, keyed by repo-relative path. */
 export function parseFrontendReport(raw: string): LineCoverage {
     const data = JSON.parse(raw) as RawCoverage;
     const coverage: LineCoverage = new Map();
