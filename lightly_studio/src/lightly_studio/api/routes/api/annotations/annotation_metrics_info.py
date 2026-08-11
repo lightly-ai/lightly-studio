@@ -13,11 +13,11 @@ from lightly_studio.models.evaluation_annotation_metric import (
 )
 from lightly_studio.resolvers import evaluation_annotation_metric_resolver
 
-get_annotation_metrics_info_router = APIRouter()
+annotation_metrics_info_router = APIRouter(prefix="/evaluation/metrics/annotation/info")
 
 
-@get_annotation_metrics_info_router.get(
-    "/evaluation/metrics/annotation/info",
+@annotation_metrics_info_router.get(
+    "",
     response_model=list[EvaluationRunAnnotationMetricsInfoView],
 )
 def get_evaluation_annotation_metrics_info(
