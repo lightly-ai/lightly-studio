@@ -21,17 +21,26 @@ vi.mock('$app/state', () => ({
     page: { params: { collection_type: 'images' } }
 }));
 
+const { invalidateAnnotationGridQueries, useInvalidateAnnotationGridQueries } = vi.hoisted(() => ({
+    invalidateAnnotationGridQueries: vi.fn(),
+    useInvalidateAnnotationGridQueries: vi.fn()
+}));
+vi.mock('$lib/hooks/useInvalidateAnnotationGridQueries', () => ({
+    useInvalidateAnnotationGridQueries
+}));
+
 describe('useCreateAnnotation', () => {
     const invalidateQueries = vi.fn();
 
     beforeEach(() => {
         vi.clearAllMocks();
+        useInvalidateAnnotationGridQueries.mockReturnValue(invalidateAnnotationGridQueries);
         vi.mocked(useQueryClient).mockReturnValue({
             invalidateQueries
         } as unknown as ReturnType<typeof useQueryClient>);
     });
 
-    it('invalidates the annotation counts and the source list after a successful create', async () => {
+    it('invalidates annotation-bearing grids, counts, and sources after a successful create', async () => {
         vi.mocked(createMutation).mockReturnValue({
             mutate: (_vars: unknown, opts: { onSuccess: (data: unknown) => void }) => {
                 opts.onSuccess({
@@ -52,6 +61,8 @@ describe('useCreateAnnotation', () => {
         expect(invalidateQueries).toHaveBeenCalledWith({
             queryKey: useImageAnnotationCountsQueryKey
         });
+        expect(useInvalidateAnnotationGridQueries).toHaveBeenCalledWith();
+        expect(invalidateAnnotationGridQueries).toHaveBeenCalledWith('col-1');
         expect(invalidateQueries).toHaveBeenCalledWith({
             queryKey: readAnnotationCollectionsQueryKey({ path: { collection_id: 'col-1' } })
         });

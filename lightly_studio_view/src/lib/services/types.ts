@@ -3,7 +3,6 @@ import type {
     ImageView,
     TagView as TagViewType,
     TagCreateBody,
-    ExportFilter as ExportFilterType,
     SampleIdsBody as SampleIdsBodyType,
     AnnotationView,
     ObjectDetectionAnnotationView as ObjectDetectionAnnotationViewType,
@@ -20,7 +19,6 @@ export type Collection = CollectionTable;
 export type ImageSample = ImageView;
 export type TagView = TagViewType;
 export type TagInputBody = TagCreateBody;
-export type ExportFilter = ExportFilterType;
 export type TagKind = TagCreateBody['kind'];
 export type SampleIdsBody = SampleIdsBodyType;
 export type Annotation = AnnotationView;

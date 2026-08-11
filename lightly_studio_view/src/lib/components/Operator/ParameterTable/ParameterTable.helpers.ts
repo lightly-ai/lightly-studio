@@ -1,5 +1,5 @@
 import type { OperatorParameterColumn } from '$lib/hooks';
-import { getCellConfig, isCellFilled, type ParameterTableRow } from '../parameterTypeConfig';
+import { getCellConfig, isCellSubmittable, type ParameterTableRow } from '../parameterTypeConfig';
 
 // Four rows before the table scrolls instead of growing the dialog: inputs are h-10 (2.5rem) and rows
 // are gap-2 (0.5rem) apart, so four measure 4 * 2.5rem + 3 * 0.5rem = 11.5rem. The header shares the
@@ -72,36 +72,9 @@ export const replaceCell = (
 ): ParameterTableRow[] =>
     rows.map((row, rowIndex) => (rowIndex === index ? { ...row, [name]: value } : row));
 
-/** Validation state of the table parameter the cell belongs to. */
-interface TableValidationState {
-    /** Whether the table parameter itself is required. */
-    required: boolean;
-    /** Whether the table parameter is currently blocking submission. */
-    isMissing: boolean;
-}
-
 /**
- * Whether a cell holds a value the backend cannot accept. A numeric column reads `''` while its
- * input is empty or mid-edit, and the backend validates every cell against its column type
- * regardless of `required`, so such a cell is always invalid — not just on a required column.
+ * Whether a cell should be flagged as invalid. Every cell the operator cannot run with is flagged on
+ * sight, which includes the blank required cells of a row the user just added.
  */
-const isCellUnsubmittable = (row: ParameterTableRow, column: OperatorParameterColumn): boolean => {
-    const { type } = getCellConfig(column);
-    return (type === 'int' || type === 'float') && !isCellFilled(row[column.name], column);
-};
-
-/**
- * Whether a cell should be flagged as invalid. Cells that block submission are flagged: the empty
- * cells of required columns once the table is missing a value, and cells of any column whose value
- * the backend would reject outright.
- */
-export const isCellInvalid = (
-    row: ParameterTableRow,
-    column: OperatorParameterColumn,
-    { required, isMissing }: TableValidationState
-): boolean =>
-    isCellUnsubmittable(row, column) ||
-    (required &&
-        isMissing &&
-        (column.required ?? false) &&
-        !isCellFilled(row[column.name], column));
+export const isCellInvalid = (row: ParameterTableRow, column: OperatorParameterColumn): boolean =>
+    !isCellSubmittable(row[column.name], column);

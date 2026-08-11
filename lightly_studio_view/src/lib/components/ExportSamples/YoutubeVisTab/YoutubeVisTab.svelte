@@ -4,7 +4,13 @@
     import { PUBLIC_LIGHTLY_STUDIO_API_URL } from '$env/static/public';
     import { useExportDownload } from '../useExportDownload/useExportDownload';
     import ExportDownloadButton from '../ExportDownloadButton/ExportDownloadButton.svelte';
-    import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+    import { useVideoFilters } from '$lib/hooks';
+
+    interface Props {
+        onDownloadClick?: () => void;
+    }
+
+    let { onDownloadClick }: Props = $props();
 
     const collectionId = page.params.collection_id!;
     const { videoFilter } = useVideoFilters();
@@ -29,7 +35,10 @@
     <ExportDownloadButton
         isLoading={$isLoading}
         errorMessage={$errorMessage}
-        onclick={handleDownload}
+        onclick={() => {
+            onDownloadClick?.();
+            handleDownload();
+        }}
         testId="submit-button-youtube-vis-instance-segmentations"
     />
 </div>
