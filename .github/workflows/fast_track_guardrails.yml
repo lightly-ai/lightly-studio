@@ -31,7 +31,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v6
         # Never pushes — keep the git token out of the checkout. The later toolchain steps
-        # expose GCP secrets to PR code (same posture as test_and_release.yml); fork PRs get
+        # expose GCP secrets to PR code (same posture as unit_test.yml); fork PRs get
         # no secrets, so their toolchain-dependent guardrails error instead of emitting a verdict.
         with:
           persist-credentials: false

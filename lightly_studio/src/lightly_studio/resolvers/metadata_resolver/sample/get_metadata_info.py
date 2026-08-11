@@ -9,6 +9,7 @@ from sqlmodel import Session, col, select
 
 from lightly_studio.database import db_json
 from lightly_studio.models.metadata import (
+    NUMERIC_TYPE_NAMES,
     HistogramView,
     MetadataInfoView,
     SampleMetadataTable,
@@ -19,8 +20,6 @@ from lightly_studio.resolvers.metadata_resolver.sample import metadata_helpers
 
 # Number of bins used for numeric metadata histograms.
 _HISTOGRAM_BIN_COUNT = 20
-
-_NUMERIC_TYPES = ("integer", "float")
 
 
 def get_all_metadata_keys_and_schema(
@@ -47,7 +46,7 @@ def get_all_metadata_keys_and_schema(
         metadata_info = MetadataInfoView(name=key, type=metadata_type)
 
         # Add min, max, and histogram for numerical types.
-        if metadata_type in _NUMERIC_TYPES:
+        if metadata_type in NUMERIC_TYPE_NAMES:
             stats = _get_metadata_min_max_count(
                 session=session, collection_id=collection_id, metadata_key=key
             )
@@ -95,7 +94,7 @@ def get_metadata_histograms(
 
     histograms: dict[str, HistogramView] = {}
     for key, metadata_type in merged.items():
-        if metadata_type not in _NUMERIC_TYPES:
+        if metadata_type not in NUMERIC_TYPE_NAMES:
             continue
         stats = _get_metadata_min_max_count(
             session=session, collection_id=collection_id, metadata_key=key

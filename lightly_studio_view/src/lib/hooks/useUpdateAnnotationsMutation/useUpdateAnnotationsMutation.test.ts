@@ -12,14 +12,41 @@ vi.mock('$lib/hooks/usePostHog', () => ({
     usePostHog: () => ({ trackEvent })
 }));
 
+const { invalidateAnnotationGridQueries, useInvalidateAnnotationGridQueries } = vi.hoisted(() => ({
+    invalidateAnnotationGridQueries: vi.fn(),
+    useInvalidateAnnotationGridQueries: vi.fn()
+}));
+vi.mock('$lib/hooks/useInvalidateAnnotationGridQueries', () => ({
+    useInvalidateAnnotationGridQueries
+}));
+
 describe('useUpdateAnnotationsMutation', () => {
     const invalidateQueries = vi.fn();
 
     beforeEach(() => {
         vi.clearAllMocks();
+        useInvalidateAnnotationGridQueries.mockReturnValue(invalidateAnnotationGridQueries);
         vi.mocked(useQueryClient).mockReturnValue({
             invalidateQueries
         } as unknown as ReturnType<typeof useQueryClient>);
+    });
+
+    it('invalidates annotation-bearing grids after a successful update', async () => {
+        vi.mocked(createMutation).mockReturnValue({
+            mutate: (_vars: unknown, opts: { onSuccess: () => void }) => {
+                opts.onSuccess();
+            }
+        } as unknown as ReturnType<typeof createMutation>);
+
+        const { updateAnnotations } = useUpdateAnnotationsMutation({
+            getCollectionId: () => 'col-1'
+        });
+        await updateAnnotations([
+            { annotation_id: 'ann-1', collection_id: 'col-1', label_name: 'dog' }
+        ]);
+
+        expect(useInvalidateAnnotationGridQueries).toHaveBeenCalledWith();
+        expect(invalidateAnnotationGridQueries).toHaveBeenCalledWith('col-1');
     });
 
     it('fires annotation_label_updated when a single update with label_name succeeds', async () => {
