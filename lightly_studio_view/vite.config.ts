@@ -8,6 +8,10 @@ export default defineConfig({
         rollupOptions: {
             output: {
                 manualChunks(id) {
+                    // Keep the preload helper in the base vendor chunk to avoid circular initialization.
+                    if (id.includes('vite/preload-helper')) {
+                        return 'vendor';
+                    }
                     // Split embedding-atlas into its own chunk
                     if (id.includes('node_modules/embedding-atlas')) {
                         return 'vendor-embedding-atlas';
