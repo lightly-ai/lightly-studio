@@ -1,7 +1,6 @@
 import type { Octokit } from '../shared/octokit';
 
 const DISMISS_MESSAGE = 'Fast Track checks no longer pass; dismissing the bot approval.';
-const SUPERSEDED_MESSAGE = 'Superseded by a newer Fast Track approval.';
 
 interface ReviewParams {
     octokit: Octokit;
@@ -15,27 +14,28 @@ interface ApproveParams extends ReviewParams {
     headSha: string;
 }
 
-/** Keep exactly one active bot approval, bound to the validated head. */
+/**
+ * Ensure the bot has an active approval, without churning reviews on a pass.
+ *
+ * A passing run must not dismiss and re-create the approval on every push: that
+ * generates downstream review events for no gain. So an existing bot approval is
+ * left in place, even when it is bound to an earlier commit — the fresh pass
+ * confirms it still holds, and the status comment carries the new head SHA. Only
+ * a failing run dismisses (see `dismissApproval`). An approval is created only
+ * when none exists yet, binding it to the validated head.
+ */
 export async function approve(params: ApproveParams): Promise<'approved' | 'noop'> {
     const reviews = await listBotApprovals(params);
-    const current = reviews.find((review) => review.commit_id === params.headSha);
+    if (reviews.length > 0) return 'noop';
 
-    if (current === undefined) {
-        await params.octokit.rest.pulls.createReview({
-            owner: params.owner,
-            repo: params.repo,
-            pull_number: params.prNumber,
-            commit_id: params.headSha,
-            event: 'APPROVE'
-        });
-    }
-
-    await dismissReviews(
-        params,
-        reviews.filter((review) => review !== current),
-        SUPERSEDED_MESSAGE
-    );
-    return current === undefined ? 'approved' : 'noop';
+    await params.octokit.rest.pulls.createReview({
+        owner: params.owner,
+        repo: params.repo,
+        pull_number: params.prNumber,
+        commit_id: params.headSha,
+        event: 'APPROVE'
+    });
+    return 'approved';
 }
 
 /** Dismiss only the App's active approvals, never a human review. */
