@@ -11,13 +11,14 @@ import json
 from pathlib import Path
 from uuid import UUID
 
+import torch
 from environs import Env
 
 import lightly_studio as ls
 from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.database import db_manager
-from lightly_studio.dataset import caption_embedding
+from lightly_studio.dataset import caption_embedding, file_utils
 from lightly_studio.dataset.caption_repetition import (
     DEFAULT_SIMILARITY_THRESHOLD,
     REPEATED_CAPTION_GROUP_ID_KEY,
@@ -31,14 +32,56 @@ from lightly_studio.dataset.caption_segment_matching import (
     set_video_caption_match_aggregates,
 )
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
+from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
+from lightly_studio.dataset.perception_encoder_embedding_generator import (
+    PerceptionEncoderEmbeddingGenerator,
+)
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.resolvers import (
     caption_resolver,
     collection_resolver,
     metadata_resolver,
     sample_embedding_resolver,
 )
+from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transforms
+
+LARGE_MODEL_NAME = "PE-Core-T16-384"
+
+
+class LargePerceptionEncoderEmbeddingGenerator(PerceptionEncoderEmbeddingGenerator):
+    """Perception Encoder generator using a larger checkpoint for better embeddings."""
+
+    def __init__(self, model_name: str = LARGE_MODEL_NAME) -> None:
+        self._model_name = model_name
+
+        LIGHTLY_STUDIO_MODEL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        self._model, model_path = pe.CLIP.from_config(
+            name=model_name, pretrained=True, download_dir=LIGHTLY_STUDIO_MODEL_CACHE_DIR
+        )
+        self._preprocess = transforms.get_image_transform(self._model.image_size)
+        self._tokenizer = transforms.get_text_tokenizer(self._model.context_length)
+
+        # Auto select device: CUDA > MPS (Apple Silicon) > CPU
+        self._device = torch.device(
+            "cuda"
+            if torch.cuda.is_available()
+            else "mps"
+            if torch.backends.mps.is_available()
+            else "cpu"
+        )
+        self._model = self._model.to(self._device)
+        self._model_hash = file_utils.get_file_xxhash(Path(model_path))
+
+    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
+        return EmbeddingModelCreate(
+            name=self._model_name,
+            embedding_model_hash=self._model_hash,
+            embedding_dimension=self._model.output_dim,
+            collection_id=collection_id,
+        )
+
 
 DEFAULT_VIDEO_PATH = Path(
     r"C:\Users\horatiu\Downloads\ego-annotate-demo\ego-annotate-demo\clips\lemonade.mp4"
@@ -88,7 +131,11 @@ def add_captions_from_sentences(video: VideoSample, sentences_path: Path) -> lis
     )
 
 
-def score_timed_captions_for_video(video: VideoSample, caption_ids: list[UUID]) -> None:
+def score_timed_captions_for_video(
+    video: VideoSample,
+    caption_ids: list[UUID],
+    embedding_generator: PerceptionEncoderEmbeddingGenerator,
+) -> None:
     """Score timed captions against video segments and write match scores as metadata."""
     session = video.get_object_session()
     captions = caption_resolver.get_by_ids(session=session, sample_ids=caption_ids)
@@ -127,7 +174,11 @@ def score_timed_captions_for_video(video: VideoSample, caption_ids: list[UUID]) 
         span = caption.temporal_span_details
         if embedding is None or span is None:
             continue
-        intervals.append((span.start_time_s, span.end_time_s))
+        duration = span.end_time_s - span.start_time_s
+        buffer = 0.1 * duration
+        buffered_start = max(0.0, span.start_time_s - buffer)
+        buffered_end = span.end_time_s + buffer
+        intervals.append((buffered_start, buffered_end))
         caption_embeddings.append(list(embedding))
         scored_ids.append(caption.sample_id)
 
@@ -138,6 +189,7 @@ def score_timed_captions_for_video(video: VideoSample, caption_ids: list[UUID]) 
         video_path=video.file_path_abs,
         intervals=intervals,
         caption_embeddings=caption_embeddings,
+        embedding_generator=embedding_generator,
     )
     for caption_id, score in zip(scored_ids, scores):
         metadata_resolver.set_value_for_sample(
@@ -227,6 +279,10 @@ env.read_env()
 # Cleanup an existing database
 db_manager.connect(cleanup_existing=True)
 
+# Create instance of larger Perception Encoder model for embeddings
+large_embedding_generator = LargePerceptionEncoderEmbeddingGenerator()
+ls.set_default_embedding_model(large_embedding_generator)
+
 video_path = env.path("EXAMPLES_LEMONADE_VIDEO_PATH", DEFAULT_VIDEO_PATH)
 sentences_path = env.path("EXAMPLES_LEMONADE_SENTENCES_PATH", DEFAULT_SENTENCES_PATH)
 
@@ -245,7 +301,11 @@ for video in dataset:
 caption_embedding.embed_captions(session=dataset.session, caption_sample_ids=all_caption_ids)
 
 for video, caption_ids in captions_by_video:
-    score_timed_captions_for_video(video=video, caption_ids=caption_ids)
+    score_timed_captions_for_video(
+        video=video,
+        caption_ids=caption_ids,
+        embedding_generator=large_embedding_generator,
+    )
     detect_repeated_captions_for_video(video=video, caption_ids=caption_ids)
     captions = caption_resolver.get_by_ids(session=dataset.session, sample_ids=caption_ids)
     print(f"{video.file_name} ({video.duration_s}s): {len(captions)} caption(s)")

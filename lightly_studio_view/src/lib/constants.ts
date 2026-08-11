@@ -25,3 +25,4 @@ export const REPEATED_CAPTION_GROUP_COUNT_KEY = 'repeated_caption_group_count';
 export const BLUR_SCORE_KEY = 'blur_score';
 export const LIGHTING_SCORE_KEY = 'lighting_score';
 export const MOTION_SCORE_KEY = 'motion_score';
+export const SHAKE_SCORE_KEY = 'shake_score';

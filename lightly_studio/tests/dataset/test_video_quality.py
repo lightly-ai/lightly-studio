@@ -118,6 +118,9 @@ def test_score_video_quality__and_store_metadata(db_session: Session, tmp_path: 
     assert metadata_resolver.get_value_for_sample(
         session=db_session, sample_id=video.sample_id, key=video_quality.MOTION_SCORE_KEY
     ) == pytest.approx(scores.motion_score)
+    assert metadata_resolver.get_value_for_sample(
+        session=db_session, sample_id=video.sample_id, key=video_quality.SHAKE_SCORE_KEY
+    ) == pytest.approx(scores.shake_score)
 
 
 def test_compute_and_store_quality_metadata(db_session: Session, tmp_path: Path) -> None:
@@ -162,6 +165,46 @@ def test_score_video_quality__invalid_args() -> None:
         video_quality.score_video_quality("unused.mp4", max_edge=0)
 
 
+def _textured_frame(size: int = 128, seed: int = 0) -> np.ndarray:
+    """Non-periodic textured grayscale frame suitable for feature tracking."""
+    rng = np.random.default_rng(seed)
+    noise = rng.integers(0, 256, size=(size, size), dtype=np.uint8)
+    # Soften slightly so corners are stable under small rolls.
+    return cv2.GaussianBlur(noise, (3, 3), 0)
+
+
+def test_camera_shake_score__static_pan_and_jitter() -> None:
+    base = _textured_frame()
+    static_frames = [base for _ in range(8)]
+    # Steady horizontal pan: constant shift each step → near-zero acceleration.
+    pan_frames = [np.roll(base, shift=8 * i, axis=1) for i in range(8)]
+    # Oscillating shifts: handheld-like jitter → high acceleration.
+    jitter_shifts = [0, 12, -10, 14, -12, 10, -8, 11]
+    jitter_frames = [np.roll(base, shift=s, axis=1) for s in jitter_shifts]
+
+    static_score = video_quality.camera_shake_score(static_frames)
+    pan_score = video_quality.camera_shake_score(pan_frames)
+    jitter_score = video_quality.camera_shake_score(jitter_frames)
+
+    assert static_score == pytest.approx(0.0, abs=0.5)
+    assert pan_score < 1.0
+    assert jitter_score > pan_score * 5
+    assert jitter_score > video_quality.DEFAULT_SHAKE_SCORE_HIGH_MIN
+
+
+def test_camera_shake_score__too_few_frames() -> None:
+    assert video_quality.camera_shake_score([_textured_frame(), _textured_frame()]) == 0.0
+
+
+def test_camera_shake_score_from_bursts__uses_max() -> None:
+    base = _textured_frame()
+    steady = [np.roll(base, shift=4 * i, axis=1) for i in range(6)]
+    jitter_shifts = [0, 15, -12, 14, -11, 13]
+    jitter = [np.roll(base, shift=s, axis=1) for s in jitter_shifts]
+    score = video_quality.camera_shake_score_from_bursts([steady, jitter])
+    assert score == pytest.approx(video_quality.camera_shake_score(jitter))
+
+
 def test_scores_to_metadata_keys() -> None:
     scores = video_quality.VideoQualityScores(
         blur_score=1.0,
@@ -170,6 +213,7 @@ def test_scores_to_metadata_keys() -> None:
         overexposure_ratio=0.2,
         lighting_score=0.3,
         motion_score=4.0,
+        shake_score=5.0,
     )
     meta = video_quality.scores_to_metadata(scores)
     assert set(meta) == {
@@ -179,4 +223,5 @@ def test_scores_to_metadata_keys() -> None:
         video_quality.OVEREXPOSURE_RATIO_KEY,
         video_quality.LIGHTING_SCORE_KEY,
         video_quality.MOTION_SCORE_KEY,
+        video_quality.SHAKE_SCORE_KEY,
     }

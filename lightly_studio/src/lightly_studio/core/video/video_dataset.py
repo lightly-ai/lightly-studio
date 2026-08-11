@@ -269,12 +269,12 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         num_frames: int | None = None,
         max_edge: int | None = None,
     ) -> int:
-        """Score blur, lighting, and motion for videos and store as metadata.
+        """Score blur, lighting, motion, and camera shake for videos and store as metadata.
 
         Samples a few frames per video, computes classical CV quality signals, and
         writes aggregates under metadata keys such as ``blur_score``,
-        ``lighting_score``, and ``motion_score``. Use metadata filters in the GUI
-        or Python query API to screen low-quality videos.
+        ``lighting_score``, ``motion_score``, and ``shake_score``. Use metadata
+        filters in the GUI or Python query API to screen low-quality videos.
 
         Args:
             num_frames: Number of uniformly spaced frames to sample per video.

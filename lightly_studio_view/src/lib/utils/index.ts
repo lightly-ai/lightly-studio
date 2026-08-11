@@ -51,7 +51,8 @@ export {
 export {
     BLUR_SCORE_LOW_MAX,
     LIGHTING_SCORE_LOW_MAX,
-    MOTION_SCORE_LOW_MAX
+    MOTION_SCORE_LOW_MAX,
+    SHAKE_SCORE_HIGH_MIN
 } from './videoQuality/videoQuality';
 export { getURL } from './getURL/getURL';
 export { fetchCollection } from './fetchCollection';

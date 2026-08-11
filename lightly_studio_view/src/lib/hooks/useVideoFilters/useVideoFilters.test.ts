@@ -149,18 +149,24 @@ describe('useVideoFilters', () => {
             ]);
         });
 
-        it('adds blurry / poor lighting / static camera metadata filters', () => {
+        it('adds blurry / poor lighting / static camera / shaky metadata filters', () => {
             const { videoFilter, updateFilterParams } = useVideoFilters();
 
             updateFilterParams({
                 collection_id: 'coll-1',
-                filters: { blurry: true, poor_lighting: true, static_camera: true }
+                filters: {
+                    blurry: true,
+                    poor_lighting: true,
+                    static_camera: true,
+                    shaky: true
+                }
             });
 
             expect(get(videoFilter)?.sample_filter?.metadata_filters).toEqual([
                 { key: 'blur_score', op: '<', value: 50 },
                 { key: 'lighting_score', op: '<', value: 0.45 },
-                { key: 'motion_score', op: '<', value: 3 }
+                { key: 'motion_score', op: '<', value: 3 },
+                { key: 'shake_score', op: '>', value: 4 }
             ]);
         });
     });

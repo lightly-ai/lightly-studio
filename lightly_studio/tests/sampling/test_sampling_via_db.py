@@ -14,6 +14,7 @@ from sqlmodel import Session
 from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import (
     image_resolver,
+    metadata_resolver,
     tag_resolver,
 )
 from lightly_studio.resolvers.image_filter import ImageFilter
@@ -103,21 +104,57 @@ def test_sampling_via_database__embedding_deduplication(
         ],
     )
 
-    sampling_via_database(
-        db_session, sampling_config, input_sample_ids=_all_sample_ids(db_session, collection_id)
-    )
+    input_sample_ids = _all_sample_ids(db_session, collection_id)
+    sampling_via_database(db_session, sampling_config, input_sample_ids=input_sample_ids)
 
     tags = tag_resolver.get_all_by_collection_id(db_session, collection_id=collection_id)
-    assert len(tags) == 1
-    assert tags[0].name == "sampling_1"
+    tags_by_name = {tag.name: tag for tag in tags}
+    assert set(tags_by_name) == {"sampling_1", "NOT_sampling_1"}
+
     samples_in_tag = image_resolver.get_all_by_collection_id(
         session=db_session,
         collection_id=collection_id,
-        filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
+        filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags_by_name["sampling_1"].tag_id])),
     ).samples
+    samples_in_left_out_tag = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        filters=ImageFilter(
+            sample_filter=SampleFilter(tag_ids=[tags_by_name["NOT_sampling_1"].tag_id])
+        ),
+    ).samples
+
+    selected_sample_ids = {sample.sample_id for sample in samples_in_tag}
+    left_out_sample_ids = {sample.sample_id for sample in samples_in_left_out_tag}
 
     # The stopping condition halts selection before reaching the requested 10 samples.
     assert 2 <= len(samples_in_tag) < 10
+    assert selected_sample_ids | left_out_sample_ids == set(input_sample_ids)
+    assert selected_sample_ids.isdisjoint(left_out_sample_ids)
+
+    # Left-out samples point at the nearest kept sample via duplicate_of metadata.
+    # Embeddings are [i, i], so nearest in L2 is the selected sample with closest index.
+    selected_positions_by_id = {
+        sample.sample_id: int(sample.file_path_abs.removeprefix("sample_").removesuffix(".jpg"))
+        for sample in samples_in_tag
+    }
+    for left_out_sample in samples_in_left_out_tag:
+        duplicate_of = metadata_resolver.get_value_for_sample(
+            session=db_session,
+            sample_id=left_out_sample.sample_id,
+            key="duplicate_of",
+        )
+        assert duplicate_of is not None
+        assert UUID(duplicate_of) in selected_sample_ids
+
+        left_out_position = int(
+            left_out_sample.file_path_abs.removeprefix("sample_").removesuffix(".jpg")
+        )
+        expected_kept = min(
+            selected_positions_by_id,
+            key=lambda kept_id: abs(left_out_position - selected_positions_by_id[kept_id]),
+        )
+        assert UUID(duplicate_of) == expected_kept
 
     # Each selected sample i has embedding [i, i], so the distance between samples
     # i and j is sqrt(2) * |i - j|. Deduplication guarantees that all selected

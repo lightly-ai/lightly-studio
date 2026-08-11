@@ -172,6 +172,11 @@ class Sampling:
         samples. Fewer than `n_samples_to_select` samples may be selected if the
         stopping condition is reached first.
 
+        Selected samples are tagged with `sampling_result_tag_name`. Left-out
+        near-duplicates are tagged with `NOT_<sampling_result_tag_name>` when at
+        least one sample is left out, and each left-out sample gets `duplicate_of`
+        metadata pointing to the nearest kept sample ID.
+
         Args:
             n_samples_to_select: Maximum number of samples to select.
             sampling_result_tag_name: Tag name for the sampling result.

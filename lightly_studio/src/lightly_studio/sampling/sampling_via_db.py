@@ -39,6 +39,9 @@ from lightly_studio.sampling.sampling_config import (
 from lightly_studio.utils import batching
 
 EPSILON = 1e-6
+# Metadata key set on left-out samples after pure deduplication, pointing at the
+# nearest kept sample ID (string UUID) in embedding space.
+DUPLICATE_OF_METADATA_KEY = "duplicate_of"
 
 logger = logging.getLogger(__name__)
 
@@ -226,7 +229,18 @@ def sampling_via_database(
     First resolves the sampling config to concrete database values.
     Then calls Mundig to run the sampling with pure values.
     Finally creates a tag for the selected set.
+
+    For pure deduplication (a single EmbeddingDeduplicationStrategy), also
+    creates a NOT_<tag_name> tag for the left-out near-duplicate samples and
+    sets ``duplicate_of`` metadata on each left-out sample to the nearest kept
+    sample ID.
     """
+    is_pure_deduplication = len(config.strategies) == 1 and isinstance(
+        config.strategies[0], EmbeddingDeduplicationStrategy
+    )
+    deduplication_strategy = config.strategies[0] if is_pure_deduplication else None
+    left_out_tag_name = f"NOT_{config.sampling_result_tag_name}"
+
     # Check if the tag name is already used
     existing_tag = tag_resolver.get_by_name(
         session=session,
@@ -239,6 +253,19 @@ def sampling_via_database(
             f"collection {config.collection_id}. Please use a different tag name."
         )
         raise ValueError(msg)
+
+    if is_pure_deduplication:
+        existing_left_out_tag = tag_resolver.get_by_name(
+            session=session,
+            tag_name=left_out_tag_name,
+            collection_id=config.collection_id,
+        )
+        if existing_left_out_tag:
+            msg = (
+                f"Tag with name {left_out_tag_name} already exists in the "
+                f"collection {config.collection_id}. Please use a different tag name."
+            )
+            raise ValueError(msg)
 
     n_samples_to_select = min(config.n_samples_to_select, len(input_sample_ids))
     if n_samples_to_select == 0:
@@ -278,6 +305,88 @@ def sampling_via_database(
     )
     tag_resolver.add_sample_ids_to_tag_id(
         session=session, tag_id=tag.tag_id, sample_ids=selected_sample_ids
+    )
+
+    if is_pure_deduplication:
+        left_out_sample_ids = list(set(input_sample_ids) - set(selected_sample_ids))
+        if left_out_sample_ids:
+            left_out_tag = tag_resolver.create(
+                session=session,
+                tag=TagCreate(
+                    collection_id=config.collection_id,
+                    name=left_out_tag_name,
+                    kind="sample",
+                ),
+            )
+            tag_resolver.add_sample_ids_to_tag_id(
+                session=session,
+                tag_id=left_out_tag.tag_id,
+                sample_ids=left_out_sample_ids,
+            )
+            assert isinstance(deduplication_strategy, EmbeddingDeduplicationStrategy)
+            _tag_left_out_duplicates_with_nearest_kept(
+                session=session,
+                context=context,
+                strategy=deduplication_strategy,
+                selected_sample_ids=selected_sample_ids,
+                left_out_sample_ids=left_out_sample_ids,
+            )
+
+
+def _nearest_kept_sample_ids(
+    embeddings: Sequence[Embedding],
+    input_sample_ids: Sequence[UUID],
+    selected_sample_ids: Sequence[UUID],
+    left_out_sample_ids: Sequence[UUID],
+) -> dict[UUID, UUID]:
+    """Map each left-out sample to the nearest selected sample in embedding space.
+
+    Distance is Euclidean (L2), matching Mundig diversifying/deduplication distance.
+    """
+    sample_id_to_idx = {sample_id: i for i, sample_id in enumerate(input_sample_ids)}
+    embedding_matrix = np.asarray(embeddings, dtype=np.float32)
+    selected_indices = [sample_id_to_idx[sample_id] for sample_id in selected_sample_ids]
+    left_out_indices = [sample_id_to_idx[sample_id] for sample_id in left_out_sample_ids]
+    selected_embeddings = embedding_matrix[selected_indices]
+    left_out_embeddings = embedding_matrix[left_out_indices]
+    # Shape (n_left_out, n_selected).
+    distances = np.linalg.norm(
+        left_out_embeddings[:, np.newaxis, :] - selected_embeddings[np.newaxis, :, :],
+        axis=2,
+    )
+    nearest_selected_positions = np.argmin(distances, axis=1)
+    selected_sample_ids_list = list(selected_sample_ids)
+    return {
+        left_out_sample_ids[i]: selected_sample_ids_list[int(nearest_selected_positions[i])]
+        for i in range(len(left_out_sample_ids))
+    }
+
+
+def _tag_left_out_duplicates_with_nearest_kept(
+    session: Session,
+    context: _SamplingContext,
+    strategy: EmbeddingDeduplicationStrategy,
+    selected_sample_ids: Sequence[UUID],
+    left_out_sample_ids: Sequence[UUID],
+) -> None:
+    """Attach duplicate_of metadata linking left-out samples to their nearest kept sample."""
+    embeddings = _get_embeddings_by_sample_ids(
+        session=session,
+        context=context,
+        embedding_model_name=strategy.embedding_model_name,
+    )
+    left_out_to_kept = _nearest_kept_sample_ids(
+        embeddings=embeddings,
+        input_sample_ids=context.input_sample_ids,
+        selected_sample_ids=selected_sample_ids,
+        left_out_sample_ids=left_out_sample_ids,
+    )
+    metadata_resolver.bulk_update_metadata(
+        session=session,
+        sample_metadata=[
+            (left_out_id, {DUPLICATE_OF_METADATA_KEY: str(kept_id)})
+            for left_out_id, kept_id in left_out_to_kept.items()
+        ],
     )
 
 

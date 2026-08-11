@@ -75,6 +75,8 @@ If your dataset has multiple embedding models, pass `embedding_model_name` to sp
 
 Deduplication builds a subset in which no two selected samples are closer than `stopping_condition_minimum_distance` in embedding space. A sample is added to the result only if it is at least that far from every sample already selected; any sample that falls within the threshold is treated as a near-duplicate and skipped. Selection continues until `n_samples_to_select` samples have been collected or no sufficiently distinct sample remains, so fewer than `n_samples_to_select` samples may be returned.
 
+Selected samples are stored under `sampling_result_tag_name`. The left-out near-duplicates are stored under `NOT_<sampling_result_tag_name>` (for example `NOT_deduplicated_sampling`). Each left-out sample also gets a `duplicate_of` metadata field with the sample ID of the nearest kept sample in embedding space. This complementary tagging is only created for pure deduplication runs (a single deduplication strategy, not combined with other strategies), and only when at least one sample is left out.
+
 ```py
 import lightly_studio as ls
 

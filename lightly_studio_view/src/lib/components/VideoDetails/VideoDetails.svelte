@@ -23,6 +23,7 @@
     } from '$lib/utils';
     import VideoSampleMetadata from '../VideoSampleMetadata/VideoSampleMetadata.svelte';
     import SampleDetailsCaptionSegment from '../SampleDetails/SampleDetailsCaptionsSegment/SampleDetailsCaptionSegment.svelte';
+    import JumpToDuplicateSample from '../JumpToDuplicateSample/JumpToDuplicateSample.svelte';
     import SelectClassDialog from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
     import { useVideoFrames } from '$lib/hooks/useVideoFrames/useVideoFrames';
     import { useVideoFrameAnnotations } from '$lib/hooks/useVideoFrameAnnotations/useVideoFrameAnnotations';
@@ -388,6 +389,10 @@
                 {/if}
                 <VideoSampleMetadata {video} />
                 <MetadataSegment metadata_dict={(video?.sample as SampleView).metadata_dict} />
+                <JumpToDuplicateSample
+                    metadataDict={(video?.sample as SampleView).metadata_dict}
+                    {datasetId}
+                />
                 {#if video?.sample?.sample_id}
                     <SampleDetailsCaptionSegment
                         refetch={onVideoUpdate}

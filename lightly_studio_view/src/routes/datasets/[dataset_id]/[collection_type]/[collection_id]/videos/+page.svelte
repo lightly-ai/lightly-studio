@@ -48,7 +48,8 @@
             low_caption_match: $filterParams?.filters?.low_caption_match,
             blurry: $filterParams?.filters?.blurry,
             poor_lighting: $filterParams?.filters?.poor_lighting,
-            static_camera: $filterParams?.filters?.static_camera
+            static_camera: $filterParams?.filters?.static_camera,
+            shaky: $filterParams?.filters?.shaky
         },
         video_bounds: $videoBoundsValues
     });

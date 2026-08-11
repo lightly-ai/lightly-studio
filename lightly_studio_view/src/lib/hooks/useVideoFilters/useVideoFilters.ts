@@ -12,13 +12,15 @@ import {
     BLUR_SCORE_KEY,
     LIGHTING_SCORE_KEY,
     MIN_CAPTION_SEGMENT_MATCH_SCORE_KEY,
-    MOTION_SCORE_KEY
+    MOTION_SCORE_KEY,
+    SHAKE_SCORE_KEY
 } from '$lib/constants';
 import { MATCH_SCORE_LOW_MAX } from '$lib/utils/captionMatchScore/captionMatchScore';
 import {
     BLUR_SCORE_LOW_MAX,
     LIGHTING_SCORE_LOW_MAX,
-    MOTION_SCORE_LOW_MAX
+    MOTION_SCORE_LOW_MAX,
+    SHAKE_SCORE_HIGH_MIN
 } from '$lib/utils/videoQuality/videoQuality';
 
 type MetadataValues = Record<string, { min: number; max: number }>;
@@ -39,6 +41,8 @@ export type VideoFilterParams = {
         poor_lighting?: boolean;
         /** When true, keep only videos with motion_score below the default threshold. */
         static_camera?: boolean;
+        /** When true, keep only videos with shake_score above the default threshold. */
+        shaky?: boolean;
     };
     video_bounds?: VideoFieldsBoundsView | null;
 };
@@ -133,6 +137,14 @@ export const buildVideoFilter = ($filterParams: VideoFilterParams | null): Video
         });
     }
 
+    if ($filterParams.filters?.shaky) {
+        metadataFilters.push({
+            key: SHAKE_SCORE_KEY,
+            op: '>',
+            value: SHAKE_SCORE_HIGH_MIN
+        });
+    }
+
     if (metadataFilters.length > 0) {
         sampleFilter.metadata_filters = metadataFilters;
     }
@@ -156,7 +168,7 @@ const videoFilter = derived(filterParams, ($filterParams): VideoFilter | null =>
 );
 
 const setQualityShortcut = (
-    key: 'blurry' | 'poor_lighting' | 'static_camera',
+    key: 'blurry' | 'poor_lighting' | 'static_camera' | 'shaky',
     enabled: boolean
 ) => {
     const params = get(filterParams);
@@ -221,6 +233,7 @@ export const useVideoFilters = () => {
         setLowCaptionMatch,
         setBlurry: (enabled: boolean) => setQualityShortcut('blurry', enabled),
         setPoorLighting: (enabled: boolean) => setQualityShortcut('poor_lighting', enabled),
-        setStaticCamera: (enabled: boolean) => setQualityShortcut('static_camera', enabled)
+        setStaticCamera: (enabled: boolean) => setQualityShortcut('static_camera', enabled),
+        setShaky: (enabled: boolean) => setQualityShortcut('shaky', enabled)
     };
 };

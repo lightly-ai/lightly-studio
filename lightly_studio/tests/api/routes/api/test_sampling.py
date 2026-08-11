@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from uuid import UUID
 
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
@@ -15,6 +16,7 @@ from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
     image_resolver,
+    metadata_resolver,
     tag_resolver,
     video_resolver,
 )
@@ -161,13 +163,36 @@ def test_create_combination_sampling__deduplication_success(
         session=db_session, tag_name="test_deduplication_sampling", collection_id=collection_id
     )
     assert created_tag is not None
+    left_out_tag = tag_resolver.get_by_name(
+        session=db_session,
+        tag_name="NOT_test_deduplication_sampling",
+        collection_id=collection_id,
+    )
+    assert left_out_tag is not None
 
     tag_filter = ImageFilter(sample_filter=SampleFilter(tag_ids=[created_tag.tag_id]))
     result = image_resolver.get_all_by_collection_id(
         session=db_session, collection_id=collection_id, filters=tag_filter
     )
+    left_out_result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[left_out_tag.tag_id])),
+    )
     # The stopping condition halts selection before reaching the requested 10 samples.
     assert 2 <= len(result.samples) < 10
+    assert len(result.samples) + len(left_out_result.samples) == 20
+    selected_ids = {sample.sample_id for sample in result.samples}
+    left_out_ids = {sample.sample_id for sample in left_out_result.samples}
+    assert selected_ids.isdisjoint(left_out_ids)
+    for left_out_sample in left_out_result.samples:
+        duplicate_of = metadata_resolver.get_value_for_sample(
+            session=db_session,
+            sample_id=left_out_sample.sample_id,
+            key="duplicate_of",
+        )
+        assert duplicate_of is not None
+        assert UUID(duplicate_of) in selected_ids
 
 
 def test_create_combination_sampling__insufficient_samples(
