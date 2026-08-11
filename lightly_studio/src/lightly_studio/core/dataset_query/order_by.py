@@ -183,7 +183,7 @@ class OrderByMetadataField(OrderByExpression):
         )
 
     def _sort_key_expressions(self) -> list[ColumnElement[Any]]:
-        """Return the numerical key, NULL for non-numerical fields, then the raw value."""
+        """Return the numerical key, NULL for non-numerical fields, then the text value."""
         return [self._order_value_expression(), self._extracted_value()]
 
     def to_column_elements(self) -> list[ColumnElement[Any]]:
@@ -193,12 +193,16 @@ class OrderByMetadataField(OrderByExpression):
     def _is_numerical_field(self) -> ColumnElement[bool]:
         """Return whether ``metadata_schema`` records this field as a number.
 
-        Uses the same path syntax as the value, so the two cannot disagree.
+        ``metadata_schema`` maps a top-level key to the name of its type, so the read
+        below yields a type name rather than a value. It is read with the same path
+        syntax as the value so that the two cannot disagree: a dotted path finds nothing
+        here and sorts lexicographically, which is what a nested value has to do anyway.
         """
-        return db_json.json_extract_as_text(
+        schema_type_name = db_json.json_extract_as_text(
             column=self._metadata_alias.metadata_schema,
             field=self.field_name,
-        ).in_(NUMERIC_TYPE_NAMES)
+        )
+        return schema_type_name.in_(NUMERIC_TYPE_NAMES)
 
     def _extracted_value(self) -> ColumnElement[Any]:
         """Return the field's value as text.
