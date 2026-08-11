@@ -22,11 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Deprecated
 
-- The `is_numeric` field on sort expressions in the images-list and adjacent-samples request
-  bodies is ignored and will be removed in a future release. The value type is now taken from
-  the collection's metadata schema. Requests may keep sending the field until then.
-
 ### Removed
+
+- The `is_numeric` field on sort expressions in the images-list and adjacent-samples request
+  bodies. It was already ignored, as the value type is taken from the collection's metadata
+  schema. Requests that still send the field keep working; it is dropped during validation.
 
 - The `cast_to_float` argument of `OrderByMetadataField`. Top-level numerical fields are now
   detected automatically, so passing it is no longer needed: `OrderByMetadataField("score",
