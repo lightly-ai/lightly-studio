@@ -1,5 +1,5 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { writable } from 'svelte/store';
 import SegmentTags from './SegmentTags.svelte';
 import * as hooks from '$lib/hooks';
@@ -203,6 +203,34 @@ describe('SegmentTags', () => {
 
         expect(removeTagFromSampleMock).toHaveBeenCalledWith('sample-1', '2');
         expect(removeTagFromSampleMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps each pending removal disabled independently', async () => {
+        const tags = [
+            { tag_id: '1', name: 'Tag 1' },
+            { tag_id: '2', name: 'Tag 2' }
+        ];
+
+        const resolvers: Array<() => void> = [];
+        removeTagFromSampleMock.mockImplementation(
+            () => new Promise<void>((resolve) => resolvers.push(resolve))
+        );
+
+        render(SegmentTags, {
+            props: {
+                tags,
+                collectionId: 'collection-1',
+                sampleId: 'sample-1'
+            }
+        });
+
+        await fireEvent.click(screen.getByTestId('remove-tag-Tag 1'));
+        await fireEvent.click(screen.getByTestId('remove-tag-Tag 2'));
+
+        resolvers[1]();
+        await waitFor(() => expect(screen.getByTestId('remove-tag-Tag 2')).toBeEnabled());
+
+        expect(screen.getByTestId('remove-tag-Tag 1')).toBeDisabled();
     });
 
     it('calls addExisting when selecting a tag that already exists in the collection', async () => {

@@ -13,7 +13,7 @@
     import PlotHoverPreview from './PlotHoverPreview/PlotHoverPreview.svelte';
     import { getHoverPreviewState } from './PlotHoverPreview/hoverPreviewState';
     import { NoopTooltip, createOverlayProxyReporter } from './PlotHoverPreview/overlayProxy';
-    import { createQuerySelection, createThumbnailUrlResolver } from './PlotHoverPreview';
+    import { createQuerySelection, createThumbnailResolver } from './PlotHoverPreview';
     import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
     import type { EmbeddingRegion } from '$lib/api/lightly_studio_local';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
@@ -454,8 +454,8 @@
             category: $plotData?.category as Uint8Array | undefined
         })
     );
-    const resolveThumbnailUrl = $derived.by(() =>
-        createThumbnailUrlResolver({
+    const resolveThumbnail = $derived.by(() =>
+        createThumbnailResolver({
             route: isAnnotations ? 'annotations' : isVideos ? 'videos' : 'images',
             collectionId
         })
@@ -528,10 +528,7 @@
                             class="pointer-events-none absolute z-10 -translate-x-1/2"
                             style="left: {hoverPreview.left}px; top: {hoverPreview.top}px"
                         >
-                            <PlotHoverPreview
-                                sampleId={hoverPreview.sampleId}
-                                {resolveThumbnailUrl}
-                            />
+                            <PlotHoverPreview sampleId={hoverPreview.sampleId} {resolveThumbnail} />
                         </div>
                     {/if}
 

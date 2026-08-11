@@ -1,7 +1,12 @@
 import { ColorMarker } from '../';
+import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
 import * as utils from '$lib/utils';
-import { render, screen } from '@testing-library/svelte';
-import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+afterEach(() => {
+    useCustomLabelColors().clearCustomColors();
+});
 
 describe('ColorMarker', () => {
     const testId = 'color-swatch-test';
@@ -49,5 +54,33 @@ describe('ColorMarker', () => {
         const marker = screen.getByTestId(testId);
         expect(marker).toHaveStyle(`background-color: ${colorBG.color};`);
         expect(marker).toHaveStyle(`border-color: ${colorBorder.color}`);
+    });
+
+    it('leaves no color override behind when a preview is cancelled', async () => {
+        const { getCustomColor } = useCustomLabelColors();
+        render(ColorMarker, { props: { ...props, enableColorPicker: true } });
+
+        await fireEvent.click(screen.getByRole('button'));
+        await fireEvent.click(screen.getByTitle('#0000ff'));
+        await waitFor(() => expect(getCustomColor(props.label)?.color).toBe('#0000ff'));
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+        expect(getCustomColor(props.label)).toBeUndefined();
+    });
+
+    it('restores the last applied color when the next preview is cancelled', async () => {
+        const { getCustomColor } = useCustomLabelColors();
+        render(ColorMarker, { props: { ...props, enableColorPicker: true } });
+
+        await fireEvent.click(screen.getByRole('button'));
+        await fireEvent.click(screen.getByTitle('#0000ff'));
+        await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+        await fireEvent.click(screen.getByRole('button'));
+        await fireEvent.click(screen.getByTitle('#00ff00'));
+        await waitFor(() => expect(getCustomColor(props.label)?.color).toBe('#00ff00'));
+        await fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+        expect(getCustomColor(props.label)?.color).toBe('#0000ff');
     });
 });

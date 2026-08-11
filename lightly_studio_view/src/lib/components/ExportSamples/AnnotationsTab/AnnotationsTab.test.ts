@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AnnotationsTab from './AnnotationsTab.svelte';
+import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
 
 const pageMock = vi.hoisted(() => ({ params: { collection_id: 'test-collection' } }));
 vi.mock('$app/state', () => ({ page: pageMock }));
@@ -19,17 +20,28 @@ vi.mock('$lib/hooks', () => ({
     useImageFilters: () => ({ imageFilter: imageFilterStore })
 }));
 
+vi.mock('$lib/hooks/useVideoFilters/useVideoFilters', () => ({
+    useVideoFilters: vi.fn()
+}));
+
 const defaultProps = {
     exportFormat: 'object_detection_coco' as const,
     description: 'Export in COCO format',
     annotationSources: [{ id: 'source-1', name: 'Source 1' }],
     selectedAnnotationCollectionId: undefined,
-    testId: 'submit-button-annotations'
+    testId: 'submit-button-annotations',
+    sampleType: 'image' as const
 };
 
 describe('AnnotationsTab', () => {
     beforeEach(() => {
         mocks.exportCollectionAnnotationsPrepare.mockReset();
+        vi.mocked(useVideoFilters).mockReturnValue({
+            videoFilter: writable(null),
+            filterParams: writable(null),
+            updateFilterParams: vi.fn(),
+            updateSampleIds: vi.fn()
+        });
     });
 
     it('renders the description text', () => {
@@ -85,6 +97,39 @@ describe('AnnotationsTab', () => {
                 expect.stringContaining('/export/download/key123'),
                 '_blank'
             );
+        });
+    });
+
+    it('passes the active video filter and annotation source for video classifications', async () => {
+        vi.spyOn(window, 'open').mockReturnValue(null);
+        mocks.exportCollectionAnnotationsPrepare.mockResolvedValue({
+            data: { export_key: 'key123' }
+        });
+        const activeFilter = { filter_type: 'video' as const, width: { min: 100 } };
+        vi.mocked(useVideoFilters).mockReturnValueOnce({
+            videoFilter: writable(activeFilter),
+            filterParams: writable(null),
+            updateFilterParams: vi.fn(),
+            updateSampleIds: vi.fn()
+        });
+        render(AnnotationsTab, {
+            props: {
+                ...defaultProps,
+                exportFormat: 'classification_csv',
+                selectedAnnotationCollectionId: 'source-2',
+                sampleType: 'video'
+            }
+        });
+
+        await fireEvent.click(screen.getByTestId('submit-button-annotations'));
+
+        expect(mocks.exportCollectionAnnotationsPrepare).toHaveBeenCalledWith({
+            path: { collection_id: 'test-collection' },
+            body: {
+                export_format: 'classification_csv',
+                annotation_collection_id: 'source-2',
+                video_filter: activeFilter
+            }
         });
     });
 

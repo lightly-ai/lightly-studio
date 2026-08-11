@@ -23,17 +23,19 @@
 
     const { removeTagFromSample } = useRemoveTagFromSample({ getCollectionId: () => collectionId });
 
-    let removingTagId = $state<string | null>(null);
+    let removingTagIds = $state(new Set<string>());
 
     async function handleRemoveTag(tagId: string) {
-        removingTagId = tagId;
+        removingTagIds = new Set(removingTagIds).add(tagId);
         try {
             await removeTagFromSample(sampleId, tagId);
         } catch {
             toast.error('Failed to remove tag. Please try again.');
             return;
         } finally {
-            removingTagId = null;
+            const remaining = new Set(removingTagIds);
+            remaining.delete(tagId);
+            removingTagIds = remaining;
         }
         onRefetch();
     }
@@ -96,7 +98,7 @@
                     <Button
                         icon={X}
                         ariaLabel={`Remove tag ${tag.name}`}
-                        isPending={removingTagId === tag.tag_id}
+                        isPending={removingTagIds.has(tag.tag_id)}
                         buttonProps={{
                             size: 'sm',
                             class: 'size-6 rounded-full p-1 text-muted-foreground hover:text-destructive-text',

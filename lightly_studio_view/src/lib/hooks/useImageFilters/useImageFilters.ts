@@ -129,8 +129,7 @@ const imageSortBy = writable<SortExpr[] | null>([
     {
         source: 'image',
         field_name: 'file_path_abs',
-        direction: SortDirection.ASC,
-        is_numeric: false
+        direction: SortDirection.ASC
     }
 ]);
 

@@ -44,8 +44,7 @@ describe('useOrderBy', () => {
                 {
                     source: 'image',
                     field_name: 'file_name',
-                    direction: SortDirection.DESC,
-                    is_numeric: false
+                    direction: SortDirection.DESC
                 }
             ]);
             const { selectedDirection } = useOrderBy({
@@ -70,8 +69,7 @@ describe('useOrderBy', () => {
                 {
                     source: 'image',
                     field_name: 'file_name',
-                    direction: SortDirection.ASC,
-                    is_numeric: false
+                    direction: SortDirection.ASC
                 }
             ]);
             const { selectedLabel } = useOrderBy({
@@ -87,16 +85,14 @@ describe('useOrderBy', () => {
                 {
                     source: 'metadata',
                     value: 'brightness',
-                    label: 'metadata.brightness',
-                    is_numeric: true
+                    label: 'metadata.brightness'
                 }
             ]);
             imageSortBy.set([
                 {
                     source: 'metadata',
                     field_name: 'brightness',
-                    direction: SortDirection.ASC,
-                    is_numeric: true
+                    direction: SortDirection.ASC
                 }
             ]);
             const { selectedLabel } = useOrderBy({
@@ -148,8 +144,7 @@ describe('useOrderBy', () => {
                 {
                     source: 'image',
                     field_name: 'width',
-                    direction: SortDirection.ASC,
-                    is_numeric: false
+                    direction: SortDirection.ASC
                 }
             ]);
             const { isFieldSelected } = useOrderBy({
@@ -208,8 +203,7 @@ describe('useOrderBy', () => {
                 {
                     source: 'image',
                     field_name: 'width',
-                    direction: SortDirection.ASC,
-                    is_numeric: false
+                    direction: SortDirection.ASC
                 }
             ]);
 
@@ -230,8 +224,7 @@ describe('useOrderBy', () => {
                 {
                     source: 'image',
                     field_name: 'file_name',
-                    direction: SortDirection.ASC,
-                    is_numeric: false
+                    direction: SortDirection.ASC
                 }
             ]);
         });
@@ -241,8 +234,7 @@ describe('useOrderBy', () => {
                 {
                     source: 'image',
                     field_name: 'file_name',
-                    direction: SortDirection.ASC,
-                    is_numeric: false
+                    direction: SortDirection.ASC
                 }
             ]);
             const { handleFieldClick } = useOrderBy({
@@ -260,8 +252,7 @@ describe('useOrderBy', () => {
                 {
                     source: 'image',
                     field_name: 'file_name',
-                    direction: SortDirection.DESC,
-                    is_numeric: false
+                    direction: SortDirection.DESC
                 }
             ]);
             const { handleFieldClick } = useOrderBy({
@@ -275,13 +266,12 @@ describe('useOrderBy', () => {
                 {
                     source: 'image',
                     field_name: 'width',
-                    direction: SortDirection.DESC,
-                    is_numeric: false
+                    direction: SortDirection.DESC
                 }
             ]);
         });
 
-        it('sets is_numeric true for numeric metadata fields', () => {
+        it('selects a metadata field', () => {
             const { handleFieldClick } = useOrderBy({
                 collectionId: () => 'col1',
                 datasetId: () => 'ds1'
@@ -290,16 +280,14 @@ describe('useOrderBy', () => {
             handleFieldClick({
                 source: 'metadata',
                 value: 'score',
-                label: 'metadata.score',
-                is_numeric: true
+                label: 'metadata.score'
             });
 
             expect(updateSortBy).toHaveBeenCalledWith([
                 {
                     source: 'metadata',
                     field_name: 'score',
-                    direction: SortDirection.ASC,
-                    is_numeric: true
+                    direction: SortDirection.ASC
                 }
             ]);
         });
@@ -345,8 +333,7 @@ describe('useOrderBy', () => {
                 {
                     source: 'image',
                     field_name: 'file_name',
-                    direction: SortDirection.ASC,
-                    is_numeric: false
+                    direction: SortDirection.ASC
                 }
             ]);
             const { toggleDirection } = useOrderBy({
@@ -359,8 +346,7 @@ describe('useOrderBy', () => {
                 {
                     source: 'image',
                     field_name: 'file_name',
-                    direction: SortDirection.DESC,
-                    is_numeric: false
+                    direction: SortDirection.DESC
                 }
             ]);
 
@@ -368,8 +354,7 @@ describe('useOrderBy', () => {
                 {
                     source: 'image',
                     field_name: 'file_name',
-                    direction: SortDirection.DESC,
-                    is_numeric: false
+                    direction: SortDirection.DESC
                 }
             ]);
             toggleDirection();
@@ -377,19 +362,17 @@ describe('useOrderBy', () => {
                 {
                     source: 'image',
                     field_name: 'file_name',
-                    direction: SortDirection.ASC,
-                    is_numeric: false
+                    direction: SortDirection.ASC
                 }
             ]);
         });
 
-        it('preserves is_numeric when toggling direction on a metadata field', () => {
+        it('toggles direction for a metadata field', () => {
             imageSortBy.set([
                 {
                     source: 'metadata',
                     field_name: 'score',
-                    direction: SortDirection.ASC,
-                    is_numeric: true
+                    direction: SortDirection.ASC
                 }
             ]);
             const { toggleDirection } = useOrderBy({
@@ -403,8 +386,7 @@ describe('useOrderBy', () => {
                 {
                     source: 'metadata',
                     field_name: 'score',
-                    direction: SortDirection.DESC,
-                    is_numeric: true
+                    direction: SortDirection.DESC
                 }
             ]);
         });

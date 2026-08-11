@@ -4,6 +4,7 @@ export { Select } from '$lib/components/Select';
 export type { SelectItem, SelectSize } from '$lib/components/Select';
 export { default as AnnotationsGrid } from '$lib/components/AnnotationsGrid/AnnotationsGrid.svelte';
 export { default as AnnotationsGridItem } from '$lib/components/AnnotationsGrid/AnnotationsGridItem/AnnotationsGridItem.svelte';
+export { default as AnnotationItem } from '$lib/components/AnnotationsGrid/AnnotationItem/AnnotationItem.svelte';
 export { default as Card } from '$lib/components/Card/Card.svelte';
 export { default as CardContent } from '$lib/components/CardContent/CardContent.svelte';
 export { default as CombinedMetadataDimensionsFilters } from '$lib/components/CombinedMetadataDimensionsFilters/CombinedMetadataDimensionsFilters.svelte';
