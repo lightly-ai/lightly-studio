@@ -15,6 +15,20 @@ invalid, or stale verdict revokes the bot approval. Add the `no-fast-track`
 label to opt out and defer to a human. Locally, `make run-guardrails` judges
 committed changes.
 
+## Trust and approval model
+
+The guardrails CI runs from the current branch while the bot CI runs from main.
+Therefore the bot code is considered trusted; guardrails code less so.
+
+The bot approves the PR if the guardrails pass. However, the main branch protection
+is set up with CODEOWNERS so that for certain paths a Lightly team member must
+approve, in particular when the code touches the guardrails or CI.
+
+The bot dismisses its past approvals only when a new bot run (after a new push)
+does not pass. Therefore there is a window when the PR keeps an approval while
+a newer commit has not been judged yet. This is intentional; it aligns with the
+current philosophy of not dismissing stale approvals for faster development.
+
 ## Local commands
 
 ```bash
