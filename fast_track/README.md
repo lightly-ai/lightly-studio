@@ -38,21 +38,33 @@ GUARDRAILS=dummy make run-guardrails
 BASE_REF=origin/develop make run-guardrails
 ```
 
-## Coverage guardrails
+## `backend/coverage`
 
-`backend/coverage` does not run tests. The workflow runs the full suite
-(`make test-coverage` in `lightly_studio`) and hands the guardrail its report
-through two env vars; the guardrail then judges each changed file's **added**
-lines at **90%**, per file, not pooled.
+**What it does.** For every backend source file the PR touches, it asks: are the
+lines this PR _added_ covered by tests? Each file is judged on its own at
+**90%**. Coverage is not pooled, so one well-covered file cannot carry an
+uncovered one. The guardrail never runs tests itself; it only reads a report.
+
+**Inputs.** Two, combined per file:
+
+| input      | source                                                            |
+| ---------- | ----------------------------------------------------------------- |
+| the diff   | `BASE_REF...HEAD`, giving the added line numbers per changed file |
+| the report | a full-suite `coverage.py` JSON report, produced by the workflow  |
+
+The report arrives through two env vars:
 
 | var                     | meaning                               |
 | ----------------------- | ------------------------------------- |
 | `BACKEND_COVERAGE_JSON` | path to the `coverage.py` JSON report |
 | `BACKEND_TESTS_PASSED`  | `false` when that test run failed     |
 
-Full-suite coverage inflates numbers via incidental execution — `conftest.py`
-imports the whole app, so imports, decorators and class bodies read as covered
-whether or not a test exercises them.
+**When to expect a verdict.** Only when the PR changes backend source, i.e.
+`lightly_studio/src/lightly_studio/**/*.py`. Tests, `conftest.py`, `__init__.py`
+and the `migrations/`, `examples/` and `vendor/` trees are out of scope; a PR
+touching nothing else passes as `0 file(s) checked`. The workflow runs the full
+suite on the same path filter, so the expensive step is skipped for PRs this
+guardrail would not judge anyway.
 
 Verdicts:
 
