@@ -155,13 +155,16 @@ def apply_metadata_filters(
                 _build_in_condition(metadata_model=metadata_model, metadata_filter=meta_filter)
             )
             continue
-        extract_expr = db_json.json_extract(
-            column=metadata_model.data,
-            field=meta_filter.key,
-            cast_to_float=isinstance(meta_filter.value, (int, float)),
+        # Compare as text unless the value is numeric, so that the operand types match
+        # on both databases; the raw JSON expression compares against neither.
+        extract = (
+            db_json.json_extract_as_float
+            if isinstance(meta_filter.value, (int, float))
+            else db_json.json_extract_as_text
         )
+        extract_expr = extract(column=metadata_model.data, field=meta_filter.key)
         compare_op = _OP_MAP[meta_filter.op]
-        condition = compare_op(extract_expr, db_json.json_literal(meta_filter.value))
+        condition = compare_op(extract_expr, meta_filter.value)
         query = query.where(condition)
 
     return query

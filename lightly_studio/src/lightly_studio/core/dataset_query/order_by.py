@@ -195,14 +195,18 @@ class OrderByMetadataField(OrderByExpression):
 
         Uses the same path syntax as the value, so the two cannot disagree.
         """
-        return db_json.json_extract(
+        return db_json.json_extract_as_text(
             column=self._metadata_alias.metadata_schema,
             field=self.field_name,
-        ).in_([db_json.json_literal(type_name) for type_name in NUMERIC_TYPE_NAMES])
+        ).in_(NUMERIC_TYPE_NAMES)
 
     def _extracted_value(self) -> ColumnElement[Any]:
-        """Return the raw JSON value of the field."""
-        return db_json.json_extract(column=self._metadata_alias.data, field=self.field_name)
+        """Return the field's value as text.
+
+        Text rather than raw JSON because PostgreSQL can neither order by nor cast a
+        ``json`` value, and because it makes both databases sort undecorated values.
+        """
+        return db_json.json_extract_as_text(column=self._metadata_alias.data, field=self.field_name)
 
     def apply_joins(self, query: SelectT) -> SelectT:
         """Left-outer-join aliased ``SampleMetadataTable`` on ``sample_id``."""

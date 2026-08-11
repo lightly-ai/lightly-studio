@@ -2,12 +2,28 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 import sqlalchemy
 from duckdb_engine import Dialect
-from sqlalchemy.dialects import postgresql, sqlite
+from sqlalchemy.dialects import postgresql
 
 from lightly_studio.database import db_json
+
+# Both databases speak the same JSON operators, so every expression below has to
+# compile identically for each of them.
+_DIALECTS = [Dialect(), postgresql.dialect()]  # type: ignore[no-untyped-call]
+
+_COLUMN = sqlalchemy.column("data", sqlalchemy.JSON)
+
+# A key that closes the string literal and appends SQL, if it were interpolated.
+_INJECTION_KEY = "x') AS FLOAT), (SELECT 1 FROM secrets"
+_SPECIAL_KEYS = [_INJECTION_KEY, "owner's key", 'say "hi"', "back\\slash", "path/to~key"]
+
+
+def _compile(expression: Any, dialect: Any) -> Any:
+    return expression.compile(dialect=dialect)
 
 
 @pytest.mark.parametrize(
@@ -18,282 +34,112 @@ from lightly_studio.database import db_json
         ("a.b.c", ["a", "b", "c"]),
         ("test_dict.nested_list[0]", ["test_dict", "nested_list", 0]),
         ("nested_list[10][2]", ["nested_list", 10, 2]),
-        # Only integer brackets are indices; anything else stays part of the key.
+        ("nested_list[-1]", ["nested_list", -1]),
+        # Only integer brackets are indices; anything else becomes a key of its own.
         ("weird[key]", ["weird", "[key]"]),
         ("weird[0x1]", ["weird", "[0x1]"]),
+        # The largest indices PostgreSQL subscripts accept.
+        ("nested_list[2147483647]", ["nested_list", 2147483647]),
+        ("nested_list[-2147483648]", ["nested_list", -2147483648]),
     ],
 )
 def test_parse_field_path(field: str, expected: list[str | int]) -> None:
     assert db_json._parse_field_path(field) == expected
 
 
+@pytest.mark.parametrize("index", ["2147483648", "-2147483649", "99999999999999999999"])
+def test_parse_field_path__out_of_range_index_stays_a_key(index: str) -> None:
+    """An index PostgreSQL cannot subscript with addresses nothing, so it stays a key."""
+    assert db_json._parse_field_path(f"nested_list[{index}]") == ["nested_list", f"[{index}]"]
+
+
+@pytest.mark.parametrize("dialect", _DIALECTS)
+def test_json_extract__simple_key(dialect: Any) -> None:
+    result = _compile(db_json.json_extract(column=_COLUMN, field="temperature"), dialect)
+    assert str(result) == "data -> %(data_1)s"
+    assert result.params == {"data_1": "temperature"}
+
+
+@pytest.mark.parametrize("dialect", _DIALECTS)
+def test_json_extract__nested_key(dialect: Any) -> None:
+    """Each segment is its own bound step, so no key can be read as path syntax."""
+    result = _compile(db_json.json_extract(column=_COLUMN, field="test_dict.int_key"), dialect)
+    assert str(result) == "(data -> %(data_1)s) -> %(param_1)s"
+    assert result.params == {"data_1": "test_dict", "param_1": "int_key"}
+
+
+@pytest.mark.parametrize("dialect", _DIALECTS)
+def test_json_extract__array_index(dialect: Any) -> None:
+    result = _compile(db_json.json_extract(column=_COLUMN, field="nested_list[0]"), dialect)
+    assert str(result) == "(data -> %(data_1)s) -> %(param_1)s"
+    assert result.params == {"data_1": "nested_list", "param_1": 0}
+
+
+@pytest.mark.parametrize("dialect", _DIALECTS)
 @pytest.mark.parametrize("index", [-1, -3])
-def test_parse_field_path__negative_index(index: int) -> None:
-    assert db_json._parse_field_path(f"nested_list[{index}]") == ["nested_list", index]
+def test_json_extract__negative_index(dialect: Any, index: int) -> None:
+    """Both databases subscript from the end natively, so the index passes straight through."""
+    result = _compile(db_json.json_extract(column=_COLUMN, field=f"nested_list[{index}]"), dialect)
+    assert result.params == {"data_1": "nested_list", "param_1": index}
 
 
-@pytest.mark.parametrize(
-    ("segments", "expected"),
-    [
-        (["a", "b"], ["/a/b"]),
-        (["a", "list", 0], ["/a/list/0"]),
-        # A pointer cannot count from the end, so each negative index is its own step.
-        (["a", "list", -1], ["/a/list", "$[-1]"]),
-        (["a", "list", -3, "name"], ["/a/list", "$[-3]", "/name"]),
-        (["m", -1, -2], ["/m", "$[-1]", "$[-2]"]),
-    ],
-)
-def test_to_duckdb_paths(segments: list[str | int], expected: list[str]) -> None:
-    assert db_json._to_duckdb_paths(segments) == expected
-
-
-@pytest.mark.parametrize("index", [-1, -3])
-def test_json_extract__duckdb_negative_index(index: int) -> None:
-    """A negative index needs a second extraction on what the pointer returned."""
-    expr = db_json.json_extract(column=sqlalchemy.column("data"), field=f"nested_list[{index}]")
-    result = expr.compile(dialect=Dialect())
-    assert str(result) == "json_extract(json_extract(data, %(param_1)s), %(param_2)s)"
-    assert result.params == {"param_1": "/nested_list", "param_2": f"$[{index}]"}
-
-
-@pytest.mark.parametrize("index", [-1, -3])
-def test_json_extract__pg_negative_index(index: int) -> None:
-    """PostgreSQL subscripts count from the end natively, so the chain is unbroken."""
-    expr = db_json.json_extract(column=sqlalchemy.column("data"), field=f"nested_list[{index}]")
-    result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
-    assert str(result) == f"data->%(param_1)s->>{index}"
-    assert result.params == {"param_1": "nested_list"}
-
-
-def test_json_extract__duckdb_negative_index_then_key() -> None:
-    """Segments after a negative index are extracted from its result."""
-    expr = db_json.json_extract(column=sqlalchemy.column("data"), field="a.list[-1].name")
-    result = expr.compile(dialect=Dialect())
-    assert str(result) == (
-        "json_extract(json_extract(json_extract(data, %(param_1)s), %(param_2)s), %(param_3)s)"
+@pytest.mark.parametrize("dialect", _DIALECTS)
+def test_json_extract__out_of_range_index_is_a_bound_key(dialect: Any) -> None:
+    """An index wider than int32 raises when subscripted, so it is bound as a key instead."""
+    result = _compile(
+        db_json.json_extract(column=_COLUMN, field="nested_list[2147483648]"), dialect
     )
-    assert result.params == {"param_1": "/a/list", "param_2": "$[-1]", "param_3": "/name"}
+    assert result.params == {"data_1": "nested_list", "param_1": "[2147483648]"}
 
 
-def test_json_extract__pg_negative_index_then_key() -> None:
-    expr = db_json.json_extract(column=sqlalchemy.column("data"), field="a.list[-1].name")
-    result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
-    assert str(result) == "data->%(param_1)s->%(param_2)s->-1->>%(param_3)s"
-    assert result.params == {"param_1": "a", "param_2": "list", "param_3": "name"}
+@pytest.mark.parametrize("dialect", _DIALECTS)
+@pytest.mark.parametrize("field", _SPECIAL_KEYS)
+def test_json_extract__special_key_is_bound(dialect: Any, field: str) -> None:
+    """Special characters stay inside the parameter and never reach the statement."""
+    result = _compile(db_json.json_extract(column=_COLUMN, field=field), dialect)
+    assert str(result) == "data -> %(data_1)s"
+    assert result.params == {"data_1": field}
 
 
-@pytest.mark.parametrize(
-    ("segments", "expected"),
-    [
-        (["temperature"], "/temperature"),
-        (["a", "b"], "/a/b"),
-        (["a", "list", 0], "/a/list/0"),
-        (["path/to~key"], "/path~1to~0key"),
-        (["owner's key"], "/owner's key"),
-    ],
-)
-def test_to_json_pointer(segments: list[str | int], expected: str) -> None:
-    assert db_json._to_json_pointer(segments) == expected
+@pytest.mark.parametrize("dialect", _DIALECTS)
+@pytest.mark.parametrize("field", [f"weird[{_INJECTION_KEY}]", "weird[0; DROP TABLE t]"])
+def test_json_extract__non_integer_index_is_bound(dialect: Any, field: str) -> None:
+    """Brackets holding anything but an integer are bound as keys, so they smuggle nothing."""
+    result = _compile(db_json.json_extract(column=_COLUMN, field=field), dialect)
+    assert str(result) == "(data -> %(data_1)s) -> %(param_1)s"
 
 
-def test_json_extract__duckdb_simple_key() -> None:
-    expr = db_json.json_extract(column=sqlalchemy.column("data"), field="temperature")
-    result = expr.compile(dialect=Dialect())
-    assert str(result) == "json_extract(data, %(param_1)s)"
-    assert result.params == {"param_1": "/temperature"}
+@pytest.mark.parametrize("dialect", _DIALECTS)
+def test_json_extract_as_float(dialect: Any) -> None:
+    result = _compile(db_json.json_extract_as_float(column=_COLUMN, field="temperature"), dialect)
+    assert str(result) == "CAST(data ->> %(data_1)s AS FLOAT)"
+    assert result.params == {"data_1": "temperature"}
 
 
-def test_json_extract__duckdb_nested_key() -> None:
-    expr = db_json.json_extract(column=sqlalchemy.column("data"), field="test_dict.int_key")
-    result = expr.compile(dialect=Dialect())
-    assert str(result) == "json_extract(data, %(param_1)s)"
-    assert result.params == {"param_1": "/test_dict/int_key"}
+@pytest.mark.parametrize("dialect", _DIALECTS)
+def test_json_extract_as_text(dialect: Any) -> None:
+    result = _compile(db_json.json_extract_as_text(column=_COLUMN, field="temperature"), dialect)
+    assert str(result) == "CAST(data ->> %(data_1)s AS VARCHAR)"
+    assert result.params == {"data_1": "temperature"}
 
 
-def test_json_extract__duckdb_cast_to_float() -> None:
-    expr = db_json.json_extract(
-        column=sqlalchemy.column("data"), field="temperature", cast_to_float=True
-    )
-    result = expr.compile(dialect=Dialect())
-    assert str(result) == "CAST(json_extract(data, %(param_1)s) AS FLOAT)"
-    assert result.params == {"param_1": "/temperature"}
+@pytest.mark.parametrize("dialect", _DIALECTS)
+@pytest.mark.parametrize("field", ["site.name", *_SPECIAL_KEYS])
+def test_json_extract_string__key_is_literal_and_bound(dialect: Any, field: str) -> None:
+    """The whole field is one key, so a dot in it does not step into a nested object."""
+    result = _compile(db_json.json_extract_string(column=_COLUMN, field=field), dialect)
+    assert str(result) == "CAST(data ->> %(data_1)s AS VARCHAR)"
+    assert result.params == {"data_1": field}
 
 
-def test_json_extract__duckdb_array_index() -> None:
-    expr = db_json.json_extract(column=sqlalchemy.column("data"), field="test_dict.nested_list[0]")
-    result = expr.compile(dialect=Dialect())
-    assert str(result) == "json_extract(data, %(param_1)s)"
-    assert result.params == {"param_1": "/test_dict/nested_list/0"}
-
-
-def test_json_extract__pg_simple_key() -> None:
-    expr = db_json.json_extract(column=sqlalchemy.column("data"), field="temperature")
-    # SQLAlchemy dialect factory functions lack type stubs.
-    result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
-    assert str(result) == "data->>%(param_1)s"
-    assert result.params == {"param_1": "temperature"}
-
-
-def test_json_extract__pg_nested_key() -> None:
-    expr = db_json.json_extract(column=sqlalchemy.column("data"), field="test_dict.int_key")
-    result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
-    assert str(result) == "data->%(param_1)s->>%(param_2)s"
-    assert result.params == {"param_1": "test_dict", "param_2": "int_key"}
-
-
-def test_json_extract__pg_deeply_nested_key() -> None:
-    expr = db_json.json_extract(column=sqlalchemy.column("data"), field="a.b.c")
-    result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
-    assert str(result) == "data->%(param_1)s->%(param_2)s->>%(param_3)s"
-    assert result.params == {"param_1": "a", "param_2": "b", "param_3": "c"}
-
-
-def test_json_extract__pg_cast_to_float() -> None:
-    expr = db_json.json_extract(
-        column=sqlalchemy.column("data"), field="temperature", cast_to_float=True
-    )
-    result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
-    assert str(result) == "(data->>%(param_1)s)::float"
-    assert result.params == {"param_1": "temperature"}
-
-
-def test_json_extract__pg_nested_cast_to_float() -> None:
-    expr = db_json.json_extract(
-        column=sqlalchemy.column("data"), field="test_dict.int_key", cast_to_float=True
-    )
-    result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
-    assert str(result) == "(data->%(param_1)s->>%(param_2)s)::float"
-    assert result.params == {"param_1": "test_dict", "param_2": "int_key"}
-
-
-def test_json_extract__pg_array_index() -> None:
-    expr = db_json.json_extract(column=sqlalchemy.column("data"), field="test_dict.nested_list[0]")
-    result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
-    assert str(result) == "data->%(param_1)s->%(param_2)s->>0"
-    assert result.params == {"param_1": "test_dict", "param_2": "nested_list"}
-
-
-@pytest.mark.parametrize("dialect", [Dialect(), postgresql.dialect()])  # type: ignore[no-untyped-call]
-def test_json_extract__repeated_renders_share_one_parameter(dialect: object) -> None:
+@pytest.mark.parametrize("dialect", _DIALECTS)
+def test_json_extract__repeated_renders_share_one_parameter(dialect: Any) -> None:
     """One parameter per key, so GROUP BY renders the same expression as SELECT."""
-    expr = db_json.json_extract(column=sqlalchemy.column("data"), field="score")
+    expr = db_json.json_extract(column=_COLUMN, field="score")
     query = sqlalchemy.select(expr).group_by(expr)
 
-    result = query.compile(dialect=dialect)  # type: ignore[arg-type]
+    result = _compile(query, dialect)
 
     assert len(result.params) == 1
     select_sql, group_by_sql = str(result).split(" GROUP BY ")
     assert group_by_sql.strip() in select_sql
-
-
-# A key that closes the string literal and appends SQL, if it were interpolated.
-_INJECTION_KEY = "x') AS FLOAT), (SELECT 1 FROM secrets"
-
-
-@pytest.mark.parametrize("field", [_INJECTION_KEY, "owner's key", 'say "hi"', "back\\slash"])
-def test_json_extract__duckdb_special_key_is_bound(field: str) -> None:
-    expr = db_json.json_extract(column=sqlalchemy.column("data"), field=field, cast_to_float=True)
-    result = expr.compile(dialect=Dialect())
-    assert str(result) == "CAST(json_extract(data, %(param_1)s) AS FLOAT)"
-    assert result.params == {"param_1": f"/{field}"}
-
-
-@pytest.mark.parametrize("field", [_INJECTION_KEY, "owner's key", 'say "hi"', "back\\slash"])
-def test_json_extract__pg_special_key_is_bound(field: str) -> None:
-    expr = db_json.json_extract(column=sqlalchemy.column("data"), field=field, cast_to_float=True)
-    result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
-    assert str(result) == "(data->>%(param_1)s)::float"
-    assert result.params == {"param_1": field}
-
-
-@pytest.mark.parametrize("field", [f"weird[{_INJECTION_KEY}]", "weird[0; DROP TABLE t]"])
-def test_json_extract__pg_non_integer_index_is_bound(field: str) -> None:
-    """Only integer indices render unquoted, so brackets cannot smuggle in SQL."""
-    expr = db_json.json_extract(column=sqlalchemy.column("data"), field=field)
-    result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
-    assert str(result) == "data->%(param_1)s->>%(param_2)s"
-
-
-def test_json_extract__sqlite_raises() -> None:
-    expr = db_json.json_extract(column=sqlalchemy.column("data"), field="key")
-    with pytest.raises(NotImplementedError, match="Unsupported dialect: sqlite"):
-        expr.compile(dialect=sqlite.dialect())
-
-
-def test_json_extract_string__duckdb() -> None:
-    expr = db_json.json_extract_string(column=sqlalchemy.column("data"), field="location")
-    result = expr.compile(dialect=Dialect())
-    assert str(result) == "json_extract_string(data, %(param_1)s)"
-    assert result.params == {"param_1": "location"}
-
-
-def test_json_extract_string__postgresql() -> None:
-    expr = db_json.json_extract_string(column=sqlalchemy.column("data"), field="location")
-    result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
-    assert str(result) == "data->>%(param_1)s"
-    assert result.params == {"param_1": "location"}
-
-
-@pytest.mark.parametrize("field", ["site.name", "owner's site"])
-def test_json_extract_string__special_key_is_bound(field: str) -> None:
-    expr = db_json.json_extract_string(column=sqlalchemy.column("data"), field=field)
-    duckdb_result = expr.compile(dialect=Dialect())
-    postgres_result = expr.compile(
-        dialect=postgresql.dialect()  # type: ignore[no-untyped-call]
-    )
-
-    assert str(duckdb_result) == "json_extract_string(data, %(param_1)s)"
-    assert duckdb_result.params == {"param_1": field}
-    assert str(postgres_result) == "data->>%(param_1)s"
-    assert postgres_result.params == {"param_1": field}
-
-
-@pytest.mark.parametrize(
-    ("field", "expected"),
-    [
-        ("site.name", "/site.name"),
-        ("owner's site", "/owner's site"),
-        ("path/to~site", "/path~1to~0site"),
-    ],
-)
-def test_json_top_level_key_type__duckdb_path(field: str, expected: str) -> None:
-    type_ = db_json._JsonTopLevelKeyType()
-    assert type_.process_bind_param(value=field, dialect=Dialect()) == expected
-
-
-def test_json_extract_string__sqlite_raises() -> None:
-    expr = db_json.json_extract_string(column=sqlalchemy.column("data"), field="location")
-    with pytest.raises(NotImplementedError, match="Unsupported dialect: sqlite"):
-        expr.compile(dialect=sqlite.dialect())
-
-
-def test_json_literal__duckdb_string_value() -> None:
-    """String values are JSON-encoded for DuckDB."""
-    lit = db_json.json_literal("hello")
-    type_ = lit.type
-    assert isinstance(type_, db_json._JsonStringType)
-    assert type_.process_bind_param(value="hello", dialect=Dialect()) == '"hello"'
-
-
-def test_json_literal__pg_string_value() -> None:
-    """String values pass through unchanged for PostgreSQL."""
-    lit = db_json.json_literal("hello")
-    type_ = lit.type
-    assert isinstance(type_, db_json._JsonStringType)
-    # SQLAlchemy dialect factory functions lack type stubs.
-    assert type_.process_bind_param(value="hello", dialect=postgresql.dialect()) == "hello"  # type: ignore[no-untyped-call]
-
-
-def test_json_literal__none() -> None:
-    type_ = db_json._JsonStringType()
-    assert type_.process_bind_param(value=None, dialect=Dialect()) is None
-
-
-def test_json_literal__numeric_value() -> None:
-    lit = db_json.json_literal(10)
-    assert not isinstance(lit.type, db_json._JsonStringType)
-
-
-def test_json_literal__float_value() -> None:
-    lit = db_json.json_literal(1.23)
-    assert not isinstance(lit.type, db_json._JsonStringType)
