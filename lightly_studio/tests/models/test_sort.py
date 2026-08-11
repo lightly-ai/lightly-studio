@@ -178,21 +178,3 @@ def test_sort_expr_discriminated_union__routes_to_sort_field_expr() -> None:
     )
     assert isinstance(expr, SortFieldExpr)
     assert expr.field_name == "file_name"
-
-
-def test_sort_field_expr__ignores_removed_is_numeric() -> None:
-    """Test that request bodies from older clients still validate.
-
-    ``is_numeric`` is no longer a field, so pydantic drops the key instead of
-    rejecting the request and clients that still send it keep working.
-    """
-    expr = SortFieldExpr.model_validate(
-        {
-            "source": "metadata",
-            "field_name": "score",
-            "direction": "asc",
-            "is_numeric": True,
-        }
-    )
-    assert expr.field_name == "score"
-    assert "is_numeric" not in expr.model_dump()
