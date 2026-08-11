@@ -30,7 +30,7 @@ The screen recording below shows the search both by text query "dog" and by past
 
 Search works the same way in the `Annotations` view, where it finds similar objects using
 object-level embeddings. See
-[Object-level embeddings](annotations.md#object-level-embeddings) for details.
+[Object-level embeddings](embeddings.md#object-level-embeddings) for details.
 
 ## Filter in GUI
 
