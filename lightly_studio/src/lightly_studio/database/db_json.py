@@ -23,6 +23,10 @@ from sqlalchemy import ColumnElement, Text
 from sqlalchemy.engine.interfaces import Dialect
 from sqlalchemy.types import TypeDecorator
 
+# Not DatabaseBackend.DUCKDB from db_manager: importing it here closes an import cycle
+# through api.db_tables and the resolvers.
+_DUCKDB_DIALECT = "duckdb"
+
 _ARRAY_INDEX_PATTERN = re.compile(r"^\[(-?[0-9]+)\]$")
 
 # PostgreSQL's "->" subscript takes a 32-bit integer; a wider one raises rather than
@@ -127,7 +131,7 @@ class _JsonKeyType(TypeDecorator[str]):
         Returns:
             The value to send to the database.
         """
-        if value is None or dialect.name != "duckdb":
+        if value is None or dialect.name != _DUCKDB_DIALECT:
             return value
         escaped = value.replace("~", "~0").replace("/", "~1")
         return f"/{escaped}"
