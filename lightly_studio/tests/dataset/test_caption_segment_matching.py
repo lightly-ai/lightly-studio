@@ -80,7 +80,7 @@ def test_score_caption_segments__unnormalized_inputs(mocker: MockerFixture) -> N
 def test_cosine_similarities() -> None:
     segment = np.array([[1.0, 0.0], [1.0, 1.0]], dtype=np.float32)
     caption = np.array([[1.0, 0.0], [1.0, 1.0]], dtype=np.float32)
-    scores = caption_segment_matching._cosine_similarities(
+    scores = caption_segment_matching.cosine_similarities(
         segment_embeddings=segment,
         caption_embeddings=caption,
     )

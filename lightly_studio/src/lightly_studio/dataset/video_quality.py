@@ -15,9 +15,7 @@ from typing import Any
 from uuid import UUID
 
 import cv2
-import fsspec
 import numpy as np
-from av import FFmpegError, container
 from av.container import InputContainer
 from numpy.typing import NDArray
 from sqlmodel import Session
@@ -27,12 +25,16 @@ from lightly_studio.core.file_outcome_report import (
     BrokenInputFileError,
     MissingInputFileError,
 )
+from lightly_studio.dataset.video_frame_io import (
+    DEFAULT_VIDEO_CHANNEL,
+    OpenedVideo,
+    open_video_container,
+)
 from lightly_studio.resolvers import metadata_resolver, video_resolver
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_VIDEO_CHANNEL = 0
 DEFAULT_NUM_FRAMES = 8
 DEFAULT_MAX_EDGE = 512
 # Dense short bursts catch high-frequency handheld shake; sparse whole-video
@@ -125,27 +127,75 @@ def score_video_quality(
         MissingInputFileError: If the video path does not resolve.
         BrokenInputFileError: If the video cannot be decoded.
     """
-    shake_cfg = shake_sampling or ShakeSamplingConfig()
-    if num_frames < 1:
-        raise ValueError(f"num_frames must be >= 1, got {num_frames}.")
-    if max_edge < 1:
-        raise ValueError(f"max_edge must be >= 1, got {max_edge}.")
-    if shake_cfg.num_bursts < 1:
-        raise ValueError(f"shake_bursts must be >= 1, got {shake_cfg.num_bursts}.")
-    if shake_cfg.frames_per_burst < _MIN_FRAMES_FOR_SHAKE:
-        raise ValueError(
-            f"shake_frames_per_burst must be >= {_MIN_FRAMES_FOR_SHAKE}, "
-            f"got {shake_cfg.frames_per_burst}."
+    _validate_quality_sampling_args(
+        num_frames=num_frames,
+        max_edge=max_edge,
+        shake_sampling=shake_sampling or ShakeSamplingConfig(),
+    )
+    with open_video_container(video_path) as opened:
+        return score_opened_video_quality(
+            opened=opened,
+            num_frames=num_frames,
+            max_edge=max_edge,
+            shake_sampling=shake_sampling,
         )
 
-    quality_frames, bursts = _sample_quality_and_shake_frames(
-        filepath=video_path,
+
+def score_opened_video_quality(
+    opened: OpenedVideo,
+    *,
+    num_frames: int = DEFAULT_NUM_FRAMES,
+    max_edge: int = DEFAULT_MAX_EDGE,
+    shake_sampling: ShakeSamplingConfig | None = None,
+) -> VideoQualityScores:
+    """Score quality metrics from an already-open video container.
+
+    Args:
+        opened: Video opened via ``open_video_container``.
+        num_frames: Number of uniformly spaced frames for blur/lighting/motion.
+        max_edge: Max longest-edge length after resize. Must be >= 1.
+        shake_sampling: Dense-burst sampling config for shake. Uses defaults when omitted.
+
+    Returns:
+        Aggregated ``VideoQualityScores``.
+
+    Raises:
+        ValueError: If sampling parameters are invalid.
+        BrokenInputFileError: If frames cannot be decoded.
+    """
+    shake_cfg = shake_sampling or ShakeSamplingConfig()
+    _validate_quality_sampling_args(
+        num_frames=num_frames,
+        max_edge=max_edge,
+        shake_sampling=shake_cfg,
+    )
+    quality_frames, bursts = _sample_quality_and_shake_frames_from_opened(
+        opened=opened,
         num_frames=num_frames,
         max_edge=max_edge,
         shake_sampling=shake_cfg,
     )
     scores = aggregate_frame_quality(quality_frames)
     return replace(scores, shake_score=camera_shake_score_from_bursts(bursts))
+
+
+def _validate_quality_sampling_args(
+    *,
+    num_frames: int,
+    max_edge: int,
+    shake_sampling: ShakeSamplingConfig,
+) -> None:
+    if num_frames < 1:
+        raise ValueError(f"num_frames must be >= 1, got {num_frames}.")
+    if max_edge < 1:
+        raise ValueError(f"max_edge must be >= 1, got {max_edge}.")
+    if shake_sampling.num_bursts < 1:
+        raise ValueError(f"shake_bursts must be >= 1, got {shake_sampling.num_bursts}.")
+    if shake_sampling.frames_per_burst < _MIN_FRAMES_FOR_SHAKE:
+        raise ValueError(
+            f"shake_frames_per_burst must be >= {_MIN_FRAMES_FOR_SHAKE}, "
+            f"got {shake_sampling.frames_per_burst}."
+        )
 
 
 def aggregate_frame_quality(frames: Sequence[NDArray[np.uint8]]) -> VideoQualityScores:
@@ -364,59 +414,35 @@ def compute_and_store_quality_metadata(
     return len(sample_metadata)
 
 
-def _sample_quality_and_shake_frames(
-    filepath: str,
+def _sample_quality_and_shake_frames_from_opened(
+    opened: OpenedVideo,
     num_frames: int,
     max_edge: int,
     shake_sampling: ShakeSamplingConfig,
 ) -> tuple[list[NDArray[np.uint8]], list[list[NDArray[np.uint8]]]]:
-    """Open a video once and sample quality frames plus dense shake bursts."""
-    fs, fs_path = fsspec.core.url_to_fs(url=filepath)
-    if not fs.exists(fs_path):
-        raise MissingInputFileError(f"Video does not exist: '{filepath}'.")
-
-    try:
-        with (
-            fs.open(path=fs_path, mode="rb") as video_file,
-            container.open(file=video_file) as video_container,
-        ):
-            time_base, duration_seconds = _video_timing(video_container, filepath=filepath)
-            quality_frames = _decode_frames_at_timestamps(
-                video_container=video_container,
-                filepath=filepath,
-                time_base=time_base,
-                timestamps_s=np.linspace(
-                    0.0,
-                    duration_seconds,
-                    num=num_frames,
-                    endpoint=False,
-                    dtype=np.float64,
-                ),
-                max_edge=max_edge,
-            )
-            bursts = _decode_shake_bursts(
-                video_container=video_container,
-                filepath=filepath,
-                time_base=time_base,
-                duration_seconds=duration_seconds,
-                shake_sampling=shake_sampling,
-                max_edge=max_edge,
-            )
-            return quality_frames, bursts
-    except (OSError, FFmpegError, IndexError) as error:
-        raise BrokenInputFileError(f"Unable to read frames from video '{filepath}'.") from error
-
-
-def _video_timing(video_container: InputContainer, *, filepath: str) -> tuple[float, float]:
-    video_stream = video_container.streams.video[DEFAULT_VIDEO_CHANNEL]
-    duration_pts = video_stream.duration
-    raw_time_base = video_stream.time_base
-    if duration_pts is None or duration_pts <= 0 or raw_time_base is None:
-        raise BrokenInputFileError(f"Unable to read frames from video '{filepath}'.")
-    time_base = float(raw_time_base)
-    if time_base <= 0.0:
-        raise BrokenInputFileError(f"Unable to read frames from video '{filepath}'.")
-    return time_base, duration_pts * time_base
+    """Sample quality frames plus dense shake bursts from an open container."""
+    quality_frames = _decode_frames_at_timestamps(
+        video_container=opened.container,
+        filepath=opened.filepath,
+        time_base=opened.time_base,
+        timestamps_s=np.linspace(
+            0.0,
+            opened.duration_s,
+            num=num_frames,
+            endpoint=False,
+            dtype=np.float64,
+        ).tolist(),
+        max_edge=max_edge,
+    )
+    bursts = _decode_shake_bursts(
+        video_container=opened.container,
+        filepath=opened.filepath,
+        time_base=opened.time_base,
+        duration_seconds=opened.duration_s,
+        shake_sampling=shake_sampling,
+        max_edge=max_edge,
+    )
+    return quality_frames, bursts
 
 
 def _decode_shake_bursts(  # noqa: PLR0913
@@ -464,7 +490,6 @@ def _decode_shake_bursts(  # noqa: PLR0913
             )
         )
     return bursts
-
 
 def _decode_consecutive_frames(  # noqa: PLR0913
     video_container: InputContainer,
@@ -559,6 +584,7 @@ __all__ = [
     "laplacian_variance",
     "lighting_score",
     "overexposure_ratio",
+    "score_opened_video_quality",
     "score_video_quality",
     "scores_to_metadata",
     "set_video_quality_metadata",

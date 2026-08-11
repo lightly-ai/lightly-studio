@@ -235,11 +235,13 @@ class TestPerceptionEncoderEmbeddingGenerator:
             def __exit__(self, *args: object) -> None:
                 return None
 
+        from lightly_studio.dataset import video_frame_io
+
         fake_fs = MagicMock()
         fake_fs.exists.return_value = True
         fake_fs.open.return_value.__enter__.return_value = MagicMock()
-        mocker.patch.object(pe_mod.fsspec.core, "url_to_fs", return_value=(fake_fs, "path"))
-        mocker.patch.object(pe_mod.container, "open", return_value=FakeContainer())
+        mocker.patch.object(video_frame_io.fsspec.core, "url_to_fs", return_value=(fake_fs, "path"))
+        mocker.patch.object(video_frame_io.container, "open", return_value=FakeContainer())
 
         preprocess = MagicMock(side_effect=lambda _image: torch.zeros(3, 4, 4))
         pe_mod._load_video_frames(

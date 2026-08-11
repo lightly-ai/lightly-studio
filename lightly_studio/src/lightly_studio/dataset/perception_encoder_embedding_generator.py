@@ -6,10 +6,8 @@ from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
 from uuid import UUID
 
-import fsspec
 import numpy as np
 import torch
-from av import FFmpegError, container
 from av.container import InputContainer
 from numpy.typing import NDArray
 from PIL import Image
@@ -19,9 +17,13 @@ from lightly_studio.core.file_outcome_report import (
     BrokenInputFileError,
     FileOutcome,
     FileOutcomeReport,
-    MissingInputFileError,
 )
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
+from lightly_studio.dataset.video_frame_io import (
+    DEFAULT_VIDEO_CHANNEL,
+    OpenedVideo,
+    open_video_container,
+)
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.utils import batching
 from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transforms
@@ -33,7 +35,6 @@ from .image_embedding import EmbeddingContext
 from .text_embedding import TextEmbeddingContext
 
 MODEL_NAME = "PE-Core-T16-384"
-DEFAULT_VIDEO_CHANNEL = 0
 MAX_BATCH_SIZE: int = 16
 VIDEO_FRAMES_PER_SAMPLE: int = 8
 
@@ -41,15 +42,19 @@ VIDEO_FRAMES_PER_SAMPLE: int = 8
 class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator):
     """Perception Encoder Core embedding model."""
 
-    def __init__(self) -> None:
+    def __init__(self, model_name: str = MODEL_NAME) -> None:
         """Initialize the Perception Encoder Core embedding model.
 
         This method loads the Perception Encoder Core model and its tokenizer. The model
         checkpoint is downloaded and cached locally for future use.
+
+        Args:
+            model_name: Perception Encoder config name (e.g. ``PE-Core-T16-384``).
         """
+        self._model_name = model_name
         LIGHTLY_STUDIO_MODEL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
         self._model, model_path = pe.CLIP.from_config(
-            name=MODEL_NAME, pretrained=True, download_dir=LIGHTLY_STUDIO_MODEL_CACHE_DIR
+            name=model_name, pretrained=True, download_dir=LIGHTLY_STUDIO_MODEL_CACHE_DIR
         )
         self._preprocess = transforms.get_image_transform(self._model.image_size)
         self._tokenizer = transforms.get_text_tokenizer(self._model.context_length)
@@ -75,7 +80,7 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             An EmbeddingModelCreate instance with the model details.
         """
         return EmbeddingModelCreate(
-            name=MODEL_NAME,
+            name=self._model_name,
             embedding_model_hash=self._model_hash,
             embedding_dimension=self._model.output_dim,
             collection_id=collection_id,
@@ -269,16 +274,53 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
         if not intervals:
             return np.empty((0, self._model.output_dim), dtype=np.float32)
 
-        segment_frames = _load_video_segment_frames(
-            filepath=filepath,
+        with open_video_container(filepath) as opened:
+            return self.embed_opened_video_segments(opened=opened, intervals=intervals)
+
+    def embed_opened_video_segments(
+        self,
+        opened: OpenedVideo,
+        intervals: Sequence[tuple[float, float]],
+    ) -> NDArray[np.float32]:
+        """Embed temporal segments from an already-open video container.
+
+        Args:
+            opened: Video opened via ``open_video_container``.
+            intervals: ``(start_time_s, end_time_s)`` pairs. Each interval must satisfy
+                ``0 <= start < end``.
+
+        Returns:
+            Array of shape ``(len(intervals), embedding_dim)`` with L2-normalized
+            embeddings in the same order as ``intervals``.
+
+        Raises:
+            ValueError: If an interval is invalid.
+            BrokenInputFileError: If frames cannot be decoded.
+        """
+        _validate_intervals(intervals)
+        if not intervals:
+            return np.empty((0, self._model.output_dim), dtype=np.float32)
+
+        segment_frames = _load_video_segment_frames_from_opened(
+            opened=opened,
             intervals=intervals,
             preprocess=self._preprocess,
         )
-        embeddings = np.empty((len(intervals), self._model.output_dim), dtype=np.float32)
+        return self._encode_video_frame_tensors(segment_frames)
+
+    def _encode_video_frame_tensors(
+        self,
+        segment_frames: Sequence[torch.Tensor],
+    ) -> NDArray[np.float32]:
+        """Encode preprocessed ``[T, C, H, W]`` video tensors with Perception Encoder."""
+        if not segment_frames:
+            return np.empty((0, self._model.output_dim), dtype=np.float32)
+
+        embeddings = np.empty((len(segment_frames), self._model.output_dim), dtype=np.float32)
         position = 0
         with torch.no_grad():
             for batch in batching.batched(segment_frames, batch_size=MAX_BATCH_SIZE):
-                videos_tensor = torch.stack(batch).to(self._device)
+                videos_tensor = torch.stack(list(batch)).to(self._device)
                 batch_embeddings = (
                     self._model.encode_video(videos_tensor, normalize=True).cpu().numpy()
                 )
@@ -363,37 +405,32 @@ def _load_video_segment_frames(
     Returns:
         One tensor of shape ``[VIDEO_FRAMES_PER_SAMPLE, C, H, W]`` per interval.
     """
-    fs, fs_path = fsspec.core.url_to_fs(url=filepath)
-    if not fs.exists(fs_path):
-        raise MissingInputFileError(f"Video does not exist: '{filepath}'.")
+    with open_video_container(filepath) as opened:
+        return _load_video_segment_frames_from_opened(
+            opened=opened,
+            intervals=intervals,
+            preprocess=preprocess,
+        )
 
-    try:
-        with (
-            fs.open(path=fs_path, mode="rb") as video_file,
-            container.open(file=video_file) as video_container,
-        ):
-            video_stream = video_container.streams.video[DEFAULT_VIDEO_CHANNEL]
-            duration_pts = video_stream.duration
-            time_base = float(video_stream.time_base)
-            if duration_pts is None or duration_pts <= 0 or time_base <= 0.0:
-                raise BrokenInputFileError(f"Unable to read frames from video '{filepath}'.")
 
-            duration_seconds = duration_pts * time_base
-            resolved_intervals = [(0.0, duration_seconds)] if intervals is None else list(intervals)
+def _load_video_segment_frames_from_opened(
+    opened: OpenedVideo,
+    intervals: Sequence[tuple[float, float]] | None,
+    preprocess: Callable[[Image.Image], torch.Tensor],
+) -> list[torch.Tensor]:
+    """Sample frames for each interval from an already-open video."""
+    resolved_intervals = [(0.0, opened.duration_s)] if intervals is None else list(intervals)
 
-            segment_tensors: list[torch.Tensor] = []
-            for start_time_s, end_time_s in resolved_intervals:
-                frames = _decode_frames_in_interval(
-                    video_container=video_container,
-                    time_base=time_base,
-                    interval=(start_time_s, end_time_s),
-                    filepath=filepath,
-                )
-                processed_frames = [preprocess(frame) for frame in frames]
-                segment_tensors.append(torch.stack(processed_frames))
-    except (OSError, FFmpegError, IndexError) as error:
-        raise BrokenInputFileError(f"Unable to read frames from video '{filepath}'.") from error
-
+    segment_tensors: list[torch.Tensor] = []
+    for start_time_s, end_time_s in resolved_intervals:
+        frames = _decode_frames_in_interval(
+            video_container=opened.container,
+            time_base=opened.time_base,
+            interval=(start_time_s, end_time_s),
+            filepath=opened.filepath,
+        )
+        processed_frames = [preprocess(frame) for frame in frames]
+        segment_tensors.append(torch.stack(processed_frames))
     return segment_tensors
 
 
