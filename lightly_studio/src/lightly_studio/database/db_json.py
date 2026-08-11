@@ -53,6 +53,8 @@ class json_extract(GenericFunction[Any]):  # noqa: N801
     - PostgreSQL:  ``(col->>:key)::float``
 
     ``field`` supports dot-separated paths (``a.b.c``) and array indices (``a.list[0]``).
+    Indices count from the front only; JSON Pointer has no notion of a negative index,
+    so ``a.list[-1]`` is read as the key ``[-1]`` and yields NULL.
     """
 
     # Field path and cast flag vary per instance, so caching is unsafe.
@@ -212,8 +214,9 @@ class _JsonStringType(TypeDecorator[str]):
 def _parse_field_path(field: str) -> list[str | int]:
     """Split a field path into key and array-index segments.
 
-    ``"a.list[0]"`` becomes ``["a", "list", 0]``. Bracket groups that do not hold an
-    integer are kept as part of the key, so they cannot reach SQL as an index.
+    ``"a.list[0]"`` becomes ``["a", "list", 0]``. Bracket groups that do not hold a
+    non-negative integer, ``"[-1]"`` included, are kept as part of the key: they cannot
+    reach SQL as an index, and JSON Pointer cannot express them either.
     """
     segments: list[str | int] = []
     # Split on '.' but keep bracket notation (e.g. "nested_list[0]" -> "nested_list", "[0]")

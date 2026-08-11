@@ -18,9 +18,11 @@ from lightly_studio.database import db_json
         ("a.b.c", ["a", "b", "c"]),
         ("test_dict.nested_list[0]", ["test_dict", "nested_list", 0]),
         ("nested_list[10][2]", ["nested_list", 10, 2]),
-        # Only integer brackets are indices; anything else stays part of the key.
+        # Only non-negative integer brackets are indices; anything else stays part of
+        # the key, including "[-1]", which JSON Pointer cannot express.
         ("weird[key]", ["weird", "[key]"]),
         ("weird[0x1]", ["weird", "[0x1]"]),
+        ("nested_list[-1]", ["nested_list", "[-1]"]),
     ],
 )
 def test_parse_field_path(field: str, expected: list[str | int]) -> None:
