@@ -7,6 +7,8 @@ syntax for DuckDB and PostgreSQL.
 from __future__ import annotations
 
 import json
+import re
+from collections.abc import Sequence
 from typing import Any
 
 import sqlalchemy
@@ -17,6 +19,8 @@ from sqlalchemy.sql.compiler import SQLCompiler
 from sqlalchemy.sql.elements import BindParameter
 from sqlalchemy.sql.functions import GenericFunction
 from sqlalchemy.types import TypeDecorator
+
+_ARRAY_INDEX_PATTERN = re.compile(r"^\[([0-9]+)\]$")
 
 
 def json_literal(value: Any) -> BindParameter[Any]:
@@ -37,13 +41,16 @@ def json_literal(value: Any) -> BindParameter[Any]:
 class json_extract(GenericFunction[Any]):  # noqa: N801
     """Extract a value from a JSON column by field path.
 
+    Keys are bound rather than interpolated into SQL, so quotes and other special
+    characters in metadata keys cannot alter the statement.
+
     Compiles to dialect-specific SQL:
-    - DuckDB:      ``json_extract(col, '$.field')``
-    - PostgreSQL:  ``col->>'field'``
+    - DuckDB:      ``json_extract(col, :path)`` with a JSON Pointer path
+    - PostgreSQL:  ``col->>:key``
 
     When *cast_to_float* is ``True``:
-    - DuckDB:      ``CAST(json_extract(col, '$.field') AS FLOAT)``
-    - PostgreSQL:  ``(col->>'field')::float``
+    - DuckDB:      ``CAST(json_extract(col, :path) AS FLOAT)``
+    - PostgreSQL:  ``(col->>:key)::float``
 
     ``field`` supports dot-separated paths (``a.b.c``) and array indices (``a.list[0]``).
     """
@@ -65,8 +72,15 @@ class json_extract(GenericFunction[Any]):  # noqa: N801
             field: Dot-separated path into the JSON object.
             cast_to_float: If True, cast the extracted value to float.
         """
-        self.field = field
+        segments = _parse_field_path(field)
         self.cast_to_float = cast_to_float
+        # Parameters are built once per instance so that repeated renderings of the same
+        # expression (e.g. in SELECT and in GROUP BY) reuse one parameter and stay equal.
+        self.duckdb_path = sqlalchemy.literal(_to_json_pointer(segments), type_=Text())
+        self.postgres_segments = [
+            segment if isinstance(segment, int) else sqlalchemy.literal(segment, type_=Text())
+            for segment in segments
+        ]
         super().__init__(column)
 
 
@@ -99,11 +113,11 @@ def _compile_json_extract_unsupported(
 
 @compiles(json_extract, "duckdb")
 def _compile_json_extract_duckdb(element: json_extract, compiler: SQLCompiler, **kw: Any) -> str:
-    """DuckDB compilation: ``json_extract(col, '$.field')``."""
+    """DuckDB compilation: ``json_extract(col, :path)`` with a bound JSON Pointer."""
     # element.clauses contains a single item: the column passed to __init__.
     col = next(iter(element.clauses))
-    json_path = "$." + element.field
-    expr = f"json_extract({compiler.process(col, **kw)}, '{json_path}')"
+    path = compiler.process(element.duckdb_path, **kw)
+    expr = f"json_extract({compiler.process(col, **kw)}, {path})"
     if element.cast_to_float:
         expr = f"CAST({expr} AS FLOAT)"
     return expr
@@ -113,12 +127,16 @@ def _compile_json_extract_duckdb(element: json_extract, compiler: SQLCompiler, *
 def _compile_json_extract_postgresql(
     element: json_extract, compiler: SQLCompiler, **kw: Any
 ) -> str:
-    """PostgreSQL compilation: ``col->>'field'`` with optional ``::float`` cast."""
+    """PostgreSQL compilation: ``col->>:key`` with optional ``::float`` cast."""
     # element.clauses contains a single item: the column passed to __init__.
     col = next(iter(element.clauses))
     col_sql = compiler.process(col, **kw)
     return _build_pg_json_accessor(
-        column=col_sql, field=element.field, cast_to_float=element.cast_to_float
+        column=col_sql,
+        segments=element.postgres_segments,
+        compiler=compiler,
+        cast_to_float=element.cast_to_float,
+        **kw,
     )
 
 
@@ -161,8 +179,7 @@ class _JsonTopLevelKeyType(TypeDecorator[str]):
         """Convert DuckDB keys to JSON Pointer and leave PostgreSQL keys raw."""
         if value is None or dialect.name != "duckdb":
             return value
-        escaped = value.replace("~", "~0").replace("/", "~1")
-        return f"/{escaped}"
+        return _to_json_pointer([value])
 
 
 class _JsonStringType(TypeDecorator[str]):
@@ -192,32 +209,65 @@ class _JsonStringType(TypeDecorator[str]):
         return value
 
 
-def _build_pg_json_accessor(column: str, field: str, *, cast_to_float: bool = False) -> str:
-    """Build a PostgreSQL JSON accessor expression from a dot-separated field path.
+def _parse_field_path(field: str) -> list[str | int]:
+    """Split a field path into key and array-index segments.
 
-    Converts paths like ``dict.key`` into ``col->'dict'->>'key'`` operator chains.
+    ``"a.list[0]"`` becomes ``["a", "list", 0]``. Bracket groups that do not hold an
+    integer are kept as part of the key, so they cannot reach SQL as an index.
+    """
+    segments: list[str | int] = []
+    # Split on '.' but keep bracket notation (e.g. "nested_list[0]" -> "nested_list", "[0]")
+    for part in field.replace("[", ".[").split("."):
+        index_match = _ARRAY_INDEX_PATTERN.match(part)
+        segments.append(int(index_match.group(1)) if index_match else part)
+    return segments
+
+
+def _to_json_pointer(segments: Sequence[str | int]) -> str:
+    """Join path segments into a JSON Pointer, escaping ``~`` and ``/`` in keys.
+
+    ``["a", "b/c", 0]`` becomes ``"/a/b~1c/0"``. DuckDB reads this syntax, and unlike
+    ``$.a.b`` it treats every segment literally, so dots in keys are not path syntax.
+    """
+    escaped = [
+        str(segment) if isinstance(segment, int) else segment.replace("~", "~0").replace("/", "~1")
+        for segment in segments
+    ]
+    return "/" + "/".join(escaped)
+
+
+def _build_pg_json_accessor(
+    column: str,
+    segments: Sequence[BindParameter[str] | int],
+    compiler: SQLCompiler,
+    *,
+    cast_to_float: bool = False,
+    **kw: Any,
+) -> str:
+    """Build a PostgreSQL JSON accessor expression from path segments.
+
+    Two key segments become a ``col->:key_1->>:key_2`` operator chain. The chain itself
+    is structural, so each key is bound individually; integer indices render unquoted
+    because PostgreSQL requires that form for array access.
 
     Args:
         column: Already-compiled column SQL string.
-        field: Dot-separated path into the JSON object.
+        segments: Bound key parameters and integer array indices, in path order.
+        compiler: The active SQL compiler, used to render the bound keys.
         cast_to_float: If True, wrap the expression in ``(...)::float``.
+        kw: Compilation keyword arguments forwarded to the compiler.
 
     Returns:
         A raw SQL expression string.
     """
-    # Split on '.' but keep bracket notation (e.g. "nested_list[0]" -> "nested_list", "[0]")
-    parts = field.replace("[", ".[").split(".")
-
     accessors: list[str] = []
-    for i, part in enumerate(parts):
-        is_last = i == len(parts) - 1
+    for i, segment in enumerate(segments):
+        is_last = i == len(segments) - 1
         op = "->>" if is_last else "->"
-        if part.startswith("[") and part.endswith("]"):
-            # Array index access: ->>0 or ->0 (unquoted integer)
-            index = part[1:-1]
-            accessors.append(f"{op}{index}")
+        if isinstance(segment, int):
+            accessors.append(f"{op}{segment}")
         else:
-            accessors.append(f"{op}'{part}'")
+            accessors.append(f"{op}{compiler.process(segment, **kw)}")
 
     expr = column + "".join(accessors)
     if cast_to_float:

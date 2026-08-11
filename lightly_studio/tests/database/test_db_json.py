@@ -10,57 +10,49 @@ from sqlalchemy.dialects import postgresql, sqlite
 from lightly_studio.database import db_json
 
 
-def test_build_pg_json_accessor__simple_key() -> None:
-    result = db_json._build_pg_json_accessor(column="metadata.data", field="temperature")
-    assert result == "metadata.data->>'temperature'"
+@pytest.mark.parametrize(
+    ("field", "expected"),
+    [
+        ("temperature", ["temperature"]),
+        ("test_dict.int_key", ["test_dict", "int_key"]),
+        ("a.b.c", ["a", "b", "c"]),
+        ("test_dict.nested_list[0]", ["test_dict", "nested_list", 0]),
+        ("nested_list[10][2]", ["nested_list", 10, 2]),
+        # Only integer brackets are indices; anything else stays part of the key.
+        ("weird[key]", ["weird", "[key]"]),
+        ("weird[0x1]", ["weird", "[0x1]"]),
+    ],
+)
+def test_parse_field_path(field: str, expected: list[str | int]) -> None:
+    assert db_json._parse_field_path(field) == expected
 
 
-def test_build_pg_json_accessor__nested_key() -> None:
-    result = db_json._build_pg_json_accessor(column="metadata.data", field="test_dict.int_key")
-    assert result == "metadata.data->'test_dict'->>'int_key'"
-
-
-def test_build_pg_json_accessor__deeply_nested_key() -> None:
-    result = db_json._build_pg_json_accessor(column="metadata.data", field="a.b.c")
-    assert result == "metadata.data->'a'->'b'->>'c'"
-
-
-def test_build_pg_json_accessor__array_index() -> None:
-    result = db_json._build_pg_json_accessor(
-        column="metadata.data", field="test_dict.nested_list[0]"
-    )
-    assert result == "metadata.data->'test_dict'->'nested_list'->>0"
-
-
-def test_build_pg_json_accessor__cast_to_float() -> None:
-    result = db_json._build_pg_json_accessor(
-        column="metadata.data", field="temperature", cast_to_float=True
-    )
-    assert result == "(metadata.data->>'temperature')::float"
-
-
-def test_build_pg_json_accessor__nested_cast_to_float() -> None:
-    result = db_json._build_pg_json_accessor(
-        column="metadata.data", field="test_dict.int_key", cast_to_float=True
-    )
-    assert result == "(metadata.data->'test_dict'->>'int_key')::float"
-
-
-def test_build_pg_json_accessor__custom_column() -> None:
-    result = db_json._build_pg_json_accessor(column="my_table.json_col", field="key")
-    assert result == "my_table.json_col->>'key'"
+@pytest.mark.parametrize(
+    ("segments", "expected"),
+    [
+        (["temperature"], "/temperature"),
+        (["a", "b"], "/a/b"),
+        (["a", "list", 0], "/a/list/0"),
+        (["path/to~key"], "/path~1to~0key"),
+        (["owner's key"], "/owner's key"),
+    ],
+)
+def test_to_json_pointer(segments: list[str | int], expected: str) -> None:
+    assert db_json._to_json_pointer(segments) == expected
 
 
 def test_json_extract__duckdb_simple_key() -> None:
     expr = db_json.json_extract(column=sqlalchemy.column("data"), field="temperature")
     result = expr.compile(dialect=Dialect())
-    assert str(result) == "json_extract(data, '$.temperature')"
+    assert str(result) == "json_extract(data, %(param_1)s)"
+    assert result.params == {"param_1": "/temperature"}
 
 
 def test_json_extract__duckdb_nested_key() -> None:
     expr = db_json.json_extract(column=sqlalchemy.column("data"), field="test_dict.int_key")
     result = expr.compile(dialect=Dialect())
-    assert str(result) == "json_extract(data, '$.test_dict.int_key')"
+    assert str(result) == "json_extract(data, %(param_1)s)"
+    assert result.params == {"param_1": "/test_dict/int_key"}
 
 
 def test_json_extract__duckdb_cast_to_float() -> None:
@@ -68,26 +60,37 @@ def test_json_extract__duckdb_cast_to_float() -> None:
         column=sqlalchemy.column("data"), field="temperature", cast_to_float=True
     )
     result = expr.compile(dialect=Dialect())
-    assert str(result) == "CAST(json_extract(data, '$.temperature') AS FLOAT)"
+    assert str(result) == "CAST(json_extract(data, %(param_1)s) AS FLOAT)"
+    assert result.params == {"param_1": "/temperature"}
 
 
 def test_json_extract__duckdb_array_index() -> None:
     expr = db_json.json_extract(column=sqlalchemy.column("data"), field="test_dict.nested_list[0]")
     result = expr.compile(dialect=Dialect())
-    assert str(result) == "json_extract(data, '$.test_dict.nested_list[0]')"
+    assert str(result) == "json_extract(data, %(param_1)s)"
+    assert result.params == {"param_1": "/test_dict/nested_list/0"}
 
 
 def test_json_extract__pg_simple_key() -> None:
     expr = db_json.json_extract(column=sqlalchemy.column("data"), field="temperature")
     # SQLAlchemy dialect factory functions lack type stubs.
     result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
-    assert str(result) == "data->>'temperature'"
+    assert str(result) == "data->>%(param_1)s"
+    assert result.params == {"param_1": "temperature"}
 
 
 def test_json_extract__pg_nested_key() -> None:
     expr = db_json.json_extract(column=sqlalchemy.column("data"), field="test_dict.int_key")
     result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
-    assert str(result) == "data->'test_dict'->>'int_key'"
+    assert str(result) == "data->%(param_1)s->>%(param_2)s"
+    assert result.params == {"param_1": "test_dict", "param_2": "int_key"}
+
+
+def test_json_extract__pg_deeply_nested_key() -> None:
+    expr = db_json.json_extract(column=sqlalchemy.column("data"), field="a.b.c")
+    result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
+    assert str(result) == "data->%(param_1)s->%(param_2)s->>%(param_3)s"
+    assert result.params == {"param_1": "a", "param_2": "b", "param_3": "c"}
 
 
 def test_json_extract__pg_cast_to_float() -> None:
@@ -95,7 +98,8 @@ def test_json_extract__pg_cast_to_float() -> None:
         column=sqlalchemy.column("data"), field="temperature", cast_to_float=True
     )
     result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
-    assert str(result) == "(data->>'temperature')::float"
+    assert str(result) == "(data->>%(param_1)s)::float"
+    assert result.params == {"param_1": "temperature"}
 
 
 def test_json_extract__pg_nested_cast_to_float() -> None:
@@ -103,13 +107,56 @@ def test_json_extract__pg_nested_cast_to_float() -> None:
         column=sqlalchemy.column("data"), field="test_dict.int_key", cast_to_float=True
     )
     result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
-    assert str(result) == "(data->'test_dict'->>'int_key')::float"
+    assert str(result) == "(data->%(param_1)s->>%(param_2)s)::float"
+    assert result.params == {"param_1": "test_dict", "param_2": "int_key"}
 
 
 def test_json_extract__pg_array_index() -> None:
     expr = db_json.json_extract(column=sqlalchemy.column("data"), field="test_dict.nested_list[0]")
     result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
-    assert str(result) == "data->'test_dict'->'nested_list'->>0"
+    assert str(result) == "data->%(param_1)s->%(param_2)s->>0"
+    assert result.params == {"param_1": "test_dict", "param_2": "nested_list"}
+
+
+@pytest.mark.parametrize("dialect", [Dialect(), postgresql.dialect()])  # type: ignore[no-untyped-call]
+def test_json_extract__repeated_renders_share_one_parameter(dialect: object) -> None:
+    """One parameter per key, so GROUP BY renders the same expression as SELECT."""
+    expr = db_json.json_extract(column=sqlalchemy.column("data"), field="score")
+    query = sqlalchemy.select(expr).group_by(expr)
+
+    result = query.compile(dialect=dialect)  # type: ignore[arg-type]
+
+    assert len(result.params) == 1
+    select_sql, group_by_sql = str(result).split(" GROUP BY ")
+    assert group_by_sql.strip() in select_sql
+
+
+# A key that closes the string literal and appends SQL, if it were interpolated.
+_INJECTION_KEY = "x') AS FLOAT), (SELECT 1 FROM secrets"
+
+
+@pytest.mark.parametrize("field", [_INJECTION_KEY, "owner's key", 'say "hi"', "back\\slash"])
+def test_json_extract__duckdb_special_key_is_bound(field: str) -> None:
+    expr = db_json.json_extract(column=sqlalchemy.column("data"), field=field, cast_to_float=True)
+    result = expr.compile(dialect=Dialect())
+    assert str(result) == "CAST(json_extract(data, %(param_1)s) AS FLOAT)"
+    assert result.params == {"param_1": f"/{field}"}
+
+
+@pytest.mark.parametrize("field", [_INJECTION_KEY, "owner's key", 'say "hi"', "back\\slash"])
+def test_json_extract__pg_special_key_is_bound(field: str) -> None:
+    expr = db_json.json_extract(column=sqlalchemy.column("data"), field=field, cast_to_float=True)
+    result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
+    assert str(result) == "(data->>%(param_1)s)::float"
+    assert result.params == {"param_1": field}
+
+
+@pytest.mark.parametrize("field", [f"weird[{_INJECTION_KEY}]", "weird[0; DROP TABLE t]"])
+def test_json_extract__pg_non_integer_index_is_bound(field: str) -> None:
+    """Only integer indices render unquoted, so brackets cannot smuggle in SQL."""
+    expr = db_json.json_extract(column=sqlalchemy.column("data"), field=field)
+    result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
+    assert str(result) == "data->%(param_1)s->>%(param_2)s"
 
 
 def test_json_extract__sqlite_raises() -> None:

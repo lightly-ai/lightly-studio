@@ -70,12 +70,13 @@ class TestOrderByField:
 class TestOrderByMetadataField:
     dialect = DuckDBDialect()
 
+    # The key is bound, so it appears as a JSON Pointer literal under literal_binds.
     _NUMERIC_KEY = (
-        "cast(case when (json_extract(metadata_1.metadata_schema, '$.brightness')"
-        " in ('\"integer\"', '\"float\"')) then json_extract(metadata_1.data, '$.brightness') end"
+        "cast(case when (json_extract(metadata_1.metadata_schema, '/brightness')"
+        " in ('\"integer\"', '\"float\"')) then json_extract(metadata_1.data, '/brightness') end"
         " as double precision)"
     )
-    _RAW_KEY = "json_extract(metadata_1.data, '$.brightness')"
+    _RAW_KEY = "json_extract(metadata_1.data, '/brightness')"
 
     def _compile(self, query: object) -> str:
         return str(

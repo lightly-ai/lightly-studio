@@ -177,6 +177,30 @@ def test_metadata_in_filter__missing(db_session: Session) -> None:
     }
 
 
+def test_metadata_filter__key_with_quote(db_session: Session) -> None:
+    """A quote in the key is bound, not compiled into the statement."""
+    collection = create_collection(session=db_session)
+    matching = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/matching.png",
+    ).sample
+    excluded = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/excluded.png",
+    ).sample
+    matching["temp're"] = 25
+    excluded["temp're"] = 15
+
+    filters = SampleFilter(metadata_filters=[Metadata("temp're") > 20])
+    samples = sample_resolver.get_filtered_samples(
+        session=db_session, collection_id=collection.collection_id, filters=filters
+    ).samples
+
+    assert [sample.sample_id for sample in samples] == [matching.sample_id]
+
+
 def test_metadata_in_filter__concrete_and_missing_special_key(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     concrete = create_image(
