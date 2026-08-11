@@ -48,7 +48,7 @@ lines at **90%**, per file, not pooled.
 | var                     | meaning                               |
 | ----------------------- | ------------------------------------- |
 | `BACKEND_COVERAGE_JSON` | path to the `coverage.py` JSON report |
-| `BACKEND_TESTS_PASSED`  | `false` when that test run ended red  |
+| `BACKEND_TESTS_PASSED`  | `false` when that test run failed     |
 
 Full-suite coverage inflates numbers via incidental execution — `conftest.py`
 imports the whole app, so imports, decorators and class bodies read as covered

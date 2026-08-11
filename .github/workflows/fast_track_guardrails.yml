@@ -109,7 +109,7 @@ jobs:
         working-directory: lightly_studio
         run: make build-lightly_studio_view
 
-      # The backend/coverage guardrail only reads a report; the suite runs here. A red
+      # The backend/coverage guardrail only reads a report; the suite runs here. A failing
       # suite must not kill the job — the guardrail turns it into a fail verdict, and the
       # bot still needs the artifact to explain itself.
       - name: Run backend tests with coverage
@@ -151,7 +151,7 @@ jobs:
           # backend/coverage reads the report the test step wrote. Both vars are set
           # unconditionally: when that step is skipped the guardrail finds no file in
           # scope and passes before consulting either. `!= 'failure'` (not `== 'success'`)
-          # so a skipped step does not read as a red suite.
+          # so a skipped step does not read as a failing suite.
           BACKEND_COVERAGE_JSON: ${{ github.workspace }}/lightly_studio/coverage.json
           BACKEND_TESTS_PASSED: ${{ steps.backend-tests.outcome != 'failure' }}
         run: npm run guardrails-ci
