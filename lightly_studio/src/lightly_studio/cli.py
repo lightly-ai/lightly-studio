@@ -26,7 +26,13 @@ def main() -> None:
     default=False,
     help="Re-download the demo dataset even if already cached.",
 )
-def quickstart(port: int | None, force_download: bool) -> None:
+@click.option(
+    "--no-browser",
+    is_flag=True,
+    default=False,
+    help="Do not open a browser automatically once the GUI server is ready.",
+)
+def quickstart(port: int | None, force_download: bool, no_browser: bool) -> None:
     """Launch the GUI preloaded with a COCO object detection evaluation demo dataset."""
     dataset_path = Path(
         lightly_studio.utils.download_example_dataset(
@@ -63,9 +69,7 @@ def quickstart(port: int | None, force_download: bool) -> None:
         config=evaluation_config,
     )
 
-    # TODO(Gabriel, 08/2026): Open the browser automatically once the server is ready.
-    # See LIG-10436.
-    lightly_studio.start_gui(port=port)
+    lightly_studio.start_gui(port=port, open_browser=not no_browser)
 
 
 @main.command()

@@ -5,3 +5,5 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // fast_track/src/guardrails/backend -> fast_track/src/guardrails -> fast_track -> repo root
 export const REPO_ROOT = resolve(__dirname, '../../../..');
 export const BACKEND_DIR = resolve(REPO_ROOT, 'lightly_studio');
+/** Repo-relative path of the backend package, with a trailing slash. */
+export const BACKEND_PREFIX = 'lightly_studio/';

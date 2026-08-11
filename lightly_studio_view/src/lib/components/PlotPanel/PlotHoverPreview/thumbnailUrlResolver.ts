@@ -1,67 +1,79 @@
-import { getAnnotation, getVideoById } from '$lib/api/lightly_studio_local';
+import { getAnnotation, getVideoById, type AnnotationView } from '$lib/api/lightly_studio_local';
 import { getGridFrameURL, getGridImageURL } from '$lib/utils';
 
 const THUMBNAIL_SIZE = 256;
 
 type PlotRoute = 'images' | 'videos' | 'annotations';
 
-export type ThumbnailUrlResolver = (sampleId: string) => Promise<string | null>;
+export interface Thumbnail {
+    url: string;
+    annotation?: AnnotationView;
+}
 
-async function getVideoThumbnailURL(videoSampleId: string): Promise<string | null> {
+export type ThumbnailResolver = (sampleId: string) => Promise<Thumbnail | null>;
+
+async function getVideoThumbnail(videoSampleId: string): Promise<Thumbnail | null> {
     const { data } = await getVideoById({ path: { sample_id: videoSampleId } });
     const frameSampleId = data?.frame?.sample_id;
     if (!frameSampleId) {
         return null;
     }
-    return getGridFrameURL({
-        sampleId: frameSampleId,
-        quality: 'high',
-        renderedWidth: THUMBNAIL_SIZE,
-        renderedHeight: THUMBNAIL_SIZE
-    });
+    return {
+        url: getGridFrameURL({
+            sampleId: frameSampleId,
+            quality: 'high',
+            renderedWidth: THUMBNAIL_SIZE,
+            renderedHeight: THUMBNAIL_SIZE
+        })
+    };
 }
 
-async function getAnnotationThumbnailURL(
+async function getAnnotationThumbnail(
     annotationSampleId: string,
     collectionId: string,
     cacheBuster?: string
-): Promise<string | null> {
+): Promise<Thumbnail | null> {
     const { data } = await getAnnotation({
         path: { collection_id: collectionId, annotation_id: annotationSampleId }
     });
     if (!data?.parent_sample_id) {
         return null;
     }
-    return getImageThumbnailURL(data.parent_sample_id, cacheBuster);
+    return {
+        // Crop coordinates use the original sample resolution, so load the raw image.
+        url: getImageThumbnailURL(data.parent_sample_id, 'raw', cacheBuster),
+        annotation: data
+    };
 }
 
-async function getImageThumbnailURL(
+function getImageThumbnailURL(
     sampleId: string,
+    quality: 'raw' | 'high',
     cacheBuster?: string
-): Promise<string | null> {
+): string {
     return getGridImageURL({
         sampleId,
-        quality: 'high',
+        quality,
         renderedWidth: THUMBNAIL_SIZE,
         renderedHeight: THUMBNAIL_SIZE,
         cacheBuster
     });
 }
 
-function getThumbnailURL(params: {
+async function getThumbnail(params: {
     route: PlotRoute;
     sampleId: string;
     collectionId: string;
     cacheBuster?: string;
-}): Promise<string | null> {
+}): Promise<Thumbnail | null> {
     const { route, sampleId, collectionId, cacheBuster } = params;
     if (route === 'videos') {
-        return getVideoThumbnailURL(sampleId);
+        return getVideoThumbnail(sampleId);
     }
     if (route === 'annotations') {
-        return getAnnotationThumbnailURL(sampleId, collectionId, cacheBuster);
+        return getAnnotationThumbnail(sampleId, collectionId, cacheBuster);
     }
-    return getImageThumbnailURL(sampleId, cacheBuster);
+    return { url: getImageThumbnailURL(sampleId, 'high', cacheBuster) };
 }
 
 /**
@@ -69,23 +81,23 @@ function getThumbnailURL(params: {
  * and annotations need one extra API lookup (poster frame / parent image) to
  * reach a displayable image, so lookups are cached per sample.
  */
-export function createThumbnailUrlResolver(params: {
+export function createThumbnailResolver(params: {
     route: PlotRoute;
     collectionId: string;
     cacheBuster?: string;
-}): ThumbnailUrlResolver {
+}): ThumbnailResolver {
     const { route, collectionId, cacheBuster } = params;
-    const urlBySampleId = new Map<string, Promise<string | null>>();
+    const thumbnailBySampleId = new Map<string, Promise<Thumbnail | null>>();
     return (sampleId) => {
-        const cached = urlBySampleId.get(sampleId);
+        const cached = thumbnailBySampleId.get(sampleId);
         if (cached) {
             return cached;
         }
-        const url = getThumbnailURL({ route, sampleId, collectionId, cacheBuster }).catch(() => {
-            urlBySampleId.delete(sampleId);
+        const thumbnail = getThumbnail({ route, sampleId, collectionId, cacheBuster }).catch(() => {
+            thumbnailBySampleId.delete(sampleId);
             return null;
         });
-        urlBySampleId.set(sampleId, url);
-        return url;
+        thumbnailBySampleId.set(sampleId, thumbnail);
+        return thumbnail;
     };
 }
