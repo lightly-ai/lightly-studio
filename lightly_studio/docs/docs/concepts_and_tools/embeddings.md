@@ -85,4 +85,148 @@ You can:
 - **Sampling** strategies such as diverse, deduplication, similarity, and
   typicality/outliers. See [Sampling](sampling.md).
 
-<!-- TODO(Michal, 08/2026) ## Using Your Own Embeddings -->
+## Using Your Own Embeddings
+
+!!! example "Beta API"
+    The embeddings API is in beta. Its interface may change in future releases
+    without a deprecation period.
+
+You may want to replace the built-in models — for example to use a domain-specific
+model, or to reuse vectors you already computed in another pipeline.
+
+Both cases use the same mechanism: e.g. for images, implement the `ImageEmbeddingGenerator`
+protocol and register it with `ls.set_default_embedding_model(...)` **before** you create or
+add to a dataset. The only difference is what your implementation of `embed_images` does inside.
+
+| Use-case | What `embed_images` does | Example |
+|---|---|---|
+| Compute embeddings on the fly | Runs your model on the given file paths | [`example_custom_embedding_model.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_custom_embedding_model.py) |
+| Load precomputed embeddings | Looks up stored vectors by file path | [`example_load_existing_embeddings.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_load_existing_embeddings.py) |
+
+Implement these protocol methods based on your needs. The
+[API reference](../api/embeddings.md) gives the full method signatures:
+
+- **`EmbeddingGenerator`** (base):
+    - `get_embedding_model_input` to describe the model to the database.
+    - `embed_text` to override the text search model.
+- **`ImageEmbeddingGenerator`**:
+    - `embed_images` to override the image embedding model.
+    - `embed_image_crops` to override the model for embeding annotations.
+    - `embed_pil_images` to override the model to embed video frames.
+- **`VideoEmbeddingGenerator`**:
+    - `embed_videos`. To override the video embedding model.
+
+`ImageEmbeddingGenerator` and `VideoEmbeddingGenerator` both extend the base protocol.
+If you don't need an embedding method raise the `NotImplemented` exception.
+
+Examples below show how an override is done for `ImageEmbeddingGenerator`.
+
+!!! warning "Some methods also run while the GUI is open"
+    LightlyStudio calls your generator at two points: when you add data, and while the
+    GUI is open to answer search queries. `embed_text` runs when a user searches by
+    text, and `embed_images` runs when a user searches by an uploaded image. If a method
+    raises `NotImplementedError`, its search feature is not available in the GUI. A
+    lookup-based `embed_images` has the same effect for a new image: the uploaded file
+    is not in your store, so search by an uploaded image does not work.
+
+### Loading precomputed embeddings
+
+Use this when you already have vectors — from a previous run, an external pipeline,
+or a research model. Instead of running a model, `embed_images` looks up each file
+path in your store.
+
+`embed_images(filepaths)` returns an `EmbeddingResult(embeddings, kept_indices)`.
+Return a matrix with one row for each file path you have a vector for, and use `kept_indices`
+to list which input positions those rows belong to. This lets you skip any file path
+that has no vector.
+
+```python
+import numpy as np
+
+import lightly_studio as ls
+from lightly_studio.dataset.embedding_result import EmbeddingResult
+
+EMBEDDING_DIMENSION = 512
+
+
+class CustomEmbeddingsGenerator(ls.ImageEmbeddingGenerator):
+    def __init__(self):
+        self._filepath_to_embedding = ...  # Implement the loading logic here.
+
+    def get_embedding_model_input(self, collection_id): ...
+
+    def embed_text(self, text): ...
+
+    def embed_image_crops(self, image_crops, show_progress=True): ...
+
+    def embed_pil_images(self, images, show_progress=True): ...
+
+    def embed_images(self, filepaths, show_progress=True) -> EmbeddingResult:
+        rows, kept_indices = [], []
+        for index, filepath in enumerate(filepaths):
+            embedding = self._filepath_to_embedding.get(filepath)
+            if embedding is None:
+                continue  # No vector for this path, so skip it.
+            rows.append(embedding)
+            kept_indices.append(index)
+        embeddings = (
+            np.stack(rows).astype(np.float32)
+            if rows
+            else np.empty((0, EMBEDDING_DIMENSION), dtype=np.float32)
+        )
+        return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
+
+
+ls.set_default_embedding_model(CustomEmbeddingsGenerator())
+```
+
+For the full runnable version, including how to key vectors by the absolute path that
+the backend stores, see
+[`example_load_existing_embeddings.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_load_existing_embeddings.py).
+
+### Computing embeddings on the fly
+
+Use this when you want a different model than the built-ins. Load your model in
+`__init__` and run it inside `embed_images`.
+
+```python
+import numpy as np
+
+import lightly_studio as ls
+from lightly_studio.dataset.embedding_result import EmbeddingResult
+
+
+class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
+    def __init__(self):
+        ...  # Load your model and preprocessing here.
+
+    def get_embedding_model_input(self, collection_id): ...
+
+    def embed_text(self, text): ...
+
+    def embed_image_crops(self, image_crops, show_progress=True): ...
+
+    def embed_pil_images(self, images, show_progress=True): ...
+
+    def embed_images(self, filepaths, show_progress=True) -> EmbeddingResult:
+        kept_indices, vectors = [], []
+        for index, filepath in enumerate(filepaths):
+            image = self._load(filepath)  # Skip a file you cannot read.
+            if image is None:
+                continue
+            vectors.append(self._model.encode(image))
+            kept_indices.append(index)
+        embeddings = np.stack(vectors).astype(np.float32)
+        return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
+
+
+ls.set_default_embedding_model(CustomEmbeddingsGenerator())
+```
+
+For the full runnable version, which wraps MobileCLIP and also implements
+`embed_text`, `embed_image_crops`, and `embed_pil_images`, see
+[`example_custom_embedding_model.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_custom_embedding_model.py).
+
+!!! note "Text search needs a shared text encoder"
+    For the text search to return meaningful results, your image and text encoder must share the
+    same embedding space.
