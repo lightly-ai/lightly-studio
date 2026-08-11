@@ -139,28 +139,42 @@ to list which input positions those rows belong to. This lets you skip any file 
 that has no vector.
 
 ```python
+from uuid import UUID
+
 import numpy as np
+from numpy.typing import NDArray
+from PIL import Image
 
 import lightly_studio as ls
 from lightly_studio.dataset.embedding_result import EmbeddingResult
+from lightly_studio.models.embedding_model import EmbeddingModelCreate
 
 EMBEDDING_DIMENSION = 512
 
 
 class CustomEmbeddingsGenerator(ls.ImageEmbeddingGenerator):
-    def __init__(self):
-        self._filepath_to_embedding = ...  # Implement the loading logic here.
+    def __init__(self) -> None:
+        self._filepath_to_embedding: dict[str, NDArray[np.float32]] = (
+            ...  # Implement the loading logic here.
+        )
 
-    def get_embedding_model_input(self, collection_id): ...
+    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate: ...
 
-    def embed_text(self, text): ...
+    def embed_text(self, text: str) -> list[float]: ...
 
-    def embed_image_crops(self, image_crops, show_progress=True): ...
+    def embed_image_crops(
+        self, image_crops: list[ls.ImageCrop], show_progress: bool = True
+    ) -> EmbeddingResult: ...
 
-    def embed_pil_images(self, images, show_progress=True): ...
+    def embed_pil_images(
+        self, images: list[Image.Image], show_progress: bool = True
+    ) -> NDArray[np.float32]: ...
 
-    def embed_images(self, filepaths, show_progress=True) -> EmbeddingResult:
-        rows, kept_indices = [], []
+    def embed_images(
+        self, filepaths: list[str], show_progress: bool = True
+    ) -> EmbeddingResult:
+        rows: list[NDArray[np.float32]] = []
+        kept_indices: list[int] = []
         for index, filepath in enumerate(filepaths):
             embedding = self._filepath_to_embedding.get(filepath)
             if embedding is None:
@@ -188,28 +202,40 @@ Use this when you want a different model than the built-ins. Load your model in
 `__init__` and run it inside `embed_images`.
 
 ```python
+from uuid import UUID
+
 import numpy as np
+from numpy.typing import NDArray
+from PIL import Image
 
 import lightly_studio as ls
 from lightly_studio.dataset.embedding_result import EmbeddingResult
+from lightly_studio.models.embedding_model import EmbeddingModelCreate
 
 EMBEDDING_DIMENSION = 512
 
 
 class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
-    def __init__(self):
+    def __init__(self) -> None:
         ...  # Load your model and preprocessing here.
 
-    def get_embedding_model_input(self, collection_id): ...
+    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate: ...
 
-    def embed_text(self, text): ...
+    def embed_text(self, text: str) -> list[float]: ...
 
-    def embed_image_crops(self, image_crops, show_progress=True): ...
+    def embed_image_crops(
+        self, image_crops: list[ls.ImageCrop], show_progress: bool = True
+    ) -> EmbeddingResult: ...
 
-    def embed_pil_images(self, images, show_progress=True): ...
+    def embed_pil_images(
+        self, images: list[Image.Image], show_progress: bool = True
+    ) -> NDArray[np.float32]: ...
 
-    def embed_images(self, filepaths, show_progress=True) -> EmbeddingResult:
-        kept_indices, vectors = [], []
+    def embed_images(
+        self, filepaths: list[str], show_progress: bool = True
+    ) -> EmbeddingResult:
+        kept_indices: list[int] = []
+        vectors: list[NDArray[np.float32]] = []
         for index, filepath in enumerate(filepaths):
             image = self._load(filepath)  # Skip a file you cannot read.
             if image is None:
