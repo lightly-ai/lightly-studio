@@ -31,7 +31,7 @@
 }
 
 /* Hide hint while search overlay is open */
-.md-search--active .search-shortcut-hint {
+input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
     display: none;
 }
 
