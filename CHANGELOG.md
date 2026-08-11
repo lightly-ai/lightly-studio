@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Opening a DuckDB database that another lightly_studio process already has open now raises a clear error instead of a raw DuckDB traceback.
 - Coloring the 2D embedding plot by annotations or metadata now loads faster, especially for large datasets.
 - Changing annotation colors is now smoother and shows a live preview while dragging the color picker.
+- Hover previews in the annotations embedding plot now show the relevant image crop and annotation overlay, matching the annotations grid.
 
 ### Security
 
