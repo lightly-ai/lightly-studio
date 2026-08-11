@@ -96,7 +96,7 @@ model, or to reuse vectors you already computed in another pipeline.
 
 Both cases use the same mechanism: e.g. for images, implement the `ImageEmbeddingGenerator`
 protocol and register it with `ls.set_default_embedding_model(...)` **before** you add to
-a dataset and launch the GUI. The only difference is what your implementation of `embed_images`
+a dataset or launch the GUI. The only difference is what your implementation of `embed_images`
 does inside.
 
 | Use-case | What `embed_images` does | Example |
