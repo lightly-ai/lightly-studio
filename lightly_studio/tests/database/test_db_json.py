@@ -18,8 +18,7 @@ from lightly_studio.database import db_json
         ("a.b.c", ["a", "b", "c"]),
         ("test_dict.nested_list[0]", ["test_dict", "nested_list", 0]),
         ("nested_list[10][2]", ["nested_list", 10, 2]),
-        # Only non-negative integer brackets are indices; anything else stays part of
-        # the key. Negative indices are covered separately below.
+        # Only integer brackets are indices; anything else stays part of the key.
         ("weird[key]", ["weird", "[key]"]),
         ("weird[0x1]", ["weird", "[0x1]"]),
     ],
@@ -28,28 +27,59 @@ def test_parse_field_path(field: str, expected: list[str | int]) -> None:
     assert db_json._parse_field_path(field) == expected
 
 
-@pytest.mark.parametrize("index", ["-1", "-3"])
-def test_parse_field_path__negative_index_stays_a_key(index: str) -> None:
-    """JSON Pointer has no negative index, so the bracket group stays part of the key."""
-    assert db_json._parse_field_path(f"nested_list[{index}]") == ["nested_list", f"[{index}]"]
+@pytest.mark.parametrize("index", [-1, -3])
+def test_parse_field_path__negative_index(index: int) -> None:
+    assert db_json._parse_field_path(f"nested_list[{index}]") == ["nested_list", index]
 
 
-@pytest.mark.parametrize("index", ["-1", "-3"])
-def test_json_extract__duckdb_negative_index_is_a_key(index: str) -> None:
-    """The pointer addresses a key named "[-1]", which no document has, so the value is NULL."""
+@pytest.mark.parametrize(
+    ("segments", "expected"),
+    [
+        (["a", "b"], ["/a/b"]),
+        (["a", "list", 0], ["/a/list/0"]),
+        # A pointer cannot count from the end, so each negative index is its own step.
+        (["a", "list", -1], ["/a/list", "$[-1]"]),
+        (["a", "list", -3, "name"], ["/a/list", "$[-3]", "/name"]),
+        (["m", -1, -2], ["/m", "$[-1]", "$[-2]"]),
+    ],
+)
+def test_to_duckdb_paths(segments: list[str | int], expected: list[str]) -> None:
+    assert db_json._to_duckdb_paths(segments) == expected
+
+
+@pytest.mark.parametrize("index", [-1, -3])
+def test_json_extract__duckdb_negative_index(index: int) -> None:
+    """A negative index needs a second extraction on what the pointer returned."""
     expr = db_json.json_extract(column=sqlalchemy.column("data"), field=f"nested_list[{index}]")
     result = expr.compile(dialect=Dialect())
-    assert str(result) == "json_extract(data, %(param_1)s)"
-    assert result.params == {"param_1": f"/nested_list/[{index}]"}
+    assert str(result) == "json_extract(json_extract(data, %(param_1)s), %(param_2)s)"
+    assert result.params == {"param_1": "/nested_list", "param_2": f"$[{index}]"}
 
 
-@pytest.mark.parametrize("index", ["-1", "-3"])
-def test_json_extract__pg_negative_index_is_a_bound_key(index: str) -> None:
-    """The index is bound as a key rather than rendered as ``->-1``, matching DuckDB."""
+@pytest.mark.parametrize("index", [-1, -3])
+def test_json_extract__pg_negative_index(index: int) -> None:
+    """PostgreSQL subscripts count from the end natively, so the chain is unbroken."""
     expr = db_json.json_extract(column=sqlalchemy.column("data"), field=f"nested_list[{index}]")
     result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
-    assert str(result) == "data->%(param_1)s->>%(param_2)s"
-    assert result.params == {"param_1": "nested_list", "param_2": f"[{index}]"}
+    assert str(result) == f"data->%(param_1)s->>{index}"
+    assert result.params == {"param_1": "nested_list"}
+
+
+def test_json_extract__duckdb_negative_index_then_key() -> None:
+    """Segments after a negative index are extracted from its result."""
+    expr = db_json.json_extract(column=sqlalchemy.column("data"), field="a.list[-1].name")
+    result = expr.compile(dialect=Dialect())
+    assert str(result) == (
+        "json_extract(json_extract(json_extract(data, %(param_1)s), %(param_2)s), %(param_3)s)"
+    )
+    assert result.params == {"param_1": "/a/list", "param_2": "$[-1]", "param_3": "/name"}
+
+
+def test_json_extract__pg_negative_index_then_key() -> None:
+    expr = db_json.json_extract(column=sqlalchemy.column("data"), field="a.list[-1].name")
+    result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
+    assert str(result) == "data->%(param_1)s->%(param_2)s->-1->>%(param_3)s"
+    assert result.params == {"param_1": "a", "param_2": "list", "param_3": "name"}
 
 
 @pytest.mark.parametrize(

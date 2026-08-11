@@ -178,23 +178,33 @@ def test_metadata_in_filter__missing(db_session: Session) -> None:
     }
 
 
-@pytest.mark.parametrize("index", [-1, -3])
-def test_metadata_filter__negative_index_matches_nothing(db_session: Session, index: int) -> None:
-    """Indices count from the front only, so a negative one reads as a missing key."""
+@pytest.mark.parametrize(("index", "expected_value"), [(-1, 3), (-3, 1)])
+def test_metadata_filter__negative_index(
+    db_session: Session, index: int, expected_value: int
+) -> None:
+    """A negative index counts from the end of the array."""
     collection = create_collection(session=db_session)
-    sample = create_image(
+    matching = create_image(
         session=db_session,
         collection_id=collection.collection_id,
-        file_path_abs="/path/to/sample.png",
+        file_path_abs="/path/to/matching.png",
     ).sample
-    sample["test_dict"] = {"nested_list": [1, 2, 3]}
+    excluded = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/excluded.png",
+    ).sample
+    matching["test_dict"] = {"nested_list": [1, 2, 3]}
+    excluded["test_dict"] = {"nested_list": [9, 9, 9]}
 
-    filters = SampleFilter(metadata_filters=[Metadata(f"test_dict.nested_list[{index}]") == 3])
+    filters = SampleFilter(
+        metadata_filters=[Metadata(f"test_dict.nested_list[{index}]") == expected_value]
+    )
     samples = sample_resolver.get_filtered_samples(
         session=db_session, collection_id=collection.collection_id, filters=filters
     ).samples
 
-    assert samples == []
+    assert [sample.sample_id for sample in samples] == [matching.sample_id]
 
 
 def test_metadata_filter__key_with_quote(db_session: Session) -> None:

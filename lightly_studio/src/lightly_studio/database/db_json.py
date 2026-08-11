@@ -20,7 +20,7 @@ from sqlalchemy.sql.elements import BindParameter
 from sqlalchemy.sql.functions import GenericFunction
 from sqlalchemy.types import TypeDecorator
 
-_ARRAY_INDEX_PATTERN = re.compile(r"^\[([0-9]+)\]$")
+_ARRAY_INDEX_PATTERN = re.compile(r"^\[(-?[0-9]+)\]$")
 
 
 def json_literal(value: Any) -> BindParameter[Any]:
@@ -52,9 +52,8 @@ class json_extract(GenericFunction[Any]):  # noqa: N801
     - DuckDB:      ``CAST(json_extract(col, :path) AS FLOAT)``
     - PostgreSQL:  ``(col->>:key)::float``
 
-    ``field`` supports dot-separated paths (``a.b.c``) and array indices (``a.list[0]``).
-    Indices count from the front only; JSON Pointer has no notion of a negative index,
-    so ``a.list[-1]`` is read as the key ``[-1]`` and yields NULL.
+    ``field`` supports dot-separated paths (``a.b.c``) and array indices (``a.list[0]``),
+    including negative indices counting from the end (``a.list[-1]``).
     """
 
     # Field path and cast flag vary per instance, so caching is unsafe.
@@ -78,7 +77,9 @@ class json_extract(GenericFunction[Any]):  # noqa: N801
         self.cast_to_float = cast_to_float
         # Parameters are built once per instance so that repeated renderings of the same
         # expression (e.g. in SELECT and in GROUP BY) reuse one parameter and stay equal.
-        self.duckdb_path = sqlalchemy.literal(_to_json_pointer(segments), type_=Text())
+        self.duckdb_paths = [
+            sqlalchemy.literal(path, type_=Text()) for path in _to_duckdb_paths(segments)
+        ]
         self.postgres_segments = [
             segment if isinstance(segment, int) else sqlalchemy.literal(segment, type_=Text())
             for segment in segments
@@ -115,11 +116,16 @@ def _compile_json_extract_unsupported(
 
 @compiles(json_extract, "duckdb")
 def _compile_json_extract_duckdb(element: json_extract, compiler: SQLCompiler, **kw: Any) -> str:
-    """DuckDB compilation: ``json_extract(col, :path)`` with a bound JSON Pointer."""
+    """DuckDB compilation: ``json_extract(col, :path)`` with bound paths.
+
+    A path that steps through a negative index needs more than one extraction, so the
+    calls are nested, innermost first.
+    """
     # element.clauses contains a single item: the column passed to __init__.
     col = next(iter(element.clauses))
-    path = compiler.process(element.duckdb_path, **kw)
-    expr = f"json_extract({compiler.process(col, **kw)}, {path})"
+    expr = compiler.process(col, **kw)
+    for path in element.duckdb_paths:
+        expr = f"json_extract({expr}, {compiler.process(path, **kw)})"
     if element.cast_to_float:
         expr = f"CAST({expr} AS FLOAT)"
     return expr
@@ -214,9 +220,8 @@ class _JsonStringType(TypeDecorator[str]):
 def _parse_field_path(field: str) -> list[str | int]:
     """Split a field path into key and array-index segments.
 
-    ``"a.list[0]"`` becomes ``["a", "list", 0]``. Bracket groups that do not hold a
-    non-negative integer, ``"[-1]"`` included, are kept as part of the key: they cannot
-    reach SQL as an index, and JSON Pointer cannot express them either.
+    ``"a.list[0]"`` becomes ``["a", "list", 0]``. Bracket groups that do not hold an
+    integer are kept as part of the key, so they cannot reach SQL as an index.
     """
     segments: list[str | int] = []
     # Split on '.' but keep bracket notation (e.g. "nested_list[0]" -> "nested_list", "[0]")
@@ -224,6 +229,30 @@ def _parse_field_path(field: str) -> list[str | int]:
         index_match = _ARRAY_INDEX_PATTERN.match(part)
         segments.append(int(index_match.group(1)) if index_match else part)
     return segments
+
+
+def _to_duckdb_paths(segments: Sequence[str | int]) -> list[str]:
+    """Split path segments into the DuckDB paths needed to walk them.
+
+    Keys go into a JSON Pointer, which treats every segment literally and has an
+    unambiguous escape for ``~`` and ``/``. A pointer cannot express an index counted
+    from the end, so each negative index becomes its own ``$[-1]`` JSONPath step,
+    applied to what the preceding path returned. ``a.list[-1].name`` therefore yields
+    ``["/a/list", "$[-1]", "/name"]``.
+    """
+    paths: list[str] = []
+    pointer_segments: list[str | int] = []
+    for segment in segments:
+        if isinstance(segment, int) and segment < 0:
+            if pointer_segments:
+                paths.append(_to_json_pointer(pointer_segments))
+                pointer_segments = []
+            paths.append(f"$[{segment}]")
+        else:
+            pointer_segments.append(segment)
+    if pointer_segments:
+        paths.append(_to_json_pointer(pointer_segments))
+    return paths
 
 
 def _to_json_pointer(segments: Sequence[str | int]) -> str:
@@ -251,7 +280,8 @@ def _build_pg_json_accessor(
 
     Two key segments become a ``col->:key_1->>:key_2`` operator chain. The chain itself
     is structural, so each key is bound individually; integer indices render unquoted
-    because PostgreSQL requires that form for array access.
+    because PostgreSQL requires that form for array access, and negative ones count from
+    the end of the array.
 
     Args:
         column: Already-compiled column SQL string.
@@ -268,6 +298,8 @@ def _build_pg_json_accessor(
         is_last = i == len(segments) - 1
         op = "->>" if is_last else "->"
         if isinstance(segment, int):
+            # "->>-1" is safe: a multi-character operator may not end in "-", so
+            # PostgreSQL lexes this as the "->>" operator applied to -1.
             accessors.append(f"{op}{segment}")
         else:
             accessors.append(f"{op}{compiler.process(segment, **kw)}")
