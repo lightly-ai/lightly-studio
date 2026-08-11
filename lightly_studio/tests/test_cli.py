@@ -122,7 +122,7 @@ def test_quickstart(mocker: MockerFixture) -> None:
     mock_download.assert_called_once_with(download_dir="dataset_examples", force_redownload=False)
     mock_connect.assert_called_once_with(db_file="quickstart.db", cleanup_existing=True)
     mock_create.assert_called_once_with()
-    mock_start_gui.assert_called_once_with(port=None)
+    mock_start_gui.assert_called_once_with(port=None, open_browser=True)
 
 
 def test_quickstart__with_force_download(mocker: MockerFixture) -> None:
@@ -139,7 +139,15 @@ def test_quickstart__with_port(mocker: MockerFixture) -> None:
     runner = CliRunner()
     result = runner.invoke(cli=cli.main, args=["quickstart", "--port", "9999"])
     assert result.exit_code == 0
-    mock_start_gui.assert_called_once_with(port=9999)
+    mock_start_gui.assert_called_once_with(port=9999, open_browser=True)
+
+
+def test_quickstart__with_no_browser(mocker: MockerFixture) -> None:
+    _, _, _, mock_start_gui = _mock_quickstart_dependencies(mocker)
+    runner = CliRunner()
+    result = runner.invoke(cli=cli.main, args=["quickstart", "--no-browser"])
+    assert result.exit_code == 0
+    mock_start_gui.assert_called_once_with(port=None, open_browser=False)
 
 
 def test_quickstart__runs_real_evaluation_pipeline(

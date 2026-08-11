@@ -32,9 +32,6 @@ export { default as SelectableBox } from '$lib/components/SelectableBox/Selectab
 export { SettingsDialog } from '$lib/components/Settings/';
 export { default as TagsMenu } from '$lib/components/TagsMenu/TagsMenu.svelte';
 export { default as UserInfo } from '$lib/components/UserInfo/index.svelte';
-export { default as ClassifiersMenu } from '$lib/components/FewShotClassifier/ClassifiersMenu.svelte';
-export { default as CreateClassifierDialog } from '$lib/components/FewShotClassifier/CreateClassifierDialog.svelte';
-export { default as RefineClassifierDialog } from '$lib/components/FewShotClassifier/RefineClassifierDialog.svelte';
 export { default as ZoomableContainer } from '$lib/components/ZoomableContainer/ZoomableContainer.svelte';
 export { default as Spinner } from '$lib/components/Spinner/Spinner.svelte';
 export { default as Segment } from '$lib/components/Segment/Segment.svelte';
