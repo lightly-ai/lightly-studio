@@ -24,11 +24,10 @@ The bot approves the PR if the guardrails pass. However, the main branch protect
 is set up with CODEOWNERS so that for certain paths a Lightly team member must
 approve, in particular when the code touches the guardrails or CI.
 
-The bot is conservative in dismissing its past approvals. It does so only when a new
-bot run (after a new push) does not pass. Therefore there is a window when the PR
-keeps an approval while a newer commit has not been re-judged yet. This is
-intentional; it aligns with the current philosophy of not dismissing stale approvals
-to allow a faster development cycle.
+The bot dismisses its past approvals only when a new bot run (after a new push)
+does not pass. Therefore there is a window when the PR keeps an approval while
+a newer commit has not been judged yet. This is intentional; it aligns with the
+current philosophy of not dismissing stale approvals for faster development.
 
 ## Local commands
 
