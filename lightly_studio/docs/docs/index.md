@@ -10,7 +10,7 @@ with an M1 chip and 16 GB of memory.
 </p>
 
 <p align="center">The embedding plot shows how images relate to each other, with a preview on hover. A lasso selection filters the grid to one cluster. A search for "coffee" finds a match, and the annotation editor opens to label it.</p>
-<p align="center"><strong>⚡ Tested with 2M+ images, embeddings included, on a single MacBook (M1, 16GB RAM).</strong></p>
+<p align="center"><strong>⚡ Works smoothly with 2M+ images, embeddings included, on a single MacBook (M1, 16GB RAM).</strong></p>
 
 
 ## Installation
