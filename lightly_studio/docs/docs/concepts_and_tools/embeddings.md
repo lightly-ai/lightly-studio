@@ -123,11 +123,8 @@ Examples below show how an override is done for `ImageEmbeddingGenerator`.
 
 !!! warning "Some methods also run while the GUI is open"
     LightlyStudio calls your generator at two points: when you add data, and while the
-    GUI is open to answer search queries. `embed_text` runs when a user searches by
-    text, and `embed_images` runs when a user searches by an uploaded image. If a method
-    raises `NotImplementedError`, its search feature is not available in the GUI. A
-    lookup-based `embed_images` has the same effect for a new image: the uploaded file
-    is not in your store, so search by an uploaded image does not work.
+    GUI is open to answer search queries. If a method raises `NotImplementedError`,
+    its search feature is not available in the GUI.
 
 ### Loading precomputed embeddings
 
