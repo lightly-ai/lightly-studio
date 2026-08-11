@@ -29,6 +29,25 @@ describe('CreateCaptionField', () => {
         expect(preventDefault).not.toHaveBeenCalled();
     });
 
+    it('submits only once while a create request is in flight', async () => {
+        let resolveCreate: (shouldClose: boolean) => void = () => {};
+        const onCreate = vi.fn(() => new Promise<boolean>((resolve) => (resolveCreate = resolve)));
+
+        render(CreateCaptionField, { props: { onCreate } });
+
+        await fireEvent.click(screen.getByTestId('add-caption-button'));
+
+        const input = screen.getByTestId('new-caption-input');
+        await fireEvent.input(input, { target: { value: 'A caption' } });
+
+        await fireEvent.keyDown(input, { key: 'Enter' });
+        await fireEvent.keyDown(input, { key: 'Enter' });
+
+        expect(onCreate).toHaveBeenCalledTimes(1);
+
+        resolveCreate(true);
+    });
+
     it('prevents opening another draft while one draft is active', async () => {
         const { container } = render(CreateCaptionFieldTestWrapper);
 

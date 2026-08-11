@@ -96,11 +96,12 @@
                     />
                     <Button
                         icon={Check}
+                        variant="default"
                         ariaLabel="Save caption"
                         isPending={isSaving}
                         buttonProps={{
                             type: 'button',
-                            class: 'h-9 w-9 border border-primary bg-primary text-primary-foreground disabled:border-input disabled:bg-background disabled:text-muted-foreground',
+                            class: 'h-9 w-9 border border-primary disabled:border-input disabled:bg-background disabled:text-muted-foreground',
                             onclick: saveCaption,
                             disabled: !isDirty || isSaving,
                             'data-testid': 'save-caption-button'

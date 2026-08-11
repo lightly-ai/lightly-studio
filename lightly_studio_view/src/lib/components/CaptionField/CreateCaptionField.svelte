@@ -42,6 +42,8 @@
     };
 
     const submitCreateCaption = async () => {
+        if (isSubmitting) return;
+
         const text = newCaptionText.trim();
         if (!text) return;
 
@@ -95,11 +97,12 @@
         />
         <Button
             icon={Check}
+            variant="default"
             ariaLabel="Save new caption"
             isPending={isSubmitting}
             buttonProps={{
                 type: 'button',
-                class: 'h-9 w-9 border border-primary bg-primary text-primary-foreground disabled:border-input disabled:bg-background disabled:text-muted-foreground',
+                class: 'h-9 w-9 border border-primary disabled:border-input disabled:bg-background disabled:text-muted-foreground',
                 onclick: submitCreateCaption,
                 disabled: !newCaptionText.trim(),
                 'data-testid': 'save-new-caption-button'
