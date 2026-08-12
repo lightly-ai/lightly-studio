@@ -78,6 +78,30 @@ class TestMundig:
         sampled = mundig.run(n_samples=2)
         assert sampled == [0, 2]
 
+    def test_run__preselection_matches_selecting_all_samples_at_once(self) -> None:
+        embeddings = [[0.0, 0.0], [1.0, 0.0], [3.0, 0.0]]
+        all_at_once = Mundig()
+        all_at_once.add_diversity(embeddings)
+
+        first_batch = Mundig()
+        first_batch.add_diversity(embeddings)
+        preselected_indices = first_batch.run(n_samples=1)
+
+        continued = Mundig()
+        continued.add_diversity(embeddings)
+
+        assert continued.run(
+            n_samples=2, preselected_indices=preselected_indices
+        ) == all_at_once.run(n_samples=2)
+
+    def test_run__preselected_indices_form_result_prefix(self) -> None:
+        mundig = Mundig()
+        mundig.add_diversity([[0.0], [1.0], [3.0]])
+
+        selected_indices = mundig.run(n_samples=3, preselected_indices=[2, 0])
+
+        assert selected_indices[:2] == [2, 0]
+
     def test_multiple__wrong_n_input_samples(self) -> None:
         """Check error is raised if input sample sizes differ."""
         mundig = Mundig()
@@ -134,4 +158,6 @@ class TestMundig:
         # Full error: "pyo3_runtime.PanicException: called `Result::unwrap()` on
         #  an `Err` value: ShapeError/IncompatibleShape: incompatible shapes"
         with pytest.raises(BaseException, match="ShapeError/IncompatibleShape"):
-            mundig.mundig.run_selection(n_total_samples=3, n_samples_to_select=1)
+            mundig.mundig.run_selection(
+                preselected_indices=[], n_total_samples=3, n_samples_to_select=1
+            )
