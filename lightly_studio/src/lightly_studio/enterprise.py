@@ -168,32 +168,44 @@ def _execute_connect_request(
 ) -> requests.Response:
     """Execute the HTTP request for enterprise connection authentication."""
     try:
-        if token:
-            url = f"{api_url}{_ENTERPRISE_CONNECT_ENDPOINT}"
-            return requests.get(
-                url=url,
-                headers={"Authorization": f"Bearer {token}"},
-                timeout=10,
-            )
-        url = f"{api_url}{_API_KEY_LOGIN_ENDPOINT}"
-        return requests.post(
-            url=url,
-            json={"api_key": api_key},
+        return _send_connect_request(api_url=api_url, token=token, api_key=api_key)
+    except (requests.exceptions.SSLError, requests.ConnectionError, requests.Timeout) as error:
+        raise ConnectionError(_connection_error_message(api_url=api_url, error=error)) from None
+
+
+def _send_connect_request(
+    api_url: str,
+    token: str | None,
+    api_key: str | None,
+) -> requests.Response:
+    """Send the request for the selected authentication method."""
+    if token:
+        return requests.get(
+            url=f"{api_url}{_ENTERPRISE_CONNECT_ENDPOINT}",
+            headers={"Authorization": f"Bearer {token}"},
             timeout=10,
         )
-    except requests.exceptions.SSLError:
-        raise ConnectionError(
+    return requests.post(
+        url=f"{api_url}{_API_KEY_LOGIN_ENDPOINT}",
+        json={"api_key": api_key},
+        timeout=10,
+    )
+
+
+def _connection_error_message(api_url: str, error: requests.RequestException) -> str:
+    """Return a user-facing message for a request transport error."""
+    if isinstance(error, requests.exceptions.SSLError):
+        return (
             f"SSL error connecting to {api_url}. "
             "Verify the server's TLS certificate is trusted "
             "by your Python environment."
-        ) from None
-    except requests.ConnectionError:
-        raise ConnectionError(
+        )
+    if isinstance(error, requests.ConnectionError):
+        return (
             f"Could not reach LightlyStudio at {api_url}. "
             "Verify the URL and that the server is running."
-        ) from None
-    except requests.Timeout:
-        raise ConnectionError(
-            f"Request to LightlyStudio at {api_url} timed out. "
-            "Verify that the server is reachable and responsive."
-        ) from None
+        )
+    return (
+        f"Request to LightlyStudio at {api_url} timed out. "
+        "Verify that the server is reachable and responsive."
+    )
