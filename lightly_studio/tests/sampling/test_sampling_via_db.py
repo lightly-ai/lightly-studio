@@ -496,8 +496,8 @@ def test_sampling_via_database__preselection_matches_single_sampling(
     strategy = EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")
 
     sampling_via_database(
-        db_session,
-        SamplingConfig(
+        session=db_session,
+        config=SamplingConfig(
             collection_id=collection_id,
             n_samples_to_select=2,
             sampling_result_tag_name="first_batch",
@@ -505,15 +505,17 @@ def test_sampling_via_database__preselection_matches_single_sampling(
         ),
         input_sample_ids=sample_ids,
     )
-    first_tag = tag_resolver.get_by_name(db_session, "first_batch", collection_id)
+    first_tag = tag_resolver.get_by_name(
+        session=db_session, tag_name="first_batch", collection_id=collection_id
+    )
     assert first_tag is not None
     first_batch = _sample_ids_by_tag(
         session=db_session, collection_id=collection_id, tag_id=first_tag.tag_id
     )
 
     sampling_via_database(
-        db_session,
-        SamplingConfig(
+        session=db_session,
+        config=SamplingConfig(
             collection_id=collection_id,
             n_samples_to_select=2,
             sampling_result_tag_name="second_batch",
@@ -522,15 +524,17 @@ def test_sampling_via_database__preselection_matches_single_sampling(
         input_sample_ids=sample_ids,
         preselected_sample_ids=first_batch,
     )
-    second_tag = tag_resolver.get_by_name(db_session, "second_batch", collection_id)
+    second_tag = tag_resolver.get_by_name(
+        session=db_session, tag_name="second_batch", collection_id=collection_id
+    )
     assert second_tag is not None
     second_batch = _sample_ids_by_tag(
         session=db_session, collection_id=collection_id, tag_id=second_tag.tag_id
     )
 
     sampling_via_database(
-        db_session,
-        SamplingConfig(
+        session=db_session,
+        config=SamplingConfig(
             collection_id=collection_id,
             n_samples_to_select=4,
             sampling_result_tag_name="single_batch",
@@ -538,7 +542,9 @@ def test_sampling_via_database__preselection_matches_single_sampling(
         ),
         input_sample_ids=sample_ids,
     )
-    single_tag = tag_resolver.get_by_name(db_session, "single_batch", collection_id)
+    single_tag = tag_resolver.get_by_name(
+        session=db_session, tag_name="single_batch", collection_id=collection_id
+    )
     assert single_tag is not None
     single_batch = _sample_ids_by_tag(
         session=db_session, collection_id=collection_id, tag_id=single_tag.tag_id

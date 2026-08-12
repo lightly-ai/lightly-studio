@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections import Counter, defaultdict
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from uuid import UUID, uuid4
 
@@ -222,7 +222,7 @@ def sampling_via_database(
     session: Session,
     config: SamplingConfig,
     input_sample_ids: list[UUID],
-    preselected_sample_ids: list[UUID] | None = None,
+    preselected_sample_ids: Iterable[UUID] | None = None,
 ) -> None:
     """Run sampling using the provided candidate sample ids.
 
@@ -254,22 +254,14 @@ def sampling_via_database(
         )
         raise ValueError(msg)
 
-    preselected_sample_ids = list(preselected_sample_ids or [])
-    preselected_set = set(preselected_sample_ids)
-    if len(preselected_sample_ids) != len(preselected_set):
-        raise ValueError("Preselected sample IDs must be unique.")
-    input_sample_id_set = set(input_sample_ids)
-    if not preselected_set.issubset(input_sample_id_set):
-        raise ValueError("Preselected sample IDs must be a subset of input sample IDs.")
-
-    n_available_samples = len(input_sample_ids) - len(preselected_sample_ids)
-    n_samples_to_select = min(config.n_samples_to_select, n_available_samples)
+    preselected_indices, n_samples_to_select = _prepare_preselection(
+        input_sample_ids=input_sample_ids,
+        preselected_sample_ids=preselected_sample_ids,
+        n_samples_to_select=config.n_samples_to_select,
+    )
     if n_samples_to_select == 0:
         logger.warning("No samples available for sampling.")
         return
-
-    sample_id_to_index = {sample_id: index for index, sample_id in enumerate(input_sample_ids)}
-    preselected_indices = [sample_id_to_index[sample_id] for sample_id in preselected_sample_ids]
 
     # Get root dataset id for balancing strategies
     root_collection = collection_resolver.get_root_collection(
@@ -310,6 +302,25 @@ def sampling_via_database(
     tag_resolver.add_sample_ids_to_tag_id(
         session=session, tag_id=tag.tag_id, sample_ids=selected_sample_ids
     )
+
+
+def _prepare_preselection(
+    input_sample_ids: Sequence[UUID],
+    preselected_sample_ids: Iterable[UUID] | None,
+    n_samples_to_select: int,
+) -> tuple[list[int], int]:
+    """Validate preselection and return its indices and available selection size."""
+    preselected_sample_ids = list(preselected_sample_ids or ())
+    preselected_set = set(preselected_sample_ids)
+    if len(preselected_sample_ids) != len(preselected_set):
+        raise ValueError("Preselected sample IDs must be unique.")
+    if not preselected_set.issubset(input_sample_ids):
+        raise ValueError("Preselected sample IDs must be a subset of input sample IDs.")
+
+    sample_id_to_index = {sample_id: index for index, sample_id in enumerate(input_sample_ids)}
+    preselected_indices = [sample_id_to_index[sample_id] for sample_id in preselected_sample_ids]
+    n_available_samples = len(input_sample_ids) - len(preselected_indices)
+    return preselected_indices, min(n_samples_to_select, n_available_samples)
 
 
 def _get_embeddings_by_sample_ids(

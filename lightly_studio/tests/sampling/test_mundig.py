@@ -78,7 +78,7 @@ class TestMundig:
         sampled = mundig.run(n_samples=2)
         assert sampled == [0, 2]
 
-    def test_preselection_matches_selecting_all_samples_at_once(self) -> None:
+    def test_run__preselection_matches_selecting_all_samples_at_once(self) -> None:
         embeddings = [[0.0, 0.0], [1.0, 0.0], [3.0, 0.0]]
         all_at_once = Mundig()
         all_at_once.add_diversity(embeddings)
@@ -94,7 +94,7 @@ class TestMundig:
             n_samples=2, preselected_indices=preselected_indices
         ) == all_at_once.run(n_samples=2)
 
-    def test_preselected_indices_form_result_prefix(self) -> None:
+    def test_run__preselected_indices_form_result_prefix(self) -> None:
         mundig = Mundig()
         mundig.add_diversity([[0.0], [1.0], [3.0]])
 
