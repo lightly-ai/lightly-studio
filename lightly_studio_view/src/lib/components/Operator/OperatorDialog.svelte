@@ -2,7 +2,7 @@
     import { untrack } from 'svelte';
     import { page } from '$app/stores';
     import { derived as storeDerived } from 'svelte/store';
-    import { Button } from '$lib/components/ui/button';
+    import { Button } from '$lib/components';
     import * as Dialog from '$lib/components/ui/dialog';
     import { LoaderCircle as Loader2 } from '@lucide/svelte';
     import {
@@ -239,11 +239,18 @@
             </div>
 
             <Dialog.Footer class="flex justify-end space-x-2">
-                <Button variant="outline" onclick={() => onOpenChange(false)}>
+                <Button variant="outline" buttonProps={{ onclick: () => onOpenChange(false) }}>
                     {executionSuccess ? 'Close' : 'Cancel'}
                 </Button>
                 {#if !executionSuccess}
-                    <Button onclick={handleExecute} disabled={!isFormValid || isExecuting}>
+                    <Button
+                        variant="default"
+                        isPending={isExecuting}
+                        buttonProps={{
+                            onclick: handleExecute,
+                            disabled: !isFormValid || isExecuting
+                        }}
+                    >
                         {isExecuting ? 'Executing...' : 'Execute'}
                     </Button>
                 {/if}

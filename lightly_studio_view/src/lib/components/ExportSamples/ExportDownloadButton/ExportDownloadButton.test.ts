@@ -21,10 +21,10 @@ describe('ExportDownloadButton', () => {
         expect(onclick).toHaveBeenCalledOnce();
     });
 
-    it('disables the button and shows a spinner when isLoading is true', () => {
+    it('disables the button and shows a progress indicator when isLoading is true', () => {
         render(ExportDownloadButton, { props: { ...defaultProps, isLoading: true } });
         expect(screen.getByTestId('download-button')).toBeDisabled();
-        expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
+        expect(screen.getByTestId('button-progress')).toBeInTheDocument();
     });
 
     it('disables the button when the disabled prop is true', () => {
