@@ -58,9 +58,10 @@
             }
         });
         if (response.error) throw new Error(JSON.stringify(response.error));
-        if (!response.data) throw new Error('Unexpected empty response data');
+        const exportKey = response.data?.export_key;
+        if (!exportKey) throw new Error('Unexpected empty response data');
         triggerDownload(
-            `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/download/${response.data.export_key}`
+            `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/download/${exportKey}`
         );
     });
 </script>

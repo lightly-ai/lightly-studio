@@ -33,7 +33,7 @@ describe('SamplesTab', () => {
         mocks.triggerDownload.mockReset();
     });
 
-    it('calls the API with correct arguments on download', async () => {
+    it('calls the API with correct arguments on download and triggers the download URL', async () => {
         mocks.exportCollectionPrepare.mockResolvedValue({ data: { export_key: 'key123' } });
         render(SamplesTab);
         await fireEvent.click(screen.getByTestId('submit-button-samples'));
@@ -42,14 +42,6 @@ describe('SamplesTab', () => {
                 path: { collection_id: 'test-collection' },
                 body: { collection_filter: null }
             });
-        });
-    });
-
-    it('triggers the download with the correct URL on success', async () => {
-        mocks.exportCollectionPrepare.mockResolvedValue({ data: { export_key: 'key123' } });
-        render(SamplesTab);
-        await fireEvent.click(screen.getByTestId('submit-button-samples'));
-        await waitFor(() => {
             expect(mocks.triggerDownload).toHaveBeenCalledWith(
                 expect.stringContaining('/export/download/key123')
             );

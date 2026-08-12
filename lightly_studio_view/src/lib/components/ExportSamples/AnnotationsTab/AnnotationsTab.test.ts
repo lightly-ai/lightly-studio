@@ -73,7 +73,7 @@ describe('AnnotationsTab', () => {
         expect(screen.getByText('Annotation Source')).toBeInTheDocument();
     });
 
-    it('calls the API using the first annotation source when none is selected', async () => {
+    it('calls the API using the first annotation source when none is selected and triggers the download URL', async () => {
         mocks.exportCollectionAnnotationsPrepare.mockResolvedValue({
             data: { export_key: 'key123' }
         });
@@ -88,16 +88,6 @@ describe('AnnotationsTab', () => {
                     image_filter: null
                 }
             });
-        });
-    });
-
-    it('triggers the download with the correct URL on success', async () => {
-        mocks.exportCollectionAnnotationsPrepare.mockResolvedValue({
-            data: { export_key: 'key123' }
-        });
-        render(AnnotationsTab, { props: defaultProps });
-        await fireEvent.click(screen.getByTestId('submit-button-annotations'));
-        await waitFor(() => {
             expect(mocks.triggerDownload).toHaveBeenCalledWith(
                 expect.stringContaining('/export/download/key123')
             );
@@ -135,6 +125,15 @@ describe('AnnotationsTab', () => {
                     video_filter: activeFilter
                 }
             });
+        });
+    });
+
+    it('shows an error message when the API returns data without export_key', async () => {
+        mocks.exportCollectionAnnotationsPrepare.mockResolvedValue({ data: {} });
+        render(AnnotationsTab, { props: defaultProps });
+        await fireEvent.click(screen.getByTestId('submit-button-annotations'));
+        await waitFor(() => {
+            expect(screen.getByText(/Export failed/)).toBeInTheDocument();
         });
     });
 
