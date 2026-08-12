@@ -186,6 +186,18 @@ class TestPerceptionEncoderEmbeddingGenerator:
         # Distinct intervals should generally produce distinct embeddings.
         assert not np.allclose(embeddings[0], embeddings[1])
 
+    def test_embed_video_segment_frames(self) -> None:
+        perception_encoder = PerceptionEncoderEmbeddingGenerator()
+        dog_video_path = FIXTURES_DIR / "dog.mp4"
+
+        embeddings = perception_encoder.embed_video_segment_frames(
+            filepath=str(dog_video_path),
+            intervals=[(0.0, 0.5), (0.5, 1.0)],
+        )
+
+        assert embeddings.shape == (2, pe_mod.VIDEO_FRAMES_PER_SAMPLE, 512)
+        assert np.allclose(np.linalg.norm(embeddings, axis=2), 1.0, atol=1e-4)
+
     def test_embed_video_segments__matches_full_video_when_covering_duration(self) -> None:
         perception_encoder = PerceptionEncoderEmbeddingGenerator()
         dog_video_path = FIXTURES_DIR / "dog.mp4"

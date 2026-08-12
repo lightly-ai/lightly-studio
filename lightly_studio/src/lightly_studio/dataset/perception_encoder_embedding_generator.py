@@ -33,6 +33,11 @@ from .image_embedding import EmbeddingContext
 from .text_embedding import TextEmbeddingContext
 
 MODEL_NAME = "PE-Core-T16-384"
+SUPPORTED_MODEL_NAMES = (
+    "PE-Core-T16-384",
+    "PE-Core-L14-336",
+    "PE-Core-G14-448",
+)
 DEFAULT_VIDEO_CHANNEL = 0
 MAX_BATCH_SIZE: int = 16
 VIDEO_FRAMES_PER_SAMPLE: int = 8
@@ -41,15 +46,19 @@ VIDEO_FRAMES_PER_SAMPLE: int = 8
 class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator):
     """Perception Encoder Core embedding model."""
 
-    def __init__(self) -> None:
+    def __init__(self, model_name: str = MODEL_NAME) -> None:
         """Initialize the Perception Encoder Core embedding model.
 
         This method loads the Perception Encoder Core model and its tokenizer. The model
         checkpoint is downloaded and cached locally for future use.
+
+        Args:
+            model_name: Name of the Perception Encoder checkpoint to load.
         """
+        self._model_name = model_name
         LIGHTLY_STUDIO_MODEL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
         self._model, model_path = pe.CLIP.from_config(
-            name=MODEL_NAME, pretrained=True, download_dir=LIGHTLY_STUDIO_MODEL_CACHE_DIR
+            name=model_name, pretrained=True, download_dir=LIGHTLY_STUDIO_MODEL_CACHE_DIR
         )
         self._preprocess = transforms.get_image_transform(self._model.image_size)
         self._tokenizer = transforms.get_text_tokenizer(self._model.context_length)
@@ -75,7 +84,7 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             An EmbeddingModelCreate instance with the model details.
         """
         return EmbeddingModelCreate(
-            name=MODEL_NAME,
+            name=self._model_name,
             embedding_model_hash=self._model_hash,
             embedding_dimension=self._model.output_dim,
             collection_id=collection_id,
@@ -257,8 +266,8 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
                 ``0 <= start < end``.
 
         Returns:
-            Array of shape ``(len(intervals), embedding_dim)`` with L2-normalized
-            embeddings in the same order as ``intervals``.
+            Mean-pooled frame embeddings of shape ``(len(intervals), embedding_dim)``
+            in the same order as ``intervals``.
 
         Raises:
             ValueError: If an interval is invalid.
@@ -269,23 +278,59 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
         if not intervals:
             return np.empty((0, self._model.output_dim), dtype=np.float32)
 
+        frame_embeddings = self.embed_video_segment_frames(
+            filepath=filepath,
+            intervals=intervals,
+        )
+        return np.asarray(frame_embeddings.mean(axis=1), dtype=np.float32)
+
+    def embed_video_segment_frames(
+        self,
+        filepath: str,
+        intervals: Sequence[tuple[float, float]],
+    ) -> NDArray[np.float32]:
+        """Embed every sampled frame in temporal video segments.
+
+        N is the number of intervals, F is ``VIDEO_FRAMES_PER_SAMPLE``, and D is
+        the model's embedding dimension.
+
+        Args:
+            filepath: Path or URL of the video.
+            intervals: ``(start_time_s, end_time_s)`` pairs. Each interval must satisfy
+                ``0 <= start < end``.
+
+        Returns:
+            L2-normalized frame embeddings of shape (N, F, D).
+
+        Raises:
+            ValueError: If an interval is invalid.
+            MissingInputFileError: If the video path does not resolve.
+            BrokenInputFileError: If the video is present but unreadable/undecodable.
+        """
+        _validate_intervals(intervals)
+        if not intervals:
+            shape = (0, VIDEO_FRAMES_PER_SAMPLE, self._model.output_dim)
+            return np.empty(shape, dtype=np.float32)
+
         segment_frames = _load_video_segment_frames(
             filepath=filepath,
             intervals=intervals,
             preprocess=self._preprocess,
         )
-        embeddings = np.empty((len(intervals), self._model.output_dim), dtype=np.float32)
+        frames = torch.cat(segment_frames, dim=0)
+        frame_count = len(frames)
+        embeddings = np.empty((frame_count, self._model.output_dim), dtype=np.float32)
         position = 0
         with torch.no_grad():
-            for batch in batching.batched(segment_frames, batch_size=MAX_BATCH_SIZE):
-                videos_tensor = torch.stack(batch).to(self._device)
+            for batch in batching.batched(frames, batch_size=MAX_BATCH_SIZE):
+                images_tensor = torch.stack(batch).to(self._device)
                 batch_embeddings = (
-                    self._model.encode_video(videos_tensor, normalize=True).cpu().numpy()
+                    self._model.encode_image(images_tensor, normalize=True).cpu().numpy()
                 )
-                batch_size = videos_tensor.size(0)
+                batch_size = images_tensor.size(0)
                 embeddings[position : position + batch_size] = batch_embeddings
                 position += batch_size
-        return embeddings
+        return embeddings.reshape(len(intervals), VIDEO_FRAMES_PER_SAMPLE, self._model.output_dim)
 
 
 def _validate_intervals(intervals: Sequence[tuple[float, float]]) -> None:
