@@ -99,6 +99,13 @@ jobs:
           version: "0.8.17"
           enable-cache: true
 
+      - name: Install Google Artifact Registry keyring
+        if: steps.cache-build.outputs.cache-hit != 'true'
+        working-directory: lightly_studio
+        # `make export-schema` below invokes `uv run` before the end-to-end job
+        # installs optional dependencies, so registry authentication is needed here.
+        run: make install-google-artifact-registry-keyring
+
       - name: Set Up Node.js
         uses: actions/setup-node@v6
         with:

@@ -29,17 +29,22 @@ class Mundig:
 
         self.n_input_samples: int | None = None
 
-    def run(self, n_samples: int) -> list[int]:
+    def run(self, n_samples: int, preselected_indices: Iterable[int] = ()) -> list[int]:
         """Run the sampling algorithm and return selected sample indices.
 
         Args:
             n_samples: The number of samples to select.
+            preselected_indices: Indices of samples that Mundig should consider
+                already selected. They count towards `n_samples` and form the
+                prefix of the returned indices in the provided order.
 
         Returns:
             A list of indices of the selected samples.
         """
         selected: list[int] = self.mundig.run_selection(
-            n_total_samples=self.n_input_samples, n_samples_to_select=n_samples
+            preselected_indices=list(preselected_indices),
+            n_total_samples=self.n_input_samples,
+            n_samples_to_select=n_samples,
         )
         return selected
 
