@@ -177,7 +177,8 @@ def test_metadata_filter__boolean_equality(db_session: Session, wanted: bool) ->
     assert [sample.sample_id for sample in samples] == [expected.sample_id]
 
 
-def test_metadata_filter__boolean_inequality(db_session: Session) -> None:
+@pytest.mark.parametrize("unwanted", [True, False])
+def test_metadata_filter__boolean_inequality(db_session: Session, unwanted: bool) -> None:
     """``!=`` on a boolean compares as text too."""
     collection = create_collection(session=db_session)
     reviewed = create_image(
@@ -193,12 +194,13 @@ def test_metadata_filter__boolean_inequality(db_session: Session) -> None:
     reviewed["reviewed"] = True
     pending["reviewed"] = False
 
-    filters = SampleFilter(metadata_filters=[Metadata("reviewed") != True])  # noqa: E712
+    filters = SampleFilter(metadata_filters=[Metadata("reviewed") != unwanted])
     samples = sample_resolver.get_filtered_samples(
         session=db_session, collection_id=collection.collection_id, filters=filters
     ).samples
 
-    assert [sample.sample_id for sample in samples] == [pending.sample_id]
+    expected = pending if unwanted else reviewed
+    assert [sample.sample_id for sample in samples] == [expected.sample_id]
 
 
 def test_metadata_in_filter__missing(db_session: Session) -> None:
