@@ -1,4 +1,4 @@
-# Set up logging before importing any other modules.
+# Set up logging before importing any other modules (fast-track smoke test).
 # Add noqa to silence unused import and unsorted imports linter warnings.
 from . import setup_logging  # noqa: F401 I001
 
