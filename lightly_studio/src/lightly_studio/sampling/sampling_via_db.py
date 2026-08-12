@@ -219,13 +219,27 @@ def _get_class_balancing_data(  # noqa: C901
 
 
 def sampling_via_database(
-    session: Session, config: SamplingConfig, input_sample_ids: list[UUID]
+    session: Session,
+    config: SamplingConfig,
+    input_sample_ids: list[UUID],
+    preselected_sample_ids: list[UUID] | None = None,
 ) -> None:
     """Run sampling using the provided candidate sample ids.
 
     First resolves the sampling config to concrete database values.
     Then calls Mundig to run the sampling with pure values.
     Finally creates a tag for the selected set.
+
+    Args:
+        session: Database session used to resolve and store sampling data.
+        config: Sampling configuration.
+        input_sample_ids: Candidate sample IDs.
+        preselected_sample_ids: Sample IDs that should inform the sampling as
+            already selected. They are excluded from the result tag.
+
+    Raises:
+        ValueError: If the preselected sample IDs contain duplicates or are not
+            a subset of the input sample IDs.
     """
     # Check if the tag name is already used
     existing_tag = tag_resolver.get_by_name(
@@ -240,10 +254,22 @@ def sampling_via_database(
         )
         raise ValueError(msg)
 
-    n_samples_to_select = min(config.n_samples_to_select, len(input_sample_ids))
+    preselected_sample_ids = list(preselected_sample_ids or [])
+    preselected_set = set(preselected_sample_ids)
+    if len(preselected_sample_ids) != len(preselected_set):
+        raise ValueError("Preselected sample IDs must be unique.")
+    input_sample_id_set = set(input_sample_ids)
+    if not preselected_set.issubset(input_sample_id_set):
+        raise ValueError("Preselected sample IDs must be a subset of input sample IDs.")
+
+    n_available_samples = len(input_sample_ids) - len(preselected_sample_ids)
+    n_samples_to_select = min(config.n_samples_to_select, n_available_samples)
     if n_samples_to_select == 0:
         logger.warning("No samples available for sampling.")
         return
+
+    sample_id_to_index = {sample_id: index for index, sample_id in enumerate(input_sample_ids)}
+    preselected_indices = [sample_id_to_index[sample_id] for sample_id in preselected_sample_ids]
 
     # Get root dataset id for balancing strategies
     root_collection = collection_resolver.get_root_collection(
@@ -265,8 +291,13 @@ def sampling_via_database(
             mundig=mundig,
         )
 
-    selected_indices = mundig.run(n_samples=n_samples_to_select)
-    selected_sample_ids = [input_sample_ids[i] for i in selected_indices]
+    selected_indices = mundig.run(
+        n_samples=len(preselected_indices) + n_samples_to_select,
+        preselected_indices=preselected_indices,
+    )
+    selected_sample_ids = [
+        input_sample_ids[index] for index in selected_indices[len(preselected_indices) :]
+    ]
 
     tag = tag_resolver.create(
         session=session,

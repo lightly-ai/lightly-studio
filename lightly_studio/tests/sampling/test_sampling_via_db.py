@@ -413,7 +413,7 @@ def test_sampling_via_database__more_samples_to_sampling_than_available(
     )
 
     # Verify that mundig.run was called with the correct n_samples (5, not 10)
-    spy_mundig_run.assert_called_once_with(self=mocker.ANY, n_samples=5)
+    spy_mundig_run.assert_called_once_with(mocker.ANY, n_samples=5, preselected_indices=[])
 
 
 def test_sampling_via_database__zero_input_samples_available(
@@ -483,6 +483,108 @@ def test_sampling_via_database__tag_name_already_exists(
             db_session,
             sampling_config,
             input_sample_ids=candidate_sample_ids,
+        )
+
+
+def test_sampling_via_database__preselection_matches_single_sampling(
+    db_session: Session,
+) -> None:
+    collection_id = fill_db_with_samples_and_embeddings(
+        db_session, n_samples=10, embedding_model_names=["embedding_model_1"]
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+    strategy = EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")
+
+    sampling_via_database(
+        db_session,
+        SamplingConfig(
+            collection_id=collection_id,
+            n_samples_to_select=2,
+            sampling_result_tag_name="first_batch",
+            strategies=[strategy],
+        ),
+        input_sample_ids=sample_ids,
+    )
+    first_tag = tag_resolver.get_by_name(db_session, "first_batch", collection_id)
+    assert first_tag is not None
+    first_batch = _sample_ids_by_tag(
+        session=db_session, collection_id=collection_id, tag_id=first_tag.tag_id
+    )
+
+    sampling_via_database(
+        db_session,
+        SamplingConfig(
+            collection_id=collection_id,
+            n_samples_to_select=2,
+            sampling_result_tag_name="second_batch",
+            strategies=[strategy],
+        ),
+        input_sample_ids=sample_ids,
+        preselected_sample_ids=first_batch,
+    )
+    second_tag = tag_resolver.get_by_name(db_session, "second_batch", collection_id)
+    assert second_tag is not None
+    second_batch = _sample_ids_by_tag(
+        session=db_session, collection_id=collection_id, tag_id=second_tag.tag_id
+    )
+
+    sampling_via_database(
+        db_session,
+        SamplingConfig(
+            collection_id=collection_id,
+            n_samples_to_select=4,
+            sampling_result_tag_name="single_batch",
+            strategies=[strategy],
+        ),
+        input_sample_ids=sample_ids,
+    )
+    single_tag = tag_resolver.get_by_name(db_session, "single_batch", collection_id)
+    assert single_tag is not None
+    single_batch = _sample_ids_by_tag(
+        session=db_session, collection_id=collection_id, tag_id=single_tag.tag_id
+    )
+
+    assert set(first_batch).isdisjoint(second_batch)
+    assert set(first_batch + second_batch) == set(single_batch)
+
+
+def test_sampling_via_database__preselected_sample_id_not_in_input(
+    db_session: Session,
+) -> None:
+    sample_id = uuid4()
+
+    with pytest.raises(
+        ValueError, match="Preselected sample IDs must be a subset of input sample IDs"
+    ):
+        sampling_via_database(
+            session=db_session,
+            config=SamplingConfig(
+                collection_id=uuid4(),
+                n_samples_to_select=1,
+                sampling_result_tag_name="result",
+                strategies=[],
+            ),
+            input_sample_ids=[],
+            preselected_sample_ids=[sample_id],
+        )
+
+
+def test_sampling_via_database__duplicate_preselected_sample_id(
+    db_session: Session,
+) -> None:
+    sample_id = uuid4()
+
+    with pytest.raises(ValueError, match="Preselected sample IDs must be unique"):
+        sampling_via_database(
+            session=db_session,
+            config=SamplingConfig(
+                collection_id=uuid4(),
+                n_samples_to_select=1,
+                sampling_result_tag_name="result",
+                strategies=[],
+            ),
+            input_sample_ids=[sample_id],
+            preselected_sample_ids=[sample_id, sample_id],
         )
 
 
@@ -1089,5 +1191,14 @@ def _all_sample_ids(session: Session, collection_id: UUID) -> list[UUID]:
     """Return all sample ids for the collection ordered as returned by resolver."""
     samples = image_resolver.get_all_by_collection_id(
         session=session, collection_id=collection_id, pagination=None
+    ).samples
+    return [sample.sample_id for sample in samples]
+
+
+def _sample_ids_by_tag(session: Session, collection_id: UUID, tag_id: UUID) -> list[UUID]:
+    samples = image_resolver.get_all_by_collection_id(
+        session=session,
+        collection_id=collection_id,
+        filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tag_id])),
     ).samples
     return [sample.sample_id for sample in samples]
