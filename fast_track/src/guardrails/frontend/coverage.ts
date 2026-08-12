@@ -8,7 +8,15 @@ import { FRONTEND_PREFIX } from './eslint-runner';
 
 const SRC_PREFIX = FRONTEND_PREFIX + 'src/';
 
-const IGNORE_SUFFIXES = ['.test.ts', '.test.js', '.spec.ts', '.spec.js', '.d.ts'];
+const IGNORE_SUFFIXES = [
+    '.test.ts',
+    '.test.js',
+    '.test.svelte',
+    '.spec.ts',
+    '.spec.js',
+    '.spec.svelte',
+    '.d.ts'
+];
 const SOURCE_SUFFIXES = ['.ts', '.js', '.svelte'];
 
 // Istanbul v8 coverage types (as written by @vitest/coverage-v8).
