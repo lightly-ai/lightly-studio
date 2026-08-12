@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Python SDK: Export video frames as image files via `VideoFrameDataset.export().to_image_files()` with support for PNG, JPEG, WEBP, BMP, and TIFF formats. Returns the paths of the created files.
 - Google Cloud Storage (GCS) is supported in the LightlyStudio Enterprise version.
+- Python SDK: Connect to LightlyStudio Enterprise with a long-lived API key by passing `api_key` to `lightly_studio.connect()` or setting `LIGHTLY_STUDIO_API_KEY`.
 
 ### Changed
 
