@@ -2,7 +2,7 @@ import { vi, describe, expect, it } from 'vitest';
 import type { ESLint } from 'eslint';
 import type { ChangedFile, GuardrailContext } from '../context/types';
 import { frontendComplexityGuardrail } from './complexity';
-import { FRONTEND_ABS } from './eslint-runner';
+import { FRONTEND_ABS } from './shared';
 
 vi.mock('node:fs', async (importOriginal) => {
     const actual = await importOriginal<typeof import('node:fs')>();
@@ -50,7 +50,7 @@ describe('frontendComplexityGuardrail', () => {
     });
 
     it('passes when all changed frontend files are deleted', async () => {
-        vi.mocked(existsSync).mockReturnValueOnce(false);
+        vi.mocked(existsSync).mockImplementation((p) => !String(p).includes('deleted'));
         const result = await frontendComplexityGuardrail.run(
             makeCtx([
                 {
@@ -66,7 +66,7 @@ describe('frontendComplexityGuardrail', () => {
     });
 
     it('only lints existing files when some are deleted', async () => {
-        vi.mocked(existsSync).mockReturnValueOnce(true).mockReturnValueOnce(false);
+        vi.mocked(existsSync).mockImplementation((p) => !String(p).includes('deleted'));
         vi.mocked(runEslint).mockResolvedValueOnce([
             { filePath: `${FRONTEND_ABS}/src/foo.ts`, messages: [] }
         ] as unknown as ESLint.LintResult[]);

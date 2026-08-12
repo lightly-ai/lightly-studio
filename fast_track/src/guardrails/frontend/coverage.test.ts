@@ -7,7 +7,7 @@ vi.mock('node:fs', () => ({
 
 import { existsSync, readFileSync } from 'node:fs';
 import { filterFrontendFiles, frontendCoverageGuardrail, parseFrontendReport } from './coverage';
-import { FRONTEND_ABS, FRONTEND_PREFIX } from './eslint-runner';
+import { FRONTEND_ABS, FRONTEND_PREFIX } from './shared';
 import type { ChangedFile, GuardrailContext } from '../context/types';
 
 const mockExistsSync = vi.mocked(existsSync);

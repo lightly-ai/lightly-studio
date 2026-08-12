@@ -5,7 +5,7 @@ import { guardrails, selectGuardrails } from './registry';
 import { runGuardrails } from './run-guardrails';
 
 // Local CLI: judges the branch's committed changes from a plain checkout — no
-// GitHub API. The CI entry that writes the verdict artifact lands in a later PR.
+// GitHub API. The CI entry that writes the verdict artifact lives in ci.ts.
 
 /** Base ref to diff against; overridable so stacked branches can pick their base. */
 const DEFAULT_BASE_REF = 'origin/main';
