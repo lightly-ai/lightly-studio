@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import atexit
 import logging
+import threading
 from collections.abc import Mapping
 from enum import Enum
 from typing import Protocol
@@ -70,11 +71,15 @@ def track(event: str, properties: Mapping[str, object]) -> None:
 def shutdown() -> None:
     """Deliver pending events and release the tracker. Never raises."""
     global _tracker  # noqa: PLW0603
-    tracker = _tracker
+    # Only the swap is locked. Flushing can block on the network, and a caller reporting an event
+    # meanwhile should not wait on it.
+    with _tracker_lock:
+        tracker = _tracker
+        _tracker = None
+
     if tracker is None:
         return
 
-    _tracker = None
     try:
         tracker.shutdown()
     except Exception:
@@ -82,14 +87,18 @@ def shutdown() -> None:
 
 
 _tracker: Tracker | None = None
+_tracker_lock = threading.Lock()
 
 
 def _get_tracker() -> Tracker:
     """Get the process-wide tracker, building it on first use."""
     global _tracker  # noqa: PLW0603
-    if _tracker is None:
-        _tracker = _create_tracker()
-    return _tracker
+    # Held for the whole check-and-build: two callers racing here would each get a tracker, and
+    # the loser's events would sit in an instance nothing ever flushes.
+    with _tracker_lock:
+        if _tracker is None:
+            _tracker = _create_tracker()
+        return _tracker
 
 
 def _create_tracker() -> Tracker:

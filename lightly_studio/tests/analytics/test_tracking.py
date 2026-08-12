@@ -1,4 +1,6 @@
 import atexit
+import threading
+import time
 from collections.abc import Generator, Mapping
 
 import pytest
@@ -62,6 +64,32 @@ def test_track__builds_the_tracker_once(mocker: MockerFixture) -> None:
 
     create.assert_called_once_with()
     assert len(fake.events) == 2
+
+
+def test_track__builds_the_tracker_once_under_concurrency(mocker: MockerFixture) -> None:
+    """Concurrent callers must share one tracker, or an event is queued on an orphan."""
+
+    def build_tracker() -> FakeTracker:
+        # Sleeping releases the GIL, so every thread reaches the None check before the first
+        # construction finishes. Without a lock they all build their own tracker.
+        time.sleep(0.01)
+        return FakeTracker()
+
+    create = mocker.patch.object(tracking, "_create_tracker", side_effect=build_tracker)
+    threads = [
+        threading.Thread(
+            target=tracking.track,
+            kwargs={"event": tracking.APP_LAUNCHED, "properties": {}},
+        )
+        for _ in range(8)
+    ]
+
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    create.assert_called_once_with()
 
 
 def test_track__when_the_backend_raises(mocker: MockerFixture) -> None:
