@@ -99,6 +99,10 @@ jobs:
           version: "0.8.17"
           enable-cache: true
 
+      - name: Install Google Artifact Registry keyring
+        if: steps.cache-build.outputs.cache-hit != 'true'
+        run: pip install keyrings.google-artifactregistry-auth
+
       - name: Set Up Node.js
         uses: actions/setup-node@v6
         with:
