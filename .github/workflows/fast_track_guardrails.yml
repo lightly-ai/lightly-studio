@@ -130,9 +130,9 @@ jobs:
           npm ci
           npm run prebuild
 
-      # Same arrangement as the backend step above, for frontend/coverage. That guardrail
-      # still runs its own per-file vitest subset until it migrates onto the shared base,
-      # so nothing reads this report yet.
+      # Same arrangement as the backend step above, for frontend/coverage: the guardrail
+      # only reads coverage/coverage-final.json, and a failing suite becomes a fail verdict
+      # rather than killing the job.
       - name: Run frontend tests with coverage
         id: frontend-tests
         if: steps.changes.outputs.frontend_src == 'true'
@@ -154,6 +154,10 @@ jobs:
           # so a skipped step does not read as a failing suite.
           BACKEND_COVERAGE_JSON: ${{ github.workspace }}/lightly_studio/coverage.json
           BACKEND_TESTS_PASSED: ${{ steps.backend-tests.outcome != 'failure' }}
+          # frontend/coverage mirrors the backend vars, reading the report the frontend
+          # test step wrote.
+          FRONTEND_COVERAGE_JSON: ${{ github.workspace }}/lightly_studio_view/coverage/coverage-final.json
+          FRONTEND_TESTS_PASSED: ${{ steps.frontend-tests.outcome != 'failure' }}
         run: npm run guardrails-ci
 
       # JS action, so defaults.run.working-directory doesn't apply — path is repo-root-relative.
