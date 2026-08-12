@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
+from pydantic import BaseModel
 from sqlmodel import Field, SQLModel
+
+from lightly_studio.models.evaluation_run import EvaluationTaskType
 
 
 class EvaluationAnnotationMetricTable(SQLModel, table=True):
@@ -33,6 +36,25 @@ class EvaluationAnnotationMetricTable(SQLModel, table=True):
     )
     metric_name: str | None = Field(default=None, index=True)
     value: float | None = Field(default=None)
+
+
+class EvaluationAnnotationMetricInfoView(BaseModel):
+    """One per-annotation metric name recorded by an evaluation run."""
+
+    metric_name: str
+
+
+class EvaluationRunAnnotationMetricsInfoView(BaseModel):
+    """Per-annotation metrics recorded by one evaluation run.
+
+    Carries no value bounds: how bounds interact with unmatched annotations, whose
+    ordering value is coalesced to zero, is decided by the threshold filter.
+    """
+
+    run_id: UUID
+    run_name: str
+    task_type: EvaluationTaskType
+    metrics: list[EvaluationAnnotationMetricInfoView]
 
 
 class EvaluationAnnotationMetricCreate(SQLModel):
