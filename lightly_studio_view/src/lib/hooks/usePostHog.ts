@@ -6,6 +6,11 @@ import {
     PUBLIC_POSTHOG_HOST
 } from '$env/static/public';
 import { version } from '$lib/version.json';
+import { getFeatures } from '$lib/api/lightly_studio_local/sdk.gen';
+
+// The backend reports this only while LIGHTLY_STUDIO_ANALYTICS_ENABLED is set, so one variable
+// opts out of tracking in both the Python package and here.
+const ANALYTICS_FEATURE = 'analytics';
 
 let initialized = false;
 
@@ -22,8 +27,15 @@ let initialized = false;
  * ```
  */
 export const usePostHog = () => {
-    const init = () => {
+    /**
+     * Start PostHog, unless the backend reports that usage tracking is switched off.
+     *
+     * Resolves once the decision is made. Events fired before then are dropped by trackEvent().
+     */
+    const init = async () => {
         if (!browser || initialized) return;
+
+        if (!(await analyticsEnabled())) return;
 
         const apiKey = PUBLIC_POSTHOG_KEY || PUBLIC_POSTHOG_DEV_KEY;
         const apiHost = PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog.com';
@@ -71,4 +83,20 @@ export const usePostHog = () => {
         init,
         trackEvent
     };
+};
+
+/**
+ * Ask the backend whether usage tracking is switched on.
+ *
+ * Returns false when the request fails, so a backend that cannot be reached is never tracked
+ * against.
+ */
+const analyticsEnabled = async (): Promise<boolean> => {
+    try {
+        const { data } = await getFeatures();
+        return data?.includes(ANALYTICS_FEATURE) ?? false;
+    } catch (e) {
+        console.warn('Could not read the active features, leaving analytics off', e);
+        return false;
+    }
 };

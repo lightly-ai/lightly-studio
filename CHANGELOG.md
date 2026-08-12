@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Python SDK: Export video frames as image files via `VideoFrameDataset.export().to_image_files()` with support for PNG, JPEG, WEBP, BMP, and TIFF formats. Returns the paths of the created files.
 
+- Report anonymous usage data on app launch. Set `LIGHTLY_STUDIO_ANALYTICS_ENABLED=false` to opt out.
+
 ### Changed
 
 - `lightly-studio quickstart` now opens your browser automatically once the GUI server is ready. Pass `--no-browser` to skip that.

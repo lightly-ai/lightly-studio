@@ -23,6 +23,13 @@ LIGHTLY_STUDIO_DATABASE_URL: Optional[str] = env.str("LIGHTLY_STUDIO_DATABASE_UR
 LIGHTLY_STUDIO_API_URL: Optional[str] = env.str("LIGHTLY_STUDIO_API_URL", default=None)
 LIGHTLY_STUDIO_TOKEN: Optional[str] = env.str("LIGHTLY_STUDIO_TOKEN", default=None)
 
+# Anonymous usage tracking. Covers the Python package and the browser UI, which reads the flag
+# back from the API. See lightly_studio/analytics/tracking.py.
+LIGHTLY_STUDIO_ANALYTICS_ENABLED: bool = env.bool("LIGHTLY_STUDIO_ANALYTICS_ENABLED", True)
+# PostHog project API keys are write-only and ship inside every client, so this is not a secret.
+# Empty means no key was configured, which disables tracking.
+LIGHTLY_STUDIO_POSTHOG_KEY: str = env.str("LIGHTLY_STUDIO_POSTHOG_KEY", "")
+
 LIGHTLY_STUDIO_REQUEST_TIMING_ENABLED: bool = env.bool(
     "LIGHTLY_STUDIO_REQUEST_TIMING_ENABLED", False
 )

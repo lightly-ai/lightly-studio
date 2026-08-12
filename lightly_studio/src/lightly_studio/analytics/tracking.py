@@ -1,0 +1,104 @@
+"""Anonymous usage tracking.
+
+Call sites use `track` and nothing else. Which backend receives the events is an implementation
+detail of this module, so replacing or dropping PostHog does not touch any caller.
+"""
+
+from __future__ import annotations
+
+import atexit
+import logging
+from collections.abc import Mapping
+from enum import Enum
+from typing import Protocol
+
+from lightly_studio.analytics.posthog_tracker import PostHogTracker
+from lightly_studio.dataset.env import (
+    LIGHTLY_STUDIO_ANALYTICS_ENABLED,
+    LIGHTLY_STUDIO_POSTHOG_KEY,
+)
+
+logger = logging.getLogger(__name__)
+
+APP_LAUNCHED = "app_launched"
+
+
+class Tracker(Protocol):
+    """Delivers usage events to an analytics backend."""
+
+    def track(self, event: str, properties: Mapping[str, object]) -> None:
+        """Report a single event."""
+        ...
+
+    def shutdown(self) -> None:
+        """Deliver anything still pending and release resources."""
+        ...
+
+
+class NoOpTracker:
+    """Tracker that drops everything, used when tracking is off."""
+
+    def track(self, event: str, properties: Mapping[str, object]) -> None:
+        """Discard the event."""
+
+    def shutdown(self) -> None:
+        """Do nothing."""
+
+
+class LaunchSource(str, Enum):
+    """The entry point that started the app."""
+
+    QUICKSTART = "quickstart"
+    GUI = "gui"
+
+
+def track(event: str, properties: Mapping[str, object]) -> None:
+    """Report a usage event.
+
+    Never raises. Tracking is best effort and must not be able to break the caller.
+
+    Args:
+        event: Event name, e.g. `APP_LAUNCHED`.
+        properties: Metadata to attach to the event.
+    """
+    try:
+        _get_tracker().track(event=event, properties=properties)
+    except Exception:
+        logger.debug(f"Could not report the '{event}' event.", exc_info=True)
+
+
+def shutdown() -> None:
+    """Deliver pending events and release the tracker. Never raises."""
+    global _tracker  # noqa: PLW0603
+    tracker = _tracker
+    if tracker is None:
+        return
+
+    _tracker = None
+    try:
+        tracker.shutdown()
+    except Exception:
+        logger.debug("Could not shut down the tracker.", exc_info=True)
+
+
+_tracker: Tracker | None = None
+
+
+def _get_tracker() -> Tracker:
+    """Get the process-wide tracker, building it on first use."""
+    global _tracker  # noqa: PLW0603
+    if _tracker is None:
+        _tracker = _create_tracker()
+    return _tracker
+
+
+def _create_tracker() -> Tracker:
+    """Build the tracker matching the current configuration."""
+    if not LIGHTLY_STUDIO_ANALYTICS_ENABLED or not LIGHTLY_STUDIO_POSTHOG_KEY:
+        return NoOpTracker()
+
+    tracker = PostHogTracker(project_api_key=LIGHTLY_STUDIO_POSTHOG_KEY)
+    # PostHog delivers from a background thread and registers no exit hook of its own, so a
+    # short-lived process would drop the event without this.
+    atexit.register(shutdown)
+    return tracker
