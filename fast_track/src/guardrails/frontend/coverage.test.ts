@@ -13,7 +13,7 @@ vi.mock('node:child_process', () => ({
 }));
 
 import { existsSync, readFileSync } from 'node:fs';
-import { fileCoverageRatio, frontendCoverageGuardrail } from './coverage';
+import { fileCoverageRatio, frontendCoverageGuardrail, parseFrontendReport } from './coverage';
 import { FRONTEND_ABS, FRONTEND_PREFIX } from './eslint-runner';
 import type { ChangedFile, GuardrailContext } from '../context/types';
 
@@ -153,6 +153,90 @@ describe('fileCoverageRatio', () => {
             s: {}
         };
         expect(fileCoverageRatio(entry, new Set([1]))).toBe(0);
+    });
+});
+
+describe('parseFrontendReport', () => {
+    it('maps absolute report keys to repo-relative paths', () => {
+        const report = parseFrontendReport(JSON.stringify(FULL_COVERAGE_DATA));
+        expect([...report.keys()]).toEqual([`${FRONTEND_PREFIX}src/lib/foo.ts`]);
+    });
+
+    it('normalises Windows separators before matching the frontend prefix', () => {
+        const report = parseFrontendReport(
+            JSON.stringify({
+                [`C:\\repo\\${FRONTEND_PREFIX.replace(/\//g, '\\')}src\\lib\\foo.ts`]: {
+                    statementMap: {
+                        '0': { start: { line: 1, column: 0 }, end: { line: 1, column: 5 } }
+                    },
+                    s: { '0': 1 }
+                }
+            })
+        );
+        expect([...report.keys()]).toEqual([`${FRONTEND_PREFIX}src/lib/foo.ts`]);
+    });
+
+    it('skips entries whose path is outside the frontend prefix', () => {
+        const report = parseFrontendReport(
+            JSON.stringify({
+                '/some/other/repo/src/foo.ts': {
+                    statementMap: {
+                        '0': { start: { line: 1, column: 0 }, end: { line: 1, column: 5 } }
+                    },
+                    s: { '0': 1 }
+                }
+            })
+        );
+        expect(report.size).toBe(0);
+    });
+
+    it('marks a line executable if any statement covers it, covered if any covering statement has hits', () => {
+        const report = parseFrontendReport(
+            JSON.stringify({
+                [`${FRONTEND_ABS}/src/lib/foo.ts`]: {
+                    statementMap: {
+                        '0': { start: { line: 1, column: 0 }, end: { line: 1, column: 10 } },
+                        '1': { start: { line: 2, column: 0 }, end: { line: 2, column: 10 } }
+                    },
+                    s: { '0': 1, '1': 0 }
+                }
+            })
+        );
+        const entry = report.get(`${FRONTEND_PREFIX}src/lib/foo.ts`);
+        expect([...entry!.executable].sort()).toEqual([1, 2]);
+        expect([...entry!.covered].sort()).toEqual([1]);
+    });
+
+    it('spans every line of a multi-line statement', () => {
+        const report = parseFrontendReport(
+            JSON.stringify({
+                [`${FRONTEND_ABS}/src/lib/foo.ts`]: {
+                    statementMap: {
+                        '0': { start: { line: 1, column: 0 }, end: { line: 3, column: 10 } }
+                    },
+                    s: { '0': 2 }
+                }
+            })
+        );
+        const entry = report.get(`${FRONTEND_PREFIX}src/lib/foo.ts`);
+        expect([...entry!.executable].sort()).toEqual([1, 2, 3]);
+        expect([...entry!.covered].sort()).toEqual([1, 2, 3]);
+    });
+
+    it('treats a missing s entry as 0 hits', () => {
+        const report = parseFrontendReport(
+            JSON.stringify({
+                [`${FRONTEND_ABS}/src/lib/foo.ts`]: {
+                    statementMap: {
+                        '0': { start: { line: 1, column: 0 }, end: { line: 1, column: 10 } }
+                    },
+                    s: {}
+                }
+            })
+        );
+        const entry = report.get(`${FRONTEND_PREFIX}src/lib/foo.ts`);
+        expect([...entry!.executable]).toEqual([1]);
+        expect([...entry!.covered]).toEqual([]);
     });
 });
 
