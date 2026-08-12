@@ -1,9 +1,4 @@
-"""Sorting models for annotation grids.
-
-Kept separate from the image sort union in ``models.sort``: that union's members bind to
-image-specific joins that are invalid against an annotation-rooted query, so sharing it
-would let the API accept requests it cannot serve.
-"""
+"""Sorting models for annotation grids."""
 
 from __future__ import annotations
 

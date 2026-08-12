@@ -14,18 +14,6 @@ from lightly_studio.resolvers.annotations import annotation_metric_sort
 from tests.resolvers.evaluation_sample_metric_resolver import helpers as evaluation_run_helpers
 
 
-def _unpersisted_run(
-    *, gt_annotation_collection_id: UUID, pred_annotation_collection_id: UUID
-) -> EvaluationRunTable:
-    return EvaluationRunTable(
-        name="test_run",
-        gt_annotation_collection_id=gt_annotation_collection_id,
-        pred_annotation_collection_id=pred_annotation_collection_id,
-        dataset_id=uuid4(),
-        task_type=EvaluationTaskType.OBJECT_DETECTION,
-    )
-
-
 def test_sort_expr_to_order_by__unknown_run_raises(db_session: Session) -> None:
     sort_expr = AnnotationEvaluationMetricSortExpr(
         evaluation_run_id=uuid4(),
@@ -33,7 +21,7 @@ def test_sort_expr_to_order_by__unknown_run_raises(db_session: Session) -> None:
         direction=SortDirection.asc,
     )
 
-    with pytest.raises(annotation_metric_sort.EvaluationRunNotFoundError):
+    with pytest.raises(ValueError, match="not found"):
         annotation_metric_sort.sort_expr_to_order_by(
             session=db_session,
             annotation_collection_id=uuid4(),
@@ -50,7 +38,7 @@ def test_sort_expr_to_order_by__source_not_in_run_raises(db_session: Session) ->
         direction=SortDirection.asc,
     )
 
-    with pytest.raises(annotation_metric_sort.AnnotationSourceNotInEvaluationRunError):
+    with pytest.raises(ValueError, match="neither side"):
         annotation_metric_sort.sort_expr_to_order_by(
             session=db_session,
             annotation_collection_id=uuid4(),
@@ -103,3 +91,15 @@ def test_resolve_side__neither_source() -> None:
     side = annotation_metric_sort.resolve_side(run=run, annotation_collection_id=uuid4())
 
     assert side is None
+
+
+def _unpersisted_run(
+    *, gt_annotation_collection_id: UUID, pred_annotation_collection_id: UUID
+) -> EvaluationRunTable:
+    return EvaluationRunTable(
+        name="test_run",
+        gt_annotation_collection_id=gt_annotation_collection_id,
+        pred_annotation_collection_id=pred_annotation_collection_id,
+        dataset_id=uuid4(),
+        task_type=EvaluationTaskType.OBJECT_DETECTION,
+    )
