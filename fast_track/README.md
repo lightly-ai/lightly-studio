@@ -52,54 +52,56 @@ GUARDRAILS=diff-size make run-guardrails
 BASE_REF=origin/develop make run-guardrails
 ```
 
-## `backend/coverage`
+## Backend and frontend coverage guardrails
 
-**What it does.** For every backend source file the PR touches, it asks: are the
-lines this PR _added_ covered by tests? Each file is judged on its own at
-**90%**. Coverage is not pooled, so one well-covered file cannot carry an
-uncovered one. The guardrail never runs tests itself; it only reads a report.
+**What they do.** For every source file the PR touches, they compute the percentage
+of _lines added_ covered by tests. Each file must be over **90%**.
+The guardrails don't run tests themselves, they only read a report produced in CI.
 
-**Inputs.** Two, combined per file:
+| guardrail           | scope                                         | report                                 | env vars                                          |
+| ------------------- | --------------------------------------------- | -------------------------------------- | ------------------------------------------------- |
+| `backend/coverage`  | `lightly_studio/src/lightly_studio/**/*.py`   | a full-suite `coverage.py` JSON        | `BACKEND_COVERAGE_JSON`, `BACKEND_TESTS_PASSED`   |
+| `frontend/coverage` | `lightly_studio_view/src/**/*.{ts,js,svelte}` | a full-suite vitest (Istanbul/v8) JSON | `FRONTEND_COVERAGE_JSON`, `FRONTEND_TESTS_PASSED` |
 
-| input      | source                                                            |
-| ---------- | ----------------------------------------------------------------- |
-| the diff   | `BASE_REF...HEAD`, giving the added line numbers per changed file |
-| the report | a full-suite `coverage.py` JSON report, produced by the workflow  |
+`*_COVERAGE_JSON` gives the path to the report. `*_TESTS_PASSED` is `false` when
+the test run failed. The diff (`BASE_REF...HEAD`) gives the added line numbers per
+file. The verdict for each file combines these lines with the report.
 
-The report arrives through two env vars:
-
-| var                     | meaning                               |
-| ----------------------- | ------------------------------------- |
-| `BACKEND_COVERAGE_JSON` | path to the `coverage.py` JSON report |
-| `BACKEND_TESTS_PASSED`  | `false` when that test run failed     |
-
-**When to expect a verdict.** Only when the PR changes backend source, i.e.
-`lightly_studio/src/lightly_studio/**/*.py`. Tests, `conftest.py`, `__init__.py`
-and the `migrations/`, `examples/` and `vendor/` trees are out of scope; a PR
-touching nothing else passes as `0 file(s) checked`. The workflow runs the full
-suite on the same path filter, so the expensive step is skipped for PRs this
-guardrail would not judge anyway.
+**When to expect a verdict.** A verdict appears only when the PR changes source in
+scope. For the backend, these files are out of scope: tests, `conftest.py`,
+`__init__.py`, and the `migrations/`, `examples/`, and `vendor/` trees. For the
+frontend, test files (`.test.*`, `.spec.*`) and type declarations (`.d.ts`) are
+out of scope. A PR that changes nothing in scope passes as `0 file(s) checked`.
+The workflow runs each full suite on the same path filter. Therefore it skips the
+expensive step for PRs that the guardrail does not judge.
 
 Verdicts:
 
 - no changed file in scope → pass, `0 file(s) checked`
 - report present → each file judged at 90%; a file the report omits fails
 - env var set but the file is missing → fail, `coverage report missing`
-- `BACKEND_TESTS_PASSED=false` → fail, coverage is not judged on partial data
+- `*_TESTS_PASSED=false` → fail, coverage is not judged on partial data
 - **env var unset** → pass, with a loud `coverage skipped` summary. Only the
   local `make run-guardrails` path reaches this; CI always sets the var.
 
-To exercise it locally, produce a report and point the guardrail at it:
+To exercise them locally, produce a report and point the guardrail at it:
 
 ```bash
+# backend
 cd lightly_studio
 make build-lightly_studio_view   # conftest imports the app, so the dist must exist
 make install-optional-deps       # some test modules need extras (e.g. s3fs)
 make test-coverage               # writes lightly_studio/coverage.json
-
 cd ../fast_track
 BACKEND_COVERAGE_JSON=$PWD/../lightly_studio/coverage.json \
   GUARDRAILS=backend/coverage make run-guardrails
+
+# frontend
+cd lightly_studio_view
+make test-coverage               # writes coverage/coverage-final.json
+cd ../fast_track
+FRONTEND_COVERAGE_JSON=$PWD/../lightly_studio_view/coverage/coverage-final.json \
+  GUARDRAILS=frontend/coverage make run-guardrails
 ```
 
 ## Toolchain
