@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Check as CheckIcon } from '@lucide/svelte';
-    import { Button } from '$lib/components/ui/button';
+    import { Button } from '$lib/components';
     import * as Command from '$lib/components/ui/command';
     import { cn } from '$lib/utils';
 
@@ -52,17 +52,21 @@
         <div class="flex gap-1">
             <Button
                 variant="ghost"
-                size="sm"
-                class="h-6 px-2 text-xs"
-                onclick={() => (selected = resolvedItems.map((item) => item.value))}
+                buttonProps={{
+                    size: 'sm',
+                    class: 'h-6 px-2 text-xs',
+                    onclick: () => (selected = resolvedItems.map((item) => item.value))
+                }}
             >
                 Select all
             </Button>
             <Button
                 variant="ghost"
-                size="sm"
-                class="h-6 px-2 text-xs"
-                onclick={() => (selected = [])}
+                buttonProps={{
+                    size: 'sm',
+                    class: 'h-6 px-2 text-xs',
+                    onclick: () => (selected = [])
+                }}
             >
                 Clear
             </Button>

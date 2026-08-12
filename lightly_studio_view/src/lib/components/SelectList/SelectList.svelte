@@ -7,7 +7,7 @@
     import { tick, untrack, type Snippet } from 'svelte';
     import * as Command from '$lib/components/ui/command/index.js';
     import * as Popover from '$lib/components/ui/popover/index.js';
-    import { Button } from '$lib/components/ui/button/index.js';
+    import { Button } from '$lib/components';
     import { cn } from '$lib/utils';
     import type { ListItem } from './types';
 
@@ -145,13 +145,15 @@
         {#snippet child({ props }: ChildProps)}
             <div class="flex w-full min-w-0 max-w-full items-center space-x-4">
                 <Button
-                    {...props}
                     variant="secondary"
-                    {disabled}
-                    class={cn('w-[200px] min-w-0 max-w-full justify-between', className)}
-                    role="combobox"
-                    aria-expanded={open}
-                    data-testid="select-list-trigger"
+                    buttonProps={{
+                        ...props,
+                        disabled,
+                        class: cn('w-[200px] min-w-0 max-w-full justify-between', className),
+                        role: 'combobox',
+                        'aria-expanded': open,
+                        'data-testid': 'select-list-trigger'
+                    }}
                 >
                     <span
                         class="min-w-0 flex-1 truncate text-left"
