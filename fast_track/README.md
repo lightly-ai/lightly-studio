@@ -56,7 +56,7 @@ BASE_REF=origin/develop make run-guardrails
 
 **What they do.** For every source file the PR touches, they compute the percentage
 of _lines added_ covered by tests. Each file must be at least **90%**.
-The guardrails don't run tests themselves, they only read a report produced in CI.
+The guardrails do not run tests themselves. They only read a report produced in CI.
 
 | guardrail           | scope                                         | report                                 | env vars                                          |
 | ------------------- | --------------------------------------------- | -------------------------------------- | ------------------------------------------------- |

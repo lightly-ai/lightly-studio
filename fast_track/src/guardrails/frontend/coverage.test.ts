@@ -74,13 +74,18 @@ describe('filterFrontendFiles', () => {
         expect(filterFrontendFiles(files)).toHaveLength(0);
     });
 
-    it.each(['foo.test.ts', 'foo.test.js', 'foo.spec.ts', 'foo.spec.js', 'types.d.ts'])(
-        'excludes %s',
-        (name) => {
-            const files = [file(`${FRONTEND_PREFIX}src/lib/${name}`)];
-            expect(filterFrontendFiles(files)).toHaveLength(0);
-        }
-    );
+    it.each([
+        'foo.test.ts',
+        'foo.test.js',
+        'foo.test.svelte',
+        'foo.spec.ts',
+        'foo.spec.js',
+        'foo.spec.svelte',
+        'types.d.ts'
+    ])('excludes %s', (name) => {
+        const files = [file(`${FRONTEND_PREFIX}src/lib/${name}`)];
+        expect(filterFrontendFiles(files)).toHaveLength(0);
+    });
 
     it('excludes non-source files (.css, .svg)', () => {
         const files = [
