@@ -28,20 +28,12 @@
 
 ---
 
-# Welcome to LightlyStudio!
-
-We at Lightly created **LightlyStudio**, an open-source tool designed to unify your data workflows from curation, annotation, model evaluation and management in a single tool. Since we're big fans of Rust we used it to speed things up. You can work with COCO and ImageNet on a Macbook Pro with M1 and 16GB of memory!
-
 <p align="center">
-  <video
-    src="https://github.com/user-attachments/assets/012974ce-1040-40f9-9f7e-41a45c56bf1c"
-    width="70%"
-    controls
-    loop
-    muted
-  ></video>
-  <br>
+  <img src="assets/readme/hero_showcase.gif" alt="LightlyStudio: an image grid with annotations next to an embedding plot, a cluster selection filtering the grid, and the annotation editor open on one image" width="100%" />
 </p>
+
+<p align="center">The embedding plot shows how images relate to each other, with a preview on hover. A lasso selection filters the grid to one cluster. A search for "coffee" finds a match, and the annotation editor opens to label it.</p>
+<p align="center"><strong>⚡ Works smoothly with 2M+ images, embeddings included, on a single MacBook (M1, 16GB RAM).</strong></p>
 
 ## 💻 Installation
 
@@ -50,7 +42,6 @@ Runs on **Python 3.9 to 3.14** on Windows, Linux and MacOS. We recommend **Pytho
 ```shell
 pip install lightly-studio
 ```
-
 
 ## Workflows
 
@@ -96,7 +87,6 @@ pip install lightly-studio
     </td>
   </tr>
 </table>
-
 
 ## 🚀 Quickstart
 

@@ -5,16 +5,12 @@ your data workflows from curation, annotation and management. Built with Rust fo
 efficiency, it lets you work seamlessly with datasets like COCO and ImageNet, even on a MacBook Pro
 with an M1 chip and 16 GB of memory.
 
-<div style="width: 100%; aspect-ratio: 16 / 9; overflow: hidden;">
-  <iframe
-    style="width: 100%; height: 100%; border: 0;"
-    src="https://www.youtube.com/embed/iUS9hjI4VQ4?autoplay=1&mute=1&playsinline=1&rel=0"
-    title="LightlyStudio overview"
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-    referrerpolicy="strict-origin-when-cross-origin"
-    allowfullscreen
-  ></iframe>
-</div>
+<p align="center">
+  <video src="_static/hero_showcase.mp4" width="100%" autoplay loop muted playsinline></video>
+</p>
+
+<p align="center">The embedding plot shows how images relate to each other, with a preview on hover. A lasso selection filters the grid to one cluster. A search for "coffee" finds a match, and the annotation editor opens to label it.</p>
+<p align="center"><strong>⚡ Works smoothly with 2M+ images, embeddings included, on a single MacBook (M1, 16GB RAM).</strong></p>
 
 
 ## Installation
@@ -46,7 +42,7 @@ pip install lightly-studio
         pip install lightly-studio
         ```
 
-## Quickstart
+## Try it in 60 seconds
 
 Want to try LightlyStudio instantly? Run:
 
@@ -56,6 +52,8 @@ lightly-studio quickstart
 
 This downloads the COCO example dataset, loads it, and opens the GUI in your browser. Run
 `lightly-studio quickstart --help` for the available options.
+
+## Quickstart
 
 The examples below use the same example dataset by default, downloaded on the first run. Point
 them at your own image, video, or YOLO/COCO dataset by changing the input path.
@@ -151,9 +149,8 @@ them at your own image, video, or YOLO/COCO dataset by changing the input path.
     1. Click on the printed URL to open the app in your browser.
 
 !!! tip
-    - Run `lightly-studio quickstart` to try LightlyStudio instantly — no Python script needed.
-    - Call `lightly-studio gui` instead of `ls.start_gui()` in Python to skip reindexing
-      an already-loaded dataset.
+    Call `lightly-studio gui` instead of `ls.start_gui()` in Python to skip reindexing
+    an already-loaded dataset.
 
 Ready for a complete, end-to-end workflow? Follow the tutorial
 [Curate a Traffic CCTV Dataset for YOLO Training](tutorials/yolo-traffic-cctv-object-detection.md)
