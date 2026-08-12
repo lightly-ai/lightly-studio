@@ -11,13 +11,27 @@ from lightly_studio.analytics.posthog_tracker import PostHogTracker
 INSTALL_ID = UUID("0199f1a2-b775-76b8-9b09-c2fd260c67c1")
 
 
+class RecordingHandler(logging.Handler):
+    """Stands in for the handler that would write to the user's terminal."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.records: list[logging.LogRecord] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.records.append(record)
+
+
 @pytest.fixture(autouse=True)
-def restore_logger_levels() -> Generator[None, None, None]:
-    """Keep the logger levels these tests change out of the rest of the suite."""
-    levels = {name: logging.getLogger(name).level for name in posthog_tracker._NOISY_LOGGERS}
+def restore_logger_state() -> Generator[None, None, None]:
+    """Keep the logger changes these tests make out of the rest of the suite."""
+    loggers = [logging.getLogger(name) for name in posthog_tracker._NOISY_LOGGERS]
+    saved = [(logger, logger.level, logger.propagate, list(logger.handlers)) for logger in loggers]
     yield
-    for name, level in levels.items():
-        logging.getLogger(name).setLevel(level)
+    for logger, level, propagate, handlers in saved:
+        logger.setLevel(level)
+        logger.propagate = propagate
+        logger.handlers = handlers
 
 
 class TestPostHogTracker:
@@ -37,19 +51,32 @@ class TestPostHogTracker:
     def test_init__silences_delivery_logging(self, mocker: MockerFixture) -> None:
         """An unreachable analytics endpoint must not print anything to the user's terminal."""
         mocker.patch.object(install_id, "get_install_id", return_value=INSTALL_ID)
+        mocker.patch.object(posthog_tracker, "Posthog")
+        terminal = RecordingHandler()
+        logging.getLogger().addHandler(terminal)
 
-        def build_client(**_kwargs: object) -> object:
-            # The real client raises its own logger level while being constructed, which is why
-            # the tracker has to silence it afterwards rather than before.
-            logging.getLogger("posthog").setLevel(logging.WARNING)
-            return mocker.MagicMock()
+        try:
+            PostHogTracker(project_api_key="phc_test")
+            logging.getLogger("posthog").error("could not deliver the batch")
+            logging.getLogger("backoff").info("backing off send_request")
+        finally:
+            logging.getLogger().removeHandler(terminal)
 
-        mocker.patch.object(posthog_tracker, "Posthog", side_effect=build_client)
+        assert terminal.records == []
+
+    def test_init__leaves_a_handler_the_caller_attached_working(
+        self, mocker: MockerFixture
+    ) -> None:
+        """Silencing must not destroy the records for an app that wired these loggers up itself."""
+        mocker.patch.object(install_id, "get_install_id", return_value=INSTALL_ID)
+        mocker.patch.object(posthog_tracker, "Posthog")
+        own = RecordingHandler()
+        logging.getLogger("backoff").addHandler(own)
 
         PostHogTracker(project_api_key="phc_test")
+        logging.getLogger("backoff").error("giving up on send_request")
 
-        for name in posthog_tracker._NOISY_LOGGERS:
-            assert logging.getLogger(name).level == logging.CRITICAL
+        assert len(own.records) == 1
 
     def test_track(self, mocker: MockerFixture) -> None:
         mocker.patch.object(install_id, "get_install_id", return_value=INSTALL_ID)

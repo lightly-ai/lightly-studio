@@ -18,10 +18,10 @@ POSTHOG_HOST = "https://eu.i.posthog.com"
 MAX_RETRIES = 1
 REQUEST_TIMEOUT_SECONDS = 3
 
-# PostHog reports delivery failures at ERROR and its retries at INFO, straight to the user's
-# terminal. An unreachable analytics endpoint is not the user's problem, so keep it out of their
-# output. `backoff` only entered the dependency tree through PostHog, so quieting it hides nothing
-# else.
+# PostHog reports delivery failures at ERROR, and the retries around them at INFO, straight to the
+# user's terminal. An unreachable analytics endpoint is not the user's problem. Both names are
+# needed: PostHog's consumer wraps its send in `backoff.on_exception` without passing a logger, so
+# the retry lines go to `backoff`'s own logger rather than PostHog's.
 _NOISY_LOGGERS = ("posthog", "backoff")
 
 
@@ -45,7 +45,6 @@ class PostHogTracker:
             max_retries=MAX_RETRIES,
             timeout=REQUEST_TIMEOUT_SECONDS,
         )
-        # After the client, not before: it sets its own logger level in __init__.
         _silence_delivery_logging()
         self._distinct_id = str(install_id.get_install_id())
         self._common_properties = _common_properties()
@@ -69,9 +68,17 @@ class PostHogTracker:
 
 
 def _silence_delivery_logging() -> None:
-    """Stop the PostHog client from writing delivery failures to the user's terminal."""
+    """Keep delivery failures out of the handlers that write to the user's terminal.
+
+    Stops propagation rather than raising the level, so a caller that attached a handler to these
+    loggers itself still receives the records.
+    """
     for name in _NOISY_LOGGERS:
-        logging.getLogger(name).setLevel(logging.CRITICAL)
+        logger = logging.getLogger(name)
+        # Without a handler of its own, a logger that does not propagate falls back to
+        # `logging.lastResort`, which writes to stderr. The null handler is what stops that.
+        logger.addHandler(logging.NullHandler())
+        logger.propagate = False
 
 
 def _common_properties() -> dict[str, str]:
