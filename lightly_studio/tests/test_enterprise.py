@@ -165,44 +165,18 @@ def test_connect__explicit_params_over_env(
     )
 
 
-def test_connect__explicit_api_key_over_env_token(
-    mocker: MockerFixture,
-    patch_db_connect: None,  # noqa: ARG001
-) -> None:
+def test_connect__explicit_api_key_and_env_token_raises(mocker: MockerFixture) -> None:
     mocker.patch.object(enterprise, "LIGHTLY_STUDIO_TOKEN", "env-token")
-    mock_response = mocker.MagicMock(status_code=200, ok=True)
-    mock_response.json.return_value = {
-        "engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio"
-    }
-    mock_post = mocker.patch.object(requests, "post", return_value=mock_response)
 
-    enterprise.connect(api_url="http://10.0.0.5:8100", api_key="ls_explicit")
-
-    mock_post.assert_called_once_with(
-        url="http://10.0.0.5:8100/auth/api/v1/api-key-login",
-        json={"api_key": "ls_explicit"},
-        timeout=10,
-    )
+    with pytest.raises(ValueError, match="Exactly one of token or api_key must be provided"):
+        enterprise.connect(api_url="http://10.0.0.5:8100", api_key="ls_explicit")
 
 
-def test_connect__explicit_token_over_env_api_key(
-    mocker: MockerFixture,
-    patch_db_connect: None,  # noqa: ARG001
-) -> None:
+def test_connect__explicit_token_and_env_api_key_raises(mocker: MockerFixture) -> None:
     mocker.patch.object(enterprise, "LIGHTLY_STUDIO_API_KEY", "ls_env")
-    mock_response = mocker.MagicMock(status_code=200, ok=True)
-    mock_response.json.return_value = {
-        "engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio"
-    }
-    mock_get = mocker.patch.object(requests, "get", return_value=mock_response)
 
-    enterprise.connect(api_url="http://10.0.0.5:8100", token="explicit-token")
-
-    mock_get.assert_called_once_with(
-        url="http://10.0.0.5:8100/auth/api/v1/enterprise-connect",
-        headers={"Authorization": "Bearer explicit-token"},
-        timeout=10,
-    )
+    with pytest.raises(ValueError, match="Exactly one of token or api_key must be provided"):
+        enterprise.connect(api_url="http://10.0.0.5:8100", token="explicit-token")
 
 
 def test_connect__missing_api_url_raises() -> None:
@@ -277,13 +251,30 @@ def test_connect__ssl_error(mocker: MockerFixture, patch_db_connect: MockType) -
     patch_db_connect.assert_not_called()
 
 
-def test_connect__connection_error(mocker: MockerFixture, patch_db_connect: MockType) -> None:
-    mocker.patch.object(requests, "get", side_effect=requests.ConnectionError("refused"))
+def test_connect__connection_error(
+    mocker: MockerFixture,
+    patch_db_connect: MockType,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    request_error = requests.ConnectionError("refused")
+    mocker.patch.object(requests, "get", side_effect=request_error)
 
-    with pytest.raises(ConnectionError, match="Could not reach LightlyStudio"):
+    with pytest.raises(ConnectionError, match="Could not reach LightlyStudio") as exc_info:
         enterprise.connect(api_url="http://unreachable:8100", token="tok")
 
+    assert exc_info.value.__cause__ is request_error
+    assert "Failed to execute LightlyStudio enterprise connection request." in caplog.messages
+    assert "Failed to connect to LightlyStudio enterprise instance." in caplog.messages
     patch_db_connect.assert_not_called()
+
+
+def test_send_connect_request__missing_credentials_raises() -> None:
+    with pytest.raises(ValueError, match="Either token or api_key is required"):
+        enterprise._send_connect_request(
+            api_url="http://host:8100",
+            token=None,
+            api_key=None,
+        )
 
 
 def test_connect__sets_aws_env_vars(

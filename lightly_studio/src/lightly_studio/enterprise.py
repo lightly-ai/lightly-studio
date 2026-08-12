@@ -54,7 +54,8 @@ def connect(
 
     Parameters can be passed explicitly or read from environment variables
     ``LIGHTLY_STUDIO_API_URL``, ``LIGHTLY_STUDIO_TOKEN``, or
-    ``LIGHTLY_STUDIO_API_KEY``. Explicit parameters take precedence.
+    ``LIGHTLY_STUDIO_API_KEY``. Each explicit parameter takes precedence over
+    its corresponding environment variable.
 
     Args:
         api_url: Base URL of the LightlyStudio enterprise instance
@@ -73,8 +74,9 @@ def connect(
         RuntimeError: If the server is not configured for remote connections.
     """
     api_url = api_url or LIGHTLY_STUDIO_API_URL
-    if token is None and api_key is None:
+    if token is None:
         token = LIGHTLY_STUDIO_TOKEN
+    if api_key is None:
         api_key = LIGHTLY_STUDIO_API_KEY
 
     if not api_url:
@@ -91,7 +93,11 @@ def connect(
     # Strip trailing slash.
     api_url = api_url.rstrip("/")
 
-    config = _fetch_connect_config(api_url=api_url, token=token, api_key=api_key)
+    try:
+        config = _fetch_connect_config(api_url=api_url, token=token, api_key=api_key)
+    except (ConnectionError, PermissionError, RuntimeError):
+        logger.exception("Failed to connect to LightlyStudio enterprise instance.")
+        raise
 
     if config.cloud_credentials:
         apply_cloud_credentials(credentials=config.cloud_credentials)
@@ -170,7 +176,8 @@ def _execute_connect_request(
     try:
         return _send_connect_request(api_url=api_url, token=token, api_key=api_key)
     except (requests.exceptions.SSLError, requests.ConnectionError, requests.Timeout) as error:
-        raise ConnectionError(_connection_error_message(api_url=api_url, error=error)) from None
+        logger.exception("Failed to execute LightlyStudio enterprise connection request.")
+        raise ConnectionError(_connection_error_message(api_url=api_url, error=error)) from error
 
 
 def _send_connect_request(
@@ -179,17 +186,19 @@ def _send_connect_request(
     api_key: str | None,
 ) -> requests.Response:
     """Send the request for the selected authentication method."""
-    if token:
+    if token is not None:
         return requests.get(
             url=f"{api_url}{_ENTERPRISE_CONNECT_ENDPOINT}",
             headers={"Authorization": f"Bearer {token}"},
             timeout=10,
         )
-    return requests.post(
-        url=f"{api_url}{_API_KEY_LOGIN_ENDPOINT}",
-        json={"api_key": api_key},
-        timeout=10,
-    )
+    if api_key is not None:
+        return requests.post(
+            url=f"{api_url}{_API_KEY_LOGIN_ENDPOINT}",
+            json={"api_key": api_key},
+            timeout=10,
+        )
+    raise ValueError("Either token or api_key is required to execute the connection request.")
 
 
 def _connection_error_message(api_url: str, error: requests.RequestException) -> str:
