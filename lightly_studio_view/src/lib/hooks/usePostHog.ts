@@ -36,6 +36,8 @@ export const usePostHog = () => {
         if (!browser || initialized) return;
 
         if (!(await analyticsEnabled())) return;
+        // Re-check: concurrent callers both get past the guard above before this resolves.
+        if (initialized) return;
 
         const apiKey = PUBLIC_POSTHOG_KEY || PUBLIC_POSTHOG_DEV_KEY;
         const apiHost = PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog.com';

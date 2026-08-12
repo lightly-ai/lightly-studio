@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { usePostHog } from './usePostHog';
 
 vi.mock('$app/environment', () => ({
     browser: true
@@ -45,7 +44,7 @@ describe('usePostHog', () => {
     });
 
     it('should initialize PostHog with correct configuration', async () => {
-        const { init } = usePostHog();
+        const { init } = await freshPostHog();
         await init();
 
         expect(mockInit).toHaveBeenCalledWith('prod-key', {
@@ -59,11 +58,19 @@ describe('usePostHog', () => {
     });
 
     it('should track events after initialization', async () => {
-        const { init, trackEvent } = usePostHog();
+        const { init, trackEvent } = await freshPostHog();
         await init();
         trackEvent('test_event', { test: 'data' });
 
         expect(mockCapture).toHaveBeenCalledWith('test_event', { test: 'data' });
+    });
+
+    it('should initialize once when init is called twice concurrently', async () => {
+        const { init } = await freshPostHog();
+
+        await Promise.all([init(), init()]);
+
+        expect(mockInit).toHaveBeenCalledTimes(1);
     });
 
     it('should not initialize when the backend reports analytics as off', async () => {
