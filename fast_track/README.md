@@ -55,7 +55,7 @@ BASE_REF=origin/develop make run-guardrails
 ## Backend and frontend coverage guardrails
 
 **What they do.** For every source file the PR touches, they compute the percentage
-of _lines added_ covered by tests. Each file must be over **90%**.
+of _lines added_ covered by tests. Each file must be at least **90%**.
 The guardrails don't run tests themselves, they only read a report produced in CI.
 
 | guardrail           | scope                                         | report                                 | env vars                                          |
@@ -72,8 +72,10 @@ scope. For the backend, these files are out of scope: tests, `conftest.py`,
 `__init__.py`, and the `migrations/`, `examples/`, and `vendor/` trees. For the
 frontend, test files (`.test.*`, `.spec.*`) and type declarations (`.d.ts`) are
 out of scope. A PR that changes nothing in scope passes as `0 file(s) checked`.
-The workflow runs each full suite on the same path filter. Therefore it skips the
-expensive step for PRs that the guardrail does not judge.
+The workflow runs each full suite on a broader path filter. Therefore it skips the
+expensive step for PRs with no source change, but it still runs the suite for a PR
+that touches only excluded files (for example a test), which then gets a `0 file(s)
+checked` verdict.
 
 Verdicts:
 
