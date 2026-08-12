@@ -176,7 +176,6 @@ def _execute_connect_request(
     try:
         return _send_connect_request(api_url=api_url, token=token, api_key=api_key)
     except (requests.exceptions.SSLError, requests.ConnectionError, requests.Timeout) as error:
-        logger.exception("Failed to execute LightlyStudio enterprise connection request.")
         raise ConnectionError(_connection_error_message(api_url=api_url, error=error)) from error
 
 

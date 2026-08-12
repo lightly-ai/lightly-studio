@@ -263,7 +263,6 @@ def test_connect__connection_error(
         enterprise.connect(api_url="http://unreachable:8100", token="tok")
 
     assert exc_info.value.__cause__ is request_error
-    assert "Failed to execute LightlyStudio enterprise connection request." in caplog.messages
     assert "Failed to connect to LightlyStudio enterprise instance." in caplog.messages
     patch_db_connect.assert_not_called()
 
