@@ -42,7 +42,7 @@ pip install lightly-studio
         pip install lightly-studio
         ```
 
-## Quickstart
+## Try it in 60 seconds
 
 Want to try LightlyStudio instantly? Run:
 
@@ -52,6 +52,8 @@ lightly-studio quickstart
 
 This downloads the COCO example dataset, loads it, and opens the GUI in your browser. Run
 `lightly-studio quickstart --help` for the available options.
+
+## Quickstart
 
 The examples below use the same example dataset by default, downloaded on the first run. Point
 them at your own image, video, or YOLO/COCO dataset by changing the input path.
@@ -147,9 +149,8 @@ them at your own image, video, or YOLO/COCO dataset by changing the input path.
     1. Click on the printed URL to open the app in your browser.
 
 !!! tip
-    - Run `lightly-studio quickstart` to try LightlyStudio instantly — no Python script needed.
-    - Call `lightly-studio gui` instead of `ls.start_gui()` in Python to skip reindexing
-      an already-loaded dataset.
+    Call `lightly-studio gui` instead of `ls.start_gui()` in Python to skip reindexing
+    an already-loaded dataset.
 
 Ready for a complete, end-to-end workflow? Follow the tutorial
 [Curate a Traffic CCTV Dataset for YOLO Training](tutorials/yolo-traffic-cctv-object-detection.md)
