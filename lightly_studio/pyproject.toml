@@ -65,10 +65,9 @@ dependencies = [
     "brotli-asgi>=1.4.0",
     "jinja2>=3.1.0",
     "alembic-postgresql-enum>=1.10.0",
-    # PostHog 7.0 dropped Python 3.9. The API we use is the same on both majors, see
-    # lightly_studio/analytics/posthog_tracker.py.
-    "posthog>=6.9,<7.0; python_version < '3.10'",
-    "posthog>=7.0,<8.0; python_version >= '3.10'",
+    # Pinned below 7.0, which dropped Python 3.9. 6.9 covers every Python this package supports,
+    # so one major runs everywhere rather than two that have to stay behaviourally identical.
+    "posthog>=6.9,<7.0",
 ]
 
 [project.scripts]
@@ -140,7 +139,7 @@ ignore_missing_imports = true
 module = "sqlalchemy_utils.*"
 ignore_missing_imports = true
 
-# PostHog 6.x, the version resolved on Python 3.9, leaves parts of its client unannotated.
+# PostHog 6.x leaves parts of its client unannotated.
 [[tool.mypy.overrides]]
 module = "lightly_studio.analytics.posthog_tracker"
 disallow_untyped_calls = false
