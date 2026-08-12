@@ -271,19 +271,16 @@ class OrderByEvaluationMetricField(OrderByExpression):
 class OrderByAnnotationEvaluationMetricField(OrderByExpression):
     """Order annotations by a per-annotation metric from EvaluationAnnotationMetricTable.
 
-    A single LEFT OUTER JOIN is added, so annotations the run never covered still appear
-    in results. Three states must stay distinguishable:
+    A LEFT OUTER JOIN keeps annotations the run did not cover. The sort value depends on
+    the joined row:
 
-    - Matched pair: a metric value exists, order by it.
-    - Unmatched annotation (false positive / false negative): a row exists but carries no
-      metric name or value. A completely missed box genuinely has zero overlap, so it
-      orders as ``0.0``.
-    - Annotation absent from the run, because evaluation covered a subset of samples:
-      no row at all, genuinely unknown, orders as ``NULL``.
+    - Row with a value: order by that value.
+    - Row without a value (unmatched annotation, i.e. false positive or false negative):
+      order as ``0.0``, because it has no overlap.
+    - No row (the run did not cover this annotation): order as ``NULL``.
 
-    Distinguishing the last two is why the ordering value is keyed on whether the joined
-    row exists rather than coalescing the value itself. Nulls are placed last in both
-    directions so un-evaluated annotations never crowd out the top of the review queue.
+    Nulls sort last in both directions, so un-evaluated annotations stay out of the top
+    of the review queue.
 
     Args:
         evaluation_run_id: ID of the evaluation run holding the metric.
