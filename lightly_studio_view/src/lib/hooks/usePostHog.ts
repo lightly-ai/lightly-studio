@@ -67,29 +67,8 @@ export const usePostHog = () => {
         posthog.capture(eventName, properties);
     };
 
-    /**
-     * Register properties that are attached to every subsequent event in this session.
-     *
-     * PostHog backs these with the browser's sessionStorage, so they are scoped to the current
-     * tab and cannot leak into a later launch. Use this for session-wide context that should be
-     * available when segmenting any event, rather than for one-off metadata belonging to a
-     * single action.
-     *
-     * @param properties - Properties to attach to all following events (e.g., launch_source)
-     *
-     * @example
-     * ```ts
-     * registerSessionProperties({ launch_source: 'quickstart' });
-     * ```
-     */
-    const registerSessionProperties = (properties: Record<string, unknown>) => {
-        if (!initialized) return;
-        posthog.register_for_session(properties);
-    };
-
     return {
         init,
-        trackEvent,
-        registerSessionProperties
+        trackEvent
     };
 };

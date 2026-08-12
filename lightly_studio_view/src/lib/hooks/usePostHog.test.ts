@@ -18,14 +18,12 @@ vi.mock('$lib/version.json', () => ({
 const mockInit = vi.fn();
 const mockCapture = vi.fn();
 const mockRegister = vi.fn();
-const mockRegisterForSession = vi.fn();
 
 vi.mock('posthog-js', () => ({
     default: {
         init: (...args: unknown[]) => mockInit(...args),
         capture: (...args: unknown[]) => mockCapture(...args),
-        register: (...args: unknown[]) => mockRegister(...args),
-        register_for_session: (...args: unknown[]) => mockRegisterForSession(...args)
+        register: (...args: unknown[]) => mockRegister(...args)
     }
 }));
 
@@ -34,7 +32,6 @@ describe('usePostHog', () => {
         mockInit.mockClear();
         mockCapture.mockClear();
         mockRegister.mockClear();
-        mockRegisterForSession.mockClear();
     });
 
     it('should initialize PostHog with correct configuration', () => {
@@ -57,23 +54,5 @@ describe('usePostHog', () => {
         trackEvent('test_event', { test: 'data' });
 
         expect(mockCapture).toHaveBeenCalledWith('test_event', { test: 'data' });
-    });
-
-    it('should register session properties after initialization', () => {
-        const { init, registerSessionProperties } = usePostHog();
-        init();
-        registerSessionProperties({ launch_source: 'quickstart' });
-
-        expect(mockRegisterForSession).toHaveBeenCalledWith({ launch_source: 'quickstart' });
-    });
-
-    it('should ignore session properties before initialization', async () => {
-        // The initialized flag is module scoped, so reload the module to get an uninitialized one.
-        vi.resetModules();
-        const { usePostHog: useFreshPostHog } = await import('./usePostHog');
-
-        useFreshPostHog().registerSessionProperties({ launch_source: 'quickstart' });
-
-        expect(mockRegisterForSession).not.toHaveBeenCalled();
     });
 });

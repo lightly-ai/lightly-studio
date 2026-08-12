@@ -13,8 +13,6 @@ from pytest_mock import MockerFixture
 
 import lightly_studio
 from lightly_studio import cli
-from lightly_studio.api import launch_source
-from lightly_studio.api.launch_source import LaunchSource
 from lightly_studio.database import db_manager
 from lightly_studio.models.evaluation_run import EvaluationTaskType
 from lightly_studio.resolvers import annotation_resolver, evaluation_run_resolver
@@ -26,14 +24,6 @@ def cleanup_db_manager() -> Generator[None, None, None]:
     db_manager.close()
     yield
     db_manager.close()
-
-
-@pytest.fixture(autouse=True)
-def reset_launch_source() -> Generator[None, None, None]:
-    """Reset the process-global launch source so tests do not leak into each other."""
-    launch_source.set_launch_source(source=LaunchSource.SDK)
-    yield
-    launch_source.set_launch_source(source=LaunchSource.SDK)
 
 
 def test_main__version_option() -> None:
@@ -51,7 +41,6 @@ def test_gui(mocker: MockerFixture) -> None:
     assert result.exit_code == 0
     mock_connect.assert_called_once_with(db_file=None, db_url=None, must_exist=True)
     mock_start_gui.assert_called_once_with(host=None, port=None)
-    assert launch_source.get_launch_source() == LaunchSource.GUI
 
 
 def test_gui__with_host_port(mocker: MockerFixture) -> None:
@@ -134,7 +123,6 @@ def test_quickstart(mocker: MockerFixture) -> None:
     mock_connect.assert_called_once_with(db_file="quickstart.db", cleanup_existing=True)
     mock_create.assert_called_once_with()
     mock_start_gui.assert_called_once_with(port=None, open_browser=True)
-    assert launch_source.get_launch_source() == LaunchSource.QUICKSTART
 
 
 def test_quickstart__with_force_download(mocker: MockerFixture) -> None:
@@ -160,8 +148,6 @@ def test_quickstart__with_no_browser(mocker: MockerFixture) -> None:
     result = runner.invoke(cli=cli.main, args=["quickstart", "--no-browser"])
     assert result.exit_code == 0
     mock_start_gui.assert_called_once_with(port=None, open_browser=False)
-    # The GUI can still be opened manually later, so the launch source must be recorded.
-    assert launch_source.get_launch_source() == LaunchSource.QUICKSTART
 
 
 def test_quickstart__runs_real_evaluation_pipeline(

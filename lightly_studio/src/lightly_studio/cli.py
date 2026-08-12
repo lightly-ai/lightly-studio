@@ -8,8 +8,6 @@ from pathlib import Path
 import click
 
 import lightly_studio
-from lightly_studio.api import launch_source
-from lightly_studio.api.launch_source import LaunchSource
 from lightly_studio.database import db_manager
 from lightly_studio.evaluation.image_dataset_evaluate import ObjectDetectionEvaluationConfig
 
@@ -71,7 +69,6 @@ def quickstart(port: int | None, force_download: bool, no_browser: bool) -> None
         config=evaluation_config,
     )
 
-    launch_source.set_launch_source(source=LaunchSource.QUICKSTART)
     lightly_studio.start_gui(port=port, open_browser=not no_browser)
 
 
@@ -102,5 +99,4 @@ def gui(
     if db_file is not None and db_url is not None:
         raise click.UsageError("Options '--db-file' and '--db-url' are mutually exclusive.")
     db_manager.connect(db_file=db_file, db_url=db_url, must_exist=True)
-    launch_source.set_launch_source(source=LaunchSource.GUI)
     lightly_studio.start_gui(host=host, port=port)
