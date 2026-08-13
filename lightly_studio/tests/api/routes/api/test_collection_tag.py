@@ -220,7 +220,7 @@ def test_add_samples_by_filter__image_filter_with_embedding_region_tags_only_reg
 def test_add_samples_by_filter__annotations_filter_with_embedding_region_tags_only_region_samples(
     db_session: Session, test_client: TestClient
 ) -> None:
-    """Tagging by AnnotationsFilter with an embedding region only tags annotation samples inside the region."""
+    """AnnotationsFilter with embedding region only tags samples inside the region."""
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
     label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)

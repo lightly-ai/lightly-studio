@@ -239,15 +239,18 @@ def add_samples_to_tag_by_filter(
     # Resolve any embedding-plot region selection to concrete sample ids before building
     # the query (the point-in-polygon test needs the session, which `apply` lacks).
     grid_filter = body.filter
-    if isinstance(grid_filter, ImageFilter) and grid_filter.sample_filter is not None:
-        if grid_filter.sample_filter.embedding_region is not None:
-            grid_filter.sample_filter.region_sample_ids = (
-                embedding_region_resolver.get_sample_ids_in_region(
-                    session=session,
-                    collection_id=collection_id,
-                    region=grid_filter.sample_filter.embedding_region,
-                )
+    if (
+        isinstance(grid_filter, ImageFilter)
+        and grid_filter.sample_filter is not None
+        and grid_filter.sample_filter.embedding_region is not None
+    ):
+        grid_filter.sample_filter.region_sample_ids = (
+            embedding_region_resolver.get_sample_ids_in_region(
+                session=session,
+                collection_id=collection_id,
+                region=grid_filter.sample_filter.embedding_region,
             )
+        )
     elif isinstance(grid_filter, AnnotationsFilter) and grid_filter.embedding_region is not None:
         grid_filter.region_sample_ids = embedding_region_resolver.get_sample_ids_in_region(
             session=session,
