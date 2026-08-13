@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_ANALYTICS_ENABLED
 
-# The browser UI reads this back to decide whether to start PostHog, so that
+# The GUI reads this back to decide whether to start PostHog, so that
 # LIGHTLY_STUDIO_ANALYTICS_ENABLED switches off tracking on both sides.
 ANALYTICS_FEATURE = "analytics"
 

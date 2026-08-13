@@ -10,7 +10,7 @@ def test_get_active_features(mocker: MockerFixture) -> None:
 
 
 def test_get_active_features__with_analytics_disabled(mocker: MockerFixture) -> None:
-    """Opting out must also stop the browser UI from starting PostHog."""
+    """Opting out must also stop the GUI from starting PostHog."""
     mocker.patch.object(features, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", False)
 
     assert features._get_active_features() == []

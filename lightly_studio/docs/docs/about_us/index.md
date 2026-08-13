@@ -29,4 +29,4 @@ Turn it off with:
 export LIGHTLY_STUDIO_ANALYTICS_ENABLED=false
 ```
 
-This covers the browser UI too.
+This covers the GUI too.
