@@ -47,6 +47,25 @@ def test_sort_expr_to_order_by__source_not_in_run_raises(db_session: Session) ->
         )
 
 
+def test_sort_expr_to_order_by__ascending(db_session: Session) -> None:
+    run = evaluation_run_helpers.create_run(session=db_session)
+    sort_expr = AnnotationEvaluationMetricSortExpr(
+        evaluation_run_id=run.id,
+        metric_name="iou",
+        direction=SortDirection.asc,
+    )
+
+    order_by = annotation_metric_sort.sort_expr_to_order_by(
+        session=db_session,
+        annotation_collection_id=run.pred_annotation_collection_id,
+        sort_expr=sort_expr,
+        annotation_id_column=col(AnnotationBaseTable.sample_id),
+    )
+
+    assert order_by.ascending is True
+    assert order_by.side == EvaluationAnnotationSide.PREDICTION
+
+
 def test_sort_expr_to_order_by__descending(db_session: Session) -> None:
     run = evaluation_run_helpers.create_run(session=db_session)
     sort_expr = AnnotationEvaluationMetricSortExpr(
