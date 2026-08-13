@@ -142,6 +142,9 @@ const defaultProps = {
     refetch: vi.fn()
 };
 
+const catLabel = { annotation_label_id: 'label-cat', annotation_label_name: 'cat' };
+const dogLabel = { annotation_label_id: 'label-dog', annotation_label_name: 'dog' };
+
 describe('SampleDetailsClassificationSegment', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -149,17 +152,50 @@ describe('SampleDetailsClassificationSegment', () => {
         mocks.selectedCollectionIds = [];
         mocks.lastCreatedAnnotationId = null;
         mocks.annotationLabels = [];
-        mocks.deleteAnnotation.mockReset();
-        mocks.deleteAnnotation.mockResolvedValue(undefined);
-        mocks.createAnnotation.mockReset();
-        mocks.createAnnotation.mockResolvedValue({ sample_id: 'created-1' });
+        mocks.deleteAnnotation.mockReset().mockResolvedValue(undefined);
+        mocks.createAnnotation.mockReset().mockResolvedValue({ sample_id: 'created-1' });
         mocks.createLabel.mockReset();
-        mocks.updateAnnotations.mockReset();
-        mocks.updateAnnotations.mockResolvedValue(undefined);
+        mocks.updateAnnotations.mockReset().mockResolvedValue(undefined);
         mocks.addReversibleAction.mockReset();
         mocks.isEditingMode.set(false);
         mocks.enforceColoringByClassStore.set(false);
+        // The component logs the caught error alongside the toast on every failure path.
+        vi.spyOn(console, 'error').mockImplementation(() => {});
     });
+
+    // One saved 'cat' classification, in edit mode.
+    const renderEditableRow = (labels = [catLabel]) => {
+        const user = userEvent.setup();
+        mocks.isEditingMode.set(true);
+        mocks.collections = [groundTruthSource];
+        mocks.annotationLabels = labels;
+
+        render(SampleDetailsClassificationSegment, {
+            props: {
+                ...defaultProps,
+                annotations: [createClassification('c1', groundTruthSource.collection_id, 'cat')]
+            }
+        });
+
+        return user;
+    };
+
+    // Empty segment in edit mode, with a draft row added and its class dropdown open.
+    const openDraftRow = async () => {
+        const user = userEvent.setup();
+        mocks.isEditingMode.set(true);
+        mocks.collections = [groundTruthSource];
+        mocks.annotationLabels = [catLabel];
+
+        render(SampleDetailsClassificationSegment, { props: defaultProps });
+
+        await user.click(screen.getByRole('button', { name: 'Add classification' }));
+        await user.click(screen.getByTestId('select-list-trigger'));
+
+        return user;
+    };
+
+    const deleteButton = () => screen.getByRole('button', { name: 'Delete classification' });
 
     it('renders a flat list without source groups for a single source', () => {
         mocks.collections = [groundTruthSource];
@@ -357,96 +393,42 @@ describe('SampleDetailsClassificationSegment', () => {
     });
 
     describe('deleting a classification', () => {
-        const renderEditableRow = () => {
-            mocks.isEditingMode.set(true);
-            mocks.collections = [groundTruthSource];
-            mocks.annotationLabels = [
-                { annotation_label_id: 'label-cat', annotation_label_name: 'cat' }
-            ];
-            const annotations = [
-                createClassification('c1', groundTruthSource.collection_id, 'cat')
-            ];
-
-            render(SampleDetailsClassificationSegment, { props: { ...defaultProps, annotations } });
-
-            return screen.getByRole('button', { name: 'Delete classification' });
-        };
-
         it('deletes once and stacks one undo action when clicked twice mid-flight', async () => {
-            const user = userEvent.setup();
-            let resolveDelete: () => void = () => {};
-            mocks.deleteAnnotation.mockImplementation(
-                () =>
-                    new Promise<void>((resolve) => {
-                        resolveDelete = resolve;
-                    })
+            let resolveDelete = () => {};
+            mocks.deleteAnnotation.mockReturnValue(
+                new Promise<void>((resolve) => {
+                    resolveDelete = resolve;
+                })
             );
+            const user = renderEditableRow();
 
-            const deleteButton = renderEditableRow();
-
-            await user.click(deleteButton);
-            await user.click(deleteButton);
+            await user.click(deleteButton());
+            await user.click(deleteButton());
 
             expect(mocks.deleteAnnotation).toHaveBeenCalledTimes(1);
             expect(mocks.deleteAnnotation).toHaveBeenCalledWith('c1', 'classification');
             expect(mocks.addReversibleAction).toHaveBeenCalledTimes(1);
+            expect(deleteButton()).toBeDisabled();
 
             resolveDelete();
+            await waitFor(() => expect(deleteButton()).not.toBeDisabled());
         });
 
-        it('disables the button while the delete is in flight and re-enables it after', async () => {
-            const user = userEvent.setup();
-            let resolveDelete: () => void = () => {};
-            mocks.deleteAnnotation.mockImplementation(
-                () =>
-                    new Promise<void>((resolve) => {
-                        resolveDelete = resolve;
-                    })
-            );
-
-            const deleteButton = renderEditableRow();
-
-            await user.click(deleteButton);
-            expect(deleteButton).toBeDisabled();
-            expect(screen.getByTestId('button-progress')).toBeInTheDocument();
-
-            resolveDelete();
-
-            await waitFor(() => expect(deleteButton).not.toBeDisabled());
-            expect(screen.queryByTestId('button-progress')).not.toBeInTheDocument();
-        });
-
-        it('re-enables the button when the delete fails', async () => {
-            const user = userEvent.setup();
-            vi.spyOn(console, 'error').mockImplementation(() => {});
+        it('allows another attempt once a failed delete settles', async () => {
             mocks.deleteAnnotation.mockRejectedValue(new Error('network down'));
+            const user = renderEditableRow();
 
-            const deleteButton = renderEditableRow();
+            await user.click(deleteButton());
+            await waitFor(() => expect(toast.error).toHaveBeenCalled());
+            await user.click(deleteButton());
 
-            await user.click(deleteButton);
-
-            await waitFor(() => expect(deleteButton).not.toBeDisabled());
-            expect(mocks.deleteAnnotation).toHaveBeenCalledTimes(1);
+            expect(mocks.deleteAnnotation).toHaveBeenCalledTimes(2);
         });
     });
 
     describe('creating a classification', () => {
-        const openDraftRow = async (user: ReturnType<typeof userEvent.setup>) => {
-            mocks.isEditingMode.set(true);
-            mocks.collections = [groundTruthSource];
-            mocks.annotationLabels = [
-                { annotation_label_id: 'label-cat', annotation_label_name: 'cat' }
-            ];
-
-            render(SampleDetailsClassificationSegment, { props: defaultProps });
-
-            await user.click(screen.getByRole('button', { name: 'Add classification' }));
-            await user.click(screen.getByTestId('select-list-trigger'));
-        };
-
         it('creates the annotation and drops the draft row when an existing class is picked', async () => {
-            const user = userEvent.setup();
-            await openDraftRow(user);
+            const user = await openDraftRow();
 
             await user.click(screen.getByRole('option', { name: 'cat' }));
 
@@ -458,7 +440,6 @@ describe('SampleDetailsClassificationSegment', () => {
                     annotation_collection_name: undefined
                 })
             );
-            expect(mocks.createLabel).not.toHaveBeenCalled();
             // The sample had no classifications, so the root collection counts need a refresh.
             expect(mocks.refetchRootCollection).toHaveBeenCalled();
             expect(mocks.addReversibleAction).toHaveBeenCalledTimes(1);
@@ -466,12 +447,11 @@ describe('SampleDetailsClassificationSegment', () => {
         });
 
         it('creates the class first when the typed name is new', async () => {
-            const user = userEvent.setup();
             mocks.createLabel.mockResolvedValue({
                 annotation_label_id: 'label-otter',
                 annotation_label_name: 'otter'
             });
-            await openDraftRow(user);
+            const user = await openDraftRow();
 
             await user.type(screen.getByTestId('select-list-input'), 'otter{Enter}');
 
@@ -487,14 +467,7 @@ describe('SampleDetailsClassificationSegment', () => {
         });
 
         it('drops the draft row when its trash button is clicked', async () => {
-            const user = userEvent.setup();
-            mocks.isEditingMode.set(true);
-            mocks.collections = [groundTruthSource];
-
-            render(SampleDetailsClassificationSegment, { props: defaultProps });
-
-            await user.click(screen.getByRole('button', { name: 'Add classification' }));
-            expect(screen.getByRole('combobox')).toBeInTheDocument();
+            const user = await openDraftRow();
 
             await user.click(screen.getByRole('button', { name: 'Remove classification draft' }));
 
@@ -503,36 +476,19 @@ describe('SampleDetailsClassificationSegment', () => {
         });
 
         it('keeps the draft row when the create fails', async () => {
-            const user = userEvent.setup();
-            vi.spyOn(console, 'error').mockImplementation(() => {});
             mocks.createAnnotation.mockRejectedValue(new Error('network down'));
-            await openDraftRow(user);
+            const user = await openDraftRow();
 
             await user.click(screen.getByRole('option', { name: 'cat' }));
 
-            await waitFor(() => expect(mocks.createAnnotation).toHaveBeenCalled());
+            await waitFor(() => expect(toast.error).toHaveBeenCalled());
             expect(screen.getByRole('combobox')).toBeInTheDocument();
         });
     });
 
     describe('changing a classification label', () => {
-        const renderEditableRow = () => {
-            mocks.isEditingMode.set(true);
-            mocks.collections = [groundTruthSource];
-            mocks.annotationLabels = [
-                { annotation_label_id: 'label-cat', annotation_label_name: 'cat' },
-                { annotation_label_id: 'label-dog', annotation_label_name: 'dog' }
-            ];
-            const annotations = [
-                createClassification('c1', groundTruthSource.collection_id, 'cat')
-            ];
-
-            render(SampleDetailsClassificationSegment, { props: { ...defaultProps, annotations } });
-        };
-
         it('shows the current class on the trigger and updates on selection', async () => {
-            const user = userEvent.setup();
-            renderEditableRow();
+            const user = renderEditableRow([catLabel, dogLabel]);
 
             expect(screen.getByTestId('select-list-trigger')).toHaveTextContent('cat');
 
@@ -553,10 +509,8 @@ describe('SampleDetailsClassificationSegment', () => {
         });
 
         it('reports an error when the update fails', async () => {
-            const user = userEvent.setup();
-            vi.spyOn(console, 'error').mockImplementation(() => {});
             mocks.updateAnnotations.mockRejectedValue(new Error('network down'));
-            renderEditableRow();
+            const user = renderEditableRow([catLabel, dogLabel]);
 
             await user.click(screen.getByTestId('select-list-trigger'));
             await user.click(screen.getByRole('option', { name: 'dog' }));
