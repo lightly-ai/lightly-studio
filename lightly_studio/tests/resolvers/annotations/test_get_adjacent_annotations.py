@@ -1,5 +1,7 @@
+import importlib
 from collections.abc import Sequence
 from datetime import datetime, timezone
+from typing import Any, NoReturn
 from unittest import mock
 from uuid import UUID
 
@@ -21,6 +23,17 @@ from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
     create_run,
 )
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
+
+# The resolver package re-exports the entry point under its module's own name, shadowing
+# it, so the module has to be looked up by import path to patch what it dispatches to.
+_dispatch_module = importlib.import_module(
+    "lightly_studio.resolvers.annotation_resolver.get_adjacent_annotations"
+)
+
+
+def _fail_if_called(**kwargs: Any) -> NoReturn:  # noqa: ARG001
+    """Stand-in for the adjacency path a test expects the dispatch not to take."""
+    raise AssertionError("Unexpected adjacency implementation was used.")
 
 
 def test_get_adjacent_annotations__orders_by_path(db_session: Session) -> None:
@@ -504,6 +517,180 @@ def test_get_adjacent_annotations__orders_annotations_sharing_a_parent_image(
     _assert_matches_expected_order(
         session=db_session, filters=filters, expected_order=expected_order
     )
+
+
+@pytest.mark.parametrize(
+    ("annotation_collection_names", "path_not_taken"),
+    [
+        # One collection has a known parent kind, so it can seek. Several could mix parent
+        # kinds, so the keyset path bows out.
+        (["annotations"], "get_adjacent_annotations_window"),
+        (["annotations_a", "annotations_b"], "get_adjacent_annotations_keyset"),
+    ],
+    ids=["one_collection_seeks", "several_collections_fall_back"],
+)
+def test_get_adjacent_annotations__dispatches_on_collection_count(
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+    annotation_collection_names: list[str],
+    path_not_taken: str,
+) -> None:
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.IMAGE
+    )
+    label = helpers_resolvers.create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="label",
+    )
+    image = helpers_resolvers.create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/images/a.png",
+    )
+    annotations = [
+        helpers_resolvers.create_annotation(
+            session=db_session,
+            collection_id=collection.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=label.annotation_label_id,
+            annotation_collection_name=name,
+        )
+        for name in annotation_collection_names
+    ]
+
+    monkeypatch.setattr(_dispatch_module, path_not_taken, _fail_if_called)
+
+    result = annotation_resolver.get_adjacent_annotations(
+        session=db_session,
+        sample_id=annotations[0].sample_id,
+        filters=AnnotationsFilter(
+            collection_ids=[annotation.sample.collection_id for annotation in annotations]
+        ),
+    )
+
+    assert result is not None
+    assert result.total_count == len(annotations)
+
+
+def test_get_adjacent_annotations__falls_back_for_video_level_annotations(
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Annotations on a video rather than on one of its frames. The keyset path cannot serve
+    # them — it joins one parent table and there is no join from an annotation to its video
+    # — so the dispatch has to bow out, which is what the monkeypatch below asserts.
+    #
+    # The window query it falls back to reaches VideoTable only through VideoFrameTable, so
+    # these annotations get no path to sort by at all: their leading key is the coalesce's
+    # empty-string default. Only the created-at and sample-id tiebreakers order them, which
+    # is why this asserts a total order rather than an order by video path.
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    )
+    label = helpers_resolvers.create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="label",
+    )
+
+    videos = [
+        create_video_with_frames(
+            session=db_session,
+            collection_id=collection.collection_id,
+            video=VideoStub(path=path, duration_s=0.2, fps=10.0),
+        )
+        for path in ("/videos/c.mp4", "/videos/a.mp4", "/videos/b.mp4")
+    ]
+
+    annotations = helpers_resolvers.create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=[
+            helpers_resolvers.AnnotationDetails(
+                sample_id=video.video_sample_id,
+                annotation_label_id=label.annotation_label_id,
+            )
+            for video in videos
+        ],
+    )
+    filters = AnnotationsFilter(collection_ids=[annotations[0].sample.collection_id])
+
+    monkeypatch.setattr(_dispatch_module, "get_adjacent_annotations_keyset", _fail_if_called)
+
+    results = {}
+    for annotation in annotations:
+        result = annotation_resolver.get_adjacent_annotations(
+            session=db_session, sample_id=annotation.sample_id, filters=filters
+        )
+        assert result is not None
+        results[annotation.sample_id] = result
+
+    by_position = {result.current_sample_position: key for key, result in results.items()}
+    assert sorted(by_position) == [1, 2, 3]
+    for position, sample_id in by_position.items():
+        result = results[sample_id]
+        assert result.total_count == len(annotations)
+        assert result.previous_sample_id == by_position.get(position - 1)
+        assert result.next_sample_id == by_position.get(position + 1)
+
+
+def test_get_adjacent_annotations__returns_none_when_anchor_filtered_out_of_keyset_path(
+    db_session: Session,
+) -> None:
+    # The keyset counterpart of __returns_none_when_sample_not_in_filter, which reaches the
+    # same result through the window path: here the collection is scoped so the seek runs,
+    # and the anchor's own label is what the filter excludes.
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.IMAGE
+    )
+    dog_label = helpers_resolvers.create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="dog",
+    )
+    cat_label = helpers_resolvers.create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="cat",
+    )
+
+    image_a = helpers_resolvers.create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/images/a.png",
+    )
+    image_b = helpers_resolvers.create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/images/b.png",
+    )
+
+    annotation_dog, annotation_cat = helpers_resolvers.create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=[
+            helpers_resolvers.AnnotationDetails(
+                sample_id=image_a.sample_id,
+                annotation_label_id=dog_label.annotation_label_id,
+            ),
+            helpers_resolvers.AnnotationDetails(
+                sample_id=image_b.sample_id,
+                annotation_label_id=cat_label.annotation_label_id,
+            ),
+        ],
+    )
+
+    result = annotation_resolver.get_adjacent_annotations(
+        session=db_session,
+        sample_id=annotation_cat.sample_id,
+        filters=AnnotationsFilter(
+            collection_ids=[annotation_dog.sample.collection_id],
+            annotation_label_ids=[dog_label.annotation_label_id],
+        ),
+    )
+
+    assert result is None
 
 
 def _create_annotations_with_pinned_created_at(
