@@ -3,41 +3,34 @@ import { describe, expect, it } from 'vitest';
 import type { Guardrail } from './context/types';
 import { selectGuardrails } from './registry';
 
-const guardrail = (name: string, needsPrContext: boolean): Guardrail => ({
+const guardrail = (name: string): Guardrail => ({
     name,
     required: true,
-    needsPrContext,
     run: async () => ({ status: 'pass', summary: '' })
 });
 
-const local = guardrail('local-check', false);
-const prOnly = guardrail('pr-check', true);
-const all = [local, prOnly];
+const first = guardrail('first-check');
+const second = guardrail('second-check');
+const all = [first, second];
 
 describe('selectGuardrails', () => {
-    it('drops guardrails needing PR context when it is unavailable', () => {
-        expect(selectGuardrails(all, { hasPrContext: false })).toEqual([local]);
-    });
-
-    it('keeps guardrails needing PR context when it is available', () => {
-        expect(selectGuardrails(all, { hasPrContext: true })).toEqual(all);
+    it('selects all when no names are given', () => {
+        expect(selectGuardrails(all, {})).toEqual(all);
     });
 
     it('restricts to the named subset', () => {
-        expect(selectGuardrails(all, { hasPrContext: true, guardrailNames: ['pr-check'] })).toEqual(
-            [prOnly]
+        expect(selectGuardrails(all, { guardrailNames: ['second-check'] })).toEqual([second]);
+    });
+
+    it('preserves the input order regardless of the requested order', () => {
+        expect(selectGuardrails(all, { guardrailNames: ['second-check', 'first-check'] })).toEqual(
+            all
         );
     });
 
     it('throws on an unknown name rather than passing vacuously', () => {
-        expect(() =>
-            selectGuardrails(all, { hasPrContext: true, guardrailNames: ['typo'] })
-        ).toThrow(/Unknown guardrail/);
-    });
-
-    it('throws when an explicitly named guardrail needs unavailable PR context', () => {
-        expect(() =>
-            selectGuardrails(all, { hasPrContext: false, guardrailNames: ['pr-check'] })
-        ).toThrow(/PR context/);
+        expect(() => selectGuardrails(all, { guardrailNames: ['typo'] })).toThrow(
+            /Unknown guardrail/
+        );
     });
 });

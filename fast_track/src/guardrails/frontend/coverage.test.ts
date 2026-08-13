@@ -17,7 +17,7 @@ const mockReadFileSync = vi.mocked(readFileSync);
 const PATCH = '@@ -0,0 +1,3 @@\n+line 1\n+line 2\n+line 3\n';
 
 function makeCtx(files: ChangedFile[]): GuardrailContext {
-    return { baseRef: 'origin/main', changedFiles: async () => files };
+    return { changedFiles: async () => files };
 }
 
 const FRONTEND_FILE: ChangedFile = {

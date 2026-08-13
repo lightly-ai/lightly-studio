@@ -28,13 +28,12 @@ const backendFile: ChangedFile = {
 };
 
 function makeCtx(files: ChangedFile[] = [backendFile]): GuardrailContext {
-    return { baseRef: 'origin/main', changedFiles: async () => files };
+    return { changedFiles: async () => files };
 }
 
 describe('backendComplexityGuardrail', () => {
-    it('is required and runs locally', () => {
+    it('is required', () => {
         expect(backendComplexityGuardrail.required).toBe(true);
-        expect(backendComplexityGuardrail.needsPrContext).toBe(false);
     });
 
     it('passes immediately when no backend files changed', async () => {

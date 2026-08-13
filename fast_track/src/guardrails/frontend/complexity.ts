@@ -11,7 +11,6 @@ const ESLINT_ERROR_SEVERITY = 2;
 export const frontendComplexityGuardrail: Guardrail = {
     name: 'frontend/complexity',
     required: true,
-    needsPrContext: false,
     async run(ctx: GuardrailContext): Promise<GuardrailOutcome> {
         const files = (await ctx.changedFiles()).filter(
             (f) => f.path.startsWith(FRONTEND_PREFIX) && EXTENSIONS.has(extname(f.path))
