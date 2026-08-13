@@ -11,11 +11,12 @@ import logging
 import threading
 from collections.abc import Mapping
 from enum import Enum
-from typing import Protocol
 
 from lightly_studio.analytics.posthog_tracker import PostHogTracker
+from lightly_studio.analytics.tracker import Tracker
 from lightly_studio.dataset.env import (
     LIGHTLY_STUDIO_ANALYTICS_ENABLED,
+    LIGHTLY_STUDIO_POSTHOG_HOST,
     LIGHTLY_STUDIO_POSTHOG_KEY,
 )
 
@@ -24,19 +25,7 @@ logger = logging.getLogger(__name__)
 APP_LAUNCHED = "app_launched"
 
 
-class Tracker(Protocol):
-    """Delivers usage events to an analytics backend."""
-
-    def track(self, event: str, properties: Mapping[str, object]) -> None:
-        """Report a single event."""
-        ...
-
-    def shutdown(self) -> None:
-        """Deliver anything still pending and release resources."""
-        ...
-
-
-class NoOpTracker:
+class NoOpTracker(Tracker):
     """Tracker that drops everything, used when tracking is off."""
 
     def track(self, event: str, properties: Mapping[str, object]) -> None:
@@ -106,7 +95,9 @@ def _create_tracker() -> Tracker:
     if not LIGHTLY_STUDIO_ANALYTICS_ENABLED or not LIGHTLY_STUDIO_POSTHOG_KEY:
         return NoOpTracker()
 
-    tracker = PostHogTracker(project_api_key=LIGHTLY_STUDIO_POSTHOG_KEY)
+    tracker = PostHogTracker(
+        project_api_key=LIGHTLY_STUDIO_POSTHOG_KEY, host=LIGHTLY_STUDIO_POSTHOG_HOST
+    )
     # PostHog delivers from a background thread and registers no exit hook of its own, so a
     # short-lived process would drop the event without this.
     atexit.register(shutdown)

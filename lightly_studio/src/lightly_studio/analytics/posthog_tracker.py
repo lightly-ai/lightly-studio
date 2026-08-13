@@ -10,8 +10,7 @@ from importlib import metadata
 from posthog import Posthog
 
 from lightly_studio.analytics import install_id
-
-POSTHOG_HOST = "https://eu.i.posthog.com"
+from lightly_studio.analytics.tracker import Tracker
 
 # One retry rather than the default three. Delivery happens on a background thread, but the flush
 # at process exit blocks on it, and nobody should wait on telemetry to close the CLI.
@@ -25,14 +24,14 @@ REQUEST_TIMEOUT_SECONDS = 3
 _NOISY_LOGGERS = ("posthog", "backoff")
 
 
-class PostHogTracker:
+class PostHogTracker(Tracker):
     """Sends usage events to PostHog, keyed on the anonymous installation ID.
 
     Events are queued and delivered by a background thread, so `track` does not block. Call
     `shutdown` before the process ends, otherwise queued events are lost.
     """
 
-    def __init__(self, project_api_key: str, host: str = POSTHOG_HOST) -> None:
+    def __init__(self, project_api_key: str, host: str) -> None:
         """Build the tracker.
 
         Args:

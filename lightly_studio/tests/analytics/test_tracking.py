@@ -121,12 +121,13 @@ def test_shutdown__when_the_backend_raises(mocker: MockerFixture) -> None:
 def test_create_tracker(mocker: MockerFixture) -> None:
     mocker.patch.object(tracking, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", True)
     mocker.patch.object(tracking, "LIGHTLY_STUDIO_POSTHOG_KEY", "phc_test")
+    mocker.patch.object(tracking, "LIGHTLY_STUDIO_POSTHOG_HOST", "https://posthog.test")
     mocker.patch.object(atexit, "register")
     posthog_tracker = mocker.patch.object(tracking, "PostHogTracker")
 
     tracker = tracking._create_tracker()
 
-    posthog_tracker.assert_called_once_with(project_api_key="phc_test")
+    posthog_tracker.assert_called_once_with(project_api_key="phc_test", host="https://posthog.test")
     assert tracker is posthog_tracker.return_value
 
 
