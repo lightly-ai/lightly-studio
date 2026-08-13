@@ -1,6 +1,7 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { Button } from '$lib/components/ui/button';
+    import { Button } from '$lib/components';
     import {
         EmbeddingView,
         type DataPoint,
@@ -12,7 +13,7 @@
     import PlotHoverPreview from './PlotHoverPreview/PlotHoverPreview.svelte';
     import { getHoverPreviewState } from './PlotHoverPreview/hoverPreviewState';
     import { NoopTooltip, createOverlayProxyReporter } from './PlotHoverPreview/overlayProxy';
-    import { createQuerySelection, createThumbnailUrlResolver } from './PlotHoverPreview';
+    import { createQuerySelection, createThumbnailResolver } from './PlotHoverPreview';
     import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
     import type { EmbeddingRegion } from '$lib/api/lightly_studio_local';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
@@ -49,7 +50,7 @@
     const { trackEvent } = usePostHog();
     const { setShowEmbeddingPlot, getRangeSelection, setRangeSelectionForCollection } =
         useGlobalStorage();
-    const rangeSelection = getRangeSelection(collectionId);
+    const rangeSelection = $derived(getRangeSelection(collectionId));
     const setRangeSelection = (selection: Point[] | null) => {
         setRangeSelectionForCollection(collectionId, selection);
     };
@@ -79,8 +80,9 @@
     );
 
     // The active annotation label/tag filter, mirroring what the annotations grid applies.
-    const { annotationFilter: selectedAnnotationsFilter } =
-        useSelectedAnnotationsFilter(collectionId);
+    const { annotationFilter: selectedAnnotationsFilter } = $derived.by(() =>
+        useSelectedAnnotationsFilter(collectionId)
+    );
 
     // Prepare filter for embeddings API - use VideoFilter for videos, ImageFilter for images
     const filter = $derived.by(() => {
@@ -108,11 +110,11 @@
         };
     });
 
-    const { selectedColorByType } = usePlotColorByType(collectionId);
+    const { selectedColorByType } = usePlotColorByType(untrack(() => collectionId));
     // Annotation samples carry annotation-kind tags. Captured once at mount, like
     // collectionId above.
     const { tags } = useTags({
-        collection_id: collectionId,
+        collection_id: untrack(() => collectionId),
         kind: isAnnotationsRoute(page.route?.id ?? null) ? ['annotation'] : ['sample']
     });
     const annotationLabelsQuery = useAnnotationLabels(() => ({ collectionId }));
@@ -452,8 +454,8 @@
             category: $plotData?.category as Uint8Array | undefined
         })
     );
-    const resolveThumbnailUrl = $derived.by(() =>
-        createThumbnailUrlResolver({
+    const resolveThumbnail = $derived.by(() =>
+        createThumbnailResolver({
             route: isAnnotations ? 'annotations' : isVideos ? 'videos' : 'images',
             collectionId
         })
@@ -475,10 +477,12 @@
         <div class="text-lg font-semibold">Embedding Plot</div>
         <Button
             variant="ghost"
-            size="icon"
-            onclick={handleClose}
-            class="h-8 w-8"
-            data-testid="plot-close-button"
+            buttonProps={{
+                size: 'icon',
+                onclick: handleClose,
+                class: 'h-8 w-8',
+                'data-testid': 'plot-close-button'
+            }}
         >
             ✕
         </Button>
@@ -524,10 +528,7 @@
                             class="pointer-events-none absolute z-10 -translate-x-1/2"
                             style="left: {hoverPreview.left}px; top: {hoverPreview.top}px"
                         >
-                            <PlotHoverPreview
-                                sampleId={hoverPreview.sampleId}
-                                {resolveThumbnailUrl}
-                            />
+                            <PlotHoverPreview sampleId={hoverPreview.sampleId} {resolveThumbnail} />
                         </div>
                     {/if}
 
@@ -569,11 +570,13 @@
             />
             <Button
                 variant="outline"
-                size="sm"
-                onclick={reset}
-                data-testid="plot-reset-zoom-button"
-                class="px-2.5"
-                title="Reset zoom"
+                buttonProps={{
+                    size: 'sm',
+                    onclick: reset,
+                    'data-testid': 'plot-reset-zoom-button',
+                    class: 'px-2.5',
+                    title: 'Reset zoom'
+                }}
             >
                 Reset zoom
             </Button>

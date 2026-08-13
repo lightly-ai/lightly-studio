@@ -2,9 +2,10 @@
     import * as Popover from '$lib/components/ui/popover';
     import { MoreHorizontal, Pencil, Trash2 } from '@lucide/svelte';
     import type { TagView } from '$lib/services/types';
+    import { Button } from '$lib/components';
 
     const actionButtonClass =
-        'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50';
+        'w-full justify-start gap-2 rounded-sm px-2 py-1.5 text-sm font-normal text-foreground';
     const defaultActionButtonClass = `${actionButtonClass} hover:bg-accent`;
     const destructiveActionButtonClass = `${actionButtonClass} hover:bg-destructive hover:text-destructive-foreground`;
 
@@ -49,29 +50,34 @@
             event.stopPropagation();
         }}
     >
-        <button
-            type="button"
-            class={defaultActionButtonClass}
-            data-testid={`rename-tag-${tag.tag_id}`}
-            disabled={deletingTagId !== null || renamingTagId !== null}
-            onclick={(event: MouseEvent) => {
-                onRename(tag, event);
+        <Button
+            icon={Pencil}
+            buttonProps={{
+                type: 'button',
+                class: defaultActionButtonClass,
+                'data-testid': `rename-tag-${tag.tag_id}`,
+                disabled: deletingTagId !== null || renamingTagId !== null,
+                onclick: (event: MouseEvent) => {
+                    onRename(tag, event);
+                }
             }}
         >
-            <Pencil class="size-4" />
             Rename tag
-        </button>
-        <button
-            type="button"
-            class={destructiveActionButtonClass}
-            data-testid={`delete-tag-${tag.tag_id}`}
-            disabled={deletingTagId !== null || renamingTagId !== null}
-            onclick={(event: MouseEvent) => {
-                void onDelete(tag, event);
+        </Button>
+        <Button
+            icon={Trash2}
+            isPending={deletingTagId === tag.tag_id}
+            buttonProps={{
+                type: 'button',
+                class: destructiveActionButtonClass,
+                'data-testid': `delete-tag-${tag.tag_id}`,
+                disabled: deletingTagId !== null || renamingTagId !== null,
+                onclick: (event: MouseEvent) => {
+                    void onDelete(tag, event);
+                }
             }}
         >
-            <Trash2 class="size-4" />
             {deletingTagId === tag.tag_id ? 'Deleting...' : 'Delete tag'}
-        </button>
+        </Button>
     </Popover.Content>
 </Popover.Root>

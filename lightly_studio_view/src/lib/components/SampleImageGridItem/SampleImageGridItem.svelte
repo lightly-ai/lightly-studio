@@ -9,12 +9,14 @@
     const {
         sample,
         objectFit,
-        sampleSize,
+        tileWidth,
+        tileHeight,
         displayTextOnImage
     }: {
         sample: ImageView;
         objectFit?: SampleImageObjectFit;
-        sampleSize: number;
+        tileWidth: number;
+        tileHeight: number;
         displayTextOnImage?: string;
     } = $props();
 
@@ -38,15 +40,15 @@
     {sample}
     {objectFit}
     thumbnailQuality={$gridViewThumbnailQualityStore}
-    thumbnailWidth={sampleSize}
-    thumbnailHeight={sampleSize}
+    thumbnailWidth={tileWidth}
+    thumbnailHeight={tileHeight}
 />
 <SampleClassificationPills
     {sample}
     hasBottomOverlay={Boolean(displayTextOnImage)}
     hasRightOverlay={shouldShowOrderValue || hasSimilarityScore}
 />
-<SampleAnnotations {sample} {objectFit} />
+<SampleAnnotations {sample} {objectFit} outputWidth={tileWidth} outputHeight={tileHeight} />
 
 {#if shouldShowOrderValue}
     <div

@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import threading
+import time
+import webbrowser
 from dataclasses import dataclass
 
 import uvicorn
@@ -19,6 +21,7 @@ logger = logging.getLogger(__name__)
 def start_gui(
     host: str | None = None,
     port: int | None = None,
+    open_browser: bool = False,
 ) -> Server:
     """Launch the web interface for the loaded dataset.
 
@@ -27,6 +30,7 @@ def start_gui(
     Args:
         host: Host to bind the server to. Falls back to LIGHTLY_STUDIO_HOST env var.
         port: Port to bind the server to. Falls back to LIGHTLY_STUDIO_PORT env var.
+        open_browser: Whether to open the URL in a browser once the server is ready.
 
     Returns:
         The Server instance.
@@ -38,8 +42,28 @@ def start_gui(
 
     logger.info(f"Open the LightlyStudio GUI under: {server.url}")
 
+    if open_browser:
+        threading.Thread(
+            target=_open_browser_when_ready,
+            args=(uvicorn_server, server.url),
+            daemon=True,
+            name="lightly-studio-browser-opener",
+        ).start()
+
     _run_uvicorn_server(uvicorn_server)
     return server
+
+
+def _open_browser_when_ready(uvicorn_server: uvicorn.Server, url: str) -> None:
+    """Open the browser at url once the uvicorn server starts accepting connections."""
+    while not uvicorn_server.started and not uvicorn_server.should_exit:
+        time.sleep(0.1)
+    if not uvicorn_server.started:
+        return
+    try:
+        webbrowser.open(url)
+    except webbrowser.Error:
+        logger.debug("No runnable browser found; skipping auto-open.", exc_info=True)
 
 
 @dataclass

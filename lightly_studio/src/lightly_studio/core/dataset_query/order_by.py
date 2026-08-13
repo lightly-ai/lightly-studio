@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import Any, cast
+from uuid import UUID
 
-from sqlalchemy import ColumnElement, and_
+import sqlalchemy
+from sqlalchemy import ColumnElement, and_, case, func, nullslast, or_
 from sqlalchemy import Select as SQLAlchemySelect
 from sqlalchemy.engine import Row
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import Mapped, aliased
 from sqlmodel import col
 from sqlmodel.sql.expression import SelectOfScalar
 from typing_extensions import Self, TypeVar
@@ -16,10 +18,14 @@ from typing_extensions import Self, TypeVar
 from lightly_studio.core.dataset_query.field import Field
 from lightly_studio.database import db_json
 from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.evaluation_annotation_metric import (
+    EvaluationAnnotationMetricTable,
+    EvaluationAnnotationSide,
+)
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.image import ImageTable
-from lightly_studio.models.metadata import SampleMetadataTable
+from lightly_studio.models.metadata import NUMERIC_TYPE_NAMES, SampleMetadataTable
 from lightly_studio.models.sample import SampleTable
 
 T = TypeVar("T", default=ImageTable)
@@ -42,7 +48,15 @@ class OrderByExpression(ABC):
 
     @abstractmethod
     def _order_value_expression(self) -> ColumnElement[Any]:
-        """Return the SQL expression used for sorting (no ASC/DESC)."""
+        """Return the value surfaced by ``apply_with_order_value`` (no ASC/DESC)."""
+
+    def _sort_key_expressions(self) -> list[ColumnElement[Any]]:
+        """Return the SQL expressions to sort by, most significant first (no ASC/DESC).
+
+        Defaults to the order value alone. Override when correct ordering needs more
+        than one key.
+        """
+        return [self._order_value_expression()]
 
     @abstractmethod
     def apply_joins(self, query: SelectT) -> SelectT:
@@ -55,16 +69,17 @@ class OrderByExpression(ABC):
         Use per-instance aliases when joining the same table more than once.
         """
 
-    def to_column_element(self) -> ColumnElement[Any]:
-        """Return the SQLAlchemy column element with direction applied.
+    def to_column_elements(self) -> list[ColumnElement[Any]]:
+        """Return the SQLAlchemy column elements with direction applied.
 
-        For use in ``query.order_by()`` or window ``over(order_by=...)``. Does not
-        apply joins; call ``apply`` first when joins are required.
+        For use in ``query.order_by()`` or window ``over(order_by=...)``. Usually a
+        single element; a sort may return several when one key cannot express the
+        required ordering. Does not apply joins; call ``apply`` first when joins are
+        required.
         """
-        order_expr = self._order_value_expression()
         if self.ascending:
-            return order_expr.asc()
-        return order_expr.desc()
+            return [expr.asc() for expr in self._sort_key_expressions()]
+        return [expr.desc() for expr in self._sort_key_expressions()]
 
     def apply(self, query: SelectOfScalar[T]) -> SelectOfScalar[T]:
         """Apply joins for this sort and append the ``ORDER BY``.
@@ -76,7 +91,7 @@ class OrderByExpression(ABC):
             The modified query after joining and ordering.
         """
         joined = self.apply_joins(query)
-        return joined.order_by(self.to_column_element())
+        return joined.order_by(*self.to_column_elements())
 
     def apply_with_order_value(self, query: SelectOfScalar[T]) -> SQLAlchemySelect[tuple[T, Any]]:
         """Apply this sort and append its value to the SELECT list.
@@ -94,7 +109,7 @@ class OrderByExpression(ABC):
         """
         joined = self.apply_joins(query)
         order_value = self._order_value_expression().label(ORDER_VALUE_LABEL)
-        return joined.add_columns(order_value).order_by(self.to_column_element())
+        return joined.add_columns(order_value).order_by(*self.to_column_elements())
 
     def asc(self) -> Self:
         """Set the ordering to ascending.
@@ -143,30 +158,56 @@ class OrderByMetadataField(OrderByExpression):
     A LEFT OUTER JOIN to SampleMetadataTable is added automatically so that
     samples without metadata still appear in results (sorted last when ascending).
 
+    Numerical fields order numerically and everything else lexicographically,
+    decided in SQL from the type recorded in ``metadata_schema``. Only top-level
+    keys are recorded there, so a dotted path sorts lexicographically.
+
     Args:
         field_name: The key inside the JSON ``data`` column to sort by.
-        cast_to_float: When True, the extracted value is cast to float before
-            ordering.  Use this for numerical metadata fields so that numeric
-            ordering is applied instead of lexicographic ordering.
     """
 
-    def __init__(self, field_name: str, cast_to_float: bool) -> None:
-        """Initialize with the metadata field name and float cast flag."""
+    def __init__(self, field_name: str) -> None:
+        """Initialize with the metadata field name."""
         super().__init__()
         self.field_name = field_name
-        # TODO(Leonardo, 05/2026): Rework to avoid requiring callers to pass
-        # cast_to_float explicitly.
-        self.cast_to_float = cast_to_float
         # Per-instance alias so sort joins do not collide with filter joins on metadata.
         self._metadata_alias = aliased(SampleMetadataTable)
 
     def _order_value_expression(self) -> ColumnElement[Any]:
-        """Return the JSON-extract expression for the metadata field."""
-        return db_json.json_extract(
-            column=self._metadata_alias.data,
-            field=self.field_name,
-            cast_to_float=self.cast_to_float,
+        """Return the numerical value of the field, or NULL if it is not numerical.
+
+        The CAST wraps the CASE so its operand is NULL for rows that would fail it,
+        and casts to Double because DuckDB's FLOAT is single precision.
+        """
+        return sqlalchemy.cast(
+            sqlalchemy.case(
+                (self._is_numerical_field(), self._extracted_value()),
+                else_=None,
+            ),
+            sqlalchemy.Double,
         )
+
+    def _sort_key_expressions(self) -> list[ColumnElement[Any]]:
+        """Return the numerical key, NULL for non-numerical fields, then the raw value."""
+        return [self._order_value_expression(), self._extracted_value()]
+
+    def to_column_elements(self) -> list[ColumnElement[Any]]:
+        """Pin NULLs last; the two dialects disagree on where they go by default."""
+        return [sqlalchemy.nullslast(element) for element in super().to_column_elements()]
+
+    def _is_numerical_field(self) -> ColumnElement[bool]:
+        """Return whether ``metadata_schema`` records this field as a number.
+
+        Uses the same path syntax as the value, so the two cannot disagree.
+        """
+        return db_json.json_extract(
+            column=self._metadata_alias.metadata_schema,
+            field=self.field_name,
+        ).in_([db_json.json_literal(type_name) for type_name in NUMERIC_TYPE_NAMES])
+
+    def _extracted_value(self) -> ColumnElement[Any]:
+        """Return the raw JSON value of the field."""
+        return db_json.json_extract(column=self._metadata_alias.data, field=self.field_name)
 
     def apply_joins(self, query: SelectT) -> SelectT:
         """Left-outer-join aliased ``SampleMetadataTable`` on ``sample_id``."""
@@ -223,6 +264,85 @@ class OrderByEvaluationMetricField(OrderByExpression):
                 col(self._metric_alias.sample_id) == col(ImageTable.sample_id),
                 col(self._metric_alias.evaluation_run_id) == col(self._run_alias.id),
                 col(self._metric_alias.metric_name) == self.metric_name,
+            ),
+        )
+
+
+class OrderByAnnotationEvaluationMetricField(OrderByExpression):
+    """Order annotations by a per-annotation metric from EvaluationAnnotationMetricTable.
+
+    A LEFT OUTER JOIN keeps annotations the run did not cover. The sort value depends on
+    the joined row:
+
+    - Row with a value: order by that value.
+    - Row without a value (unmatched annotation, i.e. false positive or false negative):
+      order as ``0.0``, because it has no overlap.
+    - No row (the run did not cover this annotation): order as ``NULL``.
+
+    Nulls sort last in both directions, so un-evaluated annotations stay out of the top
+    of the review queue.
+
+    Args:
+        evaluation_run_id: ID of the evaluation run holding the metric.
+        metric_name: Name of the metric to order by, as stored.
+        side: Which side of the run's pairing the browsed annotation source is. Selects
+            the column the join matches the annotation ID against.
+        annotation_id_column: Column holding the annotation's sample ID. Passed in
+            because the grid query is rooted on the annotation table while adjacency
+            orders over a filtered subquery.
+    """
+
+    def __init__(
+        self,
+        *,
+        evaluation_run_id: UUID,
+        metric_name: str,
+        side: EvaluationAnnotationSide,
+        annotation_id_column: ColumnElement[Any] | Mapped[Any],
+    ) -> None:
+        """Initialize with the run, metric, pairing side and annotation ID column."""
+        super().__init__()
+        self.evaluation_run_id = evaluation_run_id
+        self.metric_name = metric_name
+        self.side = side
+        self.annotation_id_column = annotation_id_column
+        # Per-instance alias so this join cannot collide with a filter join on the same table.
+        self._metric_alias = aliased(EvaluationAnnotationMetricTable)
+
+    def to_column_elements(self) -> list[ColumnElement[Any]]:
+        """Return the sort keys with direction applied and nulls placed last."""
+        return [nullslast(element) for element in super().to_column_elements()]
+
+    def _order_value_expression(self) -> ColumnElement[Any]:
+        """Return the metric value, zero when the row is unmatched, null when absent."""
+        return case(
+            (
+                col(self._metric_alias.id).is_not(None),
+                func.coalesce(col(self._metric_alias.value), 0.0),
+            ),
+            else_=None,
+        )
+
+    def apply_joins(self, query: SelectT) -> SelectT:
+        """Left-outer-join the aliased annotation metric table on the pairing side.
+
+        The predicate matches the requested metric name or a null one, so a run writing
+        several metrics per annotation cannot multiply grid rows and corrupt the count.
+        """
+        if self.side == EvaluationAnnotationSide.GROUND_TRUTH:
+            side_column = col(self._metric_alias.gt_annotation_id)
+        else:
+            side_column = col(self._metric_alias.pred_annotation_id)
+
+        return query.outerjoin(
+            self._metric_alias,
+            and_(
+                side_column == self.annotation_id_column,
+                col(self._metric_alias.evaluation_run_id) == self.evaluation_run_id,
+                or_(
+                    col(self._metric_alias.metric_name) == self.metric_name,
+                    col(self._metric_alias.metric_name).is_(None),
+                ),
             ),
         )
 

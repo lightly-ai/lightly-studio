@@ -1,7 +1,7 @@
 <script lang="ts">
     import { ChevronsUpDown } from '@lucide/svelte';
     import * as Popover from '$lib/components/ui/popover';
-    import { Button } from '$lib/components/ui/button';
+    import { Button } from '$lib/components';
     import { Checkbox } from '$lib/components/ui/checkbox';
     import { Input } from '$lib/components/ui/input';
     import type { CategoricalMetadataBucket } from '$lib/hooks/useCategoricalMetadataDistribution/types';
@@ -48,13 +48,15 @@
         <Popover.Trigger>
             {#snippet child({ props })}
                 <Button
-                    {...props}
                     variant="outline"
-                    size="sm"
-                    class="min-w-0 flex-1 justify-between max-sm:min-h-11"
-                    {disabled}
-                    aria-label="Select metadata values"
-                    data-testid="metadata-categorical-filter-trigger"
+                    buttonProps={{
+                        ...props,
+                        size: 'sm',
+                        class: 'min-w-0 flex-1 justify-between max-sm:min-h-11',
+                        disabled,
+                        'data-testid': 'metadata-categorical-filter-trigger'
+                    }}
+                    ariaLabel="Select metadata values"
                 >
                     <span class="truncate">{loading ? 'Loading…' : summary}</span>
                     <ChevronsUpDown class="opacity-50" />
@@ -100,9 +102,11 @@
             {#if selectedValues.length > 0}
                 <Button
                     variant="ghost"
-                    size="sm"
-                    class="mt-2 w-full max-sm:min-h-11"
-                    onclick={onClear}>Clear</Button
+                    buttonProps={{
+                        size: 'sm',
+                        class: 'mt-2 w-full max-sm:min-h-11',
+                        onclick: onClear
+                    }}>Clear</Button
                 >
             {/if}
         </Popover.Content>

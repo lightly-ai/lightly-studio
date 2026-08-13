@@ -168,6 +168,14 @@ describe('runBot', () => {
         expect(execution.createComment).toHaveBeenCalledOnce();
     });
 
+    it('keeps an existing approval on a current pass without churning reviews', async () => {
+        const execution = run(verdict(), { existingApproval: true });
+        await expect(execution.result).resolves.toEqual({ status: 'approved', prNumber: 7 });
+        expect(execution.createReview).not.toHaveBeenCalled();
+        expect(execution.dismissReview).not.toHaveBeenCalled();
+        expect(execution.createComment).toHaveBeenCalledOnce();
+    });
+
     it('dismisses an existing approval on a failure verdict', async () => {
         const execution = run(verdict({ verdict: 'fail', reason: 'Human review required.' }), {
             existingApproval: true

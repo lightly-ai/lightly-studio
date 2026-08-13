@@ -1,5 +1,4 @@
 import type { Guardrail } from './context/types';
-import { dummyGuardrail } from './dummy';
 import { backendComplexityGuardrail } from './backend/complexity';
 import { frontendComplexityGuardrail } from './frontend/complexity';
 import { backendCoverageGuardrail } from './backend/coverage';
@@ -8,7 +7,6 @@ import { frontendCoverageGuardrail } from './frontend/coverage';
 
 /** The guardrail registry. */
 export const guardrails: Guardrail[] = [
-    dummyGuardrail,
     frontendComplexityGuardrail,
     backendComplexityGuardrail,
     backendCoverageGuardrail,

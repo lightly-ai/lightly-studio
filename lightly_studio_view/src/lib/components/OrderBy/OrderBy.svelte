@@ -1,11 +1,8 @@
 <script lang="ts">
-    import { SortDirection } from '$lib/api/lightly_studio_local';
     import { useOrderBy } from '$lib/hooks/useOrderBy/useOrderBy';
     import { useGlobalStorage, usePostHog } from '$lib/hooks';
-    import { Select, type SelectItem } from '$lib/components/Select';
-    import { Button } from '$lib/components/ui/button';
-    import { Tooltip } from '$lib/components/ui/tooltip';
-    import { ArrowDown, ArrowUp } from '@lucide/svelte';
+    import { type SelectItem } from '$lib/components/Select';
+    import OrderByControl from './OrderByControl.svelte';
 
     interface Props {
         collectionId: string;
@@ -26,7 +23,7 @@
         handleFieldClick,
         toggleDirection,
         dispose
-    } = useOrderBy({ collectionId: () => collectionId, datasetId });
+    } = useOrderBy({ collectionId: () => collectionId, datasetId: () => datasetId });
 
     $effect(() => {
         return () => dispose();
@@ -57,47 +54,16 @@
         const field = $allSortFields[Number(value)];
         if (field) handleFieldClick(field);
     };
-
-    const directionTooltip = $derived(
-        $selectedDirection === SortDirection.DESC ? 'Sort descending' : 'Sort ascending'
-    );
 </script>
 
-<div class="flex items-center gap-1">
-    <Tooltip content="Sort items by attribute" position="top" triggerClass="inline-flex">
-        <Select
-            items={sortItems}
-            value={selectValue}
-            triggerLabel={$selectedLabel ?? undefined}
-            allowDeselect
-            onValueChange={handleValueChange}
-            onOpenChange={(open) => {
-                if (open) trackEvent('sort_by_opened', { collection_id: collectionId });
-            }}
-            disabled={isSimilaritySearchActive}
-            placeholder="Sort by"
-            size="xs"
-            variant="ghost"
-            class="w-[100px] min-w-20"
-            testId="sort-by-trigger"
-        />
-    </Tooltip>
-
-    <Tooltip content={directionTooltip} position="top">
-        <Button
-            variant="ghost"
-            size="icon"
-            disabled={!$selectedLabel || isSimilaritySearchActive}
-            onclick={toggleDirection}
-            class="size-auto p-0 hover:bg-transparent [&>svg]:text-foreground [&>svg]:hover:text-muted-foreground"
-            data-testid="sort-direction-button"
-            aria-label={directionTooltip}
-        >
-            {#if $selectedDirection === SortDirection.DESC}
-                <ArrowDown class="size-4" />
-            {:else}
-                <ArrowUp class="size-4" />
-            {/if}
-        </Button>
-    </Tooltip>
-</div>
+<OrderByControl
+    items={sortItems}
+    selectedValue={selectValue}
+    triggerLabel={$selectedLabel ?? undefined}
+    direction={$selectedDirection}
+    disabled={isSimilaritySearchActive}
+    allowDeselect
+    onValueChange={handleValueChange}
+    onOpen={() => trackEvent('sort_by_opened', { collection_id: collectionId })}
+    onToggleDirection={toggleDirection}
+/>

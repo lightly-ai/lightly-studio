@@ -34,7 +34,7 @@ describe('useOrderBy', () => {
         it('returns ASC when no sort is active', () => {
             const { selectedDirection } = useOrderBy({
                 collectionId: () => 'col1',
-                datasetId: 'ds1'
+                datasetId: () => 'ds1'
             });
             expect(get(selectedDirection)).toBe(SortDirection.ASC);
         });
@@ -44,13 +44,12 @@ describe('useOrderBy', () => {
                 {
                     source: 'image',
                     field_name: 'file_name',
-                    direction: SortDirection.DESC,
-                    is_numeric: false
+                    direction: SortDirection.DESC
                 }
             ]);
             const { selectedDirection } = useOrderBy({
                 collectionId: () => 'col1',
-                datasetId: 'ds1'
+                datasetId: () => 'ds1'
             });
             expect(get(selectedDirection)).toBe(SortDirection.DESC);
         });
@@ -58,7 +57,10 @@ describe('useOrderBy', () => {
 
     describe('selectedLabel', () => {
         it('returns null when no sort is active', () => {
-            const { selectedLabel } = useOrderBy({ collectionId: () => 'col1', datasetId: 'ds1' });
+            const { selectedLabel } = useOrderBy({
+                collectionId: () => 'col1',
+                datasetId: () => 'ds1'
+            });
             expect(get(selectedLabel)).toBeNull();
         });
 
@@ -67,11 +69,13 @@ describe('useOrderBy', () => {
                 {
                     source: 'image',
                     field_name: 'file_name',
-                    direction: SortDirection.ASC,
-                    is_numeric: false
+                    direction: SortDirection.ASC
                 }
             ]);
-            const { selectedLabel } = useOrderBy({ collectionId: () => 'col1', datasetId: 'ds1' });
+            const { selectedLabel } = useOrderBy({
+                collectionId: () => 'col1',
+                datasetId: () => 'ds1'
+            });
             expect(get(selectedLabel)).toBe('file name');
         });
 
@@ -81,19 +85,20 @@ describe('useOrderBy', () => {
                 {
                     source: 'metadata',
                     value: 'brightness',
-                    label: 'metadata.brightness',
-                    is_numeric: true
+                    label: 'metadata.brightness'
                 }
             ]);
             imageSortBy.set([
                 {
                     source: 'metadata',
                     field_name: 'brightness',
-                    direction: SortDirection.ASC,
-                    is_numeric: true
+                    direction: SortDirection.ASC
                 }
             ]);
-            const { selectedLabel } = useOrderBy({ collectionId: () => 'col1', datasetId: 'ds1' });
+            const { selectedLabel } = useOrderBy({
+                collectionId: () => 'col1',
+                datasetId: () => 'ds1'
+            });
             expect(get(selectedLabel)).toBe('metadata.brightness');
         });
 
@@ -115,7 +120,10 @@ describe('useOrderBy', () => {
                     direction: SortDirection.ASC
                 }
             ]);
-            const { selectedLabel } = useOrderBy({ collectionId: () => 'col1', datasetId: 'ds1' });
+            const { selectedLabel } = useOrderBy({
+                collectionId: () => 'col1',
+                datasetId: () => 'ds1'
+            });
             expect(get(selectedLabel)).toBe('run1.precision');
         });
     });
@@ -124,7 +132,7 @@ describe('useOrderBy', () => {
         it('returns false for any field when no sort is active', () => {
             const { isFieldSelected } = useOrderBy({
                 collectionId: () => 'col1',
-                datasetId: 'ds1'
+                datasetId: () => 'ds1'
             });
             const check = get(isFieldSelected);
 
@@ -136,13 +144,12 @@ describe('useOrderBy', () => {
                 {
                     source: 'image',
                     field_name: 'width',
-                    direction: SortDirection.ASC,
-                    is_numeric: false
+                    direction: SortDirection.ASC
                 }
             ]);
             const { isFieldSelected } = useOrderBy({
                 collectionId: () => 'col1',
-                datasetId: 'ds1'
+                datasetId: () => 'ds1'
             });
             const check = get(isFieldSelected);
 
@@ -161,7 +168,7 @@ describe('useOrderBy', () => {
             ]);
             const { isFieldSelected } = useOrderBy({
                 collectionId: () => 'col1',
-                datasetId: 'ds1'
+                datasetId: () => 'ds1'
             });
             const check = get(isFieldSelected);
 
@@ -186,7 +193,7 @@ describe('useOrderBy', () => {
         it('updates reactively when imageSortBy changes', () => {
             const { isFieldSelected } = useOrderBy({
                 collectionId: () => 'col1',
-                datasetId: 'ds1'
+                datasetId: () => 'ds1'
             });
             const field = { source: 'image' as const, value: 'width', label: 'width' };
 
@@ -196,8 +203,7 @@ describe('useOrderBy', () => {
                 {
                     source: 'image',
                     field_name: 'width',
-                    direction: SortDirection.ASC,
-                    is_numeric: false
+                    direction: SortDirection.ASC
                 }
             ]);
 
@@ -209,7 +215,7 @@ describe('useOrderBy', () => {
         it('selects an image field with ASC direction by default', () => {
             const { handleFieldClick } = useOrderBy({
                 collectionId: () => 'col1',
-                datasetId: 'ds1'
+                datasetId: () => 'ds1'
             });
 
             handleFieldClick({ source: 'image', value: 'file_name', label: 'file name' });
@@ -218,8 +224,7 @@ describe('useOrderBy', () => {
                 {
                     source: 'image',
                     field_name: 'file_name',
-                    direction: SortDirection.ASC,
-                    is_numeric: false
+                    direction: SortDirection.ASC
                 }
             ]);
         });
@@ -229,13 +234,12 @@ describe('useOrderBy', () => {
                 {
                     source: 'image',
                     field_name: 'file_name',
-                    direction: SortDirection.ASC,
-                    is_numeric: false
+                    direction: SortDirection.ASC
                 }
             ]);
             const { handleFieldClick } = useOrderBy({
                 collectionId: () => 'col1',
-                datasetId: 'ds1'
+                datasetId: () => 'ds1'
             });
 
             handleFieldClick({ source: 'image', value: 'file_name', label: 'file name' });
@@ -248,13 +252,12 @@ describe('useOrderBy', () => {
                 {
                     source: 'image',
                     field_name: 'file_name',
-                    direction: SortDirection.DESC,
-                    is_numeric: false
+                    direction: SortDirection.DESC
                 }
             ]);
             const { handleFieldClick } = useOrderBy({
                 collectionId: () => 'col1',
-                datasetId: 'ds1'
+                datasetId: () => 'ds1'
             });
 
             handleFieldClick({ source: 'image', value: 'width', label: 'width' });
@@ -263,31 +266,28 @@ describe('useOrderBy', () => {
                 {
                     source: 'image',
                     field_name: 'width',
-                    direction: SortDirection.DESC,
-                    is_numeric: false
+                    direction: SortDirection.DESC
                 }
             ]);
         });
 
-        it('sets is_numeric true for numeric metadata fields', () => {
+        it('selects a metadata field', () => {
             const { handleFieldClick } = useOrderBy({
                 collectionId: () => 'col1',
-                datasetId: 'ds1'
+                datasetId: () => 'ds1'
             });
 
             handleFieldClick({
                 source: 'metadata',
                 value: 'score',
-                label: 'metadata.score',
-                is_numeric: true
+                label: 'metadata.score'
             });
 
             expect(updateSortBy).toHaveBeenCalledWith([
                 {
                     source: 'metadata',
                     field_name: 'score',
-                    direction: SortDirection.ASC,
-                    is_numeric: true
+                    direction: SortDirection.ASC
                 }
             ]);
         });
@@ -295,7 +295,7 @@ describe('useOrderBy', () => {
         it('selects an evaluation metric field', () => {
             const { handleFieldClick } = useOrderBy({
                 collectionId: () => 'col1',
-                datasetId: 'ds1'
+                datasetId: () => 'ds1'
             });
 
             handleFieldClick({
@@ -320,7 +320,7 @@ describe('useOrderBy', () => {
         it('does nothing when no sort is active', () => {
             const { toggleDirection } = useOrderBy({
                 collectionId: () => 'col1',
-                datasetId: 'ds1'
+                datasetId: () => 'ds1'
             });
 
             toggleDirection();
@@ -333,13 +333,12 @@ describe('useOrderBy', () => {
                 {
                     source: 'image',
                     field_name: 'file_name',
-                    direction: SortDirection.ASC,
-                    is_numeric: false
+                    direction: SortDirection.ASC
                 }
             ]);
             const { toggleDirection } = useOrderBy({
                 collectionId: () => 'col1',
-                datasetId: 'ds1'
+                datasetId: () => 'ds1'
             });
 
             toggleDirection();
@@ -347,8 +346,7 @@ describe('useOrderBy', () => {
                 {
                     source: 'image',
                     field_name: 'file_name',
-                    direction: SortDirection.DESC,
-                    is_numeric: false
+                    direction: SortDirection.DESC
                 }
             ]);
 
@@ -356,8 +354,7 @@ describe('useOrderBy', () => {
                 {
                     source: 'image',
                     field_name: 'file_name',
-                    direction: SortDirection.DESC,
-                    is_numeric: false
+                    direction: SortDirection.DESC
                 }
             ]);
             toggleDirection();
@@ -365,24 +362,22 @@ describe('useOrderBy', () => {
                 {
                     source: 'image',
                     field_name: 'file_name',
-                    direction: SortDirection.ASC,
-                    is_numeric: false
+                    direction: SortDirection.ASC
                 }
             ]);
         });
 
-        it('preserves is_numeric when toggling direction on a metadata field', () => {
+        it('toggles direction for a metadata field', () => {
             imageSortBy.set([
                 {
                     source: 'metadata',
                     field_name: 'score',
-                    direction: SortDirection.ASC,
-                    is_numeric: true
+                    direction: SortDirection.ASC
                 }
             ]);
             const { toggleDirection } = useOrderBy({
                 collectionId: () => 'col1',
-                datasetId: 'ds1'
+                datasetId: () => 'ds1'
             });
 
             toggleDirection();
@@ -391,8 +386,7 @@ describe('useOrderBy', () => {
                 {
                     source: 'metadata',
                     field_name: 'score',
-                    direction: SortDirection.DESC,
-                    is_numeric: true
+                    direction: SortDirection.DESC
                 }
             ]);
         });
@@ -408,7 +402,7 @@ describe('useOrderBy', () => {
             ]);
             const { toggleDirection } = useOrderBy({
                 collectionId: () => 'col1',
-                datasetId: 'ds1'
+                datasetId: () => 'ds1'
             });
 
             toggleDirection();

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { useColorPicker } from '$lib/hooks';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { getColorByLabel, rgbaToHex } from '$lib/utils';
     import { ColorPicker } from '../ui/color-picker';
@@ -15,12 +16,8 @@
         testId?: string;
     } = $props();
 
-    const { setCustomColor, getCustomColor, hasCustomColor, customLabelColorsStore } =
-        useCustomLabelColors();
-
-    function handleColorChange(label: string, color: string, alpha: number) {
-        setCustomColor(label, color, alpha);
-    }
+    const { getCustomColor, hasCustomColor, customLabelColorsStore } = useCustomLabelColors();
+    const picker = useColorPicker(() => labelName);
 
     function getInitialColor(label: string) {
         if (hasCustomColor(label)) {
@@ -58,7 +55,8 @@
     <ColorPicker
         initialColor={getInitialColor(labelName)}
         initialAlpha={getInitialAlpha(labelName)}
-        onChange={(color, alpha) => handleColorChange(labelName, color, alpha)}
+        onChange={picker.setColor}
+        onClose={picker.finishColorChange}
     >
         <div
             class={`${className} cursor-pointer rounded-sm border`}

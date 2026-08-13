@@ -12,7 +12,7 @@ import type { SortExpr } from '$lib/hooks/useImagesInfinite/types';
 
 interface UseOrderByParams {
     collectionId: () => string;
-    datasetId: string;
+    datasetId: () => string;
 }
 
 interface UseOrderByReturn {
@@ -117,8 +117,7 @@ export function useOrderBy({ collectionId, datasetId }: UseOrderByParams): UseOr
                 : {
                       source: field.source,
                       field_name: field.value,
-                      direction,
-                      is_numeric: field.is_numeric ?? false
+                      direction
                   };
         updateSortBy([next]);
         const { sort_source, field_name } = sortExprAnalytics(next);

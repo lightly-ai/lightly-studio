@@ -8,18 +8,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Show indexed categorical metadata values in distribution panel
+- Add the `lightly-studio quickstart` CLI command, which downloads the COCO example dataset and launches the GUI in one step.
+
+- Export image classification annotations to CSV via the GUI and Python SDK
+- Export video classification annotations to CSV via the GUI and Python SDK
+
+- Python SDK: Export video frames as image files via `VideoFrameDataset.export().to_image_files()` with support for PNG, JPEG, WEBP, BMP, and TIFF formats. Returns the paths of the created files.
+- Google Cloud Storage (GCS) is supported in the LightlyStudio Enterprise version.
+- Python SDK: Connect to LightlyStudio Enterprise with a long-lived API key by passing `api_key` to `lightly_studio.connect()` or setting `LIGHTLY_STUDIO_API_KEY`.
 
 ### Changed
+
+- `lightly-studio quickstart` now opens your browser automatically once the GUI server is ready. Pass `--no-browser` to skip that.
+- Show a busy indicator on save/delete/export/execute buttons while their action is running (caption, tag, operator, evaluation, and export actions).
 
 ### Deprecated
 
 ### Removed
 
+- The `is_numeric` field on sort expressions in the images-list and adjacent-samples request
+  bodies. It was already ignored, as the value type is taken from the collection's metadata
+  schema. Requests that still send the field keep working; it is dropped during validation.
+
+- The `cast_to_float` argument of `OrderByMetadataField`. Top-level numerical fields are now
+  detected automatically, so passing it is no longer needed: `OrderByMetadataField("score",
+  cast_to_float=True)` becomes `OrderByMetadataField("score")`. Sorting a *nested* numerical
+  field numerically is no longer possible, as `metadata_schema` records only top-level keys;
+  a dotted path such as `stats.score` now sorts lexicographically.
+
 ### Fixed
 
+- Sorting by a numeric metadata field now orders numerically without the caller having to
+  declare the field type. Previously `9` sorted after `10` unless the caller passed
+  `cast_to_float=True`.
+
+- Grid annotation overlays now render at tile resolution to bound memory usage for large source images.
 - Annotation class names no longer overflow in class selection.
 - Autofocus lets users create their first annotation faster.
 - Opening a DuckDB database that another lightly_studio process already has open now raises a clear error instead of a raw DuckDB traceback.
+- Coloring the 2D embedding plot by annotations or metadata now loads faster, especially for large datasets.
+- Changing annotation colors is now smoother and shows a live preview while dragging the color picker.
+- Hover previews in the annotations embedding plot now show the relevant image crop and annotation overlay, matching the annotations grid.
+- Custom annotation color opacity is now applied to segmentation masks in the detail view. Contributed by @sam-watts.
 
 ### Security
 

@@ -1,4 +1,5 @@
 # Project Instructions
 
-See [instructions.md](../ai_guidelines/instructions.md) for detailed coding guidelines and development workflow.
+See [AGENTS.md](../AGENTS.md) for the development workflow, and [.agents/skills](../.agents/skills)
+for the detailed coding guidelines.
 
