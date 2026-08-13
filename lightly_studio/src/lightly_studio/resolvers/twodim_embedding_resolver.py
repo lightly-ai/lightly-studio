@@ -22,9 +22,10 @@ def get_twodim_embeddings(
 ) -> tuple[NDArray[np.float32], NDArray[np.float32], list[UUID]]:
     """Return cached 2D embeddings together with their sample identifiers.
 
-    Uses a cache to avoid recomputing the 2D embeddings. The cache key combines the sorted
-    sample identifiers with a deterministic 64-bit hash over the stored high-dimensional
-    embeddings.
+    The projection is cached per (collection, embedding model). The cached row stores the
+    sample ids next to the coordinates, so a cache hit never has to re-read
+    ``sample_embedding``. A fingerprint over the collection's embeddings decides whether
+    the cached entry still describes the current set of samples.
 
     Args:
         session: Database session.
@@ -38,54 +39,63 @@ def get_twodim_embeddings(
     if embedding_model is None:
         raise ValueError(f"Embedding model {embedding_model_id} not found.")
 
-    # Check if we have a cached 2D embedding for the given collection and embedding model.
-    cache_key, sample_ids_of_samples_with_embeddings = (
-        sample_embedding_resolver.get_hash_by_collection_id(
-            session=session,
-            collection_id=collection_id,
-            embedding_model_id=embedding_model_id,
-        )
+    sample_count, fingerprint = sample_embedding_resolver.get_fingerprint_by_collection_id(
+        session=session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
     )
-
-    if not sample_ids_of_samples_with_embeddings:
+    if sample_count == 0:
         empty = np.array([], dtype=np.float32)
         return empty, empty, []
 
-    # If there is a cached entry, return it.
-    cached = session.get(TwoDimEmbeddingTable, cache_key)
-    if cached is not None:
-        x_values = np.array(cached.x, dtype=np.float32)
-        y_values = np.array(cached.y, dtype=np.float32)
-        return x_values, y_values, sample_ids_of_samples_with_embeddings
+    # The length check guards against a corrupted row: the three arrays are written
+    # together and should never diverge, but callers zip the coordinates with the ids, so
+    # a mismatch is treated as a miss rather than propagated.
+    cached = session.get(TwoDimEmbeddingTable, (collection_id, embedding_model_id))
+    if (
+        cached is not None
+        and cached.fingerprint == fingerprint
+        and len(cached.sample_ids) == len(cached.x) == len(cached.y)
+    ):
+        return (
+            np.array(cached.x, dtype=np.float32),
+            np.array(cached.y, dtype=np.float32),
+            list(cached.sample_ids),
+        )
 
-    # No cached entry found - load the high-dimensional embeddings.
-    # The order is defined by sample_ids_of_samples_with_embeddings.
-    sample_embeddings = sample_embedding_resolver.get_by_sample_ids(
+    # Cache miss or stale entry: load the high-dimensional embeddings and reproject.
+    sample_embeddings = sample_embedding_resolver.get_all_by_collection_id(
         session=session,
-        sample_ids=sample_ids_of_samples_with_embeddings,
+        collection_id=collection_id,
         embedding_model_id=embedding_model_id,
     )
-
-    # If there are no embeddings, return empty arrays.
     if not sample_embeddings:
         empty = np.array([], dtype=np.float32)
         return empty, empty, []
 
-    # Compute the 2D embedding from the high-dimensional embeddings.
-    # The order is now defined by sample_embeddings. They are the ordered subset of the
-    # sample_ids_of_samples_with_embeddings that have embeddings.
-    sample_ids_of_samples_with_embeddings = [embedding.sample_id for embedding in sample_embeddings]
+    # The order is the one get_all_by_collection_id produced, not the fingerprint's
+    # canonical sample_id order. Both the coordinates and the stored ids follow it.
+    sample_ids = [embedding.sample_id for embedding in sample_embeddings]
     embedding_values = [embedding.embedding for embedding in sample_embeddings]
     planar_embeddings = _calculate_2d_embeddings(embedding_values)
     embeddings_2d = np.asarray(planar_embeddings, dtype=np.float32)
     x_values, y_values = embeddings_2d[:, 0], embeddings_2d[:, 1]
 
-    # Write the computed 2D embeddings to the cache.
-    cache_entry = TwoDimEmbeddingTable(hash=cache_key, x=list(x_values), y=list(y_values))
-    session.add(cache_entry)
+    # merge() rather than add(): recomputing over an existing key must overwrite the row
+    # in place instead of raising an IntegrityError.
+    session.merge(
+        TwoDimEmbeddingTable(
+            collection_id=collection_id,
+            embedding_model_id=embedding_model_id,
+            fingerprint=fingerprint,
+            sample_ids=sample_ids,
+            x=[float(value) for value in x_values],
+            y=[float(value) for value in y_values],
+        )
+    )
     session.commit()
 
-    return x_values, y_values, sample_ids_of_samples_with_embeddings
+    return x_values, y_values, sample_ids
 
 
 def _calculate_2d_embeddings(

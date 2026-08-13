@@ -41,6 +41,7 @@ from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
+from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import dataset_resolver
 from lightly_studio.resolvers.dataset_resolver import table_coverage_utils
@@ -109,6 +110,8 @@ def delete_dataset(
     _delete_samples(session=session, dataset_id=dataset_id)
     _delete_annotation_labels(session=session, dataset_id=dataset_id)
     _delete_tags(session=session, dataset_id=dataset_id)
+    # Must precede embedding models (TwoDimEmbeddingTable.embedding_model_id -> embedding_model).
+    _delete_two_dim_embeddings(session=session, dataset_id=dataset_id)
     _delete_embedding_models(session=session, dataset_id=dataset_id)
     _delete_object_tracks(session=session, dataset_id=dataset_id)
     _delete_evaluation_runs(session=session, dataset_id=dataset_id)
@@ -301,6 +304,16 @@ def _delete_tags(session: Session, dataset_id: UUID) -> None:
     session.exec(
         delete(TagTable).where(
             col(TagTable.collection_id).in_(_collection_ids_subquery(dataset_id))
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_two_dim_embeddings(session: Session, dataset_id: UUID) -> None:
+    """Delete cached 2D projections for the dataset's collections."""
+    session.exec(
+        delete(TwoDimEmbeddingTable).where(
+            col(TwoDimEmbeddingTable.collection_id).in_(_collection_ids_subquery(dataset_id))
         ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
