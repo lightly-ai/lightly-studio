@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
-import hashlib
 from collections.abc import Mapping, Sequence
 from typing import Any, NamedTuple
 from uuid import UUID
 
-from sqlalchemy import func
+from sqlalchemy import String, cast, func, literal
+
+# Despite living in the postgresql dialect module, aggregate_order_by is a generic
+# construct that renders "ORDER BY" inside an aggregate on DuckDB too.
+from sqlalchemy.dialects.postgresql import aggregate_order_by
 from sqlmodel import Session, col, select
 
 from lightly_studio.database import db_vector
@@ -169,10 +172,19 @@ def get_fingerprint_by_collection_id(
 ) -> tuple[int, str]:
     """Return how many samples have embeddings and a fingerprint identifying that set.
 
-    The fingerprint is derived from the first dimension of each embedding vector, in
-    canonical ``sample_id`` order, which is database-agnostic (works with both DuckDB and
-    PostgreSQL). Callers use it to decide whether a cached projection is still valid; it
-    says nothing about the order in which the embeddings are later loaded.
+    The fingerprint is an md5 digest over the sample ids in canonical ``sample_id`` order.
+    Both the count and the digest are computed by the database in a single round trip, so
+    no embedding row ever crosses into Python. That matters most on PostgreSQL: pgvector
+    stores a 512-dim vector out of line, so reading even one dimension detoasts the whole
+    vector, once per row.
+
+    The digest deliberately does not read the embedding values. It therefore cannot detect
+    vectors changing under an unchanged ``embedding_model_id``; see the module-level note
+    on the generation counter that would close that gap.
+
+    ``md5`` is used for portability: it takes and returns ``varchar`` on both dialects,
+    while PostgreSQL's ``sha256`` works on ``bytea``. The cost here is the sort inside
+    ``string_agg``, not the hash function.
 
     Args:
         session: Database session.
@@ -180,26 +192,29 @@ def get_fingerprint_by_collection_id(
         embedding_model_id: Embedding model identifier.
 
     Returns:
-        Tuple of (number of samples with stored embeddings, fingerprint).
+        Tuple of (number of samples with stored embeddings, fingerprint). The fingerprint
+        is an empty string when the collection has no embeddings.
     """
-    first_dim_col = db_vector.vector_element(SampleEmbeddingTable.embedding, 1).label("first_dim")
-
-    rows = session.exec(
-        select(
-            SampleEmbeddingTable.sample_id,
-            first_dim_col,
+    # The ORDER BY has to ride on string_agg's separator argument. Passing it as a third
+    # argument makes PostgreSQL read it as a second sort key and fail to resolve the
+    # function; DuckDB tolerates the wrong form, so this only breaks in production.
+    sample_id_text = cast(col(SampleEmbeddingTable.sample_id), String)
+    digest = func.md5(
+        func.string_agg(
+            sample_id_text,
+            aggregate_order_by(literal(""), col(SampleEmbeddingTable.sample_id).asc()),
         )
+    )
+
+    sample_count, fingerprint = session.exec(
+        select(func.count(), digest)
         .join(SampleTable, col(SampleEmbeddingTable.sample_id) == col(SampleTable.sample_id))
         .where(SampleTable.collection_id == collection_id)
         .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
-        .order_by(col(SampleEmbeddingTable.sample_id).asc())
-    ).all()
+    ).one()
 
-    hasher = hashlib.sha256()
-    for row in rows:
-        hasher.update(str(row.first_dim).encode("utf-8"))  # type: ignore[attr-defined]
-
-    return len(rows), hasher.hexdigest()
+    # string_agg over zero rows returns NULL; callers branch on the count instead.
+    return sample_count, fingerprint or ""
 
 
 def get_embedding_count(session: Session, collection_id: UUID, embedding_model_id: UUID) -> int:
