@@ -94,11 +94,18 @@
         })
     );
 
+    // Ids of classifications with a delete request in flight, so repeated clicks cannot
+    // issue concurrent deletes or push the same annotation onto the undo stack twice.
+    let deletingAnnotationIds = $state<string[]>([]);
+
     const handleDeleteAnnotation = async (annotationId: string) => {
         if (!annotationLabels.data) return;
 
         const annotation = annotations?.find((a) => a.sample_id === annotationId);
         if (!annotation) return;
+
+        if (deletingAnnotationIds.includes(annotationId)) return;
+        deletingAnnotationIds = [...deletingAnnotationIds, annotationId];
 
         try {
             addAnnotationDeleteToUndoStack({
@@ -115,6 +122,8 @@
         } catch (error) {
             toast.error('Failed to delete classification. Please try again.');
             console.error('Error deleting classification:', error);
+        } finally {
+            deletingAnnotationIds = deletingAnnotationIds.filter((id) => id !== annotationId);
         }
     };
 
@@ -278,8 +287,9 @@
                 <Button
                     icon={Trash2}
                     ariaLabel="Delete classification"
+                    isPending={deletingAnnotationIds.includes(annotation.sample_id)}
                     buttonProps={{
-                        size: 'icon',
+                        class: 'size-7 p-0',
                         onclick: (e) => {
                             e.stopPropagation();
                             handleDeleteAnnotation(annotation.sample_id);
@@ -358,8 +368,7 @@
                                 icon={Trash2}
                                 ariaLabel="Remove classification draft"
                                 buttonProps={{
-                                    size: 'icon',
-                                    class: 'text-muted-foreground',
+                                    class: 'size-7 p-0 text-muted-foreground',
                                     onclick: (e) => {
                                         e.stopPropagation();
                                         removeDraftClassification(draftId);
@@ -371,6 +380,7 @@
                 {/each}
                 <Button
                     variant="ghost"
+                    ariaLabel="Add classification"
                     buttonProps={{
                         type: 'button',
                         class: 'mb-2 h-8 justify-center rounded-sm bg-card px-2 py-0 text-base font-normal text-diffuse-foreground hover:bg-primary hover:text-primary-foreground',
