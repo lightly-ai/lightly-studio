@@ -55,7 +55,7 @@ describe('createImagesInfiniteOptions', () => {
 
         it('includes sort_by in query key', () => {
             const sort: SortFieldExpr[] = [
-                { source: 'image', field_name: 'score', direction: 'desc', is_numeric: false }
+                { source: 'image', field_name: 'score', direction: 'desc' }
             ];
             const options = createImagesInfiniteOptions({
                 collection_id: 'col-1',
@@ -76,10 +76,10 @@ describe('createImagesInfiniteOptions', () => {
 
         it('produces different keys for different sort_by values', () => {
             const sort1: SortFieldExpr[] = [
-                { source: 'image', field_name: 'score', direction: 'desc', is_numeric: false }
+                { source: 'image', field_name: 'score', direction: 'desc' }
             ];
             const sort2: SortFieldExpr[] = [
-                { source: 'image', field_name: 'filename', direction: 'asc', is_numeric: false }
+                { source: 'image', field_name: 'filename', direction: 'asc' }
             ];
             const options1 = createImagesInfiniteOptions({
                 collection_id: 'col-1',
@@ -122,7 +122,7 @@ describe('createImagesInfiniteOptions', () => {
     describe('queryFn', () => {
         it('passes sort_by to readImages', async () => {
             const sort: SortFieldExpr[] = [
-                { source: 'image', field_name: 'score', direction: 'desc', is_numeric: false }
+                { source: 'image', field_name: 'score', direction: 'desc' }
             ];
             const options = createImagesInfiniteOptions({
                 collection_id: 'col-1',

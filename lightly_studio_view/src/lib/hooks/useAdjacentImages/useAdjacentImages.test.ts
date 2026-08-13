@@ -108,9 +108,7 @@ describe('useAdjacentImages', () => {
 
     it('passes sort_by to useAdjacentSamples when imageSortBy is set and text embedding is inactive', () => {
         textEmbeddingStore.set(undefined);
-        const sort: SortFieldExpr[] = [
-            { source: 'image', field_name: 'score', direction: 'desc', is_numeric: false }
-        ];
+        const sort: SortFieldExpr[] = [{ source: 'image', field_name: 'score', direction: 'desc' }];
         imageSortByStore.set(sort);
 
         useAdjacentImages({ sampleId: 'sample-123', collectionId: 'collection-1' });
@@ -141,9 +139,7 @@ describe('useAdjacentImages', () => {
 
     it('passes sort_by as undefined when text embedding is active, even if imageSortBy is set', () => {
         textEmbeddingStore.set({ embedding: [0.12, 0.34], queryText: 'cats' });
-        const sort: SortFieldExpr[] = [
-            { source: 'image', field_name: 'score', direction: 'desc', is_numeric: false }
-        ];
+        const sort: SortFieldExpr[] = [{ source: 'image', field_name: 'score', direction: 'desc' }];
         imageSortByStore.set(sort);
 
         useAdjacentImages({ sampleId: 'sample-123', collectionId: 'collection-1' });

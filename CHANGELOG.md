@@ -15,18 +15,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Export video classification annotations to CSV via the GUI and Python SDK
 
 - Python SDK: Export video frames as image files via `VideoFrameDataset.export().to_image_files()` with support for PNG, JPEG, WEBP, BMP, and TIFF formats. Returns the paths of the created files.
+- Google Cloud Storage (GCS) is supported in the LightlyStudio Enterprise version.
+- Python SDK: Connect to LightlyStudio Enterprise with a long-lived API key by passing `api_key` to `lightly_studio.connect()` or setting `LIGHTLY_STUDIO_API_KEY`.
 
 ### Changed
 
 - `lightly-studio quickstart` now opens your browser automatically once the GUI server is ready. Pass `--no-browser` to skip that.
+- Show a busy indicator on save/delete/export/execute buttons while their action is running (caption, tag, operator, evaluation, and export actions).
 
 ### Deprecated
 
-- The `is_numeric` field on sort expressions in the images-list and adjacent-samples request
-  bodies is ignored and will be removed in a future release. The value type is now taken from
-  the collection's metadata schema. Requests may keep sending the field until then.
-
 ### Removed
+
+- The `is_numeric` field on sort expressions in the images-list and adjacent-samples request
+  bodies. It was already ignored, as the value type is taken from the collection's metadata
+  schema. Requests that still send the field keep working; it is dropped during validation.
 
 - The `cast_to_float` argument of `OrderByMetadataField`. Top-level numerical fields are now
   detected automatically, so passing it is no longer needed: `OrderByMetadataField("score",
@@ -47,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Coloring the 2D embedding plot by annotations or metadata now loads faster, especially for large datasets.
 - Changing annotation colors is now smoother and shows a live preview while dragging the color picker.
 - Hover previews in the annotations embedding plot now show the relevant image crop and annotation overlay, matching the annotations grid.
+- Custom annotation color opacity is now applied to segmentation masks in the detail view. Contributed by @sam-watts.
 
 ### Security
 

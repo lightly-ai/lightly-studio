@@ -1,6 +1,6 @@
 <script lang="ts">
     import { ChevronDown, ChevronRight, Copy, Trash2 } from '@lucide/svelte';
-    import { Button } from '$lib/components/ui/button';
+    import { Button } from '$lib/components';
     import {
         Collapsible,
         CollapsibleContent,
@@ -78,26 +78,28 @@
 
             <div class="flex shrink-0 gap-1">
                 <Button
-                    type="button"
                     variant="ghost"
-                    size="icon"
-                    aria-label="Duplicate strategy"
-                    onclick={onDuplicate}
-                    disabled={isDuplicateDisabled}
-                    data-testid={`strategy-card-duplicate-${instance.id}`}
-                >
-                    <Copy class="size-4" />
-                </Button>
+                    icon={Copy}
+                    ariaLabel="Duplicate strategy"
+                    buttonProps={{
+                        type: 'button',
+                        size: 'icon',
+                        onclick: onDuplicate,
+                        disabled: isDuplicateDisabled,
+                        'data-testid': `strategy-card-duplicate-${instance.id}`
+                    }}
+                />
                 <Button
-                    type="button"
                     variant="ghost"
-                    size="icon"
-                    aria-label="Remove strategy"
-                    onclick={onRemove}
-                    data-testid={`strategy-card-remove-${instance.id}`}
-                >
-                    <Trash2 class="size-4" />
-                </Button>
+                    icon={Trash2}
+                    ariaLabel="Remove strategy"
+                    buttonProps={{
+                        type: 'button',
+                        size: 'icon',
+                        onclick: onRemove,
+                        'data-testid': `strategy-card-remove-${instance.id}`
+                    }}
+                />
             </div>
         </div>
 

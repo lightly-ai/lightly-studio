@@ -12,7 +12,8 @@ const mocks = vi.hoisted(() => ({
     exportCollectionYoutubeVisPrepare: vi.fn(),
     triggerDownload: vi.fn()
 }));
-vi.mock('$lib/api/lightly_studio_local', () => ({
+vi.mock('$lib/api/lightly_studio_local', async (importOriginal) => ({
+    ...(await importOriginal()),
     exportCollectionYoutubeVisPrepare: mocks.exportCollectionYoutubeVisPrepare
 }));
 

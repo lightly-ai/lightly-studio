@@ -46,7 +46,6 @@ def test_sort_field_expr__rejects_invalid_direction() -> None:
                 "source": "image",
                 "field_name": "file_name",
                 "direction": "invalid_direction",
-                "is_numeric": False,
             }
         )
 
@@ -127,27 +126,6 @@ def test_sort_field_expr_to_order_by__metadata_arbitrary_field() -> None:
     assert order_by.field_name == "custom_metric"
 
 
-@pytest.mark.parametrize("is_numeric", [True, False, None])
-def test_sort_field_expr_to_order_by__metadata_ignores_is_numeric(
-    is_numeric: bool | None,
-) -> None:
-    """Test that the deprecated is_numeric field no longer affects the translation.
-
-    Whatever an older client sends, the same expression comes out; numerical fields
-    are detected in SQL from the collection's stored metadata schema.
-    """
-    expr = SortFieldExpr(
-        source=SortFieldSource.metadata,
-        field_name="score",
-        direction=SortDirection.asc,
-        is_numeric=is_numeric,
-    )
-    order_by = sort_field_expr_to_order_by(expr)
-    assert isinstance(order_by, OrderByMetadataField)
-    assert order_by.field_name == "score"
-    assert order_by.ascending is True
-
-
 def test_sort_expr_to_order_by__evaluation_metric_ascending() -> None:
     expr = EvaluationMetricSortExpr(
         evaluation_run_name="run1",
@@ -200,18 +178,3 @@ def test_sort_expr_discriminated_union__routes_to_sort_field_expr() -> None:
     )
     assert isinstance(expr, SortFieldExpr)
     assert expr.field_name == "file_name"
-
-
-@pytest.mark.parametrize("is_numeric", [True, False, None])
-def test_sort_field_expr__accepts_deprecated_is_numeric(is_numeric: bool | None) -> None:
-    """Test that request bodies from older clients still validate."""
-    expr = SortFieldExpr.model_validate(
-        {
-            "source": "metadata",
-            "field_name": "score",
-            "direction": "asc",
-            "is_numeric": is_numeric,
-        }
-    )
-    assert expr.field_name == "score"
-    assert expr.is_numeric is is_numeric

@@ -62,26 +62,22 @@ describe('useSortFields', () => {
                     expect.objectContaining({
                         source: 'metadata',
                         value: 'score',
-                        label: 'metadata.score',
-                        is_numeric: true
+                        label: 'metadata.score'
                     }),
                     expect.objectContaining({
                         source: 'metadata',
                         value: 'count',
-                        label: 'metadata.count',
-                        is_numeric: true
+                        label: 'metadata.count'
                     }),
                     expect.objectContaining({
                         source: 'metadata',
                         value: 'label',
-                        label: 'metadata.label',
-                        is_numeric: false
+                        label: 'metadata.label'
                     }),
                     expect.objectContaining({
                         source: 'metadata',
                         value: 'active',
-                        label: 'metadata.active',
-                        is_numeric: false
+                        label: 'metadata.active'
                     })
                 ])
             );

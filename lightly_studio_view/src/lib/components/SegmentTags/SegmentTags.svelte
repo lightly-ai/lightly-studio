@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { Segment } from '$lib/components';
-    import { TagsIcon } from '@lucide/svelte';
+    import { Button, Segment } from '$lib/components';
+    import { TagsIcon, X } from '@lucide/svelte';
     import { SampleType } from '$lib/api/lightly_studio_local';
     import { useTags, useGlobalStorage, useAddTagToSample } from '$lib/hooks';
     import { useRemoveTagFromSample } from '$lib/hooks';
@@ -23,12 +23,19 @@
 
     const { removeTagFromSample } = useRemoveTagFromSample({ getCollectionId: () => collectionId });
 
+    let removingTagIds = $state(new Set<string>());
+
     async function handleRemoveTag(tagId: string) {
+        removingTagIds = new Set(removingTagIds).add(tagId);
         try {
             await removeTagFromSample(sampleId, tagId);
         } catch {
             toast.error('Failed to remove tag. Please try again.');
             return;
+        } finally {
+            const remaining = new Set(removingTagIds);
+            remaining.delete(tagId);
+            removingTagIds = remaining;
         }
         onRefetch();
     }
@@ -88,18 +95,20 @@
             <div class="inline-flex items-center gap-1 rounded-lg bg-card px-2 py-1 text-xs">
                 <span data-testid="segment-tag-name">{tag.name}</span>
                 {#if tag.tag_id}
-                    <button
-                        type="button"
-                        class="flex size-4 items-center justify-center rounded-full text-muted-foreground transition hover:text-destructive-text focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                        aria-label={`Remove tag ${tag.name}`}
-                        data-testid={`remove-tag-${tag.name}`}
-                        onclick={(event) => {
-                            event.stopPropagation();
-                            void handleRemoveTag(tag.tag_id!);
+                    <Button
+                        icon={X}
+                        ariaLabel={`Remove tag ${tag.name}`}
+                        isPending={removingTagIds.has(tag.tag_id)}
+                        buttonProps={{
+                            size: 'sm',
+                            class: 'size-6 rounded-full p-1 text-muted-foreground hover:text-destructive-text',
+                            'data-testid': `remove-tag-${tag.name}`,
+                            onclick: (event) => {
+                                event.stopPropagation();
+                                void handleRemoveTag(tag.tag_id!);
+                            }
                         }}
-                    >
-                        x
-                    </button>
+                    />
                 {/if}
             </div>
         {/each}

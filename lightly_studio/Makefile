@@ -21,14 +21,17 @@ endif
 
 # Note: Install target with default dependencies is not necessary as uv will
 # install the default dependencies automatically on e.g. `uv run` etc.
-.PHONY: install-optional-deps
-install-optional-deps:
+.PHONY: install-google-artifact-registry-keyring
+install-google-artifact-registry-keyring:
 	@echo "Installing keyring provider for Google Artifact Registry..."
 # Install keyring in the global python environment. It is not possible to install it
 # in the uv environment because uv needs it already during `uv sync`. Note that
 # we cannot use `uv tool` because it does not support tool installations for more
 # than one python version at the same time.
 	pip install keyrings.google-artifactregistry-auth
+
+.PHONY: install-optional-deps
+install-optional-deps: install-google-artifact-registry-keyring
 	@echo "Installing with optional dependencies..."
 	uv sync --all-groups --all-extras
 

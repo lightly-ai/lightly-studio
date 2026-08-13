@@ -23,6 +23,18 @@ const defaultProps = {
 };
 
 describe('MetadataCategoricalFilter', () => {
+    it('keeps the summary and the chevron as direct children of the trigger', () => {
+        render(MetadataCategoricalFilter, { props: defaultProps });
+
+        // `justify-between` only right-aligns the chevron while both are flex
+        // children of the button, and `truncate` needs the summary to stay one.
+        const trigger = screen.getByTestId('metadata-categorical-filter-trigger');
+        const summary = trigger.querySelector(':scope > span');
+
+        expect(summary).toHaveClass('truncate');
+        expect(trigger.querySelector(':scope > svg')).toBeInTheDocument();
+    });
+
     it('keeps literal Missing and semantic Missing distinct and disables Other', async () => {
         const onToggle = vi.fn();
         render(MetadataCategoricalFilter, {

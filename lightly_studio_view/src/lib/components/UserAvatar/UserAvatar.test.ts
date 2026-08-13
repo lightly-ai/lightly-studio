@@ -36,6 +36,21 @@ describe('UserAvatar', () => {
         expect(signOutButton).toBeTruthy();
     });
 
+    it('should keep menu icons as direct children so gap-2 applies', async () => {
+        const { getByTitle, getByRole } = render(UserAvatar, { props: { user: mockUser } });
+
+        await fireEvent.click(getByTitle('admin'));
+
+        // The button's `gap-2` only spaces the icon from the label while both are
+        // its flex children; a wrapper around them collapses the spacing.
+        expect(
+            getByRole('button', { name: /sign out/i }).querySelector(':scope > svg')
+        ).toBeInTheDocument();
+        expect(
+            getByRole('link', { name: /users/i }).querySelector(':scope > svg')
+        ).toBeInTheDocument();
+    });
+
     it('should render users menu item for admin user', async () => {
         const { getByTitle, getByRole } = render(UserAvatar, { props: { user: mockUser } });
         const avatarButton = getByTitle('admin');

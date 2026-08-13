@@ -10,7 +10,8 @@ const mocks = vi.hoisted(() => ({
     exportCollectionCaptionsPrepare: vi.fn(),
     triggerDownload: vi.fn()
 }));
-vi.mock('$lib/api/lightly_studio_local', () => ({
+vi.mock('$lib/api/lightly_studio_local', async (importOriginal) => ({
+    ...(await importOriginal()),
     exportCollectionCaptionsPrepare: mocks.exportCollectionCaptionsPrepare
 }));
 
