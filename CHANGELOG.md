@@ -39,6 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Left and right arrow keys no longer navigate between samples while editing text or using an open
+  dialog, menu, or listbox.
 - Sorting by a numeric metadata field now orders numerically without the caller having to
   declare the field type. Previously `9` sorted after `10` unless the caller passed
   `cast_to_float=True`.
