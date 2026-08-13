@@ -10,9 +10,13 @@ const mocks = vi.hoisted(() => ({
     exportCollectionPrepare: vi.fn(),
     triggerDownload: vi.fn()
 }));
-vi.mock('$lib/api/lightly_studio_local', () => ({
-    exportCollectionPrepare: mocks.exportCollectionPrepare
-}));
+vi.mock('$lib/api/lightly_studio_local', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('$lib/api/lightly_studio_local')>();
+    return {
+        ...actual,
+        exportCollectionPrepare: mocks.exportCollectionPrepare
+    };
+});
 
 const imageFilterStore = writable(null);
 vi.mock('$lib/hooks', () => ({
