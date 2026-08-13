@@ -19,6 +19,19 @@ dataset.add_images_from_path(path="s3://my-bucket/images/")
 ls.start_gui()
 ```
 
+**Example: Mixing sources**
+
+Sources can be mixed and appended at any time:
+
+```py
+import lightly_studio as ls
+
+dataset = ls.ImageDataset.load_or_create()
+dataset.add_images_from_path(path="s3://my-bucket/images/")
+dataset.add_images_from_path(path="gcs://other-bucket/more-images/")
+dataset.add_images_from_path(path="local-folder/not-in-the-cloud-yet")
+```
+
 **Example: Loading videos from S3**
 
 ```py
