@@ -279,6 +279,7 @@
                     icon={Trash2}
                     ariaLabel="Delete classification"
                     buttonProps={{
+                        size: 'icon',
                         onclick: (e) => {
                             e.stopPropagation();
                             handleDeleteAnnotation(annotation.sample_id);
@@ -353,10 +354,16 @@
                             </span>
                         </span>
                         <div class="flex shrink-0 items-center gap-3">
-                            <Trash2
-                                class="size-6 text-muted-foreground"
-                                onclick={() => {
-                                    removeDraftClassification(draftId);
+                            <Button
+                                icon={Trash2}
+                                ariaLabel="Remove classification draft"
+                                buttonProps={{
+                                    size: 'icon',
+                                    class: 'text-muted-foreground',
+                                    onclick: (e) => {
+                                        e.stopPropagation();
+                                        removeDraftClassification(draftId);
+                                    }
                                 }}
                             />
                         </div>
@@ -366,7 +373,7 @@
                     variant="ghost"
                     buttonProps={{
                         type: 'button',
-                        class: 'mb-2 h-8 justify-center rounded-sm bg-card px-2 py-0 text-diffuse-foreground hover:bg-primary hover:text-primary-foreground',
+                        class: 'mb-2 h-8 justify-center rounded-sm bg-card px-2 py-0 text-base font-normal text-diffuse-foreground hover:bg-primary hover:text-primary-foreground',
                         onclick: addDraftClassification,
                         'data-testid': 'add-classification-button'
                     }}
