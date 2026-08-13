@@ -5,6 +5,7 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import annotation_resolver, tag_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from tests import helpers_resolvers
+from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
 
 def test_get_adjacent_annotations__orders_by_path(db_session: Session) -> None:
@@ -392,3 +393,106 @@ def test_get_adjacent_annotations__returns_none_when_sample_not_in_filter(
     )
 
     assert result is None
+
+
+def test_get_adjacent_annotations__orders_video_frame_annotations_by_video_path(
+    db_session: Session,
+) -> None:
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    )
+    label = helpers_resolvers.create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="label",
+    )
+
+    # Paths are created out of order so that ordering by video path is observable.
+    video_c = create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="/videos/c.mp4", duration_s=0.2, fps=10.0),
+    )
+    video_a = create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="/videos/a.mp4", duration_s=0.2, fps=10.0),
+    )
+    video_b = create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="/videos/b.mp4", duration_s=0.2, fps=10.0),
+    )
+
+    annotation_c, annotation_a, annotation_b = helpers_resolvers.create_annotations(
+        session=db_session,
+        collection_id=video_c.video_frames_collection_id,
+        annotations=[
+            helpers_resolvers.AnnotationDetails(
+                sample_id=video.frame_sample_ids[0],
+                annotation_label_id=label.annotation_label_id,
+            )
+            for video in (video_c, video_a, video_b)
+        ],
+    )
+
+    result = annotation_resolver.get_adjacent_annotations(
+        session=db_session,
+        sample_id=annotation_b.sample_id,
+        filters=AnnotationsFilter(collection_ids=[annotation_b.sample.collection_id]),
+    )
+
+    assert result is not None
+    assert result.previous_sample_id == annotation_a.sample_id
+    assert result.next_sample_id == annotation_c.sample_id
+    assert result.current_sample_position == 2
+    assert result.total_count == 3
+
+
+def test_get_adjacent_annotations__orders_annotations_sharing_a_parent_image(
+    db_session: Session,
+) -> None:
+    # Annotations on the same image share the leading sort key, so the order is only total
+    # if the created-at and sample-id tiebreakers are applied.
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.IMAGE
+    )
+    label = helpers_resolvers.create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="label",
+    )
+    image = helpers_resolvers.create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/images/a.png",
+    )
+    annotations = helpers_resolvers.create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=[
+            helpers_resolvers.AnnotationDetails(
+                sample_id=image.sample_id,
+                annotation_label_id=label.annotation_label_id,
+            )
+            for _ in range(3)
+        ],
+    )
+    filters = AnnotationsFilter(collection_ids=[annotations[0].sample.collection_id])
+
+    results = {}
+    for annotation in annotations:
+        result = annotation_resolver.get_adjacent_annotations(
+            session=db_session, sample_id=annotation.sample_id, filters=filters
+        )
+        assert result is not None
+        results[annotation.sample_id] = result
+
+    # Every annotation gets a distinct position, and the neighbour links agree with them.
+    by_position = {result.current_sample_position: key for key, result in results.items()}
+    assert sorted(by_position) == [1, 2, 3]
+    for position, sample_id in by_position.items():
+        result = results[sample_id]
+        assert result.total_count == len(annotations)
+        assert result.previous_sample_id == by_position.get(position - 1)
+        assert result.next_sample_id == by_position.get(position + 1)
