@@ -1,6 +1,23 @@
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useExportDownload } from './useExportDownload';
+import { triggerDownload, useExportDownload } from './useExportDownload';
+
+describe('triggerDownload', () => {
+    it('creates a temporary anchor, sets href, and clicks it', () => {
+        const anchor = document.createElement('a');
+        vi.spyOn(document, 'createElement').mockReturnValue(anchor as HTMLAnchorElement);
+        vi.spyOn(document.body, 'appendChild').mockImplementation(() => anchor);
+        vi.spyOn(document.body, 'removeChild').mockImplementation(() => anchor);
+        const click = vi.spyOn(anchor, 'click').mockImplementation(() => undefined);
+
+        triggerDownload('https://example.com/export.zip');
+
+        expect(anchor.href).toBe('https://example.com/export.zip');
+        expect(click).toHaveBeenCalledOnce();
+        expect(document.body.appendChild).toHaveBeenCalledWith(anchor);
+        expect(document.body.removeChild).toHaveBeenCalledWith(anchor);
+    });
+});
 
 describe('useExportDownload', () => {
     beforeEach(vi.resetAllMocks);

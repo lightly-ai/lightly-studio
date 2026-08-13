@@ -3,7 +3,7 @@
     import { exportCollectionCaptionsPrepare } from '$lib/api/lightly_studio_local';
     import { useImageFilters } from '$lib/hooks';
     import { PUBLIC_LIGHTLY_STUDIO_API_URL } from '$env/static/public';
-    import { useExportDownload } from '../useExportDownload/useExportDownload';
+    import { useExportDownload, triggerDownload } from '../useExportDownload';
     import ExportDownloadButton from '../ExportDownloadButton/ExportDownloadButton.svelte';
 
     interface Props {
@@ -23,9 +23,8 @@
         if (response.error) throw new Error(JSON.stringify(response.error));
         const exportKey = response.data?.export_key;
         if (!exportKey) throw new Error('Unexpected empty response data');
-        window.open(
-            `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/download/${exportKey}`,
-            '_blank'
+        triggerDownload(
+            `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/download/${exportKey}`
         );
     });
 </script>
