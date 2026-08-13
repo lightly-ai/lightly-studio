@@ -7,7 +7,7 @@ import pytest
 from lightly_studio.core.dataset_query import AND, OrderByField
 from lightly_studio.core.dataset_query.video_sample_field import VideoSampleField
 from lightly_studio.core.video.video_dataset import VideoDataset
-from tests.resolvers.video.helpers import create_video_file
+from tests.resolvers.video.helpers import VideoStub, create_video, create_video_file
 
 
 class TestVideoDatasetQuery:
@@ -58,6 +58,27 @@ class TestVideoDatasetQuery:
         assert next(it).file_name == "test_video_0.mp4"
         with pytest.raises(StopIteration):
             next(it)
+
+    def test_match_query__duration_s(
+        self,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        dataset = VideoDataset.create(name="test_dataset")
+        for path, duration_s in (
+            ("/data/short.mp4", 5.0),
+            ("/data/long.mp4", 15.0),
+            ("/data/unknown_duration.mp4", None),
+        ):
+            create_video(
+                session=dataset.session,
+                collection_id=dataset.collection_id,
+                video=VideoStub(path=path, duration_s=duration_s),
+            )
+
+        result = dataset.query().match(VideoSampleField.duration_s < 10).to_list()
+
+        # Videos without a duration never match, as NULL fails any comparison in SQL.
+        assert [video.file_name for video in result] == ["short.mp4"]
 
     def test_ordering(
         self,

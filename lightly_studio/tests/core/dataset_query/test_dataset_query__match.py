@@ -261,3 +261,9 @@ class TestDatasetQueryMatch:
         result_samples = query.match(ImageSampleField.tags.contains("cat")).to_list()
         assert len(result_samples) == 1
         assert result_samples[0].sample_id == image3.sample_id
+
+        # Test both tags, only image3 has them both
+        query = DatasetQuery(dataset=dataset, session=db_session)
+        result_samples = query.match(ImageSampleField.tags.contains(["dog", "cat"])).to_list()
+        assert len(result_samples) == 1
+        assert result_samples[0].sample_id == image3.sample_id

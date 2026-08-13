@@ -133,6 +133,16 @@ def test_to_match_expression__ordinal_float_lt() -> None:
     assert "video.fps < 30.0" in sql
 
 
+def test_to_match_expression__ordinal_float_lt__nullable_field() -> None:
+    expr = OrdinalFloatExpr(
+        field=FieldRef(table="video", name="duration_s"),
+        operator=OrdinalComparisonOperator.LT,
+        value=10.5,
+    )
+    sql = _to_sql(query_translation.to_match_expression(expr))
+    assert "video.duration_s < 10.5" in sql
+
+
 def test_to_match_expression__ordinal_float_unknown_field() -> None:
     expr = OrdinalFloatExpr(
         field=FieldRef(table="video", name="bitrate"),

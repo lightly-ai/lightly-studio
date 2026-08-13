@@ -192,6 +192,7 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
 
     # Tags: contains()
     expr = ImageSampleField.tags.contains("dog")    # All samples that contain the tag "dog"
+    expr = ImageSampleField.tags.contains(["dog", "cat"]) # All samples that contain both tags
 
     # Assign any of the previous expressions to a query:
     query.match(expr)

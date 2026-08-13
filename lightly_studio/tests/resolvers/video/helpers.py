@@ -27,7 +27,7 @@ class VideoStub:
         path: Location of the video file.
         width: Width of the video in pixels.
         height: Height of the video in pixels.
-        duration: Duration of the video in seconds.
+        duration: Duration of the video in seconds, or None if the video header omits it.
         fps: Frame rate of the video.
 
     """
@@ -35,7 +35,7 @@ class VideoStub:
     path: PathLike = "/path/to/video.mp4"
     width: int = 640
     height: int = 480
-    duration_s: float = 12.3
+    duration_s: float | None = 12.3
     fps: float = 30.0
 
 
@@ -129,6 +129,8 @@ def create_video_with_frames(
             )
         ],
     )[0]
+    # The number of frames can only be derived from a known duration.
+    assert video.duration_s is not None
     n_frames = int(video.duration_s * video.fps)
 
     video_frames_collection_id = collection_resolver.get_or_create_child_collection(

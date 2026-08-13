@@ -24,6 +24,7 @@ from lightly_studio.resolvers import (
     embedding_model_resolver,
     metadata_resolver,
     sample_embedding_resolver,
+    sample_resolver,
     tag_resolver,
 )
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
@@ -42,6 +43,9 @@ EPSILON = 1e-6
 # Metadata key set on left-out samples after pure deduplication, pointing at the
 # nearest kept sample ID (string UUID) in embedding space.
 DUPLICATE_OF_METADATA_KEY = "duplicate_of"
+# Metadata key set alongside `duplicate_of`, holding the absolute file path of the
+# nearest kept sample. Human-readable counterpart to the sample ID.
+DUPLICATE_OF_FILE_METADATA_KEY = "duplicate_of_file"
 
 logger = logging.getLogger(__name__)
 
@@ -233,7 +237,7 @@ def sampling_via_database(
     For pure deduplication (a single EmbeddingDeduplicationStrategy), also
     creates a NOT_<tag_name> tag for the left-out near-duplicate samples and
     sets ``duplicate_of`` metadata on each left-out sample to the nearest kept
-    sample ID.
+    sample ID, plus ``duplicate_of_file`` with that sample's absolute file path.
     """
     is_pure_deduplication = len(config.strategies) == 1 and isinstance(
         config.strategies[0], EmbeddingDeduplicationStrategy
@@ -381,13 +385,29 @@ def _tag_left_out_duplicates_with_nearest_kept(
         selected_sample_ids=selected_sample_ids,
         left_out_sample_ids=left_out_sample_ids,
     )
+    # Sample types without a file path (e.g. groups) resolve to an empty mapping, in which
+    # case only the sample ID link is written.
+    kept_file_paths_abs = sample_resolver.get_file_paths_abs_by_ids(
+        session=session,
+        collection_id=context.collection_id,
+        sample_ids=list(set(left_out_to_kept.values())),
+    )
     metadata_resolver.bulk_update_metadata(
         session=session,
         sample_metadata=[
-            (left_out_id, {DUPLICATE_OF_METADATA_KEY: str(kept_id)})
+            (left_out_id, _duplicate_of_metadata(kept_id=kept_id, file_paths=kept_file_paths_abs))
             for left_out_id, kept_id in left_out_to_kept.items()
         ],
     )
+
+
+def _duplicate_of_metadata(kept_id: UUID, file_paths: Mapping[UUID, str]) -> dict[str, str]:
+    """Build the duplicate metadata pointing at the nearest kept sample."""
+    metadata = {DUPLICATE_OF_METADATA_KEY: str(kept_id)}
+    kept_file_path_abs = file_paths.get(kept_id)
+    if kept_file_path_abs is not None:
+        metadata[DUPLICATE_OF_FILE_METADATA_KEY] = kept_file_path_abs
+    return metadata
 
 
 def _get_embeddings_by_sample_ids(

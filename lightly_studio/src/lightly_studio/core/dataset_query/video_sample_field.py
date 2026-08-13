@@ -35,7 +35,7 @@ class VideoSampleField:
 
     # TODO(lukas 1/2026): make duration_s more similar to NumericalField, so that we can also use
     # `<` at least on durations that are not None.
-    duration_s = ComparableField(col(VideoTable.duration_s))
+    duration_s = NumericalField(col(VideoTable.duration_s))
     fps = NumericalField(col(VideoTable.fps))
 
     tags = TagsAccessor()

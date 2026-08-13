@@ -31,6 +31,7 @@ from sqlmodel import Session
 
 from lightly_studio.core.video import add_videos, video_dataset
 from lightly_studio.core.video.add_videos import FrameExtractionContext
+from lightly_studio.dataset import video_quality
 from lightly_studio.dataset.embedding_generator import RandomEmbeddingGenerator
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.models.collection import SampleType
@@ -39,6 +40,7 @@ from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
     dataset_resolver,
+    metadata_resolver,
     sample_embedding_resolver,
     video_frame_resolver,
     video_resolver,
@@ -412,6 +414,109 @@ def test__should_keep_frame(
         )
     ]
     assert kept == expected
+
+
+def test_load_into_collection_from_paths__compute_quality(
+    db_session: Session, tmp_path: Path
+) -> None:
+    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+    video_path = create_video_file(
+        output_path=tmp_path / "quality.mp4",
+        width=64,
+        height=64,
+        num_frames=30,
+        fps=10,
+    )
+
+    video_sample_ids, _ = add_videos.load_into_collection_from_paths(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video_paths=[str(video_path)],
+        compute_quality=True,
+    )
+
+    assert len(video_sample_ids) == 1
+    for key in video_quality.scores_to_metadata(
+        video_quality.VideoQualityScores(
+            blur_score=0.0,
+            brightness_mean=0.0,
+            underexposure_ratio=0.0,
+            overexposure_ratio=0.0,
+            lighting_score=0.0,
+            motion_score=0.0,
+            shake_score=0.0,
+        )
+    ):
+        stored = metadata_resolver.get_value_for_sample(
+            session=db_session, sample_id=video_sample_ids[0], key=key
+        )
+        assert isinstance(stored, float), f"missing quality metadata '{key}'"
+
+
+def test_load_into_collection_from_paths__no_quality_metadata_by_default(
+    db_session: Session, tmp_path: Path
+) -> None:
+    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+    video_path = create_video_file(
+        output_path=tmp_path / "plain.mp4",
+        width=64,
+        height=64,
+        num_frames=10,
+        fps=5,
+    )
+
+    video_sample_ids, _ = add_videos.load_into_collection_from_paths(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video_paths=[str(video_path)],
+    )
+
+    assert (
+        metadata_resolver.get_value_for_sample(
+            session=db_session,
+            sample_id=video_sample_ids[0],
+            key=video_quality.BLUR_SCORE_KEY,
+        )
+        is None
+    )
+
+
+def test_load_into_collection_from_paths__compute_quality_ignores_target_fps(
+    db_session: Session, tmp_path: Path
+) -> None:
+    # Quality is scored from the full decode, so subsampling the persisted frames
+    # must not change the scores.
+    video_path = create_video_file(
+        output_path=tmp_path / "subsampled.mp4",
+        width=64,
+        height=64,
+        num_frames=30,
+        fps=10,
+    )
+
+    scores: list[float] = []
+    for index, target_fps in enumerate([None, 2.0]):
+        sub_collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+        video_sample_ids, frame_sample_ids = add_videos.load_into_collection_from_paths(
+            session=db_session,
+            collection_id=sub_collection.collection_id,
+            video_paths=[str(video_path)],
+            target_fps=target_fps,
+            compute_quality=True,
+        )
+        if index == 0:
+            assert len(frame_sample_ids) == 30
+        else:
+            assert len(frame_sample_ids) < 30
+        stored = metadata_resolver.get_value_for_sample(
+            session=db_session,
+            sample_id=video_sample_ids[0],
+            key=video_quality.BRIGHTNESS_MEAN_KEY,
+        )
+        assert isinstance(stored, float)
+        scores.append(stored)
+
+    assert scores[0] == pytest.approx(scores[1])
 
 
 @pytest.mark.parametrize("target_fps", [0, -5])

@@ -69,3 +69,18 @@ class TestVideoFrameDatasetQuery:
         )
         assert len(reviewed) == 3
         assert all(frame.parent_video.file_path_abs == "/data/a.mp4" for frame in reviewed)
+
+    def test_filter_by_parent_video_tags__multiple(self, dataset: VideoDataset) -> None:
+        for video in dataset.query():
+            video.add_tag("reviewed")
+            if video.file_path_abs == "/data/a.mp4":
+                video.add_tag("exported")
+
+        # Only video A has both tags => its 3 frames.
+        both = (
+            dataset.frames()
+            .match(VideoFrameSampleField.parent_video.tags.contains(["reviewed", "exported"]))
+            .to_list()
+        )
+        assert len(both) == 3
+        assert all(frame.parent_video.file_path_abs == "/data/a.mp4" for frame in both)

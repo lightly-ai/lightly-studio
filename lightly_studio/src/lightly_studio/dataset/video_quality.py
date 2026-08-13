@@ -10,13 +10,14 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
 import cv2
 import numpy as np
 from av.container import InputContainer
+from av.video.frame import VideoFrame as AVVideoFrame
 from numpy.typing import NDArray
 from sqlmodel import Session
 from tqdm import tqdm
@@ -64,6 +65,8 @@ _MIN_FRAMES_FOR_SHAKE = 3
 _MIN_TRACKED_POINTS = 8
 _MAX_CORNERS = 200
 _PHASE_CORRELATE_MIN_RESPONSE = 0.05
+# Assumed frame rate when a stream does not report one.
+_FALLBACK_FPS = 15.0
 
 
 @dataclass(frozen=True)
@@ -98,6 +101,150 @@ class ShakeSamplingConfig:
 
     num_bursts: int = DEFAULT_SHAKE_BURSTS
     frames_per_burst: int = DEFAULT_SHAKE_FRAMES_PER_BURST
+
+
+class VideoQualityAccumulator:
+    """Collect quality and shake frames from a sequential decode.
+
+    Ingest already decodes every frame of a video, so quality scoring can piggyback
+    on that stream instead of re-opening the file and seeking. Feed every decoded
+    frame to ``add_frame`` in decode order, then call ``finalize`` once.
+
+    Frames are converted and kept only when they land on a planned quality timestamp
+    or inside a shake burst, so the cost matches the seek-based scorer without the
+    second read. Bursts come from truly consecutive frames here, whereas seeking
+    tends to snap to keyframes.
+    """
+
+    def __init__(
+        self,
+        *,
+        duration_s: float,
+        fps: float,
+        num_frames: int = DEFAULT_NUM_FRAMES,
+        max_edge: int = DEFAULT_MAX_EDGE,
+        shake_sampling: ShakeSamplingConfig | None = None,
+    ) -> None:
+        """Plan which frames to keep for a video of known duration.
+
+        Args:
+            duration_s: Video duration in seconds. Must be > 0.
+            fps: Source frame rate, used to size shake bursts. Falls back to a
+                default rate when not positive.
+            num_frames: Number of uniformly spaced frames for blur/lighting/motion.
+            max_edge: Max longest-edge length after resize. Must be >= 1.
+            shake_sampling: Dense-burst sampling config. Uses defaults when omitted.
+
+        Raises:
+            ValueError: If ``duration_s`` or the sampling parameters are invalid.
+        """
+        if duration_s <= 0.0:
+            raise ValueError(f"duration_s must be > 0, got {duration_s}.")
+        shake_cfg = shake_sampling or ShakeSamplingConfig()
+        _validate_quality_sampling_args(
+            num_frames=num_frames,
+            max_edge=max_edge,
+            shake_sampling=shake_cfg,
+        )
+
+        self._max_edge = max_edge
+        self._frames_per_burst = shake_cfg.frames_per_burst
+        self._quality_targets_s: list[float] = np.linspace(
+            0.0,
+            duration_s,
+            num=num_frames,
+            endpoint=False,
+            dtype=np.float64,
+        ).tolist()
+        self._burst_starts_s = _shake_burst_start_times(
+            duration_s=duration_s,
+            fps=fps,
+            shake_sampling=shake_cfg,
+        )
+
+        self._quality_target_index = 0
+        self._burst_start_index = 0
+        self._quality_frames: list[NDArray[np.uint8]] = []
+        self._bursts: list[list[NDArray[np.uint8]]] = []
+        self._active_burst: list[NDArray[np.uint8]] | None = None
+
+    def add_frame(self, *, timestamp_s: float, frame: AVVideoFrame) -> None:
+        """Offer one decoded frame, in decode order.
+
+        Frames that are not needed are ignored without any pixel conversion.
+
+        Args:
+            timestamp_s: Presentation timestamp of the frame in seconds.
+            frame: The decoded frame.
+        """
+        if not self._wants_frame(timestamp_s=timestamp_s):
+            return
+
+        gray = _gray_frame_from_av(frame=frame, max_edge=self._max_edge)
+
+        # One frame can satisfy several targets on videos with few frames. Repeating
+        # it matches what seek-based sampling produces for the same timestamps.
+        while (
+            self._quality_target_index < len(self._quality_targets_s)
+            and timestamp_s >= self._quality_targets_s[self._quality_target_index]
+        ):
+            self._quality_frames.append(gray)
+            self._quality_target_index += 1
+
+        if self._active_burst is None and self._burst_start_reached(timestamp_s=timestamp_s):
+            self._consume_burst_starts(timestamp_s=timestamp_s)
+            self._active_burst = []
+        if self._active_burst is None:
+            return
+
+        self._active_burst.append(gray)
+        if len(self._active_burst) >= self._frames_per_burst:
+            self._bursts.append(self._active_burst)
+            self._active_burst = None
+
+    def finalize(self) -> VideoQualityScores | None:
+        """Aggregate the collected frames into video-level scores.
+
+        Returns:
+            The aggregated scores, or ``None`` if no frame was ever collected.
+        """
+        if self._active_burst is not None:
+            self._bursts.append(self._active_burst)
+            self._active_burst = None
+        if not self._quality_frames:
+            return None
+        return _aggregate_frame_quality_with_shake(
+            frames=self._quality_frames,
+            shake_score=camera_shake_score_from_bursts(self._bursts),
+        )
+
+    def _wants_frame(self, *, timestamp_s: float) -> bool:
+        """Whether this frame is needed, checked before any pixel conversion."""
+        if self._active_burst is not None:
+            return True
+        if (
+            self._quality_target_index < len(self._quality_targets_s)
+            and timestamp_s >= self._quality_targets_s[self._quality_target_index]
+        ):
+            return True
+        return self._burst_start_reached(timestamp_s=timestamp_s)
+
+    def _burst_start_reached(self, *, timestamp_s: float) -> bool:
+        """Whether the next planned burst starts at or before this timestamp."""
+        return (
+            self._burst_start_index < len(self._burst_starts_s)
+            and timestamp_s >= self._burst_starts_s[self._burst_start_index]
+        )
+
+    def _consume_burst_starts(self, *, timestamp_s: float) -> None:
+        """Drop every burst start already reached at this timestamp.
+
+        Starts that fall inside a burst that is about to run cannot be replayed from a
+        forward-only stream, so they are dropped. This only happens on videos too short
+        to hold separate bursts, where seek-based sampling degenerates as well.
+        """
+        while self._burst_start_reached(timestamp_s=timestamp_s):
+            self._burst_start_index += 1
 
 
 def score_video_quality(
@@ -175,8 +322,12 @@ def score_opened_video_quality(
         max_edge=max_edge,
         shake_sampling=shake_cfg,
     )
-    scores = aggregate_frame_quality(quality_frames)
-    return replace(scores, shake_score=camera_shake_score_from_bursts(bursts))
+    if not quality_frames:
+        raise BrokenInputFileError(f"No frames decoded from video '{opened.filepath}'.")
+    return _aggregate_frame_quality_with_shake(
+        frames=quality_frames,
+        shake_score=camera_shake_score_from_bursts(bursts),
+    )
 
 
 def _validate_quality_sampling_args(
@@ -212,28 +363,8 @@ def aggregate_frame_quality(frames: Sequence[NDArray[np.uint8]]) -> VideoQuality
     """
     if not frames:
         raise ValueError("frames must be non-empty.")
-
-    blur_scores = [float(laplacian_variance(frame)) for frame in frames]
-    brightness_means = [float(np.mean(frame)) for frame in frames]
-    underexposure_ratios = [float(underexposure_ratio(frame)) for frame in frames]
-    overexposure_ratios = [float(overexposure_ratio(frame)) for frame in frames]
-
-    brightness_mean = float(np.mean(brightness_means))
-    under_ratio = float(np.mean(underexposure_ratios))
-    over_ratio = float(np.mean(overexposure_ratios))
-
-    return VideoQualityScores(
-        blur_score=float(np.percentile(blur_scores, 10)),
-        brightness_mean=brightness_mean,
-        underexposure_ratio=under_ratio,
-        overexposure_ratio=over_ratio,
-        lighting_score=lighting_score(
-            brightness_mean=brightness_mean,
-            underexposure_ratio=under_ratio,
-            overexposure_ratio=over_ratio,
-        ),
-        motion_score=inter_frame_motion_score(frames),
-        # Placeholder; ``score_video_quality`` overwrites with dense-burst shake.
+    return _aggregate_frame_quality_with_shake(
+        frames=frames,
         shake_score=camera_shake_score(frames),
     )
 
@@ -335,9 +466,7 @@ def camera_shake_score(frames: Sequence[NDArray[np.uint8]]) -> float:
 
 def camera_shake_score_from_bursts(bursts: Sequence[Sequence[NDArray[np.uint8]]]) -> float:
     """Aggregate per-burst shake scores, taking the max (worst window)."""
-    scores = [
-        camera_shake_score(burst) for burst in bursts if len(burst) >= _MIN_FRAMES_FOR_SHAKE
-    ]
+    scores = [camera_shake_score(burst) for burst in bursts if len(burst) >= _MIN_FRAMES_FOR_SHAKE]
     if not scores:
         return 0.0
     return float(max(scores))
@@ -460,22 +589,13 @@ def _decode_shake_bursts(  # noqa: PLR0913
     to the same keyframe and collapses the motion signal).
     """
     frames_per_burst = shake_sampling.frames_per_burst
-    # Estimate burst length in seconds from stream FPS when available.
     video_stream = video_container.streams.video[DEFAULT_VIDEO_CHANNEL]
     average_rate = video_stream.average_rate
-    fps = float(average_rate) if average_rate is not None and float(average_rate) > 0 else 15.0
-    burst_span_s = (frames_per_burst - 1) / fps
-
-    if duration_seconds <= burst_span_s:
-        starts = [0.0]
-    else:
-        starts = np.linspace(
-            0.0,
-            max(duration_seconds - burst_span_s, 0.0),
-            num=shake_sampling.num_bursts,
-            endpoint=True,
-            dtype=np.float64,
-        ).tolist()
+    starts = _shake_burst_start_times(
+        duration_s=duration_seconds,
+        fps=float(average_rate) if average_rate is not None else 0.0,
+        shake_sampling=shake_sampling,
+    )
 
     bursts: list[list[NDArray[np.uint8]]] = []
     for start_s in starts:
@@ -490,6 +610,7 @@ def _decode_shake_bursts(  # noqa: PLR0913
             )
         )
     return bursts
+
 
 def _decode_consecutive_frames(  # noqa: PLR0913
     video_container: InputContainer,
@@ -508,9 +629,7 @@ def _decode_consecutive_frames(  # noqa: PLR0913
     frames: list[NDArray[np.uint8]] = []
     try:
         for frame in video_container.decode(video=video_channel):
-            rgb = np.asarray(frame.to_ndarray(format="rgb24"), dtype=np.uint8)
-            gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
-            frames.append(_resize_max_edge(gray, max_edge=max_edge))
+            frames.append(_gray_frame_from_av(frame=frame, max_edge=max_edge))
             if len(frames) >= num_frames:
                 break
     except StopIteration:
@@ -541,10 +660,85 @@ def _decode_frames_at_timestamps(
             raise BrokenInputFileError(
                 f"Unable to decode frame at {ts_target:.3f}s from video '{filepath}'."
             ) from error
-        rgb = np.asarray(frame.to_ndarray(format="rgb24"), dtype=np.uint8)
-        gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
-        frames.append(_resize_max_edge(gray, max_edge=max_edge))
+        frames.append(_gray_frame_from_av(frame=frame, max_edge=max_edge))
     return frames
+
+
+def _aggregate_frame_quality_with_shake(
+    frames: Sequence[NDArray[np.uint8]],
+    shake_score: float,
+) -> VideoQualityScores:
+    """Aggregate per-frame metrics, taking the shake score from the caller.
+
+    Shake needs densely sampled frames, so it is scored separately from the sparse
+    frames used for blur, lighting, and motion.
+
+    Args:
+        frames: Grayscale ``uint8`` frames. Must be non-empty.
+        shake_score: Pre-computed camera shake score.
+
+    Returns:
+        Aggregated ``VideoQualityScores``.
+    """
+    blur_scores = [float(laplacian_variance(frame)) for frame in frames]
+    brightness_means = [float(np.mean(frame)) for frame in frames]
+    underexposure_ratios = [float(underexposure_ratio(frame)) for frame in frames]
+    overexposure_ratios = [float(overexposure_ratio(frame)) for frame in frames]
+
+    brightness_mean = float(np.mean(brightness_means))
+    under_ratio = float(np.mean(underexposure_ratios))
+    over_ratio = float(np.mean(overexposure_ratios))
+
+    return VideoQualityScores(
+        blur_score=float(np.percentile(blur_scores, 10)),
+        brightness_mean=brightness_mean,
+        underexposure_ratio=under_ratio,
+        overexposure_ratio=over_ratio,
+        lighting_score=lighting_score(
+            brightness_mean=brightness_mean,
+            underexposure_ratio=under_ratio,
+            overexposure_ratio=over_ratio,
+        ),
+        motion_score=inter_frame_motion_score(frames),
+        shake_score=shake_score,
+    )
+
+
+def _shake_burst_start_times(
+    *,
+    duration_s: float,
+    fps: float,
+    shake_sampling: ShakeSamplingConfig,
+) -> list[float]:
+    """Return burst start times spread so every burst fits inside the video.
+
+    Args:
+        duration_s: Video duration in seconds.
+        fps: Source frame rate; a default is assumed when not positive.
+        shake_sampling: Dense-burst sampling config.
+
+    Returns:
+        Ascending burst start times in seconds.
+    """
+    effective_fps = fps if fps > 0.0 else _FALLBACK_FPS
+    burst_span_s = (shake_sampling.frames_per_burst - 1) / effective_fps
+    if duration_s <= burst_span_s:
+        return [0.0]
+    starts: list[float] = np.linspace(
+        0.0,
+        duration_s - burst_span_s,
+        num=shake_sampling.num_bursts,
+        endpoint=True,
+        dtype=np.float64,
+    ).tolist()
+    return starts
+
+
+def _gray_frame_from_av(frame: AVVideoFrame, max_edge: int) -> NDArray[np.uint8]:
+    """Convert a decoded frame to a resized grayscale array."""
+    rgb = np.asarray(frame.to_ndarray(format="rgb24"), dtype=np.uint8)
+    gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
+    return _resize_max_edge(gray, max_edge=max_edge)
 
 
 def _resize_max_edge(gray: NDArray[np.uint8], max_edge: int) -> NDArray[np.uint8]:
@@ -574,6 +768,7 @@ __all__ = [
     "SHAKE_SCORE_KEY",
     "UNDEREXPOSURE_RATIO_KEY",
     "ShakeSamplingConfig",
+    "VideoQualityAccumulator",
     "VideoQualityScores",
     "aggregate_frame_quality",
     "camera_shake_score",

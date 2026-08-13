@@ -138,6 +138,7 @@ def test_sampling_via_database__embedding_deduplication(
         sample.sample_id: int(sample.file_path_abs.removeprefix("sample_").removesuffix(".jpg"))
         for sample in samples_in_tag
     }
+    selected_paths_by_id = {sample.sample_id: sample.file_path_abs for sample in samples_in_tag}
     for left_out_sample in samples_in_left_out_tag:
         duplicate_of = metadata_resolver.get_value_for_sample(
             session=db_session,
@@ -155,6 +156,14 @@ def test_sampling_via_database__embedding_deduplication(
             key=lambda kept_id: abs(left_out_position - selected_positions_by_id[kept_id]),
         )
         assert UUID(duplicate_of) == expected_kept
+
+        # duplicate_of_file mirrors duplicate_of as the kept sample's absolute file path.
+        duplicate_of_file = metadata_resolver.get_value_for_sample(
+            session=db_session,
+            sample_id=left_out_sample.sample_id,
+            key="duplicate_of_file",
+        )
+        assert duplicate_of_file == selected_paths_by_id[expected_kept]
 
     # Each selected sample i has embedding [i, i], so the distance between samples
     # i and j is sqrt(2) * |i - j|. Deduplication guarantees that all selected

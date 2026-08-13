@@ -5,7 +5,7 @@ Uses `isinstance` checks with `assert_never` to statically check that all cases 
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from datetime import datetime
 from typing import Protocol, TypeVar, Union
 
@@ -79,7 +79,7 @@ class _OrdinalField(_EqualityField[T_contra], Protocol[T_contra]):
 class _TagsAccessor(Protocol):
     """Tag accessor interface for dataset-query sample fields."""
 
-    def contains(self, tag_name: str) -> MatchExpression: ...
+    def contains(self, tag_names: str | Iterable[str]) -> MatchExpression: ...
 
 
 # ---------------------------------------------------------------------------

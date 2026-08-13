@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 
-from sqlalchemy import ColumnElement
+from sqlalchemy import ColumnElement, and_
 from sqlmodel import col
 
+from lightly_studio.core.dataset_query import tags_expression
 from lightly_studio.core.dataset_query.field import NumericalField
 from lightly_studio.core.dataset_query.foreign_field import (
     ForeignComparableField,
@@ -23,24 +25,31 @@ from lightly_studio.models.video import VideoFrameTable, VideoTable
 # ForeignComparableField / ForeignNumericalField) instead of a video-frame-specific class.
 @dataclass
 class _ParentVideoTagsContainsExpression(MatchExpression):
-    """Expression checking whether a frame's parent video has a given tag."""
+    """Expression checking whether a frame's parent video has all of the given tags."""
 
-    tag_name: str
+    tag_names: tuple[str, ...]
 
     def get(self) -> ColumnElement[bool]:
-        """Match frames whose parent video has the given tag."""
-        video_has_tag = VideoTable.sample.has(
-            SampleTable.tags.any(col(TagTable.name) == self.tag_name)
+        """Match frames whose parent video has all of the given tags."""
+        video_has_tags = VideoTable.sample.has(
+            and_(
+                *(
+                    SampleTable.tags.any(col(TagTable.name) == tag_name)
+                    for tag_name in self.tag_names
+                )
+            )
         )
-        return VideoFrameTable.video.has(video_has_tag)
+        return VideoFrameTable.video.has(video_has_tags)
 
 
 class _ParentVideoTagsAccessor:
     """Provides tag membership queries on a frame's parent video."""
 
-    def contains(self, tag_name: str) -> _ParentVideoTagsContainsExpression:
-        """Check whether the parent video has the given tag."""
-        return _ParentVideoTagsContainsExpression(tag_name=tag_name)
+    def contains(self, tag_names: str | Iterable[str]) -> _ParentVideoTagsContainsExpression:
+        """Check whether the parent video has the given tag, or all of them if multiple."""
+        return _ParentVideoTagsContainsExpression(
+            tag_names=tags_expression.normalize_tag_names(tag_names)
+        )
 
 
 class _ParentVideoField:

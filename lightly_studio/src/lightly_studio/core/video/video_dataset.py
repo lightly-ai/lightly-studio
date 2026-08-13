@@ -125,6 +125,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         embed_frames: bool = True,
         target_fps: float | None = None,
         limit: int | None = None,
+        compute_quality: bool = False,
     ) -> None:
         """Adding video frames from the specified path to the dataset.
 
@@ -142,6 +143,9 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
                 frame rate, only selected frames are kept. frame_number values remain
                 original. Must be greater than 0.
             limit: Maximum number of samples to load. By default, all samples are loaded.
+            compute_quality: If True, score blur, lighting, motion, and camera shake from
+                the decode pass that extracts the frames and store them as metadata. This
+                avoids the extra read that `compute_quality_scores` needs.
         """
         if target_fps is not None and target_fps <= 0:
             raise ValueError(f"target_fps must be greater than 0, got {target_fps}.")
@@ -160,6 +164,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             num_decode_threads=num_decode_threads,
             target_fps=target_fps,
             embed_frames=embed_frames,
+            compute_quality=compute_quality,
         )
 
         if embed:
