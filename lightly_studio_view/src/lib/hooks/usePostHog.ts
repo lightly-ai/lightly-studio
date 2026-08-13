@@ -6,7 +6,10 @@ import {
     PUBLIC_POSTHOG_HOST
 } from '$env/static/public';
 import { version } from '$lib/version.json';
-import { getFeatures } from '$lib/api/lightly_studio_local/sdk.gen';
+// Imported by its own path: $lib/hooks re-exports usePostHog, so going through the barrel would
+// make the two modules import each other.
+import { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
+import { get } from 'svelte/store';
 
 // The backend reports this only while LIGHTLY_STUDIO_ANALYTICS_ENABLED is set, so one variable
 // opts out of tracking in both the Python package and here.
@@ -35,7 +38,11 @@ export const usePostHog = () => {
     const init = async () => {
         if (!browser || initialized) return;
 
-        if (!(await analyticsEnabled())) return;
+        // A failed request leaves the flags empty, so a backend that cannot be reached is never
+        // tracked against.
+        const { featureFlags, ready } = useFeatureFlags();
+        await ready;
+        if (!get(featureFlags).includes(ANALYTICS_FEATURE)) return;
         // Re-check: concurrent callers both get past the guard above before this resolves.
         if (initialized) return;
 
@@ -85,20 +92,4 @@ export const usePostHog = () => {
         init,
         trackEvent
     };
-};
-
-/**
- * Ask the backend whether usage tracking is switched on.
- *
- * Returns false when the request fails, so a backend that cannot be reached is never tracked
- * against.
- */
-const analyticsEnabled = async (): Promise<boolean> => {
-    try {
-        const { data } = await getFeatures();
-        return data?.includes(ANALYTICS_FEATURE) ?? false;
-    } catch (e) {
-        console.warn('Could not read the active features, leaving analytics off', e);
-        return false;
-    }
 };
