@@ -32,6 +32,9 @@ from lightly_studio.resolvers import (
 from lightly_studio.resolvers.annotation_resolver.get_all import (
     GetAllAnnotationsResult,
 )
+from lightly_studio.resolvers.annotation_resolver.get_all_with_payload import (
+    AnnotationOrdering,
+)
 from lightly_studio.resolvers.annotation_resolver.update_bounding_box import BoundingBoxCoordinates
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
@@ -167,7 +170,7 @@ def read_annotations_with_payload(
             embedding_region=body.embedding_region,
         ),
         collection_id=collection_id,
-        text_embedding=body.text_embedding,
+        ordering=AnnotationOrdering(text_embedding=body.text_embedding),
     )
 
 
