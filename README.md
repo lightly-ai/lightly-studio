@@ -186,7 +186,7 @@ subsets, and export the result. Full documentation at
 **Work with your data**
 
 - [Query, filter, and sort](https://docs.lightly.ai/studio/concepts_and_tools/search_and_filter/#query-in-python) — build reusable subsets in Python
-- [Lightly Query Language](https://docs.lightly.ai/studio/concepts_and_tools/lightly_query_language/) — the query syntax shared by the GUI and Python
+- [Lightly Query Language](https://docs.lightly.ai/studio/concepts_and_tools/lightly_query_language/) — the query syntax for the GUI query editor
 - [Annotations](https://docs.lightly.ai/studio/concepts_and_tools/annotations/), [Tags](https://docs.lightly.ai/studio/concepts_and_tools/tags/), [Metadata](https://docs.lightly.ai/studio/concepts_and_tools/metadata/), [Captions](https://docs.lightly.ai/studio/concepts_and_tools/captions/), [Embeddings](https://docs.lightly.ai/studio/concepts_and_tools/embeddings/)
 - [Sampling](https://docs.lightly.ai/studio/concepts_and_tools/sampling/) — pick the most typical and diverse samples to cut labeling cost
 - [Model evaluation](https://docs.lightly.ai/studio/concepts_and_tools/evaluation/) — compare predictions against ground truth
