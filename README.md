@@ -158,9 +158,7 @@ Other starting points:
 [model evaluation](https://docs.lightly.ai/studio/concepts_and_tools/evaluation/#model-evaluation-in-python),
 and [notebooks](https://docs.lightly.ai/studio/dataset_setup/notebooks/).
 
-Prefer a guided, end-to-end walkthrough? Follow the tutorial
-[Curate a Traffic CCTV Dataset for YOLO Training](https://docs.lightly.ai/studio/tutorials/yolo-traffic-cctv-object-detection/) — from raw images to a trained model.
-Or try LightlyStudio without installing anything: [open the example notebook in Colab](https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb).
+Try LightlyStudio without installing anything: [open the example notebook in Colab](https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb).
 
 ## 📚 Tutorials
 
@@ -195,14 +193,8 @@ subsets, and export the result. Full documentation at
 
 **API reference**
 
-[Dataset](https://docs.lightly.ai/studio/api/dataset/) ·
-[Sample](https://docs.lightly.ai/studio/api/sample/) ·
-[DatasetQuery](https://docs.lightly.ai/studio/api/dataset_query/) ·
-[Sampling](https://docs.lightly.ai/studio/api/sampling/) ·
-[Embeddings](https://docs.lightly.ai/studio/api/embeddings/) ·
-[Annotation](https://docs.lightly.ai/studio/api/annotation/) ·
-[Model Evaluation](https://docs.lightly.ai/studio/api/evaluation/) ·
-[Plugin](https://docs.lightly.ai/studio/api/plugin/)
+| [Dataset](https://docs.lightly.ai/studio/api/dataset/) | [Sample](https://docs.lightly.ai/studio/api/sample/) | [DatasetQuery](https://docs.lightly.ai/studio/api/dataset_query/) | [Sampling](https://docs.lightly.ai/studio/api/sampling/) | [Embeddings](https://docs.lightly.ai/studio/api/embeddings/) | [Annotation](https://docs.lightly.ai/studio/api/annotation/) | [Model Evaluation](https://docs.lightly.ai/studio/api/evaluation/) | [Plugin](https://docs.lightly.ai/studio/api/plugin/) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
 
 ## 🤝 Contribute
 
