@@ -15,7 +15,11 @@ const IGNORE_SUFFIXES = [
     '.spec.ts',
     '.spec.js',
     '.spec.svelte',
-    '.d.ts'
+    '.d.ts',
+    '.stories.svelte',
+    '.stories.ts',
+    '.stories.js',
+    'setupTests.ts'
 ];
 const SOURCE_SUFFIXES = ['.ts', '.js', '.svelte'];
 
