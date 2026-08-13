@@ -51,7 +51,7 @@ def test_gui(mocker: MockerFixture, mock_track: MagicMock) -> None:
     mock_start_gui.assert_called_once_with(host=None, port=None)
     mock_track.assert_called_once_with(
         event=tracking.APP_LAUNCHED,
-        properties={"launch_source": tracking.LaunchSource.GUI},
+        properties={"launch_source": tracking.LaunchSource.GUI.value},
     )
 
 
@@ -137,7 +137,7 @@ def test_quickstart(mocker: MockerFixture, mock_track: MagicMock) -> None:
     mock_start_gui.assert_called_once_with(port=None, open_browser=True)
     mock_track.assert_called_once_with(
         event=tracking.APP_LAUNCHED,
-        properties={"launch_source": tracking.LaunchSource.QUICKSTART},
+        properties={"launch_source": tracking.LaunchSource.QUICKSTART.value},
     )
 
 
@@ -167,7 +167,7 @@ def test_quickstart__with_no_browser(mocker: MockerFixture, mock_track: MagicMoc
     # Reporting does not depend on the browser opening; the GUI can still be visited later.
     mock_track.assert_called_once_with(
         event=tracking.APP_LAUNCHED,
-        properties={"launch_source": tracking.LaunchSource.QUICKSTART},
+        properties={"launch_source": tracking.LaunchSource.QUICKSTART.value},
     )
 
 

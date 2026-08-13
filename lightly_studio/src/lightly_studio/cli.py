@@ -73,7 +73,7 @@ def quickstart(port: int | None, force_download: bool, no_browser: bool) -> None
 
     tracking.track(
         event=tracking.APP_LAUNCHED,
-        properties={"launch_source": LaunchSource.QUICKSTART},
+        properties={"launch_source": LaunchSource.QUICKSTART.value},
     )
     lightly_studio.start_gui(port=port, open_browser=not no_browser)
 
@@ -107,6 +107,6 @@ def gui(
     db_manager.connect(db_file=db_file, db_url=db_url, must_exist=True)
     tracking.track(
         event=tracking.APP_LAUNCHED,
-        properties={"launch_source": LaunchSource.GUI},
+        properties={"launch_source": LaunchSource.GUI.value},
     )
     lightly_studio.start_gui(host=host, port=port)

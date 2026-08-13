@@ -47,12 +47,10 @@ def test_track(mocker: MockerFixture) -> None:
 
     tracking.track(
         event=tracking.APP_LAUNCHED,
-        properties={"launch_source": tracking.LaunchSource.QUICKSTART},
+        properties={"launch_source": tracking.LaunchSource.QUICKSTART.value},
     )
 
-    assert fake.events == [
-        (tracking.APP_LAUNCHED, {"launch_source": tracking.LaunchSource.QUICKSTART})
-    ]
+    assert fake.events == [(tracking.APP_LAUNCHED, {"launch_source": "quickstart"})]
 
 
 def test_track__builds_the_tracker_once(mocker: MockerFixture) -> None:
