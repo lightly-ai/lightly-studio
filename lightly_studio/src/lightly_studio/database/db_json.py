@@ -5,10 +5,10 @@ chain for DuckDB and PostgreSQL and binds every key as a parameter.
 
 Two things decide which function to call. A *field* is a path (``a.b``, ``a.list[0]``)
 while a *key* is one literal name, so ``json_extract_key_as_text`` reads ``a.b`` as a
-key that contains a dot. And the raw expression from :func:`json_extract` yields
-``json``, which neither database compares against a plain value and which PostgreSQL
-cannot order or cast, so use it only to test for presence and reach for the
-``_as_text`` and ``_as_float`` variants everywhere else.
+key that contains a dot. And every function reads the value as text or as a float,
+never as raw ``json``: neither database compares ``json`` against a plain value,
+PostgreSQL can neither order nor cast it, and only the text form turns a stored JSON
+``null`` into SQL NULL, which is what a presence test needs.
 """
 
 from __future__ import annotations
@@ -33,30 +33,6 @@ _INT32_MIN = -(2**31)
 _INT32_MAX = 2**31 - 1
 
 
-def json_extract(column: Any, field: str) -> ColumnElement[Any]:
-    """Index into a JSON column by field path.
-
-    Compiles to a ``col -> :key`` chain, so keys are bound rather than interpolated
-    into SQL and quotes or dots in them cannot alter the statement.
-
-    ``field`` supports dot-separated paths (``a.b.c``) and array indices
-    (``a.list[0]``), including negative indices counting from the end
-    (``a.list[-1]``), which both databases apply natively.
-
-    Args:
-        column: The JSON column expression (e.g. ``SampleMetadataTable.data``).
-        field: Dot-separated path into the JSON object.
-
-    Returns:
-        The indexed JSON expression.
-    """
-    segments = [
-        segment if isinstance(segment, int) else _bind_key(segment)
-        for segment in _parse_field_path(field)
-    ]
-    return cast(ColumnElement[Any], functools.reduce(operator.getitem, segments, column))
-
-
 def json_extract_as_text(column: Any, field: str) -> ColumnElement[str]:
     """Index into a JSON column by field path and read the value as text.
 
@@ -65,12 +41,12 @@ def json_extract_as_text(column: Any, field: str) -> ColumnElement[str]:
 
     Args:
         column: The JSON column expression.
-        field: Dot-separated path into the JSON object, as in :func:`json_extract`.
+        field: Dot-separated path into the JSON object, as in :func:`_json_extract`.
 
     Returns:
         The extracted value as text.
     """
-    return cast(ColumnElement[str], json_extract(column=column, field=field).as_string())
+    return cast(ColumnElement[str], _json_extract(column=column, field=field).as_string())
 
 
 def json_extract_as_float(column: Any, field: str) -> ColumnElement[float]:
@@ -81,12 +57,12 @@ def json_extract_as_float(column: Any, field: str) -> ColumnElement[float]:
 
     Args:
         column: The JSON column expression.
-        field: Dot-separated path into the JSON object, as in :func:`json_extract`.
+        field: Dot-separated path into the JSON object, as in :func:`_json_extract`.
 
     Returns:
         The extracted value as a float.
     """
-    return cast(ColumnElement[float], json_extract(column=column, field=field).as_float())
+    return cast(ColumnElement[float], _json_extract(column=column, field=field).as_float())
 
 
 def json_extract_key_as_text(column: Any, key: str) -> ColumnElement[str]:
@@ -133,6 +109,30 @@ class _JsonKeyType(TypeDecorator[str]):
             return value
         escaped = value.replace("~", "~0").replace("/", "~1")
         return f"/{escaped}"
+
+
+def _json_extract(column: Any, field: str) -> ColumnElement[Any]:
+    """Index into a JSON column by field path.
+
+    Compiles to a ``col -> :key`` chain, so keys are bound rather than interpolated
+    into SQL and quotes or dots in them cannot alter the statement.
+
+    ``field`` supports dot-separated paths (``a.b.c``) and array indices
+    (``a.list[0]``), including negative indices counting from the end
+    (``a.list[-1]``), which both databases apply natively.
+
+    Args:
+        column: The JSON column expression (e.g. ``SampleMetadataTable.data``).
+        field: Dot-separated path into the JSON object.
+
+    Returns:
+        The indexed JSON expression.
+    """
+    segments = [
+        segment if isinstance(segment, int) else _bind_key(segment)
+        for segment in _parse_field_path(field)
+    ]
+    return cast(ColumnElement[Any], functools.reduce(operator.getitem, segments, column))
 
 
 def _bind_key(key: str) -> ColumnElement[str]:

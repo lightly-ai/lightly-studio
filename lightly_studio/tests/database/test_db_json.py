@@ -42,9 +42,9 @@ def _compile(expression: Any, dialect: Any) -> Any:
 
 
 def _every_entry_point(field: str) -> list[Any]:
-    """Return one expression per public function, all reading the same field."""
+    """Return one expression per entry point, all reading the same field."""
     return [
-        db_json.json_extract(column=_COLUMN, field=field),
+        db_json._json_extract(column=_COLUMN, field=field),
         db_json.json_extract_as_text(column=_COLUMN, field=field),
         db_json.json_extract_as_float(column=_COLUMN, field=field),
         db_json.json_extract_key_as_text(column=_COLUMN, key=field),
@@ -80,7 +80,7 @@ def test_parse_field_path__out_of_range_index_stays_a_key(index: str) -> None:
 
 @pytest.mark.parametrize("dialect", _DIALECTS)
 def test_json_extract__simple_key(dialect: Any) -> None:
-    result = _compile(db_json.json_extract(column=_COLUMN, field="temperature"), dialect)
+    result = _compile(db_json._json_extract(column=_COLUMN, field="temperature"), dialect)
     assert str(result) == "data -> %(param_1)s"
     assert result.params == {"param_1": "temperature"}
 
@@ -88,14 +88,14 @@ def test_json_extract__simple_key(dialect: Any) -> None:
 @pytest.mark.parametrize("dialect", _DIALECTS)
 def test_json_extract__nested_key(dialect: Any) -> None:
     """Each segment is its own bound step, so no key can be read as path syntax."""
-    result = _compile(db_json.json_extract(column=_COLUMN, field="test_dict.int_key"), dialect)
+    result = _compile(db_json._json_extract(column=_COLUMN, field="test_dict.int_key"), dialect)
     assert str(result) == "(data -> %(param_1)s) -> %(param_2)s"
     assert result.params == {"param_1": "test_dict", "param_2": "int_key"}
 
 
 @pytest.mark.parametrize("dialect", _DIALECTS)
 def test_json_extract__array_index(dialect: Any) -> None:
-    result = _compile(db_json.json_extract(column=_COLUMN, field="nested_list[0]"), dialect)
+    result = _compile(db_json._json_extract(column=_COLUMN, field="nested_list[0]"), dialect)
     assert str(result) == "(data -> %(param_1)s) -> %(param_2)s"
     assert result.params == {"param_1": "nested_list", "param_2": 0}
 
@@ -104,7 +104,7 @@ def test_json_extract__array_index(dialect: Any) -> None:
 @pytest.mark.parametrize("index", [-1, -3])
 def test_json_extract__negative_index(dialect: Any, index: int) -> None:
     """Both databases subscript from the end natively, so the index passes straight through."""
-    result = _compile(db_json.json_extract(column=_COLUMN, field=f"nested_list[{index}]"), dialect)
+    result = _compile(db_json._json_extract(column=_COLUMN, field=f"nested_list[{index}]"), dialect)
     assert result.params == {"param_1": "nested_list", "param_2": index}
 
 
@@ -112,7 +112,7 @@ def test_json_extract__negative_index(dialect: Any, index: int) -> None:
 def test_json_extract__out_of_range_index_is_a_bound_key(dialect: Any) -> None:
     """An index wider than int32 raises when subscripted, so it is bound as a key instead."""
     result = _compile(
-        db_json.json_extract(column=_COLUMN, field="nested_list[2147483648]"), dialect
+        db_json._json_extract(column=_COLUMN, field="nested_list[2147483648]"), dialect
     )
     assert result.params == {"param_1": "nested_list", "param_2": "[2147483648]"}
 
@@ -121,7 +121,7 @@ def test_json_extract__out_of_range_index_is_a_bound_key(dialect: Any) -> None:
 @pytest.mark.parametrize("field", _SPECIAL_KEYS)
 def test_json_extract__special_key_is_bound(dialect: Any, field: str) -> None:
     """Special characters stay inside the parameter and never reach the statement."""
-    result = _compile(db_json.json_extract(column=_COLUMN, field=field), dialect)
+    result = _compile(db_json._json_extract(column=_COLUMN, field=field), dialect)
     assert str(result) == "data -> %(param_1)s"
     assert result.params == {"param_1": field}
 
@@ -130,7 +130,7 @@ def test_json_extract__special_key_is_bound(dialect: Any, field: str) -> None:
 @pytest.mark.parametrize("field", [f"weird[{_INJECTION_KEY}]", "weird[0; DROP TABLE t]"])
 def test_json_extract__non_integer_index_is_bound(dialect: Any, field: str) -> None:
     """Brackets holding anything but an integer are bound as keys, so they smuggle nothing."""
-    result = _compile(db_json.json_extract(column=_COLUMN, field=field), dialect)
+    result = _compile(db_json._json_extract(column=_COLUMN, field=field), dialect)
     assert str(result) == "(data -> %(param_1)s) -> %(param_2)s"
 
 
@@ -146,6 +146,20 @@ def test_json_extract_as_text(dialect: Any) -> None:
     result = _compile(db_json.json_extract_as_text(column=_COLUMN, field="temperature"), dialect)
     assert str(result) == "CAST(data ->> %(param_1)s AS VARCHAR)"
     assert result.params == {"param_1": "temperature"}
+
+
+@pytest.mark.parametrize("dialect", _DIALECTS)
+def test_json_extract_as_text__presence_test_uses_the_text_operator(dialect: Any) -> None:
+    """``->>`` is SQL NULL for a stored JSON null, while ``->`` yields the JSON null.
+
+    So a presence test has to read the value as text; the raw index would count a row
+    whose key is present but null.
+    """
+    expression = db_json.json_extract_as_text(column=_COLUMN, field="temperature").isnot(None)
+
+    result = _compile(expression, dialect)
+
+    assert str(result) == "CAST((data ->> %(param_1)s) AS VARCHAR) IS NOT NULL"
 
 
 @pytest.mark.parametrize("dialect", _DIALECTS)
@@ -204,7 +218,7 @@ def test_json_extract__special_key_never_reaches_the_statement(dialect: Any, fie
 @pytest.mark.parametrize("dialect", _DIALECTS)
 def test_json_extract__repeated_renders_share_one_parameter(dialect: Any) -> None:
     """One parameter per key, so GROUP BY renders the same expression as SELECT."""
-    expr = db_json.json_extract(column=_COLUMN, field="score")
+    expr = db_json._json_extract(column=_COLUMN, field="score")
     query = sqlalchemy.select(expr).group_by(expr)
 
     result = _compile(query, dialect)
