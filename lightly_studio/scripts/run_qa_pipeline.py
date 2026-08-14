@@ -221,7 +221,6 @@ def _transcribe_batch(
     args: argparse.Namespace,
     triplets: list[qa_pull.LocalTriplet],
 ) -> list[qa_pull.LocalTriplet]:
-    return triplets
     missing = sum(triplet.transcript_path is None for triplet in triplets)
     if not args.transcribe or not missing:
         return triplets
