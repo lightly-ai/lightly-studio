@@ -17,22 +17,28 @@ const RUN: EvaluationRunAnnotationMetricsInfoView = {
 const mocks = vi.hoisted(() => ({
     trackEvent: vi.fn(),
     metricsProxy: { data: null as unknown[] | null, dataUpdatedAt: 0 },
+    hasEmbeddingsProxy: { data: true as boolean | undefined },
     textEmbeddingValue: undefined as TextEmbedding | undefined
 }));
 
-vi.mock('$lib/hooks', async (importOriginal) => ({
-    ...(await importOriginal<typeof import('$lib/hooks')>()),
-    usePostHog: () => ({ trackEvent: mocks.trackEvent }),
-    useGlobalStorage: () => ({ textEmbedding: readable(mocks.textEmbeddingValue) })
+// Mocked at the source modules rather than at the `$lib/hooks` barrel, so both the component and
+// the hook it uses see the mocks when importing through the barrel.
+vi.mock('$lib/hooks/usePostHog', () => ({
+    usePostHog: () => ({ trackEvent: mocks.trackEvent })
 }));
 
 vi.mock('$lib/hooks/useGlobalStorage', () => ({
     useGlobalStorage: () => ({ textEmbedding: readable(mocks.textEmbeddingValue) })
 }));
 
-vi.mock('$lib/hooks/useAnnotationEvaluationMetricsInfo/useAnnotationEvaluationMetricsInfo', () => ({
-    useAnnotationEvaluationMetricsInfo: () => mocks.metricsProxy
+vi.mock('$lib/hooks/useHasEmbeddings/useHasEmbeddings', () => ({
+    useHasEmbeddings: () => mocks.hasEmbeddingsProxy
 }));
+
+vi.mock(
+    '$lib/hooks/useAnnotationEvaluationMetricsInfo/useAnnotationEvaluationMetricsInfo.svelte',
+    () => ({ useAnnotationEvaluationMetricsInfo: () => mocks.metricsProxy })
+);
 
 const COLLECTION_ID = 'source-1';
 
@@ -48,6 +54,7 @@ describe('AnnotationOrderBy', () => {
         vi.clearAllMocks();
         mocks.metricsProxy.data = [RUN];
         mocks.metricsProxy.dataUpdatedAt = 0;
+        mocks.hasEmbeddingsProxy.data = true;
         mocks.textEmbeddingValue = undefined;
         useAnnotationSortBy().setSortBy(COLLECTION_ID, null);
     });
@@ -110,6 +117,14 @@ describe('AnnotationOrderBy', () => {
         expect(screen.getByTestId('sort-direction-button')).toBeDisabled();
     });
 
+    it('stays enabled when the source has no embeddings to search', () => {
+        mocks.textEmbeddingValue = { queryText: 'cat', embedding: [0.1] } as TextEmbedding;
+        mocks.hasEmbeddingsProxy.data = false;
+        render(AnnotationOrderBy, { props: { collectionId: COLLECTION_ID } });
+
+        expect(screen.getByTestId('sort-by-trigger')).toBeEnabled();
+    });
+
     it('fires grid_sorted analytics with the same shape as image sorting', async () => {
         const user = userEvent.setup();
         render(AnnotationOrderBy, { props: { collectionId: COLLECTION_ID } });
@@ -120,7 +135,7 @@ describe('AnnotationOrderBy', () => {
         expect(mocks.trackEvent).toHaveBeenCalledWith('grid_sorted', {
             collection_id: COLLECTION_ID,
             sort_source: 'annotation_evaluation_metric',
-            field_name: 'iou',
+            field_name: 'detection eval.iou',
             direction: 'asc'
         });
     });

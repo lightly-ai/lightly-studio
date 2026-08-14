@@ -1,6 +1,10 @@
 <script lang="ts">
-    import { useAnnotationOrderBy } from '$lib/hooks/useAnnotationOrderBy/useAnnotationOrderBy.svelte';
-    import { useGlobalStorage, usePostHog } from '$lib/hooks';
+    import {
+        useAnnotationOrderBy,
+        useGlobalStorage,
+        useHasEmbeddings,
+        usePostHog
+    } from '$lib/hooks';
     import { type SelectItem } from '$lib/components/Select';
     import OrderByControl from './OrderByControl.svelte';
 
@@ -13,9 +17,12 @@
 
     const { textEmbedding } = useGlobalStorage();
     const { trackEvent } = usePostHog();
-    // Similarity ordering keeps precedence over metric sorting, so the control is disabled
-    // while a text or drag-to-search is active. The selection survives clearing the search.
-    const isSimilaritySearchActive = $derived(!!$textEmbedding);
+    const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId }));
+    // Similarity ordering keeps precedence over metric sorting, so the control is disabled while
+    // a search applies to this source. A search started elsewhere persists but cannot be applied
+    // to a source without embeddings, and the grid keeps sorting there. The selection survives
+    // clearing the search.
+    const isSimilaritySearchActive = $derived(!!$textEmbedding && !!hasEmbeddingsQuery.data);
 
     const {
         allSortFields,
