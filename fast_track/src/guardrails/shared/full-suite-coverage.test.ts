@@ -111,7 +111,7 @@ function coverageGuardrail(overrides: Partial<CoverageConfig> = {}): Guardrail {
 }
 
 function runOn(guardrail: Guardrail, ...files: ChangedFile[]): Promise<GuardrailOutcome> {
-    return guardrail.run({ baseRef: 'origin/main', changedFiles: async () => files });
+    return guardrail.run({ changedFiles: async () => files });
 }
 
 function givenTheReportExists(): void {
@@ -144,11 +144,10 @@ beforeEach(() => {
 afterEach(clearEnv);
 
 describe('createCoverageGuardrail', () => {
-    it('is required and runs locally', () => {
+    it('is required', () => {
         const guardrail = coverageGuardrail();
         expect(guardrail.name).toBe('test/coverage');
         expect(guardrail.required).toBe(true);
-        expect(guardrail.needsPrContext).toBe(false);
     });
 
     it('passes without reading the report when no file is in scope', async () => {

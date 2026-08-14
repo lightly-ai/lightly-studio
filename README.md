@@ -35,13 +35,21 @@
 <p align="center">The embedding plot shows how images relate to each other, with a preview on hover. A lasso selection filters the grid to one cluster. A search for "coffee" finds a match, and the annotation editor opens to label it.</p>
 <p align="center"><strong>⚡ Works smoothly with 2M+ images, embeddings included, on a single MacBook (M1, 16GB RAM).</strong></p>
 
-## 💻 Installation
+## 🚀 Try it in 60 seconds
 
-Runs on **Python 3.9 to 3.14** on Windows, Linux and MacOS. We recommend **Python 3.10** for the best compatibility with plugins such as SAM autolabeling.
+LightlyStudio runs on your computer and opens in your browser. The following command downloads an example dataset with images, annotations, and evaluation results — no account needed.
 
-```shell
+```bash
 pip install lightly-studio
+lightly-studio quickstart
 ```
+
+- **Local only:** your images and datasets never leave your machine.
+- **Your own images:** one Python call indexes them, then start the server. See the [Image Dataset guide](https://docs.lightly.ai/studio/dataset_setup/image_dataset/).
+- **Your own videos:** see the [Video Dataset guide](https://docs.lightly.ai/studio/dataset_setup/video_dataset/).
+- **No install:** [open the quickstart in Colab](https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb)
+- **A guided walkthrough:** read the [Tutorials](#-tutorials) below. [Curate a Traffic CCTV Dataset for YOLO Training](https://docs.lightly.ai/studio/tutorials/yolo-traffic-cctv-object-detection/) goes from raw images to a trained model.
+- Runs on **Python 3.9 to 3.14** on Windows, Linux, and macOS. Use Python 3.10 for plugin compatibility, for example [SAM autolabeling](https://docs.lightly.ai/studio/concepts_and_tools/plugins/#example-lightlystudio-sam3-plugin).
 
 ## Workflows
 
@@ -88,7 +96,8 @@ pip install lightly-studio
   </tr>
 </table>
 
-## 🚀 Quickstart
+
+## Example workflows
 
 LightlyStudio is a browser app that runs on your own computer. Load your data into the local
 database with a Python script, then start the server and explore it in your browser.

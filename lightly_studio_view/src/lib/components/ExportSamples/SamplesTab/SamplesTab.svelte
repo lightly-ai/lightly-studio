@@ -2,7 +2,7 @@
     import { page } from '$app/state';
     import { exportCollectionPrepare } from '$lib/api/lightly_studio_local';
     import { useImageFilters } from '$lib/hooks';
-    import { useExportDownload } from '../useExportDownload/useExportDownload';
+    import { useExportDownload, triggerDownload } from '../useExportDownload';
     import ExportDownloadButton from '../ExportDownloadButton/ExportDownloadButton.svelte';
     import { PUBLIC_LIGHTLY_STUDIO_API_URL } from '$env/static/public';
 
@@ -27,9 +27,10 @@
             }
         });
         if (response.error) throw new Error(JSON.stringify(response.error));
-        window.open(
-            `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/download/${response.data!.export_key}`,
-            '_blank'
+        const exportKey = response.data?.export_key;
+        if (!exportKey) throw new Error('Unexpected empty response data');
+        triggerDownload(
+            `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/download/${exportKey}`
         );
     });
 </script>

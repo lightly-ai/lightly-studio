@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SamplesTab from './SamplesTab.svelte';
@@ -6,43 +6,75 @@ import SamplesTab from './SamplesTab.svelte';
 const pageMock = vi.hoisted(() => ({ params: { collection_id: 'test-collection' } }));
 vi.mock('$app/state', () => ({ page: pageMock }));
 
-vi.mock('$lib/api/lightly_studio_local', () => ({
+const mocks = vi.hoisted(() => ({
     exportCollectionPrepare: vi.fn(),
-    SortDirection: { ASC: 'ASC', DESC: 'DESC' }
+    triggerDownload: vi.fn()
 }));
+vi.mock('$lib/api/lightly_studio_local', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('$lib/api/lightly_studio_local')>();
+    return {
+        ...actual,
+        exportCollectionPrepare: mocks.exportCollectionPrepare
+    };
+});
 
+const imageFilterStore = writable(null);
 vi.mock('$lib/hooks', () => ({
-    useImageFilters: () => ({ imageFilter: writable(null) })
+    useImageFilters: () => ({ imageFilter: imageFilterStore })
 }));
 
-vi.mock('../useExportDownload/useExportDownload', () => ({
-    useExportDownload: () => ({
-        isLoading: writable(false),
-        errorMessage: writable(undefined),
-        handleDownload: vi.fn()
-    })
-}));
+vi.mock('../useExportDownload', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../useExportDownload')>();
+    return {
+        ...actual,
+        triggerDownload: mocks.triggerDownload
+    };
+});
 
 describe('SamplesTab', () => {
     beforeEach(() => {
-        vi.resetAllMocks();
+        mocks.exportCollectionPrepare.mockReset();
+        mocks.triggerDownload.mockReset();
     });
 
-    it('renders with an enabled download button and no tag selector or inverse checkbox', () => {
+    it('calls the API with correct arguments on download and triggers the download URL', async () => {
+        mocks.exportCollectionPrepare.mockResolvedValue({ data: { export_key: 'key123' } });
         render(SamplesTab);
-        expect(screen.getByTestId('submit-button-samples')).not.toBeDisabled();
-        expect(screen.queryByText('Inverse selection')).not.toBeInTheDocument();
-        expect(
-            screen.queryByText('Select a tag to export its samples (required)')
-        ).not.toBeInTheDocument();
+        await fireEvent.click(screen.getByTestId('submit-button-samples'));
+        await waitFor(() => {
+            expect(mocks.exportCollectionPrepare).toHaveBeenCalledWith({
+                path: { collection_id: 'test-collection' },
+                body: { collection_filter: null }
+            });
+            expect(mocks.triggerDownload).toHaveBeenCalledWith(
+                expect.stringContaining('/export/download/key123')
+            );
+        });
+    });
+
+    it('shows an error message when the API fails', async () => {
+        mocks.exportCollectionPrepare.mockRejectedValue(new Error('Network error'));
+        render(SamplesTab);
+        await fireEvent.click(screen.getByTestId('submit-button-samples'));
+        await waitFor(() => {
+            expect(screen.getByText(/Export failed/)).toBeInTheDocument();
+        });
+    });
+
+    it('shows an error message when the API returns an error body', async () => {
+        mocks.exportCollectionPrepare.mockResolvedValue({ error: { message: 'Bad request' } });
+        render(SamplesTab);
+        await fireEvent.click(screen.getByTestId('submit-button-samples'));
+        await waitFor(() => {
+            expect(screen.getByText(/Export failed/)).toBeInTheDocument();
+        });
     });
 
     it('calls onDownloadClick when the download button is clicked', async () => {
+        mocks.exportCollectionPrepare.mockResolvedValue({ data: { export_key: 'key123' } });
         const onDownloadClick = vi.fn();
         render(SamplesTab, { props: { onDownloadClick } });
-
         await fireEvent.click(screen.getByTestId('submit-button-samples'));
-
         expect(onDownloadClick).toHaveBeenCalledOnce();
     });
 });

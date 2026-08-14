@@ -2,13 +2,14 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AnnotationsTab from './AnnotationsTab.svelte';
-import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+import { useVideoFilters } from '$lib/hooks';
 
 const pageMock = vi.hoisted(() => ({ params: { collection_id: 'test-collection' } }));
 vi.mock('$app/state', () => ({ page: pageMock }));
 
 const mocks = vi.hoisted(() => ({
-    exportCollectionAnnotationsPrepare: vi.fn()
+    exportCollectionAnnotationsPrepare: vi.fn(),
+    triggerDownload: vi.fn()
 }));
 vi.mock('$lib/api/lightly_studio_local', () => ({
     exportCollectionAnnotationsPrepare: mocks.exportCollectionAnnotationsPrepare,
@@ -17,12 +18,17 @@ vi.mock('$lib/api/lightly_studio_local', () => ({
 
 const imageFilterStore = writable(null);
 vi.mock('$lib/hooks', () => ({
-    useImageFilters: () => ({ imageFilter: imageFilterStore })
-}));
-
-vi.mock('$lib/hooks/useVideoFilters/useVideoFilters', () => ({
+    useImageFilters: () => ({ imageFilter: imageFilterStore }),
     useVideoFilters: vi.fn()
 }));
+
+vi.mock('../useExportDownload', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../useExportDownload')>();
+    return {
+        ...actual,
+        triggerDownload: mocks.triggerDownload
+    };
+});
 
 const defaultProps = {
     exportFormat: 'object_detection_coco' as const,
@@ -36,6 +42,7 @@ const defaultProps = {
 describe('AnnotationsTab', () => {
     beforeEach(() => {
         mocks.exportCollectionAnnotationsPrepare.mockReset();
+        mocks.triggerDownload.mockReset();
         vi.mocked(useVideoFilters).mockReturnValue({
             videoFilter: writable(null),
             filterParams: writable(null),
@@ -66,8 +73,7 @@ describe('AnnotationsTab', () => {
         expect(screen.getByText('Annotation Source')).toBeInTheDocument();
     });
 
-    it('calls the API using the first annotation source when none is selected', async () => {
-        vi.spyOn(window, 'open').mockReturnValue(null);
+    it('calls the API using the first annotation source when none is selected and triggers the download URL', async () => {
         mocks.exportCollectionAnnotationsPrepare.mockResolvedValue({
             data: { export_key: 'key123' }
         });
@@ -82,26 +88,13 @@ describe('AnnotationsTab', () => {
                     image_filter: null
                 }
             });
-        });
-    });
-
-    it('opens a new tab with the download URL on success', async () => {
-        const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
-        mocks.exportCollectionAnnotationsPrepare.mockResolvedValue({
-            data: { export_key: 'key123' }
-        });
-        render(AnnotationsTab, { props: defaultProps });
-        await fireEvent.click(screen.getByTestId('submit-button-annotations'));
-        await waitFor(() => {
-            expect(openSpy).toHaveBeenCalledWith(
-                expect.stringContaining('/export/download/key123'),
-                '_blank'
+            expect(mocks.triggerDownload).toHaveBeenCalledWith(
+                expect.stringContaining('/export/download/key123')
             );
         });
     });
 
     it('passes the active video filter and annotation source for video classifications', async () => {
-        vi.spyOn(window, 'open').mockReturnValue(null);
         mocks.exportCollectionAnnotationsPrepare.mockResolvedValue({
             data: { export_key: 'key123' }
         });
@@ -123,13 +116,24 @@ describe('AnnotationsTab', () => {
 
         await fireEvent.click(screen.getByTestId('submit-button-annotations'));
 
-        expect(mocks.exportCollectionAnnotationsPrepare).toHaveBeenCalledWith({
-            path: { collection_id: 'test-collection' },
-            body: {
-                export_format: 'classification_csv',
-                annotation_collection_id: 'source-2',
-                video_filter: activeFilter
-            }
+        await waitFor(() => {
+            expect(mocks.exportCollectionAnnotationsPrepare).toHaveBeenCalledWith({
+                path: { collection_id: 'test-collection' },
+                body: {
+                    export_format: 'classification_csv',
+                    annotation_collection_id: 'source-2',
+                    video_filter: activeFilter
+                }
+            });
+        });
+    });
+
+    it('shows an error message when the API returns data without export_key', async () => {
+        mocks.exportCollectionAnnotationsPrepare.mockResolvedValue({ data: {} });
+        render(AnnotationsTab, { props: defaultProps });
+        await fireEvent.click(screen.getByTestId('submit-button-annotations'));
+        await waitFor(() => {
+            expect(screen.getByText(/Export failed/)).toBeInTheDocument();
         });
     });
 
@@ -143,7 +147,6 @@ describe('AnnotationsTab', () => {
     });
 
     it('calls onDownloadClick when the download button is clicked', async () => {
-        vi.spyOn(window, 'open').mockReturnValue(null);
         mocks.exportCollectionAnnotationsPrepare.mockResolvedValue({
             data: { export_key: 'key123' }
         });
