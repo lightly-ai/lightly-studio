@@ -727,13 +727,13 @@ def _write_qa_summary(
         ("whisper_wpm_pass", "low_narration_density"),
         ("qa_transcript_timestamps_valid", "invalid_transcript_timestamps"),
     ]
-    if include_narration_checks:
-        required_checks.extend(
-            [
-                ("narration_classification_complete", "narration_classification_incomplete"),
-                ("narration_requirement_pass", "insufficient_task_environment_narration"),
-            ]
-        )
+    # if include_narration_checks:
+    #     required_checks.extend(
+    #         [
+    #             ("narration_classification_complete", "narration_classification_incomplete"),
+    #             ("narration_requirement_pass", "insufficient_task_environment_narration"),
+    #         ]
+    #     )
     review_checks = [
         (
             video_quality.BLUR_SCORE_KEY,

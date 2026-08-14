@@ -18,12 +18,14 @@ Delivery layout written under ``gs://{dest-bucket}/{dest-root}/``::
     {section}/{batch}/data.json             JSONL, one flat record per video
     {section}/{batch}/videos/{n}.mp4        homogeneous video attachments
     {section}/{batch}/transcripts/{n}.json  homogeneous transcript attachments
+    {section}/{batch}/metadata/{n}.json     homogeneous metadata attachments
 
 File names are numeric (``1.mp4`` / ``1.json``); a shared numeric prefix ties a video to its
-transcript. No data is encoded in file or directory names, per the spec. Each ``data.json``
-record is a flat JSON object: reserved columns ``relative_path`` (the video path),
-``asset_id``, ``asset_type``, ``transcript_path`` (paths relative to ``data.json``) and
-``name`` (the descriptive clip name with the category prefix stripped), plus every field from
+transcript and metadata. No data is encoded in file or directory names, per the spec. Each
+``data.json`` record is a flat JSON object: reserved columns ``relative_path`` (the video
+path), ``asset_id``, ``asset_type``, ``transcript_path``, ``metadata_path`` (paths relative to
+``data.json``) and ``name`` (the descriptive clip name with the category prefix stripped), plus
+every field from
 the vendor metadata file with sanitized column names. Nested metadata values are serialized to
 a JSON string so records stay flat, as the spec requires. All records in a batch share the
 same schema; fields missing from a given video are filled with ``null``.
@@ -81,17 +83,26 @@ DEFAULT_WORKERS = 8
 
 VIDEOS_DIR = "videos"
 TRANSCRIPTS_DIR = "transcripts"
+METADATA_DIR = "metadata"
 DATA_FILE = "data.json"
 README_FILE = "README.md"
 
 ASSET_TYPE_VIDEO = "VIDEO"
 # Reserved columns lead every record; ``relative_path`` is the spec's always-required link.
-RESERVED_COLUMNS = ("relative_path", "asset_id", "asset_type", "transcript_path", "name")
+RESERVED_COLUMNS = (
+    "relative_path",
+    "asset_id",
+    "asset_type",
+    "transcript_path",
+    "metadata_path",
+    "name",
+)
 _COLUMN_DESCRIPTIONS = {
     "relative_path": "Path of the video file relative to this data file.",
     "asset_id": "Unique identifier for the asset.",
     "asset_type": "Asset type, always VIDEO for this dataset.",
     "transcript_path": "Path of the transcript JSON relative to this data file, or null.",
+    "metadata_path": "Path of the metadata JSON relative to this data file.",
     "name": "Descriptive clip name with the category prefix removed.",
     "title": "Human-readable title of the clip.",
     "description": "Description of the activity shown in the video.",
@@ -122,6 +133,7 @@ class DeliveryItem:
         display_name: Descriptive clip name with the category prefix removed.
         video_url: Source ``gs://`` URL of the video.
         transcript_url: Source ``gs://`` URL of the transcript, or ``None``.
+        metadata_url: Source ``gs://`` URL of the metadata JSON, or ``None``.
         record: Flat JSON record written to ``data.json`` for this video.
     """
 
@@ -131,6 +143,7 @@ class DeliveryItem:
     display_name: str
     video_url: str
     transcript_url: str | None
+    metadata_url: str | None
     record: dict[str, Any]
 
 
@@ -143,6 +156,7 @@ class DeliveryStats:
         transcript_count: Number of videos that ship with a transcript.
         video_bytes: Total size of the video files in bytes.
         transcript_bytes: Total size of the transcript files in bytes.
+        metadata_bytes: Total size of the metadata files in bytes.
         total_duration_s: Sum of per-video durations in seconds, when known.
         total_frames: Sum of per-video frame counts, when every video was probed.
     """
@@ -151,6 +165,7 @@ class DeliveryStats:
     transcript_count: int
     video_bytes: int
     transcript_bytes: int
+    metadata_bytes: int
     total_duration_s: float | None
     total_frames: int | None
 
@@ -267,11 +282,13 @@ def build_items(  # noqa: PLR0913  parameters mirror the discovery + sampling kn
                 display_name=display_name,
                 video_url=video_url,
                 transcript_url=transcript_url,
+                metadata_url=metadata_url,
                 record=_build_record(
                     number=number,
                     display_name=display_name,
                     metadata=metadata,
                     has_transcript=transcript_url is not None,
+                    has_metadata=metadata_url is not None,
                 ),
             )
         )
@@ -308,8 +325,8 @@ def render_readme(
         "## Dataset overview\n"
         "Multimodal: each record is one egocentric video with a spoken-narration transcript and\n"
         "per-video metadata. Videos are sampled evenly across activity categories (see the\n"
-        "`category` column). The video and transcript are linked from the structured data file\n"
-        f"by relative path (`relative_path`, `transcript_path`) in "
+        "`category` column). The video, transcript, and metadata are linked from the structured\n"
+        "data file by relative path (`relative_path`, `transcript_path`, `metadata_path`) in "
         f"`{section}/{batch}/data.json`.\n\n"
         "## Basic dataset stats\n"
         f"{_render_stats(stats)}\n\n"
@@ -322,16 +339,18 @@ def render_readme(
         "## Formats\n"
         "- Video: MP4 (H.264), 1080p or higher.\n"
         "- Transcript: JSON (faster-whisper output with segment- and word-level timestamps).\n"
+        "- Metadata: JSON (per-video vendor metadata sidecar).\n"
         "- Structured records: JSONL (`data.json`), one flat record per video.\n\n"
         "## Schema\n"
         f"{_render_schema_table(records=records, columns=columns)}\n\n"
         "Remaining columns mirror the vendor metadata file. Nested metadata values, if any, are\n"
         "serialized as JSON strings so every record stays flat.\n\n"
         "## Linking files\n"
-        f"File names are numeric; a shared number ties a video to its transcript. Each record in\n"
-        f"`{section}/{batch}/data.json` links to its media by relative path:\n"
+        f"File names are numeric; a shared number ties a video to its transcript and metadata.\n"
+        f"Each record in `{section}/{batch}/data.json` links to its media by relative path:\n"
         f"`relative_path` -> `{VIDEOS_DIR}/<asset_id>.mp4`, "
-        f"`transcript_path` -> `{TRANSCRIPTS_DIR}/<asset_id>.json` (`asset_id` is the number).\n"
+        f"`transcript_path` -> `{TRANSCRIPTS_DIR}/<asset_id>.json`, "
+        f"`metadata_path` -> `{METADATA_DIR}/<asset_id>.json` (`asset_id` is the number).\n"
     )
 
 
@@ -354,6 +373,7 @@ def gather_stats(
     """
     video_bytes = 0
     transcript_bytes = 0
+    metadata_bytes = 0
     total_duration_s = 0.0
     total_frames = 0
     duration_known = True
@@ -362,6 +382,8 @@ def gather_stats(
         video_bytes += _blob_size(client=client, url=item.video_url)
         if item.transcript_url is not None:
             transcript_bytes += _blob_size(client=client, url=item.transcript_url)
+        if item.metadata_url is not None:
+            metadata_bytes += _blob_size(client=client, url=item.metadata_url)
         duration = item.record.get("duration_s")
         if isinstance(duration, (int, float)):
             total_duration_s += float(duration)
@@ -378,6 +400,7 @@ def gather_stats(
         transcript_count=sum(1 for item in items if item.transcript_url is not None),
         video_bytes=video_bytes,
         transcript_bytes=transcript_bytes,
+        metadata_bytes=metadata_bytes,
         total_duration_s=total_duration_s if duration_known else None,
         total_frames=total_frames if frames_known else None,
     )
@@ -385,10 +408,11 @@ def gather_stats(
 
 def _render_stats(stats: DeliveryStats) -> str:
     lines = [
-        "- Asset types: video (MP4) with companion transcript (JSON).",
+        "- Asset types: video (MP4) with companion transcript and metadata (JSON).",
         f"- Videos: {stats.video_count} ({stats.transcript_count} with transcripts).",
         f"- Video size: {_human_bytes(stats.video_bytes)} total.",
         f"- Transcript size: {_human_bytes(stats.transcript_bytes)} total.",
+        f"- Metadata size: {_human_bytes(stats.metadata_bytes)} total.",
     ]
     if stats.total_frames is not None:
         lines.append(f"- Frames: {stats.total_frames} total.")
@@ -562,7 +586,11 @@ def _category_of(stem: str, categories: tuple[str, ...]) -> tuple[str, str] | No
 
 
 def _build_record(
-    number: int, display_name: str, metadata: Mapping[str, Any], has_transcript: bool
+    number: int,
+    display_name: str,
+    metadata: Mapping[str, Any],
+    has_transcript: bool,
+    has_metadata: bool,
 ) -> dict[str, Any]:
     """Build one flat record: sanitized vendor metadata plus reserved columns."""
     record: dict[str, Any] = {}
@@ -573,6 +601,7 @@ def _build_record(
     record["asset_id"] = str(number)
     record["asset_type"] = ASSET_TYPE_VIDEO
     record["transcript_path"] = f"{TRANSCRIPTS_DIR}/{number}.json" if has_transcript else None
+    record["metadata_path"] = f"{METADATA_DIR}/{number}.json" if has_metadata else None
     record["name"] = display_name
     return record
 
@@ -632,7 +661,7 @@ def _copy_assets(
     batch_root: str,
     workers: int,
 ) -> None:
-    """Copy every video and transcript to the delivery layout, server-side and in parallel."""
+    """Copy each video, transcript, and metadata to the delivery layout, server-side."""
     copies: list[tuple[str, str]] = []
     for item in items:
         copies.append(
@@ -643,6 +672,13 @@ def _copy_assets(
                 (
                     item.transcript_url,
                     f"gs://{dest_bucket}/{batch_root}/{TRANSCRIPTS_DIR}/{item.number}.json",
+                )
+            )
+        if item.metadata_url is not None:
+            copies.append(
+                (
+                    item.metadata_url,
+                    f"gs://{dest_bucket}/{batch_root}/{METADATA_DIR}/{item.number}.json",
                 )
             )
     if workers < 1:
@@ -705,6 +741,11 @@ def _print_plan(  # noqa: PLR0913  a plan print needs every destination it will 
             print(
                 f"{item.transcript_url} -> "
                 f"gs://{dest_bucket}/{batch_root}/{TRANSCRIPTS_DIR}/{item.number}.json"
+            )
+        if item.metadata_url is not None:
+            print(
+                f"{item.metadata_url} -> "
+                f"gs://{dest_bucket}/{batch_root}/{METADATA_DIR}/{item.number}.json"
             )
     print(f"write -> {data_url}")
     print(f"write -> {readme_url}")

@@ -43,7 +43,7 @@ if TYPE_CHECKING:
     from lightly_studio.core.video.video_sample import VideoSample
 
 DEFAULT_CAPTION_UNIT: CaptionUnit = "narration_chunk"
-DEFAULT_BATCH_SIZE = 8
+DEFAULT_BATCH_SIZE = 16
 # Ingest stores one child sample per decoded frame; QA reads none of them (quality reopens
 # the file, narration uses the transcript). Subsample to 1 fps to keep the database small.
 DEFAULT_TARGET_FPS = 1.0
