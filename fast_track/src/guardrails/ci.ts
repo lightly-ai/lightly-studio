@@ -67,7 +67,7 @@ async function main(env: NodeJS.ProcessEnv): Promise<void> {
         baseRef: routing.baseRef
     });
 
-    const selected = selectGuardrails(guardrails, {});
+    const selected = selectGuardrails(guardrails);
     const run = await runGuardrails(guardrailContext, selected);
     const verdict = buildVerdict(run, routing);
 

@@ -27,7 +27,7 @@ export interface SelectOptions {
  *
  * The result preserves the input order.
  */
-export function selectGuardrails(all: Guardrail[], options: SelectOptions): Guardrail[] {
+export function selectGuardrails(all: Guardrail[], options: SelectOptions = {}): Guardrail[] {
     let selected = all;
 
     if (options.guardrailNames) {
