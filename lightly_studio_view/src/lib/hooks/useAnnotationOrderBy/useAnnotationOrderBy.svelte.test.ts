@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { flushSync } from 'svelte';
 import { get } from 'svelte/store';
 import type { EvaluationRunAnnotationMetricsInfoView } from '$lib/api/lightly_studio_local';
 import { useAnnotationSortBy } from '$lib/hooks/useAnnotationSortBy/useAnnotationSortBy';
@@ -18,10 +19,7 @@ const { trackEventMock, metricsInfo } = vi.hoisted(() => ({
 
 vi.mock('$lib/hooks', async (importOriginal) => ({
     ...(await importOriginal<typeof import('$lib/hooks')>()),
-    usePostHog: () => ({ trackEvent: trackEventMock })
-}));
-
-vi.mock('$lib/hooks/useAnnotationEvaluationMetricsInfo/useAnnotationEvaluationMetricsInfo', () => ({
+    usePostHog: () => ({ trackEvent: trackEventMock }),
     useAnnotationEvaluationMetricsInfo: () => metricsInfo
 }));
 
@@ -75,17 +73,38 @@ describe('useAnnotationOrderBy', () => {
         dispose();
     });
 
+    it('drops the selection when the browsed annotation source changes', () => {
+        let collectionId = $state(COLLECTION_ID);
+        const { handleFieldClick, selectedIndex, dispose } = useAnnotationOrderBy({
+            collectionId: () => collectionId
+        });
+        // Subscribed, like a rendered control: a stale selection would not be recomputed on read.
+        let index = -1;
+        const unsubscribe = selectedIndex.subscribe((value) => (index = value));
+        flushSync();
+        handleFieldClick(mapRunsToAnnotationSortFields([RUN])[0]);
+        expect(index).toBe(0);
+
+        collectionId = 'source-2';
+        flushSync();
+
+        expect(index).toBe(-1);
+        unsubscribe();
+        dispose();
+    });
+
     it('emits the same analytics event as image sorting', () => {
         const { handleFieldClick, dispose } = useAnnotationOrderBy({
             collectionId: () => COLLECTION_ID
         });
+        flushSync();
 
         handleFieldClick(mapRunsToAnnotationSortFields([RUN])[0]);
 
         expect(trackEventMock).toHaveBeenCalledWith('grid_sorted', {
             collection_id: COLLECTION_ID,
             sort_source: 'annotation_evaluation_metric',
-            field_name: 'iou',
+            field_name: 'detection eval.iou',
             direction: 'asc'
         });
         dispose();

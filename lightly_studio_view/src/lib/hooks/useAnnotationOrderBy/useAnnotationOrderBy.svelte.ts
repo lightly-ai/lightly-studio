@@ -1,14 +1,17 @@
-import { derived, writable, type Readable } from 'svelte/store';
+import { derived, get, writable, type Readable, type Writable } from 'svelte/store';
 import {
     SortDirection,
     type AnnotationEvaluationMetricSortExpr,
     type EvaluationRunAnnotationMetricsInfoView
 } from '$lib/api/lightly_studio_local';
-import { useAnnotationSortBy, usePostHog } from '$lib/hooks';
-import { useAnnotationEvaluationMetricsInfo } from '$lib/hooks/useAnnotationEvaluationMetricsInfo/useAnnotationEvaluationMetricsInfo';
-import { formatEvaluationMetricLabel } from '$lib/hooks/useSortFields/useSortFields.svelte';
+import {
+    formatEvaluationMetricLabel,
+    useAnnotationEvaluationMetricsInfo,
+    useAnnotationSortBy,
+    usePostHog
+} from '$lib/hooks';
 
-export interface AnnotationSortField {
+interface AnnotationSortField {
     source: 'annotation_evaluation_metric';
     evaluation_run_id: string;
     metric_name: string;
@@ -45,50 +48,62 @@ export function mapRunsToAnnotationSortFields(
     );
 }
 
-export function useAnnotationOrderBy({
-    collectionId
-}: UseAnnotationOrderByParams): UseAnnotationOrderByReturn {
-    const { sortByFor, getSortBy, setSortBy } = useAnnotationSortBy();
-    const { trackEvent } = usePostHog();
+interface QueryBridge {
+    allSortFields: Readable<AnnotationSortField[]>;
+    currentCollectionId: Readable<string>;
+    dispose: () => void;
+}
+
+/**
+ * Bridges the runes-based query result and the collection getter into stores. In TanStack v6,
+ * query results are reactive objects, not Svelte stores, and the getter is only tracked inside
+ * an effect. `$effect.root` is used instead of `$effect` because this hook may be called outside
+ * a component context.
+ */
+function bridgeToStores(collectionId: () => string): QueryBridge {
+    const allSortFields: Writable<AnnotationSortField[]> = writable([]);
+    const currentCollectionId: Writable<string> = writable(collectionId());
     const metricsInfo = useAnnotationEvaluationMetricsInfo({ collectionId });
 
-    // In TanStack v6, query results are reactive objects, not Svelte stores. Bridge to a
-    // writable store via $effect.root so it integrates with derived(). $effect.root is used
-    // instead of $effect because this hook may be called outside a component context.
-    const allSortFields = writable<AnnotationSortField[]>([]);
-    const disposeEffect = $effect.root(() => {
+    const dispose = $effect.root(() => {
+        $effect(() => {
+            currentCollectionId.set(collectionId());
+        });
         $effect(() => {
             void metricsInfo.dataUpdatedAt;
             allSortFields.set(mapRunsToAnnotationSortFields(metricsInfo.data ?? []));
         });
     });
 
-    const current = derived(sortByFor, ($sortByFor) => $sortByFor(collectionId()));
+    return { allSortFields, currentCollectionId, dispose };
+}
 
-    const selectedDirection = derived(
-        current,
-        ($current) => $current?.direction ?? SortDirection.ASC
-    );
+interface SortActions {
+    handleFieldClick: (field: AnnotationSortField) => void;
+    toggleDirection: () => void;
+}
 
-    const selectedIndex = derived([current, allSortFields], ([$current, $allSortFields]) => {
-        if (!$current) return -1;
-        return $allSortFields.findIndex((field) => isSameField(field, $current));
-    });
+function createSortActions(
+    collectionId: () => string,
+    allSortFields: Readable<AnnotationSortField[]>
+): SortActions {
+    const { getSortBy, setSortBy } = useAnnotationSortBy();
+    const { trackEvent } = usePostHog();
 
-    function applySort(expr: AnnotationEvaluationMetricSortExpr) {
+    function applySort(expr: AnnotationEvaluationMetricSortExpr): void {
         setSortBy(collectionId(), expr);
         trackEvent('grid_sorted', {
             collection_id: collectionId(),
             sort_source: 'annotation_evaluation_metric',
-            field_name: expr.metric_name,
+            field_name: analyticsFieldName(get(allSortFields), expr),
             direction: expr.direction
         });
     }
 
-    function handleFieldClick(field: AnnotationSortField) {
+    function handleFieldClick(field: AnnotationSortField): void {
         const existing = getSortBy(collectionId());
         if (existing && isSameField(field, existing)) {
-            clearSort();
+            setSortBy(collectionId(), null);
             return;
         }
         applySort({
@@ -99,11 +114,7 @@ export function useAnnotationOrderBy({
         });
     }
 
-    function clearSort() {
-        setSortBy(collectionId(), null);
-    }
-
-    function toggleDirection() {
+    function toggleDirection(): void {
         const existing = getSortBy(collectionId());
         if (!existing) return;
         applySort({
@@ -113,13 +124,35 @@ export function useAnnotationOrderBy({
         });
     }
 
+    return { handleFieldClick, toggleDirection };
+}
+
+export function useAnnotationOrderBy({
+    collectionId
+}: UseAnnotationOrderByParams): UseAnnotationOrderByReturn {
+    const { sortByFor } = useAnnotationSortBy();
+    const { allSortFields, currentCollectionId, dispose } = bridgeToStores(collectionId);
+
+    const current = derived(
+        [sortByFor, currentCollectionId],
+        ([$sortByFor, $currentCollectionId]) => $sortByFor($currentCollectionId)
+    );
+
+    const selectedDirection = derived(
+        current,
+        ($current) => $current?.direction ?? SortDirection.ASC
+    );
+
+    const selectedIndex = derived([current, allSortFields], ([$current, $allSortFields]) =>
+        $current ? $allSortFields.findIndex((field) => isSameField(field, $current)) : -1
+    );
+
     return {
         allSortFields,
         selectedDirection,
         selectedIndex,
-        handleFieldClick,
-        toggleDirection,
-        dispose: disposeEffect
+        ...createSortActions(collectionId, allSortFields),
+        dispose
     };
 }
 
@@ -130,4 +163,13 @@ function isSameField(
     return (
         field.evaluation_run_id === expr.evaluation_run_id && field.metric_name === expr.metric_name
     );
+}
+
+/** Names the run alongside the metric, so analytics can tell two runs of one metric apart. */
+function analyticsFieldName(
+    fields: AnnotationSortField[],
+    expr: AnnotationEvaluationMetricSortExpr
+): string {
+    const field = fields.find((candidate) => isSameField(candidate, expr));
+    return field?.label ?? formatEvaluationMetricLabel(expr.evaluation_run_id, expr.metric_name);
 }
