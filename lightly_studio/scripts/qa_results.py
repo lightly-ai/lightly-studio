@@ -128,13 +128,16 @@ def result_object_name(
     triplet: qa_pull.LocalTriplet | qa_pull.RemoteTriplet,
     results_prefix: str,
 ) -> str:
-    """Return ``automated_qa_results/{stem}_results.json`` safely."""
+    """Return ``automated_qa_results/{stem_name}_results.json`` safely.
+
+    The result is written flat under the prefix using only the delivery's file name,
+    not its source subfolders.
+    """
     normalized_prefix = _normalize_results_prefix(results_prefix=results_prefix)
     stem = PurePosixPath(triplet.stem)
     if stem.is_absolute() or ".." in stem.parts:
         raise ValueError(f"Invalid delivery stem for result object: '{triplet.stem}'.")
-    result_path = stem.parent / f"{stem.name}_results.json"
-    return f"{normalized_prefix}/{result_path}"
+    return f"{normalized_prefix}/{stem.name}_results.json"
 
 
 def _normalize_results_prefix(results_prefix: str) -> str:
