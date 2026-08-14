@@ -1,195 +1,505 @@
-/* Keyboard shortcut hint inside the search input */
-.md-search__form {
-    position: relative;
+/* ==========================================================================
+   LightlyStudio docs theme
+
+   Two schemes over Material for MkDocs:
+     default — "Paper", warm neutrals on white, indigo accent
+     slate   — "Console", near-black panels, lime accent
+
+   Structural rules, borrowed from docs sites that read as calm rather than
+   busy: navigation lives in one tall left sidebar; the accent color is for
+   links and nothing else (the active nav item is a neutral pill); columns are
+   separated by whitespace, not rules; chrome is one row, not two.
+
+   Section order: tokens, Material variable mapping, then components in the
+   order they appear on a page (header, sidebar, article, TOC, footer).
+   ========================================================================== */
+
+/* ==========================================================================
+   1. Design tokens
+   ========================================================================== */
+
+:root {
+  --ls-font-display: "Space Grotesk", "IBM Plex Sans", system-ui, sans-serif;
+  --ls-font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --ls-radius-sm: 6px;
+  --ls-radius: 8px;
+  --ls-radius-lg: 14px;
+
+  --ls-sidebar-width: 14.5rem;
+  --ls-toc-width: 11rem;
+
+  /* Code panels are the brand navy in both schemes, so they do not flip. */
+  --ls-code-surface: #07222c;
+  --ls-code-line: #123240;
+  --ls-code-ink: #cfe3eb;
+  --ls-code-label: #7f949e;
 }
 
+[data-md-color-scheme="default"] {
+  --ls-surface: #ffffff;
+  --ls-surface-sub: #fafafc;
+  --ls-surface-mut: #efeff4;
+
+  --ls-line: #e6e6ec;
+  --ls-line-hair: #edeff2;
+  --ls-line-strong: #d6d6e0;
+
+  --ls-ink: #07222c;
+  --ls-ink-soft: #123240;
+  --ls-body: #4c616b;
+  --ls-muted: #5e727c;
+  --ls-faint: #7f949e;
+
+  --ls-accent: #0e8fce;
+  --ls-accent-hover: #07222c;
+  --ls-accent-solid: #1aa3e4;
+  --ls-accent-surface: #f2f9fd;
+  --ls-accent-line: #cfe3eb;
+  --ls-on-accent: #ffffff;
+
+  --ls-warn: #a8681a;
+  --ls-warn-surface: #fdf8ee;
+  --ls-warn-line: #efe1c6;
+  --ls-danger: #e4573d;
+  --ls-danger-surface: #fdf3f1;
+  --ls-danger-line: #f5d9d3;
+}
+
+[data-md-color-scheme="slate"] {
+  --ls-surface: #051a22;
+  --ls-surface-sub: #07222c;
+  --ls-surface-mut: #123240;
+
+  --ls-line: #123240;
+  --ls-line-hair: #0d2b36;
+  --ls-line-strong: #33505c;
+
+  --ls-ink: #f7f8fb;
+  --ls-ink-soft: #cfe3eb;
+  --ls-body: #93a7b0;
+  --ls-muted: #7f949e;
+  --ls-faint: #5e727c;
+
+  --ls-accent: #1aa3e4;
+  --ls-accent-hover: #7fd1f2;
+  --ls-accent-solid: #1aa3e4;
+  --ls-accent-surface: #06333f;
+  --ls-accent-line: #123240;
+  --ls-on-accent: #ffffff;
+
+  --ls-warn: #e0a83a;
+  --ls-warn-surface: #1f1a0e;
+  --ls-warn-line: #3b3018;
+  --ls-danger: #e4573d;
+  --ls-danger-surface: #2a1310;
+  --ls-danger-line: #5a1414;
+}
+
+/* ==========================================================================
+   2. Material variable mapping
+   ========================================================================== */
+
+/* Qualified with `body` so these outrank Material's own scheme blocks, which
+   use a bare attribute selector. `--md-typeset-a-color` in particular is
+   redefined per scheme and otherwise wins. */
+body[data-md-color-scheme="default"],
+body[data-md-color-scheme="slate"] {
+  --md-default-bg-color: var(--ls-surface);
+  --md-default-bg-color--light: var(--ls-surface-sub);
+  --md-default-bg-color--lighter: var(--ls-surface-mut);
+  --md-default-fg-color: var(--ls-ink);
+  --md-default-fg-color--light: var(--ls-body);
+  --md-default-fg-color--lighter: var(--ls-muted);
+  --md-default-fg-color--lightest: var(--ls-line);
+
+  --md-typeset-color: var(--ls-body);
+  --md-typeset-a-color: var(--ls-accent);
+  --md-typeset-mark-color: var(--ls-accent-surface);
+  --md-typeset-table-color: var(--ls-line);
+  --md-typeset-del-color: var(--ls-danger-surface);
+  --md-typeset-ins-color: var(--ls-accent-surface);
+
+  /* The header reads as page chrome, not as a brand slab. */
+  --md-primary-fg-color: var(--ls-surface);
+  --md-primary-fg-color--light: var(--ls-surface-sub);
+  --md-primary-fg-color--dark: var(--ls-surface-mut);
+  --md-primary-bg-color: var(--ls-ink);
+  --md-primary-bg-color--light: var(--ls-muted);
+
+  --md-accent-fg-color: var(--ls-accent);
+  --md-accent-fg-color--transparent: var(--ls-accent-surface);
+  --md-accent-bg-color: var(--ls-on-accent);
+
+  /* Inline code only. Fenced blocks are restyled dark further down. */
+  --md-code-bg-color: var(--ls-surface-mut);
+  --md-code-fg-color: var(--ls-ink);
+
+  --md-footer-bg-color: var(--ls-surface);
+  --md-footer-bg-color--dark: var(--ls-surface-sub);
+  --md-footer-fg-color: var(--ls-ink);
+  --md-footer-fg-color--light: var(--ls-muted);
+  --md-footer-fg-color--lighter: var(--ls-faint);
+
+  --md-shadow-z1: none;
+  --md-shadow-z2: none;
+  --md-shadow-z3: none;
+}
+
+/* Syntax colors for the navy code panel, which both schemes use. Built from
+   the brand blues so the panel reads as one family rather than a rainbow. */
+body[data-md-color-scheme="default"],
+body[data-md-color-scheme="slate"] {
+  --md-code-hl-color: rgba(26, 163, 228, 0.18);
+  --md-code-hl-number-color: #f0b47a;
+  --md-code-hl-special-color: #7fd1f2;
+  --md-code-hl-function-color: #7fd1f2;
+  --md-code-hl-constant-color: #9ad9ea;
+  --md-code-hl-keyword-color: #3ad9c6;
+  --md-code-hl-string-color: #a8d8a0;
+  --md-code-hl-name-color: #cfe3eb;
+  --md-code-hl-operator-color: #93a7b0;
+  --md-code-hl-punctuation-color: #93a7b0;
+  --md-code-hl-comment-color: #7f949e;
+  --md-code-hl-generic-color: #93a7b0;
+  --md-code-hl-variable-color: #cfe3eb;
+}
+
+/* ==========================================================================
+   3. Base and layout
+   ========================================================================== */
+
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The landing design centres on a 1240px column. Docs add a sidebar and a
+   TOC, so the shell is a little wider and the article lands near that width. */
+.md-grid {
+  max-width: 66rem;
+}
+
+@media screen and (min-width: 76.25em) {
+  .md-sidebar--primary {
+    width: var(--ls-sidebar-width);
+  }
+
+  .md-sidebar--secondary {
+    width: var(--ls-toc-width);
+  }
+
+  .md-content {
+    min-width: 0;
+  }
+
+  .md-content__inner {
+    margin-inline: 1.6rem;
+    padding-top: 0.6rem;
+  }
+}
+
+/* ==========================================================================
+   4. Header
+
+   One row: mark, wordmark, search, scheme toggle, repo. No tab strip.
+   ========================================================================== */
+
+/* Translucent and blurred over the content, as on the landing page. */
+.md-header {
+  backdrop-filter: blur(14px);
+  background-color: color-mix(in srgb, var(--ls-surface) 86%, transparent);
+  border-bottom: 1px solid var(--ls-line-hair);
+  box-shadow: none;
+  color: var(--ls-ink);
+  height: 3.4rem;
+}
+
+.md-header__inner {
+  height: 3.4rem;
+  padding-inline: 1rem;
+}
+
+.md-header__button {
+  color: var(--ls-body);
+  opacity: 1;
+}
+
+.md-header__button:hover {
+  color: var(--ls-ink);
+  opacity: 1;
+}
+
+.md-header__button.md-logo {
+  margin: 0 0.1rem 0 0;
+  padding: 0.35rem;
+}
+
+.md-header__button.md-logo :is(img, svg) {
+  height: 1.1rem;
+  width: auto;
+}
+
+/* Wordmark. The logo is the mark alone, so the site name carries the name. */
+.md-header__title {
+  align-items: center;
+  display: flex;
+  font-family: var(--ls-font-display);
+  font-size: 0.83rem;
+  font-weight: 600;
+  height: 3.4rem;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+  margin-left: 0;
+  visibility: visible;
+}
+
+/* Material stacks the two topics absolutely to cross-fade them on scroll.
+   Only the brand is kept, so it goes back in flow and centres with the mark
+   instead of pinning to the top of a taller header. The `__ellipsis` wrapper
+   sits between the two, so it has to centre as well. */
+.md-header__title .md-header__ellipsis {
+  align-items: center;
+  display: flex;
+  height: 100%;
+}
+
+.md-header__title .md-header__topic {
+  color: var(--ls-ink);
+  position: relative;
+}
+
+.md-header__topic + .md-header__topic {
+  display: none;
+}
+
+/* Set by custom.js. The landing wordmark is two-tone: the product name in
+   ink, the qualifier in body grey. */
+.md-header__title .ls-wordmark-accent {
+  color: var(--ls-body);
+  font-weight: 500;
+}
+
+/* -- Search ---------------------------------------------------------------- */
+
+.md-search__form {
+  background-color: var(--ls-surface-mut);
+  border: 1px solid transparent;
+  border-radius: var(--ls-radius);
+  box-shadow: none;
+  height: 1.65rem;
+  position: relative;
+}
+
+.md-search__form:hover {
+  background-color: var(--ls-surface-mut);
+  border-color: var(--ls-line);
+}
+
+.md-search__input {
+  color: var(--ls-ink);
+  font-size: 0.68rem;
+}
+
+.md-search__input::placeholder {
+  color: var(--ls-faint);
+}
+
+.md-search__icon {
+  color: var(--ls-faint);
+}
+
+.md-search__output {
+  border: 1px solid var(--ls-line);
+  border-radius: var(--ls-radius);
+  box-shadow: none;
+}
+
+.md-search-result__meta {
+  background-color: var(--ls-surface-sub);
+  color: var(--ls-muted);
+}
+
+/* Keyboard shortcut hint inside the search input */
 .search-shortcut-hint {
-    position: absolute;
-    right: 0.6rem;
-    top: 50%;
-    transform: translateY(-50%);
-    display: flex;
-    align-items: center;
-    pointer-events: none;
-    opacity: 0.55;
-    transition: opacity 0.2s;
+  align-items: center;
+  display: flex;
+  opacity: 1;
+  pointer-events: none;
+  position: absolute;
+  right: 0.4rem;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: opacity 0.2s;
 }
 
 .search-shortcut-hint kbd {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.1rem 0.35rem;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    border-radius: 0.25rem;
-    font-family: inherit;
-    font-size: 0.6rem;
-    line-height: 1.4;
-    color: rgba(255, 255, 255, 0.8);
-    background: rgba(255, 255, 255, 0.1);
-    box-shadow: none;
+  align-items: center;
+  background: var(--ls-surface);
+  border: 1px solid var(--ls-line);
+  border-radius: var(--ls-radius-sm);
+  box-shadow: none;
+  color: var(--ls-faint);
+  display: inline-flex;
+  font-family: var(--ls-font-mono);
+  font-size: 0.5rem;
+  font-weight: 500;
+  justify-content: center;
+  line-height: 1.4;
+  padding: 0.05rem 0.25rem;
 }
 
 /* Hide hint while search overlay is open */
 input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
-    display: none;
+  display: none;
 }
 
-/* Card styling with rounded corners */
-.md-typeset .grid.cards > ol > li,
-.md-typeset .grid.cards > ul > li {
-    border-radius: 8px; /* Slightly rounded corners */
-    transition: all 0.2s ease-in-out; /* Smooth hover effect */
-    background-color: #fafafa; /* Light background for cards */
+/* -- Repository link ------------------------------------------------------- */
+
+.md-header__source {
+  margin-left: 0.6rem;
 }
 
-/* Increase spacing between cards */
-.md-typeset .grid.cards {
-    gap: 1.25rem !important; /* More horizontal and vertical spacing */
+.md-source {
+  color: var(--ls-body);
+  font-size: 0.6rem;
 }
 
-/* Small card grid: up to 3 columns, responsive */
-.md-typeset .grid.cards.small {
-    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)) !important;
-    gap: 0.75rem !important;
+.md-source:hover {
+  color: var(--ls-ink);
+  opacity: 1;
 }
 
-.md-typeset .grid.cards.small > ol > li,
-.md-typeset .grid.cards.small > ul > li {
-    padding: 0.5rem !important;
-    font-size: 0.75rem;
+.md-source__repository {
+  font-weight: 500;
 }
 
-.md-typeset .grid.cards.small > ul > li > strong {
-    font-size: 0.7rem;
+.md-source__fact {
+  color: var(--ls-faint);
+  font-size: 0.5rem;
+  opacity: 1;
 }
 
-/* Wide card grid: up to 2 columns; a lone card keeps a reserved empty column
-   instead of stretching to fill the full row width */
-.md-typeset .grid.cards.wide {
-    grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)) !important;
+/* ==========================================================================
+   5. Left sidebar
+
+   Group captions read at body size in the ink color; pages sit under them at
+   the same weight as the prose they lead to. The current page is a neutral
+   pill — the accent stays reserved for links.
+   ========================================================================== */
+
+.md-sidebar--primary .md-nav {
+  font-size: 0.7rem;
 }
 
-/* Optional: subtle hover effect for cards */
-.md-typeset .grid.cards > ol > li:hover,
-.md-typeset .grid.cards > ul > li:hover {
-    transform: translateY(-2px); /* Slight lift on hover */
-    box-shadow: 0 4px 12px rgba(9, 28, 30, 0.15); /* Subtle shadow */
+/* The full nav overflows on most screens; the scrollbar should not compete
+   with it. */
+.md-sidebar__scrollwrap {
+  scrollbar-color: var(--ls-line) transparent;
+  scrollbar-width: thin;
 }
 
-/* Button styling with rounded corners */
-.md-button {
-    border-radius: 8px !important; /* Rounded corners for buttons */
-    transition: all 0.2s ease-in-out !important; /* Smooth transitions */
-    padding: 0.25rem 0.8rem !important; /* Slimmer buttons */
-    line-height: 1.4 !important; /* Decrease line height for thinner appearance */
-    border-width: 0.0625rem !important; /* Thinner border */
-}
-
-/* Enhanced button hover effects */
-.md-button:hover {
-    transform: translateY(-1px) !important; /* Slight lift on hover */
-    box-shadow: 0 2px 8px rgba(9, 28, 30, 0.2) !important; /* Subtle shadow */
-    background-color: #091c1e !important; /* Use header dark color on hover */
-    border-color: #091c1e !important; /* Match border color */
-}
-
-/* Custom menu bar color */
-:root {
-    --md-primary-fg-color: #091c1e;
-    --md-primary-fg-color--light: #0f2c30;
-    --md-primary-fg-color--dark: #051315;
-    --md-accent-fg-color: #13a6e6;
-    --md-accent-fg-color--transparent: #13a6e61a;
-    --lightly-nav-active-color: #0a6f99;
-}
-
-/* Override Material theme primary colors */
-[data-md-color-scheme="default"] {
-    --md-primary-fg-color: #091c1e;
-    --md-primary-fg-color--light: #0f2c30;
-    --md-primary-fg-color--dark: #051315;
-    --md-accent-fg-color: #13a6e6;
-    --md-accent-fg-color--transparent: #13a6e61a;
-}
-
-[data-md-color-scheme="slate"] {
-    --md-primary-fg-color: #091c1e;
-    --md-primary-fg-color--light: #0f2c30;
-    --md-primary-fg-color--dark: #051315;
-    --md-accent-fg-color: #13a6e6;
-    --md-accent-fg-color--transparent: #13a6e61a;
-}
-
-/* Custom logo styling - increased size */
-.md-header__button.md-logo {
-    margin: 0.2rem;
-}
-
-.md-header__button.md-logo img,
-.md-header__button.md-logo svg {
-    height: 1.8rem; /* Reduced size */
-    width: auto;
-}
-
-/* Hide site name next to logo (logo already contains the name) */
-.md-header__title {
-    visibility: hidden;
-}
-
-/* Hide Material for MkDocs footer */
-.md-footer-meta {
-    display: none !important;
-}
-
-/* Highlight the current page in the left and right navigation */
-.md-nav__link--active {
-  position: relative;
-}
-
-/* Set highlight color for the current page in the left navigation */
-.md-sidebar--primary .md-nav__link--active {
-  color: var(--lightly-nav-active-color);
-}
-
-.md-nav__link--active::before {
-  background-color: currentcolor;
-  border-radius: 999px;
-  bottom: 0.15em;
-  content: "";
-  left: -0.5rem;
-  position: absolute;
-  top: 0.15em;
-  width: 0.1rem;
-}
-
-/* Underline section headings in the left navigation */
-.md-sidebar--primary .md-nav__title {
-  color: var(--md-default-fg-color);
-}
-
-.md-sidebar--primary .md-nav:not([data-md-level="0"]) > .md-nav__list > .md-nav__item--nested > .md-nav__link,
-.md-sidebar--primary .md-nav[data-md-level="0"] > .md-nav__list > .md-nav__item--nested > .md-nav__link,
-.md-sidebar--primary .md-nav[data-md-level="0"] > .md-nav__list > .md-nav__item--nested > .md-nav__container,
-.md-sidebar--primary .md-nav__item--section > .md-nav__container {
-  border-bottom: 0.05rem solid var(--md-default-fg-color--lightest);
-  color: var(--md-default-fg-color);
-  font-size: 0.75rem;
-  margin-top: 0;
-  padding-bottom: 0.2rem;
-}
-
+/* The site name already sits in the header; the drawer still needs it. */
 @media screen and (min-width: 76.25em) {
-  .md-sidebar--primary .md-nav[data-md-level="0"] > .md-nav__list > .md-nav__item--nested > .md-nav__link {
+  .md-sidebar--primary .md-nav--primary > .md-nav__title {
     display: none;
   }
 }
 
+.md-sidebar--primary .md-nav__list {
+  padding-left: 0;
+}
+
+.md-sidebar--primary .md-nav__item {
+  padding: 0;
+}
+
+.md-sidebar--primary .md-nav__link {
+  border-radius: var(--ls-radius);
+  color: var(--ls-body);
+  font-weight: 500;
+  gap: 0.3rem;
+  margin-top: 0;
+  padding: 0.32rem 0.5rem;
+  transition: background-color 0.12s, color 0.12s;
+}
+
+.md-sidebar--primary .md-nav__link:hover {
+  background-color: var(--ls-surface-mut);
+  color: var(--ls-ink);
+}
+
+.md-sidebar--primary .md-nav__link--active,
+.md-sidebar--primary .md-nav__link--active:hover {
+  background-color: var(--ls-surface-mut);
+  color: var(--ls-ink);
+  font-weight: 600;
+}
+
+/* Material's default active marker; the pill replaces it. */
+.md-sidebar--primary .md-nav__link--active::before {
+  display: none;
+}
+
+/* -- Group captions -------------------------------------------------------- */
+
+/* Level 1 ("Concepts & Tools", "Python API"): the primary grouping. */
+.md-sidebar--primary
+  .md-nav[data-md-level="0"]
+  > .md-nav__list
+  > .md-nav__item--section
+  > :is(.md-nav__link, .md-nav__container) {
+  background-color: transparent;
+  color: var(--ls-ink);
+  cursor: default;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  margin: 0;
+  padding: 0 0.5rem 0.25rem;
+}
+
+/* Level 2 ("Concepts", "Tools", "More"): collapsible, so it keeps the item
+   shape and reads as a quieter sub-caption rather than a page. */
+.md-sidebar--primary
+  .md-nav[data-md-level="1"]
+  > .md-nav__list
+  > .md-nav__item--nested
+  > :is(.md-nav__link, .md-nav__container) {
+  color: var(--ls-muted);
+  font-size: 0.66rem;
+  font-weight: 600;
+}
+
+/* A section caption is a label, not a destination; nothing to hover. */
+.md-sidebar--primary .md-nav__item--section > .md-nav__link:hover,
+.md-sidebar--primary .md-nav__item--section > .md-nav__container:hover {
+  background-color: transparent;
+  color: inherit;
+}
+
+/* Air between top-level groups. */
+.md-sidebar--primary
+  .md-nav[data-md-level="0"]
+  > .md-nav__list
+  > .md-nav__item
+  ~ .md-nav__item {
+  margin-top: 1.15rem;
+}
+
+/* Nested pages indent under their caption rather than sitting flush. */
+.md-sidebar--primary .md-nav[data-md-level="2"] .md-nav__link {
+  padding-left: 0.85rem;
+}
+
 @media screen and (max-width: 76.234375em) {
-  /* Once a top-level tab is opened, show its section level (and the pages
-     underneath) expanded inline, mirroring the desktop left menu. The tab
-     panels (level 1) still slide in on tap; only the level-2 section panels are
-     flattened from a separate drill-down into a static, always-visible block. */
+  /* Material colors the drawer's current page with the link accent at
+     (0,3,0); the pill is neutral here too. */
+  .md-sidebar--primary .md-nav--primary .md-nav__item--active > .md-nav__link {
+    color: var(--ls-ink);
+  }
+
+  /* In the drawer, a section's pages show inline instead of as a separate
+     slide-in panel, mirroring the desktop sidebar. */
   .md-sidebar--primary .md-nav[data-md-level="2"]:not(.md-nav--secondary) {
     height: auto;
     opacity: 1;
@@ -198,33 +508,402 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
     z-index: auto;
   }
 
-  /* The inline section panels no longer need their slide-in back-button title
-     or the drill-down chevron on the section heading. */
+  /* The inline panels no longer need their slide-in back-button title or the
+     drill-down chevron on the section heading. */
   .md-sidebar--primary .md-nav[data-md-level="2"] > .md-nav__title,
-  .md-sidebar--primary .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item:has(> .md-nav[data-md-level="2"]) > .md-nav__link > .md-nav__icon {
+  .md-sidebar--primary
+    .md-nav[data-md-level="1"]
+    > .md-nav__list
+    > .md-nav__item:has(> .md-nav[data-md-level="2"])
+    > .md-nav__link
+    > .md-nav__icon {
     display: none;
   }
 }
 
-.md-sidebar--primary .md-nav__item--section:has(> .md-nav__container) ~ .md-nav__item--section:has(> .md-nav__container),
-.md-sidebar--primary .md-nav:not([data-md-level="0"]) > .md-nav__list > .md-nav__item--nested ~ .md-nav__item--nested {
-  margin-top: 1.3rem;
+/* ==========================================================================
+   6. Right sidebar (table of contents)
+   ========================================================================== */
+
+@media screen and (min-width: 76.25em) {
+  .md-nav--secondary .md-nav__title {
+    background: transparent;
+    box-shadow: none;
+    color: var(--ls-ink);
+    font-size: 0;
+    font-weight: 600;
+    padding: 0 0 0.4rem 0.6rem;
+  }
+
+  .md-nav--secondary .md-nav__title::after {
+    content: "On this page";
+    font-size: 0.68rem;
+  }
 }
 
-
-/* Bold the active top-level menu item in the header navigation tabs */
-.md-tabs__item--active .md-tabs__link {
-  font-weight: 700;
+.md-nav--secondary .md-nav__list {
+  padding-left: 0;
 }
 
+.md-nav--secondary .md-nav__link {
+  border-radius: 0;
+  color: var(--ls-muted);
+  font-size: 0.66rem;
+  line-height: 1.45;
+  padding: 0.22rem 0 0.22rem 0.6rem;
+}
 
-/* ===== Multi-row tab overrides ===== */
+.md-nav--secondary .md-nav__link:hover {
+  background-color: transparent;
+  color: var(--ls-ink);
+}
+
+.md-nav--secondary .md-nav__link--active,
+.md-nav--secondary .md-nav__link--active:hover {
+  color: var(--ls-ink);
+  font-weight: 600;
+}
+
+.md-nav--secondary .md-nav__link--active::before {
+  display: none;
+}
+
+/* ==========================================================================
+   7. Article
+   ========================================================================== */
+
+.md-typeset {
+  color: var(--ls-body);
+  font-size: 0.8rem;
+  line-height: 1.68;
+}
+
+.md-typeset :is(h1, h2, h3, h4) {
+  color: var(--ls-ink);
+  font-family: var(--ls-font-display);
+}
+
+.md-typeset h1 {
+  font-size: 2.15rem;
+  font-weight: 600;
+  letter-spacing: -0.022em;
+  line-height: 1.12;
+  margin-bottom: 0.9rem;
+}
+
+.md-typeset h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin-top: 2.4rem;
+}
+
+.md-typeset h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.md-typeset h4 {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+/* Reading measure, ~75 characters. */
+.md-typeset :is(p, ul, ol, blockquote) {
+  max-width: 32rem;
+}
+
+/* Anything that is not running prose keeps the full content width: figures,
+   card grids, and lists that wrap a code sample, table or tab set. Without
+   this a fenced block inside a numbered step gets clipped to the measure. */
+.md-typeset p:has(> :is(img, video, iframe)),
+.md-typeset .grid,
+.md-typeset :is(ul, ol):has(:is(pre, table, .highlight, .tabbed-set, .grid, img)) {
+  max-width: none;
+}
+
+.md-typeset a {
+  color: var(--ls-accent);
+  text-decoration: none;
+}
+
+.md-typeset a:hover,
+.md-typeset a:focus {
+  color: var(--ls-accent-hover);
+  text-decoration: underline;
+}
+
+.md-typeset a code {
+  color: inherit;
+}
+
+.md-typeset hr {
+  border-bottom-color: var(--ls-line-hair);
+}
+
+.md-typeset :is(img, video, iframe) {
+  border-radius: var(--ls-radius-lg);
+}
+
+/* -- Breadcrumbs ----------------------------------------------------------- */
+
+.md-path {
+  color: var(--ls-faint);
+  font-size: 0.64rem;
+  margin-bottom: 0.9rem;
+}
+
+.md-path__item a {
+  color: var(--ls-faint);
+}
+
+.md-path__item a:hover {
+  color: var(--ls-ink);
+}
+
+/* -- Code ------------------------------------------------------------------ */
+
+.md-typeset code {
+  border-radius: var(--ls-radius-sm);
+  color: var(--ls-ink-soft);
+  font-size: 0.84em;
+  padding: 0.1em 0.35em;
+}
+
+/* Fenced blocks are the brand navy panel in both schemes, with the label bar
+   and generous padding from the landing page's terminal block. */
+.md-typeset pre > code,
+.md-typeset .highlight :is(pre, code),
+.md-typeset .highlighttable {
+  background-color: var(--ls-code-surface);
+  border: 0;
+  color: var(--ls-code-ink);
+}
+
+/* 8px radius and ~1.5 leading, which is where both FiftyOne's and Label
+   Studio's blocks sit. 1.9 was loose enough to break a snippet into stripes. */
+.md-typeset pre > code {
+  border-radius: var(--ls-radius);
+  font-size: 0.7rem;
+  line-height: 1.55;
+  padding: 1rem 1.1rem;
+}
+
+.md-typeset .highlight {
+  border-radius: var(--ls-radius);
+  overflow: hidden;
+  position: relative;
+}
+
+.md-typeset .highlight > pre {
+  margin: 0;
+}
+
+.md-typeset .highlight span.filename {
+  background-color: var(--ls-code-surface);
+  border-bottom: 1px solid var(--ls-code-line);
+  border-radius: var(--ls-radius) var(--ls-radius) 0 0;
+  color: var(--ls-code-label);
+  font-family: var(--ls-font-mono);
+  font-size: 0.58rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+}
+
+.md-typeset .highlight span.filename + pre > code {
+  border-radius: 0 0 var(--ls-radius) var(--ls-radius);
+}
+
+.md-typeset .highlight [data-linenos]::before {
+  background-color: transparent;
+  box-shadow: none;
+  color: var(--ls-faint);
+}
+
+/* Copy control. Material 9.7 renders this as `nav.md-code__nav` wrapping
+   `button.md-code__button` — not the older `.md-clipboard`. Its icon inherits
+   `--md-code-fg-color`, which is the light-scheme ink and so disappears
+   against the navy panel.
+
+   Tucked flush into the top-right corner as a chip, the way Label Studio
+   does it, rather than floating over the first line of code. */
+.md-typeset .md-code__nav {
+  background-color: rgba(207, 227, 235, 0.14);
+  border-radius: 0 var(--ls-radius) 0 var(--ls-radius-sm);
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  padding: 0.2rem;
+  transition: background-color 0.15s;
+}
+
+.md-typeset .highlight:hover .md-code__nav,
+.md-typeset .md-code__nav:hover {
+  background-color: rgba(207, 227, 235, 0.26);
+}
+
+.md-typeset .md-code__button {
+  color: var(--ls-code-label);
+  transition: color 0.15s;
+}
+
+.md-typeset .md-code__button::after {
+  background-color: currentcolor;
+}
+
+.md-typeset .md-code__button:hover {
+  color: var(--ls-code-ink);
+}
+
+/* -- Admonitions ----------------------------------------------------------- */
+
+.md-typeset :is(.admonition, details) {
+  background-color: var(--ls-adm-surface, var(--ls-surface-sub));
+  border: 1px solid var(--ls-adm-line, var(--ls-line));
+  border-radius: var(--ls-radius);
+  box-shadow: none;
+  font-size: 0.72rem;
+}
+
+/* Label beside the text rather than a title bar above it: a mono, uppercase,
+   accent-colored tag in the first column, the body in the second. */
+/* The label hugs its own text with a fixed gap, as in the mocks. A fixed
+   column width left a dead gutter next to a short tag like "Tip". */
+.md-typeset .admonition {
+  align-items: baseline;
+  column-gap: 0.7rem;
+  display: grid;
+  grid-template-columns: minmax(0, max-content) 1fr;
+  padding: 0.7rem 0.85rem;
+}
+
+.md-typeset .admonition > * {
+  grid-column: 2;
+}
+
+/* Matches the specificity of Material's per-type rules
+   (`.md-typeset .info > .admonition-title`), which set their own background. */
+.md-typeset .admonition > .admonition-title {
+  background-color: transparent;
+  border: 0;
+  color: var(--ls-adm-color, var(--ls-accent));
+  font-family: var(--ls-font-mono);
+  font-size: 0.55rem;
+  font-weight: 500;
+  grid-column: 1;
+  grid-row: 1;
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+  margin: 0;
+  padding: 0.16rem 0 0;
+  text-transform: uppercase;
+}
+
+/* The designs carry no icon; the label alone marks the type. */
+.md-typeset .admonition > .admonition-title::before {
+  display: none;
+}
+
+.md-typeset .admonition > :not(.admonition-title) {
+  margin-block: 0 0.5rem;
+}
+
+.md-typeset .admonition > :last-child {
+  margin-bottom: 0;
+}
+
+/* On a phone the label column leaves too little room for the text, so the
+   label goes back above it. */
+@media screen and (max-width: 44.9375em) {
+  .md-typeset .admonition {
+    grid-template-columns: 1fr;
+  }
+
+  .md-typeset .admonition > * {
+    grid-column: 1;
+  }
+
+  .md-typeset .admonition > .admonition-title {
+    grid-row: auto;
+    margin-bottom: 0.4rem;
+  }
+}
+
+/* `details` keeps a normal disclosure row: the summary is the click target,
+   so it stays full width instead of moving into a label column. */
+.md-typeset details > summary {
+  background-color: transparent;
+  border: 0;
+  color: var(--ls-ink);
+  font-family: var(--ls-font-display);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: -0.008em;
+  margin: 0;
+  padding: 0.6rem 2rem 0.6rem 0.85rem;
+}
+
+.md-typeset details > summary::before {
+  display: none;
+}
+
+.md-typeset details[open] > summary {
+  padding-bottom: 0.2rem;
+}
+
+.md-typeset details > summary::after {
+  color: var(--ls-muted);
+  inset-inline-end: 0.7rem;
+  top: 0.62rem;
+}
+
+.md-typeset :is(.note, .info, .tip, .hint, .important, .abstract, .summary, .todo, .example) {
+  --ls-adm-color: var(--ls-accent);
+  --ls-adm-surface: var(--ls-accent-surface);
+  --ls-adm-line: var(--ls-accent-line);
+}
+
+.md-typeset :is(.warning, .caution, .attention) {
+  --ls-adm-color: var(--ls-warn);
+  --ls-adm-surface: var(--ls-warn-surface);
+  --ls-adm-line: var(--ls-warn-line);
+}
+
+.md-typeset :is(.danger, .failure, .bug, .error) {
+  --ls-adm-color: var(--ls-danger);
+  --ls-adm-surface: var(--ls-danger-surface);
+  --ls-adm-line: var(--ls-danger-line);
+}
+
+/* -- Tables ---------------------------------------------------------------- */
+
+.md-typeset table:not([class]) {
+  border: 1px solid var(--ls-line);
+  border-radius: var(--ls-radius);
+  box-shadow: none;
+  font-size: 0.72rem;
+}
+
+.md-typeset table:not([class]) th {
+  background-color: var(--ls-surface-sub);
+  color: var(--ls-ink);
+  font-weight: 600;
+}
+
+.md-typeset table:not([class]) td {
+  border-top: 1px solid var(--ls-line-hair);
+  vertical-align: top;
+}
+
+/* -- Content tabs ---------------------------------------------------------- */
 
 /* Enable wrapping; remove theme's inset box-shadow and scroll behavior */
 .md-typeset .tabbed-labels {
+  box-shadow: none;
   flex-wrap: wrap;
   overflow: visible;
-  box-shadow: none;
 }
 
 /* Hide the theme's sliding indicator and scroll arrows */
@@ -235,22 +914,29 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
 
 /* Labels: stretch to fill rows, draw separator line */
 .md-typeset .tabbed-set > .tabbed-labels > label {
+  border-bottom: 1px solid var(--ls-line);
+  color: var(--ls-muted);
   flex-grow: 1;
-  text-align: center;
-  border-bottom: 1px solid var(--md-default-fg-color--lightest);
+  font-size: 0.7rem;
+  font-weight: 500;
   position: relative;
+  text-align: center;
   white-space: nowrap;
+}
+
+.md-typeset .tabbed-set > .tabbed-labels > label:hover {
+  color: var(--ls-ink);
 }
 
 /* Active tab: accent-colored underline */
 .md-typeset .tabbed-set > .tabbed-labels > label::after {
-  content: "";
-  position: absolute;
+  background: var(--ls-accent);
   bottom: 0;
-  left: 0;
-  right: 0;
+  content: "";
   height: 2px;
-  background: var(--md-accent-fg-color);
+  left: 0;
+  position: absolute;
+  right: 0;
   transform: scaleX(0);
   transition: transform 0.25s ease;
 }
@@ -269,10 +955,160 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   transform: scaleX(1);
 }
 
-/* Indentation. doc strings */
+.md-typeset .tabbed-set:has(> input:nth-child(1):checked) > .tabbed-labels > label:nth-child(1),
+.md-typeset .tabbed-set:has(> input:nth-child(2):checked) > .tabbed-labels > label:nth-child(2),
+.md-typeset .tabbed-set:has(> input:nth-child(3):checked) > .tabbed-labels > label:nth-child(3),
+.md-typeset .tabbed-set:has(> input:nth-child(4):checked) > .tabbed-labels > label:nth-child(4),
+.md-typeset .tabbed-set:has(> input:nth-child(5):checked) > .tabbed-labels > label:nth-child(5),
+.md-typeset .tabbed-set:has(> input:nth-child(6):checked) > .tabbed-labels > label:nth-child(6),
+.md-typeset .tabbed-set:has(> input:nth-child(7):checked) > .tabbed-labels > label:nth-child(7),
+.md-typeset .tabbed-set:has(> input:nth-child(8):checked) > .tabbed-labels > label:nth-child(8),
+.md-typeset .tabbed-set:has(> input:nth-child(9):checked) > .tabbed-labels > label:nth-child(9),
+.md-typeset .tabbed-set:has(> input:nth-child(10):checked) > .tabbed-labels > label:nth-child(10) {
+  color: var(--ls-ink);
+}
+
+/* -- Cards and buttons ----------------------------------------------------- */
+
+.md-typeset .grid.cards > :is(ol, ul) > li {
+  background-color: var(--ls-surface);
+  border: 1px solid var(--ls-line);
+  border-radius: var(--ls-radius);
+  box-shadow: none;
+  transition: border-color 0.15s;
+}
+
+.md-typeset .grid.cards > :is(ol, ul) > li:hover {
+  border-color: var(--ls-ink);
+  box-shadow: none;
+  transform: none;
+}
+
+.md-typeset .grid.cards {
+  gap: 1rem !important;
+}
+
+/* Small card grid: up to 3 columns, responsive */
+.md-typeset .grid.cards.small {
+  gap: 0.75rem !important;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)) !important;
+}
+
+.md-typeset .grid.cards.small > :is(ol, ul) > li {
+  font-size: 0.7rem;
+  padding: 0.5rem !important;
+}
+
+.md-typeset .grid.cards.small > ul > li > strong {
+  font-family: var(--ls-font-display);
+  font-size: 0.72rem;
+  letter-spacing: -0.01em;
+}
+
+/* Wide card grid: up to 2 columns; a lone card keeps a reserved empty column
+   instead of stretching to fill the full row width */
+.md-typeset .grid.cards.wide {
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)) !important;
+}
+
+.md-typeset .md-button {
+  border: 1px solid var(--ls-line);
+  border-radius: var(--ls-radius);
+  color: var(--ls-ink);
+  font-weight: 500;
+  line-height: 1.5;
+  padding: 0.4rem 0.9rem;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.md-typeset .md-button:hover {
+  background-color: var(--ls-surface-mut);
+  border-color: var(--ls-ink);
+  color: var(--ls-ink);
+}
+
+.md-typeset .md-button--primary {
+  background-color: var(--ls-ink);
+  border-color: var(--ls-ink);
+  color: var(--ls-surface);
+}
+
+.md-typeset .md-button--primary:hover {
+  background-color: var(--ls-accent);
+  border-color: var(--ls-accent);
+  color: var(--ls-on-accent);
+}
+
+/* ==========================================================================
+   8. Footer
+   ========================================================================== */
+
+.md-footer {
+  background-color: var(--ls-surface);
+  border-top: 1px solid var(--ls-line-hair);
+}
+
+.md-footer__inner {
+  gap: 0.6rem;
+  margin: 1.6rem auto;
+  opacity: 1;
+  padding: 0 0.8rem;
+}
+
+.md-footer__link {
+  border: 1px solid var(--ls-line);
+  border-radius: var(--ls-radius);
+  flex: none;
+  margin: 0;
+  opacity: 1;
+  padding: 0.7rem 0.9rem;
+  transition: border-color 0.15s;
+  width: calc(50% - 0.3rem);
+}
+
+.md-footer__link:hover {
+  border-color: var(--ls-ink);
+  opacity: 1;
+}
+
+.md-footer__direction {
+  color: var(--ls-faint);
+  font-size: 0.6rem;
+  opacity: 1;
+}
+
+.md-footer__title {
+  font-size: 0.76rem;
+  line-height: 1.5;
+  margin: 0;
+  padding: 0;
+}
+
+.md-footer__title .md-ellipsis {
+  color: var(--ls-ink);
+  font-family: var(--ls-font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* The prev/next cards carry the direction already. */
+.md-footer__button {
+  display: none;
+}
+
+/* Hide Material for MkDocs footer */
+.md-footer-meta {
+  display: none !important;
+}
+
+/* ==========================================================================
+   9. Python API reference (mkdocstrings)
+   ========================================================================== */
+
+/* Indentation, doc strings */
 div.doc-contents:not(.first) {
-  padding-left: 50px;
-  border-left: .15rem solid var(--md-typeset-table-color);
+  border-left: 1px solid var(--ls-line);
+  padding-left: 1.2rem;
 }
 
 /* Hide mkdocstrings module badges */
@@ -282,46 +1118,16 @@ code.doc-symbol-module {
 
 /* Smaller docstring section labels (Parameters, Returns, etc.) */
 .doc-contents .doc-section-title {
-  font-size: 0.75rem;
-  font-weight: 500;
+  color: var(--ls-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
   letter-spacing: normal;
   text-transform: none;
-  color: inherit;
 }
 
 /* Make headings use python case instead of allcaps */
 .doc-contents .doc-heading {
   text-transform: none;
-}
-
-/* Make links visually distinguishable with a blue tint - only in main content */
-.md-content .md-typeset > p a,
-.md-content .md-typeset > ul a,
-.md-content .md-typeset > ol a,
-.md-content .md-typeset > blockquote a,
-.md-content .md-typeset details a,
-.md-content .md-typeset .admonition a {
-  color: #13a6e6;
-}
-
-.md-content .md-typeset a code {
-  color: inherit;
-}
-
-.md-content .md-typeset > p a:hover,
-.md-content .md-typeset > ul a:hover,
-.md-content .md-typeset > ol a:hover,
-.md-content .md-typeset > blockquote a:hover,
-.md-content .md-typeset details a:hover,
-.md-content .md-typeset .admonition a:hover {
-  color: #0d8abf;
-}
-
-/* Rounded corners for images and videos in the main docs content */
-.md-content .md-typeset img,
-.md-content .md-typeset video,
-.md-content .md-typeset iframe {
-  border-radius: 8px;
 }
 
 /* Inline status badges rendered inside a docstring (see the API reference).
@@ -334,40 +1140,41 @@ code.doc-symbol-module {
 /* inline-flex + align-items: center centers the icon and the label inside the
    pill. */
 .md-typeset .doc-badge {
-  display: inline-flex;
   align-items: center;
-  gap: 0.28em;
-  padding: 0.2rem 0.45rem;
   border-radius: 999px;
+  display: inline-flex;
+  font-family: var(--ls-font-mono);
   font-size: 0.5rem;
-  font-weight: 700;
+  font-weight: 600;
+  gap: 0.28em;
   letter-spacing: 0.05em;
-  text-transform: uppercase;
   line-height: 1;
+  padding: 0.2rem 0.45rem;
+  text-transform: uppercase;
 }
 
 /* Pin the badge to the left of its member heading so it sits before the
    class/method name. The badge is anchored to its own `.doc-object` wrapper
    (see below), so class and method badges each align to their own heading. */
 .md-typeset .doc-badge--beta {
+  background-color: var(--ls-accent);
+  color: var(--ls-on-accent);
+  left: 0;
   position: absolute;
   top: 0.35rem;
-  left: 0;
-  color: #fff;
-  background-color: var(--md-accent-fg-color);
 }
 
 .md-typeset .doc-badge--beta::before {
-  content: "";
-  width: 0.9em;
-  height: 0.9em;
   background-color: currentcolor;
-  -webkit-mask-image: var(--doc-badge-icon--beta);
+  content: "";
+  height: 0.9em;
   mask-image: var(--doc-badge-icon--beta);
-  -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
-  -webkit-mask-size: contain;
   mask-size: contain;
+  width: 0.9em;
+  -webkit-mask-image: var(--doc-badge-icon--beta);
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
 }
 
 /* Each member has its own `.doc-object` positioning context, so the absolutely
@@ -384,6 +1191,6 @@ code.doc-symbol-module {
 /* The badge is now out of flow, so collapse the otherwise-empty paragraph it
    used to occupy and avoid a blank line between the summary and the body. */
 .md-typeset .doc-contents > p:has(> .doc-badge--beta:only-child) {
-  margin: 0;
   line-height: 0;
+  margin: 0;
 }

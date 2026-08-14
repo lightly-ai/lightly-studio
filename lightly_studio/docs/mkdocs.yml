@@ -1,4 +1,6 @@
-site_name: LightlyStudio Docs
+# The header renders this as the wordmark, split two-tone by custom.js, so it
+# is the product name alone — "Docs" is what the whole site is.
+site_name: LightlyStudio
 site_description: LightlyStudio Documentation
 site_url: https://docs.lightly.ai/studio
 
@@ -6,26 +8,47 @@ site_url: https://docs.lightly.ai/studio
 theme:
   name: material
   language: en
-  logo: _static/lightly_logo.svg
+  # Mark only. The full logo carries a white wordmark, which is invisible on the
+  # light header; the wordmark is rendered as text instead (see custom.css).
+  logo: _static/lightly_mark.svg
   favicon: _static/lightly_logo_fav.svg
+  font:
+    text: IBM Plex Sans
+    code: JetBrains Mono
+  # `custom` opts out of Material's built-in color rules so the palette in
+  # _static/custom.css is the only thing setting colors. Without it Material
+  # falls back to `indigo` and its `[scheme][primary]` rules outrank ours.
   palette:
-    - scheme: default
-      primary: teal
-      accent: teal
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
   features:
-    - navigation.tabs
+    # Navigation lives entirely in the left sidebar: every section is a group
+    # caption with its pages listed under it, no top-level tab row.
     - navigation.sections
+    - navigation.expand
+    - navigation.indexes
     - navigation.path
     - navigation.top
-    - content.action.edit
-    - toc.follow
+    - navigation.footer
     - navigation.instant
-    - navigation.expand
-    - search.highlight
-    - navigation.tabs.sticky
-    - navigation.indexes
-    - content.tabs.link
+    - content.action.edit
     - content.code.copy
+    - content.tabs.link
+    - toc.follow
+    - search.highlight
+    - search.suggest
 
 repo_url: https://github.com/lightly-ai/lightly-studio
 repo_name: LightlyStudio
@@ -34,7 +57,7 @@ docs_dir: docs
 nav:
   - Getting Started:
     - index.md
-  - 🏢 Enterprise:
+  - Enterprise:
     - Enterprise:
       - enterprise/index.md
       - Collaboration and Permissions: enterprise/collaboration.md
@@ -99,6 +122,9 @@ validation:
     not_found: warn
 
 extra_css:
+  # Display face for headings and the wordmark. Body and code faces come from
+  # `theme.font`, which Material loads from the same CDN.
+  - https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap
   - _static/custom.css
 
 extra_javascript:
