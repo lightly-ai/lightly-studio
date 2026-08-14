@@ -81,7 +81,11 @@ describe('filterFrontendFiles', () => {
         'foo.spec.ts',
         'foo.spec.js',
         'foo.spec.svelte',
-        'types.d.ts'
+        'types.d.ts',
+        'Alert.stories.svelte',
+        'Button.stories.ts',
+        'ClassSetConfigDialog.stories.js',
+        'setupTests.ts'
     ])('excludes %s', (name) => {
         const files = [file(`${FRONTEND_PREFIX}src/lib/${name}`)];
         expect(filterFrontendFiles(files)).toHaveLength(0);
