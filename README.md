@@ -164,7 +164,7 @@ Run `python example_image.py` and open the printed URL in your browser.
 </details>
 
 Other starting points:
-[YOLO datasets](https://docs.lightly.ai/studio/dataset_setup/image_dataset/#from-an-annotation-format),
+[YOLO datasets](https://docs.lightly.ai/studio/dataset_setup/image_dataset/#__tabbed_1_1),
 [video folders](https://docs.lightly.ai/studio/dataset_setup/video_dataset/),
 [custom annotations](https://docs.lightly.ai/studio/concepts_and_tools/annotations/#annotations-in-python),
 [model evaluation](https://docs.lightly.ai/studio/concepts_and_tools/evaluation/#model-evaluation-in-python),
