@@ -1,15 +1,20 @@
 from __future__ import annotations
 
+import uuid
+
 from duckdb_engine import Dialect as DuckDBDialect
-from sqlmodel import select
+from sqlmodel import col, select
 
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import (
     ORDER_VALUE_LABEL,
+    OrderByAnnotationEvaluationMetricField,
     OrderByEvaluationMetricField,
     OrderByField,
     OrderByMetadataField,
 )
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationSide
 from lightly_studio.models.image import ImageTable
 
 
@@ -236,3 +241,66 @@ class TestOrderByEvaluationMetricField:
         sql = str(col_element.compile(compile_kwargs={"literal_binds": True})).lower()
         assert "evaluation_sample_metric_1.value asc" in sql
         assert "join" not in sql
+
+
+class TestOrderByAnnotationEvaluationMetricField:
+    dialect = DuckDBDialect()
+
+    def test_apply__ground_truth_side(self) -> None:
+        """Test the join, the metric name guard and the default ascending order."""
+        order_by = OrderByAnnotationEvaluationMetricField(
+            evaluation_run_id=uuid.uuid4(),
+            metric_name="iou",
+            side=EvaluationAnnotationSide.GROUND_TRUTH,
+            annotation_id_column=col(AnnotationBaseTable.sample_id),
+        )
+
+        returned_query = order_by.apply(select(AnnotationBaseTable))
+
+        sql = str(
+            returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
+        ).lower()
+        assert sql.count("left outer join evaluation_annotation_metric") == 1
+        assert "evaluation_annotation_metric_1.gt_annotation_id = annotation_base.sample_id" in sql
+        assert "pred_annotation_id" not in sql
+        assert (
+            "(evaluation_annotation_metric_1.metric_name = 'iou' "
+            "or evaluation_annotation_metric_1.metric_name is null)" in sql
+        )
+        assert "order by case when" in sql
+        assert "end asc nulls last" in sql
+
+    def test_apply__prediction_side(self) -> None:
+        """Test that the join is keyed on pred_annotation_id for predictions."""
+        order_by = OrderByAnnotationEvaluationMetricField(
+            evaluation_run_id=uuid.uuid4(),
+            metric_name="iou",
+            side=EvaluationAnnotationSide.PREDICTION,
+            annotation_id_column=col(AnnotationBaseTable.sample_id),
+        )
+
+        returned_query = order_by.apply(select(AnnotationBaseTable))
+
+        sql = str(
+            returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
+        ).lower()
+        assert (
+            "evaluation_annotation_metric_1.pred_annotation_id = annotation_base.sample_id" in sql
+        )
+        assert "gt_annotation_id" not in sql
+
+    def test_apply__descending(self) -> None:
+        """Test that descending ordering also places nulls last."""
+        order_by = OrderByAnnotationEvaluationMetricField(
+            evaluation_run_id=uuid.uuid4(),
+            metric_name="iou",
+            side=EvaluationAnnotationSide.GROUND_TRUTH,
+            annotation_id_column=col(AnnotationBaseTable.sample_id),
+        ).desc()
+
+        returned_query = order_by.apply(select(AnnotationBaseTable))
+
+        sql = str(
+            returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
+        ).lower()
+        assert "end desc nulls last" in sql

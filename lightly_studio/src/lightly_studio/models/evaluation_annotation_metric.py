@@ -2,12 +2,20 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel
 from sqlmodel import Field, SQLModel
 
 from lightly_studio.models.evaluation_run import EvaluationTaskType
+
+
+class EvaluationAnnotationSide(str, Enum):
+    """Which side of an evaluation run's pairing an annotation source is."""
+
+    GROUND_TRUTH = "ground_truth"
+    PREDICTION = "prediction"
 
 
 class EvaluationAnnotationMetricTable(SQLModel, table=True):

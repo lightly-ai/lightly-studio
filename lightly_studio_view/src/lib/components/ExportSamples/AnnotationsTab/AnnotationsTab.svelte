@@ -3,9 +3,9 @@
     import { FormField, AnnotationSourceSelect } from '$lib/components';
     import { exportCollectionAnnotationsPrepare } from '$lib/api/lightly_studio_local';
     import { useImageFilters } from '$lib/hooks';
-    import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+    import { useVideoFilters } from '$lib/hooks';
     import { PUBLIC_LIGHTLY_STUDIO_API_URL } from '$env/static/public';
-    import { useExportDownload } from '../useExportDownload/useExportDownload';
+    import { useExportDownload, triggerDownload } from '../useExportDownload';
     import ExportDownloadButton from '../ExportDownloadButton/ExportDownloadButton.svelte';
 
     type ExportFormat = NonNullable<
@@ -53,15 +53,15 @@
             body: {
                 export_format: exportFormat,
                 annotation_collection_id:
-                    selectedAnnotationCollectionId ?? annotationSources[0]?.id ?? undefined,
+                    selectedAnnotationCollectionId ?? annotationSources[0]?.id,
                 ...activeFilter
             }
         });
         if (response.error) throw new Error(JSON.stringify(response.error));
-        if (!response.data) return;
-        window.open(
-            `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/download/${response.data.export_key}`,
-            '_blank'
+        const exportKey = response.data?.export_key;
+        if (!exportKey) throw new Error('Unexpected empty response data');
+        triggerDownload(
+            `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/download/${exportKey}`
         );
     });
 </script>

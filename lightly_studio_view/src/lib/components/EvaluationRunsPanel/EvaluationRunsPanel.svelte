@@ -1,7 +1,6 @@
 <script lang="ts">
     import { ArrowLeft, Plus, X } from '@lucide/svelte';
-    import Button from '$lib/components/ui/button/button.svelte';
-    import { Spinner, Typography } from '$lib/components';
+    import { Button, Spinner, Typography } from '$lib/components';
     import { usePostHog } from '$lib/hooks';
 
     import EvaluationRunItem from './EvaluationRunItem/EvaluationRunItem.svelte';
@@ -65,14 +64,15 @@
             {#if expandedRun}
                 <Button
                     variant="ghost"
-                    size="icon"
-                    onclick={collapseExpanded}
-                    aria-label="Back to all evaluation runs"
-                    class="h-8 w-8"
-                    data-testid="evaluation-runs-back-button"
-                >
-                    <ArrowLeft class="size-4" />
-                </Button>
+                    icon={ArrowLeft}
+                    ariaLabel="Back to all evaluation runs"
+                    buttonProps={{
+                        size: 'icon',
+                        onclick: collapseExpanded,
+                        class: 'h-8 w-8',
+                        'data-testid': 'evaluation-runs-back-button'
+                    }}
+                />
             {/if}
             <Typography variant="h5" component="h2" className="text-foreground">
                 Evaluation Runs
@@ -82,25 +82,27 @@
             {#if canTrigger}
                 <Button
                     variant="ghost"
-                    size="icon"
-                    onclick={() => (dialogOpen = true)}
-                    aria-label="Start a new evaluation run"
-                    class="h-8 w-8"
-                    data-testid="evaluation-runs-add-button"
-                >
-                    <Plus class="size-4" />
-                </Button>
+                    icon={Plus}
+                    ariaLabel="Start a new evaluation run"
+                    buttonProps={{
+                        size: 'icon',
+                        onclick: () => (dialogOpen = true),
+                        class: 'h-8 w-8',
+                        'data-testid': 'evaluation-runs-add-button'
+                    }}
+                />
             {/if}
             <Button
                 variant="ghost"
-                size="icon"
-                onclick={onClose}
-                aria-label="Close evaluation runs panel"
-                class="h-8 w-8"
-                data-testid="evaluation-runs-close-button"
-            >
-                <X class="size-4" />
-            </Button>
+                icon={X}
+                ariaLabel="Close evaluation runs panel"
+                buttonProps={{
+                    size: 'icon',
+                    onclick: onClose,
+                    class: 'h-8 w-8',
+                    'data-testid': 'evaluation-runs-close-button'
+                }}
+            />
         </div>
     </div>
 

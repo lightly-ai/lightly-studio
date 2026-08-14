@@ -1,7 +1,10 @@
 <script lang="ts">
     import { page } from '$app/stores';
     import { client } from '$lib/api/lightly_studio_local/client.gen';
-    import { Button } from '$lib/components/ui/button';
+    // Imported from the Button module rather than the `$lib/components` barrel:
+    // the barrel pulls in components that need a query client, which the error
+    // boundary renders without.
+    import { Button } from '$lib/components/Button';
     import { derived } from 'svelte/store';
 
     const error = derived(page, ($page) => $page.error);
@@ -59,7 +62,10 @@
             </p>
         {/if}
 
-        <Button onclick={() => window.location.reload()} class="px-8 py-6 text-base">
+        <Button
+            variant="default"
+            buttonProps={{ onclick: () => window.location.reload(), class: 'px-8 py-6 text-base' }}
+        >
             Refresh Page
         </Button>
     </div>

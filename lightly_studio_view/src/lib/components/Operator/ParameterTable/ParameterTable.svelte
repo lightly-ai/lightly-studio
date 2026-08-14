@@ -1,7 +1,7 @@
 <script lang="ts">
     import { tick } from 'svelte';
     import { Trash2 } from '@lucide/svelte';
-    import { Button } from '$lib/components/ui/button';
+    import { Button } from '$lib/components';
     import { Label } from '$lib/components/ui/label';
     import { cn } from '$lib/utils';
     import type { OperatorParameterColumn } from '$lib/hooks';
@@ -66,11 +66,13 @@
             {/if}
         </Label>
         <Button
-            type="button"
             variant="outline"
-            size="sm"
-            onclick={addRow}
-            data-testid={`parameter-table-${name}-add-row`}
+            buttonProps={{
+                type: 'button',
+                size: 'sm',
+                onclick: addRow,
+                'data-testid': `parameter-table-${name}-add-row`
+            }}
         >
             Add row
         </Button>
@@ -179,15 +181,16 @@
                         class="sticky right-[-0.5rem] z-10 -mr-2 border-l border-border bg-background pl-2 pr-2"
                     >
                         <Button
-                            type="button"
                             variant="ghost"
-                            size="icon"
-                            aria-label={`Remove row ${index + 1}`}
-                            onclick={() => removeRow(index)}
-                            data-testid={`parameter-table-${name}-remove-row-${index}`}
-                        >
-                            <Trash2 class="size-4" />
-                        </Button>
+                            icon={Trash2}
+                            ariaLabel={`Remove row ${index + 1}`}
+                            buttonProps={{
+                                type: 'button',
+                                size: 'icon',
+                                onclick: () => removeRow(index),
+                                'data-testid': `parameter-table-${name}-remove-row-${index}`
+                            }}
+                        />
                     </div>
                 {/each}
             </div>

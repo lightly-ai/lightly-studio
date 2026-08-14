@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import Any, cast
+from uuid import UUID
 
 import sqlalchemy
-from sqlalchemy import ColumnElement, and_
+from sqlalchemy import ColumnElement, and_, case, func, nullslast, or_
 from sqlalchemy import Select as SQLAlchemySelect
 from sqlalchemy.engine import Row
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import Mapped, aliased
 from sqlmodel import col
 from sqlmodel.sql.expression import SelectOfScalar
 from typing_extensions import Self, TypeVar
@@ -17,6 +18,10 @@ from typing_extensions import Self, TypeVar
 from lightly_studio.core.dataset_query.field import Field
 from lightly_studio.database import db_json
 from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.evaluation_annotation_metric import (
+    EvaluationAnnotationMetricTable,
+    EvaluationAnnotationSide,
+)
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.image import ImageTable
@@ -262,6 +267,85 @@ class OrderByEvaluationMetricField(OrderByExpression):
                 col(self._metric_alias.sample_id) == col(ImageTable.sample_id),
                 col(self._metric_alias.evaluation_run_id) == col(self._run_alias.id),
                 col(self._metric_alias.metric_name) == self.metric_name,
+            ),
+        )
+
+
+class OrderByAnnotationEvaluationMetricField(OrderByExpression):
+    """Order annotations by a per-annotation metric from EvaluationAnnotationMetricTable.
+
+    A LEFT OUTER JOIN keeps annotations the run did not cover. The sort value depends on
+    the joined row:
+
+    - Row with a value: order by that value.
+    - Row without a value (unmatched annotation, i.e. false positive or false negative):
+      order as ``0.0``, because it has no overlap.
+    - No row (the run did not cover this annotation): order as ``NULL``.
+
+    Nulls sort last in both directions, so un-evaluated annotations stay out of the top
+    of the review queue.
+
+    Args:
+        evaluation_run_id: ID of the evaluation run holding the metric.
+        metric_name: Name of the metric to order by, as stored.
+        side: Which side of the run's pairing the browsed annotation source is. Selects
+            the column the join matches the annotation ID against.
+        annotation_id_column: Column holding the annotation's sample ID. Passed in
+            because the grid query is rooted on the annotation table while adjacency
+            orders over a filtered subquery.
+    """
+
+    def __init__(
+        self,
+        *,
+        evaluation_run_id: UUID,
+        metric_name: str,
+        side: EvaluationAnnotationSide,
+        annotation_id_column: ColumnElement[Any] | Mapped[Any],
+    ) -> None:
+        """Initialize with the run, metric, pairing side and annotation ID column."""
+        super().__init__()
+        self.evaluation_run_id = evaluation_run_id
+        self.metric_name = metric_name
+        self.side = side
+        self.annotation_id_column = annotation_id_column
+        # Per-instance alias so this join cannot collide with a filter join on the same table.
+        self._metric_alias = aliased(EvaluationAnnotationMetricTable)
+
+    def to_column_elements(self) -> list[ColumnElement[Any]]:
+        """Return the sort keys with direction applied and nulls placed last."""
+        return [nullslast(element) for element in super().to_column_elements()]
+
+    def _order_value_expression(self) -> ColumnElement[Any]:
+        """Return the metric value, zero when the row is unmatched, null when absent."""
+        return case(
+            (
+                col(self._metric_alias.id).is_not(None),
+                func.coalesce(col(self._metric_alias.value), 0.0),
+            ),
+            else_=None,
+        )
+
+    def apply_joins(self, query: SelectT) -> SelectT:
+        """Left-outer-join the aliased annotation metric table on the pairing side.
+
+        The predicate matches the requested metric name or a null one, so a run writing
+        several metrics per annotation cannot multiply grid rows and corrupt the count.
+        """
+        if self.side == EvaluationAnnotationSide.GROUND_TRUTH:
+            side_column = col(self._metric_alias.gt_annotation_id)
+        else:
+            side_column = col(self._metric_alias.pred_annotation_id)
+
+        return query.outerjoin(
+            self._metric_alias,
+            and_(
+                side_column == self.annotation_id_column,
+                col(self._metric_alias.evaluation_run_id) == self.evaluation_run_id,
+                or_(
+                    col(self._metric_alias.metric_name) == self.metric_name,
+                    col(self._metric_alias.metric_name).is_(None),
+                ),
             ),
         )
 
