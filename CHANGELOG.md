@@ -24,9 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Show indexed categorical metadata values in distribution panel.
 - Add the `lightly-studio quickstart` CLI command, which downloads the COCO example dataset and launches the GUI in one step. Pass `--no-browser` to skip opening the browser.
-
 - Export image and video classification annotations to CSV via the GUI and Python SDK.
-
 - Python SDK: Export video frames as image files via `VideoFrameDataset.export().to_image_files()` with support for PNG, JPEG, WEBP, BMP, and TIFF formats. Returns the paths of the created files.
 - Google Cloud Storage (GCS) is supported in the LightlyStudio Enterprise version.
 - Python SDK: Connect to LightlyStudio Enterprise with a long-lived API key by passing `api_key` to `lightly_studio.connect()` or setting `LIGHTLY_STUDIO_API_KEY`.
@@ -40,7 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The ignored `is_numeric` field on sort expressions in the images-list and adjacent-samples
   request bodies. Requests that still send it keep working; it is dropped during validation.
-
 - The `cast_to_float` argument of `OrderByMetadataField`. Top-level numeric fields are now
   detected automatically, so `OrderByMetadataField("score", cast_to_float=True)` becomes
   `OrderByMetadataField("score")`. Nested fields (e.g. `stats.score`) now always sort
@@ -50,7 +47,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Sorting by a numeric metadata field now orders numerically (e.g. `9` before `10`) without
   the caller declaring the field type.
-
 - Tagging by embedding region now correctly limits samples to the selected area.
 - Export downloads are no longer blocked by popup blockers.
 - Grid annotation overlays now render at tile resolution to bound memory usage for large source images.
