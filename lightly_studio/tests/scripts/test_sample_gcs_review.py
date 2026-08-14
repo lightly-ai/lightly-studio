@@ -120,7 +120,7 @@ def test_group_source_objects__missing_companion_is_incomplete() -> None:
     assert groups[0].files == objects
 
 
-def test_video_group__missing_transcript_is_still_shippable() -> None:
+def test_video_group__missing_transcript_is_not_shippable() -> None:
     source_root = "gs://bucket/source/"
     objects = [
         f"{source_root}clip.mp4",
@@ -129,17 +129,43 @@ def test_video_group__missing_transcript_is_still_shippable() -> None:
 
     groups, _ = sample_gcs_review.group_source_objects(objects=objects, source_root=source_root)
 
-    assert groups[0].is_complete is False
-    assert groups[0].is_shippable is True
+    assert groups[0].has_transcript is False
+    assert groups[0].is_shippable is False
 
 
-def test_video_group__video_only_is_shippable() -> None:
+def test_video_group__missing_metadata_is_not_shippable() -> None:
+    source_root = "gs://bucket/source/"
+    objects = [
+        f"{source_root}clip.mp4",
+        f"{source_root}clip_transcript.json",
+    ]
+
+    groups, _ = sample_gcs_review.group_source_objects(objects=objects, source_root=source_root)
+
+    assert groups[0].has_metadata is False
+    assert groups[0].is_shippable is False
+
+
+def test_video_group__video_only_is_not_shippable() -> None:
     source_root = "gs://bucket/source/"
     objects = [f"{source_root}clip.mp4"]
 
     groups, _ = sample_gcs_review.group_source_objects(objects=objects, source_root=source_root)
 
     assert groups[0].has_metadata is False
+    assert groups[0].is_shippable is False
+
+
+def test_video_group__complete_is_shippable() -> None:
+    source_root = "gs://bucket/source/"
+    objects = [
+        f"{source_root}clip.mp4",
+        f"{source_root}clip_transcript.json",
+        f"{source_root}clip_metadata.json",
+    ]
+
+    groups, _ = sample_gcs_review.group_source_objects(objects=objects, source_root=source_root)
+
     assert groups[0].is_shippable is True
 
 

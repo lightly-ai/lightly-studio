@@ -47,7 +47,7 @@ def test_main__downloads_and_cleans_one_batch_at_a_time(
     ]
 
 
-def test_main__preserves_failed_batch(
+def test_main__isolates_failed_batch(
     tmp_path: Path,
     mocker: MockerFixture,
     capsys: pytest.CaptureFixture[str],
@@ -63,13 +63,14 @@ def test_main__preserves_failed_batch(
         "screen_deliveries",
         side_effect=RuntimeError("screening failed"),
     )
-    cleanup = mocker.patch.object(qa_pull, "cleanup_triplets")
+    cleanup = mocker.patch.object(qa_pull, "cleanup_triplets", return_value=1)
 
-    with pytest.raises(RuntimeError, match="screening failed"):
-        run_qa_pipeline.main()
+    run_qa_pipeline.main()
 
-    cleanup.assert_not_called()
-    assert "local files remain" in capsys.readouterr().out
+    cleanup.assert_called_once_with(triplets=local, destination=args.destination)
+    output = capsys.readouterr().out
+    assert "Batch 1 failed: screening failed" in output
+    assert "1 batch(es) failed" in output
 
 
 def test_main__processes_one_bucket_at_a_time(
@@ -93,7 +94,7 @@ def test_main__processes_one_bucket_at_a_time(
     ]
 
 
-def test_main__upload_failure_preserves_batch_files(
+def test_main__upload_failure_cleans_batch_files(
     tmp_path: Path,
     mocker: MockerFixture,
 ) -> None:
@@ -111,12 +112,11 @@ def test_main__upload_failure_preserves_batch_files(
         "upload_result_records",
         side_effect=RuntimeError("upload failed"),
     )
-    cleanup = mocker.patch.object(qa_pull, "cleanup_triplets")
+    cleanup = mocker.patch.object(qa_pull, "cleanup_triplets", return_value=1)
 
-    with pytest.raises(RuntimeError, match="upload failed"):
-        run_qa_pipeline.main()
+    run_qa_pipeline.main()
 
-    cleanup.assert_not_called()
+    cleanup.assert_called_once_with(triplets=local, destination=args.destination)
 
 
 def _mock_pipeline_setup(

@@ -18,11 +18,12 @@ Delivery layout written under ``gs://{dest-bucket}/{dest-root}/``::
     {section}/{batch}/videos/{name}.mp4  homogeneous video attachments
     {section}/{batch}/transcripts/{name}.json  homogeneous transcript attachments
 
-Each ``data.json`` record is a flat JSON object: reserved columns ``id``, ``video_path``
-and ``transcript_path`` (paths relative to ``data.json``), plus every field from the
-vendor metadata file with sanitized column names. Nested metadata values are serialized to
-a JSON string so records stay flat, as the spec requires. All records in a batch share the
-same schema; fields missing from a given video are filled with ``null``.
+Each ``data.json`` record is a flat JSON object: reserved columns ``relative_path`` (the
+video path), ``asset_id``, ``asset_type`` and ``transcript_path`` (paths relative to
+``data.json``), plus every field from the vendor metadata file with sanitized column names.
+Nested metadata values are serialized to a JSON string so records stay flat, as the spec
+requires. All records in a batch share the same schema; fields missing from a given video
+are filled with ``null``.
 
 Videos and transcripts are copied server-side (no local download). Only the small metadata
 JSON files are read, to build the records. The command is a dry run unless ``--apply`` is
@@ -41,6 +42,8 @@ import argparse
 import json
 import random
 import re
+import subprocess
+import tempfile
 from collections.abc import Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -70,7 +73,28 @@ TRANSCRIPTS_DIR = "transcripts"
 DATA_FILE = "data.json"
 README_FILE = "README.md"
 
-RESERVED_COLUMNS = ("id", "video_path", "transcript_path")
+ASSET_TYPE_VIDEO = "VIDEO"
+# Reserved columns lead every record; ``relative_path`` is the spec's always-required link.
+RESERVED_COLUMNS = ("relative_path", "asset_id", "asset_type", "transcript_path")
+_COLUMN_DESCRIPTIONS = {
+    "relative_path": "Path of the video file relative to this data file.",
+    "asset_id": "Unique identifier for the asset.",
+    "asset_type": "Asset type, always VIDEO for this dataset.",
+    "transcript_path": "Path of the transcript JSON relative to this data file, or null.",
+    "title": "Human-readable title of the clip.",
+    "description": "Description of the activity shown in the video.",
+    "publication_date": "Delivery / creation date of the clip.",
+    "category": "Activity category of the clip.",
+    "duration": "Video duration formatted as HH:MM:SS.",
+    "duration_s": "Video duration in seconds.",
+    "language": "Primary spoken language as an ISO code.",
+    "resolution": "Video resolution as WIDTHxHEIGHT.",
+    "wpm": "Narration speech rate in words per minute.",
+}
+_ALWAYS_REQUIRED_COLUMNS = {"relative_path", "asset_id", "asset_type"}
+_BYTES_PER_UNIT = 1024
+# Header bytes fetched per video so ffprobe can read stream metadata without the full file.
+_VIDEO_HEADER_BYTES = 4 * 1024 * 1024
 # Chars the spec forbids in object names and column names, respectively.
 _INVALID_NAME_CHARS = re.compile(r"[^0-9a-zA-Z._-]+")
 _INVALID_COLUMN_CHARS = re.compile(r"[^0-9a-z._-]+")
@@ -93,6 +117,27 @@ class DeliveryItem:
     video_url: str
     transcript_url: str | None
     record: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class DeliveryStats:
+    """Aggregate stats over the selected deliveries, for the README.
+
+    Attributes:
+        video_count: Number of videos.
+        transcript_count: Number of videos that ship with a transcript.
+        video_bytes: Total size of the video files in bytes.
+        transcript_bytes: Total size of the transcript files in bytes.
+        total_duration_s: Sum of per-video durations in seconds, when known.
+        total_frames: Sum of per-video frame counts, when every video was probed.
+    """
+
+    video_count: int
+    transcript_count: int
+    video_bytes: int
+    transcript_bytes: int
+    total_duration_s: float | None
+    total_frames: int | None
 
 
 def main() -> None:
@@ -137,12 +182,13 @@ def main() -> None:
         batch_root=batch_root,
         workers=args.workers,
     )
+    stats = gather_stats(client=client, items=items, probe_frames=args.probe_frames)
     data_jsonl = "".join(json.dumps(record) + "\n" for record in records)
     _upload_text(client=client, url=data_url, text=data_jsonl, content_type="application/json")
     _upload_text(
         client=client,
         url=readme_url,
-        text=render_readme(items=items, records=records, section=args.section, batch=args.batch),
+        text=render_readme(records=records, stats=stats, section=args.section, batch=args.batch),
         content_type="text/markdown",
     )
     print(
@@ -227,40 +273,215 @@ def align_schema(items: Sequence[DeliveryItem]) -> list[dict[str, Any]]:
 
 
 def render_readme(
-    items: Sequence[DeliveryItem],
     records: Sequence[Mapping[str, Any]],
+    stats: DeliveryStats,
     section: str,
     batch: str,
 ) -> str:
     """Render a README describing the delivery, its schema, and how files link together."""
     columns = list(records[0].keys()) if records else list(RESERVED_COLUMNS)
-    transcript_count = sum(1 for item in items if item.transcript_url is not None)
-    column_lines = "\n".join(f"- `{column}`" for column in columns)
     return (
         "# Egocentric Video Dataset\n\n"
-        "## General information\n"
-        "- Provider: Lightly AI.\n"
-        "- Source: egocentric video deliveries collected via Toloka, quality-checked by Lightly.\n"
+        "## Data provider overview\n"
+        "Lightly AI. Egocentric (first-person) videos of everyday tasks, collected via Toloka\n"
+        "and quality-checked by Lightly's automated QA pipeline.\n\n"
+        "## Dataset overview\n"
+        "Multimodal: each record is one egocentric video with a spoken-narration transcript and\n"
+        "per-video metadata. The video and transcript are linked from the structured data file\n"
+        f"by relative path (`relative_path`, `transcript_path`) in "
+        f"`{section}/{batch}/data.json`.\n\n"
+        "## Basic dataset stats\n"
+        f"{_render_stats(stats)}\n\n"
+        "## Restrictions\n"
         "- Usage restrictions: TODO confirm with provider.\n"
-        f"- Data stats: {len(items)} videos, {transcript_count} with transcripts.\n"
         "- PII / child-related data: TODO confirm with provider.\n\n"
-        "## Data types\n"
-        "Multimodal: egocentric video with a spoken-narration transcript and "
-        "per-video metadata.\n\n"
+        "## Data collection method\n"
+        "Sourced from creator-recorded egocentric video via Toloka. Creation date is included per\n"
+        "record in the `publication_date` column.\n\n"
         "## Formats\n"
-        "- Video: MP4 (H.264).\n"
+        "- Video: MP4 (H.264), 1080p or higher.\n"
         "- Transcript: JSON (faster-whisper output with segment- and word-level timestamps).\n"
         "- Structured records: JSONL (`data.json`), one flat record per video.\n\n"
-        "## Schema (`data.json` columns)\n"
-        f"{column_lines}\n\n"
-        "Reserved columns: `id` uniquely names the video; `video_path` and `transcript_path` are\n"
-        "paths relative to `data.json`. Remaining columns mirror the vendor metadata file; nested\n"
-        "metadata values are serialized as JSON strings so every record stays flat.\n\n"
+        "## Schema\n"
+        f"{_render_schema_table(records=records, columns=columns)}\n\n"
+        "Remaining columns mirror the vendor metadata file. Nested metadata values, if any, are\n"
+        "serialized as JSON strings so every record stays flat.\n\n"
         "## Linking files\n"
         f"Each record in `{section}/{batch}/data.json` links to its media by relative path:\n"
-        f"`video_path` -> `{VIDEOS_DIR}/<id>.mp4`, "
-        f"`transcript_path` -> `{TRANSCRIPTS_DIR}/<id>.json`.\n"
+        f"`relative_path` -> `{VIDEOS_DIR}/<asset_id>.mp4`, "
+        f"`transcript_path` -> `{TRANSCRIPTS_DIR}/<asset_id>.json`.\n"
     )
+
+
+def gather_stats(
+    client: storage.Client, items: Sequence[DeliveryItem], probe_frames: bool
+) -> DeliveryStats:
+    """Collect aggregate stats over the delivered items for the README.
+
+    Sizes come from object metadata (cheap HEAD requests). Frame counts, when
+    ``probe_frames`` is set, come from ffprobe reading only each video's header. If any video
+    cannot be probed, the total frame count is reported as unknown rather than a partial sum.
+
+    Args:
+        client: Authenticated storage client.
+        items: The delivered items.
+        probe_frames: Whether to probe each video's header to count frames.
+
+    Returns:
+        The aggregate stats.
+    """
+    video_bytes = 0
+    transcript_bytes = 0
+    total_duration_s = 0.0
+    total_frames = 0
+    duration_known = True
+    frames_known = probe_frames
+    for item in items:
+        video_bytes += _blob_size(client=client, url=item.video_url)
+        if item.transcript_url is not None:
+            transcript_bytes += _blob_size(client=client, url=item.transcript_url)
+        duration = item.record.get("duration_s")
+        if isinstance(duration, (int, float)):
+            total_duration_s += float(duration)
+        else:
+            duration_known = False
+        if probe_frames:
+            frames = _probe_video_frames(client=client, url=item.video_url)
+            if frames is None:
+                frames_known = False
+            else:
+                total_frames += frames
+    return DeliveryStats(
+        video_count=len(items),
+        transcript_count=sum(1 for item in items if item.transcript_url is not None),
+        video_bytes=video_bytes,
+        transcript_bytes=transcript_bytes,
+        total_duration_s=total_duration_s if duration_known else None,
+        total_frames=total_frames if frames_known else None,
+    )
+
+
+def _render_stats(stats: DeliveryStats) -> str:
+    lines = [
+        "- Asset types: video (MP4) with companion transcript (JSON).",
+        f"- Videos: {stats.video_count} ({stats.transcript_count} with transcripts).",
+        f"- Video size: {_human_bytes(stats.video_bytes)} total.",
+        f"- Transcript size: {_human_bytes(stats.transcript_bytes)} total.",
+    ]
+    if stats.total_frames is not None:
+        lines.append(f"- Frames: {stats.total_frames} total.")
+    if stats.total_duration_s is not None:
+        lines.append(f"- Duration: {stats.total_duration_s / 3600:.2f} hours total.")
+    return "\n".join(lines)
+
+
+def _render_schema_table(records: Sequence[Mapping[str, Any]], columns: Sequence[str]) -> str:
+    header = "| field | type | is_required | description |\n| --- | --- | --- | --- |"
+    rows = [
+        f"| `{column}` | {_column_type(records=records, column=column)} "
+        f"| {'yes' if column in _ALWAYS_REQUIRED_COLUMNS else 'no'} "
+        f"| {_COLUMN_DESCRIPTIONS.get(column, 'Vendor-provided metadata field.')} |"
+        for column in columns
+    ]
+    return "\n".join([header, *rows])
+
+
+def _column_type(records: Sequence[Mapping[str, Any]], column: str) -> str:
+    for record in records:
+        value = record.get(column)
+        if value is not None:
+            return _spec_type(value)
+    return "text"
+
+
+def _spec_type(value: Any) -> str:
+    if isinstance(value, bool):
+        return "boolean"
+    if isinstance(value, (int, float)):
+        return "number"
+    return "text"
+
+
+def _human_bytes(size: int) -> str:
+    value = float(size)
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if value < _BYTES_PER_UNIT or unit == "TB":
+            return f"{value:.1f} {unit}" if unit != "B" else f"{int(value)} {unit}"
+        value /= _BYTES_PER_UNIT
+    return f"{value:.1f} TB"
+
+
+def _blob_size(client: storage.Client, url: str) -> int:
+    bucket_name, name = sampler._split_gcs_url(url)
+    blob = client.bucket(bucket_name).get_blob(name)
+    return blob.size if blob is not None and blob.size is not None else 0
+
+
+def _probe_video_frames(client: storage.Client, url: str) -> int | None:
+    """Return the video's frame count from ffprobe reading only its header, or None on failure.
+
+    Downloads a small header slice (enough for a faststart MP4's ``moov`` atom) and asks ffprobe
+    for the stream's frame count, falling back to ``round(fps * duration)`` when the container
+    does not store an explicit count.
+    """
+    bucket_name, name = sampler._split_gcs_url(url)
+    blob = client.bucket(bucket_name).blob(name)
+    try:
+        header = blob.download_as_bytes(start=0, end=_VIDEO_HEADER_BYTES - 1)
+    except Exception:  # Probing is best-effort; any download error means unknown.
+        return None
+    with tempfile.NamedTemporaryFile(suffix=".mp4") as handle:
+        handle.write(header)
+        handle.flush()
+        return _ffprobe_frames(path=handle.name)
+
+
+def _ffprobe_frames(path: str) -> int | None:
+    command = [
+        "ffprobe",
+        "-v",
+        "error",
+        "-select_streams",
+        "v:0",
+        "-show_entries",
+        "stream=nb_frames,avg_frame_rate,duration",
+        "-of",
+        "json",
+        path,
+    ]
+    try:
+        completed = subprocess.run(command, capture_output=True, text=True, check=True)
+        streams = json.loads(completed.stdout).get("streams", [])
+    except (subprocess.SubprocessError, json.JSONDecodeError, OSError):
+        return None
+    if not streams:
+        return None
+    return _frames_from_stream(stream=streams[0])
+
+
+def _frames_from_stream(stream: Mapping[str, Any]) -> int | None:
+    nb_frames = stream.get("nb_frames")
+    if isinstance(nb_frames, str) and nb_frames.isdigit():
+        return int(nb_frames)
+    fps = _parse_frame_rate(stream.get("avg_frame_rate"))
+    duration = stream.get("duration")
+    if fps is not None and isinstance(duration, str):
+        try:
+            return round(fps * float(duration))
+        except ValueError:
+            return None
+    return None
+
+
+def _parse_frame_rate(value: Any) -> float | None:
+    if not isinstance(value, str) or "/" not in value:
+        return None
+    numerator, denominator = value.split("/", 1)
+    try:
+        denominator_value = float(denominator)
+        return float(numerator) / denominator_value if denominator_value else None
+    except ValueError:
+        return None
 
 
 def _sample_groups(groups: Sequence[Any], max_videos: int, seed: int) -> list[Any]:
@@ -280,8 +501,9 @@ def _build_record(name: str, metadata: Mapping[str, Any], has_transcript: bool) 
     for key, value in metadata.items():
         column = _sanitize_column(key)
         record[column] = value if _is_scalar(value) else json.dumps(value)
-    record["id"] = name
-    record["video_path"] = f"{VIDEOS_DIR}/{name}.mp4"
+    record["relative_path"] = f"{VIDEOS_DIR}/{name}.mp4"
+    record["asset_id"] = name
+    record["asset_type"] = ASSET_TYPE_VIDEO
     record["transcript_path"] = f"{TRANSCRIPTS_DIR}/{name}.json" if has_transcript else None
     return record
 
@@ -433,6 +655,12 @@ def _parse_args() -> argparse.Namespace:
         "--allow-missing-transcript",
         action="store_true",
         help="Include videos that ship without a transcript.",
+    )
+    parser.add_argument(
+        "--probe-frames",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Count frames via ffprobe over each video's header for the README stats.",
     )
     parser.add_argument(
         "--apply",

@@ -98,12 +98,33 @@ def main() -> None:
     )
     if triplets:
         qa._probe_narration_classifier(classifier=classifier)
+    failed_batches = _process_buckets(
+        args=args,
+        client=client,
+        dataset=dataset,
+        classifier=classifier,
+        triplets=triplets,
+    )
+    qa_screen.write_dataset_summary(dataset=dataset)
+    if failed_batches:
+        print(f"{failed_batches} batch(es) failed and were skipped; see logs above.")
+
+
+def _process_buckets(
+    args: argparse.Namespace,
+    client: storage.Client,
+    dataset: VideoDataset,
+    classifier: narration_classification.OpenAICompatibleNarrationClassifier,
+    triplets: list[qa_pull.RemoteTriplet],
+) -> int:
+    """Screen every bucket batch by batch. Return the number of batches that failed."""
     bucket_groups = _group_by_bucket(triplets=triplets)
+    failed_batches = 0
     for bucket_number, (bucket, bucket_triplets) in enumerate(bucket_groups, start=1):
         print(f"Processing bucket {bucket_number}/{len(bucket_groups)}: gs://{bucket}/")
         batches = qa_screen._chunks(bucket_triplets, args.batch_size)
         for batch_number, batch in enumerate(batches, start=1):
-            _process_batch(
+            if not _process_batch(
                 args=args,
                 client=client,
                 dataset=dataset,
@@ -111,9 +132,9 @@ def main() -> None:
                 batch=batch,
                 batch_number=batch_number,
                 batch_count=len(batches),
-            )
-
-    qa_screen.write_dataset_summary(dataset=dataset)
+            ):
+                failed_batches += 1
+    return failed_batches
 
 
 def _process_batch(  # noqa: PLR0913  the orchestration boundary needs the runtime context.
@@ -124,14 +145,16 @@ def _process_batch(  # noqa: PLR0913  the orchestration boundary needs the runti
     batch: list[qa_pull.RemoteTriplet],
     batch_number: int,
     batch_count: int,
-) -> None:
+) -> bool:
+    """Screen one batch. Return False if it failed; failures are isolated so the run continues."""
     print(f"Processing batch {batch_number}/{batch_count} ({len(batch)} delivery(ies))...")
-    local = qa_pull.download_triplets(
-        client=client,
-        triplets=batch,
-        destination=args.destination,
-    )
+    local: list[qa_pull.LocalTriplet] = []
     try:
+        local = qa_pull.download_triplets(
+            client=client,
+            triplets=batch,
+            destination=args.destination,
+        )
         local = _transcribe_batch(args=args, triplets=local)
         results = qa_screen.screen_deliveries(
             dataset=dataset,
@@ -148,16 +171,27 @@ def _process_batch(  # noqa: PLR0913  the orchestration boundary needs the runti
             dataset=dataset,
             triplets=local,
         )
-    except Exception:
-        print(f"Batch {batch_number} failed; local files remain under {args.destination}.")
-        raise
+    except Exception as error:
+        print(f"Batch {batch_number} failed: {error}")
+        _cleanup_batch(args=args, triplets=local, batch_number=batch_number)
+        return False
 
     _print_results(results=results)
     for uploaded_url in uploaded_urls:
         print(f"  Uploaded {uploaded_url}")
-    if args.cleanup_local_files:
-        deleted = qa_pull.cleanup_triplets(triplets=local, destination=args.destination)
-        print(f"Cleaned up {deleted} local file(s) from batch {batch_number}.")
+    _cleanup_batch(args=args, triplets=local, batch_number=batch_number)
+    return True
+
+
+def _cleanup_batch(
+    args: argparse.Namespace,
+    triplets: list[qa_pull.LocalTriplet],
+    batch_number: int,
+) -> None:
+    if not args.cleanup_local_files or not triplets:
+        return
+    deleted = qa_pull.cleanup_triplets(triplets=triplets, destination=args.destination)
+    print(f"Cleaned up {deleted} local file(s) from batch {batch_number}.")
 
 
 def _upload_results(

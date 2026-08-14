@@ -5,10 +5,10 @@ Each delivery is a video (``{stem}.mp4``) plus companion files that share its st
 (a transcript and a metadata JSON, with either an underscore or dot separator, e.g.
 ``{stem}_transcript.json`` or ``{stem}.transcript.json``). Sampling happens per video:
 a reproducible random sample of the shippable videos is moved to ``review`` and the rest
-to ``pool``, keeping every video's companion files together. A delivery ships as long as it
-has a video or metadata; a missing transcript is generated downstream by faster-whisper, so
-it no longer excludes a delivery. Only stray files that belong to no video and carry no
-metadata are moved to ``incomplete``. Objects are moved out of ``source`` so a later run only
+to ``pool``, keeping every video's companion files together. A delivery ships only when it
+is complete: the video, its transcript, and its metadata companion are all present. Any
+group missing a companion, along with stray files that belong to no video, is moved to
+``incomplete``. Objects are moved out of ``source`` so a later run only
 ever sees files that arrived since the previous run: originals are never reconsidered and
 re-uploads are a fresh batch.
 
@@ -212,14 +212,19 @@ class VideoGroup:
         return any(file.endswith(METADATA_SUFFIXES) for file in self.files)
 
     @property
+    def has_transcript(self) -> bool:
+        """Return whether the delivery includes a transcript companion."""
+        return any(file.endswith(TRANSCRIPT_SUFFIXES) for file in self.files)
+
+    @property
     def is_shippable(self) -> bool:
         """Return whether the delivery is eligible for review/pool sampling.
 
-        A delivery ships as long as it has a video or metadata. A missing transcript no
-        longer excludes it: faster-whisper generates one downstream. Only stray files
-        with neither a video nor metadata are quarantined to ``incomplete``.
+        A delivery ships only when it is complete: the video, its transcript, and its
+        metadata companion are all present. Any group missing a companion is quarantined
+        to ``incomplete`` rather than sampled.
         """
-        return self.has_video or self.has_metadata
+        return self.has_video and self.has_transcript and self.has_metadata
 
 
 def group_source_objects(
