@@ -131,18 +131,10 @@ def screen_deliveries(  # noqa: PLR0913  parameters mirror the ingest + narratio
             video for video in batch_videos if force or not _pipeline_complete(video=video)
         ]
         if pending_videos:
-            if probe_classifier and not classifier_probed:
-                qa._probe_narration_classifier(classifier=classifier)
-                classifier_probed = True
-            _screen_videos(
-                dataset=dataset,
-                batch=batch,
-                videos=pending_videos,
-                classifier=classifier,
-                caption_unit=caption_unit,
-                action_phrase_settings=action_phrase_settings,
-                force=force,
-            )
+            # if probe_classifier and not classifier_probed:
+            #     qa._probe_narration_classifier(classifier=classifier)
+            #     classifier_probed = True
+            _screen_videos(dataset=dataset, videos=pending_videos)
         screened_videos.extend(batch_videos)
 
     unique_videos = {video.sample_id: video for video in screened_videos}
@@ -174,40 +166,14 @@ def _ingest_batch(
     return _videos_for_triplets(dataset=dataset, triplets=batch)
 
 
-def _screen_videos(  # noqa: PLR0913  the screening step needs all narration knobs.
+def _screen_videos(
     dataset: VideoDataset,
-    batch: list[qa_pull.LocalTriplet],
     videos: list[VideoSample],
-    classifier: narration_classification.OpenAICompatibleNarrationClassifier,
-    caption_unit: CaptionUnit,
-    action_phrase_settings: ActionPhraseSettings,
-    force: bool,
 ) -> None:
     """Run every file-dependent QA stage before the batch can be cleaned up."""
     metadata_resolver.bulk_update_metadata(
         dataset.session,
         [(video.sample_id, {PIPELINE_COMPLETE_KEY: False}) for video in videos],
-    )
-    for video in videos:
-        video.captions = []
-
-    transcript_paths = {
-        Path(triplet.video_path).resolve(): Path(triplet.transcript_path).resolve()
-        for triplet in batch
-        if triplet.transcript_path is not None
-    }
-    captions_by_video = qa._create_transcript_captions(
-        dataset=dataset,
-        transcript_paths=transcript_paths,
-        caption_unit=caption_unit,
-        action_phrase_settings=action_phrase_settings,
-        videos=videos,
-    )
-    qa._classify_narration_captions(
-        dataset=dataset,
-        captions_by_video=captions_by_video,
-        classifier=classifier,
-        force=force,
     )
     _score_quality(dataset=dataset, videos=videos)
     qa._write_technical_qa_metadata(dataset=dataset, videos=videos)

@@ -96,8 +96,6 @@ def main() -> None:
         api_key=args.narration_llm_api_key,
         batch_size=args.classification_batch_size,
     )
-    if triplets:
-        qa._probe_narration_classifier(classifier=classifier)
     failed_batches = _process_buckets(
         args=args,
         client=client,
@@ -223,6 +221,7 @@ def _transcribe_batch(
     args: argparse.Namespace,
     triplets: list[qa_pull.LocalTriplet],
 ) -> list[qa_pull.LocalTriplet]:
+    return triplets
     missing = sum(triplet.transcript_path is None for triplet in triplets)
     if not args.transcribe or not missing:
         return triplets

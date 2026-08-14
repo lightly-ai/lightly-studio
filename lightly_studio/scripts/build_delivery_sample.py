@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Copy a sample of egocentric deliveries into the client's delivery format.
+"""Copy a stratified sample of egocentric deliveries into the client's delivery format.
 
-Take a handful of videos (default 50) from a source pool bucket and lay them out in the
-directory structure the data-provider spec asks for, so the formatting can be validated
-with the client before a full delivery.
+Take an equal number of videos from each activity category (default 10 each) from a source
+pool bucket and lay them out in the directory structure the data-provider spec asks for, so
+the formatting can be validated with the client before a full delivery. The category is read
+off the source clip name; it is carried in a data column, never encoded in a file name.
 
 Source layout (produced by ``sample_gcs_review.py``), per video ``{stem}``::
 
@@ -14,16 +15,18 @@ Source layout (produced by ``sample_gcs_review.py``), per video ``{stem}``::
 Delivery layout written under ``gs://{dest-bucket}/{dest-root}/``::
 
     README.md
-    {section}/{batch}/data.json          JSONL, one flat record per video
-    {section}/{batch}/videos/{name}.mp4  homogeneous video attachments
-    {section}/{batch}/transcripts/{name}.json  homogeneous transcript attachments
+    {section}/{batch}/data.json             JSONL, one flat record per video
+    {section}/{batch}/videos/{n}.mp4        homogeneous video attachments
+    {section}/{batch}/transcripts/{n}.json  homogeneous transcript attachments
 
-Each ``data.json`` record is a flat JSON object: reserved columns ``relative_path`` (the
-video path), ``asset_id``, ``asset_type`` and ``transcript_path`` (paths relative to
-``data.json``), plus every field from the vendor metadata file with sanitized column names.
-Nested metadata values are serialized to a JSON string so records stay flat, as the spec
-requires. All records in a batch share the same schema; fields missing from a given video
-are filled with ``null``.
+File names are numeric (``1.mp4`` / ``1.json``); a shared numeric prefix ties a video to its
+transcript. No data is encoded in file or directory names, per the spec. Each ``data.json``
+record is a flat JSON object: reserved columns ``relative_path`` (the video path),
+``asset_id``, ``asset_type``, ``transcript_path`` (paths relative to ``data.json``) and
+``name`` (the descriptive clip name with the category prefix stripped), plus every field from
+the vendor metadata file with sanitized column names. Nested metadata values are serialized to
+a JSON string so records stay flat, as the spec requires. All records in a batch share the
+same schema; fields missing from a given video are filled with ``null``.
 
 Videos and transcripts are copied server-side (no local download). Only the small metadata
 JSON files are read, to build the records. The command is a dry run unless ``--apply`` is
@@ -31,7 +34,7 @@ given; run with the ``cloud-storage`` extra installed.
 
 Examples:
     uv run --extra cloud-storage python scripts/build_delivery_sample.py
-    uv run --extra cloud-storage python scripts/build_delivery_sample.py --max-videos 100 --apply
+    uv run --extra cloud-storage python scripts/build_delivery_sample.py --apply --replace
 """
 
 # Reuse the sampler's private GCS helpers so triplet grouping stays single-sourced.
@@ -64,7 +67,15 @@ DEFAULT_DEST_BUCKET = "lightly-delivery"
 DEFAULT_DEST_ROOT = "data_for_google/egocentric_video"
 DEFAULT_SECTION = "full_data"
 DEFAULT_BATCH = "batch_1"
-DEFAULT_MAX_VIDEOS = 50
+# The five activity categories to sample from; a clip's category is the prefix of its name.
+DEFAULT_CATEGORIES = (
+    "General",
+    "Hobbies_and_Arts",
+    "Home_Daily_Tasks",
+    "Personal_Care",
+    "Repairs_and_DIY",
+)
+DEFAULT_PER_CATEGORY = 10
 DEFAULT_SEED = 42
 DEFAULT_WORKERS = 8
 
@@ -75,12 +86,13 @@ README_FILE = "README.md"
 
 ASSET_TYPE_VIDEO = "VIDEO"
 # Reserved columns lead every record; ``relative_path`` is the spec's always-required link.
-RESERVED_COLUMNS = ("relative_path", "asset_id", "asset_type", "transcript_path")
+RESERVED_COLUMNS = ("relative_path", "asset_id", "asset_type", "transcript_path", "name")
 _COLUMN_DESCRIPTIONS = {
     "relative_path": "Path of the video file relative to this data file.",
     "asset_id": "Unique identifier for the asset.",
     "asset_type": "Asset type, always VIDEO for this dataset.",
     "transcript_path": "Path of the transcript JSON relative to this data file, or null.",
+    "name": "Descriptive clip name with the category prefix removed.",
     "title": "Human-readable title of the clip.",
     "description": "Description of the activity shown in the video.",
     "publication_date": "Delivery / creation date of the clip.",
@@ -95,25 +107,28 @@ _ALWAYS_REQUIRED_COLUMNS = {"relative_path", "asset_id", "asset_type"}
 _BYTES_PER_UNIT = 1024
 # Header bytes fetched per video so ffprobe can read stream metadata without the full file.
 _VIDEO_HEADER_BYTES = 4 * 1024 * 1024
-# Chars the spec forbids in object names and column names, respectively.
-_INVALID_NAME_CHARS = re.compile(r"[^0-9a-zA-Z._-]+")
+# Chars the spec forbids in column names.
 _INVALID_COLUMN_CHARS = re.compile(r"[^0-9a-z._-]+")
 
 
 @dataclass(frozen=True)
 class DeliveryItem:
-    """A source video mapped to its destination names and flat record.
+    """A source video mapped to its destination number and flat record.
 
     Attributes:
+        number: 1-based sequence number; the numeric base name of the destination files.
         stem: Source stem (relative path under the source prefix, no extension).
-        name: Flattened, spec-safe base name used for the destination files.
+        category: Activity category the clip was sampled under.
+        display_name: Descriptive clip name with the category prefix removed.
         video_url: Source ``gs://`` URL of the video.
         transcript_url: Source ``gs://`` URL of the transcript, or ``None``.
         record: Flat JSON record written to ``data.json`` for this video.
     """
 
+    number: int
     stem: str
-    name: str
+    category: str
+    display_name: str
     video_url: str
     transcript_url: str | None
     record: dict[str, Any]
@@ -149,7 +164,8 @@ def main() -> None:
         client=client,
         source_bucket=args.source_bucket,
         source_prefix=args.source_prefix,
-        max_videos=args.max_videos,
+        categories=tuple(args.categories),
+        per_category=args.per_category,
         seed=args.seed,
         require_transcript=not args.allow_missing_transcript,
     )
@@ -175,6 +191,9 @@ def main() -> None:
         print("\nDry run only. Re-run with --apply to write these objects.")
         return
 
+    if args.replace:
+        deleted = _delete_prefix(client=client, bucket=args.dest_bucket, prefix=f"{batch_root}/")
+        print(f"Replaced batch: deleted {deleted} existing object(s) under {batch_root}/.")
     _copy_assets(
         client=client,
         items=items,
@@ -200,22 +219,24 @@ def build_items(  # noqa: PLR0913  parameters mirror the discovery + sampling kn
     client: storage.Client,
     source_bucket: str,
     source_prefix: str,
-    max_videos: int,
+    categories: tuple[str, ...],
+    per_category: int,
     seed: int,
     require_transcript: bool,
 ) -> list[DeliveryItem]:
-    """Discover complete deliveries, sample up to ``max_videos``, and build their records.
+    """Discover complete deliveries, sample ``per_category`` per category, and build records.
 
     Args:
         client: Authenticated storage client.
         source_bucket: Bucket holding the source deliveries.
         source_prefix: Prefix within the source bucket to read, e.g. ``pool``.
-        max_videos: Maximum number of videos to include.
+        categories: Activity categories to sample from; a clip's category prefixes its name.
+        per_category: Number of videos to sample from each category.
         seed: Random seed for reproducible sampling.
         require_transcript: Keep only deliveries that also have a transcript.
 
     Returns:
-        The chosen deliveries with their destination names and flat records, sorted by stem.
+        The chosen deliveries with numeric names and flat records, grouped by category order.
     """
     source_root = sampler._gcs_root(bucket=source_bucket, prefix=source_prefix)
     objects = sampler._list_objects(client=client, bucket=source_bucket, prefix=source_prefix)
@@ -228,30 +249,29 @@ def build_items(  # noqa: PLR0913  parameters mirror the discovery + sampling kn
         and group.has_metadata
         and (not require_transcript or _has_transcript(group.files))
     ]
-    chosen = _sample_groups(groups=eligible, max_videos=max_videos, seed=seed)
+    chosen = _select_stratified(
+        groups=eligible, categories=categories, per_category=per_category, seed=seed
+    )
 
     items: list[DeliveryItem] = []
-    seen_names: dict[str, str] = {}
-    for group in chosen:
-        name = _flatten_stem(group.stem)
-        if name in seen_names:
-            raise ValueError(
-                f"Destination name collision: {group.stem!r} and {seen_names[name]!r} "
-                f"both map to {name!r}."
-            )
-        seen_names[name] = group.stem
+    for number, (group, category, display_name) in enumerate(chosen, start=1):
         video_url = _first_with_suffix(group.files, (sampler.VIDEO_SUFFIX,))
         transcript_url = _first_with_suffix_or_none(group.files, sampler.TRANSCRIPT_SUFFIXES)
         metadata_url = _first_with_suffix_or_none(group.files, sampler.METADATA_SUFFIXES)
         metadata = _read_metadata(client=client, url=metadata_url) if metadata_url else {}
         items.append(
             DeliveryItem(
+                number=number,
                 stem=group.stem,
-                name=name,
+                category=category,
+                display_name=display_name,
                 video_url=video_url,
                 transcript_url=transcript_url,
                 record=_build_record(
-                    name=name, metadata=metadata, has_transcript=transcript_url is not None
+                    number=number,
+                    display_name=display_name,
+                    metadata=metadata,
+                    has_transcript=transcript_url is not None,
                 ),
             )
         )
@@ -287,7 +307,8 @@ def render_readme(
         "and quality-checked by Lightly's automated QA pipeline.\n\n"
         "## Dataset overview\n"
         "Multimodal: each record is one egocentric video with a spoken-narration transcript and\n"
-        "per-video metadata. The video and transcript are linked from the structured data file\n"
+        "per-video metadata. Videos are sampled evenly across activity categories (see the\n"
+        "`category` column). The video and transcript are linked from the structured data file\n"
         f"by relative path (`relative_path`, `transcript_path`) in "
         f"`{section}/{batch}/data.json`.\n\n"
         "## Basic dataset stats\n"
@@ -307,9 +328,10 @@ def render_readme(
         "Remaining columns mirror the vendor metadata file. Nested metadata values, if any, are\n"
         "serialized as JSON strings so every record stays flat.\n\n"
         "## Linking files\n"
-        f"Each record in `{section}/{batch}/data.json` links to its media by relative path:\n"
+        f"File names are numeric; a shared number ties a video to its transcript. Each record in\n"
+        f"`{section}/{batch}/data.json` links to its media by relative path:\n"
         f"`relative_path` -> `{VIDEOS_DIR}/<asset_id>.mp4`, "
-        f"`transcript_path` -> `{TRANSCRIPTS_DIR}/<asset_id>.json`.\n"
+        f"`transcript_path` -> `{TRANSCRIPTS_DIR}/<asset_id>.json` (`asset_id` is the number).\n"
     )
 
 
@@ -484,38 +506,75 @@ def _parse_frame_rate(value: Any) -> float | None:
         return None
 
 
-def _sample_groups(groups: Sequence[Any], max_videos: int, seed: int) -> list[Any]:
-    """Return up to ``max_videos`` groups, reproducibly sampled and sorted by stem."""
-    if max_videos < 1:
-        raise ValueError("max_videos must be at least one")
-    ordered = sorted(groups, key=lambda group: group.stem)
-    if len(ordered) <= max_videos:
-        return ordered
-    sampled = random.Random(seed).sample(ordered, k=max_videos)
-    return sorted(sampled, key=lambda group: group.stem)
+def _select_stratified(
+    groups: Sequence[Any],
+    categories: tuple[str, ...],
+    per_category: int,
+    seed: int,
+) -> list[tuple[Any, str, str]]:
+    """Sample ``per_category`` groups from each category, in category then stem order.
+
+    A group's category is the leading segment of its clip name; groups whose name matches
+    none of ``categories`` are skipped. When a category has fewer than ``per_category``
+    eligible videos, all of them are taken and a warning is printed.
+
+    Returns:
+        ``(group, category, display_name)`` triples, ordered by ``categories`` then stem.
+    """
+    if per_category < 1:
+        raise ValueError("per_category must be at least one")
+    buckets: dict[str, list[tuple[Any, str]]] = {category: [] for category in categories}
+    for group in groups:
+        match = _category_of(stem=group.stem, categories=categories)
+        if match is not None:
+            category, display_name = match
+            buckets[category].append((group, display_name))
+
+    rng = random.Random(seed)
+    chosen: list[tuple[Any, str, str]] = []
+    for category in categories:
+        members = sorted(buckets[category], key=lambda pair: pair[0].stem)
+        if len(members) <= per_category:
+            if len(members) < per_category:
+                print(
+                    f"Warning: category {category!r} has only {len(members)} eligible "
+                    f"video(s), fewer than the requested {per_category}."
+                )
+            picked = members
+        else:
+            picked = sorted(rng.sample(members, k=per_category), key=lambda pair: pair[0].stem)
+        chosen.extend((group, category, display_name) for group, display_name in picked)
+    return chosen
 
 
-def _build_record(name: str, metadata: Mapping[str, Any], has_transcript: bool) -> dict[str, Any]:
+def _category_of(stem: str, categories: tuple[str, ...]) -> tuple[str, str] | None:
+    """Return the ``(category, display_name)`` for a stem, or None if it matches no category.
+
+    The category is the longest matching prefix of the clip name (the stem's final path
+    segment); the display name is that clip name with the ``{category}_`` prefix removed.
+    """
+    clip = stem.rsplit("/", 1)[-1]
+    for category in sorted(categories, key=len, reverse=True):
+        prefix = f"{category}_"
+        if clip.startswith(prefix):
+            return category, clip[len(prefix) :]
+    return None
+
+
+def _build_record(
+    number: int, display_name: str, metadata: Mapping[str, Any], has_transcript: bool
+) -> dict[str, Any]:
     """Build one flat record: sanitized vendor metadata plus reserved columns."""
     record: dict[str, Any] = {}
     for key, value in metadata.items():
         column = _sanitize_column(key)
         record[column] = value if _is_scalar(value) else json.dumps(value)
-    record["relative_path"] = f"{VIDEOS_DIR}/{name}.mp4"
-    record["asset_id"] = name
+    record["relative_path"] = f"{VIDEOS_DIR}/{number}.mp4"
+    record["asset_id"] = str(number)
     record["asset_type"] = ASSET_TYPE_VIDEO
-    record["transcript_path"] = f"{TRANSCRIPTS_DIR}/{name}.json" if has_transcript else None
+    record["transcript_path"] = f"{TRANSCRIPTS_DIR}/{number}.json" if has_transcript else None
+    record["name"] = display_name
     return record
-
-
-def _flatten_stem(stem: str) -> str:
-    """Flatten a source stem to a single spec-safe base name.
-
-    Path separators become double underscores; any other character outside
-    ``[0-9a-zA-Z._-]`` becomes a single underscore.
-    """
-    flattened = stem.replace("/", "__")
-    return _INVALID_NAME_CHARS.sub("_", flattened)
 
 
 def _sanitize_column(key: str) -> str:
@@ -577,13 +636,13 @@ def _copy_assets(
     copies: list[tuple[str, str]] = []
     for item in items:
         copies.append(
-            (item.video_url, f"gs://{dest_bucket}/{batch_root}/{VIDEOS_DIR}/{item.name}.mp4")
+            (item.video_url, f"gs://{dest_bucket}/{batch_root}/{VIDEOS_DIR}/{item.number}.mp4")
         )
         if item.transcript_url is not None:
             copies.append(
                 (
                     item.transcript_url,
-                    f"gs://{dest_bucket}/{batch_root}/{TRANSCRIPTS_DIR}/{item.name}.json",
+                    f"gs://{dest_bucket}/{batch_root}/{TRANSCRIPTS_DIR}/{item.number}.json",
                 )
             )
     if workers < 1:
@@ -595,6 +654,14 @@ def _copy_assets(
         ]
         for future in futures:
             future.result()
+
+
+def _delete_prefix(client: storage.Client, bucket: str, prefix: str) -> int:
+    """Delete every object under ``prefix`` in ``bucket``; return how many were deleted."""
+    blobs = list(client.list_blobs(client.bucket(bucket), prefix=prefix))
+    for blob in blobs:
+        blob.delete()
+    return len(blobs)
 
 
 def _copy_blob(client: storage.Client, source: str, destination: str) -> None:
@@ -623,17 +690,21 @@ def _print_plan(  # noqa: PLR0913  a plan print needs every destination it will 
 ) -> None:
     transcript_count = sum(1 for item in items if item.transcript_url is not None)
     columns = list(records[0].keys()) if records else []
+    per_category: dict[str, int] = {}
+    for item in items:
+        per_category[item.category] = per_category.get(item.category, 0) + 1
     print(
         f"{len(items)} video(s) selected ({transcript_count} with transcripts); "
         f"{len(columns)} data.json columns."
     )
+    print(f"Per category: {', '.join(f'{name}={count}' for name, count in per_category.items())}")
     print(f"Columns: {', '.join(columns)}")
     for item in items:
-        print(f"{item.video_url} -> gs://{dest_bucket}/{batch_root}/{VIDEOS_DIR}/{item.name}.mp4")
+        print(f"{item.video_url} -> gs://{dest_bucket}/{batch_root}/{VIDEOS_DIR}/{item.number}.mp4")
         if item.transcript_url is not None:
             print(
                 f"{item.transcript_url} -> "
-                f"gs://{dest_bucket}/{batch_root}/{TRANSCRIPTS_DIR}/{item.name}.json"
+                f"gs://{dest_bucket}/{batch_root}/{TRANSCRIPTS_DIR}/{item.number}.json"
             )
     print(f"write -> {data_url}")
     print(f"write -> {readme_url}")
@@ -648,7 +719,18 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--dest-root", default=DEFAULT_DEST_ROOT)
     parser.add_argument("--section", default=DEFAULT_SECTION, help="e.g. full_data or sample")
     parser.add_argument("--batch", default=DEFAULT_BATCH)
-    parser.add_argument("--max-videos", type=int, default=DEFAULT_MAX_VIDEOS)
+    parser.add_argument(
+        "--categories",
+        nargs="+",
+        default=list(DEFAULT_CATEGORIES),
+        help="Activity categories to sample from; a clip's category prefixes its name.",
+    )
+    parser.add_argument(
+        "--per-category",
+        type=int,
+        default=DEFAULT_PER_CATEGORY,
+        help="Number of videos to sample from each category.",
+    )
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument("--workers", type=int, default=DEFAULT_WORKERS)
     parser.add_argument(
@@ -666,6 +748,11 @@ def _parse_args() -> argparse.Namespace:
         "--apply",
         action="store_true",
         help="Write the objects. Without this flag, only print the plan.",
+    )
+    parser.add_argument(
+        "--replace",
+        action="store_true",
+        help="With --apply, delete existing objects under the batch before writing.",
     )
     return parser.parse_args()
 

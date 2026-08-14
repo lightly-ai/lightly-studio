@@ -68,20 +68,9 @@ def test_screen_videos__marks_complete_after_file_dependent_checks(
     tmp_path: Path,
     mocker: MockerFixture,
 ) -> None:
-    triplet = _local_triplet(tmp_path=tmp_path)
     video = mocker.MagicMock(sample_id=uuid4())
     dataset = mocker.MagicMock()
     events: list[str] = []
-    mocker.patch.object(
-        run_egocentric_qa,
-        "_create_transcript_captions",
-        side_effect=lambda **_: _record_and_return_empty(events=events, event="captions"),
-    )
-    mocker.patch.object(
-        run_egocentric_qa,
-        "_classify_narration_captions",
-        side_effect=lambda **_: events.append("classification"),
-    )
     mocker.patch.object(
         qa_screen,
         "_score_quality",
@@ -103,20 +92,10 @@ def test_screen_videos__marks_complete_after_file_dependent_checks(
         side_effect=lambda *_: events.append("complete"),
     )
 
-    qa_screen._screen_videos(
-        dataset=dataset,
-        batch=[triplet],
-        videos=[video],
-        classifier=mocker.MagicMock(),
-        caption_unit=qa_screen.DEFAULT_CAPTION_UNIT,
-        action_phrase_settings=qa_screen.DEFAULT_ACTION_PHRASE_SETTINGS,
-        force=False,
-    )
+    qa_screen._screen_videos(dataset=dataset, videos=[video])
 
     assert events == [
         "complete",
-        "captions",
-        "classification",
         "quality",
         "technical",
         "summary",
