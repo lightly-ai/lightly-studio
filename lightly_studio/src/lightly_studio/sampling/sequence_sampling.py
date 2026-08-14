@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
+from collections import Counter
+from collections.abc import Iterable, Sequence
 from uuid import UUID
 
 import numpy as np
@@ -23,8 +24,18 @@ def sampling_via_database_sequences(
     session: Session,
     config: SamplingConfig,
     input_sample_ids: list[UUID],
+    preselected_sample_ids: Iterable[UUID] | None = None,
 ) -> None:
-    """Run mean-proxy sequence sampling on a VIDEO_FRAME collection."""
+    """Run mean-proxy sequence sampling on a VIDEO_FRAME collection.
+
+    Args:
+        session: Database session used to resolve and store sampling data.
+        config: Sampling configuration with ``selected_sequence_length`` above 1.
+        input_sample_ids: Candidate frame sample IDs.
+        preselected_sample_ids: Frame sample IDs that should inform the sampling as
+            already selected. They must cover whole sequences and are excluded from
+            the result tag.
+    """
     diversity_strategies = _validate_sequence_sampling(session=session, config=config)
     sequence_length = config.selected_sequence_length
     sequences = _load_sequences(
@@ -32,12 +43,18 @@ def sampling_via_database_sequences(
         sample_ids=input_sample_ids,
         sequence_length=sequence_length,
     )
-    n_sequences_to_select = (
-        min(config.n_samples_to_select, len(sequences) * sequence_length) // sequence_length
+    preselected_indices = _get_preselected_sequence_indices(
+        sequences=sequences,
+        preselected_sample_ids=preselected_sample_ids,
+    )
+    n_available_sequences = len(sequences) - len(preselected_indices)
+    n_sequences_to_select = min(
+        config.n_samples_to_select // sequence_length, n_available_sequences
     )
     if n_sequences_to_select == 0:
         logger.warning(
-            "No sequences available for sampling. No video has at least %d candidate frame(s).",
+            "No sequences available for sampling. No video has at least %d candidate frame(s) "
+            "outside the preselection.",
             sequence_length,
         )
         return
@@ -65,13 +82,19 @@ def sampling_via_database_sequences(
             .mean(axis=1)
         )
         mundig.add_diversity(embeddings=sequence_proxies, strength=strat.strength)
-    selected_sequence_indices = mundig.run(n_samples=n_sequences_to_select)
+    # Mundig returns the preselected sequences as the prefix of the selection.
+    selected_sequence_indices = mundig.run(
+        n_samples=len(preselected_indices) + n_sequences_to_select,
+        preselected_indices=preselected_indices,
+    )
     sampling_helpers.create_result_tag(
         session=session,
         collection_id=config.collection_id,
         tag_name=config.sampling_result_tag_name,
         selected_sample_ids=[
-            sample_id for index in selected_sequence_indices for sample_id in sequences[index]
+            sample_id
+            for index in selected_sequence_indices[len(preselected_indices) :]
+            for sample_id in sequences[index]
         ],
     )
 
@@ -143,3 +166,56 @@ def _load_sequences(
             sequence_length,
         )
     return sequences
+
+
+def _get_preselected_sequence_indices(
+    sequences: Sequence[tuple[UUID, ...]],
+    preselected_sample_ids: Iterable[UUID] | None,
+) -> list[int]:
+    """Map preselected frames onto the sequences they cover.
+
+    Selection happens over sequences, so preselection has to be expressed per
+    sequence too. Every preselected frame must therefore belong to a complete
+    sequence, and every frame of a covered sequence must be preselected. Sequence
+    boundaries follow from the candidate frames, so a partially covered sequence
+    means the preselection comes from a run over different candidates.
+
+    Args:
+        sequences: Sequences of frame sample ids built from the candidate frames.
+        preselected_sample_ids: Frame sample ids to treat as already selected.
+
+    Returns:
+        Ascending indices into ``sequences`` of the fully covered sequences.
+
+    Raises:
+        ValueError: If the preselected frames contain duplicates, if a frame is not
+            part of a complete sequence, or if a sequence is only partially covered.
+    """
+    preselected = list(preselected_sample_ids or ())
+    if len(preselected) != len(set(preselected)):
+        raise ValueError("Preselected sample IDs must be unique.")
+
+    sequence_index_by_frame = {
+        sample_id: index for index, sequence in enumerate(sequences) for sample_id in sequence
+    }
+    n_covered_frames: Counter[int] = Counter()
+    for sample_id in preselected:
+        sequence_index = sequence_index_by_frame.get(sample_id)
+        if sequence_index is None:
+            raise ValueError(
+                f"Preselected sample ID {sample_id} is not part of a complete sequence. "
+                "Preselected frames must be among the input sample IDs and must not fall "
+                "into an incomplete trailing sequence."
+            )
+        n_covered_frames[sequence_index] += 1
+
+    partially_covered = [
+        index for index, n_frames in n_covered_frames.items() if n_frames != len(sequences[index])
+    ]
+    if partially_covered:
+        raise ValueError(
+            f"Preselection covers {len(partially_covered)} sequence(s) only partially. "
+            "Preselected frames must cover whole sequences, so they have to come from a "
+            "run over the same candidate frames."
+        )
+    return sorted(n_covered_frames)

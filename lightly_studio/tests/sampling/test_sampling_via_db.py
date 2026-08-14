@@ -1429,6 +1429,168 @@ def test_sampling_via_database__sequence_warns_about_dropped_frames(
     assert sorted(frame.frame_number for frame in tagged.samples) == list(range(10))
 
 
+def test_sampling_via_database__sequence_preselection(
+    db_session: Session,
+) -> None:
+    """A preselected sequence informs the selection and stays out of the tag.
+
+    Sequence proxies sit at ``[2, 2]``, ``[7, 7]`` and ``[12, 12]``. With the
+    first sequence preselected, diversity must pick the far end rather than the
+    adjacent middle sequence.
+    """
+    frame_collection_id, frame_sample_ids = _fill_db_with_video_frames_and_embeddings(
+        session=db_session,
+        n_frames=15,
+    )
+
+    sampling_config = SamplingConfig(
+        collection_id=frame_collection_id,
+        n_samples_to_select=5,  # 1 sequence of length 5, on top of the preselected one
+        sampling_result_tag_name="preselected_sequence",
+        strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
+        selected_sequence_length=5,
+    )
+
+    sampling_via_database(
+        db_session,
+        sampling_config,
+        input_sample_ids=frame_sample_ids,
+        preselected_sample_ids=frame_sample_ids[0:5],
+    )
+
+    tags = tag_resolver.get_all_by_collection_id(db_session, collection_id=frame_collection_id)
+    assert len(tags) == 1
+    tagged = video_frame_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=frame_collection_id,
+        video_frame_filter=VideoFrameFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
+    )
+    assert sorted(frame.frame_number for frame in tagged.samples) == [10, 11, 12, 13, 14]
+
+
+def test_sampling_via_database__sequence_preselection_matches_single_sampling(
+    db_session: Session,
+) -> None:
+    """Selecting two sequences in two preselected steps matches one combined run."""
+    frame_collection_id, frame_sample_ids = _fill_db_with_video_frames_and_embeddings(
+        session=db_session,
+        n_frames=15,
+    )
+    strategy = EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")
+
+    def sample_sequences(n_samples_to_select: int, tag_name: str, preselected: list[UUID]) -> None:
+        sampling_via_database(
+            session=db_session,
+            config=SamplingConfig(
+                collection_id=frame_collection_id,
+                n_samples_to_select=n_samples_to_select,
+                sampling_result_tag_name=tag_name,
+                strategies=[strategy],
+                selected_sequence_length=5,
+            ),
+            input_sample_ids=frame_sample_ids,
+            preselected_sample_ids=preselected,
+        )
+
+    sample_sequences(n_samples_to_select=5, tag_name="first_batch", preselected=[])
+    first_batch = _frame_sample_ids_by_tag(
+        session=db_session, collection_id=frame_collection_id, tag_name="first_batch"
+    )
+    sample_sequences(n_samples_to_select=5, tag_name="second_batch", preselected=first_batch)
+    second_batch = _frame_sample_ids_by_tag(
+        session=db_session, collection_id=frame_collection_id, tag_name="second_batch"
+    )
+    sample_sequences(n_samples_to_select=10, tag_name="single_batch", preselected=[])
+    single_batch = _frame_sample_ids_by_tag(
+        session=db_session, collection_id=frame_collection_id, tag_name="single_batch"
+    )
+
+    assert len(first_batch) == 5
+    assert set(first_batch).isdisjoint(second_batch)
+    assert set(first_batch + second_batch) == set(single_batch)
+
+
+def test_sampling_via_database__sequence_preselection_rejects_partial_sequence(
+    db_session: Session,
+) -> None:
+    """Preselected frames covering a sequence only partially are rejected."""
+    frame_collection_id, frame_sample_ids = _fill_db_with_video_frames_and_embeddings(
+        session=db_session,
+        n_frames=10,
+    )
+
+    sampling_config = SamplingConfig(
+        collection_id=frame_collection_id,
+        n_samples_to_select=5,
+        sampling_result_tag_name="partial_preselection",
+        strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
+        selected_sequence_length=5,
+    )
+
+    with pytest.raises(ValueError, match="covers 1 sequence\\(s\\) only partially"):
+        sampling_via_database(
+            db_session,
+            sampling_config,
+            input_sample_ids=frame_sample_ids,
+            preselected_sample_ids=frame_sample_ids[0:3],
+        )
+
+    tags = tag_resolver.get_all_by_collection_id(db_session, collection_id=frame_collection_id)
+    assert tags == []
+
+
+def test_sampling_via_database__sequence_preselection_rejects_dropped_frame(
+    db_session: Session,
+) -> None:
+    """A preselected frame in the dropped trailing chunk is rejected, not ignored."""
+    frame_collection_id, frame_sample_ids = _fill_db_with_video_frames_and_embeddings(
+        session=db_session,
+        n_frames=12,  # 2 sequences of length 5, frames 10 and 11 do not fill one
+    )
+
+    sampling_config = SamplingConfig(
+        collection_id=frame_collection_id,
+        n_samples_to_select=5,
+        sampling_result_tag_name="dropped_preselection",
+        strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
+        selected_sequence_length=5,
+    )
+
+    with pytest.raises(ValueError, match="is not part of a complete sequence"):
+        sampling_via_database(
+            db_session,
+            sampling_config,
+            input_sample_ids=frame_sample_ids,
+            preselected_sample_ids=[frame_sample_ids[10]],
+        )
+
+
+def test_sampling_via_database__sequence_preselection_rejects_duplicates(
+    db_session: Session,
+) -> None:
+    """Duplicate preselected frames are rejected as in the single-frame path."""
+    frame_collection_id, frame_sample_ids = _fill_db_with_video_frames_and_embeddings(
+        session=db_session,
+        n_frames=10,
+    )
+
+    sampling_config = SamplingConfig(
+        collection_id=frame_collection_id,
+        n_samples_to_select=5,
+        sampling_result_tag_name="duplicate_preselection",
+        strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
+        selected_sequence_length=5,
+    )
+
+    with pytest.raises(ValueError, match="Preselected sample IDs must be unique"):
+        sampling_via_database(
+            db_session,
+            sampling_config,
+            input_sample_ids=frame_sample_ids,
+            preselected_sample_ids=[frame_sample_ids[0], frame_sample_ids[0]],
+        )
+
+
 def _all_sample_ids(session: Session, collection_id: UUID) -> list[UUID]:
     """Return all sample ids for the collection ordered as returned by resolver."""
     samples = image_resolver.get_all_by_collection_id(
@@ -1444,6 +1606,18 @@ def _sample_ids_by_tag(session: Session, collection_id: UUID, tag_id: UUID) -> l
         filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tag_id])),
     ).samples
     return [sample.sample_id for sample in samples]
+
+
+def _frame_sample_ids_by_tag(session: Session, collection_id: UUID, tag_name: str) -> list[UUID]:
+    """Return the frame sample ids carrying the tag with the given name."""
+    tag = tag_resolver.get_by_name(session=session, tag_name=tag_name, collection_id=collection_id)
+    assert tag is not None
+    frames = video_frame_resolver.get_all_by_collection_id(
+        session=session,
+        collection_id=collection_id,
+        video_frame_filter=VideoFrameFilter(sample_filter=SampleFilter(tag_ids=[tag.tag_id])),
+    )
+    return [frame.sample_id for frame in frames.samples]
 
 
 def _fill_db_with_video_frames_and_embeddings(

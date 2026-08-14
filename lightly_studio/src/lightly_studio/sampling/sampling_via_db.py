@@ -231,6 +231,7 @@ def sampling_via_database(
 
     When ``config.selected_sequence_length > 1``, sampling runs over mean-pooled
     sequence proxies and the tag contains every frame of each selected sequence.
+    Preselected sample IDs then have to cover whole sequences.
 
     Args:
         session: Database session used to resolve and store sampling data.
@@ -241,7 +242,8 @@ def sampling_via_database(
 
     Raises:
         ValueError: If the preselected sample IDs contain duplicates or are not
-            a subset of the input sample IDs.
+            a subset of the input sample IDs, or, for sequence sampling, if they
+            do not cover whole sequences.
     """
     # Check if the tag name is already used
     existing_tag = tag_resolver.get_by_name(
@@ -261,6 +263,7 @@ def sampling_via_database(
             session=session,
             config=config,
             input_sample_ids=input_sample_ids,
+            preselected_sample_ids=preselected_sample_ids,
         )
         return
 
