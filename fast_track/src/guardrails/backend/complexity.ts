@@ -46,7 +46,6 @@ async function runLinter(paths: string[]): Promise<RuffViolation[]> {
 export const backendComplexityGuardrail: Guardrail = {
     name: NAME,
     required: true,
-    needsPrContext: false,
     async run(ctx: GuardrailContext): Promise<GuardrailOutcome> {
         const files = (await ctx.changedFiles()).filter(
             (f) => f.path.startsWith(BACKEND_PREFIX) && f.path.endsWith('.py')

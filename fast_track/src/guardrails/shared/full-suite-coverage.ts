@@ -47,7 +47,6 @@ export function createCoverageGuardrail(config: CoverageConfig): Guardrail {
     return {
         name: config.name,
         required: true,
-        needsPrContext: false,
 
         async run(ctx: GuardrailContext): Promise<GuardrailOutcome> {
             const files = await ctx.changedFiles();
