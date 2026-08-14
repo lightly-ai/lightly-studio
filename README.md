@@ -59,19 +59,19 @@ lightly-studio quickstart
       <a href="https://docs.lightly.ai/studio/dataset_setup/image_dataset/">
         <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/image_dataset.png" width="400" alt="Image Datasets"/>
       </a>
-      <br/><strong>Image Dataset</strong>
+      <br/><strong><a href="https://docs.lightly.ai/studio/dataset_setup/image_dataset/">Image Dataset</a></strong>
     </td>
     <td align="center">
       <a href="https://docs.lightly.ai/studio/dataset_setup/video_dataset/">
         <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/video_dataset.png" width="400" alt="Video Dataset"/>
       </a>
-      <br/><strong>Video Dataset</strong>
+      <br/><strong><a href="https://docs.lightly.ai/studio/dataset_setup/video_dataset/">Video Dataset</a></strong>
     </td>
     <td align="center">
       <a href="https://docs.lightly.ai/studio/concepts_and_tools/annotations/">
         <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/annotation.png" width="400" alt="Annotate"/>
       </a>
-      <br/><strong>Annotation</strong>
+      <br/><strong><a href="https://docs.lightly.ai/studio/concepts_and_tools/annotations/">Annotation</a></strong>
     </td>
   </tr>
   <tr>
@@ -79,19 +79,19 @@ lightly-studio quickstart
       <a href="https://docs.lightly.ai/studio/concepts_and_tools/sampling/">
         <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/sampling.png" width="400" alt="Curate"/>
       </a>
-      <br/><strong>Curation</strong>
+      <br/><strong><a href="https://docs.lightly.ai/studio/concepts_and_tools/sampling/">Curation</a></strong>
     </td>
     <td align="center">
       <a href="https://docs.lightly.ai/studio/concepts_and_tools/plugins/">
         <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/plugins.png" width="400" alt="Plugins"/>
       </a>
-      <br/><strong>Plugins</strong>
+      <br/><strong><a href="https://docs.lightly.ai/studio/concepts_and_tools/plugins/">Plugins</a></strong>
     </td>
     <td align="center">
       <a href="https://docs.lightly.ai/studio/concepts_and_tools/evaluation/">
         <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/model_evaluation.png" width="400" alt="Model Evaluation"/>
       </a>
-      <br/><strong>Model Evaluation</strong>
+      <br/><strong><a href="https://docs.lightly.ai/studio/concepts_and_tools/evaluation/">Model Evaluation</a></strong>
     </td>
   </tr>
 </table>
@@ -103,7 +103,42 @@ LightlyStudio is a browser app that runs on your own computer. Load your data in
 database with a Python script, then start the server and explore it in your browser.
 
 <details open>
-<summary><strong>Index a folder of images for curation and labeling</strong></summary>
+<summary><strong>Index a COCO dataset</strong></summary>
+
+Create a file named `example_coco.py`:
+
+```python
+import lightly_studio as ls
+
+# Download the example dataset (will be skipped if it already exists)
+dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+
+dataset = ls.ImageDataset.load_or_create()
+dataset.add_samples_from_coco(
+    annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
+    images_path=f"{dataset_path}/coco_subset_128_images/images",
+)
+# Optional: tag a subset of samples to filter them in the GUI.
+dataset.query()[:10].add_tag("sample_subset")
+
+ls.start_gui()
+```
+
+Run `python example_coco.py` and open the printed URL to inspect images with their annotations.
+
+Once the dataset is indexed, run `lightly-studio gui` to open the app again without re-running the
+script.
+
+To import COCO segmentation masks instead of object detections, set:
+
+```python
+annotation_type=ls.AnnotationType.SEGMENTATION_MASK
+```
+
+</details>
+
+<details>
+<summary><strong>Index a folder of images</strong></summary>
 
 Create a file named `example_image.py`:
 
@@ -128,46 +163,13 @@ Run `python example_image.py` and open the printed URL in your browser.
 
 </details>
 
-<details>
-<summary><strong>Index a COCO dataset</strong></summary>
-
-Create a file named `example_coco.py`:
-
-```python
-import lightly_studio as ls
-
-# Download the example dataset (will be skipped if it already exists)
-dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
-
-dataset = ls.ImageDataset.load_or_create()
-dataset.add_samples_from_coco(
-    annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
-    images_path=f"{dataset_path}/coco_subset_128_images/images",
-)
-# Optional: tag a subset of samples to filter them in the GUI.
-dataset.query()[:10].add_tag("sample_subset")
-
-ls.start_gui()
-```
-
-Run `python example_coco.py` and open the printed URL to inspect images with their annotations.
-
-To import COCO segmentation masks instead of object detections, set:
-
-```python
-annotation_type=ls.AnnotationType.SEGMENTATION_MASK
-```
-
-</details>
-
 Other starting points:
 [YOLO datasets](https://docs.lightly.ai/studio/dataset_setup/image_dataset/#from-an-annotation-format),
 [video folders](https://docs.lightly.ai/studio/dataset_setup/video_dataset/),
 [custom annotations](https://docs.lightly.ai/studio/concepts_and_tools/annotations/#annotations-in-python),
 [model evaluation](https://docs.lightly.ai/studio/concepts_and_tools/evaluation/#model-evaluation-in-python),
-and [notebooks](https://docs.lightly.ai/studio/dataset_setup/notebooks/).
-
-Try LightlyStudio without installing anything: [open the example notebook in Colab](https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb).
+[notebooks](https://docs.lightly.ai/studio/dataset_setup/notebooks/),
+and more in the [docs](https://docs.lightly.ai/studio/).
 
 ## 📚 Tutorials
 
@@ -176,11 +178,7 @@ Step-by-step guides covering complete workflows — from raw, unlabeled data to 
 - **[Curate a Traffic CCTV Dataset for YOLO Training](https://docs.lightly.ai/studio/tutorials/yolo-traffic-cctv-object-detection/):** Explore embeddings, remove near-duplicates, auto-label with a detection plugin, and review annotations before training.
 - **[Evaluate YOLO26 on Your Dataset with LightlyStudio](https://docs.lightly.ai/studio/tutorials/yolo26-model-evaluation/):** Compare predictions against ground truth, use the confusion matrix and embeddings to find failure patterns, and export issues for relabeling.
 
-## 🐍 Python Interface
-
-Everything in LightlyStudio is scriptable: index datasets, query and edit samples, sample
-subsets, and export the result. Full documentation at
-[docs.lightly.ai/studio](https://docs.lightly.ai/studio).
+## A selection of features
 
 **Set up a dataset**
 
@@ -200,10 +198,11 @@ subsets, and export the result. Full documentation at
 - [Plugins](https://docs.lightly.ai/studio/concepts_and_tools/plugins/) — auto-label with SAM and other models
 - [Export](https://docs.lightly.ai/studio/concepts_and_tools/export/) — write a query back out as COCO or YOLO
 
-**API reference**
+## 🐍 Python Interface
 
-| [Dataset](https://docs.lightly.ai/studio/api/dataset/) | [Sample](https://docs.lightly.ai/studio/api/sample/) | [DatasetQuery](https://docs.lightly.ai/studio/api/dataset_query/) | [Sampling](https://docs.lightly.ai/studio/api/sampling/) | [Embeddings](https://docs.lightly.ai/studio/api/embeddings/) | [Annotation](https://docs.lightly.ai/studio/api/annotation/) | [Model Evaluation](https://docs.lightly.ai/studio/api/evaluation/) | [Plugin](https://docs.lightly.ai/studio/api/plugin/) |
-| --- | --- | --- | --- | --- | --- | --- | --- |
+Everything in LightlyStudio is scriptable: index datasets, query and edit samples, sample
+subsets, and export the result. See the
+[API reference](https://docs.lightly.ai/studio/api/dataset/).
 
 ## 🤝 Contribute
 
