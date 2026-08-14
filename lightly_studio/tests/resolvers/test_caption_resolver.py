@@ -327,6 +327,8 @@ def test_update__overwrites_existing_temporal_span(db_session: Session) -> None:
     assert updated.temporal_span_details.end_time_s == 5.0
     # The span is overwritten in place instead of a second row being inserted.
     assert len(db_session.exec(select(TemporalSpanTable)).all()) == 1
+    # Caption text is preserved.
+    assert updated.text == "caption"
 
 
 def test_update__invalid_temporal_span(db_session: Session) -> None:
