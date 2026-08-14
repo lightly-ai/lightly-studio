@@ -13,10 +13,8 @@ import sqlalchemy
 from numpy.typing import NDArray
 from sqlmodel import Session, col, select
 
-from lightly_studio.database.db_vector import Embedding
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
@@ -27,6 +25,7 @@ from lightly_studio.resolvers import (
     tag_resolver,
 )
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+from lightly_studio.sampling import sampling_helpers
 from lightly_studio.sampling.mundig import Mundig
 from lightly_studio.sampling.sampling_config import (
     AnnotationClassBalancingStrategy,
@@ -290,17 +289,11 @@ def sampling_via_database(
     selected_sample_ids = [
         input_sample_ids[index] for index in selected_indices[len(preselected_indices) :]
     ]
-
-    tag = tag_resolver.create(
+    sampling_helpers.create_result_tag(
         session=session,
-        tag=TagCreate(
-            collection_id=config.collection_id,
-            name=config.sampling_result_tag_name,
-            kind="sample",
-        ),
-    )
-    tag_resolver.add_sample_ids_to_tag_id(
-        session=session, tag_id=tag.tag_id, sample_ids=selected_sample_ids
+        collection_id=config.collection_id,
+        tag_name=config.sampling_result_tag_name,
+        selected_sample_ids=selected_sample_ids,
     )
 
 
@@ -321,25 +314,6 @@ def _prepare_preselection(
     preselected_indices = [sample_id_to_index[sample_id] for sample_id in preselected_sample_ids]
     n_available_samples = len(input_sample_ids) - len(preselected_indices)
     return preselected_indices, min(n_samples_to_select, n_available_samples)
-
-
-def _get_embeddings_by_sample_ids(
-    session: Session,
-    context: _SamplingContext,
-    embedding_model_name: str | None,
-) -> list[Embedding]:
-    """Resolve sample embeddings for the given model and sample ids."""
-    embedding_model_id = embedding_model_resolver.get_by_name(
-        session=session,
-        collection_id=context.collection_id,
-        embedding_model_name=embedding_model_name,
-    ).embedding_model_id
-    embedding_tables = sample_embedding_resolver.get_by_sample_ids(
-        session=session,
-        sample_ids=list(context.input_sample_ids),
-        embedding_model_id=embedding_model_id,
-    )
-    return [embedding.embedding for embedding in embedding_tables]
 
 
 def _get_annotations_for_class_balancing(
@@ -380,27 +354,30 @@ def _add_strategy_to_mundig(
     """Resolve one sampling strategy and add it to Mundig."""
     if isinstance(strat, EmbeddingDiversityStrategy):
         mundig.add_diversity(
-            embeddings=_get_embeddings_by_sample_ids(
+            embeddings=sampling_helpers.get_embeddings_by_sample_ids(
                 session=session,
-                context=context,
+                collection_id=context.collection_id,
+                sample_ids=context.input_sample_ids,
                 embedding_model_name=strat.embedding_model_name,
             ),
             strength=strat.strength,
         )
     elif isinstance(strat, EmbeddingDeduplicationStrategy):
         mundig.add_diversity(
-            embeddings=_get_embeddings_by_sample_ids(
+            embeddings=sampling_helpers.get_embeddings_by_sample_ids(
                 session=session,
-                context=context,
+                collection_id=context.collection_id,
+                sample_ids=context.input_sample_ids,
                 embedding_model_name=strat.embedding_model_name,
             ),
             strength=strat.strength,
             stopping_condition_minimum_distance=strat.stopping_condition_minimum_distance,
         )
     elif isinstance(strat, EmbeddingSimilarityStrategy):
-        embeddings = _get_embeddings_by_sample_ids(
+        embeddings = sampling_helpers.get_embeddings_by_sample_ids(
             session=session,
-            context=context,
+            collection_id=context.collection_id,
+            sample_ids=context.input_sample_ids,
             embedding_model_name=strat.embedding_model_name,
         )
         embedding_model_id = embedding_model_resolver.get_by_name(
