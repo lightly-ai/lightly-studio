@@ -14,7 +14,8 @@ vi.mock('node:module', async (importOriginal) => {
     };
 });
 
-import { runEslint, repoRelPath, FRONTEND_ABS } from './eslint-runner';
+import { runEslint, repoRelPath } from './eslint-runner';
+import { FRONTEND_ABS } from './shared';
 
 describe('repoRelPath', () => {
     it('converts an absolute path to a repo-relative path', () => {
