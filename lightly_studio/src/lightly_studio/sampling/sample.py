@@ -99,10 +99,9 @@ class Sampling:
 
     # Video sequence sampling.
 
-    On video frame collections, `diverse()` can select contiguous clips by setting
-    `selected_sequence_length` above 1. `n_samples_to_select` still counts frames
-    and must be a multiple of the sequence length. Only diversity strategies
-    support sequences.
+    On video frame collections, `diverse()` can select whole frame sequences by setting
+    `selected_sequence_length` above 1. `n_samples_to_select` still counts frames and must
+    be a multiple of the sequence length. Only diversity strategies support sequences.
     ```python
     frames.query().sampling().diverse(
         n_samples_to_select=100,
@@ -165,9 +164,9 @@ class Sampling:
             embedding_model_name: Optional embedding model name. If None, uses the only
                 available model or raises if multiple exist.
             selected_sequence_length: Number of frames per selected sequence. Above 1,
-                selection happens over contiguous video-frame sequences, while
-                ``n_samples_to_select`` still counts frames and must be a multiple of
-                this value.
+                selection happens over video-frame sequences formed per video from the
+                candidate frames in frame-number order, while ``n_samples_to_select``
+                still counts frames and must be a multiple of this value.
         """
         strategy = EmbeddingDiversityStrategy(embedding_model_name=embedding_model_name)
         self.multi_strategies(
@@ -246,9 +245,10 @@ class Sampling:
             sampling_result_tag_name: Tag name for the sampling result.
             sampling_strategies: Strategies to compose for sampling.
             selected_sequence_length: Number of frames per selected sequence. Above 1,
-                selection happens over contiguous video-frame sequences and only
-                diversity strategies are supported, while ``n_samples_to_select`` still
-                counts frames and must be a multiple of this value.
+                selection happens over video-frame sequences formed per video from the
+                candidate frames in frame-number order and only diversity strategies are
+                supported, while ``n_samples_to_select`` still counts frames and must be
+                a multiple of this value.
         """
         config = SamplingConfig(
             collection_id=self._dataset_id,

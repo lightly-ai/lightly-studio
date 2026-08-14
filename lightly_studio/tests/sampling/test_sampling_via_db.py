@@ -1199,67 +1199,6 @@ def test_aggregate_class_distributions() -> None:
     np.testing.assert_array_equal(class_distributions, expected_distributions)
 
 
-def _all_sample_ids(session: Session, collection_id: UUID) -> list[UUID]:
-    """Return all sample ids for the collection ordered as returned by resolver."""
-    samples = image_resolver.get_all_by_collection_id(
-        session=session, collection_id=collection_id, pagination=None
-    ).samples
-    return [sample.sample_id for sample in samples]
-
-
-def _sample_ids_by_tag(session: Session, collection_id: UUID, tag_id: UUID) -> list[UUID]:
-    samples = image_resolver.get_all_by_collection_id(
-        session=session,
-        collection_id=collection_id,
-        filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tag_id])),
-    ).samples
-    return [sample.sample_id for sample in samples]
-
-
-def _fill_db_with_video_frames_and_embeddings(
-    session: Session,
-    *,
-    n_frames: int,
-    embedding_model_name: str = "embedding_model_1",
-) -> tuple[UUID, list[UUID]]:
-    """Create a video with ``n_frames`` frames and per-frame embeddings.
-
-    Embeddings are ``[i, i]`` for frame index ``i`` so diversity prefers
-    sequences at opposite ends of the video.
-
-    Returns:
-        Frame collection id and ordered frame sample ids.
-    """
-    video_collection = helpers_resolvers.create_collection(
-        session=session, sample_type=SampleType.VIDEO
-    )
-    video_with_frames = create_video_with_frames(
-        session=session,
-        collection_id=video_collection.collection_id,
-        video=VideoStub(
-            path="/data/sequence_test.mp4",
-            duration_s=float(n_frames),
-            fps=1.0,
-        ),
-    )
-    frame_collection_id = video_with_frames.video_frames_collection_id
-    frame_sample_ids = list(video_with_frames.frame_sample_ids)
-    embedding_model = helpers_resolvers.create_embedding_model(
-        session=session,
-        collection_id=frame_collection_id,
-        embedding_model_name=embedding_model_name,
-        embedding_dimension=2,
-    )
-    for i, frame_sample_id in enumerate(frame_sample_ids):
-        helpers_resolvers.create_sample_embedding(
-            session=session,
-            sample_id=frame_sample_id,
-            embedding_model_id=embedding_model.embedding_model_id,
-            embedding=[float(i), float(i)],
-        )
-    return frame_collection_id, frame_sample_ids
-
-
 def test_sampling_via_database__sequence_diversity(
     db_session: Session,
 ) -> None:
@@ -1489,3 +1428,92 @@ def test_sampling_via_database__sequence_warns_about_dropped_frames(
     )
     assert sorted(frame.frame_number for frame in tagged.samples) == list(range(10))
 
+
+def test_sampling_via_database__sequence_rejects_preselection(
+    db_session: Session,
+) -> None:
+    """Preselection is rejected instead of being silently ignored for sequences."""
+    frame_collection_id, frame_sample_ids = _fill_db_with_video_frames_and_embeddings(
+        session=db_session,
+        n_frames=10,
+    )
+
+    sampling_config = SamplingConfig(
+        collection_id=frame_collection_id,
+        n_samples_to_select=5,
+        sampling_result_tag_name="preselected_sequence",
+        strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
+        selected_sequence_length=5,
+    )
+
+    with pytest.raises(ValueError, match="not supported with selected_sequence_length"):
+        sampling_via_database(
+            db_session,
+            sampling_config,
+            input_sample_ids=frame_sample_ids,
+            preselected_sample_ids=frame_sample_ids[:5],
+        )
+
+    tags = tag_resolver.get_all_by_collection_id(db_session, collection_id=frame_collection_id)
+    assert tags == []
+
+
+def _all_sample_ids(session: Session, collection_id: UUID) -> list[UUID]:
+    """Return all sample ids for the collection ordered as returned by resolver."""
+    samples = image_resolver.get_all_by_collection_id(
+        session=session, collection_id=collection_id, pagination=None
+    ).samples
+    return [sample.sample_id for sample in samples]
+
+
+def _sample_ids_by_tag(session: Session, collection_id: UUID, tag_id: UUID) -> list[UUID]:
+    samples = image_resolver.get_all_by_collection_id(
+        session=session,
+        collection_id=collection_id,
+        filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tag_id])),
+    ).samples
+    return [sample.sample_id for sample in samples]
+
+
+def _fill_db_with_video_frames_and_embeddings(
+    session: Session,
+    *,
+    n_frames: int,
+    embedding_model_name: str = "embedding_model_1",
+) -> tuple[UUID, list[UUID]]:
+    """Create a video with ``n_frames`` frames and per-frame embeddings.
+
+    Embeddings are ``[i, i]`` for frame index ``i`` so diversity prefers
+    sequences at opposite ends of the video.
+
+    Returns:
+        Frame collection id and ordered frame sample ids.
+    """
+    video_collection = helpers_resolvers.create_collection(
+        session=session, sample_type=SampleType.VIDEO
+    )
+    video_with_frames = create_video_with_frames(
+        session=session,
+        collection_id=video_collection.collection_id,
+        video=VideoStub(
+            path="/data/sequence_test.mp4",
+            duration_s=float(n_frames),
+            fps=1.0,
+        ),
+    )
+    frame_collection_id = video_with_frames.video_frames_collection_id
+    frame_sample_ids = list(video_with_frames.frame_sample_ids)
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=session,
+        collection_id=frame_collection_id,
+        embedding_model_name=embedding_model_name,
+        embedding_dimension=2,
+    )
+    for i, frame_sample_id in enumerate(frame_sample_ids):
+        helpers_resolvers.create_sample_embedding(
+            session=session,
+            sample_id=frame_sample_id,
+            embedding_model_id=embedding_model.embedding_model_id,
+            embedding=[float(i), float(i)],
+        )
+    return frame_collection_id, frame_sample_ids
