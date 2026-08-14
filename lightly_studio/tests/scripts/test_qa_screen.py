@@ -141,6 +141,46 @@ def test_validate_transcripts__reports_delivery_identity(tmp_path: Path) -> None
         qa_screen._validate_transcripts(triplets=[triplet])
 
 
+def test_write_qa_summary__does_not_review_narration_above_requirement(
+    mocker: MockerFixture,
+) -> None:
+    video = mocker.MagicMock(sample_id=uuid4())
+    video.get_object_session.return_value = mocker.sentinel.session
+    metadata = {
+        "qa_resolution_pass": True,
+        "qa_duration_pass": True,
+        "qa_has_audio": True,
+        "qa_has_narration": True,
+        "whisper_wpm_pass": True,
+        "qa_transcript_timestamps_valid": True,
+        "narration_classification_complete": True,
+        "narration_requirement_pass": True,
+        "blur_score": 50.0,
+        "lighting_score": 0.45,
+        "motion_score": 3.0,
+        "whisper_caption_count": 1,
+        "repeated_caption_group_count": 0,
+        "narration_qa_status": "manual_review",
+        "narration_qualifying_percentage": 70.0,
+    }
+    mocker.patch.object(
+        metadata_resolver,
+        "get_value_for_sample",
+        side_effect=lambda *, key, **_: metadata.get(key),
+    )
+    update = mocker.patch.object(metadata_resolver, "bulk_update_metadata")
+
+    run_egocentric_qa._write_qa_summary(
+        video=video,
+        include_legacy_caption_threshold=False,
+    )
+
+    written_metadata = update.call_args.args[1][0][1]
+    assert written_metadata["automated_qa_status"] == "pass"
+    assert written_metadata["automated_qa_review_issues"] == ""
+    assert written_metadata["automated_qa_review_issue_count"] == 0
+
+
 def _local_triplet(tmp_path: Path, has_transcript: bool = True) -> qa_pull.LocalTriplet:
     video_path = tmp_path / "clip.mp4"
     transcript_path = tmp_path / "clip.json" if has_transcript else None

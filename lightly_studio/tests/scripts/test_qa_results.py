@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 from types import SimpleNamespace
 from typing import cast
@@ -16,7 +17,7 @@ from lightly_studio.resolvers import metadata_resolver
 from scripts import qa_pull, qa_results
 
 
-def test_build_result_records__includes_source_video_and_all_metadata(
+def test_build_result_records__builds_grouped_schema_with_thresholds(
     tmp_path: Path,
     mocker: MockerFixture,
 ) -> None:
@@ -25,8 +26,26 @@ def test_build_result_records__includes_source_video_and_all_metadata(
     dataset = _dataset(mocker=mocker, video=video)
     metadata = {
         qa_results.PIPELINE_COMPLETE_KEY: True,
-        "automated_qa_status": "pass",
-        "blur_score": 123.4,
+        "automated_qa_status": "review",
+        "automated_qa_failures": "",
+        "automated_qa_failure_count": 0,
+        "automated_qa_review_issues": "blurry",
+        "automated_qa_review_issue_count": 1,
+        "expected_quality_label": "accepted",
+        "qa_resolution_pass": True,
+        "qa_duration_pass": True,
+        "qa_has_audio": True,
+        "qa_has_narration": True,
+        "qa_transcript_timestamps_valid": True,
+        "whisper_words_per_minute": 80.0,
+        "whisper_wpm_pass": True,
+        "whisper_caption_count": 2,
+        "narration_classification_complete": True,
+        "narration_qualifying_percentage": 70.0,
+        "narration_requirement_pass": True,
+        "narration_qa_status": "manual_review",
+        "blur_score": 23.4,
+        "custom_future_metric": 42,
     }
     caption = cast(
         CaptionTable,
@@ -54,7 +73,31 @@ def test_build_result_records__includes_source_video_and_all_metadata(
     assert record["source"]["video_url"] == "gs://bucket/review/nested/clip.mp4"
     assert record["source"]["files"] == list(triplet.source_files)
     assert record["video"]["file_name"] == "clip.mp4"
-    assert record["metadata"] == metadata
+    assert record["schema_version"] == 2
+    assert record["policy_version"] == 1
+    assert record["verdict"] == {
+        "status": "review",
+        "expected_quality_label": "accepted",
+        "failures": [],
+        "failure_count": 0,
+        "review_issues": ["blurry"],
+        "review_issue_count": 1,
+        "issues": ["blurry"],
+        "issue_count": 1,
+    }
+    assert record["checks"]["task_environment_narration"] == {
+        "status": "pass",
+        "severity": "blocking",
+        "value": 70.0,
+        "rule": {"operator": ">=", "threshold": 70.0, "unit": "percent"},
+        "issue_on_failure": "insufficient_task_environment_narration",
+    }
+    assert record["checks"]["caption_match"]["status"] == "not_run"
+    assert record["checks"]["blur"]["status"] == "fail"
+    assert record["checks"]["blur"]["value"] == 23.4
+    assert record["metrics"]["narration"]["qa_status"] == "manual_review"
+    assert record["metrics"]["visual"]["blur_score"] == 23.4
+    assert record["metrics"]["other"] == {"custom_future_metric": 42}
     assert record["narration_chunks"] == [
         {
             "sample_id": str(caption.sample_id),
@@ -87,6 +130,37 @@ def test_build_result_records__rejects_incomplete_video(
         qa_results.build_result_records(dataset=dataset, triplets=[triplet])
 
 
+def test_build_result_records__treats_seventy_percent_narration_as_pass(
+    tmp_path: Path,
+    mocker: MockerFixture,
+) -> None:
+    triplet = _local_triplet(tmp_path=tmp_path, stem="clip")
+    video = _video(mocker=mocker, video_path=triplet.video_path)
+    dataset = _dataset(mocker=mocker, video=video)
+    metadata = {
+        qa_results.PIPELINE_COMPLETE_KEY: True,
+        "automated_qa_status": "review",
+        "automated_qa_failures": "",
+        "automated_qa_review_issues": "narration_near_threshold",
+        "narration_qualifying_percentage": 70.0,
+        "narration_requirement_pass": True,
+        "narration_qa_status": "manual_review",
+    }
+    mocker.patch.object(
+        metadata_resolver,
+        "get_by_sample_id",
+        return_value=SimpleNamespace(data=metadata),
+    )
+
+    records = qa_results.build_result_records(dataset=dataset, triplets=[triplet])
+
+    record = records[0][2]
+    assert record["verdict"]["status"] == "pass"
+    assert record["verdict"]["review_issues"] == []
+    assert record["checks"]["task_environment_narration"]["status"] == "pass"
+    assert record["metrics"]["narration"]["qa_status"] == "manual_review"
+
+
 def test_upload_result_records__writes_json_to_source_bucket(
     tmp_path: Path,
     mocker: MockerFixture,
@@ -114,6 +188,30 @@ def test_upload_result_records__writes_json_to_source_bucket(
         mocker.ANY,
         content_type="application/json",
     )
+
+
+def test_upload_result_records__writes_strict_json_and_preserves_verdict_first(
+    tmp_path: Path,
+    mocker: MockerFixture,
+) -> None:
+    triplet = _local_triplet(tmp_path=tmp_path, stem="clip")
+    client = mocker.MagicMock()
+    record = {"verdict": {"status": "pass"}, "metric": math.nan}
+    mocker.patch.object(
+        qa_results,
+        "build_result_records",
+        return_value=[(triplet, "automated_qa_results/clip_results.json", record)],
+    )
+
+    qa_results.upload_result_records(
+        client=client,
+        dataset=mocker.MagicMock(),
+        triplets=[triplet],
+    )
+
+    payload = client.bucket.return_value.blob.return_value.upload_from_string.call_args.args[0]
+    assert payload.index('"verdict"') < payload.index('"metric"')
+    assert json.loads(payload)["metric"] is None
 
 
 def test_filter_unpublished_triplets__lists_each_bucket_once(mocker: MockerFixture) -> None:

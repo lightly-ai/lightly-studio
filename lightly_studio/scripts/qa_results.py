@@ -4,11 +4,18 @@
 from __future__ import annotations
 
 import json
+import math
+from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any
 
 from lightly_studio.resolvers import metadata_resolver
+
+if TYPE_CHECKING or __package__:
+    from scripts import qa_result_schema
+else:
+    import qa_result_schema
 
 if TYPE_CHECKING:
     from google.cloud import storage  # type: ignore[import-untyped]
@@ -19,7 +26,7 @@ if TYPE_CHECKING:
     from scripts import qa_pull
 
 DEFAULT_RESULTS_PREFIX = "automated_qa_results"
-RESULT_SCHEMA_VERSION = 1
+RESULT_SCHEMA_VERSION = qa_result_schema.RESULT_SCHEMA_VERSION
 PIPELINE_COMPLETE_KEY = "qa_pipeline_complete"
 
 
@@ -46,7 +53,7 @@ def upload_result_records(
     uploaded_urls: list[str] = []
     for triplet, object_name, record in records:
         client.bucket(triplet.bucket).blob(object_name).upload_from_string(
-            json.dumps(record, indent=2, sort_keys=True),
+            json.dumps(_json_safe(value=record), indent=2, allow_nan=False),
             content_type="application/json",
         )
         uploaded_urls.append(f"gs://{triplet.bucket}/{object_name}")
@@ -145,7 +152,9 @@ def _build_record(
     result_url: str,
 ) -> dict[str, Any]:
     return {
-        "schema_version": RESULT_SCHEMA_VERSION,
+        "verdict": qa_result_schema.build_verdict(metadata=metadata),
+        "schema_version": qa_result_schema.RESULT_SCHEMA_VERSION,
+        "policy_version": qa_result_schema.QA_POLICY_VERSION,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "result_url": result_url,
         "source": {
@@ -164,7 +173,13 @@ def _build_record(
             "duration_s": video.duration_s,
             "fps": video.fps,
         },
-        "metadata": metadata,
+        "checks": qa_result_schema.build_checks(
+            metadata=metadata,
+            width=video.width,
+            height=video.height,
+            duration_s=video.duration_s,
+        ),
+        "metrics": qa_result_schema.build_metrics(metadata=metadata),
         "narration_chunks": [_build_caption_record(caption=caption) for caption in captions],
     }
 
@@ -179,3 +194,19 @@ def _build_caption_record(caption: CaptionTable) -> dict[str, Any]:
         "end_time_s": span.end_time_s if span is not None else None,
         "metadata": metadata,
     }
+
+
+def _json_safe(value: Any) -> Any:
+    """Return a recursively strict-JSON-compatible value."""
+    if value is None or isinstance(value, (str, bool, int)):
+        return value
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    if isinstance(value, Mapping):
+        return {str(key): _json_safe(value=item) for key, item in value.items()}
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return [_json_safe(value=item) for item in value]
+    item_method = getattr(value, "item", None)
+    if callable(item_method):
+        return _json_safe(value=item_method())
+    raise TypeError(f"Value of type {type(value).__name__} is not JSON serializable.")

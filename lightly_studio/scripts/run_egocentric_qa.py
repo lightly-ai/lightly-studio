@@ -56,9 +56,9 @@ DEFAULT_NARRATION_LLM_MODEL = os.environ.get("NARRATION_LLM_MODEL", "qwen3:4b")
 DEFAULT_NARRATION_LLM_API_KEY = os.environ.get("NARRATION_LLM_API_KEY")
 DEFAULT_NARRATION_LLM_PROVIDER = os.environ.get("NARRATION_LLM_PROVIDER", "ollama")
 WHISPER_WORKER_PATH = PROJECT_ROOT / "scripts" / "transcribe_with_faster_whisper.py"
-LOW_CAPTION_MATCH_MAX = 0.35
+LOW_CAPTION_MATCH_MAX = caption_segment_matching.DEFAULT_MIN_CAPTION_SEGMENT_MATCH_SCORE
 MIN_CAPTIONS_FOR_REPETITION = 2
-MIN_NARRATION_WORDS_PER_MINUTE = 25.0
+MIN_NARRATION_WORDS_PER_MINUTE = egocentric_qa.MIN_NARRATION_WORDS_PER_MINUTE
 CaptionMatchScoring = Literal["mean_pool", "top2"]
 
 
@@ -739,7 +739,11 @@ def _write_qa_summary(
             video_quality.DEFAULT_MOTION_SCORE_LOW_MAX,
             "static_camera",
         ),
-        ("whisper_caption_count", 1.0, "no_action_phrases"),
+        (
+            "whisper_caption_count",
+            float(egocentric_qa.MIN_NARRATION_CAPTION_COUNT),
+            "no_action_phrases",
+        ),
     ]
     if include_legacy_caption_threshold:
         review_checks.append(
@@ -772,18 +776,6 @@ def _write_qa_summary(
     )
     if isinstance(repeated_group_count, (int, float)) and repeated_group_count > 0:
         review_issues.append("repeated_actions")
-    narration_status = metadata_resolver.get_value_for_sample(
-        session=session,
-        sample_id=video.sample_id,
-        key="narration_qa_status",
-    )
-    narration_requirement_pass = metadata_resolver.get_value_for_sample(
-        session=session,
-        sample_id=video.sample_id,
-        key="narration_requirement_pass",
-    )
-    if narration_status == "manual_review" and narration_requirement_pass is True:
-        review_issues.append("narration_near_threshold")
     if failures:
         status = "fail"
     elif review_issues:
