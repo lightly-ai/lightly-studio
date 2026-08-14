@@ -28,7 +28,7 @@ export interface ApiGuardrailContextParams {
  */
 export class ApiGuardrailContext implements GuardrailContext {
     readonly baseRef: string;
-    readonly octokit: Octokit;
+    private readonly octokit: Octokit;
     private readonly owner: string;
     private readonly repo: string;
     private readonly prNumber: number;

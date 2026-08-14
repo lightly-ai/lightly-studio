@@ -67,8 +67,7 @@ async function main(env: NodeJS.ProcessEnv): Promise<void> {
         baseRef: routing.baseRef
     });
 
-    // hasPrContext: true — unlike the local CLI, pr-only guardrails run here.
-    const selected = selectGuardrails(guardrails, { hasPrContext: true });
+    const selected = selectGuardrails(guardrails);
     const run = await runGuardrails(guardrailContext, selected);
     const verdict = buildVerdict(run, routing);
 
