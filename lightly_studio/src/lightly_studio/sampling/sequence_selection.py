@@ -7,12 +7,13 @@ from collections.abc import Sequence
 from uuid import UUID
 
 from lightly_studio.resolvers.video_frame_resolver import VideoFrameInfoRow
+from lightly_studio.utils import batching
 
 
 def create_sequences(
     frames: Sequence[VideoFrameInfoRow],
     sequence_length: int,
-) -> list[tuple[UUID, ...]]:
+) -> list[list[UUID]]:
     """Split frames into non-overlapping sequences of fixed length.
 
     Videos are processed in the order they first appear in ``frames``. Within a
@@ -33,17 +34,17 @@ def create_sequences(
     if sequence_length < 1:
         raise ValueError(f"sequence_length must be >= 1, got {sequence_length}.")
 
-    by_video: dict[UUID, list[VideoFrameInfoRow]] = defaultdict(list)
+    video_id_to_frames: dict[UUID, list[VideoFrameInfoRow]] = defaultdict(list)
     for frame in frames:
-        by_video[frame.parent_sample_id].append(frame)
+        video_id_to_frames[frame.parent_sample_id].append(frame)
 
-    sequences: list[tuple[UUID, ...]] = []
+    sequences: list[list[UUID]] = []
     # Insertion order of `by_video` is first-seen video order from `frames`.
-    for video_frames in by_video.values():
+    for video_frames in video_id_to_frames.values():
         video_frames_sorted = sorted(video_frames, key=lambda frame: frame.frame_number)
-        for start_idx in range(0, len(video_frames_sorted), sequence_length):
-            chunk = video_frames_sorted[start_idx : start_idx + sequence_length]
+        for chunk in batching.batched(items=video_frames_sorted, batch_size=sequence_length):
+            # `batched` yields a shorter final chunk; an incomplete sequence is dropped.
             if len(chunk) != sequence_length:
                 break
-            sequences.append(tuple(frame.sample_id for frame in chunk))
+            sequences.append([frame.sample_id for frame in chunk])
     return sequences
