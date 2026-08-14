@@ -39,7 +39,7 @@ def create_sequences(
         video_id_to_frames[frame.parent_sample_id].append(frame)
 
     sequences: list[list[UUID]] = []
-    # Insertion order of `by_video` is first-seen video order from `frames`.
+    # Insertion order of `video_id_to_frames` is first-seen video order from `frames`.
     for video_frames in video_id_to_frames.values():
         video_frames_sorted = sorted(video_frames, key=lambda frame: frame.frame_number)
         for chunk in batching.batched(items=video_frames_sorted, batch_size=sequence_length):
