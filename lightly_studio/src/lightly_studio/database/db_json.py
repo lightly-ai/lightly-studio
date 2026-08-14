@@ -4,9 +4,10 @@ Thin wrappers over SQLAlchemy's JSON indexing, which compiles to the right opera
 chain for DuckDB and PostgreSQL and binds every key as a parameter.
 
 Two things decide which function to call. A *field* is a path (``a.b``, ``a.list[0]``)
-while a *key* is one literal name, so ``json_extract_key_as_text`` reads ``a.b`` as a
-key that contains a dot. And every function reads the value as text or as a float,
-never as raw ``json``: neither database compares ``json`` against a plain value,
+while a *key* is one literal name, so the ``_key_`` variants read ``a.b`` as a key that
+contains a dot; reach for them whenever the caller holds a key rather than a path, such
+as one enumerated from a stored schema. And every function reads the value as text or as
+a float, never as raw ``json``: neither database compares ``json`` against a plain value,
 PostgreSQL can neither order nor cast it, and only the text form turns a stored JSON
 ``null`` into SQL NULL, which is what a presence test needs.
 """
@@ -79,6 +80,25 @@ def json_extract_key_as_text(column: Any, key: str) -> ColumnElement[str]:
         The extracted value as text.
     """
     return cast(ColumnElement[str], column[_bind_key(key)].as_string())
+
+
+def json_extract_key_as_float(column: Any, key: str) -> ColumnElement[float]:
+    """Read one top-level JSON key as a float.
+
+    The key is taken literally, so unlike :func:`json_extract_as_float` a dot in it
+    stays part of the key rather than stepping into a nested object.
+
+    Casting a non-numeric value fails on PostgreSQL, so guard the call when the key's
+    type is not known.
+
+    Args:
+        column: The JSON column expression.
+        key: The top-level key to read, dots and all.
+
+    Returns:
+        The extracted value as a float.
+    """
+    return cast(ColumnElement[float], column[_bind_key(key)].as_float())
 
 
 class _JsonKeyType(TypeDecorator[str]):
