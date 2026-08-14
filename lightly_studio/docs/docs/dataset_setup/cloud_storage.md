@@ -29,7 +29,7 @@ import lightly_studio as ls
 dataset = ls.ImageDataset.load_or_create()
 dataset.add_images_from_path(path="s3://my-bucket/images/")
 dataset.add_images_from_path(path="gcs://other-bucket/more-images/")
-dataset.add_images_from_path(path="local-folder/not-in-the-cloud-yet")
+dataset.add_images_from_path(path="/data/images/not-in-the-cloud-yet")
 ```
 
 **Example: Loading videos from S3**
