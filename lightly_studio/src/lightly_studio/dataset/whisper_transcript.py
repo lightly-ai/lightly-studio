@@ -235,7 +235,15 @@ def load_whisper_transcript(
 
     segments = payload.get("segments")
     if not isinstance(segments, list):
-        raise ValueError(f"Whisper transcript must contain a segments list: '{path}'.")
+        # Newer delivery transcripts ship a flat top-level ``words`` list with no
+        # ``segments``. Wrap it in one synthetic segment so every word-based unit,
+        # word count, and the segment-timestamp path work unchanged.
+        top_level_words = payload.get("words")
+        if isinstance(top_level_words, list):
+            text = str(payload.get("text", ""))
+            segments = [_segment_from_words(words=top_level_words, text=text)]
+        else:
+            raise ValueError(f"Whisper transcript must contain a segments list: '{path}'.")
 
     if caption_unit == "segment":
         raw_captions = segments
@@ -282,7 +290,11 @@ def load_whisper_transcript(
         language=language if isinstance(language, str) else None,
         language_probability=_as_float(payload.get("language_probability")),
         duration_s=_as_float(payload.get("duration_s")),
-        speech_duration_s=_as_float(payload.get("speech_duration_s")),
+        speech_duration_s=(
+            _as_float(payload.get("speech_duration_s"))
+            if payload.get("speech_duration_s") is not None
+            else _derive_speech_duration_s(segments=segments)
+        ),
         silences=_parse_silences(payload.get("silences", [])),
         captions=captions,
     )
@@ -540,6 +552,34 @@ def _has_nontrivial_stem(token: str, suffix: str) -> bool:
 
 def _normalize_token(value: str) -> str:
     return _TOKEN_PATTERN.sub("", value.lower())
+
+
+def _segment_from_words(words: list[Any], text: str) -> dict[str, Any]:
+    starts = [s for word in words if (s := _as_float(_word_field(word, "start"))) is not None]
+    ends = [e for word in words if (e := _as_float(_word_field(word, "end"))) is not None]
+    return {
+        "text": text,
+        "start": min(starts) if starts else 0.0,
+        "end": max(ends) if ends else 0.0,
+        "words": words,
+    }
+
+
+def _derive_speech_duration_s(segments: list[Any]) -> float | None:
+    total = 0.0
+    for segment in segments:
+        if not isinstance(segment, dict):
+            continue
+        for word in segment.get("words", []):
+            start = _as_float(_word_field(word, "start"))
+            end = _as_float(_word_field(word, "end"))
+            if start is not None and end is not None and end > start:
+                total += end - start
+    return total if total > 0.0 else None
+
+
+def _word_field(word: Any, key: str) -> Any:
+    return word.get(key) if isinstance(word, dict) else None
 
 
 def _get_words(segments: list[Any], path: Path) -> list[Any]:

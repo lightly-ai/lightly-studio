@@ -99,6 +99,7 @@ class VideoLoadContext:
     target_fps: float | None
     embed_frames: bool
     embedding_model_id: UUID | None
+    extract_frames: bool = True
 
 
 def load_into_collection_from_paths(  # noqa: PLR0913
@@ -110,6 +111,7 @@ def load_into_collection_from_paths(  # noqa: PLR0913
     show_progress: bool = True,
     target_fps: float | None = None,
     embed_frames: bool = False,
+    extract_frames: bool = True,
 ) -> tuple[list[UUID], list[UUID]]:
     """Load video samples from file paths into the dataset using PyAV.
 
@@ -127,6 +129,9 @@ def load_into_collection_from_paths(  # noqa: PLR0913
             original. Must be greater than 0.
         embed_frames: If True, generate image embeddings for extracted video frames during
             decoding. Requires an image-compatible embedding model.
+        extract_frames: If True, decode and persist a child sample per (subsampled) frame.
+            If False, only the video sample and its header metadata are stored; the whole
+            decode pass is skipped. Use for screening paths that never read frame rows.
 
     Returns:
         A tuple containing:
@@ -172,6 +177,7 @@ def load_into_collection_from_paths(  # noqa: PLR0913
         target_fps=target_fps,
         embed_frames=effective_embed_frames,
         embedding_model_id=embedding_model_id,
+        extract_frames=extract_frames,
     )
 
     # TODO(Malte, 07/2026): Parallelize video indexing across videos with
@@ -266,6 +272,11 @@ def _load_single_video(
 
             if len(video_sample_ids) != 1:
                 raise RuntimeError(f"There was an error adding {video_path} to the dataset.")
+
+            # Header metadata (width/height/duration/fps) is already read above, so callers
+            # that never touch frame rows can skip the full decode pass entirely.
+            if not context.extract_frames:
+                return video_sample_ids[0], []
 
             # Create video frame samples by parsing all frames
             extraction_context = FrameExtractionContext(

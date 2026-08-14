@@ -44,8 +44,8 @@ if TYPE_CHECKING:
 
 DEFAULT_CAPTION_UNIT: CaptionUnit = "narration_chunk"
 DEFAULT_BATCH_SIZE = 16
-# Ingest stores one child sample per decoded frame; QA reads none of them (quality reopens
-# the file, narration uses the transcript). Subsample to 1 fps to keep the database small.
+# Only used when frames are extracted (extract_frames=True). The QA path skips frame
+# extraction, so this is inert there, but it remains a knob for browse-oriented ingests.
 DEFAULT_TARGET_FPS = 1.0
 # The reference runner defaults to ``qwen3:4b``, which is not installed locally; the QA
 # host carries ``qwen3:8b``.
@@ -109,8 +109,8 @@ def screen_deliveries(  # noqa: PLR0913  parameters mirror the ingest + narratio
         batch_size: Deliveries ingested and classified per batch.
         caption_unit: Whisper caption granularity fed to the classifier.
         action_phrase_settings: Action-phrase windowing for ``action_phrase`` units.
-        target_fps: Frame rate the videos are subsampled to at ingest, to bound the
-            number of stored frame rows.
+        target_fps: Subsample rate applied only when frames are extracted; inert here
+            because the QA path ingests with ``extract_frames=False``.
         force: Reclassify captions even if a cached classification exists.
         probe_classifier: Probe the narration endpoint before the first pending batch.
 
@@ -121,11 +121,7 @@ def screen_deliveries(  # noqa: PLR0913  parameters mirror the ingest + narratio
     screened_videos: list[VideoSample] = []
     classifier_probed = False
     for batch in _chunks(triplets, batch_size):
-        batch_videos = _ingest_batch(
-            dataset=dataset,
-            batch=batch,
-            target_fps=target_fps,
-        )
+        batch_videos = _ingest_batch(dataset=dataset, batch=batch, target_fps=target_fps)
         _write_provenance(dataset=dataset, batch=batch, videos=batch_videos)
         pending_videos = [
             video for video in batch_videos if force or not _pipeline_complete(video=video)
@@ -134,7 +130,13 @@ def screen_deliveries(  # noqa: PLR0913  parameters mirror the ingest + narratio
             # if probe_classifier and not classifier_probed:
             #     qa._probe_narration_classifier(classifier=classifier)
             #     classifier_probed = True
-            _screen_videos(dataset=dataset, videos=pending_videos)
+            _screen_videos(
+                dataset=dataset,
+                videos=pending_videos,
+                batch=batch,
+                caption_unit=caption_unit,
+                action_phrase_settings=action_phrase_settings,
+            )
         screened_videos.extend(batch_videos)
 
     unique_videos = {video.sample_id: video for video in screened_videos}
@@ -161,6 +163,7 @@ def _ingest_batch(
             path=triplet.video_path.resolve(),
             embed=False,
             embed_frames=False,
+            extract_frames=False,
             target_fps=target_fps,
         )
     return _videos_for_triplets(dataset=dataset, triplets=batch)
@@ -169,11 +172,21 @@ def _ingest_batch(
 def _screen_videos(
     dataset: VideoDataset,
     videos: list[VideoSample],
+    batch: list[qa_pull.LocalTriplet],
+    caption_unit: CaptionUnit,
+    action_phrase_settings: ActionPhraseSettings,
 ) -> None:
     """Run every file-dependent QA stage before the batch can be cleaned up."""
     metadata_resolver.bulk_update_metadata(
         dataset.session,
         [(video.sample_id, {PIPELINE_COMPLETE_KEY: False}) for video in videos],
+    )
+    _write_transcript_metadata(
+        dataset=dataset,
+        videos=videos,
+        batch=batch,
+        caption_unit=caption_unit,
+        action_phrase_settings=action_phrase_settings,
     )
     _score_quality(dataset=dataset, videos=videos)
     qa._write_technical_qa_metadata(dataset=dataset, videos=videos)
@@ -182,6 +195,32 @@ def _screen_videos(
     metadata_resolver.bulk_update_metadata(
         dataset.session,
         [(video.sample_id, {PIPELINE_COMPLETE_KEY: True}) for video in videos],
+    )
+
+
+def _write_transcript_metadata(
+    dataset: VideoDataset,
+    videos: list[VideoSample],
+    batch: list[qa_pull.LocalTriplet],
+    caption_unit: CaptionUnit,
+    action_phrase_settings: ActionPhraseSettings,
+) -> None:
+    """Load each shipped transcript and write the whisper/narration QA metadata.
+
+    Without this, ``qa_has_narration``, ``whisper_wpm_pass`` and
+    ``qa_transcript_timestamps_valid`` are never persisted, so the narration checks in
+    ``_write_qa_summary`` fail every video regardless of transcript content.
+    """
+    transcript_paths = {
+        triplet.video_path.resolve(): cast(Path, triplet.transcript_path).resolve()
+        for triplet in batch
+    }
+    qa._create_transcript_captions(
+        dataset=dataset,
+        transcript_paths=transcript_paths,
+        caption_unit=caption_unit,
+        action_phrase_settings=action_phrase_settings,
+        videos=videos,
     )
 
 

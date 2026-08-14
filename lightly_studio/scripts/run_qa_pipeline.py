@@ -221,6 +221,7 @@ def _transcribe_batch(
     args: argparse.Namespace,
     triplets: list[qa_pull.LocalTriplet],
 ) -> list[qa_pull.LocalTriplet]:
+    return triplets
     missing = sum(triplet.transcript_path is None for triplet in triplets)
     if not args.transcribe or not missing:
         return triplets
@@ -305,7 +306,7 @@ def _parse_args() -> argparse.Namespace:
         "--target-fps",
         type=float,
         default=qa_screen.DEFAULT_TARGET_FPS,
-        help="Frame rate videos are subsampled to at ingest (keeps the database small).",
+        help="Frame subsample rate; inert while the QA path ingests with extract_frames=False.",
     )
     parser.add_argument(
         "--batch-size",
