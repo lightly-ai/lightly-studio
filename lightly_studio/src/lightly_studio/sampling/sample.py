@@ -96,6 +96,20 @@ class Sampling:
         ],
     )
     ```
+
+    # Video sequence sampling.
+
+    On video frame collections, `diverse()` can select contiguous clips by setting
+    `selected_sequence_length` above 1. `n_samples_to_select` still counts frames
+    and must be a multiple of the sequence length. Only diversity strategies
+    support sequences.
+    ```python
+    frames.query().sampling().diverse(
+        n_samples_to_select=100,
+        sampling_result_tag_name="sequence_clips",
+        selected_sequence_length=50,
+    )
+    ```
     """
 
     def __init__(
@@ -141,6 +155,7 @@ class Sampling:
         n_samples_to_select: int,
         sampling_result_tag_name: str,
         embedding_model_name: str | None = None,
+        selected_sequence_length: int = 1,
     ) -> None:
         """Select a diverse subset using embeddings.
 
@@ -149,12 +164,17 @@ class Sampling:
             sampling_result_tag_name: Tag name for the sampling result.
             embedding_model_name: Optional embedding model name. If None, uses the only
                 available model or raises if multiple exist.
+            selected_sequence_length: Number of frames per selected sequence. Above 1,
+                selection happens over contiguous video-frame sequences, while
+                ``n_samples_to_select`` still counts frames and must be a multiple of
+                this value.
         """
         strategy = EmbeddingDiversityStrategy(embedding_model_name=embedding_model_name)
         self.multi_strategies(
             n_samples_to_select=n_samples_to_select,
             sampling_result_tag_name=sampling_result_tag_name,
             sampling_strategies=[strategy],
+            selected_sequence_length=selected_sequence_length,
         )
 
     def deduplicate(
@@ -217,6 +237,7 @@ class Sampling:
         n_samples_to_select: int,
         sampling_result_tag_name: str,
         sampling_strategies: list[SamplingStrategy],
+        selected_sequence_length: int = 1,
     ) -> None:
         """Select a subset based on multiple strategies.
 
@@ -224,12 +245,17 @@ class Sampling:
             n_samples_to_select: Number of samples to select.
             sampling_result_tag_name: Tag name for the sampling result.
             sampling_strategies: Strategies to compose for sampling.
+            selected_sequence_length: Number of frames per selected sequence. Above 1,
+                selection happens over contiguous video-frame sequences and only
+                diversity strategies are supported, while ``n_samples_to_select`` still
+                counts frames and must be a multiple of this value.
         """
         config = SamplingConfig(
             collection_id=self._dataset_id,
             n_samples_to_select=n_samples_to_select,
             sampling_result_tag_name=sampling_result_tag_name,
             strategies=sampling_strategies,
+            selected_sequence_length=selected_sequence_length,
         )
         sampling_via_database(
             session=self._session,

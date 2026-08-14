@@ -102,6 +102,52 @@ class TestSampling:
             input_sample_ids=expected_sample_ids,
         )
 
+    def test_diverse__selected_sequence_length(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        mocker: MockerFixture,
+    ) -> None:
+        dataset = VideoDataset.create(name="video_dataset_sequences")
+        create_video_with_frames(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            video=VideoStub(path="/data/a.mp4", duration_s=1.0, fps=4.0),
+        )
+        frames = dataset.frames()
+        embedding_model = helpers_resolvers.create_embedding_model(
+            session=dataset.session,
+            collection_id=frames.collection_id,
+            embedding_model_name="embedding_model_1",
+        )
+        for i, frame in enumerate(frames):
+            helpers_resolvers.create_sample_embedding(
+                session=dataset.session,
+                sample_id=frame.sample_id,
+                embedding_model_id=embedding_model.embedding_model_id,
+                embedding=[i, i],
+            )
+
+        spy_sampling_via_db = mocker.spy(sampling_file, "sampling_via_database")
+
+        frames.query().sampling().diverse(
+            n_samples_to_select=4,
+            sampling_result_tag_name="sequence_frames",
+            selected_sequence_length=2,
+        )
+
+        expected_sample_ids = [frame.sample_id for frame in frames]
+        spy_sampling_via_db.assert_called_once_with(
+            session=dataset.session,
+            config=SamplingConfig(
+                collection_id=frames.collection_id,
+                n_samples_to_select=4,
+                sampling_result_tag_name="sequence_frames",
+                strategies=[EmbeddingDiversityStrategy(embedding_model_name=None)],
+                selected_sequence_length=2,
+            ),
+            input_sample_ids=expected_sample_ids,
+        )
+
     def test_diverse__embedding_model_name_specified(
         self, db_session: Session, mocker: MockerFixture
     ) -> None:

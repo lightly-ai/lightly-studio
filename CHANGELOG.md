@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Python SDK: Select video-frame sequences with `selected_sequence_length` on `Sampling.diverse()`. `n_samples_to_select` still counts frames and must be a multiple of the sequence length.
 - Show indexed categorical metadata values in distribution panel
 - Add the `lightly-studio quickstart` CLI command, which downloads the COCO example dataset and launches the GUI in one step.
 
