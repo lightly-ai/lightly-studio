@@ -8,11 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Show indexed categorical metadata values in distribution panel
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## \[1.0.5\] - 2026-08-14
+
+### Added
+- Show indexed categorical metadata values in distribution panel.
 - Add the `lightly-studio quickstart` CLI command, which downloads the COCO example dataset and launches the GUI in one step.
 
-- Export image classification annotations to CSV via the GUI and Python SDK
-- Export video classification annotations to CSV via the GUI and Python SDK
+- Export image classification annotations to CSV via the GUI and Python SDK.
+- Export video classification annotations to CSV via the GUI and Python SDK.
 
 - Python SDK: Export video frames as image files via `VideoFrameDataset.export().to_image_files()` with support for PNG, JPEG, WEBP, BMP, and TIFF formats. Returns the paths of the created files.
 - Google Cloud Storage (GCS) is supported in the LightlyStudio Enterprise version.
@@ -22,8 +36,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `lightly-studio quickstart` now opens your browser automatically once the GUI server is ready. Pass `--no-browser` to skip that.
 - Show a busy indicator on save/delete/export/execute buttons while their action is running (caption, tag, operator, evaluation, and export actions).
-
-### Deprecated
 
 ### Removed
 
@@ -51,8 +63,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Changing annotation colors is now smoother and shows a live preview while dragging the color picker.
 - Hover previews in the annotations embedding plot now show the relevant image crop and annotation overlay, matching the annotations grid.
 - Custom annotation color opacity is now applied to segmentation masks in the detail view. Contributed by @sam-watts.
-
-### Security
 
 ## \[1.0.4\] - 2026-07-27
 
