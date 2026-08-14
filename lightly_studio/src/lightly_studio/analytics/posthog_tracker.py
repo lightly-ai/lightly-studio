@@ -1,0 +1,89 @@
+"""Tracker sending usage events to PostHog."""
+
+from __future__ import annotations
+
+import logging
+import platform
+from collections.abc import Mapping
+from importlib import metadata
+
+from posthog import Posthog
+
+from lightly_studio.analytics import install_id
+from lightly_studio.analytics.tracker import Tracker
+
+# One retry rather than the default three. Delivery happens on a background thread, but the flush
+# at process exit blocks on it, and nobody should wait on telemetry to close the CLI.
+MAX_RETRIES = 1
+REQUEST_TIMEOUT_SECONDS = 3
+
+# PostHog reports delivery failures at ERROR, and the retries around them at INFO, straight to the
+# user's terminal. An unreachable analytics endpoint is not the user's problem. Both names are
+# needed: PostHog's consumer wraps its send in `backoff.on_exception` without passing a logger, so
+# the retry lines go to `backoff`'s own logger rather than PostHog's.
+_NOISY_LOGGERS = ("posthog", "backoff")
+
+
+class PostHogTracker(Tracker):
+    """Sends usage events to PostHog, keyed on the anonymous installation ID.
+
+    Events are queued and delivered by a background thread, so `track` does not block. Call
+    `shutdown` before the process ends, otherwise queued events are lost.
+    """
+
+    def __init__(self, project_api_key: str, host: str) -> None:
+        """Build the tracker.
+
+        Args:
+            project_api_key: PostHog project API key to report against.
+            host: PostHog instance to report to.
+        """
+        self._client = Posthog(
+            project_api_key=project_api_key,
+            host=host,
+            max_retries=MAX_RETRIES,
+            timeout=REQUEST_TIMEOUT_SECONDS,
+        )
+        _silence_delivery_logging()
+        self._distinct_id = str(install_id.get_install_id())
+        self._common_properties = _common_properties()
+
+    def track(self, event: str, properties: Mapping[str, object]) -> None:
+        """Queue an event for delivery.
+
+        Args:
+            event: Event name.
+            properties: Metadata to attach, merged over the properties sent with every event.
+        """
+        self._client.capture(
+            event=event,
+            distinct_id=self._distinct_id,
+            properties={**self._common_properties, **properties},
+        )
+
+    def shutdown(self) -> None:
+        """Flush queued events and stop the background thread."""
+        self._client.shutdown()
+
+
+def _silence_delivery_logging() -> None:
+    """Keep delivery failures out of the handlers that write to the user's terminal.
+
+    Stops propagation rather than raising the level, so a caller that attached a handler to these
+    loggers itself still receives the records.
+    """
+    for name in _NOISY_LOGGERS:
+        logger = logging.getLogger(name)
+        # Without a handler of its own, a logger that does not propagate falls back to
+        # `logging.lastResort`, which writes to stderr. The null handler is what stops that.
+        logger.addHandler(logging.NullHandler())
+        logger.propagate = False
+
+
+def _common_properties() -> dict[str, str]:
+    """Build the properties attached to every event."""
+    return {
+        "lightly_studio_version": metadata.version("lightly-studio"),
+        "python_version": platform.python_version(),
+        "os": platform.system(),
+    }
