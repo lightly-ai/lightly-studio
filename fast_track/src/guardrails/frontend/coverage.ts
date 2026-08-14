@@ -4,7 +4,7 @@ import {
     type FileLineCoverage,
     type LineCoverage
 } from '../shared/full-suite-coverage';
-import { FRONTEND_PREFIX } from './eslint-runner';
+import { FRONTEND_PREFIX } from './shared';
 
 const SRC_PREFIX = FRONTEND_PREFIX + 'src/';
 

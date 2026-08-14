@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Guardrail } from './context/types';
-import { selectGuardrails } from './registry';
+import { guardrails, selectGuardrails } from './registry';
 
 const guardrail = (name: string, needsPrContext: boolean): Guardrail => ({
     name,
@@ -39,5 +39,20 @@ describe('selectGuardrails', () => {
         expect(() =>
             selectGuardrails(all, { hasPrContext: false, guardrailNames: ['pr-check'] })
         ).toThrow(/PR context/);
+    });
+});
+
+describe('guardrails registry', () => {
+    it('has unique guardrail names', () => {
+        const names = guardrails.map((g) => g.name);
+        expect(new Set(names).size).toBe(names.length);
+    });
+
+    it('marks at least one guardrail as required', () => {
+        expect(guardrails.some((g) => g.required)).toBe(true);
+    });
+
+    it('gives every guardrail a non-empty name', () => {
+        expect(guardrails.every((g) => g.name.length > 0)).toBe(true);
     });
 });

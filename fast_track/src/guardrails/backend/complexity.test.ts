@@ -84,7 +84,7 @@ describe('backendComplexityGuardrail', () => {
     });
 
     it('passes for a deleted backend file (does not exist on disk)', async () => {
-        vi.mocked(existsSync).mockReturnValueOnce(false);
+        vi.mocked(existsSync).mockImplementation((p) => !String(p).includes('model.py'));
         const result = await backendComplexityGuardrail.run(makeCtx());
         expect(result.status).toBe('pass');
         expect(result.summary).toContain('deleted');

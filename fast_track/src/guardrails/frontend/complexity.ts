@@ -2,7 +2,8 @@ import { existsSync } from 'node:fs';
 import { extname, resolve } from 'node:path';
 import type { ESLint } from 'eslint';
 import type { Guardrail, GuardrailContext, GuardrailOutcome } from '../context/types';
-import { FRONTEND_ABS, FRONTEND_PREFIX, repoRelPath, runEslint } from './eslint-runner';
+import { repoRelPath, runEslint } from './eslint-runner';
+import { FRONTEND_ABS, FRONTEND_PREFIX } from './shared';
 
 const EXTENSIONS = new Set(['.js', '.ts', '.svelte']);
 const ESLINT_CONFIG = 'eslint.complexity.config.js';
