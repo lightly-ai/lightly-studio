@@ -25,7 +25,11 @@ import lightly_studio as ls
 from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.database import db_manager
-from lightly_studio.dataset import caption_embedding, caption_segment_matching
+from lightly_studio.dataset import (
+    caption_embedding,
+    caption_segment_matching,
+    narration_classification,
+)
 from lightly_studio.dataset.perception_encoder_embedding_generator import (
     SUPPORTED_MODEL_NAMES,
     PerceptionEncoderEmbeddingGenerator,
@@ -36,12 +40,14 @@ from lightly_studio.models.caption import CaptionTable
 DEFAULT_DATABASE_PATH = pipeline.PROJECT_ROOT / "egocentric_qa_staged.db"
 STAGES = (
     "discover",
+    "classifier-check",
     "transcribe",
     "database",
     "videos",
     "quality",
     "model",
     "captions",
+    "narration-classification",
     "caption-embeddings",
     "caption-matching",
     "repetition",
@@ -50,7 +56,7 @@ STAGES = (
 )
 
 
-def run_staged_pipeline(  # noqa: C901, PLR0911, PLR0912
+def run_staged_pipeline(  # noqa: C901, PLR0911, PLR0912, PLR0915
     args: argparse.Namespace,
 ) -> None:
     """Run the pipeline with observable boundaries and optional early stopping.
@@ -65,6 +71,12 @@ def run_staged_pipeline(  # noqa: C901, PLR0911, PLR0912
     with _stage("discover"):
         video_paths = _discover_videos(args=args)
     if _stop_after(args=args, stage="discover"):
+        return
+
+    with _stage("classifier-check"):
+        classifier = pipeline._create_narration_classifier(args=args)
+        pipeline._probe_narration_classifier(classifier=classifier)
+    if _stop_after(args=args, stage="classifier-check"):
         return
 
     with _stage("transcribe"):
@@ -86,13 +98,18 @@ def run_staged_pipeline(  # noqa: C901, PLR0911, PLR0912
 
     with _stage("quality"):
         dataset.compute_quality_scores()
+        pipeline._write_technical_qa_metadata(dataset=dataset)
     if _stop_after(args=args, stage="quality"):
         return
 
     with _stage("model"):
-        print(f"Loading Perception Encoder model {args.pe_model}...", flush=True)
-        embedding_generator = PerceptionEncoderEmbeddingGenerator(model_name=args.pe_model)
-        ls.set_default_embedding_model(embedding_generator)
+        embedding_generator = None
+        if args.enable_pe_diagnostics:
+            print(f"Loading Perception Encoder model {args.pe_model}...", flush=True)
+            embedding_generator = PerceptionEncoderEmbeddingGenerator(model_name=args.pe_model)
+            ls.set_default_embedding_model(embedding_generator)
+        else:
+            print("PE diagnostics disabled; skipping model load.", flush=True)
     if _stop_after(args=args, stage="model"):
         return
 
@@ -113,34 +130,56 @@ def run_staged_pipeline(  # noqa: C901, PLR0911, PLR0912
     if _stop_after(args=args, stage="captions"):
         return
 
-    with _stage("caption-embeddings"):
-        all_caption_ids = [
-            caption_id for _, caption_ids in captions_by_video for caption_id in caption_ids
-        ]
-        caption_embedding.embed_captions(
-            session=dataset.session,
-            caption_sample_ids=all_caption_ids,
+    with _stage("narration-classification"):
+        pipeline._classify_narration_captions(
+            dataset=dataset,
+            captions_by_video=captions_by_video,
+            classifier=classifier,
+            force=args.force_classify,
         )
+    if _stop_after(args=args, stage="narration-classification"):
+        return
+
+    with _stage("caption-embeddings"):
+        if args.enable_pe_diagnostics:
+            all_caption_ids = [
+                caption_id for _, caption_ids in captions_by_video for caption_id in caption_ids
+            ]
+            caption_embedding.embed_captions(
+                session=dataset.session,
+                caption_sample_ids=all_caption_ids,
+            )
+        else:
+            print("PE diagnostics disabled; skipping caption embeddings.", flush=True)
     if _stop_after(args=args, stage="caption-embeddings"):
         return
 
     with _stage("caption-matching"):
-        batches, frame_score_batches = _score_captions(
-            captions_by_video=captions_by_video,
-            embedding_generator=embedding_generator,
-            primary_scoring=args.caption_match_scoring,
-        )
-        pipeline._print_caption_match_summary(
-            score_batches=frame_score_batches,
-            primary_scoring=args.caption_match_scoring,
-        )
+        batches: list[tuple[VideoSample, pipeline.CaptionEmbeddingBatch]] = []
+        if args.enable_pe_diagnostics:
+            if embedding_generator is None:
+                raise RuntimeError("PE embedding generator was not loaded.")
+            batches, frame_score_batches = _score_captions(
+                captions_by_video=captions_by_video,
+                embedding_generator=embedding_generator,
+                primary_scoring=args.caption_match_scoring,
+            )
+            pipeline._print_caption_match_summary(
+                score_batches=frame_score_batches,
+                primary_scoring=args.caption_match_scoring,
+            )
+        else:
+            print("PE diagnostics disabled; skipping caption matching.", flush=True)
     if _stop_after(args=args, stage="caption-matching"):
         return
 
     with _stage("repetition"):
-        for video, batch in batches:
-            print(f"Checking repetitions in {video.file_name}...", flush=True)
-            pipeline._detect_repeated_captions(video=video, batch=batch)
+        if args.enable_pe_diagnostics:
+            for video, batch in batches:
+                print(f"Checking repetitions in {video.file_name}...", flush=True)
+                pipeline._detect_repeated_captions(video=video, batch=batch)
+        else:
+            print("PE diagnostics disabled; skipping repetition detection.", flush=True)
     if _stop_after(args=args, stage="repetition"):
         return
 
@@ -148,8 +187,11 @@ def run_staged_pipeline(  # noqa: C901, PLR0911, PLR0912
         for video, _ in captions_by_video:
             pipeline._write_qa_summary(
                 video=video,
-                include_legacy_caption_threshold=args.caption_match_scoring == "mean_pool",
+                include_legacy_caption_threshold=(
+                    args.enable_pe_diagnostics and args.caption_match_scoring == "mean_pool"
+                ),
             )
+        pipeline._write_and_print_dataset_qa_summary(dataset=dataset)
         print(f"Indexed {len(video_paths)} video(s) in {args.db_file.resolve()}.", flush=True)
     if args.no_gui or _stop_after(args=args, stage="qa-summary"):
         return
@@ -170,6 +212,12 @@ def _run_only_stage(  # noqa: C901, PLR0911, PLR0912, PLR0915
     if stage == "discover":
         with _stage(stage):
             _discover_videos(args=args)
+        return
+
+    if stage == "classifier-check":
+        with _stage(stage):
+            classifier = pipeline._create_narration_classifier(args=args)
+            pipeline._probe_narration_classifier(classifier=classifier)
         return
 
     if stage == "transcribe":
@@ -193,6 +241,7 @@ def _run_only_stage(  # noqa: C901, PLR0911, PLR0912, PLR0915
     if stage == "quality":
         with _stage(stage):
             dataset.compute_quality_scores()
+            pipeline._write_technical_qa_metadata(dataset=dataset)
         return
 
     if stage == "model":
@@ -200,12 +249,15 @@ def _run_only_stage(  # noqa: C901, PLR0911, PLR0912, PLR0915
             _load_embedding_generator(model_name=args.pe_model)
         return
 
-    captions_by_video = _get_existing_captions_by_video(dataset=dataset)
+    captions_by_video = _get_existing_captions_by_video(
+        dataset=dataset,
+        limit=args.max_videos,
+    )
     if stage == "captions":
         if any(caption_ids for _, caption_ids in captions_by_video):
             raise RuntimeError(
                 "The staged database already contains captions. Continue with "
-                "'--only-stage caption-embeddings' instead of creating duplicates."
+                "'--only-stage narration-classification' instead of creating duplicates."
             )
         with _stage(stage):
             video_paths = _find_selected_videos(args=args)
@@ -222,6 +274,17 @@ def _run_only_stage(  # noqa: C901, PLR0911, PLR0912, PLR0915
 
     if not any(caption_ids for _, caption_ids in captions_by_video):
         raise RuntimeError("No captions found. Run '--only-stage captions' first.")
+
+    if stage == "narration-classification":
+        with _stage(stage):
+            classifier = pipeline._create_narration_classifier(args=args)
+            pipeline._classify_narration_captions(
+                dataset=dataset,
+                captions_by_video=captions_by_video,
+                classifier=classifier,
+                force=args.force_classify,
+            )
+        return
 
     if stage == "caption-embeddings":
         with _stage(stage):
@@ -262,8 +325,11 @@ def _run_only_stage(  # noqa: C901, PLR0911, PLR0912, PLR0915
             for video, _ in captions_by_video:
                 pipeline._write_qa_summary(
                     video=video,
-                    include_legacy_caption_threshold=args.caption_match_scoring == "mean_pool",
+                    include_legacy_caption_threshold=(
+                        args.enable_pe_diagnostics and args.caption_match_scoring == "mean_pool"
+                    ),
                 )
+            pipeline._write_and_print_dataset_qa_summary(dataset=dataset)
         return
 
     with _stage("gui"):
@@ -303,9 +369,13 @@ def _load_embedding_generator(model_name: str) -> PerceptionEncoderEmbeddingGene
 
 def _get_existing_captions_by_video(
     dataset: VideoDataset,
+    limit: int | None = None,
 ) -> list[tuple[VideoSample, list[UUID]]]:
     captions_by_video = []
-    for video in dataset:
+    videos = list(dataset)
+    if limit is not None:
+        videos = videos[:limit]
+    for video in videos:
         statement = (
             sqlmodel.select(CaptionTable)
             .where(sqlmodel.col(CaptionTable.parent_sample_id) == video.sample_id)
@@ -409,8 +479,8 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--vad-min-silence-ms", type=int, default=500)
     parser.add_argument(
         "--caption-unit",
-        choices=("segment", "word", "action_phrase"),
-        default="action_phrase",
+        choices=("segment", "word", "action_phrase", "narration_chunk"),
+        default="narration_chunk",
     )
     parser.add_argument("--action-pause-s", type=float, default=0.8)
     parser.add_argument("--action-window-padding-s", type=float, default=1.0)
@@ -427,6 +497,34 @@ def _parse_args() -> argparse.Namespace:
         default="mean_pool",
     )
     parser.add_argument("--force-transcribe", action="store_true")
+    parser.add_argument("--force-classify", action="store_true")
+    parser.add_argument(
+        "--narration-llm-base-url",
+        default=pipeline.DEFAULT_NARRATION_LLM_BASE_URL,
+    )
+    parser.add_argument(
+        "--narration-llm-provider",
+        choices=("ollama", "openai"),
+        default=pipeline.DEFAULT_NARRATION_LLM_PROVIDER,
+    )
+    parser.add_argument(
+        "--narration-llm-model",
+        default=pipeline.DEFAULT_NARRATION_LLM_MODEL,
+    )
+    parser.add_argument(
+        "--narration-llm-api-key",
+        default=pipeline.DEFAULT_NARRATION_LLM_API_KEY,
+    )
+    parser.add_argument(
+        "--classification-batch-size",
+        type=int,
+        default=narration_classification.DEFAULT_BATCH_SIZE,
+    )
+    parser.add_argument(
+        "--enable-pe-diagnostics",
+        action="store_true",
+        help="Run the slower PE caption matching and repetition diagnostics.",
+    )
     parser.add_argument("--max-videos", type=int, help="Only process the first N videos.")
     parser.add_argument(
         "--stop-after",

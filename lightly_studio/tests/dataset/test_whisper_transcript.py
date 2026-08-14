@@ -100,6 +100,79 @@ def test_load_whisper_transcript__words(transcript_path: Path) -> None:
     ]
 
 
+def test_load_whisper_transcript__narration_chunks(tmp_path: Path) -> None:
+    path = tmp_path / "narration.json"
+    words = [
+        (" I", 0.0, 0.2),
+        (" tighten", 0.2, 0.5),
+        (" the", 0.5, 0.6),
+        (" screw.", 0.6, 0.9),
+        (" The", 1.0, 1.2),
+        (" toolbox", 1.2, 1.5),
+        (" is", 1.5, 1.6),
+        (" beside", 1.6, 1.8),
+        (" me.", 1.8, 2.0),
+    ]
+    path.write_text(
+        json.dumps(
+            {
+                "text": "I tighten the screw. The toolbox is beside me.",
+                "segments": [
+                    {
+                        "text": "I tighten the screw. The toolbox is beside me.",
+                        "start": 0.0,
+                        "end": 2.0,
+                        "words": [
+                            {"word": word, "start": start, "end": end} for word, start, end in words
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = whisper_transcript.load_whisper_transcript(
+        path,
+        caption_unit="narration_chunk",
+    )
+
+    assert result.captions == (
+        whisper_transcript.TimedTranscriptCaption(
+            text="I tighten the screw.", start_time_s=0.0, end_time_s=0.9
+        ),
+        whisper_transcript.TimedTranscriptCaption(
+            text="The toolbox is beside me.", start_time_s=1.0, end_time_s=2.0
+        ),
+    )
+    assert sum(len(caption.text.split()) for caption in result.captions) == result.word_count
+
+
+def test_load_whisper_transcript__narration_chunks_limit_long_phrases(tmp_path: Path) -> None:
+    path = tmp_path / "long-narration.json"
+    words = [
+        {"word": f" word{index}", "start": index * 0.1, "end": (index + 1) * 0.1}
+        for index in range(35)
+    ]
+    path.write_text(
+        json.dumps(
+            {
+                "text": " ".join(f"word{index}" for index in range(35)),
+                "segments": [{"text": "long", "start": 0.0, "end": 3.5, "words": words}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = whisper_transcript.load_whisper_transcript(
+        path,
+        caption_unit="narration_chunk",
+    )
+
+    assert [len(caption.text.split()) for caption in result.captions] == [30, 5]
+    assert result.captions[0].end_time_s <= result.captions[1].start_time_s
+
+
 def test_load_whisper_transcript__action_phrases(tmp_path: Path) -> None:
     path = tmp_path / "actions.json"
     words = [

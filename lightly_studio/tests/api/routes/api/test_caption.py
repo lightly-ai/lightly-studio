@@ -45,6 +45,57 @@ def test_update_caption_text(db_session: Session, test_client: TestClient) -> No
     assert updated_caption.text == new_text
 
 
+def test_update_caption_text__marks_narration_classification_stale(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+    parent_sample = create_image(session=db_session, collection_id=collection.collection_id)
+    caption = create_caption(
+        session=db_session,
+        collection_id=collection.collection_id,
+        parent_sample_id=parent_sample.sample_id,
+    )
+    metadata_resolver.bulk_update_metadata(
+        session=db_session,
+        sample_metadata=[
+            (
+                parent_sample.sample_id,
+                {
+                    "narration_qa_status": "likely_pass",
+                    "narration_classification_complete": True,
+                    "narration_classification_stale": False,
+                    "narration_classification_error": "",
+                },
+            ),
+            (
+                caption.sample_id,
+                {"narration_label": "TASK", "narration_classification_stale": False},
+            ),
+        ],
+    )
+
+    response = test_client.put(
+        f"/api/collections/{collection.collection_id}/captions/{caption.sample_id}",
+        json={"text": "changed narration"},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    parent_metadata = metadata_resolver.get_by_sample_id(
+        session=db_session,
+        sample_id=parent_sample.sample_id,
+    )
+    caption_metadata = metadata_resolver.get_by_sample_id(
+        session=db_session,
+        sample_id=caption.sample_id,
+    )
+    assert parent_metadata is not None
+    assert parent_metadata.data["narration_qa_status"] == "incomplete"
+    assert parent_metadata.data["narration_classification_complete"] is False
+    assert caption_metadata is not None
+    assert caption_metadata.data["narration_classification_stale"] is True
+
+
 def test_get_caption(db_session: Session, test_client: TestClient) -> None:
     # Initialize a collection and add a caption
     collection = create_collection(session=db_session)

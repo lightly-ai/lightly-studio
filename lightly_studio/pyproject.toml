@@ -59,6 +59,7 @@ dependencies = [
     "pyarrow>=17.0.0",
     "av>=10.0.0",
     "requests>=2.32.3",
+    "httpx>=0.27.2",
     "einops>=0.6.0",
     "opencv-python-headless>=4.11.0.86",
     "click>=8.0.0",
@@ -75,12 +76,12 @@ cloud-storage = [
     "s3fs>=2023.1.0",
     "gcsfs>=2023.1.0",
     "adlfs>=2023.1.0",
+    "google-cloud-storage>=2.18.0",
 ]
 
 [dependency-groups]
 dev = [
     "black>=24.8.0",
-    "httpx>=0.27.2",
     "moto[server]>=5.0.0",
     "pytest-mock>=3.14.0",
     "pytest>=8.3.3",

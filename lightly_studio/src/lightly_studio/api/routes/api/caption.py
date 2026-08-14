@@ -13,6 +13,7 @@ from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.dataset import caption_embedding
 from lightly_studio.models.caption import CaptionCreate, CaptionTable, CaptionView
 from lightly_studio.resolvers import caption_resolver, sample_resolver
+from lightly_studio.services import narration_classification_service
 
 
 # TODO(jonas, 11/2025): Use CaptionCreate instead when CaptionTable is linked to SampleTable.
@@ -58,6 +59,11 @@ def update_caption(
     # A changed text drops the caption's embedding, so recompute it here. This is a
     # no-op when only the temporal span changed.
     caption_embedding.embed_captions(session=session, caption_sample_ids=[sample_id])
+    narration_classification_service.mark_stale(
+        session=session,
+        parent_sample_id=caption.parent_sample_id,
+        caption_sample_id=sample_id,
+    )
     return caption
 
 
@@ -106,6 +112,11 @@ def create_caption(
     assert len(sample_ids) == 1, "Expected exactly one caption to be created."
 
     caption_embedding.embed_captions(session=session, caption_sample_ids=sample_ids)
+    narration_classification_service.mark_stale(
+        session=session,
+        parent_sample_id=create_caption_input.parent_sample_id,
+        caption_sample_id=sample_ids[0],
+    )
 
     # Fetch and return the created caption
     return caption_resolver.get_by_ids(session=session, sample_ids=sample_ids)[0]
@@ -117,6 +128,7 @@ def delete_caption(
     sample_id: Annotated[UUID, Path(title="Caption ID", description="ID of the caption to delete")],
 ) -> dict[str, str]:
     """Delete a caption from the database."""
+    captions = caption_resolver.get_by_ids(session=session, sample_ids=[sample_id])
     try:
         caption_resolver.delete_caption(session=session, sample_id=sample_id)
     except ValueError as e:
@@ -124,4 +136,9 @@ def delete_caption(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail="Caption not found",
         ) from e
+    if captions:
+        narration_classification_service.mark_stale(
+            session=session,
+            parent_sample_id=captions[0].parent_sample_id,
+        )
     return {"status": "deleted"}
