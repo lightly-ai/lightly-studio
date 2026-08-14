@@ -22,3 +22,4 @@ dataset_examples_studio
 .local.gitignore
 
 /test
+/keys

@@ -79,8 +79,11 @@ def run_pipeline(args: argparse.Namespace) -> None:
     """
     videos_path = args.videos.resolve()
     video_paths = _find_videos(videos_path=videos_path)
-    classifier = _create_narration_classifier(args=args)
-    _probe_narration_classifier(classifier=classifier)
+    classifier = _create_narration_classifier(args=args) if args.narration else None
+    if classifier is not None:
+        _probe_narration_classifier(classifier=classifier)
+    else:
+        print("Skipping narration classification (enable with --narration).", flush=True)
     transcript_paths = _ensure_transcripts(video_paths=video_paths, args=args)
 
     db_manager.connect(db_file=args.db_file.resolve(), cleanup_existing=True)
@@ -100,12 +103,13 @@ def run_pipeline(args: argparse.Namespace) -> None:
             max_words=args.action_max_words,
         ),
     )
-    _classify_narration_captions(
-        dataset=dataset,
-        captions_by_video=captions_by_video,
-        classifier=classifier,
-        force=args.force_classify,
-    )
+    if classifier is not None:
+        _classify_narration_captions(
+            dataset=dataset,
+            captions_by_video=captions_by_video,
+            classifier=classifier,
+            force=args.force_classify,
+        )
 
     frame_score_batches = []
     if args.enable_pe_diagnostics:
@@ -136,6 +140,7 @@ def run_pipeline(args: argparse.Namespace) -> None:
             include_legacy_caption_threshold=(
                 args.enable_pe_diagnostics and args.caption_match_scoring == "mean_pool"
             ),
+            include_narration_checks=args.narration,
         )
 
     _write_and_print_dataset_qa_summary(dataset=dataset)
@@ -709,6 +714,7 @@ def _write_technical_qa_metadata(
 def _write_qa_summary(
     video: VideoSample,
     include_legacy_caption_threshold: bool,
+    include_narration_checks: bool = True,
 ) -> None:
     session = video.get_object_session()
     failures = []
@@ -720,9 +726,14 @@ def _write_qa_summary(
         ("qa_has_narration", "no_narration"),
         ("whisper_wpm_pass", "low_narration_density"),
         ("qa_transcript_timestamps_valid", "invalid_transcript_timestamps"),
-        ("narration_classification_complete", "narration_classification_incomplete"),
-        ("narration_requirement_pass", "insufficient_task_environment_narration"),
     ]
+    if include_narration_checks:
+        required_checks.extend(
+            [
+                ("narration_classification_complete", "narration_classification_incomplete"),
+                ("narration_requirement_pass", "insufficient_task_environment_narration"),
+            ]
+        )
     review_checks = [
         (
             video_quality.BLUR_SCORE_KEY,
@@ -926,6 +937,12 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--force-transcribe", action="store_true")
     parser.add_argument("--force-classify", action="store_true")
+    parser.add_argument(
+        "--narration",
+        action="store_true",
+        help="Run the Qwen narration classification and its task/environment pass check "
+        "(off by default).",
+    )
     parser.add_argument(
         "--narration-llm-base-url",
         default=DEFAULT_NARRATION_LLM_BASE_URL,
