@@ -99,8 +99,7 @@ def test_create_caption(db_session: Session, test_client: TestClient) -> None:
 
 
 def test_create_caption__with_temporal_span(db_session: Session, test_client: TestClient) -> None:
-    collection = create_collection(session=db_session)
-    collection_id = collection.collection_id
+    collection_id = create_collection(session=db_session).collection_id
     sample = create_image(session=db_session, collection_id=collection_id)
     input_data = {
         "parent_sample_id": str(sample.sample_id),
@@ -111,25 +110,20 @@ def test_create_caption__with_temporal_span(db_session: Session, test_client: Te
     response = test_client.post(f"/api/collections/{collection_id!s}/captions", json=input_data)
 
     assert response.status_code == HTTP_STATUS_OK
-    result = response.json()
-    assert result["temporal_span_details"] == {"start_time_s": 1.0, "end_time_s": 2.5}
+    assert response.json()["temporal_span_details"] == {"start_time_s": 1.0, "end_time_s": 2.5}
 
 
-def test_update_caption_text_and_temporal_span(
+def test_update_caption__text_and_temporal_span(
     db_session: Session, test_client: TestClient
 ) -> None:
-    collection = create_collection(session=db_session)
-    collection_id = collection.collection_id
+    collection_id = create_collection(session=db_session).collection_id
     parent_sample = create_image(session=db_session, collection_id=collection_id)
     caption = create_caption(
-        session=db_session,
-        collection_id=collection_id,
-        parent_sample_id=parent_sample.sample_id,
+        session=db_session, collection_id=collection_id, parent_sample_id=parent_sample.sample_id
     )
-    sample_id = caption.sample_id
 
     response = test_client.put(
-        f"/api/collections/{collection_id!s}/captions/{sample_id!s}",
+        f"/api/collections/{collection_id!s}/captions/{caption.sample_id!s}",
         json={"text": "new text", "start_time_s": 1.0, "end_time_s": 2.0},
     )
 

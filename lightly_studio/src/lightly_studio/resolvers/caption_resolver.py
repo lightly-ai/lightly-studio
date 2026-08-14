@@ -117,10 +117,8 @@ def update(
         session: Database session for executing the operation.
         sample_id: UUID of the caption to update.
         text: New text. Left unchanged when ``None``.
-        start_time_s: New start time in seconds. Must be provided together with
-            ``end_time_s``; the span is left unchanged only when both are ``None``.
-        end_time_s: New end time in seconds. Must be provided together with
-            ``start_time_s``; the span is left unchanged only when both are ``None``.
+        start_time_s: New start time in seconds. Must be given with ``end_time_s``.
+        end_time_s: New end time in seconds. Must be given with ``start_time_s``.
 
     Returns:
         The updated caption.
@@ -145,18 +143,12 @@ def update(
         if text is not None:
             caption.text = text
         if start_time_s is not None and end_time_s is not None:
-            if caption.temporal_span_details is None:
-                session.add(
-                    TemporalSpanTable(
-                        sample_id=sample_id,
-                        start_time_s=start_time_s,
-                        end_time_s=end_time_s,
-                    )
+            # The span's primary key is the caption's sample_id, so merge upserts the row.
+            session.merge(
+                TemporalSpanTable(
+                    sample_id=sample_id, start_time_s=start_time_s, end_time_s=end_time_s
                 )
-            else:
-                caption.temporal_span_details.start_time_s = start_time_s
-                caption.temporal_span_details.end_time_s = end_time_s
-                session.add(caption.temporal_span_details)
+            )
         session.commit()
         session.refresh(caption)
         return caption
@@ -216,10 +208,6 @@ def _validate_optional_temporal_span(caption: CaptionCreate) -> tuple[float, flo
 
 def _validate_temporal_span_bounds(start_time_s: float, end_time_s: float) -> None:
     """Validate that a temporal span's bounds are finite, non-negative, and ordered.
-
-    Args:
-        start_time_s: Start time in seconds.
-        end_time_s: End time in seconds.
 
     Raises:
         ValueError: If either bound is not finite, the start is negative, or the start is
