@@ -13,6 +13,8 @@ CaptionUnit = Literal["segment", "word", "action_phrase", "narration_chunk"]
 MAX_NARRATION_CHUNK_WORDS = 30
 NARRATION_CLAUSE_MIN_WORDS = 12
 NARRATION_PAUSE_THRESHOLD_S = 1.0
+# Matches the old VAD ``min_silence_ms=500`` so word-derived silences stay comparable.
+_DERIVED_SILENCE_THRESHOLD_S = 0.5
 
 _ACTION_VERBS = frozenset(
     {
@@ -284,18 +286,31 @@ def load_whisper_transcript(
         )
     text = str(payload.get("text", "")).strip()
     language = payload.get("language")
+    payload_duration_s = _as_float(payload.get("duration_s"))
+    payload_silences = payload.get("silences")
     return WhisperTranscript(
         text=text,
         word_count=_count_words(segments=segments, transcript_text=text),
         language=language if isinstance(language, str) else None,
         language_probability=_as_float(payload.get("language_probability")),
-        duration_s=_as_float(payload.get("duration_s")),
+        # Newer transcripts omit ``duration_s``; the last word's end time is the best
+        # available proxy for the spoken span (video duration is applied downstream).
+        duration_s=(
+            payload_duration_s
+            if payload_duration_s is not None
+            else _derive_duration_s(segments=segments)
+        ),
         speech_duration_s=(
             _as_float(payload.get("speech_duration_s"))
             if payload.get("speech_duration_s") is not None
             else _derive_speech_duration_s(segments=segments)
         ),
-        silences=_parse_silences(payload.get("silences", [])),
+        # Newer transcripts omit ``silences``; derive them from inter-word gaps.
+        silences=(
+            _parse_silences(payload_silences)
+            if isinstance(payload_silences, list)
+            else _derive_silences(segments=segments)
+        ),
         captions=captions,
     )
 
@@ -576,6 +591,43 @@ def _derive_speech_duration_s(segments: list[Any]) -> float | None:
             if start is not None and end is not None and end > start:
                 total += end - start
     return total if total > 0.0 else None
+
+
+def _derive_duration_s(segments: list[Any]) -> float | None:
+    ends = [
+        end
+        for segment in segments
+        if isinstance(segment, dict)
+        for word in segment.get("words", [])
+        if (end := _as_float(_word_field(word, "end"))) is not None
+    ]
+    return max(ends) if ends else None
+
+
+def _derive_silences(
+    segments: list[Any],
+    threshold_s: float = _DERIVED_SILENCE_THRESHOLD_S,
+) -> tuple[SilenceSpan, ...]:
+    """Treat each inter-word gap of at least ``threshold_s`` as a silence span.
+
+    The default matches the old VAD ``min_silence_ms=500`` so word-derived silences
+    stay comparable to the shipped ones. Leading/trailing silence is not inferred:
+    only gaps between spoken words are counted.
+    """
+    bounds = sorted(
+        (start, end)
+        for segment in segments
+        if isinstance(segment, dict)
+        for word in segment.get("words", [])
+        if (start := _as_float(_word_field(word, "start"))) is not None
+        and (end := _as_float(_word_field(word, "end"))) is not None
+    )
+    silences = [
+        SilenceSpan(start_time_s=prev_end, end_time_s=next_start)
+        for (_, prev_end), (next_start, _) in zip(bounds, bounds[1:])
+        if next_start - prev_end >= threshold_s
+    ]
+    return tuple(silences)
 
 
 def _word_field(word: Any, key: str) -> Any:
