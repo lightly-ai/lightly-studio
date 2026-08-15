@@ -323,7 +323,7 @@ def _extract_narration_chunks(
         word for raw_word in raw_words if (word := _parse_word(raw_word=raw_word)) is not None
     )
     chunks = _split_words_into_narration_chunks(words=words)
-    return tuple(
+    captions = (
         TimedTranscriptCaption(
             text=" ".join(word.raw_text.strip() for word in chunk),
             start_time_s=chunk[0].start_time_s,
@@ -334,6 +334,11 @@ def _extract_narration_chunks(
         )
         for chunk in chunks
         if chunk
+    )
+    # Clamping the end to the video duration can invert a chunk whose words start
+    # after the video ends (transcript/video duration mismatch); drop those.
+    return tuple(
+        caption for caption in captions if caption.start_time_s < caption.end_time_s
     )
 
 
