@@ -117,7 +117,6 @@ def screen_deliveries(  # noqa: PLR0913  parameters mirror the ingest + narratio
     Returns:
         One ``ScreenResult`` per requested video, in input order.
     """
-    _validate_transcripts(triplets=triplets)
     screened_videos: list[VideoSample] = []
     classifier_probed = False
     for batch in _chunks(triplets, batch_size):
@@ -212,15 +211,23 @@ def _write_transcript_metadata(
     ``_write_qa_summary`` fail every video regardless of transcript content.
     """
     transcript_paths = {
-        triplet.video_path.resolve(): cast(Path, triplet.transcript_path).resolve()
+        triplet.video_path.resolve(): triplet.transcript_path.resolve()
         for triplet in batch
+        if triplet.transcript_path is not None
     }
+    # Videos with no shipped transcript get no whisper metadata; their narration checks
+    # then fail in ``_write_qa_summary`` instead of crashing the batch.
+    videos_with_transcript = [
+        video for video in videos if Path(video.file_path_abs).resolve() in transcript_paths
+    ]
+    if not videos_with_transcript:
+        return
     qa._create_transcript_captions(
         dataset=dataset,
         transcript_paths=transcript_paths,
         caption_unit=caption_unit,
         action_phrase_settings=action_phrase_settings,
-        videos=videos,
+        videos=videos_with_transcript,
     )
 
 
@@ -283,17 +290,6 @@ def _pipeline_complete(video: VideoSample) -> bool:
         key=PIPELINE_COMPLETE_KEY,
     )
     return value is True
-
-
-def _validate_transcripts(triplets: list[qa_pull.LocalTriplet]) -> None:
-    missing = [
-        f"{triplet.bucket}/{triplet.prefix}/{triplet.stem}"
-        for triplet in triplets
-        if triplet.transcript_path is None
-    ]
-    if missing:
-        joined = ", ".join(missing)
-        raise ValueError(f"Cannot screen deliveries without transcripts: {joined}.")
 
 
 def _read_result(video: VideoSample) -> ScreenResult:
