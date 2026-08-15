@@ -249,6 +249,12 @@ def _load_single_video(
                 video_height = video_stream.height or 0
                 if video_stream.duration and video_stream.time_base:
                     video_duration = float(video_stream.duration * video_stream.time_base)
+                elif video_container.duration:
+                    # Some containers (fragmented MP4, some webm) omit the per-stream
+                    # duration but carry it at the container level, in AV_TIME_BASE
+                    # (microsecond) units. Fall back to that so duration-derived signals
+                    # (wpm, silence ratio, timestamp validity) still compute.
+                    video_duration = float(video_container.duration) / 1_000_000
                 else:
                     video_duration = None
             except (OSError, IndexError, FFmpegError) as e:
