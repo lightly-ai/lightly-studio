@@ -20,24 +20,15 @@
         (annotationCollectionsQuery.data ?? []).map((c) => ({ id: c.collection_id, name: c.name }))
     );
 
-    const {
-        setSelectedCollectionIds,
-        selectedCollectionIds,
-        multipleSourcesVisible,
-        seedSelectionIfNeeded
-    } = useAnnotationCollectionsFilter();
+    const { setSelectedCollectionIds, selectedCollectionIds, multipleSourcesVisible } =
+        useAnnotationCollectionsFilter();
     const { enforceColoringByClassStore } = useSettings();
     const { trackEvent } = usePostHog();
 
+    // Checkboxes are only worth showing when there is a choice to make. The selection itself is
+    // filled by useSeedAnnotationSourceFilter in the collection layout, which runs for every
+    // collection including those with a single source.
     const isEnabled = $derived(items.length > 1);
-
-    // Seed all sources the first time this collection is shown; remounts (e.g. returning
-    // from image details) keep the user's existing selection. See seedSelectionIfNeeded.
-    $effect(() => {
-        if (isEnabled) {
-            seedSelectionIfNeeded(collectionId, items);
-        }
-    });
 
     const handleChangeSelectedItems = (newIds: string[]) => {
         handleAnnotationSourceFilterChange({

@@ -65,11 +65,34 @@ describe('useAnnotationCollectionsFilter', () => {
             expect(get(isSourceVisible)('pred')).toBe(false);
         });
 
-        it('shows every source while the selection is empty', async () => {
+        it('hides every source once the user unchecks them all', async () => {
+            const { isSourceVisible, setSelectedCollectionIds, seedSelectionIfNeeded } =
+                await importHook();
+
+            seedSelectionIfNeeded('collection-1', sources);
+            setSelectedCollectionIds([]);
+
+            expect(get(isSourceVisible)('gt')).toBe(false);
+            expect(get(isSourceVisible)('pred')).toBe(false);
+        });
+
+        // The videos grid draws frame annotations whose sources hang off the frames
+        // collection, so they are absent from the videos collection's own source list.
+        // The filter has no say over them and must not hide them.
+        it('shows a source it does not know about', async () => {
+            const { isSourceVisible, setSelectedCollectionIds, seedSelectionIfNeeded } =
+                await importHook();
+
+            seedSelectionIfNeeded('collection-1', sources);
+            setSelectedCollectionIds([]);
+
+            expect(get(isSourceVisible)('source-from-the-frames-collection')).toBe(true);
+        });
+
+        it('shows everything before any collection has been seeded', async () => {
             const { isSourceVisible } = await importHook();
 
             expect(get(isSourceVisible)('gt')).toBe(true);
-            expect(get(isSourceVisible)('pred')).toBe(true);
         });
     });
 

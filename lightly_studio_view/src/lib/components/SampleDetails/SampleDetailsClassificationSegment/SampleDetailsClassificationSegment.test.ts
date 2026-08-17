@@ -35,7 +35,9 @@ vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilte
     const { readable } = await import('svelte/store');
     return {
         useAnnotationCollectionsFilter: vi.fn(() => ({
-            selectedCollectionIds: readable(mocks.selectedCollectionIds),
+            isSourceVisible: readable((sourceId: string) =>
+                mocks.selectedCollectionIds.includes(sourceId)
+            ),
             multipleSourcesVisible: readable(mocks.selectedCollectionIds.length > 1)
         }))
     };
@@ -214,6 +216,10 @@ describe('SampleDetailsClassificationSegment', () => {
 
     it('groups classifications under one header per source for multiple sources', () => {
         mocks.collections = [groundTruthSource, predictionsSource];
+        mocks.selectedCollectionIds = [
+            groundTruthSource.collection_id,
+            predictionsSource.collection_id
+        ];
         const annotations = [
             createClassification('c1', groundTruthSource.collection_id, 'cat'),
             createClassification('c2', predictionsSource.collection_id, 'zebra'),
@@ -364,6 +370,10 @@ describe('SampleDetailsClassificationSegment', () => {
         const user = userEvent.setup();
         mocks.isEditingMode.set(true);
         mocks.collections = [groundTruthSource, predictionsSource];
+        mocks.selectedCollectionIds = [
+            groundTruthSource.collection_id,
+            predictionsSource.collection_id
+        ];
         const annotations = [
             createClassification('c1', groundTruthSource.collection_id, 'cat'),
             createClassification('c2', predictionsSource.collection_id, 'zebra'),

@@ -62,6 +62,7 @@
     } from '$lib/api/lightly_studio_local/types.gen';
     import type { AnnotationsFilter } from '$lib/api/lightly_studio_local/types.gen';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
+    import { useSeedAnnotationSourceFilter } from '$lib/hooks/useSeedAnnotationSourceFilter/useSeedAnnotationSourceFilter.svelte';
     import type { DistributionSource } from '$lib/components/DatasetDistributionPanel';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
     import {
@@ -358,6 +359,11 @@
         $imageFilterFromHook?.sample_filter?.confusion_cell ?? null
     );
     const plotFilterQueryExpr = $derived($imageFilterFromHook?.sample_filter?.query_expr ?? null);
+
+    // Fill the annotation source filter for whatever collection is on screen. Every grid draws
+    // its boxes against this one selection, so seeding only from the images-grid menu left the
+    // other tabs filtering against another tab's sources.
+    useSeedAnnotationSourceFilter(() => collectionId);
 
     // Selected annotation sources (annotation collections). When a subset is
     // selected the distribution counts only annotations from those sources; the

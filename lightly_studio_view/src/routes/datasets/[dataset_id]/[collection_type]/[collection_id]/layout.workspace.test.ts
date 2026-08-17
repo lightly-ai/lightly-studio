@@ -133,6 +133,9 @@ vi.mock('$lib/hooks/useVideoFilters/useVideoFilters', () => ({
 vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter', () => ({
     useAnnotationCollectionsFilter: vi.fn(() => ({ selectedCollectionIds: writable([]) }))
 }));
+vi.mock('$lib/hooks/useSeedAnnotationSourceFilter/useSeedAnnotationSourceFilter.svelte', () => ({
+    useSeedAnnotationSourceFilter: vi.fn()
+}));
 vi.mock('$lib/hooks', () => ({
     useSelectionSummary: vi.fn(() => ({
         selectedCount: writable(0),
