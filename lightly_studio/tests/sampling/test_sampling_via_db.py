@@ -522,7 +522,7 @@ def test_sampling_via_database__preselection_matches_single_sampling(
             strategies=[strategy],
         ),
         input_sample_ids=sample_ids,
-        preselected_sample_ids=first_batch,
+        preselected_tag_id=first_tag.tag_id,
     )
     second_tag = tag_resolver.get_by_name(
         session=db_session, tag_name="second_batch", collection_id=collection_id
@@ -554,14 +554,12 @@ def test_sampling_via_database__preselection_matches_single_sampling(
     assert set(first_batch + second_batch) == set(single_batch)
 
 
-def test_sampling_via_database__preselected_sample_id_not_in_input(
+def test_sampling_via_database__preselected_tag_not_found(
     db_session: Session,
 ) -> None:
-    sample_id = uuid4()
+    preselected_tag_id = uuid4()
 
-    with pytest.raises(
-        ValueError, match="Preselected sample IDs must be a subset of input sample IDs"
-    ):
+    with pytest.raises(ValueError, match=f"Preselected tag with ID {preselected_tag_id} not found"):
         sampling_via_database(
             session=db_session,
             config=SamplingConfig(
@@ -571,26 +569,40 @@ def test_sampling_via_database__preselected_sample_id_not_in_input(
                 strategies=[],
             ),
             input_sample_ids=[],
-            preselected_sample_ids=[sample_id],
+            preselected_tag_id=preselected_tag_id,
         )
 
 
-def test_sampling_via_database__duplicate_preselected_sample_id(
+def test_sampling_via_database__preselected_sample_id_not_in_input(
     db_session: Session,
 ) -> None:
-    sample_id = uuid4()
+    collection_id = fill_db_with_samples_and_embeddings(
+        db_session, n_samples=1, embedding_model_names=[]
+    )
+    sample_id = _all_sample_ids(db_session, collection_id)[0]
+    preselected_tag = tag_resolver.create(
+        session=db_session,
+        tag=TagCreate(collection_id=collection_id, name="preselected", kind="sample"),
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session,
+        tag_id=preselected_tag.tag_id,
+        sample_ids=[sample_id],
+    )
 
-    with pytest.raises(ValueError, match="Preselected sample IDs must be unique"):
+    with pytest.raises(
+        ValueError, match="Preselected sample IDs must be a subset of input sample IDs"
+    ):
         sampling_via_database(
             session=db_session,
             config=SamplingConfig(
-                collection_id=uuid4(),
+                collection_id=collection_id,
                 n_samples_to_select=1,
                 sampling_result_tag_name="result",
                 strategies=[],
             ),
-            input_sample_ids=[sample_id],
-            preselected_sample_ids=[sample_id, sample_id],
+            input_sample_ids=[],
+            preselected_tag_id=preselected_tag.tag_id,
         )
 
 
