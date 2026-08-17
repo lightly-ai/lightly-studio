@@ -1,9 +1,14 @@
 import type { EChartsCoreOption } from 'echarts/core';
 import escape from 'lodash-es/escape';
 import { truncate } from 'lodash-es';
-import { CHART_AXIS_LABEL, CHART_EMPHASIS, CHART_LINE_COLOR, CHART_TEXT_COLOR } from '$lib/utils';
+import {
+    CHART_AXIS_LABEL,
+    CHART_EMPHASIS,
+    CHART_LINE_COLOR,
+    CHART_TEXT_COLOR,
+    formatPercent
+} from '$lib/utils';
 import type { CategoryCount, CategoryCountSeries } from './';
-import { buildTooltipFormatter } from './buildTooltipFormatter';
 
 // Same accent as Histogram (the Lightly primary green, --color-lightly-primary #3bd99f).
 const BAR_COLOR = 'rgba(59,217,159,0.85)';
@@ -50,6 +55,19 @@ interface BuildEchartsOptionOptions {
     /** Whether bars show raw counts or each series' percentage distribution. */
     valueMode?: BarChartValueMode;
 }
+
+interface TooltipParam {
+    name: string;
+    value: number;
+    seriesName?: string;
+    seriesIndex?: number;
+    marker?: string;
+}
+
+const formatTooltipValue = (count: number, total: number): string => {
+    const percent = total > 0 ? ` (${formatPercent(count / total)})` : '';
+    return `<b>${count}</b>${percent}`;
+};
 
 /** Builds the ECharts option for a category-count bar chart (pass to `setOption`). */
 export function buildEchartsOption(
@@ -109,7 +127,6 @@ export function buildEchartsOption(
         splitLine: { lineStyle: { color: CHART_LINE_COLOR } }
     };
 
-    const formatter = buildTooltipFormatter(totalCount);
     const toChartValue = (count: number, denominator: number): number =>
         valueMode === 'percentage' && denominator > 0 ? (count / denominator) * 100 : count;
 
@@ -192,25 +209,27 @@ export function buildEchartsOption(
             trigger: 'axis',
             axisPointer: { type: 'shadow' },
             appendTo: 'body',
-            formatter: isGrouped
-                ? (
-                      params: {
-                          name: string;
-                          value: number;
-                          seriesName?: string;
-                          marker?: string;
-                      }[]
-                  ) => {
-                      if (params.length === 0) return '';
-                      const values = params
-                          .map(
-                              (item) =>
-                                  `${item.marker ?? ''}${escape(item.seriesName ?? '')}: <b>${item.value}</b>`
-                          )
-                          .join('<br/>');
-                      return `<b>${escape(params[0].name)}</b><br/>${values}`;
-                  }
-                : formatter
+            formatter: (params: TooltipParam[]) => {
+                if (params.length === 0) return '';
+                const [{ name }] = params;
+                if (isGrouped) {
+                    const values = params
+                        .map((item, index) => {
+                            const series = groupedSeries[item.seriesIndex ?? index];
+                            const count =
+                                series?.data.find((entry) => entry.label === name)?.count ?? 0;
+                            const seriesTotal =
+                                series?.totalCount ??
+                                series?.data.reduce((sum, entry) => sum + entry.count, 0) ??
+                                0;
+                            return `${item.marker ?? ''}${escape(item.seriesName ?? '')}: ${formatTooltipValue(count, seriesTotal)}`;
+                        })
+                        .join('<br/>');
+                    return `<b>${escape(name)}</b><br/>${values}`;
+                }
+                const count = data.find((entry) => entry.label === name)?.count ?? 0;
+                return `<b>${escape(name)}</b><br/>Count: ${formatTooltipValue(count, totalCount)}`;
+            }
         },
         legend: isGrouped
             ? { type: 'scroll', top: 0, textStyle: { color: CHART_TEXT_COLOR } }

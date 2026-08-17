@@ -70,7 +70,7 @@
         <Dialog.Header>
             <Dialog.Title>Distribution</Dialog.Title>
             <Dialog.Description>
-                Hover a bar for the full {categoryNoun} name and count
+                Hover a bar for the full {categoryNoun} name, number, and percentage
             </Dialog.Description>
         </Dialog.Header>
         <PanelHeader

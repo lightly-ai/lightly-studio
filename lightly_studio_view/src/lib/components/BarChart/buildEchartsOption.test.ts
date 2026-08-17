@@ -68,6 +68,7 @@ describe('buildEchartsOption', () => {
                             value: number;
                             seriesName?: string;
                             marker?: string;
+                            seriesIndex?: number;
                         }[]
                     ) => string;
                 };
@@ -204,6 +205,19 @@ describe('buildEchartsOption', () => {
                 { name: 'car', value: 3, seriesName: 'Reviewed', marker: '● ' },
                 { name: 'car', value: 1, seriesName: 'Priority', marker: '■ ' }
             ])
-        ).toBe('<b>car</b><br/>● Reviewed: <b>3</b><br/>■ Priority: <b>1</b>');
+        ).toBe('<b>car</b><br/>● Reviewed: <b>3</b> (100.0%)<br/>■ Priority: <b>1</b> (100.0%)');
+    });
+
+    it('keeps raw counts and percentages in percentage-mode tooltips', () => {
+        const formatter = getFormatter(
+            buildEchartsOption([{ label: 'car', count: 20 }], {
+                totalCount: 80,
+                valueMode: 'percentage'
+            })
+        );
+
+        expect(formatter([{ name: 'car', value: 25 }])).toBe(
+            '<b>car</b><br/>Count: <b>20</b> (25.0%)'
+        );
     });
 });
