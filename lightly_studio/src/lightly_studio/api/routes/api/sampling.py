@@ -132,7 +132,8 @@ def create_sampling(
         collection_id=collection.collection_id,
         preselected_tag_id=request.preselected_tag_id,
     )
-    _validate_preselection(
+    input_sample_ids.extend(set(preselected_sample_ids) - set(input_sample_ids))
+    _validate_sample_count(
         input_sample_ids=input_sample_ids,
         preselected_sample_ids=preselected_sample_ids,
         n_samples_to_select=request.n_samples_to_select,
@@ -167,16 +168,12 @@ def _get_preselected_sample_ids(
     return tag_resolver.get_sample_ids_by_tag_id(session=session, tag_id=preselected_tag_id)
 
 
-def _validate_preselection(
+def _validate_sample_count(
     input_sample_ids: list[UUID],
     preselected_sample_ids: list[UUID],
     n_samples_to_select: int,
 ) -> None:
-    """Validate the preselection against the sampling input and requested sample count."""
-    if not set(preselected_sample_ids).issubset(input_sample_ids):
-        raise InvalidSamplingRequestError(
-            "All samples in the preselected tag must match the current filters."
-        )
+    """Validate the requested sample count against the available candidates."""
     n_candidates = len(input_sample_ids) - len(preselected_sample_ids)
     if n_candidates < n_samples_to_select:
         candidates_description = (

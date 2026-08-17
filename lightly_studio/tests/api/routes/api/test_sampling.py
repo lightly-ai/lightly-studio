@@ -85,7 +85,9 @@ def test_create_sampling__preselected_tag(test_client: TestClient, db_session: S
     response = test_client.post(
         f"/api/collections/{collection_id}/sampling",
         json=_preselection_sampling_request(
-            preselected_tag_id=preselected_tag_id, n_samples_to_select=3
+            preselected_tag_id=preselected_tag_id,
+            result_tag_name="new_batch",
+            n_samples_to_select=3,
         ),
     )
 
@@ -99,7 +101,7 @@ def test_create_sampling__preselected_tag(test_client: TestClient, db_session: S
     assert set(preselected_sample_ids).issubset(result_ids)
 
 
-def test_create_sampling__preselected_samples_outside_input(
+def test_create_sampling__preselected_samples_outside_filter(
     test_client: TestClient, db_session: Session
 ) -> None:
     collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
@@ -118,15 +120,19 @@ def test_create_sampling__preselected_samples_outside_input(
         f"/api/collections/{collection_id}/sampling",
         json=_preselection_sampling_request(
             preselected_tag_id=preselected_tag_id,
+            result_tag_name="new_batch",
             filter_sample_ids=sample_ids[2:],
         ),
     )
 
-    assert response.status_code == 400
-    assert (
-        response.json()["error"]
-        == "All samples in the preselected tag must match the current filters."
+    assert response.status_code == 204
+    result_tag = tag_resolver.get_by_name(
+        session=db_session, tag_name="new_batch", collection_id=collection_id
     )
+    assert result_tag is not None
+    result_ids = tag_resolver.get_sample_ids_by_tag_id(session=db_session, tag_id=result_tag.tag_id)
+    assert len(result_ids) == 3
+    assert set(sample_ids[:2]).issubset(result_ids)
 
 
 def test_create_sampling__preselected_tag_from_another_collection(
@@ -145,7 +151,9 @@ def test_create_sampling__preselected_tag_from_another_collection(
 
     response = test_client.post(
         f"/api/collections/{collection_id}/sampling",
-        json=_preselection_sampling_request(preselected_tag_id=preselected_tag_id),
+        json=_preselection_sampling_request(
+            preselected_tag_id=preselected_tag_id, result_tag_name="new_batch"
+        ),
     )
 
     assert response.status_code == 400
@@ -849,12 +857,13 @@ def _create_sample_tag(
 
 def _preselection_sampling_request(
     preselected_tag_id: UUID,
+    result_tag_name: str,
     n_samples_to_select: int = 1,
     filter_sample_ids: list[UUID] | None = None,
 ) -> dict[str, object]:
     request: dict[str, object] = {
         "n_samples_to_select": n_samples_to_select,
-        "sampling_result_tag_name": "new_batch",
+        "sampling_result_tag_name": result_tag_name,
         "preselected_tag_id": str(preselected_tag_id),
         "strategies": [
             {"strategy_name": "diversity", "embedding_model_name": "test_embedding_model"}
