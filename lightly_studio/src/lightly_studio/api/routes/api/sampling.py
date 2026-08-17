@@ -11,6 +11,7 @@ from sqlmodel import Session
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.database.db_manager import SessionDep
+from lightly_studio.errors import InvalidSamplingRequestError, InvalidTagError
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.resolvers import image_resolver, tag_resolver, video_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
@@ -131,22 +132,11 @@ def create_sampling(
         collection_id=collection.collection_id,
         preselected_tag_id=request.preselected_tag_id,
     )
-    if not set(preselected_sample_ids).issubset(input_sample_ids):
-        raise HTTPException(
-            status_code=400,
-            detail="All samples in the preselected tag must match the current filters.",
-        )
-    # Validate we have enough samples to select from.
-    n_candidates = len(input_sample_ids) - len(preselected_sample_ids)
-    if n_candidates < request.n_samples_to_select:
-        candidates_description = (
-            "samples not in the preselected set" if preselected_sample_ids else "samples"
-        )
-        raise HTTPException(
-            status_code=400,
-            detail=f"collection has only {n_candidates} {candidates_description}, "
-            f"cannot select {request.n_samples_to_select}",
-        )
+    _validate_preselection(
+        input_sample_ids=input_sample_ids,
+        preselected_sample_ids=preselected_sample_ids,
+        n_samples_to_select=request.n_samples_to_select,
+    )
     # Create SamplingConfig with diversity strategy.
     config = SamplingConfig(
         collection_id=collection.collection_id,
@@ -173,5 +163,26 @@ def _get_preselected_sample_ids(
         return []
     tag = tag_resolver.get_by_id(session=session, tag_id=preselected_tag_id)
     if tag is None or tag.collection_id != collection_id or tag.kind != "sample":
-        raise HTTPException(status_code=400, detail="Invalid preselected sample tag.")
+        raise InvalidTagError("Invalid preselected sample tag.")
     return tag_resolver.get_sample_ids_by_tag_id(session=session, tag_id=preselected_tag_id)
+
+
+def _validate_preselection(
+    input_sample_ids: list[UUID],
+    preselected_sample_ids: list[UUID],
+    n_samples_to_select: int,
+) -> None:
+    """Validate the preselection against the sampling input and requested sample count."""
+    if not set(preselected_sample_ids).issubset(input_sample_ids):
+        raise InvalidSamplingRequestError(
+            "All samples in the preselected tag must match the current filters."
+        )
+    n_candidates = len(input_sample_ids) - len(preselected_sample_ids)
+    if n_candidates < n_samples_to_select:
+        candidates_description = (
+            "samples not in the preselected set" if preselected_sample_ids else "samples"
+        )
+        raise InvalidSamplingRequestError(
+            f"collection has only {n_candidates} {candidates_description}, "
+            f"cannot select {n_samples_to_select}",
+        )
