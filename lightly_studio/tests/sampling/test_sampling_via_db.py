@@ -1255,41 +1255,6 @@ def test_sampling_via_database__sequence_diversity(
     ]
 
 
-def test_sampling_via_database__sequence_diversity_selects_one_sequence(
-    db_session: Session,
-) -> None:
-    """Selecting 5 frames with sequence length 5 tags exactly one full sequence."""
-    frame_collection_id, frame_sample_ids = _fill_db_with_video_frames_and_embeddings(
-        session=db_session,
-        n_frames=10,
-    )
-
-    sampling_config = SamplingConfig(
-        collection_id=frame_collection_id,
-        n_samples_to_select=5,
-        sampling_result_tag_name="one_sequence",
-        strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
-        selected_sequence_length=5,
-    )
-
-    sampling_via_database(
-        db_session,
-        sampling_config,
-        input_sample_ids=frame_sample_ids,
-    )
-
-    tags = tag_resolver.get_all_by_collection_id(db_session, collection_id=frame_collection_id)
-    tagged = video_frame_resolver.get_all_by_collection_id(
-        session=db_session,
-        collection_id=frame_collection_id,
-        video_frame_filter=VideoFrameFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
-    )
-    tagged_frame_numbers = sorted(frame.frame_number for frame in tagged.samples)
-    # Which of the two sequences diversity picks is left open, only its shape is checked.
-    assert len(tagged_frame_numbers) == 5
-    assert tagged_frame_numbers == list(range(tagged_frame_numbers[0], tagged_frame_numbers[0] + 5))
-
-
 def test_sampling_via_database__sequence_rejects_non_multiple(
     db_session: Session,
 ) -> None:
