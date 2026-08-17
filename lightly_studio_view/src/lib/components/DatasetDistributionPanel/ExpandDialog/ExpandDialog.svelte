@@ -84,6 +84,7 @@
             {categoryNounPlural}
             {sortLabels}
             onConfigure={() => (configDialogOpen = true)}
+            onValueModeChange={(valueMode) => onConfigChange({ ...config, valueMode })}
             onShowAll={() => onConfigChange({ ...config, mode: 'topN', n: data.length })}
             onToggleOrientation={() =>
                 onConfigChange({
@@ -103,6 +104,7 @@
                 maxWidthPx={clientWidth || undefined}
                 {totalCount}
                 series={visibleSeries}
+                valueMode={config.valueMode}
                 {onBarClick}
                 gridTopPx={4}
             />

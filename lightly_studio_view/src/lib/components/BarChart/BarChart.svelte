@@ -4,7 +4,11 @@
     import { BarChart as EchartsBarChart } from 'echarts/charts';
     import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
     import { CanvasRenderer } from 'echarts/renderers';
-    import { buildEchartsOption, type BarChartOrientation } from './buildEchartsOption';
+    import {
+        buildEchartsOption,
+        type BarChartOrientation,
+        type BarChartValueMode
+    } from './buildEchartsOption';
     import type { CategoryCount, CategoryCountSeries } from './types';
 
     echarts.use([
@@ -22,6 +26,8 @@
         series?: CategoryCountSeries[];
         /** Bar orientation (default 'vertical'). */
         orientation?: BarChartOrientation;
+        /** Whether bars show raw counts or percentages (default 'number'). */
+        valueMode?: BarChartValueMode;
         /**
          * Caps the chart width in px. Vertical bars scroll horizontally once they
          * exceed it; horizontal bars fill it. Defaults to the parent width.
@@ -50,6 +56,7 @@
         data,
         series = [],
         orientation = 'vertical',
+        valueMode = 'number',
         maxWidthPx,
         maxHeightPx,
         totalCount,
@@ -116,7 +123,13 @@
     $effect(() => {
         if (!chart) return;
         chart.setOption(
-            buildEchartsOption(data, { totalCount, orientation, series, gridTopPx }),
+            buildEchartsOption(data, {
+                totalCount,
+                orientation,
+                series,
+                valueMode,
+                gridTopPx
+            }),
             true
         );
     });

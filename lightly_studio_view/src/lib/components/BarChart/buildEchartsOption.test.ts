@@ -173,6 +173,25 @@ describe('buildEchartsOption', () => {
         expect(option.series.map((series) => series.data)).toEqual([[3], [1]]);
     });
 
+    it('shows each grouped series as its own percentage distribution', () => {
+        const option = buildEchartsOption(
+            [
+                { label: 'car', count: 4 },
+                { label: 'dog', count: 0 }
+            ],
+            { series: groupedSeries, valueMode: 'percentage' }
+        ) as {
+            yAxis: { max: number };
+            series: { data: number[] }[];
+        };
+
+        expect(option.yAxis.max).toBe(100);
+        expect(option.series.map((series) => series.data)).toEqual([
+            [100, 0],
+            [100, 0]
+        ]);
+    });
+
     it('uses stable colours and identifies every series in grouped tooltips', () => {
         expect(colorForSeries('tag-a')).toBe(colorForSeries('tag-a'));
         expect(colorForSeries('tag-a')).not.toBe(colorForSeries('tag-b'));

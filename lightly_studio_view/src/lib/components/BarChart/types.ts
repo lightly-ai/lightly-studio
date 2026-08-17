@@ -25,4 +25,6 @@ export interface CategoryCountSeries {
     id: string;
     label: string;
     data: CategoryCount[];
+    /** Full-series total, used when the visible data is a top-N subset. */
+    totalCount?: number;
 }

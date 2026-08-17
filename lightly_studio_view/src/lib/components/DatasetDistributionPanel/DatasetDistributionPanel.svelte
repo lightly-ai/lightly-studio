@@ -142,7 +142,8 @@
         activeComparisonData.map((tag) => ({
             id: tag.sample_tag_id,
             label: tag.sample_tag_name,
-            data: tag.counts.map((item) => ({ label: item.label_name, count: item.count }))
+            data: tag.counts.map((item) => ({ label: item.label_name, count: item.count })),
+            totalCount: tag.counts.reduce((sum, item) => sum + item.count, 0)
         }))
     );
     // Rank the shared axis by the aggregate across tags; individual series stay independent.
@@ -209,7 +210,8 @@
         sortBy: 'count',
         manualClasses: [],
         orientation: 'horizontal',
-        countMode: untrack(() => initialCountMode)
+        countMode: untrack(() => initialCountMode),
+        valueMode: 'number'
     });
     const defaultCategoricalConfig: DistributionConfig = {
         mode: 'topN',
@@ -217,7 +219,8 @@
         sortBy: 'count',
         manualClasses: [],
         orientation: 'horizontal',
-        countMode: AnnotationCountMode.SAMPLES
+        countMode: AnnotationCountMode.SAMPLES,
+        valueMode: 'number'
     };
     let categoricalConfigs = $state<Record<string, DistributionConfig>>({});
     const categoricalConfig = $derived<DistributionConfig>(
@@ -228,6 +231,7 @@
               })
             : defaultCategoricalConfig
     );
+    let wasComparingTags = $state(false);
     let configDialogOpen = $state(false);
     let expandOpen = $state(false);
     let histogramExpandOpen = $state(false);
@@ -242,6 +246,14 @@
     let clientWidth = $state(0);
 
     const activeCountMode = $derived(config.countMode ?? AnnotationCountMode.OBJECTS);
+    const isComparingTags = $derived(
+        activeSource.id === 'classes' && selectedComparisonTagIds.length > 0
+    );
+    $effect(() => {
+        if (isComparingTags === wasComparingTags) return;
+        wasComparingTags = isComparingTags;
+        config = { ...config, valueMode: isComparingTags ? 'percentage' : 'number' };
+    });
     const showTotalCount = $derived(activeCountMode !== AnnotationCountMode.SAMPLES);
 
     const sourceItems = $derived<SelectItem[]>(
@@ -474,6 +486,7 @@
                 seriesCount={activeSeries.length || undefined}
                 {valueNoun}
                 onConfigure={() => (configDialogOpen = true)}
+                onValueModeChange={(valueMode) => (config = { ...config, valueMode })}
                 onShowAll={() => (config = { ...config, mode: 'topN', n: activeData.length })}
                 onToggleOrientation={() =>
                     (config = {
@@ -539,6 +552,7 @@
                 maxWidthPx={clientWidth || undefined}
                 {totalCount}
                 series={activeCategorical ? [] : visibleSeries}
+                valueMode={activeCategorical ? 'number' : config.valueMode}
                 onBarClick={activeCategorical ? handleCategoricalBarClick : onBarClick}
                 emptyState={activeCategorical ? categoricalEmptyState : undefined}
                 gridTopPx={4}

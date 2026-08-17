@@ -253,6 +253,29 @@ describe('DatasetDistributionPanel', () => {
         await waitFor(() => expect(screen.getAllByText(/2 sample tags/)).toHaveLength(2));
     });
 
+    it('defaults tag comparisons to percentage and allows switching to numbers', async () => {
+        const user = userEvent.setup();
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: [
+                    {
+                        id: 'classes',
+                        label: 'Annotation classes',
+                        comparisonData
+                    }
+                ],
+                selectedComparisonTagIds: ['tag-a', 'tag-b']
+            }
+        });
+
+        const valueMode = screen.getByTestId('dataset-distribution-value-mode');
+        await waitFor(() => expect(valueMode).toHaveTextContent('Percentage'));
+
+        await user.click(valueMode);
+        await user.click(screen.getByRole('option', { name: 'Number' }));
+        await waitFor(() => expect(valueMode).toHaveTextContent('Number'));
+    });
+
     it('renders comparison data from the selected annotation-type group', async () => {
         const user = userEvent.setup();
         render(DatasetDistributionPanel, {
