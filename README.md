@@ -118,16 +118,14 @@ dataset.add_samples_from_coco(
     annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
     images_path=f"{dataset_path}/coco_subset_128_images/images",
 )
-# Optional: tag a subset of samples to filter them in the GUI.
-dataset.query()[:10].add_tag("sample_subset")
 
+# Start the UI server on localhost:8001.
+# Pass `host` and `port` parameters to customize it.
+# Reopen the app later with `lightly-studio gui` instead of re-running this script.
 ls.start_gui()
 ```
 
 Run `python example_coco.py` and open the printed URL to inspect images with their annotations.
-
-Once the dataset is indexed, run `lightly-studio gui` to open the app again without re-running the
-script.
 
 To import COCO segmentation masks instead of object detections, set:
 
