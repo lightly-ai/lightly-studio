@@ -14,7 +14,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.database import db_array, db_insert
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
-from lightly_studio.models.tag import TagCreate, TagTable
+from lightly_studio.models.tag import TagCreate, TagKind, TagTable
 from lightly_studio.utils import batching
 
 
@@ -49,15 +49,19 @@ def get_by_id(session: Session, tag_id: UUID) -> TagTable | None:
     return session.exec(select(TagTable).where(TagTable.tag_id == tag_id)).one_or_none()
 
 
-def get_by_name(session: Session, tag_name: str, collection_id: UUID | None) -> TagTable | None:
-    """Retrieve a single tag by ID."""
+def get_by_name(
+    session: Session,
+    tag_name: str,
+    collection_id: UUID | None,
+    tag_kind: TagKind | None = None,
+) -> TagTable | None:
+    """Retrieve a single tag by name, optionally constrained by kind."""
+    query = select(TagTable).where(TagTable.name == tag_name)
     if collection_id:
-        return session.exec(
-            select(TagTable)
-            .where(TagTable.collection_id == collection_id)
-            .where(TagTable.name == tag_name)
-        ).one_or_none()
-    return session.exec(select(TagTable).where(TagTable.name == tag_name)).one_or_none()
+        query = query.where(TagTable.collection_id == collection_id)
+    if tag_kind is not None:
+        query = query.where(TagTable.kind == tag_kind)
+    return session.exec(query).one_or_none()
 
 
 def rename(session: Session, tag_id: UUID, new_name: str) -> TagTable | None:

@@ -10,7 +10,7 @@ from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
-from lightly_studio.resolvers import collection_resolver, image_resolver
+from lightly_studio.resolvers import collection_resolver, image_resolver, tag_resolver
 from lightly_studio.sampling import sample as sampling_file
 from lightly_studio.sampling.mundig import Mundig
 from lightly_studio.sampling.sampling_config import (
@@ -132,6 +132,51 @@ class TestSampling:
             ),
             input_sample_ids=expected_sample_ids,
         )
+
+    def test_diverse__preselected_tag_name(self, db_session: Session) -> None:
+        collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
+            session=db_session, n_samples=10, embedding_model_names=["embedding_model_1"]
+        )
+        collection_table = collection_resolver.get_by_id(db_session, collection_id)
+        assert collection_table is not None
+        query = DatasetQuery(collection_table, db_session)
+
+        query.sampling().diverse(
+            n_samples_to_select=2,
+            sampling_result_tag_name="first_batch",
+        )
+        query.sampling().diverse(
+            n_samples_to_select=2,
+            sampling_result_tag_name="second_batch",
+            preselected_tag_name="first_batch",
+        )
+        query.sampling().diverse(
+            n_samples_to_select=4,
+            sampling_result_tag_name="single_batch",
+        )
+
+        tags = {
+            tag_name: tag_resolver.get_by_name(
+                session=db_session,
+                tag_name=tag_name,
+                collection_id=collection_id,
+            )
+            for tag_name in ("first_batch", "second_batch", "single_batch")
+        }
+        assert all(tag is not None for tag in tags.values())
+        batches = {
+            tag_name: tag_resolver.get_sample_ids_by_tag_id(
+                session=db_session,
+                tag_id=tag.tag_id,
+            )
+            for tag_name, tag in tags.items()
+            if tag is not None
+        }
+
+        assert len(batches["first_batch"]) == 2
+        assert len(batches["second_batch"]) == 2
+        assert set(batches["first_batch"]).isdisjoint(batches["second_batch"])
+        assert set(batches["first_batch"] + batches["second_batch"]) == set(batches["single_batch"])
 
     def test_annotation_balancing(self, db_session: Session, mocker: MockerFixture) -> None:
         collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
