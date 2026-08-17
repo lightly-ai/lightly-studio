@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fix requests failing intermittently while the GUI is under load, caused by concurrent access to a shared database session.
+- Hide every bounding box when all annotation sources are unchecked, instead of showing them all.
 
 ### Security
 
