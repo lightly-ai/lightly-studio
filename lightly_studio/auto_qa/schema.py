@@ -1,20 +1,19 @@
-"""Build the human-readable, self-describing QA result payload."""
+"""Stable schema for uploaded automatic QA results."""
 
 from __future__ import annotations
 
 from collections.abc import Mapping
 from typing import Any, Literal
 
-from lightly_studio.dataset import (
-    caption_repetition,
-    caption_segment_matching,
-    egocentric_qa,
-    narration_classification,
-    video_quality,
-)
+from lightly_studio.dataset import egocentric_qa, video_quality
 
 RESULT_SCHEMA_VERSION = 2
 QA_POLICY_VERSION = 1
+NARRATION_REQUIREMENT_PERCENTAGE = 70.0
+CAPTION_MATCH_SCORE_KEY = "min_caption_segment_match_score"
+CAPTION_MATCH_MINIMUM = 0.35
+REPEATED_CAPTION_COUNT_KEY = "repeated_caption_group_count"
+REPETITION_SIMILARITY_MINIMUM = 0.85
 
 CheckSeverity = Literal["blocking", "review"]
 
@@ -74,19 +73,18 @@ _SOURCE_FIELDS = {
 
 
 def build_verdict(metadata: Mapping[str, Any]) -> dict[str, Any]:
-    """Build the concise human-triage verdict."""
-    failures = _as_issue_list(metadata.get("automated_qa_failures"))
-    stored_review_issues = _as_issue_list(metadata.get("automated_qa_review_issues"))
+    """Build the human-triage verdict."""
+    failures = _issue_list(metadata.get("automated_qa_failures"))
+    stored_review_issues = _issue_list(metadata.get("automated_qa_review_issues"))
     review_issues = [issue for issue in stored_review_issues if issue != "narration_near_threshold"]
     issues = [*failures, *review_issues]
-    status = _verdict_status(
-        stored_status=metadata.get("automated_qa_status"),
-        failures=failures,
-        review_issues=review_issues,
-        stored_review_issues=stored_review_issues,
-    )
     return {
-        "status": status,
+        "status": _verdict_status(
+            stored_status=metadata.get("automated_qa_status"),
+            failures=failures,
+            review_issues=review_issues,
+            stored_review_issues=stored_review_issues,
+        ),
         "expected_quality_label": metadata.get("expected_quality_label"),
         "failures": failures,
         "failure_count": len(failures),
@@ -104,7 +102,7 @@ def build_checks(
     height: int,
     duration_s: float | None,
 ) -> dict[str, dict[str, Any]]:
-    """Build threshold-bearing checks from raw video and metadata values."""
+    """Build the threshold-bearing checks."""
     qualifying_percentage = _number(metadata.get("narration_qualifying_percentage"))
     return {
         "resolution": _check(
@@ -166,14 +164,14 @@ def build_checks(
         "task_environment_narration": _check(
             value=qualifying_percentage,
             passed=(
-                qualifying_percentage >= narration_classification.OFFICIAL_REQUIREMENT_PERCENTAGE
+                qualifying_percentage >= NARRATION_REQUIREMENT_PERCENTAGE
                 if qualifying_percentage is not None
                 else None
             ),
             severity="blocking",
             rule={
                 "operator": ">=",
-                "threshold": narration_classification.OFFICIAL_REQUIREMENT_PERCENTAGE,
+                "threshold": NARRATION_REQUIREMENT_PERCENTAGE,
                 "unit": "percent",
             },
             issue="insufficient_task_environment_narration",
@@ -203,33 +201,30 @@ def build_checks(
             issue="static_camera",
         ),
         "caption_match": _minimum_check(
-            value=metadata.get(caption_segment_matching.MIN_CAPTION_SEGMENT_MATCH_SCORE_KEY),
-            threshold=caption_segment_matching.DEFAULT_MIN_CAPTION_SEGMENT_MATCH_SCORE,
+            value=metadata.get(CAPTION_MATCH_SCORE_KEY),
+            threshold=CAPTION_MATCH_MINIMUM,
             severity="review",
             issue="low_caption_match",
         ),
         "caption_repetition": _maximum_check(
-            value=metadata.get(caption_repetition.REPEATED_CAPTION_GROUP_COUNT_KEY),
+            value=metadata.get(REPEATED_CAPTION_COUNT_KEY),
             threshold=0,
             severity="review",
             issue="repeated_actions",
-            rule_details={
-                "detection_similarity_min": caption_repetition.DEFAULT_SIMILARITY_THRESHOLD
-            },
+            rule_details={"detection_similarity_min": REPETITION_SIMILARITY_MINIMUM},
         ),
     }
 
 
 def build_metrics(metadata: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
-    """Group every persisted metadata field into a stable readable namespace."""
+    """Group persisted metadata into the stable result namespaces."""
     consumed = set(_VERDICT_FIELDS) | set(_SOURCE_FIELDS)
-    technical = _mapped_values(metadata=metadata, fields=_TECHNICAL_FIELDS, consumed=consumed)
-    audio = _mapped_values(metadata=metadata, fields=_AUDIO_FIELDS, consumed=consumed)
-    visual = _mapped_values(metadata=metadata, fields=_VISUAL_FIELDS, consumed=consumed)
-    pipeline = _mapped_values(metadata=metadata, fields=_PIPELINE_FIELDS, consumed=consumed)
-    narration = _prefixed_values(metadata=metadata, prefix="narration_", consumed=consumed)
-    diagnostics = _diagnostic_values(metadata=metadata, consumed=consumed)
-    other = {key: value for key, value in metadata.items() if key not in consumed}
+    technical = _mapped_values(metadata, _TECHNICAL_FIELDS, consumed)
+    audio = _mapped_values(metadata, _AUDIO_FIELDS, consumed)
+    visual = _mapped_values(metadata, _VISUAL_FIELDS, consumed)
+    pipeline = _mapped_values(metadata, _PIPELINE_FIELDS, consumed)
+    narration = _prefixed_values(metadata, "narration_", consumed)
+    diagnostics = _diagnostic_values(metadata, consumed)
     return {
         "technical": technical,
         "audio": audio,
@@ -237,7 +232,7 @@ def build_metrics(metadata: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
         "visual": visual,
         "diagnostics": diagnostics,
         "pipeline": pipeline,
-        "other": other,
+        "other": {key: value for key, value in metadata.items() if key not in consumed},
     }
 
 
@@ -249,9 +244,8 @@ def _check(
     rule: Mapping[str, Any],
     issue: str,
 ) -> dict[str, Any]:
-    status = "not_run" if passed is None else ("pass" if passed else "fail")
     return {
-        "status": status,
+        "status": "not_run" if passed is None else "pass" if passed else "fail",
         "severity": severity,
         "value": value,
         "rule": dict(rule),
@@ -271,9 +265,7 @@ def _verdict_status(
         return "review"
     if stored_review_issues == ["narration_near_threshold"]:
         return "pass"
-    if stored_status in {"pass", "review", "fail"}:
-        return str(stored_status)
-    return None
+    return str(stored_status) if stored_status in {"pass", "review", "fail"} else None
 
 
 def _boolean_check(value: Any, severity: CheckSeverity, issue: str) -> dict[str, Any]:
@@ -293,10 +285,10 @@ def _minimum_check(
     severity: CheckSeverity,
     issue: str,
 ) -> dict[str, Any]:
-    numeric_value = _number(value)
+    number = _number(value)
     return _check(
-        value=numeric_value,
-        passed=numeric_value >= threshold if numeric_value is not None else None,
+        value=number,
+        passed=number >= threshold if number is not None else None,
         severity=severity,
         rule={"operator": ">=", "threshold": threshold},
         issue=issue,
@@ -310,13 +302,12 @@ def _maximum_check(
     issue: str,
     rule_details: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    numeric_value = _number(value)
-    rule = {"operator": "<=", "threshold": threshold, **(rule_details or {})}
+    number = _number(value)
     return _check(
-        value=numeric_value,
-        passed=numeric_value <= threshold if numeric_value is not None else None,
+        value=number,
+        passed=number <= threshold if number is not None else None,
         severity=severity,
-        rule=rule,
+        rule={"operator": "<=", "threshold": threshold, **(rule_details or {})},
         issue=issue,
     )
 
@@ -357,7 +348,7 @@ def _diagnostic_values(metadata: Mapping[str, Any], consumed: set[str]) -> dict[
     return values
 
 
-def _as_issue_list(value: Any) -> list[str]:
+def _issue_list(value: Any) -> list[str]:
     if isinstance(value, str):
         return [issue.strip() for issue in value.split(",") if issue.strip()]
     if isinstance(value, (list, tuple)):

@@ -1,35 +1,31 @@
 from pathlib import Path
 
-import pytest
+from pytest_mock import MockerFixture
 
-from scripts import qa_pull, qa_transcribe
+from auto_qa import storage, transcribe
 
 
-def test_fill_missing_transcripts__tracks_generated_file_for_cleanup(
+def test_missing_transcripts_tracks_generated_file(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    mocker: MockerFixture,
 ) -> None:
-    video_path = tmp_path / "clip.mp4"
-    video_path.write_bytes(b"video")
-    whisper_python = tmp_path / "python"
-    whisper_python.write_text("")
-    triplet = qa_pull.LocalTriplet(
+    video = tmp_path / "clip.mp4"
+    python = tmp_path / "python"
+    video.write_bytes(b"video")
+    python.write_text("")
+    delivery = storage.LocalDelivery(
         bucket="bucket",
         prefix="review",
         stem="clip",
-        video_path=video_path,
+        video_path=video,
         transcript_path=None,
-        metadata_path=None,
         source_files=("gs://bucket/review/clip.mp4",),
-        local_files=(video_path,),
+        local_files=(video,),
     )
-    monkeypatch.setattr(qa_transcribe, "_run_whisper", lambda **_: None)
+    mocker.patch.object(transcribe, "_run")
 
-    result = qa_transcribe.fill_missing_transcripts(
-        triplets=[triplet],
-        whisper_python=whisper_python,
-    )
+    result = transcribe.missing_transcripts([delivery], python=python)
 
-    transcript_path = tmp_path / "clip.faster-whisper.json"
-    assert result[0].transcript_path == transcript_path
-    assert result[0].local_files == (video_path, transcript_path)
+    output = tmp_path / "clip.faster-whisper.json"
+    assert result[0].transcript_path == output
+    assert result[0].local_files == (video, output)

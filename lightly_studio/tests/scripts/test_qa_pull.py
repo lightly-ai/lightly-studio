@@ -4,57 +4,45 @@ from pathlib import Path
 
 import pytest
 
-from scripts import qa_pull
+from auto_qa import storage
 
 
-def test_validate_unique_triplets__rejects_same_delivery_in_two_prefixes() -> None:
-    triplets = [
-        _remote_triplet(prefix="review"),
-        _remote_triplet(prefix="pool"),
-    ]
+def test_deduplicate_keeps_first_prefix() -> None:
+    deliveries = [_remote(prefix="review"), _remote(prefix="pool")]
 
-    with pytest.raises(ValueError, match="multiple work prefixes"):
-        qa_pull._validate_unique_triplets(triplets=triplets)
+    assert storage._deduplicate(deliveries) == [deliveries[0]]
 
 
-def test_cleanup_triplets__deletes_only_tracked_files(tmp_path: Path) -> None:
-    destination = tmp_path / "pull"
-    local_dir = destination / "bucket" / "clip"
-    local_dir.mkdir(parents=True)
-    video_path = local_dir / "clip.mp4"
-    transcript_path = local_dir / "clip.faster-whisper.json"
-    unrelated_path = local_dir / "notes.txt"
-    for path in (video_path, transcript_path, unrelated_path):
-        path.write_text("data")
-    triplet = _local_triplet(
-        video_path=video_path,
-        transcript_path=transcript_path,
-        local_files=(video_path, transcript_path),
-    )
-
-    deleted = qa_pull.cleanup_triplets(triplets=[triplet], destination=destination)
-
-    assert deleted == 2
-    assert not video_path.exists()
-    assert not transcript_path.exists()
-    assert unrelated_path.is_file()
-
-
-def test_cleanup_triplets__rejects_path_outside_destination(tmp_path: Path) -> None:
+def test_cleanup_deletes_only_tracked_files(tmp_path: Path) -> None:
     destination = tmp_path / "pull"
     destination.mkdir()
-    outside_path = tmp_path / "outside.mp4"
-    outside_path.write_text("data")
-    triplet = _local_triplet(video_path=outside_path, local_files=(outside_path,))
+    video = destination / "clip.mp4"
+    transcript = destination / "clip.json"
+    unrelated = destination / "notes.txt"
+    for path in (video, transcript, unrelated):
+        path.write_text("data")
+    delivery = _local(video=video, transcript=transcript, files=(video, transcript))
+
+    assert storage.cleanup([delivery], destination) == 2
+    assert unrelated.is_file()
+    assert not video.exists()
+    assert not transcript.exists()
+
+
+def test_cleanup_rejects_path_outside_destination(tmp_path: Path) -> None:
+    destination = tmp_path / "pull"
+    destination.mkdir()
+    outside = tmp_path / "outside.mp4"
+    outside.write_text("data")
 
     with pytest.raises(ValueError, match="outside destination"):
-        qa_pull.cleanup_triplets(triplets=[triplet], destination=destination)
+        storage.cleanup([_local(video=outside, files=(outside,))], destination)
 
-    assert outside_path.is_file()
+    assert outside.is_file()
 
 
-def test_resolve_local_dir__rejects_stem_outside_destination(tmp_path: Path) -> None:
-    triplet = qa_pull.RemoteTriplet(
+def test_local_directory_rejects_unsafe_stem(tmp_path: Path) -> None:
+    delivery = storage.RemoteDelivery(
         bucket="bucket",
         prefix="review",
         stem="../../escape",
@@ -62,11 +50,11 @@ def test_resolve_local_dir__rejects_stem_outside_destination(tmp_path: Path) -> 
     )
 
     with pytest.raises(ValueError, match="escapes destination"):
-        qa_pull._resolve_local_dir(destination=tmp_path / "pull", triplet=triplet)
+        storage._local_directory(tmp_path / "pull", delivery)
 
 
-def _remote_triplet(prefix: str) -> qa_pull.RemoteTriplet:
-    return qa_pull.RemoteTriplet(
+def _remote(prefix: str) -> storage.RemoteDelivery:
+    return storage.RemoteDelivery(
         bucket="bucket",
         prefix=prefix,
         stem="clip",
@@ -74,18 +62,17 @@ def _remote_triplet(prefix: str) -> qa_pull.RemoteTriplet:
     )
 
 
-def _local_triplet(
-    video_path: Path,
-    transcript_path: Path | None = None,
-    local_files: tuple[Path, ...] = (),
-) -> qa_pull.LocalTriplet:
-    return qa_pull.LocalTriplet(
+def _local(
+    video: Path,
+    transcript: Path | None = None,
+    files: tuple[Path, ...] = (),
+) -> storage.LocalDelivery:
+    return storage.LocalDelivery(
         bucket="bucket",
         prefix="review",
         stem="clip",
-        video_path=video_path,
-        transcript_path=transcript_path,
-        metadata_path=None,
+        video_path=video,
+        transcript_path=transcript,
         source_files=("gs://bucket/review/clip.mp4",),
-        local_files=local_files,
+        local_files=files,
     )

@@ -148,6 +148,46 @@ def test_load_whisper_transcript__narration_chunks(tmp_path: Path) -> None:
     assert sum(len(caption.text.split()) for caption in result.captions) == result.word_count
 
 
+@pytest.mark.parametrize("use_flat_words", [False, True])
+def test_load_whisper_transcript__narration_chunks_drop_clamped_inversions(
+    tmp_path: Path, use_flat_words: bool
+) -> None:
+    path = tmp_path / "clamped-narration.json"
+    words = [
+        (" I", 0.0, 0.2),
+        (" tighten", 0.2, 0.5),
+        (" the", 0.5, 0.6),
+        (" screw.", 0.6, 0.9),
+        (" The", 5.0, 5.2),
+        (" toolbox", 5.2, 5.5),
+        (" is", 5.5, 5.6),
+        (" beside", 5.6, 5.8),
+        (" me.", 5.8, 6.0),
+    ]
+    word_dicts = [{"word": word, "start": start, "end": end} for word, start, end in words]
+    payload: dict[str, object] = {"text": "I tighten the screw. The toolbox is beside me."}
+    if use_flat_words:
+        payload["words"] = word_dicts
+    else:
+        payload["segments"] = [{"text": "", "start": 0.0, "end": 6.0, "words": word_dicts}]
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    result = whisper_transcript.load_whisper_transcript(
+        path,
+        caption_unit="narration_chunk",
+        video_duration_s=2.0,
+    )
+
+    assert all(
+        caption.start_time_s < caption.end_time_s for caption in result.captions
+    )
+    assert result.captions == (
+        whisper_transcript.TimedTranscriptCaption(
+            text="I tighten the screw.", start_time_s=0.0, end_time_s=0.9
+        ),
+    )
+
+
 def test_load_whisper_transcript__narration_chunks_limit_long_phrases(tmp_path: Path) -> None:
     path = tmp_path / "long-narration.json"
     words = [
