@@ -15,7 +15,6 @@ from sqlmodel import Session, col, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
@@ -312,12 +311,11 @@ def _get_preselected_sample_ids(
     if preselected_tag_name is None:
         return []
 
-    preselected_tag = session.exec(
-        select(TagTable)
-        .where(TagTable.collection_id == collection_id)
-        .where(TagTable.name == preselected_tag_name)
-        .where(TagTable.kind == "sample")
-    ).one_or_none()
+    preselected_tag = tag_resolver.get_by_name(
+        session=session,
+        tag_name=preselected_tag_name,
+        collection_id=collection_id,
+    )
     if preselected_tag is None:
         raise ValueError(f"Preselected tag with name {preselected_tag_name} not found.")
     return tag_resolver.get_sample_ids_by_tag_id(
