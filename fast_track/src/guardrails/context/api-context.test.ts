@@ -41,6 +41,12 @@ describe('toChangedFile', () => {
             toChangedFile({ filename: 'src/foo.ts', status: 'removed', additions: 0, deletions: 5 })
         ).toEqual({ path: 'src/foo.ts', status: 'deleted', additions: 0, deletions: 5 });
     });
+
+    it("maps an unknown status (e.g. 'changed') to 'modified'", () => {
+        expect(
+            toChangedFile({ filename: 'src/foo.ts', status: 'changed', additions: 1, deletions: 1 })
+        ).toEqual({ path: 'src/foo.ts', status: 'modified', additions: 1, deletions: 1 });
+    });
 });
 
 describe('ApiGuardrailContext', () => {

@@ -70,20 +70,26 @@ class json_extract(GenericFunction[Any]):  # noqa: N801
         super().__init__(column)
 
 
-class json_extract_string(GenericFunction[str]):  # noqa: N801
-    """Extract a top-level JSON scalar as plain text.
+class json_extract_key_as_text(GenericFunction[str]):  # noqa: N801
+    """Read one top-level JSON key as plain text.
 
-    The key is bound rather than interpolated into SQL. It is treated literally,
-    so dots and quotes in metadata keys do not become path syntax.
+    The key is bound rather than interpolated into SQL. It is taken literally, so unlike
+    :class:`json_extract` a dot in it stays part of the key rather than stepping into a
+    nested object, and a quote cannot become path syntax.
     """
 
     inherit_cache = False
     type = Text()
 
-    def __init__(self, column: Any, field: str) -> None:
-        """Initialize with a JSON column and top-level field name."""
-        field_parameter = sqlalchemy.literal(field, type_=_JsonTopLevelKeyType())
-        super().__init__(column, field_parameter)
+    def __init__(self, column: Any, key: str) -> None:
+        """Initialize with a JSON column and the top-level key to read.
+
+        Args:
+            column: The JSON column expression.
+            key: The top-level key to read, dots and all.
+        """
+        key_parameter = sqlalchemy.literal(key, type_=_JsonKeyType())
+        super().__init__(column, key_parameter)
 
 
 @compiles(json_extract)
@@ -122,9 +128,9 @@ def _compile_json_extract_postgresql(
     )
 
 
-@compiles(json_extract_string)
-def _compile_json_extract_string_unsupported(
-    element: json_extract_string, compiler: SQLCompiler, **kw: Any
+@compiles(json_extract_key_as_text)
+def _compile_json_extract_key_as_text_unsupported(
+    element: json_extract_key_as_text, compiler: SQLCompiler, **kw: Any
 ) -> str:
     """Raise for unsupported dialects."""
     raise NotImplementedError(
@@ -133,26 +139,26 @@ def _compile_json_extract_string_unsupported(
     )
 
 
-@compiles(json_extract_string, "duckdb")
-def _compile_json_extract_string_duckdb(
-    element: json_extract_string, compiler: SQLCompiler, **kw: Any
+@compiles(json_extract_key_as_text, "duckdb")
+def _compile_json_extract_key_as_text_duckdb(
+    element: json_extract_key_as_text, compiler: SQLCompiler, **kw: Any
 ) -> str:
     """Extract a JSON scalar as plain text on DuckDB."""
-    column, field = element.clauses
-    return f"json_extract_string({compiler.process(column, **kw)}, {compiler.process(field, **kw)})"
+    column, key = element.clauses
+    return f"json_extract_string({compiler.process(column, **kw)}, {compiler.process(key, **kw)})"
 
 
-@compiles(json_extract_string, "postgresql")
-def _compile_json_extract_string_postgresql(
-    element: json_extract_string, compiler: SQLCompiler, **kw: Any
+@compiles(json_extract_key_as_text, "postgresql")
+def _compile_json_extract_key_as_text_postgresql(
+    element: json_extract_key_as_text, compiler: SQLCompiler, **kw: Any
 ) -> str:
     """Extract a JSON scalar as plain text on PostgreSQL."""
-    column, field = element.clauses
-    return f"{compiler.process(column, **kw)}->>{compiler.process(field, **kw)}"
+    column, key = element.clauses
+    return f"{compiler.process(column, **kw)}->>{compiler.process(key, **kw)}"
 
 
-class _JsonTopLevelKeyType(TypeDecorator[str]):
-    """Bind a literal top-level JSON key for each supported database."""
+class _JsonKeyType(TypeDecorator[str]):
+    """Bind one literal object key for each supported database."""
 
     impl = Text
     cache_ok = True

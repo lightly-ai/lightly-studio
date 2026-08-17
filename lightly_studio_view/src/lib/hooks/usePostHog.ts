@@ -6,6 +6,14 @@ import {
     PUBLIC_POSTHOG_HOST
 } from '$env/static/public';
 import { version } from '$lib/version.json';
+// Imported by its own path: $lib/hooks re-exports usePostHog, so going through the barrel would
+// make the two modules import each other.
+import { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
+import { get } from 'svelte/store';
+
+// The backend reports this only while LIGHTLY_STUDIO_ANALYTICS_ENABLED is set, so one variable
+// opts out of tracking in both the Python package and here.
+const ANALYTICS_FEATURE = 'analytics';
 
 let initialized = false;
 
@@ -22,8 +30,21 @@ let initialized = false;
  * ```
  */
 export const usePostHog = () => {
-    const init = () => {
+    /**
+     * Start PostHog, unless the backend reports that usage tracking is switched off.
+     *
+     * Resolves once the decision is made. Events fired before then are dropped by trackEvent().
+     */
+    const init = async () => {
         if (!browser || initialized) return;
+
+        // A failed request leaves the flags empty, so a backend that cannot be reached is never
+        // tracked against.
+        const { featureFlags, ready } = useFeatureFlags();
+        await ready;
+        if (!get(featureFlags).includes(ANALYTICS_FEATURE)) return;
+        // Re-check: concurrent callers both get past the guard above before this resolves.
+        if (initialized) return;
 
         const apiKey = PUBLIC_POSTHOG_KEY || PUBLIC_POSTHOG_DEV_KEY;
         const apiHost = PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog.com';

@@ -9,6 +9,7 @@
     import { onDestroy, onMount } from 'svelte';
     import { page } from '$app/state';
     import { useAnnotationsInfinite } from '$lib/hooks/useAnnotationsInfinite/useAnnotationsInfinite';
+    import { useAnnotationSortBy } from '$lib/hooks';
     import { afterNavigate, goto } from '$app/navigation';
     import SelectedAnnotations from './SelectedAnnotations/SelectedAnnotations.svelte';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
@@ -31,6 +32,8 @@
 
     const { selectedAnnotationFilterIdsArray: selectedAnnotationFilterIds } =
         useSelectedAnnotationsFilter();
+
+    const { sortByFor } = useAnnotationSortBy();
 
     // Use the collection_id for tags - tags should use the specific collection, not root
     const { tagsSelected } = $derived(
@@ -99,7 +102,9 @@
         // Embedding plot lasso selection narrows the grid to annotations inside the region.
         embedding_region: plotSelectedRegion ?? undefined,
         // Embedding text search reorders the grid by similarity (shared with images tab).
-        text_embedding: searchEmbedding?.embedding ?? undefined
+        text_embedding: searchEmbedding?.embedding ?? undefined,
+        // Similarity ordering keeps precedence, so the two are never sent together.
+        sort_by: searchEmbedding ? undefined : ($sortByFor(collection_id) ?? undefined)
     });
 
     const {
@@ -116,7 +121,8 @@
         $selectedAnnotationFilterIds.join(',') +
             Array.from($tagsSelected).join(',') +
             (plotSelectedRegion ? JSON.stringify(plotSelectedRegion) : '') +
-            (searchEmbedding ? `search:${searchEmbedding.queryText}` : '')
+            (searchEmbedding ? `search:${searchEmbedding.queryText}` : '') +
+            (queryParams.sort_by ? `sort:${JSON.stringify(queryParams.sort_by)}` : '')
     );
 
     const filterHash = $derived(infiniteLoaderIdentifier);

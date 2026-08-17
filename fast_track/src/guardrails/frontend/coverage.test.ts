@@ -7,7 +7,7 @@ vi.mock('node:fs', () => ({
 
 import { existsSync, readFileSync } from 'node:fs';
 import { filterFrontendFiles, frontendCoverageGuardrail, parseFrontendReport } from './coverage';
-import { FRONTEND_ABS, FRONTEND_PREFIX } from './eslint-runner';
+import { FRONTEND_ABS, FRONTEND_PREFIX } from './shared';
 import type { ChangedFile, GuardrailContext } from '../context/types';
 
 const mockExistsSync = vi.mocked(existsSync);
@@ -17,7 +17,7 @@ const mockReadFileSync = vi.mocked(readFileSync);
 const PATCH = '@@ -0,0 +1,3 @@\n+line 1\n+line 2\n+line 3\n';
 
 function makeCtx(files: ChangedFile[]): GuardrailContext {
-    return { baseRef: 'origin/main', changedFiles: async () => files };
+    return { changedFiles: async () => files };
 }
 
 const FRONTEND_FILE: ChangedFile = {
@@ -81,7 +81,11 @@ describe('filterFrontendFiles', () => {
         'foo.spec.ts',
         'foo.spec.js',
         'foo.spec.svelte',
-        'types.d.ts'
+        'types.d.ts',
+        'Alert.stories.svelte',
+        'Button.stories.ts',
+        'ClassSetConfigDialog.stories.js',
+        'setupTests.ts'
     ])('excludes %s', (name) => {
         const files = [file(`${FRONTEND_PREFIX}src/lib/${name}`)];
         expect(filterFrontendFiles(files)).toHaveLength(0);

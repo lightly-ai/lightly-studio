@@ -123,7 +123,7 @@ def _load_sequences(
     session: Session,
     sample_ids: Sequence[UUID],
     sequence_length: int,
-) -> list[tuple[UUID, ...]]:
+) -> list[list[UUID]]:
     """Load candidate frames and chunk them into complete sequences."""
     frames = video_frame_resolver.get_frame_infos_by_ids(session=session, sample_ids=sample_ids)
     if len(frames) != len(sample_ids):

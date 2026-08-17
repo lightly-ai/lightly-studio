@@ -21,16 +21,20 @@ def test_create_sequences__chunks_and_drops_partial_tail() -> None:
     sequences = sequence_selection.create_sequences(frames=frames, sequence_length=5)
 
     assert sequences == [
-        tuple(frame.sample_id for frame in frames[0:5]),
-        tuple(frame.sample_id for frame in frames[5:10]),
+        [frame.sample_id for frame in frames[0:5]],
+        [frame.sample_id for frame in frames[5:10]],
     ]
 
 
 def test_create_sequences__groups_by_video() -> None:
-    """Frames from different videos are chunked independently."""
+    """Frames from different videos are chunked independently.
+
+    Video A holds an odd number of frames, so its leftover frame must be dropped
+    rather than paired with the first frame of video B.
+    """
     video_a = uuid4()
     video_b = uuid4()
-    ids_a = [uuid4() for _ in range(4)]
+    ids_a = [uuid4() for _ in range(3)]
     ids_b = [uuid4() for _ in range(4)]
     frames = [
         VideoFrameInfoRow(sample_id=sample_id, parent_sample_id=video_a, frame_number=i)
@@ -43,10 +47,9 @@ def test_create_sequences__groups_by_video() -> None:
     sequences = sequence_selection.create_sequences(frames=frames, sequence_length=2)
 
     assert sequences == [
-        (ids_a[0], ids_a[1]),
-        (ids_a[2], ids_a[3]),
-        (ids_b[0], ids_b[1]),
-        (ids_b[2], ids_b[3]),
+        [ids_a[0], ids_a[1]],
+        [ids_b[0], ids_b[1]],
+        [ids_b[2], ids_b[3]],
     ]
 
 
