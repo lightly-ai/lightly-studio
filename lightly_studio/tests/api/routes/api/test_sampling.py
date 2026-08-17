@@ -11,6 +11,7 @@ from sqlmodel import Session
 from lightly_studio.api.routes.api import sampling as sampling_api
 from lightly_studio.metadata import compute_typicality
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
@@ -64,6 +65,137 @@ def test_create_combination_sampling__diversity_success(
         session=db_session, collection_id=collection_id, filters=tag_filter
     )
     assert len(result.samples) == 3
+
+
+def test_create_combination_sampling__preselected_tag(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
+        session=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
+    )
+    sample_ids = list(
+        image_resolver.get_sample_ids(session=db_session, collection_id=collection_id)
+    )
+    preselected_sample_ids = sample_ids[:2]
+    preselected_tag = tag_resolver.create(
+        session=db_session,
+        tag=TagCreate(collection_id=collection_id, name="preselected", kind="sample"),
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session,
+        tag_id=preselected_tag.tag_id,
+        sample_ids=preselected_sample_ids,
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/sampling",
+        json={
+            "n_samples_to_select": 3,
+            "sampling_result_tag_name": "new_batch",
+            "preselected_tag_id": str(preselected_tag.tag_id),
+            "strategies": [
+                {
+                    "strategy_name": "diversity",
+                    "embedding_model_name": "test_embedding_model",
+                }
+            ],
+            "filter": {
+                "filter_type": "image",
+                "sample_filter": {"sample_ids": [str(sample_id) for sample_id in sample_ids]},
+            },
+        },
+    )
+
+    assert response.status_code == 204
+    result_tag = tag_resolver.get_by_name(
+        session=db_session, tag_name="new_batch", collection_id=collection_id
+    )
+    assert result_tag is not None
+    result_ids = tag_resolver.get_sample_ids_by_tag_id(session=db_session, tag_id=result_tag.tag_id)
+    assert len(result_ids) == 5
+    assert set(preselected_sample_ids).issubset(result_ids)
+
+
+def test_create_combination_sampling__preselected_samples_outside_input(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
+        session=db_session, n_samples=5, embedding_model_names=["test_embedding_model"]
+    )
+    sample_ids = list(
+        image_resolver.get_sample_ids(session=db_session, collection_id=collection_id)
+    )
+    preselected_tag = tag_resolver.create(
+        session=db_session,
+        tag=TagCreate(collection_id=collection_id, name="preselected", kind="sample"),
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session,
+        tag_id=preselected_tag.tag_id,
+        sample_ids=sample_ids[:2],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/sampling",
+        json={
+            "n_samples_to_select": 1,
+            "sampling_result_tag_name": "new_batch",
+            "preselected_tag_id": str(preselected_tag.tag_id),
+            "strategies": [
+                {
+                    "strategy_name": "diversity",
+                    "embedding_model_name": "test_embedding_model",
+                }
+            ],
+            "filter": {
+                "filter_type": "image",
+                "sample_filter": {"sample_ids": [str(sample_id) for sample_id in sample_ids[2:]]},
+            },
+        },
+    )
+
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "All samples in the preselected tag must match the current filters."
+    )
+
+
+def test_create_combination_sampling__preselected_tag_from_another_collection(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
+        session=db_session, n_samples=3, embedding_model_names=["test_embedding_model"]
+    )
+    other_collection = helpers_resolvers.create_collection(
+        session=db_session, collection_name="other"
+    )
+    preselected_tag = tag_resolver.create(
+        session=db_session,
+        tag=TagCreate(
+            collection_id=other_collection.collection_id,
+            name="preselected",
+            kind="sample",
+        ),
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/sampling",
+        json={
+            "n_samples_to_select": 1,
+            "sampling_result_tag_name": "new_batch",
+            "preselected_tag_id": str(preselected_tag.tag_id),
+            "strategies": [
+                {
+                    "strategy_name": "diversity",
+                    "embedding_model_name": "test_embedding_model",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Invalid preselected sample tag."
 
 
 def test_create_sampling__passes_request_to_sampling(

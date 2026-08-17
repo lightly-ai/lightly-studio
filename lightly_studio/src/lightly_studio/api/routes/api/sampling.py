@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 from typing import Annotated, Union
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from sqlmodel import Session
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.collection import CollectionTable, SampleType
-from lightly_studio.resolvers import image_resolver, video_resolver
+from lightly_studio.resolvers import image_resolver, tag_resolver, video_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from lightly_studio.sampling.sampling_config import (
@@ -49,6 +51,13 @@ class SamplingRequest(BaseModel):
     sampling_result_tag_name: str = Field(min_length=1, description="Name for the result tag")
     strategies: list[Strategy]
     filter: CollectionFilter | None = None
+    preselected_tag_id: UUID | None = Field(
+        default=None,
+        description=(
+            "Sample tag whose samples should be considered already selected and included in the "
+            "result tag"
+        ),
+    )
 
 
 @sampling_router.post(
@@ -117,11 +126,25 @@ def create_sampling(
             filters=video_filter,
         )
     input_sample_ids = list(all_samples_result)
-    # Validate we have enough samples to select from.
-    if len(input_sample_ids) < request.n_samples_to_select:
+    preselected_sample_ids = _get_preselected_sample_ids(
+        session=session,
+        collection_id=collection.collection_id,
+        preselected_tag_id=request.preselected_tag_id,
+    )
+    if not set(preselected_sample_ids).issubset(input_sample_ids):
         raise HTTPException(
             status_code=400,
-            detail=f"collection has only {len(input_sample_ids)} samples, "
+            detail="All samples in the preselected tag must match the current filters.",
+        )
+    # Validate we have enough samples to select from.
+    n_candidates = len(input_sample_ids) - len(preselected_sample_ids)
+    if n_candidates < request.n_samples_to_select:
+        candidates_description = (
+            "samples not in the preselected set" if preselected_sample_ids else "samples"
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=f"collection has only {n_candidates} {candidates_description}, "
             f"cannot select {request.n_samples_to_select}",
         )
     # Create SamplingConfig with diversity strategy.
@@ -132,4 +155,23 @@ def create_sampling(
         strategies=request.strategies,
     )
     # Perform sampling via database.
-    sampling_via_database(session=session, config=config, input_sample_ids=input_sample_ids)
+    sampling_via_database(
+        session=session,
+        config=config,
+        input_sample_ids=input_sample_ids,
+        preselected_sample_ids=preselected_sample_ids,
+    )
+
+
+def _get_preselected_sample_ids(
+    session: Session,
+    collection_id: UUID,
+    preselected_tag_id: UUID | None,
+) -> list[UUID]:
+    """Resolve and validate the optional preselected sample tag."""
+    if preselected_tag_id is None:
+        return []
+    tag = tag_resolver.get_by_id(session=session, tag_id=preselected_tag_id)
+    if tag is None or tag.collection_id != collection_id or tag.kind != "sample":
+        raise HTTPException(status_code=400, detail="Invalid preselected sample tag.")
+    return tag_resolver.get_sample_ids_by_tag_id(session=session, tag_id=preselected_tag_id)

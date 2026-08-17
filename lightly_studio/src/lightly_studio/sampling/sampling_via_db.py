@@ -234,7 +234,7 @@ def sampling_via_database(
         config: Sampling configuration.
         input_sample_ids: Candidate sample IDs.
         preselected_sample_ids: Sample IDs that should inform the sampling as
-            already selected. They are excluded from the result tag.
+            already selected. They are included in the result tag.
 
     Raises:
         ValueError: If the preselected sample IDs contain duplicates or are not
@@ -260,6 +260,13 @@ def sampling_via_database(
     )
     if n_samples_to_select == 0:
         logger.warning("No samples available for sampling.")
+        if preselected_indices:
+            sampling_helpers.create_result_tag(
+                session=session,
+                collection_id=config.collection_id,
+                tag_name=config.sampling_result_tag_name,
+                selected_sample_ids=[input_sample_ids[index] for index in preselected_indices],
+            )
         return
 
     # Get root dataset id for balancing strategies
@@ -286,9 +293,7 @@ def sampling_via_database(
         n_samples=len(preselected_indices) + n_samples_to_select,
         preselected_indices=preselected_indices,
     )
-    selected_sample_ids = [
-        input_sample_ids[index] for index in selected_indices[len(preselected_indices) :]
-    ]
+    selected_sample_ids = [input_sample_ids[index] for index in selected_indices]
     sampling_helpers.create_result_tag(
         session=session,
         collection_id=config.collection_id,

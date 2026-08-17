@@ -528,7 +528,7 @@ def test_sampling_via_database__preselection_matches_single_sampling(
         session=db_session, tag_name="second_batch", collection_id=collection_id
     )
     assert second_tag is not None
-    second_batch = _sample_ids_by_tag(
+    continued_selection = _sample_ids_by_tag(
         session=db_session, collection_id=collection_id, tag_id=second_tag.tag_id
     )
 
@@ -550,8 +550,40 @@ def test_sampling_via_database__preselection_matches_single_sampling(
         session=db_session, collection_id=collection_id, tag_id=single_tag.tag_id
     )
 
-    assert set(first_batch).isdisjoint(second_batch)
-    assert set(first_batch + second_batch) == set(single_batch)
+    assert set(first_batch).issubset(continued_selection)
+    assert set(continued_selection) == set(single_batch)
+
+
+def test_sampling_via_database__only_preselected_samples_available(
+    db_session: Session,
+) -> None:
+    collection_id = fill_db_with_samples_and_embeddings(
+        db_session, n_samples=2, embedding_model_names=["embedding_model_1"]
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+
+    sampling_via_database(
+        session=db_session,
+        config=SamplingConfig(
+            collection_id=collection_id,
+            n_samples_to_select=1,
+            sampling_result_tag_name="result",
+            strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
+        ),
+        input_sample_ids=sample_ids,
+        preselected_sample_ids=sample_ids,
+    )
+
+    result_tag = tag_resolver.get_by_name(
+        session=db_session, tag_name="result", collection_id=collection_id
+    )
+    assert result_tag is not None
+    result_sample_ids = _sample_ids_by_tag(
+        session=db_session,
+        collection_id=collection_id,
+        tag_id=result_tag.tag_id,
+    )
+    assert set(result_sample_ids) == set(sample_ids)
 
 
 def test_sampling_via_database__preselected_sample_id_not_in_input(
