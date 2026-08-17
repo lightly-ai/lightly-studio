@@ -127,11 +127,8 @@ ls.start_gui()
 
 Run `python example_coco.py` and open the printed URL to inspect images with their annotations.
 
-To import COCO segmentation masks instead of object detections, set:
-
-```python
-annotation_type=ls.AnnotationType.SEGMENTATION_MASK
-```
+To import COCO segmentation masks instead of object detections, pass
+`annotation_type=ls.AnnotationType.SEGMENTATION_MASK` to `add_samples_from_coco()`.
 
 </details>
 
