@@ -205,9 +205,7 @@ export function buildEchartsOption(
         : [foregroundSeries];
     const chartSeries = isGrouped
         ? groupedSeries.map((item) => {
-              const countsByLabel = new Map(
-                  item.data.map((count) => [count.label, count.count])
-              );
+              const countsByLabel = new Map(item.data.map((count) => [count.label, count.count]));
               const seriesTotal =
                   item.totalCount ?? item.data.reduce((sum, count) => sum + count.count, 0);
               return {

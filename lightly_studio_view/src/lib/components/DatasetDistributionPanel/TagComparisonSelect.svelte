@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Check, ChevronsUpDown } from '@lucide/svelte';
+    import { Check, ChevronDown } from '@lucide/svelte';
     import { Button } from '$lib/components/ui/button';
     import * as Command from '$lib/components/ui/command';
     import * as Popover from '$lib/components/ui/popover';
@@ -33,13 +33,13 @@
         <Button
             variant="outline"
             size="sm"
-            class="h-8 min-w-0 flex-1 justify-between"
+            class="m-0 h-8 min-w-0 flex-1 justify-start gap-2 rounded-md px-3 text-xs font-normal"
             role="combobox"
             aria-expanded={open}
             data-testid="dataset-distribution-tag-select"
         >
             <span class="truncate">{label}</span>
-            <ChevronsUpDown class="ml-2 shrink-0 opacity-50" />
+            <ChevronDown class="ml-auto size-4 shrink-0 opacity-50" />
         </Button>
     </Popover.Trigger>
     <Popover.Content class="w-[260px] p-0">
