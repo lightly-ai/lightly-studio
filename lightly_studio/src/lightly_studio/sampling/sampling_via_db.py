@@ -221,7 +221,7 @@ def sampling_via_database(
     session: Session,
     config: SamplingConfig,
     input_sample_ids: list[UUID],
-    preselected_sample_ids: Iterable[UUID] | None = None,
+    preselected_tag_id: UUID | None = None,
 ) -> None:
     """Run sampling using the provided candidate sample ids.
 
@@ -233,13 +233,24 @@ def sampling_via_database(
         session: Database session used to resolve and store sampling data.
         config: Sampling configuration.
         input_sample_ids: Candidate sample IDs.
-        preselected_sample_ids: Sample IDs that should inform the sampling as
+        preselected_tag_id: Tag whose sample IDs should inform the sampling as
             already selected. They are excluded from the result tag.
 
     Raises:
         ValueError: If the preselected sample IDs contain duplicates or are not
             a subset of the input sample IDs.
     """
+    preselected_sample_ids = (
+        list(
+            tag_resolver.get_tags_by_sample(
+                session=session,
+                tag_ids=[preselected_tag_id],
+            )
+        )
+        if preselected_tag_id is not None
+        else []
+    )
+
     # Check if the tag name is already used
     existing_tag = tag_resolver.get_by_name(
         session=session,
