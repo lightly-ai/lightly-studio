@@ -237,19 +237,18 @@ def sampling_via_database(
             already selected. They are excluded from the result tag.
 
     Raises:
-        ValueError: If the preselected sample IDs contain duplicates or are not
-            a subset of the input sample IDs.
+        ValueError: If the preselected tag does not exist or its sample IDs are
+            not a subset of the input sample IDs.
     """
-    preselected_sample_ids = (
-        list(
-            tag_resolver.get_tags_by_sample(
-                session=session,
-                tag_ids=[preselected_tag_id],
-            )
+    if preselected_tag_id is not None:
+        preselected_tag = tag_resolver.get_by_id(session=session, tag_id=preselected_tag_id)
+        if preselected_tag is None:
+            raise ValueError(f"Preselected tag with ID {preselected_tag_id} not found.")
+        preselected_sample_ids = list(
+            tag_resolver.get_tags_by_sample(session=session, tag_ids=[preselected_tag_id]).keys()
         )
-        if preselected_tag_id is not None
-        else []
-    )
+    else:
+        preselected_sample_ids = []
 
     # Check if the tag name is already used
     existing_tag = tag_resolver.get_by_name(

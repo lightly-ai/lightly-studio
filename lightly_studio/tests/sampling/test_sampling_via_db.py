@@ -554,6 +554,25 @@ def test_sampling_via_database__preselection_matches_single_sampling(
     assert set(first_batch + second_batch) == set(single_batch)
 
 
+def test_sampling_via_database__preselected_tag_not_found(
+    db_session: Session,
+) -> None:
+    preselected_tag_id = uuid4()
+
+    with pytest.raises(ValueError, match=f"Preselected tag with ID {preselected_tag_id} not found"):
+        sampling_via_database(
+            session=db_session,
+            config=SamplingConfig(
+                collection_id=uuid4(),
+                n_samples_to_select=1,
+                sampling_result_tag_name="result",
+                strategies=[],
+            ),
+            input_sample_ids=[],
+            preselected_tag_id=preselected_tag_id,
+        )
+
+
 def test_sampling_via_database__preselected_sample_id_not_in_input(
     db_session: Session,
 ) -> None:
