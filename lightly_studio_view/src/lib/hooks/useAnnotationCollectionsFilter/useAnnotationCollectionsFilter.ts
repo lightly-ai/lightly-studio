@@ -1,7 +1,21 @@
-import { writable } from 'svelte/store';
+import { derived, writable, type Readable } from 'svelte/store';
 
 const selectedCollectionIds = writable<string[]>([]);
 const collectionIdToName = writable<Record<string, string>>({});
+
+// Whether annotations from a given source should be drawn. An empty selection means the filter
+// has not been seeded for this collection yet, so nothing is filtered out.
+const isSourceVisible: Readable<(sourceId: string) => boolean> = derived(
+    selectedCollectionIds,
+    ($ids) => (sourceId: string) => $ids.length === 0 || $ids.includes(sourceId)
+);
+
+// Annotations are colored per source instead of per class while more than one source is
+// visible. Pass this to resolveEffectiveColorBySource rather than reading the selection length.
+const multipleSourcesVisible: Readable<boolean> = derived(
+    selectedCollectionIds,
+    ($ids) => $ids.length > 1
+);
 
 // Remembers which annotation collection the grid filter was last seeded for.
 // Module-level so it survives component remounts (e.g. grid <-> image details), which lets
@@ -13,6 +27,8 @@ export const useAnnotationCollectionsFilter = () => {
     return {
         selectedCollectionIds,
         setSelectedCollectionIds: (ids: string[]) => selectedCollectionIds.set(ids),
+        isSourceVisible,
+        multipleSourcesVisible,
         collectionIdToName,
         setCollectionIdToName: (map: Record<string, string>) => collectionIdToName.set(map),
         /**
