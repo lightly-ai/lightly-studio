@@ -47,7 +47,7 @@ review together.
 
 - Follow `.github/pull_request_template.md`. Keep the description short and human readable.
 - Assign the reviewer most likely to help, based on `git blame`/`git log` history of the touched
-  files or lines, and recommend a second one at the end of the description.
+  files or lines, and recommend an alternative one at the end of the description.
 - For a stack of PRs, prefer the same reviewer(s) for each item in the stack, unless the items
   can be reviewed independently.
 
