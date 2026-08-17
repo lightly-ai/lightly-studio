@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import math
 import random
+import re
 from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -168,6 +169,18 @@ def select_sample(objects: Sequence[str], fraction: float, seed: int) -> list[st
     return sorted(selected)
 
 
+_INVALID_NAME_CHARS = re.compile(r"[^0-9a-zA-Z._-]+")
+
+
+def _sanitize_relative(relative: str) -> str:
+    """Coerce each path segment to ``[0-9a-zA-Z._-]+`` so moved objects have valid names.
+
+    Segments are coerced independently to keep the ``/`` folder structure. Coercion is
+    deterministic per stem, so a video and its companions stay grouped after the move.
+    """
+    return "/".join(_INVALID_NAME_CHARS.sub("", segment) for segment in relative.split("/"))
+
+
 def destination_url(source: str, source_root: str, destination_root: str) -> str:
     """Map a source object URL to the equivalent path below a destination prefix.
 
@@ -184,7 +197,8 @@ def destination_url(source: str, source_root: str, destination_root: str) -> str
     """
     if not source.startswith(source_root):
         raise ValueError(f"Object is outside the source prefix: {source}")
-    return f"{destination_root}{source.removeprefix(source_root)}"
+    relative = _sanitize_relative(source.removeprefix(source_root))
+    return f"{destination_root}{relative}"
 
 
 @dataclass
