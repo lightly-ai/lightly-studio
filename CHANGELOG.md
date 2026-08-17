@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Stepping to the previous or next image now drives an index range scan instead of scanning the
+  sort index from the start. On PostgreSQL with 1M images, one neighbour lookup went from 92ms
+  to 0.03ms.
+
 ### Deprecated
 
 ### Removed

@@ -129,6 +129,12 @@ def _keyset_condition(
 
     with ``>`` flipped to ``<`` for descending keys and for ``after=False``. All keys are
     non-nullable, so NULLs need no handling.
+
+    The comparison is ANDed with ``k0 >= v0``, which is implied and changes no results.
+    Planners only turn a *single-column* comparison into an index range condition; without
+    it PostgreSQL applies the whole disjunction as a filter and scans the index from the
+    start. Measured on 1M images with the anchor at position 800k, one seek went from 92ms
+    (``Rows Removed by Filter: 800000``) to 0.03ms.
     """
     or_terms: list[ColumnElement[bool]] = []
     for i, (column, ascending) in enumerate(sort_keys):
@@ -138,7 +144,13 @@ def _keyset_condition(
         seek_greater = ascending if after else not ascending
         comparison = (column > anchor[i]) if seek_greater else (column < anchor[i])
         or_terms.append(sqlalchemy.and_(*equals_prefix, comparison))
-    return sqlalchemy.or_(*or_terms)
+
+    leading_column, leading_ascending = sort_keys[0]
+    leading_seek_greater = leading_ascending if after else not leading_ascending
+    leading_bound = (
+        leading_column >= anchor[0] if leading_seek_greater else leading_column <= anchor[0]
+    )
+    return sqlalchemy.and_(sqlalchemy.or_(*or_terms), leading_bound)
 
 
 def _count(session: Session, query: SelectOfScalar[UUID]) -> int:
