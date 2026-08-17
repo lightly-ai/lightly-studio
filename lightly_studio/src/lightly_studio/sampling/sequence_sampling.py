@@ -32,8 +32,9 @@ def sampling_via_database_sequences(
         sample_ids=input_sample_ids,
         sequence_length=sequence_length,
     )
-    n_sequences_to_select = (
-        min(config.n_samples_to_select, len(sequences) * sequence_length) // sequence_length
+    n_sequences_to_select = min(
+        config.n_samples_to_select // sequence_length,
+        len(sequences),
     )
     if n_sequences_to_select == 0:
         logger.warning(
@@ -137,7 +138,7 @@ def _load_sequences(
     if n_dropped > 0:
         logger.warning(
             "Dropped %d of %d candidate frame(s) that do not fill a complete sequence of "
-            "%d frame(s); videos with fewer frames than that contribute nothing.",
+            "%d frame(s).",
             n_dropped,
             len(frames),
             sequence_length,
