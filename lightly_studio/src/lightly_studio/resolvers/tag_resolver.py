@@ -275,6 +275,12 @@ def get_tags_by_sample(
     return result
 
 
+def get_sample_ids_by_tag_id(session: Session, tag_id: UUID) -> list[UUID]:
+    """Return all sample IDs assigned to a tag."""
+    statement = select(SampleTagLinkTable.sample_id).where(col(SampleTagLinkTable.tag_id) == tag_id)
+    return [sample_id for sample_id in session.exec(statement).all() if sample_id is not None]
+
+
 def get_or_create_sample_tag_by_name(
     session: Session,
     collection_id: UUID,

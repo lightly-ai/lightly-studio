@@ -244,8 +244,8 @@ def sampling_via_database(
         preselected_tag = tag_resolver.get_by_id(session=session, tag_id=preselected_tag_id)
         if preselected_tag is None:
             raise ValueError(f"Preselected tag with ID {preselected_tag_id} not found.")
-        preselected_sample_ids = list(
-            tag_resolver.get_tags_by_sample(session=session, tag_ids=[preselected_tag_id]).keys()
+        preselected_sample_ids = tag_resolver.get_sample_ids_by_tag_id(
+            session=session, tag_id=preselected_tag_id
         )
     else:
         preselected_sample_ids = []
