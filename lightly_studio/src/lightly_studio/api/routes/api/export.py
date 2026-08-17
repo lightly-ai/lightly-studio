@@ -110,7 +110,9 @@ def export_collection_prepare(
     output_path = temp_dir / filename
     try:
         output_path.write_text("\n".join(exported))
-        export = export_job_resolver.create(session=session, export_path=str(output_path))
+        export = export_job_resolver.create(
+            session=session, collection_id=collection.collection_id, export_path=str(output_path)
+        )
     except Exception:
         shutil.rmtree(temp_dir, ignore_errors=True)
         raise
@@ -145,7 +147,9 @@ def export_collection_youtube_vis_prepare(
             samples=dataset_query,
             output_json=output_path,
         )
-        export = export_job_resolver.create(session=session, export_path=str(output_path))
+        export = export_job_resolver.create(
+            session=session, collection_id=collection.collection_id, export_path=str(output_path)
+        )
     except Exception:
         shutil.rmtree(temp_dir, ignore_errors=True)
         raise
@@ -187,7 +191,9 @@ def export_collection_annotations_prepare(
             annotation_collection_id=body.annotation_collection_id,
             temp_dir=temp_dir,
         )
-        export = export_job_resolver.create(session=session, export_path=str(export_path))
+        export = export_job_resolver.create(
+            session=session, collection_id=collection.collection_id, export_path=str(export_path)
+        )
     except Exception:
         shutil.rmtree(temp_dir, ignore_errors=True)
         raise
@@ -220,7 +226,9 @@ def export_collection_captions_prepare(
             dataset_id=collection.dataset_id,
             samples=dataset_query,
         ).to_coco_captions(output_json=output_path)
-        export = export_job_resolver.create(session=session, export_path=str(output_path))
+        export = export_job_resolver.create(
+            session=session, collection_id=collection.collection_id, export_path=str(output_path)
+        )
     except Exception:
         shutil.rmtree(temp_dir, ignore_errors=True)
         raise
@@ -230,7 +238,7 @@ def export_collection_captions_prepare(
 
 @export_router.get("/export/download/{export_key}")
 def export_download(
-    _collection: Annotated[
+    collection: Annotated[
         CollectionTable,
         Path(title="collection Id"),
         Depends(collection_api.get_and_validate_collection_id),
@@ -240,7 +248,7 @@ def export_download(
 ) -> StreamingResponse:
     """Stream the export identified by *export_key*."""
     job = export_job_resolver.get(session=session, export_key=export_key)
-    if job is None:
+    if job is None or job.collection_id != collection.collection_id:
         raise NotFoundError("Export key not found.")
 
     export_path = PathlibPath(job.export_path)

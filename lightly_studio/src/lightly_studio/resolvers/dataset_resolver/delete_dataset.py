@@ -34,6 +34,7 @@ from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
+from lightly_studio.models.export_job import ExportJobTable
 from lightly_studio.models.group import GroupTable, SampleGroupLinkTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import SampleMetadataTable
@@ -112,6 +113,7 @@ def delete_dataset(
     _delete_embedding_models(session=session, dataset_id=dataset_id)
     _delete_object_tracks(session=session, dataset_id=dataset_id)
     _delete_evaluation_runs(session=session, dataset_id=dataset_id)
+    _delete_export_jobs(session=session, dataset_id=dataset_id)
 
     # 6. Collections (single statement; self-FK satisfied at statement end).
     _delete_collections(session=session, dataset_id=dataset_id)
@@ -361,6 +363,16 @@ def _delete_evaluation_runs(session: Session, dataset_id: UUID) -> None:
             col(EvaluationRunTable.gt_annotation_collection_id).in_(
                 _collection_ids_subquery(dataset_id)
             )
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_export_jobs(session: Session, dataset_id: UUID) -> None:
+    """Delete export jobs for the dataset's collections."""
+    session.exec(
+        delete(ExportJobTable).where(
+            col(ExportJobTable.collection_id).in_(_collection_ids_subquery(dataset_id))
         ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )

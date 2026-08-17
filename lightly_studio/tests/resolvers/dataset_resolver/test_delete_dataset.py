@@ -17,6 +17,7 @@ from lightly_studio.resolvers import (
     evaluation_annotation_metric_resolver,
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
+    export_job_resolver,
     metadata_resolver,
     sample_embedding_resolver,
     sample_resolver,
@@ -203,6 +204,28 @@ def test_delete_dataset__with_tags(db_session: Session) -> None:
     # Assert - collection and tags deleted
     assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
     assert tag_resolver.get_by_id(session=db_session, tag_id=tag_id) is None
+
+
+def test_delete_dataset__with_export_job(db_session: Session) -> None:
+    # Arrange
+    dataset = create_collection(session=db_session, collection_name="to_delete")
+    collection_id = dataset.collection_id  # Capture before delete
+    job = export_job_resolver.create(
+        session=db_session,
+        collection_id=collection_id,
+        export_path="/exports/coco.json",
+    )
+    export_key = job.export_key  # Capture before delete
+
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+    )
+
+    # Assert - collection and its export job deleted
+    assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
+    assert export_job_resolver.get(session=db_session, export_key=export_key) is None
 
 
 def test_delete_dataset__does_not_affect_other_datasets(db_session: Session) -> None:
