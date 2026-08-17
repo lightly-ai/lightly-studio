@@ -315,7 +315,6 @@ def _get_preselected_sample_ids(
         session=session,
         tag_name=preselected_tag_name,
         collection_id=collection_id,
-        tag_kind="sample",
     )
     if preselected_tag is None:
         raise ValueError(f"Preselected tag with name {preselected_tag_name} not found.")

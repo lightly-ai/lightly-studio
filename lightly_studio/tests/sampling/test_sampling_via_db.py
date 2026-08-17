@@ -608,7 +608,6 @@ def test_sampling_via_database__preselected_tag_name_ignores_annotation_tag(
         session=db_session,
         tag_name="result",
         collection_id=collection_id,
-        tag_kind="sample",
     )
     assert result_tag is not None
     result_sample_ids = _sample_ids_by_tag(
