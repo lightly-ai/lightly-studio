@@ -26,13 +26,33 @@ const SERIES_COLORS = [
     '#76B7B2',
     '#EDC948',
     '#FF9DA7',
-    '#9C755F'
+    '#9C755F',
+    '#BAB0AC'
 ];
 
 /** Maps a stable series ID to the same accessible chart colour across renders. */
 export function colorForSeries(id: string): string {
-    const hash = [...id].reduce((value, character) => value * 31 + character.charCodeAt(0), 0);
-    return SERIES_COLORS[Math.abs(hash) % SERIES_COLORS.length];
+    const index = [...id].reduce(
+        (value, character) => (value * 31 + character.charCodeAt(0)) % SERIES_COLORS.length,
+        0
+    );
+    return SERIES_COLORS[index];
+}
+
+/** Resolves hash collisions so simultaneously visible series always differ. */
+function assignSeriesColors(seriesIds: string[]): Map<string, string> {
+    const colors = new Map<string, string>();
+    const usedColors = new Set<string>();
+    for (const id of seriesIds) {
+        let index = SERIES_COLORS.indexOf(colorForSeries(id));
+        while (usedColors.has(SERIES_COLORS[index]) && usedColors.size < SERIES_COLORS.length) {
+            index = (index + 1) % SERIES_COLORS.length;
+        }
+        const color = SERIES_COLORS[index];
+        colors.set(id, color);
+        usedColors.add(color);
+    }
+    return colors;
 }
 
 /** Bar layout: 'vertical' bars grow upward, 'horizontal' bars grow rightward. */
@@ -80,6 +100,7 @@ export function buildEchartsOption(
     const isHorizontal = orientation === 'horizontal';
     const groupedSeries = options.series ?? [];
     const isGrouped = groupedSeries.length > 0;
+    const groupedColors = assignSeriesColors(groupedSeries.map((series) => series.id));
     const valueMode = options.valueMode ?? 'number';
 
     const labels = data.map((item) => item.label);
@@ -196,7 +217,11 @@ export function buildEchartsOption(
                   data: labels.map((label) =>
                       toChartValue(countsByLabel.get(label) ?? 0, seriesTotal)
                   ),
-                  itemStyle: { color: colorForSeries(item.id) },
+                  itemStyle: {
+                      color: groupedColors.get(item.id),
+                      borderColor: 'rgba(255,255,255,0.75)',
+                      borderWidth: 1
+                  },
                   barCategoryGap: '25%',
                   emphasis: CHART_EMPHASIS
               };

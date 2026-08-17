@@ -208,6 +208,21 @@ describe('buildEchartsOption', () => {
         ).toBe('<b>car</b><br/>● Reviewed: <b>3</b> (100.0%)<br/>■ Priority: <b>1</b> (100.0%)');
     });
 
+    it('resolves palette collisions between visible series', () => {
+        const collidingSeries = [
+            { id: 'a', label: 'First', data: [{ label: 'car', count: 1 }] },
+            { id: 'k', label: 'Second', data: [{ label: 'car', count: 1 }] }
+        ];
+        expect(colorForSeries('a')).toBe(colorForSeries('k'));
+
+        const option = buildEchartsOption([{ label: 'car', count: 2 }], {
+            series: collidingSeries
+        }) as { series: { itemStyle: { color: string; borderWidth: number } }[] };
+
+        expect(option.series[0].itemStyle.color).not.toBe(option.series[1].itemStyle.color);
+        expect(option.series.every((series) => series.itemStyle.borderWidth === 1)).toBe(true);
+    });
+
     it('keeps raw counts and percentages in percentage-mode tooltips', () => {
         const formatter = getFormatter(
             buildEchartsOption([{ label: 'car', count: 20 }], {
