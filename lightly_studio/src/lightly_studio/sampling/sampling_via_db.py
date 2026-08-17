@@ -250,7 +250,7 @@ def sampling_via_database(
         collection_id=config.collection_id,
     )
     if existing_tag:
-        # TODO(Lukas, 8/2026): drop this requirement when `preselected_tag_name` is the same as
+        # TODO(Lukas, 08/2026): drop this requirement when `preselected_tag_name` is the same as
         # `sampling_result_tag_name`.
         msg = (
             f"Tag with name {config.sampling_result_tag_name} already exists in the "
