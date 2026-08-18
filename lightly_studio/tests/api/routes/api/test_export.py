@@ -2,45 +2,244 @@
 
 from __future__ import annotations
 
+import csv
 import io
 import json
+import tempfile
 import zipfile
+from pathlib import Path
+from unittest import mock
+from uuid import UUID, uuid4
 
-import yaml
+import pytest
 from fastapi.testclient import TestClient
-from PIL import Image as PILImage
 from sqlmodel import Session
 
-from lightly_studio.api.routes.api.status import HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_OK
+from lightly_studio.api.routes.api import export as export_api
+from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_BAD_REQUEST,
+    HTTP_STATUS_NOT_FOUND,
+    HTTP_STATUS_OK,
+)
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
     AnnotationType,
 )
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.export_job import ExportJobTable
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
+    export_job_resolver,
     object_track_resolver,
-    tag_resolver,
 )
 from tests.helpers_resolvers import (
-    ImageStub,
+    AnnotationDetails,
     create_annotation_label,
+    create_annotations,
     create_caption,
     create_collection,
     create_image,
-    create_images,
-    create_tag,
 )
-from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
+from tests.resolvers.video.helpers import VideoStub, create_video, create_video_with_frames
 
 
-def test_export_collection_coco(
+def test_export_collection_prepare(
     db_session: Session,
     test_client: TestClient,
 ) -> None:
-    # Create a single sample with a single annotation.
+    collection = create_collection(session=db_session, collection_name="my_collection")
+    create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="path/a.png",
+    )
+    create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="path/b.png",
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/prepare",
+        json={},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    export_key = UUID(response.json()["export_key"])
+
+    export_job = db_session.get(ExportJobTable, export_key)
+    assert export_job is not None
+    file_content = Path(export_job.export_path).read_text()
+    assert set(file_content.splitlines()) == {"path/a.png", "path/b.png"}
+
+
+def test_export_collection_prepare__with_collection_filter(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+    image_a = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="path/a.png",
+    )
+    create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="path/b.png",
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/prepare",
+        json={
+            "collection_filter": {
+                "filter_type": "image",
+                "sample_filter": {"sample_ids": [str(image_a.sample_id)]},
+            }
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    export_key = UUID(response.json()["export_key"])
+
+    export_job = db_session.get(ExportJobTable, export_key)
+    assert export_job is not None
+    assert Path(export_job.export_path).read_text() == "path/a.png"
+
+
+def test_export_download__not_found_returns_404(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+    export_key = uuid4()
+
+    response = test_client.get(
+        f"/api/collections/{collection.collection_id}/export/download/{export_key}"
+    )
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
+
+
+def test_export_download__json_file_streams_content_and_deletes_job(
+    tmp_path: Path,
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+
+    export_dir = tmp_path / "container"
+    export_dir.mkdir()
+    export_path = export_dir / "export.json"
+    export_path.write_text('{"items": [1, 2, 3]}')
+
+    job = export_job_resolver.create(session=db_session, export_path=str(export_path))
+
+    response = test_client.get(
+        f"/api/collections/{collection.collection_id}/export/download/{job.export_key}"
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.headers["Content-Type"] == "application/json"
+    assert response.headers["Content-Disposition"] == "attachment; filename=export.json"
+    assert response.json() == {"items": [1, 2, 3]}
+    assert export_job_resolver.get(session=db_session, export_key=job.export_key) is None
+    assert not export_path.exists()
+    assert export_dir.exists()
+
+
+def test_export_download__txt_file_streams_content_and_deletes_job(
+    tmp_path: Path,
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+
+    export_dir = tmp_path / "container"
+    export_dir.mkdir()
+    export_path = export_dir / "export.txt"
+    export_path.write_text("path/a.jpg\npath/b.jpg\n")
+
+    job = export_job_resolver.create(session=db_session, export_path=str(export_path))
+
+    response = test_client.get(
+        f"/api/collections/{collection.collection_id}/export/download/{job.export_key}"
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.headers["Content-Type"].startswith("text/plain")
+    assert response.headers["Content-Disposition"] == "attachment; filename=export.txt"
+    assert response.text == "path/a.jpg\npath/b.jpg\n"
+    assert export_job_resolver.get(session=db_session, export_key=job.export_key) is None
+    assert not export_path.exists()
+    assert export_dir.exists()
+
+
+def test_export_download__csv_file_streams_content_and_deletes_job(
+    tmp_path: Path,
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+    export_dir = tmp_path / "container"
+    export_dir.mkdir()
+    export_path = export_dir / "classification_export.csv"
+    export_path.write_text("file_path_abs,class_name\n/data/img1.jpg,cat\n")
+    job = export_job_resolver.create(session=db_session, export_path=str(export_path))
+
+    response = test_client.get(
+        f"/api/collections/{collection.collection_id}/export/download/{job.export_key}"
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.headers["Content-Type"].startswith("text/csv")
+    assert response.headers["Content-Disposition"] == (
+        "attachment; filename=classification_export.csv"
+    )
+    assert response.text == "file_path_abs,class_name\n/data/img1.jpg,cat\n"
+    assert export_job_resolver.get(session=db_session, export_key=job.export_key) is None
+    assert not export_path.exists()
+    assert export_dir.exists()
+
+
+def test_export_download__directory_streams_as_zip_and_deletes_job(
+    tmp_path: Path,
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+
+    container = tmp_path / "container"
+    container.mkdir()
+    export_dir = container / "my_export"
+    export_dir.mkdir()
+    (export_dir / "labels.txt").write_text("cat\ndog\n")
+
+    job = export_job_resolver.create(session=db_session, export_path=str(export_dir))
+
+    response = test_client.get(
+        f"/api/collections/{collection.collection_id}/export/download/{job.export_key}"
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.headers["Content-Type"] == "application/zip"
+    assert response.headers["Content-Disposition"] == "attachment; filename=my_export.zip"
+
+    with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
+        assert "my_export/labels.txt" in zip_ref.namelist()
+        assert zip_ref.read("my_export/labels.txt") == b"cat\ndog\n"
+
+    assert export_job_resolver.get(session=db_session, export_key=job.export_key) is None
+    assert not export_dir.exists()
+    assert container.exists()
+
+
+def test_export_collection_annotations_prepare__coco(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
     collection = create_collection(session=db_session)
     image = create_image(
         session=db_session,
@@ -73,30 +272,152 @@ def test_export_collection_coco(
         sample_type=SampleType.ANNOTATION,
     )
 
-    # Call the API.
-    response = test_client.get(
-        f"/api/collections/{collection.collection_id}/export/annotations",
-        params={"annotation_collection_id": str(annotation_collection_id)},
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/annotations/prepare",
+        json={
+            "export_format": "object_detection_coco",
+            "annotation_collection_id": str(annotation_collection_id),
+        },
     )
 
-    # Check the response.
     assert response.status_code == HTTP_STATUS_OK
-    content = json.loads(response.content)
+    export_key = UUID(response.json()["export_key"])
+
+    export_job = db_session.get(ExportJobTable, export_key)
+    assert export_job is not None
+    content = json.loads(Path(export_job.export_path).read_text())
     assert content == {
         "images": [{"id": 0, "file_name": "img1.jpg", "width": 100, "height": 100}],
         "categories": [{"id": 0, "name": "cat"}],
         "annotations": [{"image_id": 0, "category_id": 0, "bbox": [10.0, 20.0, 30.0, 40.0]}],
     }
 
-    # Check the export file name. Quotes are intentionally omitted.
-    assert response.headers["Content-Disposition"] == "attachment; filename=coco_export.json"
 
-
-def test_export_collection_yolo(
+def test_export_collection_annotations_prepare__classification_csv(
     db_session: Session,
     test_client: TestClient,
 ) -> None:
-    # Create a single sample with a single annotation.
+    collection = create_collection(session=db_session)
+    image = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/data/img1.jpg",
+    )
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    )
+    annotations = create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image.sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+                confidence=0.5,
+            )
+        ],
+        collection_name="model",
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/annotations/prepare",
+        json={
+            "export_format": "classification_csv",
+            "annotation_collection_id": str(annotations[0].annotation_collection_id),
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    export_job = db_session.get(ExportJobTable, UUID(response.json()["export_key"]))
+    assert export_job is not None
+    export_path = Path(export_job.export_path)
+    assert export_path.name == "classification_export.csv"
+    assert list(csv.DictReader(io.StringIO(export_path.read_text()))) == [
+        {
+            "file_path_abs": "/data/img1.jpg",
+            "class_name": "cat",
+            "confidence": "0.5",
+            "annotation_source": "model",
+        }
+    ]
+
+
+def test_export_collection_annotations_prepare__video_classification_filter(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    included = create_video(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="/data/included.mp4"),
+    )
+    excluded = create_video(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="/data/excluded.mp4"),
+    )
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="cat",
+    )
+    selected = create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+            )
+            for sample_id in (included.sample_id, excluded.sample_id)
+        ],
+        collection_name="selected",
+    )
+    create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=included.sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+            )
+        ],
+        collection_name="excluded-source",
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/annotations/prepare",
+        json={
+            "export_format": "classification_csv",
+            "annotation_collection_id": str(selected[0].annotation_collection_id),
+            "video_filter": {
+                "filter_type": "video",
+                "sample_filter": {"sample_ids": [str(included.sample_id)]},
+            },
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    export_job = db_session.get(ExportJobTable, UUID(response.json()["export_key"]))
+    assert export_job is not None
+    assert list(csv.DictReader(io.StringIO(Path(export_job.export_path).read_text()))) == [
+        {
+            "file_path_abs": "/data/included.mp4",
+            "class_name": "cat",
+            "confidence": "",
+            "annotation_source": "selected",
+        }
+    ]
+
+
+def test_export_collection_annotations_prepare__yolo(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
     collection = create_collection(session=db_session)
     image = create_image(
         session=db_session,
@@ -129,35 +450,28 @@ def test_export_collection_yolo(
         sample_type=SampleType.ANNOTATION,
     )
 
-    response = test_client.get(
-        f"/api/collections/{collection.collection_id}/export/annotations",
-        params={
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/annotations/prepare",
+        json={
             "export_format": "object_detection_yolo",
             "annotation_collection_id": str(annotation_collection_id),
         },
     )
 
     assert response.status_code == HTTP_STATUS_OK
-    assert response.headers["Content-Disposition"] == "attachment; filename=yolo.zip"
+    export_key = UUID(response.json()["export_key"])
 
-    with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
-        files = set(zip_ref.namelist())
-        assert "yolo/data.yaml" in files
-        assert "yolo/labels/img1.txt" in files
-
-        data_yaml = yaml.safe_load(zip_ref.read("yolo/data.yaml"))
-        assert data_yaml == {"path": ".", "train": "images", "nc": 1, "names": {0: "cat"}}
-
-        # Box (x=10, y=20, w=30, h=40) on a 100x100 image has center (25, 40), so
-        # normalized cx=0.25 cy=0.4 w=0.3 h=0.4.
-        assert zip_ref.read("yolo/labels/img1.txt").decode() == "0 0.25 0.4 0.3 0.4\n"
+    export_job = db_session.get(ExportJobTable, export_key)
+    assert export_job is not None
+    export_dir = Path(export_job.export_path)
+    assert (export_dir / "data.yaml").exists()
+    assert (export_dir / "labels" / "img1.txt").exists()
 
 
-def test_export_collection_segmentation_masks(
+def test_export_collection_annotations_prepare__segmentation_mask_coco(
     db_session: Session,
     test_client: TestClient,
 ) -> None:
-    # Create a single sample with a single annotation.
     collection = create_collection(session=db_session)
     image = create_image(
         session=db_session,
@@ -191,16 +505,20 @@ def test_export_collection_segmentation_masks(
         sample_type=SampleType.ANNOTATION,
     )
 
-    response = test_client.get(
-        f"/api/collections/{collection.collection_id}/export/annotations",
-        params={
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/annotations/prepare",
+        json={
             "export_format": "segmentation_mask_coco",
             "annotation_collection_id": str(annotation_collection_id),
         },
     )
 
     assert response.status_code == HTTP_STATUS_OK
-    content = json.loads(response.content)
+    export_key = UUID(response.json()["export_key"])
+
+    export_job = db_session.get(ExportJobTable, export_key)
+    assert export_job is not None
+    content = json.loads(Path(export_job.export_path).read_text())
     assert content == {
         "images": [{"id": 0, "file_name": "img1.jpg", "width": 10, "height": 10}],
         "categories": [{"id": 0, "name": "cat"}],
@@ -215,13 +533,8 @@ def test_export_collection_segmentation_masks(
         ],
     }
 
-    assert (
-        response.headers["Content-Disposition"]
-        == "attachment; filename=coco_segmentation_mask_export.json"
-    )
 
-
-def test_export_collection_pascalvoc_from_segmentation_masks(
+def test_export_collection_annotations_prepare__pascal_voc(
     db_session: Session,
     test_client: TestClient,
 ) -> None:
@@ -258,37 +571,127 @@ def test_export_collection_pascalvoc_from_segmentation_masks(
         sample_type=SampleType.ANNOTATION,
     )
 
-    response = test_client.get(
-        f"/api/collections/{collection.collection_id}/export/annotations",
-        params={
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/annotations/prepare",
+        json={
             "export_format": "pascal_voc",
             "annotation_collection_id": str(annotation_collection_id),
         },
     )
 
     assert response.status_code == HTTP_STATUS_OK
-    assert response.headers["Content-Disposition"] == "attachment; filename=pascalvoc.zip"
+    export_key = UUID(response.json()["export_key"])
 
-    with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
-        files = set(zip_ref.namelist())
-        assert "pascalvoc/class_id_to_name.json" in files
-        assert "pascalvoc/SegmentationClass/img1.png" in files
-
-        class_map = json.loads(zip_ref.read("pascalvoc/class_id_to_name.json"))
-        assert class_map == {"0": "background", "1": "dog"}
-
-        with PILImage.open(
-            io.BytesIO(zip_ref.read("pascalvoc/SegmentationClass/img1.png"))
-        ) as mask:
-            mask_values = list(mask.getdata())
-        assert mask_values == [0, 1, 0, 0, 0, 0]
+    export_job = db_session.get(ExportJobTable, export_key)
+    assert export_job is not None
+    export_dir = Path(export_job.export_path)
+    assert (export_dir / "class_id_to_name.json").exists()
+    assert (export_dir / "SegmentationClass" / "img1.png").exists()
 
 
-def test_export_collection_captions(
+def test_export_collection_annotations_prepare__unsupported_format(
+    db_session: Session,
+    test_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    collection = create_collection(session=db_session)
+    generate_annotations_export = mock.Mock()
+    make_temp_dir = mock.Mock()
+    monkeypatch.setattr(export_api, "_generate_annotations_export", generate_annotations_export)
+    monkeypatch.setattr(tempfile, "mkdtemp", make_temp_dir)
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/annotations/prepare",
+        json={"export_format": "youtube_vis_segmentation"},
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+    assert response.json() == {
+        "detail": "Export format 'youtube_vis_segmentation' is not supported for this endpoint."
+    }
+    generate_annotations_export.assert_not_called()
+    make_temp_dir.assert_not_called()
+
+
+def test_export_collection_annotations_prepare__image_filter(
     db_session: Session,
     test_client: TestClient,
 ) -> None:
-    # Create a single sample with a single annotation.
+    # image_a is included via image_filter; image_b is excluded.
+    collection = create_collection(session=db_session)
+    image_a = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="img_a.jpg",
+        width=100,
+        height=100,
+    )
+    image_b = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="img_b.jpg",
+        width=100,
+        height=100,
+    )
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    )
+    annotation_resolver.create_many(
+        session=db_session,
+        parent_collection_id=collection.collection_id,
+        annotations=[
+            AnnotationCreate(
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+                parent_sample_id=image_a.sample_id,
+                x=10,
+                y=20,
+                width=30,
+                height=40,
+            ),
+            AnnotationCreate(
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+                parent_sample_id=image_b.sample_id,
+                x=10,
+                y=20,
+                width=30,
+                height=40,
+            ),
+        ],
+    )
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/annotations/prepare",
+        json={
+            "export_format": "object_detection_coco",
+            "annotation_collection_id": str(annotation_collection_id),
+            "image_filter": {
+                "filter_type": "image",
+                "sample_filter": {"sample_ids": [str(image_a.sample_id)]},
+            },
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    export_key = UUID(response.json()["export_key"])
+
+    export_job = db_session.get(ExportJobTable, export_key)
+    assert export_job is not None
+    content = json.loads(Path(export_job.export_path).read_text())
+    assert len(content["images"]) == 1
+    assert content["images"][0]["file_name"] == "img_a.jpg"
+
+
+def test_export_collection_captions_prepare(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
     collection = create_collection(session=db_session)
     image = create_image(
         session=db_session,
@@ -301,92 +704,82 @@ def test_export_collection_captions(
         session=db_session,
         collection_id=collection.collection_id,
         parent_sample_id=image.sample_id,
-        text="test caption",
+        text="a cat on a mat",
     )
-
-    # Call the API.
-    response = test_client.get(f"/api/collections/{collection.collection_id}/export/captions")
-
-    # Check the response.
-    assert response.status_code == HTTP_STATUS_OK
-    content = json.loads(response.content)
-    assert content == {
-        "images": [{"id": 0, "file_name": "img1.jpg", "width": 100, "height": 100}],
-        "annotations": [{"id": 0, "image_id": 0, "caption": "test caption"}],
-    }
-
-    # Check the export file name. Quotes are intentionally omitted.
-    assert (
-        response.headers["Content-Disposition"] == "attachment; filename=coco_captions_export.json"
-    )
-
-
-def test_export_collection_samples__image_filter__tag__returns_intersection(
-    db_session: Session, test_client: TestClient
-) -> None:
-    # Tag covers A and B; ImageFilter covers B and C → export returns B only.
-    collection_id = create_collection(session=db_session).collection_id
-    image_a = create_image(
-        session=db_session, collection_id=collection_id, file_path_abs="path/a.png"
-    )
-    image_b = create_image(
-        session=db_session, collection_id=collection_id, file_path_abs="path/b.png"
-    )
-    image_c = create_image(
-        session=db_session, collection_id=collection_id, file_path_abs="path/c.png"
-    )
-
-    tag = create_tag(session=db_session, collection_id=collection_id)
-    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=image_a.sample)
-    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=image_b.sample)
 
     response = test_client.post(
-        f"/api/collections/{collection_id}/export",
+        f"/api/collections/{collection.collection_id}/export/captions/prepare",
+        json={},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    export_key = UUID(response.json()["export_key"])
+
+    export_job = db_session.get(ExportJobTable, export_key)
+    assert export_job is not None
+    content = json.loads(Path(export_job.export_path).read_text())
+    assert content == {
+        "images": [{"id": 0, "file_name": "img1.jpg", "width": 100, "height": 100}],
+        "annotations": [{"id": 0, "image_id": 0, "caption": "a cat on a mat"}],
+    }
+
+
+def test_export_collection_captions_prepare__image_filter(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    # image_a is included via image_filter; image_b is excluded.
+    collection = create_collection(session=db_session)
+    image_a = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="img_a.jpg",
+        width=100,
+        height=100,
+    )
+    image_b = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="img_b.jpg",
+        width=100,
+        height=100,
+    )
+    create_caption(
+        session=db_session,
+        collection_id=collection.collection_id,
+        parent_sample_id=image_a.sample_id,
+        text="caption for a",
+    )
+    create_caption(
+        session=db_session,
+        collection_id=collection.collection_id,
+        parent_sample_id=image_b.sample_id,
+        text="caption for b",
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/captions/prepare",
         json={
-            "include": {"tag_ids": [str(tag.tag_id)]},
-            "collection_filter": {
+            "image_filter": {
                 "filter_type": "image",
-                "sample_filter": {"sample_ids": [str(image_b.sample_id), str(image_c.sample_id)]},
+                "sample_filter": {"sample_ids": [str(image_a.sample_id)]},
             },
         },
     )
 
     assert response.status_code == HTTP_STATUS_OK
-    assert response.text == image_b.file_path_abs
+    export_key = UUID(response.json()["export_key"])
+
+    export_job = db_session.get(ExportJobTable, export_key)
+    assert export_job is not None
+    content = json.loads(Path(export_job.export_path).read_text())
+    assert len(content["images"]) == 1
+    assert content["images"][0]["file_name"] == "img_a.jpg"
+    assert len(content["annotations"]) == 1
+    assert content["annotations"][0]["caption"] == "caption for a"
 
 
-def test_export_collection_samples(db_session: Session, test_client: TestClient) -> None:
-    client = test_client
-    collection_id = create_collection(
-        session=db_session, collection_name="example_collection"
-    ).collection_id
-    images = create_images(
-        db_session=db_session,
-        collection_id=collection_id,
-        images=[
-            ImageStub(path="path/to/image0.jpg"),
-            ImageStub(path="path/to/image1.jpg"),
-            ImageStub(path="path/to/image2.jpg"),
-        ],
-    )
-
-    # Tag two samples.
-    tag = create_tag(session=db_session, collection_id=collection_id)
-    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=images[0].sample)
-    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=images[2].sample)
-
-    # Export the collection
-    response = client.post(
-        f"/api/collections/{collection_id}/export",
-        json={"include": {"tag_ids": [str(tag.tag_id)]}},
-    )
-    assert response.status_code == HTTP_STATUS_OK
-
-    lines = response.text.split("\n")
-    assert lines == ["path/to/image0.jpg", "path/to/image2.jpg"]
-
-
-def test_export_collection_youtube_vis(
+def test_export_collection_youtube_vis_prepare(
     db_session: Session,
     test_client: TestClient,
 ) -> None:
@@ -396,7 +789,6 @@ def test_export_collection_youtube_vis(
         collection_id=collection.collection_id,
         video=VideoStub(path="video_001.mp4", width=3, height=2, duration_s=2.0, fps=1.0),
     )
-
     label = create_annotation_label(
         session=db_session,
         root_collection_id=collection.collection_id,
@@ -411,7 +803,6 @@ def test_export_collection_youtube_vis(
             )
         ],
     )[0]
-
     frame_0, _frame_1 = video_with_frames.frame_sample_ids
     annotation_resolver.create_many(
         session=db_session,
@@ -431,13 +822,17 @@ def test_export_collection_youtube_vis(
         ],
     )
 
-    response = test_client.get(
-        f"/api/collections/{collection.collection_id}/export/youtube-vis",
-        params={"export_format": "youtube_vis_segmentation"},
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/youtube-vis/prepare",
+        json={},
     )
 
     assert response.status_code == HTTP_STATUS_OK
-    content = json.loads(response.content)
+    export_key = UUID(response.json()["export_key"])
+
+    export_job = db_session.get(ExportJobTable, export_key)
+    assert export_job is not None
+    content = json.loads(Path(export_job.export_path).read_text())
     assert content == {
         "info": {"description": "YouTube-VIS export"},
         "categories": [{"id": 1, "name": "cat"}],
@@ -468,33 +863,54 @@ def test_export_collection_youtube_vis(
             }
         ],
     }
-    assert (
-        response.headers["Content-Disposition"]
-        == "attachment; filename=youtube_vis_segmentation_mask_export.json"
-    )
 
 
-def test_export_collection_youtube_vis__wrong_collection_type(
+def test_export_collection_youtube_vis_prepare__wrong_collection_type(
     db_session: Session,
     test_client: TestClient,
 ) -> None:
     collection = create_collection(session=db_session)
-    response = test_client.get(
-        f"/api/collections/{collection.collection_id}/export/youtube-vis",
-        params={"export_format": "youtube_vis_segmentation"},
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/youtube-vis/prepare",
+        json={},
     )
 
     assert response.status_code == HTTP_STATUS_BAD_REQUEST
 
 
-def test_export_collection_youtube_vis__wrong_export_format(
+def test_export_collection_youtube_vis_prepare__video_filter(
     db_session: Session,
     test_client: TestClient,
 ) -> None:
+    # video_a is included via video_filter; video_b is excluded.
     collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
-    response = test_client.get(
-        f"/api/collections/{collection.collection_id}/export/youtube-vis",
-        params={"export_format": "object_detection_coco"},
+    video_a = create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="video_a.mp4", width=3, height=2, duration_s=1.0, fps=1.0),
+    )
+    create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="video_b.mp4", width=3, height=2, duration_s=1.0, fps=1.0),
     )
 
-    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/youtube-vis/prepare",
+        json={
+            "video_filter": {
+                "filter_type": "video",
+                "sample_filter": {"sample_ids": [str(video_a.video_sample_id)]},
+            },
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    export_key = UUID(response.json()["export_key"])
+
+    export_job = db_session.get(ExportJobTable, export_key)
+    assert export_job is not None
+    content = json.loads(Path(export_job.export_path).read_text())
+    assert len(content["videos"]) == 1
+    assert content["videos"][0]["file_names"] == ["video_a.mp4/00000.jpg"]

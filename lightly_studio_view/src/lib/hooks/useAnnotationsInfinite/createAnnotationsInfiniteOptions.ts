@@ -9,16 +9,20 @@ import type { AnnotationsInfiniteParams, AnnotationsInfiniteQueryKey } from './t
 
 const DEFAULT_PAGE_LIMIT = 100;
 
+export const getAnnotationsInfiniteQueryKeyPrefix = (collectionId: string) =>
+    ['readAnnotationsWithPayloadInfinite', collectionId] as const;
+
 export const createAnnotationsInfiniteOptions = (params: AnnotationsInfiniteParams) => {
     const queryKey: AnnotationsInfiniteQueryKey = [
-        'readAnnotationsWithPayloadInfinite',
-        params.collection_id,
+        ...getAnnotationsInfiniteQueryKeyPrefix(params.collection_id),
         {
             annotation_label_ids: params.annotation_label_ids,
             tag_ids: params.tag_ids,
             sample_ids: params.sample_ids,
             embedding_region: params.embedding_region,
-            text_embedding: params.text_embedding
+            text_embedding: params.text_embedding,
+            // In the key, not only the body: without it cached pages serve and nothing reorders.
+            sort_by: params.sort_by
         }
     ];
 
@@ -39,7 +43,8 @@ export const createAnnotationsInfiniteOptions = (params: AnnotationsInfinitePara
                     tag_ids: params.tag_ids,
                     sample_ids: params.sample_ids,
                     embedding_region: params.embedding_region,
-                    text_embedding: params.text_embedding
+                    text_embedding: params.text_embedding,
+                    sort_by: params.sort_by
                 },
                 signal,
                 throwOnError: true

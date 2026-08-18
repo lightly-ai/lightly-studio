@@ -5,16 +5,16 @@ your data workflows from curation, annotation and management. Built with Rust fo
 efficiency, it lets you work seamlessly with datasets like COCO and ImageNet, even on a MacBook Pro
 with an M1 chip and 16 GB of memory.
 
-<div style="width: 100%; aspect-ratio: 16 / 9; overflow: hidden;">
-  <iframe
-    style="width: 100%; height: 100%; border: 0;"
-    src="https://www.youtube.com/embed/iUS9hjI4VQ4?autoplay=1&mute=1&playsinline=1&rel=0"
-    title="LightlyStudio overview"
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-    referrerpolicy="strict-origin-when-cross-origin"
-    allowfullscreen
-  ></iframe>
-</div>
+Working in a team and looking for collaboration features, role-based access permissions, and
+centrally managed cloud credentials? Check out [LightlyStudio Enterprise](enterprise/index.md)
+and [start for free with your team](https://www.lightly.ai/studio-signup).
+
+<p align="center">
+  <video src="_static/hero_showcase.mp4" width="100%" autoplay loop muted playsinline></video>
+</p>
+
+<p align="center">The embedding plot shows how images relate to each other, with a preview on hover. A lasso selection filters the grid to one cluster. A search for "coffee" finds a match, and the annotation editor opens to label it.</p>
+<p align="center"><strong>⚡ Works smoothly with 2M+ images, embeddings included, on a single MacBook (M1, 16GB RAM).</strong></p>
 
 
 ## Installation
@@ -46,10 +46,21 @@ pip install lightly-studio
         pip install lightly-studio
         ```
 
+## Try it in 60 seconds
+
+Want to try LightlyStudio instantly? Run:
+
+```shell
+lightly-studio quickstart
+```
+
+This downloads the COCO example dataset, loads it, and opens the GUI in your browser. Run
+`lightly-studio quickstart --help` for the available options.
+
 ## Quickstart
 
-The examples below download the required example data the first time you run them. You can also
-directly use your own image, video, or YOLO/COCO dataset.
+The examples below use the same example dataset by default, downloaded on the first run. Point
+them at your own image, video, or YOLO/COCO dataset by changing the input path.
 
 === "COCO Object Detection"
 
@@ -142,8 +153,8 @@ directly use your own image, video, or YOLO/COCO dataset.
     1. Click on the printed URL to open the app in your browser.
 
 !!! tip
-    Call `lightly-studio gui` from the command line instead of `ls.start_gui()` in Python
-    to skip reindexing your dataset.
+    Call `lightly-studio gui` instead of `ls.start_gui()` in Python to skip reindexing
+    an already-loaded dataset.
 
 Ready for a complete, end-to-end workflow? Follow the tutorial
 [Curate a Traffic CCTV Dataset for YOLO Training](tutorials/yolo-traffic-cctv-object-detection.md)
@@ -195,6 +206,10 @@ to explore embeddings, remove near-duplicates, auto-label, and train a model —
 -   **[Metadata](concepts_and_tools/metadata.md)**
 
     [![Metadata](https://storage.googleapis.com/lightly-public/studio/docs_cards/metadata.png)](concepts_and_tools/metadata.md)
+
+-   **[Embeddings](concepts_and_tools/embeddings.md)**
+
+    [![Embeddings](https://storage.googleapis.com/lightly-public/studio/docs_cards/embeddings.png)](concepts_and_tools/embeddings.md)
 
 </div>
 

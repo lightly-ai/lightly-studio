@@ -37,6 +37,7 @@ nav:
   - 🏢 Enterprise:
     - Enterprise:
       - enterprise/index.md
+      - Collaboration and Permissions: enterprise/collaboration.md
       - Connect from Python: enterprise/connect.md
       - Security and Architecture: enterprise/security.md
       - On-Premise Deployment: enterprise/on-premise.md
@@ -44,6 +45,7 @@ nav:
     - Cloud Storage:
       - enterprise/cloud_storage/index.md
       - AWS S3: enterprise/cloud_storage/aws.md
+      - Google Cloud Storage: enterprise/cloud_storage/gcs.md
   - Tutorials:
     - tutorials/index.md
     - "Tutorial 1: Curate a Traffic CCTV Dataset for YOLO Training": tutorials/yolo-traffic-cctv-object-detection.md
@@ -62,6 +64,7 @@ nav:
       - Sample: api/sample.md
       - DatasetQuery: api/dataset_query.md
       - Sampling: api/sampling.md
+      - Embeddings: api/embeddings.md
       - Plugin: api/plugin.md
       - Annotation: api/annotation.md
       - Model Evaluation: api/evaluation.md
@@ -71,8 +74,10 @@ nav:
       - Tags: concepts_and_tools/tags.md
       - Captions: concepts_and_tools/captions.md
       - Metadata: concepts_and_tools/metadata.md
+      - Embeddings: concepts_and_tools/embeddings.md
     - Tools:
       - Search and Filter: concepts_and_tools/search_and_filter.md
+      - Dataset Distributions: concepts_and_tools/dataset_distributions.md
       - Export: concepts_and_tools/export.md
       - Sampling: concepts_and_tools/sampling.md
       - Plugins: concepts_and_tools/plugins.md
@@ -96,6 +101,9 @@ validation:
 extra_css:
   - _static/custom.css
 
+extra_javascript:
+  - _static/custom.js
+
 plugins:
   - search
   - mkdocstrings:
@@ -107,6 +115,7 @@ plugins:
             docstring_style: google
             docstring_options:
               ignore_init_summary: true
+              returns_multiple_items: false
             heading_level: 2
             merge_init_into_class: true
             show_source: false

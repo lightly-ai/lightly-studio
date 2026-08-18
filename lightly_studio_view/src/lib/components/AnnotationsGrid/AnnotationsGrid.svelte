@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { AnnotationsGridItem, SelectableBox } from '$lib/components';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
@@ -10,24 +9,20 @@
     import { onDestroy, onMount } from 'svelte';
     import { page } from '$app/state';
     import { useAnnotationsInfinite } from '$lib/hooks/useAnnotationsInfinite/useAnnotationsInfinite';
+    import { useAnnotationSortBy } from '$lib/hooks';
     import { afterNavigate, goto } from '$app/navigation';
     import SelectedAnnotations from './SelectedAnnotations/SelectedAnnotations.svelte';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
-    import { AnnotationType, type AnnotationWithPayloadView } from '$lib/api/lightly_studio_local';
-    import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
+    import type { AnnotationWithPayloadView } from '$lib/api/lightly_studio_local';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
     import { GridContainer } from '$lib/components/GridContainer';
     import { Grid } from '$lib/components/Grid';
-    import { GridItem } from '$lib/components/GridItem';
-    import {
-        buildAnnotationDragData,
-        buildClassificationDragData
-    } from './AnnotationsGrid.helpers';
-    import AnnotationClassificationGridItem from './AnnotationClassificationGridItem/AnnotationClassificationGridItem.svelte';
-    import { renderCropObjectUrl, type CropWindow } from './AnnotationItem/renderCropObjectUrl';
+    import { useAnnotationCropPreview } from './useAnnotationCropPreview/useAnnotationCropPreview.svelte';
+    import { useAnnotationTileSelection } from './useAnnotationTileSelection/useAnnotationTileSelection';
+    import AnnotationTile from './AnnotationTile/AnnotationTile.svelte';
 
     type AnnotationsProps = {
         collection_id: string;
@@ -37,6 +32,8 @@
 
     const { selectedAnnotationFilterIdsArray: selectedAnnotationFilterIds } =
         useSelectedAnnotationsFilter();
+
+    const { sortByFor } = useAnnotationSortBy();
 
     // Use the collection_id for tags - tags should use the specific collection, not root
     const { tagsSelected } = $derived(
@@ -74,44 +71,15 @@
 
     // Drag-to-search crop preview. Tiles report only their crop geometry; the blob is
     // rendered lazily when a drag starts (not per visible tile), and revoked on unmount.
-    let cropWindowByAnnotationId = $state<Record<string, CropWindow>>({});
-    let cropUrlByAnnotationId = $state<Record<string, string>>({});
+    const {
+        cropWindowByAnnotationId,
+        cropUrlByAnnotationId,
+        handleCropWindowChange,
+        handleAnnotationDragStart,
+        cleanup: cleanupCropPreview
+    } = useAnnotationCropPreview();
 
-    function handleCropWindowChange(annotationId: string, window: CropWindow | null) {
-        if (window) {
-            cropWindowByAnnotationId[annotationId] = window;
-            return;
-        }
-        delete cropWindowByAnnotationId[annotationId];
-        revokeCropUrl(annotationId);
-    }
-
-    function revokeCropUrl(annotationId: string) {
-        const url = cropUrlByAnnotationId[annotationId];
-        if (url) {
-            URL.revokeObjectURL(url);
-            delete cropUrlByAnnotationId[annotationId];
-        }
-    }
-
-    async function handleAnnotationDragStart(annotationId: string) {
-        const window = cropWindowByAnnotationId[annotationId];
-        if (!window) return;
-        revokeCropUrl(annotationId);
-        const url = await renderCropObjectUrl(window, { cancelled: false });
-        // The tile may have unmounted while rendering; drop the blob if so.
-        if (url && cropWindowByAnnotationId[annotationId]) {
-            cropUrlByAnnotationId[annotationId] = url;
-        } else if (url) {
-            URL.revokeObjectURL(url);
-        }
-    }
-
-    onDestroy(() => {
-        for (const url of Object.values(cropUrlByAnnotationId)) {
-            URL.revokeObjectURL(url);
-        }
-    });
+    onDestroy(cleanupCropPreview);
 
     afterNavigate(() => {
         clearReversibleActions();
@@ -134,7 +102,9 @@
         // Embedding plot lasso selection narrows the grid to annotations inside the region.
         embedding_region: plotSelectedRegion ?? undefined,
         // Embedding text search reorders the grid by similarity (shared with images tab).
-        text_embedding: searchEmbedding?.embedding ?? undefined
+        text_embedding: searchEmbedding?.embedding ?? undefined,
+        // Similarity ordering keeps precedence, so the two are never sent together.
+        sort_by: searchEmbedding ? undefined : ($sortByFor(collection_id) ?? undefined)
     });
 
     const {
@@ -145,13 +115,14 @@
     } = useAnnotationsInfinite(() => queryParams);
 
     const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
-        collectionId: collection_id
+        getCollectionId: () => collection_id
     });
     let infiniteLoaderIdentifier = $derived(
         $selectedAnnotationFilterIds.join(',') +
             Array.from($tagsSelected).join(',') +
             (plotSelectedRegion ? JSON.stringify(plotSelectedRegion) : '') +
-            (searchEmbedding ? `search:${searchEmbedding.queryText}` : '')
+            (searchEmbedding ? `search:${searchEmbedding.queryText}` : '') +
+            (queryParams.sort_by ? `sort:${JSON.stringify(queryParams.sort_by)}` : '')
     );
 
     const filterHash = $derived(infiniteLoaderIdentifier);
@@ -177,14 +148,6 @@
         clearSelectedSampleAnnotationCrops
     } = useGlobalStorage();
 
-    let selectionAnchorAnnotationId = $state<string | null>(null);
-
-    function handleToggleSelection(annotationId: string) {
-        if (annotationId) {
-            toggleSampleAnnotationCropSelection(collection_id, annotationId);
-        }
-    }
-
     const annotations: AnnotationWithPayloadView[] = $derived(
         infiniteAnnotations.data?.pages.flatMap((page) => page.data) ?? []
     );
@@ -195,17 +158,14 @@
         }
     }
 
-    function handleAnnotationSelect(annotationId: string, index: number, shiftKey: boolean) {
-        selectionAnchorAnnotationId = selectRangeByAnchor({
-            sampleIdsInOrder: annotations.map((annotation) => annotation.annotation.sample_id),
-            selectedSampleIds: $pickedAnnotationIds[collection_id] ?? new Set<string>(),
-            clickedSampleId: annotationId,
-            clickedIndex: index,
-            shiftKey,
-            anchorSampleId: selectionAnchorAnnotationId,
-            onSelectSample: (selectedAnnotationId) => handleToggleSelection(selectedAnnotationId)
-        });
-    }
+    const { handleGridItemSelect } = useAnnotationTileSelection({
+        getCollectionId: () => collection_id,
+        getAnnotations: () => annotations,
+        pickedAnnotationIds,
+        toggleSelection: toggleSampleAnnotationCropSelection
+    });
+
+    const canShowSelectionOverlay = $derived(hasMinimumRole(user?.role, 'labeler'));
 
     const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type!);
@@ -221,14 +181,6 @@
                 })
             );
         }
-    }
-
-    function handleGridItemSelect(
-        event: MouseEvent | KeyboardEvent,
-        annotationId: string,
-        index: number
-    ) {
-        handleAnnotationSelect(annotationId, index, event.shiftKey);
     }
 
     const selectedAnnotations = $derived(
@@ -302,80 +254,25 @@
                     {#snippet gridItem({ index, style, width, height })}
                         {#if annotations[index]}
                             {@const ann = annotations[index]}
-                            {@const annotationId = ann.annotation.sample_id}
-                            {@const isClassification =
-                                ann.annotation.annotation_type === AnnotationType.CLASSIFICATION}
-                            {#key annotationId}
-                                <GridItem
-                                    {width}
-                                    {height}
-                                    {style}
-                                    dataTestId="annotation-grid-item"
-                                    tag={false}
-                                    ariaLabel={`Edit annotation: ${annotationId}`}
-                                    dragData={isClassification
-                                        ? buildClassificationDragData({
-                                              annotation: ann.annotation,
-                                              cropWindow: cropWindowByAnnotationId[annotationId],
-                                              cropUrl: cropUrlByAnnotationId[annotationId]
-                                          })
-                                        : buildAnnotationDragData({
-                                              annotation: ann.annotation,
-                                              cropWindow: cropWindowByAnnotationId[annotationId],
-                                              cropUrl: cropUrlByAnnotationId[annotationId]
-                                          })}
-                                    onDragStart={() => handleAnnotationDragStart(annotationId)}
-                                    onSelect={(event) =>
-                                        handleGridItemSelect(event, annotationId, index)}
-                                    ondblclick={() => handleOnDoubleClick(annotationId)}
-                                >
-                                    <div
-                                        class="annotation-grid-item relative h-full w-full"
-                                        data-annotation-id={annotationId}
-                                        data-annotation-index={index}
-                                        data-sample-id={ann.annotation.parent_sample_id}
-                                        data-index={index}
-                                    >
-                                        {#if hasMinimumRole(user?.role, 'labeler') && $pickedAnnotationIds[collection_id]?.has(annotationId)}
-                                            <div
-                                                class="pointer-events-none absolute right-2 top-1.5 z-10"
-                                                inert
-                                            >
-                                                <SelectableBox
-                                                    onSelect={() => undefined}
-                                                    isSelected={true}
-                                                />
-                                            </div>
-                                        {/if}
-
-                                        {#if isClassification}
-                                            <!-- One classification annotation = one tile (1:1 mapping, same as OD/seg). -->
-                                            <AnnotationClassificationGridItem
-                                                annotation={ann}
-                                                containerWidth={width}
-                                                containerHeight={height}
-                                                selected={$pickedAnnotationIds[collection_id]?.has(
-                                                    annotationId
-                                                )}
-                                                cachedCollectionVersion={collectionVersion}
-                                                onCropWindowChange={handleCropWindowChange}
-                                            />
-                                        {:else}
-                                            <AnnotationsGridItem
-                                                annotation={ann}
-                                                {width}
-                                                {height}
-                                                cachedCollectionVersion={collectionVersion}
-                                                showLabel={showLabels}
-                                                selected={$pickedAnnotationIds[collection_id]?.has(
-                                                    annotationId
-                                                )}
-                                                onCropWindowChange={handleCropWindowChange}
-                                            />
-                                        {/if}
-                                    </div>
-                                </GridItem>
-                            {/key}
+                            <AnnotationTile
+                                annotation={ann}
+                                {index}
+                                {width}
+                                {height}
+                                {style}
+                                selected={$pickedAnnotationIds[collection_id]?.has(
+                                    ann.annotation.sample_id
+                                ) ?? false}
+                                showLabel={showLabels}
+                                cachedCollectionVersion={collectionVersion}
+                                {canShowSelectionOverlay}
+                                cropWindow={cropWindowByAnnotationId[ann.annotation.sample_id]}
+                                cropUrl={cropUrlByAnnotationId[ann.annotation.sample_id]}
+                                onCropWindowChange={handleCropWindowChange}
+                                onDragStart={handleAnnotationDragStart}
+                                onSelect={handleGridItemSelect}
+                                onDoubleClick={handleOnDoubleClick}
+                            />
                         {/if}
                     {/snippet}
                     {#snippet footerItem()}

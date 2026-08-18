@@ -1,6 +1,6 @@
 [project]
 name = "lightly-studio"
-version = "1.0.3"
+version = "1.0.5"
 description = "LightlyStudio is a lightweight, fast, and easy-to-use data exploration tool for data scientists and engineers."
 readme = "USAGE.md"
 requires-python = ">=3.9,<3.15"
@@ -34,7 +34,7 @@ dependencies = [
     # Unreleased and released labelformat versions can be referenced with this syntax:
     # - "labelformat @ git+https://github.com/lightly-ai/labelformat.git@325a20b"
     # - "labelformat>=0.1.9"
-    "labelformat @ git+https://github.com/lightly-ai/labelformat.git@07b00a0edf54e2dc7930a3abc756c7914c068829",
+    "labelformat>=0.1.17",
     "tqdm>=4.65.0",
     "eval-type-backport>=0.2.2",
     "xxhash>=3.5.0",
@@ -55,7 +55,7 @@ dependencies = [
     #   lightly-mundig==$version
     # Then lock the version. The uv.lock file is updated accordingly.
     # uv lock --upgrade-package lightly-mundig==$version
-    "lightly-mundig==0.1.13",
+    "lightly-mundig==0.1.14",
     "pyarrow>=17.0.0",
     "av>=10.0.0",
     "requests>=2.32.3",
@@ -65,6 +65,9 @@ dependencies = [
     "brotli-asgi>=1.4.0",
     "jinja2>=3.1.0",
     "alembic-postgresql-enum>=1.10.0",
+    # Pinned below 7.0, which dropped Python 3.9. 6.9 covers every Python this package supports,
+    # so one major runs everywhere rather than two that have to stay behaviourally identical.
+    "posthog>=6.9,<7.0",
 ]
 
 [project.scripts]
@@ -135,6 +138,11 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "sqlalchemy_utils.*"
 ignore_missing_imports = true
+
+# PostHog 6.x leaves parts of its client unannotated.
+[[tool.mypy.overrides]]
+module = "lightly_studio.analytics.posthog_tracker"
+disallow_untyped_calls = false
 
 
 [tool.pytest.ini_options]

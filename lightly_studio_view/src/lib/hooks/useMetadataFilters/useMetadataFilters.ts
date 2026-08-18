@@ -3,6 +3,7 @@ import type { MetadataInfoView, MetadataFilter } from '$lib/api/lightly_studio_l
 import { get, writable } from 'svelte/store';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { validate as validateUUID } from 'uuid';
+import type { CategoricalMetadataValues } from '$lib/services/types';
 type MetadataBounds = Record<string, { min: number; max: number }>;
 type MetadataValues = Record<string, { min: number; max: number }>;
 
@@ -16,6 +17,7 @@ const loadInitialMetadataInfo = async (collection_id: string) => {
         return;
     }
     lastCollectionId.set(collection_id);
+    const storage = useGlobalStorage();
 
     const { data: metadataInfoData } = await getMetadataInfo({
         path: {
@@ -26,7 +28,7 @@ const loadInitialMetadataInfo = async (collection_id: string) => {
     if (!metadataInfoData) {
         return;
     }
-    const { updateMetadataBounds, updateMetadataValues, updateMetadataInfo } = useGlobalStorage();
+    const { updateMetadataBounds, updateMetadataValues, updateMetadataInfo } = storage;
 
     // Extract numerical metadata for bounds and values
     const bounds: MetadataBounds = {};
@@ -46,7 +48,10 @@ const loadInitialMetadataInfo = async (collection_id: string) => {
     updateMetadataInfo(metadataInfoData);
 };
 
-export const createMetadataFilters = (metadataValues: MetadataValues): MetadataFilter[] => {
+export const createMetadataFilters = (
+    metadataValues: MetadataValues,
+    categoricalMetadataValues: CategoricalMetadataValues = {}
+): MetadataFilter[] => {
     const filters: MetadataFilter[] = [];
     const { metadataBounds } = useGlobalStorage();
 
@@ -76,6 +81,11 @@ export const createMetadataFilters = (metadataValues: MetadataValues): MetadataF
             }
         }
     }
+    for (const [key, values] of Object.entries(categoricalMetadataValues)) {
+        if (values.length > 0) {
+            filters.push({ key, value: values, op: 'in' });
+        }
+    }
     return filters;
 };
 
@@ -88,7 +98,9 @@ export const useMetadataFilters = (collection_id?: string) => {
         metadataBounds,
         metadataValues,
         metadataInfo,
+        categoricalMetadataValues,
         updateMetadataValues,
+        updateCategoricalMetadataValues,
         updateMetadataBounds,
         updateMetadataInfo
     } = useGlobalStorage();
@@ -97,7 +109,9 @@ export const useMetadataFilters = (collection_id?: string) => {
         metadataBounds,
         metadataValues,
         metadataInfo,
+        categoricalMetadataValues,
         updateMetadataValues,
+        updateCategoricalMetadataValues,
         updateMetadataBounds,
         updateMetadataInfo,
         createMetadataFilters

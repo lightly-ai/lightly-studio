@@ -103,8 +103,11 @@ const imageFilter = derived(
             sampleFilter.confusion_cell = confusionCell;
         }
 
-        if ($filterParams.metadata_values) {
-            const metadataFilters = createMetadataFilters($filterParams.metadata_values);
+        if ($filterParams.metadata_values || $filterParams.categorical_metadata_values) {
+            const metadataFilters = createMetadataFilters(
+                $filterParams.metadata_values ?? {},
+                $filterParams.categorical_metadata_values ?? {}
+            );
             if (metadataFilters.length > 0) {
                 sampleFilter.metadata_filters = metadataFilters;
             }
@@ -126,8 +129,7 @@ const imageSortBy = writable<SortExpr[] | null>([
     {
         source: 'image',
         field_name: 'file_path_abs',
-        direction: SortDirection.ASC,
-        is_numeric: false
+        direction: SortDirection.ASC
     }
 ]);
 

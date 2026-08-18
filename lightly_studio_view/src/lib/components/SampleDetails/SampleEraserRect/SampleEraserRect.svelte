@@ -54,14 +54,10 @@
         setAnnotationId
     } = useAnnotationLabelContext();
 
-    const { deleteAnnotation } = useDeleteAnnotation({
-        collectionId
-    });
+    const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
     const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
     const { addReversibleAction } = useGlobalStorage();
-    const { createAnnotation } = useCreateAnnotation({
-        collectionId
-    });
+    const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
     const eraserApi = $derived.by(() =>
         useSegmentationMaskEraser({
             collectionId,
@@ -154,7 +150,7 @@
         refetch();
     };
 
-    const datasetId = $derived(page.params.dataset_id);
+    const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type ?? page.data.collectionType);
     const currentAnnotationId = $derived(
         annotationLabelContext.annotationId ?? sample.annotations[0]?.sample_id ?? ''
@@ -187,7 +183,7 @@
                 refetch
             });
 
-            await deleteAnnotation(annotation!.sample_id);
+            await deleteAnnotation(annotation!.sample_id, annotation!.annotation_type);
             toast.success('Annotation deleted successfully');
 
             if (annotationLabelContext.isOnAnnotationDetailsView) return gotoNextAnnotation();

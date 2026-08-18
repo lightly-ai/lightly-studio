@@ -1,6 +1,7 @@
 import { derived, get, type Readable } from 'svelte/store';
 import { SortDirection } from '$lib/api/lightly_studio_local';
 import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+import { usePostHog } from '$lib/hooks';
 import {
     formatEvaluationMetricLabel,
     useSortFields,
@@ -10,7 +11,8 @@ import {
 import type { SortExpr } from '$lib/hooks/useImagesInfinite/types';
 
 interface UseOrderByParams {
-    datasetId: string;
+    collectionId: () => string;
+    datasetId: () => string;
 }
 
 interface UseOrderByReturn {
@@ -40,9 +42,23 @@ function checkIsFieldSelected(field: SortField, current: SortExpr | undefined): 
     );
 }
 
-export function useOrderBy({ datasetId }: UseOrderByParams): UseOrderByReturn {
+function sortExprAnalytics(expr: SortExpr): { sort_source: string; field_name: string } {
+    if (expr.source === 'evaluation_metric') {
+        return {
+            sort_source: 'evaluation_metric',
+            field_name: `${expr.evaluation_run_name}.${expr.metric_name}`
+        };
+    }
+    return {
+        sort_source: expr.source === 'metadata' ? 'metadata_field' : 'image_field',
+        field_name: expr.field_name
+    };
+}
+
+export function useOrderBy({ collectionId, datasetId }: UseOrderByParams): UseOrderByReturn {
     const { imageSortBy, updateSortBy } = useImageFilters();
     const { allSortFields, dispose } = useSortFields({ datasetId });
+    const { trackEvent } = usePostHog();
 
     const selectedDirection = derived(
         imageSortBy,
@@ -87,51 +103,46 @@ export function useOrderBy({ datasetId }: UseOrderByParams): UseOrderByReturn {
         const current = get(imageSortBy)?.[0];
         if (checkIsFieldSelected(field, current)) {
             updateSortBy(null);
-        } else if (field.source === 'evaluation_metric') {
-            updateSortBy([
-                {
-                    source: 'evaluation_metric',
-                    evaluation_run_name: field.evaluation_run_name,
-                    metric_name: field.metric_name,
-                    direction: get(selectedDirection)
-                }
-            ]);
-        } else {
-            updateSortBy([
-                {
-                    source: field.source,
-                    field_name: field.value,
-                    direction: get(selectedDirection),
-                    is_numeric: field.is_numeric ?? false
-                }
-            ]);
+            return;
         }
+        const direction = get(selectedDirection);
+        const next: SortExpr =
+            field.source === 'evaluation_metric'
+                ? {
+                      source: 'evaluation_metric',
+                      evaluation_run_name: field.evaluation_run_name,
+                      metric_name: field.metric_name,
+                      direction
+                  }
+                : {
+                      source: field.source,
+                      field_name: field.value,
+                      direction
+                  };
+        updateSortBy([next]);
+        const { sort_source, field_name } = sortExprAnalytics(next);
+        trackEvent('grid_sorted', {
+            collection_id: collectionId(),
+            sort_source,
+            field_name,
+            direction
+        });
     }
 
     function toggleDirection() {
         const current = get(imageSortBy)?.[0];
         if (!current) return;
-        const next =
+        const direction =
             get(selectedDirection) === SortDirection.ASC ? SortDirection.DESC : SortDirection.ASC;
-        if (current.source === 'evaluation_metric') {
-            updateSortBy([
-                {
-                    source: 'evaluation_metric',
-                    evaluation_run_name: current.evaluation_run_name,
-                    metric_name: current.metric_name,
-                    direction: next
-                }
-            ]);
-        } else {
-            updateSortBy([
-                {
-                    source: current.source,
-                    field_name: current.field_name,
-                    direction: next,
-                    is_numeric: current.is_numeric
-                }
-            ]);
-        }
+        const next: SortExpr = { ...current, direction };
+        updateSortBy([next]);
+        const { sort_source, field_name } = sortExprAnalytics(next);
+        trackEvent('grid_sorted', {
+            collection_id: collectionId(),
+            sort_source,
+            field_name,
+            direction
+        });
     }
 
     return {

@@ -14,7 +14,8 @@ const mocks = vi.hoisted(() => ({
     updateSortBy: vi.fn(),
     metadataInfoValue: [] as MetadataInfoView[],
     metricsProxy: { data: null as EvaluationRunMetricsInfoView[] | null, dataUpdatedAt: 0 },
-    textEmbeddingValue: undefined as TextEmbedding | undefined
+    textEmbeddingValue: undefined as TextEmbedding | undefined,
+    capturedDatasetIdGetter: undefined as (() => string) | undefined
 }));
 
 vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
@@ -31,7 +32,10 @@ vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
 }));
 
 vi.mock('$lib/hooks/useEvaluationSampleMetricsInfo/useEvaluationSampleMetricsInfo', () => ({
-    useEvaluationSampleMetricsInfo: () => mocks.metricsProxy
+    useEvaluationSampleMetricsInfo: ({ datasetId }: { datasetId: () => string }) => {
+        mocks.capturedDatasetIdGetter = datasetId;
+        return mocks.metricsProxy;
+    }
 }));
 
 vi.mock('$lib/hooks/useGlobalStorage', () => ({
@@ -55,16 +59,17 @@ describe('OrderBy', () => {
         mocks.metricsProxy.data = null;
         mocks.metricsProxy.dataUpdatedAt = 0;
         mocks.textEmbeddingValue = undefined;
+        mocks.capturedDatasetIdGetter = undefined;
     });
 
     it('shows placeholder text when no field is selected', () => {
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
         expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('Sort by');
     });
 
     it('shows a tooltip on hover over the sort trigger', async () => {
         const user = userEvent.setup();
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
 
         await user.hover(screen.getByTestId('sort-by-trigger'));
 
@@ -76,16 +81,15 @@ describe('OrderBy', () => {
             {
                 source: 'image',
                 field_name: 'file_name',
-                direction: SortDirection.ASC,
-                is_numeric: false
+                direction: SortDirection.ASC
             }
         ];
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
         expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('file name');
     });
 
     it('direction button is disabled when no field is selected', () => {
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
         expect(screen.getByTestId('sort-direction-button')).toBeDisabled();
     });
 
@@ -94,11 +98,10 @@ describe('OrderBy', () => {
             {
                 source: 'image',
                 field_name: 'width',
-                direction: SortDirection.ASC,
-                is_numeric: false
+                direction: SortDirection.ASC
             }
         ];
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
         expect(screen.getByTestId('sort-direction-button')).not.toBeDisabled();
     });
 
@@ -108,11 +111,10 @@ describe('OrderBy', () => {
             {
                 source: 'image',
                 field_name: 'file_name',
-                direction: SortDirection.ASC,
-                is_numeric: false
+                direction: SortDirection.ASC
             }
         ];
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
 
         await user.hover(screen.getByTestId('sort-direction-button'));
 
@@ -125,11 +127,10 @@ describe('OrderBy', () => {
             {
                 source: 'image',
                 field_name: 'file_name',
-                direction: SortDirection.DESC,
-                is_numeric: false
+                direction: SortDirection.DESC
             }
         ];
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
 
         await user.hover(screen.getByTestId('sort-direction-button'));
 
@@ -138,7 +139,7 @@ describe('OrderBy', () => {
 
     it('selects a field and calls updateSortBy with asc direction by default', async () => {
         const user = userEvent.setup();
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
 
         await user.click(screen.getByTestId('sort-by-trigger'));
         await user.click(screen.getByTestId('sort-field-file_name'));
@@ -147,8 +148,7 @@ describe('OrderBy', () => {
             {
                 source: 'image',
                 field_name: 'file_name',
-                direction: SortDirection.ASC,
-                is_numeric: false
+                direction: SortDirection.ASC
             }
         ]);
     });
@@ -159,11 +159,10 @@ describe('OrderBy', () => {
             {
                 source: 'image',
                 field_name: 'file_name',
-                direction: SortDirection.ASC,
-                is_numeric: false
+                direction: SortDirection.ASC
             }
         ];
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
 
         await user.click(screen.getByTestId('sort-by-trigger'));
         await user.click(screen.getByTestId('sort-field-file_name'));
@@ -177,11 +176,10 @@ describe('OrderBy', () => {
             {
                 source: 'image',
                 field_name: 'file_name',
-                direction: SortDirection.DESC,
-                is_numeric: false
+                direction: SortDirection.DESC
             }
         ];
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
 
         await user.click(screen.getByTestId('sort-by-trigger'));
         await user.click(screen.getByTestId('sort-field-width'));
@@ -190,8 +188,7 @@ describe('OrderBy', () => {
             {
                 source: 'image',
                 field_name: 'width',
-                direction: SortDirection.DESC,
-                is_numeric: false
+                direction: SortDirection.DESC
             }
         ]);
     });
@@ -201,11 +198,10 @@ describe('OrderBy', () => {
             {
                 source: 'image',
                 field_name: 'file_name',
-                direction: SortDirection.ASC,
-                is_numeric: false
+                direction: SortDirection.ASC
             }
         ];
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
 
         await fireEvent.click(screen.getByTestId('sort-direction-button'));
 
@@ -213,8 +209,7 @@ describe('OrderBy', () => {
             {
                 source: 'image',
                 field_name: 'file_name',
-                direction: SortDirection.DESC,
-                is_numeric: false
+                direction: SortDirection.DESC
             }
         ]);
     });
@@ -224,11 +219,10 @@ describe('OrderBy', () => {
             {
                 source: 'image',
                 field_name: 'file_name',
-                direction: SortDirection.DESC,
-                is_numeric: false
+                direction: SortDirection.DESC
             }
         ];
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
 
         await fireEvent.click(screen.getByTestId('sort-direction-button'));
 
@@ -236,14 +230,13 @@ describe('OrderBy', () => {
             {
                 source: 'image',
                 field_name: 'file_name',
-                direction: SortDirection.ASC,
-                is_numeric: false
+                direction: SortDirection.ASC
             }
         ]);
     });
 
     it('does not call updateSortBy when direction button is clicked with no field selected', async () => {
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
 
         await fireEvent.click(screen.getByTestId('sort-direction-button'));
 
@@ -252,7 +245,7 @@ describe('OrderBy', () => {
 
     it('lists all sort fields in the dropdown', async () => {
         const user = userEvent.setup();
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
 
         await user.click(screen.getByTestId('sort-by-trigger'));
 
@@ -271,7 +264,7 @@ describe('OrderBy', () => {
             { name: 'label', type: 'string' },
             { name: 'active', type: 'boolean' }
         ];
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
 
         await user.click(screen.getByTestId('sort-by-trigger'));
 
@@ -290,7 +283,7 @@ describe('OrderBy', () => {
             { name: 'nested', type: 'dict' },
             { name: 'score', type: 'float' }
         ];
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
 
         await user.click(screen.getByTestId('sort-by-trigger'));
 
@@ -299,10 +292,10 @@ describe('OrderBy', () => {
         expect(screen.getByTestId('sort-field-score')).toHaveTextContent('metadata.score');
     });
 
-    it('selects a numeric metadata field with is_numeric true', async () => {
+    it('selects a metadata field', async () => {
         const user = userEvent.setup();
         mocks.metadataInfoValue = [{ name: 'score', type: 'float' }];
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
 
         await user.click(screen.getByTestId('sort-by-trigger'));
         await user.click(screen.getByTestId('sort-field-score'));
@@ -311,26 +304,7 @@ describe('OrderBy', () => {
             {
                 source: 'metadata',
                 field_name: 'score',
-                direction: SortDirection.ASC,
-                is_numeric: true
-            }
-        ]);
-    });
-
-    it('selects a string metadata field with is_numeric false', async () => {
-        const user = userEvent.setup();
-        mocks.metadataInfoValue = [{ name: 'category', type: 'string' }];
-        render(OrderBy, { props: { datasetId: 'ds1' } });
-
-        await user.click(screen.getByTestId('sort-by-trigger'));
-        await user.click(screen.getByTestId('sort-field-category'));
-
-        expect(mocks.updateSortBy).toHaveBeenCalledWith([
-            {
-                source: 'metadata',
-                field_name: 'category',
-                direction: SortDirection.ASC,
-                is_numeric: false
+                direction: SortDirection.ASC
             }
         ]);
     });
@@ -341,25 +315,23 @@ describe('OrderBy', () => {
             {
                 source: 'metadata',
                 field_name: 'brightness',
-                direction: SortDirection.ASC,
-                is_numeric: true
+                direction: SortDirection.ASC
             }
         ];
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
         expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('metadata.brightness');
     });
 
-    it('preserves is_numeric when toggling direction on a metadata field', async () => {
+    it('toggles direction for a metadata field', async () => {
         mocks.metadataInfoValue = [{ name: 'score', type: 'float' }];
         mocks.imageSortByValue = [
             {
                 source: 'metadata',
                 field_name: 'score',
-                direction: SortDirection.ASC,
-                is_numeric: true
+                direction: SortDirection.ASC
             }
         ];
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
 
         await fireEvent.click(screen.getByTestId('sort-direction-button'));
 
@@ -367,8 +339,7 @@ describe('OrderBy', () => {
             {
                 source: 'metadata',
                 field_name: 'score',
-                direction: SortDirection.DESC,
-                is_numeric: true
+                direction: SortDirection.DESC
             }
         ]);
     });
@@ -384,7 +355,7 @@ describe('OrderBy', () => {
                 ]
             }
         ];
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
 
         await user.click(screen.getByTestId('sort-by-trigger'));
 
@@ -400,7 +371,7 @@ describe('OrderBy', () => {
                 metrics: [{ metric_name: 'precision', min_value: 0, max_value: 1 }]
             }
         ];
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
 
         await user.click(screen.getByTestId('sort-by-trigger'));
         await user.click(screen.getByTestId('sort-field-run1-precision'));
@@ -431,7 +402,7 @@ describe('OrderBy', () => {
                 direction: SortDirection.ASC
             }
         ];
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
 
         await user.click(screen.getByTestId('sort-by-trigger'));
         await user.click(screen.getByTestId('sort-field-run1-precision'));
@@ -448,13 +419,13 @@ describe('OrderBy', () => {
                 direction: SortDirection.ASC
             }
         ];
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
         expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('run1.precision');
     });
 
     it('disables the sort select when text embedding is active', () => {
         mocks.textEmbeddingValue = { embedding: [0.1, 0.2], queryText: 'dogs' };
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
         expect(screen.getByTestId('sort-by-trigger')).toBeDisabled();
     });
 
@@ -464,17 +435,16 @@ describe('OrderBy', () => {
             {
                 source: 'image',
                 field_name: 'file_name',
-                direction: SortDirection.ASC,
-                is_numeric: false
+                direction: SortDirection.ASC
             }
         ];
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
         expect(screen.getByTestId('sort-direction-button')).toBeDisabled();
     });
 
     it('enables the sort select when text embedding is inactive', () => {
         mocks.textEmbeddingValue = undefined;
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
         expect(screen.getByTestId('sort-by-trigger')).not.toBeDisabled();
     });
 
@@ -487,7 +457,7 @@ describe('OrderBy', () => {
                 direction: SortDirection.ASC
             }
         ];
-        render(OrderBy, { props: { datasetId: 'ds1' } });
+        render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
 
         await fireEvent.click(screen.getByTestId('sort-direction-button'));
 
@@ -499,5 +469,15 @@ describe('OrderBy', () => {
                 direction: SortDirection.DESC
             }
         ]);
+    });
+
+    it('passes a reactive datasetId getter that tracks the current prop after navigation', async () => {
+        const { rerender } = render(OrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
+
+        expect(mocks.capturedDatasetIdGetter!()).toBe('ds1');
+
+        await rerender({ collectionId: 'col1', datasetId: 'ds2' });
+
+        expect(mocks.capturedDatasetIdGetter!()).toBe('ds2');
     });
 });

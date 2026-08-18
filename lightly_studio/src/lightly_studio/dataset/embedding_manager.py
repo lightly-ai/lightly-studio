@@ -71,17 +71,14 @@ class EmbeddingManagerProvider:
 def set_default_embedding_model(embedding_generator: EmbeddingGenerator) -> None:
     """Register a custom embedding model that overrides the env-var default.
 
-    Call this before ingesting a dataset (e.g. before ImageDataset.load_or_create)
-    to use your own generator instead of the model selected by
+    <span class="doc-badge doc-badge--beta">Beta</span>
+
+    Call this before you add a dataset (for example, before ImageDataset.load_or_create)
+    or before you launch the GUI to use your own generator instead of the model set by
     LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE. The override applies to every collection.
 
-    Note: the registration lives in-process only. When re-launching the GUI via the
-    `lightly-studio gui` CLI without re-running this call, embeddings computed with the
-    custom model remain, but text search falls back to the env-var default model and
-    will not match them.
-
     Args:
-        embedding_generator: A generator implementing ImageEmbeddingGenerator and/or
+        embedding_generator: A generator that implements ImageEmbeddingGenerator and/or
             VideoEmbeddingGenerator.
     """
     EmbeddingManagerProvider.get_embedding_manager().set_default_embedding_model(
@@ -383,13 +380,14 @@ class EmbeddingManager:
             raise ValueError("Could not fetch all video paths for the provided IDs.")
 
         # Generate embeddings for the samples.
-        embeddings = model.embed_videos(filepaths=filepaths)
+        result = model.embed_videos(filepaths=filepaths)
+        kept_sample_ids = [sample_ids[index] for index in result.kept_indices]
 
         _store_embeddings(
             session=session,
             model_id=model_id,
-            sample_ids=sample_ids,
-            embeddings=embeddings,
+            sample_ids=kept_sample_ids,
+            embeddings=result.embeddings,
         )
 
     def embed_and_store_pil_images(

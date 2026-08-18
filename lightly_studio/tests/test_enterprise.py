@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import os
 
+import fsspec
 import pytest
 import requests
+from gcsfs import GCSFileSystem  # type: ignore[import-untyped]
 from pytest_mock import MockerFixture, MockType
 
 from lightly_studio import enterprise
@@ -18,6 +21,7 @@ def _patch_env_vars(mocker: MockerFixture) -> None:
     mocker.patch.dict(os.environ, {}, clear=True)
     mocker.patch.object(enterprise, "LIGHTLY_STUDIO_API_URL", None)
     mocker.patch.object(enterprise, "LIGHTLY_STUDIO_TOKEN", None)
+    mocker.patch.object(enterprise, "LIGHTLY_STUDIO_API_KEY", None)
 
 
 @pytest.fixture
@@ -43,6 +47,51 @@ def test_connect__success(mocker: MockerFixture, patch_db_connect: MockType) -> 
     )
     patch_db_connect.assert_called_once_with(
         db_url="postgresql://lightly:secret@10.0.0.5:5433/lightly_studio"
+    )
+
+
+def test_connect__success_api_key(mocker: MockerFixture, patch_db_connect: MockType) -> None:
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.ok = True
+    mock_response.json.return_value = {
+        "engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio"
+    }
+    mock_post = mocker.patch.object(requests, "post", return_value=mock_response)
+
+    enterprise.connect(api_url="http://10.0.0.5:8100", api_key="ls_testkey")
+
+    mock_post.assert_called_once_with(
+        url="http://10.0.0.5:8100/auth/api/v1/api-key-login",
+        json={"api_key": "ls_testkey"},
+        timeout=10,
+    )
+    patch_db_connect.assert_called_once_with(
+        db_url="postgresql://lightly:secret@10.0.0.5:5433/lightly_studio"
+    )
+
+
+def test_connect__success_api_key_env_var(
+    mocker: MockerFixture,
+    patch_db_connect: MockType,  # noqa: ARG001
+) -> None:
+    mocker.patch.object(enterprise, "LIGHTLY_STUDIO_API_URL", "http://10.0.0.5:8100")
+    mocker.patch.object(enterprise, "LIGHTLY_STUDIO_API_KEY", "ls_envkey")
+
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.ok = True
+    mock_response.json.return_value = {
+        "engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio"
+    }
+    mock_post = mocker.patch.object(requests, "post", return_value=mock_response)
+
+    enterprise.connect()
+
+    mock_post.assert_called_once_with(
+        url="http://10.0.0.5:8100/auth/api/v1/api-key-login",
+        json={"api_key": "ls_envkey"},
+        timeout=10,
     )
 
 
@@ -116,14 +165,33 @@ def test_connect__explicit_params_over_env(
     )
 
 
+def test_connect__explicit_api_key_and_env_token_raises(mocker: MockerFixture) -> None:
+    mocker.patch.object(enterprise, "LIGHTLY_STUDIO_TOKEN", "env-token")
+
+    with pytest.raises(ValueError, match="Exactly one of token or api_key must be provided"):
+        enterprise.connect(api_url="http://10.0.0.5:8100", api_key="ls_explicit")
+
+
+def test_connect__explicit_token_and_env_api_key_raises(mocker: MockerFixture) -> None:
+    mocker.patch.object(enterprise, "LIGHTLY_STUDIO_API_KEY", "ls_env")
+
+    with pytest.raises(ValueError, match="Exactly one of token or api_key must be provided"):
+        enterprise.connect(api_url="http://10.0.0.5:8100", token="explicit-token")
+
+
 def test_connect__missing_api_url_raises() -> None:
     with pytest.raises(ValueError, match="api_url is required"):
         enterprise.connect(api_url=None, token="some-token")
 
 
-def test_connect__missing_token_raises() -> None:
-    with pytest.raises(ValueError, match="token is required"):
-        enterprise.connect(api_url="http://host:8100", token=None)
+def test_connect__missing_token_and_api_key_raises() -> None:
+    with pytest.raises(ValueError, match="Exactly one of token or api_key must be provided"):
+        enterprise.connect(api_url="http://host:8100", token=None, api_key=None)
+
+
+def test_connect__both_token_and_api_key_raises() -> None:
+    with pytest.raises(ValueError, match="Exactly one of token or api_key must be provided"):
+        enterprise.connect(api_url="http://host:8100", token="token", api_key="ls_key")
 
 
 def test_connect__token_expired_401(mocker: MockerFixture, patch_db_connect: MockType) -> None:
@@ -133,6 +201,17 @@ def test_connect__token_expired_401(mocker: MockerFixture, patch_db_connect: Moc
 
     with pytest.raises(PermissionError, match="token may have expired"):
         enterprise.connect(api_url="http://host:8100", token="expired-token")
+
+    patch_db_connect.assert_not_called()
+
+
+def test_connect__api_key_invalid_401(mocker: MockerFixture, patch_db_connect: MockType) -> None:
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 401
+    mocker.patch.object(requests, "post", return_value=mock_response)
+
+    with pytest.raises(PermissionError, match="invalid or expired API key"):
+        enterprise.connect(api_url="http://host:8100", api_key="ls_invalid")
 
     patch_db_connect.assert_not_called()
 
@@ -172,13 +251,29 @@ def test_connect__ssl_error(mocker: MockerFixture, patch_db_connect: MockType) -
     patch_db_connect.assert_not_called()
 
 
-def test_connect__connection_error(mocker: MockerFixture, patch_db_connect: MockType) -> None:
-    mocker.patch.object(requests, "get", side_effect=requests.ConnectionError("refused"))
+def test_connect__connection_error(
+    mocker: MockerFixture,
+    patch_db_connect: MockType,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    request_error = requests.ConnectionError("refused")
+    mocker.patch.object(requests, "get", side_effect=request_error)
 
-    with pytest.raises(ConnectionError, match="Could not reach LightlyStudio"):
+    with pytest.raises(ConnectionError, match="Could not reach LightlyStudio") as exc_info:
         enterprise.connect(api_url="http://unreachable:8100", token="tok")
 
+    assert exc_info.value.__cause__ is request_error
+    assert "Failed to connect to LightlyStudio enterprise instance." in caplog.messages
     patch_db_connect.assert_not_called()
+
+
+def test_send_connect_request__missing_credentials_raises() -> None:
+    with pytest.raises(ValueError, match="Either token or api_key is required"):
+        enterprise._send_connect_request(
+            api_url="http://host:8100",
+            token=None,
+            api_key=None,
+        )
 
 
 def test_connect__sets_aws_env_vars(
@@ -204,6 +299,30 @@ def test_connect__sets_aws_env_vars(
 
     assert os.environ["AWS_ACCESS_KEY_ID"] == access_key_id
     assert os.environ["AWS_SECRET_ACCESS_KEY"] == secret_access_key
+
+
+def test_connect__applies_gcs_runtime_config(
+    mocker: MockerFixture,
+    patch_db_connect: MockType,  # noqa: ARG001
+) -> None:
+    mocker.patch.dict(fsspec.config.conf, {}, clear=True)
+    clear_cache = mocker.spy(GCSFileSystem, "clear_instance_cache")
+    storage_options = {"project": "test-project", "token": "anon"}
+    serialized_options = json.dumps(storage_options)
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.ok = True
+    mock_response.json.return_value = {
+        "engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio",
+        "cloud_credentials": {"FSSPEC_GCS": serialized_options},
+    }
+    mocker.patch.object(requests, "get", return_value=mock_response)
+
+    enterprise.connect(api_url="http://10.0.0.5:8100", token="token")
+
+    assert os.environ["FSSPEC_GCS"] == serialized_options
+    assert fsspec.config.conf["gcs"] == storage_options
+    clear_cache.assert_called_once_with()
 
 
 def test_connect__aws_missing_skips_env(

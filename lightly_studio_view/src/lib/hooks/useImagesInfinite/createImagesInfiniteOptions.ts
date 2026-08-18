@@ -5,16 +5,19 @@ import { readImages } from '$lib/api/lightly_studio_local';
 import { buildRequestBody } from './buildRequestBody';
 import type { ImagesInfiniteParams, SamplesQueryKey } from './types';
 
+export const getImagesInfiniteQueryKeyPrefix = (collectionId: string) =>
+    ['readImagesInfinite', collectionId] as const;
+
 // Create infinite query options for samples with mode-aware logic.
 export const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
     // Build query key with intelligent structure to minimize refetches.
     const queryKey: SamplesQueryKey = [
-        'readImagesInfinite',
-        params.collection_id,
+        ...getImagesInfiniteQueryKeyPrefix(params.collection_id),
         params.mode,
         params.mode === 'normal' ? params.filters : params.classifierSamples,
         {
             metadata_values: params.metadata_values,
+            categorical_metadata_values: params.categorical_metadata_values,
             text_embedding: params.text_embedding,
             query_expr: params.query_expr
         },

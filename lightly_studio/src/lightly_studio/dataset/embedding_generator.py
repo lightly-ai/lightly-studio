@@ -17,26 +17,56 @@ from lightly_studio.models.embedding_model import EmbeddingModelCreate
 
 @dataclass(frozen=True)
 class ImageCrop:
-    """Image crop to embed."""
+    """A rectangular region of an image to embed, given in pixel coordinates.
+
+    <span class="doc-badge doc-badge--beta">Beta</span>
+    """
 
     filepath: str
+    """Path to the image the crop is taken from."""
+
     x: int
+    """Left edge of the crop, in pixels from the image's left."""
+
     y: int
+    """Top edge of the crop, in pixels from the image's top."""
+
     width: int
+    """Crop width in pixels."""
+
     height: int
+    """Crop height in pixels."""
 
 
 @runtime_checkable
 class EmbeddingGenerator(Protocol):
-    """Protocol defining the interface for embedding models.
+    """Base protocol shared by every embedding generator.
 
-    This protocol defines the interface that all embedding models must
-    implement. Concrete implementations will use different techniques
-    for creating embeddings.
+    <span class="doc-badge doc-badge--beta">Beta</span>
+
+    An EmbeddingGenerator provides embeddings for images, image crops, videos, video frames
+    or other sample types. Every sample collection can have a different associated embedding
+    generator. The generator is used at two points:
+
+    - During data loading to compute sample embeddings
+    - During a GUI run to embed text or image search queries
+
+    Generators are loaded at startup and need to identify themselves with
+    `get_embedding_model_input` which returns metadata about the loaded model.
+
+    To provide custom embeddings, implement one of the protocols below (``ImageEmbeddingGenerator``
+    and/or ``VideoEmbeddingGenerator``) and register it with ``set_default_embedding_model``
+    before you add a dataset or start the GUI.
     """
 
     def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
         """Generate an EmbeddingModelCreate instance.
+
+        <span class="doc-badge doc-badge--beta">Beta</span>
+
+        Returns metadata about the model to be stored in the database.
+        The `embedding_model_hash` field is used to match the same EmbeddingGenerator
+        across multiple LightlyStudio runs.
 
         Args:
             collection_id: The ID of the collection.
@@ -47,6 +77,8 @@ class EmbeddingGenerator(Protocol):
 
     def embed_text(self, text: str) -> list[float]:
         """Generate an embedding for a text sample.
+
+        <span class="doc-badge doc-badge--beta">Beta</span>
 
         Args:
             text: The text to embed.
@@ -59,25 +91,32 @@ class EmbeddingGenerator(Protocol):
 
 @runtime_checkable
 class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
-    """Protocol defining the interface for image embedding models.
+    """Protocol for embedding images, image crops, and text.
 
-    This protocol defines the interface that all image embedding models must
-    implement. Concrete implementations will use different techniques
-    for creating embeddings.
+    <span class="doc-badge doc-badge--beta">Beta</span>
+
+    Implement this to use your own image model in LightlyStudio. Inside ``embed_images``
+    you can run the model on the given file paths or look up precomputed vectors. A
+    registered image generator replaces the built-in image, crop, and text embeddings.
+    It inherits ``embed_text`` from ``EmbeddingGenerator``, so keep the text and image
+    encoders in the same embedding space for text-based image and crop search to work.
     """
 
     def embed_images(self, filepaths: list[str], show_progress: bool = True) -> EmbeddingResult:
         """Generate embeddings for multiple image samples.
 
-        TODO(Michal, 04/2025): Use DatasetLoader as input instead.
+        <span class="doc-badge doc-badge--beta">Beta</span>
 
         Args:
-            filepaths: A list of file paths to the images to embed.
+            filepaths: A list of ``fsspec``-compatible file paths to the images to embed.
+                Each one is an absolute local path with forward slashes (e.g. ``/data/cat.jpg``)
+                or a remote URI (e.g. ``s3://bucket/cat.jpg``).
             show_progress: Whether to show a progress bar during embedding.
 
         Returns:
             An ``EmbeddingResult`` with embeddings for the readable files, in the same
-            order as the corresponding input file paths.
+            order as the corresponding input file paths. Use ``kept_indices`` to skip
+            any file paths you cannot or do not want to embed.
         """
         ...
 
@@ -85,6 +124,8 @@ class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
         self, image_crops: list[ImageCrop], show_progress: bool = True
     ) -> EmbeddingResult:
         """Generate embeddings for image crops.
+
+        <span class="doc-badge doc-badge--beta">Beta</span>
 
         Args:
             image_crops: A list of image crop definitions to embed.
@@ -101,6 +142,10 @@ class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
     ) -> NDArray[np.float32]:
         """Generate embeddings for in-memory PIL images.
 
+        <span class="doc-badge doc-badge--beta">Beta</span>
+
+        Used for video frame embedding.
+
         Args:
             images: PIL images to embed.
             show_progress: Whether to show a progress bar during embedding.
@@ -114,22 +159,29 @@ class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
 
 @runtime_checkable
 class VideoEmbeddingGenerator(EmbeddingGenerator, Protocol):
-    """Protocol defining the interface for video embedding models.
+    """Protocol for embedding videos (and text).
 
-    This protocol defines the interface that all video embedding models must
-    implement. Concrete implementations will use different techniques
-    for creating embeddings.
+    <span class="doc-badge doc-badge--beta">Beta</span>
+
+    Implement this to use your own video model in LightlyStudio. A registered video
+    generator replaces the built-in video and text embeddings. It inherits ``embed_text``
+    from ``EmbeddingGenerator``, so keep the text and video encoders in the same embedding
+    space for text-based video search to work.
     """
 
-    def embed_videos(self, filepaths: list[str]) -> NDArray[np.float32]:
+    def embed_videos(self, filepaths: list[str]) -> EmbeddingResult:
         """Generate embeddings for multiple video samples.
 
+        <span class="doc-badge doc-badge--beta">Beta</span>
+
         Args:
-            filepaths: A list of file paths to the videos to embed.
+            filepaths: A list of ``fsspec``-compatible file paths to the videos to embed.
+                Each one is an absolute local path with forward slashes (e.g. ``/data/clip.mp4``)
+                or a remote URI (e.g. ``s3://bucket/clip.mp4``).
 
         Returns:
-            A numpy array representing the generated embeddings
-            in the same order as the input file paths.
+            An ``EmbeddingResult`` with embeddings for the readable videos, in the same
+            order as the corresponding input file paths.
         """
         ...
 
@@ -186,6 +238,7 @@ class RandomEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator)
         _ = show_progress  # Not used for random embeddings.
         return np.random.rand(len(images), self._dimension).astype(np.float32)
 
-    def embed_videos(self, filepaths: list[str]) -> NDArray[np.float32]:
+    def embed_videos(self, filepaths: list[str]) -> EmbeddingResult:
         """Generate random embeddings for multiple video samples."""
-        return np.random.rand(len(filepaths), self._dimension).astype(np.float32)
+        embeddings = np.random.rand(len(filepaths), self._dimension).astype(np.float32)
+        return EmbeddingResult(embeddings=embeddings, kept_indices=list(range(len(filepaths))))

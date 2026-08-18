@@ -9,19 +9,27 @@ We welcome contributions of all kinds, including:
 
 After you have your changes ready, and you create a new pull request, a maintainer will review your PR, may ask for changes, suggest improvements, or approve once ready.
 
-## Development Quickstart
+## Requirements
+- Python **3.9–3.14** (3.9 recommended)
+- Uv version **0.8.17+**
+- Node.js **24+** (exact version pinned in `lightly_studio_view/.nvmrc`)
+- Access to **Google Cloud Platform** (request permissions from @IgorSusmelj)
 
+## Development Quickstart
 
 ```bash
 git clone git@github.com:lightly-ai/lightly_studio.git
-cd lightly_studio/lightly_studio
+cd lightly_studio
+make download-example-dataset  # run from the repo root
+cd lightly_studio              # descend into the backend subdirectory (same name as repo root)
 make start
 ```
 
 This will:
-- Install dependencies
-- Build the application
-- Start an example script
+- Download the example dataset into `lightly_studio/datasets` (see [Clone the Repository with Test Data](#clone-the-repository-with-test-data))
+- Install dependencies (uv installs Python dependencies automatically, `npm ci` the frontend ones)
+- Build the frontend and the Python package
+- Start an example script, which serves the app on <http://localhost:8001>
 
 For starting it again, you can skip the build step by just calling `make start-example`.
 
@@ -40,12 +48,16 @@ make static-checks
 make test
 ```
 
-When updating the code please follow our coding guidelines in [./ai_guidelines](./ai_guidelines).
-AI coding tools will be able to assist.
+When updating the code please follow our coding guidelines in [.agents/skills](./.agents/skills).
+They are [Agent Skills](https://agentskills.io), so Claude Code, Codex and Gemini CLI load the
+relevant one automatically as you work.
 
 ### End-to-End Testing
 
 We use Playwright for end-to-end testing. Tests need to be run separately for images and videos.
+
+The e2e index scripts read the example data from `lightly_studio/datasets`, so make sure it is
+present first (see [Clone the Repository with Test Data](#clone-the-repository-with-test-data)).
 
 #### Testing with Images
 
@@ -92,34 +104,33 @@ make serve
 #### Writing Documentation
 
 The documentation source is in [docs/docs](./lightly_studio/docs/docs). The documentation is
-written in Markdown (MyST flavor). For more information regarding formatting, see:
+written in Markdown and built with MkDocs using the Material theme. For more information regarding
+formatting, see:
 
-- https://pradyunsg.me/furo/reference/
-- https://myst-parser.readthedocs.io/en/latest/syntax/typography.html
+- https://squidfunk.github.io/mkdocs-material/reference/
+- https://www.mkdocs.org/user-guide/writing-your-docs/
 
 
 ## Development Environment Setup
 
-### Requirements
-- Python **3.9+** (3.10 recommended)
-- Uv version **0.8.17+**
-- Node.js **22.11+**
-- Access to **Google Cloud Platform** (request permissions from @IgorSusmelj)
+See [Requirements](#requirements) above for the Python, Uv, and Node.js versions needed before
+following the steps below.
 
 ### Clone the Repository with Test Data
 
-Clone the example dataset repository inside the backend subdirectory `lightly_studio`.
-It contains sample data used during development.
+Download the example dataset, which contains sample data used during development. Run this from
+the repository root:
 
 ```bash
-cd lightly_studio
-git clone https://github.com/lightly-ai/dataset_examples
+make download-example-dataset
 ```
+
+This clones the data into `lightly_studio/datasets`, which is where the `EXAMPLES_*` paths in
+`.env.example` and the e2e index scripts expect to find it.
 
 ### Define Environment Variables
 
-We recommend using the `.env` file to set up environment variables. Start by copying `.env.example`
-file to `.env`:
+Copy `.env.example` to `.env`:
 
 ```shell
 cd lightly_studio
@@ -140,40 +151,32 @@ cd lightly_studio
 uv run src/lightly_studio/examples/example.py
 ```
 
-### Start the Backend
+### Start the Application
 
-Navigate to the backend `lightly_studio` directory and run:
+`make start` builds the frontend into the backend package and serves the whole application on
+<http://localhost:8001>, so this single command is all that is needed:
 
 ```shell
 cd lightly_studio
 make start
 ```
 
-### Start the Frontend
+### Frontend Development with Hot Reloading
 
-In a new terminal tab, navigate to the `lightly_studio_view` directory and copy the environment file:
+Optional, for UI work only. This runs the Vite dev server in front of the backend, so keep
+`make start` running in another terminal.
 
 ```shell
 cd lightly_studio_view
-cp .env .env.local
-```
-
-Then, define the following variables in your `.env.local` file:
-
-```
-PUBLIC_SAMPLES_URL=http://localhost:8001/images
-PUBLIC_LIGHTLY_STUDIO_API_URL=http://localhost:8001/
-```
-
-Finally, start the frontend:
-
-```shell
+cp .env.example .env.local
 npm run dev
 ```
 
 ### Exploring the Makefile
 
-The `Makefile` includes several helpful commands. Here are some commonly used ones:
+There are three Makefiles: one in `lightly_studio` for the backend, build, e2e and migration
+targets, one in `lightly_studio_view` for the frontend, and one in the repository root that
+delegates to both. Some commonly used commands:
 
 Run tests:
 
@@ -187,7 +190,8 @@ Format code:
 make format
 ```
 
-You can explore more available commands directly in the `Makefile`.
+Run these from the directory you are working in, or from the root to cover both sides. You can
+explore more available commands directly in the `Makefile`.
 
 ### Contributor License Agreement (CLA)
 

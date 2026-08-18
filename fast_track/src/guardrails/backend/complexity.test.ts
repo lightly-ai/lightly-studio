@@ -28,13 +28,12 @@ const backendFile: ChangedFile = {
 };
 
 function makeCtx(files: ChangedFile[] = [backendFile]): GuardrailContext {
-    return { baseRef: 'origin/main', changedFiles: async () => files };
+    return { changedFiles: async () => files };
 }
 
 describe('backendComplexityGuardrail', () => {
-    it('is required and runs locally', () => {
+    it('is required', () => {
         expect(backendComplexityGuardrail.required).toBe(true);
-        expect(backendComplexityGuardrail.needsPrContext).toBe(false);
     });
 
     it('passes immediately when no backend files changed', async () => {
@@ -84,7 +83,7 @@ describe('backendComplexityGuardrail', () => {
     });
 
     it('passes for a deleted backend file (does not exist on disk)', async () => {
-        vi.mocked(existsSync).mockReturnValueOnce(false);
+        vi.mocked(existsSync).mockImplementation((p) => !String(p).includes('model.py'));
         const result = await backendComplexityGuardrail.run(makeCtx());
         expect(result.status).toBe('pass');
         expect(result.summary).toContain('deleted');

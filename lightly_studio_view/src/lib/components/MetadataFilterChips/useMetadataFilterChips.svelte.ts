@@ -1,6 +1,8 @@
 import { fromStore } from 'svelte/store';
 import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import { formatFloat, formatInteger } from '$lib/utils';
+import { usePostHog } from '$lib/hooks';
+import type { CategoricalMetadataValue } from '$lib/services/types';
 
 type Range = { min: number; max: number };
 type BoundsMap = Record<string, Range>;
@@ -8,17 +10,27 @@ type BoundsMap = Record<string, Range>;
 export interface MetadataFilterChip {
     key: string;
     active: boolean;
-    range: Range;
+    kind: 'numeric' | 'categorical';
+    range?: Range;
+    values?: CategoricalMetadataValue[];
 }
 
 export function useMetadataFilterChips(collectionId: string | undefined) {
-    const { metadataBounds, metadataValues, updateMetadataValues } =
-        useMetadataFilters(collectionId);
+    const {
+        metadataBounds,
+        metadataValues,
+        categoricalMetadataValues,
+        updateMetadataValues,
+        updateCategoricalMetadataValues
+    } = useMetadataFilters(collectionId);
+    const { trackEvent } = usePostHog();
 
     const boundsStore = fromStore(metadataBounds);
     const valuesStore = fromStore(metadataValues);
+    const categoricalStore = fromStore(categoricalMetadataValues);
 
     let lastRanges = $state<BoundsMap>({});
+    let lastCategoricalValues = $state<Record<string, CategoricalMetadataValue[]>>({});
 
     const isNarrowed = (key: string): boolean => {
         const bound = boundsStore.current[key];
@@ -38,6 +50,19 @@ export function useMetadataFilterChips(collectionId: string | undefined) {
         }
     });
 
+    $effect(() => {
+        for (const [key, values] of Object.entries(categoricalStore.current)) {
+            if (values.length === 0) continue;
+            const previous = lastCategoricalValues[key] ?? [];
+            const unchanged =
+                previous.length === values.length &&
+                previous.every((value, index) => Object.is(value, values[index]));
+            if (!unchanged) {
+                lastCategoricalValues = { ...lastCategoricalValues, [key]: [...values] };
+            }
+        }
+    });
+
     // One chip per key that is narrowed now or has a remembered range: active
     // chips show the current range, disabled ones the remembered range.
     const chips = $derived.by<MetadataFilterChip[]>(() => {
@@ -45,23 +70,55 @@ export function useMetadataFilterChips(collectionId: string | undefined) {
             ...Object.keys(lastRanges),
             ...Object.keys(valuesStore.current).filter(isNarrowed)
         ]);
-        return [...keys]
+        const numericChips = [...keys]
             .filter((key) => boundsStore.current[key])
             .map((key) => {
                 const active = isNarrowed(key);
                 const range: Range | undefined = active
                     ? valuesStore.current[key]
                     : lastRanges[key];
-                return { key, active, range };
+                return range ? { key, active, range, kind: 'numeric' as const } : null;
             })
-            .filter((chip): chip is MetadataFilterChip => !!chip.range);
+            .filter((chip): chip is NonNullable<typeof chip> => chip !== null);
+        const categoricalKeys = new Set([
+            ...Object.keys(lastCategoricalValues),
+            ...Object.entries(categoricalStore.current)
+                .filter(([, values]) => values.length > 0)
+                .map(([key]) => key)
+        ]);
+        const categoricalChips: MetadataFilterChip[] = [...categoricalKeys].map((key) => {
+            const current = categoricalStore.current[key] ?? [];
+            return {
+                key,
+                active: current.length > 0,
+                kind: 'categorical',
+                values: current.length > 0 ? current : lastCategoricalValues[key]
+            };
+        });
+        return [...numericChips, ...categoricalChips];
     });
 
     const setRange = (key: string, range: Range) => {
         updateMetadataValues({ ...valuesStore.current, [key]: range });
     };
 
+    const trackFilterChanged = (key: string, action: 'enabled' | 'disabled') => {
+        if (!collectionId) return;
+        trackEvent('metadata_filter_changed', {
+            collection_id: collectionId,
+            field_name: key,
+            action
+        });
+    };
+
     const handleToggle = (key: string, checked: boolean | 'indeterminate') => {
+        if (lastCategoricalValues[key]) {
+            updateCategoricalMetadataValues({
+                ...categoricalStore.current,
+                [key]: checked ? lastCategoricalValues[key] : []
+            });
+            return;
+        }
         const bound = boundsStore.current[key];
         if (!bound) return;
         if (checked && lastRanges[key]) {
@@ -69,14 +126,25 @@ export function useMetadataFilterChips(collectionId: string | undefined) {
         } else {
             setRange(key, { min: bound.min, max: bound.max });
         }
+        trackFilterChanged(key, checked ? 'enabled' : 'disabled');
     };
 
     const handleClear = (key: string) => {
+        if (lastCategoricalValues[key]) {
+            const next = { ...categoricalStore.current };
+            delete next[key];
+            updateCategoricalMetadataValues(next);
+            lastCategoricalValues = Object.fromEntries(
+                Object.entries(lastCategoricalValues).filter(([valueKey]) => valueKey !== key)
+            );
+            return;
+        }
         const bound = boundsStore.current[key];
         if (bound) setRange(key, { min: bound.min, max: bound.max });
         lastRanges = Object.fromEntries(
             Object.entries(lastRanges).filter(([rangeKey]) => rangeKey !== key)
         );
+        trackFilterChanged(key, 'disabled');
     };
 
     const formatValue = (key: string, value: number): string => {
@@ -85,12 +153,26 @@ export function useMetadataFilterChips(collectionId: string | undefined) {
         return isInteger ? formatInteger(value) : formatFloat(value);
     };
 
+    const formatCategoricalValues = (values: CategoricalMetadataValue[] = []): string => {
+        const hasMissingValue = values.includes('Missing');
+        const hasNoValue = values.includes(null);
+        return values
+            .map((value) => {
+                if (value === null) return hasMissingValue ? 'Missing (no value)' : 'Missing';
+                if (value === 'Missing' && hasNoValue) return 'Missing (value)';
+                if (value === 'Other') return 'Other (value)';
+                return String(value);
+            })
+            .join(', ');
+    };
+
     return {
         get chips() {
             return chips;
         },
         handleToggle,
         handleClear,
-        formatValue
+        formatValue,
+        formatCategoricalValues
     };
 }

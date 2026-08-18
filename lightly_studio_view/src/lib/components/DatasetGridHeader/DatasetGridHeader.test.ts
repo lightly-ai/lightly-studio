@@ -39,9 +39,11 @@ vi.mock('$lib/hooks/useFileDrop/useFileDrop', () => ({
 import DatasetGridHeader from './DatasetGridHeader.svelte';
 
 const defaultProps = {
+    collectionId: 'col1',
     canSelectAll: false,
     isSelectionActive: false,
     isImages: false,
+    isAnnotations: false,
     hasMediaWithEmbeddings: false,
     collectionDatasetId: 'dataset-1',
     onSelectAll: vi.fn().mockResolvedValue(undefined),

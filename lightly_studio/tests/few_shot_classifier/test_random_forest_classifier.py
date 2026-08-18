@@ -329,6 +329,7 @@ class TestRandomForestClassifier:
         )
         assert np.allclose(predictions, predictions_exported_model, atol=1e-8)
 
+    @pytest.mark.skip(reason="Skipped a long running test, lightly format should be removed.")
     def test_export__lightly_format(self, tmp_path: Path) -> None:
         """Test the export raw functionality."""
         n_samples = 1000

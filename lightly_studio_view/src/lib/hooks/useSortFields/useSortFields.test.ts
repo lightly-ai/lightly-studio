@@ -31,7 +31,7 @@ describe('useSortFields', () => {
 
     describe('allSortFields', () => {
         it('contains the five base image sort fields', () => {
-            const { allSortFields } = useSortFields({ datasetId: 'ds1' });
+            const { allSortFields } = useSortFields({ datasetId: () => 'ds1' });
             flushSync();
             const fields = get(allSortFields);
 
@@ -53,7 +53,7 @@ describe('useSortFields', () => {
                 { name: 'label', type: 'string' },
                 { name: 'active', type: 'boolean' }
             ]);
-            const { allSortFields } = useSortFields({ datasetId: 'ds1' });
+            const { allSortFields } = useSortFields({ datasetId: () => 'ds1' });
             flushSync();
             const fields = get(allSortFields);
 
@@ -62,26 +62,22 @@ describe('useSortFields', () => {
                     expect.objectContaining({
                         source: 'metadata',
                         value: 'score',
-                        label: 'metadata.score',
-                        is_numeric: true
+                        label: 'metadata.score'
                     }),
                     expect.objectContaining({
                         source: 'metadata',
                         value: 'count',
-                        label: 'metadata.count',
-                        is_numeric: true
+                        label: 'metadata.count'
                     }),
                     expect.objectContaining({
                         source: 'metadata',
                         value: 'label',
-                        label: 'metadata.label',
-                        is_numeric: false
+                        label: 'metadata.label'
                     }),
                     expect.objectContaining({
                         source: 'metadata',
                         value: 'active',
-                        label: 'metadata.active',
-                        is_numeric: false
+                        label: 'metadata.active'
                     })
                 ])
             );
@@ -93,7 +89,7 @@ describe('useSortFields', () => {
                 { name: 'nested', type: 'dict' },
                 { name: 'score', type: 'float' }
             ]);
-            const { allSortFields } = useSortFields({ datasetId: 'ds1' });
+            const { allSortFields } = useSortFields({ datasetId: () => 'ds1' });
             flushSync();
             const fields = get(allSortFields);
 
@@ -111,7 +107,7 @@ describe('useSortFields', () => {
                     ]
                 }
             ];
-            const { allSortFields } = useSortFields({ datasetId: 'ds1' });
+            const { allSortFields } = useSortFields({ datasetId: () => 'ds1' });
             flushSync();
             const fields = get(allSortFields);
 
@@ -134,7 +130,7 @@ describe('useSortFields', () => {
         });
 
         it('updates reactively when metadataInfo changes', () => {
-            const { allSortFields } = useSortFields({ datasetId: 'ds1' });
+            const { allSortFields } = useSortFields({ datasetId: () => 'ds1' });
             flushSync();
 
             expect(

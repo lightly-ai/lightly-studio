@@ -17,10 +17,14 @@ import fsspec
 import numpy as np
 import torch
 from numpy.typing import NDArray
-from PIL import Image, UnidentifiedImageError
+from PIL import Image
 from tqdm import tqdm
 
-from lightly_studio.core.file_outcome_report import FileOutcome, FileOutcomeReport
+from lightly_studio.core.file_outcome_report import (
+    BROKEN_IMAGE_ERRORS,
+    FileOutcome,
+    FileOutcomeReport,
+)
 from lightly_studio.dataset.embedding_result import EmbeddingResult
 from lightly_studio.utils import batching, parallelize
 
@@ -80,7 +84,7 @@ def embed_image_files_batched(
         try:
             with fsspec.open(filepath, "rb") as file:
                 image = Image.open(file).convert("RGB")
-        except (OSError, UnidentifiedImageError):
+        except BROKEN_IMAGE_ERRORS:
             return None
         return context.preprocess(image)
 

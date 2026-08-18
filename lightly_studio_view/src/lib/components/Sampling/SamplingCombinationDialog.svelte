@@ -1,10 +1,12 @@
 <script lang="ts">
     import { page } from '$app/state';
     import { Info } from '@lucide/svelte';
+    import { get } from 'svelte/store';
+    import { usePostHog } from '$lib/hooks';
     import AddStrategyButton from '$lib/components/Sampling/AddStrategyButton.svelte';
     import StrategyCard from '$lib/components/Sampling/StrategyCard/StrategyCard.svelte';
     import FieldTooltip from '$lib/components/FieldTooltip/FieldTooltip.svelte';
-    import { Button } from '$lib/components/ui/button';
+    import { Button } from '$lib/components';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import * as Dialog from '$lib/components/ui/dialog';
     import { Input } from '$lib/components/ui/input';
@@ -21,6 +23,7 @@
             page.data.collection?.sample_type === 'video_frame'
     );
 
+    const { trackEvent } = usePostHog();
     const { isSamplingDialogOpen, openSamplingDialog, closeSamplingDialog } = useSamplingDialog();
 
     const {
@@ -34,11 +37,6 @@
     } = useStrategyBuilder();
 
     const strategyOptions = useStrategyOptions(() => collectionId);
-
-    // TODO(Leonardo, 06/2026): Update once there are multiple embedding models - currently only one diversity
-    // strategy is supported since all samples share a single embedding space.
-    const hasDiversity = $derived($instances.some((i) => i.type === 'diversity'));
-    const hasDeduplication = $derived($instances.some((i) => i.type === 'deduplication'));
 
     const {
         tags,
@@ -62,11 +60,64 @@
         instances,
         onSubmitSuccess: resetStrategies
     });
+
+    function handleOpenDialog() {
+        openSamplingDialog({
+            collection_id: collectionId,
+            filtered_sample_count: get(filteredSampleCount)
+        });
+    }
+
+    function handleCloseDialog() {
+        closeSamplingDialog({
+            collection_id: collectionId,
+            strategy_count: $instances.length
+        });
+    }
+
+    function handleMenuOpen() {
+        trackEvent('add_strategy_menu_opened', {
+            collection_id: collectionId,
+            current_strategy_count: $instances.length
+        });
+    }
+
+    function handleAddStrategy(type: Parameters<typeof addStrategy>[0]) {
+        trackEvent('sampling_strategy_added', {
+            collection_id: collectionId,
+            strategy_type: type,
+            strategy_count: $instances.length + 1
+        });
+        addStrategy(type);
+    }
+
+    function handleDuplicateStrategy(instanceId: string, instanceType: string) {
+        trackEvent('sampling_strategy_duplicated', {
+            collection_id: collectionId,
+            strategy_type: instanceType,
+            strategy_count: $instances.length + 1
+        });
+        duplicateStrategy(instanceId);
+    }
+
+    function handleRemoveStrategy(instanceId: string, instanceType: string) {
+        trackEvent('sampling_strategy_removed', {
+            collection_id: collectionId,
+            strategy_type: instanceType,
+            strategy_count: $instances.length - 1
+        });
+        removeStrategy(instanceId);
+    }
+
+    // TODO(Leonardo, 06/2026): Update once there are multiple embedding models - currently only one diversity
+    // strategy is supported since all samples share a single embedding space.
+    const hasDiversity = $derived($instances.some((i) => i.type === 'diversity'));
+    const hasDeduplication = $derived($instances.some((i) => i.type === 'deduplication'));
 </script>
 
 <Dialog.Root
     open={$isSamplingDialogOpen}
-    onOpenChange={(open) => (open ? openSamplingDialog() : closeSamplingDialog())}
+    onOpenChange={(open) => (open ? handleOpenDialog() : handleCloseDialog())}
 >
     <Dialog.Portal>
         <Dialog.Overlay />
@@ -102,7 +153,8 @@
                                 classBalancingDisabledReason={!strategyOptions.hasAnnotationLabels
                                     ? 'No annotation labels found. Add annotations to your samples to enable this strategy.'
                                     : undefined}
-                                onAdd={addStrategy}
+                                onAdd={handleAddStrategy}
+                                onMenuOpen={handleMenuOpen}
                             />
                         </div>
 
@@ -118,8 +170,10 @@
                                         metadataFieldNames={strategyOptions.metadataFieldNames}
                                         isDuplicateDisabled={instance.type === 'diversity' ||
                                             instance.type === 'deduplication'}
-                                        onRemove={() => removeStrategy(instance.id)}
-                                        onDuplicate={() => duplicateStrategy(instance.id)}
+                                        onRemove={() =>
+                                            handleRemoveStrategy(instance.id, instance.type)}
+                                        onDuplicate={() =>
+                                            handleDuplicateStrategy(instance.id, instance.type)}
                                         onUpdate={(params) => updateParams(instance.id, params)}
                                         onToggleExpand={() => toggleExpand(instance.id)}
                                     />
@@ -198,10 +252,12 @@
                     </a>
                     <Button
                         variant="outline"
-                        type="button"
-                        onclick={closeSamplingDialog}
-                        disabled={$isSubmitting}
-                        data-testid="sampling-dialog-cancel"
+                        buttonProps={{
+                            type: 'button',
+                            onclick: handleCloseDialog,
+                            disabled: $isSubmitting,
+                            'data-testid': 'sampling-dialog-cancel'
+                        }}
                     >
                         Cancel
                     </Button>
@@ -211,12 +267,16 @@
                         triggerClass="inline-block"
                     >
                         <Button
-                            type="submit"
-                            disabled={!$isFormValid ||
-                                $isSubmitting ||
-                                $notEnoughSamples ||
-                                $noSamples}
-                            data-testid="sampling-dialog-submit"
+                            variant="default"
+                            buttonProps={{
+                                type: 'submit',
+                                disabled:
+                                    !$isFormValid ||
+                                    $isSubmitting ||
+                                    $notEnoughSamples ||
+                                    $noSamples,
+                                'data-testid': 'sampling-dialog-submit'
+                            }}
                         >
                             {$isSubmitting ? $loadingMessage || 'Creating...' : 'Create Selection'}
                         </Button>

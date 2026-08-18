@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections import Counter, defaultdict
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from uuid import UUID, uuid4
 
@@ -13,10 +13,8 @@ import sqlalchemy
 from numpy.typing import NDArray
 from sqlmodel import Session, col, select
 
-from lightly_studio.database.db_vector import Embedding
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
@@ -27,6 +25,7 @@ from lightly_studio.resolvers import (
     tag_resolver,
 )
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+from lightly_studio.sampling import sampling_helpers
 from lightly_studio.sampling.mundig import Mundig
 from lightly_studio.sampling.sampling_config import (
     AnnotationClassBalancingStrategy,
@@ -219,14 +218,31 @@ def _get_class_balancing_data(  # noqa: C901
 
 
 def sampling_via_database(
-    session: Session, config: SamplingConfig, input_sample_ids: list[UUID]
+    session: Session,
+    config: SamplingConfig,
+    input_sample_ids: list[UUID],
 ) -> None:
     """Run sampling using the provided candidate sample ids.
 
     First resolves the sampling config to concrete database values.
     Then calls Mundig to run the sampling with pure values.
     Finally creates a tag for the selected set.
+
+    Args:
+        session: Database session used to resolve and store sampling data.
+        config: Sampling configuration.
+        input_sample_ids: Candidate sample IDs.
+
+    Raises:
+        ValueError: If the preselected tag does not exist or its sample IDs are
+            not a subset of the input sample IDs.
     """
+    preselected_sample_ids = _get_preselected_sample_ids(
+        session=session,
+        collection_id=config.collection_id,
+        preselected_tag_name=config.preselected_tag_name,
+    )
+
     # Check if the tag name is already used
     existing_tag = tag_resolver.get_by_name(
         session=session,
@@ -234,13 +250,19 @@ def sampling_via_database(
         collection_id=config.collection_id,
     )
     if existing_tag:
+        # TODO(Lukas, 08/2026): drop this requirement when `preselected_tag_name` is the same as
+        # `sampling_result_tag_name`.
         msg = (
             f"Tag with name {config.sampling_result_tag_name} already exists in the "
             f"collection {config.collection_id}. Please use a different tag name."
         )
         raise ValueError(msg)
 
-    n_samples_to_select = min(config.n_samples_to_select, len(input_sample_ids))
+    preselected_indices, n_samples_to_select = _prepare_preselection(
+        input_sample_ids=input_sample_ids,
+        preselected_sample_ids=preselected_sample_ids,
+        n_samples_to_select=config.n_samples_to_select,
+    )
     if n_samples_to_select == 0:
         logger.warning("No samples available for sampling.")
         return
@@ -265,39 +287,60 @@ def sampling_via_database(
             mundig=mundig,
         )
 
-    selected_indices = mundig.run(n_samples=n_samples_to_select)
-    selected_sample_ids = [input_sample_ids[i] for i in selected_indices]
-
-    tag = tag_resolver.create(
+    selected_indices = mundig.run(
+        n_samples=len(preselected_indices) + n_samples_to_select,
+        preselected_indices=preselected_indices,
+    )
+    selected_sample_ids = [
+        input_sample_ids[index] for index in selected_indices[len(preselected_indices) :]
+    ]
+    sampling_helpers.create_result_tag(
         session=session,
-        tag=TagCreate(
-            collection_id=config.collection_id,
-            name=config.sampling_result_tag_name,
-            kind="sample",
-        ),
-    )
-    tag_resolver.add_sample_ids_to_tag_id(
-        session=session, tag_id=tag.tag_id, sample_ids=selected_sample_ids
+        collection_id=config.collection_id,
+        tag_name=config.sampling_result_tag_name,
+        selected_sample_ids=selected_sample_ids,
     )
 
 
-def _get_embeddings_by_sample_ids(
+def _get_preselected_sample_ids(
     session: Session,
-    context: _SamplingContext,
-    embedding_model_name: str | None,
-) -> list[Embedding]:
-    """Resolve sample embeddings for the given model and sample ids."""
-    embedding_model_id = embedding_model_resolver.get_by_name(
+    collection_id: UUID,
+    preselected_tag_name: str | None,
+) -> list[UUID]:
+    """Resolve sample IDs from an optional preselected sample tag."""
+    if preselected_tag_name is None:
+        return []
+
+    preselected_tag = tag_resolver.get_by_name(
         session=session,
-        collection_id=context.collection_id,
-        embedding_model_name=embedding_model_name,
-    ).embedding_model_id
-    embedding_tables = sample_embedding_resolver.get_by_sample_ids(
-        session=session,
-        sample_ids=list(context.input_sample_ids),
-        embedding_model_id=embedding_model_id,
+        tag_name=preselected_tag_name,
+        collection_id=collection_id,
     )
-    return [embedding.embedding for embedding in embedding_tables]
+    if preselected_tag is None:
+        raise ValueError(f"Preselected tag with name {preselected_tag_name} not found.")
+    return tag_resolver.get_sample_ids_by_tag_id(
+        session=session,
+        tag_id=preselected_tag.tag_id,
+    )
+
+
+def _prepare_preselection(
+    input_sample_ids: Sequence[UUID],
+    preselected_sample_ids: Iterable[UUID] | None,
+    n_samples_to_select: int,
+) -> tuple[list[int], int]:
+    """Validate preselection and return its indices and available selection size."""
+    preselected_sample_ids = list(preselected_sample_ids or ())
+    preselected_set = set(preselected_sample_ids)
+    if len(preselected_sample_ids) != len(preselected_set):
+        raise ValueError("Preselected sample IDs must be unique.")
+    if not preselected_set.issubset(input_sample_ids):
+        raise ValueError("Preselected sample IDs must be a subset of input sample IDs.")
+
+    sample_id_to_index = {sample_id: index for index, sample_id in enumerate(input_sample_ids)}
+    preselected_indices = [sample_id_to_index[sample_id] for sample_id in preselected_sample_ids]
+    n_available_samples = len(input_sample_ids) - len(preselected_indices)
+    return preselected_indices, min(n_samples_to_select, n_available_samples)
 
 
 def _get_annotations_for_class_balancing(
@@ -338,27 +381,30 @@ def _add_strategy_to_mundig(
     """Resolve one sampling strategy and add it to Mundig."""
     if isinstance(strat, EmbeddingDiversityStrategy):
         mundig.add_diversity(
-            embeddings=_get_embeddings_by_sample_ids(
+            embeddings=sampling_helpers.get_embeddings_by_sample_ids(
                 session=session,
-                context=context,
+                collection_id=context.collection_id,
+                sample_ids=context.input_sample_ids,
                 embedding_model_name=strat.embedding_model_name,
             ),
             strength=strat.strength,
         )
     elif isinstance(strat, EmbeddingDeduplicationStrategy):
         mundig.add_diversity(
-            embeddings=_get_embeddings_by_sample_ids(
+            embeddings=sampling_helpers.get_embeddings_by_sample_ids(
                 session=session,
-                context=context,
+                collection_id=context.collection_id,
+                sample_ids=context.input_sample_ids,
                 embedding_model_name=strat.embedding_model_name,
             ),
             strength=strat.strength,
             stopping_condition_minimum_distance=strat.stopping_condition_minimum_distance,
         )
     elif isinstance(strat, EmbeddingSimilarityStrategy):
-        embeddings = _get_embeddings_by_sample_ids(
+        embeddings = sampling_helpers.get_embeddings_by_sample_ids(
             session=session,
-            context=context,
+            collection_id=context.collection_id,
+            sample_ids=context.input_sample_ids,
             embedding_model_name=strat.embedding_model_name,
         )
         embedding_model_id = embedding_model_resolver.get_by_name(

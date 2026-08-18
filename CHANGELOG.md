@@ -9,6 +9,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Report anonymous usage data on app launch. Set `LIGHTLY_STUDIO_ANALYTICS_ENABLED=false` to opt out.
+- Sort the annotations grid by a per-annotation evaluation metric, such as IoU.
+- Python SDK: Continue sampling from an existing tagged selection with the
+  `preselected_tag_name` parameter.
+
+### Changed
+
+- Stepping to the previous or next image now drives an index range scan instead of scanning the
+  sort index from the start. On PostgreSQL with 1M images, one neighbour lookup went from 92ms
+  to 0.03ms.
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+- Fix requests failing intermittently while the GUI is under load, caused by concurrent access to a shared database session.
+
+### Security
+
+## \[1.0.5\] - 2026-08-14
+
+### Added
+- Show indexed categorical metadata values in distribution panel.
+- Add the `lightly-studio quickstart` CLI command, which downloads the COCO example dataset and launches the GUI in one step. Pass `--no-browser` to skip opening the browser.
+- Export image and video classification annotations to CSV via the GUI and Python SDK.
+- Python SDK: Export video frames as image files via `VideoFrameDataset.export().to_image_files()` with support for PNG, JPEG, WEBP, BMP, and TIFF formats. Returns the paths of the created files.
+- Google Cloud Storage (GCS) is supported in the LightlyStudio Enterprise version.
+- Python SDK: Connect to LightlyStudio Enterprise with a long-lived API key by passing `api_key` to `lightly_studio.connect()` or setting `LIGHTLY_STUDIO_API_KEY`.
+- Python SDK: Add support for table parameters in plugins, allowing users to pass multiple rows of input.
+
+### Changed
+
+- Show a busy indicator on save/delete/export/execute buttons while their action is running (caption, tag, operator, evaluation, and export actions).
+
+### Removed
+
+- The ignored `is_numeric` field on sort expressions in the images-list and adjacent-samples
+  request bodies. Requests that still send it keep working; it is dropped during validation.
+- The `cast_to_float` argument of `OrderByMetadataField`. Top-level numeric fields are now
+  detected automatically, so `OrderByMetadataField("score", cast_to_float=True)` becomes
+  `OrderByMetadataField("score")`. Nested fields (e.g. `stats.score`) now always sort
+  lexicographically.
+
+### Fixed
+
+- Sorting by a numeric metadata field now orders numerically (e.g. `9` before `10`) without
+  the caller declaring the field type.
+- Tagging by embedding region now correctly limits samples to the selected area.
+- Export downloads are no longer blocked by popup blockers.
+- Grid annotation overlays now render at tile resolution to bound memory usage for large source images.
+- Annotation class names no longer overflow in class selection.
+- Autofocus lets users create their first annotation faster.
+- Opening a DuckDB database that another lightly_studio process already has open now raises a clear error instead of a raw DuckDB traceback.
+- Coloring the 2D embedding plot by annotations or metadata now loads faster, especially for large datasets.
+- Changing annotation colors is now smoother and shows a live preview while dragging the color picker.
+- Hover previews in the annotations embedding plot now show the relevant image crop and annotation overlay, matching the annotations grid.
+- Custom annotation color opacity is now applied to segmentation masks in the detail view. Contributed by @sam-watts.
+
+## \[1.0.4\] - 2026-07-27
+
+### Added
+
 - Python SDK: Allow embedding video frames by adding the `embed_frames` parameter to `VideoDataset.add_videos_from_path` and `VideoDataset.add_videos_from_youtube_vis`.
 - Python dataset queries can now filter annotation evaluation results for false positives and false negatives.
 - Show numeric metadata values in distribution panel.
@@ -18,21 +82,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Display classification annotations in the annotations grid.
 - Show a preview image when hovering over the 2d embedding plot.
 
-
 ### Changed
 
 - The left filter panel can now be collapsed entirely to reclaim space for the grid; a "Filters" button in the grid header restores it.
-
-### Deprecated
-
-### Removed
+- Image and video opening paths (indexing and embedding) now handle errors consistently: broken files are tolerated and skipped instead of breaking the whole operation.
 
 ### Fixed
 
 - Class distribution bar chart: tooltip was clipped when hovering a chart with a single class.
 - Long tags shown in the left side menu are truncated.
-
-### Security
 
 ## \[1.0.3\] - 2026-07-10
 

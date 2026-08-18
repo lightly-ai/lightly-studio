@@ -7,7 +7,7 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { useSettings } from '$lib/hooks/useSettings';
-    import { onMount, type Snippet } from 'svelte';
+    import { onMount, untrack, type Snippet } from 'svelte';
 
     import { get } from 'svelte/store';
     import { getAnnotations } from '../SampleAnnotation/utils';
@@ -79,10 +79,16 @@
     const { settingsStore } = useSettings();
     const { isEditingMode, lastAnnotationLabel, lastAnnotationSource } = useGlobalStorage();
 
-    // Annotation details must use the first annotation from sample.annotations
-    const annotationLabelContext = createAnnotationLabelContext({
-        isOnAnnotationDetailsView: isOnAnnotationDetailsView,
-        annotationId: isOnAnnotationDetailsView ? sample.annotations![0].sample_id : null
+    // Annotation details must use the first annotation from sample.annotations.
+    // isOnAnnotationDetailsView is re-synced via $effect when the prop changes.
+    const annotationLabelContext = createAnnotationLabelContext(
+        untrack(() => ({
+            isOnAnnotationDetailsView,
+            annotationId: isOnAnnotationDetailsView ? sample.annotations![0].sample_id : null
+        }))
+    );
+    $effect(() => {
+        annotationLabelContext.isOnAnnotationDetailsView = isOnAnnotationDetailsView;
     });
     createSampleDetailsToolbarContext();
 
@@ -175,7 +181,11 @@
             isOnAnnotationDetailsView
         )
             return;
-        selectAnnotation({ annotationId, annotations: sample.annotations ?? [], collectionId });
+        selectAnnotation({
+            annotationId,
+            annotations: sample.annotations ?? [],
+            collectionId
+        });
     };
 
     let annotationsToShow = $derived(sample?.annotations ? getAnnotations(sample.annotations) : []);

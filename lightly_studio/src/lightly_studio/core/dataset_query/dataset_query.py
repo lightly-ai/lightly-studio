@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from typing import Generic, cast
+from uuid import UUID
 
 from sqlalchemy.orm import joinedload
 from sqlmodel import Session, col, select
@@ -147,6 +148,7 @@ class DatasetQuery(Generic[T]):
         self.match_expression: MatchExpression | None = None
         self.order_by_expressions: list[OrderByExpression] | None = None
         self._slice: _SliceType | None = None
+        self._sample_ids_subquery: SelectOfScalar[UUID] | None = None
         if sample_class is None:
             # TODO(lukas 12/2025): Remove once we introduce ImageDatasetQuery. Right now
             # T=ImageSample is the default, so this is fine.
@@ -190,6 +192,25 @@ class DatasetQuery(Generic[T]):
             raise ValueError("order_by() can only be called once per DatasetQuery instance")
 
         self.order_by_expressions = list(order_by)
+        return self
+
+    def filter_by_sample_ids(self, sample_ids_subquery: SelectOfScalar[UUID]) -> Self:
+        """Restrict results to samples whose IDs appear in *sample_ids_subquery*.
+
+        Args:
+            sample_ids_subquery: A subquery returning the ``sample_id`` values to keep.
+
+        Returns:
+            Self for method chaining.
+
+        Raises:
+            ValueError: If filter_by_sample_ids() has already been called on this instance.
+        """
+        if self._sample_ids_subquery is not None:
+            raise ValueError(
+                "filter_by_sample_ids() can only be called once per DatasetQuery instance"
+            )
+        self._sample_ids_subquery = sample_ids_subquery
         return self
 
     def slice(self, offset: int = 0, limit: int | None = None) -> Self:
@@ -306,6 +327,10 @@ class DatasetQuery(Generic[T]):
         # Apply filter if present
         if self.match_expression:
             query = query.where(self.match_expression.get())
+
+        # Apply sample ID subquery filter if present
+        if self._sample_ids_subquery is not None:
+            query = query.where(col(SampleTable.sample_id).in_(self._sample_ids_subquery))
 
         # Apply ordering
         if self.order_by_expressions:

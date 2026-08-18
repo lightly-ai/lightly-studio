@@ -16,14 +16,18 @@ jobs:
     name: Fast Track Guardrails
     # Skip drafts. `edited` fires on any PR edit (title, body, base), so restrict it
     # to base retargets — those change the diff and warrant a re-judge; other edits don't.
+    # Skip fork PRs: they get no secrets, so the toolchain steps would fail with a
+    # confusing red check. The bot already skips forks, so no verdict is expected.
     if: >-
       github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
       (github.event.action != 'edited' || github.event.changes.base != null)
     # Job-level concurrency prevents an unrelated skipped edit from cancelling this job.
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: fast_track
@@ -31,10 +35,11 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v6
         # Never pushes — keep the git token out of the checkout. The later toolchain steps
-        # expose GCP secrets to PR code (same posture as test_and_release.yml); fork PRs get
-        # no secrets, so their toolchain-dependent guardrails error instead of emitting a verdict.
+        # expose GCP secrets to PR code (same posture as unit_test.yml); the job's `if`
+        # restricts it to same-repo PRs, so untrusted fork code never reaches them.
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
 
       # Detect which areas changed, so we install only the toolchains their guardrails need.
       - name: Detect changed areas
@@ -44,8 +49,15 @@ jobs:
           filters: |
             backend:
               - 'lightly_studio/**'
+            # Superset of the backend/coverage guardrail's own scope, so the full
+            # suite runs only for PRs that guardrail will actually judge.
+            backend_src:
+              - 'lightly_studio/src/lightly_studio/**/*.py'
             frontend:
               - 'lightly_studio_view/**'
+            # Same idea as backend_src, for the frontend/coverage guardrail.
+            frontend_src:
+              - 'lightly_studio_view/src/**'
 
       # --- Backend toolchain -------------------------------------------------
       # Full backend venv for backend guardrails (e.g. backend/complexity, backend/coverage);
@@ -95,6 +107,23 @@ jobs:
             fast_track/package-lock.json
             lightly_studio_view/package-lock.json
 
+      # Build the webapp so backend guardrails can import the app: pytest's conftest imports
+      # the full app, and the webapp route raises at import time unless the dist exists.
+      - name: Build webapp for backend guardrails
+        if: steps.changes.outputs.backend == 'true'
+        working-directory: lightly_studio
+        run: make build-lightly_studio_view
+
+      # The backend/coverage guardrail only reads a report; the suite runs here. A failing
+      # suite must not kill the job — the guardrail turns it into a fail verdict, and the
+      # bot still needs the artifact to explain itself.
+      - name: Run backend tests with coverage
+        id: backend-tests
+        if: steps.changes.outputs.backend_src == 'true'
+        continue-on-error: true
+        working-directory: lightly_studio
+        run: make test-coverage
+
       # --- Frontend toolchain ------------------------------------------------
       # Deps and generated API client for frontend guardrails (e.g. frontend/complexity,
       # frontend/coverage). prebuild is the app build's generation step, without the
@@ -106,6 +135,16 @@ jobs:
           npm ci
           npm run prebuild
 
+      # Same arrangement as the backend step above, for frontend/coverage: the guardrail
+      # only reads coverage/coverage-final.json, and a failing suite becomes a fail verdict
+      # rather than killing the job.
+      - name: Run frontend tests with coverage
+        id: frontend-tests
+        if: steps.changes.outputs.frontend_src == 'true'
+        continue-on-error: true
+        working-directory: lightly_studio_view
+        run: make test-coverage
+
       # --- Fast Track toolchain ----------------------------------------------
       - name: Install dependencies
         run: npm ci
@@ -114,11 +153,21 @@ jobs:
       - name: Run Fast Track Guardrails
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          # backend/coverage reads the report the test step wrote. Both vars are set
+          # unconditionally: when that step is skipped the guardrail finds no file in
+          # scope and passes before consulting either. `!= 'failure'` (not `== 'success'`)
+          # so a skipped step does not read as a failing suite.
+          BACKEND_COVERAGE_JSON: ${{ github.workspace }}/lightly_studio/coverage.json
+          BACKEND_TESTS_PASSED: ${{ steps.backend-tests.outcome != 'failure' }}
+          # frontend/coverage mirrors the backend vars, reading the report the frontend
+          # test step wrote.
+          FRONTEND_COVERAGE_JSON: ${{ github.workspace }}/lightly_studio_view/coverage/coverage-final.json
+          FRONTEND_TESTS_PASSED: ${{ steps.frontend-tests.outcome != 'failure' }}
         run: npm run guardrails-ci
 
       # JS action, so defaults.run.working-directory doesn't apply — path is repo-root-relative.
       - name: Upload verdict
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fast-track-verdict
           path: fast_track/verdict.json

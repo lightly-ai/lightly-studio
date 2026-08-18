@@ -1,9 +1,10 @@
 export { default as Alert } from '$lib/components/Alert/index.svelte';
-export { default as Button } from '$lib/components/Button/Button.svelte';
+export { Button } from '$lib/components/Button';
 export { Select } from '$lib/components/Select';
 export type { SelectItem, SelectSize } from '$lib/components/Select';
 export { default as AnnotationsGrid } from '$lib/components/AnnotationsGrid/AnnotationsGrid.svelte';
 export { default as AnnotationsGridItem } from '$lib/components/AnnotationsGrid/AnnotationsGridItem/AnnotationsGridItem.svelte';
+export { default as AnnotationItem } from '$lib/components/AnnotationsGrid/AnnotationItem/AnnotationItem.svelte';
 export { default as Card } from '$lib/components/Card/Card.svelte';
 export { default as CardContent } from '$lib/components/CardContent/CardContent.svelte';
 export { default as CombinedMetadataDimensionsFilters } from '$lib/components/CombinedMetadataDimensionsFilters/CombinedMetadataDimensionsFilters.svelte';
@@ -31,9 +32,6 @@ export { default as SelectableBox } from '$lib/components/SelectableBox/Selectab
 export { SettingsDialog } from '$lib/components/Settings/';
 export { default as TagsMenu } from '$lib/components/TagsMenu/TagsMenu.svelte';
 export { default as UserInfo } from '$lib/components/UserInfo/index.svelte';
-export { default as ClassifiersMenu } from '$lib/components/FewShotClassifier/ClassifiersMenu.svelte';
-export { default as CreateClassifierDialog } from '$lib/components/FewShotClassifier/CreateClassifierDialog.svelte';
-export { default as RefineClassifierDialog } from '$lib/components/FewShotClassifier/RefineClassifierDialog.svelte';
 export { default as ZoomableContainer } from '$lib/components/ZoomableContainer/ZoomableContainer.svelte';
 export { default as Spinner } from '$lib/components/Spinner/Spinner.svelte';
 export { default as Segment } from '$lib/components/Segment/Segment.svelte';
@@ -69,5 +67,8 @@ export { default as CollectionSearch } from '$lib/components/CollectionSearch/Co
 export { default as CollectionSearchImage } from '$lib/components/CollectionSearch/CollectionSearchImage/CollectionSearchImage.svelte';
 export { default as CollectionSearchInput } from '$lib/components/CollectionSearch/SearchInput/CollectionSearchInput.svelte';
 export { default as OrderBy } from '$lib/components/OrderBy/OrderBy.svelte';
+export { default as AnnotationOrderBy } from '$lib/components/OrderBy/AnnotationOrderBy.svelte';
 export { default as SamplingCombinationDialog } from '$lib/components/Sampling/SamplingCombinationDialog.svelte';
 export { default as MetadataFilterChips } from '$lib/components/MetadataFilterChips/MetadataFilterChips.svelte';
+export { default as FormField } from '$lib/components/FormField/FormField.svelte';
+export { default as AnnotationSourceSelect } from '$lib/components/AnnotationSourceSelect/AnnotationSourceSelect.svelte';

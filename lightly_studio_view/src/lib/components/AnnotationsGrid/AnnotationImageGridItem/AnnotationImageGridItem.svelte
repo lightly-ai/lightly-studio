@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import type { AnnotationView, ImageAnnotationView } from '$lib/api/lightly_studio_local';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useSettings } from '$lib/hooks/useSettings';
@@ -32,8 +33,8 @@
     const { gridViewThumbnailQualityStore } = useSettings();
 
     // Store collection version for cache busting
-    let collectionVersion = $state(cachedCollectionVersion);
-    let collectionVersionLoaded = $state(!!cachedCollectionVersion);
+    let collectionVersion = $state(untrack(() => cachedCollectionVersion));
+    let collectionVersionLoaded = $state(untrack(() => !!cachedCollectionVersion));
 
     // Component is loaded when both collection version and image are loaded
     const isLoaded = $derived(collectionVersionLoaded);

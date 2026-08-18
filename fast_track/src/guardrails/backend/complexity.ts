@@ -1,13 +1,9 @@
-import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
-import { promisify } from 'node:util';
 import type { Guardrail, GuardrailContext, GuardrailOutcome } from '../context/types';
-import { REPO_ROOT, BACKEND_DIR } from './shared';
-import { extractStdoutOrThrow } from '../shared/utils';
+import { REPO_ROOT, BACKEND_DIR, BACKEND_PREFIX } from './shared';
+import { extractStdoutOrThrow, runLoggedCommand } from '../shared/utils';
 
-const execFileAsync = promisify(execFile);
-const BACKEND_PREFIX = 'lightly_studio/';
 const NAME = 'backend/complexity';
 const COMPLEXITY_RULE = 'C901';
 const LINTER_TIMEOUT_MS = 60_000;
@@ -23,7 +19,8 @@ interface RuffViolation {
 async function runLinter(paths: string[]): Promise<RuffViolation[]> {
     let stdout: string;
     try {
-        const result = await execFileAsync(
+        const result = await runLoggedCommand(
+            NAME,
             'uv',
             [
                 'run',
@@ -49,7 +46,6 @@ async function runLinter(paths: string[]): Promise<RuffViolation[]> {
 export const backendComplexityGuardrail: Guardrail = {
     name: NAME,
     required: true,
-    needsPrContext: false,
     async run(ctx: GuardrailContext): Promise<GuardrailOutcome> {
         const files = (await ctx.changedFiles()).filter(
             (f) => f.path.startsWith(BACKEND_PREFIX) && f.path.endsWith('.py')

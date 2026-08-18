@@ -14,16 +14,19 @@ from __future__ import annotations
 
 import atexit
 import logging
+import threading
 from collections.abc import Generator
 from contextlib import contextmanager
 from enum import Enum
 from pathlib import Path
 from typing import Annotated, Any
 
+import duckdb
 import sqlalchemy_utils
 from fastapi import Depends
 from sqlalchemy import StaticPool, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import OperationalError
 from sqlmodel import Session, SQLModel, create_engine
 
 import lightly_studio.api.db_tables  # noqa: F401, required for SQLModel to work properly
@@ -44,6 +47,7 @@ class DatabaseEngine:
     _engine_url: str
     _engine: Engine
     _persistent_session: Session | None = None
+    _persistent_session_lock: threading.RLock
     _backend: DatabaseBackend
 
     def __init__(
@@ -64,7 +68,16 @@ class DatabaseEngine:
 
         Raises:
             FileNotFoundError: If must_exist is True and the database does not exist.
+            RuntimeError: If the DuckDB file is already open in another process.
         """
+        # Guards every access to the persistent session. A SQLAlchemy Session is not
+        # thread-safe, and the session below is reached from many threads at once: FastAPI
+        # runs the sync session dependency on Starlette's threadpool, the async media
+        # routes open sessions on the event loop thread, and the Python API uses the
+        # persistent session on the caller's own thread. Re-entrant because
+        # _commit_persistent_session calls get_persistent_session.
+        self._persistent_session_lock = threading.RLock()
+
         if engine_url is not None:
             self._engine_url = engine_url
         elif LIGHTLY_STUDIO_DATABASE_URL is not None:
@@ -119,7 +132,7 @@ class DatabaseEngine:
                 cleanup_existing=cleanup_existing,
             )
         else:
-            SQLModel.metadata.create_all(self._engine)
+            _create_duckdb_schema(engine=self._engine, engine_url=self._engine_url)
 
     @contextmanager
     def session(self) -> Generator[Session, None, None]:
@@ -130,9 +143,7 @@ class DatabaseEngine:
         # in the persistent session.
         # TODO(Mihnea, 02/2026): Consider making this DuckDB specific,
         #  as this won't be a problem in Postgres.
-        if self.get_persistent_session().in_transaction():
-            logging.debug("The persistent session is in transaction, committing changes.")
-            self.get_persistent_session().commit()
+        self._commit_persistent_session()
 
         session = Session(self._engine, close_resets_only=False)
         try:
@@ -143,9 +154,7 @@ class DatabaseEngine:
 
             # Commit the persistent session if it has an active transaction.
             # This ensures the session sees the latest data changes made by short-lived sessions.
-            persistent_session = self.get_persistent_session()
-            if persistent_session.in_transaction():
-                persistent_session.commit()
+            self._commit_persistent_session()
         except Exception:
             session.rollback()
             raise
@@ -159,26 +168,50 @@ class DatabaseEngine:
 
     def get_persistent_session(self) -> Session:
         """Get the persistent database session."""
-        if self._persistent_session is None:
-            self._persistent_session = Session(
-                self._engine, close_resets_only=False, expire_on_commit=True
-            )
-        return self._persistent_session
+        with self._persistent_session_lock:
+            if self._persistent_session is None:
+                self._persistent_session = Session(
+                    self._engine, close_resets_only=False, expire_on_commit=True
+                )
+            return self._persistent_session
 
     def close(self) -> None:
         """Close the persistent session and dispose the engine."""
-        if self._persistent_session is not None:
-            try:
-                if self._persistent_session.in_transaction():
-                    logging.debug(
-                        "The persistent session is in transaction, committing before close."
-                    )
-                    self._persistent_session.commit()
-            finally:
-                self._persistent_session.close()
-                self._persistent_session = None
+        with self._persistent_session_lock:
+            if self._persistent_session is not None:
+                try:
+                    if self._persistent_session.in_transaction():
+                        logging.debug(
+                            "The persistent session is in transaction, committing before close."
+                        )
+                        self._persistent_session.commit()
+                finally:
+                    self._persistent_session.close()
+                    self._persistent_session = None
 
         self._engine.dispose()
+
+    def _commit_persistent_session(self) -> None:
+        """Commit the persistent session if it has an active transaction.
+
+        The persistent session is shared between the Python API and every thread that opens
+        a short-lived session, and a SQLAlchemy Session is not thread-safe. Without the
+        lock, two threads entering `session` at the same time both call `commit()` on the
+        same session and SQLAlchemy raises IllegalStateChangeError. The lock is
+        deliberately not held across the `yield` in `session`, so requests still run
+        concurrently.
+
+        The lock does not cover Python API code that uses the persistent session directly,
+        so a Python API call made while `start_gui_background` serves requests can still
+        race.
+        TODO(Iunir, 08/2026): Stop sharing one session between the Python API and the
+         threads serving requests, so that no locking is needed here.
+        """
+        with self._persistent_session_lock:
+            persistent_session = self.get_persistent_session()
+            if persistent_session.in_transaction():
+                logging.debug("The persistent session is in transaction, committing changes.")
+                persistent_session.commit()
 
 
 # Global database engine instance instantiated lazily.
@@ -308,6 +341,20 @@ def _initialize_postgres_schema(
         logging.info("Dropped all tables in PostgreSQL database.")
 
     db_migrations.run_migrations(engine=engine, engine_url=engine_url)
+
+
+def _create_duckdb_schema(engine: Engine, engine_url: str) -> None:
+    """Create the DuckDB schema, raising a clear error if the file is locked elsewhere."""
+    try:
+        SQLModel.metadata.create_all(engine)
+    except OperationalError as e:
+        if isinstance(e.orig, duckdb.IOException) and "Could not set lock" in str(e.orig):
+            raise RuntimeError(
+                f"DuckDB database at {engine_url!r} is locked by another process. "
+                "Close the other lightly_studio process, or set "
+                "LIGHTLY_STUDIO_DATABASE_URL to point at a different database."
+            ) from e
+        raise
 
 
 def _detect_backend_from_url(engine_url: str) -> DatabaseBackend:

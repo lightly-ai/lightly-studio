@@ -12,7 +12,7 @@ import { runGuardrails } from './run-guardrails';
 
 // CI entry: runs the guardrails in a PR workflow. Mirrors the local cli.ts but
 // swaps git for the read-only GitHub API; it only judges, and writes the verdict
-// to a file the bot later consumes (design §2.2). Never holds a write token, never acts.
+// to a file the bot later consumes. Never holds a write token, never acts.
 
 // cwd-relative, so it lands at fast_track/verdict.json (the workflow's upload path).
 const VERDICT_PATH = 'verdict.json';
@@ -67,8 +67,7 @@ async function main(env: NodeJS.ProcessEnv): Promise<void> {
         baseRef: routing.baseRef
     });
 
-    // hasPrContext: true — unlike the local CLI, pr-only guardrails run here.
-    const selected = selectGuardrails(guardrails, { hasPrContext: true });
+    const selected = selectGuardrails(guardrails);
     const run = await runGuardrails(guardrailContext, selected);
     const verdict = buildVerdict(run, routing);
 
@@ -77,9 +76,22 @@ async function main(env: NodeJS.ProcessEnv): Promise<void> {
 
 async function writeVerdict(verdict: Verdict): Promise<void> {
     await writeFile(VERDICT_PATH, `${JSON.stringify(verdict, null, 2)}\n`);
+    printVerdict(verdict);
+}
+
+/** Echo the verdict to the CI log so a run can be inspected without downloading the artifact. */
+function printVerdict(verdict: Verdict): void {
     console.log(
         `Verdict: ${verdict.verdict} (${verdict.guardrails.length} guardrail(s)) → ${VERDICT_PATH}`
     );
+    for (const guardrail of verdict.guardrails) {
+        // Indent multi-line summaries so each guardrail reads as one block.
+        const summary = guardrail.summary.replace(/\n/g, '\n    ');
+        console.log(`  [${guardrail.status}] ${guardrail.name}: ${summary}`);
+    }
+    if (verdict.reason !== undefined) {
+        console.log(`\nReason: ${verdict.reason}`);
+    }
 }
 
 // Only a crash exits non-zero. A `fail` verdict returns cleanly, so it publishes

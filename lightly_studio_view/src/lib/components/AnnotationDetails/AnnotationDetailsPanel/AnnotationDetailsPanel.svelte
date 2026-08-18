@@ -1,11 +1,10 @@
 <script lang="ts">
-    import { Card, CardContent } from '$lib/components';
+    import { Button, Card, CardContent } from '$lib/components';
     import AnnotationMetadata from './AnnotationMetadata/AnnotationMetadata.svelte';
     import SegmentTags from '../../SegmentTags/SegmentTags.svelte';
     import { type AnnotationView } from '$lib/api/lightly_studio_local';
     import type { Snippet } from 'svelte';
     import { page } from '$app/state';
-    import { Button } from '$lib/components/ui';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import * as Popover from '$lib/components/ui/popover/index.js';
     import { toast } from 'svelte-sonner';
@@ -26,13 +25,11 @@
 
     const { isEditingMode } = page.data.globalStorage;
 
-    const { deleteAnnotation } = useDeleteAnnotation({
-        collectionId
-    });
+    const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
 
     const handleDeleteAnnotation = async () => {
         try {
-            await deleteAnnotation(annotation.sample_id);
+            await deleteAnnotation(annotation.sample_id, annotation.annotation_type);
 
             toast.success('Annotation deleted successfully');
 
@@ -77,8 +74,10 @@
                     <Popover.Trigger>
                         <Button
                             variant="destructive"
-                            class="w-full"
-                            data-testid="delete-annotation-trigger"
+                            buttonProps={{
+                                class: 'w-full',
+                                'data-testid': 'delete-annotation-trigger'
+                            }}
                         >
                             Delete annotation
                         </Button>
@@ -88,20 +87,24 @@
                         <div class="mt-2 flex justify-end gap-2">
                             <Button
                                 variant="destructive"
-                                size="sm"
-                                data-testid="confirm-delete-annotation"
-                                onclick={(e: MouseEvent) => {
-                                    e.stopPropagation();
-                                    handleDeleteAnnotation();
-                                    showDeleteConfirmation = false;
+                                buttonProps={{
+                                    size: 'sm',
+                                    'data-testid': 'confirm-delete-annotation',
+                                    onclick: (e: MouseEvent) => {
+                                        e.stopPropagation();
+                                        handleDeleteAnnotation();
+                                        showDeleteConfirmation = false;
+                                    }
                                 }}>Delete</Button
                             >
                             <Button
                                 variant="outline"
-                                size="sm"
-                                onclick={(e: MouseEvent) => {
-                                    e.stopPropagation();
-                                    showDeleteConfirmation = false;
+                                buttonProps={{
+                                    size: 'sm',
+                                    onclick: (e: MouseEvent) => {
+                                        e.stopPropagation();
+                                        showDeleteConfirmation = false;
+                                    }
                                 }}>Cancel</Button
                             >
                         </div>

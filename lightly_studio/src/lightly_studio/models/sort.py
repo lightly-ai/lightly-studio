@@ -30,15 +30,11 @@ class SortFieldExpr(BaseModel):
         source: The source of the field (e.g., "image" or "metadata").
         field_name: The field to sort by.
         direction: The sort direction, either ascending or descending.
-        is_numeric: Whether the field holds numeric values.  When ``True``,
-            the extracted value is cast to float for correct numeric ordering.
-            Only relevant when ``source`` is ``"metadata"``.
     """
 
     source: Literal[SortFieldSource.image, SortFieldSource.metadata]
     field_name: str
     direction: SortDirection
-    is_numeric: bool
 
 
 class EvaluationMetricSortExpr(BaseModel):
@@ -55,7 +51,6 @@ class EvaluationMetricSortExpr(BaseModel):
     evaluation_run_name: str
     metric_name: str
     direction: SortDirection
-    is_numeric: bool = False
 
 
 SortExpr = Annotated[
@@ -76,7 +71,6 @@ def sort_field_expr_to_order_by(expr: SortFieldExpr) -> OrderByExpression:
     return sort_to_order_by(
         key=(expr.source, expr.field_name),
         direction=expr.direction,
-        cast_to_float=expr.is_numeric,
     )
 
 
