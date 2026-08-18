@@ -136,9 +136,6 @@ vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilte
         allSourcesHidden: writable(false)
     }))
 }));
-vi.mock('$lib/hooks/useSeedAnnotationSourceFilter/useSeedAnnotationSourceFilter.svelte', () => ({
-    useSeedAnnotationSourceFilter: vi.fn()
-}));
 vi.mock('$lib/hooks', () => ({
     useSelectionSummary: vi.fn(() => ({
         selectedCount: writable(0),
@@ -154,7 +151,8 @@ vi.mock('$lib/hooks', () => ({
         refetch: vi.fn()
     })),
     usePostHog: vi.fn(() => ({ trackEvent: vi.fn() })),
-    useTrackSampleInspected: vi.fn()
+    useTrackSampleInspected: vi.fn(),
+    useSeedAnnotationSourceFilter: vi.fn()
 }));
 vi.mock('$lib/hooks/useSelectAll/useSelectAll', () => ({
     useSelectAll: vi.fn(() => ({ handleSelectAll: vi.fn() }))

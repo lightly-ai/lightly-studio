@@ -62,7 +62,6 @@
     } from '$lib/api/lightly_studio_local/types.gen';
     import type { AnnotationsFilter } from '$lib/api/lightly_studio_local/types.gen';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
-    import { useSeedAnnotationSourceFilter } from '$lib/hooks/useSeedAnnotationSourceFilter/useSeedAnnotationSourceFilter.svelte';
     import type { DistributionSource } from '$lib/components/DatasetDistributionPanel';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
     import {
@@ -77,7 +76,8 @@
         useImageAnnotationCountsQueryKey,
         useNumericMetadataDistribution,
         usePostHog,
-        useCategoricalMetadataDistribution
+        useCategoricalMetadataDistribution,
+        useSeedAnnotationSourceFilter
     } from '$lib/hooks';
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
     import { isInputElement } from '$lib/utils';
