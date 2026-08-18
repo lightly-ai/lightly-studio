@@ -27,7 +27,7 @@ from lightly_studio.resolvers import (
 from lightly_studio.resolvers.image_filter import (
     ImageFilter,
 )
-from lightly_studio.resolvers.image_resolver.count_image_annotations_by_collection import (
+from lightly_studio.resolvers.image_resolver.annotation_count_types import (
     AnnotationCountMode,
     SampleTagAnnotationCounts,
 )

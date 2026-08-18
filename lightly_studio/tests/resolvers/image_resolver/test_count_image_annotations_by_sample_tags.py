@@ -9,7 +9,7 @@ from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.resolvers import image_resolver, tag_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
-from lightly_studio.resolvers.image_resolver.count_image_annotations_by_collection import (
+from lightly_studio.resolvers.image_resolver.annotation_count_types import (
     AnnotationCountMode,
 )
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter

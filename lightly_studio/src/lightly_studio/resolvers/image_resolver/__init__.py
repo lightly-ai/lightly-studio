@@ -2,6 +2,8 @@
 
 from lightly_studio.resolvers.image_resolver.count_image_annotations_by_collection import (
     count_image_annotations_by_collection,
+)
+from lightly_studio.resolvers.image_resolver.count_image_annotations_by_sample_tags import (
     count_image_annotations_by_sample_tags,
 )
 from lightly_studio.resolvers.image_resolver.create_many import create_many
