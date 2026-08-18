@@ -16,7 +16,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
-from lightly_studio.errors import NotFoundError, QueryExprError
+from lightly_studio.errors import DuplicateCollectionNameError, NotFoundError, QueryExprError
 
 # Set up logger for error handling
 logger = logging.getLogger("lightly_studio.api.exceptions")
@@ -31,7 +31,12 @@ def _log_error_details(
     logger.error(f"Server Error {status_code}: {exc}")
 
 
-def register_exception_handlers(app: FastAPI) -> None:
+def _error_message(exc: Exception, default: str) -> str:
+    """Return the exception's message, falling back to `default` if it has none."""
+    return str(exc) or default
+
+
+def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
     """Register exception handlers for the FastAPI app."""
 
     @app.exception_handler(IntegrityError)
@@ -120,7 +125,21 @@ def register_exception_handlers(app: FastAPI) -> None:
         """Handle not-found errors."""
         return JSONResponse(
             status_code=HTTP_STATUS_NOT_FOUND,
-            content={"error": str(_exc) or "Resource not found."},
+            content={"error": _error_message(_exc, "Resource not found.")},
+        )
+
+    @app.exception_handler(DuplicateCollectionNameError)
+    async def _duplicate_collection_name_error_handler(
+        _request: Request, _exc: DuplicateCollectionNameError
+    ) -> JSONResponse:
+        """Handle duplicate collection name data integrity errors."""
+        _log_error_details(
+            exc=_exc,
+            status_code=HTTP_STATUS_CONFLICT,
+        )
+        return JSONResponse(
+            status_code=HTTP_STATUS_CONFLICT,
+            content={"error": _error_message(_exc, "Duplicate collection name found.")},
         )
 
     @app.exception_handler(QueryExprError)
@@ -132,5 +151,5 @@ def register_exception_handlers(app: FastAPI) -> None:
         )
         return JSONResponse(
             status_code=HTTP_STATUS_BAD_REQUEST,
-            content={"error": str(_exc) or "Invalid query expression."},
+            content={"error": _error_message(_exc, "Invalid query expression.")},
         )

@@ -14,6 +14,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_CONFLICT,
     HTTP_STATUS_INTERNAL_SERVER_ERROR,
 )
+from lightly_studio.errors import DuplicateCollectionNameError
 
 
 @pytest.fixture
@@ -107,6 +108,24 @@ def test_register_exception_handlers__validation_error_handler(
     response = client.get(path)
 
     assert response.status_code == HTTP_STATUS_BAD_REQUEST
+    assert response.json() == {"error": msg}
+
+
+def test_register_exception_handlers__duplicate_collection_name_error_handler(
+    app_with_exception_handlers: FastAPI, client: TestClient
+) -> None:
+    """Test the duplicate collection name error handler."""
+    msg = "Found multiple collections named 'ds1'."
+    path = "/test-duplicate-collection-name-error"
+
+    # Create a test endpoint that raises DuplicateCollectionNameError
+    @app_with_exception_handlers.get(path)
+    async def test_duplicate_collection_name_error() -> None:
+        raise DuplicateCollectionNameError(msg)
+
+    response = client.get(path)
+
+    assert response.status_code == HTTP_STATUS_CONFLICT
     assert response.json() == {"error": msg}
 
 

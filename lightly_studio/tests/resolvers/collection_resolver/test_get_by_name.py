@@ -3,8 +3,11 @@ from __future__ import annotations
 import uuid
 
 import pytest
+import sqlalchemy
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
+from lightly_studio.errors import DuplicateCollectionNameError
 from lightly_studio.resolvers import collection_resolver
 from tests.helpers_resolvers import (
     create_collection,
@@ -85,3 +88,12 @@ def test_get_by_name__parent_not_found(db_session: Session) -> None:
         collection_resolver.get_by_name(
             session=db_session, name="child", parent_collection_id=uuid.uuid4()
         )
+
+
+def test_get_by_name__root_duplicate_raises(db_session: Session, mocker: MockerFixture) -> None:
+    # Simulates duplicate root collections slipping past the database constraint
+    # (e.g. pre-existing data on a database created before the partial unique index).
+    mocker.patch.object(db_session, "exec", side_effect=sqlalchemy.exc.MultipleResultsFound())
+
+    with pytest.raises(DuplicateCollectionNameError, match="ds1"):
+        collection_resolver.get_by_name(session=db_session, name="ds1", parent_collection_id=None)
