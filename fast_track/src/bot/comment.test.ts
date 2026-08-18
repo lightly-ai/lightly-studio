@@ -87,8 +87,16 @@ describe('renderComment', () => {
             }),
             headSha: HEAD_SHA
         });
-        expect(body).toContain('| lint\\|check | ❌ | one<br>two\\|three |');
+        expect(body).toContain('| lint&#124;check | ❌ | one<br>two&#124;three |');
         expect(body).toContain('<sub>Reflects `abc1234`.</sub>');
+    });
+
+    it('escapes a backslash before a pipe without splitting the cell', () => {
+        const body = renderComment({
+            verdict: verdict({ guardrails: [{ name: 'g', status: 'fail', summary: 'a\\|b' }] }),
+            headSha: HEAD_SHA
+        });
+        expect(body).toContain('| g | ❌ | a\\&#124;b |');
     });
 
     it('normalizes all line-ending forms to line breaks', () => {
