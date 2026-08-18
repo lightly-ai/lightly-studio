@@ -7,6 +7,7 @@ import type { Annotation } from '$lib/types';
 
 const mocks = vi.hoisted(() => ({
     selectedCollectionIds: null as unknown as Writable<string[]>,
+    allSourcesHidden: null as unknown as Writable<boolean>,
     enforceColoringByClassStore: null as unknown as Writable<boolean>,
     hiddenClassNamesStore: null as unknown as Writable<string[]>,
     toggleClassVisibility: vi.fn()
@@ -15,10 +16,12 @@ const mocks = vi.hoisted(() => ({
 vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter', async () => {
     const { derived, writable } = await import('svelte/store');
     mocks.selectedCollectionIds = writable<string[]>([]);
+    mocks.allSourcesHidden = writable<boolean>(false);
     const multipleSourcesVisible = derived(mocks.selectedCollectionIds, ($ids) => $ids.length > 1);
     return {
         useAnnotationCollectionsFilter: () => ({
             selectedCollectionIds: mocks.selectedCollectionIds,
+            allSourcesHidden: mocks.allSourcesHidden,
             multipleSourcesVisible
         })
     };
@@ -82,6 +85,7 @@ describe('LabelsMenu', () => {
 
     beforeEach(() => {
         mocks.selectedCollectionIds.set([]);
+        mocks.allSourcesHidden.set(false);
         mocks.enforceColoringByClassStore.set(false);
         mocks.hiddenClassNamesStore.set([]);
         mocks.toggleClassVisibility.mockReset();
@@ -112,6 +116,21 @@ describe('LabelsMenu', () => {
         expect(screen.getAllByTestId('labels-menu-item')).toHaveLength(2);
         expect(screen.getByText('car')).toBeInTheDocument();
         expect(screen.getByText('person')).toBeInTheDocument();
+    });
+
+    it('explains the empty list when every annotation source is unchecked', () => {
+        mocks.allSourcesHidden.set(true);
+        render(LabelsMenu, { ...defaultProps, annotationFilterRows: writable<Annotation[]>([]) });
+
+        expect(screen.getByTestId('labels-menu-no-sources')).toBeInTheDocument();
+        expect(screen.queryByText(/No annotations yet/)).not.toBeInTheDocument();
+    });
+
+    it('points at labeling when the collection genuinely has no annotations', () => {
+        render(LabelsMenu, { ...defaultProps, annotationFilterRows: writable<Annotation[]>([]) });
+
+        expect(screen.getByText(/No annotations yet/)).toBeInTheDocument();
+        expect(screen.queryByTestId('labels-menu-no-sources')).not.toBeInTheDocument();
     });
 
     it('shows visibility toggle buttons when showVisibilityToggle is true', () => {
