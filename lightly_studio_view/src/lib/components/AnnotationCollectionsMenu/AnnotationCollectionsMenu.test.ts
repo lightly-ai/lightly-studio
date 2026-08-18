@@ -25,15 +25,17 @@ vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
 }));
 
 vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter', async () => {
-    const { writable } = await import('svelte/store');
+    const { derived, writable } = await import('svelte/store');
     // A real writable backs the store so the controlled checkboxes reflect intermediate
     // state across consecutive toggles.
     mocks.selectedCollectionIds = writable<string[]>([]);
     mocks.setSelectedCollectionIds = vi.fn((ids: string[]) => mocks.selectedCollectionIds.set(ids));
+    const multipleSourcesVisible = derived(mocks.selectedCollectionIds, ($ids) => $ids.length > 1);
     return {
         useAnnotationCollectionsFilter: vi.fn(() => ({
             selectedCollectionIds: mocks.selectedCollectionIds,
             setSelectedCollectionIds: mocks.setSelectedCollectionIds,
+            multipleSourcesVisible,
             seedSelectionIfNeeded: mocks.seedSelectionIfNeeded
         }))
     };

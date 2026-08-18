@@ -80,8 +80,8 @@
     // Label colors only match the boxes on the image while they are not colored by
     // source. The colorBySource prop drives this on the details page; the global
     // selection rule is the fallback, mirroring the behavior of LabelsMenu.
-    const { selectedCollectionIds } = useAnnotationCollectionsFilter();
-    const showLabelColorLegend = $derived(!(colorBySource ?? $selectedCollectionIds.length >= 2));
+    const { multipleSourcesVisible } = useAnnotationCollectionsFilter();
+    const showLabelColorLegend = $derived(!(colorBySource ?? $multipleSourcesVisible));
 
     const annotationId = $derived(annotationProp.sample_id);
 
