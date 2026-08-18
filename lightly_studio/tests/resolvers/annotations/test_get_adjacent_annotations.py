@@ -1,6 +1,13 @@
+from collections.abc import Sequence
+from datetime import datetime, timezone
+from unittest import mock
+from uuid import UUID
+
 import pytest
 from sqlmodel import Session
 
+from lightly_studio.models.annotation import annotation_base as annotation_base_module
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import annotation_resolver, tag_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
@@ -451,9 +458,11 @@ def test_get_adjacent_annotations__orders_video_frame_annotations_by_video_path(
 
 def test_get_adjacent_annotations__orders_annotations_sharing_a_parent_image(
     db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Annotations on the same image share the leading sort key, so the order is only total
-    # if the created-at and sample-id tiebreakers are applied.
+    # Annotations on the same image share the leading sort key, so the order is only total if
+    # the created-at and sample-id tiebreakers are applied. Two of them are pinned to the same
+    # created_at below, so their relative order can only come from the sample_id tiebreaker.
     collection = helpers_resolvers.create_collection(
         session=db_session, sample_type=SampleType.IMAGE
     )
@@ -467,8 +476,9 @@ def test_get_adjacent_annotations__orders_annotations_sharing_a_parent_image(
         collection_id=collection.collection_id,
         file_path_abs="/images/a.png",
     )
-    annotations = helpers_resolvers.create_annotations(
+    annotations = _create_annotations_with_pinned_created_at(
         session=db_session,
+        monkeypatch=monkeypatch,
         collection_id=collection.collection_id,
         annotations=[
             helpers_resolvers.AnnotationDetails(
@@ -478,21 +488,75 @@ def test_get_adjacent_annotations__orders_annotations_sharing_a_parent_image(
             for _ in range(3)
         ],
     )
+    expected_order = sorted(
+        annotations, key=lambda annotation: (annotation.created_at, annotation.sample_id)
+    )
     filters = AnnotationsFilter(collection_ids=[annotations[0].sample.collection_id])
 
-    results = {}
-    for annotation in annotations:
-        result = annotation_resolver.get_adjacent_annotations(
-            session=db_session, sample_id=annotation.sample_id, filters=filters
-        )
-        assert result is not None
-        results[annotation.sample_id] = result
+    _assert_matches_expected_order(
+        session=db_session, filters=filters, expected_order=expected_order
+    )
 
-    # Every annotation gets a distinct position, and the neighbour links agree with them.
-    by_position = {result.current_sample_position: key for key, result in results.items()}
-    assert sorted(by_position) == [1, 2, 3]
-    for position, sample_id in by_position.items():
-        result = results[sample_id]
-        assert result.total_count == len(annotations)
-        assert result.previous_sample_id == by_position.get(position - 1)
-        assert result.next_sample_id == by_position.get(position + 1)
+
+def _create_annotations_with_pinned_created_at(
+    session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+    collection_id: UUID,
+    annotations: list[helpers_resolvers.AnnotationDetails],
+) -> list[AnnotationBaseTable]:
+    """Create 3 annotations, pinning created_at so the first two tie and the third is later.
+
+    `AnnotationBaseTable.created_at` otherwise defaults to `datetime.now()` at construction
+    time, so annotations created moments apart in the same batch almost never truly tie —
+    pinning the clock guarantees a tie, forcing the sample_id tiebreaker to decide between
+    them. Updating created_at after creation isn't an option: DuckDB rejects updating any
+    column of an annotation row once it has FK-referencing detail rows (e.g. its object
+    detection box).
+
+    Args:
+        session: Database session.
+        monkeypatch: Fixture used to pin the annotation module's clock.
+        collection_id: ID of the collection.
+        annotations: Exactly 3 annotation details to create.
+
+    Returns:
+        The created annotations, in the same order as `annotations`.
+    """
+    assert len(annotations) == 3, "This helper pins created_at for exactly 3 annotations."
+    tied_created_at = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    later_created_at = datetime(2024, 1, 2, tzinfo=timezone.utc)
+    times = iter([tied_created_at, tied_created_at, later_created_at])
+    monkeypatch.setattr(annotation_base_module, "datetime", mock.Mock(now=lambda _tz: next(times)))
+
+    return helpers_resolvers.create_annotations(
+        session=session, collection_id=collection_id, annotations=annotations
+    )
+
+
+def _assert_matches_expected_order(
+    session: Session,
+    filters: AnnotationsFilter,
+    expected_order: Sequence[AnnotationBaseTable],
+) -> None:
+    """Assert get_adjacent_annotations agrees with expected_order at every position.
+
+    Args:
+        session: Database session.
+        filters: Filters to query with.
+        expected_order: Annotations in the exact order `get_adjacent_annotations` should place
+            them, e.g. sorted by `(created_at, sample_id)`.
+    """
+    for position, annotation in enumerate(expected_order, start=1):
+        result = annotation_resolver.get_adjacent_annotations(
+            session=session, sample_id=annotation.sample_id, filters=filters
+        )
+        previous_annotation = expected_order[position - 2] if position > 1 else None
+        next_annotation = expected_order[position] if position < len(expected_order) else None
+
+        assert result is not None
+        assert result.current_sample_position == position
+        assert result.total_count == len(expected_order)
+        assert result.previous_sample_id == (
+            previous_annotation.sample_id if previous_annotation else None
+        )
+        assert result.next_sample_id == (next_annotation.sample_id if next_annotation else None)
