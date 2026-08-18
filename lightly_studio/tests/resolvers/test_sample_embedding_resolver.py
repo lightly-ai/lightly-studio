@@ -288,3 +288,124 @@ def test_get_embedding_count(db_session: Session) -> None:
         embedding_model_id=embedding_model_2_id,
     )
     assert count == 0
+
+
+def test_get_fingerprint_by_collection_id__stable_across_calls(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    embedding_model_id = create_embedding_model(
+        session=db_session, collection_id=collection_id
+    ).embedding_model_id
+    images = create_images(
+        db_session=db_session,
+        collection_id=collection_id,
+        images=[ImageStub("sample1.png"), ImageStub("sample2.png")],
+    )
+    for image in images:
+        create_sample_embedding(
+            session=db_session,
+            sample_id=image.sample_id,
+            embedding=[1.0, 2.0, 3.0],
+            embedding_model_id=embedding_model_id,
+        )
+
+    first = sample_embedding_resolver.get_fingerprint_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+    )
+    second = sample_embedding_resolver.get_fingerprint_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+    )
+
+    assert first == second
+    assert first[0] == 2
+    assert first[1] != ""
+
+
+def test_get_fingerprint_by_collection_id__changes_with_sample_set(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    embedding_model_id = create_embedding_model(
+        session=db_session, collection_id=collection_id
+    ).embedding_model_id
+    first_image = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/first.png"
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=first_image.sample_id,
+        embedding=[1.0, 2.0, 3.0],
+        embedding_model_id=embedding_model_id,
+    )
+    count_before, fingerprint_before = sample_embedding_resolver.get_fingerprint_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+    )
+
+    second_image = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/second.png"
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=second_image.sample_id,
+        embedding=[4.0, 5.0, 6.0],
+        embedding_model_id=embedding_model_id,
+    )
+    count_after, fingerprint_after = sample_embedding_resolver.get_fingerprint_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+    )
+
+    assert (count_before, count_after) == (1, 2)
+    assert fingerprint_before != fingerprint_after
+
+
+def test_get_fingerprint_by_collection_id__distinguishes_collections(db_session: Session) -> None:
+    """Collections with identical embedding values still fingerprint differently.
+
+    The digest is over sample ids, so two collections holding the same vectors are only
+    told apart by the ids themselves.
+    """
+    fingerprints = []
+    for name in ("col_a", "col_b"):
+        collection_id = create_collection(session=db_session, collection_name=name).collection_id
+        embedding_model_id = create_embedding_model(
+            session=db_session, collection_id=collection_id
+        ).embedding_model_id
+        image = create_image(
+            session=db_session, collection_id=collection_id, file_path_abs=f"/{name}.png"
+        )
+        create_sample_embedding(
+            session=db_session,
+            sample_id=image.sample_id,
+            embedding=[1.0, 2.0, 3.0],
+            embedding_model_id=embedding_model_id,
+        )
+        fingerprints.append(
+            sample_embedding_resolver.get_fingerprint_by_collection_id(
+                session=db_session,
+                collection_id=collection_id,
+                embedding_model_id=embedding_model_id,
+            )
+        )
+
+    assert fingerprints[0][1] != fingerprints[1][1]
+
+
+def test_get_fingerprint_by_collection_id__empty_collection(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    embedding_model_id = create_embedding_model(
+        session=db_session, collection_id=collection_id
+    ).embedding_model_id
+
+    count, fingerprint = sample_embedding_resolver.get_fingerprint_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+    )
+
+    assert count == 0
+    assert fingerprint == ""
