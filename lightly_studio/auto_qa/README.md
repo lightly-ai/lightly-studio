@@ -52,3 +52,7 @@ are reported as `not_run` when no historical classification metadata exists.
 
 Python 3.9 still runs the pipeline, but current Google libraries print end-of-life warnings.
 Use Python 3.10 or newer when the project environment is next upgraded.
+
+Downloads use four concurrent workers by default. Override the bounded concurrency with
+`--download-workers`; phase timings in the command output report download, screening, result
+building, and result upload separately.

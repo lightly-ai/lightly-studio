@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, Any
 
 from auto_qa import schema, screen
 from auto_qa.storage import LocalDelivery, RemoteDelivery
-from lightly_studio.resolvers import metadata_resolver
 
 if TYPE_CHECKING:
     from google.cloud import storage  # type: ignore[import-untyped]
@@ -43,13 +42,11 @@ def unpublished(
 
 def upload(
     client: storage.Client,
-    dataset: VideoDataset,
-    deliveries: list[LocalDelivery],
-    prefix: str = DEFAULT_PREFIX,
+    records: list[tuple[LocalDelivery, str, dict[str, Any]]],
 ) -> list[str]:
     """Upload one result record for each delivery."""
     uploaded = []
-    for delivery, name, record in build(dataset=dataset, deliveries=deliveries, prefix=prefix):
+    for delivery, name, record in records:
         client.bucket(delivery.bucket).blob(name).upload_from_string(
             json.dumps(_json_safe(record), indent=2, allow_nan=False),
             content_type="application/json",
@@ -61,16 +58,17 @@ def upload(
 def build(
     dataset: VideoDataset,
     deliveries: list[LocalDelivery],
+    screened_batch: screen.ScreenBatch,
     prefix: str = DEFAULT_PREFIX,
 ) -> list[tuple[LocalDelivery, str, dict[str, Any]]]:
     """Build result records without uploading them."""
-    videos = {Path(video.file_path_abs).resolve(): video for video in dataset}
+    videos_by_path = {Path(video.file_path_abs).resolve(): video for video in screened_batch.videos}
     records = []
     for delivery in deliveries:
-        video = videos.get(delivery.video_path.resolve())
+        video = videos_by_path.get(delivery.video_path.resolve())
         if video is None:
             raise RuntimeError(f"Cannot publish unindexed video: '{delivery.video_path}'.")
-        metadata = _metadata(dataset=dataset, video=video)
+        metadata = screened_batch.metadata_by_sample_id.get(video.sample_id, {})
         if metadata.get(screen.COMPLETE_KEY) is not True:
             raise RuntimeError(f"Cannot publish incomplete QA result for '{video.file_name}'.")
         dataset.session.expire(video.sample_table, ["captions"])
@@ -103,7 +101,7 @@ def object_name(delivery: LocalDelivery | RemoteDelivery, prefix: str) -> str:
 def _record(
     delivery: LocalDelivery,
     video: VideoSample,
-    metadata: dict[str, Any],
+    metadata: Mapping[str, Any],
     captions: list[CaptionTable],
     url: str,
 ) -> dict[str, Any]:
@@ -157,11 +155,6 @@ def _normalize_prefix(prefix: str) -> str:
     if not normalized:
         raise ValueError("results prefix must not be empty.")
     return normalized
-
-
-def _metadata(dataset: VideoDataset, video: VideoSample) -> dict[str, Any]:
-    row = metadata_resolver.get_by_sample_id(session=dataset.session, sample_id=video.sample_id)
-    return dict(row.data) if row is not None else {}
 
 
 def _json_safe(value: Any) -> Any:

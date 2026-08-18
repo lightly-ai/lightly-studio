@@ -13,5 +13,6 @@ cd "$project_dir"
 "$project_dir/.venv/bin/python" -m auto_qa \
     --apply \
     --cleanup-local-files \
+    --download-workers 4 \
     --db-file "$state_dir/qa-screen.db" \
     --destination "$state_dir/work"

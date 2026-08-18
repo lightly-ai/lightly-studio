@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import tempfile
-from collections.abc import Sequence
+import time
+from collections.abc import Iterator, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, TypeVar
 
@@ -16,6 +18,7 @@ if TYPE_CHECKING:
     from google.cloud import storage as gcs  # type: ignore[import-untyped]
 
 _T = TypeVar("_T")
+DEFAULT_DOWNLOAD_WORKERS = 4
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -69,33 +72,46 @@ def _process_batch(
     remote: list[storage.RemoteDelivery],
     number: int,
 ) -> bool:
-    print(f"Processing batch {number} ({len(remote)} delivery(ies))...")
+    print(f"Processing batch {number} ({len(remote)} delivery(ies))...", flush=True)
     try:
-        local = storage.download(client=client, deliveries=remote, destination=args.destination)
-        if args.transcribe_missing:
-            local = transcribe.missing_transcripts(
-                deliveries=local,
-                python=args.whisper_python,
-                model=args.whisper_model,
-                device=args.whisper_device,
-                compute_type=args.whisper_compute_type,
-            )
-        screened = screen.deliveries(dataset=dataset, local_deliveries=local, force=args.force)
-        uploaded = (
-            results.upload(
+        with _timed_phase("Download"):
+            local = storage.download(
                 client=client,
-                dataset=dataset,
-                deliveries=local,
-                prefix=args.results_prefix,
+                deliveries=remote,
+                destination=args.destination,
+                workers=args.download_workers,
             )
-            if args.apply
-            else []
-        )
+        if args.transcribe_missing:
+            with _timed_phase("Transcription"):
+                local = transcribe.missing_transcripts(
+                    deliveries=local,
+                    python=args.whisper_python,
+                    model=args.whisper_model,
+                    device=args.whisper_device,
+                    compute_type=args.whisper_compute_type,
+                )
+        with _timed_phase("Screening"):
+            screened_batch = screen.deliveries(
+                dataset=dataset,
+                local_deliveries=local,
+                force=args.force,
+            )
+        uploaded = []
+        if args.apply:
+            with _timed_phase("Result building"):
+                records = results.build(
+                    dataset=dataset,
+                    deliveries=local,
+                    screened_batch=screened_batch,
+                    prefix=args.results_prefix,
+                )
+            with _timed_phase("Result upload"):
+                uploaded = results.upload(client=client, records=records)
     except Exception as error:
         print(f"Batch {number} failed: {error}")
         return False
 
-    for result in screened:
+    for result in screened_batch.results:
         print(f"  [{result.status}] {result.file_name}: {result.issues or 'no issues'}")
     for url in uploaded:
         print(f"  Uploaded {url}")
@@ -118,6 +134,12 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--dataset-name", default="egocentric-qa")
     parser.add_argument("--results-prefix", default=results.DEFAULT_PREFIX)
     parser.add_argument("--batch-size", type=_positive_int, default=16)
+    parser.add_argument(
+        "--download-workers",
+        type=_positive_int,
+        default=DEFAULT_DOWNLOAD_WORKERS,
+        help="Maximum number of deliveries downloaded concurrently.",
+    )
     parser.add_argument("--max-videos", type=int)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--apply", action="store_true", help="Upload result JSON files.")
@@ -153,6 +175,20 @@ def _positive_int(value: str) -> int:
     if parsed < 1:
         raise argparse.ArgumentTypeError("must be at least 1")
     return parsed
+
+
+@contextlib.contextmanager
+def _timed_phase(name: str) -> Iterator[None]:
+    print(f"  {name} started.", flush=True)
+    started = time.perf_counter()
+    try:
+        yield
+    except Exception:
+        elapsed = time.perf_counter() - started
+        print(f"  {name} failed after {elapsed:.1f}s.", flush=True)
+        raise
+    elapsed = time.perf_counter() - started
+    print(f"  {name} finished in {elapsed:.1f}s.", flush=True)
 
 
 def _print_manifest(deliveries: list[storage.RemoteDelivery]) -> None:

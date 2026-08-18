@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import concurrent.futures
 import logging
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
@@ -80,12 +81,26 @@ def download(
     client: storage.Client,
     deliveries: list[RemoteDelivery],
     destination: Path,
+    workers: int,
 ) -> list[LocalDelivery]:
-    """Download deliveries into a local workspace."""
-    return [
-        _download_one(client=client, delivery=delivery, destination=destination)
-        for delivery in deliveries
-    ]
+    """Download deliveries concurrently into a local workspace."""
+    if workers < 1:
+        raise ValueError("workers must be at least 1")
+    if not deliveries:
+        return []
+
+    max_workers = min(workers, len(deliveries))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [
+            executor.submit(
+                _download_one,
+                client=client,
+                delivery=delivery,
+                destination=destination,
+            )
+            for delivery in deliveries
+        ]
+        return [future.result() for future in futures]
 
 
 def cleanup(deliveries: list[LocalDelivery], destination: Path) -> int:

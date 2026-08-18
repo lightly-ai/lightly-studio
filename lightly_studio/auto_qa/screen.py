@@ -8,14 +8,19 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
+from sqlmodel import col, select
+
 from auto_qa.storage import LocalDelivery
+from lightly_studio.core.dataset_query import OR, VideoSampleField
 from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.dataset import egocentric_qa, video_quality, whisper_transcript
 from lightly_studio.models.caption import CaptionCreate
+from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.resolvers import caption_resolver, metadata_resolver
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
+from lightly_studio.utils import batching
 
 COMPLETE_KEY = "qa_pipeline_complete"
 _REQUIRED_CHECKS = {
@@ -52,11 +57,26 @@ class ScreenResult:
     issues: str
 
 
+@dataclass(frozen=True)
+class ScreenBatch:
+    """Screening output and persisted state for one delivery batch.
+
+    Attributes:
+        results: Concise results for command-line output.
+        videos: Persisted videos in delivery order.
+        metadata_by_sample_id: Final metadata for the persisted videos.
+    """
+
+    results: list[ScreenResult]
+    videos: list[VideoSample]
+    metadata_by_sample_id: dict[UUID, dict[str, Any]]
+
+
 def deliveries(
     dataset: VideoDataset,
     local_deliveries: list[LocalDelivery],
     force: bool = False,
-) -> list[ScreenResult]:
+) -> ScreenBatch:
     """Ingest and screen local deliveries."""
     for delivery in local_deliveries:
         dataset.add_videos_from_path(
@@ -68,21 +88,36 @@ def deliveries(
 
     videos = _videos_by_delivery(dataset=dataset, deliveries=local_deliveries)
     _write_provenance(dataset=dataset, deliveries=local_deliveries, videos=videos)
-    pending = [video for video in videos if force or not _is_complete(video)]
+    metadata_by_sample_id = _metadata_by_sample_id(dataset=dataset, videos=videos)
+    pending = [
+        video
+        for video in videos
+        if force or metadata_by_sample_id[video.sample_id].get(COMPLETE_KEY) is not True
+    ]
     if pending:
         _run_checks(
             dataset=dataset,
             videos=pending,
             deliveries=local_deliveries,
         )
-    return [_read_result(video) for video in videos]
+        metadata_by_sample_id = _metadata_by_sample_id(dataset=dataset, videos=videos)
+    return ScreenBatch(
+        results=[
+            _read_result(video=video, metadata=metadata_by_sample_id[video.sample_id])
+            for video in videos
+        ],
+        videos=videos,
+        metadata_by_sample_id=metadata_by_sample_id,
+    )
 
 
 def write_dataset_summary(dataset: VideoDataset) -> None:
     """Print aggregate verdict counts."""
     statuses = {"pass": 0, "review": 0, "fail": 0}
-    for video in dataset:
-        status = _metadata(video).get("automated_qa_status")
+    videos = list(dataset)
+    metadata_by_sample_id = _metadata_by_sample_id(dataset=dataset, videos=videos)
+    for video in videos:
+        status = metadata_by_sample_id[video.sample_id].get("automated_qa_status")
         if status in statuses:
             statuses[str(status)] += 1
     print(
@@ -100,8 +135,7 @@ def _run_checks(
     _write_transcript_metadata(dataset=dataset, videos=videos, deliveries=deliveries)
     _score_quality(dataset=dataset, videos=videos)
     _write_technical_metadata(dataset=dataset, videos=videos)
-    for video in videos:
-        _write_verdict(video)
+    _write_verdicts(dataset=dataset, videos=videos)
     _set_complete(dataset=dataset, videos=videos, complete=True)
 
 
@@ -225,8 +259,7 @@ def _write_technical_metadata(dataset: VideoDataset, videos: list[VideoSample]) 
     metadata_resolver.bulk_update_metadata(dataset.session, updates)
 
 
-def _write_verdict(video: VideoSample) -> None:
-    metadata = _metadata(video)
+def _verdict_update(metadata: Mapping[str, Any]) -> dict[str, Any]:
     failures = [issue for key, issue in _REQUIRED_CHECKS.items() if metadata.get(key) is not True]
     review_issues = [
         issue
@@ -235,19 +268,25 @@ def _write_verdict(video: VideoSample) -> None:
     ]
     status = "fail" if failures else "review" if review_issues else "pass"
     issues = [*failures, *review_issues]
+    return {
+        "qa_deterministic_pass": not failures,
+        "automated_qa_status": status,
+        "automated_qa_failures": ", ".join(failures),
+        "automated_qa_review_issues": ", ".join(review_issues),
+        "automated_qa_issues": ", ".join(issues),
+    }
+
+
+def _write_verdicts(dataset: VideoDataset, videos: list[VideoSample]) -> None:
+    metadata_by_sample_id = _metadata_by_sample_id(dataset=dataset, videos=videos)
     metadata_resolver.bulk_update_metadata(
-        video.get_object_session(),
+        dataset.session,
         [
             (
                 video.sample_id,
-                {
-                    "qa_deterministic_pass": not failures,
-                    "automated_qa_status": status,
-                    "automated_qa_failures": ", ".join(failures),
-                    "automated_qa_review_issues": ", ".join(review_issues),
-                    "automated_qa_issues": ", ".join(issues),
-                },
+                _verdict_update(metadata=metadata_by_sample_id[video.sample_id]),
             )
+            for video in videos
         ],
     )
 
@@ -280,7 +319,11 @@ def _videos_by_delivery(
     dataset: VideoDataset,
     deliveries: list[LocalDelivery],
 ) -> list[VideoSample]:
-    by_path = {Path(video.file_path_abs).resolve(): video for video in dataset}
+    paths = [delivery.video_path.resolve() for delivery in deliveries]
+    path_expression = OR(*(VideoSampleField.file_path_abs == str(path) for path in paths))
+    by_path = {
+        Path(video.file_path_abs).resolve(): video for video in dataset.match(path_expression)
+    }
     try:
         return [by_path[delivery.video_path.resolve()] for delivery in deliveries]
     except KeyError as error:
@@ -294,20 +337,21 @@ def _set_complete(dataset: VideoDataset, videos: list[VideoSample], complete: bo
     )
 
 
-def _is_complete(video: VideoSample) -> bool:
-    return _metadata(video).get(COMPLETE_KEY) is True
+def _metadata_by_sample_id(
+    dataset: VideoDataset,
+    videos: list[VideoSample],
+) -> dict[UUID, dict[str, Any]]:
+    metadata_by_sample_id: dict[UUID, dict[str, Any]] = {}
+    sample_ids = [video.sample_id for video in videos]
+    for batch in batching.batched(items=sample_ids):
+        rows = dataset.session.exec(
+            select(SampleMetadataTable).where(col(SampleMetadataTable.sample_id).in_(batch))
+        ).all()
+        metadata_by_sample_id.update({row.sample_id: dict(row.data) for row in rows})
+    return {sample_id: metadata_by_sample_id.get(sample_id, {}) for sample_id in sample_ids}
 
 
-def _metadata(video: VideoSample) -> dict[str, Any]:
-    row = metadata_resolver.get_by_sample_id(
-        session=video.get_object_session(),
-        sample_id=video.sample_id,
-    )
-    return dict(row.data) if row is not None else {}
-
-
-def _read_result(video: VideoSample) -> ScreenResult:
-    metadata = _metadata(video)
+def _read_result(video: VideoSample, metadata: Mapping[str, Any]) -> ScreenResult:
     return ScreenResult(
         file_name=video.file_name,
         status=str(metadata.get("automated_qa_status")),
