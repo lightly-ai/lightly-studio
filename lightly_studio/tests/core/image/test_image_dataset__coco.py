@@ -541,15 +541,17 @@ class TestDataset:
             images_path=images_path,
             annotation_type=AnnotationType.OBJECT_DETECTION,
             tag_depth=2,
+            split="train",
             embed=False,
         )
 
         samples = list(dataset)
         assert len(samples) == 3
         name_to_tags = {Path(s.file_name).name: s.tags for s in samples}
-        assert name_to_tags["image1.jpg"] == {"dogs", "husky"}
-        assert name_to_tags["image2.jpg"] == {"cats"}
-        assert name_to_tags["image3.jpg"] == set()
+        # Directory tags are added on top of the "train" split tag.
+        assert name_to_tags["image1.jpg"] == {"train", "dogs", "husky"}
+        assert name_to_tags["image2.jpg"] == {"train", "cats"}
+        assert name_to_tags["image3.jpg"] == {"train"}
 
     @pytest.mark.parametrize("tag_depth", [-1, -5])
     def test_add_samples_from_coco__invalid_tag_depth(
