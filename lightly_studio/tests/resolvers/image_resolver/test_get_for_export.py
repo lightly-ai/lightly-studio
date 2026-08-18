@@ -123,23 +123,25 @@ def test_get_for_export__with_embedding_region_filter(db_session: Session) -> No
     )
 
     # Seed 2D coordinates: inside1 and inside2 within (0,0)-(10,10), outside at (100, 100).
-    cache_key, sample_ids_in_order = sample_embedding_resolver.get_hash_by_collection_id(
+    _, fingerprint = sample_embedding_resolver.get_fingerprint_by_collection_id(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
     )
-    inside1_i = sample_ids_in_order.index(image_inside1.sample_id)
-    inside2_i = sample_ids_in_order.index(image_inside2.sample_id)
-    outside_i = sample_ids_in_order.index(image_outside.sample_id)
-    x = [0.0, 0.0, 0.0]
-    y = [0.0, 0.0, 0.0]
-    x[inside1_i] = 1.0
-    y[inside1_i] = 1.0
-    x[inside2_i] = 5.0
-    y[inside2_i] = 5.0
-    x[outside_i] = 100.0
-    y[outside_i] = 100.0
-    db_session.add(TwoDimEmbeddingTable(hash=cache_key, x=x, y=y))
+    db_session.add(
+        TwoDimEmbeddingTable(
+            collection_id=collection.collection_id,
+            embedding_model_id=embedding_model.embedding_model_id,
+            fingerprint=fingerprint,
+            sample_ids=[
+                image_inside1.sample_id,
+                image_inside2.sample_id,
+                image_outside.sample_id,
+            ],
+            x=[1.0, 5.0, 100.0],
+            y=[1.0, 5.0, 100.0],
+        )
+    )
     db_session.commit()
 
     region = EmbeddingRegion(

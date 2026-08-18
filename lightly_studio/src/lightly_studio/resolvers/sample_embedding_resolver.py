@@ -162,15 +162,17 @@ def get_all_by_collection_id(
     ]
 
 
-def get_hash_by_collection_id(
+def get_fingerprint_by_collection_id(
     session: Session,
     collection_id: UUID,
     embedding_model_id: UUID,
-) -> tuple[str, list[UUID]]:
-    """Return a combined hash and ordered sample IDs with embeddings for a collection.
+) -> tuple[int, str]:
+    """Return how many samples have embeddings and a fingerprint identifying that set.
 
-    The cache key is derived from the first dimension of each embedding vector,
-    which is database-agnostic (works with both DuckDB and PostgreSQL).
+    The fingerprint is derived from the first dimension of each embedding vector, in
+    canonical ``sample_id`` order, which is database-agnostic (works with both DuckDB and
+    PostgreSQL). Callers use it to decide whether a cached projection is still valid; it
+    says nothing about the order in which the embeddings are later loaded.
 
     Args:
         session: Database session.
@@ -178,7 +180,7 @@ def get_hash_by_collection_id(
         embedding_model_id: Embedding model identifier.
 
     Returns:
-        Tuple of (combined hash, ordered sample IDs that have stored embeddings).
+        Tuple of (number of samples with stored embeddings, fingerprint).
     """
     first_dim_col = db_vector.vector_element(SampleEmbeddingTable.embedding, 1).label("first_dim")
 
@@ -193,16 +195,11 @@ def get_hash_by_collection_id(
         .order_by(col(SampleEmbeddingTable.sample_id).asc())
     ).all()
 
-    sample_ids: list[UUID] = []
     hasher = hashlib.sha256()
-
     for row in rows:
-        sample_ids.append(row.sample_id)  # type: ignore[attr-defined]
         hasher.update(str(row.first_dim).encode("utf-8"))  # type: ignore[attr-defined]
 
-    if not sample_ids:
-        return "empty", []
-    return hasher.hexdigest(), sample_ids
+    return len(rows), hasher.hexdigest()
 
 
 def get_embedding_count(session: Session, collection_id: UUID, embedding_model_id: UUID) -> int:

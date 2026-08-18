@@ -1113,14 +1113,18 @@ def _setup_collection_with_2d_coordinates(
     }
     # Seed the cached 2D projection so the region resolver reads deterministic coordinates
     # instead of recomputing them.
-    cache_key, cached_sample_ids = sample_embedding_resolver.get_hash_by_collection_id(
+    _, fingerprint = sample_embedding_resolver.get_fingerprint_by_collection_id(
         session=session,
         collection_id=collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
     )
+    cached_sample_ids = list(coordinates_by_sample)
     session.add(
         TwoDimEmbeddingTable(
-            hash=cache_key,
+            collection_id=collection_id,
+            embedding_model_id=embedding_model.embedding_model_id,
+            fingerprint=fingerprint,
+            sample_ids=cached_sample_ids,
             x=[coordinates_by_sample[sample_id][0] for sample_id in cached_sample_ids],
             y=[coordinates_by_sample[sample_id][1] for sample_id in cached_sample_ids],
         )
@@ -1202,14 +1206,18 @@ def test_get_all_by_collection_id__embedding_region_combined_with_dimension_filt
         images[1].sample_id: (2.0, 2.0),  # inside region, narrow
         images[2].sample_id: (100.0, 100.0),  # outside region, wide
     }
-    cache_key, cached_sample_ids = sample_embedding_resolver.get_hash_by_collection_id(
+    _, fingerprint = sample_embedding_resolver.get_fingerprint_by_collection_id(
         session=db_session,
         collection_id=collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
     )
+    cached_sample_ids = list(coordinates)
     db_session.add(
         TwoDimEmbeddingTable(
-            hash=cache_key,
+            collection_id=collection_id,
+            embedding_model_id=embedding_model.embedding_model_id,
+            fingerprint=fingerprint,
+            sample_ids=cached_sample_ids,
             x=[coordinates[sample_id][0] for sample_id in cached_sample_ids],
             y=[coordinates[sample_id][1] for sample_id in cached_sample_ids],
         )

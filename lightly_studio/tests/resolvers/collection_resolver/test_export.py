@@ -107,7 +107,7 @@ def _setup_embedding_region(
             (ImageStub(path="sample_c.png"), [2.1, 0.2, 0.3]),
         ],
     )
-    cache_key, ordered_sample_ids = sample_embedding_resolver.get_hash_by_collection_id(
+    _, fingerprint = sample_embedding_resolver.get_fingerprint_by_collection_id(
         session=db_session,
         collection_id=collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
@@ -117,9 +117,13 @@ def _setup_embedding_region(
         image_b.sample_id: (5.0, 5.0),
         image_c.sample_id: (100.0, 100.0),
     }
+    ordered_sample_ids = list(coordinates)
     db_session.add(
         TwoDimEmbeddingTable(
-            hash=cache_key,
+            collection_id=collection_id,
+            embedding_model_id=embedding_model.embedding_model_id,
+            fingerprint=fingerprint,
+            sample_ids=ordered_sample_ids,
             x=[coordinates[sid][0] for sid in ordered_sample_ids],
             y=[coordinates[sid][1] for sid in ordered_sample_ids],
         )

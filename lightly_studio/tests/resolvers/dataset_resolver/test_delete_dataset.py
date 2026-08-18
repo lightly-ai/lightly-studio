@@ -3,13 +3,14 @@
 import uuid
 
 import pytest
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
+from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     collection_resolver,
@@ -21,6 +22,7 @@ from lightly_studio.resolvers import (
     sample_embedding_resolver,
     sample_resolver,
     tag_resolver,
+    twodim_embedding_resolver,
 )
 from tests.helpers_resolvers import (
     AnnotationDetails,
@@ -183,6 +185,43 @@ def test_delete_dataset__with_embeddings(db_session: Session) -> None:
         embedding_model_id=embedding_model_id,
     )
     assert len(embeddings) == 0
+
+
+def test_delete_dataset__with_two_dim_embeddings(db_session: Session) -> None:
+    """Cached 2D projections are removed; their FKs must not block the delete."""
+    # Arrange
+    dataset = create_collection(session=db_session, collection_name="to_delete")
+    collection_id = dataset.collection_id  # Capture before delete
+    img = create_image(session=db_session, collection_id=collection_id, file_path_abs="/a.png")
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_name="test_model",
+        embedding_dimension=3,
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=img.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[1.0, 2.0, 3.0],
+    )
+    # Populate the cache so a row exists to be deleted.
+    twodim_embedding_resolver.get_twodim_embeddings(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+    assert db_session.exec(select(TwoDimEmbeddingTable)).all() != []
+
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+    )
+
+    # Assert - collection and cached projection deleted
+    assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
+    assert db_session.exec(select(TwoDimEmbeddingTable)).all() == []
 
 
 def test_delete_dataset__with_tags(db_session: Session) -> None:

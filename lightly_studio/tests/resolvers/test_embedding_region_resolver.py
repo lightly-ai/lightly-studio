@@ -107,14 +107,18 @@ def _seed_2d_coordinates(
 
     Returns the ordered sample ids as ``get_twodim_embeddings`` would return them.
     """
-    cache_key, sample_ids = sample_embedding_resolver.get_hash_by_collection_id(
+    _, fingerprint = sample_embedding_resolver.get_fingerprint_by_collection_id(
         session=session,
         collection_id=collection_id,
         embedding_model_id=embedding_model_id,
     )
+    sample_ids = list(coordinates)
     session.add(
         TwoDimEmbeddingTable(
-            hash=cache_key,
+            collection_id=collection_id,
+            embedding_model_id=embedding_model_id,
+            fingerprint=fingerprint,
+            sample_ids=sample_ids,
             x=[coordinates[sample_id][0] for sample_id in sample_ids],
             y=[coordinates[sample_id][1] for sample_id in sample_ids],
         )
