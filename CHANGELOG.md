@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Stepping to the previous or next image now drives an index range scan instead of scanning the
   sort index from the start. On PostgreSQL with 1M images, one neighbour lookup went from 92ms
   to 0.03ms.
+- Python SDK: `ImageDataset.add_images_from_path` now accepts `tag_depth > 1` to tag images by several leading directory levels (previously only `tag_depth=1` was supported).
 
 ### Deprecated
 
@@ -86,7 +87,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Python SDK: `ImageDataset.add_images_from_path` now accepts `tag_depth > 1` to tag images by several leading directory levels (previously only `tag_depth=1` was supported).
 - The left filter panel can now be collapsed entirely to reclaim space for the grid; a "Filters" button in the grid header restores it.
 - Image and video opening paths (indexing and embedding) now handle errors consistently: broken files are tolerated and skipped instead of breaking the whole operation.
 
