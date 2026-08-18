@@ -39,6 +39,7 @@ jobs:
         # restricts it to same-repo PRs, so untrusted fork code never reaches them.
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
 
       # Detect which areas changed, so we install only the toolchains their guardrails need.
       - name: Detect changed areas
