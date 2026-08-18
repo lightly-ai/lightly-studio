@@ -3,15 +3,15 @@ from __future__ import annotations
 from uuid import UUID, uuid4
 
 import pytest
+from lightly_studio.resolvers.image_resolver.annotation_count_types import (
+    AnnotationCountMode,
+)
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.resolvers import image_resolver, tag_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
-from lightly_studio.resolvers.image_resolver.annotation_count_types import (
-    AnnotationCountMode,
-)
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
     AnnotationDetails,
