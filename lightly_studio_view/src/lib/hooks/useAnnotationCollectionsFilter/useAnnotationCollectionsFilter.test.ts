@@ -145,6 +145,44 @@ describe('useAnnotationCollectionsFilter', () => {
         });
     });
 
+    describe('allSourcesHidden', () => {
+        it('is false before any collection has been seeded', async () => {
+            const { allSourcesHidden } = await importHook();
+
+            expect(get(allSourcesHidden)).toBe(false);
+        });
+
+        it('is false while a source is still selected', async () => {
+            const { allSourcesHidden, setSelectedCollectionIds, seedSelectionIfNeeded } =
+                await importHook();
+
+            seedSelectionIfNeeded('collection-1', sources);
+            setSelectedCollectionIds(['gt']);
+
+            expect(get(allSourcesHidden)).toBe(false);
+        });
+
+        it('is true once the user unchecks every source', async () => {
+            const { allSourcesHidden, setSelectedCollectionIds, seedSelectionIfNeeded } =
+                await importHook();
+
+            seedSelectionIfNeeded('collection-1', sources);
+            setSelectedCollectionIds([]);
+
+            expect(get(allSourcesHidden)).toBe(true);
+        });
+
+        // A collection without annotation sources has an empty selection too, but the user
+        // never hid anything, so the counts must stay as they are.
+        it('is false for a collection that has no sources', async () => {
+            const { allSourcesHidden, seedSelectionIfNeeded } = await importHook();
+
+            seedSelectionIfNeeded('collection-1', []);
+
+            expect(get(allSourcesHidden)).toBe(false);
+        });
+    });
+
     describe('multipleSourcesVisible', () => {
         it('is true only while more than one source is selected', async () => {
             const { multipleSourcesVisible, setSelectedCollectionIds, seedSelectionIfNeeded } =

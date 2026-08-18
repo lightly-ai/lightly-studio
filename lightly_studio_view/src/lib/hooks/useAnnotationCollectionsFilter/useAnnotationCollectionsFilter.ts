@@ -25,6 +25,13 @@ const isSourceVisible: Readable<(sourceId: string) => boolean> = derived(
             !$known.has(sourceId) || $ids.includes(sourceId)
 );
 
+// True while the filter knows about sources and the user has unchecked all of them. Nothing is
+// drawn in that state, so nothing counted per source should survive either.
+const allSourcesHidden: Readable<boolean> = derived(
+    [selectedCollectionIds, knownSourceIds],
+    ([$ids, $known]) => $known.size > 0 && $ids.length === 0
+);
+
 // Annotations are colored per source instead of per class while more than one source is
 // visible. Pass this to resolveEffectiveColorBySource rather than reading the selection length.
 const multipleSourcesVisible: Readable<boolean> = derived(
@@ -45,6 +52,7 @@ export const useAnnotationCollectionsFilter = () => {
         selectedCollectionIds,
         setSelectedCollectionIds: (ids: string[]) => selectedCollectionIds.set(ids),
         isSourceVisible,
+        allSourcesHidden,
         multipleSourcesVisible,
         collectionIdToName,
         setCollectionIdToName: (map: Record<string, string>) => collectionIdToName.set(map),
