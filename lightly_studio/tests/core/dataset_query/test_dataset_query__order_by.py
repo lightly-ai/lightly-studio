@@ -262,6 +262,38 @@ class TestDatasetQueryOrderBy:
             image_a.sample_id,
         ]
 
+    def test_order_by__metadata_key_with_quote(self, db_session: Session) -> None:
+        """Test that a quote in the key is bound, not compiled into the statement."""
+        dataset = create_collection(session=db_session)
+        image_a = create_image(
+            session=db_session,
+            collection_id=dataset.collection_id,
+            file_path_abs="/path/to/a.jpg",
+        )
+        image_b = create_image(
+            session=db_session,
+            collection_id=dataset.collection_id,
+            file_path_abs="/path/to/b.jpg",
+        )
+        metadata_resolver.bulk_update_metadata(
+            db_session,
+            [
+                (image_a.sample_id, {"sco're": 2}),
+                (image_b.sample_id, {"sco're": 1}),
+            ],
+        )
+
+        result_samples = (
+            DatasetQuery(dataset=dataset, session=db_session)
+            .order_by(OrderByMetadataField("sco're"))
+            .to_list()
+        )
+
+        assert [sample.sample_id for sample in result_samples] == [
+            image_b.sample_id,
+            image_a.sample_id,
+        ]
+
     def test_order_by__string_metadata_field(self, db_session: Session) -> None:
         """Test that string metadata keeps lexicographic ordering."""
         dataset = create_collection(session=db_session)

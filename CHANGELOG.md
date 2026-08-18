@@ -10,9 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Report anonymous usage data on app launch. Set `LIGHTLY_STUDIO_ANALYTICS_ENABLED=false` to opt out.
+- Sort the annotations grid by a per-annotation evaluation metric, such as IoU.
+- Python SDK: Continue sampling from an existing tagged selection with the
+  `preselected_tag_name` parameter.
 - Python SDK: Select video-frame sequences with `selected_sequence_length` on `Sampling.diverse()`. It defaults to `None`, which selects individual frames. `n_samples_to_select` still counts frames and must be a multiple of the sequence length.
 
 ### Changed
+
+- Stepping to the previous or next image now drives an index range scan instead of scanning the
+  sort index from the start. On PostgreSQL with 1M images, one neighbour lookup went from 92ms
+  to 0.03ms.
 
 ### Deprecated
 
@@ -20,7 +27,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fix requests failing intermittently while the GUI is under load, caused by concurrent access to a shared database session.
+
 ### Security
+
+- Scope export downloads to the collection they were prepared for, so an export key from one collection can no longer be used to download an export prepared for a different collection.
 
 ## \[1.0.5\] - 2026-08-14
 

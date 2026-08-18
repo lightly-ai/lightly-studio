@@ -18,6 +18,7 @@ class SamplingConfig(BaseModel):
     collection_id: UUID
     n_samples_to_select: int
     sampling_result_tag_name: str
+    preselected_tag_name: str | None = None
     strategies: Sequence[SamplingStrategy]
     selected_sequence_length: int | None = Field(
         default=None,

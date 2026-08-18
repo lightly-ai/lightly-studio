@@ -221,7 +221,6 @@ def sampling_via_database(
     session: Session,
     config: SamplingConfig,
     input_sample_ids: list[UUID],
-    preselected_sample_ids: Iterable[UUID] | None = None,
 ) -> None:
     """Run sampling using the provided candidate sample ids.
 
@@ -236,13 +235,17 @@ def sampling_via_database(
         session: Database session used to resolve and store sampling data.
         config: Sampling configuration.
         input_sample_ids: Candidate sample IDs.
-        preselected_sample_ids: Sample IDs that should inform the sampling as
-            already selected. They are excluded from the result tag.
 
     Raises:
-        ValueError: If the preselected sample IDs contain duplicates or are not
-            a subset of the input sample IDs.
+        ValueError: If the preselected tag does not exist or its sample IDs are
+            not a subset of the input sample IDs.
     """
+    preselected_sample_ids = _get_preselected_sample_ids(
+        session=session,
+        collection_id=config.collection_id,
+        preselected_tag_name=config.preselected_tag_name,
+    )
+
     # Check if the tag name is already used
     existing_tag = tag_resolver.get_by_name(
         session=session,
@@ -250,6 +253,8 @@ def sampling_via_database(
         collection_id=config.collection_id,
     )
     if existing_tag:
+        # TODO(Lukas, 08/2026): drop this requirement when `preselected_tag_name` is the same as
+        # `sampling_result_tag_name`.
         msg = (
             f"Tag with name {config.sampling_result_tag_name} already exists in the "
             f"collection {config.collection_id}. Please use a different tag name."
@@ -305,6 +310,28 @@ def sampling_via_database(
         collection_id=config.collection_id,
         tag_name=config.sampling_result_tag_name,
         selected_sample_ids=selected_sample_ids,
+    )
+
+
+def _get_preselected_sample_ids(
+    session: Session,
+    collection_id: UUID,
+    preselected_tag_name: str | None,
+) -> list[UUID]:
+    """Resolve sample IDs from an optional preselected sample tag."""
+    if preselected_tag_name is None:
+        return []
+
+    preselected_tag = tag_resolver.get_by_name(
+        session=session,
+        tag_name=preselected_tag_name,
+        collection_id=collection_id,
+    )
+    if preselected_tag is None:
+        raise ValueError(f"Preselected tag with name {preselected_tag_name} not found.")
+    return tag_resolver.get_sample_ids_by_tag_id(
+        session=session,
+        tag_id=preselected_tag.tag_id,
     )
 
 

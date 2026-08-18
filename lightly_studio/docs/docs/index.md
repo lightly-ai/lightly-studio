@@ -5,6 +5,10 @@ your data workflows from curation, annotation and management. Built with Rust fo
 efficiency, it lets you work seamlessly with datasets like COCO and ImageNet, even on a MacBook Pro
 with an M1 chip and 16 GB of memory.
 
+Working in a team and looking for collaboration features, role-based access permissions, and
+centrally managed cloud credentials? Check out [LightlyStudio Enterprise](enterprise/index.md)
+and [start for free with your team](https://www.lightly.ai/studio-signup).
+
 <p align="center">
   <video src="_static/hero_showcase.mp4" width="100%" autoplay loop muted playsinline></video>
 </p>

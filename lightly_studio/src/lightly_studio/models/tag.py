@@ -54,6 +54,7 @@ class TagTable(TagBase, table=True):
 
     __tablename__ = "tag"
     # ensure there can only be one tag named "lightly_studio" per collection
+    # TODO(Lukas, 08/2026): drop "kind" from the constraint, we never mix different kinds
     __table_args__ = (
         UniqueConstraint("collection_id", "kind", "name", name="unique_name_constraint"),
     )
