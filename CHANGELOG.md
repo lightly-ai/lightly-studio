@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Report anonymous usage data on app launch. Set `LIGHTLY_STUDIO_ANALYTICS_ENABLED=false` to opt out.
 - Sort the annotations grid by a per-annotation evaluation metric, such as IoU.
+- Python SDK: Continue sampling from an existing tagged selection with the
+  `preselected_tag_name` parameter.
 
 ### Changed
 
