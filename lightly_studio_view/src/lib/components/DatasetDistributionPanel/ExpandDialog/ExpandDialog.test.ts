@@ -21,6 +21,7 @@ vi.mock('echarts/core', () => ({
 vi.mock('echarts/charts', () => ({ BarChart: {} }));
 vi.mock('echarts/components', () => ({
     GridComponent: {},
+    LegendComponent: {},
     TooltipComponent: {}
 }));
 vi.mock('echarts/renderers', () => ({ CanvasRenderer: {} }));
@@ -95,6 +96,32 @@ describe('ExpandDialog', () => {
         );
 
         expect(onConfigChange).toHaveBeenCalledWith({ ...config, orientation: 'horizontal' });
+    });
+
+    it('shows valueNoun in the header summary when no series are present', () => {
+        // valueNoun is only rendered when totalCount is shown, which requires series=[].
+        renderDialog({ valueNoun: 'objects' });
+
+        expect(screen.getByText(/objects/)).toBeInTheDocument();
+    });
+
+    it('filters series to only the visible top-N labels', () => {
+        const series = [
+            {
+                id: 'tag-a',
+                label: 'Tag A',
+                data: longTail.map((item) => ({ ...item, count: item.count / 2 }))
+            }
+        ];
+        renderDialog({ series });
+
+        // config.n = 10, so only the top 10 labels are visible.
+        const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+            series: { data: unknown[] }[];
+        };
+        // The named series is last; its data must be trimmed to the visible subset.
+        const namedSeries = option.series.at(-1) as { data: unknown[] };
+        expect(namedSeries.data).toHaveLength(10);
     });
 
     it('uses consistent plot spacing and exposes categorical value controls', async () => {
