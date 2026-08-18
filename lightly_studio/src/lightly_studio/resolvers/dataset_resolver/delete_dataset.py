@@ -407,9 +407,15 @@ def _remove_export_artifact(export_path: str) -> None:
     resolved_path = Path(export_path).resolve()
     temp_dir = Path(tempfile.gettempdir()).resolve()
     try:
-        resolved_path.relative_to(temp_dir)
+        relative_path = resolved_path.relative_to(temp_dir)
     except ValueError:
         logger.warning("Skipping export artifact outside the temp directory: %s", export_path)
+        return
+    if relative_path == Path():
+        # Equality is not raised by `relative_to`; reject the temp directory root itself.
+        logger.warning(
+            "Skipping export artifact that is the temp directory itself: %s", export_path
+        )
         return
     if resolved_path.is_dir():
         shutil.rmtree(resolved_path, ignore_errors=True)

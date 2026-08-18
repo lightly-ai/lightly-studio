@@ -43,8 +43,11 @@ def _remove_existing_export_artifacts() -> None:
     for export_path in export_paths:
         resolved_path = Path(export_path).resolve()
         try:
-            resolved_path.relative_to(temp_dir)
+            relative_path = resolved_path.relative_to(temp_dir)
         except ValueError:
+            continue
+        if relative_path == Path():
+            # Equality is not raised by `relative_to`; reject the temp directory root itself.
             continue
         if resolved_path.is_dir():
             shutil.rmtree(resolved_path, ignore_errors=True)
