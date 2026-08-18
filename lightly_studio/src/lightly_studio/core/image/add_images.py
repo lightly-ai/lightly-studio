@@ -423,6 +423,7 @@ def tag_samples_by_directory(
     Raises:
         ValueError: If tag_depth is negative.
     """
+    # TODO (Mihnea, 08/2026): Consider refactoring this, as it is getting quite big.
     if tag_depth < 0:
         raise ValueError(f"tag_depth must be non-negative, got {tag_depth}.")
     if tag_depth == 0:
