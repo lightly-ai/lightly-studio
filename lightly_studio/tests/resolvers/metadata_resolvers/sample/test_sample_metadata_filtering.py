@@ -147,6 +147,62 @@ def test_metadata_in_filter__concrete_values_and_other_keys(db_session: Session)
     assert [sample.sample_id for sample in samples] == [first.sample_id]
 
 
+@pytest.mark.parametrize("wanted", [True, False])
+def test_metadata_filter__boolean_equality(db_session: Session, wanted: bool) -> None:
+    """A boolean compares as text, because both databases read it back as text.
+
+    Python calls a bool an int, so the numeric branch would cast "true" to a float
+    and the database would raise.
+    """
+    collection = create_collection(session=db_session)
+    reviewed = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/reviewed.png",
+    ).sample
+    pending = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/pending.png",
+    ).sample
+    reviewed["reviewed"] = True
+    pending["reviewed"] = False
+
+    filters = SampleFilter(metadata_filters=[Metadata("reviewed") == wanted])
+    samples = sample_resolver.get_filtered_samples(
+        session=db_session, collection_id=collection.collection_id, filters=filters
+    ).samples
+
+    expected = reviewed if wanted else pending
+    assert [sample.sample_id for sample in samples] == [expected.sample_id]
+
+
+@pytest.mark.parametrize("unwanted", [True, False])
+def test_metadata_filter__boolean_inequality(db_session: Session, unwanted: bool) -> None:
+    """``!=`` on a boolean compares as text too."""
+    collection = create_collection(session=db_session)
+    reviewed = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/reviewed.png",
+    ).sample
+    pending = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/pending.png",
+    ).sample
+    reviewed["reviewed"] = True
+    pending["reviewed"] = False
+
+    filters = SampleFilter(metadata_filters=[Metadata("reviewed") != unwanted])
+    samples = sample_resolver.get_filtered_samples(
+        session=db_session, collection_id=collection.collection_id, filters=filters
+    ).samples
+
+    expected = pending if unwanted else reviewed
+    assert [sample.sample_id for sample in samples] == [expected.sample_id]
+
+
 def test_metadata_in_filter__missing(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     concrete = create_image(
