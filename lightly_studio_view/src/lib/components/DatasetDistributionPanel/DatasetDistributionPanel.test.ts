@@ -40,6 +40,7 @@ vi.mock('echarts/core', () => ({
 vi.mock('echarts/charts', () => ({ BarChart: {}, CustomChart: {} }));
 vi.mock('echarts/components', () => ({
     GridComponent: {},
+    LegendComponent: {},
     TooltipComponent: {}
 }));
 vi.mock('echarts/renderers', () => ({ CanvasRenderer: {} }));
@@ -53,6 +54,24 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
 }
 
 const defaultProps = { data: balanced };
+const comparisonData = [
+    {
+        sample_tag_id: 'tag-a',
+        sample_tag_name: 'Reviewed',
+        counts: [
+            { label_name: 'car', count: 2 },
+            { label_name: 'dog', count: 0 }
+        ]
+    },
+    {
+        sample_tag_id: 'tag-b',
+        sample_tag_name: 'Priority',
+        counts: [
+            { label_name: 'car', count: 1 },
+            { label_name: 'dog', count: 5 }
+        ]
+    }
+];
 
 describe('DatasetDistributionPanel', () => {
     beforeAll(() => {
@@ -202,6 +221,88 @@ describe('DatasetDistributionPanel', () => {
     it('omits the source selector when only one source is available', () => {
         render(DatasetDistributionPanel, { props: defaultProps });
         expect(screen.queryByTestId('dataset-distribution-source-select')).not.toBeInTheDocument();
+    });
+
+    it('ranks comparison classes by aggregate counts and keeps tag series independent', async () => {
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: [
+                    {
+                        id: 'classes',
+                        label: 'Annotation classes',
+                        data: [{ label: 'car', count: 10 }],
+                        comparisonData
+                    }
+                ]
+            }
+        });
+
+        const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+            yAxis: { data: string[] };
+            series: { name: string; data: number[] }[];
+        };
+        expect(option.yAxis.data).toEqual(['dog', 'car']);
+        expect(option.series).toMatchObject([
+            { name: 'Reviewed', data: [0, 2] },
+            { name: 'Priority', data: [5, 1] }
+        ]);
+        expect(screen.getByText(/2 sample tags/)).toBeInTheDocument();
+        expect(screen.queryByText(/annotations/)).not.toBeInTheDocument();
+
+        await fireEvent.click(screen.getByTestId('dataset-distribution-expand'));
+        await waitFor(() => expect(screen.getAllByText(/2 sample tags/)).toHaveLength(2));
+    });
+
+    it('defaults tag comparisons to percentage and allows switching to numbers', async () => {
+        const user = userEvent.setup();
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: [
+                    {
+                        id: 'classes',
+                        label: 'Annotation classes',
+                        comparisonData
+                    }
+                ],
+                selectedComparisonTagIds: ['tag-a', 'tag-b']
+            }
+        });
+
+        const valueMode = screen.getByTestId('dataset-distribution-value-mode');
+        await waitFor(() => expect(valueMode).toHaveTextContent('Percentage'));
+
+        await user.click(valueMode);
+        await user.click(screen.getByRole('option', { name: 'Number' }));
+        await waitFor(() => expect(valueMode).toHaveTextContent('Number'));
+    });
+
+    it('renders comparison data from the selected annotation-type group', async () => {
+        const user = userEvent.setup();
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: [
+                    {
+                        id: 'classes',
+                        label: 'Annotation classes',
+                        groupLabel: 'Annotation type',
+                        groups: [
+                            { id: 'all', label: 'All types', data: balanced },
+                            {
+                                id: 'classification',
+                                label: 'Classification',
+                                data: [{ label: 'car', count: 3 }],
+                                comparisonData
+                            }
+                        ]
+                    }
+                ]
+            }
+        });
+
+        await user.click(screen.getByTestId('dataset-distribution-group-select'));
+        await user.click(screen.getByText('Classification'));
+
+        await waitFor(() => expect(screen.getByText(/2 sample tags/)).toBeInTheDocument());
     });
 
     it('defaults to the first source with content when a leading source is empty', () => {
@@ -695,6 +796,26 @@ describe('DatasetDistributionPanel', () => {
         window.dispatchEvent(new MouseEvent('mouseup'));
 
         expect(onHistogramRangeSelect).toHaveBeenCalledWith('confidence', { min: 0.5, max: 1 });
+    });
+
+    it('shows a group selector when the only source has multiple groups', () => {
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: [
+                    {
+                        id: 'classes',
+                        label: 'Annotation classes',
+                        groups: [
+                            { id: 'all', label: 'All types', data: balanced },
+                            { id: 'classification', label: 'Classification', data: balanced }
+                        ]
+                    }
+                ]
+            }
+        });
+
+        expect(screen.queryByTestId('dataset-distribution-source-select')).not.toBeInTheDocument();
+        expect(screen.getByTestId('dataset-distribution-group-select')).toBeInTheDocument();
     });
 
     const histogramSources: DistributionSource[] = [
