@@ -183,6 +183,7 @@ describe('SampleAnnotations', () => {
 
     afterEach(() => {
         vi.restoreAllMocks();
+        vi.useRealTimers();
     });
 
     it('keeps object-detection boxes visible when showBoundingBoxesForSegmentation is disabled', async () => {
@@ -218,6 +219,7 @@ describe('SampleAnnotations', () => {
     });
 
     it('draws nothing once the user unchecks every annotation source', async () => {
+        vi.useFakeTimers();
         setShowBoundingBoxesForSegmentation(true);
         useAnnotationCollectionsFilter().setSelectedCollectionIds([]);
 
@@ -227,8 +229,8 @@ describe('SampleAnnotations', () => {
             }
         });
 
-        // Give the idle-callback canvas mount a chance to run before asserting nothing drew.
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        // The canvas mounts from an idle callback; drain it before asserting nothing drew.
+        await vi.runAllTimersAsync();
 
         expect(mockContext.strokeRect).not.toHaveBeenCalled();
     });
