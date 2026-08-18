@@ -3,6 +3,9 @@
 from lightly_studio.resolvers.image_resolver.count_image_annotations_by_collection import (
     count_image_annotations_by_collection,
 )
+from lightly_studio.resolvers.image_resolver.count_image_annotations_by_sample_tags import (
+    count_image_annotations_by_sample_tags,
+)
 from lightly_studio.resolvers.image_resolver.create_many import create_many
 from lightly_studio.resolvers.image_resolver.delete import delete
 from lightly_studio.resolvers.image_resolver.get_adjacent_images import get_adjacent_images
@@ -29,6 +32,7 @@ __all__ = [
     "ImageExportPreload",
     "build_sample_ids_query",
     "count_image_annotations_by_collection",
+    "count_image_annotations_by_sample_tags",
     "create_many",
     "delete",
     "get_adjacent_images",
