@@ -1,10 +1,11 @@
-import { derived, writable, type Readable } from 'svelte/store';
+import { derived, get, writable, type Readable } from 'svelte/store';
 
 const selectedCollectionIds = writable<string[]>([]);
 const collectionIdToName = writable<Record<string, string>>({});
 
 // The sources the filter knows about, which are the annotation sources of the collection the
-// user is looking at. Seeded together with the selection, so its keys are always in step.
+// user is looking at. Follows the source list rather than the selection, so a source created
+// while the collection is open can still be hidden.
 const knownSourceIds: Readable<Set<string>> = derived(
     collectionIdToName,
     ($idToName) => new Set(Object.keys($idToName))
@@ -48,19 +49,43 @@ export const useAnnotationCollectionsFilter = () => {
         collectionIdToName,
         setCollectionIdToName: (map: Record<string, string>) => collectionIdToName.set(map),
         /**
-         * Seeds the filter with every source selected the first time a collection is shown.
-         * No-op on later calls for the same collection, so a user's manual selection is
-         * preserved across navigation; re-seeds when the collection changes so a stale
-         * selection never leaks across datasets.
+         * Points the filter at a collection's annotation sources.
+         *
+         * The first call for a collection selects every source. Later calls for the same
+         * collection keep the user's selection and fold in sources that appeared since, because
+         * an annotation can be written to a brand-new source and the filter can only hide what
+         * it knows about. Switching collection selects everything again, so a stale selection
+         * never leaks across datasets.
          */
         seedSelectionIfNeeded: (
             collectionId: string,
             collections: { id: string; name: string }[]
         ) => {
-            if (seededCollectionId === collectionId) return;
-            seededCollectionId = collectionId;
-            selectedCollectionIds.set(collections.map((c) => c.id));
-            collectionIdToName.set(Object.fromEntries(collections.map((c) => [c.id, c.name])));
+            const nextIdToName = Object.fromEntries(collections.map((c) => [c.id, c.name]));
+
+            if (seededCollectionId !== collectionId) {
+                seededCollectionId = collectionId;
+                collectionIdToName.set(nextIdToName);
+                selectedCollectionIds.set(collections.map((c) => c.id));
+                return;
+            }
+
+            // Same collection, but the source list can still grow: an annotation may be written
+            // to a brand-new source, and the filter can only hide sources it knows about.
+            const previousIdToName = get(collectionIdToName);
+            const unchanged =
+                Object.keys(previousIdToName).length === collections.length &&
+                collections.every((c) => previousIdToName[c.id] === c.name);
+            if (unchanged) return;
+
+            const addedIds = collections.map((c) => c.id).filter((id) => !(id in previousIdToName));
+
+            collectionIdToName.set(nextIdToName);
+            // A new source starts checked, so an annotation just drawn into one stays on screen.
+            selectedCollectionIds.update(($ids) => [
+                ...$ids.filter((id) => id in nextIdToName),
+                ...addedIds
+            ]);
         }
     };
 };

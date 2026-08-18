@@ -39,6 +39,55 @@ describe('useAnnotationCollectionsFilter', () => {
         expect(get(selectedCollectionIds)).toEqual(['gt']);
     });
 
+    it('learns a source that appears after the first seed', async () => {
+        const { isSourceVisible, setSelectedCollectionIds, seedSelectionIfNeeded } =
+            await importHook();
+
+        seedSelectionIfNeeded('collection-1', sources);
+        // an annotation was written to a brand-new source, so the list refetches longer
+        seedSelectionIfNeeded('collection-1', [...sources, { id: 'new', name: 'Manual' }]);
+        setSelectedCollectionIds(['gt', 'pred']);
+
+        expect(get(isSourceVisible)('new')).toBe(false);
+    });
+
+    it('keeps the selection and checks the source that appeared', async () => {
+        const { selectedCollectionIds, setSelectedCollectionIds, seedSelectionIfNeeded } =
+            await importHook();
+
+        seedSelectionIfNeeded('collection-1', sources);
+        setSelectedCollectionIds(['gt']);
+        seedSelectionIfNeeded('collection-1', [...sources, { id: 'new', name: 'Manual' }]);
+
+        expect(get(selectedCollectionIds)).toEqual(['gt', 'new']);
+    });
+
+    it('drops a source that is gone from the list', async () => {
+        const { selectedCollectionIds, collectionIdToName, seedSelectionIfNeeded } =
+            await importHook();
+
+        seedSelectionIfNeeded('collection-1', sources);
+        seedSelectionIfNeeded('collection-1', [{ id: 'gt', name: 'Ground truth' }]);
+
+        expect(get(selectedCollectionIds)).toEqual(['gt']);
+        expect(get(collectionIdToName)).toEqual({ gt: 'Ground truth' });
+    });
+
+    it('does not notify subscribers when the source list is unchanged', async () => {
+        const { isSourceVisible, seedSelectionIfNeeded } = await importHook();
+
+        seedSelectionIfNeeded('collection-1', sources);
+
+        let emissions = 0;
+        const unsubscribe = isSourceVisible.subscribe(() => {
+            emissions += 1;
+        });
+        seedSelectionIfNeeded('collection-1', sources); // e.g. a window-focus refetch
+        unsubscribe();
+
+        expect(emissions).toBe(1); // the subscribe call itself
+    });
+
     it('re-seeds all sources when the collection changes', async () => {
         const { selectedCollectionIds, setSelectedCollectionIds, seedSelectionIfNeeded } =
             await importHook();
