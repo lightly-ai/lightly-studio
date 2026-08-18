@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- Scope export downloads to the collection they were prepared for, so an export key from one collection can no longer be used to download an export prepared for a different collection.
+
 ## \[1.0.5\] - 2026-08-14
 
 ### Added
