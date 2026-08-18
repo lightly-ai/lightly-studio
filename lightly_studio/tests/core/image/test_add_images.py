@@ -664,7 +664,7 @@ def test_create_label_map(db_session: Session) -> None:
     assert label_map_2[2] not in label_map_1.values()  # bird is new
 
 
-def test_tag_samples_by_directory_tag_depth_negative(
+def test_tag_samples_by_directory__tag_depth_negative(
     db_session: Session,
 ) -> None:
     """Tests that a negative tag_depth raises an error."""
@@ -679,7 +679,7 @@ def test_tag_samples_by_directory_tag_depth_negative(
         )
 
 
-def test_tag_samples_by_directory_tag_depth_0(
+def test_tag_samples_by_directory__tag_depth_0(
     db_session: Session,
 ) -> None:
     """Tests the default behavior (tag_depth=0) adds samples but no tags."""
@@ -713,7 +713,7 @@ def test_tag_samples_by_directory_tag_depth_0(
         assert len(sample.sample.tags) == 0
 
 
-def test_tag_samples_by_directory_tag_depth_1(
+def test_tag_samples_by_directory__tag_depth_1(
     db_session: Session,
 ) -> None:
     """Tests that tag_depth=1 correctly tags samples based on directory structure."""
@@ -751,7 +751,7 @@ def test_tag_samples_by_directory_tag_depth_1(
     assert sample_filename_to_tags["root_img.png"] == set()
 
 
-def test_tag_samples_by_directory_tag_depth_2(
+def test_tag_samples_by_directory__tag_depth_2(
     db_session: Session,
 ) -> None:
     """Tests that tag_depth=2 tags samples by their first two directory levels."""
