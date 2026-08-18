@@ -1,8 +1,14 @@
 import type { EChartsCoreOption } from 'echarts/core';
+import escape from 'lodash-es/escape';
 import { truncate } from 'lodash-es';
-import { CHART_AXIS_LABEL, CHART_EMPHASIS, CHART_LINE_COLOR, CHART_TEXT_COLOR } from '$lib/utils';
-import type { CategoryCount } from './';
-import { buildTooltipFormatter } from './buildTooltipFormatter';
+import {
+    CHART_AXIS_LABEL,
+    CHART_EMPHASIS,
+    CHART_LINE_COLOR,
+    CHART_TEXT_COLOR,
+    formatPercent
+} from '$lib/utils';
+import type { CategoryCount, CategoryCountSeries } from './';
 
 // Same accent as Histogram (the Lightly primary green, --color-lightly-primary #3bd99f).
 const BAR_COLOR = 'rgba(59,217,159,0.85)';
@@ -11,9 +17,47 @@ const BAR_COLOR_DIMMED = '#4b5563';
 // Full-dataset context bars drawn behind the filtered foreground bars.
 // Matches CHART_LINE_COLOR so background bars blend with the chart grid lines.
 const BAR_COLOR_BACKGROUND = '#374151';
+const SERIES_COLORS = [
+    '#4E79A7',
+    '#F28E2B',
+    '#59A14F',
+    '#E15759',
+    '#B07AA1',
+    '#76B7B2',
+    '#EDC948',
+    '#FF9DA7',
+    '#9C755F',
+    '#BAB0AC'
+];
+
+/** Maps a stable series ID to the same accessible chart colour across renders. */
+export function colorForSeries(id: string): string {
+    const index = [...id].reduce(
+        (value, character) => (value * 31 + character.charCodeAt(0)) % SERIES_COLORS.length,
+        0
+    );
+    return SERIES_COLORS[index];
+}
+
+/** Resolves hash collisions so simultaneously visible series always differ. */
+function assignSeriesColors(seriesIds: string[]): Map<string, string> {
+    const colors = new Map<string, string>();
+    const usedColors = new Set<string>();
+    for (const id of seriesIds) {
+        let index = SERIES_COLORS.indexOf(colorForSeries(id));
+        while (usedColors.has(SERIES_COLORS[index]) && usedColors.size < SERIES_COLORS.length) {
+            index = (index + 1) % SERIES_COLORS.length;
+        }
+        const color = SERIES_COLORS[index];
+        colors.set(id, color);
+        usedColors.add(color);
+    }
+    return colors;
+}
 
 /** Bar layout: 'vertical' bars grow upward, 'horizontal' bars grow rightward. */
 export type BarChartOrientation = 'vertical' | 'horizontal';
+export type BarChartValueMode = 'number' | 'percentage';
 
 interface BuildEchartsOptionOptions {
     /**
@@ -26,7 +70,24 @@ interface BuildEchartsOptionOptions {
     orientation?: BarChartOrientation;
     /** Top chart-grid padding in px (default 16). */
     gridTopPx?: number;
+    /** Named grouped-bar series rendered instead of the single `data` series. */
+    series?: CategoryCountSeries[];
+    /** Whether bars show raw counts or each series' percentage distribution. */
+    valueMode?: BarChartValueMode;
 }
+
+interface TooltipParam {
+    name: string;
+    value: number;
+    seriesName?: string;
+    seriesIndex?: number;
+    marker?: string;
+}
+
+const formatTooltipValue = (count: number, total: number): string => {
+    const percent = total > 0 ? ` (${formatPercent(count / total)})` : '';
+    return `<b>${count}</b>${percent}`;
+};
 
 /** Builds the ECharts option for a category-count bar chart (pass to `setOption`). */
 export function buildEchartsOption(
@@ -37,6 +98,10 @@ export function buildEchartsOption(
     const orientation = options.orientation ?? 'vertical';
     const gridTopPx = options.gridTopPx ?? 16;
     const isHorizontal = orientation === 'horizontal';
+    const groupedSeries = options.series ?? [];
+    const isGrouped = groupedSeries.length > 0;
+    const groupedColors = assignSeriesColors(groupedSeries.map((series) => series.id));
+    const valueMode = options.valueMode ?? 'number';
 
     const labels = data.map((item) => item.label);
     // When any category is actively selected, dim the rest — mirrors the range
@@ -74,25 +139,30 @@ export function buildEchartsOption(
         // Counts are whole numbers, so keep ticks on integer boundaries. Without
         // this, a max count of 1 makes ECharts split [0,1] into 0.2 steps and
         // render fractional labels (0, 0.2, 0.4 …).
-        minInterval: 1,
-        axisLabel: CHART_AXIS_LABEL,
+        minInterval: valueMode === 'number' ? 1 : undefined,
+        max: valueMode === 'percentage' ? 100 : undefined,
+        axisLabel:
+            valueMode === 'percentage'
+                ? { ...CHART_AXIS_LABEL, formatter: (value: number) => `${value}%` }
+                : CHART_AXIS_LABEL,
         splitLine: { lineStyle: { color: CHART_LINE_COLOR } }
     };
 
-    const formatter = buildTooltipFormatter(totalCount);
+    const toChartValue = (count: number, denominator: number): number =>
+        valueMode === 'percentage' && denominator > 0 ? (count / denominator) * 100 : count;
 
     // Foreground bar: coloured at the filtered count (or full count when no filter).
     const foregroundData = data.map((item) => {
         // Simple items with no selection/filter state can be returned as raw numbers,
         // which ECharts renders without per-item itemStyle overhead.
         if (item.selected == null && item.selectable == null && item.filteredCount == null) {
-            return item.count;
+            return toChartValue(item.count, totalCount);
         }
         const foregroundCount =
             hasActiveFilter && item.filteredCount !== undefined ? item.filteredCount : item.count;
         const isDimmed = hasAnySelected && !item.selected;
         return {
-            value: foregroundCount,
+            value: toChartValue(foregroundCount, totalCount),
             itemStyle: {
                 color: isDimmed ? BAR_COLOR_DIMMED : BAR_COLOR,
                 opacity: item.selectable === false ? 0.45 : 1
@@ -117,7 +187,7 @@ export function buildEchartsOption(
         ? {
               type: 'bar',
               data: data.map((item) => ({
-                  value: item.count,
+                  value: toChartValue(item.count, totalCount),
                   itemStyle: {
                       color: BAR_COLOR_BACKGROUND,
                       opacity: item.selectable === false ? 0.45 : 1
@@ -130,7 +200,31 @@ export function buildEchartsOption(
           }
         : null;
 
-    const series = hasActiveFilter ? [backgroundSeries, foregroundSeries] : [foregroundSeries];
+    const standardSeries = hasActiveFilter
+        ? [backgroundSeries, foregroundSeries]
+        : [foregroundSeries];
+    const chartSeries = isGrouped
+        ? groupedSeries.map((item) => {
+              const countsByLabel = new Map(item.data.map((count) => [count.label, count.count]));
+              const seriesTotal =
+                  item.totalCount ?? item.data.reduce((sum, count) => sum + count.count, 0);
+              return {
+                  id: item.id,
+                  name: item.label,
+                  type: 'bar',
+                  data: labels.map((label) =>
+                      toChartValue(countsByLabel.get(label) ?? 0, seriesTotal)
+                  ),
+                  itemStyle: {
+                      color: groupedColors.get(item.id),
+                      borderColor: 'rgba(255,255,255,0.75)',
+                      borderWidth: 1
+                  },
+                  barCategoryGap: '25%',
+                  emphasis: CHART_EMPHASIS
+              };
+          })
+        : standardSeries;
 
     return {
         backgroundColor: 'transparent',
@@ -138,12 +232,35 @@ export function buildEchartsOption(
             trigger: 'axis',
             axisPointer: { type: 'shadow' },
             appendTo: 'body',
-            formatter
+            formatter: (params: TooltipParam[]) => {
+                if (params.length === 0) return '';
+                const [{ name }] = params;
+                if (isGrouped) {
+                    const values = params
+                        .map((item, index) => {
+                            const series = groupedSeries[item.seriesIndex ?? index];
+                            const count =
+                                series?.data.find((entry) => entry.label === name)?.count ?? 0;
+                            const seriesTotal =
+                                series?.totalCount ??
+                                series?.data.reduce((sum, entry) => sum + entry.count, 0) ??
+                                0;
+                            return `${item.marker ?? ''}${escape(item.seriesName ?? '')}: ${formatTooltipValue(count, seriesTotal)}`;
+                        })
+                        .join('<br/>');
+                    return `<b>${escape(name)}</b><br/>${values}`;
+                }
+                const count = data.find((entry) => entry.label === name)?.count ?? 0;
+                return `<b>${escape(name)}</b><br/>Count: ${formatTooltipValue(count, totalCount)}`;
+            }
         },
-        grid: { left: 8, right: 8, top: gridTopPx, bottom: 8, containLabel: true },
+        legend: isGrouped
+            ? { type: 'scroll', top: 0, textStyle: { color: CHART_TEXT_COLOR } }
+            : undefined,
+        grid: { left: 8, right: 8, top: isGrouped ? 48 : gridTopPx, bottom: 8, containLabel: true },
         // Swap which axis holds the categories so bars grow rightward when horizontal.
         xAxis: isHorizontal ? valueAxis : categoryAxis,
         yAxis: isHorizontal ? categoryAxis : valueAxis,
-        series
+        series: chartSeries
     };
 }
