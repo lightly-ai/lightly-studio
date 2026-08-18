@@ -69,3 +69,4 @@ export {
     type OperatorParameterColumn,
     type OperatorParameterType
 } from '$lib/hooks/useOperators';
+export { useImageAnnotationCountsBySampleTags } from '$lib/hooks/useImageAnnotationCountsBySampleTags/useImageAnnotationCountsBySampleTags.svelte';
