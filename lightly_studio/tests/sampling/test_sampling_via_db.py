@@ -519,10 +519,10 @@ def test_sampling_via_database__preselection_matches_single_sampling(
             collection_id=collection_id,
             n_samples_to_select=2,
             sampling_result_tag_name="second_batch",
+            preselected_tag_name="first_batch",
             strategies=[strategy],
         ),
         input_sample_ids=sample_ids,
-        preselected_tag_id=first_tag.tag_id,
     )
     second_tag = tag_resolver.get_by_name(
         session=db_session, tag_name="second_batch", collection_id=collection_id
@@ -554,22 +554,20 @@ def test_sampling_via_database__preselection_matches_single_sampling(
     assert set(first_batch + second_batch) == set(single_batch)
 
 
-def test_sampling_via_database__preselected_tag_not_found(
+def test_sampling_via_database__preselected_tag_name_not_found(
     db_session: Session,
 ) -> None:
-    preselected_tag_id = uuid4()
-
-    with pytest.raises(ValueError, match=f"Preselected tag with ID {preselected_tag_id} not found"):
+    with pytest.raises(ValueError, match="Preselected tag with name missing not found"):
         sampling_via_database(
             session=db_session,
             config=SamplingConfig(
                 collection_id=uuid4(),
                 n_samples_to_select=1,
                 sampling_result_tag_name="result",
+                preselected_tag_name="missing",
                 strategies=[],
             ),
             input_sample_ids=[],
-            preselected_tag_id=preselected_tag_id,
         )
 
 
@@ -599,10 +597,10 @@ def test_sampling_via_database__preselected_sample_id_not_in_input(
                 collection_id=collection_id,
                 n_samples_to_select=1,
                 sampling_result_tag_name="result",
+                preselected_tag_name="preselected",
                 strategies=[],
             ),
             input_sample_ids=[],
-            preselected_tag_id=preselected_tag.tag_id,
         )
 
 
