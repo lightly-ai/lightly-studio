@@ -15,7 +15,7 @@ this index when it diffs the live catalog against SQLModel metadata — keep it 
 reviewing future `make migration-revision-postgresql` output.
 
 Revision ID: 4f6a7b8c9d0e
-Revises: b7c8d9e0f1a2
+Revises: a3b4c5d6e7f8
 Create Date: 2026-08-18 00:00:00.000000
 
 """
@@ -28,7 +28,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "4f6a7b8c9d0e"
-down_revision: Union[str, Sequence[str], None] = "b7c8d9e0f1a2"
+down_revision: Union[str, Sequence[str], None] = "a3b4c5d6e7f8"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
