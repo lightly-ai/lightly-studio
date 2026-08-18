@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Report anonymous usage data on app launch. Set `LIGHTLY_STUDIO_ANALYTICS_ENABLED=false` to opt out.
-- Python SDK: Select video-frame sequences with `selected_sequence_length` on `Sampling.diverse()`. `n_samples_to_select` still counts frames and must be a multiple of the sequence length.
+- Python SDK: Select video-frame sequences with `selected_sequence_length` on `Sampling.diverse()`. It defaults to `None`, which selects individual frames. `n_samples_to_select` still counts frames and must be a multiple of the sequence length.
 
 ### Changed
 

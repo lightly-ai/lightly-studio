@@ -229,7 +229,7 @@ def sampling_via_database(
     Then calls Mundig to run the sampling with pure values.
     Finally creates a tag for the selected set.
 
-    When ``config.selected_sequence_length > 1``, sampling runs over mean-pooled
+    When ``config.selected_sequence_length`` is set, sampling runs over mean-pooled
     sequence proxies and the tag contains every frame of each selected sequence.
 
     Args:
@@ -256,7 +256,7 @@ def sampling_via_database(
         )
         raise ValueError(msg)
 
-    if config.selected_sequence_length > 1:
+    if config.selected_sequence_length is not None:
         sequence_sampling.sampling_via_database_sequences(
             session=session,
             config=config,

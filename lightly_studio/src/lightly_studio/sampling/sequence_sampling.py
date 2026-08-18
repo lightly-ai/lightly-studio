@@ -27,6 +27,7 @@ def sampling_via_database_sequences(
     """Run mean-proxy sequence sampling on a VIDEO_FRAME collection."""
     diversity_strategies = _validate_sequence_sampling(session=session, config=config)
     sequence_length = config.selected_sequence_length
+    assert sequence_length is not None
     sequences = _load_sequences(
         session=session,
         sample_ids=input_sample_ids,
@@ -85,7 +86,7 @@ def _validate_sequence_sampling(
 
     Args:
         session: The database session.
-        config: The sampling configuration, with ``selected_sequence_length`` above 1.
+        config: The sampling configuration. ``selected_sequence_length`` must be set.
 
     Returns:
         The configured diversity strategies.
@@ -95,15 +96,17 @@ def _validate_sequence_sampling(
             ``n_samples_to_select`` is not a multiple of ``selected_sequence_length``,
             or if any non-diversity strategy is configured.
     """
+    sequence_length = config.selected_sequence_length
+    assert sequence_length is not None
     collection_resolver.check_collection_type(
         session=session,
         collection_id=config.collection_id,
         expected_type=SampleType.VIDEO_FRAME,
     )
-    if config.n_samples_to_select % config.selected_sequence_length != 0:
+    if config.n_samples_to_select % sequence_length != 0:
         raise ValueError(
             f"n_samples_to_select ({config.n_samples_to_select}) must be a multiple "
-            f"of selected_sequence_length ({config.selected_sequence_length})."
+            f"of selected_sequence_length ({sequence_length})."
         )
     diversity_strategies: list[EmbeddingDiversityStrategy] = []
     non_diversity_names: list[str] = []
@@ -114,7 +117,7 @@ def _validate_sequence_sampling(
             non_diversity_names.append(type(strat).__name__)
     if non_diversity_names:
         raise ValueError(
-            "selected_sequence_length > 1 currently supports only diversity strategies, "
+            "selected_sequence_length currently supports only diversity strategies, "
             f"got: {non_diversity_names}."
         )
     return diversity_strategies

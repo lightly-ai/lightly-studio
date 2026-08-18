@@ -353,10 +353,10 @@ See [Search and Filter](search_and_filter.md#query-in-python) for more filtering
 ### Video sequence sampling
 
 To select clips instead of individual frames, set `selected_sequence_length` to
-the number of frames per sequence (for example `50`). Each video is split into
-non-overlapping sequences of that length; trailing frames that do not fill a full sequence
-are dropped. Sampling then chooses among sequence proxies (mean of the frame embeddings),
-and every frame of each chosen sequence is tagged.
+the number of frames per sequence (for example `50`). By default `selected_sequence_length` is
+ `None` and individual frames are selected. Each video is split into non-overlapping sequences of that
+length; trailing frames that do not fill a full sequence are dropped. Sampling then chooses among sequence
+proxies (mean of the frame embeddings), and every frame of each chosen sequence is tagged.
 
 `n_samples_to_select` counts **frames** and must be a multiple of `selected_sequence_length`.
 The number of selected sequences is `n_samples_to_select / selected_sequence_length`.
@@ -375,8 +375,7 @@ frames.query().sampling().diverse(
 )
 ```
 
-Only frame collections support `selected_sequence_length > 1`, and only diversity
-sampling supports sequences.
+Only diversity selection on video frame collections support `selected_sequence_length`.
 
 ### Combining multiple strategies
 

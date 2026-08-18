@@ -100,8 +100,9 @@ class Sampling:
     # Video sequence sampling.
 
     On video frame collections, `diverse()` can select whole frame sequences by setting
-    `selected_sequence_length` above 1. `n_samples_to_select` still counts frames and must
-    be a multiple of the sequence length. Only diversity strategies support sequences.
+    `selected_sequence_length` to the number of frames per sequence; leaving it as `None`
+    selects individual frames. `n_samples_to_select` still counts frames and must be a
+    multiple of the sequence length. Only diversity strategies support sequences.
     ```python
     frames.query().sampling().diverse(
         n_samples_to_select=100,
@@ -154,7 +155,7 @@ class Sampling:
         n_samples_to_select: int,
         sampling_result_tag_name: str,
         embedding_model_name: str | None = None,
-        selected_sequence_length: int = 1,
+        selected_sequence_length: int | None = None,
     ) -> None:
         """Select a diverse subset using embeddings.
 
@@ -163,10 +164,11 @@ class Sampling:
             sampling_result_tag_name: Tag name for the sampling result.
             embedding_model_name: Optional embedding model name. If None, uses the only
                 available model or raises if multiple exist.
-            selected_sequence_length: Number of frames per selected sequence. Above 1,
-                selection happens over video-frame sequences formed per video from the
-                candidate frames in frame-number order, while ``n_samples_to_select``
-                still counts frames and must be a multiple of this value.
+            selected_sequence_length: Number of frames per selected sequence, at least
+                2. ``None`` selects individual samples. When set, selection happens over
+                video-frame sequences formed per video from the candidate frames in
+                frame-number order, while ``n_samples_to_select`` still counts frames and
+                must be a multiple of this value.
         """
         strategy = EmbeddingDiversityStrategy(embedding_model_name=embedding_model_name)
         self.multi_strategies(
@@ -236,7 +238,7 @@ class Sampling:
         n_samples_to_select: int,
         sampling_result_tag_name: str,
         sampling_strategies: list[SamplingStrategy],
-        selected_sequence_length: int = 1,
+        selected_sequence_length: int | None = None,
     ) -> None:
         """Select a subset based on multiple strategies.
 
@@ -244,11 +246,12 @@ class Sampling:
             n_samples_to_select: Number of samples to select.
             sampling_result_tag_name: Tag name for the sampling result.
             sampling_strategies: Strategies to compose for sampling.
-            selected_sequence_length: Number of frames per selected sequence. Above 1,
-                selection happens over video-frame sequences formed per video from the
-                candidate frames in frame-number order and only diversity strategies are
-                supported, while ``n_samples_to_select`` still counts frames and must be
-                a multiple of this value.
+            selected_sequence_length: Number of frames per selected sequence, at least
+                2. ``None`` selects individual samples. When set, selection happens over
+                video-frame sequences formed per video from the candidate frames in
+                frame-number order and only diversity strategies are supported, while
+                ``n_samples_to_select`` still counts frames and must be a multiple of
+                this value.
         """
         config = SamplingConfig(
             collection_id=self._dataset_id,
