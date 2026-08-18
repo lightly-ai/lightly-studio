@@ -6,7 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Index, Relationship, SQLModel
 
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.range import FloatRange, IntRange
@@ -43,6 +43,10 @@ class VideoTable(VideoBase, table=True):
     """This class defines the Video ORM table."""
 
     __tablename__ = "video"
+    # Composite index on the default adjacency sort key (``file_path_abs``) plus the
+    # unique ``sample_id`` tiebreaker, mirroring ``ImageTable``. Lets the keyset seek for
+    # annotations on video frames walk the videos in path order. See LIG-10067.
+    __table_args__ = (Index("ix_video_file_path_abs_sample_id", "file_path_abs", "sample_id"),)
     sample_id: UUID = Field(foreign_key="sample.sample_id", primary_key=True)
     frames: Mapped[list["VideoFrameTable"]] = Relationship(
         sa_relationship_kwargs={"lazy": "select"}, back_populates="video"

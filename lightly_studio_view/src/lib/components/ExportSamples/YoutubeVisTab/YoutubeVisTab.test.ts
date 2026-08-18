@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { writable } from 'svelte/store';
 import type { VideoFilter } from '$lib/api/lightly_studio_local/types.gen';
 import YoutubeVisTab from './YoutubeVisTab.svelte';
@@ -9,7 +9,8 @@ const pageMock = vi.hoisted(() => ({ params: { collection_id: 'test-collection' 
 vi.mock('$app/state', () => ({ page: pageMock }));
 
 const mocks = vi.hoisted(() => ({
-    exportCollectionYoutubeVisPrepare: vi.fn()
+    exportCollectionYoutubeVisPrepare: vi.fn(),
+    triggerDownload: vi.fn()
 }));
 vi.mock('$lib/api/lightly_studio_local', async (importOriginal) => ({
     ...(await importOriginal()),
@@ -20,9 +21,18 @@ vi.mock('$lib/hooks', () => ({
     useVideoFilters: vi.fn()
 }));
 
+vi.mock('../useExportDownload', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../useExportDownload')>();
+    return {
+        ...actual,
+        triggerDownload: mocks.triggerDownload
+    };
+});
+
 describe('YoutubeVisTab', () => {
     beforeEach(() => {
         mocks.exportCollectionYoutubeVisPrepare.mockReset();
+        mocks.triggerDownload.mockReset();
         vi.mocked(useVideoFilters).mockReturnValue({
             videoFilter: writable(null),
             filterParams: writable(null),
@@ -31,17 +41,12 @@ describe('YoutubeVisTab', () => {
         });
     });
 
-    afterEach(() => {
-        vi.restoreAllMocks();
-    });
-
     it('renders the description', () => {
         render(YoutubeVisTab);
         expect(screen.getByText(/YouTube-VIS format/)).toBeInTheDocument();
     });
 
-    it('calls the API with null video_filter and opens the download tab when no filter is active', async () => {
-        const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
+    it('calls the API with null video_filter and triggers the download on success', async () => {
         mocks.exportCollectionYoutubeVisPrepare.mockResolvedValue({
             data: { export_key: 'key123' }
         });
@@ -54,15 +59,13 @@ describe('YoutubeVisTab', () => {
                 path: { collection_id: 'test-collection' },
                 body: { video_filter: null }
             });
-            expect(openSpy).toHaveBeenCalledWith(
-                expect.stringContaining('/export/download/key123'),
-                '_blank'
+            expect(mocks.triggerDownload).toHaveBeenCalledWith(
+                expect.stringContaining('/export/download/key123')
             );
         });
     });
 
     it('passes the active video filter to the API', async () => {
-        vi.spyOn(window, 'open').mockReturnValue(null);
         mocks.exportCollectionYoutubeVisPrepare.mockResolvedValue({
             data: { export_key: 'key456' }
         });
@@ -77,9 +80,11 @@ describe('YoutubeVisTab', () => {
         await fireEvent.click(
             screen.getByTestId('submit-button-youtube-vis-instance-segmentations')
         );
-        expect(mocks.exportCollectionYoutubeVisPrepare).toHaveBeenCalledWith({
-            path: { collection_id: 'test-collection' },
-            body: { video_filter: activeFilter }
+        await waitFor(() => {
+            expect(mocks.exportCollectionYoutubeVisPrepare).toHaveBeenCalledWith({
+                path: { collection_id: 'test-collection' },
+                body: { video_filter: activeFilter }
+            });
         });
     });
 
@@ -92,5 +97,17 @@ describe('YoutubeVisTab', () => {
         await waitFor(() => {
             expect(screen.getByText(/Export failed/)).toBeInTheDocument();
         });
+    });
+
+    it('calls onDownloadClick when the download button is clicked', async () => {
+        mocks.exportCollectionYoutubeVisPrepare.mockResolvedValue({
+            data: { export_key: 'key123' }
+        });
+        const onDownloadClick = vi.fn();
+        render(YoutubeVisTab, { props: { onDownloadClick } });
+        await fireEvent.click(
+            screen.getByTestId('submit-button-youtube-vis-instance-segmentations')
+        );
+        expect(onDownloadClick).toHaveBeenCalledOnce();
     });
 });

@@ -18,7 +18,7 @@ const mockExistsSync = vi.mocked(existsSync);
 const mockReadFileSync = vi.mocked(readFileSync);
 
 function makeCtx(files: ChangedFile[]): GuardrailContext {
-    return { baseRef: 'origin/main', changedFiles: async () => files };
+    return { changedFiles: async () => files };
 }
 
 function setReport(files: Record<string, CoverageFileData>): void {

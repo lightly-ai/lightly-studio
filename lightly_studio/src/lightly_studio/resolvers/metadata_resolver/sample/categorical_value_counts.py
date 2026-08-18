@@ -74,7 +74,7 @@ def _get_field_value_counts(
     metadata_type: str,
     filters: ImageFilter | None,
 ) -> MetadataValueCountsView:
-    value_expr = db_json.json_extract_string(column=SampleMetadataTable.data, field=metadata_key)
+    value_expr = db_json.json_extract_key_as_text(column=SampleMetadataTable.data, key=metadata_key)
     rows = _get_top_value_counts(
         session=session,
         collection_id=collection_id,

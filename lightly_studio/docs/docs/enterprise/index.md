@@ -10,6 +10,8 @@ We offer it in two deployment variants:
 
 Contact [sales@lightly.ai](mailto:sales@lightly.ai) to find the right option for your team.
 
+Not registered yet? [Start for free](https://www.lightly.ai/studio-signup) to get access.
+
 ## A Look Inside
 
 === "Single Sign-On"

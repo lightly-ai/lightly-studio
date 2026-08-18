@@ -121,6 +121,7 @@ class Sampling:
         n_samples_to_select: int,
         sampling_result_tag_name: str,
         metadata_key: str,
+        preselected_tag_name: str | None = None,
     ) -> None:
         """Select a subset based on numeric metadata weights.
 
@@ -128,12 +129,15 @@ class Sampling:
             n_samples_to_select: Number of samples to select.
             sampling_result_tag_name: Tag name for the sampling result.
             metadata_key: Metadata key used as weights (float or int values).
+            preselected_tag_name: Optional tag containing samples that should be treated
+                as already selected. These samples are excluded from the result tag.
         """
         strategy = MetadataWeightingStrategy(metadata_key=metadata_key)
         self.multi_strategies(
             n_samples_to_select=n_samples_to_select,
             sampling_result_tag_name=sampling_result_tag_name,
             sampling_strategies=[strategy],
+            preselected_tag_name=preselected_tag_name,
         )
 
     def diverse(
@@ -141,6 +145,7 @@ class Sampling:
         n_samples_to_select: int,
         sampling_result_tag_name: str,
         embedding_model_name: str | None = None,
+        preselected_tag_name: str | None = None,
     ) -> None:
         """Select a diverse subset using embeddings.
 
@@ -149,12 +154,15 @@ class Sampling:
             sampling_result_tag_name: Tag name for the sampling result.
             embedding_model_name: Optional embedding model name. If None, uses the only
                 available model or raises if multiple exist.
+            preselected_tag_name: Optional tag containing samples that should be treated
+                as already selected. These samples are excluded from the result tag.
         """
         strategy = EmbeddingDiversityStrategy(embedding_model_name=embedding_model_name)
         self.multi_strategies(
             n_samples_to_select=n_samples_to_select,
             sampling_result_tag_name=sampling_result_tag_name,
             sampling_strategies=[strategy],
+            preselected_tag_name=preselected_tag_name,
         )
 
     def deduplicate(
@@ -163,6 +171,7 @@ class Sampling:
         sampling_result_tag_name: str,
         stopping_condition_minimum_distance: float,
         embedding_model_name: str | None = None,
+        preselected_tag_name: str | None = None,
     ) -> None:
         """Select a deduplicated subset using embeddings.
 
@@ -180,6 +189,8 @@ class Sampling:
                 least this far from the already selected samples.
             embedding_model_name: Optional embedding model name. If None, uses the only
                 available model or raises if multiple exist.
+            preselected_tag_name: Optional tag containing samples that should be treated
+                as already selected. These samples are excluded from the result tag.
         """
         strategy = EmbeddingDeduplicationStrategy(
             embedding_model_name=embedding_model_name,
@@ -189,6 +200,7 @@ class Sampling:
             n_samples_to_select=n_samples_to_select,
             sampling_result_tag_name=sampling_result_tag_name,
             sampling_strategies=[strategy],
+            preselected_tag_name=preselected_tag_name,
         )
 
     def annotation_balancing(
@@ -196,6 +208,7 @@ class Sampling:
         n_samples_to_select: int,
         sampling_result_tag_name: str,
         target_distribution: AnnotationClassToTarget | Literal["uniform"] | Literal["input"],
+        preselected_tag_name: str | None = None,
     ) -> None:
         """Select a subset using annotation class balancing.
 
@@ -204,12 +217,15 @@ class Sampling:
             sampling_result_tag_name: Tag name for the sampling result.
             target_distribution: Can be 'uniform', 'input',
                 or a dictionary mapping class names to target ratios.
+            preselected_tag_name: Optional tag containing samples that should be treated
+                as already selected. These samples are excluded from the result tag.
         """
         strategy = AnnotationClassBalancingStrategy(target_distribution=target_distribution)
         self.multi_strategies(
             n_samples_to_select=n_samples_to_select,
             sampling_result_tag_name=sampling_result_tag_name,
             sampling_strategies=[strategy],
+            preselected_tag_name=preselected_tag_name,
         )
 
     def multi_strategies(
@@ -217,6 +233,7 @@ class Sampling:
         n_samples_to_select: int,
         sampling_result_tag_name: str,
         sampling_strategies: list[SamplingStrategy],
+        preselected_tag_name: str | None = None,
     ) -> None:
         """Select a subset based on multiple strategies.
 
@@ -224,11 +241,14 @@ class Sampling:
             n_samples_to_select: Number of samples to select.
             sampling_result_tag_name: Tag name for the sampling result.
             sampling_strategies: Strategies to compose for sampling.
+            preselected_tag_name: Optional tag containing samples that should be treated
+                as already selected. These samples are excluded from the result tag.
         """
         config = SamplingConfig(
             collection_id=self._dataset_id,
             n_samples_to_select=n_samples_to_select,
             sampling_result_tag_name=sampling_result_tag_name,
+            preselected_tag_name=preselected_tag_name,
             strategies=sampling_strategies,
         )
         sampling_via_database(
