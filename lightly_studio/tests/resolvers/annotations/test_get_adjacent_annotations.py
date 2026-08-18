@@ -583,8 +583,9 @@ def test_get_adjacent_annotations__falls_back_for_video_level_annotations(
     #
     # The window query it falls back to reaches VideoTable only through VideoFrameTable, so
     # these annotations get no path to sort by at all: their leading key is the coalesce's
-    # empty-string default. Only the created-at and sample-id tiebreakers order them, which
-    # is why this asserts a total order rather than an order by video path.
+    # empty-string default. Only the created-at and sample-id tiebreakers order them, which is
+    # why two of them are pinned to the same created_at below and this asserts a total order
+    # rather than an order by video path.
     collection = helpers_resolvers.create_collection(
         session=db_session, sample_type=SampleType.VIDEO
     )
@@ -603,8 +604,9 @@ def test_get_adjacent_annotations__falls_back_for_video_level_annotations(
         for path in ("/videos/c.mp4", "/videos/a.mp4", "/videos/b.mp4")
     ]
 
-    annotations = helpers_resolvers.create_annotations(
+    annotations = _create_annotations_with_pinned_created_at(
         session=db_session,
+        monkeypatch=monkeypatch,
         collection_id=collection.collection_id,
         annotations=[
             helpers_resolvers.AnnotationDetails(
@@ -614,25 +616,16 @@ def test_get_adjacent_annotations__falls_back_for_video_level_annotations(
             for video in videos
         ],
     )
+    expected_order = sorted(
+        annotations, key=lambda annotation: (annotation.created_at, annotation.sample_id)
+    )
     filters = AnnotationsFilter(collection_ids=[annotations[0].sample.collection_id])
 
     monkeypatch.setattr(_dispatch_module, "get_adjacent_annotations_keyset", _fail_if_called)
 
-    results = {}
-    for annotation in annotations:
-        result = annotation_resolver.get_adjacent_annotations(
-            session=db_session, sample_id=annotation.sample_id, filters=filters
-        )
-        assert result is not None
-        results[annotation.sample_id] = result
-
-    by_position = {result.current_sample_position: key for key, result in results.items()}
-    assert sorted(by_position) == [1, 2, 3]
-    for position, sample_id in by_position.items():
-        result = results[sample_id]
-        assert result.total_count == len(annotations)
-        assert result.previous_sample_id == by_position.get(position - 1)
-        assert result.next_sample_id == by_position.get(position + 1)
+    _assert_matches_expected_order(
+        session=db_session, filters=filters, expected_order=expected_order
+    )
 
 
 def test_get_adjacent_annotations__returns_none_when_anchor_filtered_out_of_keyset_path(
