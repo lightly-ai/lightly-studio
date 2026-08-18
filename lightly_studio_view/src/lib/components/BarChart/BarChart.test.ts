@@ -28,6 +28,7 @@ vi.mock('echarts/core', () => ({
 vi.mock('echarts/charts', () => ({ BarChart: {} }));
 vi.mock('echarts/components', () => ({
     GridComponent: {},
+    LegendComponent: {},
     TooltipComponent: {}
 }));
 vi.mock('echarts/renderers', () => ({ CanvasRenderer: {} }));
@@ -92,5 +93,27 @@ describe('BarChart', () => {
         echartsMock.getClickHandler()?.({});
 
         expect(onBarClick).not.toHaveBeenCalled();
+    });
+
+    it('scrolls horizontally for vertical orientation', () => {
+        render(BarChart, { props: { data: balanced, orientation: 'vertical' } });
+        expect(screen.getByTestId('bar-chart')).toHaveClass('overflow-x-auto');
+    });
+
+    it('scrolls vertically for horizontal orientation', () => {
+        render(BarChart, { props: { data: balanced, orientation: 'horizontal' } });
+        expect(screen.getByTestId('bar-chart')).toHaveClass('overflow-y-auto');
+    });
+
+    it('applies maxWidthPx as a max-width inline style', () => {
+        render(BarChart, { props: { data: balanced, maxWidthPx: 600 } });
+        expect(screen.getByTestId('bar-chart')).toHaveStyle({ 'max-width': '600px' });
+    });
+
+    it('applies maxHeightPx as a height or max-height inline style', () => {
+        render(BarChart, { props: { data: balanced, maxHeightPx: 400 } });
+        const chart = screen.getByTestId('bar-chart');
+        const style = chart.getAttribute('style') ?? '';
+        expect(style).toContain('400px');
     });
 });
