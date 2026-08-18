@@ -525,10 +525,10 @@ def test_sampling_via_database__preselection_matches_single_sampling(
             collection_id=collection_id,
             n_samples_to_select=2,
             sampling_result_tag_name="second_batch",
+            preselected_tag_name="first_batch",
             strategies=[strategy],
         ),
         input_sample_ids=sample_ids,
-        preselected_sample_ids=first_batch,
     )
     second_tag = tag_resolver.get_by_name(
         session=db_session, tag_name="second_batch", collection_id=collection_id
@@ -560,10 +560,39 @@ def test_sampling_via_database__preselection_matches_single_sampling(
     assert set(first_batch + second_batch) == set(single_batch)
 
 
+def test_sampling_via_database__preselected_tag_name_not_found(
+    db_session: Session,
+) -> None:
+    with pytest.raises(ValueError, match="Preselected tag with name missing not found"):
+        sampling_via_database(
+            session=db_session,
+            config=SamplingConfig(
+                collection_id=uuid4(),
+                n_samples_to_select=1,
+                sampling_result_tag_name="result",
+                preselected_tag_name="missing",
+                strategies=[],
+            ),
+            input_sample_ids=[],
+        )
+
+
 def test_sampling_via_database__preselected_sample_id_not_in_input(
     db_session: Session,
 ) -> None:
-    sample_id = uuid4()
+    collection_id = fill_db_with_samples_and_embeddings(
+        db_session, n_samples=1, embedding_model_names=[]
+    )
+    sample_id = _all_sample_ids(db_session, collection_id)[0]
+    preselected_tag = tag_resolver.create(
+        session=db_session,
+        tag=TagCreate(collection_id=collection_id, name="preselected", kind="sample"),
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session,
+        tag_id=preselected_tag.tag_id,
+        sample_ids=[sample_id],
+    )
 
     with pytest.raises(
         ValueError, match="Preselected sample IDs must be a subset of input sample IDs"
@@ -571,32 +600,13 @@ def test_sampling_via_database__preselected_sample_id_not_in_input(
         sampling_via_database(
             session=db_session,
             config=SamplingConfig(
-                collection_id=uuid4(),
+                collection_id=collection_id,
                 n_samples_to_select=1,
                 sampling_result_tag_name="result",
+                preselected_tag_name="preselected",
                 strategies=[],
             ),
             input_sample_ids=[],
-            preselected_sample_ids=[sample_id],
-        )
-
-
-def test_sampling_via_database__duplicate_preselected_sample_id(
-    db_session: Session,
-) -> None:
-    sample_id = uuid4()
-
-    with pytest.raises(ValueError, match="Preselected sample IDs must be unique"):
-        sampling_via_database(
-            session=db_session,
-            config=SamplingConfig(
-                collection_id=uuid4(),
-                n_samples_to_select=1,
-                sampling_result_tag_name="result",
-                strategies=[],
-            ),
-            input_sample_ids=[sample_id],
-            preselected_sample_ids=[sample_id, sample_id],
         )
 
 
@@ -1447,23 +1457,32 @@ def test_sampling_via_database__sequence_preselection(
         collection_id=frame_collection_id,
         n_samples_to_select=5,  # 1 sequence of length 5, on top of the preselected one
         sampling_result_tag_name="preselected_sequence",
+        preselected_tag_name="preselected",
         strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
         selected_sequence_length=5,
     )
 
-    sampling_via_database(
-        db_session,
-        sampling_config,
-        input_sample_ids=frame_sample_ids,
-        preselected_sample_ids=frame_sample_ids[0:5],
+    _create_tag_with_sample_ids(
+        session=db_session,
+        collection_id=frame_collection_id,
+        tag_name="preselected",
+        sample_ids=frame_sample_ids[0:5],
     )
 
-    tags = tag_resolver.get_all_by_collection_id(db_session, collection_id=frame_collection_id)
-    assert len(tags) == 1
+    sampling_via_database(db_session, sampling_config, input_sample_ids=frame_sample_ids)
+
+    result_tag = tag_resolver.get_by_name(
+        session=db_session,
+        tag_name="preselected_sequence",
+        collection_id=frame_collection_id,
+    )
+    assert result_tag is not None
     tagged = video_frame_resolver.get_all_by_collection_id(
         session=db_session,
         collection_id=frame_collection_id,
-        video_frame_filter=VideoFrameFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
+        video_frame_filter=VideoFrameFilter(
+            sample_filter=SampleFilter(tag_ids=[result_tag.tag_id])
+        ),
     )
     assert sorted(frame.frame_number for frame in tagged.samples) == [10, 11, 12, 13, 14]
 
@@ -1478,29 +1497,33 @@ def test_sampling_via_database__sequence_preselection_matches_single_sampling(
     )
     strategy = EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")
 
-    def sample_sequences(n_samples_to_select: int, tag_name: str, preselected: list[UUID]) -> None:
+    def sample_sequences(
+        n_samples_to_select: int, tag_name: str, preselected_tag_name: str | None
+    ) -> None:
         sampling_via_database(
             session=db_session,
             config=SamplingConfig(
                 collection_id=frame_collection_id,
                 n_samples_to_select=n_samples_to_select,
                 sampling_result_tag_name=tag_name,
+                preselected_tag_name=preselected_tag_name,
                 strategies=[strategy],
                 selected_sequence_length=5,
             ),
             input_sample_ids=frame_sample_ids,
-            preselected_sample_ids=preselected,
         )
 
-    sample_sequences(n_samples_to_select=5, tag_name="first_batch", preselected=[])
+    sample_sequences(n_samples_to_select=5, tag_name="first_batch", preselected_tag_name=None)
     first_batch = _frame_sample_ids_by_tag(
         session=db_session, collection_id=frame_collection_id, tag_name="first_batch"
     )
-    sample_sequences(n_samples_to_select=5, tag_name="second_batch", preselected=first_batch)
+    sample_sequences(
+        n_samples_to_select=5, tag_name="second_batch", preselected_tag_name="first_batch"
+    )
     second_batch = _frame_sample_ids_by_tag(
         session=db_session, collection_id=frame_collection_id, tag_name="second_batch"
     )
-    sample_sequences(n_samples_to_select=10, tag_name="single_batch", preselected=[])
+    sample_sequences(n_samples_to_select=10, tag_name="single_batch", preselected_tag_name=None)
     single_batch = _frame_sample_ids_by_tag(
         session=db_session, collection_id=frame_collection_id, tag_name="single_batch"
     )
@@ -1523,20 +1546,28 @@ def test_sampling_via_database__sequence_preselection_rejects_partial_sequence(
         collection_id=frame_collection_id,
         n_samples_to_select=5,
         sampling_result_tag_name="partial_preselection",
+        preselected_tag_name="preselected",
         strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
         selected_sequence_length=5,
     )
+    _create_tag_with_sample_ids(
+        session=db_session,
+        collection_id=frame_collection_id,
+        tag_name="preselected",
+        sample_ids=frame_sample_ids[0:3],
+    )
 
     with pytest.raises(ValueError, match="covers 1 sequence\\(s\\) only partially"):
-        sampling_via_database(
-            db_session,
-            sampling_config,
-            input_sample_ids=frame_sample_ids,
-            preselected_sample_ids=frame_sample_ids[0:3],
-        )
+        sampling_via_database(db_session, sampling_config, input_sample_ids=frame_sample_ids)
 
-    tags = tag_resolver.get_all_by_collection_id(db_session, collection_id=frame_collection_id)
-    assert tags == []
+    assert (
+        tag_resolver.get_by_name(
+            session=db_session,
+            tag_name="partial_preselection",
+            collection_id=frame_collection_id,
+        )
+        is None
+    )
 
 
 def test_sampling_via_database__sequence_preselection_rejects_dropped_frame(
@@ -1552,43 +1583,19 @@ def test_sampling_via_database__sequence_preselection_rejects_dropped_frame(
         collection_id=frame_collection_id,
         n_samples_to_select=5,
         sampling_result_tag_name="dropped_preselection",
+        preselected_tag_name="preselected",
         strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
         selected_sequence_length=5,
+    )
+    _create_tag_with_sample_ids(
+        session=db_session,
+        collection_id=frame_collection_id,
+        tag_name="preselected",
+        sample_ids=[frame_sample_ids[10]],
     )
 
     with pytest.raises(ValueError, match="is not part of a complete sequence"):
-        sampling_via_database(
-            db_session,
-            sampling_config,
-            input_sample_ids=frame_sample_ids,
-            preselected_sample_ids=[frame_sample_ids[10]],
-        )
-
-
-def test_sampling_via_database__sequence_preselection_rejects_duplicates(
-    db_session: Session,
-) -> None:
-    """Duplicate preselected frames are rejected as in the single-frame path."""
-    frame_collection_id, frame_sample_ids = _fill_db_with_video_frames_and_embeddings(
-        session=db_session,
-        n_frames=10,
-    )
-
-    sampling_config = SamplingConfig(
-        collection_id=frame_collection_id,
-        n_samples_to_select=5,
-        sampling_result_tag_name="duplicate_preselection",
-        strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
-        selected_sequence_length=5,
-    )
-
-    with pytest.raises(ValueError, match="Preselected sample IDs must be unique"):
-        sampling_via_database(
-            db_session,
-            sampling_config,
-            input_sample_ids=frame_sample_ids,
-            preselected_sample_ids=[frame_sample_ids[0], frame_sample_ids[0]],
-        )
+        sampling_via_database(db_session, sampling_config, input_sample_ids=frame_sample_ids)
 
 
 def _all_sample_ids(session: Session, collection_id: UUID) -> list[UUID]:
@@ -1606,6 +1613,20 @@ def _sample_ids_by_tag(session: Session, collection_id: UUID, tag_id: UUID) -> l
         filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tag_id])),
     ).samples
     return [sample.sample_id for sample in samples]
+
+
+def _create_tag_with_sample_ids(
+    session: Session,
+    collection_id: UUID,
+    tag_name: str,
+    sample_ids: list[UUID],
+) -> None:
+    """Create a sample tag holding the given sample ids, for use as a preselection."""
+    tag = tag_resolver.create(
+        session=session,
+        tag=TagCreate(collection_id=collection_id, name=tag_name, kind="sample"),
+    )
+    tag_resolver.add_sample_ids_to_tag_id(session=session, tag_id=tag.tag_id, sample_ids=sample_ids)
 
 
 def _frame_sample_ids_by_tag(session: Session, collection_id: UUID, tag_name: str) -> list[UUID]:

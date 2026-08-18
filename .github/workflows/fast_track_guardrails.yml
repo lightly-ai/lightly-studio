@@ -16,14 +16,18 @@ jobs:
     name: Fast Track Guardrails
     # Skip drafts. `edited` fires on any PR edit (title, body, base), so restrict it
     # to base retargets — those change the diff and warrant a re-judge; other edits don't.
+    # Skip fork PRs: they get no secrets, so the toolchain steps would fail with a
+    # confusing red check. The bot already skips forks, so no verdict is expected.
     if: >-
       github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
       (github.event.action != 'edited' || github.event.changes.base != null)
     # Job-level concurrency prevents an unrelated skipped edit from cancelling this job.
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: fast_track
@@ -31,8 +35,8 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v6
         # Never pushes — keep the git token out of the checkout. The later toolchain steps
-        # expose GCP secrets to PR code (same posture as unit_test.yml); fork PRs get
-        # no secrets, so their toolchain-dependent guardrails error instead of emitting a verdict.
+        # expose GCP secrets to PR code (same posture as unit_test.yml); the job's `if`
+        # restricts it to same-repo PRs, so untrusted fork code never reaches them.
         with:
           persist-credentials: false
 
@@ -162,7 +166,7 @@ jobs:
 
       # JS action, so defaults.run.working-directory doesn't apply — path is repo-root-relative.
       - name: Upload verdict
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fast-track-verdict
           path: fast_track/verdict.json

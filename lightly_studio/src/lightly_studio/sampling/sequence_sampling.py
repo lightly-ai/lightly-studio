@@ -146,7 +146,7 @@ def _load_sequences(
     session: Session,
     sample_ids: Sequence[UUID],
     sequence_length: int,
-) -> list[tuple[UUID, ...]]:
+) -> list[list[UUID]]:
     """Load candidate frames and chunk them into complete sequences."""
     frames = video_frame_resolver.get_frame_infos_by_ids(session=session, sample_ids=sample_ids)
     if len(frames) != len(sample_ids):
@@ -169,7 +169,7 @@ def _load_sequences(
 
 
 def _get_preselected_sequence_indices(
-    sequences: Sequence[tuple[UUID, ...]],
+    sequences: Sequence[Sequence[UUID]],
     preselected_sample_ids: Iterable[UUID] | None,
 ) -> list[int]:
     """Map preselected frames onto the sequences they cover.

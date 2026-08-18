@@ -3,13 +3,12 @@ import type { ChangedFile, GuardrailContext } from './context/types';
 import { diffSizeGuardrail, isExcluded, MAX_ADDED_LOC } from './diff-size';
 
 function makeCtx(files: ChangedFile[]): GuardrailContext {
-    return { baseRef: 'origin/main', changedFiles: async () => files };
+    return { changedFiles: async () => files };
 }
 
 describe('diffSizeGuardrail', () => {
-    it('is required and runs locally', () => {
+    it('is required', () => {
         expect(diffSizeGuardrail.required).toBe(true);
-        expect(diffSizeGuardrail.needsPrContext).toBe(false);
     });
 
     it('passes when total additions are below the limit', async () => {

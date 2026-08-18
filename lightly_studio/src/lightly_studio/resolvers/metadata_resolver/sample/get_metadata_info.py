@@ -127,10 +127,8 @@ def _get_metadata_min_max_count(
     Returns:
         A ``(min, max, count)`` tuple, or ``None`` if the key has no values.
     """
-    value_expr = db_json.json_extract(
-        column=SampleMetadataTable.data, field=metadata_key, cast_to_float=True
-    )
-    json_not_null_expr = db_json.json_extract(
+    value_expr = db_json.json_extract_as_float(column=SampleMetadataTable.data, field=metadata_key)
+    json_not_null_expr = db_json.json_extract_as_text(
         column=SampleMetadataTable.data, field=metadata_key
     ).isnot(None)
 
@@ -205,10 +203,8 @@ def _compute_histogram(  # noqa: PLR0913
 
     width = (max_value - min_value) / bin_count
 
-    value_expr = db_json.json_extract(
-        column=SampleMetadataTable.data, field=metadata_key, cast_to_float=True
-    )
-    json_not_null_expr = db_json.json_extract(
+    value_expr = db_json.json_extract_as_float(column=SampleMetadataTable.data, field=metadata_key)
+    json_not_null_expr = db_json.json_extract_as_text(
         column=SampleMetadataTable.data, field=metadata_key
     ).isnot(None)
 
@@ -250,7 +246,7 @@ def _count_metadata_values(
     filters: ImageFilter | None,
 ) -> int:
     """Count non-null values for a metadata key under the given filters."""
-    json_not_null_expr = db_json.json_extract(
+    json_not_null_expr = db_json.json_extract_as_text(
         column=SampleMetadataTable.data, field=metadata_key
     ).isnot(None)
     query = (

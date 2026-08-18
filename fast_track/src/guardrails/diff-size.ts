@@ -25,7 +25,6 @@ export function isExcluded(path: string): boolean {
 export const diffSizeGuardrail: Guardrail = {
     name: NAME,
     required: true,
-    needsPrContext: false,
     async run(ctx: GuardrailContext): Promise<GuardrailOutcome> {
         const files = await ctx.changedFiles();
         const totalAdditions = files

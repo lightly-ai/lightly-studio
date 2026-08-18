@@ -9,7 +9,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Index, Relationship, SQLModel
 
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
@@ -50,6 +50,17 @@ class AnnotationBaseTable(SQLModel, table=True):
     """Base class for all annotation models."""
 
     __tablename__ = "annotation_base"
+    # Composite index on the adjacency sort keys that live on the annotation itself. The
+    # keyset seek walks the parent media in path order and looks up each parent's
+    # annotations here, already ordered by the remaining tiebreakers. See LIG-10067.
+    __table_args__ = (
+        Index(
+            "ix_annotation_base_parent_sample_id_created_at_sample_id",
+            "parent_sample_id",
+            "created_at",
+            "sample_id",
+        ),
+    )
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
 

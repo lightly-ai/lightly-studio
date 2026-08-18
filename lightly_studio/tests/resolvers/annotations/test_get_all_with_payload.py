@@ -263,7 +263,7 @@ def test_get_all_with_payload__orders_by_text_embedding_similarity(
     annotations_page = annotation_resolver.get_all_with_payload(
         session=db_session,
         collection_id=annotation_collection_id,
-        text_embedding=[1.0, 0.0],
+        ordering=annotation_resolver.AnnotationOrdering(text_embedding=[1.0, 0.0]),
     )
 
     assert annotations_page.total_count == 2
@@ -294,7 +294,7 @@ def test_get_all_with_payload__without_embedding_model_has_no_similarity_score(
     annotations_page = annotation_resolver.get_all_with_payload(
         session=db_session,
         collection_id=annotation.sample.collection_id,
-        text_embedding=[1.0, 0.0],
+        ordering=annotation_resolver.AnnotationOrdering(text_embedding=[1.0, 0.0]),
     )
 
     assert annotations_page.annotations[0].similarity_score is None

@@ -2,6 +2,7 @@ export { useVideoFrames } from '$lib/hooks/useVideoFrames/useVideoFrames';
 export { useVideoFrameAnnotations } from '$lib/hooks/useVideoFrameAnnotations/useVideoFrameAnnotations';
 export { useSamplesInfinite } from '$lib/hooks/useSamplesInfinite/useSamplesInfinite.svelte';
 export { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+export { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
 export { useGroupsInfinite } from '$lib/hooks/useGroupsInfinite/useGroupsInfinite.svelte';
 export { useFrames } from '$lib/hooks/useFrames/useFrames.svelte';
 export { useTags } from '$lib/hooks/useTags/useTags';
@@ -29,7 +30,10 @@ export { useEvaluationSampleMetricsInfo } from '$lib/hooks/useEvaluationSampleMe
 export { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
 export { useEvaluationConfusionMatrix } from '$lib/hooks/useEvaluationConfusionMatrix/useEvaluationConfusionMatrix.svelte';
 export { useOrderBy } from '$lib/hooks/useOrderBy/useOrderBy';
-export { useSortFields } from '$lib/hooks/useSortFields/useSortFields.svelte';
+export {
+    useSortFields,
+    formatEvaluationMetricLabel
+} from '$lib/hooks/useSortFields/useSortFields.svelte';
 export { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
 export { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
 export { useSegmentationMaskBrush } from '$lib/hooks/useSegmentationMaskBrush';
@@ -48,6 +52,9 @@ export { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
 export { useSettings } from '$lib/hooks/useSettings';
 export { useTrackSampleInspected } from '$lib/hooks/useTrackSampleInspected';
 export { useAnnotationClassVisibility } from '$lib/hooks/useAnnotationClassVisibility/useAnnotationClassVisibility';
+export { useAnnotationSortBy } from '$lib/hooks/useAnnotationSortBy/useAnnotationSortBy';
+export { useAnnotationEvaluationMetricsInfo } from '$lib/hooks/useAnnotationEvaluationMetricsInfo/useAnnotationEvaluationMetricsInfo.svelte';
+export { useAnnotationOrderBy } from '$lib/hooks/useAnnotationOrderBy/useAnnotationOrderBy.svelte';
 export { useInvalidateAnnotationGridQueries } from '$lib/hooks/useInvalidateAnnotationGridQueries';
 export {
     useImageAnnotationCounts,

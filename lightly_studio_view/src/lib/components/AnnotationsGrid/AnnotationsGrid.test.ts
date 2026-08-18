@@ -5,14 +5,23 @@ import { type Writable } from 'svelte/store';
 import {
     AnnotationType,
     SampleType,
+    type AnnotationEvaluationMetricSortExpr,
     type AnnotationView,
     type AnnotationWithPayloadView,
     type ImageAnnotationView
 } from '$lib/api/lightly_studio_local';
 import AnnotationsGrid from './AnnotationsGrid.svelte';
 
+const SORT_BY: AnnotationEvaluationMetricSortExpr = {
+    source: 'annotation_evaluation_metric',
+    evaluation_run_id: 'run-1',
+    metric_name: 'iou',
+    direction: 'asc'
+};
+
 const mocks = vi.hoisted(() => ({
     annotationsData: [] as AnnotationWithPayloadView[],
+    sortedAnnotationsData: [] as AnnotationWithPayloadView[],
     updateAnnotations: vi.fn(),
     updateAnnotationsRaw: vi.fn(),
     refresh: vi.fn(),
@@ -25,7 +34,9 @@ const mocks = vi.hoisted(() => ({
     addReversibleAction: vi.fn(),
     clearReversibleActions: vi.fn(),
     textEmbeddingStore: null as unknown as Writable<undefined>,
-    isEditingModeStore: null as unknown as Writable<boolean>
+    isEditingModeStore: null as unknown as Writable<boolean>,
+    hasEmbeddings: false,
+    sortBy: null as AnnotationEvaluationMetricSortExpr | null
 }));
 
 vi.mock('$app/navigation', () => ({
@@ -101,14 +112,29 @@ vi.mock('$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations', async 
 });
 
 vi.mock('$lib/hooks/useHasEmbeddings/useHasEmbeddings', () => ({
-    useHasEmbeddings: vi.fn(() => ({ data: null }))
+    useHasEmbeddings: vi.fn(() => ({ data: mocks.hasEmbeddings ? true : null }))
 }));
 
+vi.mock('$lib/hooks/useAnnotationSortBy/useAnnotationSortBy', async () => {
+    const { derived, writable } = await import('svelte/store');
+    return {
+        useAnnotationSortBy: vi.fn(() => ({
+            sortByFor: derived(writable(null), () => () => mocks.sortBy)
+        }))
+    };
+});
+
+// Stands in for the backend: answers with the sorted page only when the grid sends sort_by.
+function pageFor(params: { sort_by?: unknown }) {
+    const data = params.sort_by ? mocks.sortedAnnotationsData : mocks.annotationsData;
+    return { data, total_count: data.length };
+}
+
 vi.mock('$lib/hooks/useAnnotationsInfinite/useAnnotationsInfinite', () => ({
-    useAnnotationsInfinite: vi.fn(() => ({
+    useAnnotationsInfinite: vi.fn((getParams: () => { sort_by?: unknown }) => ({
         annotations: {
             data: {
-                pages: [{ data: mocks.annotationsData, total_count: mocks.annotationsData.length }]
+                pages: [pageFor(getParams())]
             },
             isSuccess: true,
             isFetched: true,
@@ -218,9 +244,44 @@ describe('AnnotationsGrid', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mocks.annotationsData = [];
+        mocks.sortedAnnotationsData = [];
         mocks.getCollectionVersion.mockResolvedValue('v1');
         mocks.pickedAnnotationIds.set({});
         mocks.isEditingModeStore.set(false);
+        mocks.hasEmbeddings = false;
+        mocks.textEmbeddingStore.set(undefined);
+        mocks.sortBy = null;
+    });
+
+    function renderWithSortSelection() {
+        mocks.sortBy = SORT_BY;
+        mocks.annotationsData = [buildClassificationAnnotation('cls-1')];
+        mocks.sortedAnnotationsData = [buildClassificationAnnotation('cls-2')];
+
+        renderGrid();
+
+        return screen.getAllByTestId('mock-classification-grid-item');
+    }
+
+    it('renders the sorted page when a sort is selected', () => {
+        const tiles = renderWithSortSelection();
+
+        expect(tiles[0]).toHaveAttribute('data-annotation-id', 'cls-2');
+        // The reset key restarts the loader and the scroll position on a new sort.
+        expect(screen.getByTestId('mock-grid-scroll-reset-key')).toHaveTextContent('sort:');
+    });
+
+    it('renders the unsorted page while a similarity search is active', () => {
+        mocks.hasEmbeddings = true;
+        mocks.textEmbeddingStore.set({
+            embedding: [0.1, 0.2],
+            queryText: 'a cat'
+        } as unknown as undefined);
+
+        const tiles = renderWithSortSelection();
+
+        expect(tiles[0]).toHaveAttribute('data-annotation-id', 'cls-1');
+        expect(screen.getByTestId('mock-grid-scroll-reset-key')).not.toHaveTextContent('sort:');
     });
 
     it('renders two separate tiles for two classification annotations', () => {
