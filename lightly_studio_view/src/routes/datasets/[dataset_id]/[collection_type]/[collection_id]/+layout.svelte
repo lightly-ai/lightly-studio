@@ -756,9 +756,9 @@
         <div class="flex min-h-0 flex-1 gap-4 px-4" data-testid="workspace-body">
             {#if isCollectionGrid}
                 <!--
-                    Keep the panel mounted while collapsed (only visually hidden). Children such as
-                    AnnotationCollectionsMenu run mount-time $effects (e.g. seeding the annotation
-                    source selection) that must still fire after a reload with the panel collapsed.
+                    Keep the panel mounted while collapsed (only visually hidden). Its children
+                    run mount-time $effects that must still fire after a reload with the panel
+                    collapsed.
                 -->
                 <div
                     class="h-full min-h-0 w-80 flex-col {$filterPanelCollapsed ? 'hidden' : 'flex'}"
