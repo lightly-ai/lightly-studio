@@ -1,8 +1,10 @@
 """Tests for delete_dataset resolver."""
 
 import uuid
+from pathlib import Path
 
 import pytest
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
@@ -206,14 +208,16 @@ def test_delete_dataset__with_tags(db_session: Session) -> None:
     assert tag_resolver.get_by_id(session=db_session, tag_id=tag_id) is None
 
 
-def test_delete_dataset__with_export_job(db_session: Session) -> None:
+def test_delete_dataset__with_export_job(db_session: Session, tmp_path: Path) -> None:
     # Arrange
     dataset = create_collection(session=db_session, collection_name="to_delete")
     collection_id = dataset.collection_id  # Capture before delete
+    export_path = tmp_path / "coco.json"
+    export_path.write_text("{}")
     job = export_job_resolver.create(
         session=db_session,
         collection_id=collection_id,
-        export_path="/exports/coco.json",
+        export_path=str(export_path),
     )
     export_key = job.export_key  # Capture before delete
 
@@ -223,9 +227,68 @@ def test_delete_dataset__with_export_job(db_session: Session) -> None:
         dataset_id=dataset.dataset_id,
     )
 
-    # Assert - collection and its export job deleted
+    # Assert - collection, export job, and its on-disk artifact are all gone
     assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
     assert export_job_resolver.get(session=db_session, export_key=export_key) is None
+    assert not export_path.exists()
+
+
+def test_delete_dataset__with_export_job__removes_directory_artifact(
+    db_session: Session, tmp_path: Path
+) -> None:
+    # Arrange
+    dataset = create_collection(session=db_session, collection_name="to_delete")
+    collection_id = dataset.collection_id  # Capture before delete
+    export_dir = tmp_path / "yolo"
+    export_dir.mkdir()
+    (export_dir / "labels.txt").write_text("cat")
+    job = export_job_resolver.create(
+        session=db_session,
+        collection_id=collection_id,
+        export_path=str(export_dir),
+    )
+    export_key = job.export_key  # Capture before delete
+
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+    )
+
+    # Assert - export job and its directory artifact are both gone
+    assert export_job_resolver.get(session=db_session, export_key=export_key) is None
+    assert not export_dir.exists()
+
+
+def test_delete_dataset__with_export_job__leaves_artifact_outside_temp_dir(
+    db_session: Session, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    # Arrange - the fake temp directory does not contain the export artifact below
+    mocker.patch(
+        "lightly_studio.resolvers.dataset_resolver.delete_dataset.tempfile.gettempdir",
+        return_value=str(tmp_path / "temp"),
+    )
+    dataset = create_collection(session=db_session, collection_name="to_delete")
+    collection_id = dataset.collection_id  # Capture before delete
+    export_path = tmp_path / "outside" / "coco.json"
+    export_path.parent.mkdir()
+    export_path.write_text("{}")
+    job = export_job_resolver.create(
+        session=db_session,
+        collection_id=collection_id,
+        export_path=str(export_path),
+    )
+    export_key = job.export_key  # Capture before delete
+
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+    )
+
+    # Assert - the DB row is gone but the untrusted artifact path is left untouched
+    assert export_job_resolver.get(session=db_session, export_key=export_key) is None
+    assert export_path.exists()
 
 
 def test_delete_dataset__does_not_affect_other_datasets(db_session: Session) -> None:

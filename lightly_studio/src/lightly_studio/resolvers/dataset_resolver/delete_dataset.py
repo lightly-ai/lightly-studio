@@ -4,6 +4,9 @@ This is an enterprise-only / PostgreSQL-only operation. It deletes everything be
 dataset with server-side, set-based ``DELETE``s scoped by subquery, so no rows cross the Python
 boundary. All deletes run in a single transaction with one final commit.
 
+The one exception is ``export_job``: its row is the only reference to where its on-disk artifact
+lives, so the affected paths are selected into Python and removed before the rows are deleted.
+
 The per-table scoping below is the source of truth for what gets deleted. If a new table with a
 dataset/sample/collection FK is added, add a delete here; ``verify_table_coverage()`` fails fast
 until you do.
@@ -11,6 +14,10 @@ until you do.
 
 from __future__ import annotations
 
+import logging
+import shutil
+import tempfile
+from pathlib import Path
 from uuid import UUID
 
 from sqlmodel import Session, col, delete, select
@@ -52,6 +59,8 @@ from lightly_studio.resolvers.dataset_resolver import table_coverage_utils
 # of deleted rows. Nothing is loaded in this session, so we disable synchronization and the delete
 # runs entirely server-side with bounded memory regardless of dataset size.
 _DELETE_EXECUTION_OPTIONS = {"synchronize_session": False}
+
+logger = logging.getLogger(__name__)
 
 
 def delete_dataset(
@@ -369,13 +378,43 @@ def _delete_evaluation_runs(session: Session, dataset_id: UUID) -> None:
 
 
 def _delete_export_jobs(session: Session, dataset_id: UUID) -> None:
-    """Delete export jobs for the dataset's collections."""
+    """Remove export artifacts, then delete export jobs for the dataset's collections."""
+    export_paths = session.exec(
+        select(ExportJobTable.export_path).where(
+            col(ExportJobTable.collection_id).in_(_collection_ids_subquery(dataset_id))
+        )
+    ).all()
+    for export_path in export_paths:
+        _remove_export_artifact(export_path)
     session.exec(
         delete(ExportJobTable).where(
             col(ExportJobTable.collection_id).in_(_collection_ids_subquery(dataset_id))
         ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
+
+
+def _remove_export_artifact(export_path: str) -> None:
+    """Best-effort removal of an export job's on-disk artifact.
+
+    Every ``export_path`` is generated under the system temp directory (see
+    ``lightly_studio.api.routes.api.export``); paths outside of it are left untouched rather than
+    removed, since they cannot be confirmed to be export-owned.
+
+    Args:
+        export_path: Absolute path to the export job's file or directory.
+    """
+    resolved_path = Path(export_path).resolve()
+    temp_dir = Path(tempfile.gettempdir()).resolve()
+    try:
+        resolved_path.relative_to(temp_dir)
+    except ValueError:
+        logger.warning("Skipping export artifact outside the temp directory: %s", export_path)
+        return
+    if resolved_path.is_dir():
+        shutil.rmtree(resolved_path, ignore_errors=True)
+    else:
+        resolved_path.unlink(missing_ok=True)
 
 
 def _delete_collections(session: Session, dataset_id: UUID) -> None:
