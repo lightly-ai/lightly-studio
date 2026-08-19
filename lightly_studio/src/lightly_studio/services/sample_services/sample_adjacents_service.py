@@ -68,6 +68,10 @@ def _build_annotation_order_by(
     collection_ids = filters.collection_ids or []
     if not (annotation_sort_by and collection_ids):
         return None
+    if len(collection_ids) > 1:
+        raise ValueError(
+            "annotation_sort_by is not supported when multiple collection_ids are provided"
+        )
     return annotation_metric_sort.sort_expr_to_order_by(
         session=session,
         annotation_collection_id=collection_ids[0],

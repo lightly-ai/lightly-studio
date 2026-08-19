@@ -236,6 +236,35 @@ def test_get_adjacent_samples__translates_annotation_sort_by_before_delegating(
     )
 
 
+def test_get_adjacent_samples__raises_when_annotation_sort_by_with_multiple_collection_ids(
+    db_session: Session,
+) -> None:
+    collection_id_a = uuid4()
+    collection_id_b = uuid4()
+    filters = AnnotationsFilter(collection_ids=[collection_id_a, collection_id_b])
+    annotation_sort_by = AnnotationEvaluationMetricSortExpr(
+        evaluation_run_id=uuid4(),
+        metric_name="iou",
+        direction=SortDirection.desc,
+    )
+    request = AdjacentRequest(
+        sample_type=SampleType.ANNOTATION,
+        collection_id=uuid4(),
+        filters=filters,
+        annotation_sort_by=annotation_sort_by,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="annotation_sort_by is not supported when multiple collection_ids are provided",
+    ):
+        get_adjacent_samples(
+            session=db_session,
+            sample_id=uuid4(),
+            request=request,
+        )
+
+
 def test_get_adjacent_samples__raises_for_image_with_wrong_filter_type(
     db_session: Session,
 ) -> None:
