@@ -26,13 +26,13 @@
         showVisibilityToggle = false
     }: Props = $props();
 
-    const { selectedCollectionIds } = useAnnotationCollectionsFilter();
+    const { multipleSourcesVisible } = useAnnotationCollectionsFilter();
     const { enforceColoringByClassStore } = useSettings();
     const { hiddenClassNamesStore, toggleClassVisibility } = useAnnotationClassVisibility();
 
     const showClassColorLegend = $derived(
         !resolveEffectiveColorBySource({
-            multipleSourcesVisible: $selectedCollectionIds.length > 1,
+            multipleSourcesVisible: $multipleSourcesVisible,
             enforceColoringByClass: $enforceColoringByClassStore
         })
     );

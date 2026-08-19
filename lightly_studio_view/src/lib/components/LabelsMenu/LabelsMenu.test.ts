@@ -13,11 +13,13 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter', async () => {
-    const { writable } = await import('svelte/store');
+    const { derived, writable } = await import('svelte/store');
     mocks.selectedCollectionIds = writable<string[]>([]);
+    const multipleSourcesVisible = derived(mocks.selectedCollectionIds, ($ids) => $ids.length > 1);
     return {
         useAnnotationCollectionsFilter: () => ({
-            selectedCollectionIds: mocks.selectedCollectionIds
+            selectedCollectionIds: mocks.selectedCollectionIds,
+            multipleSourcesVisible
         })
     };
 });

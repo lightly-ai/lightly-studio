@@ -35,7 +35,8 @@ vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilte
     const { readable } = await import('svelte/store');
     return {
         useAnnotationCollectionsFilter: vi.fn(() => ({
-            selectedCollectionIds: readable(mocks.selectedCollectionIds)
+            selectedCollectionIds: readable(mocks.selectedCollectionIds),
+            multipleSourcesVisible: readable(mocks.selectedCollectionIds.length > 1)
         }))
     };
 });

@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Stepping to the previous or next image now drives an index range scan instead of scanning the
   sort index from the start. On PostgreSQL with 1M images, one neighbour lookup went from 92ms
   to 0.03ms.
+- Python SDK: `ImageDataset.add_images_from_path` now accepts `tag_depth > 1` to tag images by several leading directory levels (previously only `tag_depth=1` was supported).
 
 ### Deprecated
 
@@ -29,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix requests failing intermittently while the GUI is under load, caused by concurrent access to a shared database session.
 
 ### Security
+
+- Scope export downloads to the collection they were prepared for, so an export key from one collection can no longer be used to download an export prepared for a different collection.
 
 ## \[1.0.5\] - 2026-08-14
 
