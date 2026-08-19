@@ -30,7 +30,14 @@ def get_adjacent_annotations_window(
     filters: AnnotationsFilter,
     order_by: OrderByAnnotationEvaluationMetricField | None = None,
 ) -> AdjacentResultView | None:
-    """Get the adjacent annotations by sorting and windowing the whole filtered set."""
+    """Get the adjacent annotations by sorting and windowing the whole filtered set.
+
+    Args:
+        session: Database session.
+        sample_id: The anchor annotation whose neighbours we want.
+        filters: Annotation filters constraining the set; must scope the collection.
+        order_by: Optional leading sort key applied before the tiebreaker chain.
+    """
     return adjacents.get_sample_adjacent_info(
         session=session,
         sample_id=sample_id,
