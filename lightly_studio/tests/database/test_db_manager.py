@@ -5,6 +5,9 @@
 
 from __future__ import annotations
 
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import duckdb
@@ -12,6 +15,7 @@ import pytest
 import sqlmodel
 from pytest_mock import MockerFixture
 from sqlalchemy.exc import OperationalError
+from sqlmodel import Session
 
 from lightly_studio import ImageDataset
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
@@ -191,6 +195,91 @@ def test_session_data_consistency(mocker: MockerFixture, tmp_path: Path) -> None
     assert len(samples) == 2
     assert samples[0].file_path_abs == "image.png"
     assert samples[1].file_path_abs == "image2.png"
+
+
+def test_session__persistent_session_commits_are_serialized(
+    tmp_path: Path,
+    postgres_url: str | None,
+    mocker: MockerFixture,
+) -> None:
+    """Test that concurrent session() callers never commit the persistent session at once.
+
+    A SQLAlchemy Session is not thread-safe. FastAPI runs the sync session dependency on
+    Starlette's threadpool and three async media routes call session() on the event loop
+    thread, so many threads enter session() concurrently and each commits the one shared
+    persistent session. Unserialized, that raises IllegalStateChangeError.
+    """
+    db_url = postgres_url or f"duckdb:///{tmp_path / 'concurrency.db'}"
+    # A pooled engine, not single_threaded: StaticPool hands the same connection to every
+    # session, so it cannot reproduce concurrent access.
+    engine = DatabaseEngine(engine_url=db_url)
+    persistent_session = engine.get_persistent_session()
+    original_commit = persistent_session.commit
+
+    counter_lock = threading.Lock()
+    commits_in_flight = 0
+    max_commits_in_flight = 0
+
+    def tracked_commit() -> None:
+        nonlocal commits_in_flight, max_commits_in_flight
+        with counter_lock:
+            commits_in_flight += 1
+            max_commits_in_flight = max(max_commits_in_flight, commits_in_flight)
+        # Widen the window so an unserialized commit is guaranteed to overlap.
+        time.sleep(0.01)
+        try:
+            original_commit()
+        finally:
+            with counter_lock:
+                commits_in_flight -= 1
+
+    # Force the commit branch. Otherwise the first caller ends the transaction and every
+    # later caller skips the commit, closing the window under test.
+    mocker.patch.object(persistent_session, "in_transaction", return_value=True)
+    mocker.patch.object(persistent_session, "commit", tracked_commit)
+
+    def read_in_session() -> None:
+        with engine.session() as session:
+            session.exec(sqlmodel.select(CollectionTable)).all()
+
+    try:
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            futures = [pool.submit(read_in_session) for _ in range(24)]
+            for future in futures:
+                future.result()
+    finally:
+        engine.close()
+
+    assert max_commits_in_flight == 1
+
+
+def test_get_persistent_session__concurrent_threads_share_one_session(
+    tmp_path: Path,
+    postgres_url: str | None,
+) -> None:
+    """Test that concurrent first-time callers all receive the same persistent session.
+
+    The lazy initialization is a check-then-set: unserialized, two threads can each build
+    a Session and one is silently dropped while it still holds a pool connection.
+    """
+    db_url = postgres_url or f"duckdb:///{tmp_path / 'lazy_init.db'}"
+    engine = DatabaseEngine(engine_url=db_url)
+    thread_count = 8
+    all_threads_ready = threading.Barrier(parties=thread_count)
+
+    def get_persistent_session() -> Session:
+        # Line the threads up so they race the lazy initialization.
+        all_threads_ready.wait()
+        return engine.get_persistent_session()
+
+    try:
+        with ThreadPoolExecutor(max_workers=thread_count) as pool:
+            futures = [pool.submit(get_persistent_session) for _ in range(thread_count)]
+            sessions = [future.result() for future in futures]
+    finally:
+        engine.close()
+
+    assert all(session is sessions[0] for session in sessions)
 
 
 def test_close__removes_wal_and_allows_reconnect(

@@ -8,6 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from fastapi.params import Query
 from pydantic import BaseModel, Field
+from sqlmodel import col
 
 from lightly_studio.api.routes.api import annotations as annotations_module
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
@@ -21,6 +22,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationViewsWithCount,
     AnnotationWithPayloadAndCountView,
 )
+from lightly_studio.models.annotation_sort import AnnotationEvaluationMetricSortExpr
 from lightly_studio.models.collection import AnnotationCollectionView, CollectionTable
 from lightly_studio.models.embedding_region import EmbeddingRegion
 from lightly_studio.resolvers import (
@@ -32,7 +34,11 @@ from lightly_studio.resolvers import (
 from lightly_studio.resolvers.annotation_resolver.get_all import (
     GetAllAnnotationsResult,
 )
+from lightly_studio.resolvers.annotation_resolver.get_all_with_payload import (
+    AnnotationOrdering,
+)
 from lightly_studio.resolvers.annotation_resolver.update_bounding_box import BoundingBoxCoordinates
+from lightly_studio.resolvers.annotations import annotation_metric_sort
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
@@ -92,6 +98,7 @@ class ReadAnnotationsWithPayloadRequest(BaseModel):
     # list of selected annotation sample ids; resolved to sample ids server-side (LIG-9903).
     embedding_region: EmbeddingRegion | None = None
     text_embedding: list[float] | None = None
+    sort_by: AnnotationEvaluationMetricSortExpr | None = None
 
 
 @annotations_router.get(
@@ -153,6 +160,16 @@ def read_annotations_with_payload(
     body: ReadAnnotationsWithPayloadRequest,
 ) -> AnnotationWithPayloadAndCountView:
     """Retrieve annotations with payload and optional similarity or sample filters."""
+    order_by = None
+    if body.sort_by is not None:
+        # An invalid sort raises ValueError, which the registered handler turns into a 400.
+        order_by = annotation_metric_sort.sort_expr_to_order_by(
+            session=session,
+            annotation_collection_id=collection_id,
+            sort_expr=body.sort_by,
+            annotation_id_column=col(AnnotationBaseTable.sample_id),
+        )
+
     return annotation_resolver.get_all_with_payload(
         session=session,
         pagination=Paginated(
@@ -167,7 +184,10 @@ def read_annotations_with_payload(
             embedding_region=body.embedding_region,
         ),
         collection_id=collection_id,
-        text_embedding=body.text_embedding,
+        ordering=AnnotationOrdering(
+            text_embedding=body.text_embedding,
+            order_by=order_by,
+        ),
     )
 
 

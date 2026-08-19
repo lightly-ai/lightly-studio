@@ -20,8 +20,12 @@
         (annotationCollectionsQuery.data ?? []).map((c) => ({ id: c.collection_id, name: c.name }))
     );
 
-    const { setSelectedCollectionIds, selectedCollectionIds, seedSelectionIfNeeded } =
-        useAnnotationCollectionsFilter();
+    const {
+        setSelectedCollectionIds,
+        selectedCollectionIds,
+        multipleSourcesVisible,
+        seedSelectionIfNeeded
+    } = useAnnotationCollectionsFilter();
     const { enforceColoringByClassStore } = useSettings();
     const { trackEvent } = usePostHog();
 
@@ -51,7 +55,7 @@
     <Segment title="Annotation Sources">
         <SideMenu
             showColorMarker={resolveEffectiveColorBySource({
-                multipleSourcesVisible: $selectedCollectionIds.length > 1,
+                multipleSourcesVisible: $multipleSourcesVisible,
                 enforceColoringByClass: $enforceColoringByClassStore
             })}
             enableColorPicker

@@ -10,6 +10,19 @@ interface UseExportDownloadReturn {
 }
 
 /**
+ * Triggers a file download by creating a temporary anchor element and clicking it.
+ * Unlike `window.open`, this does not require user activation and is not blocked by
+ * popup blockers when called from an async context.
+ */
+export function triggerDownload(url: string): void {
+    const a = document.createElement('a');
+    a.href = url;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+/**
  * Hook that manages the loading and error state for triggering an export download.
  *
  * @param prepare - Async function that performs the actual export preparation (e.g. API call).

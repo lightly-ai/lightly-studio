@@ -52,4 +52,39 @@ describe('useAnnotationCollectionsFilter', () => {
 
         expect(get(selectedCollectionIds)).toEqual(['a', 'b']);
     });
+
+    describe('isSourceVisible', () => {
+        it('shows only the selected sources', async () => {
+            const { isSourceVisible, setSelectedCollectionIds, seedSelectionIfNeeded } =
+                await importHook();
+
+            seedSelectionIfNeeded('collection-1', sources);
+            setSelectedCollectionIds(['gt']);
+
+            expect(get(isSourceVisible)('gt')).toBe(true);
+            expect(get(isSourceVisible)('pred')).toBe(false);
+        });
+
+        it('shows every source while the selection is empty', async () => {
+            const { isSourceVisible } = await importHook();
+
+            expect(get(isSourceVisible)('gt')).toBe(true);
+            expect(get(isSourceVisible)('pred')).toBe(true);
+        });
+    });
+
+    describe('multipleSourcesVisible', () => {
+        it('is true only while more than one source is selected', async () => {
+            const { multipleSourcesVisible, setSelectedCollectionIds, seedSelectionIfNeeded } =
+                await importHook();
+
+            expect(get(multipleSourcesVisible)).toBe(false);
+
+            seedSelectionIfNeeded('collection-1', sources);
+            expect(get(multipleSourcesVisible)).toBe(true);
+
+            setSelectedCollectionIds(['gt']);
+            expect(get(multipleSourcesVisible)).toBe(false);
+        });
+    });
 });

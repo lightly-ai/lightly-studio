@@ -15,6 +15,7 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session, SQLModel
 from testcontainers.postgres import PostgresContainer  # type: ignore[import-untyped]
 
+from lightly_studio.analytics import tracking
 from lightly_studio.api import features
 from lightly_studio.api.app import app
 from lightly_studio.database import db_manager
@@ -68,6 +69,16 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
     for item in items:
         if "postgres_only" in item.keywords:
             item.add_marker(skip_marker)
+
+
+@pytest.fixture(autouse=True)
+def _disable_analytics(mocker: MockerFixture) -> None:
+    """Keep the suite off the network whatever the developer's environment configures.
+
+    Runs before any module level fixture, so a test that patches these itself still wins.
+    """
+    mocker.patch.object(tracking, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", False)
+    mocker.patch.object(tracking, "_tracker", None)
 
 
 @pytest.fixture(scope="session")

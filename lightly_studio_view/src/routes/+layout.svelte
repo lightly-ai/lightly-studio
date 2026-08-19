@@ -43,7 +43,7 @@
     onMount(() => {
         if (browser) {
             useSettings().initSettings();
-            usePostHog().init();
+            void usePostHog().init();
         }
     });
 

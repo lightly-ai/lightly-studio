@@ -350,6 +350,30 @@ frames.match(VideoFrameSampleField.frame_number > 1).sampling().metadata_weighti
 
 See [Search and Filter](search_and_filter.md#query-in-python) for more filtering options.
 
+### Continuing from preselected samples
+
+Use `preselected_tag_name` to select a new batch while taking an earlier batch into
+account. The preselected samples influence the strategy but are not added to the new
+result tag. `n_samples_to_select` is the number of new samples to select.
+
+```py
+sampling = dataset.query().sampling()
+
+sampling.diverse(
+    n_samples_to_select=100,
+    sampling_result_tag_name="first_batch",
+)
+sampling.diverse(
+    n_samples_to_select=100,
+    sampling_result_tag_name="second_batch",
+    preselected_tag_name="first_batch",
+)
+```
+
+The preselected tag must belong to the sampled collection, and all of its samples must
+be part of the query being sampled. The option is available on every sampling method,
+including `multi_strategies()`.
+
 ### Combining multiple strategies
 
 You can combine several strategies into a single sampling run. All configured strategies are evaluated together and weighted by the `strength` parameter.

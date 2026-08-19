@@ -1,7 +1,7 @@
 <script lang="ts">
     // TODO (Mihnea, 06/2026): Refactor this component, as it is way past the 100-line guideline.
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
-    import { SampleDetailsAnnotationSourceGroup, Segment } from '$lib/components';
+    import { Button, SampleDetailsAnnotationSourceGroup, Segment } from '$lib/components';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
@@ -72,7 +72,7 @@
     });
 
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
-    const { selectedCollectionIds } = useAnnotationCollectionsFilter();
+    const { selectedCollectionIds, multipleSourcesVisible } = useAnnotationCollectionsFilter();
     const annotationSources = $derived(annotationCollectionsQuery.data ?? []);
     const isGrouped = $derived(annotationSources.length > 1);
     const sourceGroups = $derived(
@@ -89,16 +89,23 @@
     // coloring is not enforced, mirroring the annotation segment and canvas behavior.
     const colorBySource = $derived(
         resolveEffectiveColorBySource({
-            multipleSourcesVisible: $selectedCollectionIds.length > 1,
+            multipleSourcesVisible: $multipleSourcesVisible,
             enforceColoringByClass: $enforceColoringByClassStore
         })
     );
+
+    // Ids of classifications with a delete request in flight, so repeated clicks cannot
+    // issue concurrent deletes or push the same annotation onto the undo stack twice.
+    let deletingAnnotationIds = $state<string[]>([]);
 
     const handleDeleteAnnotation = async (annotationId: string) => {
         if (!annotationLabels.data) return;
 
         const annotation = annotations?.find((a) => a.sample_id === annotationId);
         if (!annotation) return;
+
+        if (deletingAnnotationIds.includes(annotationId)) return;
+        deletingAnnotationIds = [...deletingAnnotationIds, annotationId];
 
         try {
             addAnnotationDeleteToUndoStack({
@@ -115,6 +122,8 @@
         } catch (error) {
             toast.error('Failed to delete classification. Please try again.');
             console.error('Error deleting classification:', error);
+        } finally {
+            deletingAnnotationIds = deletingAnnotationIds.filter((id) => id !== annotationId);
         }
     };
 
@@ -275,16 +284,18 @@
         </span>
         <div class="flex shrink-0 items-center gap-3">
             {#if $isEditingMode}
-                <button
-                    type="button"
-                    aria-label="Delete classification"
-                    onclick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteAnnotation(annotation.sample_id);
+                <Button
+                    icon={Trash2}
+                    ariaLabel="Delete classification"
+                    isPending={deletingAnnotationIds.includes(annotation.sample_id)}
+                    buttonProps={{
+                        class: 'size-7 p-0',
+                        onclick: (e) => {
+                            e.stopPropagation();
+                            handleDeleteAnnotation(annotation.sample_id);
+                        }
                     }}
-                >
-                    <Trash2 class="size-6" />
-                </button>
+                />
             {/if}
         </div>
     </div>
@@ -353,23 +364,32 @@
                             </span>
                         </span>
                         <div class="flex shrink-0 items-center gap-3">
-                            <Trash2
-                                class="size-6 text-muted-foreground"
-                                onclick={() => {
-                                    removeDraftClassification(draftId);
+                            <Button
+                                icon={Trash2}
+                                ariaLabel="Remove classification draft"
+                                buttonProps={{
+                                    class: 'size-7 p-0 text-muted-foreground',
+                                    onclick: (e) => {
+                                        e.stopPropagation();
+                                        removeDraftClassification(draftId);
+                                    }
                                 }}
                             />
                         </div>
                     </div>
                 {/each}
-                <button
-                    type="button"
-                    class="mb-2 flex h-8 items-center justify-center rounded-sm bg-card px-2 py-0 text-diffuse-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
-                    onclick={addDraftClassification}
-                    data-testid="add-classification-button"
+                <Button
+                    variant="ghost"
+                    ariaLabel="Add classification"
+                    buttonProps={{
+                        type: 'button',
+                        class: 'mb-2 h-8 justify-center rounded-sm bg-card px-2 py-0 text-base font-normal text-diffuse-foreground hover:bg-primary hover:text-primary-foreground',
+                        onclick: addDraftClassification,
+                        'data-testid': 'add-classification-button'
+                    }}
                 >
                     +
-                </button>
+                </Button>
             {/if}
         </div>
     </div>
