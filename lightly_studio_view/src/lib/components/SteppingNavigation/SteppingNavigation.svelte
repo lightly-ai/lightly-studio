@@ -13,8 +13,9 @@
 
     const isOverlayTarget = (target: EventTarget | null): boolean =>
         target instanceof Element &&
-        target.closest('[role="dialog"], [role="menu"], [role="listbox"], [data-popover-content]') !==
-            null;
+        target.closest(
+            '[role="dialog"], [role="menu"], [role="listbox"], [data-popover-content]'
+        ) !== null;
 
     const handleKeyDownEvent = (event: KeyboardEvent) => {
         if (
