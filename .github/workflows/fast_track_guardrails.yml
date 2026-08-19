@@ -34,9 +34,9 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
-        # Never pushes — keep the git token out of the checkout. The later toolchain steps
-        # expose GCP secrets to PR code (same posture as unit_test.yml); the job's `if`
-        # restricts it to same-repo PRs, so untrusted fork code never reaches them.
+        # Never pushes — keep the git token out of the checkout. This job runs PR code
+        # (builds and tests) with the workflow token, and the job's `if` restricts it to
+        # same-repo PRs, so untrusted fork code never runs in that context.
         with:
           persist-credentials: false
           ref: ${{ github.event.pull_request.head.sha }}
@@ -62,13 +62,6 @@ jobs:
       # --- Backend toolchain -------------------------------------------------
       # Full backend venv for backend guardrails (e.g. backend/complexity, backend/coverage);
       # frontend PRs need it too, to export the schema for their generated API client.
-      - name: Authenticate with GCP
-        if: steps.changes.outputs.backend == 'true' || steps.changes.outputs.frontend == 'true'
-        uses: 'google-github-actions/auth@v3'
-        with:
-          project_id: boris-250909
-          credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
-
       - name: Set Up Python
         if: steps.changes.outputs.backend == 'true' || steps.changes.outputs.frontend == 'true'
         uses: actions/setup-python@v6
