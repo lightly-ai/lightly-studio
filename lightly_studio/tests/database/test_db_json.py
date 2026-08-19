@@ -48,6 +48,7 @@ def _every_entry_point(field: str) -> list[Any]:
         db_json.json_extract_as_text(column=_COLUMN, field=field),
         db_json.json_extract_as_float(column=_COLUMN, field=field),
         db_json.json_extract_key_as_text(column=_COLUMN, key=field),
+        db_json.json_extract_key_as_float(column=_COLUMN, key=field),
     ]
 
 
@@ -168,6 +169,15 @@ def test_json_extract_key_as_text__key_is_literal_and_bound(dialect: Any, key: s
     """The whole argument is one key, so a dot in it does not step into a nested object."""
     result = _compile(db_json.json_extract_key_as_text(column=_COLUMN, key=key), dialect)
     assert str(result) == "CAST(data ->> %(param_1)s AS VARCHAR)"
+    assert result.params == {"param_1": key}
+
+
+@pytest.mark.parametrize("dialect", _DIALECTS)
+@pytest.mark.parametrize("key", ["site.name", *_SPECIAL_KEYS])
+def test_json_extract_key_as_float__key_is_literal_and_bound(dialect: Any, key: str) -> None:
+    """The whole argument is one key, so a dot in it does not step into a nested object."""
+    result = _compile(db_json.json_extract_key_as_float(column=_COLUMN, key=key), dialect)
+    assert str(result) == "CAST(data ->> %(param_1)s AS FLOAT)"
     assert result.params == {"param_1": key}
 
 
