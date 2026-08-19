@@ -2,20 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Any
 from uuid import UUID
 
-import sqlmodel
-from sqlalchemy import func
-from sqlmodel import Session, col, select
-from sqlmodel.sql.expression import Select, SelectOfScalar
+from sqlmodel import Session
 
 from lightly_studio.models.adjacents import AdjacentResultView
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
-from lightly_studio.models.image import ImageTable
-from lightly_studio.models.video import VideoFrameTable, VideoTable
-from lightly_studio.resolvers import adjacents
-from lightly_studio.resolvers.annotations import annotation_ordering
+from lightly_studio.resolvers.annotation_resolver.get_adjacent_annotations_window import (
+    get_adjacent_annotations_window,
+)
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 
 
@@ -24,50 +18,24 @@ def get_adjacent_annotations(
     sample_id: UUID,
     filters: AnnotationsFilter,
 ) -> AdjacentResultView | None:
-    """Get the adjacent annotations for a given annotation ID."""
+    """Get the adjacent annotations for a given annotation ID.
+
+    Args:
+        session: Database session.
+        sample_id: The anchor annotation whose neighbours we want.
+        filters: Annotation filters constraining the set; must scope the collection.
+
+    Returns:
+        The adjacency result, or ``None`` if the anchor is not in the filtered set.
+
+    Raises:
+        ValueError: If the filters do not scope the collection.
+    """
     if not filters.collection_ids:
         raise ValueError("Collection IDs must be provided in filters.")
 
-    return adjacents.get_sample_adjacent_info(
+    return get_adjacent_annotations_window(
         session=session,
         sample_id=sample_id,
-        samples_query=_build_window_query(filters),
-    )
-
-
-def _build_window_query(filters: AnnotationsFilter) -> Select[Any]:
-    # Start from raw annotation rows so tag filters can join/distinct before windowing.
-    base_rows: SelectOfScalar[AnnotationBaseTable] = select(AnnotationBaseTable)
-    filtered_rows = filters.apply(base_rows).subquery()
-
-    # TODO(Jonas, 07/2026): No leading order key here, so next/prev drifts from the grid
-    # whenever the grid sorts by similarity. A leading key added there must be added here.
-    ordering_expression = annotation_ordering.build_order_by(
-        file_path_abs=annotation_ordering.coalesced_file_path_abs_expression(),
-        created_at=filtered_rows.c.created_at,
-        annotation_sample_id=filtered_rows.c.sample_id,
-    )
-
-    # Compute lag/lead/row_number on the already filtered set to avoid tag duplicates.
-    return (
-        select(
-            filtered_rows.c.sample_id.label("sample_id"),
-            func.lag(filtered_rows.c.sample_id)
-            .over(order_by=ordering_expression)
-            .label("previous_sample_id"),
-            func.lead(filtered_rows.c.sample_id)
-            .over(order_by=ordering_expression)
-            .label("next_sample_id"),
-            func.row_number().over(order_by=ordering_expression).label("row_number"),
-        )
-        .select_from(filtered_rows)
-        .outerjoin(ImageTable, col(ImageTable.sample_id) == filtered_rows.c.parent_sample_id)
-        .outerjoin(
-            VideoFrameTable,
-            col(VideoFrameTable.sample_id) == filtered_rows.c.parent_sample_id,
-        )
-        .outerjoin(
-            VideoTable,
-            col(VideoTable.sample_id) == sqlmodel.col(VideoFrameTable.parent_sample_id),
-        )
+        filters=filters,
     )
