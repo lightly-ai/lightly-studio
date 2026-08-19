@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { writable } from 'svelte/store';
 import { SampleType, type AnnotationEvaluationMetricSortExpr } from '$lib/api/lightly_studio_local';
+import type { TextEmbedding } from '$lib/hooks/useGlobalStorage';
 
 const useAdjacentSamplesMock = vi.fn();
 const selectedAnnotationFilterIds = writable<Set<string>>(new Set());
 const tagsSelected = writable<Set<string>>(new Set());
+const textEmbedding = writable<TextEmbedding | undefined>(undefined);
 const getSortByMock = vi.fn<(collectionId: string) => AnnotationEvaluationMetricSortExpr | null>();
+const hasEmbeddingsQueryStore = writable<{ data: boolean | undefined }>({ data: undefined });
 
 vi.mock('../useAdjacentSamples/useAdjacentSamples', () => ({
     useAdjacentSamples: (...args: unknown[]) => useAdjacentSamplesMock(...args)
@@ -13,7 +16,8 @@ vi.mock('../useAdjacentSamples/useAdjacentSamples', () => ({
 
 vi.mock('../useGlobalStorage', () => ({
     useGlobalStorage: () => ({
-        selectedAnnotationFilterIds
+        selectedAnnotationFilterIds,
+        textEmbedding
     })
 }));
 
@@ -27,6 +31,10 @@ vi.mock('$lib/hooks', () => ({
     useAnnotationSortBy: () => ({ getSortBy: getSortByMock })
 }));
 
+vi.mock('../useHasEmbeddings/useHasEmbeddings', () => ({
+    useHasEmbeddings: () => hasEmbeddingsQueryStore
+}));
+
 import { useAdjacentAnnotations } from './useAdjacentAnnotations';
 
 describe('useAdjacentAnnotations', () => {
@@ -35,6 +43,8 @@ describe('useAdjacentAnnotations', () => {
         useAdjacentSamplesMock.mockReset();
         selectedAnnotationFilterIds.set(new Set());
         tagsSelected.set(new Set());
+        textEmbedding.set(undefined);
+        hasEmbeddingsQueryStore.set({ data: undefined });
         getSortByMock.mockReturnValue(null);
         useAdjacentSamplesMock.mockReturnValue({ query: 'query-result', refetch: vi.fn() });
     });
@@ -92,6 +102,48 @@ describe('useAdjacentAnnotations', () => {
             direction: 'desc'
         };
         getSortByMock.mockReturnValue(sort);
+
+        useAdjacentAnnotations({ sampleId: 'ann-123', collectionId: 'col-9' });
+
+        expect(useAdjacentSamplesMock).toHaveBeenCalledWith(
+            expect.objectContaining({
+                params: expect.objectContaining({
+                    body: expect.objectContaining({ annotation_sort_by: sort })
+                })
+            })
+        );
+    });
+
+    it('suppresses annotation_sort_by when a similarity search is active on a collection with embeddings', () => {
+        const sort: AnnotationEvaluationMetricSortExpr = {
+            evaluation_run_id: 'run-1',
+            metric_name: 'iou',
+            direction: 'desc'
+        };
+        getSortByMock.mockReturnValue(sort);
+        hasEmbeddingsQueryStore.set({ data: true });
+        textEmbedding.set({ queryText: 'a dog', embedding: [0.1, 0.2] });
+
+        useAdjacentAnnotations({ sampleId: 'ann-123', collectionId: 'col-9' });
+
+        expect(useAdjacentSamplesMock).toHaveBeenCalledWith(
+            expect.objectContaining({
+                params: expect.objectContaining({
+                    body: expect.objectContaining({ annotation_sort_by: undefined })
+                })
+            })
+        );
+    });
+
+    it('keeps annotation_sort_by when a search embedding is set but the collection has no embeddings', () => {
+        const sort: AnnotationEvaluationMetricSortExpr = {
+            evaluation_run_id: 'run-1',
+            metric_name: 'iou',
+            direction: 'desc'
+        };
+        getSortByMock.mockReturnValue(sort);
+        hasEmbeddingsQueryStore.set({ data: false });
+        textEmbedding.set({ queryText: 'a dog', embedding: [0.1, 0.2] });
 
         useAdjacentAnnotations({ sampleId: 'ann-123', collectionId: 'col-9' });
 
