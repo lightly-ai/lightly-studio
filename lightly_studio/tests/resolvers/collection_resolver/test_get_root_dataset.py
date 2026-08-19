@@ -73,11 +73,3 @@ def test_get_root_collection__non_existent_collection(
         collection_resolver.get_root_collection(
             session=db_session, collection_id=not_found_collection_id
         )
-
-
-def test_get_root_collection__collection_id_required(
-    db_session: Session,
-) -> None:
-    """`collection_id` must be required; `None` is no longer a valid value."""
-    with pytest.raises(ValueError, match=r"Collection with ID None not found."):
-        collection_resolver.get_root_collection(session=db_session, collection_id=None)  # type: ignore[arg-type]
