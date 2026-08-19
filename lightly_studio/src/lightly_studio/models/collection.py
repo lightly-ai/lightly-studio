@@ -41,15 +41,9 @@ class CollectionTable(CollectionBase, table=True):
 
     __tablename__ = "collection"
     __table_args__ = (
-        # Collections should have unique names per parent collection. This does not
-        # cover root collections (parent_collection_id IS NULL): Postgres treats NULLs
-        # as distinct, so this constraint alone lets any number of root collections
-        # share a name. Postgres additionally gets a partial unique index on
-        # `name WHERE parent_collection_id IS NULL` via migration 4f6a7b8c9d0e, which
-        # closes that gap for root collections. It is not declared here because
-        # DuckDB (schema-created via `create_all()`) does not support partial indexes;
-        # `migrations/env.py` excludes it from autogenerate diffs so that it is not
-        # dropped again by a future revision.
+        # Does not cover root collections: NULL parents compare as distinct. Postgres
+        # closes that gap with a partial unique index from migration 4f6a7b8c9d0e,
+        # which lives there because DuckDB cannot create partial indexes.
         UniqueConstraint("name", "parent_collection_id", name="unique_collection"),
     )
     collection_id: UUID = Field(default_factory=uuid4, primary_key=True)
