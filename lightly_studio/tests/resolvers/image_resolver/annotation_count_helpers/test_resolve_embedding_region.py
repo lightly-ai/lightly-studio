@@ -103,9 +103,7 @@ def _setup_collection_with_coordinates(
         collection_id=collection.collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
     )
-    coordinates_by_sample = {
-        image.sample_id: coord for image, coord in zip(images, coordinates)
-    }
+    coordinates_by_sample = {image.sample_id: coord for image, coord in zip(images, coordinates)}
     session.add(
         TwoDimEmbeddingTable(
             hash=cache_key,

@@ -32,7 +32,7 @@ def get_counts_grouped_by_sample_tag(  # noqa: PLR0913
     if annotation_collection_ids:
         query = restrict_to_annotation_sources(query, annotation_collection_ids)
     if image_filter is not None:
-        query = image_filter.apply(query)
+        query = image_filter.apply(query)  # type: ignore[type-var]
     query = query.group_by(
         col(SampleTagLinkTable.tag_id),
         AnnotationLabelTable.annotation_label_name,
