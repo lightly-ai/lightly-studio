@@ -6,9 +6,11 @@ from typing import Annotated
 from uuid import UUID
 
 from pydantic import BaseModel, Field
-from sqlmodel import Session
+from sqlmodel import Session, col
 
 from lightly_studio.models.adjacents import AdjacentResultView
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.annotation_sort import AnnotationEvaluationMetricSortExpr
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sort import SortExpr, sort_expr_to_order_by
 from lightly_studio.resolvers import (
@@ -17,6 +19,7 @@ from lightly_studio.resolvers import (
     video_frame_resolver,
     video_resolver,
 )
+from lightly_studio.resolvers.annotations import annotation_metric_sort
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
@@ -39,6 +42,7 @@ class AdjacentRequest(BaseModel):
     ) = None
     text_embedding: list[float] | None = None
     sort_by: list[SortExpr] | None = None
+    annotation_sort_by: AnnotationEvaluationMetricSortExpr | None = None
 
 
 def get_adjacent_samples(
@@ -101,10 +105,22 @@ def get_adjacent_samples(
                 "Invalid filter provided. Expected AnnotationsFilter"
                 f" for sample type '{request.sample_type.value}'."
             )
+        collection_ids = request.filters.collection_ids or []
+        annotation_order_by = (
+            annotation_metric_sort.sort_expr_to_order_by(
+                session=session,
+                annotation_collection_id=collection_ids[0],
+                sort_expr=request.annotation_sort_by,
+                annotation_id_column=col(AnnotationBaseTable.sample_id),
+            )
+            if request.annotation_sort_by and collection_ids
+            else None
+        )
         return annotation_resolver.get_adjacent_annotations(
             session=session,
             filters=request.filters,
             sample_id=sample_id,
+            order_by=annotation_order_by,
         )
     raise NotImplementedError(
         f"Adjacent samples retrieval is not implemented for sample type: {request.sample_type}"

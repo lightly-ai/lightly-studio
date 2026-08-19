@@ -4,14 +4,22 @@ from unittest import mock
 from uuid import UUID
 
 import pytest
-from sqlmodel import Session
+from sqlmodel import Session, col
 
+from lightly_studio.core.dataset_query.order_by import OrderByAnnotationEvaluationMetricField
 from lightly_studio.models.annotation import annotation_base as annotation_base_module
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.collection import SampleType
-from lightly_studio.resolvers import annotation_resolver, tag_resolver
+from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationSide
+from lightly_studio.resolvers import annotation_resolver, collection_resolver, tag_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from tests import helpers_resolvers
+from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
+    FalseNegativeMetricStub,
+    TruePositiveMetricStub,
+    create_annotation_metrics,
+    create_run,
+)
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
 
@@ -560,3 +568,78 @@ def _assert_matches_expected_order(
             previous_annotation.sample_id if previous_annotation else None
         )
         assert result.next_sample_id == (next_annotation.sample_id if next_annotation else None)
+
+
+def test_get_adjacent_annotations__sort_by_annotation_evaluation_metric(
+    db_session: Session,
+) -> None:
+    # unmatched (0.0) < matched (0.75); uncovered (NULL) sorts last
+    root = helpers_resolvers.create_collection(session=db_session)
+    label = helpers_resolvers.create_annotation_label(
+        session=db_session, root_collection_id=root.collection_id
+    )
+    run = create_run(session=db_session, collection_id=root.collection_id)
+
+    image_matched = helpers_resolvers.create_image(
+        session=db_session, collection_id=root.collection_id, file_path_abs="/a.png"
+    )
+    image_unmatched = helpers_resolvers.create_image(
+        session=db_session, collection_id=root.collection_id, file_path_abs="/b.png"
+    )
+    image_uncovered = helpers_resolvers.create_image(
+        session=db_session, collection_id=root.collection_id, file_path_abs="/c.png"
+    )
+
+    matched_stub, unmatched_stub = create_annotation_metrics(
+        session=db_session,
+        run_id=run.id,
+        pair_metric_stubs=[
+            TruePositiveMetricStub(
+                sample_id=image_matched.sample_id,
+                metrics={"iou": 0.75},
+                gt_annotation_label_id=label.annotation_label_id,
+            ),
+            FalseNegativeMetricStub(
+                sample_id=image_unmatched.sample_id,
+                gt_annotation_label_id=label.annotation_label_id,
+            ),
+        ],
+    )
+
+    gt_collection = collection_resolver.get_by_id(
+        session=db_session, collection_id=run.gt_annotation_collection_id
+    )
+    assert gt_collection is not None
+    uncovered = helpers_resolvers.create_annotation(
+        session=db_session,
+        collection_id=root.collection_id,
+        sample_id=image_uncovered.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_collection_name=gt_collection.name,
+    )
+
+    assert matched_stub.gt_annotation_id is not None
+    assert unmatched_stub.gt_annotation_id is not None
+
+    order_by = OrderByAnnotationEvaluationMetricField(
+        evaluation_run_id=run.id,
+        metric_name="iou",
+        side=EvaluationAnnotationSide.GROUND_TRUTH,
+        annotation_id_column=col(AnnotationBaseTable.sample_id),
+    )
+    filters = AnnotationsFilter(collection_ids=[run.gt_annotation_collection_id])
+
+    # Query from the middle: matched is position 2 (unmatched=0.0, matched=0.75, uncovered=NULL)
+    result = annotation_resolver.get_adjacent_annotations(
+        session=db_session,
+        sample_id=matched_stub.gt_annotation_id,
+        filters=filters,
+        order_by=order_by,
+    )
+
+    assert result is not None
+    assert result.previous_sample_id == unmatched_stub.gt_annotation_id
+    assert result.sample_id == matched_stub.gt_annotation_id
+    assert result.next_sample_id == uncovered.sample_id
+    assert result.current_sample_position == 2
+    assert result.total_count == 3

@@ -177,6 +177,7 @@ def test_get_adjacent_samples__delegates_to_annotation_resolver(
         session=db_session,
         filters=filters,
         sample_id=sample_id,
+        order_by=None,
     )
 
 
