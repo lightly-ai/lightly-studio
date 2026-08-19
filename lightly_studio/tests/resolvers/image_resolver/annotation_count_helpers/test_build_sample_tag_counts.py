@@ -21,15 +21,15 @@ def test_build_sample_tag_counts__preserves_order_and_zero_fills() -> None:
 
     assert [r.sample_tag_id for r in result] == [tag_b, tag_a]
     assert result[0].sample_tag_name == "tag-b"
-    assert result[0].counts == [
+    assert result[0].counts == (
         AnnotationClassCount(label_name="cat", count=1),
         AnnotationClassCount(label_name="dog", count=0),
-    ]
+    )
     assert result[1].sample_tag_name == "tag-a"
-    assert result[1].counts == [
+    assert result[1].counts == (
         AnnotationClassCount(label_name="cat", count=0),
         AnnotationClassCount(label_name="dog", count=3),
-    ]
+    )
 
 
 def test_build_sample_tag_counts__empty_class_names() -> None:
@@ -42,4 +42,4 @@ def test_build_sample_tag_counts__empty_class_names() -> None:
         grouped_counts={},
     )
 
-    assert result[0].counts == []
+    assert result[0].counts == ()
