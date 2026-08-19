@@ -2,6 +2,7 @@ import { getAdjacentSamplesOptions } from '$lib/api/lightly_studio_local/@tansta
 import { createQuery, useQueryClient, type QueryClient } from '@tanstack/svelte-query';
 
 import type {
+    AnnotationEvaluationMetricSortExpr,
     AnnotationsFilter,
     ImageFilter,
     SampleType,
@@ -33,6 +34,7 @@ export type AdjacentSamplesRequestBody =
           sample_type: Extract<SampleType, 'annotation'>;
           collection_id: string;
           filters?: ({ filter_type: 'annotations' } & AnnotationsFilter) | null;
+          annotation_sort_by?: AnnotationEvaluationMetricSortExpr | null;
       };
 
 type AdjacentSamplesParams = {

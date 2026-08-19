@@ -1,6 +1,7 @@
 import { SampleType } from '$lib/api/lightly_studio_local';
 import { get } from 'svelte/store';
 import { useAdjacentSamples } from '../useAdjacentSamples/useAdjacentSamples';
+import { useAnnotationSortBy } from '$lib/hooks';
 import { useGlobalStorage } from '../useGlobalStorage';
 import { useTags } from '../useTags/useTags';
 
@@ -13,6 +14,8 @@ export const useAdjacentAnnotations = ({
 }) => {
     const { selectedAnnotationFilterIds } = useGlobalStorage();
     const { tagsSelected } = useTags({ collection_id: collectionId });
+    const { getSortBy } = useAnnotationSortBy();
+    const sortBy = getSortBy(collectionId);
 
     return useAdjacentSamples({
         params: {
@@ -28,7 +31,8 @@ export const useAdjacentAnnotations = ({
                             ? Array.from(get(selectedAnnotationFilterIds))
                             : undefined,
                     tag_ids: get(tagsSelected).size > 0 ? Array.from(get(tagsSelected)) : undefined
-                }
+                },
+                annotation_sort_by: sortBy ?? undefined
             }
         }
     });

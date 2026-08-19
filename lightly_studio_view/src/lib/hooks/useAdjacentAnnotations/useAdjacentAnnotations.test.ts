@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { writable } from 'svelte/store';
 import { SampleType } from '$lib/api/lightly_studio_local';
+import type { AnnotationEvaluationMetricSortExpr } from '$lib/api/lightly_studio_local/types.gen';
 
 const useAdjacentSamplesMock = vi.fn();
 const selectedAnnotationFilterIds = writable<Set<string>>(new Set());
 const tagsSelected = writable<Set<string>>(new Set());
+const getSortByMock = vi.fn<(collectionId: string) => AnnotationEvaluationMetricSortExpr | null>();
 
 vi.mock('../useAdjacentSamples/useAdjacentSamples', () => ({
     useAdjacentSamples: (...args: unknown[]) => useAdjacentSamplesMock(...args)
@@ -22,6 +24,10 @@ vi.mock('../useTags/useTags', () => ({
     })
 }));
 
+vi.mock('$lib/hooks', () => ({
+    useAnnotationSortBy: () => ({ getSortBy: getSortByMock })
+}));
+
 import { useAdjacentAnnotations } from './useAdjacentAnnotations';
 
 describe('useAdjacentAnnotations', () => {
@@ -30,6 +36,7 @@ describe('useAdjacentAnnotations', () => {
         useAdjacentSamplesMock.mockReset();
         selectedAnnotationFilterIds.set(new Set());
         tagsSelected.set(new Set());
+        getSortByMock.mockReturnValue(null);
         useAdjacentSamplesMock.mockReturnValue({ query: 'query-result', refetch: vi.fn() });
     });
 
@@ -50,7 +57,8 @@ describe('useAdjacentAnnotations', () => {
                         collection_ids: ['col-9'],
                         annotation_label_ids: ['label-1', 'label-2'],
                         tag_ids: ['tag-1']
-                    }
+                    },
+                    annotation_sort_by: undefined
                 }
             }
         });
@@ -71,9 +79,43 @@ describe('useAdjacentAnnotations', () => {
                         collection_ids: ['col-3'],
                         annotation_label_ids: undefined,
                         tag_ids: undefined
-                    }
+                    },
+                    annotation_sort_by: undefined
                 }
             }
         });
+    });
+
+    it('passes annotation_sort_by to useAdjacentSamples when a sort is active', () => {
+        const sort: AnnotationEvaluationMetricSortExpr = {
+            evaluation_run_id: 'run-1',
+            metric_name: 'iou',
+            direction: 'desc'
+        };
+        getSortByMock.mockReturnValue(sort);
+
+        useAdjacentAnnotations({ sampleId: 'ann-123', collectionId: 'col-9' });
+
+        expect(useAdjacentSamplesMock).toHaveBeenCalledWith(
+            expect.objectContaining({
+                params: expect.objectContaining({
+                    body: expect.objectContaining({ annotation_sort_by: sort })
+                })
+            })
+        );
+    });
+
+    it('passes annotation_sort_by as undefined when no sort is active', () => {
+        getSortByMock.mockReturnValue(null);
+
+        useAdjacentAnnotations({ sampleId: 'ann-123', collectionId: 'col-9' });
+
+        expect(useAdjacentSamplesMock).toHaveBeenCalledWith(
+            expect.objectContaining({
+                params: expect.objectContaining({
+                    body: expect.objectContaining({ annotation_sort_by: undefined })
+                })
+            })
+        );
     });
 });
