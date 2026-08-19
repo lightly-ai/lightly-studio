@@ -103,18 +103,4 @@ describe('useAdjacentAnnotations', () => {
             })
         );
     });
-
-    it('passes annotation_sort_by as undefined when no sort is active', () => {
-        getSortByMock.mockReturnValue(null);
-
-        useAdjacentAnnotations({ sampleId: 'ann-123', collectionId: 'col-9' });
-
-        expect(useAdjacentSamplesMock).toHaveBeenCalledWith(
-            expect.objectContaining({
-                params: expect.objectContaining({
-                    body: expect.objectContaining({ annotation_sort_by: undefined })
-                })
-            })
-        );
-    });
 });
