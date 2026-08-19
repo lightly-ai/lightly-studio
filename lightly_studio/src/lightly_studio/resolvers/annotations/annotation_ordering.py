@@ -42,11 +42,41 @@ def build_order_by(
         Order by clauses: the leading order key if given, then ascending file path,
         creation time and annotation sample ID.
     """
+    sort_keys = build_sort_keys(
+        file_path_abs=file_path_abs,
+        created_at=created_at,
+        annotation_sample_id=annotation_sample_id,
+    )
     return [
         *([leading_order_key] if leading_order_key is not None else []),
-        file_path_abs.asc(),
-        created_at.asc(),
-        annotation_sample_id.asc(),
+        *(column.asc() if ascending else column.desc() for column, ascending in sort_keys),
+    ]
+
+
+def build_sort_keys(
+    file_path_abs: OrderExpression,
+    created_at: OrderExpression,
+    annotation_sample_id: OrderExpression,
+) -> list[tuple[OrderExpression, bool]]:
+    """Build the tiebreaker chain as (column, ascending) pairs.
+
+    This is the source of truth `build_order_by` derives its clauses from. Callers that
+    need the columns themselves — a keyset seek compares against them rather than sorting
+    by them — use this directly.
+
+    Args:
+        file_path_abs: Expression for the parent sample's absolute file path.
+        created_at: Expression for the annotation's creation time.
+        annotation_sample_id: Expression for the annotation's sample ID.
+
+    Returns:
+        The parent file path, the creation time and the annotation sample ID, all
+        ascending. The sample ID makes the ordering total.
+    """
+    return [
+        (file_path_abs, True),
+        (created_at, True),
+        (annotation_sample_id, True),
     ]
 
 
