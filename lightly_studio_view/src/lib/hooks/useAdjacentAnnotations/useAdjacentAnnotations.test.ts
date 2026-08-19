@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { writable } from 'svelte/store';
-import { SampleType } from '$lib/api/lightly_studio_local';
-import type { AnnotationEvaluationMetricSortExpr } from '$lib/api/lightly_studio_local/types.gen';
+import { SampleType, type AnnotationEvaluationMetricSortExpr } from '$lib/api/lightly_studio_local';
 
 const useAdjacentSamplesMock = vi.fn();
 const selectedAnnotationFilterIds = writable<Set<string>>(new Set());
