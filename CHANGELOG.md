@@ -60,6 +60,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Left and right arrow keys no longer navigate between samples while editing text or using an open
+  dialog, menu, or listbox.
 - Sorting by a numeric metadata field now orders numerically (e.g. `9` before `10`) without
   the caller declaring the field type.
 - Tagging by embedding region now correctly limits samples to the selected area.
