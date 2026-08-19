@@ -8,6 +8,13 @@ values as distinct, so any number of root collections (parent_collection_id IS N
 can share a name. This index closes that gap for root collections specifically; the
 existing constraint continues to cover non-root collections.
 
+Root collections that already share a name are renamed to fit the index: the oldest one
+keeps the name, the others get a ` (2)`, ` (3)`, ... suffix. They are separate datasets
+with their own samples, so merging them is not an option, and failing the migration is
+not either: `run_migrations` is called from `DatabaseEngine.__init__`, so the app would
+refuse to start with no way to fix the names from within it. The renames are logged and
+can be changed in the GUI afterwards.
+
 This index is Postgres-only and intentionally not declared on `CollectionTable` in
 `models/collection.py`: DuckDB (schema created via `create_all()`) does not support
 partial indexes. Autogenerate would therefore propose dropping this index when it diffs
@@ -20,6 +27,7 @@ Create Date: 2026-08-18 00:00:00.000000
 
 """
 
+import logging
 from collections.abc import Sequence
 from typing import Union
 
@@ -34,32 +42,12 @@ depends_on: Union[str, Sequence[str], None] = None
 
 _INDEX_NAME = "uq_collection_name_root"
 
+_logger = logging.getLogger("lightly_studio.migrations")
+
 
 def upgrade() -> None:
     """Upgrade schema."""
-    duplicates = (
-        op.get_bind()
-        .execute(
-            sa.text(
-                """
-            SELECT name, COUNT(*)
-            FROM collection
-            WHERE parent_collection_id IS NULL
-            GROUP BY name
-            HAVING COUNT(*) > 1
-            """
-            )
-        )
-        .fetchall()
-    )
-    if duplicates:
-        # Name the duplicates: this migration runs on startup, so an operator has no
-        # way to list them from within the app once it fails to boot.
-        names = ", ".join(f"'{name}' ({count} collections)" for name, count in duplicates)
-        raise RuntimeError(
-            "Cannot add unique index, duplicate root-collection names found: "
-            f"{names}. Rename or merge the duplicates before migrating."
-        )
+    _rename_duplicate_root_collections()
 
     op.create_index(
         _INDEX_NAME,
@@ -71,5 +59,48 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Downgrade schema."""
+    """Downgrade schema. Renamed collections keep their new names."""
     op.drop_index(_INDEX_NAME, table_name="collection")
+
+
+def _rename_duplicate_root_collections() -> None:
+    """Renames root collections that share a name so the unique index can be created.
+
+    The oldest collection of each name keeps it, the others get the first free
+    ` (<number>)` suffix.
+    """
+    connection = op.get_bind()
+    collections = connection.execute(
+        sa.text(
+            """
+            SELECT collection_id, name
+            FROM collection
+            WHERE parent_collection_id IS NULL
+            ORDER BY name, created_at, collection_id
+            """
+        )
+    ).fetchall()
+
+    taken = {name for _, name in collections}
+    seen: set[str] = set()
+    for collection_id, name in collections:
+        if name not in seen:
+            seen.add(name)
+            continue
+        # `taken` holds every existing name, so the suffix cannot take a name that
+        # another root collection still uses.
+        new_name = _free_name(name=name, taken=taken)
+        taken.add(new_name)
+        connection.execute(
+            sa.text("UPDATE collection SET name = :name WHERE collection_id = :collection_id"),
+            {"name": new_name, "collection_id": collection_id},
+        )
+        _logger.warning("Renamed duplicate root collection '%s' to '%s'.", name, new_name)
+
+
+def _free_name(name: str, taken: set[str]) -> str:
+    """Returns `name` with the lowest ` (<number>)` suffix that is not in `taken`."""
+    number = 2
+    while f"{name} ({number})" in taken:
+        number += 1
+    return f"{name} ({number})"
