@@ -425,7 +425,10 @@ def test_get_adjacent_annotations__returns_none_when_sample_not_in_filter(
 
 def test_get_adjacent_annotations__orders_video_frame_annotations_by_video_path(
     db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setattr(_dispatch_module, "get_adjacent_annotations_window", _fail_if_called)
+
     collection = helpers_resolvers.create_collection(
         session=db_session, sample_type=SampleType.VIDEO
     )

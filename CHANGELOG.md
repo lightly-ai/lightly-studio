@@ -23,9 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python SDK: `ImageDataset.add_images_from_path` now accepts `tag_depth > 1` to tag images by several leading directory levels (previously only `tag_depth=1` was supported).
 
 - Stepping to the previous or next annotation in the annotation details view no longer sorts the
-  whole collection on every click. On PostgreSQL with 4M annotations a click went from 6.3s to
-  1.3s; the neighbour lookup itself went from ~6s to 3ms, and the remaining 1.2s is the exact
-  position and total counts.
+  whole collection on every click, for annotations on images and on video frames. On PostgreSQL
+  with 4M annotations a click went from 6.3s to 1.3s; the neighbour lookup itself went from ~6s
+  to 3ms, and the remaining 1.2s is the exact position and total counts.
 
 ### Deprecated
 
