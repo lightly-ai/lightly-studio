@@ -573,7 +573,7 @@ def _assert_matches_expected_order(
 def test_get_adjacent_annotations__sort_by_annotation_evaluation_metric(
     db_session: Session,
 ) -> None:
-    # unmatched (0.0) < matched (0.75); uncovered (NULL) sorts last
+    # Unmatched (0.0) < matched (0.75); uncovered (NULL) sorts last
     root = helpers_resolvers.create_collection(session=db_session)
     label = helpers_resolvers.create_annotation_label(
         session=db_session, root_collection_id=root.collection_id
