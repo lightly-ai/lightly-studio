@@ -39,4 +39,4 @@ class SampleTagAnnotationCounts:
 
     sample_tag_id: UUID
     sample_tag_name: str
-    counts: list[AnnotationClassCount]
+    counts: tuple[AnnotationClassCount, ...]
