@@ -73,13 +73,6 @@ jobs:
         with:
           submodules: recursive
 
-      # Authenticate to download dev versions of lightly-mundig.
-      - name: Authenticate with GCP
-        uses: 'google-github-actions/auth@v3'
-        with:
-          project_id: boris-250909
-          credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
-
       - name: Set Up uv
         uses: astral-sh/setup-uv@v8.1.0
         with:
@@ -110,12 +103,6 @@ jobs:
         uses: actions/checkout@v6
         with:
           submodules: recursive
-
-      - name: Authenticate with GCP
-        uses: 'google-github-actions/auth@v3'
-        with:
-          project_id: boris-250909
-          credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
 
       - name: Set Up Python
         uses: actions/setup-python@v6
@@ -174,13 +161,6 @@ jobs:
         with:
           submodules: recursive
 
-      # Authenticate to download dev versions of lightly-mundig.
-      - name: Authenticate with GCP
-        uses: 'google-github-actions/auth@v3'
-        with:
-          project_id: boris-250909
-          credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
-
       - name: Set Up uv
         uses: astral-sh/setup-uv@v8.1.0
         with:
@@ -224,13 +204,6 @@ jobs:
         uses: actions/checkout@v6
         with:
           submodules: recursive
-
-      # Authenticate to download dev versions of lightly-mundig.
-      - name: Authenticate with GCP
-        uses: 'google-github-actions/auth@v3'
-        with:
-          project_id: boris-250909
-          credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
 
       - name: Set Up Python
         uses: actions/setup-python@v6
@@ -277,13 +250,6 @@ jobs:
         with:
           submodules: recursive
 
-      # Authenticate to download dev versions of lightly-mundig.
-      - name: Authenticate with GCP
-        uses: 'google-github-actions/auth@v3'
-        with:
-          project_id: boris-250909
-          credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
-
       - name: Set Up uv
         uses: astral-sh/setup-uv@v8.1.0
         with:
@@ -295,7 +261,6 @@ jobs:
         with:
           python-version: "3.9"
 
-      # Installs keyring to download dev versions of lightly-mundig.
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
         run: make install-optional-deps
