@@ -192,3 +192,28 @@ def test_get_all_metadata_keys_and_schema__histogram_constant_values(
     assert score_info.max == pytest.approx(7.0)
     assert score_info.histogram is not None
     assert sum(score_info.histogram.counts) == 3
+
+
+def test_get_all_metadata_keys_and_schema__key_with_dot(
+    db_session: Session,
+) -> None:
+    """A dot in the key is part of the key, so the stats read the value it holds."""
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    for i in range(3):
+        sample = create_image(
+            session=db_session,
+            collection_id=collection_id,
+            file_path_abs=f"/path/to/sample{i}.png",
+        ).sample
+        sample["sensor.temp"] = float(i)
+
+    result = get_all_metadata_keys_and_schema(session=db_session, collection_id=collection_id)
+    temp_info = next(item for item in result if item.name == "sensor.temp")
+
+    assert temp_info.type == "float"
+    assert temp_info.min == pytest.approx(0.0)
+    assert temp_info.max == pytest.approx(2.0)
+    assert temp_info.histogram is not None
+    assert sum(temp_info.histogram.counts) == 3
