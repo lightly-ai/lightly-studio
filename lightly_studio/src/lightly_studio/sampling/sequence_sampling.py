@@ -33,8 +33,8 @@ def sampling_via_database_sequences(
         config: Sampling configuration. ``selected_sequence_length`` must be set.
         input_sample_ids: Candidate frame sample IDs.
         preselected_sample_ids: Frame sample IDs that should inform the sampling as
-            already selected. They must cover whole sequences and are excluded from
-            the result tag.
+            already selected. Sequences holding such a frame are excluded from the
+            result tag; frames outside the candidate sequences are ignored.
     """
     diversity_strategies = _validate_sequence_sampling(session=session, config=config)
     sequence_length = config.selected_sequence_length
@@ -174,47 +174,42 @@ def _get_preselected_sequence_indices(
     """Map preselected frames onto the sequences they cover.
 
     Selection happens over sequences, so preselection has to be expressed per
-    sequence too. Every preselected frame must therefore belong to a complete
-    sequence, and every frame of a covered sequence must be preselected. Sequence
-    boundaries follow from the candidate frames, so a partially covered sequence
-    means the preselection comes from a run over different candidates.
+    sequence too. Sequence boundaries follow from the candidate frames, so a
+    preselection made over different candidates can reach frames outside the
+    sequences of this run or cover a sequence only partially. Frames outside the
+    sequences carry no information for this run and are ignored, while a sequence
+    with at least one preselected frame counts as preselected, because selecting it
+    again would overlap what is already selected.
 
     Args:
         sequences: Sequences of frame sample ids built from the candidate frames.
         preselected_sample_ids: Frame sample ids to treat as already selected.
 
     Returns:
-        Ascending indices into ``sequences`` of the fully covered sequences.
-
-    Raises:
-        ValueError: If the preselected frames contain duplicates, if a frame is not
-            part of a complete sequence, or if a sequence is only partially covered.
+        Ascending indices into ``sequences`` of the preselected sequences.
     """
-    preselected = list(preselected_sample_ids or ())
-    if len(preselected) != len(set(preselected)):
-        raise ValueError("Preselected sample IDs must be unique.")
-
+    preselected = set(preselected_sample_ids or ())
     sequence_index_by_frame = {
         sample_id: index for index, sequence in enumerate(sequences) for sample_id in sequence
     }
-    n_covered_frames: Counter[int] = Counter()
-    for sample_id in preselected:
-        sequence_index = sequence_index_by_frame.get(sample_id)
-        if sequence_index is None:
-            raise ValueError(
-                f"Preselected sample ID {sample_id} is not part of a complete sequence. "
-                "Preselected frames must be among the input sample IDs and must not fall "
-                "into an incomplete trailing sequence."
-            )
-        n_covered_frames[sequence_index] += 1
+    n_covered_frames: Counter[int] = Counter(
+        sequence_index_by_frame[sample_id]
+        for sample_id in preselected
+        if sample_id in sequence_index_by_frame
+    )
 
-    partially_covered = [
-        index for index, n_frames in n_covered_frames.items() if n_frames != len(sequences[index])
-    ]
-    if partially_covered:
-        raise ValueError(
-            f"Preselection covers {len(partially_covered)} sequence(s) only partially. "
-            "Preselected frames must cover whole sequences, so they have to come from a "
-            "run over the same candidate frames."
+    n_ignored = len(preselected) - sum(n_covered_frames.values())
+    if n_ignored > 0:
+        logger.info(
+            f"Ignored {n_ignored} of {len(preselected)} preselected frame(s) that are not part "
+            "of a complete candidate sequence."
+        )
+    n_partially_covered = sum(
+        n_frames != len(sequences[index]) for index, n_frames in n_covered_frames.items()
+    )
+    if n_partially_covered > 0:
+        logger.info(
+            f"Preselection covers {n_partially_covered} sequence(s) only partially; they count "
+            "as preselected and stay out of the result."
         )
     return sorted(n_covered_frames)

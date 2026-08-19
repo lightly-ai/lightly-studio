@@ -230,7 +230,9 @@ def sampling_via_database(
 
     When ``config.selected_sequence_length`` is set, sampling runs over mean-pooled
     sequence proxies and the tag contains every frame of each selected sequence.
-    Preselected sample IDs then have to cover whole sequences.
+    Preselected sample IDs then count per sequence: a sequence holding a preselected
+    frame stays out of the tag, and preselected frames outside the candidate
+    sequences are ignored.
 
     Args:
         session: Database session used to resolve and store sampling data.
@@ -238,9 +240,9 @@ def sampling_via_database(
         input_sample_ids: Candidate sample IDs.
 
     Raises:
-        ValueError: If the preselected tag does not exist, if its sample IDs are
-            not a subset of the input sample IDs, or, for sequence sampling, if
-            they do not cover whole sequences.
+        ValueError: If the preselected tag does not exist or, outside sequence
+            sampling, if its sample IDs contain duplicates or are not a subset of the
+            input sample IDs.
     """
     preselected_sample_ids = _get_preselected_sample_ids(
         session=session,

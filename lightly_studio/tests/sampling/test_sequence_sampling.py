@@ -221,15 +221,11 @@ def test_sampling_via_database_sequences__warns_about_dropped_frames(
         )
 
     assert "Dropped 2 of 12 candidate frame(s)" in caplog.text
-    tags = tag_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=frame_collection_id
-    )
-    tagged = video_frame_resolver.get_all_by_collection_id(
+    assert _tagged_frame_numbers(
         session=db_session,
         collection_id=frame_collection_id,
-        video_frame_filter=VideoFrameFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
-    )
-    assert sorted(frame.frame_number for frame in tagged.samples) == list(range(10))
+        tag_name="dropped_tail",
+    ) == list(range(10))
 
 
 def test_sampling_via_database_sequences__preselection(
@@ -261,22 +257,23 @@ def test_sampling_via_database_sequences__preselection(
         preselected_sample_ids=frame_sample_ids[0:5],
     )
 
-    tags = tag_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=frame_collection_id
-    )
-    assert len(tags) == 1
-    tagged = video_frame_resolver.get_all_by_collection_id(
+    assert _tagged_frame_numbers(
         session=db_session,
         collection_id=frame_collection_id,
-        video_frame_filter=VideoFrameFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
-    )
-    assert sorted(frame.frame_number for frame in tagged.samples) == [10, 11, 12, 13, 14]
+        tag_name="preselected_sequence",
+    ) == [10, 11, 12, 13, 14]
 
 
-def test_sampling_via_database_sequences__preselection_rejects_partial_sequence(
+def test_sampling_via_database_sequences__preselection_partial_sequence(
     db_session: Session,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Preselected frames covering a sequence only partially are rejected."""
+    """A partially preselected sequence counts as preselected and stays out of the tag.
+
+    Sequence boundaries come from the candidate frames, so a preselection made over
+    other candidates can straddle them. Selecting such a sequence again would overlap
+    the preselection, so it is skipped instead of rejected.
+    """
     frame_collection_id, frame_sample_ids = _fill_db_with_video_frames_and_embeddings(
         session=db_session,
         n_frames=10,
@@ -290,7 +287,7 @@ def test_sampling_via_database_sequences__preselection_rejects_partial_sequence(
         selected_sequence_length=5,
     )
 
-    with pytest.raises(ValueError, match=r"covers 1 sequence\(s\) only partially"):
+    with caplog.at_level(logging.INFO):
         sampling_via_database_sequences(
             session=db_session,
             config=sampling_config,
@@ -298,16 +295,19 @@ def test_sampling_via_database_sequences__preselection_rejects_partial_sequence(
             preselected_sample_ids=frame_sample_ids[0:3],
         )
 
-    tags = tag_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=frame_collection_id
-    )
-    assert tags == []
+    assert "covers 1 sequence(s) only partially" in caplog.text
+    assert _tagged_frame_numbers(
+        session=db_session,
+        collection_id=frame_collection_id,
+        tag_name="partial_preselection",
+    ) == [5, 6, 7, 8, 9]
 
 
-def test_sampling_via_database_sequences__preselection_rejects_dropped_frame(
+def test_sampling_via_database_sequences__preselection_ignores_dropped_frame(
     db_session: Session,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """A preselected frame in the dropped trailing chunk is rejected, not ignored."""
+    """A preselected frame in the dropped trailing chunk is ignored, not rejected."""
     frame_collection_id, frame_sample_ids = _fill_db_with_video_frames_and_embeddings(
         session=db_session,
         n_frames=12,  # 2 sequences of length 5, frames 10 and 11 do not fill one
@@ -321,7 +321,7 @@ def test_sampling_via_database_sequences__preselection_rejects_dropped_frame(
         selected_sequence_length=5,
     )
 
-    with pytest.raises(ValueError, match="is not part of a complete sequence"):
+    with caplog.at_level(logging.INFO):
         sampling_via_database_sequences(
             session=db_session,
             config=sampling_config,
@@ -329,11 +329,21 @@ def test_sampling_via_database_sequences__preselection_rejects_dropped_frame(
             preselected_sample_ids=[frame_sample_ids[10]],
         )
 
+    assert "Ignored 1 of 1 preselected frame(s)" in caplog.text
+    tagged_frame_numbers = _tagged_frame_numbers(
+        session=db_session,
+        collection_id=frame_collection_id,
+        tag_name="dropped_preselection",
+    )
+    # Nothing counts as preselected, so both sequences stay available and either can win.
+    assert tagged_frame_numbers in ([0, 1, 2, 3, 4], [5, 6, 7, 8, 9])
 
-def test_sampling_via_database_sequences__preselection_rejects_duplicates(
+
+def test_sampling_via_database_sequences__preselection_ignores_frame_outside_input(
     db_session: Session,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Duplicate preselected frames are rejected as in the single-frame path."""
+    """Preselected frames that are no candidates at all are ignored."""
     frame_collection_id, frame_sample_ids = _fill_db_with_video_frames_and_embeddings(
         session=db_session,
         n_frames=10,
@@ -342,18 +352,25 @@ def test_sampling_via_database_sequences__preselection_rejects_duplicates(
     sampling_config = SamplingConfig(
         collection_id=frame_collection_id,
         n_samples_to_select=5,
-        sampling_result_tag_name="duplicate_preselection",
+        sampling_result_tag_name="outside_preselection",
         strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
         selected_sequence_length=5,
     )
 
-    with pytest.raises(ValueError, match="Preselected sample IDs must be unique"):
+    with caplog.at_level(logging.INFO):
         sampling_via_database_sequences(
             session=db_session,
             config=sampling_config,
-            input_sample_ids=frame_sample_ids,
-            preselected_sample_ids=[frame_sample_ids[0], frame_sample_ids[0]],
+            input_sample_ids=frame_sample_ids[0:5],
+            preselected_sample_ids=frame_sample_ids[5:10],
         )
+
+    assert "Ignored 5 of 5 preselected frame(s)" in caplog.text
+    assert _tagged_frame_numbers(
+        session=db_session,
+        collection_id=frame_collection_id,
+        tag_name="outside_preselection",
+    ) == [0, 1, 2, 3, 4]
 
 
 def test_sampling_via_database__sequence_preselection_matches_single_sampling(
@@ -372,7 +389,7 @@ def test_sampling_via_database__sequence_preselection_matches_single_sampling(
 
     def sample_sequences(
         n_samples_to_select: int, tag_name: str, preselected_tag_name: str | None
-    ) -> list[UUID]:
+    ) -> list[int]:
         sampling_via_database(
             session=db_session,
             config=SamplingConfig(
@@ -385,7 +402,7 @@ def test_sampling_via_database__sequence_preselection_matches_single_sampling(
             ),
             input_sample_ids=frame_sample_ids,
         )
-        return _frame_sample_ids_by_tag(
+        return _tagged_frame_numbers(
             session=db_session, collection_id=frame_collection_id, tag_name=tag_name
         )
 
@@ -404,8 +421,8 @@ def test_sampling_via_database__sequence_preselection_matches_single_sampling(
     assert set(first_batch + second_batch) == set(single_batch)
 
 
-def _frame_sample_ids_by_tag(session: Session, collection_id: UUID, tag_name: str) -> list[UUID]:
-    """Return the frame sample ids carrying the tag with the given name."""
+def _tagged_frame_numbers(session: Session, collection_id: UUID, tag_name: str) -> list[int]:
+    """Return the ascending frame numbers carrying the tag with the given name."""
     tag = tag_resolver.get_by_name(session=session, tag_name=tag_name, collection_id=collection_id)
     assert tag is not None
     frames = video_frame_resolver.get_all_by_collection_id(
@@ -413,7 +430,7 @@ def _frame_sample_ids_by_tag(session: Session, collection_id: UUID, tag_name: st
         collection_id=collection_id,
         video_frame_filter=VideoFrameFilter(sample_filter=SampleFilter(tag_ids=[tag.tag_id])),
     )
-    return [frame.sample_id for frame in frames.samples]
+    return sorted(frame.frame_number for frame in frames.samples)
 
 
 def _fill_db_with_video_frames_and_embeddings(
