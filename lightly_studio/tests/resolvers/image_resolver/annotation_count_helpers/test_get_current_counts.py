@@ -54,7 +54,14 @@ def test_get_current_counts__filter_reduces_count(db_session: Session) -> None:
     cat = create_annotation_label(
         session=db_session, root_collection_id=collection_id, label_name="cat"
     )
-    dog_id, cat_id = dog.annotation_label_id, cat.annotation_label_id
+    bird = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="bird"
+    )
+    dog_id, cat_id, bird_id = (
+        dog.annotation_label_id,
+        cat.annotation_label_id,
+        bird.annotation_label_id,
+    )
     source = create_annotations(
         session=db_session,
         collection_id=collection_id,
@@ -63,8 +70,18 @@ def test_get_current_counts__filter_reduces_count(db_session: Session) -> None:
             AnnotationDetails(sample_id=image_b.sample_id, annotation_label_id=dog_id),
             AnnotationDetails(sample_id=image_a.sample_id, annotation_label_id=cat_id),
         ],
+        collection_name="source-a",
     )
     source_id = source[0].annotation_collection_id
+    # A second source with a bird annotation — must not appear in results.
+    create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(sample_id=image_a.sample_id, annotation_label_id=bird_id),
+        ],
+        collection_name="source-b",
+    )
     # Filter to only images annotated with cat — only image_a matches.
     image_filter = ImageFilter(
         sample_filter=SampleFilter(
