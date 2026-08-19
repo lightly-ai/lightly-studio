@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.image_resolver import annotation_count_helpers
@@ -106,6 +107,84 @@ def test_get_current_counts__samples_mode(db_session: Session) -> None:
         collection_id=collection_id,
         image_filter=None,
         count_mode=AnnotationCountMode.SAMPLES,
+    )
+
+    assert result == {"dog": 1}
+
+
+def test_get_current_counts__annotation_type_filters_results(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    image = create_image(session=db_session, collection_id=collection_id)
+    dog = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="dog"
+    )
+    dog_id = dog.annotation_label_id
+    create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image.sample_id,
+                annotation_label_id=dog_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+            ),
+            AnnotationDetails(
+                sample_id=image.sample_id,
+                annotation_label_id=dog_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+            ),
+        ],
+    )
+
+    result = annotation_count_helpers.get_current_counts(
+        session=db_session,
+        collection_id=collection_id,
+        image_filter=None,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
+    )
+
+    assert result == {"dog": 1}
+
+
+def test_get_current_counts__annotation_collection_ids_excludes_other_sources(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    image = create_image(session=db_session, collection_id=collection_id)
+    dog = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="dog"
+    )
+    cat = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="cat"
+    )
+    source_a = create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image.sample_id, annotation_label_id=dog.annotation_label_id
+            )
+        ],
+        collection_name="source-a",
+    )
+    create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image.sample_id, annotation_label_id=cat.annotation_label_id
+            )
+        ],
+        collection_name="source-b",
+    )
+
+    result = annotation_count_helpers.get_current_counts(
+        session=db_session,
+        collection_id=collection_id,
+        image_filter=None,
+        annotation_collection_ids=[source_a[0].annotation_collection_id],
     )
 
     assert result == {"dog": 1}

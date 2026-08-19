@@ -13,7 +13,7 @@ __all__ = [
     "build_sample_tag_counts",
     "get_and_validate_sample_tags",
     "get_annotation_collection_ids",
-    "restrict_to_annotation_sources",
     "get_counts_grouped_by_sample_tag",
     "get_current_counts",
+    "restrict_to_annotation_sources",
 ]
