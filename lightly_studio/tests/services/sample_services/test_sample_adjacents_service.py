@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from unittest import mock
 from uuid import uuid4
 
 import pytest
@@ -9,7 +10,9 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.models.adjacents import AdjacentResultView
+from lightly_studio.models.annotation_sort import AnnotationEvaluationMetricSortExpr
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.sort_direction import SortDirection
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
@@ -178,6 +181,58 @@ def test_get_adjacent_samples__delegates_to_annotation_resolver(
         filters=filters,
         sample_id=sample_id,
         order_by=None,
+    )
+
+
+def test_get_adjacent_samples__translates_annotation_sort_by_before_delegating(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    expected = _make_adjacent_result()
+    mock_get_adjacent_annotations = mocker.patch(
+        "lightly_studio.resolvers.annotation_resolver.get_adjacent_annotations",
+        return_value=expected,
+    )
+    fake_order_by = mocker.MagicMock()
+    mock_sort_expr_to_order_by = mocker.patch(
+        "lightly_studio.resolvers.annotations.annotation_metric_sort.sort_expr_to_order_by",
+        return_value=fake_order_by,
+    )
+
+    sample_id = uuid4()
+    collection_id = uuid4()
+    evaluation_run_id = uuid4()
+    filters = AnnotationsFilter(collection_ids=[collection_id])
+    annotation_sort_by = AnnotationEvaluationMetricSortExpr(
+        evaluation_run_id=evaluation_run_id,
+        metric_name="iou",
+        direction=SortDirection.desc,
+    )
+    request = AdjacentRequest(
+        sample_type=SampleType.ANNOTATION,
+        collection_id=uuid4(),
+        filters=filters,
+        annotation_sort_by=annotation_sort_by,
+    )
+
+    result = get_adjacent_samples(
+        session=db_session,
+        sample_id=sample_id,
+        request=request,
+    )
+
+    assert result == expected
+    mock_sort_expr_to_order_by.assert_called_once_with(
+        session=db_session,
+        annotation_collection_id=collection_id,
+        sort_expr=annotation_sort_by,
+        annotation_id_column=mock.ANY,
+    )
+    mock_get_adjacent_annotations.assert_called_once_with(
+        session=db_session,
+        filters=filters,
+        sample_id=sample_id,
+        order_by=fake_order_by,
     )
 
 
