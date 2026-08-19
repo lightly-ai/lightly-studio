@@ -22,7 +22,7 @@ export const useAdjacentAnnotations = ({
     // Similarity search takes precedence over metric sort: when a search is active on a
     // collection with embeddings, suppress the metric sort so next/prev follows the same
     // similarity ordering shown in the grid.
-    const searchEmbedding = get(hasEmbeddingsQuery).data ? get(textEmbedding) : undefined;
+    const searchEmbedding = hasEmbeddingsQuery.data ? get(textEmbedding) : undefined;
 
     return useAdjacentSamples({
         params: {
