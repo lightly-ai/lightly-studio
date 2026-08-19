@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Optional, cast
+from typing import Union, cast
 from uuid import UUID
 
 from sqlmodel import col, select
@@ -25,7 +25,7 @@ def build_grouped_count_query(
 ) -> Select[tuple[UUID | None, str, int]]:
     """Build the join chain for annotation counts grouped by tag and label."""
     return cast(
-        Select[tuple[Optional[UUID], str, int]],
+        Select[tuple[Union[UUID, None], str, int]],
         select(
             SampleTagLinkTable.tag_id,
             AnnotationLabelTable.annotation_label_name,
