@@ -72,7 +72,7 @@
     });
 
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
-    const { selectedCollectionIds } = useAnnotationCollectionsFilter();
+    const { selectedCollectionIds, multipleSourcesVisible } = useAnnotationCollectionsFilter();
     const annotationSources = $derived(annotationCollectionsQuery.data ?? []);
     const isGrouped = $derived(annotationSources.length > 1);
     const sourceGroups = $derived(
@@ -89,7 +89,7 @@
     // coloring is not enforced, mirroring the annotation segment and canvas behavior.
     const colorBySource = $derived(
         resolveEffectiveColorBySource({
-            multipleSourcesVisible: $selectedCollectionIds.length > 1,
+            multipleSourcesVisible: $multipleSourcesVisible,
             enforceColoringByClass: $enforceColoringByClassStore
         })
     );

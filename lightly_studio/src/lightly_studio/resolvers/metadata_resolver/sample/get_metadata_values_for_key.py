@@ -32,11 +32,11 @@ def get_metadata_values_for_key(
             - The schema type for `key`, or `None` if the key is not present in
               the collection schema.
     """
-    schema_type_expr = db_json.json_extract_string(
+    schema_type_expr = db_json.json_extract_key_as_text(
         column=SampleMetadataTable.metadata_schema,
-        field=key,
+        key=key,
     )
-    value_expr = db_json.json_extract_string(column=SampleMetadataTable.data, field=key)
+    value_expr = db_json.json_extract_key_as_text(column=SampleMetadataTable.data, key=key)
 
     rows = session.exec(
         select(SampleMetadataTable.sample_id, value_expr, schema_type_expr)

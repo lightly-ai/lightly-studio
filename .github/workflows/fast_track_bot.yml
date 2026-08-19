@@ -27,6 +27,7 @@ jobs:
     # fresh verdict — reaches the bot, which fails closed and revokes.
     if: github.event.workflow_run.conclusion != 'skipped'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Mint App Token
         id: app-token
@@ -59,7 +60,6 @@ jobs:
         run: npm ci
 
       - name: Download Verdict
-        id: download
         # Tolerate a missing verdict so the bot still runs and revokes, fail closed.
         continue-on-error: true
         uses: actions/download-artifact@v8

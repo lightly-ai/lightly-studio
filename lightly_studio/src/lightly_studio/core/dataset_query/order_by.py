@@ -188,7 +188,7 @@ class OrderByMetadataField(OrderByExpression):
         )
 
     def _sort_key_expressions(self) -> list[ColumnElement[Any]]:
-        """Return the numerical key, NULL for non-numerical fields, then the raw value."""
+        """Return the numerical key, NULL for non-numerical fields, then the text value."""
         return [self._order_value_expression(), self._extracted_value()]
 
     def to_column_elements(self) -> list[ColumnElement[Any]]:
@@ -198,16 +198,19 @@ class OrderByMetadataField(OrderByExpression):
     def _is_numerical_field(self) -> ColumnElement[bool]:
         """Return whether ``metadata_schema`` records this field as a number.
 
-        Uses the same path syntax as the value, so the two cannot disagree.
+        ``metadata_schema`` maps a key to the name of its type, so this reads a type name
+        rather than a value. Uses the same path syntax as the value so the two cannot
+        disagree.
         """
-        return db_json.json_extract(
+        schema_type_name = db_json.json_extract_as_text(
             column=self._metadata_alias.metadata_schema,
             field=self.field_name,
-        ).in_([db_json.json_literal(type_name) for type_name in NUMERIC_TYPE_NAMES])
+        )
+        return schema_type_name.in_(NUMERIC_TYPE_NAMES)
 
     def _extracted_value(self) -> ColumnElement[Any]:
-        """Return the raw JSON value of the field."""
-        return db_json.json_extract(column=self._metadata_alias.data, field=self.field_name)
+        """Return the field's value as text, which is what ``ORDER BY`` can sort."""
+        return db_json.json_extract_as_text(column=self._metadata_alias.data, field=self.field_name)
 
     def apply_joins(self, query: SelectT) -> SelectT:
         """Left-outer-join aliased ``SampleMetadataTable`` on ``sample_id``."""

@@ -24,6 +24,7 @@ from lightly_studio.resolvers.annotation_resolver.get_all_by_parent_sample_ids i
     get_all_by_parent_sample_ids,
 )
 from lightly_studio.resolvers.annotation_resolver.get_all_with_payload import (
+    AnnotationOrdering,
     get_all_with_payload,
 )
 from lightly_studio.resolvers.annotation_resolver.get_annotation_crops import (
@@ -59,6 +60,7 @@ from lightly_studio.resolvers.annotation_resolver.update_temporal_span import (
 
 __all__ = [
     "AnnotationCrop",
+    "AnnotationOrdering",
     "build_sample_ids_query",
     "create_many",
     "delete_annotation",

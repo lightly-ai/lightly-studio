@@ -30,7 +30,7 @@ def sampling_via_database_sequences(
 
     Args:
         session: Database session used to resolve and store sampling data.
-        config: Sampling configuration with ``selected_sequence_length`` above 1.
+        config: Sampling configuration. ``selected_sequence_length`` must be set.
         input_sample_ids: Candidate frame sample IDs.
         preselected_sample_ids: Frame sample IDs that should inform the sampling as
             already selected. They must cover whole sequences and are excluded from
@@ -38,6 +38,7 @@ def sampling_via_database_sequences(
     """
     diversity_strategies = _validate_sequence_sampling(session=session, config=config)
     sequence_length = config.selected_sequence_length
+    assert sequence_length is not None
     sequences = _load_sequences(
         session=session,
         sample_ids=input_sample_ids,
@@ -47,15 +48,14 @@ def sampling_via_database_sequences(
         sequences=sequences,
         preselected_sample_ids=preselected_sample_ids,
     )
-    n_available_sequences = len(sequences) - len(preselected_indices)
     n_sequences_to_select = min(
-        config.n_samples_to_select // sequence_length, n_available_sequences
+        config.n_samples_to_select // sequence_length,
+        len(sequences) - len(preselected_indices),
     )
     if n_sequences_to_select == 0:
         logger.warning(
-            "No sequences available for sampling. No video has at least %d candidate frame(s) "
-            "outside the preselection.",
-            sequence_length,
+            "No sequences available for sampling. No video has at least "
+            f"{sequence_length} candidate frame(s) outside the preselection."
         )
         return
 
@@ -107,7 +107,7 @@ def _validate_sequence_sampling(
 
     Args:
         session: The database session.
-        config: The sampling configuration, with ``selected_sequence_length`` above 1.
+        config: The sampling configuration. ``selected_sequence_length`` must be set.
 
     Returns:
         The configured diversity strategies.
@@ -117,15 +117,17 @@ def _validate_sequence_sampling(
             ``n_samples_to_select`` is not a multiple of ``selected_sequence_length``,
             or if any non-diversity strategy is configured.
     """
+    sequence_length = config.selected_sequence_length
+    assert sequence_length is not None
     collection_resolver.check_collection_type(
         session=session,
         collection_id=config.collection_id,
         expected_type=SampleType.VIDEO_FRAME,
     )
-    if config.n_samples_to_select % config.selected_sequence_length != 0:
+    if config.n_samples_to_select % sequence_length != 0:
         raise ValueError(
             f"n_samples_to_select ({config.n_samples_to_select}) must be a multiple "
-            f"of selected_sequence_length ({config.selected_sequence_length})."
+            f"of selected_sequence_length ({sequence_length})."
         )
     diversity_strategies: list[EmbeddingDiversityStrategy] = []
     non_diversity_names: list[str] = []
@@ -136,7 +138,7 @@ def _validate_sequence_sampling(
             non_diversity_names.append(type(strat).__name__)
     if non_diversity_names:
         raise ValueError(
-            "selected_sequence_length > 1 currently supports only diversity strategies, "
+            "selected_sequence_length currently supports only diversity strategies, "
             f"got: {non_diversity_names}."
         )
     return diversity_strategies
@@ -146,7 +148,7 @@ def _load_sequences(
     session: Session,
     sample_ids: Sequence[UUID],
     sequence_length: int,
-) -> list[tuple[UUID, ...]]:
+) -> list[list[UUID]]:
     """Load candidate frames and chunk them into complete sequences."""
     frames = video_frame_resolver.get_frame_infos_by_ids(session=session, sample_ids=sample_ids)
     if len(frames) != len(sample_ids):
@@ -159,17 +161,14 @@ def _load_sequences(
     n_dropped = len(frames) - len(sequences) * sequence_length
     if n_dropped > 0:
         logger.warning(
-            "Dropped %d of %d candidate frame(s) that do not fill a complete sequence of "
-            "%d frame(s); videos with fewer frames than that contribute nothing.",
-            n_dropped,
-            len(frames),
-            sequence_length,
+            f"Dropped {n_dropped} of {len(frames)} candidate frame(s) that do not fill a "
+            f"complete sequence of {sequence_length} frame(s)."
         )
     return sequences
 
 
 def _get_preselected_sequence_indices(
-    sequences: Sequence[tuple[UUID, ...]],
+    sequences: Sequence[Sequence[UUID]],
     preselected_sample_ids: Iterable[UUID] | None,
 ) -> list[int]:
     """Map preselected frames onto the sequences they cover.

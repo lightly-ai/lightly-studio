@@ -4,7 +4,7 @@ import {
     type FileLineCoverage,
     type LineCoverage
 } from '../shared/full-suite-coverage';
-import { FRONTEND_PREFIX } from './eslint-runner';
+import { FRONTEND_PREFIX } from './shared';
 
 const SRC_PREFIX = FRONTEND_PREFIX + 'src/';
 
@@ -15,7 +15,11 @@ const IGNORE_SUFFIXES = [
     '.spec.ts',
     '.spec.js',
     '.spec.svelte',
-    '.d.ts'
+    '.d.ts',
+    '.stories.svelte',
+    '.stories.ts',
+    '.stories.js',
+    'setupTests.ts'
 ];
 const SOURCE_SUFFIXES = ['.ts', '.js', '.svelte'];
 

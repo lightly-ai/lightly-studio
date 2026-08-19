@@ -350,13 +350,37 @@ frames.match(VideoFrameSampleField.frame_number > 1).sampling().metadata_weighti
 
 See [Search and Filter](search_and_filter.md#query-in-python) for more filtering options.
 
+### Continuing from preselected samples
+
+Use `preselected_tag_name` to select a new batch while taking an earlier batch into
+account. The preselected samples influence the strategy but are not added to the new
+result tag. `n_samples_to_select` is the number of new samples to select.
+
+```py
+sampling = dataset.query().sampling()
+
+sampling.diverse(
+    n_samples_to_select=100,
+    sampling_result_tag_name="first_batch",
+)
+sampling.diverse(
+    n_samples_to_select=100,
+    sampling_result_tag_name="second_batch",
+    preselected_tag_name="first_batch",
+)
+```
+
+The preselected tag must belong to the sampled collection, and all of its samples must
+be part of the query being sampled. The option is available on every sampling method,
+including `multi_strategies()`.
+
 ### Video sequence sampling
 
 To select clips instead of individual frames, set `selected_sequence_length` to
-the number of frames per sequence (for example `50`). Each video is split into
-non-overlapping sequences of that length; trailing frames that do not fill a full sequence
-are dropped. Sampling then chooses among sequence proxies (mean of the frame embeddings),
-and every frame of each chosen sequence is tagged.
+the number of frames per sequence (for example `50`). By default `selected_sequence_length` is
+ `None` and individual frames are selected. Each video is split into non-overlapping sequences of that
+length; trailing frames that do not fill a full sequence are dropped. Sampling then chooses among sequence
+proxies (mean of the frame embeddings), and every frame of each chosen sequence is tagged.
 
 `n_samples_to_select` counts **frames** and must be a multiple of `selected_sequence_length`.
 The number of selected sequences is `n_samples_to_select / selected_sequence_length`.
@@ -375,8 +399,7 @@ frames.query().sampling().diverse(
 )
 ```
 
-Only frame collections support `selected_sequence_length > 1`, and only diversity
-sampling supports sequences.
+Only diversity selection on video frame collections support `selected_sequence_length`.
 
 ### Combining multiple strategies
 

@@ -101,31 +101,54 @@ def get_by_ids(session: Session, sample_ids: Sequence[UUID]) -> list[CaptionTabl
     return [caption_map[id_] for id_ in sample_ids if id_ in caption_map]
 
 
-def update_text(
+def update(
     session: Session,
     sample_id: UUID,
-    text: str,
+    text: str | None = None,
+    start_time_s: float | None = None,
+    end_time_s: float | None = None,
 ) -> CaptionTable:
-    """Update the text of a caption.
+    """Update a caption's text and/or temporal span.
+
+    The temporal span is created if it does not exist yet. Both ``start_time_s`` and
+    ``end_time_s`` must be provided together to change the span.
 
     Args:
         session: Database session for executing the operation.
         sample_id: UUID of the caption to update.
-        text: New text.
+        text: New text. Left unchanged when ``None``.
+        start_time_s: New start time in seconds. Must be given with ``end_time_s``.
+        end_time_s: New end time in seconds. Must be given with ``start_time_s``.
 
     Returns:
-        The updated caption with the new text.
+        The updated caption.
 
     Raises:
-        ValueError: If the caption is not found.
+        ValueError: If the caption is not found, no fields are provided, or the temporal
+            span is incomplete or invalid.
     """
-    captions = get_by_ids(session, [sample_id])
+    if (start_time_s is None) != (end_time_s is None):
+        raise ValueError("Both start_time_s and end_time_s must be provided together.")
+    if text is None and start_time_s is None:
+        raise ValueError("No updates provided for the caption.")
+    if start_time_s is not None and end_time_s is not None:
+        _validate_temporal_span_bounds(start_time_s=start_time_s, end_time_s=end_time_s)
+
+    captions = get_by_ids(session=session, sample_ids=[sample_id])
     if not captions:
         raise ValueError(f"Caption with ID {sample_id} not found.")
 
     caption = captions[0]
     try:
-        caption.text = text
+        if text is not None:
+            caption.text = text
+        if start_time_s is not None and end_time_s is not None:
+            # The span's primary key is the caption's sample_id, so merge upserts the row.
+            session.merge(
+                TemporalSpanTable(
+                    sample_id=sample_id, start_time_s=start_time_s, end_time_s=end_time_s
+                )
+            )
         session.commit()
         session.refresh(caption)
         return caption
@@ -178,11 +201,21 @@ def _validate_optional_temporal_span(caption: CaptionCreate) -> tuple[float, flo
 
     if start_time_s is None or end_time_s is None:
         raise ValueError("Both start_time_s and end_time_s must be provided together.")
+    _validate_temporal_span_bounds(start_time_s=start_time_s, end_time_s=end_time_s)
+
+    return (start_time_s, end_time_s)
+
+
+def _validate_temporal_span_bounds(start_time_s: float, end_time_s: float) -> None:
+    """Validate that a temporal span's bounds are finite, non-negative, and ordered.
+
+    Raises:
+        ValueError: If either bound is not finite, the start is negative, or the start is
+            not strictly less than the end.
+    """
     if not math.isfinite(start_time_s) or not math.isfinite(end_time_s):
         raise ValueError("start_time_s and end_time_s must be finite.")
     if start_time_s < 0:
         raise ValueError("start_time_s must be non-negative.")
     if start_time_s >= end_time_s:
         raise ValueError("start_time_s must be less than end_time_s.")
-
-    return (start_time_s, end_time_s)

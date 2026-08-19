@@ -18,14 +18,16 @@ class SamplingConfig(BaseModel):
     collection_id: UUID
     n_samples_to_select: int
     sampling_result_tag_name: str
+    preselected_tag_name: str | None = None
     strategies: Sequence[SamplingStrategy]
-    selected_sequence_length: int = Field(
-        default=1,
-        ge=1,
+    selected_sequence_length: int | None = Field(
+        default=None,
+        ge=2,
         description=(
-            "Number of frames per selected sequence. Above 1, n_samples_to_select "
-            "still counts frames and must be a multiple of this value. Only "
-            "VIDEO_FRAME collections and diversity strategies support sequences."
+            "Number of frames per selected sequence. None selects individual samples. "
+            "When set, n_samples_to_select still counts frames and must be a multiple "
+            "of this value. Only VIDEO_FRAME collections and diversity strategies "
+            "support sequences."
         ),
     )
 
