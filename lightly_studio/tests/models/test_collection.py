@@ -29,3 +29,6 @@ def test_collection_table__root_duplicate_name_rejected_by_database(db_session: 
     )
     with pytest.raises(sqlalchemy.exc.IntegrityError):
         db_session.commit()
+    # The failed commit leaves the session pending a rollback, without it the fixture
+    # teardown fails when it commits the session.
+    db_session.rollback()

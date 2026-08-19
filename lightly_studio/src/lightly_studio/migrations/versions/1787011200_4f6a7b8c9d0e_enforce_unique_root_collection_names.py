@@ -10,9 +10,9 @@ existing constraint continues to cover non-root collections.
 
 This index is Postgres-only and intentionally not declared on `CollectionTable` in
 `models/collection.py`: DuckDB (schema created via `create_all()`) does not support
-partial indexes. Autogenerate against Postgres will therefore keep proposing to drop
-this index when it diffs the live catalog against SQLModel metadata — keep it when
-reviewing future `make migration-revision-postgresql` output.
+partial indexes. Autogenerate would therefore propose dropping this index when it diffs
+the live catalog against SQLModel metadata; `_include_object` in `migrations/env.py`
+excludes it from those diffs.
 
 Revision ID: 4f6a7b8c9d0e
 Revises: a3b4c5d6e7f8
@@ -53,10 +53,12 @@ def upgrade() -> None:
         .fetchall()
     )
     if duplicates:
+        # Name the duplicates: this migration runs on startup, so an operator has no
+        # way to list them from within the app once it fails to boot.
+        names = ", ".join(f"'{name}' ({count} collections)" for name, count in duplicates)
         raise RuntimeError(
-            "Cannot add unique index: "
-            f"{len(duplicates)} duplicate root-collection names found. "
-            "Rename or merge the duplicates before migrating."
+            "Cannot add unique index, duplicate root-collection names found: "
+            f"{names}. Rename or merge the duplicates before migrating."
         )
 
     op.create_index(
