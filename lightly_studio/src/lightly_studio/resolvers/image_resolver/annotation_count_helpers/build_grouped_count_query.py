@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Optional, cast
 from uuid import UUID
 
@@ -13,14 +14,13 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
+from lightly_studio.resolvers.image_resolver import annotation_count_helpers
 from lightly_studio.resolvers.image_resolver.annotation_count_types import AnnotationCountMode
-
-from .build_count_expression import build_count_expression
 
 
 def build_grouped_count_query(
     collection_id: UUID,
-    sample_tag_ids: list[UUID],
+    sample_tag_ids: Sequence[UUID],
     count_mode: AnnotationCountMode,
 ) -> Select[tuple[UUID | None, str, int]]:
     """Build the join chain for annotation counts grouped by tag and label."""
@@ -29,7 +29,7 @@ def build_grouped_count_query(
         select(
             SampleTagLinkTable.tag_id,
             AnnotationLabelTable.annotation_label_name,
-            build_count_expression(count_mode).label("count"),
+            annotation_count_helpers.build_count_expression(count_mode).label("count"),
         )
         .join(
             AnnotationBaseTable,
@@ -48,5 +48,9 @@ def build_grouped_count_query(
         .where(
             col(SampleTable.collection_id) == collection_id,
             db_array.in_array(column=col(SampleTagLinkTable.tag_id), values=sample_tag_ids),
+        )
+        .group_by(
+            col(SampleTagLinkTable.tag_id),
+            col(AnnotationLabelTable.annotation_label_name),
         ),
     )  # cast: tag_id is UUID | None per model but always non-null in practice
