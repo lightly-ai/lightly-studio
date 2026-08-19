@@ -9,5 +9,5 @@ __all__ = [
     "build_grouped_count_query",
     "build_sample_tag_counts",
     "get_and_validate_sample_tags",
-    "get_annotation_collection_ids"
+    "get_annotation_collection_ids",
 ]
