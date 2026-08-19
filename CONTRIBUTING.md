@@ -13,7 +13,6 @@ After you have your changes ready, and you create a new pull request, a maintain
 - Python **3.9–3.14** (3.9 recommended)
 - Uv version **0.8.17+**
 - Node.js **24+** (exact version pinned in `lightly_studio_view/.nvmrc`)
-- Access to **Google Cloud Platform** (request permissions from @IgorSusmelj)
 
 ## Development Quickstart
 
