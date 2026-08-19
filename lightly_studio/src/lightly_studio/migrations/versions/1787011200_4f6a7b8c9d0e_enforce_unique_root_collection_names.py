@@ -1,25 +1,13 @@
 """enforce_unique_root_collection_names.
 
 Adds a partial unique index on `collection(name) WHERE parent_collection_id IS NULL`.
+`UniqueConstraint("name", "parent_collection_id")` misses root collections because
+Postgres compares NULL parents as distinct. Existing duplicates are renamed first, see
+`_rename_duplicate_root_collections`.
 
-`UniqueConstraint("name", "parent_collection_id")` on the `collection` table does not
-prevent duplicate root-collection names: Postgres treats NULL `parent_collection_id`
-values as distinct, so any number of root collections (parent_collection_id IS NULL)
-can share a name. This index closes that gap for root collections specifically; the
-existing constraint continues to cover non-root collections.
-
-Root collections that already share a name are renamed to fit the index: the oldest one
-keeps the name, the others get a ` (2)`, ` (3)`, ... suffix. They are separate datasets
-with their own samples, so merging them is not an option, and failing the migration is
-not either: `run_migrations` is called from `DatabaseEngine.__init__`, so the app would
-refuse to start with no way to fix the names from within it. The renames are logged and
-can be changed in the GUI afterwards.
-
-This index is Postgres-only and intentionally not declared on `CollectionTable` in
-`models/collection.py`: DuckDB (schema created via `create_all()`) does not support
-partial indexes. Autogenerate would therefore propose dropping this index when it diffs
-the live catalog against SQLModel metadata; `_include_object` in `migrations/env.py`
-excludes it from those diffs.
+The index is Postgres-only: DuckDB cannot create partial indexes, so it is not declared
+on `CollectionTable` and `_include_object` in `migrations/env.py` keeps autogenerate from
+dropping it.
 
 Revision ID: 4f6a7b8c9d0e
 Revises: a3b4c5d6e7f8
@@ -67,7 +55,9 @@ def _rename_duplicate_root_collections() -> None:
     """Renames root collections that share a name so the unique index can be created.
 
     The oldest collection of each name keeps it, the others get the first free
-    ` (<number>)` suffix.
+    ` (<number>)` suffix. Renaming instead of failing the migration keeps the app
+    bootable, `run_migrations` is called from `DatabaseEngine.__init__`. Merging is not an
+    option, root collections are separate datasets with their own samples.
     """
     connection = op.get_bind()
     collections = connection.execute(
