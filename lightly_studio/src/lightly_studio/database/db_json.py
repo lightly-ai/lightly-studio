@@ -79,6 +79,25 @@ def json_extract_key_as_text(column: Any, key: str) -> ColumnElement[str]:
     return cast(ColumnElement[str], column[_bind_key(key)].as_string())
 
 
+def json_extract_key_as_float(column: Any, key: str) -> ColumnElement[float]:
+    """Read one top-level JSON key as a float.
+
+    The key is taken literally, so unlike :func:`json_extract_as_float` a dot in it
+    stays part of the key rather than stepping into a nested object.
+
+    Casting a non-numeric value fails on PostgreSQL, so guard the call when the key's
+    type is not known.
+
+    Args:
+        column: The JSON column expression.
+        key: The top-level key to read, dots and all.
+
+    Returns:
+        The extracted value as a float.
+    """
+    return cast(ColumnElement[float], column[_bind_key(key)].as_float())
+
+
 class _JsonKeyType(TypeDecorator[str]):
     """Bind one object key so that each database reads it as a key and nothing else.
 
