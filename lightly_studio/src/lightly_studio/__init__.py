@@ -27,16 +27,6 @@ from lightly_studio.dataset.embedding_generator import (
     VideoEmbeddingGenerator,
 )
 from lightly_studio.dataset.embedding_manager import set_default_embedding_model
-from lightly_studio.embed import (
-    BaseEmbedder,
-    Capability,
-    EmbedderDescriptor,
-    EmbeddingResult,
-    ImagePathEmbedder,
-    RandomEmbedder,
-    TextEmbedder,
-    register_default_embedder,
-)
 from lightly_studio.models.collection import SampleType
 from lightly_studio.enterprise import connect
 from lightly_studio.core.lightly_train_helpers.generate_train_script import lt_train_script
@@ -47,28 +37,20 @@ from lightly_studio.models.annotation.annotation_base import AnnotationType
 
 __all__ = [
     "AnnotationType",
-    "BaseEmbedder",
-    "Capability",
     "CreateImage",
     "CreateVideo",
-    "EmbedderDescriptor",
     "EmbeddingGenerator",
-    "EmbeddingResult",
     "GroupDataset",
     "ImageCrop",
     "ImageDataset",
     "ImageEmbeddingGenerator",
-    "ImagePathEmbedder",
-    "RandomEmbedder",
     "SampleType",
-    "TextEmbedder",
     "VideoDataset",
     "VideoEmbeddingGenerator",
     "VideoFrameDataset",
     "VideoFrameSample",
     "connect",
     "lt_train_script",
-    "register_default_embedder",
     "set_default_embedding_model",
     "start_gui",
     "start_gui_background",
