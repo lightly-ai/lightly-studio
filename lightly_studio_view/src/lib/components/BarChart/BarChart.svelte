@@ -116,8 +116,9 @@
         {#if emptyState}
             {@render emptyState()}
         {:else}
-            No data to display.
-            <br />Check the
+            No distribution data to display.
+            <br />Add annotations or metadata to see their distribution.
+            <br />Learn more in the
             <a
                 href="https://docs.lightly.ai/studio/"
                 target="_blank"
@@ -125,8 +126,7 @@
                 class="text-primary underline-offset-4 hover:underline"
             >
                 documentation
-            </a>
-            to learn how to add data.
+            </a>.
         {/if}
     </div>
 {:else}
