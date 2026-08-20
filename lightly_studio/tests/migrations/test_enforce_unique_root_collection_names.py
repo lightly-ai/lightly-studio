@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib
 from datetime import timedelta
 
+import pytest
 from pytest_mock import MockerFixture
 from sqlmodel import Session, select
 
@@ -15,6 +16,9 @@ _migration = importlib.import_module(
 )
 
 
+# Postgres builds its schema from the migrations, so the index is already in place there
+# and the duplicates this test needs cannot be inserted. The rename SQL is plain ANSI.
+@pytest.mark.duckdb_only
 def test_rename_duplicate_root_collections(db_session: Session, mocker: MockerFixture) -> None:
     # Builds the pre-migration state, bypassing `collection_resolver.create` which
     # rejects duplicate names before they reach the database.
