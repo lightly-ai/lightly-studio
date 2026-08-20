@@ -6,6 +6,7 @@ from .get_annotation_collection_ids import get_annotation_collection_ids
 from .get_counts_grouped_by_sample_tag import get_counts_grouped_by_sample_tag
 from .get_current_counts import get_current_counts
 from .get_total_counts import get_total_counts
+from .resolve_embedding_region import resolve_embedding_region
 from .restrict_to_annotation_sources import restrict_to_annotation_sources
 
 __all__ = [
@@ -17,5 +18,6 @@ __all__ = [
     "get_counts_grouped_by_sample_tag",
     "get_current_counts",
     "get_total_counts",
+    "resolve_embedding_region",
     "restrict_to_annotation_sources",
 ]
