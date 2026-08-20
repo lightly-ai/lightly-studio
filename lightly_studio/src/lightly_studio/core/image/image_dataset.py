@@ -31,6 +31,7 @@ from lightly_studio.core.image.add_images import BrokenImageCollector
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
+from lightly_studio.embed.manager import EmbedderManagerProvider
 from lightly_studio.evaluation.image_dataset_evaluate import ImageDatasetEvaluate
 from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
@@ -188,7 +189,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             )
 
         if embed:
-            _generate_embeddings_image(
+            embedder_manager = EmbedderManagerProvider.get_embedder_manager()
+            embedder_manager.embed_images_and_store(
                 session=self.session,
                 collection_id=self.collection_id,
                 sample_ids=created_sample_ids,
