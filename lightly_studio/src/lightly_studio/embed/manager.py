@@ -90,6 +90,33 @@ class EmbedderManager:
             embeddings=result.embeddings,
         )
 
+    def embed_text(self, text: str) -> list[float]:
+        """Embed a single query text with the registered text embedder.
+
+        Used by the GUI text-search route. The returned vector lives in the same
+        space as the image vectors stored at ingest, as long as the same embedder
+        was registered for both capabilities (the common case for a combined
+        image-and-text embedder).
+
+        Args:
+            text: The query text to embed.
+
+        Returns:
+            The embedding as a list of floats.
+
+        Raises:
+            ValueError: If no text embedder is registered.
+        """
+        embedder = self._registry.get_default_text_embedder()
+        if embedder is None:
+            raise ValueError("No text embedder registered.")
+
+        # Honor the load-before-embed contract so heavy setup happens once.
+        self._load_once(cast(Embedder, embedder))
+        result = embedder.embed_text([text])
+        embedding: list[float] = result.embeddings[0].tolist()
+        return embedding
+
     def _load_once(self, embedder: Embedder) -> EmbedderDescriptor:
         """Return the embedder's descriptor, calling ``load`` only on first use.
 
