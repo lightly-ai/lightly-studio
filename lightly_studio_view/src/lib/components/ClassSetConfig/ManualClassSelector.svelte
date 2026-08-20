@@ -1,6 +1,5 @@
 <script lang="ts">
     import { MultiSelectList } from '$lib/components/MultiSelectList';
-    import type { MultiSelectItem } from '$lib/components/MultiSelectList';
 
     interface Props {
         /** Currently selected class labels. Bindable — mutated on toggle / Select all / Clear. */
@@ -8,7 +7,7 @@
         /** Full list of class labels to choose from, in the order they should be displayed. */
         allClasses?: string[];
         /** Optional stable values and display labels; labels need not be unique. */
-        items?: MultiSelectItem[];
+        items?: { value: string; label: string }[];
         itemNoun?: string;
         itemNounPlural?: string;
         /** test-id for the search input; lets each host keep its own id scheme. */

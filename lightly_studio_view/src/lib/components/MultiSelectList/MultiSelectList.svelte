@@ -4,7 +4,7 @@
     import * as Command from '$lib/components/ui/command';
     import { cn } from '$lib/utils';
 
-    export interface MultiSelectItem {
+    interface MultiSelectItem {
         /** Unique identifier used as the selection key. */
         value: string;
         /** Display text shown in the list. */
@@ -37,6 +37,14 @@
         itemNounPlural = 'items',
         searchTestId
     }: Props = $props();
+
+    function toggleItem(value: string) {
+        onChange(
+            selectedIds.includes(value)
+                ? selectedIds.filter((id) => id !== value)
+                : [...selectedIds, value]
+        );
+    }
 </script>
 
 <div>
@@ -77,12 +85,7 @@
                 <Command.Item
                     value={item.value}
                     keywords={[item.label]}
-                    onSelect={() =>
-                        onChange(
-                            selectedIds.includes(item.value)
-                                ? selectedIds.filter((id) => id !== item.value)
-                                : [...selectedIds, item.value]
-                        )}
+                    onSelect={() => toggleItem(item.value)}
                 >
                     <CheckIcon
                         class={cn(!selectedIds.includes(item.value) && 'text-transparent')}

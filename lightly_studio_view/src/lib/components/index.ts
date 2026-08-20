@@ -73,4 +73,3 @@ export { default as MetadataFilterChips } from '$lib/components/MetadataFilterCh
 export { default as FormField } from '$lib/components/FormField/FormField.svelte';
 export { default as AnnotationSourceSelect } from '$lib/components/AnnotationSourceSelect/AnnotationSourceSelect.svelte';
 export { MultiSelectList } from '$lib/components/MultiSelectList';
-export type { MultiSelectItem } from '$lib/components/MultiSelectList';
