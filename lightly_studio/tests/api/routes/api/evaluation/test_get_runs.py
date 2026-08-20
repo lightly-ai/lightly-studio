@@ -49,6 +49,7 @@ def test_get_evaluation_runs(test_client: TestClient, mocker: MockerFixture) -> 
             "created_at": "2026-05-18T10:00:00Z",
             "gt_annotation_source": "gt_v1",
             "pred_annotation_source": "pred_v1",
+            "stale_since": None,
         },
         {
             "id": str(run_2_id),
@@ -57,6 +58,7 @@ def test_get_evaluation_runs(test_client: TestClient, mocker: MockerFixture) -> 
             "created_at": "2026-05-17T09:30:00Z",
             "gt_annotation_source": "gt_v2",
             "pred_annotation_source": "pred_v2",
+            "stale_since": None,
         },
     ]
 
