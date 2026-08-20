@@ -1,31 +1,42 @@
-"""Types shared across annotation count resolvers."""
+"""Types for image annotation count resolvers."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from uuid import UUID
 
 
 class AnnotationCountMode(str, Enum):
-    """Whether to count annotation objects or distinct annotated samples."""
+    """Controls what the annotation count represents."""
 
     OBJECTS = "objects"
     SAMPLES = "samples"
 
 
-@dataclass
+@dataclass(frozen=True)
 class AnnotationClassCount:
-    """Annotation count for one class."""
+    """Annotation count for one class.
+
+    Attributes:
+        label_name: Annotation class name on the shared class axis.
+        count: Number of matching annotation objects or distinct annotated samples.
+    """
 
     label_name: str
     count: int
 
 
-@dataclass
+@dataclass(frozen=True)
 class SampleTagAnnotationCounts:
-    """Annotation class counts for one sample tag."""
+    """Annotation class counts for one sample tag.
+
+    Attributes:
+        sample_tag_id: ID of the selected sample tag.
+        sample_tag_name: Name of the selected sample tag.
+        counts: Zero-filled counts on the shared class axis.
+    """
 
     sample_tag_id: UUID
     sample_tag_name: str
-    counts: list[AnnotationClassCount] = field(default_factory=list)
+    counts: tuple[AnnotationClassCount, ...]

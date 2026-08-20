@@ -8,7 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Path
 from pydantic import BaseModel, Field
 
-from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
+from lightly_studio.api.routes.api import collection
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import CollectionTable
@@ -78,7 +78,7 @@ def count_image_annotations_by_sample_tags(
     collection: Annotated[
         CollectionTable,
         Path(title="collection Id"),
-        Depends(get_and_validate_collection_id),
+        Depends(collection.get_and_validate_collection_id),
     ],
     session: SessionDep,
     body: ReadCountImageAnnotationsBySampleTagsRequest,

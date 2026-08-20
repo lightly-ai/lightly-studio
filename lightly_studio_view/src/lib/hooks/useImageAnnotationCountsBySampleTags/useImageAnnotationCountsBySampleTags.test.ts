@@ -19,42 +19,39 @@ const params = {
 };
 
 describe('useImageAnnotationCountsBySampleTags', () => {
-    const queryResult = { data: undefined, subscribe: vi.fn() } as unknown as CreateQueryResult<
-        unknown,
-        Error
-    >;
+    let capturedOptions: CreateQueryOptions;
 
     beforeEach(() => {
         vi.resetAllMocks();
-        vi.spyOn(tanstackQuery, 'createQuery').mockReturnValue(queryResult);
+        vi.spyOn(tanstackQuery, 'createQuery').mockImplementation((getOptions) => {
+            capturedOptions = getOptions() as CreateQueryOptions;
+            return { data: undefined, subscribe: vi.fn() } as unknown as CreateQueryResult<
+                unknown,
+                Error
+            >;
+        });
     });
 
     it('disables the query when the comparison selection is empty', () => {
-        const createQuerySpy = vi.spyOn(tanstackQuery, 'createQuery');
         useImageAnnotationCountsBySampleTags(() => ({ ...params, sampleTagIds: [] }));
 
-        const options = createQuerySpy.mock.calls[0][0]() as CreateQueryOptions;
-        expect(options.enabled).toBe(false);
+        expect(capturedOptions.enabled).toBe(false);
     });
 
     it('respects an explicit disabled state with selected tags', () => {
-        const createQuerySpy = vi.spyOn(tanstackQuery, 'createQuery');
         useImageAnnotationCountsBySampleTags(() => ({ ...params, enabled: false }));
 
-        const options = createQuerySpy.mock.calls[0][0]() as CreateQueryOptions;
-        expect(options.enabled).toBe(false);
+        expect(capturedOptions.enabled).toBe(false);
     });
 
     it('forwards the request and cancellation signal to the SDK', async () => {
-        const createQuerySpy = vi.spyOn(tanstackQuery, 'createQuery');
         const signal = new AbortController().signal;
         vi.mocked(countImageAnnotationsBySampleTags).mockResolvedValue({
             data: []
         } as unknown as Awaited<ReturnType<typeof countImageAnnotationsBySampleTags>>);
         useImageAnnotationCountsBySampleTags(() => params);
 
-        const options = createQuerySpy.mock.calls[0][0]() as CreateQueryOptions;
-        await (options.queryFn as (context: { signal: AbortSignal }) => Promise<unknown>)({
+        await (capturedOptions.queryFn as (context: { signal: AbortSignal }) => Promise<unknown>)({
             signal
         });
 
