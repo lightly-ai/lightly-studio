@@ -4,19 +4,27 @@
     import * as Command from '$lib/components/ui/command';
     import { cn } from '$lib/utils';
 
-    export interface MultiSelectItem {
+    interface MultiSelectItem {
+        /** Unique identifier used as the selection key. */
         value: string;
+        /** Display text shown in the list. */
         label: string;
     }
 
     interface Props {
+        /** List of available options. */
         items: MultiSelectItem[];
+        /** Values of currently selected items. */
         selectedIds: string[];
+        /** Called with the new selection whenever an item is toggled, all selected, or cleared. */
         onChange: (ids: string[]) => void;
         /** Show "X of Y selected" counter and Select all / Clear buttons. */
         showSelectAll?: boolean;
+        /** Singular noun used in the empty state and search placeholder (e.g. "tag"). */
         itemNoun?: string;
+        /** Plural noun used in the empty state and search placeholder (e.g. "tags"). */
         itemNounPlural?: string;
+        /** `data-testid` applied to the search input. */
         searchTestId?: string;
     }
 
@@ -29,6 +37,14 @@
         itemNounPlural = 'items',
         searchTestId
     }: Props = $props();
+
+    function toggleItem(value: string) {
+        onChange(
+            selectedIds.includes(value)
+                ? selectedIds.filter((id) => id !== value)
+                : [...selectedIds, value]
+        );
+    }
 </script>
 
 <div>
@@ -69,12 +85,7 @@
                 <Command.Item
                     value={item.value}
                     keywords={[item.label]}
-                    onSelect={() =>
-                        onChange(
-                            selectedIds.includes(item.value)
-                                ? selectedIds.filter((id) => id !== item.value)
-                                : [...selectedIds, item.value]
-                        )}
+                    onSelect={() => toggleItem(item.value)}
                 >
                     <CheckIcon
                         class={cn(!selectedIds.includes(item.value) && 'text-transparent')}

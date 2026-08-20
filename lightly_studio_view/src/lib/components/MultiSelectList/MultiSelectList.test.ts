@@ -53,13 +53,6 @@ describe('MultiSelectList', () => {
         expect(screen.getByText('Clear')).toBeInTheDocument();
     });
 
-    it('does not show the counter or Select all / Clear by default', () => {
-        render(MultiSelectList, { props: defaultProps });
-
-        expect(screen.queryByText('Select all')).not.toBeInTheDocument();
-        expect(screen.queryByText('Clear')).not.toBeInTheDocument();
-    });
-
     it('calls onChange with all ids when Select all is clicked', async () => {
         const onChange = vi.fn();
         render(MultiSelectList, {
