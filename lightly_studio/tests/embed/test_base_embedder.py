@@ -45,17 +45,18 @@ def test_derive_capabilities__multiple() -> None:
 
 
 class TestBaseEmbedder:
-    def test_describe(self) -> None:
-        embedder = BaseEmbedder(model_id="my_model", dimension=7)
+    def test_descriptor(self) -> None:
+        class _Plain(BaseEmbedder):
+            pass
 
-        descriptor = embedder.describe()
+        descriptor = _Plain()._descriptor(model_id="my_model", dimension=7)
 
         assert descriptor.model_id == "my_model"
         assert descriptor.dimension == 7
-        # A bare BaseEmbedder implements no capability protocol.
+        # A base subclass with no capability protocol implements none.
         assert descriptor.capabilities == frozenset()
 
-    def test_describe__derives_subclass_capabilities(self) -> None:
+    def test_descriptor__derives_subclass_capabilities(self) -> None:
         class _ImageOnly(BaseEmbedder):
             def embed_images(self, paths: list[str]) -> EmbeddingResult:
                 return EmbeddingResult(
@@ -63,6 +64,6 @@ class TestBaseEmbedder:
                     kept_indices=list(range(len(paths))),
                 )
 
-        descriptor = _ImageOnly(model_id="image_only", dimension=3).describe()
+        descriptor = _ImageOnly()._descriptor(model_id="image_only", dimension=3)
 
         assert descriptor.capabilities == frozenset({Capability.IMAGE_PATH})

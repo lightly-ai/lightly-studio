@@ -12,35 +12,30 @@ _CAPABILITY_PROTOCOLS: dict[Capability, type] = {
 
 
 class BaseEmbedder:
-    """Base class users inherit to declare a model id and dimension.
+    """Optional convenience base for embedders.
 
     <span class="doc-badge doc-badge--beta">Beta</span>
 
-    Capabilities are derived from the capability protocols the subclass also
-    implements. ``BaseEmbedder`` does not inherit from the ``Embedder`` protocol
-    (structural typing already makes any subclass satisfy ``Embedder``); it only
-    provides ``describe``.
+    Subclasses implement ``load`` and may use ``_descriptor`` to build its
+    result, which fills in the capabilities derived from the capability
+    protocols the subclass implements. ``BaseEmbedder`` does not inherit from the
+    ``Embedder`` protocol (structural typing already makes any subclass with a
+    ``load`` method satisfy ``Embedder``).
     """
 
-    def __init__(self, *, model_id: str, dimension: int) -> None:
-        """Store the embedder's identity and dimension.
+    def _descriptor(self, *, model_id: str, dimension: int) -> EmbedderDescriptor:
+        """Build a descriptor with capabilities derived from ``self``.
 
         Args:
             model_id: Stable identity string for the embedder.
             dimension: Length of the embedding vectors the embedder produces.
-        """
-        self._model_id = model_id
-        self._dimension = dimension
-
-    def describe(self) -> EmbedderDescriptor:
-        """Return the embedder's identity and derived capabilities.
 
         Returns:
             The descriptor with model id, dimension, and derived capabilities.
         """
         return EmbedderDescriptor(
-            model_id=self._model_id,
-            dimension=self._dimension,
+            model_id=model_id,
+            dimension=dimension,
             capabilities=derive_capabilities(self),
         )
 

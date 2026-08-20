@@ -43,6 +43,7 @@ class EmbedderManager:
         """Initialize the manager with a default ``RandomEmbedder``."""
         self._registry = EmbedderRegistry()
         self._registry.register(RandomEmbedder())
+        self._descriptors: dict[Embedder, EmbedderDescriptor] = {}
 
     def register(self, embedder: Embedder) -> None:
         """Register an embedder, overriding the default for its capabilities.
@@ -71,7 +72,7 @@ class EmbedderManager:
 
         # Every registered embedder also implements the Embedder protocol; the
         # capability slot only narrows to the image-path protocol.
-        descriptor = cast(Embedder, embedder).describe()
+        descriptor = self._load_once(cast(Embedder, embedder))
         db_model = embedding_model_resolver.get_or_create(
             session=session,
             embedding_model=_to_embedding_model_create(
@@ -88,6 +89,16 @@ class EmbedderManager:
             sample_ids=kept_sample_ids,
             embeddings=result.embeddings,
         )
+
+    def _load_once(self, embedder: Embedder) -> EmbedderDescriptor:
+        """Return the embedder's descriptor, calling ``load`` only on first use.
+
+        The descriptor is authoritative once loaded, so it is cached and reused
+        for every later call for the same embedder.
+        """
+        if embedder not in self._descriptors:
+            self._descriptors[embedder] = embedder.load()
+        return self._descriptors[embedder]
 
 
 class EmbedderManagerProvider:

@@ -14,14 +14,19 @@ class Embedder(Protocol):
 
     <span class="doc-badge doc-badge--beta">Beta</span>
 
-    An embedder identifies itself through ``describe``. Implement one or more of the
+    An embedder identifies itself through ``load``. Implement one or more of the
     capability protocols below to declare what kinds of input it can embed.
     """
 
-    def describe(self) -> EmbedderDescriptor:
-        """Return the embedder's identity and derived capabilities.
+    def load(self) -> EmbedderDescriptor:
+        """Realize the model and return its identity.
 
         <span class="doc-badge doc-badge--beta">Beta</span>
+
+        The framework calls this once, before any embed call. The returned
+        descriptor is authoritative and must not change afterwards. Put heavy
+        setup work here (for example loading model weights) rather than in
+        ``__init__`` so that constructing an embedder stays cheap.
 
         Returns:
             The descriptor with model id, dimension, and capabilities.

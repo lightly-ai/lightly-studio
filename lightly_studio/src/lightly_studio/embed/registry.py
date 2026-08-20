@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from lightly_studio.embed.base_embedder import derive_capabilities
 from lightly_studio.embed.capability import Capability
 from lightly_studio.embed.protocols import Embedder, ImagePathEmbedder, TextEmbedder
 
@@ -27,7 +28,9 @@ class EmbedderRegistry:
             embedder: The embedder to register. Its capabilities determine which
                 slots it fills.
         """
-        capabilities = embedder.describe().capabilities
+        # Capabilities come from the protocols the embedder implements, which is
+        # cheap and structural, so registering does not trigger a load.
+        capabilities = derive_capabilities(embedder)
         if Capability.TEXT in capabilities:
             # The capability set was derived from these very protocols.
             assert isinstance(embedder, TextEmbedder)

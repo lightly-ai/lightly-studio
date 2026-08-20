@@ -4,13 +4,14 @@ import numpy as np
 
 from lightly_studio.dataset.embedding_result import EmbeddingResult
 from lightly_studio.embed.base_embedder import BaseEmbedder
+from lightly_studio.embed.capability import EmbedderDescriptor
 from lightly_studio.embed.random_embedder import RandomEmbedder
 from lightly_studio.embed.registry import EmbedderRegistry
 
 
 class _TextOnlyEmbedder(BaseEmbedder):
-    def __init__(self) -> None:
-        super().__init__(model_id="text_only", dimension=3)
+    def load(self) -> EmbedderDescriptor:
+        return self._descriptor(model_id="text_only", dimension=3)
 
     def embed_text(self, texts: list[str]) -> EmbeddingResult:
         return EmbeddingResult(

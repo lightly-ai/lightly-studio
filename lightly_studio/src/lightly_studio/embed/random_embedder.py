@@ -6,6 +6,7 @@ import numpy as np
 
 from lightly_studio.dataset.embedding_result import EmbeddingResult
 from lightly_studio.embed.base_embedder import BaseEmbedder
+from lightly_studio.embed.capability import EmbedderDescriptor
 
 
 class RandomEmbedder(BaseEmbedder):
@@ -14,7 +15,7 @@ class RandomEmbedder(BaseEmbedder):
     <span class="doc-badge doc-badge--beta">Beta</span>
 
     Implements ``ImagePathEmbedder`` and ``TextEmbedder`` structurally, so
-    ``describe`` reports ``{IMAGE_PATH, TEXT}``.
+    ``load`` reports ``{IMAGE_PATH, TEXT}``.
     """
 
     def __init__(self, *, model_id: str = "random", dimension: int = 3) -> None:
@@ -24,7 +25,12 @@ class RandomEmbedder(BaseEmbedder):
             model_id: Stable identity string for the embedder.
             dimension: Length of the random embedding vectors to generate.
         """
-        super().__init__(model_id=model_id, dimension=dimension)
+        self._model_id = model_id
+        self._dimension = dimension
+
+    def load(self) -> EmbedderDescriptor:
+        """Return the embedder's identity and derived capabilities."""
+        return self._descriptor(model_id=self._model_id, dimension=self._dimension)
 
     def embed_images(self, paths: list[str]) -> EmbeddingResult:
         """Generate random embeddings for image paths."""

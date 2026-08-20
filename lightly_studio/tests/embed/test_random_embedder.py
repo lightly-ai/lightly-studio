@@ -25,8 +25,8 @@ class TestRandomEmbedder:
         assert result.embeddings.dtype == np.float32
         assert result.kept_indices == [0, 1]
 
-    def test_describe(self) -> None:
-        descriptor = RandomEmbedder().describe()
+    def test_load(self) -> None:
+        descriptor = RandomEmbedder().load()
 
         assert descriptor.model_id == "random"
         assert descriptor.dimension == 3
