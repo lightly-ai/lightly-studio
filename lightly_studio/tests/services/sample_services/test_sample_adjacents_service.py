@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from unittest import mock
 from uuid import uuid4
 
 import pytest
@@ -226,7 +225,7 @@ def test_get_adjacent_samples__translates_annotation_sort_by_before_delegating(
         session=db_session,
         annotation_collection_id=collection_id,
         sort_expr=annotation_sort_by,
-        annotation_id_column=mock.ANY,
+        annotation_id_column=mocker.ANY,
     )
     mock_get_adjacent_annotations.assert_called_once_with(
         session=db_session,

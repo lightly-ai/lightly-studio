@@ -57,7 +57,9 @@ def _build_window_query(
     # because AnnotationBaseTable is not directly in the FROM — only the subquery is.
     if order_by is not None:
         order_by.annotation_id_column = filtered_rows.c.sample_id
-        leading_order_key: ColumnElement[Any] | None = order_by.to_column_elements()[0]
+        leading_order_key: ColumnElement[Any] | None = order_by.to_column_elements()[
+            0
+        ]  # Safe only while order_by yields a single sort key.
     else:
         leading_order_key = None
 
