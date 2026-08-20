@@ -1,12 +1,12 @@
 import { get, writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SortDirection } from '$lib/api/lightly_studio_local';
-import type { SortField } from '$lib/hooks/useSortFields/useSortFields.svelte';
-import { IMAGE_SORT_FIELDS } from '$lib/hooks/useSortFields/useSortFields.svelte';
-import { useOrderBy } from './useOrderBy';
-import type { SortExpr } from '../useImagesInfinite/types';
+import type { SortField } from '$lib/hooks/useImageSortFields/useImageSortFields.svelte';
+import { IMAGE_SORT_FIELDS } from '$lib/hooks/useImageSortFields/useImageSortFields.svelte';
+import { useImageOrderBy } from './useImageOrderBy';
+import type { ImageSortExpr } from '../useImagesInfinite/types';
 
-const imageSortBy = writable<SortExpr[] | null>(null);
+const imageSortBy = writable<ImageSortExpr[] | null>(null);
 const allSortFields = writable<SortField[]>([...IMAGE_SORT_FIELDS]);
 const updateSortBy = vi.fn();
 
@@ -14,16 +14,18 @@ vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
     useImageFilters: () => ({ imageSortBy, updateSortBy })
 }));
 
-vi.mock('$lib/hooks/useSortFields/useSortFields.svelte', async (importOriginal) => {
+vi.mock('$lib/hooks/useImageSortFields/useImageSortFields.svelte', async (importOriginal) => {
     const original =
-        await importOriginal<typeof import('$lib/hooks/useSortFields/useSortFields.svelte')>();
+        await importOriginal<
+            typeof import('$lib/hooks/useImageSortFields/useImageSortFields.svelte')
+        >();
     return {
         ...original,
-        useSortFields: () => ({ allSortFields })
+        useImageSortFields: () => ({ allSortFields })
     };
 });
 
-describe('useOrderBy', () => {
+describe('useImageOrderBy', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         imageSortBy.set(null);
@@ -32,7 +34,7 @@ describe('useOrderBy', () => {
 
     describe('selectedDirection', () => {
         it('returns ASC when no sort is active', () => {
-            const { selectedDirection } = useOrderBy({
+            const { selectedDirection } = useImageOrderBy({
                 collectionId: () => 'col1',
                 datasetId: () => 'ds1'
             });
@@ -47,7 +49,7 @@ describe('useOrderBy', () => {
                     direction: SortDirection.DESC
                 }
             ]);
-            const { selectedDirection } = useOrderBy({
+            const { selectedDirection } = useImageOrderBy({
                 collectionId: () => 'col1',
                 datasetId: () => 'ds1'
             });
@@ -57,7 +59,7 @@ describe('useOrderBy', () => {
 
     describe('selectedLabel', () => {
         it('returns null when no sort is active', () => {
-            const { selectedLabel } = useOrderBy({
+            const { selectedLabel } = useImageOrderBy({
                 collectionId: () => 'col1',
                 datasetId: () => 'ds1'
             });
@@ -72,7 +74,7 @@ describe('useOrderBy', () => {
                     direction: SortDirection.ASC
                 }
             ]);
-            const { selectedLabel } = useOrderBy({
+            const { selectedLabel } = useImageOrderBy({
                 collectionId: () => 'col1',
                 datasetId: () => 'ds1'
             });
@@ -95,7 +97,7 @@ describe('useOrderBy', () => {
                     direction: SortDirection.ASC
                 }
             ]);
-            const { selectedLabel } = useOrderBy({
+            const { selectedLabel } = useImageOrderBy({
                 collectionId: () => 'col1',
                 datasetId: () => 'ds1'
             });
@@ -120,7 +122,7 @@ describe('useOrderBy', () => {
                     direction: SortDirection.ASC
                 }
             ]);
-            const { selectedLabel } = useOrderBy({
+            const { selectedLabel } = useImageOrderBy({
                 collectionId: () => 'col1',
                 datasetId: () => 'ds1'
             });
@@ -130,7 +132,7 @@ describe('useOrderBy', () => {
 
     describe('isFieldSelected', () => {
         it('returns false for any field when no sort is active', () => {
-            const { isFieldSelected } = useOrderBy({
+            const { isFieldSelected } = useImageOrderBy({
                 collectionId: () => 'col1',
                 datasetId: () => 'ds1'
             });
@@ -147,7 +149,7 @@ describe('useOrderBy', () => {
                     direction: SortDirection.ASC
                 }
             ]);
-            const { isFieldSelected } = useOrderBy({
+            const { isFieldSelected } = useImageOrderBy({
                 collectionId: () => 'col1',
                 datasetId: () => 'ds1'
             });
@@ -166,7 +168,7 @@ describe('useOrderBy', () => {
                     direction: SortDirection.ASC
                 }
             ]);
-            const { isFieldSelected } = useOrderBy({
+            const { isFieldSelected } = useImageOrderBy({
                 collectionId: () => 'col1',
                 datasetId: () => 'ds1'
             });
@@ -191,7 +193,7 @@ describe('useOrderBy', () => {
         });
 
         it('updates reactively when imageSortBy changes', () => {
-            const { isFieldSelected } = useOrderBy({
+            const { isFieldSelected } = useImageOrderBy({
                 collectionId: () => 'col1',
                 datasetId: () => 'ds1'
             });
@@ -213,7 +215,7 @@ describe('useOrderBy', () => {
 
     describe('handleFieldClick', () => {
         it('selects an image field with ASC direction by default', () => {
-            const { handleFieldClick } = useOrderBy({
+            const { handleFieldClick } = useImageOrderBy({
                 collectionId: () => 'col1',
                 datasetId: () => 'ds1'
             });
@@ -237,7 +239,7 @@ describe('useOrderBy', () => {
                     direction: SortDirection.ASC
                 }
             ]);
-            const { handleFieldClick } = useOrderBy({
+            const { handleFieldClick } = useImageOrderBy({
                 collectionId: () => 'col1',
                 datasetId: () => 'ds1'
             });
@@ -255,7 +257,7 @@ describe('useOrderBy', () => {
                     direction: SortDirection.DESC
                 }
             ]);
-            const { handleFieldClick } = useOrderBy({
+            const { handleFieldClick } = useImageOrderBy({
                 collectionId: () => 'col1',
                 datasetId: () => 'ds1'
             });
@@ -272,7 +274,7 @@ describe('useOrderBy', () => {
         });
 
         it('selects a metadata field', () => {
-            const { handleFieldClick } = useOrderBy({
+            const { handleFieldClick } = useImageOrderBy({
                 collectionId: () => 'col1',
                 datasetId: () => 'ds1'
             });
@@ -293,7 +295,7 @@ describe('useOrderBy', () => {
         });
 
         it('selects an evaluation metric field', () => {
-            const { handleFieldClick } = useOrderBy({
+            const { handleFieldClick } = useImageOrderBy({
                 collectionId: () => 'col1',
                 datasetId: () => 'ds1'
             });
@@ -318,7 +320,7 @@ describe('useOrderBy', () => {
 
     describe('toggleDirection', () => {
         it('does nothing when no sort is active', () => {
-            const { toggleDirection } = useOrderBy({
+            const { toggleDirection } = useImageOrderBy({
                 collectionId: () => 'col1',
                 datasetId: () => 'ds1'
             });
@@ -336,7 +338,7 @@ describe('useOrderBy', () => {
                     direction: SortDirection.ASC
                 }
             ]);
-            const { toggleDirection } = useOrderBy({
+            const { toggleDirection } = useImageOrderBy({
                 collectionId: () => 'col1',
                 datasetId: () => 'ds1'
             });
@@ -375,7 +377,7 @@ describe('useOrderBy', () => {
                     direction: SortDirection.ASC
                 }
             ]);
-            const { toggleDirection } = useOrderBy({
+            const { toggleDirection } = useImageOrderBy({
                 collectionId: () => 'col1',
                 datasetId: () => 'ds1'
             });
@@ -400,7 +402,7 @@ describe('useOrderBy', () => {
                     direction: SortDirection.ASC
                 }
             ]);
-            const { toggleDirection } = useOrderBy({
+            const { toggleDirection } = useImageOrderBy({
                 collectionId: () => 'col1',
                 datasetId: () => 'ds1'
             });

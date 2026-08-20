@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { useOrderBy } from '$lib/hooks/useOrderBy/useOrderBy';
+    import { useImageOrderBy } from '$lib/hooks/useImageOrderBy/useImageOrderBy';
     import { useGlobalStorage, usePostHog } from '$lib/hooks';
     import { type SelectItem } from '$lib/components/Select';
     import OrderByControl from './OrderByControl.svelte';
@@ -23,7 +23,7 @@
         handleFieldClick,
         toggleDirection,
         dispose
-    } = useOrderBy({ collectionId: () => collectionId, datasetId: () => datasetId });
+    } = useImageOrderBy({ collectionId: () => collectionId, datasetId: () => datasetId });
 
     $effect(() => {
         return () => dispose();

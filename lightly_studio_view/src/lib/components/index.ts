@@ -66,7 +66,7 @@ export { default as Separator } from '$lib/components/ui/separator/separator.sve
 export { default as CollectionSearch } from '$lib/components/CollectionSearch/CollectionSearch.svelte';
 export { default as CollectionSearchImage } from '$lib/components/CollectionSearch/CollectionSearchImage/CollectionSearchImage.svelte';
 export { default as CollectionSearchInput } from '$lib/components/CollectionSearch/SearchInput/CollectionSearchInput.svelte';
-export { default as OrderBy } from '$lib/components/OrderBy/OrderBy.svelte';
+export { default as ImageOrderBy } from '$lib/components/OrderBy/ImageOrderBy.svelte';
 export { default as AnnotationOrderBy } from '$lib/components/OrderBy/AnnotationOrderBy.svelte';
 export { default as SamplingCombinationDialog } from '$lib/components/Sampling/SamplingCombinationDialog.svelte';
 export { default as MetadataFilterChips } from '$lib/components/MetadataFilterChips/MetadataFilterChips.svelte';
