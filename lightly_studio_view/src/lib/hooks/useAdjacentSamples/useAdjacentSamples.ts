@@ -34,7 +34,7 @@ export type AdjacentSamplesRequestBody =
           sample_type: Extract<SampleType, 'annotation'>;
           collection_id: string;
           filters?: ({ filter_type: 'annotations' } & AnnotationsFilter) | null;
-          annotation_sort_by?: AnnotationEvaluationMetricSortExpr | null;
+          annotation_sort_by?: AnnotationEvaluationMetricSortExpr;
       };
 
 type AdjacentSamplesParams = {
