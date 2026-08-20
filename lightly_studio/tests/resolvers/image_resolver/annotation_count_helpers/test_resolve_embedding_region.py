@@ -5,12 +5,11 @@ from uuid import UUID
 from sqlmodel import Session
 
 from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
+from lightly_studio.models.image import ImageTable
 from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
 from lightly_studio.resolvers import sample_embedding_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
-from lightly_studio.resolvers.image_resolver.annotation_count_helpers import (
-    resolve_embedding_region,
-)
+from lightly_studio.resolvers.image_resolver import annotation_count_helpers
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests import helpers_resolvers
 from tests.helpers_resolvers import ImageStub
@@ -19,7 +18,7 @@ from tests.helpers_resolvers import ImageStub
 def test_resolve_embedding_region__no_image_filter(db_session: Session) -> None:
     collection = helpers_resolvers.create_collection(session=db_session)
 
-    resolve_embedding_region(
+    annotation_count_helpers.resolve_embedding_region(
         session=db_session,
         collection_id=collection.collection_id,
         image_filter=None,
@@ -30,7 +29,7 @@ def test_resolve_embedding_region__no_sample_filter(db_session: Session) -> None
     collection = helpers_resolvers.create_collection(session=db_session)
     image_filter = ImageFilter()
 
-    resolve_embedding_region(
+    annotation_count_helpers.resolve_embedding_region(
         session=db_session,
         collection_id=collection.collection_id,
         image_filter=image_filter,
@@ -44,7 +43,7 @@ def test_resolve_embedding_region__no_embedding_region(db_session: Session) -> N
     sample_filter = SampleFilter()
     image_filter = ImageFilter(sample_filter=sample_filter)
 
-    resolve_embedding_region(
+    annotation_count_helpers.resolve_embedding_region(
         session=db_session,
         collection_id=collection.collection_id,
         image_filter=image_filter,
@@ -69,7 +68,7 @@ def test_resolve_embedding_region__resolves_sample_ids(db_session: Session) -> N
     sample_filter = SampleFilter(embedding_region=region)
     image_filter = ImageFilter(sample_filter=sample_filter)
 
-    resolve_embedding_region(
+    annotation_count_helpers.resolve_embedding_region(
         session=db_session,
         collection_id=collection_id,
         image_filter=image_filter,
@@ -83,6 +82,24 @@ def _setup_collection_with_coordinates(
     session: Session,
     coordinates: list[tuple[float, float]],
 ) -> tuple[UUID, list[UUID]]:
+    collection_id, embedding_model_id, images = _create_collection_with_embedded_samples(
+        session=session,
+        n_samples=len(coordinates),
+    )
+    _persist_two_dim_projection(
+        session=session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+        images=images,
+        coordinates=coordinates,
+    )
+    return collection_id, [image.sample_id for image in images]
+
+
+def _create_collection_with_embedded_samples(
+    session: Session,
+    n_samples: int,
+) -> tuple[UUID, UUID, list[ImageTable]]:
     collection = helpers_resolvers.create_collection(session=session)
     embedding_model = helpers_resolvers.create_embedding_model(
         session=session,
@@ -95,13 +112,23 @@ def _setup_collection_with_coordinates(
         embedding_model_id=embedding_model.embedding_model_id,
         images_and_embeddings=[
             (ImageStub(path=f"sample_{i}.png"), [float(i) + 0.1, 0.2, 0.3])
-            for i in range(len(coordinates))
+            for i in range(n_samples)
         ],
     )
+    return collection.collection_id, embedding_model.embedding_model_id, images
+
+
+def _persist_two_dim_projection(
+    session: Session,
+    collection_id: UUID,
+    embedding_model_id: UUID,
+    images: list[ImageTable],
+    coordinates: list[tuple[float, float]],
+) -> None:
     cache_key, sample_ids_ordered = sample_embedding_resolver.get_hash_by_collection_id(
         session=session,
-        collection_id=collection.collection_id,
-        embedding_model_id=embedding_model.embedding_model_id,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
     )
     coordinates_by_sample = {image.sample_id: coord for image, coord in zip(images, coordinates)}
     session.add(
@@ -112,4 +139,3 @@ def _setup_collection_with_coordinates(
         )
     )
     session.commit()
-    return collection.collection_id, [image.sample_id for image in images]
