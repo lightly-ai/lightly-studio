@@ -19,9 +19,15 @@ from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import ImageView, ImageViewsWithCount
 from lightly_studio.models.sort import SortExpr, sort_expr_to_order_by
-from lightly_studio.resolvers import image_resolver
-from lightly_studio.resolvers.image_filter import ImageFilter
-from lightly_studio.resolvers.image_resolver.annotation_count_types import AnnotationCountMode
+from lightly_studio.resolvers import (
+    image_resolver,
+)
+from lightly_studio.resolvers.image_filter import (
+    ImageFilter,
+)
+from lightly_studio.resolvers.image_resolver.annotation_count_types import (
+    AnnotationCountMode,
+)
 
 image_router = APIRouter(tags=["image"])
 image_router.include_router(

@@ -22,6 +22,8 @@ jobs:
   prepare-caches:
     name: Build Cache
     runs-on: ubuntu-latest
+    # Recent runs: 3.5min median, 10min worst.
+    timeout-minutes: 15
     outputs:
       file-hash: ${{ steps.file-hash.outputs.hash }}
     steps:
@@ -55,15 +57,6 @@ jobs:
             lightly_studio_view/build
             lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
           key: python-build-${{ steps.file-hash.outputs.hash }}
-
-      # Authenticate to download dev versions of lightly-mundig. Only needed
-      # when the build cache misses, same as the steps that consume it below.
-      - name: Authenticate with GCP
-        if: steps.cache-build.outputs.cache-hit != 'true'
-        uses: 'google-github-actions/auth@v3'
-        with:
-          project_id: boris-250909
-          credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
 
       - name: Cache Playwright browsers
         id: cache-playwright-browsers
@@ -101,13 +94,6 @@ jobs:
           version: "0.8.17"
           enable-cache: true
 
-      - name: Install Google Artifact Registry keyring
-        if: steps.cache-build.outputs.cache-hit != 'true'
-        working-directory: lightly_studio
-        # `make export-schema` below invokes `uv run` before the end-to-end job
-        # installs optional dependencies, so registry authentication is needed here.
-        run: make install-google-artifact-registry-keyring
-
       - name: Set Up Node.js
         uses: actions/setup-node@v6
         with:
@@ -121,12 +107,6 @@ jobs:
         run: npm ci
 
       ### Build caches ###
-
-      # Always ensure system packages for browsers are present on Ubuntu
-      - name: Install Playwright system dependencies
-        if: steps.cache-build.outputs.cache-hit != 'true'
-        working-directory: lightly_studio_view
-        run: npx playwright install-deps chromium
 
       # Only download browser binaries when cache misses; otherwise reuse cache
       - name: Install Playwright browsers
@@ -162,6 +142,8 @@ jobs:
   end-to-end:
     name: End2End Test (${{ matrix.name }})
     runs-on: ubuntu-latest
+    # Recent runs: 5.7min median, 9.2min worst.
+    timeout-minutes: 20
     needs: prepare-caches
     strategy:
       fail-fast: false
@@ -276,15 +258,6 @@ jobs:
           lookup-only: true
           path: ${{ matrix.success_marker }}
           key: ${{ matrix.success_key }}-${{ needs.prepare-caches.outputs.file-hash }}
-
-      # Authenticate to download dev versions of lightly-mundig. Only needed
-      # when the e2e success cache misses, same as the steps that consume it below.
-      - name: Authenticate with GCP
-        if: steps.cache-success.outputs.cache-hit != 'true'
-        uses: 'google-github-actions/auth@v3'
-        with:
-          project_id: boris-250909
-          credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
 
       ### Restore caches ###
 

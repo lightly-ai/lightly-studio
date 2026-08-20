@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from uuid import UUID
 
 from sqlmodel import Session, col, select
@@ -13,7 +14,7 @@ from lightly_studio.models.tag import TagTable
 def get_and_validate_sample_tags(
     session: Session,
     collection_id: UUID,
-    sample_tag_ids: list[UUID],
+    sample_tag_ids: Sequence[UUID],
 ) -> dict[UUID, str]:
     """Return {tag_id: name} for the given IDs, raising if any are invalid."""
     query = select(TagTable.tag_id, TagTable.name).where(

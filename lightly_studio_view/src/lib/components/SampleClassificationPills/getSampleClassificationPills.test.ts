@@ -37,6 +37,19 @@ function createAnnotation({
     };
 }
 
+/**
+ * Builds the source-visibility params from a selection, mirroring what
+ * `useAnnotationCollectionsFilter` derives. Keeps these tests about pills rather than about
+ * the selection rule, which `useAnnotationCollectionsFilter.test.ts` covers.
+ */
+function sourceFilter(selectedCollectionIds: string[]) {
+    return {
+        isSourceVisible: (sourceId: string) =>
+            selectedCollectionIds.length === 0 || selectedCollectionIds.includes(sourceId),
+        multipleSourcesVisible: selectedCollectionIds.length > 1
+    };
+}
+
 describe('getSampleClassificationPills', () => {
     it('returns only visible classification annotations', () => {
         const pills = getSampleClassificationPills({
@@ -55,7 +68,7 @@ describe('getSampleClassificationPills', () => {
                     annotationType: AnnotationType.OBJECT_DETECTION
                 })
             ],
-            selectedCollectionIds: ['collection-1'],
+            ...sourceFilter(['collection-1']),
             collectionIdToName: {
                 'collection-1': 'Animals',
                 'collection-2': 'Vehicles'
@@ -86,7 +99,7 @@ describe('getSampleClassificationPills', () => {
                     annotationLabelName: 'car'
                 })
             ],
-            selectedCollectionIds: [],
+            ...sourceFilter([]),
             collectionIdToName: {
                 'collection-1': 'Source A',
                 'collection-2': 'Source B'
@@ -117,7 +130,7 @@ describe('getSampleClassificationPills', () => {
                     annotationLabelName: 'car'
                 })
             ],
-            selectedCollectionIds: ['collection-1', 'collection-2'],
+            ...sourceFilter(['collection-1', 'collection-2']),
             collectionIdToName: {
                 'collection-1': 'Source A',
                 'collection-2': 'Source B'
@@ -159,7 +172,7 @@ describe('getSampleClassificationPills', () => {
                     annotationLabelName: 'apple'
                 })
             ],
-            selectedCollectionIds: ['collection-b', 'collection-a'],
+            ...sourceFilter(['collection-b', 'collection-a']),
             collectionIdToName: {
                 'collection-a': 'Collection A',
                 'collection-b': 'Collection B'
@@ -182,7 +195,7 @@ describe('getSampleClassificationPills', () => {
                     annotationLabelName: 'person'
                 })
             ],
-            selectedCollectionIds: ['missing-collection', 'collection-2'],
+            ...sourceFilter(['missing-collection', 'collection-2']),
             collectionIdToName: {
                 'collection-2': 'Known Source'
             },
@@ -216,7 +229,7 @@ describe('getSampleClassificationPills', () => {
                     annotationLabelName: 'truck'
                 })
             ],
-            selectedCollectionIds: ['collection-1', 'collection-2'],
+            ...sourceFilter(['collection-1', 'collection-2']),
             collectionIdToName: {
                 'collection-1': 'Ground Truth',
                 'collection-2': 'Predictions'
@@ -246,7 +259,7 @@ describe('getSampleClassificationPills', () => {
                     annotationLabelName: 'hippopotamus'
                 })
             ],
-            selectedCollectionIds: [],
+            ...sourceFilter([]),
             collectionIdToName: {},
             enforceColoringByClass: false
         });

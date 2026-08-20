@@ -8,13 +8,15 @@ until they are updated to handle the new tables.
 from sqlmodel import SQLModel
 
 # Tables handled by deep_copy and delete_dataset.
-_HANDLED_TABLES_COUNT = 24
+# - export_job is handled by delete_dataset only (its collection_id FK must be cleared
+#   before the collection is deleted); deep_copy intentionally leaves it alone since a job
+#   is a transient download token, not data worth duplicating.
+_HANDLED_TABLES_COUNT = 25
 
 # Tables not relevant for collection operations:
 # - setting (application-level, not collection-specific)
 # - two_dim_embeddings (cached projections, regenerated as needed)
-# - export_job (application-level, no dataset/collection FK)
-_EXCLUDED_TABLES_COUNT = 3
+_EXCLUDED_TABLES_COUNT = 2
 
 _TOTAL_TABLES_COUNT = _HANDLED_TABLES_COUNT + _EXCLUDED_TABLES_COUNT
 
