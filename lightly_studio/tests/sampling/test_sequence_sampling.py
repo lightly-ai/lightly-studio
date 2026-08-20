@@ -264,15 +264,15 @@ def test_sampling_via_database_sequences__preselection(
     ) == [10, 11, 12, 13, 14]
 
 
-def test_sampling_via_database_sequences__preselection_partial_sequence(
+def test_sampling_via_database_sequences__preselection_not_sequence_aligned(
     db_session: Session,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """A partially preselected sequence counts as preselected and stays out of the tag.
+    """Preselected frames are held out of the candidates, which shifts the boundaries.
 
-    Sequence boundaries come from the candidate frames, so a preselection made over
-    other candidates can straddle them. Selecting such a sequence again would overlap
-    the preselection, so it is skipped instead of rejected.
+    The preselected frames 0-2 do not fill a sequence of their own and are dropped.
+    The remaining candidates 3-9 are chunked on their own, so the sequence starts at
+    frame 3 rather than at a boundary of the full frame range.
     """
     frame_collection_id, frame_sample_ids = _fill_db_with_video_frames_and_embeddings(
         session=db_session,
@@ -282,12 +282,12 @@ def test_sampling_via_database_sequences__preselection_partial_sequence(
     sampling_config = SamplingConfig(
         collection_id=frame_collection_id,
         n_samples_to_select=5,
-        sampling_result_tag_name="partial_preselection",
+        sampling_result_tag_name="unaligned_preselection",
         strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
         selected_sequence_length=5,
     )
 
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.WARNING):
         sampling_via_database_sequences(
             session=db_session,
             config=sampling_config,
@@ -295,22 +295,23 @@ def test_sampling_via_database_sequences__preselection_partial_sequence(
             preselected_sample_ids=frame_sample_ids[0:3],
         )
 
-    assert "covers 1 sequence(s) only partially" in caplog.text
+    assert "Dropped 3 of 3 preselected frame(s)" in caplog.text
+    assert "Dropped 2 of 7 candidate frame(s)" in caplog.text
     assert _tagged_frame_numbers(
         session=db_session,
         collection_id=frame_collection_id,
-        tag_name="partial_preselection",
-    ) == [5, 6, 7, 8, 9]
+        tag_name="unaligned_preselection",
+    ) == [3, 4, 5, 6, 7]
 
 
-def test_sampling_via_database_sequences__preselection_ignores_dropped_frame(
+def test_sampling_via_database_sequences__preselection_incomplete_sequence(
     db_session: Session,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """A preselected frame in the dropped trailing chunk is ignored, not rejected."""
+    """A preselection that fills no sequence is dropped, not rejected."""
     frame_collection_id, frame_sample_ids = _fill_db_with_video_frames_and_embeddings(
         session=db_session,
-        n_frames=12,  # 2 sequences of length 5, frames 10 and 11 do not fill one
+        n_frames=11,
     )
 
     sampling_config = SamplingConfig(
@@ -321,7 +322,7 @@ def test_sampling_via_database_sequences__preselection_ignores_dropped_frame(
         selected_sequence_length=5,
     )
 
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.WARNING):
         sampling_via_database_sequences(
             session=db_session,
             config=sampling_config,
@@ -329,24 +330,27 @@ def test_sampling_via_database_sequences__preselection_ignores_dropped_frame(
             preselected_sample_ids=[frame_sample_ids[10]],
         )
 
-    assert "Ignored 1 of 1 preselected frame(s)" in caplog.text
-    tagged_frame_numbers = _tagged_frame_numbers(
+    assert "Dropped 1 of 1 preselected frame(s)" in caplog.text
+    # Nothing counts as preselected, so both candidate sequences stay available.
+    assert _tagged_frame_numbers(
         session=db_session,
         collection_id=frame_collection_id,
         tag_name="dropped_preselection",
-    )
-    # Nothing counts as preselected, so both sequences stay available and either can win.
-    assert tagged_frame_numbers in ([0, 1, 2, 3, 4], [5, 6, 7, 8, 9])
+    ) in ([0, 1, 2, 3, 4], [5, 6, 7, 8, 9])
 
 
-def test_sampling_via_database_sequences__preselection_ignores_frame_outside_input(
+def test_sampling_via_database_sequences__preselection_outside_input(
     db_session: Session,
-    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Preselected frames that are no candidates at all are ignored."""
+    """Preselected frames that are no candidates form their own sequence and inform it.
+
+    The preselection covers frames 10-14, which sit outside the candidates. They are
+    chunked into a sequence with proxy ``[12, 12]``, so diversity must pick the far
+    candidate sequence ``[2, 2]`` over the adjacent ``[7, 7]``.
+    """
     frame_collection_id, frame_sample_ids = _fill_db_with_video_frames_and_embeddings(
         session=db_session,
-        n_frames=10,
+        n_frames=15,
     )
 
     sampling_config = SamplingConfig(
@@ -357,15 +361,13 @@ def test_sampling_via_database_sequences__preselection_ignores_frame_outside_inp
         selected_sequence_length=5,
     )
 
-    with caplog.at_level(logging.INFO):
-        sampling_via_database_sequences(
-            session=db_session,
-            config=sampling_config,
-            input_sample_ids=frame_sample_ids[0:5],
-            preselected_sample_ids=frame_sample_ids[5:10],
-        )
+    sampling_via_database_sequences(
+        session=db_session,
+        config=sampling_config,
+        input_sample_ids=frame_sample_ids[0:10],
+        preselected_sample_ids=frame_sample_ids[10:15],
+    )
 
-    assert "Ignored 5 of 5 preselected frame(s)" in caplog.text
     assert _tagged_frame_numbers(
         session=db_session,
         collection_id=frame_collection_id,

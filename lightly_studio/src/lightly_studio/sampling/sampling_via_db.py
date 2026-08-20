@@ -230,9 +230,6 @@ def sampling_via_database(
 
     When ``config.selected_sequence_length`` is set, sampling runs over mean-pooled
     sequence proxies and the tag contains every frame of each selected sequence.
-    Preselected sample IDs then count per sequence: a sequence holding a preselected
-    frame stays out of the tag, and preselected frames outside the candidate
-    sequences are ignored.
 
     Args:
         session: Database session used to resolve and store sampling data.

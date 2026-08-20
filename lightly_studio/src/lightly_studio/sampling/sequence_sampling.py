@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from collections import Counter
 from collections.abc import Iterable, Sequence
 from uuid import UUID
 
@@ -33,24 +32,32 @@ def sampling_via_database_sequences(
         config: Sampling configuration. ``selected_sequence_length`` must be set.
         input_sample_ids: Candidate frame sample IDs.
         preselected_sample_ids: Frame sample IDs that should inform the sampling as
-            already selected. Sequences holding such a frame are excluded from the
-            result tag; frames outside the candidate sequences are ignored.
+            already selected. They need not be candidates and are never tagged; they
+            are chunked into sequences of their own that seed the selection.
     """
     diversity_strategies = _validate_sequence_sampling(session=session, config=config)
     sequence_length = config.selected_sequence_length
     assert sequence_length is not None
-    sequences = _load_sequences(
+    preselected = list(preselected_sample_ids or ())
+    # Candidate and preselected frames are chunked separately.
+    preselected_sequences = _load_sequences(
         session=session,
-        sample_ids=input_sample_ids,
+        sample_ids=preselected,
         sequence_length=sequence_length,
+        frame_kind="preselected",
     )
-    preselected_indices = _get_preselected_sequence_indices(
-        sequences=sequences,
-        preselected_sample_ids=preselected_sample_ids,
+    candidate_sequences = _load_sequences(
+        session=session,
+        sample_ids=[sample_id for sample_id in input_sample_ids if sample_id not in preselected],
+        sequence_length=sequence_length,
+        frame_kind="candidate",
     )
+    # Mundig indices run over both groups, the preselected sequences coming first.
+    sequences = preselected_sequences + candidate_sequences
+    preselected_indices = list(range(len(preselected_sequences)))
     n_sequences_to_select = min(
         config.n_samples_to_select // sequence_length,
-        len(sequences) - len(preselected_indices),
+        len(candidate_sequences),
     )
     if n_sequences_to_select == 0:
         logger.warning(
@@ -148,68 +155,37 @@ def _load_sequences(
     session: Session,
     sample_ids: Sequence[UUID],
     sequence_length: int,
+    frame_kind: str,
 ) -> list[list[UUID]]:
-    """Load candidate frames and chunk them into complete sequences."""
+    """Load the given frames and chunk them into complete sequences.
+
+    Args:
+        session: The database session.
+        sample_ids: Frame sample ids to chunk, without duplicates.
+        sequence_length: Number of frames per sequence.
+        frame_kind: Names the frames in messages, so that the candidate and the
+            preselected chunking stay distinguishable.
+
+    Returns:
+        Sequences of frame sample ids, each of length ``sequence_length``.
+
+    Raises:
+        ValueError: If a sample id has no video frame metadata.
+    """
+    if not sample_ids:
+        return []
     frames = video_frame_resolver.get_frame_infos_by_ids(session=session, sample_ids=sample_ids)
     if len(frames) != len(sample_ids):
         missing = len(sample_ids) - len(frames)
         raise ValueError(
-            "Sequence sampling requires all candidates to be video frames; "
+            f"Sequence sampling requires all {frame_kind} samples to be video frames; "
             f"{missing} sample(s) have no video frame metadata."
         )
     sequences = sequence_selection.create_sequences(frames=frames, sequence_length=sequence_length)
     n_dropped = len(frames) - len(sequences) * sequence_length
     if n_dropped > 0:
         logger.warning(
-            f"Dropped {n_dropped} of {len(frames)} candidate frame(s) that do not fill a "
+            f"Dropped {n_dropped} of {len(frames)} {frame_kind} frame(s) that do not fill a "
             f"complete sequence of {sequence_length} frame(s)."
         )
     return sequences
-
-
-def _get_preselected_sequence_indices(
-    sequences: Sequence[Sequence[UUID]],
-    preselected_sample_ids: Iterable[UUID] | None,
-) -> list[int]:
-    """Map preselected frames onto the sequences they cover.
-
-    Selection happens over sequences, so preselection has to be expressed per
-    sequence too. Sequence boundaries follow from the candidate frames, so a
-    preselection made over different candidates can reach frames outside the
-    sequences of this run or cover a sequence only partially. Frames outside the
-    sequences carry no information for this run and are ignored, while a sequence
-    with at least one preselected frame counts as preselected, because selecting it
-    again would overlap what is already selected.
-
-    Args:
-        sequences: Sequences of frame sample ids built from the candidate frames.
-        preselected_sample_ids: Frame sample ids to treat as already selected.
-
-    Returns:
-        Ascending indices into ``sequences`` of the preselected sequences.
-    """
-    preselected = set(preselected_sample_ids or ())
-    sequence_index_by_frame = {
-        sample_id: index for index, sequence in enumerate(sequences) for sample_id in sequence
-    }
-    n_covered_frames: Counter[int] = Counter(
-        sequence_index_by_frame[sample_id]
-        for sample_id in preselected
-        if sample_id in sequence_index_by_frame
-    )
-
-    n_ignored = len(preselected) - sum(n_covered_frames.values())
-    if n_ignored > 0:
-        logger.info(
-            f"Ignored {n_ignored} of {len(preselected)} preselected frame(s) that are not part "
-            "of a complete candidate sequence."
-        )
-    n_partially_covered = sum(
-        n_frames != len(sequences[index]) for index, n_frames in n_covered_frames.items()
-    )
-    if n_partially_covered > 0:
-        logger.info(
-            f"Preselection covers {n_partially_covered} sequence(s) only partially; they count "
-            "as preselected and stay out of the result."
-        )
-    return sorted(n_covered_frames)
