@@ -17,7 +17,7 @@ Create Date: 2026-08-18 00:00:00.000000
 
 import logging
 from collections.abc import Sequence
-from typing import Union
+from typing import Any, Union
 
 import sqlalchemy as sa
 from alembic import op
@@ -73,6 +73,7 @@ def _rename_duplicate_root_collections() -> None:
 
     taken = {name for _, name in collections}
     seen: set[str] = set()
+    renames: list[dict[str, Any]] = []
     for collection_id, name in collections:
         if name not in seen:
             seen.add(name)
@@ -81,11 +82,14 @@ def _rename_duplicate_root_collections() -> None:
         # another root collection still uses.
         new_name = _free_name(name=name, taken=taken)
         taken.add(new_name)
+        renames.append({"collection_id": collection_id, "name": new_name})
+        _logger.warning("Renaming duplicate root collection '%s' to '%s'.", name, new_name)
+
+    if renames:
         connection.execute(
             sa.text("UPDATE collection SET name = :name WHERE collection_id = :collection_id"),
-            {"name": new_name, "collection_id": collection_id},
+            renames,
         )
-        _logger.warning("Renamed duplicate root collection '%s' to '%s'.", name, new_name)
 
 
 def _free_name(name: str, taken: set[str]) -> str:
