@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from uuid import UUID, uuid4
+import uuid
+from uuid import UUID
 
 import pytest
 from sqlmodel import Session
@@ -243,7 +244,7 @@ def _create_invalid_tag_id(
     invalid_tag_kind: str,
 ) -> UUID:
     if invalid_tag_kind == "missing":
-        return uuid4()
+        return uuid.uuid4()
     if invalid_tag_kind == "annotation":
         return create_tag(
             session=session,
