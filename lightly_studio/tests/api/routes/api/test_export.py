@@ -123,6 +123,31 @@ def test_export_download__not_found_returns_404(
     assert response.status_code == HTTP_STATUS_NOT_FOUND
 
 
+def test_export_download__wrong_collection_returns_404(
+    tmp_path: Path,
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    owning_collection = create_collection(session=db_session)
+    other_collection = create_collection(session=db_session)
+
+    export_path = tmp_path / "export.json"
+    export_path.write_text('{"items": [1, 2, 3]}')
+    job = export_job_resolver.create(
+        session=db_session,
+        collection_id=owning_collection.collection_id,
+        export_path=str(export_path),
+    )
+
+    response = test_client.get(
+        f"/api/collections/{other_collection.collection_id}/export/download/{job.export_key}"
+    )
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
+    assert export_job_resolver.get(session=db_session, export_key=job.export_key) is not None
+    assert export_path.exists()
+
+
 def test_export_download__json_file_streams_content_and_deletes_job(
     tmp_path: Path,
     db_session: Session,
@@ -135,7 +160,9 @@ def test_export_download__json_file_streams_content_and_deletes_job(
     export_path = export_dir / "export.json"
     export_path.write_text('{"items": [1, 2, 3]}')
 
-    job = export_job_resolver.create(session=db_session, export_path=str(export_path))
+    job = export_job_resolver.create(
+        session=db_session, collection_id=collection.collection_id, export_path=str(export_path)
+    )
 
     response = test_client.get(
         f"/api/collections/{collection.collection_id}/export/download/{job.export_key}"
@@ -162,7 +189,9 @@ def test_export_download__txt_file_streams_content_and_deletes_job(
     export_path = export_dir / "export.txt"
     export_path.write_text("path/a.jpg\npath/b.jpg\n")
 
-    job = export_job_resolver.create(session=db_session, export_path=str(export_path))
+    job = export_job_resolver.create(
+        session=db_session, collection_id=collection.collection_id, export_path=str(export_path)
+    )
 
     response = test_client.get(
         f"/api/collections/{collection.collection_id}/export/download/{job.export_key}"
@@ -187,7 +216,9 @@ def test_export_download__csv_file_streams_content_and_deletes_job(
     export_dir.mkdir()
     export_path = export_dir / "classification_export.csv"
     export_path.write_text("file_path_abs,class_name\n/data/img1.jpg,cat\n")
-    job = export_job_resolver.create(session=db_session, export_path=str(export_path))
+    job = export_job_resolver.create(
+        session=db_session, collection_id=collection.collection_id, export_path=str(export_path)
+    )
 
     response = test_client.get(
         f"/api/collections/{collection.collection_id}/export/download/{job.export_key}"
@@ -217,7 +248,9 @@ def test_export_download__directory_streams_as_zip_and_deletes_job(
     export_dir.mkdir()
     (export_dir / "labels.txt").write_text("cat\ndog\n")
 
-    job = export_job_resolver.create(session=db_session, export_path=str(export_dir))
+    job = export_job_resolver.create(
+        session=db_session, collection_id=collection.collection_id, export_path=str(export_dir)
+    )
 
     response = test_client.get(
         f"/api/collections/{collection.collection_id}/export/download/{job.export_key}"

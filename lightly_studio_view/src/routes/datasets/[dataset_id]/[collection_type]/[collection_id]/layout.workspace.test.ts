@@ -131,7 +131,10 @@ vi.mock('$lib/hooks/useVideoFilters/useVideoFilters', () => ({
     useVideoFilters: vi.fn(() => ({ videoFilter: writable(null) }))
 }));
 vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter', () => ({
-    useAnnotationCollectionsFilter: vi.fn(() => ({ selectedCollectionIds: writable([]) }))
+    useAnnotationCollectionsFilter: vi.fn(() => ({
+        selectedCollectionIds: writable([]),
+        allSourcesHidden: writable(false)
+    }))
 }));
 vi.mock('$lib/hooks', () => ({
     useSelectionSummary: vi.fn(() => ({
@@ -148,7 +151,8 @@ vi.mock('$lib/hooks', () => ({
         refetch: vi.fn()
     })),
     usePostHog: vi.fn(() => ({ trackEvent: vi.fn() })),
-    useTrackSampleInspected: vi.fn()
+    useTrackSampleInspected: vi.fn(),
+    useSeedAnnotationSourceFilter: vi.fn()
 }));
 vi.mock('$lib/hooks/useSelectAll/useSelectAll', () => ({
     useSelectAll: vi.fn(() => ({ handleSelectAll: vi.fn() }))
