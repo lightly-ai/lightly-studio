@@ -4,7 +4,7 @@ import type {
     ImageFilter
 } from '$lib/api/lightly_studio_local';
 
-export interface GroupedAnnotationCountsParams {
+interface GroupedAnnotationCountsParams {
     /** ID of the collection to query. */
     collectionId: string;
     /** Ordered sample tag IDs whose counts are fetched independently. */
