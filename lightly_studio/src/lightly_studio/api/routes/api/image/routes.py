@@ -1,4 +1,4 @@
-"""This module contains the API routes for managing samples."""
+"""API routes for managing image samples."""
 
 from __future__ import annotations
 
@@ -9,17 +9,15 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, Field
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
-from lightly_studio.api.routes.api.status import (
-    HTTP_STATUS_NOT_FOUND,
+from lightly_studio.api.routes.api.image.count_by_sample_tags import (
+    count_by_sample_tags_router,
 )
+from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import CollectionTable
-from lightly_studio.models.image import (
-    ImageView,
-    ImageViewsWithCount,
-)
+from lightly_studio.models.image import ImageView, ImageViewsWithCount
 from lightly_studio.models.sort import SortExpr, sort_expr_to_order_by
 from lightly_studio.resolvers import (
     image_resolver,
@@ -32,6 +30,10 @@ from lightly_studio.resolvers.image_resolver.annotation_count_types import (
 )
 
 image_router = APIRouter(tags=["image"])
+image_router.include_router(
+    count_by_sample_tags_router,
+    prefix="/collections/{collection_id}/images",
+)
 
 
 class ReadImagesRequest(BaseModel):
