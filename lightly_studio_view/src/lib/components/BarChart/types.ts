@@ -18,3 +18,15 @@ export interface CategoryCount {
     /** Keeps semantic buckets visible when a top-N view is applied. */
     pinned?: boolean;
 }
+
+/** A named series of category counts for grouped bar charts. */
+export interface CategoryCountSeries {
+    /** Stable series identity used for color assignment. */
+    id: string;
+    /** Display name shown in the legend and tooltip. */
+    label: string;
+    /** Per-category counts for this series. */
+    data: CategoryCount[];
+    /** Denominator for tooltip percentages; defaults to the sum of `data`. */
+    totalCount?: number;
+}
