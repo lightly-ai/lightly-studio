@@ -106,6 +106,56 @@ extra_javascript:
 
 plugins:
   - search
+  # Generates llms.txt and per-page .md files for AI agent discoverability.
+  # Keep sections in sync with nav: when adding or removing pages.
+  - llmstxt:
+      sections:
+        Getting Started:
+          - index.md
+        Enterprise:
+          - enterprise/index.md
+          - enterprise/collaboration.md
+          - enterprise/connect.md
+          - enterprise/security.md
+          - enterprise/on-premise.md
+          - enterprise/local_storage.md
+          - enterprise/cloud_storage/index.md
+          - enterprise/cloud_storage/aws.md
+          - enterprise/cloud_storage/gcs.md
+        Tutorials:
+          - tutorials/index.md
+          - tutorials/yolo-traffic-cctv-object-detection.md
+          - tutorials/yolo26-model-evaluation.md
+        Dataset Setup:
+          - dataset_setup/image_dataset.md
+          - dataset_setup/video_dataset.md
+          - dataset_setup/notebooks.md
+          - dataset_setup/cloud_storage.md
+          - dataset_setup/reuse_datasets.md
+        Python API:
+          - api/dataset.md
+          - api/sample.md
+          - api/dataset_query.md
+          - api/sampling.md
+          - api/embeddings.md
+          - api/plugin.md
+          - api/annotation.md
+          - api/evaluation.md
+        Concepts & Tools:
+          - concepts_and_tools/annotations.md
+          - concepts_and_tools/tags.md
+          - concepts_and_tools/captions.md
+          - concepts_and_tools/metadata.md
+          - concepts_and_tools/embeddings.md
+          - concepts_and_tools/search_and_filter.md
+          - concepts_and_tools/dataset_distributions.md
+          - concepts_and_tools/export.md
+          - concepts_and_tools/sampling.md
+          - concepts_and_tools/plugins.md
+          - concepts_and_tools/evaluation.md
+          - concepts_and_tools/lightly_query_language.md
+        About Us:
+          - about_us/index.md
   - mkdocstrings:
       handlers:
         python:
