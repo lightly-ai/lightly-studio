@@ -1,11 +1,10 @@
-import importlib
 from collections.abc import Sequence
 from datetime import datetime, timezone
-from typing import Any, NoReturn
-from unittest import mock
+from types import ModuleType
 from uuid import UUID
 
 import pytest
+from pytest_mock import MockerFixture
 from sqlmodel import Session, col
 
 from lightly_studio.core.dataset_query.order_by import OrderByAnnotationEvaluationMetricField
@@ -14,6 +13,10 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationSide
 from lightly_studio.resolvers import annotation_resolver, collection_resolver, tag_resolver
+from lightly_studio.resolvers.annotation_resolver import (
+    get_adjacent_annotations_keyset,
+    get_adjacent_annotations_window,
+)
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from tests import helpers_resolvers
 from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
@@ -24,16 +27,10 @@ from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
 )
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
-# The resolver package re-exports the entry point under its module's own name, shadowing
-# it, so the module has to be looked up by import path to patch what it dispatches to.
-_dispatch_module = importlib.import_module(
-    "lightly_studio.resolvers.annotation_resolver.get_adjacent_annotations"
-)
-
-
-def _fail_if_called(**kwargs: Any) -> NoReturn:  # noqa: ARG001
-    """Stand-in for the adjacency path a test expects the dispatch not to take."""
-    raise AssertionError("Unexpected adjacency implementation was used.")
+# The two adjacency implementations the entry point dispatches to, as the (module, function)
+# pairs `_fail_if_used` patches.
+_KEYSET_PATH = (get_adjacent_annotations_keyset, "get_adjacent_annotations_keyset")
+_WINDOW_PATH = (get_adjacent_annotations_window, "get_adjacent_annotations_window")
 
 
 def test_get_adjacent_annotations__orders_by_path(db_session: Session) -> None:
@@ -425,9 +422,9 @@ def test_get_adjacent_annotations__returns_none_when_sample_not_in_filter(
 
 def test_get_adjacent_annotations__orders_video_frame_annotations_by_video_path(
     db_session: Session,
-    monkeypatch: pytest.MonkeyPatch,
+    mocker: MockerFixture,
 ) -> None:
-    monkeypatch.setattr(_dispatch_module, "get_adjacent_annotations_window", _fail_if_called)
+    _fail_if_used(mocker=mocker, path=_WINDOW_PATH)
 
     collection = helpers_resolvers.create_collection(
         session=db_session, sample_type=SampleType.VIDEO
@@ -482,7 +479,7 @@ def test_get_adjacent_annotations__orders_video_frame_annotations_by_video_path(
 
 def test_get_adjacent_annotations__orders_annotations_sharing_a_parent_image(
     db_session: Session,
-    monkeypatch: pytest.MonkeyPatch,
+    mocker: MockerFixture,
 ) -> None:
     # Annotations on the same image share the leading sort key, so the order is only total if
     # the created-at and sample-id tiebreakers are applied. Two of them are pinned to the same
@@ -502,7 +499,7 @@ def test_get_adjacent_annotations__orders_annotations_sharing_a_parent_image(
     )
     annotations = _create_annotations_with_pinned_created_at(
         session=db_session,
-        monkeypatch=monkeypatch,
+        mocker=mocker,
         collection_id=collection.collection_id,
         annotations=[
             helpers_resolvers.AnnotationDetails(
@@ -527,16 +524,16 @@ def test_get_adjacent_annotations__orders_annotations_sharing_a_parent_image(
     [
         # One collection has a known parent kind, so it can seek. Several could mix parent
         # kinds, so the keyset path bows out.
-        (["annotations"], "get_adjacent_annotations_window"),
-        (["annotations_a", "annotations_b"], "get_adjacent_annotations_keyset"),
+        (["annotations"], _WINDOW_PATH),
+        (["annotations_a", "annotations_b"], _KEYSET_PATH),
     ],
     ids=["one_collection_seeks", "several_collections_fall_back"],
 )
 def test_get_adjacent_annotations__dispatches_on_collection_count(
     db_session: Session,
-    monkeypatch: pytest.MonkeyPatch,
+    mocker: MockerFixture,
     annotation_collection_names: list[str],
-    path_not_taken: str,
+    path_not_taken: tuple[ModuleType, str],
 ) -> None:
     collection = helpers_resolvers.create_collection(
         session=db_session, sample_type=SampleType.IMAGE
@@ -562,7 +559,7 @@ def test_get_adjacent_annotations__dispatches_on_collection_count(
         for name in annotation_collection_names
     ]
 
-    monkeypatch.setattr(_dispatch_module, path_not_taken, _fail_if_called)
+    _fail_if_used(mocker=mocker, path=path_not_taken)
 
     result = annotation_resolver.get_adjacent_annotations(
         session=db_session,
@@ -578,17 +575,13 @@ def test_get_adjacent_annotations__dispatches_on_collection_count(
 
 def test_get_adjacent_annotations__falls_back_for_video_level_annotations(
     db_session: Session,
-    monkeypatch: pytest.MonkeyPatch,
+    mocker: MockerFixture,
 ) -> None:
-    # Annotations on a video rather than on one of its frames. The keyset path cannot serve
-    # them — it joins one parent table and there is no join from an annotation to its video
-    # — so the dispatch has to bow out, which is what the monkeypatch below asserts.
-    #
+    # Annotations on a video rather than on one of its frames, which the keyset path cannot
+    # serve: it joins one parent table and there is no join from an annotation to its video.
     # The window query it falls back to reaches VideoTable only through VideoFrameTable, so
-    # these annotations get no path to sort by at all: their leading key is the coalesce's
-    # empty-string default. Only the created-at and sample-id tiebreakers order them, which is
-    # why two of them are pinned to the same created_at below and this asserts a total order
-    # rather than an order by video path.
+    # these annotations have no path to sort by — only the created-at and sample-id
+    # tiebreakers order them, which is why created_at is pinned below.
     collection = helpers_resolvers.create_collection(
         session=db_session, sample_type=SampleType.VIDEO
     )
@@ -609,7 +602,7 @@ def test_get_adjacent_annotations__falls_back_for_video_level_annotations(
 
     annotations = _create_annotations_with_pinned_created_at(
         session=db_session,
-        monkeypatch=monkeypatch,
+        mocker=mocker,
         collection_id=collection.collection_id,
         annotations=[
             helpers_resolvers.AnnotationDetails(
@@ -624,7 +617,7 @@ def test_get_adjacent_annotations__falls_back_for_video_level_annotations(
     )
     filters = AnnotationsFilter(collection_ids=[annotations[0].sample.collection_id])
 
-    monkeypatch.setattr(_dispatch_module, "get_adjacent_annotations_keyset", _fail_if_called)
+    _fail_if_used(mocker=mocker, path=_KEYSET_PATH)
 
     _assert_matches_expected_order(
         session=db_session, filters=filters, expected_order=expected_order
@@ -691,7 +684,7 @@ def test_get_adjacent_annotations__returns_none_when_anchor_filtered_out_of_keys
 
 def _create_annotations_with_pinned_created_at(
     session: Session,
-    monkeypatch: pytest.MonkeyPatch,
+    mocker: MockerFixture,
     collection_id: UUID,
     annotations: list[helpers_resolvers.AnnotationDetails],
 ) -> list[AnnotationBaseTable]:
@@ -706,7 +699,7 @@ def _create_annotations_with_pinned_created_at(
 
     Args:
         session: Database session.
-        monkeypatch: Fixture used to pin the annotation module's clock.
+        mocker: Fixture used to pin the annotation module's clock.
         collection_id: ID of the collection.
         annotations: Exactly 3 annotation details to create.
 
@@ -717,10 +710,25 @@ def _create_annotations_with_pinned_created_at(
     tied_created_at = datetime(2024, 1, 1, tzinfo=timezone.utc)
     later_created_at = datetime(2024, 1, 2, tzinfo=timezone.utc)
     times = iter([tied_created_at, tied_created_at, later_created_at])
-    monkeypatch.setattr(annotation_base_module, "datetime", mock.Mock(now=lambda _tz: next(times)))
+    mocker.patch.object(
+        annotation_base_module, "datetime", mocker.Mock(now=lambda _tz: next(times))
+    )
 
     return helpers_resolvers.create_annotations(
         session=session, collection_id=collection_id, annotations=annotations
+    )
+
+
+def _fail_if_used(mocker: MockerFixture, path: tuple[ModuleType, str]) -> None:
+    """Make the adjacency implementation at `path` fail if the dispatch calls it.
+
+    Args:
+        mocker: Fixture used to patch the implementation.
+        path: The `(module, function name)` pair the dispatch must not call.
+    """
+    module, function_name = path
+    mocker.patch.object(
+        module, function_name, side_effect=AssertionError("Unexpected adjacency implementation.")
     )
 
 

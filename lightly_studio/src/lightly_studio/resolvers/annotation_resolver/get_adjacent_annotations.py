@@ -10,10 +10,8 @@ from lightly_studio.core.dataset_query.order_by import OrderByAnnotationEvaluati
 from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import collection_resolver
-from lightly_studio.resolvers.annotation_resolver.get_adjacent_annotations_keyset import (
+from lightly_studio.resolvers.annotation_resolver import (
     get_adjacent_annotations_keyset,
-)
-from lightly_studio.resolvers.annotation_resolver.get_adjacent_annotations_window import (
     get_adjacent_annotations_window,
 )
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
@@ -52,14 +50,14 @@ def get_adjacent_annotations(
 
     parent_sample_type = _keyset_parent_sample_type(session=session, filters=filters)
     if parent_sample_type is not None:
-        return get_adjacent_annotations_keyset(
+        return get_adjacent_annotations_keyset.get_adjacent_annotations_keyset(
             session=session,
             sample_id=sample_id,
             filters=filters,
             parent_sample_type=parent_sample_type,
         )
 
-    return get_adjacent_annotations_window(
+    return get_adjacent_annotations_window.get_adjacent_annotations_window(
         session=session,
         sample_id=sample_id,
         filters=filters,

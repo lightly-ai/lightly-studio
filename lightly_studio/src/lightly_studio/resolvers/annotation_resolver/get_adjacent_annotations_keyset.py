@@ -8,6 +8,7 @@ up front lets us inner-join a single parent table and seek on a plain indexed co
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
@@ -72,7 +73,7 @@ def get_adjacent_annotations_keyset(
 
 
 def _filtered_query(
-    columns: list[keyset_seek.SortColumn],
+    columns: Sequence[keyset_seek.SortColumn],
     filters: AnnotationsFilter,
     parent_sample_type: SampleType,
 ) -> Any:
