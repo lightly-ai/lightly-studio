@@ -1,13 +1,12 @@
 <script lang="ts">
-    import { Check, ChevronDown } from '@lucide/svelte';
+    import { ChevronDown } from '@lucide/svelte';
     import { Button } from '$lib/components/ui/button';
-    import * as Command from '$lib/components/ui/command';
     import * as Popover from '$lib/components/ui/popover';
-    import type { SelectItem } from '$lib/components/Select';
-    import { cn } from '$lib/utils';
+    import { MultiSelectList } from '$lib/components/MultiSelectList';
+    import type { MultiSelectItem } from '$lib/components/MultiSelectList';
 
     interface Props {
-        items: SelectItem[];
+        items: MultiSelectItem[];
         selectedIds: string[];
         onChange: (ids: string[]) => void;
     }
@@ -19,13 +18,6 @@
             ? 'Compare sample tags'
             : `${selectedIds.length} tag${selectedIds.length === 1 ? '' : 's'} selected`
     );
-
-    const toggle = (id: string) =>
-        onChange(
-            selectedIds.includes(id)
-                ? selectedIds.filter((selectedId) => selectedId !== id)
-                : [...selectedIds, id]
-        );
 </script>
 
 <Popover.Root bind:open>
@@ -45,26 +37,13 @@
             </Button>
         {/snippet}
     </Popover.Trigger>
-    <Popover.Content class="w-[260px] p-0">
-        <Command.Root>
-            <Command.Input placeholder="Search sample tags..." />
-            <Command.List class="max-h-[240px] dark:[color-scheme:dark]">
-                <Command.Empty>No sample tag found.</Command.Empty>
-                <Command.Group>
-                    {#each items as item (item.value)}
-                        <Command.Item
-                            value={item.label}
-                            data-testid={`dataset-distribution-tag-option-${item.value}`}
-                            onSelect={() => toggle(item.value)}
-                        >
-                            <Check
-                                class={cn(!selectedIds.includes(item.value) && 'text-transparent')}
-                            />
-                            <span class="min-w-0 flex-1 truncate">{item.label}</span>
-                        </Command.Item>
-                    {/each}
-                </Command.Group>
-            </Command.List>
-        </Command.Root>
+    <Popover.Content class="w-[260px] p-0 pt-2">
+        <MultiSelectList
+            {items}
+            {selectedIds}
+            {onChange}
+            itemNoun="sample tag"
+            itemNounPlural="sample tags"
+        />
     </Popover.Content>
 </Popover.Root>
