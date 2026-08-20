@@ -107,7 +107,7 @@ extra_javascript:
 plugins:
   - search
   # Generates llms.txt and per-page .md files for AI agent discoverability.
-  # Keep sections in sync with nav: when adding or removing pages.
+  # Keep sections in sync with nav when adding or removing pages.
   - llmstxt:
       full_output: llms-full.txt
       sections:
