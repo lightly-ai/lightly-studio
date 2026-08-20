@@ -41,7 +41,9 @@ class CollectionTable(CollectionBase, table=True):
 
     __tablename__ = "collection"
     __table_args__ = (
-        # Collections should have unique names per parent collection
+        # Does not cover root collections: NULL parents compare as distinct. Postgres
+        # closes that gap with a partial unique index from migration 4f6a7b8c9d0e,
+        # which lives there because DuckDB cannot create partial indexes.
         UniqueConstraint("name", "parent_collection_id", name="unique_collection"),
     )
     collection_id: UUID = Field(default_factory=uuid4, primary_key=True)
