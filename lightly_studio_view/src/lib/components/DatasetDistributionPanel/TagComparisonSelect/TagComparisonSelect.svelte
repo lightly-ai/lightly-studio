@@ -30,17 +30,20 @@
 
 <Popover.Root bind:open>
     <Popover.Trigger>
-        <Button
-            variant="outline"
-            size="sm"
-            class="m-0 h-8 min-w-0 flex-1 justify-start gap-2 rounded-md px-3 text-xs font-normal"
-            role="combobox"
-            aria-expanded={open}
-            data-testid="dataset-distribution-tag-select"
-        >
-            <span class="truncate">{label}</span>
-            <ChevronDown class="ml-auto size-4 shrink-0 opacity-50" />
-        </Button>
+        {#snippet child({ props })}
+            <Button
+                {...props}
+                variant="outline"
+                size="sm"
+                class="m-0 h-8 min-w-0 flex-1 justify-start gap-2 rounded-md px-3 text-xs font-normal"
+                role="combobox"
+                aria-expanded={open}
+                data-testid="dataset-distribution-tag-select"
+            >
+                <span class="truncate">{label}</span>
+                <ChevronDown class="ml-auto size-4 shrink-0 opacity-50" />
+            </Button>
+        {/snippet}
     </Popover.Trigger>
     <Popover.Content class="w-[260px] p-0">
         <Command.Root>
