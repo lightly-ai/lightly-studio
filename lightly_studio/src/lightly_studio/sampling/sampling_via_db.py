@@ -25,7 +25,7 @@ from lightly_studio.resolvers import (
     tag_resolver,
 )
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
-from lightly_studio.sampling import sampling_helpers
+from lightly_studio.sampling import sampling_helpers, sequence_sampling
 from lightly_studio.sampling.mundig import Mundig
 from lightly_studio.sampling.sampling_config import (
     AnnotationClassBalancingStrategy,
@@ -228,6 +228,9 @@ def sampling_via_database(
     Then calls Mundig to run the sampling with pure values.
     Finally creates a tag for the selected set.
 
+    When ``config.selected_sequence_length`` is set, sampling runs over mean-pooled
+    sequence proxies and the tag contains every frame of each selected sequence.
+
     Args:
         session: Database session used to resolve and store sampling data.
         config: Sampling configuration.
@@ -257,6 +260,14 @@ def sampling_via_database(
             f"collection {config.collection_id}. Please use a different tag name."
         )
         raise ValueError(msg)
+
+    if config.selected_sequence_length is not None:
+        sequence_sampling.sampling_via_database_sequences(
+            session=session,
+            config=config,
+            input_sample_ids=input_sample_ids,
+        )
+        return
 
     preselected_indices, n_samples_to_select = _prepare_preselection(
         input_sample_ids=input_sample_ids,

@@ -14,6 +14,7 @@ from alembic import context
 from alembic.autogenerate.api import AutogenContext
 from sqlalchemy import engine, pool
 from sqlalchemy.engine import Connection
+from sqlalchemy.sql.schema import SchemaItem
 from sqlmodel import SQLModel
 
 import lightly_studio.api.db_tables  # noqa: F401
@@ -45,6 +46,20 @@ def _render_item(
     return False
 
 
+def _include_object(
+    _object: SchemaItem,
+    name: str | None,
+    type_: str,
+    _reflected: bool,
+    _compare_to: SchemaItem | None,
+) -> bool:
+    """Keep indexes that migrations create but SQLModel tables do not declare.
+
+    Used only by ``revision --autogenerate``; ``upgrade`` does not call this hook.
+    """
+    return not (type_ == "index" and name == "uq_collection_name_root")
+
+
 def _run_migrations_on(connection: Connection) -> None:
     """Configure Alembic and run migrations on the given connection."""
     context.configure(
@@ -52,6 +67,7 @@ def _run_migrations_on(connection: Connection) -> None:
         target_metadata=target_metadata,
         compare_type=True,
         render_item=_render_item,
+        include_object=_include_object,
     )
 
     with context.begin_transaction():

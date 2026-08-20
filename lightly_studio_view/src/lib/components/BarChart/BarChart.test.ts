@@ -48,7 +48,16 @@ describe('BarChart', () => {
 
     it('renders the default empty message when no emptyState snippet is provided', () => {
         render(BarChart, { props: { data: empty } });
-        expect(screen.getByTestId('bar-chart-empty')).toHaveTextContent('No data to display.');
+        const emptyState = screen.getByTestId('bar-chart-empty');
+
+        expect(emptyState).toHaveTextContent('No distribution data to display.');
+        expect(emptyState).toHaveTextContent(
+            'Add annotations or metadata to see their distribution.'
+        );
+        expect(screen.getByRole('link', { name: 'documentation' })).toHaveAttribute(
+            'href',
+            'https://docs.lightly.ai/studio/'
+        );
     });
 
     it('renders a custom emptyState snippet instead of the default message', () => {
@@ -57,7 +66,7 @@ describe('BarChart', () => {
         }));
         render(BarChart, { props: { data: empty, emptyState } });
         expect(screen.getByTestId('custom-empty')).toBeInTheDocument();
-        expect(screen.queryByText('No data to display.')).not.toBeInTheDocument();
+        expect(screen.queryByText('No distribution data to display.')).not.toBeInTheDocument();
     });
 
     it('renders the chart container for non-empty data', () => {

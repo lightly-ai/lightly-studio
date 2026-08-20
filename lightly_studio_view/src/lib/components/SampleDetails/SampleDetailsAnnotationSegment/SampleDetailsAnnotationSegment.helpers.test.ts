@@ -155,42 +155,34 @@ describe('toggleSourceVisibility', () => {
 });
 
 describe('computeSeededHiddenIds', () => {
-    const sources = [groundTruthSource, predictionsSource];
     const annotations = [
         createAnnotation('gt-1', groundTruthSource.collection_id, 'cat'),
         createAnnotation('pred-1', predictionsSource.collection_id, 'cat'),
         createAnnotation('pred-2', predictionsSource.collection_id, 'dog')
     ];
 
+    const visibleSources = (selectedIds: string[]) => (sourceId: string) =>
+        selectedIds.includes(sourceId);
+
     it('hides annotations whose source is not selected', () => {
         const hiddenIds = computeSeededHiddenIds(
             annotations,
-            [groundTruthSource.collection_id],
-            sources
+            visibleSources([groundTruthSource.collection_id])
         );
 
         expect(hiddenIds).toEqual(new Set(['pred-1', 'pred-2']));
     });
 
-    it('hides nothing when the selection is empty', () => {
-        expect(computeSeededHiddenIds(annotations, [], sources)).toEqual(new Set());
+    it('hides everything when no source is selected', () => {
+        expect(computeSeededHiddenIds(annotations, visibleSources([]))).toEqual(
+            new Set(['gt-1', 'pred-1', 'pred-2'])
+        );
     });
 
     it('hides nothing when all sources are selected', () => {
         const hiddenIds = computeSeededHiddenIds(
             annotations,
-            [groundTruthSource.collection_id, predictionsSource.collection_id],
-            sources
-        );
-
-        expect(hiddenIds).toEqual(new Set());
-    });
-
-    it('hides nothing when the selection does not apply to this dataset', () => {
-        const hiddenIds = computeSeededHiddenIds(
-            annotations,
-            ['source-from-another-dataset'],
-            sources
+            visibleSources([groundTruthSource.collection_id, predictionsSource.collection_id])
         );
 
         expect(hiddenIds).toEqual(new Set());
@@ -203,8 +195,7 @@ describe('computeSeededHiddenIds', () => {
 
         const hiddenIds = computeSeededHiddenIds(
             predictionsOnly,
-            [groundTruthSource.collection_id],
-            sources
+            visibleSources([groundTruthSource.collection_id])
         );
 
         expect(hiddenIds).toEqual(new Set(['pred-1']));
