@@ -1,10 +1,13 @@
 import { derived, writable, type Readable } from 'svelte/store';
-import type { SortFieldExpr, EvaluationRunMetricsInfoView } from '$lib/api/lightly_studio_local';
+import type {
+    ImageSortFieldExpr,
+    EvaluationRunMetricsInfoView
+} from '$lib/api/lightly_studio_local';
 import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import { useEvaluationSampleMetricsInfo } from '$lib/hooks/useEvaluationSampleMetricsInfo/useEvaluationSampleMetricsInfo';
 
-export interface ImageSortField {
-    source: SortFieldExpr['source'];
+export interface ColumnSortField {
+    source: ImageSortFieldExpr['source'];
     value: string;
     label: string;
 }
@@ -16,7 +19,7 @@ export interface EvalSortField {
     label: string;
 }
 
-export type SortField = ImageSortField | EvalSortField;
+export type SortField = ColumnSortField | EvalSortField;
 
 interface UseSortFieldsParams {
     datasetId: () => string;
@@ -28,7 +31,7 @@ interface UseSortFieldsReturn {
     dispose: () => void;
 }
 
-export const IMAGE_SORT_FIELDS: ImageSortField[] = [
+export const IMAGE_SORT_FIELDS: ColumnSortField[] = [
     { source: 'image', value: 'file_name', label: 'file name' },
     { source: 'image', value: 'file_path_abs', label: 'file path' },
     { source: 'image', value: 'created_at', label: 'created at' },
@@ -53,7 +56,7 @@ function mapRunsToEvalFields(runs: EvaluationRunMetricsInfoView[]): EvalSortFiel
     );
 }
 
-export function useSortFields({ datasetId }: UseSortFieldsParams): UseSortFieldsReturn {
+export function useImageSortFields({ datasetId }: UseSortFieldsParams): UseSortFieldsReturn {
     const { metadataInfo } = useMetadataFilters();
     const metricsInfo = useEvaluationSampleMetricsInfo({ datasetId });
 
@@ -61,8 +64,8 @@ export function useSortFields({ datasetId }: UseSortFieldsParams): UseSortFields
         ($metadataInfo ?? [])
             .filter((info) => ['integer', 'float', 'string', 'boolean'].includes(info.type))
             .map(
-                (info): ImageSortField => ({
-                    source: 'metadata' as SortFieldExpr['source'],
+                (info): ColumnSortField => ({
+                    source: 'metadata' as ImageSortFieldExpr['source'],
                     value: info.name,
                     label: `metadata.${info.name}`
                 })

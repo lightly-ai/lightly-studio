@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { createImagesInfiniteOptions } from './createImagesInfiniteOptions';
-import type { SortFieldExpr } from '$lib/api/lightly_studio_local';
+import type { ImageSortFieldExpr } from '$lib/api/lightly_studio_local';
 
 type Options = ReturnType<typeof createImagesInfiniteOptions>;
 type QueryFnContext = { pageParam: number; signal: AbortSignal };
@@ -54,7 +54,7 @@ describe('createImagesInfiniteOptions', () => {
         });
 
         it('includes sort_by in query key', () => {
-            const sort: SortFieldExpr[] = [
+            const sort: ImageSortFieldExpr[] = [
                 { source: 'image', field_name: 'score', direction: 'desc' }
             ];
             const options = createImagesInfiniteOptions({
@@ -75,10 +75,10 @@ describe('createImagesInfiniteOptions', () => {
         });
 
         it('produces different keys for different sort_by values', () => {
-            const sort1: SortFieldExpr[] = [
+            const sort1: ImageSortFieldExpr[] = [
                 { source: 'image', field_name: 'score', direction: 'desc' }
             ];
-            const sort2: SortFieldExpr[] = [
+            const sort2: ImageSortFieldExpr[] = [
                 { source: 'image', field_name: 'filename', direction: 'asc' }
             ];
             const options1 = createImagesInfiniteOptions({
@@ -121,7 +121,7 @@ describe('createImagesInfiniteOptions', () => {
 
     describe('queryFn', () => {
         it('passes sort_by to readImages', async () => {
-            const sort: SortFieldExpr[] = [
+            const sort: ImageSortFieldExpr[] = [
                 { source: 'image', field_name: 'score', direction: 'desc' }
             ];
             const options = createImagesInfiniteOptions({
