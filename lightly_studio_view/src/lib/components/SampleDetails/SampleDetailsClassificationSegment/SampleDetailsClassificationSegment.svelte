@@ -72,7 +72,7 @@
     });
 
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
-    const { selectedCollectionIds } = useAnnotationCollectionsFilter();
+    const { isSourceVisible, multipleSourcesVisible } = useAnnotationCollectionsFilter();
     const annotationSources = $derived(annotationCollectionsQuery.data ?? []);
     const isGrouped = $derived(annotationSources.length > 1);
     const sourceGroups = $derived(
@@ -82,14 +82,14 @@
     // Hidden set implied by the grid filter, as a derived so it's readable at mount (unlike
     // the effect-written `annotationsIdsToHide`); drives the seed and the initial collapse.
     const seededHiddenIds = $derived(
-        computeSeededHiddenIds(classificationAnnotations, $selectedCollectionIds, annotationSources)
+        computeSeededHiddenIds(classificationAnnotations, $isSourceVisible)
     );
 
     // Color source group headers by source only when multiple sources are visible and class
     // coloring is not enforced, mirroring the annotation segment and canvas behavior.
     const colorBySource = $derived(
         resolveEffectiveColorBySource({
-            multipleSourcesVisible: $selectedCollectionIds.length > 1,
+            multipleSourcesVisible: $multipleSourcesVisible,
             enforceColoringByClass: $enforceColoringByClassStore
         })
     );

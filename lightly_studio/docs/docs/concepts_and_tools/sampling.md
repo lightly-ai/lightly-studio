@@ -374,6 +374,33 @@ The preselected tag must belong to the sampled collection, and all of its sample
 be part of the query being sampled. The option is available on every sampling method,
 including `multi_strategies()`.
 
+### Video sequence sampling
+
+To select clips instead of individual frames, set `selected_sequence_length` to
+the number of frames per sequence (for example `50`). By default `selected_sequence_length` is
+ `None` and individual frames are selected. Each video is split into non-overlapping sequences of that
+length; trailing frames that do not fill a full sequence are dropped. Sampling then chooses among sequence
+proxies (mean of the frame embeddings), and every frame of each chosen sequence is tagged.
+
+`n_samples_to_select` counts **frames** and must be a multiple of `selected_sequence_length`.
+The number of selected sequences is `n_samples_to_select / selected_sequence_length`.
+
+```py
+import lightly_studio as ls
+
+dataset = ls.VideoDataset.load("my_video_dataset")
+frames = dataset.frames()
+
+# Select 2 sequences of 50 frames each (100 frames total).
+frames.query().sampling().diverse(
+    n_samples_to_select=100,
+    sampling_result_tag_name="sequence_clips",
+    selected_sequence_length=50,
+)
+```
+
+Only diversity selection on video frame collections support `selected_sequence_length`.
+
 ### Combining multiple strategies
 
 You can combine several strategies into a single sampling run. All configured strategies are evaluated together and weighted by the `strength` parameter.

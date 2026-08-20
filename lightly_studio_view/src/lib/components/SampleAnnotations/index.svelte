@@ -35,7 +35,8 @@
     const { isHidden } = useHideAnnotations();
     const { hiddenClassNamesStore } = useAnnotationClassVisibility();
     const { showBoundingBoxesForSegmentationStore, enforceColoringByClassStore } = useSettings();
-    const { selectedCollectionIds, collectionIdToName } = useAnnotationCollectionsFilter();
+    const { isSourceVisible, multipleSourcesVisible, collectionIdToName } =
+        useAnnotationCollectionsFilter();
 
     // Normalize backend annotation variants into the smaller canvas render contract.
     const mapToCanvasAnnotation = (
@@ -72,20 +73,16 @@
 
     const annotationsWithVisuals: AnnotationCanvasAnnotation[] = $derived.by(() => {
         const showInstanceSegmentationBoundingBoxes = $showBoundingBoxesForSegmentationStore;
-        const selectedIds = $selectedCollectionIds;
+        const sourceIsVisible = $isSourceVisible;
         const idToName = $collectionIdToName;
         const hiddenClasses = $hiddenClassNamesStore;
         const colorBySource = resolveEffectiveColorBySource({
-            multipleSourcesVisible: selectedIds.length > 1,
+            multipleSourcesVisible: $multipleSourcesVisible,
             enforceColoringByClass: $enforceColoringByClassStore
         });
 
         return sample.annotations
-            .filter(
-                (annotation) =>
-                    selectedIds.length === 0 ||
-                    selectedIds.includes(annotation.annotation_collection_id)
-            )
+            .filter((annotation) => sourceIsVisible(annotation.annotation_collection_id))
             .filter((annotation) => annotation.annotation_type !== 'classification')
             .filter(
                 (annotation) =>
