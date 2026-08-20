@@ -14,13 +14,11 @@ const params = {
 
 describe('buildImageAnnotationCountsBySampleTagsQueryKey', () => {
     it('keeps the annotation-count prefix and every request input in the query key', () => {
-        const key = buildImageAnnotationCountsBySampleTagsQueryKey(params);
-
-        expect(key.slice(0, useImageAnnotationCountsQueryKey.length)).toEqual(
-            useImageAnnotationCountsQueryKey
-        );
-        expect(key).toContain('by-sample-tags');
-        expect(key.at(-1)).toEqual(buildImageAnnotationCountsBySampleTagsRequest(params));
+        expect(buildImageAnnotationCountsBySampleTagsQueryKey(params)).toEqual([
+            ...useImageAnnotationCountsQueryKey,
+            'by-sample-tags',
+            buildImageAnnotationCountsBySampleTagsRequest(params)
+        ]);
     });
 
     it('produces different keys for different tag orderings', () => {
