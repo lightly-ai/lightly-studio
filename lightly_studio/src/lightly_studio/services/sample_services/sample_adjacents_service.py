@@ -6,9 +6,12 @@ from typing import Annotated
 from uuid import UUID
 
 from pydantic import BaseModel, Field
-from sqlmodel import Session
+from sqlmodel import Session, col
 
+from lightly_studio.core.dataset_query.order_by import OrderByAnnotationEvaluationMetricField
 from lightly_studio.models.adjacents import AdjacentResultView
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.annotation_sort import AnnotationEvaluationMetricSortExpr
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sort import SortExpr, sort_expr_to_order_by
 from lightly_studio.resolvers import (
@@ -17,6 +20,7 @@ from lightly_studio.resolvers import (
     video_frame_resolver,
     video_resolver,
 )
+from lightly_studio.resolvers.annotations import annotation_metric_sort
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
@@ -39,6 +43,41 @@ class AdjacentRequest(BaseModel):
     ) = None
     text_embedding: list[float] | None = None
     sort_by: list[SortExpr] | None = None
+    annotation_sort_by: AnnotationEvaluationMetricSortExpr | None = None
+
+
+def _build_annotation_order_by(
+    session: Session,
+    filters: AnnotationsFilter,
+    annotation_sort_by: AnnotationEvaluationMetricSortExpr | None,
+) -> OrderByAnnotationEvaluationMetricField | None:
+    """Resolve the order-by clause for an annotation adjacent query.
+
+    Normalises the collection ID list from the filter and, when a sort
+    expression is present, translates it into a database-backed order-by
+    expression tied to the first collection.
+
+    Args:
+        session: Database session used to look up the evaluation run.
+        filters: The annotation filters carrying the collection IDs.
+        annotation_sort_by: Optional sort expression from the request.
+
+    Returns:
+        An order-by expression, or None when no sort should be applied.
+    """
+    collection_ids = filters.collection_ids or []
+    if not (annotation_sort_by and collection_ids):
+        return None
+    if len(collection_ids) > 1:
+        raise ValueError(
+            "annotation_sort_by is not supported when multiple collection_ids are provided"
+        )
+    return annotation_metric_sort.sort_expr_to_order_by(
+        session=session,
+        annotation_collection_id=collection_ids[0],
+        sort_expr=annotation_sort_by,
+        annotation_id_column=col(AnnotationBaseTable.sample_id),
+    )
 
 
 def get_adjacent_samples(
@@ -105,6 +144,11 @@ def get_adjacent_samples(
             session=session,
             filters=request.filters,
             sample_id=sample_id,
+            order_by=_build_annotation_order_by(
+                session=session,
+                filters=request.filters,
+                annotation_sort_by=request.annotation_sort_by,
+            ),
         )
     raise NotImplementedError(
         f"Adjacent samples retrieval is not implemented for sample type: {request.sample_type}"
