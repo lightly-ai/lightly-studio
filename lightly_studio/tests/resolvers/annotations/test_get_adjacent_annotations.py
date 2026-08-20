@@ -763,6 +763,7 @@ def _assert_matches_expected_order(
 
 def test_get_adjacent_annotations__sort_by_annotation_evaluation_metric(
     db_session: Session,
+    mocker: MockerFixture,
 ) -> None:
     # Unmatched (0.0) < matched (0.75); uncovered (NULL) sorts last
     root = helpers_resolvers.create_collection(session=db_session)
@@ -819,6 +820,9 @@ def test_get_adjacent_annotations__sort_by_annotation_evaluation_metric(
         annotation_id_column=col(AnnotationBaseTable.sample_id),
     )
     filters = AnnotationsFilter(collection_ids=[run.gt_annotation_collection_id])
+
+    # The keyset path seeks on the parent's file path, so it cannot order by a metric.
+    _fail_if_used(mocker=mocker, path=_KEYSET_PATH)
 
     # Query from the middle: matched is position 2 (unmatched=0.0, matched=0.75, uncovered=NULL)
     result = annotation_resolver.get_adjacent_annotations(
