@@ -1,12 +1,9 @@
 import { countImageAnnotationsBySampleTagsQueryKey } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-import { useImageAnnotationCountsQueryKey } from '../useImageAnnotationCounts/useImageAnnotationCounts';
-import {
-    buildImageAnnotationCountsBySampleTagsRequest,
-    type GroupedAnnotationCountsParams
-} from './buildImageAnnotationCountsBySampleTagsRequest';
+import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
+import { buildImageAnnotationCountsBySampleTagsRequest } from './buildImageAnnotationCountsBySampleTagsRequest';
 
 export function buildImageAnnotationCountsBySampleTagsQueryKey(
-    params: GroupedAnnotationCountsParams
+    params: Parameters<typeof buildImageAnnotationCountsBySampleTagsRequest>[0]
 ): ReturnType<typeof countImageAnnotationsBySampleTagsQueryKey> {
     return [
         ...useImageAnnotationCountsQueryKey,

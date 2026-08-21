@@ -1,4 +1,5 @@
-import type { BarChartValueMode, CategoryCount } from '$lib/components/BarChart';
+import type { CategoryCount } from '$lib/components/BarChart';
+import type { BarChartValueMode } from '$lib/components/BarChart/buildEchartsOption';
 import type { ClassSetSelection } from '$lib/components/ClassSetConfig';
 import type {
     AnnotationCountMode,
@@ -119,6 +120,6 @@ export interface DistributionConfig extends ClassSetSelection<DistributionSortOp
     orientation: DistributionOrientation;
     /** Whether to count annotation objects or distinct annotated samples (default OBJECTS). */
     countMode?: AnnotationCountMode;
-    /** Whether categorical distributions show counts or percentages. */
+    /** Whether bars display raw counts or percentages (default 'number'). */
     valueMode?: BarChartValueMode;
 }

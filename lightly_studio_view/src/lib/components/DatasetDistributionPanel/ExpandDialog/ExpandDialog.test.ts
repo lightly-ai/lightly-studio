@@ -58,10 +58,11 @@ describe('ExpandDialog', () => {
     });
 
     it('renders the title and a top-N summary from the applied config', () => {
-        renderDialog();
+        renderDialog({ valueNoun: 'objects' });
 
         expect(screen.getByText('Distribution')).toBeInTheDocument();
         expect(screen.getByText(/Top 10 of 30 classes · sorted by count/)).toBeInTheDocument();
+        expect(screen.getByText(/objects/)).toBeInTheDocument();
     });
 
     it('renders nothing while closed', () => {
@@ -96,13 +97,6 @@ describe('ExpandDialog', () => {
         );
 
         expect(onConfigChange).toHaveBeenCalledWith({ ...config, orientation: 'horizontal' });
-    });
-
-    it('shows valueNoun in the header summary when no series are present', () => {
-        // valueNoun is only rendered when totalCount is shown, which requires series=[].
-        renderDialog({ valueNoun: 'objects' });
-
-        expect(screen.getByText(/objects/)).toBeInTheDocument();
     });
 
     it('filters series to only the visible top-N labels', () => {

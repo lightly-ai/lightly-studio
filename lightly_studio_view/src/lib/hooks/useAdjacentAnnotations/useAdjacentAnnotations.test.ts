@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { writable } from 'svelte/store';
-import { SampleType } from '$lib/api/lightly_studio_local';
+import { SampleType, type AnnotationEvaluationMetricSortExpr } from '$lib/api/lightly_studio_local';
+import type { TextEmbedding } from '$lib/hooks/useGlobalStorage';
 
 const useAdjacentSamplesMock = vi.fn();
 const selectedAnnotationFilterIds = writable<Set<string>>(new Set());
 const tagsSelected = writable<Set<string>>(new Set());
+const textEmbedding = writable<TextEmbedding | undefined>(undefined);
+const getSortByMock = vi.fn<(collectionId: string) => AnnotationEvaluationMetricSortExpr | null>();
 
 vi.mock('../useAdjacentSamples/useAdjacentSamples', () => ({
     useAdjacentSamples: (...args: unknown[]) => useAdjacentSamplesMock(...args)
@@ -12,7 +15,8 @@ vi.mock('../useAdjacentSamples/useAdjacentSamples', () => ({
 
 vi.mock('../useGlobalStorage', () => ({
     useGlobalStorage: () => ({
-        selectedAnnotationFilterIds
+        selectedAnnotationFilterIds,
+        textEmbedding
     })
 }));
 
@@ -20,6 +24,10 @@ vi.mock('../useTags/useTags', () => ({
     useTags: () => ({
         tagsSelected
     })
+}));
+
+vi.mock('$lib/hooks', () => ({
+    useAnnotationSortBy: () => ({ getSortBy: getSortByMock })
 }));
 
 import { useAdjacentAnnotations } from './useAdjacentAnnotations';
@@ -30,6 +38,8 @@ describe('useAdjacentAnnotations', () => {
         useAdjacentSamplesMock.mockReset();
         selectedAnnotationFilterIds.set(new Set());
         tagsSelected.set(new Set());
+        textEmbedding.set(undefined);
+        getSortByMock.mockReturnValue(null);
         useAdjacentSamplesMock.mockReturnValue({ query: 'query-result', refetch: vi.fn() });
     });
 
@@ -50,7 +60,8 @@ describe('useAdjacentAnnotations', () => {
                         collection_ids: ['col-9'],
                         annotation_label_ids: ['label-1', 'label-2'],
                         tag_ids: ['tag-1']
-                    }
+                    },
+                    annotation_sort_by: undefined
                 }
             }
         });
@@ -71,9 +82,49 @@ describe('useAdjacentAnnotations', () => {
                         collection_ids: ['col-3'],
                         annotation_label_ids: undefined,
                         tag_ids: undefined
-                    }
+                    },
+                    annotation_sort_by: undefined
                 }
             }
         });
+    });
+
+    it('passes annotation_sort_by to useAdjacentSamples when a sort is active', () => {
+        const sort: AnnotationEvaluationMetricSortExpr = {
+            evaluation_run_id: 'run-1',
+            metric_name: 'iou',
+            direction: 'desc'
+        };
+        getSortByMock.mockReturnValue(sort);
+
+        useAdjacentAnnotations({ sampleId: 'ann-123', collectionId: 'col-9' });
+
+        expect(useAdjacentSamplesMock).toHaveBeenCalledWith(
+            expect.objectContaining({
+                params: expect.objectContaining({
+                    body: expect.objectContaining({ annotation_sort_by: sort })
+                })
+            })
+        );
+    });
+
+    it('suppresses annotation_sort_by when a similarity search is active', () => {
+        const sort: AnnotationEvaluationMetricSortExpr = {
+            evaluation_run_id: 'run-1',
+            metric_name: 'iou',
+            direction: 'desc'
+        };
+        getSortByMock.mockReturnValue(sort);
+        textEmbedding.set({ queryText: 'a dog', embedding: [0.1, 0.2] });
+
+        useAdjacentAnnotations({ sampleId: 'ann-123', collectionId: 'col-9' });
+
+        expect(useAdjacentSamplesMock).toHaveBeenCalledWith(
+            expect.objectContaining({
+                params: expect.objectContaining({
+                    body: expect.objectContaining({ annotation_sort_by: undefined })
+                })
+            })
+        );
     });
 });

@@ -78,7 +78,8 @@
         useNumericMetadataDistribution,
         usePostHog,
         useCategoricalMetadataDistribution,
-        useTags
+        useTags,
+        useSeedAnnotationSourceFilter
     } from '$lib/hooks';
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
     import { isInputElement } from '$lib/utils';
@@ -361,14 +362,23 @@
     );
     const plotFilterQueryExpr = $derived($imageFilterFromHook?.sample_filter?.query_expr ?? null);
 
+    // Fill the annotation source filter for whatever collection is on screen. Every grid draws
+    // its boxes against this one selection, so seeding only from the images-grid menu left the
+    // other tabs filtering against another tab's sources.
+    useSeedAnnotationSourceFilter(() => collectionId);
+
     // Selected annotation sources (annotation collections). When a subset is
     // selected the distribution counts only annotations from those sources; the
     // backend restricts the counted annotations by their own collection id.
-    const { selectedCollectionIds: selectedAnnotationSourceIds } = useAnnotationCollectionsFilter();
+    const { selectedCollectionIds: selectedAnnotationSourceIds, allSourcesHidden } =
+        useAnnotationCollectionsFilter();
     const annotationFilterForCounts = $derived.by<AnnotationsFilter | undefined>(() => {
         const base = $annotationFilterStore;
         const sourceIds =
             isAnnotations || isAnnotationDetails ? [collectionId] : $selectedAnnotationSourceIds;
+        // An empty list cannot be sent: the backend skips collection_ids when it is falsy, so
+        // it would read as "every source". The unchecked-everything case is handled on the
+        // results instead, via allSourcesHidden below.
         if (sourceIds.length === 0) return base;
         return {
             ...(base ?? { filter_type: 'annotations' }),
@@ -446,10 +456,14 @@
         return imageAnnotationCountsQuery;
     });
 
+    // With every known source unchecked nothing is drawn, so nothing is counted either.
+    // The request itself cannot say that, so the empty result is produced here.
+    const annotationCountsData = $derived($allSourcesHidden ? [] : annotationCounts.data);
+
     // Feed annotation counts back into the hook for UI-ready filter rows.
     // Only update when data is present to avoid flicker during query refetch.
     $effect(() => {
-        const countsData = annotationCounts.data;
+        const countsData = annotationCountsData;
         if (countsData) {
             setAnnotationCounts(
                 countsData as { label_name: string; total_count: number; current_count?: number }[]
@@ -462,7 +476,7 @@
     });
 
     const totalAnnotations = $derived.by(() => {
-        const countsData = annotationCounts.data;
+        const countsData = annotationCountsData;
         if (!countsData) return 0;
         return countsData.reduce(
             (sum: number, item: { [key: string]: string | number }) =>
@@ -482,8 +496,10 @@
     // sources fetch classification / detection / segmentation counts on demand
     // while the panel is open. We map `current_count` so the plot tracks the
     // active filters, dropping labels with no matches in the current view.
+    // Same rule as annotationCountsData: with every source hidden the class distribution has
+    // nothing to show, whichever count query it came from.
     const toCategoryCounts = (countsData: unknown[] | undefined) =>
-        (countsData ?? [])
+        ($allSourcesHidden ? [] : (countsData ?? []))
             .map((item) => {
                 const row = item as { [key: string]: unknown };
                 return { label: String(row['label_name']), count: Number(row['current_count']) };
@@ -802,9 +818,9 @@
         <div class="flex min-h-0 flex-1 gap-4 px-4" data-testid="workspace-body">
             {#if isCollectionGrid}
                 <!--
-                    Keep the panel mounted while collapsed (only visually hidden). Children such as
-                    AnnotationCollectionsMenu run mount-time $effects (e.g. seeding the annotation
-                    source selection) that must still fire after a reload with the panel collapsed.
+                    Keep the panel mounted while collapsed (only visually hidden). Its children
+                    run mount-time $effects that must still fire after a reload with the panel
+                    collapsed.
                 -->
                 <div
                     class="h-full min-h-0 w-80 flex-col {$filterPanelCollapsed ? 'hidden' : 'flex'}"

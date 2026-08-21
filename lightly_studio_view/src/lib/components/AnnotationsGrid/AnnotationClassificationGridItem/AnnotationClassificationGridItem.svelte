@@ -71,8 +71,5 @@
     aria-selected={selected}
     style="width: {containerWidth}px; height: {containerHeight}px; background-image: url('{thumbnailUrl}'); background-size: cover; background-position: center;"
 >
-    <SampleClassificationPills
-        sample={{ annotations: [annotation.annotation] }}
-        selectedCollectionIds={[]}
-    />
+    <SampleClassificationPills sample={{ annotations: [annotation.annotation] }} showAllSources />
 </div>
