@@ -72,7 +72,7 @@ def test_get_default_by_collection_id__returns_recorded_default(db_session: Sess
         embedding_model_name="chosen",
         embedding_model_hash="hash_chosen",
     )
-    # The first model is the default until set_default overrides it.
+    # Distinct ids, so the assertion below confirms set_default picked this one.
     assert first.embedding_model_id != chosen.embedding_model_id
     default_embedding_space_resolver.set_default(
         session=db_session,
