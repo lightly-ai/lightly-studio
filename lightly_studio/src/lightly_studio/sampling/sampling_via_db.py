@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections import Counter, defaultdict
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from uuid import UUID, uuid4
 
@@ -338,11 +338,10 @@ def _get_preselected_sample_ids(
 
 def _prepare_preselection(
     input_sample_ids: Sequence[UUID],
-    preselected_sample_ids: Iterable[UUID] | None,
+    preselected_sample_ids: Sequence[UUID],
     n_samples_to_select: int,
 ) -> tuple[list[int], int]:
     """Validate preselection and return its indices and available selection size."""
-    preselected_sample_ids = list(preselected_sample_ids or ())
     preselected_set = set(preselected_sample_ids)
     if len(preselected_sample_ids) != len(preselected_set):
         raise ValueError("Preselected sample IDs must be unique.")

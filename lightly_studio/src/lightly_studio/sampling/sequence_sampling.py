@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 from uuid import UUID
 
 import numpy as np
@@ -23,7 +23,7 @@ def sampling_via_database_sequences(
     session: Session,
     config: SamplingConfig,
     input_sample_ids: list[UUID],
-    preselected_sample_ids: Iterable[UUID] | None = None,
+    preselected_sample_ids: Sequence[UUID],
 ) -> None:
     """Run mean-proxy sequence sampling on a VIDEO_FRAME collection.
 
@@ -38,12 +38,11 @@ def sampling_via_database_sequences(
     diversity_strategies = _validate_sequence_sampling(session=session, config=config)
     sequence_length = config.selected_sequence_length
     assert sequence_length is not None
-    preselected = list(preselected_sample_ids or ())
-    preselected_id_set = set(preselected)
+    preselected_id_set = set(preselected_sample_ids)
     # Candidate and preselected frames are chunked separately.
     preselected_sequences = _load_sequences(
         session=session,
-        sample_ids=preselected,
+        sample_ids=preselected_sample_ids,
         sequence_length=sequence_length,
         frame_kind="preselected",
     )

@@ -50,6 +50,7 @@ def test_sampling_via_database_sequences(
         session=db_session,
         config=sampling_config,
         input_sample_ids=frame_sample_ids,
+        preselected_sample_ids=[],
     )
 
     tags = tag_resolver.get_all_by_collection_id(
@@ -103,6 +104,7 @@ def test_sampling_via_database_sequences__rejects_non_multiple(
             session=db_session,
             config=sampling_config,
             input_sample_ids=frame_sample_ids,
+            preselected_sample_ids=[],
         )
 
 
@@ -135,6 +137,7 @@ def test_sampling_via_database_sequences__rejects_non_frame_collection(
             session=db_session,
             config=sampling_config,
             input_sample_ids=sample_ids,
+            preselected_sample_ids=[],
         )
 
 
@@ -160,6 +163,7 @@ def test_sampling_via_database_sequences__rejects_non_diversity(
             session=db_session,
             config=sampling_config,
             input_sample_ids=frame_sample_ids,
+            preselected_sample_ids=[],
         )
 
 
@@ -186,6 +190,7 @@ def test_sampling_via_database_sequences__warns_when_too_few_frames(
             session=db_session,
             config=sampling_config,
             input_sample_ids=frame_sample_ids,
+            preselected_sample_ids=[],
         )
 
     assert "No sequences available for sampling." in caplog.text
@@ -218,6 +223,7 @@ def test_sampling_via_database_sequences__warns_about_dropped_frames(
             session=db_session,
             config=sampling_config,
             input_sample_ids=frame_sample_ids,
+            preselected_sample_ids=[],
         )
 
     assert "Dropped 2 of 12 candidate frame(s)" in caplog.text
