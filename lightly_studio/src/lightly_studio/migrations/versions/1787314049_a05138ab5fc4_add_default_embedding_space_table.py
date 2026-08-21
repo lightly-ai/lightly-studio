@@ -1,12 +1,7 @@
 """add default embedding space table.
 
-Creates the empty `default_embedding_space` table (one row per collection). Nothing
-reads the table at this revision; the backfill of each collection's current default and
-the switch to reading the table land in the follow-up revision
-`b1c2d3e4f5a6_backfill_default_embedding_space`, together with the write path that keeps
-it populated. Keeping the create empty makes this revision a pure additive schema step.
-
-Downgrade drops the table.
+Creates the empty `default_embedding_space` table (one row per collection). No code reads
+the table at this revision.
 
 DuckDB builds its schema with `create_all`, so this migration only matters for tracked
 Postgres databases.

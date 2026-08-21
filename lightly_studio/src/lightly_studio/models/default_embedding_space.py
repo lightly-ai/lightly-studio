@@ -13,9 +13,7 @@ class DefaultEmbeddingSpaceTable(SQLModel, table=True):
     One row per collection (the ``collection_id`` primary key enforces this). The
     embedding space is identified by the embedding model that produced it, so the row
     points at the ``embedding_model`` used whenever a caller does not name one
-    explicitly, e.g. the 2D projection endpoints and similarity search. This is the
-    persistent record of the "default" that used to be derived on the fly as the
-    collection's oldest model.
+    explicitly, e.g. the 2D projection endpoints and similarity search.
     """
 
     __tablename__ = "default_embedding_space"
