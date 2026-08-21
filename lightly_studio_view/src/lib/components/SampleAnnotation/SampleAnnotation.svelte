@@ -45,12 +45,12 @@
     } = $props();
 
     const { customLabelColorsStore } = useCustomLabelColors();
-    const { selectedCollectionIds, collectionIdToName } = useAnnotationCollectionsFilter();
+    const { multipleSourcesVisible, collectionIdToName } = useAnnotationCollectionsFilter();
 
     const label = $derived(annotation.annotation_label.annotation_label_name);
 
     const colorLabel = $derived.by(() => {
-        const bySource = colorBySource ?? $selectedCollectionIds.length >= 2;
+        const bySource = colorBySource ?? $multipleSourcesVisible;
         if (!bySource) return label;
         return $collectionIdToName[annotation.annotation_collection_id] ?? label;
     });

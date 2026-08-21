@@ -45,15 +45,8 @@ dependencies = [
     "open-clip-torch>=2.20.0",
     "torch>=2.6.0",
     "torchvision>=0.20.0",
-    # Public Mundig versions are found at https://pypi.org/project/lightly-mundig/
-    # Internal Mundig versions are found at
-    # https://console.cloud.google.com/artifacts/python/boris-250909/europe-west3/lightly-pypi/lightly-mundig
-    #
-    # To update to an internal version, first install the new version
-    # uv pip install --upgrade --keyring-provider subprocess --extra-index-url \
-    #   https://oauth2accesstoken@europe-west3-python.pkg.dev/boris-250909/lightly-pypi/simple/ \
-    #   lightly-mundig==$version
-    # Then lock the version. The uv.lock file is updated accordingly.
+    # Mundig releases are published to PyPI: https://pypi.org/project/lightly-mundig/
+    # To update, bump the pin below and relock:
     # uv lock --upgrade-package lightly-mundig==$version
     "lightly-mundig==0.1.14",
     "pyarrow>=17.0.0",
@@ -165,18 +158,12 @@ packages = ["src/lightly_studio"]
 allow-direct-references = true
 
 [tool.uv]
-keyring-provider = "subprocess"
 required-version = ">=0.8.17"
 # moto[server] pulls in antlr4-python3-runtime unconstrained (latest 4.13.x), but it
 # only loads it lazily for StepFunctions mocking, which we never use (moto is only
 # used for S3 mocking in tests). The lightly_train plugin's omegaconf/hydra require
 # antlr 4.9.* and crash on import with 4.13.x, so we pin it back to 4.9.3.
 constraint-dependencies = ["antlr4-python3-runtime==4.9.3"]
-
-[[tool.uv.index]]
-name = "lightly-pypi"
-url = "https://oauth2accesstoken@europe-west3-python.pkg.dev/boris-250909/lightly-pypi/simple/"
-explicit = true
 
 [tool.hatch.build]
 artifacts = [

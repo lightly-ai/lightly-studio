@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AnnotationCountMode, AnnotationType } from '$lib/api/lightly_studio_local/types.gen';
-import { useImageAnnotationCountsQueryKey } from '../useImageAnnotationCounts/useImageAnnotationCounts';
+import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 import { buildImageAnnotationCountsBySampleTagsQueryKey } from './buildImageAnnotationCountsBySampleTagsQueryKey';
 import { buildImageAnnotationCountsBySampleTagsRequest } from './buildImageAnnotationCountsBySampleTagsRequest';
 
@@ -14,13 +14,11 @@ const params = {
 
 describe('buildImageAnnotationCountsBySampleTagsQueryKey', () => {
     it('keeps the annotation-count prefix and every request input in the query key', () => {
-        const key = buildImageAnnotationCountsBySampleTagsQueryKey(params);
-
-        expect(key.slice(0, useImageAnnotationCountsQueryKey.length)).toEqual(
-            useImageAnnotationCountsQueryKey
-        );
-        expect(key).toContain('by-sample-tags');
-        expect(key.at(-1)).toEqual(buildImageAnnotationCountsBySampleTagsRequest(params));
+        expect(buildImageAnnotationCountsBySampleTagsQueryKey(params)).toEqual([
+            ...useImageAnnotationCountsQueryKey,
+            'by-sample-tags',
+            buildImageAnnotationCountsBySampleTagsRequest(params)
+        ]);
     });
 
     it('produces different keys for different tag orderings', () => {

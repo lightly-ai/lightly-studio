@@ -179,6 +179,27 @@ def test_get_metadata_histograms__key_with_quote(db_session: Session) -> None:
     assert sum(score.counts) == 4
 
 
+def test_get_metadata_histograms__key_with_dot(db_session: Session) -> None:
+    """A dot in the key is part of the key, not a step into a nested object."""
+    collection = create_collection(session=db_session)
+    for i in range(4):
+        sample = create_image(
+            session=db_session,
+            collection_id=collection.collection_id,
+            file_path_abs=f"/path/to/sample{i}.png",
+        ).sample
+        sample["sensor.temp"] = float(i)
+
+    histograms = get_metadata_info.get_metadata_histograms(
+        session=db_session, collection_id=collection.collection_id
+    )
+
+    temp = histograms["sensor.temp"]
+    assert temp.bin_edges[0] == pytest.approx(0.0)
+    assert temp.bin_edges[-1] == pytest.approx(3.0)
+    assert sum(temp.counts) == 4
+
+
 def test_get_metadata_histograms__skips_non_numeric_keys(db_session: Session) -> None:
     """String and boolean keys produce no histogram."""
     collection = create_collection(session=db_session)

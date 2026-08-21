@@ -63,7 +63,7 @@ tag samples during loading.
 #### By folder structure
 
 When loading images from a folder, pass `tag_depth=1` to automatically create a tag for each image
-based on its parent directory's name.
+based on its top-level folder below the loaded path.
 
 ```python
 import lightly_studio as ls
@@ -85,6 +85,11 @@ Given this layout, each sample receives a tag matching its folder:
 ```
 
 The default is `tag_depth=0`, which skips automatic tagging.
+
+To tag by more than one directory level, pass a larger `tag_depth`. With `tag_depth=N` each image is
+tagged with the names of the first `N` folders below the loaded path (or fewer if it is nested less
+deeply), so an image can receive several tags. For example, with `tag_depth=2` an image at
+`/data/images/dogs/husky/dog1.jpg` is tagged both `dogs` and `husky`.
 
 #### By dataset split
 

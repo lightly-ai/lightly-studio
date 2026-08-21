@@ -58,7 +58,7 @@
     const { selectAnnotation } = useAnnotationSelection();
 
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
-    const { selectedCollectionIds, seedSelectionIfNeeded } = useAnnotationCollectionsFilter();
+    const { isSourceVisible } = useAnnotationCollectionsFilter();
     const { enforceColoringByClassStore } = useSettings();
 
     const annotationsSort = $derived.by(() => {
@@ -83,9 +83,7 @@
 
     // Hidden set implied by the grid filter, as a derived so it's readable at mount (unlike
     // the effect-written `annotationsIdsToHide`); drives the seed and the initial collapse.
-    const seededHiddenIds = $derived(
-        computeSeededHiddenIds(annotationsSort, $selectedCollectionIds, annotationSources)
-    );
+    const seededHiddenIds = $derived(computeSeededHiddenIds(annotationsSort, $isSourceVisible));
 
     // Annotations are colored by source only while multiple sources are visible and class
     // coloring is not enforced, matching the details canvas. Swatches are shown only when
@@ -97,18 +95,6 @@
             enforceColoringByClass: $enforceColoringByClassStore
         })
     );
-
-    // Seed the global annotation source stores the first time this collection is shown
-    // (e.g. landing directly on the details page via deep link), so annotations are colored
-    // by source. seedSelectionIfNeeded keeps an existing selection from the grid filter.
-    $effect(() => {
-        if (annotationSources.length > 1) {
-            seedSelectionIfNeeded(
-                collectionId,
-                annotationSources.map((source) => ({ id: source.collection_id, name: source.name }))
-            );
-        }
-    });
 
     // Tracks which sample the hidden set was seeded for. Intentionally not reactive:
     // it must not re-trigger the seeding effect.

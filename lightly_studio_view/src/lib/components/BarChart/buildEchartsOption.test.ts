@@ -235,4 +235,17 @@ describe('buildEchartsOption', () => {
             '<b>car</b><br/>Count: <b>20</b> (25.0%)'
         );
     });
+
+    it('uses category ids on the axis and formats them as labels', () => {
+        const option = buildEchartsOption([
+            { id: 'first', label: 'Missing', count: 4 },
+            { id: 'second', label: 'Missing', count: 2 }
+        ]) as {
+            xAxis: { data: string[]; axisLabel: { formatter: (key: string) => string } };
+        };
+
+        expect(option.xAxis.data).toEqual(['first', 'second']);
+        expect(option.xAxis.axisLabel.formatter('first')).toBe('Missing');
+        expect(option.xAxis.axisLabel.formatter('second')).toBe('Missing');
+    });
 });

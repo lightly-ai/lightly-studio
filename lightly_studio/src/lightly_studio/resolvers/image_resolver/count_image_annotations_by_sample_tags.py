@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from uuid import UUID
 
 from sqlmodel import Session
@@ -18,7 +19,7 @@ from lightly_studio.resolvers.image_resolver.annotation_count_types import (
 def count_image_annotations_by_sample_tags(  # noqa: PLR0913
     session: Session,
     collection_id: UUID,
-    sample_tag_ids: list[UUID],
+    sample_tag_ids: Sequence[UUID],
     image_filter: ImageFilter | None = None,
     annotation_type: AnnotationType | None = None,
     count_mode: AnnotationCountMode = AnnotationCountMode.OBJECTS,
