@@ -19,4 +19,4 @@ class DefaultEmbeddingSpaceTable(SQLModel, table=True):
     __tablename__ = "default_embedding_space"
 
     collection_id: UUID = Field(foreign_key="collection.collection_id", primary_key=True)
-    embedding_model_id: UUID = Field(foreign_key="embedding_model.embedding_model_id", index=True)
+    embedding_model_id: UUID = Field(foreign_key="embedding_model.embedding_model_id")

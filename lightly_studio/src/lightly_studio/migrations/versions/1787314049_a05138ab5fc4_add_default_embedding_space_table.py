@@ -35,18 +35,8 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["embedding_model_id"], ["embedding_model.embedding_model_id"]),
         sa.PrimaryKeyConstraint("collection_id"),
     )
-    op.create_index(
-        op.f("ix_default_embedding_space_embedding_model_id"),
-        "default_embedding_space",
-        ["embedding_model_id"],
-        unique=False,
-    )
 
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.drop_index(
-        op.f("ix_default_embedding_space_embedding_model_id"),
-        table_name="default_embedding_space",
-    )
     op.drop_table("default_embedding_space")
