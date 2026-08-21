@@ -1,8 +1,6 @@
-<script module lang="ts">
+<script module>
     import { defineMeta } from '@storybook/addon-svelte-csf';
     import TagComparisonSelect from './TagComparisonSelect.svelte';
-    import { MultiSelectList } from '$lib/components/MultiSelectList';
-    import type { ComponentProps } from 'svelte';
 
     const { Story } = defineMeta({
         title: 'Components/DatasetDistributionPanel/TagComparisonSelect',
@@ -22,6 +20,8 @@
 </script>
 
 <script lang="ts">
+    import type { ComponentProps } from 'svelte';
+    import { MultiSelectList } from '$lib/components/MultiSelectList';
     type MultiSelectItem = ComponentProps<typeof MultiSelectList>['items'][number];
 
     const MANY_ITEMS: MultiSelectItem[] = Array.from({ length: 20 }, (_, i) => ({
