@@ -399,7 +399,7 @@ frames.query().sampling().diverse(
 )
 ```
 
-Only diversity selection on video frame collections support `selected_sequence_length`.
+Only diversity selection on video frame collections supports `selected_sequence_length`.
 
 ### Combining multiple strategies
 
