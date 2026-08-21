@@ -16,7 +16,6 @@ const BAR_COLOR_DIMMED = '#4b5563';
 // Matches CHART_LINE_COLOR so background bars blend with the chart grid lines.
 const BAR_COLOR_BACKGROUND = '#374151';
 
-
 /** Bar layout: 'vertical' bars grow upward, 'horizontal' bars grow rightward. */
 export type BarChartOrientation = 'vertical' | 'horizontal';
 export type BarChartValueMode = 'number' | 'percentage';
