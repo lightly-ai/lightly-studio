@@ -19,22 +19,42 @@ class SortFieldSource(str, Enum):
     """Source of the field to sort by."""
 
     image = "image"
+    video = "video"
     metadata = "metadata"
     evaluation_metric = "evaluation_metric"
 
 
-class SortFieldExpr(BaseModel):
-    """A sorting expression for a single field.
+class SortFieldExprBase(BaseModel):
+    """Fields shared by every single-field sorting expression.
+
+    Subclasses narrow ``source`` to the sources their endpoint can reach. A sample
+    table only appears in the FROM clause of queries over that sample type, so a
+    field from the wrong source would be cross-joined instead of rejected.
 
     Attributes:
-        source: The source of the field (e.g., "image" or "metadata").
+        source: The source of the field (e.g., "image", "video" or "metadata").
         field_name: The field to sort by.
         direction: The sort direction, either ascending or descending.
     """
 
-    source: Literal[SortFieldSource.image, SortFieldSource.metadata]
+    source: SortFieldSource
     field_name: str
     direction: SortDirection
+
+
+class SortFieldExpr(SortFieldExprBase):
+    """A sorting expression for a single field of an image."""
+
+    source: Literal[SortFieldSource.image, SortFieldSource.metadata]
+
+
+class VideoSortFieldExpr(SortFieldExprBase):
+    """A sorting expression for a single field of a video.
+
+    Evaluation metrics are image-only, so they have no counterpart here.
+    """
+
+    source: Literal[SortFieldSource.video, SortFieldSource.metadata]
 
 
 class EvaluationMetricSortExpr(BaseModel):
@@ -59,8 +79,8 @@ SortExpr = Annotated[
 ]
 
 
-def sort_field_expr_to_order_by(expr: SortFieldExpr) -> OrderByExpression:
-    """Translate a SortFieldExpr to an OrderByExpression.
+def sort_field_expr_to_order_by(expr: SortFieldExprBase) -> OrderByExpression:
+    """Translate a single-field sort expression to an OrderByExpression.
 
     Args:
         expr: The sort field expression from the API request.

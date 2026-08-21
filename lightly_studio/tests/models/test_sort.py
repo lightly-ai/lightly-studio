@@ -15,12 +15,22 @@ from lightly_studio.models.sort import (
     SortExpr,
     SortFieldExpr,
     SortFieldSource,
+    VideoSortFieldExpr,
     sort_expr_to_order_by,
     sort_field_expr_to_order_by,
 )
 from lightly_studio.models.sort_direction import SortDirection
 
 _IMAGE_SORT_FIELD_NAMES = ["file_name", "file_path_abs", "created_at", "width", "height"]
+_VIDEO_SORT_FIELD_NAMES = [
+    "file_name",
+    "file_path_abs",
+    "created_at",
+    "width",
+    "height",
+    "duration_s",
+    "fps",
+]
 
 
 def test_sort_field_expr__valid_directions() -> None:
@@ -89,6 +99,69 @@ def test_sort_field_expr_to_order_by__all_fields_map() -> None:
         )
         order_by = sort_field_expr_to_order_by(expr)
         assert order_by is not None
+
+
+def test_sort_field_expr_to_order_by__image_field_name_not_shared_with_video() -> None:
+    # `duration_s` exists on videos only; the source must select the right registry.
+    expr = SortFieldExpr(
+        source=SortFieldSource.image,
+        field_name="duration_s",
+        direction=SortDirection.asc,
+    )
+    with pytest.raises(QueryExprError):
+        sort_field_expr_to_order_by(expr)
+
+
+def test_sort_field_expr__rejects_video_source() -> None:
+    # Image queries do not have `VideoTable` in the FROM clause, so a video field
+    # would be cross-joined rather than sorted by.
+    with pytest.raises(ValidationError):
+        SortFieldExpr.model_validate({"source": "video", "field_name": "fps", "direction": "asc"})
+
+
+def test_video_sort_field_expr_to_order_by__all_fields_map() -> None:
+    for field_name in _VIDEO_SORT_FIELD_NAMES:
+        expr = VideoSortFieldExpr(
+            source=SortFieldSource.video,
+            field_name=field_name,
+            direction=SortDirection.asc,
+        )
+        order_by = sort_field_expr_to_order_by(expr)
+        assert order_by is not None
+
+
+def test_video_sort_field_expr_to_order_by__metadata_source() -> None:
+    expr = VideoSortFieldExpr(
+        source=SortFieldSource.metadata,
+        field_name="blur_score",
+        direction=SortDirection.asc,
+    )
+    assert isinstance(sort_field_expr_to_order_by(expr), OrderByMetadataField)
+
+
+def test_video_sort_field_expr_to_order_by__rejects_unknown_field() -> None:
+    expr = VideoSortFieldExpr(
+        source=SortFieldSource.video,
+        field_name="invalid_field",
+        direction=SortDirection.asc,
+    )
+    with pytest.raises(QueryExprError):
+        sort_field_expr_to_order_by(expr)
+
+
+def test_video_sort_field_expr__rejects_image_source() -> None:
+    with pytest.raises(ValidationError):
+        VideoSortFieldExpr.model_validate(
+            {"source": "image", "field_name": "width", "direction": "asc"}
+        )
+
+
+def test_video_sort_field_expr__rejects_evaluation_metric_source() -> None:
+    # Evaluation metrics are image-only.
+    with pytest.raises(ValidationError):
+        VideoSortFieldExpr.model_validate(
+            {"source": "evaluation_metric", "field_name": "iou", "direction": "asc"}
+        )
 
 
 def test_sort_field_expr_to_order_by__metadata_ascending() -> None:
