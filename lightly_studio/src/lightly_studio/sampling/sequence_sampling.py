@@ -39,6 +39,7 @@ def sampling_via_database_sequences(
     sequence_length = config.selected_sequence_length
     assert sequence_length is not None
     preselected = list(preselected_sample_ids or ())
+    preselected_id_set = set(preselected)
     # Candidate and preselected frames are chunked separately.
     preselected_sequences = _load_sequences(
         session=session,
@@ -48,7 +49,9 @@ def sampling_via_database_sequences(
     )
     candidate_sequences = _load_sequences(
         session=session,
-        sample_ids=[sample_id for sample_id in input_sample_ids if sample_id not in preselected],
+        sample_ids=[
+            sample_id for sample_id in input_sample_ids if sample_id not in preselected_id_set
+        ],
         sequence_length=sequence_length,
         frame_kind="candidate",
     )

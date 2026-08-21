@@ -237,9 +237,8 @@ def sampling_via_database(
         input_sample_ids: Candidate sample IDs.
 
     Raises:
-        ValueError: If the preselected tag does not exist or, outside sequence
-            sampling, if its sample IDs contain duplicates or are not a subset of the
-            input sample IDs.
+        ValueError: If the preselected tag does not exist or its sample IDs are
+            not a subset of the input sample IDs.
     """
     preselected_sample_ids = _get_preselected_sample_ids(
         session=session,
