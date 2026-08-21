@@ -7,7 +7,7 @@ from typing import Any, cast
 from uuid import UUID
 
 import sqlalchemy
-from sqlalchemy import ColumnElement, and_, case, func, nullslast, or_
+from sqlalchemy import ColumnElement, and_, case, func, or_
 from sqlalchemy import Select as SQLAlchemySelect
 from sqlalchemy.engine import Row
 from sqlalchemy.orm import Mapped, aliased
@@ -75,11 +75,13 @@ class OrderByExpression(ABC):
         For use in ``query.order_by()`` or window ``over(order_by=...)``. Usually a
         single element; a sort may return several when one key cannot express the
         required ordering. Does not apply joins; call ``apply`` first when joins are
-        required.
+        required. NULLs always sort last, so DuckDB and PostgreSQL — which disagree on
+        the default placement — order nullable fields the same way.
         """
-        if self.ascending:
-            return [expr.asc() for expr in self._sort_key_expressions()]
-        return [expr.desc() for expr in self._sort_key_expressions()]
+        directed: list[ColumnElement[Any]] = [
+            expr.asc() if self.ascending else expr.desc() for expr in self._sort_key_expressions()
+        ]
+        return [sqlalchemy.nullslast(element) for element in directed]
 
     def apply(self, query: SelectOfScalar[T]) -> SelectOfScalar[T]:
         """Apply joins for this sort and append the ``ORDER BY``.
@@ -190,10 +192,6 @@ class OrderByMetadataField(OrderByExpression):
     def _sort_key_expressions(self) -> list[ColumnElement[Any]]:
         """Return the numerical key, NULL for non-numerical fields, then the text value."""
         return [self._order_value_expression(), self._extracted_value()]
-
-    def to_column_elements(self) -> list[ColumnElement[Any]]:
-        """Pin NULLs last; the two dialects disagree on where they go by default."""
-        return [sqlalchemy.nullslast(element) for element in super().to_column_elements()]
 
     def _is_numerical_field(self) -> ColumnElement[bool]:
         """Return whether ``metadata_schema`` records this field as a number.
@@ -311,10 +309,6 @@ class OrderByAnnotationEvaluationMetricField(OrderByExpression):
         self.annotation_id_column = annotation_id_column
         # Per-instance alias so this join cannot collide with a filter join on the same table.
         self._metric_alias = aliased(EvaluationAnnotationMetricTable)
-
-    def to_column_elements(self) -> list[ColumnElement[Any]]:
-        """Return the sort keys with direction applied and nulls placed last."""
-        return [nullslast(element) for element in super().to_column_elements()]
 
     def _order_value_expression(self) -> ColumnElement[Any]:
         """Return the metric value, zero when the row is unmatched, null when absent."""
