@@ -186,6 +186,28 @@ def test_extract_released_section():
     assert "1.0.5" not in section
 
 
+def test_render_pr_body():
+    body = prepare_release.render_pr_body(
+        section_body="### Added\n\n- Added thing one.",
+        drafting_skipped_reason="LIG-10559 is not wired in yet",
+        coverage_checklist="- abc123 Some PR title (#42)",
+    )
+    assert "Draft release notes" in body
+    assert "LIG-10559 is not wired in yet" in body
+    assert "Added thing one" in body
+    assert "Coverage checklist" in body
+    assert "#42" in body
+
+
+def test_render_pr_body__empty_checklist_shows_placeholder():
+    body = prepare_release.render_pr_body(
+        section_body="### Fixed\n\n- A fix.",
+        drafting_skipped_reason="reason",
+        coverage_checklist="",
+    )
+    assert "_None found._" in body
+
+
 SAMPLE_LOCK = """\
 version = 1
 revision = 2

@@ -4,8 +4,8 @@
 Backs the `Prepare Release` GitHub Actions workflow, landing incrementally
 (see LIG-10552 for the full spec). Every subcommand does one small,
 independently testable piece of RELEASE.md steps 3-5. This slice adds
-changelog promotion plus the version, `pyproject.toml`, and `uv.lock`
-guards RELEASE.md's steps 2-4 call for.
+changelog promotion, the version/`pyproject.toml`/`uv.lock` guards, and
+draft release-notes rendering for the release PR body.
 
 Stdlib only, deliberately: this runs on the release-critical path before
 `uv sync`, so it must not itself depend on anything `uv` would need to
@@ -232,6 +232,26 @@ def extract_released_section(changelog_text: str, version: str) -> str:
     return changelog_text[body_start:body_end].strip()
 
 
+def render_pr_body(section_body: str, drafting_skipped_reason: str, coverage_checklist: str) -> str:
+    """Assembles the release PR body: draft notes + advisory coverage checklist.
+
+    The coverage checklist is git-derived and untrusted display text - it
+    must never be mistaken for reviewed release notes, hence the explicit
+    label and the blank line separating it from the draft notes.
+    """
+    checklist = coverage_checklist.strip() or "_None found._"
+    return (
+        "## Draft release notes\n\n"
+        f"> Automated drafting was skipped ({drafting_skipped_reason}). These are the "
+        "mechanically promoted CHANGELOG entries - review and edit before publishing.\n\n"
+        f"{section_body}\n\n"
+        "## Coverage checklist (advisory only - never copy into the release notes)\n\n"
+        "Merged changes since the last tag with no obviously matching CHANGELOG entry, "
+        "for a human to judge:\n\n"
+        f"{checklist}\n"
+    )
+
+
 def parse_lock_blocks(uv_lock_text: str) -> dict[str, str]:
     """Splits a `uv.lock`'s text into per-package blocks, keyed by name.
 
@@ -348,6 +368,13 @@ def main(argv: list[str] | None = None) -> int:
     lock_diff.add_argument("--after", type=Path, required=True)
     lock_diff.add_argument("--package", required=True)
 
+    pr_body = subparsers.add_parser("render-pr-body", help="assemble the release PR body")
+    pr_body.add_argument("--changelog", type=Path, required=True)
+    pr_body.add_argument("--version", required=True)
+    pr_body.add_argument("--drafting-skipped-reason", required=True)
+    pr_body.add_argument("--coverage-file", type=Path, required=True)
+    pr_body.add_argument("--output", type=Path, required=True)
+
     args = parser.parse_args(argv)
 
     try:
@@ -365,6 +392,7 @@ def _dispatch(args: argparse.Namespace) -> int:
         "promote-changelog": _cmd_promote_changelog,
         "bump-pyproject": _cmd_bump_pyproject,
         "assert-lock-diff": _cmd_assert_lock_diff,
+        "render-pr-body": _cmd_render_pr_body,
     }
     handlers[args.command](args)
     return 0
@@ -403,6 +431,13 @@ def _cmd_bump_pyproject(args: argparse.Namespace) -> None:
 
 def _cmd_assert_lock_diff(args: argparse.Namespace) -> None:
     assert_lock_diff_narrow(args.before.read_text(), args.after.read_text(), package=args.package)
+
+
+def _cmd_render_pr_body(args: argparse.Namespace) -> None:
+    section_body = extract_released_section(args.changelog.read_text(), args.version)
+    coverage_checklist = args.coverage_file.read_text() if args.coverage_file.exists() else ""
+    body = render_pr_body(section_body, args.drafting_skipped_reason, coverage_checklist)
+    args.output.write_text(body)
 
 
 if __name__ == "__main__":
