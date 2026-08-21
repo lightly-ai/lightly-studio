@@ -1,6 +1,10 @@
-import type { BarChartValueMode, CategoryCount } from '$lib/components/BarChart';
+import type { CategoryCount } from '$lib/components/BarChart';
+import type { BarChartValueMode } from '$lib/components/BarChart/buildEchartsOption';
 import type { ClassSetSelection } from '$lib/components/ClassSetConfig';
-import { type AnnotationCountMode } from '$lib/api/lightly_studio_local/types.gen';
+import type {
+    AnnotationCountMode,
+    SampleTagAnnotationCountsView
+} from '$lib/api/lightly_studio_local/types.gen';
 import type { HistogramData, HistogramRange } from '$lib/components/Histogram';
 import type { CategoricalMetadataBucket } from '$lib/hooks/useCategoricalMetadataDistribution/types';
 import type { CategoricalMetadataValue } from '$lib/services/types';
@@ -57,6 +61,8 @@ export interface DistributionSourceGroup {
     label: string;
     /** Category counts rendered as a bar chart. Mutually exclusive with `histogram`. */
     data?: CategoryCount[];
+    /** Counts grouped by the sample tags selected for comparison. */
+    comparisonData?: SampleTagAnnotationCountsView[];
     /** Numeric bin distribution rendered as a histogram. Mutually exclusive with `data`. */
     histogram?: HistogramData;
     /**
@@ -91,6 +97,8 @@ export interface DistributionSource {
     label: string;
     /** Counts for a simple source. Mutually exclusive with `groups` and `histogram`. */
     data?: CategoryCount[];
+    /** Counts grouped by the sample tags selected for comparison. */
+    comparisonData?: SampleTagAnnotationCountsView[];
     /** Numeric bin distribution rendered as a histogram. Mutually exclusive with `data`. */
     histogram?: HistogramData;
     /**
