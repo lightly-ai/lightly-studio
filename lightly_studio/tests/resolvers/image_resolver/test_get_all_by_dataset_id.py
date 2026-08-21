@@ -1097,6 +1097,7 @@ def _setup_collection_with_2d_coordinates(
         session=session,
         collection_id=collection_id,
         embedding_dimension=3,
+        set_as_default=True,
     )
     images = create_samples_with_embeddings(
         session=session,
@@ -1185,6 +1186,7 @@ def test_get_all_by_collection_id__embedding_region_combined_with_dimension_filt
         session=db_session,
         collection_id=collection_id,
         embedding_dimension=3,
+        set_as_default=True,
     )
     # Two samples fall inside the region below, but only one also satisfies the width filter.
     images = create_samples_with_embeddings(

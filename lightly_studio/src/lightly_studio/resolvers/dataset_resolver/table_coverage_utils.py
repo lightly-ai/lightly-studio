@@ -16,10 +16,11 @@ _HANDLED_TABLES_COUNT = 25
 # Tables not relevant for collection operations:
 # - setting (application-level, not collection-specific)
 # - two_dim_embeddings (cached projections, regenerated as needed)
-# - default_embedding_space (created empty; nothing writes it yet)
-# TODO(Michal, 08/2026): Move default_embedding_space into deep_copy and delete_dataset
-# (copy/delete its rows per collection) and shift it into _HANDLED_TABLES_COUNT once the
-# write path lands.
+# - default_embedding_space (populated, but not yet handled by deep_copy/delete_dataset — see TODO)
+# TODO(Michal, 08/2026): wire default_embedding_space into deep_copy and delete_dataset,
+# then move it into _HANDLED_TABLES_COUNT. Until then, on Postgres delete_dataset raises an
+# FK error for any dataset with embeddings, and deep_copy silently drops the copied
+# collection's default.
 _EXCLUDED_TABLES_COUNT = 3
 
 _TOTAL_TABLES_COUNT = _HANDLED_TABLES_COUNT + _EXCLUDED_TABLES_COUNT

@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlmodel import Session, col, select
 
+from lightly_studio.models.default_embedding_space import DefaultEmbeddingSpaceTable
 from lightly_studio.models.embedding_model import (
     EmbeddingModelCreate,
     EmbeddingModelTable,
@@ -58,20 +59,19 @@ def get_default_by_collection_id(
 ) -> EmbeddingModelTable | None:
     """Return the collection's default embedding model, or None if it has none.
 
-    The default is the oldest model (``created_at`` ascending), which makes the choice
-    deterministic when a collection has multiple embedding models. Endpoints that resolve
-    a selection against a cached 2D projection (embeddings2d, embedding regions) must all
-    agree on this same model so the projections line up. ``embedding_model_id`` breaks ties
-    when models share the same ``created_at`` (e.g. bulk-created in one transaction).
+    The default is read from the ``default_embedding_space`` table (one row per
+    collection). Endpoints that resolve a selection against a cached 2D projection
+    (embeddings2d, embedding regions) must all agree on this same model so the
+    projections line up.
     """
     return session.exec(
         select(EmbeddingModelTable)
-        .where(EmbeddingModelTable.collection_id == collection_id)
-        .order_by(
-            col(EmbeddingModelTable.created_at).asc(),
-            col(EmbeddingModelTable.embedding_model_id).asc(),
+        .join(
+            DefaultEmbeddingSpaceTable,
+            onclause=col(DefaultEmbeddingSpaceTable.embedding_model_id)
+            == col(EmbeddingModelTable.embedding_model_id),
         )
-        .limit(1)
+        .where(DefaultEmbeddingSpaceTable.collection_id == collection_id)
     ).first()
 
 

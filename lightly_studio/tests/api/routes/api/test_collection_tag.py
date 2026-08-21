@@ -156,6 +156,7 @@ def test_add_samples_by_filter__image_filter_with_embedding_region_tags_only_reg
         session=db_session,
         collection_id=collection_id,
         embedding_dimension=3,
+        set_as_default=True,
     )
     # Two samples inside the square region [0,10]x[0,10], one far outside.
     images = create_samples_with_embeddings(
@@ -252,6 +253,7 @@ def test_add_samples_by_filter__annotations_filter_with_embedding_region_tags_on
         session=db_session,
         collection_id=annotation_collection_id,
         embedding_dimension=3,
+        set_as_default=True,
     )
     create_sample_embedding(
         session=db_session,

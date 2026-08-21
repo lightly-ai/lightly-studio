@@ -4,7 +4,7 @@ import pytest
 from sqlmodel import Session
 
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
-from lightly_studio.resolvers import embedding_model_resolver
+from lightly_studio.resolvers import default_embedding_space_resolver, embedding_model_resolver
 from tests.helpers_resolvers import (
     create_collection,
     create_embedding_model,
@@ -45,6 +45,46 @@ def test_read_embedding_models(db_session: Session) -> None:
 
     assert embedding_models[0].embedding_model_id == embedding_model_1.embedding_model_id
     assert embedding_models[1].embedding_model_id == embedding_model_2.embedding_model_id
+
+
+def test_get_default_by_collection_id__none_when_no_default(db_session: Session) -> None:
+    """A collection with no default row resolves to None."""
+    collection = create_collection(session=db_session)
+
+    default = embedding_model_resolver.get_default_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    )
+    assert default is None
+
+
+def test_get_default_by_collection_id__returns_recorded_default(db_session: Session) -> None:
+    """The default is the model recorded in default_embedding_space."""
+    collection = create_collection(session=db_session)
+    first = create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="first",
+        embedding_model_hash="hash_first",
+    )
+    chosen = create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="chosen",
+        embedding_model_hash="hash_chosen",
+    )
+    # Distinct ids, so the assertion below confirms set_default picked this one.
+    assert first.embedding_model_id != chosen.embedding_model_id
+    default_embedding_space_resolver.set_default(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_id=chosen.embedding_model_id,
+    )
+
+    default = embedding_model_resolver.get_default_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    )
+    assert default is not None
+    assert default.embedding_model_id == chosen.embedding_model_id
 
 
 def test_read_embedding_model(db_session: Session) -> None:
