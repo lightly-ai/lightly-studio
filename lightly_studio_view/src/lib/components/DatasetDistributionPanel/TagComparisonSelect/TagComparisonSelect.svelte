@@ -3,10 +3,10 @@
     import { Button } from '$lib/components/ui/button';
     import * as Popover from '$lib/components/ui/popover';
     import { MultiSelectList } from '$lib/components/MultiSelectList';
-    import type { MultiSelectItem } from '$lib/components/MultiSelectList';
+    import type { ComponentProps } from 'svelte';
 
     interface Props {
-        items: MultiSelectItem[];
+        items: ComponentProps<typeof MultiSelectList>['items'];
         selectedIds: string[];
         onChange: (ids: string[]) => void;
     }

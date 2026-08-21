@@ -20,7 +20,9 @@
 </script>
 
 <script lang="ts">
-    import type { MultiSelectItem } from '$lib/components/MultiSelectList';
+    import type { ComponentProps } from 'svelte';
+    import { MultiSelectList } from '$lib/components/MultiSelectList';
+    type MultiSelectItem = ComponentProps<typeof MultiSelectList>['items'][number];
 
     const MANY_ITEMS: MultiSelectItem[] = Array.from({ length: 20 }, (_, i) => ({
         value: `tag-${i + 1}`,
