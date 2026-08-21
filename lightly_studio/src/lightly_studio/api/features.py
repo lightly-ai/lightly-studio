@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_ANALYTICS_ENABLED
 
-# The GUI reads this back to decide whether to start PostHog, so that
-# LIGHTLY_STUDIO_ANALYTICS_ENABLED switches off tracking on both sides.
+# Reports whether usage tracking runs. The GUI decides whether to start PostHog from
+# /analytics/config instead, which also carries the identity to report under.
 ANALYTICS_FEATURE = "analytics"
 
 

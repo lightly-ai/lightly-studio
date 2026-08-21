@@ -8,12 +8,8 @@ import {
 import { version } from '$lib/version.json';
 // Imported by its own path: $lib/hooks re-exports usePostHog, so going through the barrel would
 // make the two modules import each other.
-import { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
+import { useAnalyticsConfig } from '$lib/hooks/useAnalyticsConfig/useAnalyticsConfig';
 import { get } from 'svelte/store';
-
-// The backend reports this only while LIGHTLY_STUDIO_ANALYTICS_ENABLED is set, so one variable
-// opts out of tracking in both the Python package and here.
-const ANALYTICS_FEATURE = 'analytics';
 
 let initialized = false;
 
@@ -38,11 +34,13 @@ export const usePostHog = () => {
     const init = async () => {
         if (!browser || initialized) return;
 
-        // A failed request leaves the flags empty, so a backend that cannot be reached is never
-        // tracked against.
-        const { featureFlags, ready } = useFeatureFlags();
+        // A failed request leaves the config empty, so a backend that cannot be reached is never
+        // tracked against. LIGHTLY_STUDIO_ANALYTICS_ENABLED decides there, so one variable opts
+        // out of tracking in both the Python package and here.
+        const { config, ready } = useAnalyticsConfig();
         await ready;
-        if (!get(featureFlags).includes(ANALYTICS_FEATURE)) return;
+        const analyticsConfig = get(config);
+        if (!analyticsConfig?.enabled) return;
         // Re-check: concurrent callers both get past the guard above before this resolves.
         if (initialized) return;
 
@@ -62,6 +60,14 @@ export const usePostHog = () => {
             capture_exceptions: true
         });
         posthog.register({ app_version: version });
+
+        // Report against the installation ID the Python package uses, so backend and browser
+        // events belong to one person rather than two, with the cohort on that person.
+        if (analyticsConfig.distinct_id) {
+            posthog.identify(analyticsConfig.distinct_id, {
+                user_cohort: analyticsConfig.user_cohort
+            });
+        }
 
         initialized = true;
     };
