@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, cast
+from typing import Any, cast, overload
 from uuid import UUID
 
 import sqlalchemy
@@ -29,6 +29,7 @@ from lightly_studio.models.metadata import NUMERIC_TYPE_NAMES, SampleMetadataTab
 from lightly_studio.models.sample import SampleTable
 
 T = TypeVar("T", default=ImageTable)
+T2 = TypeVar("T2")
 # Preserves the query type so apply_joins works on both SelectOfScalar (apply)
 # and Select (window query).
 SelectT = TypeVar("SelectT", bound=SQLAlchemySelect[Any])
@@ -94,6 +95,16 @@ class OrderByExpression(ABC):
         """
         joined = self.apply_joins(query)
         return joined.order_by(*self.to_column_elements())
+
+    @overload
+    def apply_with_order_value(
+        self, query: SelectOfScalar[T]
+    ) -> SQLAlchemySelect[tuple[T, Any]]: ...
+
+    @overload
+    def apply_with_order_value(
+        self, query: SQLAlchemySelect[tuple[T, T2]]
+    ) -> SQLAlchemySelect[tuple[T, T2, Any]]: ...
 
     def apply_with_order_value(self, query: SQLAlchemySelect[Any]) -> SQLAlchemySelect[Any]:
         """Apply this sort and append its value to the SELECT list.
