@@ -5,10 +5,13 @@ from __future__ import annotations
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import (
     OrderByEvaluationMetricField,
+    OrderByField,
     OrderByMetadataField,
 )
+from lightly_studio.core.dataset_query.video_sample_field import VideoSampleField
 from lightly_studio.errors import QueryExprError
 from lightly_studio.models.sort import (
     EvaluationMetricSortExpr,
@@ -21,16 +24,22 @@ from lightly_studio.models.sort import (
 )
 from lightly_studio.models.sort_direction import SortDirection
 
-_IMAGE_SORT_FIELD_NAMES = ["file_name", "file_path_abs", "created_at", "width", "height"]
-_VIDEO_SORT_FIELD_NAMES = [
-    "file_name",
-    "file_path_abs",
-    "created_at",
-    "width",
-    "height",
-    "duration_s",
-    "fps",
-]
+_IMAGE_SORT_FIELD_TO_COLUMN = {
+    "file_name": ImageSampleField.file_name,
+    "file_path_abs": ImageSampleField.file_path_abs,
+    "created_at": ImageSampleField.created_at,
+    "width": ImageSampleField.width,
+    "height": ImageSampleField.height,
+}
+_VIDEO_SORT_FIELD_TO_COLUMN = {
+    "file_name": VideoSampleField.file_name,
+    "file_path_abs": VideoSampleField.file_path_abs,
+    "created_at": VideoSampleField.created_at,
+    "width": VideoSampleField.width,
+    "height": VideoSampleField.height,
+    "duration_s": VideoSampleField.duration_s,
+    "fps": VideoSampleField.fps,
+}
 
 
 def test_sort_field_expr__valid_directions() -> None:
@@ -67,7 +76,7 @@ def test_sort_field_expr_to_order_by__rejects_unknown_field() -> None:
         direction=SortDirection.asc,
     )
     with pytest.raises(QueryExprError):
-        sort_field_expr_to_order_by(expr)
+        sort_field_expr_to_order_by(expr=expr)
 
 
 def test_sort_field_expr_to_order_by__ascending() -> None:
@@ -76,7 +85,7 @@ def test_sort_field_expr_to_order_by__ascending() -> None:
         field_name="file_name",
         direction=SortDirection.asc,
     )
-    order_by = sort_field_expr_to_order_by(expr)
+    order_by = sort_field_expr_to_order_by(expr=expr)
     assert order_by.ascending is True
 
 
@@ -86,19 +95,20 @@ def test_sort_field_expr_to_order_by__descending() -> None:
         field_name="width",
         direction=SortDirection.desc,
     )
-    order_by = sort_field_expr_to_order_by(expr)
+    order_by = sort_field_expr_to_order_by(expr=expr)
     assert order_by.ascending is False
 
 
 def test_sort_field_expr_to_order_by__all_fields_map() -> None:
-    for field_name in _IMAGE_SORT_FIELD_NAMES:
+    for field_name, expected_field in _IMAGE_SORT_FIELD_TO_COLUMN.items():
         expr = SortFieldExpr(
             source=SortFieldSource.image,
             field_name=field_name,
             direction=SortDirection.asc,
         )
-        order_by = sort_field_expr_to_order_by(expr)
-        assert order_by is not None
+        order_by = sort_field_expr_to_order_by(expr=expr)
+        assert isinstance(order_by, OrderByField)
+        assert order_by.field is expected_field
 
 
 def test_sort_field_expr_to_order_by__image_field_name_not_shared_with_video() -> None:
@@ -109,7 +119,7 @@ def test_sort_field_expr_to_order_by__image_field_name_not_shared_with_video() -
         direction=SortDirection.asc,
     )
     with pytest.raises(QueryExprError):
-        sort_field_expr_to_order_by(expr)
+        sort_field_expr_to_order_by(expr=expr)
 
 
 def test_sort_field_expr__rejects_video_source() -> None:
@@ -119,34 +129,35 @@ def test_sort_field_expr__rejects_video_source() -> None:
         SortFieldExpr.model_validate({"source": "video", "field_name": "fps", "direction": "asc"})
 
 
-def test_video_sort_field_expr_to_order_by__all_fields_map() -> None:
-    for field_name in _VIDEO_SORT_FIELD_NAMES:
+def test_sort_field_expr_to_order_by__video_all_fields_map() -> None:
+    for field_name, expected_field in _VIDEO_SORT_FIELD_TO_COLUMN.items():
         expr = VideoSortFieldExpr(
             source=SortFieldSource.video,
             field_name=field_name,
             direction=SortDirection.asc,
         )
-        order_by = sort_field_expr_to_order_by(expr)
-        assert order_by is not None
+        order_by = sort_field_expr_to_order_by(expr=expr)
+        assert isinstance(order_by, OrderByField)
+        assert order_by.field is expected_field
 
 
-def test_video_sort_field_expr_to_order_by__metadata_source() -> None:
+def test_sort_field_expr_to_order_by__video_metadata_source() -> None:
     expr = VideoSortFieldExpr(
         source=SortFieldSource.metadata,
         field_name="blur_score",
         direction=SortDirection.asc,
     )
-    assert isinstance(sort_field_expr_to_order_by(expr), OrderByMetadataField)
+    assert isinstance(sort_field_expr_to_order_by(expr=expr), OrderByMetadataField)
 
 
-def test_video_sort_field_expr_to_order_by__rejects_unknown_field() -> None:
+def test_sort_field_expr_to_order_by__video_rejects_unknown_field() -> None:
     expr = VideoSortFieldExpr(
         source=SortFieldSource.video,
         field_name="invalid_field",
         direction=SortDirection.asc,
     )
     with pytest.raises(QueryExprError):
-        sort_field_expr_to_order_by(expr)
+        sort_field_expr_to_order_by(expr=expr)
 
 
 def test_video_sort_field_expr__rejects_image_source() -> None:
@@ -170,7 +181,7 @@ def test_sort_field_expr_to_order_by__metadata_ascending() -> None:
         field_name="brightness",
         direction=SortDirection.asc,
     )
-    order_by = sort_field_expr_to_order_by(expr)
+    order_by = sort_field_expr_to_order_by(expr=expr)
     assert isinstance(order_by, OrderByMetadataField)
     assert order_by.field_name == "brightness"
     assert order_by.ascending is True
@@ -182,7 +193,7 @@ def test_sort_field_expr_to_order_by__metadata_descending() -> None:
         field_name="score",
         direction=SortDirection.desc,
     )
-    order_by = sort_field_expr_to_order_by(expr)
+    order_by = sort_field_expr_to_order_by(expr=expr)
     assert isinstance(order_by, OrderByMetadataField)
     assert order_by.field_name == "score"
     assert order_by.ascending is False
@@ -194,7 +205,7 @@ def test_sort_field_expr_to_order_by__metadata_arbitrary_field() -> None:
         field_name="custom_metric",
         direction=SortDirection.asc,
     )
-    order_by = sort_field_expr_to_order_by(expr)
+    order_by = sort_field_expr_to_order_by(expr=expr)
     assert isinstance(order_by, OrderByMetadataField)
     assert order_by.field_name == "custom_metric"
 
@@ -205,7 +216,7 @@ def test_sort_expr_to_order_by__evaluation_metric_ascending() -> None:
         metric_name="score",
         direction=SortDirection.asc,
     )
-    order_by = sort_expr_to_order_by(expr)
+    order_by = sort_expr_to_order_by(expr=expr)
     assert isinstance(order_by, OrderByEvaluationMetricField)
     assert order_by.evaluation_run_name == "run1"
     assert order_by.metric_name == "score"
@@ -218,7 +229,7 @@ def test_sort_expr_to_order_by__evaluation_metric_descending() -> None:
         metric_name="precision",
         direction=SortDirection.desc,
     )
-    order_by = sort_expr_to_order_by(expr)
+    order_by = sort_expr_to_order_by(expr=expr)
     assert isinstance(order_by, OrderByEvaluationMetricField)
     assert order_by.evaluation_run_name == "run1"
     assert order_by.metric_name == "precision"
