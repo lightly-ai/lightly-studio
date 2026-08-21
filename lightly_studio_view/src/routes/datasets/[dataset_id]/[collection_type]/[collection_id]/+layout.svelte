@@ -517,7 +517,11 @@
         useTags({ collection_id: datasetId, kind: ['sample'] })
     );
     const distributionSampleTagItems = $derived(
-        $distributionSampleTags.map((tag) => ({ value: tag.tag_id, label: tag.name }))
+        $distributionSampleTags.map((tag) => ({
+            value: tag.tag_id,
+            label: tag.name,
+            testId: `dataset-distribution-tag-option-${tag.tag_id}`
+        }))
     );
     $effect(() => {
         const validIds = new Set($distributionSampleTags.map((tag) => tag.tag_id));

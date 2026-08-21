@@ -9,6 +9,8 @@
         value: string;
         /** Display text shown in the list. */
         label: string;
+        /** Optional `data-testid` for the list item element. */
+        testId?: string;
     }
 
     interface Props {
@@ -86,6 +88,7 @@
                     value={item.value}
                     keywords={[item.label]}
                     onSelect={() => toggleItem(item.value)}
+                    data-testid={item.testId}
                 >
                     <CheckIcon
                         class={cn(!selectedIds.includes(item.value) && 'text-transparent')}
