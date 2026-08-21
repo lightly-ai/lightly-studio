@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 
 # TODO(Malte, 08/2025): About the type ignore:
 # Use pyo3 typing stubs once they are implemented.
@@ -29,7 +29,7 @@ class Mundig:
 
         self.n_input_samples: int | None = None
 
-    def run(self, n_samples: int, preselected_indices: Iterable[int] = ()) -> list[int]:
+    def run(self, n_samples: int, preselected_indices: Sequence[int] = ()) -> list[int]:
         """Run the sampling algorithm and return selected sample indices.
 
         Args:
@@ -42,7 +42,7 @@ class Mundig:
             A list of indices of the selected samples.
         """
         selected: list[int] = self.mundig.run_selection(
-            preselected_indices=list(preselected_indices),
+            preselected_indices=preselected_indices,
             n_total_samples=self.n_input_samples,
             n_samples_to_select=n_samples,
         )
