@@ -36,6 +36,9 @@ interface BuildEchartsOptionOptions {
     /** Whether bars show raw counts or each series' percentage distribution. */
     valueMode?: BarChartValueMode;
 }
+/** Top padding reserved for the grouped-bar legend, in px. */
+export const GROUPED_GRID_TOP_PX = 48;
+
 /** Builds the ECharts option for a category-count bar chart (pass to `setOption`). */
 export function buildEchartsOption(
     data: CategoryCount[],
@@ -174,7 +177,13 @@ export function buildEchartsOption(
         legend: isGrouped
             ? { type: 'scroll', top: 0, textStyle: { color: CHART_TEXT_COLOR } }
             : undefined,
-        grid: { left: 8, right: 8, top: isGrouped ? 48 : gridTopPx, bottom: 8, containLabel: true },
+        grid: {
+            left: 8,
+            right: 8,
+            top: isGrouped ? GROUPED_GRID_TOP_PX : gridTopPx,
+            bottom: 8,
+            containLabel: true
+        },
         // Swap which axis holds the categories so bars grow rightward when horizontal.
         xAxis: isHorizontal ? valueAxis : categoryAxis,
         yAxis: isHorizontal ? categoryAxis : valueAxis,
