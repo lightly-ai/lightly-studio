@@ -3,6 +3,7 @@ import { createRawSnippet } from 'svelte';
 import { describe, expect, it, vi } from 'vitest';
 import BarChart from './BarChart.svelte';
 import { balanced, empty } from './fixtures';
+import type { CategoryCountSeries } from './types';
 
 const echartsMock = vi.hoisted(() => {
     let clickHandler: ((params: { dataIndex?: number }) => void) | undefined;
@@ -28,6 +29,7 @@ vi.mock('echarts/core', () => ({
 vi.mock('echarts/charts', () => ({ BarChart: {} }));
 vi.mock('echarts/components', () => ({
     GridComponent: {},
+    LegendComponent: {},
     TooltipComponent: {}
 }));
 vi.mock('echarts/renderers', () => ({ CanvasRenderer: {} }));
@@ -92,5 +94,35 @@ describe('BarChart', () => {
         echartsMock.getClickHandler()?.({});
 
         expect(onBarClick).not.toHaveBeenCalled();
+    });
+
+    it('applies maxWidthPx as a max-width inline style', () => {
+        render(BarChart, { props: { data: balanced, maxWidthPx: 600 } });
+        expect(screen.getByTestId('bar-chart')).toHaveStyle({ 'max-width': '600px' });
+    });
+
+    it('applies maxHeightPx as height for vertical orientation', () => {
+        render(BarChart, { props: { data: balanced, maxHeightPx: 400 } });
+        expect(screen.getByTestId('bar-chart')).toHaveStyle({ height: '400px' });
+    });
+
+    it('applies maxHeightPx as max-height for horizontal orientation', () => {
+        render(BarChart, {
+            props: { data: balanced, maxHeightPx: 400, orientation: 'horizontal' }
+        });
+        expect(screen.getByTestId('bar-chart')).toHaveStyle({ 'max-height': '400px' });
+    });
+
+    it('adds legend height to the canvas when horizontal with grouped series', () => {
+        // BAR_THICKNESS_PX=28, series.length*14=28, categoryThicknessPx=max(28,28)=28
+        // barsExtentPx = balanced.length * 28 + 40 + (GROUPED_GRID_TOP_PX - DEFAULT_GRID_TOP_PX)
+        //              = 5 * 28 + 40 + (48 - 16) = 140 + 40 + 32 = 212
+        const series: CategoryCountSeries[] = [
+            { id: 'a', label: 'Series A', data: balanced },
+            { id: 'b', label: 'Series B', data: balanced }
+        ];
+        render(BarChart, { props: { data: balanced, orientation: 'horizontal', series } });
+        const canvas = screen.getByTestId('bar-chart').firstElementChild as HTMLElement;
+        expect(canvas).toHaveStyle({ height: '212px' });
     });
 });

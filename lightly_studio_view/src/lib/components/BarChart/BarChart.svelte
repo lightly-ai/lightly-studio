@@ -2,18 +2,33 @@
     import { onDestroy, type Snippet } from 'svelte';
     import * as echarts from 'echarts/core';
     import { BarChart as EchartsBarChart } from 'echarts/charts';
-    import { GridComponent, TooltipComponent } from 'echarts/components';
+    import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
     import { CanvasRenderer } from 'echarts/renderers';
-    import { buildEchartsOption, type BarChartOrientation } from './buildEchartsOption';
-    import type { CategoryCount } from './types';
+    import {
+        buildEchartsOption,
+        GROUPED_GRID_TOP_PX,
+        type BarChartOrientation,
+        type BarChartValueMode
+    } from './buildEchartsOption';
+    import type { CategoryCount, CategoryCountSeries } from './types';
 
-    echarts.use([EchartsBarChart, GridComponent, TooltipComponent, CanvasRenderer]);
+    echarts.use([
+        EchartsBarChart,
+        GridComponent,
+        LegendComponent,
+        TooltipComponent,
+        CanvasRenderer
+    ]);
 
     interface Props {
         /** Categories rendered in the given order. */
         data: CategoryCount[];
+        /** Optional named series rendered as grouped bars on the `data` category axis. */
+        series?: CategoryCountSeries[];
         /** Bar orientation (default 'vertical'). */
         orientation?: BarChartOrientation;
+        /** Whether bars show raw counts or percentages (default 'number'). */
+        valueMode?: BarChartValueMode;
         /**
          * Caps the chart width in px. Vertical bars scroll horizontally once they
          * exceed it; horizontal bars fill it. Defaults to the parent width.
@@ -40,7 +55,9 @@
 
     const {
         data,
+        series = [],
         orientation = 'vertical',
+        valueMode = 'number',
         maxWidthPx,
         maxHeightPx,
         totalCount,
@@ -59,7 +76,18 @@
     // panel). This extent sizes the category axis (width when vertical, height
     // when horizontal); the +40/+60px covers the axis gutters.
     const BAR_THICKNESS_PX = 28;
-    const barsExtentPx = $derived(data.length * BAR_THICKNESS_PX + (isHorizontal ? 40 : 60));
+    const DEFAULT_GRID_TOP_PX = 16;
+    const categoryThicknessPx = $derived(Math.max(BAR_THICKNESS_PX, series.length * 14));
+    // For grouped horizontal charts, the legend consumes GROUPED_GRID_TOP_PX of
+    // vertical space that isn't part of the category axis, so include the delta.
+    const groupedLegendHeightPx = $derived(
+        isHorizontal && series.length > 0
+            ? GROUPED_GRID_TOP_PX - (gridTopPx ?? DEFAULT_GRID_TOP_PX)
+            : 0
+    );
+    const barsExtentPx = $derived(
+        data.length * categoryThicknessPx + (isHorizontal ? 40 : 60) + groupedLegendHeightPx
+    );
 
     // Height budget in px: the measured container height, or a fallback so the
     // chart still renders when the parent is unconstrained (standalone/Storybook).
@@ -105,7 +133,16 @@
 
     $effect(() => {
         if (!chart) return;
-        chart.setOption(buildEchartsOption(data, { totalCount, orientation, gridTopPx }), true);
+        chart.setOption(
+            buildEchartsOption(data, {
+                totalCount,
+                orientation,
+                series,
+                valueMode,
+                gridTopPx
+            }),
+            true
+        );
     });
 
     onDestroy(() => chart?.dispose());
