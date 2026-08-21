@@ -9,11 +9,12 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session, col
 
 from lightly_studio.core.dataset_query.order_by import OrderByAnnotationEvaluationMetricField
+from lightly_studio.models import sort
 from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_sort import AnnotationEvaluationMetricSortExpr
 from lightly_studio.models.collection import SampleType
-from lightly_studio.models.sort import ImageSortExpr, image_sort_expr_to_order_by
+from lightly_studio.models.sort import ImageSortExpr
 from lightly_studio.resolvers import (
     annotation_resolver,
     image_resolver,
@@ -100,7 +101,7 @@ def get_adjacent_samples(
                 f" for sample type '{request.sample_type.value}'."
             )
         order_by = (
-            [image_sort_expr_to_order_by(expr) for expr in request.sort_by]
+            [sort.image_sort_expr_to_order_by(expr) for expr in request.sort_by]
             if request.sort_by
             else None
         )

@@ -15,10 +15,11 @@ from lightly_studio.api.routes.api.image.count_by_sample_tags import (
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.database.db_manager import SessionDep
+from lightly_studio.models import sort
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import ImageView, ImageViewsWithCount
-from lightly_studio.models.sort import ImageSortExpr, image_sort_expr_to_order_by
+from lightly_studio.models.sort import ImageSortExpr
 from lightly_studio.resolvers import (
     image_resolver,
 )
@@ -65,7 +66,7 @@ def read_images(
         A list of filtered samples.
     """
     order_by = (
-        [image_sort_expr_to_order_by(expr) for expr in body.sort_by] if body.sort_by else None
+        [sort.image_sort_expr_to_order_by(expr) for expr in body.sort_by] if body.sort_by else None
     )
     result = image_resolver.get_all_by_collection_id(
         session=session,
