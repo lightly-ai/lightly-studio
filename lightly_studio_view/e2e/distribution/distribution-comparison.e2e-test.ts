@@ -1,3 +1,4 @@
+import type { Request } from '@playwright/test';
 import { expect, test } from '../utils';
 import { distributionComparison } from './fixtures';
 
@@ -18,7 +19,7 @@ test('compares overlapping and empty sample tags without reloading or filtering 
     let navigationCount = 0;
     let imageListRequestCount = 0;
     const recordNavigation = () => navigationCount++;
-    const recordImageListRequest = (request: { url: () => string }) => {
+    const recordImageListRequest = (request: Request) => {
         if (request.url().includes('/images/list')) imageListRequestCount++;
     };
     page.on('framenavigated', recordNavigation);
