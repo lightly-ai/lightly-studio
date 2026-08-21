@@ -20,7 +20,11 @@ const echartsMock = vi.hoisted(() => {
 
 vi.mock('echarts/core', () => ({ init: echartsMock.init, use: vi.fn() }));
 vi.mock('echarts/charts', () => ({ BarChart: {}, CustomChart: {} }));
-vi.mock('echarts/components', () => ({ GridComponent: {}, TooltipComponent: {} }));
+vi.mock('echarts/components', () => ({
+    GridComponent: {},
+    LegendComponent: {},
+    TooltipComponent: {}
+}));
 vi.mock('echarts/renderers', () => ({ CanvasRenderer: {} }));
 
 if (typeof globalThis.ResizeObserver === 'undefined') {
