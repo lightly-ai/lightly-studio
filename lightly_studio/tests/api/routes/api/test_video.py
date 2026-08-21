@@ -3,9 +3,13 @@ from uuid import UUID
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
+from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_BAD_REQUEST,
+    HTTP_STATUS_OK,
+    HTTP_STATUS_UNPROCESSABLE_ENTITY,
+)
 from lightly_studio.models.collection import SampleType
-from lightly_studio.resolvers import video_resolver
+from lightly_studio.resolvers import metadata_resolver, video_resolver
 from tests.helpers_resolvers import (
     AnnotationDetails,
     create_annotation_label,
@@ -45,6 +49,122 @@ def test_get_all_videos(test_client: TestClient, db_session: Session) -> None:
     assert result["total_count"] == 2
     assert data[0]["file_path_abs"].endswith("sample1.mp4")
     assert data[1]["file_path_abs"].endswith("sample2.mp4")
+
+
+def test_get_all_videos__with_sort_by_video_field(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection_id = collection.collection_id
+
+    create_videos(
+        session=db_session,
+        collection_id=collection_id,
+        videos=[
+            VideoStub(path="/path/to/sample1.mp4", fps=10.0),
+            VideoStub(path="/path/to/sample2.mp4", fps=30.0),
+        ],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/video/",
+        params={"offset": 0, "limit": 2},
+        json={"sort_by": [{"source": "video", "field_name": "fps", "direction": "desc"}]},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    data = response.json()["data"]
+
+    assert [sample["file_name"] for sample in data] == ["sample2.mp4", "sample1.mp4"]
+    assert [sample["order_value"] for sample in data] == [30.0, 10.0]
+
+
+def test_get_all_videos__with_sort_by_metadata(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection_id = collection.collection_id
+
+    sample_ids = create_videos(
+        session=db_session,
+        collection_id=collection_id,
+        videos=[
+            VideoStub(path="/path/to/sample1.mp4"),
+            VideoStub(path="/path/to/sample2.mp4"),
+        ],
+    )
+    for sample_id, blur_score in zip(sample_ids, [0.8, 0.2]):
+        metadata_resolver.set_value_for_sample(
+            session=db_session,
+            sample_id=sample_id,
+            key="blur_score",
+            value=blur_score,
+        )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/video/",
+        params={"offset": 0, "limit": 2},
+        json={"sort_by": [{"source": "metadata", "field_name": "blur_score", "direction": "asc"}]},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    data = response.json()["data"]
+
+    assert [sample["file_name"] for sample in data] == ["sample2.mp4", "sample1.mp4"]
+    assert [sample["order_value"] for sample in data] == [0.2, 0.8]
+
+
+def test_get_all_videos__rejects_unknown_sort_field(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/video/",
+        params={"offset": 0, "limit": 2},
+        json={"sort_by": [{"source": "video", "field_name": "nope", "direction": "asc"}]},
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+
+
+def test_get_all_videos__rejects_image_sort_source(
+    test_client: TestClient, db_session: Session
+) -> None:
+    # An image field is not reachable from a video query, so SQLAlchemy would add
+    # `ImageTable` as an unrelated FROM and cross-join every image with every video.
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/video/",
+        params={"offset": 0, "limit": 2},
+        json={"sort_by": [{"source": "image", "field_name": "width", "direction": "asc"}]},
+    )
+
+    assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
+
+
+def test_get_all_videos__rejects_evaluation_metric_sort_source(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/video/",
+        params={"offset": 0, "limit": 2},
+        json={
+            "sort_by": [
+                {
+                    "source": "evaluation_metric",
+                    "evaluation_run_name": "run",
+                    "metric_name": "iou",
+                    "direction": "asc",
+                }
+            ]
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
 
 
 def test_get_all_videos__with_width_filter(test_client: TestClient, db_session: Session) -> None:
