@@ -16,7 +16,11 @@ _HANDLED_TABLES_COUNT = 25
 # Tables not relevant for collection operations:
 # - setting (application-level, not collection-specific)
 # - two_dim_embeddings (cached projections, regenerated as needed)
-_EXCLUDED_TABLES_COUNT = 2
+# - default_embedding_space (created empty; nothing writes it yet)
+# TODO(Michal, 08/2026): Move default_embedding_space into deep_copy and delete_dataset
+# (copy/delete its rows per collection) and shift it into _HANDLED_TABLES_COUNT once the
+# write path lands.
+_EXCLUDED_TABLES_COUNT = 3
 
 _TOTAL_TABLES_COUNT = _HANDLED_TABLES_COUNT + _EXCLUDED_TABLES_COUNT
 
