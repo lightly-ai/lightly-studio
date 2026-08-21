@@ -22,7 +22,7 @@
 </script>
 
 <script lang="ts">
-    type MultiSelectItem = ComponentProps<typeof MultiSelectList>['items'];
+    type MultiSelectItem = ComponentProps<typeof MultiSelectList>['items'][number];
 
     const MANY_ITEMS: MultiSelectItem[] = Array.from({ length: 20 }, (_, i) => ({
         value: `tag-${i + 1}`,
