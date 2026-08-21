@@ -27,6 +27,8 @@ export function buildChartTooltipFormatter(
     return (params: TooltipParam[]) => {
         if (params.length === 0) return '';
         const [{ name }] = params;
+        const category = data.find((entry) => categoryKey(entry) === name);
+        const header = `<b>${escape(category?.label ?? name)}</b>`;
 
         if (isGrouped) {
             const values = params
@@ -41,13 +43,11 @@ export function buildChartTooltipFormatter(
                     return `${item.marker ?? ''}${escape(item.seriesName ?? '')}: ${formatTooltipValue(count, seriesTotal)}`;
                 })
                 .join('<br/>');
-            return `<b>${escape(name)}</b><br/>${values}`;
+            return `${header}<br/>${values}`;
         }
 
-        const entry = data.find((e) => categoryKey(e) === name);
-        const count = entry?.count ?? 0;
-        const filteredCount = entry?.filteredCount;
-        const header = `<b>${escape(entry?.label ?? name)}</b>`;
+        const count = category?.count ?? 0;
+        const filteredCount = category?.filteredCount;
         if (hasActiveFilter && filteredCount !== undefined && filteredCount !== count) {
             return `${header}<br/>Count: ${formatTooltipValue(filteredCount, totalCount)} of ${formatTooltipValue(count, totalCount)} total`;
         }

@@ -3,7 +3,7 @@ import { truncate } from 'lodash-es';
 import { CHART_AXIS_LABEL, CHART_EMPHASIS, CHART_LINE_COLOR, CHART_TEXT_COLOR } from '$lib/utils';
 import type { CategoryCount, CategoryCountSeries } from './types';
 import { assignSeriesColors } from './seriesColors';
-import { buildGroupedSeries } from './buildGroupedSeries';
+import { buildGroupedSeries, categoryKey } from './buildGroupedSeries';
 import { buildChartTooltipFormatter } from './buildChartTooltipFormatter';
 
 export { colorForSeries } from './seriesColors';
@@ -51,7 +51,8 @@ export function buildEchartsOption(
     const groupedColors = assignSeriesColors(groupedSeries.map((series) => series.id));
     const valueMode = options.valueMode ?? 'number';
 
-    const labels = data.map((item) => item.label);
+    const categoryLabels = new Map(data.map((item) => [categoryKey(item), item.label]));
+    const categoryKeys = data.map(categoryKey);
     // When any category is actively selected, dim the rest — mirrors the range
     // highlighting in the numeric Histogram where out-of-range bins go grey.
     const hasAnySelected = data.some((item) => item.selected === true);
@@ -64,7 +65,7 @@ export function buildEchartsOption(
 
     const categoryAxis = {
         type: 'category' as const,
-        data: labels,
+        data: categoryKeys,
         axisLabel: {
             // Vertical layout rotates long labels so they don't overflow the
             // canvas edge (echarts containLabel ignores rotation); horizontal
@@ -74,7 +75,8 @@ export function buildEchartsOption(
             color: CHART_TEXT_COLOR,
             fontSize: 12,
             // Cap long labels on the axis; the tooltip still shows the full name.
-            formatter: (label: string) => truncate(label, { length: 24, omission: '…' })
+            formatter: (key: string) =>
+                truncate(categoryLabels.get(key) ?? key, { length: 24, omission: '…' })
         },
         axisLine: { lineStyle: { color: CHART_LINE_COLOR } },
         axisTick: { alignWithLabel: true },

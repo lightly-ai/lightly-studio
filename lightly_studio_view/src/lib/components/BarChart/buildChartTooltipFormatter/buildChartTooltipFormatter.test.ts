@@ -61,6 +61,14 @@ describe('buildChartTooltipFormatter — standard (non-grouped)', () => {
         const result = fmtXss([param('<script>alert(1)</script>', 1)]);
         expect(result).not.toContain('<script>');
     });
+
+    it('looks up categories by id while displaying their label', () => {
+        const categories: CategoryCount[] = [{ id: 'category-1', label: 'car', count: 6 }];
+        const fmtById = buildChartTooltipFormatter(false, categories, [], 10, false);
+
+        expect(fmtById([param('category-1', 6)])).toContain('<b>car</b>');
+        expect(fmtById([param('category-1', 6)])).toContain('<b>6</b>');
+    });
 });
 
 describe('buildChartTooltipFormatter — standard with active filter', () => {
@@ -137,5 +145,32 @@ describe('buildChartTooltipFormatter — grouped', () => {
             param('car', 1, { seriesIndex: 0, seriesName: '<img src=x onerror=alert(1)>' })
         ]);
         expect(result).not.toContain('<img');
+    });
+
+    it('keeps duplicate labels distinct by category id', () => {
+        const categories: CategoryCount[] = [
+            { id: 'first', label: 'Missing', count: 4 },
+            { id: 'second', label: 'Missing', count: 2 }
+        ];
+        const duplicateLabelSeries: CategoryCountSeries[] = [
+            {
+                id: 'tag-a',
+                label: 'Reviewed',
+                data: [
+                    { id: 'first', label: 'Missing', count: 3 },
+                    { id: 'second', label: 'Missing', count: 1 }
+                ]
+            }
+        ];
+        const fmtById = buildChartTooltipFormatter(
+            true,
+            categories,
+            duplicateLabelSeries,
+            0,
+            false
+        );
+
+        expect(fmtById([param('first', 3, { seriesIndex: 0 })])).toContain('<b>3</b>');
+        expect(fmtById([param('second', 1, { seriesIndex: 0 })])).toContain('<b>1</b>');
     });
 });
