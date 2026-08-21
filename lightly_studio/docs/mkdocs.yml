@@ -110,6 +110,10 @@ plugins:
   # Keep sections in sync with nav when adding or removing pages.
   - llmstxt:
       full_output: llms-full.txt
+      markdown_description: |
+        LightlyStudio helps you build better computer-vision datasets. It provides tools for
+        intelligent data sampling, annotation management, embedding-based search, model evaluation,
+        and cloud storage integration — accessible through a Python API or web interface.
       sections:
         Getting Started:
           - index.md
