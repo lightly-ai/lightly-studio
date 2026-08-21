@@ -30,13 +30,19 @@ def skills_for(rel_path: str) -> list[str]:
 
 
 def first_time(session_id: str, skill: str) -> bool:
-    """True the first time this session touches this skill; records it for next time."""
+    """True the first time this session touches this skill; records it for next time.
+
+    Fails open: on any filesystem error (including an existing marker) it returns
+    False, so a marker problem never produces a reminder. `touch(exist_ok=False)`
+    makes the create atomic against a concurrent hook.
+    """
     marker_dir = Path(tempfile.gettempdir()) / "claude-skill-reminder"
     marker = marker_dir / f"{session_id}-{skill}"
-    if marker.exists():
+    try:
+        marker_dir.mkdir(parents=True, exist_ok=True)
+        marker.touch(exist_ok=False)
+    except OSError:
         return False
-    marker_dir.mkdir(parents=True, exist_ok=True)
-    marker.touch()
     return True
 
 
