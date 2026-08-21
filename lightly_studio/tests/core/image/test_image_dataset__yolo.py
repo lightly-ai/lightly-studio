@@ -154,6 +154,60 @@ class TestDataset:
         assert len(samples) == 2
         assert all("train" in sample.tags for sample in samples)
 
+    def test_add_samples_from_yolo__tags_created_for_tag_depth(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        yaml_path = tmp_path / "data.yaml"
+        yaml_path.write_text(yaml.dump(get_yolo_yaml_dict_valid()))
+
+        images_path = tmp_path / "train" / "images"
+        labels_path = tmp_path / "train" / "labels"
+        _create_sample_images(
+            [
+                images_path / "dogs" / "husky" / "image1.jpg",
+                images_path / "cats" / "image2.jpg",
+                images_path / "image3.jpg",
+            ]
+        )
+        _create_sample_labels(
+            [
+                labels_path / "dogs" / "husky" / "image1.txt",
+                labels_path / "cats" / "image2.txt",
+                labels_path / "image3.txt",
+            ]
+        )
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_samples_from_yolo(
+            data_yaml=yaml_path, input_split="train", tag_depth=2, embed=False
+        )
+
+        samples = list(dataset)
+        assert len(samples) == 3
+        name_to_tags = {Path(s.file_name).name: s.tags for s in samples}
+        # Directory tags are added on top of the "train" split tag.
+        assert name_to_tags["image1.jpg"] == {"train", "dogs", "husky"}
+        assert name_to_tags["image2.jpg"] == {"train", "cats"}
+        assert name_to_tags["image3.jpg"] == {"train"}
+
+    @pytest.mark.parametrize("tag_depth", [-1, -5])
+    def test_add_samples_from_yolo__invalid_tag_depth(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+        tag_depth: int,
+    ) -> None:
+        yaml_path = tmp_path / "data.yaml"
+        yaml_path.write_text(yaml.dump(get_yolo_yaml_dict_valid()))
+
+        dataset = ImageDataset.create(name="test_dataset")
+        with pytest.raises(ValueError, match="tag_depth must be non-negative"):
+            dataset.add_samples_from_yolo(
+                data_yaml=yaml_path, input_split="train", tag_depth=tag_depth
+            )
+
     def test_add_samples_from_yolo__all_splits_loaded(
         self,
         patch_collection: None,  # noqa: ARG002

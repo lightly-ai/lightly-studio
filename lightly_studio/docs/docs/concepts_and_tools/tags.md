@@ -114,5 +114,10 @@ dataset.add_samples_from_yolo(
 )
 ```
 
+The annotation-format loaders also accept `tag_depth` to tag samples by their folder structure, in
+addition to the split tag. `add_samples_from_coco` tags by the directory levels of each image's
+`file_name` below `images_path`; `add_samples_from_yolo` tags by the levels below the split's images
+directory.
+
 Check [Dataset](../api/dataset.md) Python API docs for a full list of methods that support
 split loading.

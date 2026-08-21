@@ -93,6 +93,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add metadata filter chips to the left sidebar
 - Display classification annotations in the annotations grid.
 - Show a preview image when hovering over the 2d embedding plot.
+- Python SDK: `ImageDataset.add_samples_from_coco` and `add_samples_from_yolo` now accept `tag_depth` to tag imported samples by their folder structure, in addition to the split tag.
 
 ### Changed
 
