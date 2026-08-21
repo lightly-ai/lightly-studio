@@ -1,6 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { buildEchartsOption } from './buildEchartsOption';
+import { buildEchartsOption, colorForSeries } from './buildEchartsOption';
+import type { CategoryCountSeries } from './types';
 import { balanced } from './fixtures';
+
+const groupedSeries: CategoryCountSeries[] = [
+    {
+        id: 'tag-a',
+        label: 'Reviewed',
+        data: [
+            { label: 'car', count: 3 },
+            { label: 'dog', count: 0 }
+        ]
+    },
+    {
+        id: 'tag-b',
+        label: 'Priority',
+        data: [{ label: 'car', count: 1 }]
+    }
+];
 
 describe('buildEchartsOption', () => {
     it('maps labels to the category axis and counts to the bar series', () => {
@@ -40,6 +57,23 @@ describe('buildEchartsOption', () => {
         expect(vertical.yAxis.minInterval).toBe(1);
         expect(horizontal.xAxis.minInterval).toBe(1);
     });
+
+    const getFormatter = (option: unknown) =>
+        (
+            option as {
+                tooltip: {
+                    formatter: (
+                        params: {
+                            name: string;
+                            value: number;
+                            seriesName?: string;
+                            marker?: string;
+                            seriesIndex?: number;
+                        }[]
+                    ) => string;
+                };
+            }
+        ).tooltip.formatter;
 
     it('unselected bars are dimmed while the selected bar remains green', () => {
         const option = buildEchartsOption([
@@ -100,5 +134,118 @@ describe('buildEchartsOption', () => {
 
         expect(standard.grid.top).toBe(16);
         expect(compact.grid.top).toBe(4);
+    });
+
+    it('renders named grouped series on a shared axis and zero-fills missing values', () => {
+        const option = buildEchartsOption(
+            [
+                { label: 'car', count: 4 },
+                { label: 'dog', count: 0 }
+            ],
+            { series: groupedSeries }
+        ) as {
+            xAxis: { data: string[] };
+            legend: { type: string };
+            series: { name: string; data: number[]; itemStyle: { color: string } }[];
+        };
+
+        expect(option.xAxis.data).toEqual(['car', 'dog']);
+        expect(option.legend.type).toBe('scroll');
+        expect(option.series.map((series) => series.name)).toEqual(['Reviewed', 'Priority']);
+        expect(option.series.map((series) => series.data)).toEqual([
+            [3, 0],
+            [1, 0]
+        ]);
+        expect(option.series[0].itemStyle.color).not.toBe(option.series[1].itemStyle.color);
+    });
+
+    it('supports grouped series with a horizontal category axis', () => {
+        const option = buildEchartsOption([{ label: 'car', count: 4 }], {
+            orientation: 'horizontal',
+            series: groupedSeries
+        }) as {
+            xAxis: { type: string };
+            yAxis: { type: string; data: string[] };
+            series: { data: number[] }[];
+        };
+
+        expect(option.xAxis.type).toBe('value');
+        expect(option.yAxis).toMatchObject({ type: 'category', data: ['car'] });
+        expect(option.series.map((series) => series.data)).toEqual([[3], [1]]);
+    });
+
+    it('shows each grouped series as its own percentage distribution', () => {
+        const option = buildEchartsOption(
+            [
+                { label: 'car', count: 4 },
+                { label: 'dog', count: 0 }
+            ],
+            { series: groupedSeries, valueMode: 'percentage' }
+        ) as {
+            yAxis: { max: number };
+            series: { data: number[] }[];
+        };
+
+        expect(option.yAxis.max).toBe(100);
+        expect(option.series.map((series) => series.data)).toEqual([
+            [100, 0],
+            [100, 0]
+        ]);
+    });
+
+    it('uses stable colours and identifies every series in grouped tooltips', () => {
+        expect(colorForSeries('tag-a')).toBe(colorForSeries('tag-a'));
+        expect(colorForSeries('tag-a')).not.toBe(colorForSeries('tag-b'));
+
+        const formatter = getFormatter(
+            buildEchartsOption([{ label: 'car', count: 4 }], { series: groupedSeries })
+        );
+        expect(
+            formatter([
+                { name: 'car', value: 3, seriesName: 'Reviewed', marker: '● ' },
+                { name: 'car', value: 1, seriesName: 'Priority', marker: '■ ' }
+            ])
+        ).toBe('<b>car</b><br/>● Reviewed: <b>3</b> (100.0%)<br/>■ Priority: <b>1</b> (100.0%)');
+    });
+
+    it('resolves palette collisions between visible series', () => {
+        const collidingSeries = [
+            { id: 'a', label: 'First', data: [{ label: 'car', count: 1 }] },
+            { id: 'k', label: 'Second', data: [{ label: 'car', count: 1 }] }
+        ];
+        expect(colorForSeries('a')).toBe(colorForSeries('k'));
+
+        const option = buildEchartsOption([{ label: 'car', count: 2 }], {
+            series: collidingSeries
+        }) as { series: { itemStyle: { color: string; borderWidth: number } }[] };
+
+        expect(option.series[0].itemStyle.color).not.toBe(option.series[1].itemStyle.color);
+        expect(option.series.every((series) => series.itemStyle.borderWidth === 1)).toBe(true);
+    });
+
+    it('keeps raw counts and percentages in percentage-mode tooltips', () => {
+        const formatter = getFormatter(
+            buildEchartsOption([{ label: 'car', count: 20 }], {
+                totalCount: 80,
+                valueMode: 'percentage'
+            })
+        );
+
+        expect(formatter([{ name: 'car', value: 25 }])).toBe(
+            '<b>car</b><br/>Count: <b>20</b> (25.0%)'
+        );
+    });
+
+    it('uses category ids on the axis and formats them as labels', () => {
+        const option = buildEchartsOption([
+            { id: 'first', label: 'Missing', count: 4 },
+            { id: 'second', label: 'Missing', count: 2 }
+        ]) as {
+            xAxis: { data: string[]; axisLabel: { formatter: (key: string) => string } };
+        };
+
+        expect(option.xAxis.data).toEqual(['first', 'second']);
+        expect(option.xAxis.axisLabel.formatter('first')).toBe('Missing');
+        expect(option.xAxis.axisLabel.formatter('second')).toBe('Missing');
     });
 });

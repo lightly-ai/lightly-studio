@@ -266,11 +266,16 @@ describe('DatasetDistributionPanel', () => {
         render(DatasetDistributionPanel, { props: { sources, onCategoricalValueToggle } });
 
         const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
-            yAxis: { data: string[] };
+            yAxis: { data: string[]; axisLabel: { formatter: (key: string) => string } };
             series: [{ data: { itemStyle: { color: string } }[] }];
             grid: { top: number };
         };
-        expect(option.yAxis.data).toEqual(['Missing', 'Missing', 'Other']);
+        expect(option.yAxis.data).toEqual(['literal', 'missing', 'other']);
+        expect(option.yAxis.data.map(option.yAxis.axisLabel.formatter)).toEqual([
+            'Missing',
+            'Missing',
+            'Other'
+        ]);
         expect(option.grid.top).toBe(4);
         // 'Missing' (value) is selected → accent green; the others are dimmed grey.
         expect(option.series[0].data[0].itemStyle.color).toBe('rgba(59,217,159,0.85)');
@@ -423,10 +428,11 @@ describe('DatasetDistributionPanel', () => {
         await fireEvent.click(screen.getByTestId('distribution-config-apply'));
 
         const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
-            yAxis: { data: string[] };
+            yAxis: { data: string[]; axisLabel: { formatter: (key: string) => string } };
             series: [{ data: { value: number }[] }];
         };
-        expect(option.yAxis.data).toEqual(['Missing']);
+        expect(option.yAxis.data).toEqual(['semantic-missing']);
+        expect(option.yAxis.axisLabel.formatter('semantic-missing')).toBe('Missing');
         expect(option.series[0].data[0].value).toBe(3);
     });
 
