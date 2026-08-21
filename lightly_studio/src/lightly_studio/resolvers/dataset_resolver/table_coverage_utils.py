@@ -16,10 +16,14 @@ _HANDLED_TABLES_COUNT = 25
 # Tables not relevant for collection operations:
 # - setting (application-level, not collection-specific)
 # - two_dim_embeddings (cached projections, regenerated as needed)
-# - default_embedding_space (created empty; nothing writes it yet)
-# TODO(Michal, 08/2026): Move default_embedding_space into deep_copy and delete_dataset
-# (copy/delete its rows per collection) and shift it into _HANDLED_TABLES_COUNT once the
-# write path lands.
+# - default_embedding_space (excluded here, but the write path has now landed, so it is
+#   populated in Postgres — see the TODO below)
+# TODO(Michal, 08/2026): default_embedding_space is now written (backfill +
+# register_embedding_model), but deep_copy and delete_dataset still ignore it. Until PR2 wires
+# them up, on Postgres delete_dataset raises an FK error for any dataset with embeddings (its rows
+# still reference embedding_model/collection) and deep_copy silently drops the copied collection's
+# default. PR2 must: delete its rows in delete_dataset.py, copy them in deep_copy.py, and move it
+# into _HANDLED_TABLES_COUNT. This break is acceptable only because PR1b and PR2 ship together.
 _EXCLUDED_TABLES_COUNT = 3
 
 _TOTAL_TABLES_COUNT = _HANDLED_TABLES_COUNT + _EXCLUDED_TABLES_COUNT
