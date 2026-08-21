@@ -6,7 +6,11 @@ import { pixelToBinIndex } from './createHistogramChart';
 // the module loads without pulling in the real (heavy) echarts runtime.
 vi.mock('echarts/core', () => ({ use: vi.fn() }));
 vi.mock('echarts/charts', () => ({ CustomChart: {} }));
-vi.mock('echarts/components', () => ({ GridComponent: {}, TooltipComponent: {} }));
+vi.mock('echarts/components', () => ({
+    GridComponent: {},
+    LegendComponent: {},
+    TooltipComponent: {}
+}));
 vi.mock('echarts/renderers', () => ({ CanvasRenderer: {} }));
 
 // The x-axis is a value axis over bin indices; 10px per bin index mirrors the

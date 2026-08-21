@@ -16,14 +16,27 @@ const formatTooltipValue = (count: number, total: number): string => {
     return `<b>${count}</b>${percent}`;
 };
 
+interface ChartTooltipFormatterOptions {
+    /** Whether the chart displays grouped (multi-series) bars. */
+    isGrouped: boolean;
+    /** Flat category counts used for standard (non-grouped) tooltips. */
+    data: CategoryCount[];
+    /** Per-series category counts used for grouped tooltips. */
+    groupedSeries: CategoryCountSeries[];
+    /** Total sample count used as the percentage denominator. */
+    totalCount: number;
+    /** Whether a dataset filter is currently active, enabling filtered vs. total display. */
+    hasActiveFilter: boolean;
+}
+
 /** Builds the ECharts tooltip formatter for grouped or standard bar charts. */
-export function buildChartTooltipFormatter(
-    isGrouped: boolean,
-    data: CategoryCount[],
-    groupedSeries: CategoryCountSeries[],
-    totalCount: number,
-    hasActiveFilter: boolean
-): (params: TooltipParam[]) => string {
+export function buildChartTooltipFormatter({
+    isGrouped,
+    data,
+    groupedSeries,
+    totalCount,
+    hasActiveFilter
+}: ChartTooltipFormatterOptions): (params: TooltipParam[]) => string {
     return (params: TooltipParam[]) => {
         if (params.length === 0) return '';
         const [{ name }] = params;
