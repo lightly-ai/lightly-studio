@@ -164,13 +164,13 @@ export function buildEchartsOption(
             trigger: 'axis',
             axisPointer: { type: 'shadow' },
             appendTo: 'body',
-            formatter: buildChartTooltipFormatter(
+            formatter: buildChartTooltipFormatter({
                 isGrouped,
                 data,
                 groupedSeries,
                 totalCount,
                 hasActiveFilter
-            )
+            })
         },
         legend: isGrouped
             ? { type: 'scroll', top: 0, textStyle: { color: CHART_TEXT_COLOR } }

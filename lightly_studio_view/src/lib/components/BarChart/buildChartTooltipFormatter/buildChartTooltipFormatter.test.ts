@@ -31,7 +31,13 @@ const param = (name: string, value: number, overrides: object = {}) => ({
 });
 
 describe('buildChartTooltipFormatter — standard (non-grouped)', () => {
-    const fmt = buildChartTooltipFormatter(false, data, [], 10, false);
+    const fmt = buildChartTooltipFormatter({
+        isGrouped: false,
+        data,
+        groupedSeries: [],
+        totalCount: 10,
+        hasActiveFilter: false
+    });
 
     it('returns empty string for empty params', () => {
         expect(fmt([])).toBe('');
@@ -50,21 +56,39 @@ describe('buildChartTooltipFormatter — standard (non-grouped)', () => {
     });
 
     it('omits percentage when totalCount is 0', () => {
-        const fmt0 = buildChartTooltipFormatter(false, data, [], 0, false);
+        const fmt0 = buildChartTooltipFormatter({
+            isGrouped: false,
+            data,
+            groupedSeries: [],
+            totalCount: 0,
+            hasActiveFilter: false
+        });
         const result = fmt0([param('car', 6)]);
         expect(result).not.toContain('%');
     });
 
     it('escapes HTML in the category label', () => {
         const xssData: CategoryCount[] = [{ label: '<script>alert(1)</script>', count: 1 }];
-        const fmtXss = buildChartTooltipFormatter(false, xssData, [], 1, false);
+        const fmtXss = buildChartTooltipFormatter({
+            isGrouped: false,
+            data: xssData,
+            groupedSeries: [],
+            totalCount: 1,
+            hasActiveFilter: false
+        });
         const result = fmtXss([param('<script>alert(1)</script>', 1)]);
         expect(result).not.toContain('<script>');
     });
 
     it('looks up categories by id while displaying their label', () => {
         const categories: CategoryCount[] = [{ id: 'category-1', label: 'car', count: 6 }];
-        const fmtById = buildChartTooltipFormatter(false, categories, [], 10, false);
+        const fmtById = buildChartTooltipFormatter({
+            isGrouped: false,
+            data: categories,
+            groupedSeries: [],
+            totalCount: 10,
+            hasActiveFilter: false
+        });
 
         expect(fmtById([param('category-1', 6)])).toContain('<b>car</b>');
         expect(fmtById([param('category-1', 6)])).toContain('<b>6</b>');
@@ -74,7 +98,13 @@ describe('buildChartTooltipFormatter — standard (non-grouped)', () => {
 describe('buildChartTooltipFormatter — standard with active filter', () => {
     it('shows filtered and total counts when filteredCount differs from count', () => {
         const filtered: CategoryCount[] = [{ label: 'car', count: 6, filteredCount: 2 }];
-        const fmt = buildChartTooltipFormatter(false, filtered, [], 10, true);
+        const fmt = buildChartTooltipFormatter({
+            isGrouped: false,
+            data: filtered,
+            groupedSeries: [],
+            totalCount: 10,
+            hasActiveFilter: true
+        });
         const result = fmt([param('car', 2)]);
         expect(result).toContain('of');
         expect(result).toContain('<b>2</b>');
@@ -83,20 +113,38 @@ describe('buildChartTooltipFormatter — standard with active filter', () => {
 
     it('does not show "of total" when filteredCount equals count', () => {
         const filtered: CategoryCount[] = [{ label: 'car', count: 6, filteredCount: 6 }];
-        const fmt = buildChartTooltipFormatter(false, filtered, [], 10, true);
+        const fmt = buildChartTooltipFormatter({
+            isGrouped: false,
+            data: filtered,
+            groupedSeries: [],
+            totalCount: 10,
+            hasActiveFilter: true
+        });
         const result = fmt([param('car', 6)]);
         expect(result).not.toContain('of');
     });
 
     it('does not show "of total" when filteredCount is absent', () => {
-        const fmt = buildChartTooltipFormatter(false, data, [], 10, true);
+        const fmt = buildChartTooltipFormatter({
+            isGrouped: false,
+            data,
+            groupedSeries: [],
+            totalCount: 10,
+            hasActiveFilter: true
+        });
         const result = fmt([param('car', 6)]);
         expect(result).not.toContain('of');
     });
 });
 
 describe('buildChartTooltipFormatter — grouped', () => {
-    const fmt = buildChartTooltipFormatter(true, [], groupedSeries, 0, false);
+    const fmt = buildChartTooltipFormatter({
+        isGrouped: true,
+        data: [],
+        groupedSeries,
+        totalCount: 0,
+        hasActiveFilter: false
+    });
 
     it('returns empty string for empty params', () => {
         expect(fmt([])).toBe('');
@@ -140,7 +188,13 @@ describe('buildChartTooltipFormatter — grouped', () => {
         const xssSeries: CategoryCountSeries[] = [
             { id: 'x', label: '<img src=x onerror=alert(1)>', data: [{ label: 'car', count: 1 }] }
         ];
-        const fmtXss = buildChartTooltipFormatter(true, [], xssSeries, 0, false);
+        const fmtXss = buildChartTooltipFormatter({
+            isGrouped: true,
+            data: [],
+            groupedSeries: xssSeries,
+            totalCount: 0,
+            hasActiveFilter: false
+        });
         const result = fmtXss([
             param('car', 1, { seriesIndex: 0, seriesName: '<img src=x onerror=alert(1)>' })
         ]);
@@ -162,13 +216,13 @@ describe('buildChartTooltipFormatter — grouped', () => {
                 ]
             }
         ];
-        const fmtById = buildChartTooltipFormatter(
-            true,
-            categories,
-            duplicateLabelSeries,
-            0,
-            false
-        );
+        const fmtById = buildChartTooltipFormatter({
+            isGrouped: true,
+            data: categories,
+            groupedSeries: duplicateLabelSeries,
+            totalCount: 0,
+            hasActiveFilter: false
+        });
 
         expect(fmtById([param('first', 3, { seriesIndex: 0 })])).toContain('<b>3</b>');
         expect(fmtById([param('second', 1, { seriesIndex: 0 })])).toContain('<b>1</b>');
