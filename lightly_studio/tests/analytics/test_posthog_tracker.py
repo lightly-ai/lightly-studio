@@ -5,11 +5,13 @@ from uuid import UUID
 import pytest
 from pytest_mock import MockerFixture
 
-from lightly_studio.analytics import install_id, posthog_tracker
+from lightly_studio.analytics import cohort, install_id, posthog_tracker
+from lightly_studio.analytics.cohort import UserCohort
 from lightly_studio.analytics.posthog_tracker import PostHogTracker
 
 INSTALL_ID = UUID("0199f1a2-b775-76b8-9b09-c2fd260c67c1")
 POSTHOG_HOST = "https://eu.i.posthog.com"
+_BASE_PROPERTIES = ("lightly_studio_version", "python_version", "os")
 
 
 class RecordingHandler(logging.Handler):
@@ -104,8 +106,13 @@ def test_shutdown(mocker: MockerFixture) -> None:
     client.shutdown.assert_called_once_with()
 
 
-def test_common_properties() -> None:
+def test_common_properties(mocker: MockerFixture) -> None:
+    """The cohort goes on the person too, which is what the internal user filter selects on."""
+    mocker.patch.object(cohort, "get_cohort", return_value=UserCohort.CI)
+
     properties = posthog_tracker._common_properties()
 
-    assert set(properties) == {"lightly_studio_version", "python_version", "os"}
+    assert set(properties) == {*_BASE_PROPERTIES, "user_cohort", "$set"}
     assert all(properties.values())
+    assert properties["user_cohort"] == "ci"
+    assert properties["$set"] == {"user_cohort": "ci"}

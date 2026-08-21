@@ -39,6 +39,10 @@ LIGHTLY_STUDIO_POSTHOG_KEY: str = env.str(
 LIGHTLY_STUDIO_POSTHOG_HOST: str = env.str(
     "LIGHTLY_STUDIO_POSTHOG_HOST", "https://eu.i.posthog.com"
 )
+# Marks this machine as a Lightly dev or staff machine, so internal usage can be filtered out of
+# the product metrics. See lightly_studio/analytics/cohort.py for the alternative marker file,
+# which survives recreating the virtualenv.
+LIGHTLY_STUDIO_INTERNAL: bool = env.bool("LIGHTLY_STUDIO_INTERNAL", False)
 
 LIGHTLY_STUDIO_REMOTE_IMAGE_PROBE_WORKERS: int = max(
     1, env.int("LIGHTLY_STUDIO_REMOTE_IMAGE_PROBE_WORKERS", 32)
