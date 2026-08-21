@@ -9,7 +9,7 @@ from importlib import metadata
 
 from posthog import Posthog
 
-from lightly_studio.analytics import install_id
+from lightly_studio.analytics import cohort, install_id
 from lightly_studio.analytics.tracker import Tracker
 
 # One retry rather than the default three. Delivery happens on a background thread, but the flush
@@ -80,10 +80,15 @@ def _silence_delivery_logging() -> None:
         logger.propagate = False
 
 
-def _common_properties() -> dict[str, str]:
+def _common_properties() -> dict[str, object]:
     """Build the properties attached to every event."""
+    user_cohort = cohort.get_cohort().value
     return {
         "lightly_studio_version": metadata.version("lightly-studio"),
         "python_version": platform.python_version(),
         "os": platform.system(),
+        "user_cohort": user_cohort,
+        # Also stored on the person, so a PostHog cohort and the project-wide internal user filter
+        # can select on it without reading event properties.
+        "$set": {"user_cohort": user_cohort},
     }
