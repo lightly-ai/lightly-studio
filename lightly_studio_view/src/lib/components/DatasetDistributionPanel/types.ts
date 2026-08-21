@@ -1,4 +1,5 @@
-import type { BarChartValueMode, CategoryCount } from '$lib/components/BarChart';
+import type { CategoryCount } from '$lib/components/BarChart';
+import type { BarChartValueMode } from '$lib/components/BarChart/buildEchartsOption';
 import type { ClassSetSelection } from '$lib/components/ClassSetConfig';
 import type {
     AnnotationCountMode,

@@ -4,18 +4,15 @@
     import { Button } from '$lib/components';
     import Typography from '$lib/components/Typography/Typography.svelte';
     import { Select, type SelectItem } from '$lib/components/Select';
-    import {
-        BarChart,
-        type CategoryCount,
-        type CategoryCountSeries
-    } from '$lib/components/BarChart';
+    import { BarChart, type CategoryCount } from '$lib/components/BarChart';
+    import type { CategoryCountSeries } from '$lib/components/BarChart/types';
     import { Histogram, type HistogramRange } from '$lib/components/Histogram';
     import { formatFloat, formatInteger } from '$lib/utils';
     import DistributionConfigDialog from './DistributionConfigDialog/DistributionConfigDialog.svelte';
     import ExpandDialog from './ExpandDialog/ExpandDialog.svelte';
     import HistogramExpandDialog from './HistogramExpandDialog/HistogramExpandDialog.svelte';
     import PanelHeader from './PanelHeader/PanelHeader.svelte';
-    import TagComparisonSelect from './TagComparisonSelect.svelte';
+    import { TagComparisonSelect } from './TagComparisonSelect';
     import { selectVisibleCounts } from './selectVisibleCounts';
     import {
         CATEGORICAL_DISTRIBUTION_SORT_LABELS,
@@ -139,12 +136,14 @@
         activeGroup?.comparisonData ?? activeSource.comparisonData ?? []
     );
     const activeSeries = $derived<CategoryCountSeries[]>(
-        activeComparisonData.map((tag) => ({
-            id: tag.sample_tag_id,
-            label: tag.sample_tag_name,
-            data: tag.counts.map((item) => ({ label: item.label_name, count: item.count })),
-            totalCount: tag.counts.reduce((sum, item) => sum + item.count, 0)
-        }))
+        activeComparisonData
+            .filter((tag) => selectedComparisonTagIds.includes(tag.sample_tag_id))
+            .map((tag) => ({
+                id: tag.sample_tag_id,
+                label: tag.sample_tag_name,
+                data: tag.counts.map((item) => ({ label: item.label_name, count: item.count })),
+                totalCount: tag.counts.reduce((sum, item) => sum + item.count, 0)
+            }))
     );
     // Rank the shared axis by the aggregate across tags; individual series stay independent.
     const activeData = $derived.by<CategoryCount[]>(() => {
