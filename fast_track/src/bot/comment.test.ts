@@ -80,15 +80,41 @@ describe('renderComment', () => {
         );
     });
 
-    it('renders guardrails safely in a Markdown table', () => {
+    it('renders newlines in a summary as line breaks and escapes pipes', () => {
         const body = renderComment({
             verdict: verdict({
                 guardrails: [{ name: 'lint|check', status: 'fail', summary: 'one\ntwo|three' }]
             }),
             headSha: HEAD_SHA
         });
-        expect(body).toContain('| lint\\|check | ❌ | one two\\|three |');
+        expect(body).toContain('| lint&#124;check | ❌ | one<br>two&#124;three |');
         expect(body).toContain('<sub>Reflects `abc1234`.</sub>');
+    });
+
+    it('escapes a backslash before a pipe without splitting the cell', () => {
+        const body = renderComment({
+            verdict: verdict({ guardrails: [{ name: 'g', status: 'fail', summary: 'a\\|b' }] }),
+            headSha: HEAD_SHA
+        });
+        expect(body).toContain('| g | ❌ | a\\&#124;b |');
+    });
+
+    it('normalizes all line-ending forms to line breaks', () => {
+        const body = renderComment({
+            verdict: verdict({ guardrails: [{ name: 'g', status: 'fail', summary: 'a\r\nb\rc' }] }),
+            headSha: HEAD_SHA
+        });
+        expect(body).toContain('| g | ❌ | a<br>b<br>c |');
+    });
+
+    it('HTML-escapes angle brackets so raw linter output stays visible', () => {
+        const body = renderComment({
+            verdict: verdict({
+                guardrails: [{ name: 'g', status: 'fail', summary: '<img src=x>' }]
+            }),
+            headSha: HEAD_SHA
+        });
+        expect(body).toContain('| g | ❌ | &lt;img src=x&gt; |');
     });
 });
 

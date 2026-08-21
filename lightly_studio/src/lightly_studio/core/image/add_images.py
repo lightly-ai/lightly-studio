@@ -405,11 +405,29 @@ def tag_samples_by_directory(
     sample_ids: list[UUID],
     tag_depth: int,
 ) -> None:
-    """Tags samples based on their first-level subdirectory relative to input_path."""
+    """Tags samples by the leading directory levels of their path below input_path.
+
+    For ``tag_depth=N`` each sample is tagged with the names of the first ``N``
+    directory levels below ``input_path``, or fewer if the sample is nested less
+    deeply, so a sample may receive several tags. Samples that lie directly in
+    ``input_path`` are not tagged.
+
+    Args:
+        session: The database session.
+        collection_id: The collection the samples belong to.
+        input_path: The root path the samples were loaded from.
+        sample_ids: The ids of the samples to tag.
+        tag_depth: The number of leading directory levels to tag by. ``tag_depth=0``
+            skips tagging.
+
+    Raises:
+        ValueError: If tag_depth is negative.
+    """
+    # TODO (Mihnea, 08/2026): Consider refactoring this, as it is getting quite big.
+    if tag_depth < 0:
+        raise ValueError(f"tag_depth must be non-negative, got {tag_depth}.")
     if tag_depth == 0:
         return
-    if tag_depth > 1:
-        raise NotImplementedError("tag_depth > 1 is not yet implemented for add_images_from_path.")
 
     input_path_abs = add_annotations.normalize_images_root(input_path)
 
@@ -420,17 +438,19 @@ def tag_samples_by_directory(
     newly_created_samples = [ImageSample(inner=image) for image in newly_created_images]
 
     logger.info(f"Adding directory tags to {len(sample_ids)} new samples.")
-    parent_dir_to_sample_ids: defaultdict[str, list[UUID]] = defaultdict(list)
+    tag_name_to_sample_ids: defaultdict[str, list[UUID]] = defaultdict(list)
     for sample in newly_created_samples:
         sample_path_abs = Path(sample.file_path_abs)
         relative_path = sample_path_abs.relative_to(input_path_abs)
 
-        if len(relative_path.parts) > 1:
-            tag_name = relative_path.parts[0]
+        # relative_path.parts holds the directory levels followed by the file name,
+        # so the number of directory levels is one less than the number of parts.
+        num_directory_levels = len(relative_path.parts) - 1
+        for tag_name in relative_path.parts[: min(tag_depth, num_directory_levels)]:
             if tag_name:
-                parent_dir_to_sample_ids[tag_name].append(sample.sample_id)
+                tag_name_to_sample_ids[tag_name].append(sample.sample_id)
 
-    for tag_name, s_ids in parent_dir_to_sample_ids.items():
+    for tag_name, s_ids in tag_name_to_sample_ids.items():
         tag = tag_resolver.get_or_create_sample_tag_by_name(
             session=session,
             collection_id=collection_id,
@@ -441,7 +461,7 @@ def tag_samples_by_directory(
             tag_id=tag.tag_id,
             sample_ids=s_ids,
         )
-    logger.info(f"Created {len(parent_dir_to_sample_ids)} tags from directories.")
+    logger.info(f"Created {len(tag_name_to_sample_ids)} tags from directories.")
 
 
 def _group_captions_by_image_id(

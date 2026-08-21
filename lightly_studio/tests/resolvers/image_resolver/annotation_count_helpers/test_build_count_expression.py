@@ -9,6 +9,7 @@ def test_build_count_expression__objects_mode() -> None:
 
     assert "distinct" not in str(expr).lower()
     assert "sample_id" in str(expr)
+    assert "parent_sample_id" not in str(expr)
 
 
 def test_build_count_expression__samples_mode() -> None:

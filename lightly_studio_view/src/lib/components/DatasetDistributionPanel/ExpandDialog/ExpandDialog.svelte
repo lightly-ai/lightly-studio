@@ -1,13 +1,11 @@
 <script lang="ts">
     import * as Dialog from '$lib/components/ui/dialog';
-    import {
-        BarChart,
-        type CategoryCount,
-        type CategoryCountSeries
-    } from '$lib/components/BarChart';
+    import { BarChart, type CategoryCount } from '$lib/components/BarChart';
+    import type { CategoryCountSeries } from '$lib/components/BarChart/types';
     import DistributionConfigDialog from '../DistributionConfigDialog/DistributionConfigDialog.svelte';
     import PanelHeader from '../PanelHeader/PanelHeader.svelte';
     import { selectVisibleCounts } from '../selectVisibleCounts';
+    import { prepareVisibleSeries } from './prepareVisibleSeries';
     import type { DistributionConfig, DistributionSortOption } from '../types';
     import { DISTRIBUTION_SORT_LABELS } from '../types';
 
@@ -53,12 +51,7 @@
 
     const visible = $derived(selectVisibleCounts(data, config));
     const visibleLabels = $derived(new Set(visible.map((item) => item.label)));
-    const visibleSeries = $derived(
-        series.map((item) => ({
-            ...item,
-            data: item.data.filter((count) => visibleLabels.has(count.label))
-        }))
-    );
+    const visibleSeries = $derived(prepareVisibleSeries(series, visibleLabels));
     const totalCount = $derived(data.reduce((sum, item) => sum + item.count, 0));
     const configurationItems = $derived(
         data.map((item) => ({ value: item.id ?? item.label, label: item.label }))

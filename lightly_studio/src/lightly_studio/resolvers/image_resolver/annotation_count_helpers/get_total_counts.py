@@ -10,10 +10,8 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.resolvers.image_resolver import annotation_count_helpers
 from lightly_studio.resolvers.image_resolver.annotation_count_types import AnnotationCountMode
-
-from .build_count_expression import build_count_expression
-from .restrict_to_annotation_sources import restrict_to_annotation_sources
 
 
 def get_total_counts(
@@ -27,7 +25,7 @@ def get_total_counts(
     query = (
         select(
             AnnotationLabelTable.annotation_label_name,
-            build_count_expression(count_mode).label("total_count"),
+            annotation_count_helpers.build_count_expression(count_mode).label("total_count"),
         )
         .join(
             AnnotationBaseTable,
@@ -47,7 +45,10 @@ def get_total_counts(
     if annotation_type is not None:
         query = query.where(col(AnnotationBaseTable.annotation_type) == annotation_type)
     if annotation_collection_ids:
-        query = restrict_to_annotation_sources(query, annotation_collection_ids)
+        query = annotation_count_helpers.restrict_to_annotation_sources(
+            query=query,
+            annotation_collection_ids=annotation_collection_ids,
+        )
     query = query.group_by(AnnotationLabelTable.annotation_label_name).order_by(
         col(AnnotationLabelTable.annotation_label_name).asc()
     )
