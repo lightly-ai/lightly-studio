@@ -35,7 +35,7 @@ class VideoStub:
     path: PathLike = "/path/to/video.mp4"
     width: int = 640
     height: int = 480
-    duration_s: float = 12.3
+    duration_s: float | None = 12.3
     fps: float = 30.0
 
 
@@ -115,6 +115,7 @@ def create_video_with_frames(
     Returns:
         The video sample id and list of frame sample ids in a VideoWithFrames object.
     """
+    assert video.duration_s is not None, "frame generation needs a concrete duration"
     video_sample_id = video_resolver.create_many(
         session=session,
         collection_id=collection_id,
