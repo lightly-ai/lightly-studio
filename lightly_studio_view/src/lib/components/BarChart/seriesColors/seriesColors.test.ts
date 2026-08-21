@@ -88,4 +88,10 @@ describe('assignSeriesColors', () => {
         const ids = ['x', 'y', 'z'];
         expect(assignSeriesColors(ids)).toEqual(assignSeriesColors(ids));
     });
+
+    it('assigns colliding ids consistently regardless of input order', () => {
+        expect(colorForSeries('a')).toBe(colorForSeries('k'));
+
+        expect(assignSeriesColors(['a', 'k'])).toEqual(assignSeriesColors(['k', 'a']));
+    });
 });

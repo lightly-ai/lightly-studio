@@ -33,7 +33,7 @@ export function colorForSeries(id: string): string {
 export function assignSeriesColors(seriesIds: string[]): Map<string, string> {
     const colors = new Map<string, string>();
     const usedColors = new Set<string>();
-    for (const id of seriesIds) {
+    for (const id of [...new Set(seriesIds)].sort()) {
         let index = SERIES_COLORS.indexOf(colorForSeries(id));
         let cycle = 0;
         while (usedColors.has(extendedSeriesColor(index + cycle * SERIES_COLORS.length))) {
