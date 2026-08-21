@@ -3,10 +3,9 @@
 
 Backs the `Prepare Release` GitHub Actions workflow, landing incrementally
 (see LIG-10552 for the full spec). Every subcommand does one small,
-independently testable piece of RELEASE.md steps 3-5. This first slice
-covers the highest-consequence one: promoting `CHANGELOG.md`'s
-`[Unreleased]` section into a released version block without silently
-corrupting the file.
+independently testable piece of RELEASE.md steps 3-5. This slice adds
+changelog promotion plus the version, `pyproject.toml`, and `uv.lock`
+guards RELEASE.md's steps 2-4 call for.
 
 Stdlib only, deliberately: this runs on the release-critical path before
 `uv sync`, so it must not itself depend on anything `uv` would need to
@@ -21,6 +20,7 @@ Usage (see `main()` for the full set of subcommands):
 from __future__ import annotations
 
 import argparse
+import difflib
 import re
 import sys
 from pathlib import Path
@@ -36,6 +36,10 @@ SUBSECTIONS = ("Added", "Changed", "Deprecated", "Removed", "Fixed", "Security")
 _UNRELEASED_RE = re.compile(r"^## \[Unreleased\][ \t]*$", re.MULTILINE)
 _ANY_H2_RE = re.compile(r"^## ", re.MULTILINE)
 _SUBSECTION_RE = re.compile(r"^### (?P<name>\w+)[ \t]*$", re.MULTILINE)
+_PYPROJECT_VERSION_RE = re.compile(r'^version = "(?P<version>[^"]+)"$', re.MULTILINE)
+_LOCK_PACKAGE_SPLIT_RE = re.compile(r"(?=^\[\[package\]\]$)", re.MULTILINE)
+_LOCK_PACKAGE_NAME_RE = re.compile(r'^name = "(?P<name>[^"]+)"$', re.MULTILINE)
+_SEMVER_PART_COUNT = 3
 
 
 class PrepareReleaseError(Exception):
@@ -44,6 +48,70 @@ class PrepareReleaseError(Exception):
     Raised for anything that should fail the workflow loudly rather than
     open a malformed or unreviewable release PR.
     """
+
+
+def current_pyproject_version(pyproject_text: str) -> str:
+    """Reads the `[project] version` from a `pyproject.toml`'s text."""
+    match = _PYPROJECT_VERSION_RE.search(pyproject_text)
+    if match is None:
+        raise PrepareReleaseError('no `version = "..."` line found in pyproject.toml')
+    return match.group("version")
+
+
+def bump_semver(version: str, bump: str) -> str:
+    """Bumps a plain `X.Y.Z` version.
+
+    Args:
+        version: The current version. Must be exactly `X.Y.Z` with integer
+            parts; anything else (e.g. an already-released release
+            candidate) has no well-defined next bump and should be
+            overridden explicitly instead.
+        bump: One of "patch", "minor", "major".
+
+    Returns:
+        The bumped version, still in plain `X.Y.Z` form.
+    """
+    parts = version.split(".")
+    if len(parts) != _SEMVER_PART_COUNT or not all(p.isdigit() for p in parts):
+        raise PrepareReleaseError(
+            f"current version {version!r} is not a plain X.Y.Z semver; "
+            "pass --version explicitly instead of a --bump"
+        )
+    major, minor, patch = (int(p) for p in parts)
+    if bump == "major":
+        return f"{major + 1}.0.0"
+    if bump == "minor":
+        return f"{major}.{minor + 1}.0"
+    if bump == "patch":
+        return f"{major}.{minor}.{patch + 1}"
+    raise PrepareReleaseError(f"unknown bump kind {bump!r}")
+
+
+def check_labelformat_pin(pyproject_text: str) -> None:
+    """Fails if the Labelformat requirement is pinned by git sha.
+
+    A `git+` requirement means Labelformat itself needs a release first
+    (see the Labelformat release runbook); a plain version requirement is
+    fine.
+    """
+    match = re.search(r'^\s*"labelformat[^"]*"', pyproject_text, re.MULTILINE)
+    if match and "git+" in match.group(0):
+        raise PrepareReleaseError(
+            "labelformat is pinned by git sha in pyproject.toml "
+            f"({match.group(0).strip()}). Release Labelformat first, see "
+            "https://www.notion.so/Release-Labelformat-or-Lightly-Insights-"
+            "039ffe75cd8b4dd89dcb45a7338533b2?source=copy_link"
+        )
+
+
+def bump_pyproject_version(pyproject_text: str, new_version: str) -> str:
+    """Returns `pyproject_text` with the `[project] version` replaced."""
+    new_text, count = _PYPROJECT_VERSION_RE.subn(
+        f'version = "{new_version}"', pyproject_text, count=1
+    )
+    if count == 0:
+        raise PrepareReleaseError('no `version = "..."` line found in pyproject.toml')
+    return new_text
 
 
 def parse_unreleased_sections(changelog_text: str) -> dict[str, str]:
@@ -164,6 +232,58 @@ def extract_released_section(changelog_text: str, version: str) -> str:
     return changelog_text[body_start:body_end].strip()
 
 
+def parse_lock_blocks(uv_lock_text: str) -> dict[str, str]:
+    """Splits a `uv.lock`'s text into per-package blocks, keyed by name.
+
+    The lockfile header (everything before the first `[[package]]`) is kept
+    under the empty-string key so it participates in the same diff check.
+    """
+    chunks = _LOCK_PACKAGE_SPLIT_RE.split(uv_lock_text)
+    blocks = {"": chunks[0]}
+    for chunk in chunks[1:]:
+        match = _LOCK_PACKAGE_NAME_RE.search(chunk)
+        if match is None:
+            raise PrepareReleaseError("a uv.lock [[package]] block has no `name` field")
+        blocks[match.group("name")] = chunk
+    return blocks
+
+
+def assert_lock_diff_narrow(before_text: str, after_text: str, package: str) -> None:
+    """Fails if `uv sync` changed more than `package`'s version line.
+
+    `uv sync` on CI can resolve transitive dependencies differently from
+    whoever last locked, producing a diff wider than the version bump. That
+    doesn't endanger the published wheel, but it makes the release PR
+    unreviewable, so treat it as a hard failure rather than something review
+    might catch.
+    """
+    before_blocks = parse_lock_blocks(before_text)
+    after_blocks = parse_lock_blocks(after_text)
+
+    unexpected = sorted(
+        name or "<lockfile header>"
+        for name in set(before_blocks) | set(after_blocks)
+        if name != package and before_blocks.get(name) != after_blocks.get(name)
+    )
+    if unexpected:
+        raise PrepareReleaseError(
+            "uv sync changed packages beyond the version bump: " + ", ".join(unexpected)
+        )
+
+    before_pkg = before_blocks.get(package)
+    after_pkg = after_blocks.get(package)
+    if before_pkg is None or after_pkg is None:
+        raise PrepareReleaseError(f"package {package!r} not found in uv.lock before/after uv sync")
+
+    diff = difflib.unified_diff(before_pkg.splitlines(), after_pkg.splitlines(), lineterm="")
+    changed_lines = [line for line in diff if line[:1] in "+-" and line[:3] not in ("+++", "---")]
+    if any(not re.match(r'^[+-]version = "', line) for line in changed_lines):
+        raise PrepareReleaseError(
+            f"uv.lock diff for {package!r} touches more than its version line:\n"
+            + "\n".join(changed_lines)
+        )
+
+
 def _single_unreleased_match(changelog_text: str) -> re.Match[str]:
     matches = list(_UNRELEASED_RE.finditer(changelog_text))
     if len(matches) != 1:
@@ -191,10 +311,22 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    check_pin = subparsers.add_parser(
+        "check-labelformat-pin", help="fail if labelformat is pinned by git sha"
+    )
+    check_pin.add_argument("--pyproject", type=Path, required=True)
+
     suggest = subparsers.add_parser(
         "suggest-bump", help="suggest a semver bump from [Unreleased]'s contents"
     )
     suggest.add_argument("--changelog", type=Path, required=True)
+
+    compute = subparsers.add_parser(
+        "compute-version", help="resolve the release version to bump to"
+    )
+    compute.add_argument("--pyproject", type=Path, required=True)
+    compute.add_argument("--bump", choices=["patch", "minor", "major"], required=True)
+    compute.add_argument("--version", default="", help="explicit override, empty to use --bump")
 
     promote = subparsers.add_parser(
         "promote-changelog", help="promote [Unreleased] to a released version block"
@@ -202,6 +334,19 @@ def main(argv: list[str] | None = None) -> int:
     promote.add_argument("--changelog", type=Path, required=True)
     promote.add_argument("--version", required=True)
     promote.add_argument("--date", required=True, help="YYYY-MM-DD")
+
+    bump_pyproject = subparsers.add_parser(
+        "bump-pyproject", help="write the new version into pyproject.toml"
+    )
+    bump_pyproject.add_argument("--pyproject", type=Path, required=True)
+    bump_pyproject.add_argument("--version", required=True)
+
+    lock_diff = subparsers.add_parser(
+        "assert-lock-diff", help="fail if uv sync changed more than the version bump"
+    )
+    lock_diff.add_argument("--before", type=Path, required=True)
+    lock_diff.add_argument("--after", type=Path, required=True)
+    lock_diff.add_argument("--package", required=True)
 
     args = parser.parse_args(argv)
 
@@ -214,11 +359,19 @@ def main(argv: list[str] | None = None) -> int:
 
 def _dispatch(args: argparse.Namespace) -> int:
     handlers = {
+        "check-labelformat-pin": _cmd_check_labelformat_pin,
         "suggest-bump": _cmd_suggest_bump,
+        "compute-version": _cmd_compute_version,
         "promote-changelog": _cmd_promote_changelog,
+        "bump-pyproject": _cmd_bump_pyproject,
+        "assert-lock-diff": _cmd_assert_lock_diff,
     }
     handlers[args.command](args)
     return 0
+
+
+def _cmd_check_labelformat_pin(args: argparse.Namespace) -> None:
+    check_labelformat_pin(args.pyproject.read_text())
 
 
 def _cmd_suggest_bump(args: argparse.Namespace) -> None:
@@ -228,11 +381,28 @@ def _cmd_suggest_bump(args: argparse.Namespace) -> None:
     print(reasoning)
 
 
+def _cmd_compute_version(args: argparse.Namespace) -> None:
+    if args.version:
+        print(args.version)
+        return
+    current = current_pyproject_version(args.pyproject.read_text())
+    print(bump_semver(current, args.bump))
+
+
 def _cmd_promote_changelog(args: argparse.Namespace) -> None:
     original = args.changelog.read_text()
     promoted = promote_changelog(original, args.version, args.date)
     assert_changelog_structure(original, promoted, args.version)
     args.changelog.write_text(promoted)
+
+
+def _cmd_bump_pyproject(args: argparse.Namespace) -> None:
+    original = args.pyproject.read_text()
+    args.pyproject.write_text(bump_pyproject_version(original, args.version))
+
+
+def _cmd_assert_lock_diff(args: argparse.Namespace) -> None:
+    assert_lock_diff_narrow(args.before.read_text(), args.after.read_text(), package=args.package)
 
 
 if __name__ == "__main__":
