@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Mechanical steps for preparing a LightlyStudio release.
 
-Backs the `Prepare Release` GitHub Actions workflow, landing incrementally
-(see LIG-10552 for the full spec). Every subcommand does one small,
-independently testable piece of RELEASE.md steps 3-5. This slice adds
-changelog promotion, the version/`pyproject.toml`/`uv.lock` guards, and
-draft release-notes rendering for the release PR body.
+Backs the `Prepare Release` GitHub Actions workflow
+(`.github/workflows/prepare_release.yml`). Every subcommand does one small,
+independently testable piece of RELEASE.md steps 3-5: promoting the
+changelog, bumping the version, and guarding against a handful of ways that
+can quietly go wrong. See LIG-10552 for the full spec.
 
 Stdlib only, deliberately: this runs on the release-critical path before
 `uv sync`, so it must not itself depend on anything `uv` would need to
