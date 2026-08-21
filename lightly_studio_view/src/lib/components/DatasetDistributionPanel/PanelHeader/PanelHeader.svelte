@@ -6,9 +6,8 @@
         BarChartHorizontal as BarChartHorizontalIcon
     } from '@lucide/svelte';
     import { Button } from '$lib/components';
-    import { Select, type SelectItem } from '$lib/components/Select';
-    import type { BarChartValueMode } from '$lib/components/BarChart';
     import { DISTRIBUTION_SORT_LABELS, type DistributionConfig } from '../types';
+    import { ValueModeSelect, type ValueMode } from './ValueModeSelect';
 
     interface Props {
         /** Applied view config (top-N, sort order, orientation). */
@@ -30,8 +29,10 @@
         sortLabels?: Record<keyof typeof DISTRIBUTION_SORT_LABELS, string>;
         /** Opens the view-config dialog (top-N and sort order). */
         onConfigure: () => void;
+        /** Current value mode shown in the selector (default 'number'). */
+        valueMode?: ValueMode;
         /** Switches the chart between raw counts and percentage distributions. */
-        onValueModeChange?: (mode: BarChartValueMode) => void;
+        onValueModeChange?: (mode: ValueMode) => void;
         /** Quick action showing all classes; rendered only while a subset is visible. */
         onShowAll?: () => void;
         /** Toggles between vertical and horizontal bar layouts. */
@@ -53,17 +54,13 @@
         categoryNounPlural = 'classes',
         sortLabels = DISTRIBUTION_SORT_LABELS,
         onConfigure,
+        valueMode = 'number',
         onValueModeChange,
         onShowAll,
         onToggleOrientation,
         onExpand,
         testIdPrefix = 'dataset-distribution'
     }: Props = $props();
-
-    const valueModeItems: SelectItem[] = [
-        { value: 'number', label: 'Number' },
-        { value: 'percentage', label: 'Percentage' }
-    ];
 </script>
 
 <div class="flex flex-row items-center gap-2">
@@ -112,14 +109,10 @@
         />
     {/if}
     {#if onValueModeChange}
-        <Select
-            items={valueModeItems}
-            value={config.valueMode ?? 'number'}
-            size="xs"
-            class="w-28"
+        <ValueModeSelect
+            value={valueMode}
             testId={`${testIdPrefix}-value-mode`}
-            selectProps={{ 'aria-label': 'Distribution value mode' }}
-            onValueChange={(value) => onValueModeChange(value as BarChartValueMode)}
+            onChange={onValueModeChange}
         />
     {/if}
     <Button

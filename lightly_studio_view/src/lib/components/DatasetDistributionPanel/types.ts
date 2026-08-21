@@ -119,6 +119,6 @@ export interface DistributionConfig extends ClassSetSelection<DistributionSortOp
     orientation: DistributionOrientation;
     /** Whether to count annotation objects or distinct annotated samples (default OBJECTS). */
     countMode?: AnnotationCountMode;
-    /** Whether categorical distributions show counts or percentages. */
+    /** Whether bars display raw counts or percentages (default 'number'). */
     valueMode?: BarChartValueMode;
 }
