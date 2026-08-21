@@ -17,6 +17,7 @@ from lightly_studio.sampling.sampling_config import (
     MetadataWeightingStrategy,
     SamplingConfig,
 )
+from lightly_studio.sampling.sampling_via_db import sampling_via_database
 from lightly_studio.sampling.sequence_sampling import sampling_via_database_sequences
 from tests import helpers_resolvers
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
@@ -49,6 +50,7 @@ def test_sampling_via_database_sequences(
         session=db_session,
         config=sampling_config,
         input_sample_ids=frame_sample_ids,
+        preselected_sample_ids=[],
     )
 
     tags = tag_resolver.get_all_by_collection_id(
@@ -102,6 +104,7 @@ def test_sampling_via_database_sequences__rejects_non_multiple(
             session=db_session,
             config=sampling_config,
             input_sample_ids=frame_sample_ids,
+            preselected_sample_ids=[],
         )
 
 
@@ -134,6 +137,7 @@ def test_sampling_via_database_sequences__rejects_non_frame_collection(
             session=db_session,
             config=sampling_config,
             input_sample_ids=sample_ids,
+            preselected_sample_ids=[],
         )
 
 
@@ -159,6 +163,7 @@ def test_sampling_via_database_sequences__rejects_non_diversity(
             session=db_session,
             config=sampling_config,
             input_sample_ids=frame_sample_ids,
+            preselected_sample_ids=[],
         )
 
 
@@ -185,6 +190,7 @@ def test_sampling_via_database_sequences__warns_when_too_few_frames(
             session=db_session,
             config=sampling_config,
             input_sample_ids=frame_sample_ids,
+            preselected_sample_ids=[],
         )
 
     assert "No sequences available for sampling." in caplog.text
@@ -217,18 +223,222 @@ def test_sampling_via_database_sequences__warns_about_dropped_frames(
             session=db_session,
             config=sampling_config,
             input_sample_ids=frame_sample_ids,
+            preselected_sample_ids=[],
         )
 
     assert "Dropped 2 of 12 candidate frame(s)" in caplog.text
-    tags = tag_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=frame_collection_id
-    )
-    tagged = video_frame_resolver.get_all_by_collection_id(
+    assert _tagged_frame_numbers(
         session=db_session,
         collection_id=frame_collection_id,
-        video_frame_filter=VideoFrameFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
+        tag_name="dropped_tail",
+    ) == list(range(10))
+
+
+def test_sampling_via_database_sequences__preselection(
+    db_session: Session,
+) -> None:
+    """A preselected sequence informs the selection and stays out of the tag.
+
+    Sequence proxies sit at ``[2, 2]``, ``[7, 7]`` and ``[12, 12]``. With the
+    first sequence preselected, diversity must pick the far end rather than the
+    adjacent middle sequence.
+    """
+    frame_collection_id, frame_sample_ids = _fill_db_with_video_frames_and_embeddings(
+        session=db_session,
+        n_frames=15,
     )
-    assert sorted(frame.frame_number for frame in tagged.samples) == list(range(10))
+
+    sampling_config = SamplingConfig(
+        collection_id=frame_collection_id,
+        n_samples_to_select=5,  # 1 sequence of length 5, on top of the preselected one
+        sampling_result_tag_name="preselected_sequence",
+        strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
+        selected_sequence_length=5,
+    )
+
+    sampling_via_database_sequences(
+        session=db_session,
+        config=sampling_config,
+        input_sample_ids=frame_sample_ids,
+        preselected_sample_ids=frame_sample_ids[0:5],
+    )
+
+    assert _tagged_frame_numbers(
+        session=db_session,
+        collection_id=frame_collection_id,
+        tag_name="preselected_sequence",
+    ) == [10, 11, 12, 13, 14]
+
+
+def test_sampling_via_database_sequences__preselection_not_sequence_aligned(
+    db_session: Session,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Preselected frames are held out of the candidates, which shifts the boundaries.
+
+    The preselected frames 0-2 do not fill a sequence of their own and are dropped.
+    The remaining candidates 3-9 are chunked on their own, so the sequence starts at
+    frame 3 rather than at a boundary of the full frame range.
+    """
+    frame_collection_id, frame_sample_ids = _fill_db_with_video_frames_and_embeddings(
+        session=db_session,
+        n_frames=10,
+    )
+
+    sampling_config = SamplingConfig(
+        collection_id=frame_collection_id,
+        n_samples_to_select=5,
+        sampling_result_tag_name="unaligned_preselection",
+        strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
+        selected_sequence_length=5,
+    )
+
+    with caplog.at_level(logging.WARNING):
+        sampling_via_database_sequences(
+            session=db_session,
+            config=sampling_config,
+            input_sample_ids=frame_sample_ids,
+            preselected_sample_ids=frame_sample_ids[0:3],
+        )
+
+    assert "Dropped 3 of 3 preselected frame(s)" in caplog.text
+    assert "Dropped 2 of 7 candidate frame(s)" in caplog.text
+    assert _tagged_frame_numbers(
+        session=db_session,
+        collection_id=frame_collection_id,
+        tag_name="unaligned_preselection",
+    ) == [3, 4, 5, 6, 7]
+
+
+def test_sampling_via_database_sequences__preselection_incomplete_sequence(
+    db_session: Session,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A preselection that fills no sequence is dropped, not rejected."""
+    frame_collection_id, frame_sample_ids = _fill_db_with_video_frames_and_embeddings(
+        session=db_session,
+        n_frames=11,
+    )
+
+    sampling_config = SamplingConfig(
+        collection_id=frame_collection_id,
+        n_samples_to_select=5,
+        sampling_result_tag_name="dropped_preselection",
+        strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
+        selected_sequence_length=5,
+    )
+
+    with caplog.at_level(logging.WARNING):
+        sampling_via_database_sequences(
+            session=db_session,
+            config=sampling_config,
+            input_sample_ids=frame_sample_ids,
+            preselected_sample_ids=[frame_sample_ids[10]],
+        )
+
+    assert "Dropped 1 of 1 preselected frame(s)" in caplog.text
+    # Nothing counts as preselected, so both candidate sequences stay available.
+    assert _tagged_frame_numbers(
+        session=db_session,
+        collection_id=frame_collection_id,
+        tag_name="dropped_preselection",
+    ) in ([0, 1, 2, 3, 4], [5, 6, 7, 8, 9])
+
+
+def test_sampling_via_database_sequences__preselection_outside_input(
+    db_session: Session,
+) -> None:
+    """Preselected frames that are no candidates form their own sequence and inform it.
+
+    The preselection covers frames 10-14, which sit outside the candidates. They are
+    chunked into a sequence with proxy ``[12, 12]``, so diversity must pick the far
+    candidate sequence ``[2, 2]`` over the adjacent ``[7, 7]``.
+    """
+    frame_collection_id, frame_sample_ids = _fill_db_with_video_frames_and_embeddings(
+        session=db_session,
+        n_frames=15,
+    )
+
+    sampling_config = SamplingConfig(
+        collection_id=frame_collection_id,
+        n_samples_to_select=5,
+        sampling_result_tag_name="outside_preselection",
+        strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
+        selected_sequence_length=5,
+    )
+
+    sampling_via_database_sequences(
+        session=db_session,
+        config=sampling_config,
+        input_sample_ids=frame_sample_ids[0:10],
+        preselected_sample_ids=frame_sample_ids[10:15],
+    )
+
+    assert _tagged_frame_numbers(
+        session=db_session,
+        collection_id=frame_collection_id,
+        tag_name="outside_preselection",
+    ) == [0, 1, 2, 3, 4]
+
+
+def test_sampling_via_database__sequence_preselection_matches_single_sampling(
+    db_session: Session,
+) -> None:
+    """Selecting two sequences in two preselected steps matches one combined run.
+
+    Goes through ``sampling_via_database`` so that resolving ``preselected_tag_name``
+    into frames of the sequence path is covered too.
+    """
+    frame_collection_id, frame_sample_ids = _fill_db_with_video_frames_and_embeddings(
+        session=db_session,
+        n_frames=15,
+    )
+    strategy = EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")
+
+    def sample_sequences(
+        n_samples_to_select: int, tag_name: str, preselected_tag_name: str | None
+    ) -> list[int]:
+        sampling_via_database(
+            session=db_session,
+            config=SamplingConfig(
+                collection_id=frame_collection_id,
+                n_samples_to_select=n_samples_to_select,
+                sampling_result_tag_name=tag_name,
+                preselected_tag_name=preselected_tag_name,
+                strategies=[strategy],
+                selected_sequence_length=5,
+            ),
+            input_sample_ids=frame_sample_ids,
+        )
+        return _tagged_frame_numbers(
+            session=db_session, collection_id=frame_collection_id, tag_name=tag_name
+        )
+
+    first_batch = sample_sequences(
+        n_samples_to_select=5, tag_name="first_batch", preselected_tag_name=None
+    )
+    second_batch = sample_sequences(
+        n_samples_to_select=5, tag_name="second_batch", preselected_tag_name="first_batch"
+    )
+    single_batch = sample_sequences(
+        n_samples_to_select=10, tag_name="single_batch", preselected_tag_name=None
+    )
+
+    assert len(first_batch) == 5
+    assert set(first_batch).isdisjoint(second_batch)
+    assert set(first_batch + second_batch) == set(single_batch)
+
+
+def _tagged_frame_numbers(session: Session, collection_id: UUID, tag_name: str) -> list[int]:
+    """Return the ascending frame numbers carrying the tag with the given name."""
+    tag = tag_resolver.get_by_name(session=session, tag_name=tag_name, collection_id=collection_id)
+    assert tag is not None
+    frames = video_frame_resolver.get_all_by_collection_id(
+        session=session,
+        collection_id=collection_id,
+        video_frame_filter=VideoFrameFilter(sample_filter=SampleFilter(tag_ids=[tag.tag_id])),
+    )
+    return sorted(frame.frame_number for frame in frames.samples)
 
 
 def _fill_db_with_video_frames_and_embeddings(

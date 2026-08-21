@@ -23,24 +23,48 @@ def sampling_via_database_sequences(
     session: Session,
     config: SamplingConfig,
     input_sample_ids: list[UUID],
+    preselected_sample_ids: Sequence[UUID],
 ) -> None:
-    """Run mean-proxy sequence sampling on a VIDEO_FRAME collection."""
+    """Run mean-proxy sequence sampling on a VIDEO_FRAME collection.
+
+    Args:
+        session: Database session used to resolve and store sampling data.
+        config: Sampling configuration. ``selected_sequence_length`` must be set.
+        input_sample_ids: Candidate frame sample IDs.
+        preselected_sample_ids: Frame sample IDs that should inform the sampling as
+            already selected. They need not be candidates and are never tagged; they
+            are chunked into sequences of their own that seed the selection.
+    """
     diversity_strategies = _validate_sequence_sampling(session=session, config=config)
     sequence_length = config.selected_sequence_length
     assert sequence_length is not None
-    sequences = _load_sequences(
+    preselected_id_set = set(preselected_sample_ids)
+    # Candidate and preselected frames are chunked separately.
+    preselected_sequences = _load_sequences(
         session=session,
-        sample_ids=input_sample_ids,
+        sample_ids=preselected_sample_ids,
         sequence_length=sequence_length,
+        frame_kind="preselected",
     )
+    candidate_sequences = _load_sequences(
+        session=session,
+        sample_ids=[
+            sample_id for sample_id in input_sample_ids if sample_id not in preselected_id_set
+        ],
+        sequence_length=sequence_length,
+        frame_kind="candidate",
+    )
+    # Mundig indices run over both groups, the preselected sequences coming first.
+    sequences = preselected_sequences + candidate_sequences
+    preselected_indices = list(range(len(preselected_sequences)))
     n_sequences_to_select = min(
         config.n_samples_to_select // sequence_length,
-        len(sequences),
+        len(candidate_sequences),
     )
     if n_sequences_to_select == 0:
         logger.warning(
             "No sequences available for sampling. No video has at least "
-            f"{sequence_length} candidate frame(s)."
+            f"{sequence_length} candidate frame(s) outside the preselection."
         )
         return
 
@@ -67,13 +91,19 @@ def sampling_via_database_sequences(
             .mean(axis=1)
         )
         mundig.add_diversity(embeddings=sequence_proxies, strength=strat.strength)
-    selected_sequence_indices = mundig.run(n_samples=n_sequences_to_select)
+    # Mundig returns the preselected sequences as the prefix of the selection.
+    selected_sequence_indices = mundig.run(
+        n_samples=len(preselected_indices) + n_sequences_to_select,
+        preselected_indices=preselected_indices,
+    )
     sampling_helpers.create_result_tag(
         session=session,
         collection_id=config.collection_id,
         tag_name=config.sampling_result_tag_name,
         selected_sample_ids=[
-            sample_id for index in selected_sequence_indices for sample_id in sequences[index]
+            sample_id
+            for index in selected_sequence_indices[len(preselected_indices) :]
+            for sample_id in sequences[index]
         ],
     )
 
@@ -127,20 +157,37 @@ def _load_sequences(
     session: Session,
     sample_ids: Sequence[UUID],
     sequence_length: int,
+    frame_kind: str,
 ) -> list[list[UUID]]:
-    """Load candidate frames and chunk them into complete sequences."""
+    """Load the given frames and chunk them into complete sequences.
+
+    Args:
+        session: The database session.
+        sample_ids: Frame sample ids to chunk, without duplicates.
+        sequence_length: Number of frames per sequence.
+        frame_kind: Names the frames in messages, so that the candidate and the
+            preselected chunking stay distinguishable.
+
+    Returns:
+        Sequences of frame sample ids, each of length ``sequence_length``.
+
+    Raises:
+        ValueError: If a sample id has no video frame metadata.
+    """
+    if not sample_ids:
+        return []
     frames = video_frame_resolver.get_frame_infos_by_ids(session=session, sample_ids=sample_ids)
     if len(frames) != len(sample_ids):
         missing = len(sample_ids) - len(frames)
         raise ValueError(
-            "Sequence sampling requires all candidates to be video frames; "
+            f"Sequence sampling requires all {frame_kind} samples to be video frames; "
             f"{missing} sample(s) have no video frame metadata."
         )
     sequences = sequence_selection.create_sequences(frames=frames, sequence_length=sequence_length)
     n_dropped = len(frames) - len(sequences) * sequence_length
     if n_dropped > 0:
         logger.warning(
-            f"Dropped {n_dropped} of {len(frames)} candidate frame(s) that do not fill a "
+            f"Dropped {n_dropped} of {len(frames)} {frame_kind} frame(s) that do not fill a "
             f"complete sequence of {sequence_length} frame(s)."
         )
     return sequences
