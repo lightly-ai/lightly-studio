@@ -55,7 +55,13 @@ class VideoTable(VideoBase, table=True):
 
 
 class VideoView(SQLModel):
-    """Video class when retrieving."""
+    """Video class when retrieving.
+
+    Attributes:
+        similarity_score: Similarity to a text/embedding query, when search is active.
+        order_value: Primary sort value for the current grid sort, when provided by the
+            resolver. Mutually exclusive with ``similarity_score`` for the grid overlay.
+    """
 
     type: SampleType = SampleType.VIDEO
     width: int
@@ -68,6 +74,7 @@ class VideoView(SQLModel):
     sample: SampleView
     frame: Optional["FrameView"] = None
     similarity_score: Optional[float] = None
+    order_value: Optional[float] = None
 
 
 class VideoViewsWithCount(BaseModel):
