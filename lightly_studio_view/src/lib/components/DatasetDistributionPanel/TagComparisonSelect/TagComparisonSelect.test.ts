@@ -7,6 +7,11 @@ const items = [
     { value: 'tag-a', label: 'Reviewed' },
     { value: 'tag-b', label: 'Priority' }
 ];
+const defaultProps = {
+    items,
+    selectedIds: [] as string[],
+    onChange: vi.fn()
+};
 
 describe('TagComparisonSelect', () => {
     beforeAll(() => {
@@ -16,7 +21,7 @@ describe('TagComparisonSelect', () => {
     it('selects a tag without mutating the controlled value', async () => {
         const user = userEvent.setup();
         const onChange = vi.fn();
-        render(TagComparisonSelect, { props: { items, selectedIds: [], onChange } });
+        render(TagComparisonSelect, { props: { ...defaultProps, onChange } });
 
         await user.click(screen.getByTestId('dataset-distribution-tag-select'));
         await user.click(screen.getByText('Reviewed'));
@@ -31,7 +36,7 @@ describe('TagComparisonSelect', () => {
         const user = userEvent.setup();
         const onChange = vi.fn();
         render(TagComparisonSelect, {
-            props: { items, selectedIds: ['tag-a'], onChange }
+            props: { ...defaultProps, selectedIds: ['tag-a'], onChange }
         });
 
         expect(screen.getByTestId('dataset-distribution-tag-select')).toHaveTextContent(

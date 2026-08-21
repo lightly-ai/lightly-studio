@@ -3,17 +3,15 @@ import type { SampleTagAnnotationCountsView } from '$lib/api/lightly_studio_loca
 import { countImageAnnotationsBySampleTagsOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { countImageAnnotationsBySampleTags } from '$lib/api/lightly_studio_local/sdk.gen';
 import { buildImageAnnotationCountsBySampleTagsQueryKey } from './buildImageAnnotationCountsBySampleTagsQueryKey';
-import {
-    buildImageAnnotationCountsBySampleTagsRequest,
-    type GroupedAnnotationCountsParams
-} from './buildImageAnnotationCountsBySampleTagsRequest';
+import { buildImageAnnotationCountsBySampleTagsRequest } from './buildImageAnnotationCountsBySampleTagsRequest';
 
 export { buildImageAnnotationCountsBySampleTagsQueryKey } from './buildImageAnnotationCountsBySampleTagsQueryKey';
 export { buildImageAnnotationCountsBySampleTagsRequest } from './buildImageAnnotationCountsBySampleTagsRequest';
-export type { GroupedAnnotationCountsParams } from './buildImageAnnotationCountsBySampleTagsRequest';
 
 export const useImageAnnotationCountsBySampleTags = (
-    getParams: () => GroupedAnnotationCountsParams & { enabled?: boolean }
+    getParams: () => Parameters<typeof buildImageAnnotationCountsBySampleTagsRequest>[0] & {
+        enabled?: boolean;
+    }
 ) => {
     return createQuery(() => {
         const { enabled, ...params } = getParams();

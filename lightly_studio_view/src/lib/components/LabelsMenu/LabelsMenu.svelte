@@ -26,13 +26,13 @@
         showVisibilityToggle = false
     }: Props = $props();
 
-    const { selectedCollectionIds } = useAnnotationCollectionsFilter();
+    const { multipleSourcesVisible, allSourcesHidden } = useAnnotationCollectionsFilter();
     const { enforceColoringByClassStore } = useSettings();
     const { hiddenClassNamesStore, toggleClassVisibility } = useAnnotationClassVisibility();
 
     const showClassColorLegend = $derived(
         !resolveEffectiveColorBySource({
-            multipleSourcesVisible: $selectedCollectionIds.length > 1,
+            multipleSourcesVisible: $multipleSourcesVisible,
             enforceColoringByClass: $enforceColoringByClassStore
         })
     );
@@ -40,7 +40,14 @@
 
 <Segment title="Annotation Classes">
     <div class="width-full space-y-2 overflow-hidden">
-        {#if $annotationFilterRows.length === 0}
+        {#if $allSourcesHidden}
+            <!-- The rows are empty here because every source is unchecked, not because the
+                 dataset has no annotations. Say so, otherwise the message below sends the user
+                 off to import annotations they already have. -->
+            <p class="text-sm text-diffuse-foreground" data-testid="labels-menu-no-sources">
+                No annotation sources selected. Select one to see its annotation classes.
+            </p>
+        {:else if $annotationFilterRows.length === 0}
             <p class="text-sm text-diffuse-foreground">
                 No annotations yet.
                 <a
