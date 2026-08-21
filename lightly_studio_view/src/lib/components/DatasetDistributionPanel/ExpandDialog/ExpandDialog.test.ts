@@ -58,10 +58,11 @@ describe('ExpandDialog', () => {
     });
 
     it('renders the title and a top-N summary from the applied config', () => {
-        renderDialog();
+        renderDialog({ valueNoun: 'objects' });
 
         expect(screen.getByText('Distribution')).toBeInTheDocument();
         expect(screen.getByText(/Top 10 of 30 classes · sorted by count/)).toBeInTheDocument();
+        expect(screen.getByText(/objects/)).toBeInTheDocument();
     });
 
     it('renders nothing while closed', () => {
@@ -96,6 +97,25 @@ describe('ExpandDialog', () => {
         );
 
         expect(onConfigChange).toHaveBeenCalledWith({ ...config, orientation: 'horizontal' });
+    });
+
+    it('filters series to only the visible top-N labels', () => {
+        const series = [
+            {
+                id: 'tag-a',
+                label: 'Tag A',
+                data: longTail.map((item) => ({ ...item, count: item.count / 2 }))
+            }
+        ];
+        renderDialog({ series });
+
+        // config.n = 10, so only the top 10 labels are visible.
+        const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+            series: { data: unknown[] }[];
+        };
+        // The named series is last; its data must be trimmed to the visible subset.
+        const namedSeries = option.series.at(-1) as { data: unknown[] };
+        expect(namedSeries.data).toHaveLength(10);
     });
 
     it('uses consistent plot spacing and exposes categorical value controls', async () => {

@@ -1,9 +1,14 @@
 <script lang="ts">
     import * as Dialog from '$lib/components/ui/dialog';
-    import { BarChart, type CategoryCount } from '$lib/components/BarChart';
+    import {
+        BarChart,
+        type CategoryCount,
+        type CategoryCountSeries
+    } from '$lib/components/BarChart';
     import DistributionConfigDialog from '../DistributionConfigDialog/DistributionConfigDialog.svelte';
     import PanelHeader from '../PanelHeader/PanelHeader.svelte';
     import { selectVisibleCounts } from '../selectVisibleCounts';
+    import { prepareVisibleSeries } from './prepareVisibleSeries';
     import type { DistributionConfig, DistributionSortOption } from '../types';
     import { DISTRIBUTION_SORT_LABELS } from '../types';
 
@@ -12,6 +17,8 @@
         open: boolean;
         /** Full class counts; the dialog applies `config` itself. */
         data: CategoryCount[];
+        /** Optional comparison series rendered on the shared class axis. */
+        series?: CategoryCountSeries[];
         /** The applied view config, shared with the panel. */
         config: DistributionConfig;
         /** Noun for the header summary (e.g. 'annotations', 'samples'). */
@@ -28,6 +35,7 @@
     let {
         open = $bindable(),
         data,
+        series = [],
         config,
         valueNoun = 'annotations',
         categoryNoun = 'class',
@@ -45,6 +53,8 @@
     let clientWidth = $state(0);
 
     const visible = $derived(selectVisibleCounts(data, config));
+    const visibleLabels = $derived(new Set(visible.map((item) => item.label)));
+    const visibleSeries = $derived(prepareVisibleSeries(series, visibleLabels));
     const totalCount = $derived(data.reduce((sum, item) => sum + item.count, 0));
     const configurationItems = $derived(
         data.map((item) => ({ value: item.id ?? item.label, label: item.label }))
@@ -56,19 +66,21 @@
         <Dialog.Header>
             <Dialog.Title>Distribution</Dialog.Title>
             <Dialog.Description>
-                Hover a bar for the full {categoryNoun} name and count
+                Hover a bar for the full {categoryNoun} name, number, and percentage
             </Dialog.Description>
         </Dialog.Header>
         <PanelHeader
             {config}
             classCount={data.length}
             visibleClassCount={visible.length}
-            {totalCount}
+            totalCount={series.length === 0 ? totalCount : undefined}
+            seriesCount={series.length || undefined}
             {valueNoun}
             {categoryNoun}
             {categoryNounPlural}
             {sortLabels}
             onConfigure={() => (configDialogOpen = true)}
+            onValueModeChange={(valueMode) => onConfigChange({ ...config, valueMode })}
             onShowAll={() => onConfigChange({ ...config, mode: 'topN', n: data.length })}
             onToggleOrientation={() =>
                 onConfigChange({
@@ -87,6 +99,8 @@
                 maxHeightPx={chartHeight || undefined}
                 maxWidthPx={clientWidth || undefined}
                 {totalCount}
+                series={visibleSeries}
+                valueMode={config.valueMode}
                 {onBarClick}
                 gridTopPx={4}
             />
