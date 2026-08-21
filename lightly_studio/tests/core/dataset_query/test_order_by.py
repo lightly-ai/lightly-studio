@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from duckdb_engine import Dialect as DuckDBDialect
+from sqlalchemy import Select
+from sqlalchemy import select as sa_select
 from sqlmodel import col, select
+from sqlmodel.sql.expression import SelectOfScalar
+from typing_extensions import assert_type
 
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import (
@@ -13,9 +18,11 @@ from lightly_studio.core.dataset_query.order_by import (
     OrderByField,
     OrderByMetadataField,
 )
+from lightly_studio.core.dataset_query.video_sample_field import VideoSampleField
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationSide
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.video import VideoFrameTable, VideoTable
 
 
 class TestOrderByField:
@@ -30,6 +37,20 @@ class TestOrderByField:
         assert "select image" in sql
         assert "image.file_name" in sql
         assert f"as {ORDER_VALUE_LABEL}" in sql
+
+    def test_apply_with_order_value__preserves_image_row_type(self) -> None:
+        # A single-entity image select stays typed as its entity plus the sort value,
+        # so the caller reads `row[0]` as an `ImageTable` rather than `Any`.
+        query: SelectOfScalar[ImageTable] = select(ImageTable)
+        result = OrderByField(ImageSampleField.file_name).apply_with_order_value(query)
+        assert_type(result, Select[tuple[ImageTable, Any]])
+
+    def test_apply_with_order_value__preserves_video_row_type(self) -> None:
+        # The video grid selects the video and its thumbnail frame together; both
+        # entities survive in the row type, with the sort value appended last.
+        query = sa_select(VideoTable, VideoFrameTable)
+        result = OrderByField(VideoSampleField.duration_s).apply_with_order_value(query)
+        assert_type(result, Select[tuple[VideoTable, VideoFrameTable, Any]])
 
     def test_apply_joins__no_joins(self) -> None:
         """Test that apply_joins does not add JOINs for image fields."""

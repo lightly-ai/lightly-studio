@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, cast
+from typing import Any, cast, overload
 from uuid import UUID
 
 import sqlalchemy
@@ -29,6 +29,7 @@ from lightly_studio.models.metadata import NUMERIC_TYPE_NAMES, SampleMetadataTab
 from lightly_studio.models.sample import SampleTable
 
 T = TypeVar("T", default=ImageTable)
+T2 = TypeVar("T2")
 # Preserves the query type so apply_joins works on both SelectOfScalar (apply)
 # and Select (window query).
 SelectT = TypeVar("SelectT", bound=SQLAlchemySelect[Any])
@@ -95,7 +96,17 @@ class OrderByExpression(ABC):
         joined = self.apply_joins(query)
         return joined.order_by(*self.to_column_elements())
 
-    def apply_with_order_value(self, query: SelectOfScalar[T]) -> SQLAlchemySelect[tuple[T, Any]]:
+    @overload
+    def apply_with_order_value(
+        self, query: SelectOfScalar[T]
+    ) -> SQLAlchemySelect[tuple[T, Any]]: ...
+
+    @overload
+    def apply_with_order_value(
+        self, query: SQLAlchemySelect[tuple[T, T2]]
+    ) -> SQLAlchemySelect[tuple[T, T2, Any]]: ...
+
+    def apply_with_order_value(self, query: SQLAlchemySelect[Any]) -> SQLAlchemySelect[Any]:
         """Apply this sort and append its value to the SELECT list.
 
         Behaves like ``apply`` but also appends the sort value to the SELECT list as
@@ -103,8 +114,11 @@ class OrderByExpression(ABC):
         multi-column ``Select`` (read rows with ``session.execute``) because the sort
         value is added to the row.
 
+        Accepts any ``Select`` rather than a single-entity one, because the video grid
+        selects the video and its thumbnail frame together.
+
         Args:
-            query: The SQLModel Select query to modify.
+            query: The SQLAlchemy Select query to modify.
 
         Returns:
             The query after joining, appending the labeled sort value, and ordering.
@@ -146,7 +160,7 @@ class OrderByField(OrderByExpression):
         self.field = field
 
     def _order_value_expression(self) -> ColumnElement[Any]:
-        """Return the image table column used for sorting."""
+        """Return the column wrapped by ``self.field`` — an image, video or sample column."""
         return cast(ColumnElement[Any], self.field.get_sqlmodel_field())
 
     def apply_joins(self, query: SelectT) -> SelectT:
@@ -211,10 +225,15 @@ class OrderByMetadataField(OrderByExpression):
         return db_json.json_extract_as_text(column=self._metadata_alias.data, field=self.field_name)
 
     def apply_joins(self, query: SelectT) -> SelectT:
-        """Left-outer-join aliased ``SampleMetadataTable`` on ``sample_id``."""
+        """Left-outer-join aliased ``SampleMetadataTable`` on ``sample_id``.
+
+        Joins through ``SampleTable`` rather than a concrete sample table so the same
+        expression works for image, video and video-frame queries. Every query that can
+        carry this expression joins its sample to filter by collection.
+        """
         return query.outerjoin(
             self._metadata_alias,
-            col(self._metadata_alias.sample_id) == col(ImageTable.sample_id),
+            col(self._metadata_alias.sample_id) == col(SampleTable.sample_id),
         )
 
 
@@ -262,7 +281,7 @@ class OrderByEvaluationMetricField(OrderByExpression):
         return query.outerjoin(
             self._metric_alias,
             and_(
-                col(self._metric_alias.sample_id) == col(ImageTable.sample_id),
+                col(self._metric_alias.sample_id) == col(SampleTable.sample_id),
                 col(self._metric_alias.evaluation_run_id) == col(self._run_alias.id),
                 col(self._metric_alias.metric_name) == self.metric_name,
             ),
