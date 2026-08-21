@@ -804,7 +804,7 @@ def test_get_embeddings2d__annotation_collection_color_by_own_label(
     ]
     image = create_image(session=db_session, collection_id=collection.collection_id)
     embedding_model = create_embedding_model(
-        session=db_session, collection_id=annotation_collection_id
+        session=db_session, collection_id=annotation_collection_id, set_as_default=True
     )
     annotations = []
     for i, label in enumerate(annotation_labels):

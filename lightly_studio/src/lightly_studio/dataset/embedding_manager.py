@@ -24,6 +24,7 @@ from lightly_studio.models.sample_embedding import SampleEmbeddingCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
+    default_embedding_space_resolver,
     embedding_model_resolver,
     image_resolver,
     sample_embedding_resolver,
@@ -172,9 +173,22 @@ class EmbeddingManager:
         # Store the model in our dictionary
         self._models[model_id] = embedding_generator
 
-        # Set as default if requested or if it's the first model
+        # Set as default if requested or if it's the first model. The in-memory map is the
+        # runtime cache that pairs a collection with an already-loaded generator; the
+        # default_embedding_space table persists the same choice so query-layer callers
+        # (get_default_by_collection_id) survive across processes.
         if set_as_default or collection_id not in self._collection_id_to_default_model_id:
             self._collection_id_to_default_model_id[collection_id] = model_id
+        if (
+            set_as_default
+            or default_embedding_space_resolver.get_by_collection_id(
+                session=session, collection_id=collection_id
+            )
+            is None
+        ):
+            default_embedding_space_resolver.set_default(
+                session=session, collection_id=collection_id, embedding_model_id=model_id
+            )
 
         return db_model
 
