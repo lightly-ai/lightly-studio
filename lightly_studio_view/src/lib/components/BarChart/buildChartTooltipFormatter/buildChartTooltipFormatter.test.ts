@@ -45,14 +45,12 @@ describe('buildChartTooltipFormatter — standard (non-grouped)', () => {
 
     it('shows label, count, and percentage', () => {
         const result = fmt([param('car', 6)]);
-        expect(result).toContain('<b>car</b>');
-        expect(result).toContain('<b>6</b>');
-        expect(result).toContain('60.0%');
+        expect(result).toBe('<b>car</b><br/>Count: <b>6</b> (60.0%)');
     });
 
     it('shows 0 count when the category is not found in data', () => {
         const result = fmt([param('unknown', 0)]);
-        expect(result).toContain('<b>0</b>');
+        expect(result).toBe('<b>unknown</b><br/>Count: <b>0</b> (0.0%)');
     });
 
     it('omits percentage when totalCount is 0', () => {
@@ -64,7 +62,7 @@ describe('buildChartTooltipFormatter — standard (non-grouped)', () => {
             hasActiveFilter: false
         });
         const result = fmt0([param('car', 6)]);
-        expect(result).not.toContain('%');
+        expect(result).toBe('<b>car</b><br/>Count: <b>6</b>');
     });
 
     it('escapes HTML in the category label', () => {
@@ -77,7 +75,9 @@ describe('buildChartTooltipFormatter — standard (non-grouped)', () => {
             hasActiveFilter: false
         });
         const result = fmtXss([param('<script>alert(1)</script>', 1)]);
-        expect(result).not.toContain('<script>');
+        expect(result).toBe(
+            '<b>&lt;script&gt;alert(1)&lt;/script&gt;</b><br/>Count: <b>1</b> (100.0%)'
+        );
     });
 
     it('looks up categories by id while displaying their label', () => {
@@ -90,8 +90,7 @@ describe('buildChartTooltipFormatter — standard (non-grouped)', () => {
             hasActiveFilter: false
         });
 
-        expect(fmtById([param('category-1', 6)])).toContain('<b>car</b>');
-        expect(fmtById([param('category-1', 6)])).toContain('<b>6</b>');
+        expect(fmtById([param('category-1', 6)])).toBe('<b>car</b><br/>Count: <b>6</b> (60.0%)');
     });
 });
 
@@ -106,9 +105,7 @@ describe('buildChartTooltipFormatter — standard with active filter', () => {
             hasActiveFilter: true
         });
         const result = fmt([param('car', 2)]);
-        expect(result).toContain('of');
-        expect(result).toContain('<b>2</b>');
-        expect(result).toContain('<b>6</b>');
+        expect(result).toBe('<b>car</b><br/>Count: <b>2</b> (20.0%) of <b>6</b> (60.0%) total');
     });
 
     it('does not show "of total" when filteredCount equals count', () => {
@@ -121,7 +118,7 @@ describe('buildChartTooltipFormatter — standard with active filter', () => {
             hasActiveFilter: true
         });
         const result = fmt([param('car', 6)]);
-        expect(result).not.toContain('of');
+        expect(result).toBe('<b>car</b><br/>Count: <b>6</b> (60.0%)');
     });
 
     it('does not show "of total" when filteredCount is absent', () => {
@@ -133,7 +130,7 @@ describe('buildChartTooltipFormatter — standard with active filter', () => {
             hasActiveFilter: true
         });
         const result = fmt([param('car', 6)]);
-        expect(result).not.toContain('of');
+        expect(result).toBe('<b>car</b><br/>Count: <b>6</b> (60.0%)');
     });
 });
 
@@ -152,7 +149,7 @@ describe('buildChartTooltipFormatter — grouped', () => {
 
     it('uses the category name as a bold header', () => {
         const result = fmt([param('car', 3, { seriesIndex: 0, seriesName: 'Reviewed' })]);
-        expect(result.startsWith('<b>car</b>')).toBe(true);
+        expect(result).toBe('<b>car</b><br/>Reviewed: <b>3</b> (60.0%)');
     });
 
     it('shows each series name and its count', () => {
@@ -160,28 +157,27 @@ describe('buildChartTooltipFormatter — grouped', () => {
             param('car', 3, { seriesIndex: 0, seriesName: 'Reviewed' }),
             param('car', 1, { seriesIndex: 1, seriesName: 'Priority' })
         ]);
-        expect(result).toContain('Reviewed');
-        expect(result).toContain('Priority');
-        expect(result).toContain('<b>3</b>');
-        expect(result).toContain('<b>1</b>');
+        expect(result).toBe(
+            '<b>car</b><br/>Reviewed: <b>3</b> (60.0%)<br/>Priority: <b>1</b> (10.0%)'
+        );
     });
 
     it('uses totalCount as denominator when provided on the series', () => {
         // tag-b has totalCount: 10
         const result = fmt([param('car', 1, { seriesIndex: 1, seriesName: 'Priority' })]);
-        expect(result).toContain('10.0%'); // 1/10
+        expect(result).toBe('<b>car</b><br/>Priority: <b>1</b> (10.0%)');
     });
 
     it('sums series data as denominator when totalCount is absent', () => {
         // tag-a: 3 + 2 = 5 total; car count = 3 → 60%
         const result = fmt([param('car', 3, { seriesIndex: 0, seriesName: 'Reviewed' })]);
-        expect(result).toContain('60.0%');
+        expect(result).toBe('<b>car</b><br/>Reviewed: <b>3</b> (60.0%)');
     });
 
     it('shows 0 count for a series missing the hovered category', () => {
         // tag-b has no 'dog' entry
         const result = fmt([param('dog', 0, { seriesIndex: 1, seriesName: 'Priority' })]);
-        expect(result).toContain('<b>0</b>');
+        expect(result).toBe('<b>dog</b><br/>Priority: <b>0</b> (0.0%)');
     });
 
     it('escapes HTML in the series name', () => {
@@ -198,7 +194,7 @@ describe('buildChartTooltipFormatter — grouped', () => {
         const result = fmtXss([
             param('car', 1, { seriesIndex: 0, seriesName: '<img src=x onerror=alert(1)>' })
         ]);
-        expect(result).not.toContain('<img');
+        expect(result).toBe('<b>car</b><br/>&lt;img src=x onerror=alert(1)&gt;: <b>1</b> (100.0%)');
     });
 
     it('keeps duplicate labels distinct by category id', () => {
@@ -224,7 +220,11 @@ describe('buildChartTooltipFormatter — grouped', () => {
             hasActiveFilter: false
         });
 
-        expect(fmtById([param('first', 3, { seriesIndex: 0 })])).toContain('<b>3</b>');
-        expect(fmtById([param('second', 1, { seriesIndex: 0 })])).toContain('<b>1</b>');
+        expect(fmtById([param('first', 3, { seriesIndex: 0 })])).toBe(
+            '<b>Missing</b><br/>: <b>3</b> (75.0%)'
+        );
+        expect(fmtById([param('second', 1, { seriesIndex: 0 })])).toBe(
+            '<b>Missing</b><br/>: <b>1</b> (25.0%)'
+        );
     });
 });
