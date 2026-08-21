@@ -1,0 +1,190 @@
+name: Prepare Release
+
+# Creates a release branch, promotes the changelog, bumps the version, and
+# opens a review-ready release PR - the mechanical half of preparing a
+# LightlyStudio release, in one manual dispatch. Public repo, ubuntu-latest,
+# no secrets beyond the default token used to push the branch and open the
+# PR. Publishes nothing.
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: >-
+          Semver bump. "auto" uses the suggestion computed from which
+          [Unreleased] sections are non-empty (see the job summary).
+        type: choice
+        options: [auto, patch, minor, major]
+        default: auto
+      version:
+        description: >-
+          Explicit version override, e.g. for a release candidate such as
+          1.0.0rc1. Takes precedence over "bump" when set.
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  pull-requests: write
+
+# Only one release preparation at a time; never cancel one mid-flight since
+# it pushes a branch and opens a PR.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  # The prepare_release tooling lives outside the lightly_studio package -
+  # it's CI-internal, not something shipped or user-facing - so it's run
+  # as `python3 -m prepare_release` with this on PYTHONPATH rather than
+  # from inside lightly_studio's own environment.
+  PYTHONPATH: ${{ github.workspace }}/.github/scripts
+
+jobs:
+  prepare-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          # Full history + tags: the coverage checklist below diffs against
+          # the last tag.
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Set Up uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          version: "0.8.17"
+          enable-cache: true
+
+      - name: Lint and test the prepare_release tooling
+        working-directory: .github/scripts
+        run: |
+          uv run --with ruff --no-project ruff format --check .
+          uv run --with ruff --no-project ruff check .
+          uv run --with mypy --no-project mypy prepare_release
+          uv run --with pytest --no-project pytest -q
+
+      - name: Guard against a git-pinned Labelformat
+        run: |
+          python3 -m prepare_release check-labelformat-pin \
+            --pyproject lightly_studio/pyproject.toml
+
+      - name: Suggest version bump
+        id: suggest
+        # Only needed when the operator left both inputs on their defaults;
+        # an explicit --version or --bump makes the suggestion moot.
+        if: inputs.version == '' && inputs.bump == 'auto'
+        run: |
+          result="$(python3 -m prepare_release suggest-bump --changelog CHANGELOG.md)"
+          bump="$(printf '%s\n' "$result" | head -n1 | sed 's/^bump=//')"
+          echo "bump=$bump" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Suggested version bump: \`$bump\`"
+            printf '%s\n' "$result" | tail -n +2
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Resolve inputs
+        id: resolved
+        run: |
+          bump="${{ inputs.bump }}"
+          if [ "$bump" = "auto" ]; then
+            # Empty when an explicit --version was given instead (the
+            # "Suggest version bump" step above was skipped) - unused in
+            # that case, compute-version ignores --bump whenever --version
+            # is set.
+            bump="${{ steps.suggest.outputs.bump }}"
+            bump="${bump:-patch}"
+          fi
+          echo "bump=$bump" >> "$GITHUB_OUTPUT"
+
+          version="$(python3 -m prepare_release compute-version \
+            --pyproject lightly_studio/pyproject.toml \
+            --bump "$bump" \
+            --version "${{ inputs.version }}")"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "### Preparing release v$version" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create release branch
+        run: git checkout -b "release-v${{ steps.resolved.outputs.version }}"
+
+      - name: Promote changelog
+        run: |
+          python3 -m prepare_release promote-changelog \
+            --changelog CHANGELOG.md \
+            --version "${{ steps.resolved.outputs.version }}" \
+            --date "$(date -u +%F)"
+
+      - name: Bump pyproject.toml version
+        run: |
+          python3 -m prepare_release bump-pyproject \
+            --pyproject lightly_studio/pyproject.toml \
+            --version "${{ steps.resolved.outputs.version }}"
+
+      - name: Snapshot uv.lock before sync
+        run: cp lightly_studio/uv.lock /tmp/uv.lock.before
+
+      - name: uv sync
+        working-directory: lightly_studio
+        run: uv sync
+
+      - name: Assert uv.lock diff is narrow
+        run: |
+          python3 -m prepare_release assert-lock-diff \
+            --before /tmp/uv.lock.before \
+            --after lightly_studio/uv.lock \
+            --package lightly-studio
+
+      - name: Confirm exactly the expected files changed
+        run: |
+          changed="$(git status --porcelain | awk '{print $2}' | sort)"
+          expected="$(printf '%s\n' CHANGELOG.md lightly_studio/pyproject.toml lightly_studio/uv.lock | sort)"
+          if [ "$changed" != "$expected" ]; then
+            echo "::error::Unexpected file set changed. Got:"
+            echo "$changed"
+            exit 1
+          fi
+
+      - name: Build coverage checklist (advisory, git-derived, never published)
+        run: |
+          last_tag="$(git describe --tags --abbrev=0 origin/main 2>/dev/null || true)"
+          {
+            if [ -z "$last_tag" ]; then
+              echo "_No previous tag found; skipping coverage checklist._"
+            else
+              echo "Merged commits since \`$last_tag\` - check each has a matching CHANGELOG entry:"
+              echo
+              git log "$last_tag..origin/main" --no-merges --oneline | sed 's/^/- /'
+            fi
+          } > /tmp/coverage_checklist.md
+          cat /tmp/coverage_checklist.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Render PR body
+        run: |
+          python3 -m prepare_release render-pr-body \
+            --changelog CHANGELOG.md \
+            --version "${{ steps.resolved.outputs.version }}" \
+            --coverage-file /tmp/coverage_checklist.md \
+            --drafting-skipped-reason "automated LLM drafting is not wired in yet" \
+            --output /tmp/pr_body.md
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md lightly_studio/pyproject.toml lightly_studio/uv.lock
+          git commit -m "Bump version to ${{ steps.resolved.outputs.version }}"
+          git push origin "release-v${{ steps.resolved.outputs.version }}"
+
+      - name: Open release PR
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          gh pr create \
+            --title "Bump version to ${{ steps.resolved.outputs.version }}" \
+            --body-file /tmp/pr_body.md \
+            --base main \
+            --head "release-v${{ steps.resolved.outputs.version }}"
