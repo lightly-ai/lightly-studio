@@ -19,12 +19,14 @@ export interface CategoryCount {
     pinned?: boolean;
 }
 
-/** One named set of counts rendered against a shared category axis. */
+/** A named series of category counts for grouped bar charts. */
 export interface CategoryCountSeries {
-    /** Stable identity used to derive the series colour. */
+    /** Stable series identity used for color assignment. */
     id: string;
+    /** Display name shown in the legend and tooltip. */
     label: string;
+    /** Per-category counts for this series. */
     data: CategoryCount[];
-    /** Full-series total, used when the visible data is a top-N subset. */
+    /** Denominator for tooltip percentages; defaults to the sum of `data`. */
     totalCount?: number;
 }
