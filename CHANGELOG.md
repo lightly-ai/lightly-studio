@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Report anonymous usage data on app launch. Set `LIGHTLY_STUDIO_ANALYTICS_ENABLED=false` to opt out.
 - Sort the annotations grid by a per-annotation evaluation metric, such as IoU.
+- Python SDK: Order video queries by `VideoSampleField.created_at`.
 - Python SDK: Continue sampling from an existing tagged selection with the
   `preselected_tag_name` parameter.
 - Python SDK: Select video-frame sequences with `selected_sequence_length` on `Sampling.diverse()`. It defaults to `None`, which selects individual frames. `n_samples_to_select` still counts frames and must be a multiple of the sequence length.
@@ -21,11 +22,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sort index from the start. On PostgreSQL with 1M images, one neighbour lookup went from 92ms
   to 0.03ms.
 - Python SDK: `ImageDataset.add_images_from_path` now accepts `tag_depth > 1` to tag images by several leading directory levels (previously only `tag_depth=1` was supported).
-
-- Stepping to the previous or next annotation in the annotation details view no longer sorts the
-  whole collection on every click, for annotations on images and on video frames. On PostgreSQL
-  with 4M annotations a click went from 6.3s to 1.3s; the neighbour lookup itself went from ~6s
-  to 3ms, and the remaining 1.2s is the exact position and total counts.
 
 ### Deprecated
 
