@@ -12,15 +12,12 @@ export const SERIES_COLORS = [
     '#BAB0AC'
 ];
 
-/** Generates additional colors beyond the palette by cycling with reduced opacity. */
+/** Generates additional opaque colors beyond the base palette. */
 export function extendedSeriesColor(index: number): string {
-    const base = SERIES_COLORS[index % SERIES_COLORS.length];
-    const cycle = Math.floor(index / SERIES_COLORS.length);
-    return cycle === 0
-        ? base
-        : `${base}${Math.round((1 - cycle * 0.25) * 255)
-              .toString(16)
-              .padStart(2, '0')}`;
+    if (index < SERIES_COLORS.length) return SERIES_COLORS[index];
+
+    const hue = (index * 137.508) % 360;
+    return `hsl(${hue} 60% 55%)`;
 }
 
 /** Maps a stable series ID to the same accessible chart colour across renders. */

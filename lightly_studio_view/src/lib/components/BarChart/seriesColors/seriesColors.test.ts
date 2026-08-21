@@ -13,18 +13,18 @@ describe('extendedSeriesColor', () => {
         }
     });
 
-    it('appends an opacity suffix in the second cycle', () => {
+    it('generates an opaque color after the base palette', () => {
         const color = extendedSeriesColor(SERIES_COLORS.length);
-        expect(color).toMatch(/^#[0-9A-Fa-f]{6}[0-9A-Fa-f]{2}$/);
-        expect(color.startsWith(SERIES_COLORS[0])).toBe(true);
+        expect(color).toMatch(/^hsl\([\d.]+ 60% 55%\)$/);
     });
 
-    it('produces a darker opacity in the third cycle than the second', () => {
-        const second = extendedSeriesColor(SERIES_COLORS.length);
-        const third = extendedSeriesColor(SERIES_COLORS.length * 2);
-        const secondOpacity = parseInt(second.slice(7), 16);
-        const thirdOpacity = parseInt(third.slice(7), 16);
-        expect(thirdOpacity).toBeLessThan(secondOpacity);
+    it('keeps later-cycle colors valid, opaque, and distinct', () => {
+        const colors = [extendedSeriesColor(40), extendedSeriesColor(50)];
+        expect(colors).toEqual([
+            expect.stringMatching(/^hsl\([\d.]+ 60% 55%\)$/),
+            expect.stringMatching(/^hsl\([\d.]+ 60% 55%\)$/)
+        ]);
+        expect(new Set(colors).size).toBe(2);
     });
 });
 
