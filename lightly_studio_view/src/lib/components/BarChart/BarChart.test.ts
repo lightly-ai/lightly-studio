@@ -3,6 +3,7 @@ import { createRawSnippet } from 'svelte';
 import { describe, expect, it, vi } from 'vitest';
 import BarChart from './BarChart.svelte';
 import { balanced, empty } from './fixtures';
+import type { CategoryCountSeries } from './types';
 
 const echartsMock = vi.hoisted(() => {
     let clickHandler: ((params: { dataIndex?: number }) => void) | undefined;
@@ -110,5 +111,18 @@ describe('BarChart', () => {
             props: { data: balanced, maxHeightPx: 400, orientation: 'horizontal' }
         });
         expect(screen.getByTestId('bar-chart')).toHaveStyle({ 'max-height': '400px' });
+    });
+
+    it('adds legend height to the canvas when horizontal with grouped series', () => {
+        // BAR_THICKNESS_PX=28, series.length*14=28, categoryThicknessPx=max(28,28)=28
+        // barsExtentPx = balanced.length * 28 + 40 + (GROUPED_GRID_TOP_PX - DEFAULT_GRID_TOP_PX)
+        //              = 5 * 28 + 40 + (48 - 16) = 140 + 40 + 32 = 212
+        const series: CategoryCountSeries[] = [
+            { id: 'a', label: 'Series A', data: balanced },
+            { id: 'b', label: 'Series B', data: balanced }
+        ];
+        render(BarChart, { props: { data: balanced, orientation: 'horizontal', series } });
+        const canvas = screen.getByTestId('bar-chart').firstElementChild as HTMLElement;
+        expect(canvas).toHaveStyle({ height: '212px' });
     });
 });
