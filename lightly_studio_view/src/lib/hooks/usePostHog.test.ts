@@ -17,30 +17,37 @@ vi.mock('$lib/version.json', () => ({
 const mockInit = vi.fn();
 const mockCapture = vi.fn();
 const mockRegister = vi.fn();
+const mockIdentify = vi.fn();
 
 vi.mock('posthog-js', () => ({
     default: {
         init: (...args: unknown[]) => mockInit(...args),
         capture: (...args: unknown[]) => mockCapture(...args),
-        register: (...args: unknown[]) => mockRegister(...args)
+        register: (...args: unknown[]) => mockRegister(...args),
+        identify: (...args: unknown[]) => mockIdentify(...args)
     }
 }));
 
 // Mocked at the module registry rather than spied on, so it survives the vi.resetModules() the
 // tests below need to get an uninitialized hook.
-const mockGetFeatures = vi.fn();
+const mockGetAnalyticsConfig = vi.fn();
 
 vi.mock('$lib/api/lightly_studio_local/sdk.gen', () => ({
-    getFeatures: (...args: unknown[]) => mockGetFeatures(...args)
+    getAnalyticsConfig: (...args: unknown[]) => mockGetAnalyticsConfig(...args)
 }));
+
+const enabledConfig = {
+    data: { enabled: true, distinct_id: 'install-id', user_cohort: 'user' }
+};
 
 describe('usePostHog', () => {
     beforeEach(() => {
         mockInit.mockClear();
         mockCapture.mockClear();
         mockRegister.mockClear();
-        mockGetFeatures.mockReset();
-        mockGetFeatures.mockResolvedValue({ data: ['analytics'] });
+        mockIdentify.mockClear();
+        mockGetAnalyticsConfig.mockReset();
+        mockGetAnalyticsConfig.mockResolvedValue(enabledConfig);
     });
 
     it('should initialize PostHog with correct configuration', async () => {
@@ -73,16 +80,28 @@ describe('usePostHog', () => {
         expect(mockInit).toHaveBeenCalledTimes(1);
     });
 
+    it('should identify with the installation id and cohort reported by the backend', async () => {
+        mockGetAnalyticsConfig.mockResolvedValue({
+            data: { enabled: true, distinct_id: 'install-id', user_cohort: 'staff' }
+        });
+
+        await (await freshPostHog()).init();
+
+        expect(mockIdentify).toHaveBeenCalledWith('install-id', { user_cohort: 'staff' });
+    });
+
     it('should not initialize when the backend reports analytics as off', async () => {
-        mockGetFeatures.mockResolvedValue({ data: [] });
+        mockGetAnalyticsConfig.mockResolvedValue({
+            data: { enabled: false, distinct_id: null, user_cohort: null }
+        });
 
         await (await freshPostHog()).init();
 
         expect(mockInit).not.toHaveBeenCalled();
     });
 
-    it('should not initialize when the features request fails', async () => {
-        mockGetFeatures.mockRejectedValue(new Error('API Error'));
+    it('should not initialize when the config request fails', async () => {
+        mockGetAnalyticsConfig.mockRejectedValue(new Error('API Error'));
 
         await (await freshPostHog()).init();
 
