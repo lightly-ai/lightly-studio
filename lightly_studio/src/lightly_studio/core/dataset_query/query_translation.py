@@ -151,6 +151,13 @@ _SORT_FIELDS: dict[tuple[str, str], Field] = {
     ("image", "created_at"): ImageSampleField.created_at,
     ("image", "width"): ImageSampleField.width,
     ("image", "height"): ImageSampleField.height,
+    ("video", "file_name"): VideoSampleField.file_name,
+    ("video", "file_path_abs"): VideoSampleField.file_path_abs,
+    ("video", "created_at"): VideoSampleField.created_at,
+    ("video", "width"): VideoSampleField.width,
+    ("video", "height"): VideoSampleField.height,
+    ("video", "duration_s"): VideoSampleField.duration_s,
+    ("video", "fps"): VideoSampleField.fps,
 }
 
 

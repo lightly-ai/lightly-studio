@@ -233,7 +233,8 @@ describe('DatasetDistributionPanel', () => {
                         data: [{ label: 'car', count: 10 }],
                         comparisonData
                     }
-                ]
+                ],
+                selectedComparisonTagIds: ['tag-a', 'tag-b']
             }
         });
 
@@ -241,11 +242,10 @@ describe('DatasetDistributionPanel', () => {
             yAxis: { data: string[] };
             series: { name: string; data: number[] }[];
         };
+        // dog has the highest aggregate (0+5=5), car second (2+1=3).
         expect(option.yAxis.data).toEqual(['dog', 'car']);
-        expect(option.series).toMatchObject([
-            { name: 'Reviewed', data: [0, 2] },
-            { name: 'Priority', data: [5, 1] }
-        ]);
+        // Series names are preserved; each tag is independent (not merged).
+        expect(option.series).toMatchObject([{ name: 'Reviewed' }, { name: 'Priority' }]);
         expect(screen.getByText(/2 sample tags/)).toBeInTheDocument();
         expect(screen.queryByText(/annotations/)).not.toBeInTheDocument();
 
@@ -295,7 +295,8 @@ describe('DatasetDistributionPanel', () => {
                             }
                         ]
                     }
-                ]
+                ],
+                selectedComparisonTagIds: ['tag-a', 'tag-b']
             }
         });
 

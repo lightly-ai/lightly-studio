@@ -19,6 +19,9 @@ from lightly_studio.models.collection import (
 from lightly_studio.models.dataset import (
     DatasetTable,  # noqa: F401, required for SQLModel to work properly
 )
+from lightly_studio.models.default_embedding_space import (
+    DefaultEmbeddingSpaceTable,  # noqa: F401, required for SQLModel to work properly
+)
 from lightly_studio.models.embedding_model import (
     EmbeddingModelTable,  # noqa: F401, required for SQLModel to work properly
 )

@@ -210,7 +210,7 @@
         manualClasses: [],
         orientation: 'horizontal',
         countMode: untrack(() => initialCountMode),
-        valueMode: 'number'
+        valueMode: untrack(() => (selectedComparisonTagIds.length > 0 ? 'percentage' : 'number'))
     });
     const defaultCategoricalConfig: DistributionConfig = {
         mode: 'topN',
@@ -484,6 +484,7 @@
                 totalCount={showTotalCount && activeSeries.length === 0 ? totalCount : undefined}
                 seriesCount={activeSeries.length || undefined}
                 {valueNoun}
+                valueMode={config.valueMode}
                 onConfigure={() => (configDialogOpen = true)}
                 onValueModeChange={(valueMode) => (config = { ...config, valueMode })}
                 onShowAll={() => (config = { ...config, mode: 'topN', n: activeData.length })}

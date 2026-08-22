@@ -1,4 +1,4 @@
-import type { CategoryCountSeries } from '$lib/components/BarChart/types';
+import type { CategoryCountSeries } from '$lib/components/BarChart';
 
 /** Filters each series to only the visible labels while preserving the full-data total for percentage calculations. */
 export function prepareVisibleSeries(

@@ -1,7 +1,10 @@
 <script lang="ts">
     import * as Dialog from '$lib/components/ui/dialog';
-    import { BarChart, type CategoryCount } from '$lib/components/BarChart';
-    import type { CategoryCountSeries } from '$lib/components/BarChart/types';
+    import {
+        BarChart,
+        type CategoryCount,
+        type CategoryCountSeries
+    } from '$lib/components/BarChart';
     import DistributionConfigDialog from '../DistributionConfigDialog/DistributionConfigDialog.svelte';
     import PanelHeader from '../PanelHeader/PanelHeader.svelte';
     import { selectVisibleCounts } from '../selectVisibleCounts';
