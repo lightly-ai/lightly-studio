@@ -5,8 +5,8 @@ Adds nullable ``stale_since`` column to ``evaluation_run``.  The column is
 underlying annotation collection changes.
 
 Revision ID: d1e2f3a4b5c6
-Revises: 4f6a7b8c9d0e
-Create Date: 2026-08-20 00:00:00.000000
+Revises: b1c2d3e4f5a6
+Create Date: 2026-08-24 00:00:00.000000
 
 """
 
@@ -18,7 +18,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "d1e2f3a4b5c6"
-down_revision: Union[str, Sequence[str], None] = "4f6a7b8c9d0e"
+down_revision: Union[str, Sequence[str], None] = "b1c2d3e4f5a6"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
