@@ -15,6 +15,7 @@
         onClose,
         position = 'right',
         class: className,
+        ariaLabel,
         children
     }: {
         initialColor?: string;
@@ -23,6 +24,7 @@
         onClose?: (applied: boolean) => void;
         position?: 'top' | 'bottom' | 'left' | 'right';
         class?: string;
+        ariaLabel?: string;
         children: Snippet;
     } = $props();
 
@@ -395,6 +397,7 @@
     <button
         type="button"
         class="m-0 border-0 bg-transparent p-0"
+        aria-label={ariaLabel}
         onclick={togglePicker}
         onkeydown={handleKeyDown}
         bind:this={triggerElement}

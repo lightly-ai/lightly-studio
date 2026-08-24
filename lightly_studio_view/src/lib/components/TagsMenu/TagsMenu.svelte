@@ -1,6 +1,8 @@
 <script lang="ts">
     import type { GridType } from '$lib/types';
     import Segment from '$lib/components/Segment/Segment.svelte';
+    import { getSegmentRowStyles } from '$lib/components/Segment/segmentDensity';
+    import { cn } from '$lib/utils';
     import { Checkbox } from '$lib/components';
     import type { TagView } from '$lib/services/types';
     import { useTags } from '$lib/hooks/useTags/useTags.js';
@@ -23,6 +25,8 @@
         $props();
 
     const tagKind = $derived(gridType === 'annotations' ? 'annotation' : 'sample');
+
+    const rowStyles = getSegmentRowStyles();
 
     const { tags, tagsSelected, tagSelectionToggle, loadTags, clearTagSelected } = $derived(
         useTags({ collection_id, kind: [tagKind] })
@@ -240,7 +244,16 @@
                     {/if}
                 </div>
             {:else}
-                <p>No tags yet</p>
+                <!-- Sit on the same content column and row rhythm as the tag rows, so the
+                     placeholder reads as an empty list rather than floating loose text. -->
+                <p
+                    class={cn(
+                        'flex h-7 items-center text-[12.5px] text-diffuse-foreground',
+                        rowStyles.contentIndent
+                    )}
+                >
+                    No tags yet
+                </p>
             {/each}
         </div>
 
