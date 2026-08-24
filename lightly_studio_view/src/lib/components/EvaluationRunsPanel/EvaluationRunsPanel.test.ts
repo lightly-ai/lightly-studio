@@ -17,7 +17,7 @@ vi.mock('./TriggerEvaluationDialog/TriggerEvaluationDialog.svelte', async () => 
     return { default: module.default };
 });
 
-vi.mock('./EvaluationRunItem/useRecomputeEvaluationRun.svelte', () => ({
+vi.mock('$lib/hooks/useRecomputeEvaluationRun/useRecomputeEvaluationRun.svelte', () => ({
     useRecomputeEvaluationRun: () => ({
         mutation: { isPending: false },
         recompute: vi.fn()

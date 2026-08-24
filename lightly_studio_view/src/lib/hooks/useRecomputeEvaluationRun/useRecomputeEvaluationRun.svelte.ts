@@ -31,6 +31,9 @@ export const useRecomputeEvaluationRun = (getParams: () => UseRecomputeEvaluatio
                     client.invalidateQueries({
                         queryKey: getEvaluationSampleMetricsInfoQueryKey({ path })
                     });
+                    client.invalidateQueries({
+                        queryKey: ['getEvaluationConfusionMatrix', datasetId, runId]
+                    });
                 },
                 onError: (error) => {
                     const message =

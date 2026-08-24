@@ -13,7 +13,7 @@ vi.mock(
     }
 );
 
-vi.mock('./useRecomputeEvaluationRun.svelte', () => ({
+vi.mock('$lib/hooks/useRecomputeEvaluationRun/useRecomputeEvaluationRun.svelte', () => ({
     useRecomputeEvaluationRun: () => ({
         mutation: { isPending: false },
         recompute: vi.fn()

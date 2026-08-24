@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Button } from '$lib/components';
-    import { useRecomputeEvaluationRun } from '../useRecomputeEvaluationRun.svelte';
+    import { useRecomputeEvaluationRun } from '$lib/hooks';
 
     interface Props {
         /** The dataset the evaluation run belongs to. */
