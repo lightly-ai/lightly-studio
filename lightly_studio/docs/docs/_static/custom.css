@@ -246,6 +246,18 @@ body {
 }
 
 @media screen and (min-width: 76.25em) {
+  /* Material opens the row 1.5rem below the header. Both panels are pinned at
+     `top: var(--ls-header-height)`, so that margin shows as a 30px strip of
+     page above each of them — but only at the top of a page, because the first
+     scroll takes them up to the pin and closes it. A panel that meets the
+     header only once you scroll is worse than one that never does.
+
+     The article gets its air from the breadcrumb's own 1.2rem of padding, and
+     from `.md-content__inner` on the pages that have no breadcrumb. */
+  .md-main__inner {
+    margin-top: 0;
+  }
+
   .md-sidebar--primary {
     width: var(--ls-sidebar-width);
   }
