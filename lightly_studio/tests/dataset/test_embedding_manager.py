@@ -859,36 +859,41 @@ def _register_random_model(session: Session, collection: CollectionTable) -> UUI
     ).embedding_model_id
 
 
-def test_validate_embeddings_for_storage(
+def test_validate_and_coerce_embeddings(
     db_session: Session,
     collection: CollectionTable,
 ) -> None:
-    """A well-formed batch of embeddings passes validation without error."""
+    """A well-formed batch of embeddings passes validation unchanged."""
     model_id = _register_random_model(session=db_session, collection=collection)
     sample_ids = [uuid4(), uuid4()]
     embeddings = np.zeros((2, 3), dtype=np.float32)
 
-    embedding_manager._validate_embeddings_for_storage(
+    result = embedding_manager._validate_and_coerce_embeddings(
         session=db_session, model_id=model_id, sample_ids=sample_ids, embeddings=embeddings
     )
 
+    assert result.dtype == np.float32
+    np.testing.assert_array_equal(result, embeddings)
 
-def test_validate_embeddings_for_storage__empty_is_valid(
+
+def test_validate_and_coerce_embeddings__empty_is_valid(
     db_session: Session,
     collection: CollectionTable,
 ) -> None:
     """An empty batch passes validation without touching the embedding model."""
     model_id = _register_random_model(session=db_session, collection=collection)
 
-    embedding_manager._validate_embeddings_for_storage(
+    result = embedding_manager._validate_and_coerce_embeddings(
         session=db_session,
         model_id=model_id,
         sample_ids=[],
         embeddings=np.zeros((0, 3), dtype=np.float32),
     )
 
+    assert len(result) == 0
 
-def test_validate_embeddings_for_storage__count_mismatch(
+
+def test_validate_and_coerce_embeddings__count_mismatch(
     db_session: Session,
     collection: CollectionTable,
 ) -> None:
@@ -898,12 +903,12 @@ def test_validate_embeddings_for_storage__count_mismatch(
     embeddings = np.zeros((1, 3), dtype=np.float32)
 
     with pytest.raises(ValueError, match=r"does not match number of sample IDs"):
-        embedding_manager._validate_embeddings_for_storage(
+        embedding_manager._validate_and_coerce_embeddings(
             session=db_session, model_id=model_id, sample_ids=sample_ids, embeddings=embeddings
         )
 
 
-def test_validate_embeddings_for_storage__wrong_dimension(
+def test_validate_and_coerce_embeddings__wrong_dimension(
     db_session: Session,
     collection: CollectionTable,
 ) -> None:
@@ -913,22 +918,60 @@ def test_validate_embeddings_for_storage__wrong_dimension(
     embeddings = np.zeros((1, 4), dtype=np.float32)  # model dimension is 3
 
     with pytest.raises(ValueError, match=r"Embedding dimension \(4\)"):
-        embedding_manager._validate_embeddings_for_storage(
+        embedding_manager._validate_and_coerce_embeddings(
             session=db_session, model_id=model_id, sample_ids=sample_ids, embeddings=embeddings
         )
 
 
-def test_validate_embeddings_for_storage__wrong_dtype(
+def test_validate_and_coerce_embeddings__casts_float64_to_float32(
     db_session: Session,
     collection: CollectionTable,
 ) -> None:
-    """A non-float32 array is rejected instead of being silently coerced."""
+    """A float64 array (the numpy default) is safely cast down to float32, not rejected."""
     model_id = _register_random_model(session=db_session, collection=collection)
     sample_ids = [uuid4()]
-    embeddings = np.zeros((1, 3), dtype=np.float64)
+    embeddings = np.array([[0.1, 0.2, 0.3]], dtype=np.float64)
 
-    with pytest.raises(ValueError, match=r"must be float32"):
-        embedding_manager._validate_embeddings_for_storage(
+    result = embedding_manager._validate_and_coerce_embeddings(
+        session=db_session,
+        model_id=model_id,
+        sample_ids=sample_ids,
+        embeddings=embeddings,  # type: ignore[arg-type]
+    )
+
+    assert result.dtype == np.float32
+    np.testing.assert_allclose(result, embeddings, rtol=1e-6)
+
+
+def test_validate_and_coerce_embeddings__rejects_non_numeric_dtype(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """A non-numeric dtype (e.g. strings) is rejected."""
+    model_id = _register_random_model(session=db_session, collection=collection)
+    sample_ids = [uuid4()]
+    embeddings = np.array([["a", "b", "c"]])
+
+    with pytest.raises(ValueError, match=r"must be numeric"):
+        embedding_manager._validate_and_coerce_embeddings(
+            session=db_session,
+            model_id=model_id,
+            sample_ids=sample_ids,
+            embeddings=embeddings,
+        )
+
+
+def test_validate_and_coerce_embeddings__rejects_overflow_from_cast(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """A float64 value too large for float32 overflows to Inf and is rejected."""
+    model_id = _register_random_model(session=db_session, collection=collection)
+    sample_ids = [uuid4()]
+    embeddings = np.array([[1e308, 0.0, 0.0]], dtype=np.float64)
+
+    with pytest.raises(ValueError, match=r"NaN or infinite"):
+        embedding_manager._validate_and_coerce_embeddings(
             session=db_session,
             model_id=model_id,
             sample_ids=sample_ids,
@@ -936,7 +979,7 @@ def test_validate_embeddings_for_storage__wrong_dtype(
         )
 
 
-def test_validate_embeddings_for_storage__nan(
+def test_validate_and_coerce_embeddings__nan(
     db_session: Session,
     collection: CollectionTable,
 ) -> None:
@@ -946,12 +989,12 @@ def test_validate_embeddings_for_storage__nan(
     embeddings = np.full((1, 3), np.nan, dtype=np.float32)
 
     with pytest.raises(ValueError, match=r"NaN or infinite"):
-        embedding_manager._validate_embeddings_for_storage(
+        embedding_manager._validate_and_coerce_embeddings(
             session=db_session, model_id=model_id, sample_ids=sample_ids, embeddings=embeddings
         )
 
 
-def test_validate_embeddings_for_storage__inf(
+def test_validate_and_coerce_embeddings__inf(
     db_session: Session,
     collection: CollectionTable,
 ) -> None:
@@ -961,7 +1004,7 @@ def test_validate_embeddings_for_storage__inf(
     embeddings = np.full((1, 3), np.inf, dtype=np.float32)
 
     with pytest.raises(ValueError, match=r"NaN or infinite"):
-        embedding_manager._validate_embeddings_for_storage(
+        embedding_manager._validate_and_coerce_embeddings(
             session=db_session, model_id=model_id, sample_ids=sample_ids, embeddings=embeddings
         )
 
@@ -988,3 +1031,28 @@ def test_store_embeddings__rejects_invalid_embeddings_before_write(
         select(SampleEmbeddingTable).where(SampleEmbeddingTable.embedding_model_id == model_id)
     ).all()
     assert len(stored_embeddings) == 0
+
+
+def test_store_embeddings__casts_float64_embeddings(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """_store_embeddings accepts and stores embeddings passed in as float64."""
+    model_id = _register_random_model(session=db_session, collection=collection)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    sample_ids = [image.sample_id]
+    embeddings = np.array([[0.1, 0.2, 0.3]], dtype=np.float64)
+
+    embedding_manager._store_embeddings(
+        session=db_session,
+        model_id=model_id,
+        sample_ids=sample_ids,
+        embeddings=embeddings,  # type: ignore[arg-type]
+        show_progress=False,
+    )
+
+    stored_embeddings = db_session.exec(
+        select(SampleEmbeddingTable).where(SampleEmbeddingTable.embedding_model_id == model_id)
+    ).all()
+    assert len(stored_embeddings) == 1
+    assert len(stored_embeddings[0].embedding) == 3

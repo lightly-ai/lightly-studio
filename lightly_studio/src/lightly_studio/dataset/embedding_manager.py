@@ -540,9 +540,9 @@ def _store_embeddings(
     so a failure leaves no partially embedded dataset behind.
 
     Raises:
-        ValueError: If the embeddings fail validation. See `_validate_embeddings_for_storage`.
+        ValueError: If the embeddings fail validation. See `_validate_and_coerce_embeddings`.
     """
-    _validate_embeddings_for_storage(
+    embeddings = _validate_and_coerce_embeddings(
         session=session, model_id=model_id, sample_ids=sample_ids, embeddings=embeddings
     )
 
@@ -572,19 +572,22 @@ def _store_embeddings(
     session.commit()
 
 
-def _validate_embeddings_for_storage(
+def _validate_and_coerce_embeddings(
     session: Session,
     model_id: UUID,
     sample_ids: list[UUID],
     embeddings: NDArray[np.float32],
-) -> None:
-    """Validate embeddings before they are written to sample_embedding.
+) -> NDArray[np.float32]:
+    """Validate embeddings and coerce them to float32 before they are written to sample_embedding.
+
+    Any numeric dtype (e.g. float64, int32) is safely cast to float32. Losing precision
+    beyond float32 is expected and fine; overflowing to Inf is not.
 
     Raises:
         ValueError: If the number of embeddings does not match the number of sample
-            IDs, the embeddings are not a 2-D float32 array free of NaN/Inf, or their
-            dimension does not match the embedding model's declared
-            `embedding_dimension`.
+            IDs, the embeddings are not a 2-D numeric array free of NaN/Inf (before or
+            after the float32 cast), or their dimension does not match the embedding
+            model's declared `embedding_dimension`.
     """
     if len(embeddings) != len(sample_ids):
         raise ValueError(
@@ -592,12 +595,16 @@ def _validate_embeddings_for_storage(
             f"sample IDs ({len(sample_ids)})."
         )
     if len(embeddings) == 0:
-        return
+        return embeddings
 
     if embeddings.ndim != 2:  # noqa: PLR2004
         raise ValueError(f"Embeddings must be a 2-D array, got {embeddings.ndim}-D.")
-    if embeddings.dtype != np.float32:
-        raise ValueError(f"Embeddings must be float32, got dtype {embeddings.dtype}.")
+    if not (
+        np.issubdtype(embeddings.dtype, np.floating) or np.issubdtype(embeddings.dtype, np.integer)
+    ):
+        raise ValueError(f"Embeddings must be numeric, got dtype {embeddings.dtype}.")
+
+    embeddings = embeddings.astype(np.float32, copy=False)
     if not np.isfinite(embeddings).all():
         raise ValueError("Embeddings must not contain NaN or infinite values.")
 
@@ -613,6 +620,7 @@ def _validate_embeddings_for_storage(
             f"Embedding dimension ({actual_dimension}) does not match the embedding "
             f"model's declared dimension ({embedding_model.embedding_dimension})."
         )
+    return embeddings
 
 
 def _load_embedding_generator_from_env(sample_type: SampleType) -> EmbeddingGenerator | None:
