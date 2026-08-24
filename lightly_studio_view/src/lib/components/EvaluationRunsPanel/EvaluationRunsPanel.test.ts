@@ -24,6 +24,7 @@ const makeRun = (
 ): EvaluationRunView => ({
     evaluation_run_configuration: {},
     created_at: new Date('2026-01-01T00:00:00Z'),
+    stale_since: null,
     gt_annotation_source: 'gt_v1',
     pred_annotation_source: 'pred_v1',
     ...overrides
