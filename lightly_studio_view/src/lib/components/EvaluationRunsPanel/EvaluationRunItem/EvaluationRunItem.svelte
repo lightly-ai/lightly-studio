@@ -2,22 +2,25 @@
     import type { EvaluationRunView } from '$lib/api/lightly_studio_local/types.gen';
     import { Typography } from '$lib/components';
     import { formatDate } from '$lib/utils';
-    import { ChevronDown } from '@lucide/svelte';
+    import { ChevronDown, TriangleAlert } from '@lucide/svelte';
     import { slide } from 'svelte/transition';
     import EvaluationRunConfusionMatrixSection from './EvaluationRunConfusionMatrixSection/EvaluationRunConfusionMatrixSection.svelte';
+    import EvaluationRunStaleSection from './EvaluationRunStaleSection/EvaluationRunStaleSection.svelte';
 
     const duration = 300; // in ms
 
     interface Props {
-        // The evaluation run to display.
+        /** The dataset the evaluation run belongs to. Required to enable the recompute action. */
+        datasetId?: string;
+        /** The evaluation run to display. */
         run: EvaluationRunView;
-        // Whether the details section is expanded.
+        /** Whether the details section is expanded. */
         expanded: boolean;
-        // Callback to toggle the expanded state.
+        /** Callback to toggle the expanded state. */
         onToggle: () => void;
     }
 
-    const { run, expanded, onToggle }: Props = $props();
+    const { datasetId, run, expanded, onToggle }: Props = $props();
 
     const formatConfigValue = (value: unknown): string => {
         if (value === null || value === undefined) return '—';
@@ -37,13 +40,23 @@
         aria-expanded={expanded}
     >
         <div class="min-w-0 flex-1">
-            <Typography
-                variant={expanded ? 'subtitle1' : 'subtitle2'}
-                className="truncate"
-                props={{ 'data-testid': 'evaluation-run-name' }}
-            >
-                {run.name}
-            </Typography>
+            <div class="flex items-center gap-1.5">
+                <Typography
+                    variant={expanded ? 'subtitle1' : 'subtitle2'}
+                    className="truncate"
+                    props={{ 'data-testid': 'evaluation-run-name' }}
+                >
+                    {run.name}
+                </Typography>
+                {#if run.stale_since !== null}
+                    <TriangleAlert
+                        class="{expanded
+                            ? 'size-4'
+                            : 'size-3.5'} shrink-0 text-amber-500 dark:text-amber-400"
+                        data-testid="evaluation-run-stale-icon"
+                    />
+                {/if}
+            </div>
             <Typography
                 variant="caption"
                 className="text-muted-foreground"
@@ -64,6 +77,10 @@
             data-testid="evaluation-run-details"
             transition:slide={{ duration }}
         >
+            {#if run.stale_since !== null && datasetId}
+                <EvaluationRunStaleSection {datasetId} runId={run.id} />
+            {/if}
+
             <!-- Configuration -->
             <section>
                 <Typography variant="subtitle2" component="h3" className="mb-2">
