@@ -64,7 +64,7 @@ def test_update_segmentation_mask(db_session: Session) -> None:
     assert annotation.segmentation_details.segmentation_mask == [1, 2, 3, 4]
 
 
-def test_update_segmentation_mask_marks_evaluation_run_stale(db_session: Session) -> None:
+def test_update_segmentation_mask__marks_evaluation_run_stale(db_session: Session) -> None:
     image_collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
     image = create_image(session=db_session, collection_id=image_collection.collection_id)
     label = create_annotation_label(

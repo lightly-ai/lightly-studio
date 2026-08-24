@@ -16,9 +16,6 @@ from lightly_studio.services import (
     annotations_service,
 )
 from lightly_studio.services.annotations_service.update_annotation import AnnotationUpdate
-from lightly_studio.services.annotations_service.update_annotation_bounding_box import (
-    update_annotation_bounding_box,
-)
 from tests.conftest import AnnotationsTestData, assert_contains_properties
 from tests.helpers_resolvers import (
     create_annotation,
@@ -73,7 +70,7 @@ def test_update_annotation_object_detection(
     )
 
 
-def test_update_annotation_bounding_box_marks_evaluation_run_stale(db_session: Session) -> None:
+def test_update_annotation_bounding_box__marks_evaluation_run_stale(db_session: Session) -> None:
     image_collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=image_collection.collection_id)
     label = create_annotation_label(
@@ -113,7 +110,7 @@ def test_update_annotation_bounding_box_marks_evaluation_run_stale(db_session: S
     )
     assert run.stale_since is None
 
-    update_annotation_bounding_box(
+    annotations_service.update_annotation_bounding_box(
         session=db_session,
         annotation_id=annotation.sample_id,
         bounding_box=BoundingBoxCoordinates(x=1, y=2, width=3, height=4),

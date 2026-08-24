@@ -684,9 +684,7 @@ class TestImageSample:
             annotation_source="gt",
         )
 
-        refreshed = evaluation_run_resolver.get_by_id(
-            session=db_session, evaluation_id=run.id
-        )
+        refreshed = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run.id)
         assert refreshed is not None
         assert refreshed.stale_since is not None
 
@@ -730,8 +728,6 @@ class TestImageSample:
         annotation = image.annotations[0]
         image.delete_annotation(annotation)
 
-        refreshed = evaluation_run_resolver.get_by_id(
-            session=db_session, evaluation_id=run.id
-        )
+        refreshed = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run.id)
         assert refreshed is not None
         assert refreshed.stale_since is not None

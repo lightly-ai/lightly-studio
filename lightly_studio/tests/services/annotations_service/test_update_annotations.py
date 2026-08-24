@@ -112,7 +112,7 @@ def test_update_annotations__updates_label_for_all_track_annotations(
     assert outside_after.annotation_label_id == label_before.annotation_label_id
 
 
-def test_update_annotations_marks_evaluation_run_stale(db_session: Session) -> None:
+def test_update_annotations__marks_evaluation_run_stale(db_session: Session) -> None:
     image_collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=image_collection.collection_id)
     label = create_annotation_label(

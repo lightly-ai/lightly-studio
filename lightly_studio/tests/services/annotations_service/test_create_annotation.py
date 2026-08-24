@@ -192,7 +192,7 @@ def test_create_annotation_classification_with_temporal_span(
     assert result.temporal_span_details.end_time_s == 8.0
 
 
-def test_create_annotation_marks_evaluation_run_stale(db_session: Session) -> None:
+def test_create_annotation__marks_evaluation_run_stale(db_session: Session) -> None:
     image_collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=image_collection.collection_id)
     label = create_annotation_label(

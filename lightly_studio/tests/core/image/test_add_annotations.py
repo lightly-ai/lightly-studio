@@ -175,9 +175,7 @@ def test_add_annotations_from_labelformat__marks_evaluation_run_stale(
         collection_name="gt",
     )
 
-    refreshed = evaluation_run_resolver.get_by_id(
-        session=db_session, evaluation_id=run.id
-    )
+    refreshed = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run.id)
     assert refreshed is not None
     assert refreshed.stale_since is not None
 

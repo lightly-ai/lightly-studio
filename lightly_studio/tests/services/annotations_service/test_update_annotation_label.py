@@ -76,7 +76,7 @@ def test_update_annotation_label_creates_new_label(
     assert persisted_annotation.annotation_label.annotation_label_name == new_label_name
 
 
-def test_update_annotation_label_marks_evaluation_run_stale(db_session: Session) -> None:
+def test_update_annotation_label__marks_evaluation_run_stale(db_session: Session) -> None:
     image_collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=image_collection.collection_id)
     label = create_annotation_label(
