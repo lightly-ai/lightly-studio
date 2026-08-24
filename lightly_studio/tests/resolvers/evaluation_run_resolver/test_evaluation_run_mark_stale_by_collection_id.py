@@ -123,12 +123,16 @@ def test_mark_stale_by_collection_id__does_not_mark_unrelated_runs(db_session: S
         session=db_session, collection_id=target_collection.collection_id
     )
 
-    assert (
-        evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run_matching.id)
-    ).stale_since is not None
-    assert (
-        evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run_unrelated.id)
-    ).stale_since is None
+    refreshed_matching = evaluation_run_resolver.get_by_id(
+        session=db_session, evaluation_id=run_matching.id
+    )
+    assert refreshed_matching is not None
+    assert refreshed_matching.stale_since is not None
+    refreshed_unrelated = evaluation_run_resolver.get_by_id(
+        session=db_session, evaluation_id=run_unrelated.id
+    )
+    assert refreshed_unrelated is not None
+    assert refreshed_unrelated.stale_since is None
 
 
 def test_mark_stale_by_collection_id__marks_both_gt_and_pred_matches(db_session: Session) -> None:
@@ -191,15 +195,19 @@ def test_mark_stale_by_collection_id__marks_both_gt_and_pred_matches(db_session:
         session=db_session, collection_id=shared_collection.collection_id
     )
 
-    assert (
-        evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run_gt.id)
-    ).stale_since is not None
-    assert (
-        evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run_pred.id)
-    ).stale_since is not None
-    assert (
-        evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run_unrelated.id)
-    ).stale_since is None
+    refreshed_gt = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run_gt.id)
+    assert refreshed_gt is not None
+    assert refreshed_gt.stale_since is not None
+    refreshed_pred = evaluation_run_resolver.get_by_id(
+        session=db_session, evaluation_id=run_pred.id
+    )
+    assert refreshed_pred is not None
+    assert refreshed_pred.stale_since is not None
+    refreshed_unrelated = evaluation_run_resolver.get_by_id(
+        session=db_session, evaluation_id=run_unrelated.id
+    )
+    assert refreshed_unrelated is not None
+    assert refreshed_unrelated.stale_since is None
 
 
 def test_mark_stale_by_collection_id__calling_twice_updates_stale_since(
@@ -230,16 +238,16 @@ def test_mark_stale_by_collection_id__calling_twice_updates_stale_since(
     evaluation_run_resolver.mark_stale_by_collection_id(
         session=db_session, collection_id=gt_collection.collection_id
     )
-    first_stale_since = evaluation_run_resolver.get_by_id(
-        session=db_session, evaluation_id=run.id
-    ).stale_since
+    refreshed_first = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run.id)
+    assert refreshed_first is not None
+    first_stale_since = refreshed_first.stale_since
 
     evaluation_run_resolver.mark_stale_by_collection_id(
         session=db_session, collection_id=gt_collection.collection_id
     )
-    second_stale_since = evaluation_run_resolver.get_by_id(
-        session=db_session, evaluation_id=run.id
-    ).stale_since
+    refreshed_second = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run.id)
+    assert refreshed_second is not None
+    second_stale_since = refreshed_second.stale_since
 
     assert first_stale_since is not None
     assert second_stale_since is not None
