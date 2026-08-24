@@ -214,12 +214,22 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* The mock is full-bleed: both sidebars are panels flush to the viewport edge,
-   with the article between them. So the shell is the viewport, up to the point
-   where "full width" stops meaning anything — past 1680px the row is centred
-   instead, or the article column would drift a third of a screen away from the
-   contents list pinned to the right edge. */
+/* The mock is full-bleed: both sidebars are panels flush to the window edge,
+   with the article between them. So the shell is the window at every width. A
+   `max-width` here — Material ships 61rem — leaves the panels floating a
+   hundred-odd pixels in from the edge on a wide monitor, with a strip of page
+   showing outside each one. A panel that does not reach the edge stops reading
+   as chrome and starts reading as a card that failed to stretch. */
 .md-grid {
+  max-width: none;
+}
+
+/* The two bands under the article are the exception. They have no panels to
+   anchor and their contents are laid out `space-between`, so at 2560px the
+   footer's three link columns end up a screen apart. The band still runs edge
+   to edge; only what sits in it is bounded. */
+.md-footer__inner,
+.ls-footer__inner {
   max-width: 84rem;
 }
 
@@ -234,17 +244,21 @@ body {
 
   .md-content {
     min-width: 0;
+    padding-inline: 2rem;
   }
 
-  /* The article keeps its own width once the shell stops growing with it: 40px
-     of gutter either side of a column that tops out near the mock's 820px.
+  /* The article is bounded and centred in whatever the panels leave it. Pinned
+     to the left instead — which is what the mock does, being a fixed-width
+     mock — it parts company with the contents list opposite it: at 1920 the
+     column is 1433px wide and the text would stop 250px short of the panel,
+     leaving a hole down the right of every page.
 
      The long selector is Material's own, at (0,5,0), with `[dir]` standing in
      for its `[dir=ltr]` so the rule is direction-neutral. A bare
      `.md-content__inner` loses the margin to it by four classes. */
   [dir] .md-sidebar--primary:not([hidden]) ~ .md-content > .md-content__inner,
   [dir] .md-sidebar--secondary:not([hidden]) ~ .md-content > .md-content__inner {
-    margin-inline: 2rem;
+    margin-inline: auto;
     max-width: 44rem;
     padding-top: 0.9rem;
   }
@@ -692,10 +706,11 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   text-transform: uppercase;
 }
 
-/* Level 2 ("Concepts", "Tools", "More"): collapsible, so it keeps the item
-   shape and reads as a quieter sub-caption rather than a page. Sentence case,
-   not caps — two levels of mono caps in one panel and neither one groups
-   anything. */
+/* Level 2 ("Core Concepts", "Python API"): a run of pages inside a section that
+   is long enough to want a heading of its own. It reads as one of the items
+   around it, a half-step heavier, with its children indented under it and a
+   chevron to collapse them — not as a third label register. The section caption
+   above is what does the grouping; this only says where a run starts. */
 .md-sidebar--primary
   .md-nav[data-md-level="1"]
   > .md-nav__list
@@ -703,7 +718,7 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   > :is(.md-nav__link, .md-nav__container) {
   color: var(--ls-ink);
   font-size: 0.65rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 /* A section caption is a label, not a destination; nothing to hover. */
@@ -987,16 +1002,22 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
    `> p:first-of-type` rather than by a class, because it holds on every page
    without an author marking it up.
 
-   The rule stops at the reading measure rather than running the article width.
-   Same width as the text above it reads as that text's underline; wider reads
-   as a section divider that has drifted 100px up the page. */
+   The rule runs the full article width while the text keeps the reading
+   measure, which needs those two to come from different boxes. So the box is
+   full width and the measure is cut out of it with padding: a percentage
+   padding resolves against the containing block's width, so the content box
+   lands at exactly 32rem and the border spans the 873px behind it. `max()`
+   floors it at zero for the viewports where the article is already narrower
+   than the measure, where the paragraph should just fill the column. */
 .md-typeset > p:first-of-type {
   border-bottom: 1px solid var(--ls-line-hair);
   color: var(--ls-body);
   font-size: 0.85rem;
   line-height: 1.6;
   margin-bottom: 1.3rem;
+  max-width: none;
   padding-bottom: 1.1rem;
+  padding-inline-end: max(0px, 100% - 32rem);
 }
 
 /* An `h2` straight after the standfirst would put its own top margin under
@@ -1080,9 +1101,14 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   color: var(--ls-muted);
   font-size: 0.625rem;
   margin-bottom: 0.9rem;
-  /* Material's own 1.2rem, which would leave the trail 16px to the left of the
-     `h1` it belongs to. */
-  margin-inline: 2rem;
+}
+
+/* The trail is a sibling of `.md-content__inner`, not a child, so it needs the
+   same bound and the same centring or it drifts out of line with the `h1`
+   under it. Material's own margin here is a flat 1.2rem. */
+.md-content > .md-path {
+  margin-inline: auto;
+  max-width: 44rem;
 }
 
 .md-path__item a {
@@ -1093,9 +1119,9 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   color: var(--ls-accent);
 }
 
-/* The last crumb is the current page, which the `h1` under it already names;
-   the ones before it are the trail worth reading. */
-.md-path__item:last-child {
+/* The last crumb is where the reader is. It carries no link (see
+   `overrides/partials/path.html`) and reads a step darker than the trail. */
+.md-path__item--current {
   color: var(--ls-body);
 }
 
