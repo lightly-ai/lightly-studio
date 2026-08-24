@@ -5,7 +5,6 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
-from uuid import UUID
 
 import numpy as np
 from numpy.typing import NDArray
@@ -59,7 +58,7 @@ class EmbeddingGenerator(Protocol):
     before you add a dataset or start the GUI.
     """
 
-    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
+    def get_embedding_model_input(self) -> EmbeddingModelCreate:
         """Generate an EmbeddingModelCreate instance.
 
         <span class="doc-badge doc-badge--beta">Beta</span>
@@ -67,9 +66,6 @@ class EmbeddingGenerator(Protocol):
         Returns metadata about the model to be stored in the database.
         The `embedding_model_hash` field is used to match the same EmbeddingGenerator
         across multiple LightlyStudio runs.
-
-        Args:
-            collection_id: The ID of the collection.
 
         Returns:
             An EmbeddingModelCreate instance with the model details.
@@ -197,11 +193,8 @@ class RandomEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator)
         """
         self._dimension = dimension
 
-    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
+    def get_embedding_model_input(self) -> EmbeddingModelCreate:
         """Generate an EmbeddingModelCreate instance.
-
-        Args:
-            collection_id: The ID of the collection.
 
         Returns:
             An EmbeddingModelCreate instance with the model details.
@@ -210,7 +203,6 @@ class RandomEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator)
             name="Random",
             embedding_model_hash="random_model",
             embedding_dimension=self._dimension,
-            collection_id=collection_id,
         )
 
     def embed_text(self, _text: str) -> list[float]:

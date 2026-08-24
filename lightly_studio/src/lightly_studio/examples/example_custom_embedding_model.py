@@ -12,7 +12,6 @@ so ingestion uses your generator instead of the environment default.
 from __future__ import annotations
 
 from pathlib import Path
-from uuid import UUID
 
 import numpy as np
 import torch
@@ -66,7 +65,7 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
         self._tokenizer = mobileclip.get_tokenizer(model_name=MODEL_NAME)
         self._model_hash = file_utils.get_file_xxhash(model_path)
 
-    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
+    def get_embedding_model_input(self) -> EmbeddingModelCreate:
         """Describe the model so it can be recorded in the database.
 
         The name shows up in the GUI and the hash lets Lightly Studio detect when
@@ -76,7 +75,6 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
             name="Custom Embedding Model",
             embedding_model_hash=self._model_hash,
             embedding_dimension=EMBEDDING_DIMENSION,
-            collection_id=collection_id,
         )
 
     def embed_text(self, text: str) -> list[float]:

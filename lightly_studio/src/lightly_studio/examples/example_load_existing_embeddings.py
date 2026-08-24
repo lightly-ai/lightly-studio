@@ -11,7 +11,6 @@ video model.
 from __future__ import annotations
 
 from pathlib import Path
-from uuid import UUID
 
 import numpy as np
 from environs import Env
@@ -56,13 +55,12 @@ class LoadExistingEmbeddingsGenerator(ls.ImageEmbeddingGenerator):
         """
         self._embeddings_by_filepath = embeddings_by_filepath
 
-    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
+    def get_embedding_model_input(self) -> EmbeddingModelCreate:
         """Describe the model so it can be recorded in the database."""
         return EmbeddingModelCreate(
             name="Precomputed Embeddings",
             embedding_model_hash="precomputed",
             embedding_dimension=EMBEDDING_DIMENSION,
-            collection_id=collection_id,
         )
 
     def embed_text(self, text: str) -> list[float]:

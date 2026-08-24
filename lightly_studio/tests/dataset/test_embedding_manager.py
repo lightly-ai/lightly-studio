@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import numpy as np
 import pytest
@@ -88,10 +88,9 @@ def test_register_multiple_models(
 
     # Register a second model.
     class FakeEmbeddingGenerator(ImageEmbeddingGenerator):
-        def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
+        def get_embedding_model_input(self) -> EmbeddingModelCreate:
             return EmbeddingModelCreate(
                 name="Fake",
-                collection_id=collection_id,
                 embedding_model_hash="fake_hash",
                 parameter_count_in_mb=50,
                 embedding_dimension=5,
@@ -132,8 +131,6 @@ def test_register_multiple_models(
     assert len(stored_models) == 2
     model_names = {model.name for model in stored_models}
     assert model_names == {"Random", "Fake"}
-    # Verify both models are associated with the same collection
-    assert all(model.collection_id == collection.collection_id for model in stored_models)
 
 
 def test_embed_text_with_default_model(
@@ -514,8 +511,8 @@ def test_load_or_get_default_model__shares_generator_across_collections(
 ) -> None:
     """An annotation child collection reuses the parent's loaded generator.
 
-    The generator weights are loaded once, but each collection still gets its
-    own embedding-model record and id.
+    The generator weights are loaded once. Embedding models are deduplicated globally by
+    hash, so both collections resolve to the same shared embedding-model record and id.
     """
     image_collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
     annotation_collection = create_collection(
@@ -544,8 +541,8 @@ def test_load_or_get_default_model__shares_generator_across_collections(
     mock_load.assert_called_once_with(sample_type=SampleType.IMAGE)
     assert manager._models[image_model_id] is manager._models[annotation_model_id]
 
-    # Each collection still owns a distinct embedding-model record.
-    assert image_model_id != annotation_model_id
+    # Global dedup by hash: both collections share the same embedding-model record.
+    assert image_model_id == annotation_model_id
 
 
 def test_load_or_get_default_model__cant_load(
@@ -613,10 +610,9 @@ def test_set_default_embedding_model_falls_back_to_env_for_unregistered_slot(
     class ImageOnlyGenerator:
         # Implements the image protocol but not embed_videos, so only the image
         # slot is overridden.
-        def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
+        def get_embedding_model_input(self) -> EmbeddingModelCreate:
             return EmbeddingModelCreate(
                 name="ImageOnly",
-                collection_id=collection_id,
                 embedding_dimension=3,
                 embedding_model_hash="image_only_model",
             )
@@ -806,10 +802,9 @@ class TextOnlyEmbeddingGenerator:
     def __init__(self, dimension: int = 3) -> None:
         self._dimension = dimension
 
-    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
+    def get_embedding_model_input(self) -> EmbeddingModelCreate:
         return EmbeddingModelCreate(
             name="TextOnly",
-            collection_id=collection_id,
             embedding_dimension=self._dimension,
             embedding_model_hash="text_only_model",
         )

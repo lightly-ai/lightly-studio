@@ -169,7 +169,6 @@ def _generate_dataset(config: GenerationConfig) -> UUID:
         embedding_model = embedding_model_resolver.create(
             session=session,
             embedding_model=EmbeddingModelCreate(
-                collection_id=collection.collection_id,
                 name=DEFAULT_EMBEDDING_MODEL_NAME,
                 embedding_dimension=config.embedding_dim,
             ),

@@ -1,14 +1,42 @@
 from __future__ import annotations
 
+from uuid import UUID
+
 import pytest
 from sqlmodel import Session
 
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
-from lightly_studio.resolvers import embedding_model_resolver
+from lightly_studio.resolvers import (
+    default_embedding_space_resolver,
+    embedding_model_resolver,
+)
 from tests.helpers_resolvers import (
     create_collection,
     create_embedding_model,
+    create_image,
+    create_sample_embedding,
 )
+
+
+def _attach_model_to_collection(
+    session: Session,
+    collection_id: UUID,
+    embedding_model_id: UUID,
+    file_path_abs: str,
+) -> None:
+    """Give an embedding model an embedding in a collection.
+
+    Embedding models are a shared global registry; they belong to a collection only
+    through the samples they embedded. This creates one image sample and one embedding so
+    ``get_all_by_collection_id`` and ``get_by_name`` see the model in the collection.
+    """
+    image = create_image(session=session, collection_id=collection_id, file_path_abs=file_path_abs)
+    create_sample_embedding(
+        session=session,
+        sample_id=image.sample_id,
+        embedding_model_id=embedding_model_id,
+        embedding=[0.0, 0.0],
+    )
 
 
 def test_create_embedding_model(db_session: Session) -> None:
@@ -30,21 +58,61 @@ def test_read_embedding_models(db_session: Session) -> None:
         session=db_session,
         collection_id=collection_id,
         embedding_model_name="embedding_model_1",
+        embedding_model_hash="hash_1",
     )
     embedding_model_2 = create_embedding_model(
         session=db_session,
         collection_id=collection_id,
         embedding_model_name="embedding_model_2",
+        embedding_model_hash="hash_2",
+    )
+    _attach_model_to_collection(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_1.embedding_model_id,
+        file_path_abs="sample_1.jpg",
+    )
+    _attach_model_to_collection(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_2.embedding_model_id,
+        file_path_abs="sample_2.jpg",
     )
 
-    # Get all embedding models of a collection.
+    # Get all embedding models with an embedding in the collection, oldest first.
     embedding_models = embedding_model_resolver.get_all_by_collection_id(
         session=db_session, collection_id=collection_id
     )
     assert len(embedding_models) == 2
-
     assert embedding_models[0].embedding_model_id == embedding_model_1.embedding_model_id
     assert embedding_models[1].embedding_model_id == embedding_model_2.embedding_model_id
+
+
+def test_read_embedding_models__scoped_to_collection(db_session: Session) -> None:
+    """A model is listed for a collection only if it has an embedding there."""
+    collection_1 = create_collection(session=db_session, collection_name="collection_1")
+    collection_2 = create_collection(session=db_session, collection_name="collection_2")
+
+    model = create_embedding_model(
+        session=db_session,
+        collection_id=collection_1.collection_id,
+        embedding_model_name="shared_model",
+    )
+    _attach_model_to_collection(
+        session=db_session,
+        collection_id=collection_1.collection_id,
+        embedding_model_id=model.embedding_model_id,
+        file_path_abs="sample_1.jpg",
+    )
+
+    models_1 = embedding_model_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection_1.collection_id
+    )
+    models_2 = embedding_model_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection_2.collection_id
+    )
+    assert [m.embedding_model_id for m in models_1] == [model.embedding_model_id]
+    assert models_2 == []
 
 
 def test_read_embedding_model(db_session: Session) -> None:
@@ -67,12 +135,16 @@ def test_delete_embedding_model(db_session: Session) -> None:
 
     embedding_model = create_embedding_model(session=db_session, collection_id=collection_id)
 
-    # Delete the embedding model.
+    # The first model becomes the collection default; its default_embedding_space row must
+    # be removed before the model can be deleted (foreign key).
+    default_embedding_space_resolver.delete_by_collection_id(
+        session=db_session, collection_id=collection_id
+    )
+
     embedding_model_resolver.delete(
         session=db_session, embedding_model_id=embedding_model.embedding_model_id
     )
 
-    # Assert the embedding model was deleted.
     embedding_model_deleted = embedding_model_resolver.get_by_id(
         session=db_session, embedding_model_id=embedding_model.embedding_model_id
     )
@@ -97,64 +169,54 @@ def test_get_by_model_hash(db_session: Session) -> None:
     )
 
     embedding_model = embedding_model_resolver.get_by_model_hash(
-        session=db_session, embedding_model_hash="hash_1", collection_id=collection_id
+        session=db_session, embedding_model_hash="hash_1"
     )
     assert embedding_model is not None
     assert embedding_model.name == embedding_model_1.name
 
     embedding_model = embedding_model_resolver.get_by_model_hash(
-        session=db_session, embedding_model_hash="hash_3", collection_id=collection_id
+        session=db_session, embedding_model_hash="hash_3"
     )
     assert embedding_model is None
 
 
-def test_get_by_model_hash__with_collection_id(db_session: Session) -> None:
+def test_get_by_model_hash__dedup_across_collections(db_session: Session) -> None:
+    """Models are deduplicated globally by hash: same weights map to one shared row."""
     collection_1 = create_collection(session=db_session, collection_name="collection_1")
     collection_2 = create_collection(session=db_session, collection_name="collection_2")
 
-    # Create models with same hash in different collections
-    model_1 = create_embedding_model(
+    model = create_embedding_model(
         session=db_session,
         collection_id=collection_1.collection_id,
-        embedding_model_name="model_in_collection_1",
-        embedding_model_hash="same_hash",
-    )
-    model_2 = create_embedding_model(
-        session=db_session,
-        collection_id=collection_2.collection_id,
-        embedding_model_name="model_in_collection_2",
+        embedding_model_name="shared_model",
         embedding_model_hash="same_hash",
     )
 
-    # With collection_id, returns the correct model
-    result = embedding_model_resolver.get_by_model_hash(
+    # A second collection re-using the same hash resolves the same shared row.
+    reused = embedding_model_resolver.get_or_create(
         session=db_session,
-        embedding_model_hash="same_hash",
-        collection_id=collection_1.collection_id,
+        embedding_model=EmbeddingModelCreate(
+            name="shared_model",
+            embedding_model_hash="same_hash",
+            parameter_count_in_mb=model.parameter_count_in_mb,
+            embedding_dimension=model.embedding_dimension,
+        ),
     )
-    assert result is not None
-    assert result.embedding_model_id == model_1.embedding_model_id
-    assert result.embedding_model_hash == "same_hash"
-    assert result.collection_id == collection_1.collection_id
+    assert reused.embedding_model_id == model.embedding_model_id
 
     result = embedding_model_resolver.get_by_model_hash(
-        session=db_session,
-        embedding_model_hash="same_hash",
-        collection_id=collection_2.collection_id,
+        session=db_session, embedding_model_hash="same_hash"
     )
     assert result is not None
-    assert result.embedding_model_id == model_2.embedding_model_id
-    assert result.embedding_model_hash == "same_hash"
-    assert result.collection_id == collection_2.collection_id
+    assert result.embedding_model_id == model.embedding_model_id
 
-    # With non-matching collection_id, returns None
-    collection_3 = create_collection(session=db_session, collection_name="collection_3")
-    result_3 = embedding_model_resolver.get_by_model_hash(
+    # The collections share a single embedding model row.
+    default_1 = default_embedding_space_resolver.set_default(
         session=db_session,
-        embedding_model_hash="same_hash",
-        collection_id=collection_3.collection_id,
+        collection_id=collection_2.collection_id,
+        embedding_model_id=reused.embedding_model_id,
     )
-    assert result_3 is None
+    assert default_1.embedding_model_id == model.embedding_model_id
 
 
 def test_get_by_name__none_with_single_model(db_session: Session) -> None:
@@ -166,6 +228,12 @@ def test_get_by_name__none_with_single_model(db_session: Session) -> None:
         session=db_session,
         collection_id=collection_id,
         embedding_model_name="embedding_model_1",
+    )
+    _attach_model_to_collection(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        file_path_abs="sample_1.jpg",
     )
 
     result = embedding_model_resolver.get_by_name(
@@ -180,15 +248,29 @@ def test_get_by_name__none_with_multiple_models(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
-    create_embedding_model(
+    model_1 = create_embedding_model(
         session=db_session,
         collection_id=collection_id,
         embedding_model_name="embedding_model_1",
+        embedding_model_hash="hash_1",
     )
-    create_embedding_model(
+    model_2 = create_embedding_model(
         session=db_session,
         collection_id=collection_id,
         embedding_model_name="embedding_model_2",
+        embedding_model_hash="hash_2",
+    )
+    _attach_model_to_collection(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=model_1.embedding_model_id,
+        file_path_abs="sample_1.jpg",
+    )
+    _attach_model_to_collection(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=model_2.embedding_model_id,
+        file_path_abs="sample_2.jpg",
     )
 
     with pytest.raises(
@@ -223,11 +305,25 @@ def test_get_by_name__existing_name(db_session: Session) -> None:
         session=db_session,
         collection_id=collection_id,
         embedding_model_name="embedding_model_1",
+        embedding_model_hash="hash_1",
     )
     embedding_model_2 = create_embedding_model(
         session=db_session,
         collection_id=collection_id,
         embedding_model_name="embedding_model_2",
+        embedding_model_hash="hash_2",
+    )
+    _attach_model_to_collection(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_1.embedding_model_id,
+        file_path_abs="sample_1.jpg",
+    )
+    _attach_model_to_collection(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_2.embedding_model_id,
+        file_path_abs="sample_2.jpg",
     )
 
     result = embedding_model_resolver.get_by_name(
@@ -248,10 +344,16 @@ def test_get_by_name__nonexistent_name(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
-    create_embedding_model(
+    model = create_embedding_model(
         session=db_session,
         collection_id=collection_id,
         embedding_model_name="embedding_model_1",
+    )
+    _attach_model_to_collection(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=model.embedding_model_id,
+        file_path_abs="sample_1.jpg",
     )
 
     with pytest.raises(ValueError, match=r"Embedding model with name `nonexistent` not found."):
@@ -262,10 +364,7 @@ def test_get_by_name__nonexistent_name(db_session: Session) -> None:
 
 def test_get_or_create__creates_new_model(db_session: Session) -> None:
     """get_or_create should insert a model when none exists for the hash."""
-    collection = create_collection(session=db_session)
-
     model_create = EmbeddingModelCreate(
-        collection_id=collection.collection_id,
         name="Model Name",
         embedding_model_hash="model_hash",
         parameter_count_in_mb=200,
@@ -279,7 +378,6 @@ def test_get_or_create__creates_new_model(db_session: Session) -> None:
     assert created.name == "Model Name"
     assert created.parameter_count_in_mb == 200
     assert created.embedding_dimension == 768
-    assert created.collection_id == collection.collection_id
 
 
 def test_get_or_create__reuses_existing_model(db_session: Session) -> None:
@@ -295,7 +393,6 @@ def test_get_or_create__reuses_existing_model(db_session: Session) -> None:
     )
 
     model_create = EmbeddingModelCreate(
-        collection_id=collection.collection_id,
         name="Model Name",
         embedding_model_hash="model_hash",
         parameter_count_in_mb=10,
@@ -307,10 +404,6 @@ def test_get_or_create__reuses_existing_model(db_session: Session) -> None:
     )
 
     assert reused.embedding_model_id == existing.embedding_model_id
-    models = embedding_model_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
-    )
-    assert len(models) == 1
 
 
 def test_get_or_create__conflicting_model_raises(db_session: Session) -> None:
@@ -326,7 +419,6 @@ def test_get_or_create__conflicting_model_raises(db_session: Session) -> None:
     )
 
     conflicting_model_create = EmbeddingModelCreate(
-        collection_id=collection.collection_id,
         name="Model Name",
         embedding_model_hash="model_hash",
         parameter_count_in_mb=2000,
@@ -342,12 +434,9 @@ def test_get_or_create__conflicting_model_raises(db_session: Session) -> None:
         )
 
 
-def test_get_or_create__same_hash_different_collections(db_session: Session) -> None:
-    collection_1 = create_collection(session=db_session, collection_name="collection_1")
-    collection_2 = create_collection(session=db_session, collection_name="collection_2")
-
+def test_get_or_create__same_hash_shared_across_collections(db_session: Session) -> None:
+    """Same hash used from two collections resolves to a single shared model row."""
     model_create_1 = EmbeddingModelCreate(
-        collection_id=collection_1.collection_id,
         name="Test Model",
         embedding_model_hash="same_hash",
         parameter_count_in_mb=10,
@@ -358,7 +447,6 @@ def test_get_or_create__same_hash_different_collections(db_session: Session) -> 
     )
 
     model_create_2 = EmbeddingModelCreate(
-        collection_id=collection_2.collection_id,
         name="Test Model",
         embedding_model_hash="same_hash",
         parameter_count_in_mb=10,
@@ -368,17 +456,5 @@ def test_get_or_create__same_hash_different_collections(db_session: Session) -> 
         session=db_session, embedding_model=model_create_2
     )
 
-    # Should be different models
-    assert model_1.embedding_model_id != model_2.embedding_model_id
-    assert model_1.collection_id == collection_1.collection_id
-    assert model_2.collection_id == collection_2.collection_id
-
-    # Each collection should have exactly one model
-    models_1 = embedding_model_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection_1.collection_id
-    )
-    models_2 = embedding_model_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection_2.collection_id
-    )
-    assert len(models_1) == 1
-    assert len(models_2) == 1
+    # The same weights map to one shared row.
+    assert model_1.embedding_model_id == model_2.embedding_model_id
