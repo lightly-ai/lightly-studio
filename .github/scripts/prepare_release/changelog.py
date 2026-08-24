@@ -39,6 +39,10 @@ def parse_unreleased_sections(changelog_text: str) -> dict[str, str]:
         raise PrepareReleaseError(
             f"[Unreleased] subsections are {names}, expected {list(SUBSECTIONS)} in that order"
         )
+    if body[: headings[0].start()].strip():
+        raise PrepareReleaseError(
+            "unexpected content between the [Unreleased] heading and its first subsection"
+        )
     sections = {}
     for i, heading in enumerate(headings):
         start = heading.end()
@@ -98,7 +102,8 @@ def assert_changelog_structure(original_text: str, new_text: str, version: str) 
     logic itself:
 
     * exactly one `## [Unreleased]` heading, with all six subheadings,
-    * the new `## \\[version\\] - YYYY-MM-DD` heading exists,
+    * exactly one new `## \\[version\\] - YYYY-MM-DD` heading, preceded by
+      the `[Unreleased]` heading,
     * every previously-released version block is byte-identical to before.
     """
     unreleased_matches = list(_UNRELEASED_RE.finditer(new_text))
@@ -114,9 +119,15 @@ def assert_changelog_structure(original_text: str, new_text: str, version: str) 
         r"^## \\\[" + re.escape(version) + r"\\\] - \d{4}-\d{2}-\d{2}[ \t]*$",
         re.MULTILINE,
     )
-    if not released_heading.search(new_text):
+    released_matches = list(released_heading.finditer(new_text))
+    if len(released_matches) != 1:
         raise PrepareReleaseError(
-            f"expected an escaped '## \\[{version}\\] - YYYY-MM-DD' heading after promotion"
+            f"expected exactly one escaped '## \\[{version}\\] - YYYY-MM-DD' heading after "
+            f"promotion, found {len(released_matches)}"
+        )
+    if released_matches[0].start() < unreleased_matches[0].start():
+        raise PrepareReleaseError(
+            f"expected the [Unreleased] heading to precede the new '[{version}]' release heading"
         )
 
     original_match = _single_unreleased_match(original_text)
