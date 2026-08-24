@@ -853,17 +853,6 @@ def test_compute_image_embedding(
 _RANDOM_MODEL_DIMENSION = 3
 
 
-def _register_random_model(session: Session, collection: CollectionTable) -> UUID:
-    """Register a RandomEmbeddingGenerator with dimension `_RANDOM_MODEL_DIMENSION`."""
-    manager = EmbeddingManager()
-    return manager.register_embedding_model(
-        session=session,
-        embedding_generator=RandomEmbeddingGenerator(dimension=_RANDOM_MODEL_DIMENSION),
-        collection_id=collection.collection_id,
-        set_as_default=True,
-    ).embedding_model_id
-
-
 def test_validate_and_coerce_embeddings(
     db_session: Session,
     collection: CollectionTable,
@@ -1085,3 +1074,14 @@ def test_store_embeddings__casts_float64_embeddings(
     ).all()
     assert len(stored_embeddings) == 1
     assert len(stored_embeddings[0].embedding) == _RANDOM_MODEL_DIMENSION
+
+
+def _register_random_model(session: Session, collection: CollectionTable) -> UUID:
+    """Register a RandomEmbeddingGenerator with dimension `_RANDOM_MODEL_DIMENSION`."""
+    manager = EmbeddingManager()
+    return manager.register_embedding_model(
+        session=session,
+        embedding_generator=RandomEmbeddingGenerator(dimension=_RANDOM_MODEL_DIMENSION),
+        collection_id=collection.collection_id,
+        set_as_default=True,
+    ).embedding_model_id
