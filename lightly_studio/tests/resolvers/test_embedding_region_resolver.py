@@ -132,6 +132,7 @@ def _setup_collection_with_coordinates(
         session=session,
         collection_id=collection.collection_id,
         embedding_dimension=3,
+        set_as_default=True,
     )
     images = helpers_resolvers.create_samples_with_embeddings(
         session=session,

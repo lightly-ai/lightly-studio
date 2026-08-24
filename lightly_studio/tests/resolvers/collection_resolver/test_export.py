@@ -96,6 +96,7 @@ def _setup_embedding_region(
         session=db_session,
         collection_id=collection_id,
         embedding_dimension=3,
+        set_as_default=True,
     )
     image_a, image_b, image_c = create_samples_with_embeddings(
         session=db_session,
