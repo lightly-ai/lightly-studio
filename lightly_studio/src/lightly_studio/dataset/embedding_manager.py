@@ -589,16 +589,16 @@ def _validate_and_coerce_embeddings(
             after the float32 cast), or their dimension does not match the embedding
             model's declared `embedding_dimension`.
     """
-    if len(embeddings) != len(sample_ids):
-        raise ValueError(
-            f"Number of embeddings ({len(embeddings)}) does not match number of "
-            f"sample IDs ({len(sample_ids)})."
-        )
-    if len(embeddings) == 0:
-        return embeddings
-
     if embeddings.ndim != 2:  # noqa: PLR2004
         raise ValueError(f"Embeddings must be a 2-D array, got {embeddings.ndim}-D.")
+    if embeddings.shape[0] != len(sample_ids):
+        raise ValueError(
+            f"Number of embeddings ({embeddings.shape[0]}) does not match number of "
+            f"sample IDs ({len(sample_ids)})."
+        )
+    if embeddings.shape[0] == 0:
+        return embeddings
+
     if not (
         np.issubdtype(embeddings.dtype, np.floating) or np.issubdtype(embeddings.dtype, np.integer)
     ):

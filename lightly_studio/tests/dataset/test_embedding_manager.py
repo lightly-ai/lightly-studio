@@ -898,6 +898,24 @@ def test_validate_and_coerce_embeddings__empty_is_valid(
     assert len(result) == 0
 
 
+def test_validate_and_coerce_embeddings__rejects_non_2d_array(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """A 0-D array raises a clear ValueError instead of TypeError from `len()`."""
+    model_id = _register_random_model(session=db_session, collection=collection)
+    sample_ids = [uuid4()]
+    embeddings = np.array(1.0, dtype=np.float32)
+
+    with pytest.raises(ValueError, match=r"must be a 2-D array, got 0-D"):
+        embedding_manager._validate_and_coerce_embeddings(
+            session=db_session,
+            model_id=model_id,
+            sample_ids=sample_ids,
+            embeddings=embeddings,
+        )
+
+
 def test_validate_and_coerce_embeddings__count_mismatch(
     db_session: Session,
     collection: CollectionTable,
