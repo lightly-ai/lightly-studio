@@ -846,3 +846,242 @@ def test_compute_image_embedding(
         select(SampleEmbeddingTable).where(SampleEmbeddingTable.embedding_model_id == model_id)
     ).all()
     assert len(stored_embeddings) == 0
+
+
+# Dimension of the model registered by _register_random_model, used to build
+# well-formed test embeddings below.
+_RANDOM_MODEL_DIMENSION = 3
+
+
+def test_validate_and_coerce_embeddings(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """A well-formed batch of embeddings passes validation unchanged."""
+    model_id = _register_random_model(session=db_session, collection=collection)
+    sample_ids = [uuid4(), uuid4()]
+    embeddings = np.zeros((2, _RANDOM_MODEL_DIMENSION), dtype=np.float32)
+
+    result = embedding_manager._validate_and_coerce_embeddings(
+        session=db_session, model_id=model_id, sample_ids=sample_ids, embeddings=embeddings
+    )
+
+    assert result.dtype == np.float32
+    np.testing.assert_array_equal(result, embeddings)
+
+
+def test_validate_and_coerce_embeddings__empty_is_valid(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """An empty batch passes validation without touching the embedding model."""
+    model_id = _register_random_model(session=db_session, collection=collection)
+
+    result = embedding_manager._validate_and_coerce_embeddings(
+        session=db_session,
+        model_id=model_id,
+        sample_ids=[],
+        embeddings=np.zeros((0, _RANDOM_MODEL_DIMENSION), dtype=np.float32),
+    )
+
+    assert len(result) == 0
+
+
+def test_validate_and_coerce_embeddings__rejects_non_2d_array(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """A 0-D array raises a clear ValueError instead of TypeError from `len()`."""
+    model_id = _register_random_model(session=db_session, collection=collection)
+    sample_ids = [uuid4()]
+    embeddings = np.array(1.0, dtype=np.float32)
+
+    with pytest.raises(ValueError, match=r"must be a 2-D array .* got a 0-D array"):
+        embedding_manager._validate_and_coerce_embeddings(
+            session=db_session,
+            model_id=model_id,
+            sample_ids=sample_ids,
+            embeddings=embeddings,
+        )
+
+
+def test_validate_and_coerce_embeddings__count_mismatch(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """A different number of embeddings and sample IDs raises a clear error."""
+    model_id = _register_random_model(session=db_session, collection=collection)
+    sample_ids = [uuid4(), uuid4()]
+    embeddings = np.zeros((1, _RANDOM_MODEL_DIMENSION), dtype=np.float32)
+
+    with pytest.raises(ValueError, match=r"does not match number of sample IDs"):
+        embedding_manager._validate_and_coerce_embeddings(
+            session=db_session, model_id=model_id, sample_ids=sample_ids, embeddings=embeddings
+        )
+
+
+def test_validate_and_coerce_embeddings__wrong_dimension(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """A vector whose length doesn't match embedding_dimension raises a clear error."""
+    model_id = _register_random_model(session=db_session, collection=collection)
+    sample_ids = [uuid4()]
+    wrong_dimension = _RANDOM_MODEL_DIMENSION + 1
+    embeddings = np.zeros((1, wrong_dimension), dtype=np.float32)
+
+    with pytest.raises(ValueError, match=rf"Embedding dimension \({wrong_dimension}\)"):
+        embedding_manager._validate_and_coerce_embeddings(
+            session=db_session, model_id=model_id, sample_ids=sample_ids, embeddings=embeddings
+        )
+
+
+def test_validate_and_coerce_embeddings__casts_float64_to_float32(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """A float64 array (the numpy default) is safely cast down to float32, not rejected."""
+    model_id = _register_random_model(session=db_session, collection=collection)
+    sample_ids = [uuid4()]
+    embeddings = np.array(
+        [[0.1 * (i + 1) for i in range(_RANDOM_MODEL_DIMENSION)]], dtype=np.float64
+    )
+
+    result = embedding_manager._validate_and_coerce_embeddings(
+        session=db_session,
+        model_id=model_id,
+        sample_ids=sample_ids,
+        embeddings=embeddings,  # type: ignore[arg-type]
+    )
+
+    assert result.dtype == np.float32
+    np.testing.assert_allclose(result, embeddings, rtol=1e-6)
+
+
+def test_validate_and_coerce_embeddings__rejects_non_numeric_dtype(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """A non-numeric dtype (e.g. strings) is rejected."""
+    model_id = _register_random_model(session=db_session, collection=collection)
+    sample_ids = [uuid4()]
+    embeddings = np.array([[f"s{i}" for i in range(_RANDOM_MODEL_DIMENSION)]])
+
+    with pytest.raises(ValueError, match=r"must be numeric"):
+        embedding_manager._validate_and_coerce_embeddings(
+            session=db_session,
+            model_id=model_id,
+            sample_ids=sample_ids,
+            embeddings=embeddings,
+        )
+
+
+def test_validate_and_coerce_embeddings__rejects_overflow_from_cast(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """A float64 value too large for float32 overflows to Inf and is rejected."""
+    model_id = _register_random_model(session=db_session, collection=collection)
+    sample_ids = [uuid4()]
+    embeddings = np.zeros((1, _RANDOM_MODEL_DIMENSION), dtype=np.float64)
+    embeddings[0, 0] = 1e308  # Too large to represent as float32.
+
+    with pytest.raises(ValueError, match=r"NaN or infinite"):
+        embedding_manager._validate_and_coerce_embeddings(
+            session=db_session,
+            model_id=model_id,
+            sample_ids=sample_ids,
+            embeddings=embeddings,  # type: ignore[arg-type]
+        )
+
+
+def test_validate_and_coerce_embeddings__nan(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """A NaN value in an embedding raises a clear error."""
+    model_id = _register_random_model(session=db_session, collection=collection)
+    sample_ids = [uuid4()]
+    embeddings = np.full((1, _RANDOM_MODEL_DIMENSION), np.nan, dtype=np.float32)
+
+    with pytest.raises(ValueError, match=r"NaN or infinite"):
+        embedding_manager._validate_and_coerce_embeddings(
+            session=db_session, model_id=model_id, sample_ids=sample_ids, embeddings=embeddings
+        )
+
+
+def test_validate_and_coerce_embeddings__inf(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """An infinite value in an embedding raises a clear error."""
+    model_id = _register_random_model(session=db_session, collection=collection)
+    sample_ids = [uuid4()]
+    embeddings = np.full((1, _RANDOM_MODEL_DIMENSION), np.inf, dtype=np.float32)
+
+    with pytest.raises(ValueError, match=r"NaN or infinite"):
+        embedding_manager._validate_and_coerce_embeddings(
+            session=db_session, model_id=model_id, sample_ids=sample_ids, embeddings=embeddings
+        )
+
+
+def test_store_embeddings__rejects_invalid_embeddings_before_write(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """_store_embeddings raises before writing anything to the database."""
+    model_id = _register_random_model(session=db_session, collection=collection)
+    sample_ids = [uuid4()]
+    embeddings = np.full((1, _RANDOM_MODEL_DIMENSION), np.nan, dtype=np.float32)
+
+    with pytest.raises(ValueError, match=r"NaN or infinite"):
+        embedding_manager._store_embeddings(
+            session=db_session,
+            model_id=model_id,
+            sample_ids=sample_ids,
+            embeddings=embeddings,
+            show_progress=False,
+        )
+
+    stored_embeddings = db_session.exec(
+        select(SampleEmbeddingTable).where(SampleEmbeddingTable.embedding_model_id == model_id)
+    ).all()
+    assert len(stored_embeddings) == 0
+
+
+def test_store_embeddings__casts_float64_embeddings(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """_store_embeddings accepts and stores embeddings passed in as float64."""
+    model_id = _register_random_model(session=db_session, collection=collection)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    sample_ids = [image.sample_id]
+    embeddings = np.array(
+        [[0.1 * (i + 1) for i in range(_RANDOM_MODEL_DIMENSION)]], dtype=np.float64
+    )
+
+    embedding_manager._store_embeddings(
+        session=db_session,
+        model_id=model_id,
+        sample_ids=sample_ids,
+        embeddings=embeddings,  # type: ignore[arg-type]
+        show_progress=False,
+    )
+
+    stored_embeddings = db_session.exec(
+        select(SampleEmbeddingTable).where(SampleEmbeddingTable.embedding_model_id == model_id)
+    ).all()
+    assert len(stored_embeddings) == 1
+    assert len(stored_embeddings[0].embedding) == _RANDOM_MODEL_DIMENSION
+
+
+def _register_random_model(session: Session, collection: CollectionTable) -> UUID:
+    """Register a RandomEmbeddingGenerator with dimension `_RANDOM_MODEL_DIMENSION`."""
+    manager = EmbeddingManager()
+    return manager.register_embedding_model(
+        session=session,
+        embedding_generator=RandomEmbeddingGenerator(dimension=_RANDOM_MODEL_DIMENSION),
+        collection_id=collection.collection_id,
+        set_as_default=True,
+    ).embedding_model_id
