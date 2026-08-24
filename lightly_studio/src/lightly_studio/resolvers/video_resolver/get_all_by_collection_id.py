@@ -36,120 +36,6 @@ from lightly_studio.resolvers.similarity_utils import (
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 
-def _file_path_abs_in_order_by(order_by: list[OrderByExpression]) -> bool:
-    return any(
-        isinstance(expr, OrderByField) and expr.field is VideoSampleField.file_path_abs
-        for expr in order_by
-    )
-
-
-def _with_tiebreakers(order_by: list[OrderByExpression] | None) -> list[OrderByExpression]:
-    """Append a ``file_path_abs`` tiebreaker to the requested sort when it is missing.
-
-    Follows the primary sort's direction. Defaults to ``file_path_abs`` ascending when
-    nothing was requested.
-    """
-    if not order_by:
-        return [OrderByField(field=VideoSampleField.file_path_abs).asc()]
-
-    # Copy so appending the tiebreaker does not mutate the caller's list.
-    order_by = list(order_by)
-    if not _file_path_abs_in_order_by(order_by):
-        order_by.append(
-            OrderByField(field=VideoSampleField.file_path_abs).asc()
-            if order_by[0].ascending
-            else OrderByField(field=VideoSampleField.file_path_abs).desc()
-        )
-    return order_by
-
-
-def _apply_ordering(
-    query: SQLAlchemySelect[Any],
-    order_by: list[OrderByExpression] | None,
-) -> SQLAlchemySelect[Any]:
-    """Order the query and append the primary sort value to the SELECT.
-
-    Only the primary expression contributes a value; the rest contribute joins and
-    ``ORDER BY`` alone. ``sample_id`` closes the ordering, because neither the requested
-    sort nor ``file_path_abs`` is unique and equal rows would otherwise be free to move
-    between page requests. It sorts ascending in both directions, mirroring the image
-    keyset convention in ``get_adjacent_images_keyset._keyset_sort_keys`` so a sorted
-    video prev/next can match this order later. ``get_adjacent_videos`` still ignores the
-    sort, so the grid and prev/next do not yet agree.
-    """
-    expressions = _with_tiebreakers(order_by)
-    ordered_query = expressions[0].apply_with_order_value(query)
-    for expr in expressions[1:]:
-        ordered_query = expr.apply_joins(ordered_query)
-        ordered_query = ordered_query.order_by(*expr.to_column_elements())
-    return ordered_query.order_by(col(VideoTable.sample_id).asc())
-
-
-def _coerce_order_value(value: object) -> float | None:
-    """Convert a raw SQL sort value to a float suitable for ``VideoView.order_value``.
-
-    Only numeric values are converted; booleans return ``None``.
-    """
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, (int, float)):
-        return float(value)
-    return None
-
-
-def _get_load_options() -> list[LoaderOption]:
-    """Get common load options for video and frame relationships."""
-    # Eagerly load annotations to avoid multiple queries.
-    return [
-        selectinload(VideoFrameTable.sample).options(
-            joinedload(SampleTable.tags),
-            # Ignore type checker error - false positive from TYPE_CHECKING.
-            joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
-            selectinload(SampleTable.captions),
-            selectinload(SampleTable.annotations).options(
-                joinedload(AnnotationBaseTable.annotation_label),
-                joinedload(AnnotationBaseTable.object_detection_details),
-                joinedload(AnnotationBaseTable.segmentation_details),
-                selectinload(AnnotationBaseTable.sample).options(selectinload(SampleTable.tags)),
-            ),
-        ),
-        selectinload(VideoTable.sample).options(
-            joinedload(SampleTable.tags),
-            # Ignore type checker error - false positive from TYPE_CHECKING.
-            joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
-            selectinload(SampleTable.captions),
-            # Videos only support classification annotations directly, so there is no need
-            # to join object_detection_details or segmentation_details here.
-            selectinload(SampleTable.annotations).options(
-                joinedload(AnnotationBaseTable.annotation_label),
-                selectinload(AnnotationBaseTable.sample).options(selectinload(SampleTable.tags)),
-            ),
-        ),
-    ]
-
-
-def _build_min_frame_subquery() -> Any:
-    """Build subquery to get minimum frame number per video."""
-    return (
-        select(
-            VideoFrameTable.parent_sample_id,
-            func.min(col(VideoFrameTable.frame_number)).label("min_frame_number"),
-        )
-        .group_by(col(VideoFrameTable.parent_sample_id))
-        .subquery()
-    )
-
-
-def _compute_next_cursor(
-    pagination: Paginated | None,
-    total_count: int,
-) -> int | None:
-    """Compute next cursor for pagination."""
-    if pagination and pagination.offset + pagination.limit < total_count:
-        return pagination.offset + pagination.limit
-    return None
-
-
 def get_all_by_collection_id(  # noqa: PLR0913
     session: Session,
     collection_id: UUID,
@@ -187,6 +73,54 @@ def get_all_by_collection_id(  # noqa: PLR0913
         sample_ids=sample_ids,
         filters=filters,
         order_by=order_by,
+    )
+
+
+# TODO(Horatiu, 11/2025): This should be deleted when we have proper way of getting all frames for
+# a video.
+def get_all_by_collection_id_with_frames(
+    session: Session,
+    collection_id: UUID,
+) -> Sequence[VideoTable]:
+    """Retrieve video table with all the samples."""
+    samples_query = (
+        select(VideoTable).join(VideoTable.sample).where(SampleTable.collection_id == collection_id)
+    )
+    samples_query = samples_query.order_by(col(VideoTable.file_path_abs).asc())
+    return session.exec(samples_query).all()
+
+
+def convert_video_table_to_view(
+    video: VideoTable,
+    first_frame: VideoFrameTable | None,
+    similarity_score: float | None = None,
+    order_value: float | None = None,
+) -> VideoView:
+    """Convert VideoTable to VideoView with only the first frame.
+
+    Args:
+        video: The video row to convert.
+        first_frame: The video's lowest-numbered frame, used for the thumbnail.
+        similarity_score: Similarity to a text/embedding query, when search is active.
+        order_value: Primary sort value for the current grid sort, when provided by the
+            resolver. Mutually exclusive with ``similarity_score`` for the grid overlay.
+    """
+    first_frame_view = None
+    if first_frame:
+        first_frame_view = build_frame_view(first_frame)
+
+    return VideoView(
+        width=video.width,
+        height=video.height,
+        duration_s=video.duration_s,
+        fps=video.fps,
+        file_name=video.file_name,
+        file_path_abs=video.file_path_abs,
+        sample_id=video.sample_id,
+        sample=SampleView.model_validate(video.sample),
+        frame=first_frame_view,
+        similarity_score=similarity_score,
+        order_value=order_value,
     )
 
 
@@ -250,7 +184,14 @@ def _get_all_with_similarity(  # noqa: PLR0913
         samples_query = filters.apply(samples_query)
         total_count_query = filters.apply(total_count_query)
 
-    samples_query = samples_query.order_by(distance_expr)
+    # `distance_expr` alone is not a total order: equal distances would let rows move
+    # between page requests. `file_path_abs` and `sample_id` close the ordering, matching
+    # the tiebreakers `_apply_ordering` applies on the non-similarity path.
+    samples_query = samples_query.order_by(
+        distance_expr,
+        col(VideoTable.file_path_abs).asc(),
+        col(VideoTable.sample_id).asc(),
+    )
 
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
@@ -341,7 +282,7 @@ def _get_all_without_similarity(  # noqa: PLR0913
         convert_video_table_to_view(
             video=row[0],
             first_frame=row[1],
-            order_value=_coerce_order_value(order_by_module.get_order_value(row)),
+            order_value=_coerce_order_value(order_by_module.get_order_value(row=row)),
         )
         for row in rows
     ]
@@ -353,49 +294,115 @@ def _get_all_without_similarity(  # noqa: PLR0913
     )
 
 
-# TODO(Horatiu, 11/2025): This should be deleted when we have proper way of getting all frames for
-# a video.
-def get_all_by_collection_id_with_frames(
-    session: Session,
-    collection_id: UUID,
-) -> Sequence[VideoTable]:
-    """Retrieve video table with all the samples."""
-    samples_query = (
-        select(VideoTable).join(VideoTable.sample).where(SampleTable.collection_id == collection_id)
-    )
-    samples_query = samples_query.order_by(col(VideoTable.file_path_abs).asc())
-    return session.exec(samples_query).all()
+def _apply_ordering(
+    query: SQLAlchemySelect[Any],
+    order_by: list[OrderByExpression] | None,
+) -> SQLAlchemySelect[Any]:
+    """Order the query and append the primary sort value to the SELECT.
 
-
-def convert_video_table_to_view(
-    video: VideoTable,
-    first_frame: VideoFrameTable | None,
-    similarity_score: float | None = None,
-    order_value: float | None = None,
-) -> VideoView:
-    """Convert VideoTable to VideoView with only the first frame.
-
-    Args:
-        video: The video row to convert.
-        first_frame: The video's lowest-numbered frame, used for the thumbnail.
-        similarity_score: Similarity to a text/embedding query, when search is active.
-        order_value: Primary sort value for the current grid sort, when provided by the
-            resolver. Mutually exclusive with ``similarity_score`` for the grid overlay.
+    Only the primary expression contributes a value; the rest contribute joins and
+    ``ORDER BY`` alone. ``sample_id`` closes the ordering, because neither the requested
+    sort nor ``file_path_abs`` is unique and equal rows would otherwise be free to move
+    between page requests. It sorts ascending in both directions, mirroring the image
+    keyset convention in ``get_adjacent_images_keyset._keyset_sort_keys`` so a sorted
+    video prev/next can match this order later. ``get_adjacent_videos`` still ignores the
+    sort, so the grid and prev/next do not yet agree.
     """
-    first_frame_view = None
-    if first_frame:
-        first_frame_view = build_frame_view(first_frame)
+    expressions = _with_tiebreakers(order_by)
+    ordered_query = expressions[0].apply_with_order_value(query)
+    for expr in expressions[1:]:
+        ordered_query = expr.apply_joins(ordered_query)
+        ordered_query = ordered_query.order_by(*expr.to_column_elements())
+    return ordered_query.order_by(col(VideoTable.sample_id).asc())
 
-    return VideoView(
-        width=video.width,
-        height=video.height,
-        duration_s=video.duration_s,
-        fps=video.fps,
-        file_name=video.file_name,
-        file_path_abs=video.file_path_abs,
-        sample_id=video.sample_id,
-        sample=SampleView.model_validate(video.sample),
-        frame=first_frame_view,
-        similarity_score=similarity_score,
-        order_value=order_value,
+
+def _with_tiebreakers(order_by: list[OrderByExpression] | None) -> list[OrderByExpression]:
+    """Append a ``file_path_abs`` tiebreaker to the requested sort when it is missing.
+
+    Follows the primary sort's direction. Defaults to ``file_path_abs`` ascending when
+    nothing was requested.
+    """
+    if not order_by:
+        return [OrderByField(field=VideoSampleField.file_path_abs).asc()]
+
+    # Copy so appending the tiebreaker does not mutate the caller's list.
+    order_by = list(order_by)
+    if not _file_path_abs_in_order_by(order_by):
+        order_by.append(
+            OrderByField(field=VideoSampleField.file_path_abs).asc()
+            if order_by[0].ascending
+            else OrderByField(field=VideoSampleField.file_path_abs).desc()
+        )
+    return order_by
+
+
+def _file_path_abs_in_order_by(order_by: list[OrderByExpression]) -> bool:
+    return any(
+        isinstance(expr, OrderByField) and expr.field is VideoSampleField.file_path_abs
+        for expr in order_by
     )
+
+
+def _coerce_order_value(value: object) -> float | None:
+    """Convert a raw SQL sort value to a float suitable for ``VideoView.order_value``.
+
+    Only numeric values are converted; booleans return ``None``.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
+
+
+def _get_load_options() -> list[LoaderOption]:
+    """Get common load options for video and frame relationships."""
+    # Eagerly load annotations to avoid multiple queries.
+    return [
+        selectinload(VideoFrameTable.sample).options(
+            joinedload(SampleTable.tags),
+            # Ignore type checker error - false positive from TYPE_CHECKING.
+            joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
+            selectinload(SampleTable.captions),
+            selectinload(SampleTable.annotations).options(
+                joinedload(AnnotationBaseTable.annotation_label),
+                joinedload(AnnotationBaseTable.object_detection_details),
+                joinedload(AnnotationBaseTable.segmentation_details),
+                selectinload(AnnotationBaseTable.sample).options(selectinload(SampleTable.tags)),
+            ),
+        ),
+        selectinload(VideoTable.sample).options(
+            joinedload(SampleTable.tags),
+            # Ignore type checker error - false positive from TYPE_CHECKING.
+            joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
+            selectinload(SampleTable.captions),
+            # Videos only support classification annotations directly, so there is no need
+            # to join object_detection_details or segmentation_details here.
+            selectinload(SampleTable.annotations).options(
+                joinedload(AnnotationBaseTable.annotation_label),
+                selectinload(AnnotationBaseTable.sample).options(selectinload(SampleTable.tags)),
+            ),
+        ),
+    ]
+
+
+def _build_min_frame_subquery() -> Any:
+    """Build subquery to get minimum frame number per video."""
+    return (
+        select(
+            VideoFrameTable.parent_sample_id,
+            func.min(col(VideoFrameTable.frame_number)).label("min_frame_number"),
+        )
+        .group_by(col(VideoFrameTable.parent_sample_id))
+        .subquery()
+    )
+
+
+def _compute_next_cursor(
+    pagination: Paginated | None,
+    total_count: int,
+) -> int | None:
+    """Compute next cursor for pagination."""
+    if pagination and pagination.offset + pagination.limit < total_count:
+        return pagination.offset + pagination.limit
+    return None
