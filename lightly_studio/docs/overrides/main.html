@@ -1,0 +1,11 @@
+{#-
+  Material's own footer is kept for the prev/next pager; the site footer is
+  appended under it. Overriding the block rather than replacing
+  `partials/footer.html` means the pager stays whatever upstream ships.
+-#}
+{% extends "base.html" %}
+
+{% block footer %}
+  {{ super() }}
+  {% include "partials/site_footer.html" %}
+{% endblock %}

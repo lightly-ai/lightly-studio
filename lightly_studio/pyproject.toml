@@ -116,6 +116,12 @@ exclude = [
 ]
 plugins = ["pydantic.mypy"]
 
+# Only `docs/mkdocs_hooks.py` imports this, and mkdocs lives in the `docs`
+# dependency group, which `mypy .` does not install.
+[[tool.mypy.overrides]]
+module = "mkdocs.*"
+ignore_missing_imports = true
+
 [[tool.mypy.overrides]]
 module = "fsspec.*"
 ignore_missing_imports = true

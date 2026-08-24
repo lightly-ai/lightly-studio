@@ -60,7 +60,64 @@ function accentWordmarkTail() {
     topic.appendChild(accent);
 }
 
+// Instant navigation replaces `[data-md-component=container]`, which the header
+// sits outside of — so the header copy of the section tabs still marks whichever
+// tab was active when the page was first loaded. The drawer copy is inside that
+// region and is re-rendered per page, so it is the one telling the truth; copy
+// its state across after every navigation.
+function syncSectionTabs() {
+    const source = document.querySelector('.ls-tabs--drawer .ls-tabs__link--active');
+    const activeTab = source ? source.dataset.lsTab : null;
+
+    document.querySelectorAll('.ls-tabs--header .ls-tabs__link').forEach(function (link) {
+        const isActive = link.dataset.lsTab === activeTab;
+        link.classList.toggle('ls-tabs__link--active', isActive);
+        if (isActive) {
+            link.setAttribute('aria-current', source.getAttribute('aria-current') || 'true');
+        } else {
+            link.removeAttribute('aria-current');
+        }
+    });
+}
+
+// What a fence language is called in the header bar. Anything missing here is
+// printed as written, so a new language needs an entry only when the tag and
+// the name differ. `mysql` is the Pygments lexer the query-language pages
+// borrow for highlighting; it is not SQL.
+const CODE_LABELS = {
+    py: 'python',
+    bash: 'terminal',
+    shell: 'terminal',
+    console: 'terminal',
+    powershell: 'terminal',
+    mysql: 'lightly query language',
+};
+
+// Fill the header bar that `.md-typeset .highlight::before` renders: the
+// `title=` on the fence if there is one, the language otherwise.
+function labelCodeBlocks() {
+    document.querySelectorAll('.md-typeset .highlight').forEach(function (block) {
+        const filename = block.querySelector('span.filename');
+        if (filename) {
+            block.setAttribute('data-code-label', filename.textContent.trim());
+            return;
+        }
+        const languageClass = Array.from(block.classList).find(function (name) {
+            return name.startsWith('language-');
+        });
+        const language = languageClass ? languageClass.slice('language-'.length) : '';
+        block.setAttribute('data-code-label', CODE_LABELS[language] || language || 'code');
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     addSearchShortcutHint();
     accentWordmarkTail();
 });
+
+// `navigation.instant` swaps the article without a page load, so anything that
+// decorates article content — or that reads it, as the tab sync does — has to
+// run per navigation rather than once on DOMContentLoaded. `document$` is
+// Material's observable for exactly that.
+document$.subscribe(labelCodeBlocks);
+document$.subscribe(syncSectionTabs);

@@ -8,6 +8,14 @@ site_url: https://docs.lightly.ai/studio
 theme:
   name: material
   language: en
+  # `overrides/` holds four templates. `main.html` and `partials/site_footer.html`
+  # are additive — they append the site footer under Material's prev/next pager.
+  # `partials/header.html` and `partials/nav.html` are FORKS of the same-named
+  # Material 9.7.5 partials, carrying the section tab strip and the sidebar
+  # scoping it does (see `extra.tabs` below). Upstream regenerates both files
+  # between releases and shadowing them is silent, so re-diff them against
+  # `material/templates/partials/` whenever mkdocs-material is bumped.
+  custom_dir: overrides
   # Mark only. The full logo carries a white wordmark, which is invisible on the
   # light header; the wordmark is rendered as text instead (see custom.css).
   logo: _static/lightly_mark.svg
@@ -15,6 +23,27 @@ theme:
   font:
     text: IBM Plex Sans
     code: JetBrains Mono
+  # Callout icons. Material's own set is Material Design icons drawn on a 24px
+  # grid; at the 17px this theme renders them the filled ones (note, danger,
+  # info) collapse into a dot. Octicons are drawn at 16px, so they stay legible,
+  # they carry one stroke weight across the set, and the palette toggle above
+  # already uses them. The note/tip/warning/danger picks match GitHub's own
+  # alert icons. Aliases (`hint`, `caution`, `error`, ...) map onto these in
+  # _static/custom.css.
+  icon:
+    admonition:
+      note: octicons/note-16
+      abstract: octicons/checklist-16
+      info: octicons/info-16
+      tip: octicons/light-bulb-16
+      success: octicons/check-circle-16
+      question: octicons/question-16
+      warning: octicons/alert-16
+      failure: octicons/x-circle-16
+      danger: octicons/stop-16
+      bug: octicons/bug-16
+      example: octicons/beaker-16
+      quote: octicons/quote-16
   # `custom` opts out of Material's built-in color rules so the palette in
   # _static/custom.css is the only thing setting colors. Without it Material
   # falls back to `indigo` and its `[scheme][primary]` rules outrank ours.
@@ -24,14 +53,14 @@ theme:
       primary: custom
       accent: custom
       toggle:
-        icon: material/weather-night
+        icon: octicons/moon-16
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
       primary: custom
       accent: custom
       toggle:
-        icon: material/weather-sunny
+        icon: octicons/sun-16
         name: Switch to light mode
   features:
     # Navigation lives entirely in the left sidebar: every section is a group
@@ -53,6 +82,14 @@ theme:
 repo_url: https://github.com/lightly-ai/lightly-studio
 repo_name: LightlyStudio
 docs_dir: docs
+
+# Read by the footer. Material's own `.md-footer-meta` bar stays hidden.
+copyright: "© 2026 Lightly · Apache 2.0"
+
+# Sets `extra.package_version` from the installed package, so the footer does not
+# carry a second copy of the version. See `mkdocs_hooks.py`.
+hooks:
+  - mkdocs_hooks.py
 
 nav:
   - Getting Started:
@@ -165,6 +202,64 @@ plugins:
 
 extra:
   homepage: https://lightly.ai/lightly-studio
+  # The header tab strip. Each tab claims top-level `nav:` sections and scopes
+  # the sidebar to them, so a reader in Tutorials sees the tutorials and nothing
+  # else. `nav:` itself is untouched: the mapping is by section title, and a
+  # section no tab claims joins the one marked `default` rather than falling out
+  # of the site. Where each tab lands is derived from `nav:` at build time, not
+  # written down here, so it follows a section that moves.
+  #
+  # `mkdocs_hooks.py` resolves this into `extra.tab_links` and
+  # `extra.tab_sections`, and warns — fatally, under `--strict` — when a tab
+  # claims a section `nav:` no longer has.
+  tabs:
+    - name: Docs
+      default: true
+      sections:
+        - Getting Started
+        - Dataset Setup
+        - Python API
+        - Concepts & Tools
+        - About Us
+    - name: Tutorials
+      sections:
+        - Tutorials
+    - name: Enterprise
+      sections:
+        - Enterprise
+  # Footer link columns. An `href` with a scheme is used as written; anything
+  # else is a path relative to the site root.
+  footer:
+    tagline: Open-source curation and annotation for vision datasets.
+    columns:
+      - name: Community
+        links:
+          - label: GitHub
+            href: https://github.com/lightly-ai/lightly-studio
+          - label: Discord
+            href: https://discord.com/invite/xvNJW94
+          - label: Release notes
+            href: https://github.com/lightly-ai/lightly-studio/releases
+          - label: Contact support
+            href: https://www.lightly.ai/contact
+      - name: Docs
+        links:
+          - label: Getting started
+            href: .
+          - label: Tutorials
+            href: tutorials/
+          - label: Dataset setup
+            href: dataset_setup/image_dataset/
+          - label: Python API reference
+            href: api/dataset/
+      - name: Product
+        links:
+          - label: LightlyStudio
+            href: https://www.lightly.ai/lightly-studio
+          - label: Enterprise
+            href: enterprise/
+          - label: About us
+            href: about_us/
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/lightly-ai/lightly-studio
@@ -176,14 +271,17 @@ extra:
 markdown_extensions:
   - admonition
   - attr_list
-  - codehilite
   - def_list
   - footnotes
   - md_in_html
   - toc:
       permalink: true
   - pymdownx.details
-  - pymdownx.highlight
+  # `pygments_lang_class` puts the fence language on the wrapper as
+  # `language-python`, which is the only hook the header label has to read from.
+  # See `labelCodeBlocks` in _static/custom.js.
+  - pymdownx.highlight:
+      pygments_lang_class: true
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
