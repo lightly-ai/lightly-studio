@@ -62,6 +62,15 @@ describe('UserAvatar', () => {
         expect(usersButton.getAttribute('href')).toBe('/workspace/users');
     });
 
+    it('should render API keys menu item for admin user', async () => {
+        const { getByTitle, getByRole } = render(UserAvatar, { props: { user: mockUser } });
+
+        await fireEvent.click(getByTitle('admin'));
+
+        const apiKeysButton = getByRole('link', { name: /api keys/i });
+        expect(apiKeysButton.getAttribute('href')).toBe('/workspace/api-keys');
+    });
+
     it('should not render users menu item for editor user', async () => {
         const editorUser = {
             username: 'editor',
@@ -105,5 +114,6 @@ describe('UserAvatar', () => {
 
         const usersButton = queryByRole('link', { name: /users/i });
         expect(usersButton).toBeNull();
+        expect(queryByRole('link', { name: /api keys/i })).toBeNull();
     });
 });
