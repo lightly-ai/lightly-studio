@@ -8,8 +8,10 @@ test.describe('bussines-flow1', () => {
     test('User Opens UI', async ({ page, samplesPage }) => {
         // samplesPage fixture automatically navigates and loads samples
 
-        // Expect first page of samples to be loaded (default page size from COCO collection)
-        expect(await samplesPage.getSamples().count()).toBe(cocoDataset.defaultPageSize);
+        // Infinite scroll may preload additional pages, so only require one full page.
+        await expect
+            .poll(() => samplesPage.getSamples().count())
+            .toBeGreaterThanOrEqual(cocoDataset.defaultPageSize);
 
         // Check if we have some annotations on screen.
         const annotations = page.getByTestId('sample-annotation-item');
@@ -104,7 +106,9 @@ test.describe('bussines-flow1', () => {
 
         // Clear tag filter to see all samples again
         await samplesPage.pressTag(catsTagName);
-        expect(await samplesPage.getSamples().count()).toBe(cocoDataset.defaultPageSize);
+        await expect
+            .poll(() => samplesPage.getSamples().count())
+            .toBeGreaterThanOrEqual(cocoDataset.defaultPageSize);
 
         // We need to wait after clicking the clear button for the grid view to be updated
         const clearResponsePromise = page.waitForResponse(
@@ -140,7 +144,9 @@ test.describe('bussines-flow1', () => {
         // Unfilter by clicking dog label again.
         // 2 of the 5 selected dogs are beyond the first 100 samples -> not visible
         await samplesPage.clickLabel(cocoDataset.labels.dog.name);
-        expect(await samplesPage.getSamples().count()).toBe(cocoDataset.defaultPageSize);
+        await expect
+            .poll(() => samplesPage.getSamples().count())
+            .toBeGreaterThanOrEqual(cocoDataset.defaultPageSize);
 
         // Create tag to verify all 5 selections persisted (including those not visible).
         await samplesPage.createTag(dogsTagName);
