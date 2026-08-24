@@ -8,13 +8,18 @@ from uuid import UUID, uuid4
 from sqlmodel import VARCHAR, Column, Field, SQLModel
 
 
-class EmbeddingModelBase(SQLModel):
-    """Base class for the EmbeddingModel."""
+class EmbeddingSpaceDescription(SQLModel):
+    """Description of an embedding space."""
 
     name: str
     parameter_count_in_mb: int | None = None
     embedding_model_hash: str = Field(default="", sa_column=Column(VARCHAR(128)))
     embedding_dimension: int
+
+
+class EmbeddingModelBase(EmbeddingSpaceDescription):
+    """Base class for the EmbeddingModel."""
+
     collection_id: UUID = Field(default=None, foreign_key="collection.collection_id", index=True)
     dataset_id: UUID = Field(foreign_key="dataset.dataset_id", index=True)
 

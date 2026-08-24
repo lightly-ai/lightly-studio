@@ -139,15 +139,13 @@ to list which input positions those rows belong to. This lets you skip any file 
 that has no vector.
 
 ```python
-from uuid import UUID
-
 import numpy as np
 from numpy.typing import NDArray
 from PIL import Image
 
 import lightly_studio as ls
 from lightly_studio.dataset.embedding_result import EmbeddingResult
-from lightly_studio.models.embedding_model import EmbeddingModelCreate
+from lightly_studio.models.embedding_model import EmbeddingSpaceDescription
 
 EMBEDDING_DIMENSION = 512
 
@@ -156,7 +154,7 @@ class CustomEmbeddingsGenerator(ls.ImageEmbeddingGenerator):
     def __init__(self) -> None:
         self._filepath_to_embedding: dict[str, NDArray[np.float32]] = ...  # Implement the loading logic here.
 
-    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate: ...
+    def get_embedding_model_input(self) -> EmbeddingSpaceDescription: ...
 
     def embed_text(self, text: str) -> list[float]: ...
 
@@ -200,15 +198,13 @@ Use this when you want a different model than the built-ins. Load your model in
 `__init__` and run it inside `embed_images`.
 
 ```python
-from uuid import UUID
-
 import numpy as np
 from numpy.typing import NDArray
 from PIL import Image
 
 import lightly_studio as ls
 from lightly_studio.dataset.embedding_result import EmbeddingResult
-from lightly_studio.models.embedding_model import EmbeddingModelCreate
+from lightly_studio.models.embedding_model import EmbeddingSpaceDescription
 
 EMBEDDING_DIMENSION = 512
 
@@ -217,7 +213,7 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
     def __init__(self) -> None:
         ...  # Load your model and preprocessing here.
 
-    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate: ...
+    def get_embedding_model_input(self) -> EmbeddingSpaceDescription: ...
 
     def embed_text(self, text: str) -> list[float]: ...
 
