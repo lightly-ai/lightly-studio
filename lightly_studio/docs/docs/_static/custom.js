@@ -34,32 +34,6 @@ function addSearchShortcutHint() {
     searchForm.appendChild(hint);
 }
 
-// Split the header wordmark two-tone, as on the landing page: "Lightly" in
-// ink, "Studio" in grey. Falls back to tinting the trailing word for a site
-// name that is several words rather than one CamelCase token.
-function splitWordmark(name) {
-    const words = name.split(/\s+/);
-    if (words.length > 1) {
-        return [words.slice(0, -1).join(' ') + ' ', words[words.length - 1]];
-    }
-    const camel = /^([A-Z][a-z]+)([A-Z].*)$/.exec(name);
-    return camel ? [camel[1], camel[2]] : null;
-}
-
-function accentWordmarkTail() {
-    const topic = document.querySelector('.md-header__title .md-header__topic .md-ellipsis');
-    if (!topic || topic.querySelector('.ls-wordmark-accent')) return;
-
-    const parts = splitWordmark(topic.textContent.trim());
-    if (!parts) return;
-
-    topic.textContent = parts[0];
-    const accent = document.createElement('span');
-    accent.className = 'ls-wordmark-accent';
-    accent.textContent = parts[1];
-    topic.appendChild(accent);
-}
-
 // Instant navigation replaces `[data-md-component=container]`, which the header
 // sits outside of — so the header copy of the section tabs still marks whichever
 // tab was active when the page was first loaded. The drawer copy is inside that
@@ -112,7 +86,6 @@ function labelCodeBlocks() {
 
 document.addEventListener('DOMContentLoaded', function () {
     addSearchShortcutHint();
-    accentWordmarkTail();
 });
 
 // `navigation.instant` swaps the article without a page load, so anything that

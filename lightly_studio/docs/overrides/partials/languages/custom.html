@@ -1,0 +1,9 @@
+{#-
+  Translation overrides, selected by `theme.language: custom` in mkdocs.yml.
+  Material resolves a key through this file first and falls back to
+  `partials/languages/en.html` for anything it does not answer, so only the
+  strings that differ belong here — see `partials/language.html`.
+-#}
+{% macro t(key) %}{{ {
+  "search.placeholder": "Search the docs",
+}[key] }}{% endmacro %}

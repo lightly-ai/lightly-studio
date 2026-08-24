@@ -1,9 +1,10 @@
 {#-
   A copy of Material 9.7.5's `partials/header.html`, with the section tab strip
-  added after the title and nothing else changed. The one insertion is marked
-  below. `base.html` wraps the include in `{% block header %}`, but overriding
-  that block would mean reproducing this file inside it anyway, so the file is
-  what gets owned. Re-diff it against upstream when bumping mkdocs-material.
+  and the release chip added after the title and nothing else changed. Both
+  insertions are marked below. `base.html` wraps the include in
+  `{% block header %}`, but overriding that block would mean reproducing this
+  file inside it anyway, so the file is what gets owned. Re-diff it against
+  upstream when bumping mkdocs-material.
 -#}
 {% import "partials/section_tabs.html" as section_tabs with context %}
 {% set class = "md-header" %}
@@ -39,6 +40,13 @@
         </div>
       </div>
     </div>
+    {#- ADDED: the release chip, next to the wordmark. Outside `.md-header__title`
+        for the same reason as the tabs below — that element is what instant
+        navigation swaps. Minor version only; the footer carries the exact one. -#}
+    {% if config.extra.package_version %}
+      {% set version_parts = config.extra.package_version.split(".") %}
+      <span class="ls-version">v{{ version_parts[:2] | join(".") }}</span>
+    {% endif %}
     {#- ADDED: the header copy of the section tabs. It goes after the title
         rather than inside it, because the second `.md-header__topic` above is
         what instant navigation swaps and `custom.js` reads the first one. -#}

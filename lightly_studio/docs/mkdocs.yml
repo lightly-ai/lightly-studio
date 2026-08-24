@@ -1,5 +1,5 @@
-# The header renders this as the wordmark, split two-tone by custom.js, so it
-# is the product name alone — "Docs" is what the whole site is.
+# The header renders this as the wordmark, so it is the product name alone —
+# "Docs" is what the whole site is.
 site_name: LightlyStudio
 site_description: LightlyStudio Documentation
 site_url: https://docs.lightly.ai/studio
@@ -7,13 +7,18 @@ site_url: https://docs.lightly.ai/studio
 
 theme:
   name: material
-  language: en
-  # `overrides/` holds four templates. `main.html` and `partials/site_footer.html`
-  # are additive — they append the site footer under Material's prev/next pager.
-  # `partials/header.html` and `partials/nav.html` are FORKS of the same-named
-  # Material 9.7.5 partials, carrying the section tab strip and the sidebar
-  # scoping it does (see `extra.tabs` below). Upstream regenerates both files
-  # between releases and shadowing them is silent, so re-diff them against
+  # Not `en`. `overrides/partials/languages/custom.html` answers the handful of
+  # strings this theme words differently and lets Material fall back to `en` for
+  # everything else.
+  language: custom
+  # `overrides/` holds six templates. `main.html`, `partials/site_footer.html`
+  # and `partials/languages/custom.html` are additive — they append the site
+  # footer under Material's prev/next pager and reword a string or two.
+  # `partials/header.html`, `partials/nav.html` and `partials/toc.html` are FORKS
+  # of the same-named Material 9.7.5 partials, carrying the section tab strip and
+  # the sidebar scoping it does (see `extra.tabs` below), the release chip, and
+  # the page-action links under the contents list. Upstream regenerates those
+  # files between releases and shadowing them is silent, so re-diff them against
   # `material/templates/partials/` whenever mkdocs-material is bumped.
   custom_dir: overrides
   # Mark only. The full logo carries a white wordmark, which is invisible on the
@@ -22,7 +27,7 @@ theme:
   favicon: _static/lightly_logo_fav.svg
   font:
     text: IBM Plex Sans
-    code: JetBrains Mono
+    code: IBM Plex Mono
   # Callout icons. Material's own set is Material Design icons drawn on a 24px
   # grid; at the 17px this theme renders them the filled ones (note, danger,
   # info) collapse into a dot. Octicons are drawn at 16px, so they stay legible,
@@ -199,6 +204,10 @@ plugins:
   - git-revision-date-localized:
       type: date
       fallback_to_build_date: true
+      # This plugin defaults its locale to `theme.language`, which is `custom`
+      # here — a Material convention, not a babel one, so it raises
+      # `UnknownLocaleError` on the first page. Say `en` outright.
+      locale: en
 
 extra:
   homepage: https://lightly.ai/lightly-studio
@@ -227,6 +236,13 @@ extra:
     - name: Enterprise
       sections:
         - Enterprise
+  # Links under the contents list, after the "Edit this page" one that
+  # `page.edit_url` provides. Same `href` rule as the footer columns below.
+  page_actions:
+    - label: Report an issue
+      href: https://github.com/lightly-ai/lightly-studio/issues/new
+    - label: Ask in Discord
+      href: https://discord.com/invite/xvNJW94
   # Footer link columns. An `href` with a scheme is used as written; anything
   # else is a path relative to the site root.
   footer:

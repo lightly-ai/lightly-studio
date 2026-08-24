@@ -1,15 +1,17 @@
 /* ==========================================================================
    LightlyStudio docs theme
 
-   Two schemes over Material for MkDocs:
-     default — "Paper", warm neutrals on white, indigo accent
-     slate   — "Console", near-black panels, lime accent
+   Two schemes over Material for MkDocs, both taken from the design mock:
+     default — "Paper", neutral greys on white, royal blue accent
+     slate   — "Console", the same page in near-blacks
 
-   Structural rules, borrowed from docs sites that read as calm rather than
-   busy: navigation lives in one tall left sidebar, scoped by three tabs in the
-   header; the accent color is for links and for the one rule marking the active
-   tab (every active nav item is a neutral pill); columns are separated by
-   whitespace, not rules; chrome is one row, not two.
+   Structure: full-bleed, three columns. Navigation lives in one tall left
+   panel, scoped by three tabs in the header; the contents list mirrors it on
+   the right. Both panels are a shade off the article and closed by a hairline.
+   Small mono caps are the label register throughout — sidebar groups, the
+   contents caption, table headers, code block headers, footer columns — and
+   nothing else uses that face. The accent marks links and the current page,
+   and nothing else uses that color.
 
    Section order: tokens, Material variable mapping, then components in the
    order they appear on a page (header, sidebar, article, TOC, footer).
@@ -21,113 +23,115 @@
 
 :root {
   --ls-font-display: "Space Grotesk", "IBM Plex Sans", system-ui, sans-serif;
-  --ls-font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --ls-font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
-  --ls-radius-sm: 6px;
-  --ls-radius: 8px;
-  --ls-radius-lg: 14px;
+  --ls-radius-sm: 5px;
+  --ls-radius: 9px;
+  --ls-radius-lg: 10px;
 
   /* The sidebars are pinned below the header and sized against it, so the two
      have to stay in step. */
-  --ls-header-height: 3.4rem;
-  --ls-sidebar-width: 14.5rem;
-  --ls-toc-width: 11rem;
+  --ls-header-height: 2.7rem;
+  --ls-sidebar-width: 13.2rem;
+  --ls-toc-width: 10.4rem;
 
-  /* Code panels are the brand navy in both schemes, so they do not flip. The
-     slate scheme overrides `surface` and `edge` further down: against a
+  /* Code panels are the same near-black in both schemes, so they do not flip.
+     The slate scheme overrides `surface` and `edge` further down: against a
      near-black page the panel needs an edge to exist at all. */
-  --ls-code-surface: #07222c;
-  --ls-code-head: #0c2b37;
-  --ls-code-edge: #17414f;
-  --ls-code-ink: #cfe3eb;
-  --ls-code-label: #7f949e;
+  --ls-code-surface: #0d0d0d;
+  --ls-code-head: #1a1a1a;
+  --ls-code-edge: #262626;
+  --ls-code-ink: #dedede;
+  --ls-code-label: #767676;
   /* Lighter than `label`, because the header strip it sits on is lighter than
-     the panel. #7f949e drops to 3.9:1 there in the slate scheme. */
-  --ls-code-head-ink: #93a9b4;
+     the panel. #767676 drops below 4.5:1 there. */
+  --ls-code-head-ink: #949494;
 }
 
 [data-md-color-scheme="default"] {
   --ls-surface: #ffffff;
-  --ls-surface-sub: #fafafc;
-  --ls-surface-mut: #efeff4;
+  --ls-surface-sub: #fafafa;
+  --ls-surface-mut: #f6f6f6;
 
-  --ls-line: #e6e6ec;
-  --ls-line-hair: #edeff2;
-  --ls-line-strong: #d6d6e0;
+  --ls-line: #e4e4e4;
+  --ls-line-hair: #eeeeee;
+  --ls-line-strong: #dcdcdc;
 
-  --ls-ink: #07222c;
-  --ls-ink-soft: #123240;
-  --ls-body: #4c616b;
-  --ls-muted: #5e727c;
-  --ls-faint: #7f949e;
+  --ls-ink: #0d0d0d;
+  --ls-ink-soft: #2b2b2b;
+  --ls-body: #4a4a4a;
+  --ls-muted: #6e6e6e;
+  --ls-faint: #767676;
 
-  --ls-accent: #0e8fce;
-  --ls-accent-hover: #07222c;
-  --ls-accent-solid: #1aa3e4;
-  --ls-accent-surface: #f2f9fd;
+  --ls-accent: #1b5cf3;
+  --ls-accent-hover: #0f44c4;
+  --ls-accent-solid: #1b5cf3;
+  --ls-accent-surface: #e8f0fe;
   --ls-on-accent: #ffffff;
 
   --ls-warn: #a8681a;
-  --ls-danger: #e4573d;
+  --ls-danger: #cf3b28;
   --ls-danger-surface: #fdf3f1;
 
   /* What a callout's fill and edge are mixed from, and how much of the type
-     color goes in. See section 7. */
-  --ls-adm-base: var(--ls-surface-sub);
-  --ls-adm-tint: 5%;
-  --ls-adm-tint-loud: 9%;
+     color goes in. See section 7. 8% and 26% of the accent into white are what
+     reproduce the mock's #edf3fe fill on a #c6dafb edge. */
+  --ls-adm-base: var(--ls-surface);
+  --ls-adm-tint: 8%;
+  --ls-adm-tint-loud: 12%;
   --ls-adm-edge: 26%;
   --ls-adm-edge-loud: 40%;
 }
 
 [data-md-color-scheme="slate"] {
-  --ls-surface: #051a22;
-  --ls-surface-sub: #07222c;
-  --ls-surface-mut: #123240;
+  --ls-surface: #0a0a0a;
+  --ls-surface-sub: #0d0d0d;
+  --ls-surface-mut: #151515;
 
-  /* The default panel is #07222c on this #051a22 page: 1.08:1, which reads as
+  /* The default panel is #0d0d0d on this #0a0a0a page: 1.02:1, which reads as
      no panel at all. Lifting the fill barely helps — WCAG's +0.05 floor
-     compresses ratios between two near-blacks, and #0a2a36 only reaches
-     1.19:1. The border is what draws the boundary. */
-  --ls-code-surface: #0a2a36;
-  --ls-code-head: #11394a;
-  --ls-code-edge: #204f61;
+     compresses ratios between two near-blacks. The border is what draws the
+     boundary. */
+  --ls-code-surface: #151515;
+  --ls-code-head: #1c1c1c;
+  --ls-code-edge: #2e2e2e;
 
-  --ls-line: #123240;
-  --ls-line-hair: #0d2b36;
-  --ls-line-strong: #33505c;
+  --ls-line: #262626;
+  --ls-line-hair: #1c1c1c;
+  --ls-line-strong: #3a3a3a;
 
-  --ls-ink: #f7f8fb;
-  --ls-ink-soft: #cfe3eb;
-  --ls-body: #93a7b0;
-  --ls-muted: #7f949e;
-  --ls-faint: #5e727c;
+  --ls-ink: #ffffff;
+  --ls-ink-soft: #c9c9c9;
+  --ls-body: #a8a8a8;
+  --ls-muted: #8c8c8c;
+  /* The mock's faintest grey is #6e6e6e, which is 3.9:1 on this page — under
+     the floor for the small print it is used on. #808080 is 4.9:1 and still
+     reads as the quietest of the four. */
+  --ls-faint: #808080;
 
-  --ls-accent: #1aa3e4;
-  --ls-accent-hover: #7fd1f2;
-  --ls-accent-solid: #1aa3e4;
-  --ls-accent-surface: #06333f;
-  --ls-on-accent: #ffffff;
+  --ls-accent: #4d8bff;
+  --ls-accent-hover: #9ec0ff;
+  --ls-accent-solid: #4d8bff;
+  --ls-accent-surface: #12253d;
+  --ls-on-accent: #0a0a0a;
 
   --ls-warn: #e0a83a;
-  --ls-danger: #e4573d;
+  --ls-danger: #ef6a55;
   --ls-danger-surface: #2a1310;
 
-  /* Mixed from a near-neutral dark rather than from the page. Blue-black is the
-     one base that turns amber green: `--ls-warn` at 20% of #07222c lands on
-     rgb(50, 61, 47), where green is the brightest channel of the three. The
-     same 20% of #0a1015 lands on rgb(53, 46, 28) and still reads as amber.
+  /* Mixed from the page itself here, which is already a neutral near-black —
+     13% of the accent into #0a0a0a lands on the mock's #0e1b2e, and 40% on its
+     #1b3a6b edge.
 
-     Both tints are roughly double the light scheme's, and the edges are higher
-     again because they are mixed from that same near-black rather than from
-     `--ls-line`. Two near-blacks 5% apart are the same near-black — the WCAG
-     floor that flattens the code panel above flattens a callout fill too — so
-     here the border is most of what draws the box. */
-  --ls-adm-base: #0a1015;
+     Both tints are roughly double the light scheme's, and the edges higher
+     again: two near-blacks 5% apart are the same near-black — the WCAG floor
+     that flattens the code panel above flattens a callout fill too — so here
+     the border is most of what draws the box. */
+  --ls-adm-base: var(--ls-surface);
   --ls-adm-tint: 13%;
   --ls-adm-tint-loud: 20%;
-  --ls-adm-edge: 42%;
-  --ls-adm-edge-loud: 58%;
+  --ls-adm-edge: 40%;
+  --ls-adm-edge-loud: 56%;
 }
 
 /* ==========================================================================
@@ -180,23 +184,26 @@ body[data-md-color-scheme="slate"] {
   --md-shadow-z3: none;
 }
 
-/* Syntax colors for the navy code panel, which both schemes use. Built from
-   the brand blues so the panel reads as one family rather than a rainbow. */
+/* Syntax colors for the near-black code panel, which both schemes use. The
+   mock's own snippets are a flat #dedede; a real code block needs more than
+   that, so the set is deliberately short — one blue for the language's own
+   words, one green for literals, one warm for numbers, and grey for everything
+   structural. It reads as the panel plus three hues rather than a rainbow. */
 body[data-md-color-scheme="default"],
 body[data-md-color-scheme="slate"] {
-  --md-code-hl-color: rgba(26, 163, 228, 0.18);
-  --md-code-hl-number-color: #f0b47a;
-  --md-code-hl-special-color: #7fd1f2;
-  --md-code-hl-function-color: #7fd1f2;
-  --md-code-hl-constant-color: #9ad9ea;
-  --md-code-hl-keyword-color: #3ad9c6;
-  --md-code-hl-string-color: #a8d8a0;
-  --md-code-hl-name-color: #cfe3eb;
-  --md-code-hl-operator-color: #93a7b0;
-  --md-code-hl-punctuation-color: #93a7b0;
-  --md-code-hl-comment-color: #7f949e;
-  --md-code-hl-generic-color: #93a7b0;
-  --md-code-hl-variable-color: #cfe3eb;
+  --md-code-hl-color: rgba(77, 139, 255, 0.2);
+  --md-code-hl-number-color: #e0a87a;
+  --md-code-hl-special-color: #6ea8ff;
+  --md-code-hl-function-color: #6ea8ff;
+  --md-code-hl-constant-color: #9cc3ff;
+  --md-code-hl-keyword-color: #6ea8ff;
+  --md-code-hl-string-color: #b5cea8;
+  --md-code-hl-name-color: #dedede;
+  --md-code-hl-operator-color: #8c8c8c;
+  --md-code-hl-punctuation-color: #8c8c8c;
+  --md-code-hl-comment-color: #767676;
+  --md-code-hl-generic-color: #8c8c8c;
+  --md-code-hl-variable-color: #dedede;
 }
 
 /* ==========================================================================
@@ -207,10 +214,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* The landing design centres on a 1240px column. Docs add a sidebar and a
-   TOC, so the shell is a little wider and the article lands near that width. */
+/* The mock is full-bleed: both sidebars are panels flush to the viewport edge,
+   with the article between them. So the shell is the viewport, up to the point
+   where "full width" stops meaning anything — past 1680px the row is centred
+   instead, or the article column would drift a third of a screen away from the
+   contents list pinned to the right edge. */
 .md-grid {
-  max-width: 66rem;
+  max-width: 84rem;
 }
 
 @media screen and (min-width: 76.25em) {
@@ -226,9 +236,17 @@ body {
     min-width: 0;
   }
 
-  .md-content__inner {
-    margin-inline: 1.6rem;
-    padding-top: 0.6rem;
+  /* The article keeps its own width once the shell stops growing with it: 40px
+     of gutter either side of a column that tops out near the mock's 820px.
+
+     The long selector is Material's own, at (0,5,0), with `[dir]` standing in
+     for its `[dir=ltr]` so the rule is direction-neutral. A bare
+     `.md-content__inner` loses the margin to it by four classes. */
+  [dir] .md-sidebar--primary:not([hidden]) ~ .md-content > .md-content__inner,
+  [dir] .md-sidebar--secondary:not([hidden]) ~ .md-content > .md-content__inner {
+    margin-inline: 2rem;
+    max-width: 44rem;
+    padding-top: 0.9rem;
   }
 }
 
@@ -277,8 +295,8 @@ body {
 /* Translucent and blurred over the content, as on the landing page. */
 .md-header {
   backdrop-filter: blur(14px);
-  background-color: color-mix(in srgb, var(--ls-surface) 86%, transparent);
-  border-bottom: 1px solid var(--ls-line-hair);
+  background-color: color-mix(in srgb, var(--ls-surface) 90%, transparent);
+  border-bottom: 1px solid var(--ls-line);
   box-shadow: none;
   color: var(--ls-ink);
   height: var(--ls-header-height);
@@ -286,7 +304,7 @@ body {
 
 .md-header__inner {
   height: var(--ls-header-height);
-  padding-inline: 1rem;
+  padding-inline: 1.3rem;
 }
 
 .md-header__button {
@@ -341,11 +359,21 @@ body {
   display: none;
 }
 
-/* Set by custom.js. The landing wordmark is two-tone: the product name in
-   ink, the qualifier in body grey. */
-.md-header__title .ls-wordmark-accent {
-  color: var(--ls-body);
+/* Release chip, rendered next to the wordmark by `overrides/partials/header.html`
+   and set from the installed package by `mkdocs_hooks.py`. Minor version only:
+   the footer carries the exact one, and a patch number changing under the
+   wordmark every fortnight is noise. */
+.ls-version {
+  border: 1px solid var(--ls-line);
+  border-radius: 4px;
+  color: var(--ls-faint);
+  flex: none;
+  font-family: var(--ls-font-mono);
+  font-size: 0.5rem;
   font-weight: 500;
+  line-height: 1.4;
+  margin-inline-start: 0.45rem;
+  padding: 0.05rem 0.25rem;
 }
 
 /* -- Section tabs ----------------------------------------------------------
@@ -364,11 +392,12 @@ body {
    tab order too.
 
    The active tab is marked twice over. The ink text carries it and the accent
-   rule underneath repeats it, because the header is translucent: with a navy
-   code panel scrolled under it the accent falls to 2.7:1 against what is
-   effectively behind it. That is fine for a decoration and not enough to be the
-   only signal. Weight stays 500 on all three — bolding the active one would
-   change its width and shift the whole strip sideways on every navigation.
+   rule underneath repeats it, because the header is translucent: with a
+   near-black code panel scrolled under it the accent falls below 3:1 against
+   what is effectively behind it. That is fine for a decoration and not enough
+   to be the only signal. Weight stays 500 on all three — bolding the active one
+   would change its width and shift the whole strip sideways on every
+   navigation.
    ------------------------------------------------------------------------- */
 
 .ls-tabs__list {
@@ -385,8 +414,9 @@ body {
      does not jump as the reader moves between tabs. */
   border-bottom: 2px solid transparent;
   color: var(--ls-body);
-  font-size: 0.72rem;
+  font-size: 0.675rem;
   font-weight: 500;
+  padding-bottom: 0.15rem;
   text-decoration: none;
   transition: border-color 0.12s, color 0.12s;
   white-space: nowrap;
@@ -480,25 +510,27 @@ body {
 
 .md-search__form {
   background-color: var(--ls-surface-mut);
-  border: 1px solid transparent;
-  border-radius: var(--ls-radius);
+  border: 1px solid var(--ls-line);
+  border-radius: 7px;
   box-shadow: none;
-  height: 1.65rem;
+  height: 1.6rem;
   position: relative;
 }
 
 .md-search__form:hover {
   background-color: var(--ls-surface-mut);
-  border-color: var(--ls-line);
+  border-color: var(--ls-line-strong);
 }
 
 .md-search__input {
   color: var(--ls-ink);
-  font-size: 0.68rem;
+  font-size: 0.65rem;
 }
 
+/* `--ls-muted`, not `--ls-faint`: the field is filled with the muted surface,
+   and the faint grey is only 4.3:1 against it. */
 .md-search__input::placeholder {
-  color: var(--ls-faint);
+  color: var(--ls-muted);
 }
 
 .md-search__icon {
@@ -550,42 +582,42 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   display: none;
 }
 
-/* -- Repository link ------------------------------------------------------- */
+/* -- Repository link -------------------------------------------------------
+
+   Not in the header. `repo_url` still has to be set — it is what gives every
+   page an `edit_url`, and the actions list under the contents reads that — but
+   the block it renders is a wordmark, a version and two counters, and the
+   header already carries a wordmark and a version. The GitHub link itself is in
+   the footer's Community column and in that same actions list.
+   ------------------------------------------------------------------------- */
 
 .md-header__source {
-  margin-left: 0.6rem;
-}
-
-.md-source {
-  color: var(--ls-body);
-  font-size: 0.6rem;
-}
-
-.md-source:hover {
-  color: var(--ls-ink);
-  opacity: 1;
-}
-
-.md-source__repository {
-  font-weight: 500;
-}
-
-.md-source__fact {
-  color: var(--ls-faint);
-  font-size: 0.5rem;
-  opacity: 1;
+  display: none;
 }
 
 /* ==========================================================================
    5. Left sidebar
 
-   Group captions read at body size in the ink color; pages sit under them at
-   the same weight as the prose they lead to. The current page is a neutral
-   pill — the accent stays reserved for links.
+   A panel, not a column of links in the page: tinted a shade off the article
+   and closed by a rule down its right edge, so the reader's eye has a boundary
+   to stop at rather than a run of text that happens to end.
+
+   Group captions are small mono caps — the same label register as the code
+   block header strip, the TOC title and the footer columns. Pages sit under
+   them in the body face. The current page is the one accented thing in the
+   panel: accent text on an accent tint.
    ========================================================================== */
 
+@media screen and (min-width: 76.25em) {
+  .md-sidebar--primary {
+    background-color: var(--ls-surface-sub);
+    border-right: 1px solid var(--ls-line);
+    padding-top: 0.5rem;
+  }
+}
+
 .md-sidebar--primary .md-nav {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
 }
 
 /* The full nav overflows on most screens; the scrollbar should not compete
@@ -611,12 +643,12 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
 }
 
 .md-sidebar--primary .md-nav__link {
-  border-radius: var(--ls-radius);
+  border-radius: var(--ls-radius-sm);
   color: var(--ls-body);
-  font-weight: 500;
+  font-weight: 400;
   gap: 0.3rem;
   margin-top: 0;
-  padding: 0.32rem 0.5rem;
+  padding: 0.25rem 0.4rem;
   transition: background-color 0.12s, color 0.12s;
 }
 
@@ -627,8 +659,8 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
 
 .md-sidebar--primary .md-nav__link--active,
 .md-sidebar--primary .md-nav__link--active:hover {
-  background-color: var(--ls-surface-mut);
-  color: var(--ls-ink);
+  background-color: var(--ls-accent-surface);
+  color: var(--ls-accent);
   font-weight: 600;
 }
 
@@ -639,31 +671,38 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
 
 /* -- Group captions -------------------------------------------------------- */
 
-/* Level 1 ("Concepts & Tools", "Python API"): the primary grouping. */
+/* Level 1 ("Concepts & Tools", "Python API"): the primary grouping, set as
+   mono caps. Uppercasing in CSS rather than in `nav:` keeps the section title
+   itself readable everywhere else it is used — the breadcrumb, the drawer's
+   back button, the tab mapping in mkdocs.yml. */
 .md-sidebar--primary
   .md-nav[data-md-level="0"]
   > .md-nav__list
   > .md-nav__item--section
   > :is(.md-nav__link, .md-nav__container) {
   background-color: transparent;
-  color: var(--ls-ink);
+  color: var(--ls-muted);
   cursor: default;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: -0.005em;
+  font-family: var(--ls-font-mono);
+  font-size: 0.525rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   margin: 0;
-  padding: 0 0.5rem 0.25rem;
+  padding: 0 0.4rem 0.5rem;
+  text-transform: uppercase;
 }
 
 /* Level 2 ("Concepts", "Tools", "More"): collapsible, so it keeps the item
-   shape and reads as a quieter sub-caption rather than a page. */
+   shape and reads as a quieter sub-caption rather than a page. Sentence case,
+   not caps — two levels of mono caps in one panel and neither one groups
+   anything. */
 .md-sidebar--primary
   .md-nav[data-md-level="1"]
   > .md-nav__list
   > .md-nav__item--nested
   > :is(.md-nav__link, .md-nav__container) {
-  color: var(--ls-muted);
-  font-size: 0.66rem;
+  color: var(--ls-ink);
+  font-size: 0.65rem;
   font-weight: 600;
 }
 
@@ -674,25 +713,47 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   color: inherit;
 }
 
+/* Under `navigation.indexes` a section that has an index page renders that
+   page's link *inside* the caption, so it inherits the caption's mono caps —
+   and, when it is the current page, takes the accent pill on top of them. A
+   filled pill of small caps reads as a banner, not as "you are here". The
+   accent on its own says the same thing and leaves the caption a caption.
+   (0,6,0), over the pill's (0,2,0). */
+.md-sidebar--primary
+  .md-nav[data-md-level="0"]
+  > .md-nav__list
+  > .md-nav__item--section
+  > .md-nav__container
+  > :is(.md-nav__link--active, .md-nav__link:hover) {
+  background-color: transparent;
+  color: var(--ls-accent);
+}
+
 /* Air between top-level groups. */
 .md-sidebar--primary
   .md-nav[data-md-level="0"]
   > .md-nav__list
   > .md-nav__item
   ~ .md-nav__item {
-  margin-top: 1.15rem;
+  margin-top: 0.8rem;
 }
 
 /* Nested pages indent under their caption rather than sitting flush. */
 .md-sidebar--primary .md-nav[data-md-level="2"] .md-nav__link {
-  padding-left: 0.85rem;
+  padding-left: 0.7rem;
 }
 
 @media screen and (max-width: 76.234375em) {
-  /* Material colors the drawer's current page with the link accent at
-     (0,3,0); the pill is neutral here too. */
+  /* Material colors the drawer's current page with the link accent at (0,3,0),
+     which is the right color but on the wrong element — it paints every
+     ancestor section of the current page, not the page. Restate it so only the
+     accent pill below carries the mark. */
   .md-sidebar--primary .md-nav--primary .md-nav__item--active > .md-nav__link {
-    color: var(--ls-ink);
+    color: var(--ls-body);
+  }
+
+  .md-sidebar--primary .md-nav--primary .md-nav__link--active {
+    color: var(--ls-accent);
   }
 
   /* In the drawer, a section's pages show inline instead of as a separate
@@ -751,21 +812,44 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
 
 /* ==========================================================================
    6. Right sidebar (table of contents)
+
+   The mirror of the left panel: same tint, same rule, same mono caps caption.
+   Each entry carries a 2px bar at its left edge — hairline until the entry is
+   the one on screen, accent when it is. A bar rather than a pill because the
+   entries are one long unbroken column here, and the run of bars is what makes
+   the nesting legible.
    ========================================================================== */
 
+/* The panel needs the left sidebar opposite it to read as one of a pair, and
+   that only exists as a column above 76.25em. */
 @media screen and (min-width: 76.25em) {
+  .md-sidebar--secondary {
+    background-color: var(--ls-surface-sub);
+    border-left: 1px solid var(--ls-line);
+    padding-top: 0.9rem;
+  }
+}
+
+/* The caption, from where the list stops being a collapsible drawer with a back
+   button in its title and becomes a column beside the article. */
+@media screen and (min-width: 60em) {
   .md-nav--secondary .md-nav__title {
     background: transparent;
     box-shadow: none;
-    color: var(--ls-ink);
+    color: var(--ls-muted);
+    font-family: var(--ls-font-mono);
+    /* Zeroed so the label Material prints is replaced rather than joined by
+       the one below; `::after` sets its own size. */
     font-size: 0;
-    font-weight: 600;
-    padding: 0 0 0.4rem 0.6rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    padding: 0 0 0.6rem 0.5rem;
   }
 
   .md-nav--secondary .md-nav__title::after {
     content: "On this page";
-    font-size: 0.68rem;
+    font-size: 0.525rem;
+    text-transform: uppercase;
   }
 }
 
@@ -774,26 +858,84 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
 }
 
 .md-nav--secondary .md-nav__link {
+  border-inline-start: 2px solid var(--ls-line-hair);
   border-radius: 0;
   color: var(--ls-muted);
-  font-size: 0.66rem;
+  font-size: 0.625rem;
   line-height: 1.45;
-  padding: 0.22rem 0 0.22rem 0.6rem;
+  margin-top: 0;
+  padding: 0.2rem 0 0.2rem 0.5rem;
+  transition: border-color 0.12s, color 0.12s;
 }
 
 .md-nav--secondary .md-nav__link:hover {
   background-color: transparent;
+  border-inline-start-color: var(--ls-line-strong);
   color: var(--ls-ink);
 }
 
 .md-nav--secondary .md-nav__link--active,
 .md-nav--secondary .md-nav__link--active:hover {
-  color: var(--ls-ink);
-  font-weight: 600;
+  border-inline-start-color: var(--ls-accent);
+  color: var(--ls-accent);
 }
 
 .md-nav--secondary .md-nav__link--active::before {
   display: none;
+}
+
+/* Material indents nested entries with padding on the list, which would push
+   the bar in with the text and break the column the bars form. Indent the text
+   instead and leave every bar on the same line. */
+.md-nav--secondary .md-nav__item .md-nav__item .md-nav__link {
+  padding-left: 1rem;
+}
+
+.md-nav--secondary .md-nav__item .md-nav__item .md-nav__item .md-nav__link {
+  padding-left: 1.5rem;
+}
+
+/* -- Page actions ----------------------------------------------------------
+
+   Edit / report / ask, under the contents list. From
+   `overrides/partials/toc.html`; the edit link is the one Material would
+   otherwise draw as a bare pencil icon floating over the first paragraph.
+   ------------------------------------------------------------------------- */
+
+.ls-actions {
+  border-top: 1px solid var(--ls-line-hair);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 1rem 0 0;
+  padding: 0.8rem 0 0 0.5rem;
+}
+
+.ls-actions__link {
+  color: var(--ls-body);
+  font-size: 0.625rem;
+  line-height: 1.4;
+  text-decoration: none;
+  transition: color 0.12s;
+}
+
+.ls-actions__link:hover,
+.ls-actions__link:focus-visible {
+  color: var(--ls-accent);
+}
+
+/* The pencil the actions list replaces. */
+.md-content__button.md-icon[rel="edit"] {
+  display: none;
+}
+
+/* Below the TOC breakpoint the actions ride along inside the collapsed
+   contents drawer, which is the wrong place for them — they are page-level, not
+   part of the heading list. */
+@media screen and (max-width: 59.984375em) {
+  .ls-actions {
+    display: none;
+  }
 }
 
 /* ==========================================================================
@@ -802,8 +944,8 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
 
 .md-typeset {
   color: var(--ls-body);
-  font-size: 0.8rem;
-  line-height: 1.68;
+  font-size: 0.75rem;
+  line-height: 1.65;
 }
 
 .md-typeset :is(h1, h2, h3, h4) {
@@ -811,30 +953,56 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   font-family: var(--ls-font-display);
 }
 
+/* Space Grotesk is drawn wide and open, so it takes more negative tracking
+   than a text face at the same size before it stops reading as a display line —
+   heavily at 38px, barely at 16px. */
 .md-typeset h1 {
-  font-size: 2.15rem;
+  font-size: 1.9rem;
   font-weight: 600;
-  letter-spacing: -0.022em;
-  line-height: 1.12;
-  margin-bottom: 0.9rem;
+  letter-spacing: -0.028em;
+  line-height: 1.1;
+  margin-bottom: 0.7rem;
 }
 
 .md-typeset h2 {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 600;
-  letter-spacing: -0.015em;
-  margin-top: 2.4rem;
+  letter-spacing: -0.018em;
+  margin-top: 2.2rem;
 }
 
 .md-typeset h3 {
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
 
 .md-typeset h4 {
-  font-size: 0.82rem;
+  font-size: 0.75rem;
   font-weight: 600;
+}
+
+/* The opening paragraph is the page's summary, so it is set a size up and
+   closed by a rule — the mock's 17px standfirst over 15px body. Selected as
+   `> p:first-of-type` rather than by a class, because it holds on every page
+   without an author marking it up.
+
+   The rule stops at the reading measure rather than running the article width.
+   Same width as the text above it reads as that text's underline; wider reads
+   as a section divider that has drifted 100px up the page. */
+.md-typeset > p:first-of-type {
+  border-bottom: 1px solid var(--ls-line-hair);
+  color: var(--ls-body);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  margin-bottom: 1.3rem;
+  padding-bottom: 1.1rem;
+}
+
+/* An `h2` straight after the standfirst would put its own top margin under
+   that rule and open a 3rem gap. */
+.md-typeset > p:first-of-type + :is(h2, h3) {
+  margin-top: 0;
 }
 
 /* Reading measure, ~75 characters. */
@@ -882,33 +1050,92 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   border-radius: var(--ls-radius-lg);
 }
 
+/* A screenshot is framed, as in the mock: a hairline box on the subtle surface,
+   so a light UI shot has an edge instead of bleeding into the page.
+
+   Only images that stand alone in their own paragraph. An inline badge or an
+   emoji is also an `img` and does not want a border round it. */
+.md-typeset p:has(> img:only-child) > img,
+.md-typeset figure > img {
+  background-color: var(--ls-surface-sub);
+  border: 1px solid var(--ls-line);
+  display: block;
+}
+
+/* Material centres a figure's caption and sets it in the body color; here it is
+   the same mono caps as every other label. */
+.md-typeset figure > figcaption {
+  color: var(--ls-muted);
+  font-family: var(--ls-font-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.07em;
+  margin-top: 0.6rem;
+  max-width: none;
+  text-transform: uppercase;
+}
+
 /* -- Breadcrumbs ----------------------------------------------------------- */
 
 .md-path {
-  color: var(--ls-faint);
-  font-size: 0.64rem;
+  color: var(--ls-muted);
+  font-size: 0.625rem;
   margin-bottom: 0.9rem;
+  /* Material's own 1.2rem, which would leave the trail 16px to the left of the
+     `h1` it belongs to. */
+  margin-inline: 2rem;
 }
 
 .md-path__item a {
-  color: var(--ls-faint);
+  color: var(--ls-muted);
 }
 
 .md-path__item a:hover {
-  color: var(--ls-ink);
+  color: var(--ls-accent);
+}
+
+/* The last crumb is the current page, which the `h1` under it already names;
+   the ones before it are the trail worth reading. */
+.md-path__item:last-child {
+  color: var(--ls-body);
+}
+
+/* A slash, as in the mock and as in the URL the trail describes. Material's own
+   separator is a chevron drawn as a masked SVG, so unsetting the mask is not
+   enough — the box it reserves has to go too, or the slash lands next to a
+   0.8rem gap. (0,3,1) to clear its (0,2,1). */
+.md-path .md-path__item:not(:first-child)::before {
+  background-color: transparent;
+  color: var(--ls-line-strong);
+  content: "/";
+  height: auto;
+  mask-image: none;
+  width: auto;
+  -webkit-mask-image: none;
 }
 
 /* -- Code ------------------------------------------------------------------ */
 
+/* A bordered chip rather than a tinted run of text. The tint alone is 1.03:1
+   against the article at these greys — visible on white, gone the moment the
+   code sits inside a callout or a table cell, which is most of where it sits. */
 .md-typeset code {
-  border-radius: var(--ls-radius-sm);
+  border: 1px solid var(--ls-line);
+  border-radius: 4px;
   color: var(--ls-ink-soft);
-  font-size: 0.84em;
-  padding: 0.1em 0.35em;
+  font-size: 0.82em;
+  padding: 0.05em 0.35em;
 }
 
-/* Fenced blocks are the brand navy panel in both schemes, with the generous
-   padding of the landing page's terminal block. */
+/* A heading is display type; a bordered chip inside one reads as a button. */
+.md-typeset :is(h1, h2, h3, h4) code {
+  background-color: transparent;
+  border: 0;
+  font-size: 0.9em;
+  padding: 0;
+}
+
+/* Fenced blocks are the same near-black panel in both schemes, with the
+   generous padding of the landing page's terminal block. */
 .md-typeset pre > code,
 .md-typeset .highlight :is(pre, code),
 .md-typeset .highlighttable {
@@ -917,13 +1144,13 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   color: var(--ls-code-ink);
 }
 
-/* 8px radius and ~1.5 leading, which is where both FiftyOne's and Label
-   Studio's blocks sit. 1.9 was loose enough to break a snippet into stripes. */
+/* ~1.6 leading. The mock sets its two-line snippets at 1.9, which is fine for
+   two lines and breaks a thirty-line one into stripes. */
 .md-typeset pre > code {
   border-radius: var(--ls-radius);
-  font-size: 0.7rem;
-  line-height: 1.55;
-  padding: 1rem 1.1rem;
+  font-size: 0.65rem;
+  line-height: 1.6;
+  padding: 0.9rem 1rem;
 }
 
 /* Every fenced block is a framed card: a header strip naming it, the code
@@ -960,10 +1187,12 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   content: attr(data-code-label);
   display: block;
   font-family: var(--ls-font-mono);
-  font-size: 0.58rem;
-  letter-spacing: 0.04em;
+  font-size: 0.53rem;
+  font-weight: 500;
+  letter-spacing: 0.07em;
   line-height: 1;
-  padding: 0.5rem 0.8rem;
+  padding: 0.45rem 0.75rem;
+  text-transform: uppercase;
 }
 
 /* The filename is read by the header strip above, not rendered on its own. */
@@ -973,7 +1202,7 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
 
 .md-typeset .highlight > pre > code {
   border-radius: 0;
-  padding: 0.95rem 1.05rem;
+  padding: 0.85rem 1rem;
 }
 
 .md-typeset .highlight [data-linenos]::before {
@@ -985,7 +1214,7 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
 /* Copy control. Material 9.7 renders this as `nav.md-code__nav` wrapping
    `button.md-code__button` — not the older `.md-clipboard`. Its icon inherits
    `--md-code-fg-color`, which is the light-scheme ink and so disappears
-   against the navy panel.
+   against the near-black panel.
 
    It sits in the header strip and stays flat until the block is hovered. */
 .md-typeset .md-code__nav {
@@ -999,7 +1228,7 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
 
 .md-typeset .highlight:hover .md-code__nav,
 .md-typeset .md-code__nav:hover {
-  background-color: rgba(207, 227, 235, 0.14);
+  background-color: rgba(222, 222, 222, 0.14);
 }
 
 .md-typeset .md-code__button {
@@ -1047,9 +1276,9 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   border-radius: var(--ls-radius);
   box-shadow: none;
   display: flow-root;
-  font-size: 0.76rem;
-  margin: 1.15rem 0;
-  padding: 0.7rem 0.9rem;
+  font-size: 0.68rem;
+  margin: 1.1rem 0;
+  padding: 0.65rem 0.75rem;
 }
 
 /* Material gives each of its twelve types a stock border color and a tinted
@@ -1072,7 +1301,7 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
    design the summary is a full-bleed bar that reaches the box edge. Here the
    summary is ordinary padded content, so the padding has to come back. */
 .md-typeset details:not([open]) {
-  padding-bottom: 0.7rem;
+  padding-bottom: 0.65rem;
 }
 
 /* The title row. Both selectors are needed: python-markdown emits a
@@ -1248,19 +1477,33 @@ html .md-typeset :is(.admonition, details) > :last-child {
 
 .md-typeset table:not([class]) {
   border: 1px solid var(--ls-line);
-  border-radius: var(--ls-radius);
+  border-radius: var(--ls-radius-lg);
   box-shadow: none;
-  font-size: 0.72rem;
+  font-size: 0.65rem;
 }
 
+/* The header row is the table's own caption, so it takes the same mono caps as
+   every other label in the theme.
+
+   Only the header. The mock also sets the first *body* column in mono, which
+   works for the reference tables it mocks up and not for the ones these docs
+   actually have — `concepts_and_tools/sampling.md` opens its first column with
+   "Pick a diverse subset that covers the whole dataset". Mono is for a column
+   of identifiers, and nothing declares which columns those are. */
 .md-typeset table:not([class]) th {
   background-color: var(--ls-surface-sub);
-  color: var(--ls-ink);
-  font-weight: 600;
+  color: var(--ls-muted);
+  font-family: var(--ls-font-mono);
+  font-size: 0.55rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  padding: 0.55rem 0.8rem;
+  text-transform: uppercase;
 }
 
 .md-typeset table:not([class]) td {
   border-top: 1px solid var(--ls-line-hair);
+  padding: 0.55rem 0.8rem;
   vertical-align: top;
 }
 
@@ -1338,11 +1581,22 @@ html .md-typeset :is(.admonition, details) > :last-child {
 /* -- Cards and buttons ----------------------------------------------------- */
 
 .md-typeset .grid.cards > :is(ol, ul) > li {
-  background-color: var(--ls-surface);
+  background-color: var(--ls-surface-sub);
   border: 1px solid var(--ls-line);
   border-radius: var(--ls-radius);
   box-shadow: none;
+  font-size: 0.68rem;
   transition: border-color 0.15s;
+}
+
+/* A card leads with its subject in bold; the mock sets that line in the display
+   face, at the size of an `h4`. */
+.md-typeset .grid.cards > :is(ol, ul) > li > p:first-child > strong:only-child,
+.md-typeset .grid.cards > :is(ol, ul) > li > p:first-child > :is(a, em) > strong {
+  color: var(--ls-ink);
+  font-family: var(--ls-font-display);
+  font-size: 1.05em;
+  letter-spacing: -0.01em;
 }
 
 .md-typeset .grid.cards > :is(ol, ul) > li:hover {
@@ -1423,7 +1677,7 @@ html .md-typeset :is(.admonition, details) > :last-child {
   gap: 0.6rem;
   margin: 1.6rem auto;
   opacity: 1;
-  padding: 0 0.8rem;
+  padding: 0 1.3rem;
 }
 
 .md-footer__link {
@@ -1443,13 +1697,13 @@ html .md-typeset :is(.admonition, details) > :last-child {
 }
 
 .md-footer__direction {
-  color: var(--ls-faint);
-  font-size: 0.6rem;
+  color: var(--ls-muted);
+  font-size: 0.575rem;
   opacity: 1;
 }
 
 .md-footer__title {
-  font-size: 0.76rem;
+  font-size: 0.725rem;
   line-height: 1.5;
   margin: 0;
   padding: 0;
@@ -1476,12 +1730,12 @@ html .md-typeset :is(.admonition, details) > :last-child {
 /* -- Site footer ----------------------------------------------------------- */
 
 .ls-footer {
-  background-color: var(--ls-surface-sub);
+  background-color: var(--ls-surface-mut);
   border-top: 1px solid var(--ls-line);
 }
 
 .ls-footer__inner {
-  padding: 1.4rem 0.8rem 1.2rem;
+  padding: 1.4rem 1.3rem 1.2rem;
 }
 
 /* The brand block and the columns share one row and wrap together, so a narrow
@@ -1531,8 +1785,10 @@ html .md-typeset :is(.admonition, details) > :last-child {
   min-width: 6.5rem;
 }
 
+/* Same reason as the search placeholder: the footer band is the muted surface,
+   where the faint grey drops under 4.5:1. */
 .ls-footer__heading {
-  color: var(--ls-faint);
+  color: var(--ls-muted);
   font-family: var(--ls-font-mono);
   font-size: 0.52rem;
   font-weight: 500;
@@ -1680,12 +1936,17 @@ code.doc-symbol-module {
 
 /* Each member has its own `.doc-object` positioning context, so the absolutely
    positioned badge aligns to that member's heading rather than the page. The
-   heading is indented to make room; the signature and body stay full width. */
+   heading is indented to make room; the signature and body stay full width.
+
+   Only the members that carry a badge. Twelve docstrings across the package do,
+   and indenting every heading in the reference by 68px on their account left
+   several hundred of them hanging off the article's left margin — and the ones
+   nested two levels deep hanging off it twice. */
 .md-typeset .doc-object {
   position: relative;
 }
 
-.md-typeset .doc-heading {
+.md-typeset .doc-object:has(> .doc-contents > p > .doc-badge--beta) > .doc-heading {
   padding-left: 3.4rem;
 }
 
