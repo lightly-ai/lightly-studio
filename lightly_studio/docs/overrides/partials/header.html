@@ -42,10 +42,10 @@
     </div>
     {#- ADDED: the release chip, next to the wordmark. Outside `.md-header__title`
         for the same reason as the tabs below — that element is what instant
-        navigation swaps. Minor version only; the footer carries the exact one. -#}
+        navigation swaps. The whole version, patch included: truncating it to
+        the minor prints a release that was never cut. -#}
     {% if config.extra.package_version %}
-      {% set version_parts = config.extra.package_version.split(".") %}
-      <span class="ls-version">v{{ version_parts[:2] | join(".") }}</span>
+      <span class="ls-version">v{{ config.extra.package_version }}</span>
     {% endif %}
     {#- ADDED: the header copy of the section tabs. It goes after the title
         rather than inside it, because the second `.md-header__topic` above is

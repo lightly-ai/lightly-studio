@@ -374,9 +374,7 @@ body {
 }
 
 /* Release chip, rendered next to the wordmark by `overrides/partials/header.html`
-   and set from the installed package by `mkdocs_hooks.py`. Minor version only:
-   the footer carries the exact one, and a patch number changing under the
-   wordmark every fortnight is noise. */
+   and set from the installed package by `mkdocs_hooks.py`. */
 .ls-version {
   border: 1px solid var(--ls-line);
   border-radius: 4px;
