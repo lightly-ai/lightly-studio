@@ -590,7 +590,10 @@ def _validate_and_coerce_embeddings(
             model's declared `embedding_dimension`.
     """
     if embeddings.ndim != 2:  # noqa: PLR2004
-        raise ValueError(f"Embeddings must be a 2-D array, got {embeddings.ndim}-D.")
+        raise ValueError(
+            "Embeddings must be a 2-D array (one row per sample: shape "
+            f"(num_samples, embedding_dimension)), got a {embeddings.ndim}-D array."
+        )
     if embeddings.shape[0] != len(sample_ids):
         raise ValueError(
             f"Number of embeddings ({embeddings.shape[0]}) does not match number of "

@@ -907,7 +907,7 @@ def test_validate_and_coerce_embeddings__rejects_non_2d_array(
     sample_ids = [uuid4()]
     embeddings = np.array(1.0, dtype=np.float32)
 
-    with pytest.raises(ValueError, match=r"must be a 2-D array, got 0-D"):
+    with pytest.raises(ValueError, match=r"must be a 2-D array .* got a 0-D array"):
         embedding_manager._validate_and_coerce_embeddings(
             session=db_session,
             model_id=model_id,
