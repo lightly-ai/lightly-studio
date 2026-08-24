@@ -123,9 +123,7 @@ def test_clear_stale_since__does_not_affect_other_runs(db_session: Session) -> N
     evaluation_run_resolver.mark_stale_by_collection_id(
         session=db_session, collection_id=gt_collection.collection_id
     )
-    run_a_stale = evaluation_run_resolver.get_by_id(
-        session=db_session, evaluation_id=run_a.id
-    )
+    run_a_stale = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run_a.id)
     assert run_a_stale is not None
 
     evaluation_run_resolver.clear_stale_since(
