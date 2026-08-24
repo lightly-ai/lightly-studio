@@ -70,6 +70,19 @@ def test_register_embedding_model(
     assert stored_model is not None
     assert stored_model.name == "Random"
     assert stored_model.embedding_dimension == 3
+    assert stored_model.dataset_id == collection.dataset_id
+
+
+def test_register_embedding_model__collection_not_found(db_session: Session) -> None:
+    manager = EmbeddingManager()
+    collection_id = UUID(int=0)
+
+    with pytest.raises(ValueError, match="Provided collection_id could not be found"):
+        manager.register_embedding_model(
+            session=db_session,
+            embedding_generator=RandomEmbeddingGenerator(),
+            collection_id=collection_id,
+        )
 
 
 def test_register_multiple_models(
@@ -132,8 +145,9 @@ def test_register_multiple_models(
     assert len(stored_models) == 2
     model_names = {model.name for model in stored_models}
     assert model_names == {"Random", "Fake"}
-    # Verify both models are associated with the same collection
+    # Verify both models are associated with the same collection and dataset
     assert all(model.collection_id == collection.collection_id for model in stored_models)
+    assert all(model.dataset_id == collection.dataset_id for model in stored_models)
 
 
 def test_embed_text_with_default_model(

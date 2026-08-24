@@ -161,12 +161,15 @@ class EmbeddingManager:
         Returns:
             The created EmbeddingModel.
         """
-        # Get or create embedding model record in the database.
+        collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+        if collection is None:
+            raise ValueError("Provided collection_id could not be found.")
+
+        embedding_model = embedding_generator.get_embedding_model_input(collection_id=collection_id)
+        embedding_model.dataset_id = collection.dataset_id
         db_model = embedding_model_resolver.get_or_create(
             session=session,
-            embedding_model=embedding_generator.get_embedding_model_input(
-                collection_id=collection_id
-            ),
+            embedding_model=embedding_model,
         )
         model_id = db_model.embedding_model_id
 
