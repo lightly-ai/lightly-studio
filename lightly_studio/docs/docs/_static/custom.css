@@ -2,8 +2,15 @@
    LightlyStudio docs theme
 
    Two schemes over Material for MkDocs, both taken from the design mock:
-     default — "Paper", neutral greys on white, royal blue accent
+     default — "Paper", neutral greys on white
      slate   — "Console", the same page in near-blacks
+
+   The mock's own accent is a royal blue. The accent here is the mark's instead:
+   `_static/lightly_mark.svg` is a #3ad9c6 to #1aa3e4 gradient, and the blue end
+   of it is what links, the current page and the active tab are drawn in. Both
+   ends are too bright to set text in — #1aa3e4 is 2.8:1 on white — so the text
+   accent is that hue darkened to clear 4.5:1 and `--ls-accent-solid` keeps the
+   mark's own value for fills and rules, which carry no text.
 
    Structure: full-bleed, three columns. Navigation lives in one tall left
    panel, scoped by three tabs in the header; the contents list mirrors it on
@@ -63,10 +70,13 @@
   --ls-muted: #6e6e6e;
   --ls-faint: #767676;
 
-  --ls-accent: #1b5cf3;
-  --ls-accent-hover: #0f44c4;
-  --ls-accent-solid: #1b5cf3;
-  --ls-accent-surface: #e8f0fe;
+  /* The mark's #1aa3e4 at 36% lightness, same hue. 5.0:1 on the page and 4.6:1
+     on the tint below, which is the pair that has to hold: the current page in
+     the sidebar is accent text on that tint, at 13px. */
+  --ls-accent: #1277a5;
+  --ls-accent-hover: #0d5b7e;
+  --ls-accent-solid: #1aa3e4;
+  --ls-accent-surface: #eaf7fd;
   --ls-on-accent: #ffffff;
 
   --ls-warn: #a8681a;
@@ -74,8 +84,7 @@
   --ls-danger-surface: #fdf3f1;
 
   /* What a callout's fill and edge are mixed from, and how much of the type
-     color goes in. See section 7. 8% and 26% of the accent into white are what
-     reproduce the mock's #edf3fe fill on a #c6dafb edge. */
+     color goes in. See section 7. */
   --ls-adm-base: var(--ls-surface);
   --ls-adm-tint: 8%;
   --ls-adm-tint-loud: 12%;
@@ -109,10 +118,12 @@
      reads as the quietest of the four. */
   --ls-faint: #808080;
 
-  --ls-accent: #4d8bff;
-  --ls-accent-hover: #9ec0ff;
-  --ls-accent-solid: #4d8bff;
-  --ls-accent-surface: #12253d;
+  /* The mark's blue lifted rather than darkened — on a near-black page the
+     brightness that made it unusable for text is what makes it readable. */
+  --ls-accent: #4fc0f0;
+  --ls-accent-hover: #9adcf7;
+  --ls-accent-solid: #1aa3e4;
+  --ls-accent-surface: #0e2b39;
   --ls-on-accent: #0a0a0a;
 
   --ls-warn: #e0a83a;
@@ -186,18 +197,19 @@ body[data-md-color-scheme="slate"] {
 
 /* Syntax colors for the near-black code panel, which both schemes use. The
    mock's own snippets are a flat #dedede; a real code block needs more than
-   that, so the set is deliberately short — one blue for the language's own
-   words, one green for literals, one warm for numbers, and grey for everything
-   structural. It reads as the panel plus three hues rather than a rainbow. */
+   that, so the set is deliberately short and comes off the mark: its blue for
+   the language's own words, its teal for literals, one warm hue for numbers so
+   they do not read as either, and grey for everything structural. Three hues
+   and two of them are the logo. */
 body[data-md-color-scheme="default"],
 body[data-md-color-scheme="slate"] {
-  --md-code-hl-color: rgba(77, 139, 255, 0.2);
+  --md-code-hl-color: rgba(26, 163, 228, 0.22);
   --md-code-hl-number-color: #e0a87a;
-  --md-code-hl-special-color: #6ea8ff;
-  --md-code-hl-function-color: #6ea8ff;
-  --md-code-hl-constant-color: #9cc3ff;
-  --md-code-hl-keyword-color: #6ea8ff;
-  --md-code-hl-string-color: #b5cea8;
+  --md-code-hl-special-color: #5cc8f0;
+  --md-code-hl-function-color: #5cc8f0;
+  --md-code-hl-constant-color: #8fd8f5;
+  --md-code-hl-keyword-color: #5cc8f0;
+  --md-code-hl-string-color: #3ad9c6;
   --md-code-hl-name-color: #dedede;
   --md-code-hl-operator-color: #8c8c8c;
   --md-code-hl-punctuation-color: #8c8c8c;
@@ -375,7 +387,23 @@ body {
 
 /* Release chip, rendered next to the wordmark by `overrides/partials/header.html`
    and set from the installed package by `mkdocs_hooks.py`. */
+/* The chip labels the wordmark, so it sits against it. Material grows
+   `.md-header__title` to fill the row, which pushed the chip 37px clear of the
+   wordmark and hard up against the first tab — reading as a prefix to "Docs"
+   rather than as the version of the thing to its left. The title is sized by
+   its content instead and the chip carries the slack: `auto` here is what keeps
+   search and the palette toggle pinned to the right edge.
+
+   Only the site name is ever in that title — the second `.md-header__topic`,
+   which is the page title Material cross-fades in on scroll, is hidden above —
+   so there is nothing long enough for a fixed-size title to clip. */
+[dir] .md-header__title {
+  flex-grow: 0;
+  margin-right: 0;
+}
+
 .ls-version {
+  align-self: center;
   border: 1px solid var(--ls-line);
   border-radius: 4px;
   color: var(--ls-faint);
@@ -384,7 +412,7 @@ body {
   font-size: 0.5rem;
   font-weight: 500;
   line-height: 1.4;
-  margin-inline-start: 0.45rem;
+  margin-inline: 0.45rem auto;
   padding: 0.05rem 0.25rem;
 }
 
@@ -499,8 +527,8 @@ body {
   .ls-tabs--header {
     align-items: center;
     display: flex;
-    /* `auto` takes the slack the title gives up below, which keeps search and
-       the repo link pinned to the right edge. */
+    /* The strip is what takes the slack once it exists, so the search field
+       stays pinned to the right edge. */
     margin-inline-end: auto;
     height: var(--ls-header-height);
   }
@@ -509,12 +537,11 @@ body {
     display: none;
   }
 
-  /* Material grows the title to fill the row, which would shove the strip
-     against the search field. `[dir=ltr]` to match the specificity of the
-     margin rule it ships alongside it. */
-  [dir="ltr"] .md-header__title {
-    flex-grow: 0;
-    margin-right: 1.4rem;
+  /* The chip hands the slack over to the strip and settles for a plain gap —
+     wide enough that "v1.0.5" reads as belonging to the wordmark behind it
+     rather than to "Docs" in front of it. */
+  .ls-version {
+    margin-inline-end: 1.4rem;
   }
 }
 
