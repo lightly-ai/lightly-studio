@@ -47,9 +47,9 @@ make static-checks
 make test
 ```
 
-When updating the code please follow our coding guidelines in [.agents/skills](./.agents/skills).
-They are [Agent Skills](https://agentskills.io), so Claude Code, Codex and Gemini CLI load the
-relevant one automatically as you work.
+When you update the code, follow our coding guidelines in [.agents/skills](./.agents/skills).
+They are [Agent Skills](https://agentskills.io). Skills do not load automatically. Load the
+skill that matches the file you edit. See [AGENTS.md](./AGENTS.md) for the path-to-skill map.
 
 ### End-to-End Testing
 
