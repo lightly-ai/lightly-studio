@@ -152,7 +152,9 @@ vi.mock('$lib/hooks', () => ({
     })),
     usePostHog: vi.fn(() => ({ trackEvent: vi.fn() })),
     useTrackSampleInspected: vi.fn(),
-    useSeedAnnotationSourceFilter: vi.fn()
+    useSeedAnnotationSourceFilter: vi.fn(),
+    useImageAnnotationCountsBySampleTags: vi.fn(() => ({ data: undefined })),
+    useTags: vi.fn(() => ({ tags: writable([]), tagsSelected: writable(new Set()) }))
 }));
 vi.mock('$lib/hooks/useSelectAll/useSelectAll', () => ({
     useSelectAll: vi.fn(() => ({ handleSelectAll: vi.fn() }))
