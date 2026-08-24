@@ -310,9 +310,9 @@ def create_embedding_model(  # noqa: PLR0913
     """Helper function to create a embedding model.
 
     With ``set_as_default`` the model is recorded as the collection's default embedding
-    model, so ``get_default_by_collection_id`` resolves to it. It is off by default to
-    avoid the ``default_embedding_space`` foreign key blocking model or collection deletes
-    in tests that do not need a default.
+    model, so ``default_embedding_space_resolver.get_by_collection_id`` resolves to it. It
+    is off by default to avoid the ``default_embedding_space`` foreign key blocking model
+    or collection deletes in tests that do not need a default.
     """
     model = embedding_model_resolver.create(
         session=session,
@@ -425,7 +425,7 @@ def fill_db_with_samples_and_embeddings(
             collection_id=collection.collection_id,
             embedding_model_name=embedding_model_name,
             # The first model is the collection default, matching production and the
-            # queries that resolve get_default_by_collection_id (e.g. embeddings2d).
+            # queries that resolve the default embedding space (e.g. embeddings2d).
             set_as_default=index == 0,
         )
         embedding_models.append(embedding_model)
@@ -470,7 +470,7 @@ def fill_db_with_video_samples_and_embeddings(
             collection_id=collection.collection_id,
             embedding_model_name=embedding_model_name,
             # The first model is the collection default, matching production and the
-            # queries that resolve get_default_by_collection_id (e.g. embeddings2d).
+            # queries that resolve the default embedding space (e.g. embeddings2d).
             set_as_default=index == 0,
         )
         embedding_models.append(embedding_model)

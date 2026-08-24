@@ -6,7 +6,6 @@ from uuid import UUID
 
 from sqlmodel import Session, col, select
 
-from lightly_studio.models.default_embedding_space import DefaultEmbeddingSpaceTable
 from lightly_studio.models.embedding_model import (
     EmbeddingModelCreate,
     EmbeddingModelTable,
@@ -52,27 +51,6 @@ def get_all_by_collection_id(session: Session, collection_id: UUID) -> list[Embe
         .order_by(col(EmbeddingModelTable.created_at).asc())
     ).all()
     return list(embedding_models)
-
-
-def get_default_by_collection_id(
-    session: Session, collection_id: UUID
-) -> EmbeddingModelTable | None:
-    """Return the collection's default embedding model, or None if it has none.
-
-    The default is read from the ``default_embedding_space`` table (one row per
-    collection). Endpoints that resolve a selection against a cached 2D projection
-    (embeddings2d, embedding regions) must all agree on this same model so the
-    projections line up.
-    """
-    return session.exec(
-        select(EmbeddingModelTable)
-        .join(
-            DefaultEmbeddingSpaceTable,
-            onclause=col(DefaultEmbeddingSpaceTable.embedding_model_id)
-            == col(EmbeddingModelTable.embedding_model_id),
-        )
-        .where(DefaultEmbeddingSpaceTable.collection_id == collection_id)
-    ).first()
 
 
 def get_by_id(session: Session, embedding_model_id: UUID) -> EmbeddingModelTable | None:

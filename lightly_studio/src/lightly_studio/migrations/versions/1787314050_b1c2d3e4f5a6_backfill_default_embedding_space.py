@@ -2,7 +2,7 @@
 
 Seeds the `default_embedding_space` table (created empty in `a05138ab5fc4`) with each
 collection's default: the oldest embedding model by `created_at ASC, embedding_model_id
-ASC`. This is the same rule `get_default_by_collection_id` applies, so reading the table
+ASC`. This is the same model the query resolved before, so reading the table
 resolves the same model the query used before. Collections created after this migration
 are populated by `embedding_manager.register_embedding_model`, so no collection is left
 without a default row.

@@ -15,7 +15,7 @@ from numpy.typing import NDArray
 from sqlmodel import Session
 
 from lightly_studio.models.embedding_region import EmbeddingRegion
-from lightly_studio.resolvers import embedding_model_resolver, twodim_embedding_resolver
+from lightly_studio.resolvers import default_embedding_space_resolver, twodim_embedding_resolver
 
 
 def get_sample_ids_in_region(
@@ -28,17 +28,17 @@ def get_sample_ids_in_region(
     # so the region is tested against the exact projection the user lassoed over.
     # TODO(Kondrat, 07/2026): Select the embedding model via API parameter once supported,
     # matching embeddings2d.get_2d_embeddings.
-    embedding_model = embedding_model_resolver.get_default_by_collection_id(
+    embedding_model_id = default_embedding_space_resolver.get_by_collection_id(
         session=session,
         collection_id=collection_id,
     )
-    if embedding_model is None:
+    if embedding_model_id is None:
         return []
 
     x_array, y_array, sample_ids = twodim_embedding_resolver.get_twodim_embeddings(
         session=session,
         collection_id=collection_id,
-        embedding_model_id=embedding_model.embedding_model_id,
+        embedding_model_id=embedding_model_id,
     )
     if len(sample_ids) == 0:
         return []

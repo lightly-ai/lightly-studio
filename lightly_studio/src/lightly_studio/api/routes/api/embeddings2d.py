@@ -18,7 +18,7 @@ from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.resolvers import (
     annotation_resolver,
-    embedding_model_resolver,
+    default_embedding_space_resolver,
     image_resolver,
     twodim_embedding_resolver,
     video_resolver,
@@ -55,17 +55,17 @@ def get_2d_embeddings(
     _validate_filter_type(collection=collection, filters=body.filters)
 
     # TODO(Malte, 09/2025): Support choosing the embedding model via API parameter.
-    embedding_model = embedding_model_resolver.get_default_by_collection_id(
+    embedding_model_id = default_embedding_space_resolver.get_by_collection_id(
         session=session,
         collection_id=collection_id,
     )
-    if embedding_model is None:
+    if embedding_model_id is None:
         raise ValueError("No embedding model configured.")
 
     x_array, y_array, sample_ids = twodim_embedding_resolver.get_twodim_embeddings(
         session=session,
         collection_id=collection_id,
-        embedding_model_id=embedding_model.embedding_model_id,
+        embedding_model_id=embedding_model_id,
     )
 
     matching_sample_ids: set[UUID] | None = None

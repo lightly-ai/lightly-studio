@@ -174,7 +174,7 @@ class EmbeddingManager:
 
         # Record the default in two places: the in-memory map caches the loaded generator
         # for this process, and the default_embedding_space table persists the choice for
-        # query-layer callers (get_default_by_collection_id).
+        # query-layer callers (default_embedding_space_resolver.get_by_collection_id).
         if set_as_default or collection_id not in self._collection_id_to_default_model_id:
             self._collection_id_to_default_model_id[collection_id] = model_id
         if (
