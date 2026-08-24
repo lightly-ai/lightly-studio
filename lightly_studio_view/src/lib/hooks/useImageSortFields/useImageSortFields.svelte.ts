@@ -21,11 +21,11 @@ export interface EvalSortField {
 
 export type SortField = ColumnSortField | EvalSortField;
 
-interface UseSortFieldsParams {
+interface UseImageSortFieldsParams {
     datasetId: () => string;
 }
 
-interface UseSortFieldsReturn {
+interface UseImageSortFieldsReturn {
     allSortFields: Readable<SortField[]>;
     /** Dispose the detached $effect.root. Call on cleanup to prevent leaks. */
     dispose: () => void;
@@ -56,7 +56,9 @@ function mapRunsToEvalFields(runs: EvaluationRunMetricsInfoView[]): EvalSortFiel
     );
 }
 
-export function useImageSortFields({ datasetId }: UseSortFieldsParams): UseSortFieldsReturn {
+export function useImageSortFields({
+    datasetId
+}: UseImageSortFieldsParams): UseImageSortFieldsReturn {
     const { metadataInfo } = useMetadataFilters();
     const metricsInfo = useEvaluationSampleMetricsInfo({ datasetId });
 

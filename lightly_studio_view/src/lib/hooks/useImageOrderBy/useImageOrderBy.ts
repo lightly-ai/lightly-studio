@@ -10,12 +10,12 @@ import {
 } from '$lib/hooks/useImageSortFields/useImageSortFields.svelte';
 import type { ImageSortExpr } from '$lib/hooks/useImagesInfinite/types';
 
-interface UseOrderByParams {
+interface UseImageOrderByParams {
     collectionId: () => string;
     datasetId: () => string;
 }
 
-interface UseOrderByReturn {
+interface UseImageOrderByReturn {
     allSortFields: Readable<SortField[]>;
     selectedDirection: Readable<SortDirection>;
     selectedLabel: Readable<string | null>;
@@ -55,7 +55,10 @@ function sortExprAnalytics(expr: ImageSortExpr): { sort_source: string; field_na
     };
 }
 
-export function useImageOrderBy({ collectionId, datasetId }: UseOrderByParams): UseOrderByReturn {
+export function useImageOrderBy({
+    collectionId,
+    datasetId
+}: UseImageOrderByParams): UseImageOrderByReturn {
     const { imageSortBy, updateSortBy } = useImageFilters();
     const { allSortFields, dispose } = useImageSortFields({ datasetId });
     const { trackEvent } = usePostHog();
