@@ -51,7 +51,7 @@ describe('UserAvatar', () => {
         ).toBeInTheDocument();
     });
 
-    it('should render users menu item for admin user', async () => {
+    it('should render admin menu items for admin user', async () => {
         const { getByTitle, getByRole } = render(UserAvatar, { props: { user: mockUser } });
         const avatarButton = getByTitle('admin');
 
@@ -60,12 +60,6 @@ describe('UserAvatar', () => {
         const usersButton = getByRole('link', { name: /users/i });
         expect(usersButton).toBeTruthy();
         expect(usersButton.getAttribute('href')).toBe('/workspace/users');
-    });
-
-    it('should render API keys menu item for admin user', async () => {
-        const { getByTitle, getByRole } = render(UserAvatar, { props: { user: mockUser } });
-
-        await fireEvent.click(getByTitle('admin'));
 
         const apiKeysButton = getByRole('link', { name: /api keys/i });
         expect(apiKeysButton.getAttribute('href')).toBe('/workspace/api-keys');
@@ -101,7 +95,7 @@ describe('UserAvatar', () => {
         expect(usersButton).toBeNull();
     });
 
-    it('should not render users menu item for viewer user', async () => {
+    it('should not render admin menu items for viewer user', async () => {
         const viewerUser = {
             username: 'viewer',
             email: 'viewer@example.com',
