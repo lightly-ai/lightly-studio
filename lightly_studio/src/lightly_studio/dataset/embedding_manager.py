@@ -167,7 +167,10 @@ class EmbeddingManager:
 
         embedding_space = embedding_generator.get_embedding_model_input()
         embedding_model = EmbeddingModelCreate(
-            **embedding_space.model_dump(),
+            name=embedding_space.name,
+            parameter_count_in_mb=embedding_space.parameter_count_in_mb,
+            embedding_model_hash=embedding_space.embedding_model_hash,
+            embedding_dimension=embedding_space.embedding_dimension,
             collection_id=collection_id,
             dataset_id=collection.dataset_id,
         )
