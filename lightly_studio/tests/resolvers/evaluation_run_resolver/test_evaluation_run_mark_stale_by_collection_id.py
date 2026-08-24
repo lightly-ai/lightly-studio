@@ -11,7 +11,9 @@ from lightly_studio.resolvers import evaluation_run_resolver
 from tests.helpers_resolvers import create_collection
 
 
-def test_marks_runs_matching_gt_collection(db_session: Session) -> None:
+def test_mark_stale_by_collection_id__marks_runs_matching_gt_collection(
+    db_session: Session,
+) -> None:
     dataset = create_collection(session=db_session)
     gt_collection = create_collection(
         session=db_session,
@@ -43,7 +45,9 @@ def test_marks_runs_matching_gt_collection(db_session: Session) -> None:
     assert refreshed.stale_since is not None
 
 
-def test_marks_runs_matching_pred_collection(db_session: Session) -> None:
+def test_mark_stale_by_collection_id__marks_runs_matching_pred_collection(
+    db_session: Session,
+) -> None:
     dataset = create_collection(session=db_session)
     gt_collection = create_collection(
         session=db_session,
@@ -75,7 +79,7 @@ def test_marks_runs_matching_pred_collection(db_session: Session) -> None:
     assert refreshed.stale_since is not None
 
 
-def test_does_not_mark_unrelated_runs(db_session: Session) -> None:
+def test_mark_stale_by_collection_id__does_not_mark_unrelated_runs(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
     target_collection = create_collection(
         session=db_session,
@@ -127,7 +131,7 @@ def test_does_not_mark_unrelated_runs(db_session: Session) -> None:
     ).stale_since is None
 
 
-def test_marks_both_gt_and_pred_matches(db_session: Session) -> None:
+def test_mark_stale_by_collection_id__marks_both_gt_and_pred_matches(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
     shared_collection = create_collection(
         session=db_session,
@@ -198,7 +202,9 @@ def test_marks_both_gt_and_pred_matches(db_session: Session) -> None:
     ).stale_since is None
 
 
-def test_calling_twice_updates_stale_since(db_session: Session) -> None:
+def test_mark_stale_by_collection_id__calling_twice_updates_stale_since(
+    db_session: Session,
+) -> None:
     dataset = create_collection(session=db_session)
     gt_collection = create_collection(
         session=db_session,
@@ -240,7 +246,7 @@ def test_calling_twice_updates_stale_since(db_session: Session) -> None:
     assert second_stale_since >= first_stale_since
 
 
-def test_stale_since_defaults_to_none(db_session: Session) -> None:
+def test_mark_stale_by_collection_id__stale_since_defaults_to_none(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
     gt_collection = create_collection(
         session=db_session,
