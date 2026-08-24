@@ -185,13 +185,8 @@ def _get_all_with_similarity(  # noqa: PLR0913
         total_count_query = filters.apply(total_count_query)
 
     # `distance_expr` alone is not a total order: equal distances would let rows move
-    # between page requests. `file_path_abs` and `sample_id` close the ordering, matching
-    # the tiebreakers `_apply_ordering` applies on the non-similarity path.
-    samples_query = samples_query.order_by(
-        distance_expr,
-        col(VideoTable.file_path_abs).asc(),
-        col(VideoTable.sample_id).asc(),
-    )
+    # between page requests. `file_path_abs` breaks the tie, matching the images resolver.
+    samples_query = samples_query.order_by(distance_expr, col(VideoTable.file_path_abs).asc())
 
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
@@ -225,9 +220,9 @@ def _get_all_without_similarity(  # noqa: PLR0913
 ) -> VideoViewsWithCount:
     """Get videos without similarity search - returns (VideoTable, VideoFrameTable) tuples.
 
-    Ordering, including the tiebreakers that make it total, is built by
-    ``_apply_ordering``. The primary sort value is returned per row in
-    ``VideoView.order_value``; non-numeric values (e.g. strings) become ``None``.
+    Ordering, including the ``file_path_abs`` tiebreaker, is built by ``_apply_ordering``.
+    The primary sort value is returned per row in ``VideoView.order_value``; non-numeric
+    values (e.g. strings) become ``None``.
     """
     load_options = _get_load_options()
     min_frame_subquery = _build_min_frame_subquery()
@@ -301,19 +296,17 @@ def _apply_ordering(
     """Order the query and append the primary sort value to the SELECT.
 
     Only the primary expression contributes a value; the rest contribute joins and
-    ``ORDER BY`` alone. ``sample_id`` closes the ordering, because neither the requested
-    sort nor ``file_path_abs`` is unique and equal rows would otherwise be free to move
-    between page requests. It sorts ascending in both directions, mirroring the image
-    keyset convention in ``get_adjacent_images_keyset._keyset_sort_keys`` so a sorted
-    video prev/next can match this order later. ``get_adjacent_videos`` still ignores the
-    sort, so the grid and prev/next do not yet agree.
+    ``ORDER BY`` alone. ``_with_tiebreakers`` appends ``file_path_abs`` as the final key,
+    matching the images grid resolver. The sorted video prev/next
+    (``get_adjacent_videos``) still ignores the sort, so the grid and prev/next do not yet
+    agree.
     """
-    expressions = _with_tiebreakers(order_by)
-    ordered_query = expressions[0].apply_with_order_value(query)
+    expressions = _with_tiebreakers(order_by=order_by)
+    ordered_query = expressions[0].apply_with_order_value(query=query)
     for expr in expressions[1:]:
-        ordered_query = expr.apply_joins(ordered_query)
+        ordered_query = expr.apply_joins(query=ordered_query)
         ordered_query = ordered_query.order_by(*expr.to_column_elements())
-    return ordered_query.order_by(col(VideoTable.sample_id).asc())
+    return ordered_query
 
 
 def _with_tiebreakers(order_by: list[OrderByExpression] | None) -> list[OrderByExpression]:

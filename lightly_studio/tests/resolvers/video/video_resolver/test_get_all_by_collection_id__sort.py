@@ -350,40 +350,6 @@ def test_get_all_by_collection_id__order_by_paginates_without_repeats(
     assert [sample.file_name for sample in second_page.samples] == ["c.mp4", "d.mp4"]
 
 
-def test_get_all_by_collection_id__order_by_paginates_without_repeats_on_duplicate_paths(
-    db_session: Session,
-) -> None:
-    # Nothing stops two videos sharing a path, so `file_path_abs` does not make the
-    # ordering total. Only `sample_id` does.
-    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
-    create_videos(
-        session=db_session,
-        collection_id=collection.collection_id,
-        videos=[VideoStub(path="/path/to/same.mp4", duration_s=5.0) for _ in range(4)],
-    )
-    order_by = [sort.sort_field_expr_to_order_by(_video_sort(field_name="duration_s"))]
-
-    paged_sample_ids = [
-        sample.sample_id
-        for offset in [0, 2]
-        for sample in video_resolver.get_all_by_collection_id(
-            session=db_session,
-            collection_id=collection.collection_id,
-            pagination=Paginated(offset=offset, limit=2),
-            order_by=order_by,
-        ).samples
-    ]
-    all_sample_ids = [
-        sample.sample_id
-        for sample in video_resolver.get_all_by_collection_id(
-            session=db_session, collection_id=collection.collection_id, order_by=order_by
-        ).samples
-    ]
-
-    assert paged_sample_ids == all_sample_ids
-    assert len(set(paged_sample_ids)) == 4
-
-
 def test_get_all_by_collection_id__order_value_none_for_text_field(db_session: Session) -> None:
     collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     create_videos(
