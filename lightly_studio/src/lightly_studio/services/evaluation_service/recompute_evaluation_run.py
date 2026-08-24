@@ -50,6 +50,7 @@ def recompute_evaluation_run(
     Returns:
         Summary of the recomputed run, including its ID and input counts.
     """
+    observed_stale_since = run.stale_since
     data = _fetch_annotations_for_run(session=session, run=run)
     evaluation_annotation_metric_resolver.delete_by_evaluation_run_id(
         session=session, evaluation_run_id=run.id
@@ -58,7 +59,11 @@ def recompute_evaluation_run(
         session=session, evaluation_run_id=run.id
     )
     _persist_metrics(session=session, run=run, data=data)
-    evaluation_run_resolver.clear_stale_since(session=session, evaluation_run_id=run.id)
+    evaluation_run_resolver.clear_stale_since(
+        session=session,
+        evaluation_run_id=run.id,
+        expected_stale_since=observed_stale_since,
+    )
     return EvaluationResult.from_evaluation_data(data)
 
 
