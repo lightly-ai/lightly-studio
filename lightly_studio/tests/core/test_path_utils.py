@@ -1,6 +1,8 @@
 import posixpath
 from pathlib import Path
 
+import pytest
+
 from lightly_studio.core import path_utils
 
 
@@ -28,3 +30,29 @@ def test_normalize_path_root__preserves_remote_protocol() -> None:
     result = path_utils.normalize_path_root("s3://bucket/path")
 
     assert result == "s3://bucket/path"
+
+
+def test_normalize_path_root__dot_prefixed_path_is_resolved_relative_to_cwd(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    result = path_utils.normalize_path_root("./images/0001.jpg")
+
+    assert result == (tmp_path / "images/0001.jpg").as_posix()
+
+
+def test_normalize_path_root__unprefixed_path_is_resolved_relative_to_cwd(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    result = path_utils.normalize_path_root("images/0001.jpg")
+
+    assert result == (tmp_path / "images/0001.jpg").as_posix()
+
+
+def test_normalize_path_root__absolute_path_is_left_unchanged() -> None:
+    result = path_utils.normalize_path_root("/images/0001.jpg")
+
+    assert result == "/images/0001.jpg"
