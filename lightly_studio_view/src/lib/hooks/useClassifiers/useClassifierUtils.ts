@@ -1,7 +1,6 @@
 import type { AnnotatedSamples, ClassifierExportType } from '$lib/services/types';
 import { page } from '$app/state';
-import { get, writable, type Readable } from 'svelte/store';
-import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+import { writable, type Readable } from 'svelte/store';
 import { triggerDownloadBlob } from '$lib/utils';
 import {
     getNegativeSamples,
@@ -26,7 +25,7 @@ interface UseClassifierUtilsReturn {
     loadClassifier: (event: Event, collectionId: string) => Promise<void>;
     updateAnnotations: (classifierId: string, annotations: AnnotatedSamples) => Promise<void>;
     trainClassifier: (classifierId: string) => Promise<void>;
-    prepareSamples: () => Promise<PrepareSamplesResponse>;
+    prepareSamples: (positiveSampleIds: string[]) => Promise<PrepareSamplesResponse>;
 
     // Independent state management
     classifierSelectionToggle: (classifierId: string) => void;
@@ -36,7 +35,6 @@ interface UseClassifierUtilsReturn {
 const classifiersSelected = writable<Set<string>>(new Set());
 
 export function useClassifierUtils(): UseClassifierUtilsReturn {
-    const { getSelectedSampleIds } = useGlobalStorage();
     const error = writable<Error | null>(null);
     const isLoading = writable(false);
 
@@ -114,18 +112,14 @@ export function useClassifierUtils(): UseClassifierUtilsReturn {
         }
     };
 
-    async function prepareSamples(): Promise<PrepareSamplesResponse> {
+    async function prepareSamples(positiveSampleIds: string[]): Promise<PrepareSamplesResponse> {
         const collectionId = page.params.collection_id!;
-        const selectedSampleIds = getSelectedSampleIds(collectionId);
-        const selectedIds = get(selectedSampleIds);
-        const positives = Array.from(selectedIds);
-
         error.set(null);
         try {
             const response = await getNegativeSamples({
                 body: {
                     collection_id: collectionId!.toString(),
-                    positive_sample_ids: positives
+                    positive_sample_ids: positiveSampleIds
                 }
             });
 
@@ -135,7 +129,7 @@ export function useClassifierUtils(): UseClassifierUtilsReturn {
             }
 
             return {
-                positiveSampleIds: positives,
+                positiveSampleIds,
                 negativeSampleIds: response.data.negative_sample_ids
             };
         } catch (err) {

@@ -1,249 +1,134 @@
 <script lang="ts">
     import { page } from '$app/state';
-    import * as Dialog from '$lib/components/ui/dialog';
-    import { Label } from '$lib/components/ui/label';
-    import { Switch } from '$lib/components/ui/switch';
-    import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineClassifiersPanel';
+    import { Alert } from '$lib/components';
+    import { useClassifierState } from '$lib/hooks/useClassifiers/useClassifierState';
     import { useClassifiers } from '$lib/hooks/useClassifiers/useClassifiers';
-    import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
-    import { Alert, Button } from '$lib/components';
-    import ClassifierSamplesGrid from './ClassifierSamplesGrid.svelte';
-    import { Network as NetworkIcon } from '@lucide/svelte';
-    import { handleRefineClassifierClose } from './classifierDialogHelpers';
+    import { useClassifierWorkflow } from '$lib/hooks/useClassifiers/useClassifierWorkflow';
     import { useClassifiersMenu } from '$lib/hooks/useClassifiers/useClassifiersMenu';
+    import { get } from 'svelte/store';
     import { toast } from 'svelte-sonner';
+    import ClassifierSamplesGrid from './ClassifierSamplesGrid.svelte';
+    import ClassifierRefinementActions from './ClassifierRefinementActions.svelte';
+    import ReviewAgreementSummary from './ReviewAgreementSummary.svelte';
+    import { calculateReviewAgreement } from './reviewAgreement';
 
-    const showTrainingSamplesToggle = useSessionStorage<boolean>(
-        'refine_classifier_show_training_samples',
-        false
-    );
+    interface Props {
+        onCancel: () => void;
+        onFinish: () => void;
+    }
+
+    const { onCancel, onFinish }: Props = $props();
+    const { workflow, recordReview, setPending } = useClassifierWorkflow();
+    const { classifierSamples, classifierSelectedSampleIds } = useClassifierState();
     const {
-        isRefineClassifiersPanelOpen,
-        currentMode,
-        currentClassifierId,
-        currentClassifierName,
-        currentClassifierClasses
-    } = useRefineClassifiersPanel();
-    const { error, commitTempClassifier, refineClassifier, showClassifierTrainingSamples } =
-        useClassifiers();
+        applyClassifierCorrections,
+        commitTempClassifier,
+        refineClassifier,
+        showClassifierTrainingSamples
+    } = useClassifiers();
     const { openClassifiersMenu, switchToManageTab, scrollToAndSelectClassifier } =
         useClassifiersMenu();
-
-    const collectionId = $derived(page.params.collection_id!);
-    let isSubmitting = $state(false);
-    let showInstructions = $state(false);
+    const collectionId = page.params.collection_id!;
+    let pendingAction = $state<'continue' | 'finish' | null>(null);
+    const isSubmitting = $derived(pendingAction !== null);
+    let isShowingTrainingSamples = $state(false);
     let submitError = $state<string | null>(null);
 
-    function handleClose() {
-        showTrainingSamplesToggle.set(false);
-        showInstructions = false;
-        handleRefineClassifierClose(collectionId);
-    }
-
     async function handleRefineClassifier() {
-        if (isSubmitting) return;
+        if (isSubmitting || !$workflow.classifierId) return;
 
-        isSubmitting = true;
-        submitError = null; // Clear any previous errors
-
+        const predictions = get(classifierSamples);
+        const agreement =
+            predictions && !isShowingTrainingSamples
+                ? calculateReviewAgreement(predictions, get(classifierSelectedSampleIds))
+                : null;
+        pendingAction = 'continue';
+        setPending(true);
+        submitError = null;
         try {
-            showTrainingSamplesToggle.set(false);
             await refineClassifier(
-                $currentClassifierId || '',
+                $workflow.classifierId,
                 collectionId,
-                $currentClassifierClasses || []
+                $workflow.classifierClasses
             );
-        } catch (err) {
-            // Set the actual error message from the caught error
-            submitError = err instanceof Error ? err.message : String(err);
+            if (agreement) recordReview(agreement.confirmedPredictions, agreement.reviewedSamples);
+            isShowingTrainingSamples = false;
+        } catch (error) {
+            submitError = error instanceof Error ? error.message : String(error);
         } finally {
-            isSubmitting = false;
+            pendingAction = null;
+            setPending(false);
         }
     }
 
-    async function handleCommitTempClassifier() {
-        if (isSubmitting) return;
+    async function handleFinishClassifier() {
+        if (isSubmitting || !$workflow.classifierId) return;
 
-        isSubmitting = true;
-        submitError = null; // Clear any previous errors
-
+        pendingAction = 'finish';
+        setPending(true);
+        submitError = null;
         try {
-            showTrainingSamplesToggle.set(false);
-            await commitTempClassifier($currentClassifierId || '', collectionId);
-            if (error) {
-                toast.success(`Classifier "${$currentClassifierName}" created successfully.`);
-            } else {
-                toast.error('Failed to created classifier.');
-            }
-            // Open the classifier menu and switch to manage tab
-            openClassifiersMenu();
-            switchToManageTab();
-            // Scroll to and select the newly created classifier
-            scrollToAndSelectClassifier($currentClassifierId || '');
-            handleClose();
-        } catch (err) {
-            // Set the actual error message from the caught error
-            submitError = err instanceof Error ? err.message : String(err);
+            await applyClassifierCorrections($workflow.classifierId);
+            if ($workflow.mode === 'temp') await saveTemporaryClassifier();
+            onFinish();
+        } catch (error) {
+            submitError = error instanceof Error ? error.message : String(error);
         } finally {
-            isSubmitting = false;
+            pendingAction = null;
+            setPending(false);
         }
     }
 
-    function handleShowTrainingSamples(checked: boolean) {
-        showTrainingSamplesToggle.set(checked);
-        showClassifierTrainingSamples(
-            $currentClassifierId || '',
-            collectionId,
-            $currentClassifierClasses || [],
-            checked
-        );
+    async function saveTemporaryClassifier() {
+        const classifierId = $workflow.classifierId!;
+        await commitTempClassifier(classifierId, collectionId);
+        toast.success(`Classifier "${$workflow.classifierName}" created successfully.`);
+        openClassifiersMenu();
+        switchToManageTab();
+        scrollToAndSelectClassifier(classifierId);
+    }
+
+    async function handleShowTrainingSamples(checked: boolean) {
+        if (!$workflow.classifierId) return;
+        submitError = null;
+        try {
+            await showClassifierTrainingSamples(
+                $workflow.classifierId,
+                collectionId,
+                $workflow.classifierClasses,
+                checked
+            );
+            isShowingTrainingSamples = checked;
+        } catch (error) {
+            submitError = error instanceof Error ? error.message : String(error);
+        }
     }
 </script>
 
-<Dialog.Root
-    bind:open={$isRefineClassifiersPanelOpen}
-    onOpenChange={(open) => !open && handleClose()}
->
-    <Dialog.Portal>
-        <Dialog.Overlay />
-        <Dialog.Content
-            class="h-[90vh] overflow-y-auto border-border bg-background dark:[color-scheme:dark] sm:max-h-[90vh] sm:max-w-[800px]"
-        >
-            <Dialog.Header>
-                <Dialog.Title class="flex items-center gap-2 text-foreground">
-                    <NetworkIcon class="size-5" />
-                    {$currentMode === 'temp' ? 'Refine Temporary Classifier' : 'Refine Classifier'}
-                </Dialog.Title>
-                <Dialog.Description class="py-4 text-foreground">
-                    You are refining classifier: <span class="font-medium"
-                        >{$currentClassifierName}</span
-                    >
-                </Dialog.Description>
-            </Dialog.Header>
-
-            <div class="grid gap-4 py-4">
-                {#if submitError}
-                    <Alert title="Operation failed">
-                        {submitError}
-                    </Alert>
-                {/if}
-
-                <!-- Instructions -->
-                <div class="space-y-4">
-                    <div>
-                        <button
-                            type="button"
-                            class="flex w-full items-center justify-between text-left"
-                            onclick={() => (showInstructions = !showInstructions)}
-                        >
-                            <h3 class="text-lg font-semibold">Refinement Instructions</h3>
-                            <svg
-                                class="size-5 transition-transform {showInstructions
-                                    ? 'rotate-180'
-                                    : ''}"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M19 9l-7 7-7-7"
-                                />
-                            </svg>
-                        </button>
-                        {#if showInstructions}
-                            <ol
-                                class="mt-2 list-inside list-decimal space-y-2 text-sm text-muted-foreground"
-                            >
-                                <li>
-                                    Select positive examples from the samples below. Not selected
-                                    samples are considered negative examples.
-                                </li>
-                                <li>
-                                    Click "Refine Classifier" to add your selections to the
-                                    classifier training data and retrain.
-                                </li>
-                                {#if $currentMode === 'temp'}
-                                    <li>
-                                        Once satisfied with the results, click "Save Classifier" to
-                                        save permanently.
-                                    </li>
-                                {/if}
-                            </ol>
-                        {/if}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Samples Grid -->
-            <div class="flex min-h-0 flex-1 flex-col border-t pt-4">
-                <h3 class="mb-4 text-lg font-semibold">Select Positive Examples</h3>
-                <div
-                    class="min-h-0 w-full flex-1 overflow-y-auto rounded-lg border dark:[color-scheme:dark]"
-                >
-                    <ClassifierSamplesGrid collection_id={collectionId} />
-                </div>
-            </div>
-
-            <Dialog.Footer class="flex flex-nowrap gap-4">
-                <!-- Show All Training Samples Toggle -->
-                <div class="flex items-center gap-4">
-                    <Label class="text-foreground">Show All Training Samples</Label>
-                    <Switch
-                        checked={$showTrainingSamplesToggle}
-                        onCheckedChange={handleShowTrainingSamples}
-                        class=""
-                    />
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="flex flex-nowrap gap-2">
-                    {#if $currentMode === 'temp'}
-                        <Button
-                            variant="outline"
-                            isPending={isSubmitting}
-                            buttonProps={{
-                                onclick: handleCommitTempClassifier,
-                                disabled: isSubmitting,
-                                'data-testid': 'commit-temp-classifier-button',
-                                class: 'shrink-0'
-                            }}
-                        >
-                            {isSubmitting ? 'Committing...' : 'Save Classifier'}
-                        </Button>
-                    {/if}
-
-                    <Button
-                        variant="outline"
-                        buttonProps={{
-                            onclick: handleClose,
-                            disabled: isSubmitting,
-                            'data-testid': 'refine-dialog-cancel',
-                            class: 'shrink-0'
-                        }}
-                    >
-                        {#if $currentMode === 'temp'}
-                            Cancel
-                        {:else}
-                            Done
-                        {/if}
-                    </Button>
-
-                    <Button
-                        isPending={isSubmitting}
-                        buttonProps={{
-                            onclick: handleRefineClassifier,
-                            disabled: isSubmitting,
-                            'data-testid': 'refine-classifier-button',
-                            class: 'shrink-0'
-                        }}
-                    >
-                        {isSubmitting ? 'Refining...' : 'Refine Classifier'}
-                    </Button>
-                </div>
-            </Dialog.Footer>
-        </Dialog.Content>
-    </Dialog.Portal>
-</Dialog.Root>
+<div class="flex min-h-0 flex-1 flex-col gap-4">
+    {#if submitError}<Alert title="Operation failed">{submitError}</Alert>{/if}
+    <ReviewAgreementSummary
+        confirmedPredictions={$workflow.confirmedPredictions}
+        reviewedSamples={$workflow.reviewedSamples}
+        latestConfirmedPredictions={$workflow.latestConfirmedPredictions}
+        latestReviewedSamples={$workflow.latestReviewedSamples}
+    />
+    <div class="flex min-h-0 flex-1 flex-col border-t pt-4">
+        <h3 class="mb-3 text-lg font-semibold">
+            {isShowingTrainingSamples ? 'Edit Training History' : 'Review Predictions'}
+        </h3>
+        <div class="min-h-0 w-full flex-1 overflow-y-auto rounded-lg border">
+            <ClassifierSamplesGrid collection_id={collectionId} />
+        </div>
+    </div>
+    <ClassifierRefinementActions
+        mode={$workflow.mode}
+        {pendingAction}
+        canSubmit={Boolean($classifierSamples)}
+        {isShowingTrainingSamples}
+        onShowTrainingSamplesChange={handleShowTrainingSamples}
+        {onCancel}
+        onContinue={handleRefineClassifier}
+        onFinish={handleFinishClassifier}
+    />
+</div>

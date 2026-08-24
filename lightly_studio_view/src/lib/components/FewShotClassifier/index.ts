@@ -1,5 +1,11 @@
 import CreateClassifierDialog from './CreateClassifierDialog.svelte';
 import RefineClassifierDialog from './RefineClassifierDialog.svelte';
+import ClassifierWorkflowDialog from './ClassifierWorkflowDialog.svelte';
 import ClassifiersMenu from './ClassifiersMenu.svelte';
 
-export { CreateClassifierDialog, RefineClassifierDialog, ClassifiersMenu };
+export {
+    ClassifierWorkflowDialog,
+    CreateClassifierDialog,
+    RefineClassifierDialog,
+    ClassifiersMenu
+};

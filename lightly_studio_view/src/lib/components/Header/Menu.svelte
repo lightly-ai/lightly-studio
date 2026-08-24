@@ -59,7 +59,7 @@
         if (hasClassifier && isEditor) {
             items.push({
                 value: 'menu-classifiers',
-                label: 'Few Shot Classifier',
+                label: 'Find similar images',
                 icon: BrainCircuitIcon,
                 testId: 'menu-classifiers',
                 onSelect: openClassifiersMenu

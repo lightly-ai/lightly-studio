@@ -96,6 +96,15 @@ describe('createImagesInfiniteOptions', () => {
     });
 
     describe('enabled', () => {
+        it('can disable a normal-mode query', () => {
+            const options = createImagesInfiniteOptions({
+                collection_id: 'col-1',
+                mode: 'normal',
+                enabled: false
+            });
+            expect(options.enabled).toBe(false);
+        });
+
         it('is true for normal mode', () => {
             const options = createImagesInfiniteOptions({ collection_id: 'col-1', mode: 'normal' });
             expect(options.enabled).toBe(true);

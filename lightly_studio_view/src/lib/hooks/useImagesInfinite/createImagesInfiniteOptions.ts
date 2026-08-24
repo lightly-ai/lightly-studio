@@ -45,6 +45,8 @@ export const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
         },
         initialPageParam: 0,
         getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-        enabled: params.mode !== 'classifier' || Boolean(params.classifierSamples)
+        enabled:
+            params.enabled !== false &&
+            (params.mode !== 'classifier' || Boolean(params.classifierSamples))
     });
 };

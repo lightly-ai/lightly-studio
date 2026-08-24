@@ -8,8 +8,8 @@ import { page } from '$app/state';
 import { get, readonly, type Readable, writable } from 'svelte/store';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { useClassifierState } from './useClassifierState';
-import { useCreateClassifiersPanel } from '$lib/hooks/useClassifiers/useCreateClassifiersPanel';
-import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineClassifiersPanel';
+import { useClassifierWorkflow } from '$lib/hooks/useClassifiers/useClassifierWorkflow';
+import { CLASSIFIER_CREATION_CANDIDATE_LIMIT } from './classifierCandidates';
 import { toast } from 'svelte-sonner';
 import {
     getAllClassifiers,
@@ -17,6 +17,7 @@ import {
     runClassifierRoute,
     samplesToRefine,
     commitTempClassifier as commitTempClassifierApi,
+    dropTempClassifier as dropTempClassifierApi,
     sampleHistory
 } from '$lib/api/lightly_studio_local';
 import type {
@@ -47,36 +48,38 @@ interface UseClassifiersReturn {
     trainClassifier: (classifierId: string) => Promise<void>;
     updateAnnotations: (classifierId: string, annotations: AnnotatedSamples) => Promise<void>;
     commitTempClassifier: (classifierId: string, collectionId: string) => Promise<void>;
+    dropTempClassifier: (classifierId: string) => Promise<void>;
     getSamplesToRefine: (
         classifierId: string,
         collectionId: string,
         classifierClasses: string[]
     ) => Promise<void>;
-    prepareSamples: () => Promise<PrepareSamplesResponse>;
+    prepareSamples: (positiveSampleIds: string[]) => Promise<PrepareSamplesResponse>;
     loadClassifier: (event: Event, collectionId: string) => Promise<void>;
-    startCreateClassifier: (event: Event) => Promise<void>;
+    startCreateClassifier: () => void;
     startRefinement: (
         mode: RefineMode,
         classifierId: string,
         classifierName: string,
         classifierClasses: string[],
         collectionId: string
-    ) => void;
+    ) => Promise<void>;
+    applyClassifierCorrections: (classifierId: string) => Promise<void>;
     refineClassifier: (
         classifierID: string,
         collectionId: string,
         classifierClasses: string[]
-    ) => void;
+    ) => Promise<void>;
     showClassifierTrainingSamples: (
         classifierID: string,
         collectionId: string,
         classifierClasses: string[],
         toggle: boolean
-    ) => void;
+    ) => Promise<void>;
 }
 
 export function useClassifiers(): UseClassifiersReturn {
-    const { classifiers: classifiersData } = useGlobalStorage();
+    const { classifiers: classifiersData, getSelectedSampleIds } = useGlobalStorage();
     const {
         classifierSamples,
         setClassifierSamples,
@@ -91,9 +94,7 @@ export function useClassifiers(): UseClassifiersReturn {
     const error = writable<Error | null>(null);
     const isLoading = writable(false);
     const isLoaded = writable(false);
-    const { openRefineClassifiersPanel, closeRefineClassifiersPanel } = useRefineClassifiersPanel();
-    const { toggleCreateClassifiersPanel, closeCreateClassifiersPanel } =
-        useCreateClassifiersPanel();
+    const { openCreate, openRefine, setTemporaryClassifier } = useClassifierWorkflow();
 
     const loadClassifiers = async () => {
         if (get(isLoading)) return;
@@ -123,27 +124,16 @@ export function useClassifiers(): UseClassifiersReturn {
         isLoaded.set(true);
     }
 
-    async function startCreateClassifier() {
+    function startCreateClassifier() {
         error.set(null);
-        try {
-            const result = await utils.prepareSamples();
-
-            setClassifierSamples({
-                positiveSampleIds: result.positiveSampleIds,
-                negativeSampleIds: result.negativeSampleIds
+        clearClassifierSamples();
+        clearClassifierSelectedSamples();
+        Array.from(get(getSelectedSampleIds(page.params.collection_id!)))
+            .slice(0, CLASSIFIER_CREATION_CANDIDATE_LIMIT)
+            .forEach((sampleId) => {
+                toggleClassifierSampleSelection(sampleId);
             });
-
-            // Clear any existing classifier selections and set the positive samples as selected
-            clearClassifierSelectedSamples();
-            result.positiveSampleIds.forEach((id) => {
-                toggleClassifierSampleSelection(id);
-            });
-
-            toggleCreateClassifiersPanel();
-            error.set(null);
-        } catch (err) {
-            error.set(err as Error);
-        }
+        openCreate();
     }
 
     async function createClassifier(
@@ -154,6 +144,12 @@ export function useClassifiers(): UseClassifiersReturn {
             if (!request.collection_id) {
                 throw new Error('Collection ID is required');
             }
+
+            const positiveIds = Array.from(get(classifierSelectedSampleIds));
+            if (positiveIds.length === 0) {
+                throw new Error('Select at least one matching example.');
+            }
+            const preparedSamples = await utils.prepareSamples(positiveIds);
 
             const response = await createClassifierApi({
                 body: {
@@ -167,25 +163,17 @@ export function useClassifiers(): UseClassifiersReturn {
                 error.set(Error('Failed to create classifier.'));
                 return Promise.reject('Failed to create classifier.');
             }
-            const currentClassifierSamples = get(classifierSamples);
-            const allSampleIds = currentClassifierSamples
-                ? [
-                      ...currentClassifierSamples.positiveSampleIds,
-                      ...currentClassifierSamples.negativeSampleIds
-                  ]
-                : [];
 
-            // Get positive sample IDs from classifierSelectedSampleIds
-            const positiveIds = Array.from(get(classifierSelectedSampleIds));
+            setTemporaryClassifier(
+                response.data.classifier_id,
+                response.data.name,
+                request.class_list
+            );
 
-            // Calculate negative IDs by filtering allSampleIds.
-            const negativeIds = allSampleIds.filter((id) => !positiveIds.includes(id));
-
-            // Create the annotated samples object.
             const annotatedSamples = {
                 annotations: {
                     positive: positiveIds,
-                    negative: negativeIds
+                    negative: preparedSamples.negativeSampleIds
                 }
             };
             await utils.updateAnnotations(response.data.classifier_id, annotatedSamples);
@@ -196,14 +184,7 @@ export function useClassifiers(): UseClassifiersReturn {
                 request.collection_id.toString(),
                 request.class_list
             );
-            // Open the Refine Classifiers panel with the new classifier.
-            openRefineClassifiersPanel(
-                'temp',
-                response.data.classifier_id,
-                response.data.name,
-                request.class_list
-            );
-            closeCreateClassifiersPanel();
+            openRefine('temp', response.data.classifier_id, response.data.name, request.class_list);
             return response.data;
         } catch (e) {
             error.set(e as Error);
@@ -264,19 +245,23 @@ export function useClassifiers(): UseClassifiersReturn {
             await commitTempClassifierApi({
                 path: { classifier_id: classifierId }
             });
-            // Refresh classifiers list.
             await loadClassifiers();
-            const classifier = get(classifiersData).find((c) => c.classifier_id === classifierId);
-            if (!classifier) {
-                error.set(Error('Failed to create classifier.'));
-            }
         } catch (err) {
             error.set(err as Error);
-            return;
+            throw err;
         }
 
         clearClassifierSamples();
-        closeRefineClassifiersPanel();
+    };
+
+    const dropTempClassifier = async (classifierId: string): Promise<void> => {
+        try {
+            error.set(null);
+            await dropTempClassifierApi({ path: { classifier_id: classifierId } });
+        } catch (err) {
+            error.set(err as Error);
+            throw err;
+        }
     };
 
     const getSamplesToRefine = async (
@@ -306,13 +291,11 @@ export function useClassifiers(): UseClassifiersReturn {
             const keys = Object.keys(samples);
 
             if (keys.length !== 2) {
-                error.set(new Error('Invalid samples response structure'));
-                return;
+                throw new Error('Invalid samples response structure');
             }
             // Check if all classes exist in keys
             if (!classes.every((className) => keys.includes(className))) {
-                error.set(new Error(`Invalid class names. Expected classes: ${keys.join(', ')}`));
-                return;
+                throw new Error(`Invalid class names. Expected classes: ${keys.join(', ')}`);
             }
             // Create the prepared samples object
             const prepared = {
@@ -341,10 +324,12 @@ export function useClassifiers(): UseClassifiersReturn {
         classifierClasses: string[],
         collectionId: string
     ) {
+        clearClassifierSamples();
+        clearClassifierSelectedSamples();
+        openRefine(mode, classifierID, classifierName, classifierClasses);
         try {
             error.set(null);
             await getSamplesToRefine(classifierID, collectionId, classifierClasses);
-            openRefineClassifiersPanel('existing', classifierID, classifierName, classifierClasses);
         } catch (err) {
             error.set(err as Error);
         }
@@ -356,34 +341,33 @@ export function useClassifiers(): UseClassifiersReturn {
         classifierClasses: string[]
     ) {
         try {
-            error.set(null);
-            // Get all sample IDs from prepared samples
-            const currentClassifierSamples = get(classifierSamples);
-            const allSampleIds = currentClassifierSamples
-                ? [
-                      ...currentClassifierSamples.positiveSampleIds,
-                      ...currentClassifierSamples.negativeSampleIds
-                  ]
-                : [];
-            // Get positive sample IDs from classifierSelectedSampleIds
-            const positiveIds = Array.from(get(classifierSelectedSampleIds));
-
-            // Calculate negative IDs by filtering allSampleIds
-            const negativeIds = allSampleIds.filter((id) => !positiveIds.includes(id));
-
-            // Create the annotated samples object
-            const annotatedSamples = {
-                annotations: {
-                    positive: positiveIds,
-                    negative: negativeIds
-                }
-            };
-            await utils.updateAnnotations(classifierID, annotatedSamples);
-            await utils.trainClassifier(classifierID);
-
+            await applyClassifierCorrections(classifierID);
             await getSamplesToRefine(classifierID, collectionId, classifierClasses);
         } catch (err) {
             error.set(err as Error);
+            throw err;
+        }
+    }
+
+    async function applyClassifierCorrections(classifierId: string): Promise<void> {
+        try {
+            error.set(null);
+            const samples = get(classifierSamples);
+            const positiveIds = Array.from(get(classifierSelectedSampleIds));
+            const positiveIdSet = new Set(positiveIds);
+            const reviewedIds = samples
+                ? [...samples.positiveSampleIds, ...samples.negativeSampleIds]
+                : [];
+            await utils.updateAnnotations(classifierId, {
+                annotations: {
+                    positive: positiveIds,
+                    negative: reviewedIds.filter((sampleId) => !positiveIdSet.has(sampleId))
+                }
+            });
+            await utils.trainClassifier(classifierId);
+        } catch (err) {
+            error.set(err as Error);
+            throw err;
         }
     }
 
@@ -404,22 +388,17 @@ export function useClassifiers(): UseClassifiersReturn {
 
                 const samples = response.data?.samples;
                 if (!samples) {
-                    error.set(new Error('No samples data received'));
-                    return;
+                    throw new Error('No samples data received');
                 }
 
                 const keys = Object.keys(samples);
 
                 if (keys.length !== 2) {
-                    error.set(new Error('Invalid samples response structure'));
-                    return;
+                    throw new Error('Invalid samples response structure');
                 }
                 // Check if all classes exist in keys
                 if (!classifierClasses.every((className) => keys.includes(className))) {
-                    error.set(
-                        new Error(`Invalid class names. Expected classes: ${keys.join(', ')}`)
-                    );
-                    return;
+                    throw new Error(`Invalid class names. Expected classes: ${keys.join(', ')}`);
                 }
                 // Create the prepared samples object
                 const prepared = {
@@ -440,14 +419,15 @@ export function useClassifiers(): UseClassifiersReturn {
             }
         } catch (err) {
             error.set(err as Error);
+            throw err;
         }
     }
 
     // Wrapper function to handle errors from utility functions
-    const prepareSamples = async (): Promise<PrepareSamplesResponse> => {
+    const prepareSamples = async (positiveSampleIds: string[]): Promise<PrepareSamplesResponse> => {
         try {
             error.set(null);
-            const result = await utils.prepareSamples();
+            const result = await utils.prepareSamples(positiveSampleIds);
             return result;
         } catch (err) {
             error.set(err as Error);
@@ -515,12 +495,14 @@ export function useClassifiers(): UseClassifiersReturn {
         updateAnnotations,
         trainClassifier,
         commitTempClassifier,
+        dropTempClassifier,
         getSamplesToRefine,
         prepareSamples,
         loadClassifier,
         startCreateClassifier,
         isLoading: readonly(isLoading),
         startRefinement,
+        applyClassifierCorrections,
         showClassifierTrainingSamples,
         refineClassifier,
         error: readonly(error)

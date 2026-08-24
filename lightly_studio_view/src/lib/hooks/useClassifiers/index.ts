@@ -1,2 +1,1 @@
-export { useCreateClassifiersPanel } from './useCreateClassifiersPanel';
-export { useRefineClassifiersPanel } from './useRefineClassifiersPanel';
+export { useClassifierWorkflow } from './useClassifierWorkflow';

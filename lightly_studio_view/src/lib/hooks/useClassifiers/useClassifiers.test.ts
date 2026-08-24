@@ -5,6 +5,7 @@ import type { ClassifierInfo } from '$lib/services/types';
 import { waitFor } from '@testing-library/svelte';
 import { useGlobalStorage } from '../useGlobalStorage';
 import { useClassifierState } from './useClassifierState';
+import { useClassifierWorkflow } from './useClassifierWorkflow';
 import * as utils from '$lib/utils';
 import * as sdk from '$lib/api/lightly_studio_local';
 
@@ -38,10 +39,14 @@ describe('useClassifiers Hook', () => {
         vi.resetAllMocks();
         setup();
 
-        const { classifiers } = useGlobalStorage();
-        const { clearClassifierSamples } = useClassifierState();
+        const { classifiers, selectedSampleIdsByCollection } = useGlobalStorage();
+        const { clearClassifierSamples, clearClassifierSelectedSamples } = useClassifierState();
+        const { close } = useClassifierWorkflow();
         classifiers.set([]);
-        clearClassifierSamples(); // Clear any previous classifier samples
+        selectedSampleIdsByCollection.set({});
+        clearClassifierSamples();
+        clearClassifierSelectedSamples();
+        close();
     });
     describe('Classifier Handling', () => {
         it('should initialize with empty selected classifiers', () => {
@@ -237,12 +242,6 @@ describe('useClassifiers Hook', () => {
                 }
             };
 
-            const { selectedSampleIdsByCollection } = useGlobalStorage();
-            selectedSampleIdsByCollection.update((state) => ({
-                ...state,
-                'test-collection-id': new Set(mockPositives)
-            }));
-
             const getNegSpy = vi
                 .spyOn(sdk, 'getNegativeSamples')
                 .mockResolvedValueOnce(
@@ -250,7 +249,7 @@ describe('useClassifiers Hook', () => {
                 );
 
             const { prepareSamples } = useClassifiers();
-            const result = await prepareSamples();
+            const result = await prepareSamples(mockPositives);
 
             expect(getNegSpy).toHaveBeenCalledWith({
                 body: {
@@ -263,6 +262,47 @@ describe('useClassifiers Hook', () => {
                 positiveSampleIds: mockPositives,
                 negativeSampleIds: ['3', '4']
             });
+        });
+
+        it('should open classifier creation without preselected samples', () => {
+            const { startCreateClassifier } = useClassifiers();
+            const { classifierSelectedSampleIds } = useClassifierState();
+            const { workflow } = useClassifierWorkflow();
+
+            startCreateClassifier();
+
+            expect(get(workflow).phase).toBe('create');
+            expect(get(classifierSelectedSampleIds)).toEqual(new Set());
+            expect(sdk.getNegativeSamples).not.toHaveBeenCalled();
+        });
+
+        it('should preselect examples chosen in the collection grid', () => {
+            const { selectedSampleIdsByCollection } = useGlobalStorage();
+            selectedSampleIdsByCollection.set({
+                'test-collection-id': new Set(['sample-1', 'sample-2'])
+            });
+
+            const { startCreateClassifier } = useClassifiers();
+            const { classifierSelectedSampleIds } = useClassifierState();
+
+            startCreateClassifier();
+
+            expect(get(classifierSelectedSampleIds)).toEqual(new Set(['sample-1', 'sample-2']));
+        });
+
+        it('should cap collection-grid preselection at 20 candidates', () => {
+            const selectedIds = Array.from({ length: 25 }, (_, index) => `sample-${index}`);
+            const { selectedSampleIdsByCollection } = useGlobalStorage();
+            selectedSampleIdsByCollection.set({
+                'test-collection-id': new Set(selectedIds)
+            });
+
+            const { startCreateClassifier } = useClassifiers();
+            const { classifierSelectedSampleIds } = useClassifierState();
+
+            startCreateClassifier();
+
+            expect(Array.from(get(classifierSelectedSampleIds))).toEqual(selectedIds.slice(0, 20));
         });
 
         it('should create classifier successfully', async () => {
@@ -306,6 +346,9 @@ describe('useClassifiers Hook', () => {
             const trainSpy = vi
                 .spyOn(sdk, 'trainClassifier')
                 .mockResolvedValueOnce({} as unknown as ApiResult<typeof sdk.trainClassifier>);
+            vi.spyOn(sdk, 'getNegativeSamples').mockResolvedValueOnce({
+                data: { negative_sample_ids: ['3', '4'] }
+            } as unknown as ApiResult<typeof sdk.getNegativeSamples>);
             const mockSamplesResponse = {
                 data: {
                     samples: {
@@ -358,8 +401,52 @@ describe('useClassifiers Hook', () => {
             // Verify the final result
             expect(result).toEqual(mockCreateResponse.data);
         }, 10000);
+
+        it('should not create a classifier without a matching example', async () => {
+            const createSpy = vi.spyOn(sdk, 'createClassifier');
+            const { createClassifier } = useClassifiers();
+
+            await expect(
+                createClassifier({
+                    name: 'Zebras',
+                    class_list: ['positive', 'negative'],
+                    collection_id: 'test-collection-id'
+                })
+            ).rejects.toThrow('Select at least one matching example.');
+
+            expect(createSpy).not.toHaveBeenCalled();
+            expect(sdk.getNegativeSamples).not.toHaveBeenCalled();
+        });
     });
     describe('Classifier Refinement', () => {
+        it('opens an existing classifier directly in the refinement phase', async () => {
+            vi.spyOn(sdk, 'samplesToRefine').mockResolvedValue({
+                data: {
+                    samples: {
+                        positive: ['1'],
+                        negative: ['2']
+                    }
+                }
+            } as unknown as ApiResult<typeof sdk.samplesToRefine>);
+            const { startRefinement } = useClassifiers();
+            const { workflow } = useClassifierWorkflow();
+
+            const loading = startRefinement(
+                'existing',
+                'classifier-id',
+                'Zebras',
+                ['positive', 'negative'],
+                'collection-id'
+            );
+
+            expect(get(workflow)).toMatchObject({
+                phase: 'refine',
+                mode: 'existing',
+                classifierId: 'classifier-id'
+            });
+            await loading;
+        });
+
         it('should get samples to refine successfully', async () => {
             // Mock the full API response structure exactly
             const mockGetResponse = {
@@ -462,6 +549,14 @@ describe('useClassifiers Hook', () => {
             const trainSpy = vi
                 .spyOn(sdk, 'trainClassifier')
                 .mockResolvedValue({} as unknown as ApiResult<typeof sdk.trainClassifier>);
+            vi.spyOn(sdk, 'samplesToRefine').mockResolvedValue({
+                data: {
+                    samples: {
+                        positive: ['5'],
+                        negative: ['6']
+                    }
+                }
+            } as unknown as ApiResult<typeof sdk.samplesToRefine>);
 
             const { refineClassifier } = useClassifiers();
             await refineClassifier('classifier-id', 'collection-id', ['positive', 'negative']);
@@ -517,6 +612,19 @@ describe('useClassifiers Hook', () => {
                 query: { collection_id: 'test-collection-id' }
             });
         });
+
+        it('should drop an unsaved temporary classifier', async () => {
+            const dropSpy = vi
+                .spyOn(sdk, 'dropTempClassifier')
+                .mockResolvedValue({} as unknown as ApiResult<typeof sdk.dropTempClassifier>);
+            const { dropTempClassifier } = useClassifiers();
+
+            await dropTempClassifier('temporary-classifier-id');
+
+            expect(dropSpy).toHaveBeenCalledWith({
+                path: { classifier_id: 'temporary-classifier-id' }
+            });
+        });
     });
 
     describe('Classifier Annotations', () => {
@@ -552,7 +660,7 @@ describe('useClassifiers Hook', () => {
             const { prepareSamples, error } = useClassifiers();
 
             // The main hook should catch the error from the utility and set it in its error store
-            await expect(prepareSamples()).rejects.toThrow('Failed to prepare samples');
+            await expect(prepareSamples([])).rejects.toThrow('Failed to prepare samples');
             expect(get(error)).toEqual(testError);
         });
 
@@ -578,7 +686,9 @@ describe('useClassifiers Hook', () => {
 
             // Execute test with mismatched classes
             const { getSamplesToRefine, error } = useClassifiers();
-            await getSamplesToRefine('classifier-id', 'collection-id', ['positive', 'negative']);
+            await expect(
+                getSamplesToRefine('classifier-id', 'collection-id', ['positive', 'negative'])
+            ).rejects.toThrow('Invalid class names. Expected classes: class1, class2');
 
             // Verify API was called
             expect(samplesToRefineSpy).toHaveBeenCalledWith({

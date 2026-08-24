@@ -21,6 +21,7 @@ export type NormalModeFilters = Pick<AnnotationsFilter, 'annotation_label_ids' |
 
 export type ImagesInfiniteParams = {
     collection_id: string;
+    enabled?: boolean;
     query_expr?: QueryExpr;
     sort_by?: ReadImagesRequest['sort_by'];
     text_embedding?: ReadImagesRequest['text_embedding'];
