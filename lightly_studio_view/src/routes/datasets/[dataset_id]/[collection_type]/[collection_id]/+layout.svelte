@@ -60,7 +60,7 @@
         AnnotationType,
         SampleType
     } from '$lib/api/lightly_studio_local/types.gen';
-    import type { AnnotationsFilter } from '$lib/api/lightly_studio_local/types.gen';
+    import type { AnnotationsFilter, ImageFilter } from '$lib/api/lightly_studio_local/types.gen';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import type { DistributionSource } from '$lib/components/DatasetDistributionPanel';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
@@ -566,7 +566,15 @@
         enabled: distributionPanelVisible
     }));
 
-    const groupedCountsParams = (annotationType?: AnnotationType) => ({
+    interface GroupedCountsParams {
+        collectionId: string;
+        sampleTagIds: string[];
+        filter?: ImageFilter;
+        countMode: AnnotationCountMode;
+        annotationType: AnnotationType | undefined;
+        enabled: boolean;
+    }
+    const groupedCountsParams = (annotationType?: AnnotationType): GroupedCountsParams => ({
         collectionId: datasetId,
         sampleTagIds: distributionSampleTagIds,
         filter: imageAnnotationCountsFilter,
@@ -621,11 +629,14 @@
             distributionAllQuery.data !== undefined
                 ? toCategoryCounts(distributionAllQuery.data)
                 : classDistributionCounts;
+        const hasTagSelection = distributionSampleTagIds.length > 0;
+        const comparisonAllData =
+            hasTagSelection && !$allSourcesHidden ? distributionAllTagQuery.data : undefined;
         const allTypesGroup = {
             id: 'all',
             label: 'All types',
             data: allDistributionData,
-            comparisonData: distributionAllTagQuery.data
+            comparisonData: comparisonAllData
         };
 
         const perType: {
@@ -658,7 +669,8 @@
                 id,
                 label,
                 data: toCategoryCounts(query.data),
-                comparisonData: comparisonQuery.data
+                comparisonData:
+                    hasTagSelection && !$allSourcesHidden ? comparisonQuery.data : undefined
             }))
             // Skip types with no matches in the current view so the picker stays clean.
             .filter((group) => group.data.length > 0);
@@ -668,7 +680,7 @@
             return {
                 ...base,
                 data: allDistributionData,
-                comparisonData: distributionAllTagQuery.data
+                comparisonData: comparisonAllData
             };
         return { ...base, groups: [allTypesGroup, ...typeGroups] };
     });
