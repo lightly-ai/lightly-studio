@@ -3,7 +3,7 @@ import { flushSync } from 'svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MetadataInfoView } from '$lib/api/lightly_studio_local';
 import type { EvaluationRunMetricsInfoView } from '$lib/api/lightly_studio_local/types.gen';
-import { useSortFields } from './useSortFields.svelte';
+import { useImageSortFields } from './useImageSortFields.svelte';
 
 const metadataInfo = writable<MetadataInfoView[]>([]);
 
@@ -22,7 +22,7 @@ vi.mock('$lib/hooks/useEvaluationSampleMetricsInfo/useEvaluationSampleMetricsInf
     useEvaluationSampleMetricsInfo: () => metricsInfoMock
 }));
 
-describe('useSortFields', () => {
+describe('useImageSortFields', () => {
     beforeEach(() => {
         metadataInfo.set([]);
         metricsInfoMock.data = null;
@@ -31,7 +31,7 @@ describe('useSortFields', () => {
 
     describe('allSortFields', () => {
         it('contains the five base image sort fields', () => {
-            const { allSortFields } = useSortFields({ datasetId: () => 'ds1' });
+            const { allSortFields } = useImageSortFields({ datasetId: () => 'ds1' });
             flushSync();
             const fields = get(allSortFields);
 
@@ -53,7 +53,7 @@ describe('useSortFields', () => {
                 { name: 'label', type: 'string' },
                 { name: 'active', type: 'boolean' }
             ]);
-            const { allSortFields } = useSortFields({ datasetId: () => 'ds1' });
+            const { allSortFields } = useImageSortFields({ datasetId: () => 'ds1' });
             flushSync();
             const fields = get(allSortFields);
 
@@ -89,7 +89,7 @@ describe('useSortFields', () => {
                 { name: 'nested', type: 'dict' },
                 { name: 'score', type: 'float' }
             ]);
-            const { allSortFields } = useSortFields({ datasetId: () => 'ds1' });
+            const { allSortFields } = useImageSortFields({ datasetId: () => 'ds1' });
             flushSync();
             const fields = get(allSortFields);
 
@@ -107,7 +107,7 @@ describe('useSortFields', () => {
                     ]
                 }
             ];
-            const { allSortFields } = useSortFields({ datasetId: () => 'ds1' });
+            const { allSortFields } = useImageSortFields({ datasetId: () => 'ds1' });
             flushSync();
             const fields = get(allSortFields);
 
@@ -130,7 +130,7 @@ describe('useSortFields', () => {
         });
 
         it('updates reactively when metadataInfo changes', () => {
-            const { allSortFields } = useSortFields({ datasetId: () => 'ds1' });
+            const { allSortFields } = useImageSortFields({ datasetId: () => 'ds1' });
             flushSync();
 
             expect(

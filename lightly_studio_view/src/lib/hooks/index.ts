@@ -30,11 +30,11 @@ export { useSeedAnnotationSourceFilter } from '$lib/hooks/useSeedAnnotationSourc
 export { useEvaluationSampleMetricsInfo } from '$lib/hooks/useEvaluationSampleMetricsInfo/useEvaluationSampleMetricsInfo';
 export { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
 export { useEvaluationConfusionMatrix } from '$lib/hooks/useEvaluationConfusionMatrix/useEvaluationConfusionMatrix.svelte';
-export { useOrderBy } from '$lib/hooks/useOrderBy/useOrderBy';
+export { useImageOrderBy } from '$lib/hooks/useImageOrderBy/useImageOrderBy';
 export {
-    useSortFields,
+    useImageSortFields,
     formatEvaluationMetricLabel
-} from '$lib/hooks/useSortFields/useSortFields.svelte';
+} from '$lib/hooks/useImageSortFields/useImageSortFields.svelte';
 export { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
 export { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
 export { useSegmentationMaskBrush } from '$lib/hooks/useSegmentationMaskBrush';

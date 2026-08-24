@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { AnnotationOrderBy, CollectionSearch, GridHeader, OrderBy } from '$lib/components';
+    import { AnnotationOrderBy, CollectionSearch, GridHeader, ImageOrderBy } from '$lib/components';
     import GridHeaderSelectAllButton from '$lib/components/GridHeaderSelectAllButton/GridHeaderSelectAllButton.svelte';
 
     type SearchImage = { name: string; previewUrl: string };
@@ -58,7 +58,7 @@
     {/snippet}
     {#snippet auxControls()}
         {#if isImages}
-            <OrderBy {collectionId} datasetId={collectionDatasetId} />
+            <ImageOrderBy {collectionId} datasetId={collectionDatasetId} />
         {:else if isAnnotations}
             <AnnotationOrderBy {collectionId} />
         {/if}
