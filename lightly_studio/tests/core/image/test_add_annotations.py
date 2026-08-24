@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+import posixpath
 
 import pytest
 from labelformat.formats.labelformat import LabelformatObjectDetectionInput
@@ -13,7 +14,14 @@ from labelformat.utils import ImageDimensionError
 from sqlmodel import Session
 
 from lightly_studio.core.image import add_annotations
-from lightly_studio.resolvers import annotation_resolver, image_resolver
+from lightly_studio.models.collection import CollectionCreate, SampleType
+from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
+from lightly_studio.resolvers import (
+    annotation_resolver,
+    collection_resolver,
+    evaluation_run_resolver,
+    image_resolver,
+)
 from tests import helpers_resolvers
 from tests.helpers_resolvers import ImageStub
 
@@ -91,6 +99,87 @@ def test_add_annotations_from_labelformat__missing_images(db_session: Session) -
     images_root = Path("/images").absolute().as_posix()
     assert missing_paths == [f"{images_root}/nonexistent.jpg"]
     assert len(samples) == 0
+
+
+def test_normalize_images_root__local_path_is_posix() -> None:
+    # On Windows, `str(Path(...).absolute())` returns backslashes which, when
+    # joined with posix-separated labelformat filenames via `posixpath.join`,
+    # produce mixed-separator strings that fail to match ingested paths.
+    # The normalized root must therefore be in posix form.
+    result = add_annotations.normalize_images_root(Path("some") / "images")
+
+    assert "\\" not in result
+    assert result.endswith("some/images")
+    assert Path(result).is_absolute()
+
+
+def test_normalize_images_root__joins_cleanly_with_posix_filename() -> None:
+    root = add_annotations.normalize_images_root(Path("data") / "coco")
+    joined = posixpath.join(root, "images/0001.jpg")
+
+    assert "\\" not in joined
+    assert joined.endswith("data/coco/images/0001.jpg")
+
+
+def test_normalize_images_root__preserves_remote_protocol() -> None:
+    result = add_annotations.normalize_images_root("s3://bucket/path")
+
+    assert result == "s3://bucket/path"
+
+
+def test_add_annotations_from_labelformat__marks_evaluation_run_stale(
+    db_session: Session,
+) -> None:
+    collection = helpers_resolvers.create_collection(db_session)
+    helpers_resolvers.create_images(
+        db_session,
+        collection.collection_id,
+        [
+            ImageStub(
+                path=Path("images/image.jpg").absolute().as_posix(),
+                width=100,
+                height=200,
+            ),
+        ],
+    )
+    gt_collection = collection_resolver.create(
+        session=db_session,
+        collection=CollectionCreate(
+            name="gt",
+            sample_type=SampleType.ANNOTATION,
+            parent_collection_id=collection.collection_id,
+        ),
+    )
+    pred_collection = helpers_resolvers.create_collection(
+        db_session,
+        sample_type=SampleType.ANNOTATION,
+        parent_collection_id=collection.collection_id,
+    )
+    run = evaluation_run_resolver.create(
+        session=db_session,
+        evaluation_run_input=EvaluationRunCreate(
+            name="run",
+            gt_annotation_collection_id=gt_collection.collection_id,
+            pred_annotation_collection_id=pred_collection.collection_id,
+            dataset_id=collection.dataset_id,
+            task_type=EvaluationTaskType.OBJECT_DETECTION,
+        ),
+    )
+    assert run.stale_since is None
+
+    add_annotations.add_annotations_from_labelformat(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        input_labels=_get_labelformat_input_obj_det(filename="image.jpg"),
+        images_root="images",
+        collection_name="gt",
+    )
+
+    refreshed = evaluation_run_resolver.get_by_id(
+        session=db_session, evaluation_id=run.id
+    )
+    assert refreshed is not None
+    assert refreshed.stale_since is not None
 
 
 def _get_labelformat_input_obj_det(filename: str) -> LabelformatObjectDetectionInput:
