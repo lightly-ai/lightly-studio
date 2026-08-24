@@ -56,13 +56,21 @@ class LoadExistingEmbeddingsGenerator(ls.ImageEmbeddingGenerator):
         """
         self._embeddings_by_filepath = embeddings_by_filepath
 
-    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
-        """Describe the model so it can be recorded in the database."""
+    def get_embedding_model_input(
+        self, collection_id: UUID, dataset_id: UUID
+    ) -> EmbeddingModelCreate:
+        """Describe the model so it can be recorded in the database.
+
+        Args:
+            collection_id: The ID of the collection.
+            dataset_id: The ID of the dataset.
+        """
         return EmbeddingModelCreate(
             name="Precomputed Embeddings",
             embedding_model_hash="precomputed",
             embedding_dimension=EMBEDDING_DIMENSION,
             collection_id=collection_id,
+            dataset_id=dataset_id,
         )
 
     def embed_text(self, text: str) -> list[float]:

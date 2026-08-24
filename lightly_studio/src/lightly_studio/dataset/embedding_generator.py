@@ -59,7 +59,9 @@ class EmbeddingGenerator(Protocol):
     before you add a dataset or start the GUI.
     """
 
-    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
+    def get_embedding_model_input(
+        self, collection_id: UUID, dataset_id: UUID
+    ) -> EmbeddingModelCreate:
         """Generate an EmbeddingModelCreate instance.
 
         <span class="doc-badge doc-badge--beta">Beta</span>
@@ -70,6 +72,7 @@ class EmbeddingGenerator(Protocol):
 
         Args:
             collection_id: The ID of the collection.
+            dataset_id: The ID of the dataset.
 
         Returns:
             An EmbeddingModelCreate instance with the model details.
@@ -197,11 +200,14 @@ class RandomEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator)
         """
         self._dimension = dimension
 
-    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
+    def get_embedding_model_input(
+        self, collection_id: UUID, dataset_id: UUID
+    ) -> EmbeddingModelCreate:
         """Generate an EmbeddingModelCreate instance.
 
         Args:
             collection_id: The ID of the collection.
+            dataset_id: The ID of the dataset.
 
         Returns:
             An EmbeddingModelCreate instance with the model details.
@@ -211,6 +217,7 @@ class RandomEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator)
             embedding_model_hash="random_model",
             embedding_dimension=self._dimension,
             collection_id=collection_id,
+            dataset_id=dataset_id,
         )
 
     def embed_text(self, _text: str) -> list[float]:

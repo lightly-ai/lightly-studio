@@ -164,6 +164,11 @@ def test_postgres_embedding_model_dataset_id__backfilled(
                 statement=text("SELECT dataset_id FROM embedding_model")
             ).scalar_one()
         assert str(backfilled_dataset_id) == dataset_id
+        columns = db_migrations._get_inspector(engine=engine).get_columns(
+            table_name="embedding_model"
+        )
+        dataset_id_column = next(column for column in columns if column["name"] == "dataset_id")
+        assert dataset_id_column["nullable"] is False
 
         config.attributes.pop("connection", None)
         command.check(config)

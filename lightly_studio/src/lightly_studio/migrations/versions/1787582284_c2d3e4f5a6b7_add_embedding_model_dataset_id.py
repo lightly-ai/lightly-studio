@@ -1,9 +1,8 @@
 """add embedding model dataset id.
 
-Adds a nullable ``dataset_id`` to ``embedding_model`` and backfills it through the
-existing collection relationship. The column remains nullable while ``collection_id``
-is still the source of truth; a later migration can make it required when it removes
-``collection_id``.
+Adds ``dataset_id`` to ``embedding_model`` and backfills it through the existing
+collection relationship. The column is added as nullable for the backfill and then made
+required.
 
 DuckDB builds its schema with ``create_all``, so this migration only matters for tracked
 Postgres databases.
@@ -53,6 +52,7 @@ def upgrade() -> None:
             """
         )
     )
+    op.alter_column("embedding_model", "dataset_id", nullable=False)
 
 
 def downgrade() -> None:

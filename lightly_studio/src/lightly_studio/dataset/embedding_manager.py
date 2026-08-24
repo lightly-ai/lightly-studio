@@ -165,11 +165,12 @@ class EmbeddingManager:
         if collection is None:
             raise ValueError("Provided collection_id could not be found.")
 
-        embedding_model = embedding_generator.get_embedding_model_input(collection_id=collection_id)
-        embedding_model.dataset_id = collection.dataset_id
         db_model = embedding_model_resolver.get_or_create(
             session=session,
-            embedding_model=embedding_model,
+            embedding_model=embedding_generator.get_embedding_model_input(
+                collection_id=collection_id,
+                dataset_id=collection.dataset_id,
+            ),
         )
         model_id = db_model.embedding_model_id
 

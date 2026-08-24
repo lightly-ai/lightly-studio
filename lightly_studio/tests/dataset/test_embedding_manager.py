@@ -101,10 +101,13 @@ def test_register_multiple_models(
 
     # Register a second model.
     class FakeEmbeddingGenerator(ImageEmbeddingGenerator):
-        def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
+        def get_embedding_model_input(
+            self, collection_id: UUID, dataset_id: UUID
+        ) -> EmbeddingModelCreate:
             return EmbeddingModelCreate(
                 name="Fake",
                 collection_id=collection_id,
+                dataset_id=dataset_id,
                 embedding_model_hash="fake_hash",
                 parameter_count_in_mb=50,
                 embedding_dimension=5,
@@ -627,10 +630,13 @@ def test_set_default_embedding_model_falls_back_to_env_for_unregistered_slot(
     class ImageOnlyGenerator:
         # Implements the image protocol but not embed_videos, so only the image
         # slot is overridden.
-        def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
+        def get_embedding_model_input(
+            self, collection_id: UUID, dataset_id: UUID
+        ) -> EmbeddingModelCreate:
             return EmbeddingModelCreate(
                 name="ImageOnly",
                 collection_id=collection_id,
+                dataset_id=dataset_id,
                 embedding_dimension=3,
                 embedding_model_hash="image_only_model",
             )
@@ -820,10 +826,13 @@ class TextOnlyEmbeddingGenerator:
     def __init__(self, dimension: int = 3) -> None:
         self._dimension = dimension
 
-    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
+    def get_embedding_model_input(
+        self, collection_id: UUID, dataset_id: UUID
+    ) -> EmbeddingModelCreate:
         return EmbeddingModelCreate(
             name="TextOnly",
             collection_id=collection_id,
+            dataset_id=dataset_id,
             embedding_dimension=self._dimension,
             embedding_model_hash="text_only_model",
         )
