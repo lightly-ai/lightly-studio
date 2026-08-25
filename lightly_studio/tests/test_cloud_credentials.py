@@ -13,7 +13,6 @@ from gcsfs import GCSFileSystem  # type: ignore[import-untyped]
 from pytest_mock import MockerFixture
 
 from lightly_studio import cloud_credentials
-from lightly_studio.cloud_credentials import apply_cloud_credentials
 
 
 @pytest.fixture(autouse=True)
@@ -40,7 +39,7 @@ def test_apply_cloud_credentials__applies_gcs_runtime_config(
     serialized_options = json.dumps(storage_options)
     clear_cache = mocker.spy(GCSFileSystem, "clear_instance_cache")
 
-    apply_cloud_credentials(credentials={"FSSPEC_GCS": serialized_options})
+    cloud_credentials.apply_cloud_credentials(credentials={"FSSPEC_GCS": serialized_options})
 
     assert os.environ["FSSPEC_GCS"] == serialized_options
     assert fsspec.config.conf["gcs"] == storage_options
@@ -48,14 +47,14 @@ def test_apply_cloud_credentials__applies_gcs_runtime_config(
 
 
 def test_apply_cloud_credentials__invalidates_cached_gcs_filesystem() -> None:
-    apply_cloud_credentials(
+    cloud_credentials.apply_cloud_credentials(
         credentials={"FSSPEC_GCS": json.dumps({"project": "old-project", "token": "anon"})}
     )
     old_filesystem = fsspec.filesystem("gcs")
     assert GCSFileSystem._cache
     assert fsspec.filesystem("gcs") is old_filesystem
 
-    apply_cloud_credentials(
+    cloud_credentials.apply_cloud_credentials(
         credentials={"FSSPEC_GCS": json.dumps({"project": "new-project", "token": "anon"})}
     )
 
@@ -71,7 +70,9 @@ def test_apply_cloud_credentials__replaces_removed_gcs_options() -> None:
         "token": "old-token",
     }
 
-    apply_cloud_credentials(credentials={"FSSPEC_GCS": json.dumps({"token": "new-token"})})
+    cloud_credentials.apply_cloud_credentials(
+        credentials={"FSSPEC_GCS": json.dumps({"token": "new-token"})}
+    )
 
     assert fsspec.config.conf["gcs"] == {"token": "new-token"}
 
@@ -83,7 +84,7 @@ def test_apply_cloud_credentials__applies_azure_runtime_config(
     serialized_options = json.dumps(storage_options)
     clear_cache = mocker.spy(AzureBlobFileSystem, "clear_instance_cache")
 
-    apply_cloud_credentials(credentials={"FSSPEC_ABFS": serialized_options})
+    cloud_credentials.apply_cloud_credentials(credentials={"FSSPEC_ABFS": serialized_options})
 
     assert os.environ["FSSPEC_ABFS"] == serialized_options
     assert fsspec.config.conf["abfs"] == storage_options
@@ -92,7 +93,7 @@ def test_apply_cloud_credentials__applies_azure_runtime_config(
 
 
 def test_apply_cloud_credentials__invalidates_cached_azure_filesystem() -> None:
-    apply_cloud_credentials(
+    cloud_credentials.apply_cloud_credentials(
         credentials={
             "FSSPEC_ABFS": json.dumps({"account_name": "old-account", "account_key": "old-key"})
         }
@@ -101,7 +102,7 @@ def test_apply_cloud_credentials__invalidates_cached_azure_filesystem() -> None:
     assert AzureBlobFileSystem._cache
     assert fsspec.filesystem("az") is old_filesystem
 
-    apply_cloud_credentials(
+    cloud_credentials.apply_cloud_credentials(
         credentials={
             "FSSPEC_ABFS": json.dumps({"account_name": "new-account", "account_key": "new-key"})
         }
@@ -116,7 +117,7 @@ def test_apply_cloud_credentials__invalidates_cached_azure_filesystem() -> None:
 @pytest.mark.parametrize("value", ["not-json", "[]"])
 def test_apply_cloud_credentials__rejects_invalid_fsspec_config(value: str) -> None:
     with pytest.raises(ValueError, match="Invalid FSSPEC cloud credential configuration"):
-        apply_cloud_credentials(credentials={"FSSPEC_GCS": value})
+        cloud_credentials.apply_cloud_credentials(credentials={"FSSPEC_GCS": value})
 
     assert "FSSPEC_GCS" not in os.environ
     assert "gcs" not in fsspec.config.conf
@@ -132,7 +133,9 @@ def test_apply_cloud_credentials__missing_filesystem_dependency(
     )
 
     with pytest.raises(ImportError, match="lightly-studio"):
-        apply_cloud_credentials(credentials={"FSSPEC_GCS": json.dumps({"token": "anon"})})
+        cloud_credentials.apply_cloud_credentials(
+            credentials={"FSSPEC_GCS": json.dumps({"token": "anon"})}
+        )
 
     assert "FSSPEC_GCS" not in os.environ
     assert "gcs" not in fsspec.config.conf

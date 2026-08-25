@@ -123,8 +123,9 @@ gcloud auth application-default login
 ```
 
 This writes credentials to `~/.config/gcloud/application_default_credentials.json`,
-which GCS clients pick up automatically via the `GOOGLE_APPLICATION_CREDENTIALS`
-environment variable convention.
+which gcsfs discovers from the ADC well-known file through its default
+authentication. This option does not require `GOOGLE_APPLICATION_CREDENTIALS`
+or `FSSPEC_GCS` to be set.
 
 **Option B — Service account key file:**
 
@@ -181,7 +182,7 @@ Never commit service-account key files.
 
 The Azure E2E test indexes the COCO example dataset directly from a private
 Azure Blob Storage container. Use separate SAS tokens for uploading the test
-data and for running LightlyStudio. LightlyStudio only needs read and list
+data and for running LightlyStudio. LightlyStudio only requires read and list
 permissions.
 
 ### Prerequisites
@@ -216,7 +217,8 @@ Generate a short-lived SAS token with upload permissions (`racwdl`) from the
 copy the **Blob SAS token** (starts with `sv=`).
 
 ```shell
-UPLOAD_SAS="<paste-sas-token-here>"
+read -r -s -p "Upload SAS: " UPLOAD_SAS
+printf '\n'
 UPLOAD_URL="https://${ACCOUNT}.blob.core.windows.net/${CONTAINER}?${UPLOAD_SAS}"
 
 azcopy copy \
@@ -229,7 +231,7 @@ azcopy copy \
 The container must have this layout because `index_azure.py` uses these paths:
 
 ```text
-test/
+# Container root: test
 ├── images/
 │   ├── 000000565296.jpg
 │   └── ...
@@ -243,7 +245,8 @@ Generate a separate SAS with only read and list permissions (`rl`) from the
 **Read** and **List**, set expiry to a few days ahead, and copy the token.
 
 ```shell
-READ_SAS="<paste-read-only-sas-token-here>"
+read -r -s -p "Read-only SAS: " READ_SAS
+printf '\n'
 READ_URL="https://${ACCOUNT}.blob.core.windows.net/${CONTAINER}?${READ_SAS}"
 
 # Verify access before running the test:

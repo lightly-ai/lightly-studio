@@ -27,8 +27,9 @@ Do not grant write, create, add, or delete permissions.
 6. Store the generated **Blob SAS token** securely. It is a credential and must
    not be committed to source control or pasted into logs.
 
-Repeat these steps for another container if it requires a separate credential.
 LightlyStudio currently stores one deployment-wide Azure credential set.
+Configure the SAS token for the container that the deployment uses. Configuring
+credentials for a second container replaces the existing credentials.
 
 ## Step 2: Record the Storage Account Name
 

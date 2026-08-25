@@ -109,7 +109,7 @@ start-e2e-s3: build
 	@echo "Starting server for e2e tests with remote S3 dataset..."
 	uv run e2e-tests/index_s3.py
 
-# Requires GOOGLE_APPLICATION_CREDENTIALS or FSSPEC_GCS env var to be set
+# Uses gcsfs default authentication; see e2e-tests/README.md for alternatives
 .PHONY: start-e2e-gcs
 start-e2e-gcs: build
 	@echo "Starting server for e2e tests with remote GCS dataset..."
