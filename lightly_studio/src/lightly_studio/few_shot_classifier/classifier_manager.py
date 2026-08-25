@@ -168,8 +168,8 @@ class ClassifierManager:
 
         embedding_model = _get_embedding_model_by_hash(
             session=session,
-            collection_id=classifier.collection_id,
             embedding_model_hash=classifier.few_shot_classifier.embedding_model_hash,
+            collection_id=classifier.collection_id,
         )
         if embedding_model is None:
             raise ValueError(
@@ -258,8 +258,8 @@ class ClassifierManager:
         )
         embedding_model = _get_embedding_model_by_hash(
             session=session,
-            collection_id=collection_id,
             embedding_model_hash=classifier.embedding_model_hash,
+            collection_id=collection_id,
         )
         if embedding_model is None:
             raise ValueError(
@@ -393,8 +393,8 @@ class ClassifierManager:
 
         embedding_model = _get_embedding_model_by_hash(
             session=session,
-            collection_id=classifier.collection_id,
             embedding_model_hash=classifier.few_shot_classifier.embedding_model_hash,
+            collection_id=classifier.collection_id,
         )
         if embedding_model is None:
             raise ValueError(
@@ -456,8 +456,8 @@ class ClassifierManager:
             )
         embedding_model = _get_embedding_model_by_hash(
             session=session,
-            collection_id=classifier.collection_id,
             embedding_model_hash=classifier.few_shot_classifier.embedding_model_hash,
+            collection_id=classifier.collection_id,
         )
         if embedding_model is None:
             raise ValueError(
@@ -592,8 +592,8 @@ class ClassifierManager:
         )
         embedding_model = _get_embedding_model_by_hash(
             session=session,
-            collection_id=collection_id,
             embedding_model_hash=classifier.embedding_model_hash,
+            collection_id=collection_id,
         )
         if embedding_model is None:
             raise ValueError(
@@ -613,7 +613,7 @@ class ClassifierManager:
 
 
 def _get_embedding_model_by_hash(
-    session: Session, collection_id: UUID, embedding_model_hash: str
+    session: Session, embedding_model_hash: str, collection_id: UUID
 ) -> EmbeddingModelTable | None:
     """Resolve the embedding model with the given hash within the collection's dataset.
 
