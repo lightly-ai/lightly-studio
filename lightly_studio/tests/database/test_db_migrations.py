@@ -99,3 +99,78 @@ def test_postgres_fresh_database__upgrade_head(
         assert version == head_revision
     finally:
         engine.close()
+
+
+def test_postgres_embedding_model_dataset_id__backfilled(
+    postgres_url: str | None,
+) -> None:
+    """The dataset ID migration backfills embedding models from their collection."""
+    if postgres_url is None:
+        pytest.skip("Requires --postgres")
+
+    _reset_postgres_database(engine_url=postgres_url)
+    normalized_url = db_url.ensure_psycopg3_driver(engine_url=postgres_url)
+    engine = create_engine(normalized_url)
+    config = db_migrations.get_alembic_config(engine_url=postgres_url)
+    dataset_id = "00000000-0000-0000-0000-000000000001"
+    collection_id = "00000000-0000-0000-0000-000000000002"
+
+    try:
+        db_migrations._run_alembic_command(
+            engine=engine,
+            config=config,
+            fn=command.upgrade,
+            revision="b1c2d3e4f5a6",
+        )
+        with engine.begin() as connection:
+            connection.execute(
+                statement=text("INSERT INTO dataset (dataset_id) VALUES (:dataset_id)"),
+                parameters={"dataset_id": dataset_id},
+            )
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO collection (
+                        name, sample_type, collection_id, dataset_id, created_at, updated_at
+                    ) VALUES (
+                        'collection', 'IMAGE', :collection_id, :dataset_id, NOW(), NOW()
+                    )
+                    """
+                ),
+                parameters={"collection_id": collection_id, "dataset_id": dataset_id},
+            )
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO embedding_model (
+                        name, embedding_dimension, collection_id, embedding_model_id, created_at
+                    ) VALUES (
+                        'model', 128, :collection_id,
+                        '00000000-0000-0000-0000-000000000003', NOW()
+                    )
+                    """
+                ),
+                parameters={"collection_id": collection_id},
+            )
+
+        db_migrations._run_alembic_command(
+            engine=engine,
+            config=config,
+            fn=command.upgrade,
+            revision="head",
+        )
+        with engine.connect() as connection:
+            backfilled_dataset_id = connection.execute(
+                statement=text("SELECT dataset_id FROM embedding_model")
+            ).scalar_one()
+        assert str(backfilled_dataset_id) == dataset_id
+        columns = db_migrations._get_inspector(engine=engine).get_columns(
+            table_name="embedding_model"
+        )
+        dataset_id_column = next(column for column in columns if column["name"] == "dataset_id")
+        assert dataset_id_column["nullable"] is False
+
+        config.attributes.pop("connection", None)
+        command.check(config)
+    finally:
+        engine.dispose()

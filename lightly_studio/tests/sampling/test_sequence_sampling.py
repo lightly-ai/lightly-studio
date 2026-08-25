@@ -429,6 +429,41 @@ def test_sampling_via_database__sequence_preselection_matches_single_sampling(
     assert set(first_batch + second_batch) == set(single_batch)
 
 
+def test_sampling_via_database__sequence_result_tag_name_equals_preselected_tag_name(
+    db_session: Session,
+) -> None:
+    """Reusing the preselected tag name grows that tag by another sequence."""
+    frame_collection_id, frame_sample_ids = _fill_db_with_video_frames_and_embeddings(
+        session=db_session,
+        n_frames=15,
+    )
+    strategy = EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")
+
+    def sample_sequences(preselected_tag_name: str | None) -> list[int]:
+        sampling_via_database(
+            session=db_session,
+            config=SamplingConfig(
+                collection_id=frame_collection_id,
+                n_samples_to_select=5,
+                sampling_result_tag_name="growing_batch",
+                preselected_tag_name=preselected_tag_name,
+                strategies=[strategy],
+                selected_sequence_length=5,
+            ),
+            input_sample_ids=frame_sample_ids,
+        )
+        return _tagged_frame_numbers(
+            session=db_session, collection_id=frame_collection_id, tag_name="growing_batch"
+        )
+
+    first_batch = sample_sequences(preselected_tag_name=None)
+    grown_batch = sample_sequences(preselected_tag_name="growing_batch")
+
+    assert len(first_batch) == 5
+    assert set(first_batch) < set(grown_batch)
+    assert len(grown_batch) == 10
+
+
 def _tagged_frame_numbers(session: Session, collection_id: UUID, tag_name: str) -> list[int]:
     """Return the ascending frame numbers carrying the tag with the given name."""
     tag = tag_resolver.get_by_name(session=session, tag_name=tag_name, collection_id=collection_id)

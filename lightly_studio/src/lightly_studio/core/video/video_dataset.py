@@ -153,7 +153,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         logger.info(f"Found {len(video_paths)} videos in {path}.")
 
         # Process videos.
-        created_sample_ids, _ = add_videos.load_into_collection_from_paths(
+        video_path_to_id, _ = add_videos.load_into_collection_from_paths(
             session=self.session,
             collection_id=self.collection_id,
             video_paths=video_paths,
@@ -161,6 +161,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             target_fps=target_fps,
             embed_frames=embed_frames,
         )
+        created_sample_ids = list(video_path_to_id.values())
 
         if embed:
             _generate_embeddings_video(

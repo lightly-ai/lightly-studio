@@ -24,7 +24,10 @@ from lightly_studio.dataset.embedding_manager import (
 from lightly_studio.dataset.embedding_result import EmbeddingResult
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import CollectionTable, SampleType
-from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
+from lightly_studio.models.embedding_model import (
+    EmbeddingModelTable,
+    EmbeddingSpaceDescription,
+)
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.resolvers import (
@@ -70,6 +73,19 @@ def test_register_embedding_model(
     assert stored_model is not None
     assert stored_model.name == "Random"
     assert stored_model.embedding_dimension == 3
+    assert stored_model.dataset_id == collection.dataset_id
+
+
+def test_register_embedding_model__collection_not_found(db_session: Session) -> None:
+    manager = EmbeddingManager()
+    collection_id = UUID(int=0)
+
+    with pytest.raises(ValueError, match="Provided collection_id could not be found"):
+        manager.register_embedding_model(
+            session=db_session,
+            embedding_generator=RandomEmbeddingGenerator(),
+            collection_id=collection_id,
+        )
 
 
 def test_register_multiple_models(
@@ -88,10 +104,9 @@ def test_register_multiple_models(
 
     # Register a second model.
     class FakeEmbeddingGenerator(ImageEmbeddingGenerator):
-        def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
-            return EmbeddingModelCreate(
+        def get_embedding_model_input(self) -> EmbeddingSpaceDescription:
+            return EmbeddingSpaceDescription(
                 name="Fake",
-                collection_id=collection_id,
                 embedding_model_hash="fake_hash",
                 parameter_count_in_mb=50,
                 embedding_dimension=5,
@@ -132,8 +147,9 @@ def test_register_multiple_models(
     assert len(stored_models) == 2
     model_names = {model.name for model in stored_models}
     assert model_names == {"Random", "Fake"}
-    # Verify both models are associated with the same collection
+    # Verify both models are associated with the same collection and dataset
     assert all(model.collection_id == collection.collection_id for model in stored_models)
+    assert all(model.dataset_id == collection.dataset_id for model in stored_models)
 
 
 def test_embed_text_with_default_model(
@@ -613,10 +629,9 @@ def test_set_default_embedding_model_falls_back_to_env_for_unregistered_slot(
     class ImageOnlyGenerator:
         # Implements the image protocol but not embed_videos, so only the image
         # slot is overridden.
-        def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
-            return EmbeddingModelCreate(
+        def get_embedding_model_input(self) -> EmbeddingSpaceDescription:
+            return EmbeddingSpaceDescription(
                 name="ImageOnly",
-                collection_id=collection_id,
                 embedding_dimension=3,
                 embedding_model_hash="image_only_model",
             )
@@ -806,10 +821,9 @@ class TextOnlyEmbeddingGenerator:
     def __init__(self, dimension: int = 3) -> None:
         self._dimension = dimension
 
-    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
-        return EmbeddingModelCreate(
+    def get_embedding_model_input(self) -> EmbeddingSpaceDescription:
+        return EmbeddingSpaceDescription(
             name="TextOnly",
-            collection_id=collection_id,
             embedding_dimension=self._dimension,
             embedding_model_hash="text_only_model",
         )

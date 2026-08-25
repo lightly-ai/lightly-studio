@@ -266,6 +266,7 @@ def test_get_or_create__creates_new_model(db_session: Session) -> None:
 
     model_create = EmbeddingModelCreate(
         collection_id=collection.collection_id,
+        dataset_id=collection.dataset_id,
         name="Model Name",
         embedding_model_hash="model_hash",
         parameter_count_in_mb=200,
@@ -296,6 +297,7 @@ def test_get_or_create__reuses_existing_model(db_session: Session) -> None:
 
     model_create = EmbeddingModelCreate(
         collection_id=collection.collection_id,
+        dataset_id=collection.dataset_id,
         name="Model Name",
         embedding_model_hash="model_hash",
         parameter_count_in_mb=10,
@@ -327,6 +329,7 @@ def test_get_or_create__conflicting_model_raises(db_session: Session) -> None:
 
     conflicting_model_create = EmbeddingModelCreate(
         collection_id=collection.collection_id,
+        dataset_id=collection.dataset_id,
         name="Model Name",
         embedding_model_hash="model_hash",
         parameter_count_in_mb=2000,
@@ -348,6 +351,7 @@ def test_get_or_create__same_hash_different_collections(db_session: Session) -> 
 
     model_create_1 = EmbeddingModelCreate(
         collection_id=collection_1.collection_id,
+        dataset_id=collection_1.dataset_id,
         name="Test Model",
         embedding_model_hash="same_hash",
         parameter_count_in_mb=10,
@@ -359,6 +363,7 @@ def test_get_or_create__same_hash_different_collections(db_session: Session) -> 
 
     model_create_2 = EmbeddingModelCreate(
         collection_id=collection_2.collection_id,
+        dataset_id=collection_2.dataset_id,
         name="Test Model",
         embedding_model_hash="same_hash",
         parameter_count_in_mb=10,
