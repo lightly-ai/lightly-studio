@@ -355,8 +355,12 @@ body {
   opacity: 1;
 }
 
+/* The mark's own padding is the whole gap to the wordmark — see the margin
+   reset further down. lightly.ai sets that gap at 8.4px against a 25.1px mark
+   (`Logo.svg`, measured on its paths), so 0.335 of the mark's width; this mark
+   renders at 20px, which puts it at 6.7px. 0.35rem is 7. */
 .md-header__button.md-logo {
-  margin: 0 0.1rem 0 0;
+  margin: 0;
   padding: 0.35rem;
 }
 
@@ -388,9 +392,18 @@ body {
   height: 100%;
 }
 
-.md-header__title .md-header__topic {
+/* `--active` is Material's scroll state: it fades the site name out and slides
+   it 25px left to make room for the page title. That title is hidden below, so
+   the swap left the wordmark dissolving into an empty header. Pin it. */
+.md-header__title .md-header__topic,
+.md-header__title--active .md-header__topic {
   color: var(--ls-ink);
+  opacity: 1;
+  pointer-events: auto;
   position: relative;
+  transform: none;
+  transition: none;
+  z-index: 0;
 }
 
 .md-header__topic + .md-header__topic {
@@ -411,6 +424,7 @@ body {
    so there is nothing long enough for a fixed-size title to clip. */
 [dir] .md-header__title {
   flex-grow: 0;
+  margin-left: 0;
   margin-right: 0;
 }
 
