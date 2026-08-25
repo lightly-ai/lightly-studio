@@ -8,7 +8,6 @@ from uuid import UUID
 from sqlmodel import Session
 
 from lightly_studio.database.db_vector import Embedding
-from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import (
     embedding_model_resolver,
     sample_embedding_resolver,
@@ -45,14 +44,16 @@ def create_result_tag(
     tag_name: str,
     selected_sample_ids: Sequence[UUID],
 ) -> None:
-    """Create a sample tag and attach the selected sample ids."""
-    tag = tag_resolver.create(
+    """Attach the selected sample ids to the result sample tag, creating it if needed.
+
+    An existing tag is extended rather than replaced, which is how a run that reuses
+    its preselected tag name grows that tag. Callers must have rejected any other
+    name collision beforehand.
+    """
+    tag = tag_resolver.get_or_create_sample_tag_by_name(
         session=session,
-        tag=TagCreate(
-            collection_id=collection_id,
-            name=tag_name,
-            kind="sample",
-        ),
+        collection_id=collection_id,
+        tag_name=tag_name,
     )
     tag_resolver.add_sample_ids_to_tag_id(
         session=session, tag_id=tag.tag_id, sample_ids=list(selected_sample_ids)
