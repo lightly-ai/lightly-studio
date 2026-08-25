@@ -16,9 +16,11 @@ from lightly_studio.core.file_outcome_report import (
     FileOutcome,
     FileOutcomeReport,
 )
+from lightly_studio.dataset import remote_storage
 from lightly_studio.dataset.embedding_generator import ImageCrop
 from lightly_studio.dataset.embedding_result import EmbeddingResult
 from lightly_studio.dataset.image_embedding import EmbeddingContext
+from lightly_studio.utils import parallelize
 
 
 def embed_image_crops_batched(
@@ -58,6 +60,23 @@ def embed_image_crops_batched(
     for index, image_crop in enumerate(image_crops):
         crops_by_filepath.setdefault(image_crop.filepath, []).append((index, image_crop))
 
+    # Overlap the per-file reads, which dominate this loop for remote (e.g. S3) sources. Workers
+    # only read and decode; cropping, inference, and reporting stay on this thread, so the model is
+    # never touched concurrently and `FileOutcomeReport`, which is not thread-safe, is only ever
+    # written here. Ordered results keep the report's example paths in input order.
+    #
+    # Read-ahead is held at the worker count rather than a multiple of it: each in-flight item is a
+    # decoded full-resolution image, which is orders of magnitude larger than the preprocessed
+    # tensors buffered on the full-image path.
+    filepaths = list(crops_by_filepath)
+    max_workers = remote_storage.read_workers_for_path(filepaths[0]) if filepaths else 1
+    loaded_images = parallelize.thread_imap_lazy(
+        function=_load_image,
+        iterable=filepaths,
+        max_workers=max_workers,
+        buffer_size=max_workers,
+    )
+
     embeddings = np.empty((total_crops, context.embedding_dimension), dtype=np.float32)
     # Input indices of the crops that were embedded (their file could be read).
     kept_indices: list[int] = []
@@ -75,15 +94,12 @@ def embed_image_crops_batched(
         ) as progress_bar,
         torch.no_grad(),
     ):
-        for filepath, indexed_crops in crops_by_filepath.items():
-            try:
-                with fsspec.open(filepath, "rb") as file:
-                    image = Image.open(file).convert("RGB")
-            except BROKEN_IMAGE_ERRORS:
+        for filepath, image in zip(filepaths, loaded_images):
+            if image is None:
                 report.record(path=filepath, outcome=FileOutcome.BROKEN)
                 continue
             report.record(path=filepath, outcome=FileOutcome.ADDED)
-            for index, image_crop in indexed_crops:
+            for index, image_crop in crops_by_filepath[filepath]:
                 cropped = image.crop(
                     (
                         image_crop.x,
@@ -124,6 +140,25 @@ def embed_image_crops_batched(
     # kept_indices in input order maps each returned row back to its input crop.
     kept_indices.sort()
     return EmbeddingResult(embeddings=embeddings[kept_indices], kept_indices=kept_indices)
+
+
+def _load_image(filepath: str) -> Image.Image | None:
+    """Read and decode one source image, returning None if it is unreadable.
+
+    Runs in a worker thread, so it touches no shared state. A broken file is reported as ``None``
+    for the caller to record, because the outcome report is not thread-safe.
+
+    Args:
+        filepath: Path of the source image to read.
+
+    Returns:
+        The decoded RGB image, or ``None`` if the file could not be read or decoded.
+    """
+    try:
+        with fsspec.open(filepath, "rb") as file:
+            return Image.open(file).convert("RGB")
+    except BROKEN_IMAGE_ERRORS:
+        return None
 
 
 def _flush_crop_batch(

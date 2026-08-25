@@ -40,6 +40,25 @@ LIGHTLY_STUDIO_POSTHOG_HOST: str = env.str(
     "LIGHTLY_STUDIO_POSTHOG_HOST", "https://eu.i.posthog.com"
 )
 
+# Number of concurrent reads issued against remote (cloud) storage during import. Sized for
+# request latency rather than CPU count: a remote read spends nearly all its time waiting, so
+# more can be in flight than there are cores. Local paths keep the CPU-derived worker count
+# instead, because extra threads only add contention on a local disk.
+#
+# Do not raise this much higher without measuring. All fsspec cloud backends funnel their I/O
+# through one shared asyncio event loop, so past a few tens of readers that loop, not the
+# network, is the limit: throughput measurably degrades and very high values are slower than
+# reading serially.
+LIGHTLY_STUDIO_IO_CONCURRENCY: int = env.int("LIGHTLY_STUDIO_IO_CONCURRENCY", 16)
+# Read-ahead block size for partial reads from remote storage. The s3fs default is 50 MiB, which
+# makes a header-only read (e.g. reading image dimensions) fetch the whole object; 256 KiB keeps
+# such a read to a single small request.
+LIGHTLY_STUDIO_REMOTE_BLOCK_SIZE: int = env.int("LIGHTLY_STUDIO_REMOTE_BLOCK_SIZE", 256 * 1024)
+# Size of the underlying HTTP connection pool for S3. Must be at least
+# LIGHTLY_STUDIO_IO_CONCURRENCY, or concurrent readers queue behind the pool instead of running
+# in parallel. 0 means "derive from LIGHTLY_STUDIO_IO_CONCURRENCY"; botocore's own default is 10.
+LIGHTLY_STUDIO_S3_MAX_POOL_CONNECTIONS: int = env.int("LIGHTLY_STUDIO_S3_MAX_POOL_CONNECTIONS", 0)
+
 LIGHTLY_STUDIO_REQUEST_TIMING_ENABLED: bool = env.bool(
     "LIGHTLY_STUDIO_REQUEST_TIMING_ENABLED", False
 )

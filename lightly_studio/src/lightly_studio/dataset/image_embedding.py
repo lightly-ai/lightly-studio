@@ -8,7 +8,6 @@ crop-specific path lives in ``image_crop_embedding.py`` and reuses the same
 
 from __future__ import annotations
 
-import os
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from typing import TypeVar
@@ -25,6 +24,7 @@ from lightly_studio.core.file_outcome_report import (
     FileOutcome,
     FileOutcomeReport,
 )
+from lightly_studio.dataset import remote_storage
 from lightly_studio.dataset.embedding_result import EmbeddingResult
 from lightly_studio.utils import batching, parallelize
 
@@ -94,6 +94,9 @@ def embed_image_files_batched(
         context=context,
         show_progress=show_progress,
         progress=_EmbeddingProgress(desc="Generating embeddings", unit=" images"),
+        # These items are read over the network, so concurrency is sized for request latency
+        # rather than for the core count.
+        max_workers=remote_storage.read_workers_for_path(filepaths[0]) if filepaths else 1,
     )
 
     kept_indices_set = set(result.kept_indices)
@@ -128,16 +131,19 @@ def embed_pil_images_batched(
         context=context,
         show_progress=show_progress,
         progress=_EmbeddingProgress(desc="Generating frame embeddings", unit=" frames"),
+        # Already-decoded images: preprocessing is pure CPU work, so no extra I/O concurrency.
+        max_workers=remote_storage.cpu_workers(),
     )
     return result.embeddings
 
 
-def _embed_items_batched(
+def _embed_items_batched(  # noqa: PLR0913
     items: Sequence[_ItemT],
     preprocess_item: Callable[[_ItemT], torch.Tensor | None],
     context: EmbeddingContext,
     show_progress: bool,
     progress: _EmbeddingProgress,
+    max_workers: int,
 ) -> EmbeddingResult:
     """Preprocess items on a thread pool and embed them in batches, preserving order.
 
@@ -148,6 +154,15 @@ def _embed_items_batched(
     the calling thread, so the model is never touched concurrently; ``thread_imap_lazy`` preserves
     input order and caps the items in flight, keeping embeddings aligned to ``items`` and memory
     bounded.
+
+    Args:
+        items: Items to preprocess and embed, in the order the results should follow.
+        preprocess_item: Converts one item to a model input tensor, or returns ``None`` to skip it.
+        context: Model-specific embedding configuration.
+        show_progress: Whether to show a tqdm progress bar.
+        progress: tqdm label configuration.
+        max_workers: Preprocessing thread count. Callers reading items over the network size this
+            for request latency; callers preprocessing in-memory items pass the CPU count.
 
     Returns:
         An ``EmbeddingResult`` whose embeddings cover the kept items and whose
@@ -164,7 +179,7 @@ def _embed_items_batched(
     preprocessed_tensors = parallelize.thread_imap_lazy(
         function=preprocess_item,
         iterable=items,
-        max_workers=_preprocess_workers(),
+        max_workers=max_workers,
         # Read at most one extra batch ahead so a full next batch is ready during inference
         # while memory stays bounded to a small multiple of the batch size.
         buffer_size=2 * context.max_batch_size,
@@ -234,13 +249,3 @@ def _encode_preprocessed_batches(
 
     # Truncate to the number of tensors actually encoded (``max_items`` was an upper bound).
     return embeddings[:position]
-
-
-def _preprocess_workers() -> int:
-    """Return the thread count for parallel per-item preprocessing.
-
-    Uses available cores - 1 (at least 1), capped at 16, matching the decode-thread and
-    shared-executor conventions elsewhere in the codebase.
-    """
-    cpu_count = os.cpu_count() or 1
-    return max(1, min(cpu_count - 1 or 1, 16))

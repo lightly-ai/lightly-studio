@@ -8,6 +8,7 @@ import logging
 import posixpath
 from collections import defaultdict
 from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID
 
@@ -28,10 +29,12 @@ from lightly_studio.core.file_outcome_report import (
     BrokenInputFileError,
     FileOutcome,
     FileOutcomeReport,
+    InputFileError,
     MissingInputFileError,
 )
 from lightly_studio.core.image import add_annotations
 from lightly_studio.core.image.image_sample import ImageSample
+from lightly_studio.dataset import remote_storage
 from lightly_studio.models.caption import CaptionCreate
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import (
@@ -41,11 +44,14 @@ from lightly_studio.resolvers import (
     tag_resolver,
 )
 from lightly_studio.type_definitions import PathLike
+from lightly_studio.utils import parallelize
 
 logger = logging.getLogger(__name__)
 
 # Constants
-SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
+# Number of samples inserted per database flush. Each flush costs a collection-type query, a
+# bulk insert, and a commit, so a larger batch keeps that fixed cost off the per-image path.
+SAMPLE_BATCH_SIZE = 500
 
 
 class BrokenImageCollector:
@@ -69,6 +75,46 @@ class BrokenImageCollector:
             return
         self._recorded_paths.add(path_str)
         self.report.record(path=path_str, outcome=FileOutcome.BROKEN)
+
+
+@dataclass(frozen=True)
+class _ProbeResult:
+    """The outcome of reading one image's dimensions, produced off the main thread.
+
+    Carries the failure instead of raising it so `_probe_image` can run in a worker thread while
+    `FileOutcomeReport`, which is not thread-safe, stays on the consumer thread. The consumer
+    calls `raise_if_failed` inside `report.track` to record the outcome.
+
+    Exactly one of `error` or the dimension pair is set: `error` on failure, both dimensions on
+    success.
+
+    Attributes:
+        path: The image path that was probed.
+        width: Image width in pixels, or None if the probe failed.
+        height: Image height in pixels, or None if the probe failed.
+        error: The signal describing why the probe failed, or None on success.
+    """
+
+    path: str
+    width: int | None = None
+    height: int | None = None
+    error: InputFileError | None = None
+
+    def raise_if_failed(self) -> tuple[int, int]:
+        """Return the probed dimensions, re-raising the worker's failure signal instead.
+
+        Returns:
+            The image `(width, height)` in pixels.
+
+        Raises:
+            InputFileError: The signal recorded by the worker, if the probe failed.
+        """
+        if self.error is not None:
+            raise self.error
+        # A successful probe always sets both dimensions.
+        assert self.width is not None
+        assert self.height is not None
+        return self.width, self.height
 
 
 def load_into_dataset_from_paths(
@@ -110,44 +156,45 @@ def load_into_dataset_from_paths(
 
     report = FileOutcomeReport()
 
-    # TODO(Malte, 07/2026): Parallelize image indexing across images with
-    # parallelize.thread_imap_lazy (one task per image; workers and prefetch stay
-    # bounded) to overlap the per-image reads, especially for remote (e.g. S3) inputs.
-    # Keep DB writes on a single thread.
-    for normalized_path in tqdm(
-        normalized_paths,
+    # Paths needing I/O, recording the already-present ones as they are filtered out. Dedup stays
+    # on this thread: the probe workers below must not share mutable state.
+    paths_to_probe: list[str] = []
+    for normalized_path in normalized_paths:
+        if normalized_path in seen_or_existing_paths:
+            report.record(path=normalized_path, outcome=FileOutcome.ALREADY_PRESENT)
+            continue
+        seen_or_existing_paths.add(normalized_path)
+        paths_to_probe.append(normalized_path)
+
+    # Overlap the per-image reads, which dominate the loop for remote (e.g. S3) inputs. Workers
+    # only read; they classify failures into `_ProbeResult.error` for the consumer to replay,
+    # because `FileOutcomeReport` is not thread-safe. Ordered results keep the returned sample IDs
+    # in input order, which callers rely on, and `buffer_size` bounds the reads in flight.
+    max_workers = remote_storage.read_workers_for_path(paths_to_probe[0]) if paths_to_probe else 1
+    probe_results = parallelize.thread_imap_lazy(
+        function=_probe_image,
+        iterable=paths_to_probe,
+        max_workers=max_workers,
+        buffer_size=2 * max_workers,
+    )
+
+    # DB writes stay on this thread; the workers above never touch the session.
+    for probe in tqdm(
+        probe_results,
+        total=len(paths_to_probe),
         desc="Processing images",
         unit=" images",
         disable=not show_progress,
     ):
-        with report.track(path=normalized_path):
-            # Skip paths already in the database or already seen in this call.
-            if normalized_path in seen_or_existing_paths:
-                raise AlreadyPresentInputFileError()
-
-            # Detect a missing path proactively: FileNotFoundError is unreliable across
-            # fsspec backends and is a subclass of OSError, which we treat as broken.
-            if not _file_exists(normalized_path):
-                raise MissingInputFileError()
-
-            # Translate a failed header read into a broken-file signal at this I/O
-            # boundary; any other exception propagates rather than being recorded.
-            fs, fs_path = fsspec.core.url_to_fs(normalized_path)
-            try:
-                with fs.open(fs_path, "rb") as file:
-                    image = PIL.Image.open(file)
-                    width, height = image.size
-                    image.close()
-            except BROKEN_IMAGE_ERRORS as e:
-                raise BrokenInputFileError() from e
+        with report.track(path=probe.path):
+            width, height = probe.raise_if_failed()
 
             sample = ImageCreate(
-                file_name=Path(normalized_path).name,
-                file_path_abs=normalized_path,
+                file_name=Path(probe.path).name,
+                file_path_abs=probe.path,
                 width=width,
                 height=height,
             )
-            seen_or_existing_paths.add(normalized_path)
             samples_to_create.append(sample)
 
             # Process batch when it reaches SAMPLE_BATCH_SIZE
@@ -488,6 +535,38 @@ def _group_captions_by_image_id(
             continue
         captions_by_image_id[image_id].append(caption_text)
     return captions_by_image_id
+
+
+def _probe_image(path: str) -> _ProbeResult:
+    """Read one image's dimensions, classifying an unreadable file instead of raising.
+
+    Runs in a worker thread, so it touches no shared state and performs no database work. A
+    missing or undecodable file is reported through `_ProbeResult.error` for the caller to replay;
+    any other exception propagates, because a bug or infra failure is not a file outcome.
+
+    Only the image header is needed, so the read is capped to a small block: the default remote
+    read-ahead would fetch the whole object to answer it.
+
+    Args:
+        path: The absolute image path to probe.
+
+    Returns:
+        A `_ProbeResult` with the dimensions on success, or with `error` set on failure.
+    """
+    fs, fs_path = fsspec.core.url_to_fs(path)
+    try:
+        with fs.open(fs_path, "rb", **remote_storage.open_kwargs_for_path(path)) as file:
+            image = PIL.Image.open(file)
+            width, height = image.size
+            image.close()
+    except FileNotFoundError:
+        # Must precede BROKEN_IMAGE_ERRORS: FileNotFoundError is a subclass of OSError. Backends
+        # that raise a bare OSError for an absent path report it as broken rather than missing;
+        # both are tolerated failures, so only the reported label differs.
+        return _ProbeResult(path=path, error=MissingInputFileError())
+    except BROKEN_IMAGE_ERRORS:
+        return _ProbeResult(path=path, error=BrokenInputFileError())
+    return _ProbeResult(path=path, width=width, height=height)
 
 
 def _file_exists(path: str) -> bool:

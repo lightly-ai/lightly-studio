@@ -9,6 +9,8 @@ from typing import Any, cast
 
 import fsspec
 
+from lightly_studio.dataset import remote_storage
+
 # Keys accepted by apply_cloud_credentials. Only well-known cloud provider
 # environment variables are allowed to prevent arbitrary process-environment
 # injection through the enterprise credential endpoint.
@@ -57,6 +59,10 @@ def apply_cloud_credentials(credentials: dict[str, str]) -> None:
         # Replace instead of update so removed credential fields do not survive
         # a credential rotation.
         fsspec.config.conf[protocol] = protocol_config
+
+    # Replacing the per-protocol config above drops any non-credential settings, so re-apply the
+    # connection pool sizing before the filesystems are rebuilt.
+    remote_storage.apply_s3_connection_pool_config()
 
     for filesystem_class in filesystem_classes:
         filesystem_class.clear_instance_cache()

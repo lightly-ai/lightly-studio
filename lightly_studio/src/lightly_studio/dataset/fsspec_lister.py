@@ -13,6 +13,8 @@ from typing import Any
 import fsspec
 from tqdm import tqdm
 
+from lightly_studio.dataset import remote_storage
+
 # Constants
 PROTOCOL_SEPARATOR = "://"
 DEFAULT_PROTOCOL = "file"
@@ -21,8 +23,6 @@ PATH_SEPARATOR = "/"
 # Glob pattern characters
 GLOB_CHARS = ["*", "?", "[", "]"]
 
-# Cloud storage protocols
-CLOUD_PROTOCOLS = ("s3", "gs", "gcs", "azure", "abfs")
 
 # Image file extensions
 IMAGE_EXTENSIONS = {
@@ -167,7 +167,7 @@ def _stream_files_from_directory(
     """
     try:
         protocol = _get_protocol_string(fs)
-        if protocol in CLOUD_PROTOCOLS:
+        if protocol in remote_storage.CLOUD_PROTOCOLS:
             yield from _stream_files_using_walk(fs, path, extensions)
         else:
             try:
@@ -234,6 +234,10 @@ def _get_filesystem(path: str) -> fsspec.AbstractFileSystem:
     # Ensure protocol is a string, not a tuple
     if isinstance(protocol, (list, tuple)):
         protocol = protocol[0]
+
+    if protocol == "s3":
+        # Sized before the filesystem is instantiated, since the pool is fixed at construction.
+        remote_storage.apply_s3_connection_pool_config()
 
     return fsspec.filesystem(protocol)
 
