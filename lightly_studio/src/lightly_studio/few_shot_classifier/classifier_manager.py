@@ -617,14 +617,25 @@ def _get_embedding_model_by_hash(
 ) -> EmbeddingModelTable | None:
     """Resolve the embedding model with the given hash within the collection's dataset.
 
-    A classifier stores the hash of the model it was trained on. The model is looked up by
-    ``(dataset_id, embedding_model_hash)`` so it resolves regardless of whether it is the
-    collection's default embedding space.
+    A classifier stores the hash of the model it was trained on. The model is resolved by
+    ``(dataset_id, embedding_model_hash)`` so it is found regardless of which collection in
+    the dataset owns the row.
+
+    Args:
+        session: The database session.
+        embedding_model_hash: The hash of the model the classifier was trained on.
+        collection_id: The collection the classifier belongs to.
+
+    Returns:
+        The matching embedding model, or ``None`` if the dataset has no model with the hash.
+
+    Raises:
+        ValueError: If the collection does not exist.
     """
     collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
     if collection is None:
         raise ValueError(f"Collection {collection_id} not found.")
-    return embedding_model_resolver.get_by_model_hash(
+    return embedding_model_resolver.get_by_dataset_id_and_model_hash(
         session=session,
         dataset_id=collection.dataset_id,
         embedding_model_hash=embedding_model_hash,
