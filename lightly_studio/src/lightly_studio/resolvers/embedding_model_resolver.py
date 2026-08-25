@@ -90,20 +90,6 @@ def get_by_model_hash(
     return session.exec(query).first()
 
 
-def get_by_collection_id_and_hash(
-    session: Session, collection_id: UUID, embedding_model_hash: str
-) -> EmbeddingModelTable | None:
-    """Return the collection's embedding model if it carries the given hash.
-
-    A collection maps to a single model through ``default_embedding_space``; this returns it
-    only when its hash matches, and None otherwise.
-    """
-    models = get_all_by_collection_id(session=session, collection_id=collection_id)
-    return next(
-        (model for model in models if model.embedding_model_hash == embedding_model_hash), None
-    )
-
-
 def get_by_name(
     session: Session, collection_id: UUID, embedding_model_name: str | None
 ) -> EmbeddingModelTable:
