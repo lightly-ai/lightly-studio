@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator
 from pathlib import Path
-from uuid import UUID
 
 import fsspec
 import numpy as np
@@ -63,11 +62,8 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
         self._model = self._model.to(self._device)
         self._model_hash = file_utils.get_file_xxhash(Path(model_path))
 
-    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
+    def get_embedding_model_input(self) -> EmbeddingModelCreate:
         """Generate an EmbeddingModelCreate instance.
-
-        Args:
-            collection_id: The ID of the collection.
 
         Returns:
             An EmbeddingModelCreate instance with the model details.
@@ -76,7 +72,6 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             name=MODEL_NAME,
             embedding_model_hash=self._model_hash,
             embedding_dimension=self._model.output_dim,
-            collection_id=collection_id,
         )
 
     def embed_text(self, text: str) -> list[float]:

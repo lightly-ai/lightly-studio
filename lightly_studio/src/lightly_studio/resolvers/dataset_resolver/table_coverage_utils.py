@@ -11,16 +11,15 @@ from sqlmodel import SQLModel
 # - export_job is handled by delete_dataset only (its collection_id FK must be cleared
 #   before the collection is deleted); deep_copy intentionally leaves it alone since a job
 #   is a transient download token, not data worth duplicating.
+# - default_embedding_space is handled by both (its collection_id is remapped on copy and
+#   its rows are deleted before the collections they reference).
 _HANDLED_TABLES_COUNT = 25
 
 # Tables not relevant for collection operations:
 # - setting (application-level, not collection-specific)
 # - two_dim_embeddings (cached projections, regenerated as needed)
-# - default_embedding_space (populated, but not yet handled by deep_copy/delete_dataset — see TODO)
-# TODO(Michal, 08/2026): wire default_embedding_space into deep_copy and delete_dataset,
-# then move it into _HANDLED_TABLES_COUNT. Until then, on Postgres delete_dataset raises an
-# FK error for any dataset with embeddings, and deep_copy silently drops the copied
-# collection's default.
+# - embedding_model (a shared global registry, not scoped to a collection: deep_copy reuses
+#   the existing rows and delete_dataset leaves them in place)
 _EXCLUDED_TABLES_COUNT = 3
 
 _TOTAL_TABLES_COUNT = _HANDLED_TABLES_COUNT + _EXCLUDED_TABLES_COUNT

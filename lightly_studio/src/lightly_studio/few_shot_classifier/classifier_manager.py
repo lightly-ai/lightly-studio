@@ -168,7 +168,6 @@ class ClassifierManager:
         embedding_model = embedding_model_resolver.get_by_model_hash(
             session=session,
             embedding_model_hash=classifier.few_shot_classifier.embedding_model_hash,
-            collection_id=classifier.collection_id,
         )
         if embedding_model is None:
             raise ValueError(
@@ -258,7 +257,6 @@ class ClassifierManager:
         embedding_model = embedding_model_resolver.get_by_model_hash(
             session=session,
             embedding_model_hash=classifier.embedding_model_hash,
-            collection_id=collection_id,
         )
         if embedding_model is None:
             raise ValueError(
@@ -393,7 +391,6 @@ class ClassifierManager:
         embedding_model = embedding_model_resolver.get_by_model_hash(
             session=session,
             embedding_model_hash=classifier.few_shot_classifier.embedding_model_hash,
-            collection_id=classifier.collection_id,
         )
         if embedding_model is None:
             raise ValueError(
@@ -456,7 +453,6 @@ class ClassifierManager:
         embedding_model = embedding_model_resolver.get_by_model_hash(
             session=session,
             embedding_model_hash=classifier.few_shot_classifier.embedding_model_hash,
-            collection_id=classifier.collection_id,
         )
         if embedding_model is None:
             raise ValueError(
@@ -592,7 +588,6 @@ class ClassifierManager:
         embedding_model = embedding_model_resolver.get_by_model_hash(
             session=session,
             embedding_model_hash=classifier.embedding_model_hash,
-            collection_id=collection_id,
         )
         if embedding_model is None:
             raise ValueError(

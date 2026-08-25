@@ -37,7 +37,7 @@ from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.dataset import DatasetTable
-from lightly_studio.models.embedding_model import EmbeddingModelTable
+from lightly_studio.models.default_embedding_space import DefaultEmbeddingSpaceTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
@@ -119,7 +119,10 @@ def delete_dataset(
     _delete_samples(session=session, dataset_id=dataset_id)
     _delete_annotation_labels(session=session, dataset_id=dataset_id)
     _delete_tags(session=session, dataset_id=dataset_id)
-    _delete_embedding_models(session=session, dataset_id=dataset_id)
+    # Embedding models are a shared global registry and survive the delete (only the
+    # per-collection default association is removed). The default_embedding_space rows
+    # must go before the collections they reference.
+    _delete_default_embedding_spaces(session=session, dataset_id=dataset_id)
     _delete_object_tracks(session=session, dataset_id=dataset_id)
     _delete_evaluation_runs(session=session, dataset_id=dataset_id)
     _delete_export_jobs(session=session, dataset_id=dataset_id)
@@ -317,11 +320,15 @@ def _delete_tags(session: Session, dataset_id: UUID) -> None:
     )
 
 
-def _delete_embedding_models(session: Session, dataset_id: UUID) -> None:
-    """Delete embedding models for the dataset's collections."""
+def _delete_default_embedding_spaces(session: Session, dataset_id: UUID) -> None:
+    """Delete the default embedding space rows for the dataset's collections.
+
+    The referenced embedding models are shared and left in place (they may be the default
+    of other collections); only the per-collection association is removed.
+    """
     session.exec(
-        delete(EmbeddingModelTable).where(
-            col(EmbeddingModelTable.collection_id).in_(_collection_ids_subquery(dataset_id))
+        delete(DefaultEmbeddingSpaceTable).where(
+            col(DefaultEmbeddingSpaceTable.collection_id).in_(_collection_ids_subquery(dataset_id))
         ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )

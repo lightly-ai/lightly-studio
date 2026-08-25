@@ -21,7 +21,7 @@ from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.dataset import DatasetTable
-from lightly_studio.models.embedding_model import EmbeddingModelTable
+from lightly_studio.models.default_embedding_space import DefaultEmbeddingSpaceTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.evaluation_sample_metric import (
@@ -107,8 +107,12 @@ def _dataset_table_counts(session: Session, dataset_id: UUID) -> dict[str, int]:
             SampleGroupLinkTable, col(SampleGroupLinkTable.sample_id).in_(sample_ids)
         ),
         "tag": count(TagTable, col(TagTable.collection_id).in_(collection_ids)),
-        "embedding_model": count(
-            EmbeddingModelTable, col(EmbeddingModelTable.collection_id).in_(collection_ids)
+        # Embedding models are a shared global registry (not scoped to a dataset), so they
+        # are not counted here. The per-collection default_embedding_space rows are what
+        # deep_copy duplicates and delete_dataset removes.
+        "default_embedding_space": count(
+            DefaultEmbeddingSpaceTable,
+            col(DefaultEmbeddingSpaceTable.collection_id).in_(collection_ids),
         ),
         "annotation_collection_coverage": count(
             AnnotationCollectionCoverageTable,
@@ -263,7 +267,7 @@ def test_deep_copy_then_delete_round_trip(db_session: Session) -> None:
         "metadata",
         "tag",
         "sample_tag_link",
-        "embedding_model",
+        "default_embedding_space",
         "annotation_label",
         "object_track",
         "evaluation_run",

@@ -316,14 +316,15 @@ def test_deep_copy__with_embeddings(db_session: Session) -> None:
         copy_name="copied",
     )
 
-    # Assert - embedding model is copied with new ID
+    # Assert - the embedding model is a shared global row, reused (not duplicated) by the
+    # copy, so the copied collection resolves the very same embedding_model_id.
     copied_embedding_models = embedding_model_resolver.get_all_by_collection_id(
         session=db_session,
         collection_id=copied.collection_id,
     )
     assert len(copied_embedding_models) == 1
     copied_model = copied_embedding_models[0]
-    assert copied_model.embedding_model_id != embedding_model.embedding_model_id
+    assert copied_model.embedding_model_id == embedding_model.embedding_model_id
     assert copied_model.name == embedding_model.name
     assert copied_model.embedding_model_hash == embedding_model.embedding_model_hash
     assert copied_model.embedding_dimension == embedding_model.embedding_dimension

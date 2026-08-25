@@ -22,6 +22,7 @@ from lightly_studio.models.embedding_model import (
 )
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.resolvers import embedding_model_resolver
+from tests.helpers_resolvers import create_image, create_sample_embedding
 
 
 @pytest.fixture
@@ -53,14 +54,28 @@ def fine_tuning_embeddings() -> list[SampleEmbeddingTable]:
 
 @pytest.fixture
 def embedding_model(db_session: Session, collection: CollectionTable) -> EmbeddingModelTable:
-    """Fixture to create an embedding model."""
-    embedding_model = EmbeddingModelCreate(
-        embedding_model_hash="mock_hash",
-        name="test_model",
-        collection_id=collection.collection_id,
-        embedding_dimension=3,
+    """Fixture to create an embedding model with an embedding in the collection.
+
+    Embedding models are a shared global registry; they belong to a collection only
+    through the samples they embedded, so the model is given one embedding in the
+    collection to make ``get_all_by_collection_id`` resolve it.
+    """
+    embedding_model = embedding_model_resolver.create(
+        session=db_session,
+        embedding_model=EmbeddingModelCreate(
+            embedding_model_hash="mock_hash",
+            name="test_model",
+            embedding_dimension=3,
+        ),
     )
-    return embedding_model_resolver.create(session=db_session, embedding_model=embedding_model)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    create_sample_embedding(
+        session=db_session,
+        sample_id=image.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[0.1, 0.2, 0.3],
+    )
+    return embedding_model
 
 
 @pytest.fixture

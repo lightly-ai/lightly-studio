@@ -44,7 +44,7 @@ from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.dataset import DatasetTable
-from lightly_studio.models.embedding_model import EmbeddingModelTable
+from lightly_studio.models.default_embedding_space import DefaultEmbeddingSpaceTable
 from lightly_studio.models.evaluation_annotation_metric import (
     EvaluationAnnotationMetricTable,
 )
@@ -68,6 +68,10 @@ _MAP_SAMPLE = "deep_copy_map_sample"
 _MAP_TAG = "deep_copy_map_tag"
 _MAP_OBJECT_TRACK = "deep_copy_map_object_track"
 _MAP_ANNOTATION_LABEL = "deep_copy_map_annotation_label"
+# Embedding models are a shared global registry, so they are not duplicated. This map is
+# an identity map (old_id == new_id) scoped to the models with an embedding in the copied
+# samples; it lets _copy_sample_embeddings keep its embedding_model_id FK pointing at the
+# existing shared row.
 _MAP_EMBEDDING_MODEL = "deep_copy_map_embedding_model"
 _MAP_EVALUATION_RUN = "deep_copy_map_evaluation_run"
 
@@ -117,7 +121,7 @@ def deep_copy(
     _copy_tags(session=session, now=now)
     _copy_object_tracks(session=session, new_dataset_id=new_dataset_id)
     _copy_annotation_labels(session=session, new_dataset_id=new_dataset_id)
-    _copy_embedding_models(session=session, now=now)
+    _copy_default_embedding_space(session=session)
     _copy_samples(session=session, now=now)
     _copy_evaluation_runs(session=session, new_dataset_id=new_dataset_id, now=now)
 
@@ -190,11 +194,16 @@ def _build_id_maps(session: Session, old_dataset_id: UUID) -> None:
         where_sql="dataset_id = :old_dataset_id",
         params=dataset_params,
     )
+    # Identity map: embedding models are shared and not duplicated, so old_id == new_id.
+    # Scoped from sample_embedding (models with an embedding in the copied samples) since
+    # embedding_model no longer carries a collection_id.
     _create_id_map(
         session=session,
-        source_table="embedding_model",
+        source_table="sample_embedding",
         id_column="embedding_model_id",
-        where_sql=in_collection_map,
+        where_sql=f"sample_id IN (SELECT old_id FROM {_MAP_SAMPLE})",
+        map_table_name=_MAP_EMBEDDING_MODEL,
+        identity=True,
     )
     _create_id_map(
         session=session,
@@ -204,12 +213,14 @@ def _build_id_maps(session: Session, old_dataset_id: UUID) -> None:
     )
 
 
-def _create_id_map(
+def _create_id_map(  # noqa: PLR0913
     session: Session,
     source_table: str,
     id_column: str,
     where_sql: str,
     params: dict[str, Any] | None = None,
+    map_table_name: str | None = None,
+    identity: bool = False,
 ) -> None:
     """Create a temporary ``(old_id, new_id)`` table for in-scope rows of a source table.
 
@@ -219,17 +230,26 @@ def _create_id_map(
 
     Args:
         session: Database session.
-        source_table: Table to map ids for; also determines the temp table name.
-        id_column: Primary-key column whose values become ``old_id``.
+        source_table: Table to select the ids from; also determines the temp table name
+            unless ``map_table_name`` overrides it.
+        id_column: Column whose values become ``old_id``.
         where_sql: SQL predicate selecting the in-scope rows. An internal constant; any
             values are bound through ``params``.
         params: Bind parameters referenced by ``where_sql``.
+        map_table_name: Explicit temp table name, needed when it must not follow the
+            source table (e.g. a map built from ``sample_embedding`` but named for
+            embedding models).
+        identity: When True, ``new_id`` equals ``old_id`` (the entity is shared, not
+            duplicated) and ``SELECT DISTINCT`` deduplicates the ids; otherwise a fresh
+            ``gen_random_uuid()`` is assigned per row.
     """
-    map_name = f"deep_copy_map_{source_table}"
+    map_name = map_table_name or f"deep_copy_map_{source_table}"
+    new_id_expr = id_column if identity else "gen_random_uuid()"
+    distinct = "DISTINCT " if identity else ""
     session.execute(
         text(
             f"CREATE TEMPORARY TABLE {map_name} ON COMMIT DROP AS "
-            f"SELECT {id_column} AS old_id, gen_random_uuid() AS new_id "
+            f"SELECT {distinct}{id_column} AS old_id, {new_id_expr} AS new_id "
             f"FROM {source_table} WHERE {where_sql}"
         ),
         params or {},
@@ -436,22 +456,22 @@ def _copy_annotation_labels(session: Session, new_dataset_id: UUID) -> None:
     )
 
 
-def _copy_embedding_models(session: Session, now: datetime) -> None:
-    """Copy embedding models, remapping collection_id."""
-    src = _table(EmbeddingModelTable).alias("src")
-    map_model = _map(_MAP_EMBEDDING_MODEL)
+def _copy_default_embedding_space(session: Session) -> None:
+    """Copy each collection's default embedding space, remapping collection_id.
+
+    Embedding models are shared, so ``embedding_model_id`` is copied verbatim and points
+    at the same global row; only ``collection_id`` is remapped to the copied collection.
+    """
+    src = _table(DefaultEmbeddingSpaceTable).alias("src")
     map_collection = _map(_MAP_COLLECTION)
-    from_clause = src.join(map_model, map_model.c.old_id == src.c["embedding_model_id"]).join(
-        map_collection, map_collection.c.old_id == src.c["collection_id"]
-    )
+    from_clause = src.join(map_collection, map_collection.c.old_id == src.c["collection_id"])
     overrides = {
-        "embedding_model_id": map_model.c.new_id,
         "collection_id": map_collection.c.new_id,
-        "created_at": literal(now),
+        "embedding_model_id": src.c["embedding_model_id"],
     }
     _copy_table(
         session=session,
-        target=EmbeddingModelTable,
+        target=DefaultEmbeddingSpaceTable,
         source=src,
         from_clause=from_clause,
         overrides=overrides,

@@ -10,6 +10,8 @@ from lightly_studio.models.embedding_model import (
     EmbeddingModelCreate,
     EmbeddingModelTable,
 )
+from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 
 
 def create(session: Session, embedding_model: EmbeddingModelCreate) -> EmbeddingModelTable:
@@ -25,7 +27,6 @@ def get_or_create(session: Session, embedding_model: EmbeddingModelCreate) -> Em
     """Retrieve an existing EmbeddingModel by hash or create a new one if it does not exist."""
     db_model = get_by_model_hash(
         session=session,
-        collection_id=embedding_model.collection_id,
         embedding_model_hash=embedding_model.embedding_model_hash,
     )
     if db_model is None:
@@ -44,10 +45,23 @@ def get_or_create(session: Session, embedding_model: EmbeddingModelCreate) -> Em
 
 
 def get_all_by_collection_id(session: Session, collection_id: UUID) -> list[EmbeddingModelTable]:
-    """Retrieve all embedding models."""
+    """Retrieve the embedding models that have an embedding in the collection.
+
+    Embedding models are a global registry shared across collections, so a model belongs
+    to a collection only through the samples it has embedded. This joins
+    ``sample_embedding`` to ``sample`` and keeps the distinct models whose embeddings
+    belong to a sample in the collection.
+    """
     embedding_models = session.exec(
         select(EmbeddingModelTable)
-        .where(EmbeddingModelTable.collection_id == collection_id)
+        .join(
+            SampleEmbeddingTable,
+            col(SampleEmbeddingTable.embedding_model_id)
+            == col(EmbeddingModelTable.embedding_model_id),
+        )
+        .join(SampleTable, col(SampleTable.sample_id) == col(SampleEmbeddingTable.sample_id))
+        .where(col(SampleTable.collection_id) == collection_id)
+        .distinct()
         .order_by(col(EmbeddingModelTable.created_at).asc())
     ).all()
     return list(embedding_models)
@@ -62,14 +76,15 @@ def get_by_id(session: Session, embedding_model_id: UUID) -> EmbeddingModelTable
     ).one_or_none()
 
 
-def get_by_model_hash(
-    session: Session, collection_id: UUID, embedding_model_hash: str
-) -> EmbeddingModelTable | None:
-    """Retrieve a single embedding model by hash and collection."""
+def get_by_model_hash(session: Session, embedding_model_hash: str) -> EmbeddingModelTable | None:
+    """Retrieve a single embedding model by hash.
+
+    Embedding models are deduplicated globally by hash, so the same weights map to a
+    single shared row regardless of collection.
+    """
     query = select(EmbeddingModelTable).where(
         EmbeddingModelTable.embedding_model_hash == embedding_model_hash
     )
-    query = query.where(EmbeddingModelTable.collection_id == collection_id)
     return session.exec(query).one_or_none()
 
 
