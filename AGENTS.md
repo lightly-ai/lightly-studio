@@ -3,16 +3,24 @@
 ## Coding Guidelines
 
 Our coding guidelines are [Agent Skills](https://agentskills.io) in [`.agents/skills`](./.agents/skills).
-Claude Code, Codex and Gemini CLI load them automatically when a task matches. If your tool does not
-support skills, read the relevant `SKILL.md` yourself before changing code:
+Skills do not load automatically. Before you edit a file, load the skill for its path. If your
+tool cannot load skills, read that `SKILL.md` first.
 
-- [Frontend](./.agents/skills/frontend-guide/SKILL.md): TypeScript and SvelteKit standards. Read before touching `lightly_studio_view`.
-- [Python](./.agents/skills/python-guide/SKILL.md): Python style. Read before touching any Python file.
-- [Backend](./.agents/skills/backend-guide/SKILL.md): FastAPI and SQLModel architecture. Read before touching `lightly_studio`.
-- [Best Practices](./.agents/skills/best-practices/SKILL.md): General principles for readability, maintainability, and performance.
-- [Glossary](./.agents/skills/glossary/SKILL.md): Terminology and naming conventions.
-- [Pull Requests](./.agents/skills/pull-requests/SKILL.md): Guidelines for submitting a pull request.
-- [Contributing](./CONTRIBUTING.md): Development setup and testing instructions.
+Load the skill that matches the path you edit:
+
+- `lightly_studio/**/*.py` → [python-guide](./.agents/skills/python-guide/SKILL.md): Python style.
+- `lightly_studio/src/lightly_studio/**` → also [backend-guide](./.agents/skills/backend-guide/SKILL.md): FastAPI and SQLModel.
+- `lightly_studio_view/**` (`.ts`, `.svelte`) → [frontend-guide](./.agents/skills/frontend-guide/SKILL.md): TypeScript and SvelteKit.
+
+When the task matches, also load:
+
+- [best-practices](./.agents/skills/best-practices/SKILL.md): a new function, module, or component.
+- [glossary](./.agents/skills/glossary/SKILL.md): names for anything that users see.
+- [pull-requests](./.agents/skills/pull-requests/SKILL.md): a pull request.
+- [Contributing](./CONTRIBUTING.md): setup and tests.
+
+Claude Code gives you a reminder. A `PreToolUse` hook (`.claude/settings.json` and
+`.claude/hooks/skill-reminder.py`) shows the matching skill when you edit these paths.
 
 ## Validation
 

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { buildRequestBody, type ImagesInfiniteParams } from './useImagesInfinite';
-import type { SortFieldExpr } from '$lib/api/lightly_studio_local';
+import type { ImageSortFieldExpr } from '$lib/api/lightly_studio_local';
 import type { QueryClient, CreateInfiniteQueryResult } from '@tanstack/svelte-query';
 import * as tanstackQuery from '@tanstack/svelte-query';
 import { useImagesInfinite } from './useImagesInfinite';
@@ -39,7 +39,7 @@ describe('useImagesInfinite', () => {
 
     describe('sort_by in query key', () => {
         it('includes sort_by in the query key when provided', () => {
-            const sort: SortFieldExpr[] = [
+            const sort: ImageSortFieldExpr[] = [
                 { source: 'image', field_name: 'score', direction: 'desc' }
             ];
 
@@ -55,10 +55,10 @@ describe('useImagesInfinite', () => {
         });
 
         it('produces different query keys for different sort_by values', () => {
-            const sort1: SortFieldExpr[] = [
+            const sort1: ImageSortFieldExpr[] = [
                 { source: 'image', field_name: 'score', direction: 'desc' }
             ];
-            const sort2: SortFieldExpr[] = [
+            const sort2: ImageSortFieldExpr[] = [
                 { source: 'image', field_name: 'filename', direction: 'asc' }
             ];
 
@@ -74,7 +74,7 @@ describe('useImagesInfinite', () => {
 
     describe('sort_by in request body', () => {
         it('passes sort_by to readImages when provided', async () => {
-            const sort: SortFieldExpr[] = [
+            const sort: ImageSortFieldExpr[] = [
                 { source: 'image', field_name: 'score', direction: 'desc' }
             ];
 

@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { writable } from 'svelte/store';
 import { SampleType } from '$lib/api/lightly_studio_local';
-import type { ImageFilter, SortFieldExpr } from '$lib/api/lightly_studio_local/types.gen';
+import type { ImageFilter, ImageSortFieldExpr } from '$lib/api/lightly_studio_local/types.gen';
 import type { TextEmbedding } from '../useGlobalStorage';
 
 const useAdjacentSamplesMock = vi.fn();
 const imageFilterStore = writable<ImageFilter | null>(null);
-const imageSortByStore = writable<SortFieldExpr[] | null>(null);
+const imageSortByStore = writable<ImageSortFieldExpr[] | null>(null);
 const textEmbeddingStore = writable<TextEmbedding | undefined>(undefined);
 
 vi.mock('../useAdjacentSamples/useAdjacentSamples', () => ({
@@ -108,7 +108,9 @@ describe('useAdjacentImages', () => {
 
     it('passes sort_by to useAdjacentSamples when imageSortBy is set and text embedding is inactive', () => {
         textEmbeddingStore.set(undefined);
-        const sort: SortFieldExpr[] = [{ source: 'image', field_name: 'score', direction: 'desc' }];
+        const sort: ImageSortFieldExpr[] = [
+            { source: 'image', field_name: 'score', direction: 'desc' }
+        ];
         imageSortByStore.set(sort);
 
         useAdjacentImages({ sampleId: 'sample-123', collectionId: 'collection-1' });
@@ -139,7 +141,9 @@ describe('useAdjacentImages', () => {
 
     it('passes sort_by as undefined when text embedding is active, even if imageSortBy is set', () => {
         textEmbeddingStore.set({ embedding: [0.12, 0.34], queryText: 'cats' });
-        const sort: SortFieldExpr[] = [{ source: 'image', field_name: 'score', direction: 'desc' }];
+        const sort: ImageSortFieldExpr[] = [
+            { source: 'image', field_name: 'score', direction: 'desc' }
+        ];
         imageSortByStore.set(sort);
 
         useAdjacentImages({ sampleId: 'sample-123', collectionId: 'collection-1' });
