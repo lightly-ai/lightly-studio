@@ -28,7 +28,7 @@ from lightly_studio.models.embedding_region import EmbeddingRegion
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
-    embedding_model_resolver,
+    default_embedding_space_resolver,
     sample_embedding_resolver,
 )
 from lightly_studio.resolvers.annotation_resolver.get_all import (
@@ -207,11 +207,11 @@ def read_annotation_embedding(
     Used for drag-to-search self-similarity: searching with an annotation's own
     stored embedding.
     """
-    embedding_models = embedding_model_resolver.get_all_by_collection_id(
+    embedding_model_id = default_embedding_space_resolver.get_by_collection_id(
         session=session,
         collection_id=collection_id,
     )
-    if not embedding_models:
+    if embedding_model_id is None:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail="No embedding model is registered for this collection.",
@@ -220,7 +220,7 @@ def read_annotation_embedding(
     embeddings = sample_embedding_resolver.get_by_sample_ids(
         session=session,
         sample_ids=[sample_id],
-        embedding_model_id=embedding_models[0].embedding_model_id,
+        embedding_model_id=embedding_model_id,
     )
     if not embeddings:
         raise HTTPException(

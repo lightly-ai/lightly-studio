@@ -123,17 +123,12 @@ class ClassifierManager:
         Returns:
             The created classifier name and ID.
         """
-        embedding_models = embedding_model_resolver.get_all_by_collection_id(
+        embedding_model = embedding_model_resolver.get_default_by_collection_id(
             session=session,
             collection_id=collection_id,
         )
-        if len(embedding_models) == 0:
+        if embedding_model is None:
             raise ValueError("No embedding model found for the given collection ID.")
-        # TODO(Horatiu, 05/2025): Handle multiple models correctly when
-        # available
-        if len(embedding_models) > 1:
-            raise ValueError("Multiple embedding models found for the given collection ID.")
-        embedding_model = embedding_models[0]
         classifier = RandomForest(
             name=name,
             classes=class_list,
