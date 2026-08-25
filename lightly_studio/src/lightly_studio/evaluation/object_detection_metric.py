@@ -155,11 +155,11 @@ def create_and_persist_object_detection_metrics_per_sample(
 ) -> None:
     """Create and persist per-sample object-detection metrics."""
     pred_boxes_per_sample = {
-        sample_id: _to_bounding_boxes(annotations=data.pred_per_sample.get(sample_id, []))
+        sample_id: to_bounding_boxes(annotations=data.pred_per_sample.get(sample_id, []))
         for sample_id in data.selected_sample_ids
     }
     gt_boxes_per_sample = {
-        sample_id: _to_bounding_boxes(annotations=data.gt_per_sample.get(sample_id, []))
+        sample_id: to_bounding_boxes(annotations=data.gt_per_sample.get(sample_id, []))
         for sample_id in data.selected_sample_ids
     }
     sample_metrics_to_persist: list[EvaluationSampleMetricCreate] = []
@@ -345,7 +345,7 @@ def to_corner_array(boxes: Sequence[BoundingBox]) -> NDArray[np.int64]:
     )
 
 
-def _to_bounding_boxes(annotations: list[AnnotationBaseTable]) -> list[BoundingBox]:
+def to_bounding_boxes(annotations: list[AnnotationBaseTable]) -> list[BoundingBox]:
     """Convert object-detection annotations into matcher-ready bounding boxes."""
     boxes: list[BoundingBox] = []
     for annotation in annotations:

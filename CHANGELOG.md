@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Python SDK: Read aggregate evaluation metrics (per-class and micro-averaged precision, recall, and F1, plus classification accuracy) with `dataset.evaluate().metrics(run_id)`.
+- Python SDK: Read the per-class and mean average precision of an object-detection run with `dataset.evaluate().mean_average_precision(run_id)`.
 - Add an optional preselected tag selector to the sampling dialog.
 
 ### Changed
