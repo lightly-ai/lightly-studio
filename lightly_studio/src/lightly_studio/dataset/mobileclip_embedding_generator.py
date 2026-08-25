@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from uuid import UUID
 
 import numpy as np
 import torch
@@ -11,7 +10,7 @@ from numpy.typing import NDArray
 from PIL import Image
 
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
-from lightly_studio.models.embedding_model import EmbeddingModelCreate
+from lightly_studio.models.embedding_model import EmbeddingSpaceDescription
 from lightly_studio.vendor import mobileclip
 
 from . import file_utils, image_crop_embedding, image_embedding
@@ -53,20 +52,16 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
         self._tokenizer = mobileclip.get_tokenizer(model_name=MODEL_NAME)
         self._model_hash = file_utils.get_file_xxhash(model_path)
 
-    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
-        """Generate an EmbeddingModelCreate instance.
-
-        Args:
-            collection_id: The ID of the collection.
+    def get_embedding_model_input(self) -> EmbeddingSpaceDescription:
+        """Describe the embedding space produced by this generator.
 
         Returns:
-            An EmbeddingModelCreate instance with the model details.
+            A description of the embedding space.
         """
-        return EmbeddingModelCreate(
+        return EmbeddingSpaceDescription(
             name=MODEL_NAME,
             embedding_model_hash=self._model_hash,
             embedding_dimension=EMBEDDING_DIMENSION,
-            collection_id=collection_id,
         )
 
     def embed_text(self, text: str) -> list[float]:

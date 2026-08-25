@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Report anonymous usage data on app launch. Set `LIGHTLY_STUDIO_ANALYTICS_ENABLED=false` to opt out.
 - Sort the annotations grid by a per-annotation evaluation metric, such as IoU.
+- Python SDK: Order video queries by `VideoSampleField.created_at`.
 - Python SDK: Continue sampling from an existing tagged selection with the
   `preselected_tag_name` parameter.
 - Python SDK: Select video-frame sequences with `selected_sequence_length` on `Sampling.diverse()`. It defaults to `None`, which selects individual frames. `n_samples_to_select` still counts frames and must be a multiple of the sequence length.

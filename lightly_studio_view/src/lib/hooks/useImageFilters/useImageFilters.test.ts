@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
 import { useImageFilters } from './useImageFilters';
-import type { QueryExpr, SortFieldExpr } from '$lib/api/lightly_studio_local/types.gen';
+import type { QueryExpr, ImageSortFieldExpr } from '$lib/api/lightly_studio_local/types.gen';
 import { SortDirection } from '$lib/api/lightly_studio_local/types.gen';
 
 const queryExpr = {
@@ -33,7 +33,7 @@ describe('useImageFilters', () => {
     describe('updateSortBy', () => {
         it('sets imageSortBy to the provided sort fields', () => {
             const { imageSortBy, updateSortBy } = useImageFilters();
-            const sort: SortFieldExpr[] = [
+            const sort: ImageSortFieldExpr[] = [
                 {
                     source: 'image',
                     field_name: 'score',

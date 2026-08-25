@@ -107,7 +107,7 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
     PILImage.new("RGB", (100, 100)).save(image_paths[0])
 
     # Act
-    sample_ids = add_images.load_into_dataset_from_paths(
+    path_to_sample_id = add_images.load_into_dataset_from_paths(
         session=db_session,
         root_collection_id=collection.collection_id,
         image_paths=image_paths,
@@ -119,7 +119,7 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
     ).samples
     assert len(samples) == 1
 
-    assert samples[0].sample_id == sample_ids[0]
+    assert samples[0].sample_id == path_to_sample_id[image_paths[0]]
     assert samples[0].file_name == "image1.jpg"
     assert samples[0].file_path_abs == str(image_paths[0])
     assert samples[0].width == 100
@@ -159,7 +159,7 @@ def test_load_into_dataset_from_paths__records_missing_broken_already_present_ou
 
     # Act
     with caplog.at_level("INFO"):
-        sample_ids = add_images.load_into_dataset_from_paths(
+        path_to_sample_id = add_images.load_into_dataset_from_paths(
             session=db_session,
             root_collection_id=collection.collection_id,
             image_paths=[
@@ -168,12 +168,16 @@ def test_load_into_dataset_from_paths__records_missing_broken_already_present_ou
             ],
         )
 
-    # Assert: only the good files are added.
-    assert len(sample_ids) == len(good_paths)
+    # Assert: the mapping only contains entries for the newly-created (good) files, correctly
+    # matched to the sample actually created for that path. Already-present, missing, and
+    # broken paths have no entry.
+    assert set(path_to_sample_id.keys()) == {str(path) for path in good_paths}
     samples = image_resolver.get_all_by_collection_id(
         session=db_session, collection_id=collection.collection_id
     ).samples
     assert {sample.file_name for sample in samples} == {"good0.jpg", "present0.jpg", "present1.jpg"}
+    good_sample = next(sample for sample in samples if sample.file_name == "good0.jpg")
+    assert path_to_sample_id[str(good_paths[0])] == good_sample.sample_id
 
     # Assert: the end-of-run summary records the distinct per-outcome counts.
     assert "added=1" in caplog.text
@@ -198,13 +202,13 @@ def test_load_into_dataset_from_paths__records_decompression_bomb_as_broken(
     monkeypatch.setattr(PILImage, "MAX_IMAGE_PIXELS", 20_000)
 
     with caplog.at_level("INFO"):
-        sample_ids = add_images.load_into_dataset_from_paths(
+        path_to_sample_id = add_images.load_into_dataset_from_paths(
             session=db_session,
             root_collection_id=collection.collection_id,
             image_paths=[str(good_path), str(bomb_path)],
         )
 
-    assert len(sample_ids) == 1
+    assert set(path_to_sample_id.keys()) == {str(good_path)}
     samples = image_resolver.get_all_by_collection_id(
         session=db_session, collection_id=collection.collection_id
     ).samples
@@ -223,18 +227,18 @@ def test_load_into_collection_from_paths__deduplicates_in_run_duplicates(
     image_paths = [image_path, image_path, image_path]
 
     # Act
-    sample_ids = add_images.load_into_dataset_from_paths(
+    path_to_sample_id = add_images.load_into_dataset_from_paths(
         session=db_session,
         root_collection_id=collection.collection_id,
         image_paths=image_paths,
     )
 
-    # Assert: the duplicated path is only created once.
+    # Assert: the duplicated path is only created once, with a single mapping entry.
     samples = image_resolver.get_all_by_collection_id(
         session=db_session, collection_id=collection.collection_id
     ).samples
     assert len(samples) == 1
-    assert len(sample_ids) == 1
+    assert path_to_sample_id == {image_path: samples[0].sample_id}
 
 
 def test_load_into_dataset_from_labelformat__records_missing_already_present_added_outcomes(
@@ -938,20 +942,22 @@ def test_load_into_dataset_from_paths__file_url_normalization(
 
     # Act: Load with file:// directory URL
     file_url = f"file://{tmp_path}"
-    sample_ids = add_images.load_into_dataset_from_paths(
+    path_to_sample_id = add_images.load_into_dataset_from_paths(
         session=db_session,
         root_collection_id=collection.collection_id,
         image_paths=[file_url + "/image.jpg"],
     )
 
-    # Assert: Sample was created with normalized path
-    assert len(sample_ids) == 1
+    # Assert: Sample was created with normalized path, and the mapping is keyed by it.
+    normalized_path = str(image_path.absolute())
+    assert path_to_sample_id.keys() == {normalized_path}
     samples = image_resolver.get_all_by_collection_id(
         session=db_session, collection_id=collection.collection_id
     ).samples
     assert len(samples) == 1
     # Path should be absolute (file:// stripped and normalized)
-    assert samples[0].file_path_abs == str(image_path.absolute())
+    assert samples[0].file_path_abs == normalized_path
+    assert path_to_sample_id[normalized_path] == samples[0].sample_id
 
     # Act: Now add annotations using the same file:// directory root
     # (Without path normalization, this would fail to match)

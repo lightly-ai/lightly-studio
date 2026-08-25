@@ -38,6 +38,7 @@ from lightly_studio.resolvers import (
     annotation_resolver,
     caption_resolver,
     collection_resolver,
+    default_embedding_space_resolver,
     embedding_model_resolver,
     image_resolver,
     sample_embedding_resolver,
@@ -304,18 +305,37 @@ def create_embedding_model(  # noqa: PLR0913
     embedding_model_hash: str = "example_hash",
     parameter_count_in_mb: int = 100,
     embedding_dimension: int = 128,
+    set_as_default: bool = False,
 ) -> EmbeddingModelTable:
-    """Helper function to create a embedding model."""
-    return embedding_model_resolver.create(
+    """Helper function to create a embedding model.
+
+    With ``set_as_default`` the model is recorded as the collection's default embedding
+    model, so ``default_embedding_space_resolver.get_by_collection_id`` resolves to it. It
+    is off by default to avoid the ``default_embedding_space`` foreign key blocking model
+    or collection deletes in tests that do not need a default.
+    """
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+    if collection is None:
+        raise ValueError(f"Collection with id {collection_id} not found.")
+
+    model = embedding_model_resolver.create(
         session=session,
         embedding_model=EmbeddingModelCreate(
             collection_id=collection_id,
+            dataset_id=collection.dataset_id,
             name=embedding_model_name,
             embedding_model_hash=embedding_model_hash,
             parameter_count_in_mb=parameter_count_in_mb,
             embedding_dimension=embedding_dimension,
         ),
     )
+    if set_as_default:
+        default_embedding_space_resolver.set_default(
+            session=session,
+            collection_id=collection_id,
+            embedding_model_id=model.embedding_model_id,
+        )
+    return model
 
 
 def create_sample_embedding(
@@ -404,11 +424,14 @@ def fill_db_with_samples_and_embeddings(
     """Creates a collection and fills it with sample and embeddings."""
     collection = create_collection(session)
     embedding_models = []
-    for embedding_model_name in embedding_model_names:
+    for index, embedding_model_name in enumerate(embedding_model_names):
         embedding_model = create_embedding_model(
             session=session,
             collection_id=collection.collection_id,
             embedding_model_name=embedding_model_name,
+            # The first model is the collection default, matching production and the
+            # queries that resolve the default embedding space (e.g. embeddings2d).
+            set_as_default=index == 0,
         )
         embedding_models.append(embedding_model)
     for i in range(n_samples):
@@ -446,11 +469,14 @@ def fill_db_with_video_samples_and_embeddings(
     """
     collection = create_collection(session=session, sample_type=SampleType.VIDEO)
     embedding_models = []
-    for embedding_model_name in embedding_model_names:
+    for index, embedding_model_name in enumerate(embedding_model_names):
         embedding_model = create_embedding_model(
             session=session,
             collection_id=collection.collection_id,
             embedding_model_name=embedding_model_name,
+            # The first model is the collection default, matching production and the
+            # queries that resolve the default embedding space (e.g. embeddings2d).
+            set_as_default=index == 0,
         )
         embedding_models.append(embedding_model)
     for i in range(n_samples):

@@ -34,7 +34,7 @@ from PIL import Image
 from sqlmodel import Session
 from tqdm import tqdm
 
-from lightly_studio.core import labelformat_helpers
+from lightly_studio.core import labelformat_helpers, path_utils
 from lightly_studio.core.file_outcome_report import (
     AlreadyPresentInputFileError,
     BrokenInputFileError,
@@ -110,7 +110,7 @@ def load_into_collection_from_paths(  # noqa: PLR0913
     show_progress: bool = True,
     target_fps: float | None = None,
     embed_frames: bool = False,
-) -> tuple[list[UUID], list[UUID]]:
+) -> tuple[dict[str, UUID], list[UUID]]:
     """Load video samples from file paths into the dataset using PyAV.
 
     Args:
@@ -130,15 +130,19 @@ def load_into_collection_from_paths(  # noqa: PLR0913
 
     Returns:
         A tuple containing:
-            - List of UUIDs of the created video samples
+            - A mapping from normalized `file_path_abs` to the UUID of the created video
+              sample. A path that was skipped (already present, missing, or broken) has
+              no entry, so the mapping is not guaranteed to cover every input path.
             - List of UUIDs of the created video frame samples
     """
     if target_fps is not None and target_fps <= 0:
         raise ValueError(f"target_fps must be greater than 0, got {target_fps}.")
 
-    created_video_sample_ids: list[UUID] = []
+    created_video_path_to_id: dict[str, UUID] = {}
     created_video_frame_sample_ids: list[UUID] = []
-    video_paths_list = list(video_paths)
+    # Normalize up front so the returned mapping is keyed consistently with images, and so
+    # a relative single-file path is not stored as a relative `file_path_abs`.
+    video_paths_list = [path_utils.normalize_path_root(video_path) for video_path in video_paths]
     # The set starts with paths already in the database and grows with paths seen in this
     # call, so both already-present and in-run duplicate paths are skipped.
     _, existing_paths = sample_resolver.filter_new_paths(
@@ -191,13 +195,13 @@ def load_into_collection_from_paths(  # noqa: PLR0913
                 video_path=video_path,
                 seen_or_existing_paths=seen_or_existing_paths,
             )
-            created_video_sample_ids.append(video_sample_id)
+            created_video_path_to_id[video_path] = video_sample_id
             created_video_frame_sample_ids.extend(frame_sample_ids)
 
     report.log_summary()
     report.raise_if_all_failed()
 
-    return created_video_sample_ids, created_video_frame_sample_ids
+    return created_video_path_to_id, created_video_frame_sample_ids
 
 
 def _load_single_video(
@@ -345,24 +349,24 @@ def load_video_annotations_from_labelformat(  # noqa: PLR0913
         input_labels=input_labels, root_path=root_path, video_paths=video_paths, limit=limit
     )
 
-    created_sample_ids, created_video_frame_sample_ids = load_into_collection_from_paths(
+    created_video_path_to_id, created_video_frame_sample_ids = load_into_collection_from_paths(
         session=session,
         collection_id=collection_id,
         video_paths=video_paths_labelformat,
         embed_frames=embed_frames,
     )
+    created_sample_ids = list(created_video_path_to_id.values())
 
     # In YouTube-VIS, the file extension is typically missing. Hence we fallback to the path
     # without suffix. This method is assuming that we have no files with same path without suffix in
     # the dataset. E.g. /root/my_video.mp4 and /root/my_video.mov will not be present in the dataset
     # at the same time.
-    # Construct the mapping from path without suffix to sample id.
-    video_path_without_suffix_to_sample_id: dict[str, UUID] = {}
-    for sample_id in created_sample_ids:
-        video = video_resolver.get_by_id(session=session, sample_id=sample_id)
-        if video is not None:
-            video_path_without_suffix = str(Path(video.file_path_abs).absolute().with_suffix(""))
-            video_path_without_suffix_to_sample_id[video_path_without_suffix] = sample_id
+    # Construct the mapping from path without suffix to sample id, straight from the paths
+    # just returned instead of re-fetching each video from the database.
+    video_path_without_suffix_to_sample_id = {
+        str(Path(video_path).absolute().with_suffix("")): sample_id
+        for video_path, sample_id in created_video_path_to_id.items()
+    }
 
     label_map = labelformat_helpers.create_label_map(
         session=session,
