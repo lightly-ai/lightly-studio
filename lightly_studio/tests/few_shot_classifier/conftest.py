@@ -65,7 +65,7 @@ def embedding_model(db_session: Session, collection: CollectionTable) -> Embeddi
         embedding_dimension=3,
     )
     created = embedding_model_resolver.create(session=db_session, embedding_model=embedding_model)
-    # Register it as the collection's default so get_all_by_collection_id resolves it.
+    # Register it as the collection's default so it resolves as the collection's model.
     default_embedding_space_resolver.set_default(
         session=db_session,
         collection_id=collection.collection_id,
