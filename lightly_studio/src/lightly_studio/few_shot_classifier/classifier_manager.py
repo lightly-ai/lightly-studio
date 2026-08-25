@@ -34,6 +34,7 @@ from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
     collection_resolver,
+    default_embedding_space_resolver,
     embedding_model_resolver,
     image_resolver,
     sample_embedding_resolver,
@@ -123,9 +124,16 @@ class ClassifierManager:
         Returns:
             The created classifier name and ID.
         """
-        embedding_model = embedding_model_resolver.get_default_by_collection_id(
+        embedding_model_id = default_embedding_space_resolver.get_by_collection_id(
             session=session,
             collection_id=collection_id,
+        )
+        embedding_model = (
+            embedding_model_resolver.get_by_id(
+                session=session, embedding_model_id=embedding_model_id
+            )
+            if embedding_model_id is not None
+            else None
         )
         if embedding_model is None:
             raise ValueError("No embedding model found for the given collection ID.")

@@ -44,21 +44,6 @@ def get_or_create(session: Session, embedding_model: EmbeddingModelCreate) -> Em
     return db_model
 
 
-def get_default_by_collection_id(
-    session: Session, collection_id: UUID
-) -> EmbeddingModelTable | None:
-    """Retrieve the collection's default embedding model, or None if it has none.
-
-    A collection is associated with a single model through ``default_embedding_space``.
-    """
-    embedding_model_id = default_embedding_space_resolver.get_by_collection_id(
-        session=session, collection_id=collection_id
-    )
-    if embedding_model_id is None:
-        return None
-    return get_by_id(session=session, embedding_model_id=embedding_model_id)
-
-
 def get_by_id(session: Session, embedding_model_id: UUID) -> EmbeddingModelTable | None:
     """Retrieve a single embedding model by ID."""
     return session.exec(
@@ -107,7 +92,14 @@ def get_by_name(
         ValueError: If the collection has no default model, or its name does not match
             ``embedding_model_name``.
     """
-    embedding_model = get_default_by_collection_id(session=session, collection_id=collection_id)
+    embedding_model_id = default_embedding_space_resolver.get_by_collection_id(
+        session=session, collection_id=collection_id
+    )
+    embedding_model = (
+        get_by_id(session=session, embedding_model_id=embedding_model_id)
+        if embedding_model_id is not None
+        else None
+    )
 
     if embedding_model_name is None:
         if embedding_model is None:
