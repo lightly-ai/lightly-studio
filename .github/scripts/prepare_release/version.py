@@ -6,15 +6,33 @@ import re
 
 from prepare_release.errors import PrepareReleaseError
 
+_PROJECT_SECTION_RE = re.compile(r"^\[project\]\r?\n(?:(?!^\[).*(?:\r?\n|\Z))*", re.MULTILINE)
 _PYPROJECT_VERSION_RE = re.compile(r'^version = "(?P<version>[^"]+)"$', re.MULTILINE)
+_SEMVER_PART_RE = re.compile(r"^(?:0|[1-9]\d*)$")
 _SEMVER_PART_COUNT = 3
+
+
+def _project_section(pyproject_text: str) -> re.Match[str]:
+    """Locates the `[project]` table's text span, header included.
+
+    Scoping to this span (rather than searching the whole file) keeps a
+    `version = "..."` line in some other table, e.g. `[tool.foo]`, from
+    being mistaken for the release version.
+    """
+    match = _PROJECT_SECTION_RE.search(pyproject_text)
+    if match is None:
+        raise PrepareReleaseError("no `[project]` table found in pyproject.toml")
+    return match
 
 
 def current_pyproject_version(pyproject_text: str) -> str:
     """Reads the `[project] version` from a `pyproject.toml`'s text."""
-    match = _PYPROJECT_VERSION_RE.search(pyproject_text)
+    section = _project_section(pyproject_text).group(0)
+    match = _PYPROJECT_VERSION_RE.search(section)
     if match is None:
-        raise PrepareReleaseError('no `version = "..."` line found in pyproject.toml')
+        raise PrepareReleaseError(
+            'no `version = "..."` line found in the `[project]` table of pyproject.toml'
+        )
     return match.group("version")
 
 
@@ -23,16 +41,17 @@ def bump_semver(version: str, bump: str) -> str:
 
     Args:
         version: The current version. Must be exactly `X.Y.Z` with integer
-            parts; anything else (e.g. an already-released release
-            candidate) has no well-defined next bump and should be
-            overridden explicitly instead.
+            parts and no leading zeroes (per semver.org's grammar);
+            anything else (e.g. an already-released release candidate) has
+            no well-defined next bump and should be overridden explicitly
+            instead.
         bump: One of "patch", "minor", "major".
 
     Returns:
         The bumped version, still in plain `X.Y.Z` form.
     """
     parts = version.split(".")
-    if len(parts) != _SEMVER_PART_COUNT or not all(p.isdigit() for p in parts):
+    if len(parts) != _SEMVER_PART_COUNT or not all(_SEMVER_PART_RE.match(p) for p in parts):
         raise PrepareReleaseError(
             f"current version {version!r} is not a plain X.Y.Z semver; "
             "pass --version explicitly instead of a --bump"
@@ -54,7 +73,7 @@ def check_labelformat_pin(pyproject_text: str) -> None:
     (see the Labelformat release runbook); a plain version requirement is
     fine.
     """
-    match = re.search(r'^\s*"labelformat[^"]*"', pyproject_text, re.MULTILINE)
+    match = re.search(r'^\s*(?P<quote>["\'])labelformat[^"\']*\1', pyproject_text, re.MULTILINE)
     if match and "git+" in match.group(0):
         raise PrepareReleaseError(
             "labelformat is pinned by git sha in pyproject.toml "
@@ -66,9 +85,16 @@ def check_labelformat_pin(pyproject_text: str) -> None:
 
 def bump_pyproject_version(pyproject_text: str, new_version: str) -> str:
     """Returns `pyproject_text` with the `[project] version` replaced."""
-    new_text, count = _PYPROJECT_VERSION_RE.subn(
-        f'version = "{new_version}"', pyproject_text, count=1
+    section_match = _project_section(pyproject_text)
+    new_section, count = _PYPROJECT_VERSION_RE.subn(
+        f'version = "{new_version}"', section_match.group(0), count=1
     )
     if count == 0:
-        raise PrepareReleaseError('no `version = "..."` line found in pyproject.toml')
-    return new_text
+        raise PrepareReleaseError(
+            'no `version = "..."` line found in the `[project]` table of pyproject.toml'
+        )
+    return (
+        pyproject_text[: section_match.start()]
+        + new_section
+        + pyproject_text[section_match.end() :]
+    )

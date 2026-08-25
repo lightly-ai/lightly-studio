@@ -19,19 +19,23 @@ _LOCK_PACKAGE_SPLIT_RE = re.compile(r"(?=^\[\[package\]\]$)", re.MULTILINE)
 _LOCK_PACKAGE_NAME_RE = re.compile(r'^name = "(?P<name>[^"]+)"$', re.MULTILINE)
 
 
-def parse_lock_blocks(uv_lock_text: str) -> dict[str, str]:
+def parse_lock_blocks(uv_lock_text: str) -> dict[str, list[str]]:
     """Splits a `uv.lock`'s text into per-package blocks, keyed by name.
 
-    The lockfile header (everything before the first `[[package]]`) is kept
-    under the empty-string key so it participates in the same diff check.
+    `uv`'s universal resolution can emit several `[[package]]` blocks for
+    the same name - one per platform/Python-version marker, or per
+    resolution fork - so each name maps to the list of its blocks in file
+    order rather than a single block. The lockfile header (everything
+    before the first `[[package]]`) is kept under the empty-string key so
+    it participates in the same diff check.
     """
     chunks = _LOCK_PACKAGE_SPLIT_RE.split(uv_lock_text)
-    blocks = {"": chunks[0]}
+    blocks: dict[str, list[str]] = {"": [chunks[0]]}
     for chunk in chunks[1:]:
         match = _LOCK_PACKAGE_NAME_RE.search(chunk)
         if match is None:
             raise PrepareReleaseError("a uv.lock [[package]] block has no `name` field")
-        blocks[match.group("name")] = chunk
+        blocks.setdefault(match.group("name"), []).append(chunk)
     return blocks
 
 
@@ -50,15 +54,23 @@ def assert_lock_diff_narrow(before_text: str, after_text: str, package: str) -> 
             "uv sync changed packages beyond the version bump: " + ", ".join(unexpected)
         )
 
-    before_pkg = before_blocks.get(package)
-    after_pkg = after_blocks.get(package)
-    if before_pkg is None or after_pkg is None:
+    before_pkg_blocks = before_blocks.get(package)
+    after_pkg_blocks = after_blocks.get(package)
+    if not before_pkg_blocks or not after_pkg_blocks:
         raise PrepareReleaseError(f"package {package!r} not found in uv.lock before/after uv sync")
-
-    diff = difflib.unified_diff(before_pkg.splitlines(), after_pkg.splitlines(), lineterm="")
-    changed_lines = [line for line in diff if line[:1] in "+-" and line[:3] not in ("+++", "---")]
-    if any(not re.match(r'^[+-]version = "', line) for line in changed_lines):
+    if len(before_pkg_blocks) != len(after_pkg_blocks):
         raise PrepareReleaseError(
-            f"uv.lock diff for {package!r} touches more than its version line:\n"
-            + "\n".join(changed_lines)
+            f"uv sync changed the number of {package!r} blocks in uv.lock "
+            f"({len(before_pkg_blocks)} -> {len(after_pkg_blocks)})"
         )
+
+    for before_pkg, after_pkg in zip(before_pkg_blocks, after_pkg_blocks):
+        diff = difflib.unified_diff(before_pkg.splitlines(), after_pkg.splitlines(), lineterm="")
+        changed_lines = [
+            line for line in diff if line[:1] in "+-" and line[:3] not in ("+++", "---")
+        ]
+        if any(not re.match(r'^[+-]version = "', line) for line in changed_lines):
+            raise PrepareReleaseError(
+                f"uv.lock diff for {package!r} touches more than its version line:\n"
+                + "\n".join(changed_lines)
+            )
