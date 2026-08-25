@@ -4,18 +4,18 @@ import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 import { usePostHog } from '$lib/hooks';
 import {
     formatEvaluationMetricLabel,
-    useSortFields,
-    type ImageSortField,
+    useImageSortFields,
+    type ColumnSortField,
     type SortField
-} from '$lib/hooks/useSortFields/useSortFields.svelte';
-import type { SortExpr } from '$lib/hooks/useImagesInfinite/types';
+} from '$lib/hooks/useImageSortFields/useImageSortFields.svelte';
+import type { ImageSortExpr } from '$lib/hooks/useImagesInfinite/types';
 
-interface UseOrderByParams {
+interface UseImageOrderByParams {
     collectionId: () => string;
     datasetId: () => string;
 }
 
-interface UseOrderByReturn {
+interface UseImageOrderByReturn {
     allSortFields: Readable<SortField[]>;
     selectedDirection: Readable<SortDirection>;
     selectedLabel: Readable<string | null>;
@@ -26,7 +26,7 @@ interface UseOrderByReturn {
     dispose: () => void;
 }
 
-function checkIsFieldSelected(field: SortField, current: SortExpr | undefined): boolean {
+function checkIsFieldSelected(field: SortField, current: ImageSortExpr | undefined): boolean {
     if (!current) return false;
     if (field.source === 'evaluation_metric') {
         return (
@@ -42,7 +42,7 @@ function checkIsFieldSelected(field: SortField, current: SortExpr | undefined): 
     );
 }
 
-function sortExprAnalytics(expr: SortExpr): { sort_source: string; field_name: string } {
+function sortExprAnalytics(expr: ImageSortExpr): { sort_source: string; field_name: string } {
     if (expr.source === 'evaluation_metric') {
         return {
             sort_source: 'evaluation_metric',
@@ -55,9 +55,12 @@ function sortExprAnalytics(expr: SortExpr): { sort_source: string; field_name: s
     };
 }
 
-export function useOrderBy({ collectionId, datasetId }: UseOrderByParams): UseOrderByReturn {
+export function useImageOrderBy({
+    collectionId,
+    datasetId
+}: UseImageOrderByParams): UseImageOrderByReturn {
     const { imageSortBy, updateSortBy } = useImageFilters();
-    const { allSortFields, dispose } = useSortFields({ datasetId });
+    const { allSortFields, dispose } = useImageSortFields({ datasetId });
     const { trackEvent } = usePostHog();
 
     const selectedDirection = derived(
@@ -83,7 +86,7 @@ export function useOrderBy({ collectionId, datasetId }: UseOrderByParams): UseOr
             }
             return (
                 $allSortFields
-                    .filter((f): f is ImageSortField => f.source !== 'evaluation_metric')
+                    .filter((f): f is ColumnSortField => f.source !== 'evaluation_metric')
                     .find((f) => f.source === current.source && f.value === current.field_name)
                     ?.label ?? null
             );
@@ -106,7 +109,7 @@ export function useOrderBy({ collectionId, datasetId }: UseOrderByParams): UseOr
             return;
         }
         const direction = get(selectedDirection);
-        const next: SortExpr =
+        const next: ImageSortExpr =
             field.source === 'evaluation_metric'
                 ? {
                       source: 'evaluation_metric',
@@ -134,7 +137,7 @@ export function useOrderBy({ collectionId, datasetId }: UseOrderByParams): UseOr
         if (!current) return;
         const direction =
             get(selectedDirection) === SortDirection.ASC ? SortDirection.DESC : SortDirection.ASC;
-        const next: SortExpr = { ...current, direction };
+        const next: ImageSortExpr = { ...current, direction };
         updateSortBy([next]);
         const { sort_source, field_name } = sortExprAnalytics(next);
         trackEvent('grid_sorted', {

@@ -11,7 +11,7 @@ import type {
     QueryExpr,
     SampleFilter
 } from '$lib/api/lightly_studio_local';
-import type { SortExpr } from '../useImagesInfinite/types';
+import type { ImageSortExpr } from '../useImagesInfinite/types';
 
 const filterParams = writable<ImagesInfiniteParams>({} as ImagesInfiniteParams);
 
@@ -125,7 +125,7 @@ const imageFilter = derived(
     }
 );
 
-const imageSortBy = writable<SortExpr[] | null>([
+const imageSortBy = writable<ImageSortExpr[] | null>([
     {
         source: 'image',
         field_name: 'file_path_abs',
@@ -205,7 +205,7 @@ export const useImageFilters = () => {
         filterParams.set(newParams);
     };
 
-    const updateSortBy = (sort: SortExpr[] | null) => {
+    const updateSortBy = (sort: ImageSortExpr[] | null) => {
         imageSortBy.set(sort);
     };
 

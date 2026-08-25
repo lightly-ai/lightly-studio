@@ -42,7 +42,7 @@ class SortFieldExprBase(BaseModel):
     direction: SortDirection
 
 
-class SortFieldExpr(SortFieldExprBase):
+class ImageSortFieldExpr(SortFieldExprBase):
     """A sorting expression for a single field of an image."""
 
     source: Literal[SortFieldSource.image, SortFieldSource.metadata]
@@ -73,8 +73,8 @@ class EvaluationMetricSortExpr(BaseModel):
     direction: SortDirection
 
 
-SortExpr = Annotated[
-    Union[SortFieldExpr, EvaluationMetricSortExpr],
+ImageSortExpr = Annotated[
+    Union[ImageSortFieldExpr, EvaluationMetricSortExpr],
     Field(discriminator="source"),
 ]
 
@@ -94,8 +94,8 @@ def sort_field_expr_to_order_by(expr: SortFieldExprBase) -> OrderByExpression:
     )
 
 
-def sort_expr_to_order_by(expr: SortExpr) -> OrderByExpression:
-    """Translate a SortExpr (image, metadata, or evaluation metric) to an OrderByExpression.
+def image_sort_expr_to_order_by(expr: ImageSortExpr) -> OrderByExpression:
+    """Translate an ImageSortExpr (image, metadata, or evaluation metric) to an OrderByExpression.
 
     Args:
         expr: The sort expression from the API request.
