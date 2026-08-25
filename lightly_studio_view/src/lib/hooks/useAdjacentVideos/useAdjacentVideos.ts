@@ -11,10 +11,12 @@ export const useAdjacentVideos = ({
     sampleId: string;
     collectionId: string;
 }) => {
-    const { videoFilter } = useVideoFilters();
+    const { videoFilter, videoSortBy } = useVideoFilters();
     const { textEmbedding } = useGlobalStorage();
 
     const filter = get(videoFilter);
+    const embedding = get(textEmbedding);
+    const sortBy = embedding ? undefined : (get(videoSortBy) ?? undefined);
     return useAdjacentSamples({
         params: {
             sampleId,
@@ -24,7 +26,8 @@ export const useAdjacentVideos = ({
                 filters: filter
                     ? { filter_type: 'video' as const, ...filter }
                     : { filter_type: 'video' as const },
-                text_embedding: get(textEmbedding)?.embedding
+                text_embedding: embedding?.embedding,
+                sort_by: sortBy
             }
         }
     });
