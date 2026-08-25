@@ -188,7 +188,11 @@ def _landing_url(item: StructureItem) -> str | None:
         cannot read as a guard.
     """
     if isinstance(item, Page):
-        return item.url
+        # `mypy .` runs without the `docs` dependency group, where every mkdocs
+        # symbol is `Any`; the annotation is what keeps `--warn-return-any` quiet
+        # there. See the `mkdocs.*` override in `pyproject.toml`.
+        page_url: str = item.url
+        return page_url
     if isinstance(item, Section):
         for child in item.children:
             url = _landing_url(child)
