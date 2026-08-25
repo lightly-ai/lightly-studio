@@ -31,6 +31,7 @@ from lightly_studio.models.sample_embedding import (
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
+    default_embedding_space_resolver,
     embedding_model_resolver,
     image_resolver,
     sample_embedding_resolver,
@@ -51,9 +52,14 @@ class TestClassifierManager:
         """Test creating a new classifier."""
         classifier_manager = ClassifierManager()
         mocker.patch.object(
+            default_embedding_space_resolver,
+            "get_by_collection_id",
+            return_value=uuid4(),
+        )
+        mocker.patch.object(
             embedding_model_resolver,
-            "get_all_by_collection_id",
-            return_value=[EmbeddingModelTable(name="test", embedding_dimension=3)],
+            "get_by_id",
+            return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         # Create input data with two classes.
         input_classes = ["class1", "class2"]
@@ -74,17 +80,20 @@ class TestClassifierManager:
         """Test creating a new classifier."""
         classifier_manager = ClassifierManager()
         mocker.patch.object(
-            embedding_model_resolver,
-            "get_all_by_collection_id",
-            return_value=[
-                EmbeddingModelTable(
-                    name="test", embedding_dimension=3, embedding_model_hash=str(uuid4())
-                )
-            ],
+            default_embedding_space_resolver,
+            "get_by_collection_id",
+            return_value=uuid4(),
         )
         mocker.patch.object(
             embedding_model_resolver,
-            "get_by_model_hash",
+            "get_by_id",
+            return_value=EmbeddingModelTable(
+                name="test", embedding_dimension=3, embedding_model_hash=str(uuid4())
+            ),
+        )
+        mocker.patch.object(
+            few_shot_classifier.classifier_manager,
+            "_get_embedding_model_by_hash",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
@@ -138,17 +147,20 @@ class TestClassifierManager:
         """Test creating a new classifier."""
         classifier_manager = ClassifierManager()
         mocker.patch.object(
-            embedding_model_resolver,
-            "get_all_by_collection_id",
-            return_value=[
-                EmbeddingModelTable(
-                    name="test", embedding_dimension=3, embedding_model_hash=str(uuid4())
-                )
-            ],
+            default_embedding_space_resolver,
+            "get_by_collection_id",
+            return_value=uuid4(),
         )
         mocker.patch.object(
             embedding_model_resolver,
-            "get_by_model_hash",
+            "get_by_id",
+            return_value=EmbeddingModelTable(
+                name="test", embedding_dimension=3, embedding_model_hash=str(uuid4())
+            ),
+        )
+        mocker.patch.object(
+            few_shot_classifier.classifier_manager,
+            "_get_embedding_model_by_hash",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
@@ -190,9 +202,14 @@ class TestClassifierManager:
         """Test dropping a classifier in the finetuning step."""
         classifier_manager = ClassifierManager()
         mocker.patch.object(
+            default_embedding_space_resolver,
+            "get_by_collection_id",
+            return_value=uuid4(),
+        )
+        mocker.patch.object(
             embedding_model_resolver,
-            "get_all_by_collection_id",
-            return_value=[EmbeddingModelTable(name="test", embedding_dimension=3)],
+            "get_by_id",
+            return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
             few_shot_classifier.classifier_manager,
@@ -289,8 +306,8 @@ class TestClassifierManager:
             classifier_id=classifier.classifier_id, file_path=save_path
         )
         mocker.patch.object(
-            embedding_model_resolver,
-            "get_by_model_hash",
+            few_shot_classifier.classifier_manager,
+            "_get_embedding_model_by_hash",
             return_value=None,
         )
         with pytest.raises(
@@ -323,9 +340,14 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         # Setup: Create a classifier first
         mocker.patch.object(
+            default_embedding_space_resolver,
+            "get_by_collection_id",
+            return_value=uuid4(),
+        )
+        mocker.patch.object(
             embedding_model_resolver,
-            "get_all_by_collection_id",
-            return_value=[EmbeddingModelTable(name="test", embedding_dimension=3)],
+            "get_by_id",
+            return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
             few_shot_classifier.classifier_manager,
@@ -381,9 +403,14 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         # Setup: Create a classifier with initial samples
         mocker.patch.object(
+            default_embedding_space_resolver,
+            "get_by_collection_id",
+            return_value=uuid4(),
+        )
+        mocker.patch.object(
             embedding_model_resolver,
-            "get_all_by_collection_id",
-            return_value=[EmbeddingModelTable(name="test", embedding_dimension=3)],
+            "get_by_id",
+            return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
             few_shot_classifier.classifier_manager,
@@ -488,14 +515,19 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
 
         mocker.patch.object(
-            embedding_model_resolver,
-            "get_by_model_hash",
+            few_shot_classifier.classifier_manager,
+            "_get_embedding_model_by_hash",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
+            default_embedding_space_resolver,
+            "get_by_collection_id",
+            return_value=uuid4(),
+        )
+        mocker.patch.object(
             embedding_model_resolver,
-            "get_all_by_collection_id",
-            return_value=[EmbeddingModelTable(name="test", embedding_dimension=3)],
+            "get_by_id",
+            return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
             few_shot_classifier.classifier_manager,
@@ -566,14 +598,19 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
 
         mocker.patch.object(
-            embedding_model_resolver,
-            "get_by_model_hash",
+            few_shot_classifier.classifier_manager,
+            "_get_embedding_model_by_hash",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
+            default_embedding_space_resolver,
+            "get_by_collection_id",
+            return_value=uuid4(),
+        )
+        mocker.patch.object(
             embedding_model_resolver,
-            "get_all_by_collection_id",
-            return_value=[EmbeddingModelTable(name="test", embedding_dimension=3)],
+            "get_by_id",
+            return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
             few_shot_classifier.classifier_manager,
@@ -655,17 +692,20 @@ class TestClassifierManager:
         """Test creating a new classifier."""
         classifier_manager = ClassifierManager()
         mocker.patch.object(
-            embedding_model_resolver,
-            "get_all_by_collection_id",
-            return_value=[
-                EmbeddingModelTable(
-                    name="test", embedding_dimension=3, embedding_model_hash="mock_hash"
-                )
-            ],
+            default_embedding_space_resolver,
+            "get_by_collection_id",
+            return_value=uuid4(),
         )
         mocker.patch.object(
             embedding_model_resolver,
-            "get_by_model_hash",
+            "get_by_id",
+            return_value=EmbeddingModelTable(
+                name="test", embedding_dimension=3, embedding_model_hash="mock_hash"
+            ),
+        )
+        mocker.patch.object(
+            few_shot_classifier.classifier_manager,
+            "_get_embedding_model_by_hash",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(

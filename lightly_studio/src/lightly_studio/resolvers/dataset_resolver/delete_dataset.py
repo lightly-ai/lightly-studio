@@ -37,6 +37,7 @@ from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.default_embedding_space import DefaultEmbeddingSpaceTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable
@@ -119,6 +120,9 @@ def delete_dataset(
     _delete_samples(session=session, dataset_id=dataset_id)
     _delete_annotation_labels(session=session, dataset_id=dataset_id)
     _delete_tags(session=session, dataset_id=dataset_id)
+    # Must precede embedding models (DefaultEmbeddingSpaceTable.embedding_model_id ->
+    # EmbeddingModelTable) and collections (its collection_id -> CollectionTable).
+    _delete_default_embedding_spaces(session=session, dataset_id=dataset_id)
     _delete_embedding_models(session=session, dataset_id=dataset_id)
     _delete_object_tracks(session=session, dataset_id=dataset_id)
     _delete_evaluation_runs(session=session, dataset_id=dataset_id)
@@ -317,12 +321,20 @@ def _delete_tags(session: Session, dataset_id: UUID) -> None:
     )
 
 
-def _delete_embedding_models(session: Session, dataset_id: UUID) -> None:
-    """Delete embedding models for the dataset's collections."""
+def _delete_default_embedding_spaces(session: Session, dataset_id: UUID) -> None:
+    """Delete the default embedding space rows for the dataset's collections."""
     session.exec(
-        delete(EmbeddingModelTable).where(
-            col(EmbeddingModelTable.collection_id).in_(_collection_ids_subquery(dataset_id))
+        delete(DefaultEmbeddingSpaceTable).where(
+            col(DefaultEmbeddingSpaceTable.collection_id).in_(_collection_ids_subquery(dataset_id))
         ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_embedding_models(session: Session, dataset_id: UUID) -> None:
+    """Delete embedding models owned by the dataset."""
+    session.exec(
+        delete(EmbeddingModelTable).where(col(EmbeddingModelTable.dataset_id) == dataset_id),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 

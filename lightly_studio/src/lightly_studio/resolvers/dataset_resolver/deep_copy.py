@@ -44,6 +44,7 @@ from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.default_embedding_space import DefaultEmbeddingSpaceTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.evaluation_annotation_metric import (
     EvaluationAnnotationMetricTable,
@@ -118,6 +119,8 @@ def deep_copy(
     _copy_object_tracks(session=session, new_dataset_id=new_dataset_id)
     _copy_annotation_labels(session=session, new_dataset_id=new_dataset_id)
     _copy_embedding_models(session=session, new_dataset_id=new_dataset_id, now=now)
+    # Depends on the copied collections and embedding models above.
+    _copy_default_embedding_space(session=session)
     _copy_samples(session=session, now=now)
     _copy_evaluation_runs(session=session, new_dataset_id=new_dataset_id, now=now)
 
@@ -437,7 +440,11 @@ def _copy_annotation_labels(session: Session, new_dataset_id: UUID) -> None:
 
 
 def _copy_embedding_models(session: Session, new_dataset_id: UUID, now: datetime) -> None:
-    """Copy embedding models, remapping collection_id and dataset_id."""
+    """Copy embedding models, remapping collection_id and dataset_id.
+
+    ``collection_id`` is still remapped because the column remains NOT NULL until the
+    follow-up migration drops it; it is not read anywhere.
+    """
     src = _table(EmbeddingModelTable).alias("src")
     map_model = _map(_MAP_EMBEDDING_MODEL)
     map_collection = _map(_MAP_COLLECTION)
@@ -453,6 +460,27 @@ def _copy_embedding_models(session: Session, new_dataset_id: UUID, now: datetime
     _copy_table(
         session=session,
         target=EmbeddingModelTable,
+        source=src,
+        from_clause=from_clause,
+        overrides=overrides,
+    )
+
+
+def _copy_default_embedding_space(session: Session) -> None:
+    """Copy default embedding space rows, remapping collection_id and embedding_model_id."""
+    src = _table(DefaultEmbeddingSpaceTable).alias("src")
+    map_collection = _map(_MAP_COLLECTION)
+    map_model = _map(_MAP_EMBEDDING_MODEL)
+    from_clause = src.join(map_collection, map_collection.c.old_id == src.c["collection_id"]).join(
+        map_model, map_model.c.old_id == src.c["embedding_model_id"]
+    )
+    overrides = {
+        "collection_id": map_collection.c.new_id,
+        "embedding_model_id": map_model.c.new_id,
+    }
+    _copy_table(
+        session=session,
+        target=DefaultEmbeddingSpaceTable,
         source=src,
         from_clause=from_clause,
         overrides=overrides,

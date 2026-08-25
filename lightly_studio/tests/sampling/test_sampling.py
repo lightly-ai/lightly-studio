@@ -74,6 +74,7 @@ class TestSampling:
             session=dataset.session,
             collection_id=frames.collection_id,
             embedding_model_name="embedding_model_1",
+            set_as_default=True,
         )
         for i, frame in enumerate(frames):
             helpers_resolvers.create_sample_embedding(
@@ -118,6 +119,7 @@ class TestSampling:
             session=dataset.session,
             collection_id=frames.collection_id,
             embedding_model_name="embedding_model_1",
+            set_as_default=True,
         )
         for i, frame in enumerate(frames):
             helpers_resolvers.create_sample_embedding(
@@ -356,7 +358,7 @@ class TestSampling:
 
     def test_multi_strategies(self, db_session: Session, mocker: MockerFixture) -> None:
         collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
-            session=db_session, n_samples=5, embedding_model_names=["model_1", "model_2"]
+            session=db_session, n_samples=5, embedding_model_names=["model_1"]
         )
         helpers_sampling.fill_db_metadata(
             session=db_session,
@@ -374,7 +376,6 @@ class TestSampling:
             sampling_result_tag_name="multi_strategies_sampling",
             sampling_strategies=[
                 EmbeddingDiversityStrategy(embedding_model_name="model_1"),
-                EmbeddingDiversityStrategy(embedding_model_name="model_2"),
                 MetadataWeightingStrategy(metadata_key="speed"),
             ],
         )
@@ -390,7 +391,6 @@ class TestSampling:
                 sampling_result_tag_name="multi_strategies_sampling",
                 strategies=[
                     EmbeddingDiversityStrategy(embedding_model_name="model_1"),
-                    EmbeddingDiversityStrategy(embedding_model_name="model_2"),
                     MetadataWeightingStrategy(metadata_key="speed"),
                 ],
             ),

@@ -474,6 +474,7 @@ def _fill_db_with_video_frames_and_embeddings(
         collection_id=frame_collection_id,
         embedding_model_name=embedding_model_name,
         embedding_dimension=2,
+        set_as_default=True,
     )
     for i, frame_sample_id in enumerate(frame_sample_ids):
         helpers_resolvers.create_sample_embedding(

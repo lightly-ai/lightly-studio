@@ -530,8 +530,8 @@ def test_load_or_get_default_model__shares_generator_across_collections(
 ) -> None:
     """An annotation child collection reuses the parent's loaded generator.
 
-    The generator weights are loaded once, but each collection still gets its
-    own embedding-model record and id.
+    The generator weights are loaded once, and because both collections belong to the same
+    dataset with the same generator hash, they resolve to a single embedding-model record.
     """
     image_collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
     annotation_collection = create_collection(
@@ -560,8 +560,8 @@ def test_load_or_get_default_model__shares_generator_across_collections(
     mock_load.assert_called_once_with(sample_type=SampleType.IMAGE)
     assert manager._models[image_model_id] is manager._models[annotation_model_id]
 
-    # Each collection still owns a distinct embedding-model record.
-    assert image_model_id != annotation_model_id
+    # Both collections share the same dataset-scoped embedding-model record.
+    assert image_model_id == annotation_model_id
 
 
 def test_load_or_get_default_model__cant_load(

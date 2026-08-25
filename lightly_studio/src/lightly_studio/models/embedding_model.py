@@ -18,7 +18,12 @@ class EmbeddingSpaceDescription(SQLModel):
 
 
 class EmbeddingModelBase(EmbeddingSpaceDescription):
-    """Base class for the EmbeddingModel."""
+    """Base class for the EmbeddingModel.
+
+    ``collection_id`` is kept for backwards compatibility while the schema still requires
+    it, but it is no longer read: default resolution goes through ``default_embedding_space``
+    and ownership through ``dataset_id``. It is dropped in a follow-up migration.
+    """
 
     collection_id: UUID = Field(default=None, foreign_key="collection.collection_id", index=True)
     dataset_id: UUID = Field(foreign_key="dataset.dataset_id", index=True)
