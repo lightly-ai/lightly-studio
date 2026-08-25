@@ -428,6 +428,16 @@ body {
   margin-right: 0;
 }
 
+/* The chip is only rendered when the package is installed, and the tab strip
+   that takes over from it is hidden below 76.25em — so on a narrow viewport of
+   a build without the package, nothing in the row carries the slack and search
+   slides in against the wordmark. Hand it back to the title there. */
+@media screen and (max-width: 76.234375em) {
+  .md-header__inner:not(:has(.ls-version)) .md-header__title {
+    margin-inline-end: auto;
+  }
+}
+
 .ls-version {
   align-self: center;
   border: 1px solid var(--ls-line);
