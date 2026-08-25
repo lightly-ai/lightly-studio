@@ -39,6 +39,9 @@ NAME_TO_TYPE_MAP = {
 # Schema type names whose values are ordered and aggregated numerically.
 NUMERIC_TYPE_NAMES = ("integer", "float")
 
+# Schema type names whose values are discrete and aggregated by exact value.
+CATEGORICAL_TYPE_NAMES = ("string", "boolean")
+
 
 def get_type_name(value: Any) -> str:
     """Get the type name for a value.

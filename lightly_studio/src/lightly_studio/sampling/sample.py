@@ -13,6 +13,8 @@ from lightly_studio.sampling.sampling_config import (
     AnnotationClassToTarget,
     EmbeddingDeduplicationStrategy,
     EmbeddingDiversityStrategy,
+    MetadataBalancingStrategy,
+    MetadataValueToTarget,
     MetadataWeightingStrategy,
     SamplingConfig,
     SamplingStrategy,
@@ -71,6 +73,13 @@ class Sampling:
     sampling.annotation_balancing(
         n_samples_to_select=100,
         sampling_result_tag_name="balanced sampling",
+        target_distribution="uniform",
+    )
+    # Select 100 samples balanced over the values of the "weather" metadata
+    sampling.metadata_balancing(
+        n_samples_to_select=100,
+        sampling_result_tag_name="balanced weather sampling",
+        metadata_key="weather",
         target_distribution="uniform",
     )
     ```
@@ -242,6 +251,37 @@ class Sampling:
                 as already selected. These samples are excluded from the result tag.
         """
         strategy = AnnotationClassBalancingStrategy(target_distribution=target_distribution)
+        self.multi_strategies(
+            n_samples_to_select=n_samples_to_select,
+            sampling_result_tag_name=sampling_result_tag_name,
+            sampling_strategies=[strategy],
+            preselected_tag_name=preselected_tag_name,
+        )
+
+    def metadata_balancing(
+        self,
+        n_samples_to_select: int,
+        sampling_result_tag_name: str,
+        metadata_key: str,
+        target_distribution: MetadataValueToTarget | Literal["uniform"] | Literal["input"],
+        preselected_tag_name: str | None = None,
+    ) -> None:
+        """Select a subset using categorical metadata balancing.
+
+        Args:
+            n_samples_to_select: Number of samples to select.
+            sampling_result_tag_name: Tag name for the sampling result.
+            metadata_key: Metadata key to balance. Must be categorical (string or
+                boolean values).
+            target_distribution: Can be 'uniform', 'input',
+                or a dictionary mapping metadata values to target ratios.
+            preselected_tag_name: Optional tag containing samples that should be treated
+                as already selected. These samples are excluded from the result tag.
+        """
+        strategy = MetadataBalancingStrategy(
+            metadata_key=metadata_key,
+            target_distribution=target_distribution,
+        )
         self.multi_strategies(
             n_samples_to_select=n_samples_to_select,
             sampling_result_tag_name=sampling_result_tag_name,

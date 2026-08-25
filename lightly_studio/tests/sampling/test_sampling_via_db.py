@@ -18,12 +18,14 @@ from lightly_studio.resolvers import (
 )
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+from lightly_studio.sampling import metadata_balancing
 from lightly_studio.sampling.mundig import Mundig
 from lightly_studio.sampling.sampling_config import (
     AnnotationClassBalancingStrategy,
     EmbeddingDeduplicationStrategy,
     EmbeddingDiversityStrategy,
     EmbeddingSimilarityStrategy,
+    MetadataBalancingStrategy,
     SamplingConfig,
     SamplingStrategy,
 )
@@ -35,9 +37,11 @@ from tests.helpers_resolvers import (
     AnnotationDetails,
     create_annotation_label,
     create_annotations,
+    create_image,
     create_tag,
     fill_db_with_samples_and_embeddings,
 )
+from tests.sampling import helpers_sampling
 
 
 def test_sampling_via_database__embedding_diversity(
@@ -1161,6 +1165,367 @@ def test_sampling_via_database_with_annotation_class_balancing_input(
     assert len(samples_in_tag) == 1
     # Pick the first sample, because it resembles the input distribution the best.
     assert samples_in_tag[0].sample_id == sample_ids[0]
+
+
+def test_sampling_via_database__metadata_balancing_uniform(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    """Balances a categorical metadata key towards a uniform distribution."""
+    collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
+        session=db_session,
+        metadata=["sunny", "sunny", "rainy"],
+        metadata_key="weather",
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+    config = SamplingConfig(
+        n_samples_to_select=2,
+        collection_id=collection_id,
+        sampling_result_tag_name="sampling-tag",
+        strategies=[
+            MetadataBalancingStrategy(metadata_key="weather", target_distribution="uniform")
+        ],
+    )
+
+    spy_add_class_balancing = mocker.spy(Mundig, "add_class_balancing")
+    sampling_via_database(
+        session=db_session, config=config, input_sample_ids=sample_ids
+    )
+
+    call_args = spy_add_class_balancing.call_args
+    # Columns are the sorted values ["rainy", "sunny"].
+    np.testing.assert_array_equal(
+        call_args.kwargs["class_distributions"],
+        np.array([[0.0, 1.0], [0.0, 1.0], [1.0, 0.0]], dtype=np.float32),
+    )
+    assert call_args.kwargs["target"] == [0.5, 0.5]
+
+    tags = tag_resolver.get_all_by_collection_id(session=db_session, collection_id=collection_id)
+    selected = _sample_ids_by_tag(db_session, collection_id, tags[0].tag_id)
+    # One sunny and one rainy sample give the uniform distribution, so the only rainy
+    # sample must be selected.
+    assert len(selected) == 2
+    rainy_sample_id = sample_ids[2]
+    assert rainy_sample_id in selected
+
+
+def test_sampling_via_database__metadata_balancing_input(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    """Balances a categorical metadata key towards the input distribution."""
+    collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
+        session=db_session,
+        metadata=["sunny", "sunny", "rainy"],
+        metadata_key="weather",
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+    config = SamplingConfig(
+        n_samples_to_select=2,
+        collection_id=collection_id,
+        sampling_result_tag_name="sampling-tag",
+        strategies=[
+            MetadataBalancingStrategy(metadata_key="weather", target_distribution="input")
+        ],
+    )
+
+    spy_add_class_balancing = mocker.spy(Mundig, "add_class_balancing")
+    sampling_via_database(
+        session=db_session, config=config, input_sample_ids=sample_ids
+    )
+
+    # The target holds the raw counts of ["rainy", "sunny"].
+    assert spy_add_class_balancing.call_args.kwargs["target"] == [1.0, 2.0]
+
+
+def test_sampling_via_database__metadata_balancing_boolean(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    """Balances a boolean metadata key, whose values become their lowercase names."""
+    collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
+        session=db_session,
+        metadata=[True, True, False],
+        metadata_key="is_blurry",
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+    config = SamplingConfig(
+        n_samples_to_select=2,
+        collection_id=collection_id,
+        sampling_result_tag_name="sampling-tag",
+        strategies=[
+            MetadataBalancingStrategy(metadata_key="is_blurry", target_distribution="uniform")
+        ],
+    )
+
+    spy_add_class_balancing = mocker.spy(Mundig, "add_class_balancing")
+    sampling_via_database(
+        session=db_session, config=config, input_sample_ids=sample_ids
+    )
+
+    # Columns are the sorted values ["false", "true"].
+    np.testing.assert_array_equal(
+        spy_add_class_balancing.call_args.kwargs["class_distributions"],
+        np.array([[0.0, 1.0], [0.0, 1.0], [1.0, 0.0]], dtype=np.float32),
+    )
+
+
+def test_sampling_via_database__metadata_balancing_explicit_target(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    """Groups the values without an explicit target as one "other" value."""
+    collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
+        session=db_session,
+        metadata=["sunny", "rainy", "foggy"],
+        metadata_key="weather",
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+    config = SamplingConfig(
+        n_samples_to_select=2,
+        collection_id=collection_id,
+        sampling_result_tag_name="sampling-tag",
+        strategies=[
+            MetadataBalancingStrategy(
+                metadata_key="weather",
+                # This distribution gets translated to `sunny: 0.5, rainy+foggy: 0.5`.
+                target_distribution={"sunny": 0.5},
+            )
+        ],
+    )
+
+    spy_add_class_balancing = mocker.spy(Mundig, "add_class_balancing")
+    sampling_via_database(
+        session=db_session, config=config, input_sample_ids=sample_ids
+    )
+
+    call_args = spy_add_class_balancing.call_args
+    # Columns are ["sunny", other].
+    np.testing.assert_array_equal(
+        call_args.kwargs["class_distributions"],
+        np.array([[1.0, 0.0], [0.0, 1.0], [0.0, 1.0]], dtype=np.float32),
+    )
+    assert call_args.kwargs["target"] == [0.5, 0.5]
+
+
+def test_sampling_via_database__metadata_balancing_missing_values_not_dropped(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    """Keeps samples without a value for the key selectable, but does not balance them."""
+    collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
+        session=db_session,
+        metadata=["sunny", "rainy"],
+        metadata_key="weather",
+    )
+    # A third sample that has no "weather" value at all.
+    sample_without_value = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="no_weather.jpg"
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+    row_without_value = sample_ids.index(sample_without_value.sample_id)
+    config = SamplingConfig(
+        n_samples_to_select=3,
+        collection_id=collection_id,
+        sampling_result_tag_name="sampling-tag",
+        strategies=[
+            MetadataBalancingStrategy(metadata_key="weather", target_distribution="uniform")
+        ],
+    )
+
+    spy_add_class_balancing = mocker.spy(Mundig, "add_class_balancing")
+    sampling_via_database(
+        session=db_session, config=config, input_sample_ids=sample_ids
+    )
+
+    # The sample without a value has an all-zero row.
+    class_distributions = spy_add_class_balancing.call_args.kwargs["class_distributions"]
+    assert class_distributions.shape == (3, 2)
+    np.testing.assert_array_equal(
+        class_distributions[row_without_value], np.array([0.0, 0.0], dtype=np.float32)
+    )
+
+    # It stays selectable, so all three samples are selected.
+    tags = tag_resolver.get_all_by_collection_id(session=db_session, collection_id=collection_id)
+    assert len(_sample_ids_by_tag(db_session, collection_id, tags[0].tag_id)) == 3
+
+
+def test_sampling_via_database__metadata_balancing_two_keys(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    """Balances two metadata keys by combining one strategy per key."""
+    collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
+        session=db_session,
+        metadata=["sunny", "sunny", "rainy"],
+        metadata_key="weather",
+    )
+    helpers_sampling.fill_db_metadata(
+        session=db_session,
+        collection_id=collection_id,
+        metadata=["day", "night", "night"],
+        metadata_key="time_of_day",
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+    config = SamplingConfig(
+        n_samples_to_select=2,
+        collection_id=collection_id,
+        sampling_result_tag_name="sampling-tag",
+        strategies=[
+            MetadataBalancingStrategy(metadata_key="weather", target_distribution="uniform"),
+            MetadataBalancingStrategy(metadata_key="time_of_day", target_distribution="uniform"),
+        ],
+    )
+
+    spy_add_class_balancing = mocker.spy(Mundig, "add_class_balancing")
+    sampling_via_database(
+        session=db_session, config=config, input_sample_ids=sample_ids
+    )
+
+    # Each key is balanced on its own, so each adds its own balancing strategy.
+    assert spy_add_class_balancing.call_count == 2
+
+
+def test_sampling_via_database__metadata_balancing_no_values(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    """Balances nothing when no input sample has a value for the key."""
+    collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
+        session=db_session,
+        metadata=["sunny", "rainy"],
+        metadata_key="weather",
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+    # Restrict the input to a sample that has no value for the balanced key.
+    other_sample = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="no_weather.jpg"
+    )
+    config = SamplingConfig(
+        n_samples_to_select=1,
+        collection_id=collection_id,
+        sampling_result_tag_name="sampling-tag",
+        strategies=[
+            MetadataBalancingStrategy(metadata_key="weather", target_distribution="uniform")
+        ],
+    )
+
+    spy_add_class_balancing = mocker.spy(Mundig, "add_class_balancing")
+    sampling_via_database(
+        session=db_session, config=config, input_sample_ids=[other_sample.sample_id]
+    )
+
+    call_args = spy_add_class_balancing.call_args
+    assert call_args.kwargs["class_distributions"].shape == (1, 0)
+    assert call_args.kwargs["target"] == []
+    assert sample_ids  # The other samples exist, they are just not part of the input.
+
+
+def test_sampling_via_database__metadata_balancing_many_values(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    """Groups the rarest values when the key has more distinct values than balanced."""
+    n_values = metadata_balancing.MAX_BALANCED_VALUES + 5
+    collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
+        session=db_session,
+        metadata=[f"value_{index:03d}" for index in range(n_values)],
+        metadata_key="serial",
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+    config = SamplingConfig(
+        n_samples_to_select=2,
+        collection_id=collection_id,
+        sampling_result_tag_name="sampling-tag",
+        strategies=[
+            MetadataBalancingStrategy(metadata_key="serial", target_distribution="uniform")
+        ],
+    )
+
+    spy_add_class_balancing = mocker.spy(Mundig, "add_class_balancing")
+    sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
+
+    # The rarest values share one "other" column on top of the balanced ones.
+    class_distributions = spy_add_class_balancing.call_args.kwargs["class_distributions"]
+    assert class_distributions.shape == (n_values, metadata_balancing.MAX_BALANCED_VALUES + 1)
+    # Every sample still has exactly one value, so every row is one-hot.
+    np.testing.assert_array_equal(
+        class_distributions.sum(axis=1), np.ones(n_values, dtype=np.float32)
+    )
+
+
+def test_sampling_via_database__metadata_balancing_target_value_not_present(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    """Keeps a target value that no sample has, so its column stays empty."""
+    collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
+        session=db_session,
+        metadata=["sunny", "rainy"],
+        metadata_key="weather",
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+    config = SamplingConfig(
+        n_samples_to_select=1,
+        collection_id=collection_id,
+        sampling_result_tag_name="sampling-tag",
+        strategies=[
+            MetadataBalancingStrategy(
+                metadata_key="weather",
+                # No sample is foggy, so that column stays empty instead of catching
+                # the values without a target.
+                target_distribution={"sunny": 0.5, "foggy": 0.5},
+            )
+        ],
+    )
+
+    spy_add_class_balancing = mocker.spy(Mundig, "add_class_balancing")
+    sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
+
+    call_args = spy_add_class_balancing.call_args
+    # Columns are ["sunny", "foggy", other], and "rainy" falls into "other".
+    np.testing.assert_array_equal(
+        call_args.kwargs["class_distributions"],
+        np.array([[1.0, 0.0, 0.0], [0.0, 0.0, 1.0]], dtype=np.float32),
+    )
+    assert call_args.kwargs["target"] == [0.5, 0.5, 0.0]
+
+
+def test_sampling_via_database__metadata_balancing_non_categorical_key(
+    db_session: Session,
+) -> None:
+    """Rejects a metadata key whose values are not categorical."""
+    collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
+        session=db_session,
+        metadata=[0.1, 0.2, 0.3],
+        metadata_key="sharpness",
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+    config = SamplingConfig(
+        n_samples_to_select=2,
+        collection_id=collection_id,
+        sampling_result_tag_name="sampling-tag",
+        strategies=[
+            MetadataBalancingStrategy(metadata_key="sharpness", target_distribution="uniform")
+        ],
+    )
+
+    with pytest.raises(ValueError, match="has type 'float', but balancing requires"):
+        sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
+
+
+def test_sampling_via_database__metadata_balancing_unknown_key(
+    db_session: Session,
+) -> None:
+    """Rejects a metadata key that does not exist in the collection."""
+    collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
+        session=db_session,
+        metadata=["sunny", "rainy"],
+        metadata_key="weather",
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+    config = SamplingConfig(
+        n_samples_to_select=1,
+        collection_id=collection_id,
+        sampling_result_tag_name="sampling-tag",
+        strategies=[
+            MetadataBalancingStrategy(metadata_key="missing", target_distribution="uniform")
+        ],
+    )
+
+    with pytest.raises(ValueError, match="does not exist in collection"):
+        sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
 
 
 def test_aggregate_class_distributions() -> None:
