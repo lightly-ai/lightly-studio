@@ -8,6 +8,7 @@ from collections.abc import Generator
 
 import fsspec
 import pytest
+from adlfs import AzureBlobFileSystem  # type: ignore[import-untyped]
 from gcsfs import GCSFileSystem  # type: ignore[import-untyped]
 from pytest_mock import MockerFixture
 
@@ -19,8 +20,10 @@ from lightly_studio.cloud_credentials import apply_cloud_credentials
 def _reset_cloud_configuration(mocker: MockerFixture) -> Generator[None, None, None]:
     mocker.patch.dict(os.environ, {}, clear=True)
     mocker.patch.dict(fsspec.config.conf, {}, clear=True)
+    AzureBlobFileSystem.clear_instance_cache()
     GCSFileSystem.clear_instance_cache()
     yield
+    AzureBlobFileSystem.clear_instance_cache()
     GCSFileSystem.clear_instance_cache()
 
 
@@ -71,6 +74,43 @@ def test_apply_cloud_credentials__replaces_removed_gcs_options() -> None:
     apply_cloud_credentials(credentials={"FSSPEC_GCS": json.dumps({"token": "new-token"})})
 
     assert fsspec.config.conf["gcs"] == {"token": "new-token"}
+
+
+def test_apply_cloud_credentials__applies_azure_runtime_config(
+    mocker: MockerFixture,
+) -> None:
+    storage_options = {"account_name": "test-account", "account_key": "test-key"}
+    serialized_options = json.dumps(storage_options)
+    clear_cache = mocker.spy(AzureBlobFileSystem, "clear_instance_cache")
+
+    apply_cloud_credentials(credentials={"FSSPEC_ABFS": serialized_options})
+
+    assert os.environ["FSSPEC_ABFS"] == serialized_options
+    assert fsspec.config.conf["abfs"] == storage_options
+    assert fsspec.filesystem("az").account_name == "test-account"
+    clear_cache.assert_called_once_with()
+
+
+def test_apply_cloud_credentials__invalidates_cached_azure_filesystem() -> None:
+    apply_cloud_credentials(
+        credentials={
+            "FSSPEC_ABFS": json.dumps({"account_name": "old-account", "account_key": "old-key"})
+        }
+    )
+    old_filesystem = fsspec.filesystem("abfs")
+    assert AzureBlobFileSystem._cache
+    assert fsspec.filesystem("az") is old_filesystem
+
+    apply_cloud_credentials(
+        credentials={
+            "FSSPEC_ABFS": json.dumps({"account_name": "new-account", "account_key": "new-key"})
+        }
+    )
+
+    assert not AzureBlobFileSystem._cache
+    new_filesystem = fsspec.filesystem("az")
+    assert new_filesystem is not old_filesystem
+    assert new_filesystem.account_name == "new-account"
 
 
 @pytest.mark.parametrize("value", ["not-json", "[]"])
