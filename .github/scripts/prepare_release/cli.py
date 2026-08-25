@@ -7,7 +7,6 @@ changelog, bumping the version, and guarding against a handful of ways
 that can quietly go wrong.
 
 Usage:
-    python -m prepare_release suggest-bump --changelog CHANGELOG.md
     python -m prepare_release promote-changelog --changelog CHANGELOG.md \
         --version 1.0.6 --date 2026-08-21
 """
@@ -31,11 +30,6 @@ def main(argv: list[str] | None = None) -> int:
         "check-labelformat-pin", help="fail if labelformat is pinned by git sha"
     )
     check_pin.add_argument("--pyproject", type=Path, required=True)
-
-    suggest = subparsers.add_parser(
-        "suggest-bump", help="suggest a semver bump from [Unreleased]'s contents"
-    )
-    suggest.add_argument("--changelog", type=Path, required=True)
 
     compute = subparsers.add_parser(
         "compute-version", help="resolve the release version to bump to"
@@ -83,7 +77,6 @@ def main(argv: list[str] | None = None) -> int:
 def _dispatch(args: argparse.Namespace) -> int:
     handlers = {
         "check-labelformat-pin": _cmd_check_labelformat_pin,
-        "suggest-bump": _cmd_suggest_bump,
         "compute-version": _cmd_compute_version,
         "promote-changelog": _cmd_promote_changelog,
         "bump-pyproject": _cmd_bump_pyproject,
@@ -98,43 +91,50 @@ def _cmd_check_labelformat_pin(args: argparse.Namespace) -> None:
     version.check_labelformat_pin(args.pyproject.read_text())
 
 
-def _cmd_suggest_bump(args: argparse.Namespace) -> None:
-    sections = changelog.parse_unreleased_sections(args.changelog.read_text())
-    bump, reasoning = changelog.suggest_bump(sections)
-    print(f"bump={bump}")
-    print(reasoning)
-
-
 def _cmd_compute_version(args: argparse.Namespace) -> None:
     if args.version:
         print(args.version)
         return
     current = version.current_pyproject_version(args.pyproject.read_text())
-    print(version.bump_semver(current, args.bump))
+    print(version.bump_semver(version=current, bump=args.bump))
 
 
 def _cmd_promote_changelog(args: argparse.Namespace) -> None:
     original = args.changelog.read_text()
-    promoted = changelog.promote_changelog(original, args.version, args.date)
-    changelog.assert_changelog_structure(original, promoted, args.version)
+    promoted = changelog.promote_changelog(
+        changelog_text=original, version=args.version, date=args.date
+    )
+    changelog.assert_changelog_structure(
+        original_text=original, new_text=promoted, version=args.version
+    )
     args.changelog.write_text(promoted)
 
 
 def _cmd_bump_pyproject(args: argparse.Namespace) -> None:
     original = args.pyproject.read_text()
-    args.pyproject.write_text(version.bump_pyproject_version(original, args.version))
+    args.pyproject.write_text(
+        version.bump_pyproject_version(pyproject_text=original, new_version=args.version)
+    )
 
 
 def _cmd_assert_lock_diff(args: argparse.Namespace) -> None:
     lock.assert_lock_diff_narrow(
-        args.before.read_text(), args.after.read_text(), package=args.package
+        before_text=args.before.read_text(),
+        after_text=args.after.read_text(),
+        package=args.package,
     )
 
 
 def _cmd_render_pr_body(args: argparse.Namespace) -> None:
-    section_body = changelog.extract_released_section(args.changelog.read_text(), args.version)
+    section_body = changelog.extract_released_section(
+        changelog_text=args.changelog.read_text(), version=args.version
+    )
     coverage_checklist = args.coverage_file.read_text() if args.coverage_file.exists() else ""
-    body = pr_body.render_pr_body(section_body, args.drafting_skipped_reason, coverage_checklist)
+    body = pr_body.render_pr_body(
+        section_body=section_body,
+        drafting_skipped_reason=args.drafting_skipped_reason,
+        coverage_checklist=coverage_checklist,
+    )
     args.output.write_text(body)
 
 

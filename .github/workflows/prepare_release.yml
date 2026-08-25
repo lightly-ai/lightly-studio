@@ -10,11 +10,12 @@ on:
     inputs:
       bump:
         description: >-
-          Semver bump. "auto" uses the suggestion computed from which
-          [Unreleased] sections are non-empty (see the job summary).
+          Semver bump to apply. Nothing is inferred from the changelog -
+          pick "minor" deliberately when you know the [Unreleased] entries
+          add or change something notable, "patch" otherwise.
         type: choice
-        options: [auto, patch, minor, major]
-        default: auto
+        options: [patch, minor, major]
+        default: patch
       version:
         description: >-
           Explicit version override, e.g. for a release candidate such as
@@ -73,37 +74,12 @@ jobs:
           python3 -m prepare_release check-labelformat-pin \
             --pyproject lightly_studio/pyproject.toml
 
-      - name: Suggest version bump
-        id: suggest
-        # Only needed when the operator left both inputs on their defaults;
-        # an explicit --version or --bump makes the suggestion moot.
-        if: inputs.version == '' && inputs.bump == 'auto'
-        run: |
-          result="$(python3 -m prepare_release suggest-bump --changelog CHANGELOG.md)"
-          bump="$(printf '%s\n' "$result" | head -n1 | sed 's/^bump=//')"
-          echo "bump=$bump" >> "$GITHUB_OUTPUT"
-          {
-            echo "### Suggested version bump: \`$bump\`"
-            printf '%s\n' "$result" | tail -n +2
-          } >> "$GITHUB_STEP_SUMMARY"
-
       - name: Resolve inputs
         id: resolved
         run: |
-          bump="${{ inputs.bump }}"
-          if [ "$bump" = "auto" ]; then
-            # Empty when an explicit --version was given instead (the
-            # "Suggest version bump" step above was skipped) - unused in
-            # that case, compute-version ignores --bump whenever --version
-            # is set.
-            bump="${{ steps.suggest.outputs.bump }}"
-            bump="${bump:-patch}"
-          fi
-          echo "bump=$bump" >> "$GITHUB_OUTPUT"
-
           version="$(python3 -m prepare_release compute-version \
             --pyproject lightly_studio/pyproject.toml \
-            --bump "$bump" \
+            --bump "${{ inputs.bump }}" \
             --version "${{ inputs.version }}")"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "### Preparing release v$version" >> "$GITHUB_STEP_SUMMARY"
