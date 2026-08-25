@@ -25,7 +25,7 @@ def get_or_create(session: Session, embedding_model: EmbeddingModelCreate) -> Em
     """Retrieve an existing EmbeddingModel by hash or create a new one if it does not exist."""
     db_model = get_by_model_hash(
         session=session,
-        collection_id=embedding_model.collection_id,
+        dataset_id=embedding_model.dataset_id,
         embedding_model_hash=embedding_model.embedding_model_hash,
     )
     if db_model is None:
@@ -63,14 +63,24 @@ def get_by_id(session: Session, embedding_model_id: UUID) -> EmbeddingModelTable
 
 
 def get_by_model_hash(
-    session: Session, collection_id: UUID, embedding_model_hash: str
+    session: Session, dataset_id: UUID, embedding_model_hash: str
 ) -> EmbeddingModelTable | None:
-    """Retrieve a single embedding model by hash and collection."""
-    query = select(EmbeddingModelTable).where(
-        EmbeddingModelTable.embedding_model_hash == embedding_model_hash
+    """Retrieve a single embedding model by hash within a dataset.
+
+    The write path deduplicates per ``(dataset_id, embedding_model_hash)``, but no unique
+    constraint enforces it yet (it lands with the ``collection_id`` drop). The oldest match
+    is returned so legacy duplicates resolve deterministically to the canonical row.
+    """
+    query = (
+        select(EmbeddingModelTable)
+        .where(EmbeddingModelTable.embedding_model_hash == embedding_model_hash)
+        .where(EmbeddingModelTable.dataset_id == dataset_id)
+        .order_by(
+            col(EmbeddingModelTable.created_at).asc(),
+            col(EmbeddingModelTable.embedding_model_id).asc(),
+        )
     )
-    query = query.where(EmbeddingModelTable.collection_id == collection_id)
-    return session.exec(query).one_or_none()
+    return session.exec(query).first()
 
 
 def get_by_name(
