@@ -11,7 +11,12 @@ from sqlmodel import Session
 from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.annotation_sort import AnnotationEvaluationMetricSortExpr
 from lightly_studio.models.collection import SampleType
-from lightly_studio.models.sort import AdjacentSortExpr, SortFieldSource, VideoSortFieldExpr
+from lightly_studio.models.sort import (
+    AdjacentSortExpr,
+    ImageSortFieldExpr,
+    SortFieldSource,
+    VideoSortFieldExpr,
+)
 from lightly_studio.models.sort_direction import SortDirection
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
@@ -401,3 +406,43 @@ def test_get_adjacent_samples__raises_not_implemented_for_unsupported_type(
             sample_id=uuid4(),
             request=request,
         )
+
+
+def test_get_adjacent_samples__raises_for_video_with_image_sort_source(
+    db_session: Session,
+) -> None:
+    request = AdjacentRequest(
+        sample_type=SampleType.VIDEO,
+        collection_id=uuid4(),
+        filters=VideoFilter(),
+        sort_by=[
+            ImageSortFieldExpr(
+                source=SortFieldSource.image,
+                field_name="file_name",
+                direction=SortDirection.asc,
+            )
+        ],
+    )
+
+    with pytest.raises(ValueError, match=r"Sort field source 'image' is not valid"):
+        get_adjacent_samples(session=db_session, sample_id=uuid4(), request=request)
+
+
+def test_get_adjacent_samples__raises_for_image_with_video_sort_source(
+    db_session: Session,
+) -> None:
+    request = AdjacentRequest(
+        sample_type=SampleType.IMAGE,
+        collection_id=uuid4(),
+        filters=ImageFilter(),
+        sort_by=[
+            VideoSortFieldExpr(
+                source=SortFieldSource.video,
+                field_name="duration_s",
+                direction=SortDirection.asc,
+            )
+        ],
+    )
+
+    with pytest.raises(ValueError, match=r"Sort field source 'video' is not valid"):
+        get_adjacent_samples(session=db_session, sample_id=uuid4(), request=request)
