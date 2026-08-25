@@ -724,6 +724,30 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   width: auto;
 }
 
+/* Material hangs each count's icon off `vertical-align: text-top`, which lines
+   the 12px glyph up with the top of an 11px content box — so it rides high over
+   the digits. Centre the two on each other instead, and let the row's own gap
+   do the spacing the icon's margin was doing. */
+.md-header__source .md-source__fact {
+  align-items: center;
+  display: flex;
+  gap: 0.1rem;
+}
+
+[dir] .md-header__source .md-source__fact::before {
+  margin: 0;
+}
+
+/* The counts get their height from a keyframe that animates 0 → .65rem once, on
+   load, with no fill mode — paired with `overflow: hidden`. A drawer that opens
+   on demand can afford that; a header that is always on screen cannot, and it
+   leaves the row measuring zero. The counts are not an entrance here. */
+.md-header__source .md-source__facts,
+.md-header__source .md-source__fact {
+  animation: none;
+  overflow: visible;
+}
+
 .md-header__source .md-source__fact--version {
   display: none;
 }
