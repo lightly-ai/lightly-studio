@@ -929,6 +929,7 @@
                                 {canSelectAll}
                                 isSelectionActive={$selectedCount > 0}
                                 {isImages}
+                                {isVideos}
                                 {isAnnotations}
                                 {hasMediaWithEmbeddings}
                                 collectionDatasetId={collection.dataset_id}
