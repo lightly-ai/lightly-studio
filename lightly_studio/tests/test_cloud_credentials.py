@@ -91,6 +91,17 @@ def test_apply_cloud_credentials__applies_azure_runtime_config(
     clear_cache.assert_called_once_with()
 
 
+def test_apply_cloud_credentials__supports_legacy_fsspec_config_parser(
+    mocker: MockerFixture,
+) -> None:
+    storage_options = {"account_name": "test-account", "account_key": "test-key"}
+    mocker.patch.object(fsspec.config, "set_conf_env")
+
+    apply_cloud_credentials(credentials={"FSSPEC_ABFS": json.dumps(storage_options)})
+
+    assert fsspec.config.conf["abfs"] == storage_options
+
+
 def test_apply_cloud_credentials__invalidates_cached_azure_filesystem() -> None:
     apply_cloud_credentials(
         credentials={

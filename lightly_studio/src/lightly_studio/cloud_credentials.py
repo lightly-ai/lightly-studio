@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import warnings
@@ -113,10 +114,17 @@ def _parse_fsspec_config(credentials: dict[str, str]) -> dict[str, dict[str, Any
     """
     config: dict[str, dict[str, Any]] = {}
     try:
+        for key, value in credentials.items():
+            if key.startswith("FSSPEC_") and key.count("_") == 1:
+                protocol_config = json.loads(value)
+                if not isinstance(protocol_config, dict):
+                    raise ValueError("FSSPEC protocol configuration must be a JSON object.")
+                protocol = key.removeprefix("FSSPEC_").lower()
+                config[protocol] = protocol_config
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             fsspec.config.set_conf_env(conf_dict=config, envdict=credentials)
-    except UserWarning as error:
+    except (ValueError, UserWarning) as error:
         raise ValueError("Invalid FSSPEC cloud credential configuration.") from error
     return config
 

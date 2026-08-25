@@ -270,6 +270,22 @@ def test_validate_limit__invalid(limit: int) -> None:
         fsspec_lister.validate_limit(limit)
 
 
-def test_cloud_protocols__include_azure_blob_aliases() -> None:
-    assert {"abfs", "abfss", "az"} <= set(fsspec_lister.CLOUD_PROTOCOLS)
-    assert "azure" not in fsspec_lister.CLOUD_PROTOCOLS
+@pytest.mark.parametrize(
+    ("protocol", "filesystem_protocol"),
+    [("abfs", "abfs"), ("abfss", "abfs"), ("az", "az")],
+)
+def test_iter_files_from_path__supports_azure_blob_protocols(
+    mocker: MockerFixture, protocol: str, filesystem_protocol: str
+) -> None:
+    filesystem = mocker.MagicMock()
+    filesystem.protocol = filesystem_protocol
+    filesystem.exists.return_value = True
+    filesystem.isfile.return_value = False
+    filesystem.isdir.return_value = True
+    filesystem.walk.return_value = [("container/images", [], ["image.jpg"])]
+    get_filesystem = mocker.patch.object(fsspec, "filesystem", return_value=filesystem)
+
+    result = list(fsspec_lister.iter_files_from_path(f"{protocol}://container/images"))
+
+    assert result == [f"{filesystem_protocol}://container/images/image.jpg"]
+    get_filesystem.assert_called_once_with(filesystem_protocol)
