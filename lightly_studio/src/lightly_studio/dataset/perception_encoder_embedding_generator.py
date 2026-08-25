@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator
 from pathlib import Path
-from uuid import UUID
 
 import fsspec
 import numpy as np
@@ -21,7 +20,7 @@ from lightly_studio.core.file_outcome_report import (
     MissingInputFileError,
 )
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
-from lightly_studio.models.embedding_model import EmbeddingModelCreate
+from lightly_studio.models.embedding_model import EmbeddingSpaceDescription
 from lightly_studio.utils import batching
 from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transforms
 
@@ -63,20 +62,16 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
         self._model = self._model.to(self._device)
         self._model_hash = file_utils.get_file_xxhash(Path(model_path))
 
-    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
-        """Generate an EmbeddingModelCreate instance.
-
-        Args:
-            collection_id: The ID of the collection.
+    def get_embedding_model_input(self) -> EmbeddingSpaceDescription:
+        """Describe the embedding space produced by this generator.
 
         Returns:
-            An EmbeddingModelCreate instance with the model details.
+            A description of the embedding space.
         """
-        return EmbeddingModelCreate(
+        return EmbeddingSpaceDescription(
             name=MODEL_NAME,
             embedding_model_hash=self._model_hash,
             embedding_dimension=self._model.output_dim,
-            collection_id=collection_id,
         )
 
     def embed_text(self, text: str) -> list[float]:

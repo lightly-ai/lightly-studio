@@ -22,6 +22,7 @@ from labelformat.utils import ImageDimensionError
 from sqlmodel import Session
 from tqdm import tqdm
 
+from lightly_studio.core import path_utils
 from lightly_studio.core.file_outcome_report import (
     BROKEN_IMAGE_ERRORS,
     AlreadyPresentInputFileError,
@@ -76,7 +77,7 @@ def load_into_dataset_from_paths(
     root_collection_id: UUID,
     image_paths: Iterable[str],
     show_progress: bool = True,
-) -> list[UUID]:
+) -> dict[str, UUID]:
     """Load images from file paths into the dataset.
 
     Args:
@@ -86,7 +87,9 @@ def load_into_dataset_from_paths(
         show_progress: Whether to display a progress bar and final summary of loading results.
 
     Returns:
-        A list of UUIDs of the created samples.
+        A mapping from normalized `file_path_abs` to the UUID of the created sample. A
+        path that was skipped (already present, missing, or broken) has no entry, so the
+        mapping is not guaranteed to cover every input path.
 
     Raises:
         AllInputFilesFailedError: If at least one file was attempted and every
@@ -94,9 +97,7 @@ def load_into_dataset_from_paths(
     """
     # Normalize all paths up front so the database check can happen once, before the
     # main processing loop, instead of once per batch.
-    normalized_paths = [
-        add_annotations.normalize_images_root(image_path) for image_path in image_paths
-    ]
+    normalized_paths = [path_utils.normalize_path_root(image_path) for image_path in image_paths]
     # The set starts with paths already in the database and grows with paths seen in this
     # call, so both already-present and in-run duplicate paths are skipped before batching.
     seen_or_existing_paths = _get_existing_paths_set(
@@ -106,7 +107,7 @@ def load_into_dataset_from_paths(
     )
 
     samples_to_create: list[ImageCreate] = []
-    created_sample_ids: list[UUID] = []
+    created_path_to_id: dict[str, UUID] = {}
 
     report = FileOutcomeReport()
 
@@ -152,22 +153,26 @@ def load_into_dataset_from_paths(
 
             # Process batch when it reaches SAMPLE_BATCH_SIZE
             if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
-                created_path_to_id = _create_batch_samples(
-                    session=session, collection_id=root_collection_id, samples=samples_to_create
+                created_path_to_id.update(
+                    _create_batch_samples(
+                        session=session,
+                        collection_id=root_collection_id,
+                        samples=samples_to_create,
+                    )
                 )
-                created_sample_ids.extend(created_path_to_id.values())
                 samples_to_create = []
 
     # Handle remaining samples
     if samples_to_create:
-        created_path_to_id = _create_batch_samples(
-            session=session, collection_id=root_collection_id, samples=samples_to_create
+        created_path_to_id.update(
+            _create_batch_samples(
+                session=session, collection_id=root_collection_id, samples=samples_to_create
+            )
         )
-        created_sample_ids.extend(created_path_to_id.values())
 
     report.log_summary()
     report.raise_if_all_failed()
-    return created_sample_ids
+    return created_path_to_id
 
 
 def load_into_dataset_from_labelformat(  # noqa: PLR0913
@@ -199,7 +204,7 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
             attempted file was missing or broken.
 
     """
-    images_root_abs = add_annotations.normalize_images_root(images_root=images_path)
+    images_root_abs = path_utils.normalize_path_root(images_path)
 
     # Some formats open images to read the dimensions during the get_images() and get_labels() scans
     # Collector is used to record BROKEN images and skip, preventing abort of the ingest. Pascal VOC
@@ -429,7 +434,7 @@ def tag_samples_by_directory(
     if tag_depth == 0:
         return
 
-    input_path_abs = add_annotations.normalize_images_root(input_path)
+    input_path_abs = path_utils.normalize_path_root(input_path)
 
     newly_created_images = image_resolver.get_many_by_id(
         session=session,

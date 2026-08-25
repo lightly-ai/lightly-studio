@@ -19,7 +19,7 @@ from lightly_studio.dataset.embedding_generator import (
     VideoEmbeddingGenerator,
 )
 from lightly_studio.models.collection import SampleType
-from lightly_studio.models.embedding_model import EmbeddingModelTable
+from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
@@ -161,12 +161,22 @@ class EmbeddingManager:
         Returns:
             The created EmbeddingModel.
         """
-        # Get or create embedding model record in the database.
+        collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+        if collection is None:
+            raise ValueError("Provided collection_id could not be found.")
+
+        embedding_space = embedding_generator.get_embedding_model_input()
+        embedding_model = EmbeddingModelCreate(
+            name=embedding_space.name,
+            parameter_count_in_mb=embedding_space.parameter_count_in_mb,
+            embedding_model_hash=embedding_space.embedding_model_hash,
+            embedding_dimension=embedding_space.embedding_dimension,
+            collection_id=collection_id,
+            dataset_id=collection.dataset_id,
+        )
         db_model = embedding_model_resolver.get_or_create(
             session=session,
-            embedding_model=embedding_generator.get_embedding_model_input(
-                collection_id=collection_id
-            ),
+            embedding_model=embedding_model,
         )
         model_id = db_model.embedding_model_id
 

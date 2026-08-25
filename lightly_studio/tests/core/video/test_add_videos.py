@@ -64,12 +64,12 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
         num_frames=30,
         fps=2,
     )
-    video_sample_ids, frame_sample_ids = add_videos.load_into_collection_from_paths(
+    video_path_to_id, frame_sample_ids = add_videos.load_into_collection_from_paths(
         session=db_session,
         collection_id=collection.collection_id,
         video_paths=[str(first_video_path), str(second_video_path)],
     )
-    assert len(video_sample_ids) == 2
+    assert len(video_path_to_id) == 2
     assert len(frame_sample_ids) == 60
 
     # Check that video samples are created.
@@ -83,9 +83,11 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
     assert video.file_path_abs == str(second_video_path)
     assert video.frame is not None
     assert video.frame.frame_number == 0
+    assert video_path_to_id[str(second_video_path)] == video.sample_id
     video = videos[1]
     assert video.file_name == "test_video_1.mp4"
     assert video.file_path_abs == str(first_video_path)
+    assert video_path_to_id[str(first_video_path)] == video.sample_id
 
     # Check the correct collection hierarchy was created. There should be one extra collection
     # created with the video frames.
@@ -102,6 +104,30 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
         collection_id=collection_hierarchy[1].collection_id,
     ).samples
     assert len(video_frames) == 60
+
+
+def test_load_into_collection_from_paths__normalizes_relative_path(
+    db_session: Session, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A relative video path is normalized to an absolute file_path_abs, matching images."""
+    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+    video_path = create_video_file(output_path=tmp_path / "video.mp4", num_frames=2, fps=1)
+    monkeypatch.chdir(tmp_path)
+
+    video_path_to_id, _ = add_videos.load_into_collection_from_paths(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video_paths=["video.mp4"],
+    )
+
+    normalized_path = str(video_path.absolute())
+    assert video_path_to_id.keys() == {normalized_path}
+    videos = video_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    ).samples
+    assert len(videos) == 1
+    assert videos[0].file_path_abs == normalized_path
+    assert video_path_to_id[normalized_path] == videos[0].sample_id
 
 
 def test_load_into_collection_from_paths__records_missing_broken_already_present_outcomes(
@@ -136,7 +162,7 @@ def test_load_into_collection_from_paths__records_missing_broken_already_present
 
     # Act
     with caplog.at_level("INFO"):
-        video_sample_ids, _ = add_videos.load_into_collection_from_paths(
+        video_path_to_id, _ = add_videos.load_into_collection_from_paths(
             session=db_session,
             collection_id=collection.collection_id,
             video_paths=[
@@ -145,8 +171,10 @@ def test_load_into_collection_from_paths__records_missing_broken_already_present
             ],
         )
 
-    # Assert: only the good video is added.
-    assert len(video_sample_ids) == len(good_paths)
+    # Assert: the mapping only contains entries for the newly-created (good) video, correctly
+    # matched to the sample actually created for that path. Already-present, missing, and
+    # broken paths have no entry.
+    assert set(video_path_to_id.keys()) == {str(path) for path in good_paths}
     videos = video_resolver.get_all_by_collection_id(
         session=db_session, collection_id=collection.collection_id
     ).samples
@@ -155,6 +183,8 @@ def test_load_into_collection_from_paths__records_missing_broken_already_present
         "present0.mp4",
         "present1.mp4",
     }
+    good_video = next(video for video in videos if video.file_name == "good0.mp4")
+    assert video_path_to_id[str(good_paths[0])] == good_video.sample_id
 
     # Assert: the end-of-run summary records the distinct per-outcome counts.
     assert "added=1" in caplog.text
@@ -175,7 +205,7 @@ def test_load_into_collection_from_paths__mid_decode_failure_is_cleaned_up(
     _fail_after_frame_creation(mocker=mocker, failing_file_name=broken_path.name)
 
     with caplog.at_level("INFO"):
-        video_sample_ids, _ = add_videos.load_into_collection_from_paths(
+        video_path_to_id, _ = add_videos.load_into_collection_from_paths(
             session=db_session,
             collection_id=collection.collection_id,
             video_paths=[str(broken_path), str(good_path)],
@@ -185,7 +215,7 @@ def test_load_into_collection_from_paths__mid_decode_failure_is_cleaned_up(
         session=db_session, collection_id=collection.collection_id
     ).samples
     assert [video.file_name for video in videos] == [good_path.name]
-    assert video_sample_ids == [videos[0].sample_id]
+    assert video_path_to_id == {str(good_path): videos[0].sample_id}
     assert "added=1" in caplog.text
     assert "broken=1" in caplog.text
 

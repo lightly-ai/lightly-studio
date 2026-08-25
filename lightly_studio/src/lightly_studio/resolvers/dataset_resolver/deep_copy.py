@@ -117,7 +117,7 @@ def deep_copy(
     _copy_tags(session=session, now=now)
     _copy_object_tracks(session=session, new_dataset_id=new_dataset_id)
     _copy_annotation_labels(session=session, new_dataset_id=new_dataset_id)
-    _copy_embedding_models(session=session, now=now)
+    _copy_embedding_models(session=session, new_dataset_id=new_dataset_id, now=now)
     _copy_samples(session=session, now=now)
     _copy_evaluation_runs(session=session, new_dataset_id=new_dataset_id, now=now)
 
@@ -436,8 +436,8 @@ def _copy_annotation_labels(session: Session, new_dataset_id: UUID) -> None:
     )
 
 
-def _copy_embedding_models(session: Session, now: datetime) -> None:
-    """Copy embedding models, remapping collection_id."""
+def _copy_embedding_models(session: Session, new_dataset_id: UUID, now: datetime) -> None:
+    """Copy embedding models, remapping collection_id and dataset_id."""
     src = _table(EmbeddingModelTable).alias("src")
     map_model = _map(_MAP_EMBEDDING_MODEL)
     map_collection = _map(_MAP_COLLECTION)
@@ -447,6 +447,7 @@ def _copy_embedding_models(session: Session, now: datetime) -> None:
     overrides = {
         "embedding_model_id": map_model.c.new_id,
         "collection_id": map_collection.c.new_id,
+        "dataset_id": literal(new_dataset_id),
         "created_at": literal(now),
     }
     _copy_table(

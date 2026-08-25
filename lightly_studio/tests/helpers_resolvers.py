@@ -314,10 +314,15 @@ def create_embedding_model(  # noqa: PLR0913
     is off by default to avoid the ``default_embedding_space`` foreign key blocking model
     or collection deletes in tests that do not need a default.
     """
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+    if collection is None:
+        raise ValueError(f"Collection with id {collection_id} not found.")
+
     model = embedding_model_resolver.create(
         session=session,
         embedding_model=EmbeddingModelCreate(
             collection_id=collection_id,
+            dataset_id=collection.dataset_id,
             name=embedding_model_name,
             embedding_model_hash=embedding_model_hash,
             parameter_count_in_mb=parameter_count_in_mb,

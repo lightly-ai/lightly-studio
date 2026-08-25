@@ -8,7 +8,6 @@ from collections.abc import Mapping
 from pathlib import Path
 from uuid import UUID
 
-import fsspec
 import yaml
 from labelformat.model.instance_segmentation import (
     ImageInstanceSegmentation,
@@ -22,7 +21,7 @@ from labelformat.utils import ImageDimensionError
 from sqlmodel import Session
 from tqdm import tqdm
 
-from lightly_studio.core import labelformat_helpers
+from lightly_studio.core import labelformat_helpers, path_utils
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
@@ -81,7 +80,7 @@ def add_annotations_from_labelformat(  # noqa: PLR0913
         A list of file_path_abs values from input_labels that had no matching sample in
         the collection. An empty list means all images were found.
     """
-    images_root_abs = normalize_images_root(images_root=images_root)
+    images_root_abs = path_utils.normalize_path_root(images_root)
 
     # Some formats (e.g. YOLO) open every image during the get_labels() scan. Set a skip+log hook so
     # a broken image is skipped instead of aborting the ingest.
@@ -126,24 +125,6 @@ def add_annotations_from_labelformat(  # noqa: PLR0913
         )
 
     return missing_paths
-
-
-def normalize_images_root(images_root: PathLike) -> str:
-    """Return absolute local roots and preserve remote roots.
-
-    Local paths are returned in posix form (forward slashes) so they can be
-    safely joined with `posixpath.join` and compared across platforms. On
-    Windows, `str(Path(...).absolute())` yields backslashes that, when joined
-    with posix-separated relative paths, produce mixed-separator strings that
-    fail to match what was stored at ingestion time.
-    """
-    images_root_str = str(images_root)
-    protocol, _ = fsspec.core.split_protocol(images_root_str)
-    if protocol is None:
-        return Path(images_root_str).absolute().as_posix()
-    if protocol == "file":
-        return Path(fsspec.core.strip_protocol(images_root_str)).absolute().as_posix()
-    return images_root_str
 
 
 def resolve_yolo_splits(data_yaml: Path, input_split: str | None) -> list[str]:
