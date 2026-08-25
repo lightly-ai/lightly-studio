@@ -22,7 +22,7 @@ PATH_SEPARATOR = "/"
 GLOB_CHARS = ["*", "?", "[", "]"]
 
 # Cloud storage protocols
-CLOUD_PROTOCOLS = ("s3", "gs", "gcs", "azure", "abfs")
+CLOUD_PROTOCOLS = ("s3", "gs", "gcs", "abfs", "abfss", "az")
 
 # Image file extensions
 IMAGE_EXTENSIONS = {

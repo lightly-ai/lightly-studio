@@ -268,3 +268,8 @@ def test_validate_limit(limit: int | None) -> None:
 def test_validate_limit__invalid(limit: int) -> None:
     with pytest.raises(ValueError, match=r"limit must be greater than 0"):
         fsspec_lister.validate_limit(limit)
+
+
+def test_cloud_protocols__include_azure_blob_aliases() -> None:
+    assert {"abfs", "abfss", "az"} <= set(fsspec_lister.CLOUD_PROTOCOLS)
+    assert "azure" not in fsspec_lister.CLOUD_PROTOCOLS

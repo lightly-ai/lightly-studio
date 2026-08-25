@@ -8,6 +8,7 @@ import os
 import fsspec
 import pytest
 import requests
+from adlfs import AzureBlobFileSystem  # type: ignore[import-untyped]
 from gcsfs import GCSFileSystem  # type: ignore[import-untyped]
 from pytest_mock import MockerFixture, MockType
 
@@ -322,6 +323,30 @@ def test_connect__applies_gcs_runtime_config(
 
     assert os.environ["FSSPEC_GCS"] == serialized_options
     assert fsspec.config.conf["gcs"] == storage_options
+    clear_cache.assert_called_once_with()
+
+
+def test_connect__applies_azure_runtime_config(
+    mocker: MockerFixture,
+    patch_db_connect: MockType,  # noqa: ARG001
+) -> None:
+    mocker.patch.dict(fsspec.config.conf, {}, clear=True)
+    clear_cache = mocker.spy(AzureBlobFileSystem, "clear_instance_cache")
+    storage_options = {"account_name": "test-account", "account_key": "test-key"}
+    serialized_options = json.dumps(storage_options)
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.ok = True
+    mock_response.json.return_value = {
+        "engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio",
+        "cloud_credentials": {"FSSPEC_ABFS": serialized_options},
+    }
+    mocker.patch.object(requests, "get", return_value=mock_response)
+
+    enterprise.connect(api_url="http://10.0.0.5:8100", token="token")
+
+    assert os.environ["FSSPEC_ABFS"] == serialized_options
+    assert fsspec.config.conf["abfs"] == storage_options
     clear_cache.assert_called_once_with()
 
 
