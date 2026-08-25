@@ -11,9 +11,15 @@
         targetDistribution: ClassBalancingTargetRow[];
         annotationLabels: string[];
         onUpdate: (rows: ClassBalancingTargetRow[]) => void;
+        testIdPrefix?: string;
     }
 
-    let { targetDistribution, annotationLabels, onUpdate }: Props = $props();
+    let {
+        targetDistribution,
+        annotationLabels,
+        onUpdate,
+        testIdPrefix = 'class-balancing'
+    }: Props = $props();
 
     function addRow() {
         onUpdate([...targetDistribution, { class_name: '', weight: 0 }]);
@@ -46,7 +52,7 @@
                 type: 'button',
                 size: 'sm',
                 onclick: addRow,
-                'data-testid': 'class-balancing-add-row'
+                'data-testid': `${testIdPrefix}-add-row`
             }}
         >
             Add class
@@ -54,7 +60,7 @@
     </div>
 
     {#if targetDistribution.length === 0}
-        <p class="text-sm text-muted-foreground" data-testid="class-balancing-empty-state">
+        <p class="text-sm text-muted-foreground" data-testid={`${testIdPrefix}-empty-state`}>
             Add at least one class to balance against.
         </p>
     {/if}
@@ -63,7 +69,7 @@
         {@const rowItems = annotationLabels.map<SelectItem>((label) => ({
             value: label,
             label,
-            testId: `class-balancing-class-name-${index}-${label}`
+            testId: `${testIdPrefix}-class-name-${index}-${label}`
         }))}
         <div class="grid grid-cols-[1fr_120px_auto] gap-2">
             <Select
@@ -71,7 +77,7 @@
                 value={row.class_name}
                 placeholder="Select class"
                 class="w-full"
-                testId={`class-balancing-class-name-${index}`}
+                testId={`${testIdPrefix}-class-name-${index}`}
                 onValueChange={(value) => updateRow(index, { class_name: value })}
             />
             <Input
@@ -85,7 +91,7 @@
                         weight: Number((event.currentTarget as HTMLInputElement).value)
                     })}
                 class="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                data-testid={`class-balancing-weight-${index}`}
+                data-testid={`${testIdPrefix}-weight-${index}`}
             />
             <Button
                 variant="ghost"
@@ -95,7 +101,7 @@
                     type: 'button',
                     size: 'icon',
                     onclick: () => removeRow(index),
-                    'data-testid': `class-balancing-remove-row-${index}`
+                    'data-testid': `${testIdPrefix}-remove-row-${index}`
                 }}
             />
         </div>

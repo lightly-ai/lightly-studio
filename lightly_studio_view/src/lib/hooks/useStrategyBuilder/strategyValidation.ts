@@ -1,4 +1,8 @@
-import { type StrategyInstance } from './types';
+import {
+    type ClassBalancingTargetDistributionMode,
+    type ClassBalancingTargetRow,
+    type StrategyInstance
+} from './types';
 
 function isNonZeroFiniteNumber(value: number): boolean {
     return Number.isFinite(value) && value !== 0;
@@ -6,6 +10,21 @@ function isNonZeroFiniteNumber(value: number): boolean {
 
 function isPositiveNumber(value: number): boolean {
     return Number.isFinite(value) && value > 0;
+}
+
+function isTargetDistributionValid(params: {
+    target_distribution_mode: ClassBalancingTargetDistributionMode;
+    target_distribution: ClassBalancingTargetRow[];
+}): boolean {
+    if (params.target_distribution_mode !== 'dictionary') {
+        return true;
+    }
+    return (
+        params.target_distribution.length > 0 &&
+        params.target_distribution.every(
+            (row) => row.class_name.trim().length > 0 && isPositiveNumber(row.weight)
+        )
+    );
 }
 
 export function isStrategyInstanceValid(instance: StrategyInstance): boolean {
@@ -26,14 +45,13 @@ export function isStrategyInstanceValid(instance: StrategyInstance): boolean {
     }
 
     if (instance.type === 'class_balancing') {
-        if (instance.params.target_distribution_mode !== 'dictionary') {
-            return true;
-        }
+        return isTargetDistributionValid(instance.params);
+    }
+
+    if (instance.type === 'metadata_balancing') {
         return (
-            instance.params.target_distribution.length > 0 &&
-            instance.params.target_distribution.every(
-                (row) => row.class_name.trim().length > 0 && isPositiveNumber(row.weight)
-            )
+            instance.params.metadata_key.trim().length > 0 &&
+            isTargetDistributionValid(instance.params)
         );
     }
 
