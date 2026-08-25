@@ -305,9 +305,7 @@ class TestSampling:
                 n_samples_to_select=2,
                 sampling_result_tag_name="balanced_weather",
                 strategies=[
-                    MetadataBalancingStrategy(
-                        metadata_key="weather", target_distribution="uniform"
-                    )
+                    MetadataBalancingStrategy(metadata_key="weather", target_distribution="uniform")
                 ],
             ),
             input_sample_ids=[sample.sample_id for sample in all_samples],

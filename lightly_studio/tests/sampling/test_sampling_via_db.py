@@ -1187,9 +1187,7 @@ def test_sampling_via_database__metadata_balancing_uniform(
     )
 
     spy_add_class_balancing = mocker.spy(Mundig, "add_class_balancing")
-    sampling_via_database(
-        session=db_session, config=config, input_sample_ids=sample_ids
-    )
+    sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
 
     call_args = spy_add_class_balancing.call_args
     # Columns are the sorted values ["rainy", "sunny"].
@@ -1222,15 +1220,11 @@ def test_sampling_via_database__metadata_balancing_input(
         n_samples_to_select=2,
         collection_id=collection_id,
         sampling_result_tag_name="sampling-tag",
-        strategies=[
-            MetadataBalancingStrategy(metadata_key="weather", target_distribution="input")
-        ],
+        strategies=[MetadataBalancingStrategy(metadata_key="weather", target_distribution="input")],
     )
 
     spy_add_class_balancing = mocker.spy(Mundig, "add_class_balancing")
-    sampling_via_database(
-        session=db_session, config=config, input_sample_ids=sample_ids
-    )
+    sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
 
     # The target holds the raw counts of ["rainy", "sunny"].
     assert spy_add_class_balancing.call_args.kwargs["target"] == [1.0, 2.0]
@@ -1256,9 +1250,7 @@ def test_sampling_via_database__metadata_balancing_boolean(
     )
 
     spy_add_class_balancing = mocker.spy(Mundig, "add_class_balancing")
-    sampling_via_database(
-        session=db_session, config=config, input_sample_ids=sample_ids
-    )
+    sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
 
     # Columns are the sorted values ["false", "true"].
     np.testing.assert_array_equal(
@@ -1291,9 +1283,7 @@ def test_sampling_via_database__metadata_balancing_explicit_target(
     )
 
     spy_add_class_balancing = mocker.spy(Mundig, "add_class_balancing")
-    sampling_via_database(
-        session=db_session, config=config, input_sample_ids=sample_ids
-    )
+    sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
 
     call_args = spy_add_class_balancing.call_args
     # Columns are ["sunny", other].
@@ -1329,9 +1319,7 @@ def test_sampling_via_database__metadata_balancing_missing_values_not_dropped(
     )
 
     spy_add_class_balancing = mocker.spy(Mundig, "add_class_balancing")
-    sampling_via_database(
-        session=db_session, config=config, input_sample_ids=sample_ids
-    )
+    sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
 
     # The sample without a value has an all-zero row.
     class_distributions = spy_add_class_balancing.call_args.kwargs["class_distributions"]
@@ -1372,9 +1360,7 @@ def test_sampling_via_database__metadata_balancing_two_keys(
     )
 
     spy_add_class_balancing = mocker.spy(Mundig, "add_class_balancing")
-    sampling_via_database(
-        session=db_session, config=config, input_sample_ids=sample_ids
-    )
+    sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
 
     # Each key is balanced on its own, so each adds its own balancing strategy.
     assert spy_add_class_balancing.call_count == 2
