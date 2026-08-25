@@ -105,10 +105,10 @@ copyright: "© 2026 Lightly · Apache 2.0"
 hooks:
   - mkdocs_hooks.py
 
-# Five sections, named for what the reader is doing rather than for the kind of
-# artifact each page is: get set up, run the loop, plug something in, look
-# something up. Two of the five are their own header tab (see `extra.tabs`), so
-# the sidebar shows four at a time.
+# Six sections, named for what the reader is doing rather than for the kind of
+# artifact each page is: get set up, run the loop, learn the vocabulary, plug
+# something in, look something up. Two of the six are their own header tab (see
+# `extra.tabs`), so the sidebar shows four at a time.
 #
 # Workflows is the product pipeline, in the order a user runs it: ingest, curate,
 # annotate, evaluate, export. One caption per stage, so the section reads top to
@@ -116,11 +116,17 @@ hooks:
 # to the stage it serves, which is why the dataset pages sit under Data Ingest
 # rather than under Get Started.
 #
+# Core Concepts sits after Workflows, not inside Get Started. Tags and Metadata
+# are reached for mid-task — tracking curation progress, driving filters — not on
+# a first read, so a get-set-up caption did not describe them. The order is
+# FiftyOne's, whose nav this one otherwise follows: land, get running, see the
+# pipeline, then go deeper.
+#
 # Every other section keeps a single grouping level, and only where a run of
-# pages needs one — Core Concepts and Python API. The tree before last put a
-# grouping level under every section ("Data Types", "Setup Options", "Concepts",
-# "Tools", "More"), which cost a whole visual register to say things the section
-# caption above it already said.
+# pages needs one — Data Ingest and the rest of the stages, and Python API. The
+# tree before last put a grouping level under every section ("Data Types",
+# "Setup Options", "Concepts", "Tools", "More"), which cost a whole visual
+# register to say things the section caption above it already said.
 #
 # No page moved on disk, so no URL changed and nothing needs a redirect.
 nav:
@@ -128,10 +134,6 @@ nav:
     - Welcome: index.md
     - Run LightlyStudio from a Notebook: dataset_setup/notebooks.md
     - Reuse Datasets: dataset_setup/reuse_datasets.md
-    - Core Concepts:
-      - Tags: concepts_and_tools/tags.md
-      - Metadata: concepts_and_tools/metadata.md
-      - Embeddings: concepts_and_tools/embeddings.md
   - Workflows:
     - Data Ingest:
       - Image Dataset: dataset_setup/image_dataset.md
@@ -148,6 +150,10 @@ nav:
       - Model Evaluation: concepts_and_tools/evaluation.md
     - Export and Train:
       - Export: concepts_and_tools/export.md
+  - Core Concepts:
+    - Tags: concepts_and_tools/tags.md
+    - Metadata: concepts_and_tools/metadata.md
+    - Embeddings: concepts_and_tools/embeddings.md
   - Ecosystem:
     - Plugins: concepts_and_tools/plugins.md
     - Cloud Storage: dataset_setup/cloud_storage.md
@@ -253,6 +259,7 @@ extra:
       sections:
         - Get Started
         - Workflows
+        - Core Concepts
         - Ecosystem
         - Resources
     - name: Tutorials
