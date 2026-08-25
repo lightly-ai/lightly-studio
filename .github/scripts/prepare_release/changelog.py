@@ -25,48 +25,6 @@ _ANY_H2_RE = re.compile(r"^## ", re.MULTILINE)
 _SUBSECTION_RE = re.compile(r"^### (?P<name>\w+)[ \t]*$", re.MULTILINE)
 
 
-def parse_unreleased_sections(changelog_text: str) -> dict[str, str]:
-    """Extracts the `[Unreleased]` section's six subsections.
-
-    Returns:
-        A mapping from subsection name (e.g. "Added") to its raw body text
-        (may be empty or whitespace-only).
-    """
-    body = _unreleased_body(changelog_text)
-    headings = list(_SUBSECTION_RE.finditer(body))
-    names = [h.group("name") for h in headings]
-    if names != list(SUBSECTIONS):
-        raise PrepareReleaseError(
-            f"[Unreleased] subsections are {names}, expected {list(SUBSECTIONS)} in that order"
-        )
-    if body[: headings[0].start()].strip():
-        raise PrepareReleaseError(
-            "unexpected content between the [Unreleased] heading and its first subsection"
-        )
-    sections = {}
-    for i, heading in enumerate(headings):
-        start = heading.end()
-        end = headings[i + 1].start() if i + 1 < len(headings) else len(body)
-        sections[heading.group("name")] = body[start:end]
-    return sections
-
-
-def suggest_bump(sections: dict[str, str]) -> tuple[str, str]:
-    """Suggests a semver bump from which [Unreleased] sections are non-empty.
-
-    Added / Changed / Removed / Deprecated entries suggest a minor bump;
-    only Fixed and/or Security entries suggest a patch. The operator still
-    confirms - this is a suggestion, not a decision.
-    """
-    non_empty = [name for name in SUBSECTIONS if sections.get(name, "").strip()]
-    if not non_empty:
-        raise PrepareReleaseError("the [Unreleased] section has no entries; nothing to release")
-    minor_triggers = [n for n in non_empty if n in ("Added", "Changed", "Removed", "Deprecated")]
-    bump = "minor" if minor_triggers else "patch"
-    reasoning = f"Non-empty [Unreleased] sections: {', '.join(non_empty)}."
-    return bump, reasoning
-
-
 def promote_changelog(changelog_text: str, version: str, date: str) -> str:
     """Promotes `[Unreleased]` to a released version block.
 
@@ -77,7 +35,7 @@ def promote_changelog(changelog_text: str, version: str, date: str) -> str:
     """
     unreleased_match = _single_unreleased_match(changelog_text)
     _, body_end = _unreleased_body_span(changelog_text, unreleased_match)
-    sections = parse_unreleased_sections(changelog_text)
+    sections = _parse_unreleased_sections(changelog_text)
 
     preamble = changelog_text[: unreleased_match.start()]
     rest = changelog_text[body_end:]
@@ -102,6 +60,7 @@ def assert_changelog_structure(original_text: str, new_text: str, version: str) 
     logic itself:
 
     * exactly one `## [Unreleased]` heading, with all six subheadings,
+    * the fresh `[Unreleased]` section has no entries,
     * exactly one new `## \\[version\\] - YYYY-MM-DD` heading, preceded by
       the `[Unreleased]` heading,
     * every previously-released version block is byte-identical to before.
@@ -113,7 +72,11 @@ def assert_changelog_structure(original_text: str, new_text: str, version: str) 
             f"{len(unreleased_matches)}"
         )
     # Raises PrepareReleaseError itself if a subheading is missing/misordered.
-    parse_unreleased_sections(new_text)
+    fresh_sections = _parse_unreleased_sections(new_text)
+    if any(content.strip() for content in fresh_sections.values()):
+        raise PrepareReleaseError(
+            "expected the fresh [Unreleased] section to have no entries after promotion"
+        )
 
     released_heading = re.compile(
         r"^## \\\[" + re.escape(version) + r"\\\] - \d{4}-\d{2}-\d{2}[ \t]*$",
@@ -140,7 +103,11 @@ def assert_changelog_structure(original_text: str, new_text: str, version: str) 
 
 
 def extract_released_section(changelog_text: str, version: str) -> str:
-    r"""Returns the (trimmed) body of the `## \[version\] - ...` block."""
+    r"""Returns the (trimmed) body of the `## \[version\] - ...` block.
+
+    Consumed by the release PR body renderer (a later stage of this stack) to
+    pull the just-promoted section's text into the release PR description.
+    """
     heading = re.compile(
         r"^## \\\[" + re.escape(version) + r"\\\] - \d{4}-\d{2}-\d{2}[ \t]*$",
         re.MULTILINE,
@@ -152,6 +119,32 @@ def extract_released_section(changelog_text: str, version: str) -> str:
     next_heading = _ANY_H2_RE.search(changelog_text, body_start)
     body_end = next_heading.start() if next_heading else len(changelog_text)
     return changelog_text[body_start:body_end].strip()
+
+
+def _parse_unreleased_sections(changelog_text: str) -> dict[str, str]:
+    """Extracts the `[Unreleased]` section's six subsections.
+
+    Returns:
+        A mapping from subsection name (e.g. "Added") to its raw body text
+        (may be empty or whitespace-only).
+    """
+    body = _unreleased_body(changelog_text)
+    headings = list(_SUBSECTION_RE.finditer(body))
+    names = [h.group("name") for h in headings]
+    if names != list(SUBSECTIONS):
+        raise PrepareReleaseError(
+            f"[Unreleased] subsections are {names}, expected {list(SUBSECTIONS)} in that order"
+        )
+    if body[: headings[0].start()].strip():
+        raise PrepareReleaseError(
+            "unexpected content between the [Unreleased] heading and its first subsection"
+        )
+    sections = {}
+    for i, heading in enumerate(headings):
+        start = heading.end()
+        end = headings[i + 1].start() if i + 1 < len(headings) else len(body)
+        sections[heading.group("name")] = body[start:end]
+    return sections
 
 
 def _single_unreleased_match(changelog_text: str) -> re.Match[str]:
