@@ -22,8 +22,8 @@ def test_create_embedding_model(db_session: Session) -> None:
     assert embedding_model.name == "example_embedding_model"
 
 
-def test_get_all_by_collection_id__returns_default(db_session: Session) -> None:
-    """get_all_by_collection_id returns the collection's default model as a one-element list."""
+def test_get_default_by_collection_id__returns_default(db_session: Session) -> None:
+    """get_default_by_collection_id returns the collection's default model."""
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
@@ -34,15 +34,15 @@ def test_get_all_by_collection_id__returns_default(db_session: Session) -> None:
         set_as_default=True,
     )
 
-    embedding_models = embedding_model_resolver.get_all_by_collection_id(
+    default_model = embedding_model_resolver.get_default_by_collection_id(
         session=db_session, collection_id=collection_id
     )
-    assert len(embedding_models) == 1
-    assert embedding_models[0].embedding_model_id == embedding_model.embedding_model_id
+    assert default_model is not None
+    assert default_model.embedding_model_id == embedding_model.embedding_model_id
 
 
-def test_get_all_by_collection_id__empty_without_default(db_session: Session) -> None:
-    """Without a default embedding space, the collection resolves to no models."""
+def test_get_default_by_collection_id__none_without_default(db_session: Session) -> None:
+    """Without a default embedding space, the collection resolves to no model."""
     collection = create_collection(session=db_session)
 
     create_embedding_model(
@@ -51,10 +51,10 @@ def test_get_all_by_collection_id__empty_without_default(db_session: Session) ->
         embedding_model_name="embedding_model_1",
     )
 
-    embedding_models = embedding_model_resolver.get_all_by_collection_id(
+    default_model = embedding_model_resolver.get_default_by_collection_id(
         session=db_session, collection_id=collection.collection_id
     )
-    assert embedding_models == []
+    assert default_model is None
 
 
 def test_read_embedding_model(db_session: Session) -> None:
@@ -190,9 +190,7 @@ def test_get_by_name__none_with_no_models(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
-    with pytest.raises(
-        ValueError, match=r"Expected exactly one embedding model, but found 0 with names \[\]\."
-    ):
+    with pytest.raises(ValueError, match=r"The collection has no default embedding model\."):
         embedding_model_resolver.get_by_name(
             session=db_session, collection_id=collection_id, embedding_model_name=None
         )
@@ -285,10 +283,11 @@ def test_get_or_create__reuses_existing_model(db_session: Session) -> None:
     )
 
     assert reused.embedding_model_id == existing.embedding_model_id
-    models = embedding_model_resolver.get_all_by_collection_id(
+    default_model = embedding_model_resolver.get_default_by_collection_id(
         session=db_session, collection_id=collection.collection_id
     )
-    assert len(models) == 1
+    assert default_model is not None
+    assert default_model.embedding_model_id == existing.embedding_model_id
 
 
 def test_get_or_create__conflicting_model_raises(db_session: Session) -> None:

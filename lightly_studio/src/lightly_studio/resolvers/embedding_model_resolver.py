@@ -59,17 +59,6 @@ def get_default_by_collection_id(
     return get_by_id(session=session, embedding_model_id=embedding_model_id)
 
 
-def get_all_by_collection_id(session: Session, collection_id: UUID) -> list[EmbeddingModelTable]:
-    """Retrieve the collection's embedding model(s).
-
-    A collection is associated with a single model through ``default_embedding_space``, so
-    this returns that model as a one-element list, or an empty list if the collection has
-    no default.
-    """
-    embedding_model = get_default_by_collection_id(session=session, collection_id=collection_id)
-    return [embedding_model] if embedding_model is not None else []
-
-
 def get_by_id(session: Session, embedding_model_id: UUID) -> EmbeddingModelTable | None:
     """Retrieve a single embedding model by ID."""
     return session.exec(
@@ -103,41 +92,32 @@ def get_by_model_hash(
 def get_by_name(
     session: Session, collection_id: UUID, embedding_model_name: str | None
 ) -> EmbeddingModelTable:
-    """Helper function to resolve the embedding model name to its ID.
+    """Resolve the collection's default embedding model, optionally checking its name.
 
     Args:
         session: The database session.
         collection_id: The ID of the collection.
-        embedding_model_name: The name of the embedding model.
-            If None, expects the collection to have exactly one embedding model and
-            returns it. Otherwise raises a ValueError.
-            If set, expects the collection to have an embedding model with the given name.
-            Otherwise raises a ValueError.
+        embedding_model_name: The expected name of the default model. If None, the default
+            is returned as is. If set, the default is returned only when its name matches.
 
     Returns:
-        The embedding model with the given name.
+        The collection's default embedding model.
+
+    Raises:
+        ValueError: If the collection has no default model, or its name does not match
+            ``embedding_model_name``.
     """
-    embedding_models = get_all_by_collection_id(
-        session=session,
-        collection_id=collection_id,
-    )
+    embedding_model = get_default_by_collection_id(session=session, collection_id=collection_id)
 
     if embedding_model_name is None:
-        if len(embedding_models) != 1:
-            raise ValueError(
-                f"Expected exactly one embedding model, "
-                f"but found {len(embedding_models)} with names "
-                f"{[model.name for model in embedding_models]}."
-            )
-        return embedding_models[0]
+        if embedding_model is None:
+            raise ValueError("The collection has no default embedding model.")
+        return embedding_model
 
-    embedding_model_with_name = next(
-        (model for model in embedding_models if model.name == embedding_model_name), None
-    )
-    if embedding_model_with_name is None:
+    if embedding_model is None or embedding_model.name != embedding_model_name:
         raise ValueError(f"Embedding model with name `{embedding_model_name}` not found.")
 
-    return embedding_model_with_name
+    return embedding_model
 
 
 def delete(session: Session, embedding_model_id: UUID) -> bool:
