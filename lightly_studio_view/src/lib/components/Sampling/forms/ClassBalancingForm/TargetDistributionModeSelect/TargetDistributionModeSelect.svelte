@@ -7,23 +7,24 @@
     interface Props {
         targetDistributionMode: ClassBalancingTargetDistributionMode;
         onUpdate: (mode: ClassBalancingTargetDistributionMode) => void;
+        testIdPrefix?: string;
     }
 
-    let { targetDistributionMode, onUpdate }: Props = $props();
+    let { targetDistributionMode, onUpdate, testIdPrefix = 'class-balancing' }: Props = $props();
 
-    const items = [
+    const items = $derived([
         {
             value: 'uniform',
             label: 'Uniform',
-            testId: 'class-balancing-target-distribution-uniform'
+            testId: `${testIdPrefix}-target-distribution-uniform`
         },
-        { value: 'input', label: 'Input', testId: 'class-balancing-target-distribution-input' },
+        { value: 'input', label: 'Input', testId: `${testIdPrefix}-target-distribution-input` },
         {
             value: 'dictionary',
             label: 'Dictionary',
-            testId: 'class-balancing-target-distribution-dictionary'
+            testId: `${testIdPrefix}-target-distribution-dictionary`
         }
-    ] satisfies { value: ClassBalancingTargetDistributionMode; label: string; testId: string }[];
+    ] satisfies { value: ClassBalancingTargetDistributionMode; label: string; testId: string }[]);
 </script>
 
 <div class="grid gap-2">
@@ -35,7 +36,7 @@
         {items}
         value={targetDistributionMode}
         class="w-full"
-        testId="class-balancing-target-distribution"
+        testId={`${testIdPrefix}-target-distribution`}
         onValueChange={(value) => onUpdate(value as ClassBalancingTargetDistributionMode)}
     />
 </div>

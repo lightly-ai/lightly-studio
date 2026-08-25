@@ -2,11 +2,15 @@ import { get } from 'svelte/store';
 import type { MetadataInfoView } from '$lib/api/lightly_studio_local';
 import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
 import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
+import { useCategoricalMetadataDistribution } from '$lib/hooks/useCategoricalMetadataDistribution/useCategoricalMetadataDistribution.svelte';
 import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 
 export function useStrategyOptions(getCollectionId: () => string) {
     const annotationLabelsQuery = useAnnotationLabels(() => ({ collectionId: getCollectionId() }));
     const annotationCollectionsQuery = useAnnotationCollections(() => ({
+        collectionId: getCollectionId()
+    }));
+    const categoricalMetadataQuery = useCategoricalMetadataDistribution(() => ({
         collectionId: getCollectionId()
     }));
     const { metadataInfo } = useMetadataFilters(getCollectionId());
@@ -20,6 +24,22 @@ export function useStrategyOptions(getCollectionId: () => string) {
             .map((i) => i.name)
     );
     const hasMetadataFields = $derived(metadataFieldNames.length > 0);
+    const categoricalMetadataFieldNames = $derived(
+        metadataInfoValue
+            .filter((i) => i.type === 'string' || i.type === 'boolean')
+            .map((i) => i.name)
+    );
+    const hasCategoricalMetadataFields = $derived(categoricalMetadataFieldNames.length > 0);
+    // Only concrete values are selectable targets; the "missing" and "other"
+    // buckets are aggregates, not metadata values the backend can balance on.
+    const metadataValuesByKey = $derived(
+        Object.fromEntries(
+            Object.entries(categoricalMetadataQuery.data ?? {}).map(([key, buckets]) => [
+                key,
+                buckets.filter((b) => b.kind === 'value').map((b) => String(b.value))
+            ])
+        )
+    );
     const annotationLabels = $derived(
         (annotationLabelsQuery.data ?? []).map((l) => l.annotation_label_name)
     );
@@ -34,6 +54,15 @@ export function useStrategyOptions(getCollectionId: () => string) {
         },
         get hasMetadataFields() {
             return hasMetadataFields;
+        },
+        get categoricalMetadataFieldNames() {
+            return categoricalMetadataFieldNames;
+        },
+        get hasCategoricalMetadataFields() {
+            return hasCategoricalMetadataFields;
+        },
+        get metadataValuesByKey() {
+            return metadataValuesByKey;
         },
         get annotationLabels() {
             return annotationLabels;

@@ -90,6 +90,21 @@ describe('AddStrategyButton', () => {
         );
     });
 
+    it('disables the metadata balancing option when a reason is provided', async () => {
+        render(AddStrategyButton, {
+            props: {
+                metadataBalancingDisabledReason: 'No categorical metadata available',
+                onAdd: vi.fn()
+            }
+        });
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+
+        expect(await screen.findByTestId('add-strategy-metadata_balancing')).toHaveAttribute(
+            'data-disabled'
+        );
+    });
+
     it('does not call onAdd when a disabled option is clicked', async () => {
         const onAdd = vi.fn();
 

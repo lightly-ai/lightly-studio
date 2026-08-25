@@ -48,6 +48,18 @@ const defaultClassBalancing: StrategyInstance = {
     isExpanded: true
 };
 
+const defaultMetadataBalancing: StrategyInstance = {
+    id: '1',
+    type: 'metadata_balancing',
+    params: {
+        metadata_key: 'weather',
+        target_distribution_mode: 'uniform',
+        target_distribution: [],
+        strength: 1
+    },
+    isExpanded: true
+};
+
 describe('isStrategyInstanceValid', () => {
     describe('strength validation', () => {
         it('returns false when strength is 0', () => {
@@ -309,6 +321,85 @@ describe('isStrategyInstanceValid', () => {
                     target_distribution: [
                         { class_name: 'cat', weight: 2 },
                         { class_name: 'dog', weight: 1 }
+                    ]
+                }
+            };
+
+            expect(isStrategyInstanceValid(instance)).toBe(true);
+        });
+    });
+
+    describe('metadata_balancing', () => {
+        it('returns true for uniform', () => {
+            expect(isStrategyInstanceValid(defaultMetadataBalancing)).toBe(true);
+        });
+
+        it('returns false when metadata_key is empty', () => {
+            const instance: StrategyInstance = {
+                ...defaultMetadataBalancing,
+                params: { ...defaultMetadataBalancing.params, metadata_key: '' }
+            };
+
+            expect(isStrategyInstanceValid(instance)).toBe(false);
+        });
+
+        it('returns false when metadata_key is only whitespace', () => {
+            const instance: StrategyInstance = {
+                ...defaultMetadataBalancing,
+                params: { ...defaultMetadataBalancing.params, metadata_key: '   ' }
+            };
+
+            expect(isStrategyInstanceValid(instance)).toBe(false);
+        });
+
+        it('returns false for dictionary with no rows', () => {
+            const instance: StrategyInstance = {
+                ...defaultMetadataBalancing,
+                params: {
+                    ...defaultMetadataBalancing.params,
+                    target_distribution_mode: 'dictionary',
+                    target_distribution: []
+                }
+            };
+
+            expect(isStrategyInstanceValid(instance)).toBe(false);
+        });
+
+        it('returns false for dictionary when a row has a non-positive weight', () => {
+            const instance: StrategyInstance = {
+                ...defaultMetadataBalancing,
+                params: {
+                    ...defaultMetadataBalancing.params,
+                    target_distribution_mode: 'dictionary',
+                    target_distribution: [{ class_name: 'sunny', weight: 0 }]
+                }
+            };
+
+            expect(isStrategyInstanceValid(instance)).toBe(false);
+        });
+
+        it('returns false for dictionary when a row has an empty value', () => {
+            const instance: StrategyInstance = {
+                ...defaultMetadataBalancing,
+                params: {
+                    ...defaultMetadataBalancing.params,
+                    target_distribution_mode: 'dictionary',
+                    target_distribution: [{ class_name: '', weight: 1 }]
+                }
+            };
+
+            expect(isStrategyInstanceValid(instance)).toBe(false);
+        });
+
+        it('returns true for dictionary with a valid distribution', () => {
+            const instance: StrategyInstance = {
+                ...defaultMetadataBalancing,
+                params: {
+                    ...defaultMetadataBalancing.params,
+                    target_distribution_mode: 'dictionary',
+                    target_distribution: [
+                        { class_name: 'sunny', weight: 0.3 },
+                        { class_name: 'rainy', weight: 0.7 }
                     ]
                 }
             };
