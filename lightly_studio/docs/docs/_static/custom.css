@@ -999,24 +999,22 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
 }
 
 /* The caption, from where the list stops being a collapsible drawer with a back
-   button in its title and becomes a column beside the article. */
+   button in its title and becomes a column beside the article.
+
+   The wording itself is Material's `toc` string, reworded in
+   `overrides/partials/languages/custom.html`. Setting it there rather than as
+   `::after` content keeps it the same string as the `aria-label` on the list,
+   which is drawn from the same key. */
 @media screen and (min-width: 60em) {
   .md-nav--secondary .md-nav__title {
     background: transparent;
     box-shadow: none;
     color: var(--ls-muted);
     font-family: var(--ls-font-mono);
-    /* Zeroed so the label Material prints is replaced rather than joined by
-       the one below; `::after` sets its own size. */
-    font-size: 0;
+    font-size: 0.525rem;
     font-weight: 500;
     letter-spacing: 0.08em;
     padding: 0 0 0.6rem 0.5rem;
-  }
-
-  .md-nav--secondary .md-nav__title::after {
-    content: "On this page";
-    font-size: 0.525rem;
     text-transform: uppercase;
   }
 }
