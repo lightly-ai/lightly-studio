@@ -85,6 +85,15 @@ def test_check_labelformat_pin__single_quoted_git_sha_raises():
         version.check_labelformat_pin(text)
 
 
+def test_check_labelformat_pin__mixed_case_git_sha_raises():
+    text = SAMPLE_PYPROJECT.replace(
+        '"labelformat>=0.1.17"',
+        '"LabelFormat @ git+https://github.com/lightly-ai/labelformat.git@325a20b"',
+    )
+    with pytest.raises(PrepareReleaseError, match="git sha"):
+        version.check_labelformat_pin(text)
+
+
 def test_check_labelformat_pin__git_sha_after_plain_entry_raises():
     # A plain entry earlier in the file must not shadow a git-pinned one later.
     text = SAMPLE_PYPROJECT.replace(

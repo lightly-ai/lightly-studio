@@ -61,7 +61,7 @@ def check_labelformat_pin(pyproject_text: str) -> None:
     fine.
     """
     for match in re.finditer(
-        r'^\s*(?P<quote>["\'])labelformat[^"\']*\1', pyproject_text, re.MULTILINE
+        r'^\s*(?P<quote>["\'])labelformat[^"\']*\1', pyproject_text, re.MULTILINE | re.IGNORECASE
     ):
         if "git+" in match.group(0):
             raise PrepareReleaseError(
