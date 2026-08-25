@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session
 
 from lightly_studio.evaluation import (
+    aggregate_metrics,
     classification_metric,
     object_detection_metric,
     semantic_segmentation_metric,
@@ -19,6 +20,7 @@ from lightly_studio.evaluation import (
 from lightly_studio.evaluation.evaluation_data import EvaluationData
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.evaluation_confusion_matrix import ConfusionMatrix
+from lightly_studio.models.evaluation_metrics import EvaluationMetrics
 from lightly_studio.models.evaluation_run import (
     EvaluationRunCreate,
     EvaluationRunTable,
@@ -251,6 +253,42 @@ class ImageDatasetEvaluate:
             ValueError: If no run with ``run_id`` exists in this dataset.
             NotImplementedError: If the run's task type has no confusion matrix.
         """
+        _, matrix = self._confusion_matrix_with_run(run_id)
+        return matrix
+
+    def metrics(self, run_id: UUID) -> EvaluationMetrics:
+        """Return aggregate metrics for an evaluation run.
+
+        Derives per-class and micro-averaged precision, recall, and F1 from the
+        run's confusion matrix, plus accuracy for classification runs. Object
+        detection and classification are supported; segmentation tasks have no
+        confusion matrix and so no confusion-derived metrics.
+
+        Args:
+            run_id: ID of the evaluation run.
+
+        Returns:
+            The aggregate metrics for the run.
+
+        Raises:
+            ValueError: If no run with ``run_id`` exists in this dataset.
+            NotImplementedError: If the run's task type has no confusion matrix.
+        """
+        run, matrix = self._confusion_matrix_with_run(run_id)
+        return aggregate_metrics.compute_from_confusion_matrix(
+            matrix=matrix,
+            task_type=run.task_type,
+        )
+
+    def _confusion_matrix_with_run(
+        self, run_id: UUID
+    ) -> tuple[EvaluationRunTable, ConfusionMatrix]:
+        """Fetch a run and its confusion matrix, validating the run and its task type.
+
+        Raises:
+            ValueError: If no run with ``run_id`` exists in this dataset.
+            NotImplementedError: If the run's task type has no confusion matrix.
+        """
         run = evaluation_run_resolver.get_by_id(session=self.session, evaluation_id=run_id)
         if run is None or run.dataset_id != self._dataset_id():
             raise ValueError(f"Evaluation run {run_id} not found in this dataset.")
@@ -258,10 +296,11 @@ class ImageDatasetEvaluate:
             raise NotImplementedError(
                 f"Evaluation task type {run.task_type.value!r} has no confusion matrix."
             )
-        return evaluation_annotation_metric_resolver.get_confusion_matrix(
+        matrix = evaluation_annotation_metric_resolver.get_confusion_matrix(
             session=self.session,
             evaluation_run_id=run_id,
         )
+        return run, matrix
 
     def _dataset_id(self) -> UUID:
         """Resolve the dataset ID of the evaluated collection."""
