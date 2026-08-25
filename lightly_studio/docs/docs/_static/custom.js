@@ -84,9 +84,7 @@ function labelCodeBlocks() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-    addSearchShortcutHint();
-});
+document.addEventListener('DOMContentLoaded', addSearchShortcutHint);
 
 // `navigation.instant` swaps the article without a page load, so anything that
 // decorates article content — or that reads it, as the tab sync does — has to

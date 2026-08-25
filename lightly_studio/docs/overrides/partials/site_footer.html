@@ -28,7 +28,7 @@
                 {#- An `href` with a scheme is passed through; anything else is a
                     site-relative path that `url` rewrites for the current page. -#}
                 {% if "://" in link.href %}
-                  <a class="ls-footer__link" href="{{ link.href }}" rel="noopener">{{ link.label }}</a>
+                  <a class="ls-footer__link" href="{{ link.href }}">{{ link.label }}</a>
                 {% else %}
                   <a class="ls-footer__link" href="{{ link.href | url }}">{{ link.label }}</a>
                 {% endif %}

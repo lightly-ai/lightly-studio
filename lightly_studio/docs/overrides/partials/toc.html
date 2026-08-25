@@ -43,7 +43,7 @@
       {% endif %}
       {% for action in actions %}
         {% if "://" in action.href %}
-          <a class="ls-actions__link" href="{{ action.href }}" rel="noopener">{{ action.label }}</a>
+          <a class="ls-actions__link" href="{{ action.href }}">{{ action.label }}</a>
         {% else %}
           <a class="ls-actions__link" href="{{ action.href | url }}">{{ action.label }}</a>
         {% endif %}
