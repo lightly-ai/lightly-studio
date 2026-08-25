@@ -52,7 +52,9 @@ def test_normalize_path_root__unprefixed_path_is_resolved_relative_to_cwd(
     assert result == (tmp_path / "images/0001.jpg").as_posix()
 
 
-def test_normalize_path_root__absolute_path_is_left_unchanged() -> None:
-    result = path_utils.normalize_path_root("/images/0001.jpg")
+def test_normalize_path_root__absolute_path_is_left_unchanged(tmp_path: Path) -> None:
+    absolute_path = tmp_path / "images" / "0001.jpg"
 
-    assert result == "/images/0001.jpg"
+    result = path_utils.normalize_path_root(str(absolute_path))
+
+    assert result == absolute_path.as_posix()
