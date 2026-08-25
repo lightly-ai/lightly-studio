@@ -128,15 +128,12 @@ class ClassifierManager:
             session=session,
             collection_id=collection_id,
         )
-        embedding_model = (
-            embedding_model_resolver.get_by_id(
-                session=session, embedding_model_id=embedding_model_id
-            )
-            if embedding_model_id is not None
-            else None
-        )
-        if embedding_model is None:
+        if embedding_model_id is None:
             raise ValueError("No embedding model found for the given collection ID.")
+        embedding_model = embedding_model_resolver.get_by_id(
+            session=session, embedding_model_id=embedding_model_id
+        )
+        assert embedding_model is not None, "Default embedding space references a missing model."
         classifier = RandomForest(
             name=name,
             classes=class_list,
