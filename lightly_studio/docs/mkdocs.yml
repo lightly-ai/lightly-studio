@@ -36,6 +36,10 @@ theme:
   # alert icons. Aliases (`hint`, `caution`, `error`, ...) map onto these in
   # _static/custom.css.
   icon:
+    # The mark next to the star and fork counts in the header. Material defaults
+    # to `fontawesome/brands/git-alt`, a generic git mark; the repository is on
+    # GitHub and the rest of this theme's icons are Octicons.
+    repo: octicons/mark-github-16
     admonition:
       note: octicons/note-16
       abstract: octicons/checklist-16
