@@ -172,11 +172,12 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         logger.info(f"Found {len(image_paths)} images in {path}.")
 
         # Process images
-        created_sample_ids = add_images.load_into_dataset_from_paths(
+        path_to_sample_id = add_images.load_into_dataset_from_paths(
             session=self.session,
             root_collection_id=self.collection_id,
             image_paths=image_paths,
         )
+        created_sample_ids = list(path_to_sample_id.values())
 
         if created_sample_ids:
             add_images.tag_samples_by_directory(

@@ -31,15 +31,15 @@ class CreateImage(CreateSample):
             AllInputFilesFailedError: If the image is missing or broken.
             ValueError: If the image could not be added for any other reason.
         """
-        sample_ids = add_images.load_into_dataset_from_paths(
+        path_to_sample_id = add_images.load_into_dataset_from_paths(
             session=session,
             root_collection_id=collection_id,
             image_paths=[self.path],
             show_progress=False,
         )
-        if len(sample_ids) != 1:
+        if len(path_to_sample_id) != 1:
             raise ValueError("Failed to create image sample.")
-        return sample_ids[0]
+        return next(iter(path_to_sample_id.values()))
 
     def sample_type(self) -> SampleType:
         """Return the sample type."""
