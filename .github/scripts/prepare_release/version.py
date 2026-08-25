@@ -7,8 +7,8 @@ import re
 from prepare_release.errors import PrepareReleaseError
 
 _PROJECT_SECTION_RE = re.compile(r"^\[project\]\r?\n(?:(?!^\[).*(?:\r?\n|\Z))*", re.MULTILINE)
-_PYPROJECT_VERSION_RE = re.compile(r'^version = "(?P<version>[^"]+)"$', re.MULTILINE)
-_SEMVER_PART_RE = re.compile(r"^(?:0|[1-9]\d*)$")
+_PYPROJECT_VERSION_RE = re.compile(r'^version = "(?P<version>[^"]+)"(?=\r?$)', re.MULTILINE)
+_SEMVER_PART_RE = re.compile(r"(?:0|[1-9][0-9]*)")
 _SEMVER_PART_COUNT = 3
 
 
@@ -38,7 +38,7 @@ def bump_semver(version: str, bump: str) -> str:
         The bumped version, still in plain `X.Y.Z` form.
     """
     parts = version.split(".")
-    if len(parts) != _SEMVER_PART_COUNT or not all(_SEMVER_PART_RE.match(p) for p in parts):
+    if len(parts) != _SEMVER_PART_COUNT or not all(_SEMVER_PART_RE.fullmatch(p) for p in parts):
         raise PrepareReleaseError(
             f"current version {version!r} is not a plain X.Y.Z semver; "
             "pass --version explicitly instead of a --bump"
@@ -60,14 +60,16 @@ def check_labelformat_pin(pyproject_text: str) -> None:
     (see the Labelformat release runbook); a plain version requirement is
     fine.
     """
-    match = re.search(r'^\s*(?P<quote>["\'])labelformat[^"\']*\1', pyproject_text, re.MULTILINE)
-    if match and "git+" in match.group(0):
-        raise PrepareReleaseError(
-            "labelformat is pinned by git sha in pyproject.toml "
-            f"({match.group(0).strip()}). Release Labelformat first, see "
-            "https://www.notion.so/Release-Labelformat-or-Lightly-Insights-"
-            "039ffe75cd8b4dd89dcb45a7338533b2?source=copy_link"
-        )
+    for match in re.finditer(
+        r'^\s*(?P<quote>["\'])labelformat[^"\']*\1', pyproject_text, re.MULTILINE
+    ):
+        if "git+" in match.group(0):
+            raise PrepareReleaseError(
+                "labelformat is pinned by git sha in pyproject.toml "
+                f"({match.group(0).strip()}). Release Labelformat first, see "
+                "https://www.notion.so/Release-Labelformat-or-Lightly-Insights-"
+                "039ffe75cd8b4dd89dcb45a7338533b2?source=copy_link"
+            )
 
 
 def bump_pyproject_version(pyproject_text: str, new_version: str) -> str:
