@@ -72,6 +72,31 @@ class TestClassifierManager:
         )
         assert not classifier.is_active
 
+    def test_create_classifier__no_default_embedding_model(
+        self,
+        db_session: Session,
+        mocker: MockerFixture,
+    ) -> None:
+        """create_classifier raises when the collection has no default embedding model."""
+        classifier_manager = ClassifierManager()
+        mocker.patch.object(
+            default_embedding_space_resolver,
+            "get_by_collection_id",
+            return_value=None,
+        )
+        get_by_id = mocker.patch.object(embedding_model_resolver, "get_by_id")
+
+        with pytest.raises(
+            ValueError, match=r"No embedding model found for the given collection ID\."
+        ):
+            classifier_manager.create_classifier(
+                session=db_session,
+                name="test_classifier",
+                class_list=["class1", "class2"],
+                collection_id=uuid4(),
+            )
+        get_by_id.assert_not_called()
+
     def test_commit_temp_classifier(
         self,
         db_session: Session,
