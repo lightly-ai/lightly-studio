@@ -79,6 +79,16 @@ ImageSortExpr = Annotated[
 ]
 
 
+# Image and video field expressions both allow ``source="metadata"``, so a
+# discriminated union on ``source`` cannot build. Match left to right instead: a
+# metadata expression resolves to ``ImageSortFieldExpr``, which is harmless since
+# both translate through the same ``(source, field_name)`` key.
+AdjacentSortExpr = Annotated[
+    Union[ImageSortFieldExpr, VideoSortFieldExpr, EvaluationMetricSortExpr],
+    Field(union_mode="left_to_right"),
+]
+
+
 def sort_field_expr_to_order_by(expr: SortFieldExprBase) -> OrderByExpression:
     """Translate a single-field sort expression to an OrderByExpression.
 
@@ -96,6 +106,27 @@ def sort_field_expr_to_order_by(expr: SortFieldExprBase) -> OrderByExpression:
 
 def image_sort_expr_to_order_by(expr: ImageSortExpr) -> OrderByExpression:
     """Translate an ImageSortExpr (image, metadata, or evaluation metric) to an OrderByExpression.
+
+    Args:
+        expr: The sort expression from the API request.
+
+    Returns:
+        An OrderByExpression ready to be applied to a database query.
+    """
+    if isinstance(expr, EvaluationMetricSortExpr):
+        return evaluation_metric_sort_to_order_by(
+            evaluation_run_name=expr.evaluation_run_name,
+            metric_name=expr.metric_name,
+            direction=expr.direction,
+        )
+    return sort_field_expr_to_order_by(expr)
+
+
+def adjacent_sort_expr_to_order_by(expr: AdjacentSortExpr) -> OrderByExpression:
+    """Translate an adjacency sort expression to an OrderByExpression.
+
+    Handles image, video, metadata, and evaluation-metric expressions, so the
+    shared adjacent-samples request can carry the sort of either grid.
 
     Args:
         expr: The sort expression from the API request.

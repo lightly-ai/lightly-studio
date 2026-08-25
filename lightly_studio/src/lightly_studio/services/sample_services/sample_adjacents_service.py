@@ -14,7 +14,7 @@ from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_sort import AnnotationEvaluationMetricSortExpr
 from lightly_studio.models.collection import SampleType
-from lightly_studio.models.sort import ImageSortExpr
+from lightly_studio.models.sort import AdjacentSortExpr
 from lightly_studio.resolvers import (
     annotation_resolver,
     image_resolver,
@@ -43,7 +43,7 @@ class AdjacentRequest(BaseModel):
         | None
     ) = None
     text_embedding: list[float] | None = None
-    sort_by: list[ImageSortExpr] | None = None
+    sort_by: list[AdjacentSortExpr] | None = None
     annotation_sort_by: AnnotationEvaluationMetricSortExpr | None = None
 
 
@@ -101,7 +101,7 @@ def get_adjacent_samples(
                 f" for sample type '{request.sample_type.value}'."
             )
         order_by = (
-            [sort.image_sort_expr_to_order_by(expr) for expr in request.sort_by]
+            [sort.adjacent_sort_expr_to_order_by(expr) for expr in request.sort_by]
             if request.sort_by
             else None
         )
@@ -119,12 +119,18 @@ def get_adjacent_samples(
                 "Invalid filter provided. Expected VideoFilter"
                 f" for sample type '{request.sample_type.value}'."
             )
+        order_by = (
+            [sort.adjacent_sort_expr_to_order_by(expr) for expr in request.sort_by]
+            if request.sort_by
+            else None
+        )
         return video_resolver.get_adjacent_videos(
             session=session,
             sample_id=sample_id,
             collection_id=request.collection_id,
             filters=request.filters,
             text_embedding=request.text_embedding,
+            order_by=order_by,
         )
     if request.sample_type == SampleType.VIDEO_FRAME:
         if not isinstance(request.filters, VideoFrameAdjacentFilter):

@@ -11,6 +11,7 @@ from sqlmodel import Session
 from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.annotation_sort import AnnotationEvaluationMetricSortExpr
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.sort import AdjacentSortExpr, SortFieldSource, VideoSortFieldExpr
 from lightly_studio.models.sort_direction import SortDirection
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
@@ -110,6 +111,57 @@ def test_get_adjacent_samples__delegates_to_video_resolver(
         collection_id=collection_id,
         filters=filters,
         text_embedding=text_embedding,
+        order_by=None,
+    )
+
+
+def test_get_adjacent_samples__translates_video_sort_by_before_delegating(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    expected = _make_adjacent_result()
+    mock_get_adjacent_videos = mocker.patch(
+        "lightly_studio.resolvers.video_resolver.get_adjacent_videos",
+        return_value=expected,
+    )
+    fake_order_by = mocker.MagicMock()
+    mock_translate = mocker.patch(
+        "lightly_studio.models.sort.adjacent_sort_expr_to_order_by",
+        return_value=fake_order_by,
+    )
+
+    sample_id = uuid4()
+    collection_id = uuid4()
+    filters = VideoFilter()
+    sort_by: list[AdjacentSortExpr] = [
+        VideoSortFieldExpr(
+            source=SortFieldSource.video,
+            field_name="duration_s",
+            direction=SortDirection.desc,
+        )
+    ]
+    request = AdjacentRequest(
+        sample_type=SampleType.VIDEO,
+        collection_id=collection_id,
+        filters=filters,
+        sort_by=sort_by,
+    )
+
+    result = get_adjacent_samples(
+        session=db_session,
+        sample_id=sample_id,
+        request=request,
+    )
+
+    assert result == expected
+    mock_translate.assert_called_once_with(sort_by[0])
+    mock_get_adjacent_videos.assert_called_once_with(
+        session=db_session,
+        sample_id=sample_id,
+        collection_id=collection_id,
+        filters=filters,
+        text_embedding=None,
+        order_by=[fake_order_by],
     )
 
 
