@@ -5,14 +5,13 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
-from uuid import UUID
 
 import numpy as np
 from numpy.typing import NDArray
 from PIL import Image
 
 from lightly_studio.dataset.embedding_result import EmbeddingResult
-from lightly_studio.models.embedding_model import EmbeddingModelCreate
+from lightly_studio.models.embedding_model import EmbeddingSpaceDescription
 
 
 @dataclass(frozen=True)
@@ -59,8 +58,8 @@ class EmbeddingGenerator(Protocol):
     before you add a dataset or start the GUI.
     """
 
-    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
-        """Generate an EmbeddingModelCreate instance.
+    def get_embedding_model_input(self) -> EmbeddingSpaceDescription:
+        """Describe the embedding space produced by this generator.
 
         <span class="doc-badge doc-badge--beta">Beta</span>
 
@@ -68,11 +67,8 @@ class EmbeddingGenerator(Protocol):
         The `embedding_model_hash` field is used to match the same EmbeddingGenerator
         across multiple LightlyStudio runs.
 
-        Args:
-            collection_id: The ID of the collection.
-
         Returns:
-            An EmbeddingModelCreate instance with the model details.
+            A description of the embedding space.
         """
 
     def embed_text(self, text: str) -> list[float]:
@@ -197,20 +193,16 @@ class RandomEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator)
         """
         self._dimension = dimension
 
-    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
-        """Generate an EmbeddingModelCreate instance.
-
-        Args:
-            collection_id: The ID of the collection.
+    def get_embedding_model_input(self) -> EmbeddingSpaceDescription:
+        """Describe the embedding space produced by this generator.
 
         Returns:
-            An EmbeddingModelCreate instance with the model details.
+            A description of the embedding space.
         """
-        return EmbeddingModelCreate(
+        return EmbeddingSpaceDescription(
             name="Random",
             embedding_model_hash="random_model",
             embedding_dimension=self._dimension,
-            collection_id=collection_id,
         )
 
     def embed_text(self, _text: str) -> list[float]:

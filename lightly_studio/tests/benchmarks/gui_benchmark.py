@@ -395,10 +395,13 @@ def _resolve_embedding_model(session: Session, collection_id: UUID) -> tuple[UUI
         "model: the embeddings view will appear in this process's GUI but not on a separate or "
         "deployed server."
     )
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+    assert collection is not None
     synthetic_model = embedding_model_resolver.create(
         session=session,
         embedding_model=EmbeddingModelCreate(
             collection_id=collection_id,
+            dataset_id=collection.dataset_id,
             name=DEFAULT_EMBEDDING_MODEL_NAME,
             embedding_dimension=DEFAULT_EMBEDDING_DIM,
         ),
