@@ -1789,7 +1789,7 @@ html .md-typeset :is(.admonition, details) > :last-child {
   padding: 0.5rem !important;
 }
 
-.md-typeset .grid.cards.small > ul > li > strong {
+.md-typeset .grid.cards.small > :is(ol, ul) > li > strong {
   font-family: var(--ls-font-display);
   font-size: 0.72rem;
   letter-spacing: -0.01em;
