@@ -204,7 +204,7 @@
         >
             {orderValueLabel}
         </div>
-    {:else if hasSimilarityScore && video.similarity_score != null}
+    {:else if video.similarity_score != null}
         <div
             class="absolute bottom-1 right-1 z-10 box-border flex h-5 items-center rounded bg-black/60 px-1.5 text-xs font-medium text-white backdrop-blur-sm"
         >
