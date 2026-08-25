@@ -200,7 +200,9 @@
     />
     {#if shouldShowOrderValue}
         <div
-            class="absolute bottom-1 right-1 z-10 box-border flex h-5 items-center rounded bg-black/60 px-1.5 text-xs font-medium text-white backdrop-blur-sm"
+            class="absolute {caption
+                ? 'bottom-8'
+                : 'bottom-1'} right-1 z-10 box-border flex h-5 items-center rounded bg-black/60 px-1.5 text-xs font-medium text-white backdrop-blur-sm"
         >
             {orderValueLabel}
         </div>
