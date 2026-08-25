@@ -1742,18 +1742,10 @@ html .md-typeset :is(.admonition, details) > :last-child {
   transform: scaleX(1);
 }
 
-.md-typeset .tabbed-set:has(> input:nth-child(1):checked) > .tabbed-labels > label:nth-child(1),
-.md-typeset .tabbed-set:has(> input:nth-child(2):checked) > .tabbed-labels > label:nth-child(2),
-.md-typeset .tabbed-set:has(> input:nth-child(3):checked) > .tabbed-labels > label:nth-child(3),
-.md-typeset .tabbed-set:has(> input:nth-child(4):checked) > .tabbed-labels > label:nth-child(4),
-.md-typeset .tabbed-set:has(> input:nth-child(5):checked) > .tabbed-labels > label:nth-child(5),
-.md-typeset .tabbed-set:has(> input:nth-child(6):checked) > .tabbed-labels > label:nth-child(6),
-.md-typeset .tabbed-set:has(> input:nth-child(7):checked) > .tabbed-labels > label:nth-child(7),
-.md-typeset .tabbed-set:has(> input:nth-child(8):checked) > .tabbed-labels > label:nth-child(8),
-.md-typeset .tabbed-set:has(> input:nth-child(9):checked) > .tabbed-labels > label:nth-child(9),
-.md-typeset .tabbed-set:has(> input:nth-child(10):checked) > .tabbed-labels > label:nth-child(10) {
-  color: var(--ls-ink);
-}
+/* The checked label's own color is left to Material, whose rule for it is
+   `--md-default-fg-color` — mapped to `--ls-ink` in section 2 — at a
+   specificity the muted default above cannot reach. It also runs to twenty
+   tabs rather than the ten this file can practically list. */
 
 /* -- Cards and buttons ----------------------------------------------------- */
 
