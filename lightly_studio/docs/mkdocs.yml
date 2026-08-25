@@ -114,7 +114,7 @@ hooks:
 # annotate, evaluate, export. One caption per stage, so the section reads top to
 # bottom as the loop rather than as an alphabetical feature list. A page belongs
 # to the stage it serves, which is why the dataset pages sit under Data Ingest
-# rather than under Guides.
+# rather than under Get Started.
 #
 # Every other section keeps a single grouping level, and only where a run of
 # pages needs one — Core Concepts and Python API. The tree before last put a
@@ -124,7 +124,7 @@ hooks:
 #
 # No page moved on disk, so no URL changed and nothing needs a redirect.
 nav:
-  - Guides:
+  - Get Started:
     - Welcome: index.md
     - Run LightlyStudio from a Notebook: dataset_setup/notebooks.md
     - Reuse Datasets: dataset_setup/reuse_datasets.md
@@ -251,7 +251,7 @@ extra:
     - name: Docs
       default: true
       sections:
-        - Guides
+        - Get Started
         - Workflows
         - Ecosystem
         - Resources
@@ -285,7 +285,7 @@ extra:
             href: https://www.lightly.ai/contact
       - name: Docs
         links:
-          - label: Guides
+          - label: Get Started
             href: .
           - label: Workflows
             href: dataset_setup/image_dataset/
