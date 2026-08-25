@@ -92,6 +92,17 @@ def test_assert_changelog_structure__entry_left_in_fresh_unreleased_raises() -> 
         )
 
 
+def test_assert_changelog_structure__dropped_entry_raises() -> None:
+    promoted = changelog.promote_changelog(
+        changelog_text=SAMPLE_CHANGELOG, version="1.1.0", date="2026-08-21"
+    )
+    corrupted = promoted.replace("- Added thing one.\n\n", "", 1)
+    with pytest.raises(PrepareReleaseError, match="does not preserve"):
+        changelog.assert_changelog_structure(
+            original_text=SAMPLE_CHANGELOG, new_text=corrupted, version="1.1.0"
+        )
+
+
 def test_assert_changelog_structure__mutated_released_block_raises() -> None:
     promoted = changelog.promote_changelog(
         changelog_text=SAMPLE_CHANGELOG, version="1.1.0", date="2026-08-21"

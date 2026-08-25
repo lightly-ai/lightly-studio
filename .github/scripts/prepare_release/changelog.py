@@ -63,6 +63,7 @@ def assert_changelog_structure(original_text: str, new_text: str, version: str) 
     * the fresh `[Unreleased]` section has no entries,
     * exactly one new `## \\[version\\] - YYYY-MM-DD` heading, preceded by
       the `[Unreleased]` heading,
+    * the promoted release block preserves the original `[Unreleased]` entries,
     * every previously-released version block is byte-identical to before.
     """
     unreleased_matches = list(_UNRELEASED_RE.finditer(new_text))
@@ -91,6 +92,17 @@ def assert_changelog_structure(original_text: str, new_text: str, version: str) 
     if released_matches[0].start() < unreleased_matches[0].start():
         raise PrepareReleaseError(
             f"expected the [Unreleased] heading to precede the new '[{version}]' release heading"
+        )
+
+    original_sections = _parse_unreleased_sections(original_text)
+    expected_released_body = "".join(
+        f"### {name}\n\n{original_sections[name].strip()}\n\n"
+        for name in SUBSECTIONS
+        if original_sections[name].strip()
+    ).strip()
+    if extract_released_section(changelog_text=new_text, version=version) != expected_released_body:
+        raise PrepareReleaseError(
+            "promoted release content does not preserve the original [Unreleased] entries"
         )
 
     original_match = _single_unreleased_match(original_text)
