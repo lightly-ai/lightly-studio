@@ -226,7 +226,9 @@ def sampling_via_database(
 
     First resolves the sampling config to concrete database values.
     Then calls Mundig to run the sampling with pure values.
-    Finally creates a tag for the selected set.
+    Finally creates a tag for the selected set. Passing the preselected tag as
+    ``config.sampling_result_tag_name`` grows that tag in place instead, so the
+    selection accumulates over repeated runs.
 
     When ``config.selected_sequence_length`` is set, sampling runs over mean-pooled
     sequence proxies and the tag contains every frame of each selected sequence.
@@ -237,8 +239,9 @@ def sampling_via_database(
         input_sample_ids: Candidate sample IDs.
 
     Raises:
-        ValueError: If the preselected tag does not exist or its sample IDs are
-            not a subset of the input sample IDs.
+        ValueError: If the preselected tag does not exist, if its sample IDs are
+            not a subset of the input sample IDs, or if the result tag name is
+            taken by a tag other than the preselected one.
     """
     preselected_sample_ids = _get_preselected_sample_ids(
         session=session,
@@ -246,20 +249,7 @@ def sampling_via_database(
         preselected_tag_name=config.preselected_tag_name,
     )
 
-    # Check if the tag name is already used
-    existing_tag = tag_resolver.get_by_name(
-        session=session,
-        tag_name=config.sampling_result_tag_name,
-        collection_id=config.collection_id,
-    )
-    if existing_tag:
-        # TODO(Lukas, 08/2026): drop this requirement when `preselected_tag_name` is the same as
-        # `sampling_result_tag_name`.
-        msg = (
-            f"Tag with name {config.sampling_result_tag_name} already exists in the "
-            f"collection {config.collection_id}. Please use a different tag name."
-        )
-        raise ValueError(msg)
+    _check_result_tag_name_free(session=session, config=config)
 
     if config.selected_sequence_length is not None:
         sequence_sampling.sampling_via_database_sequences(
@@ -334,6 +324,32 @@ def _get_preselected_sample_ids(
         session=session,
         tag_id=preselected_tag.tag_id,
     )
+
+
+def _check_result_tag_name_free(session: Session, config: SamplingConfig) -> None:
+    """Reject a result tag name that is taken by a tag other than the preselected one.
+
+    Reusing the preselected tag name is allowed: the run extends the preselection it
+    started from. Any other existing tag would silently mix unrelated samples into the
+    sampling result.
+
+    Raises:
+        ValueError: If the result tag name is taken by another tag.
+    """
+    if config.sampling_result_tag_name == config.preselected_tag_name:
+        return
+
+    existing_tag = tag_resolver.get_by_name(
+        session=session,
+        tag_name=config.sampling_result_tag_name,
+        collection_id=config.collection_id,
+    )
+    if existing_tag is not None:
+        msg = (
+            f"Tag with name {config.sampling_result_tag_name} already exists in the "
+            f"collection {config.collection_id}. Please use a different tag name."
+        )
+        raise ValueError(msg)
 
 
 def _prepare_preselection(
