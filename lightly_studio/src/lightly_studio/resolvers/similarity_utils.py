@@ -6,11 +6,11 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import ColumnElement
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col
 
 from lightly_studio.database import db_vector
-from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
+from lightly_studio.resolvers import default_embedding_space_resolver
 from lightly_studio.type_definitions import QueryType
 
 
@@ -27,11 +27,9 @@ def get_distance_expression(
     if not text_embedding:
         return None, None
 
-    embedding_model_id = session.exec(
-        select(EmbeddingModelTable.embedding_model_id)
-        .where(EmbeddingModelTable.collection_id == collection_id)
-        .limit(1)
-    ).first()
+    embedding_model_id = default_embedding_space_resolver.get_by_collection_id(
+        session=session, collection_id=collection_id
+    )
 
     if not embedding_model_id:
         return None, None

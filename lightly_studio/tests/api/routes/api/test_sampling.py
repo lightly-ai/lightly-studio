@@ -237,6 +237,7 @@ def test_create_combination_sampling__metadata_weighting_success(
         session=db_session,
         collection_id=collection_id,
         embedding_model_name="test_embedding_model",
+        set_as_default=True,
     )
 
     samples_with_embeddings = [
@@ -308,6 +309,7 @@ def test_create_combination_sampling__metadata_weighting_success_videos(
         session=db_session,
         collection_id=collection_id,
         embedding_model_name="test_embedding_model",
+        set_as_default=True,
     )
 
     videos_with_embeddings = [
@@ -586,6 +588,7 @@ def test_create_combination_sampling__image_filter_success(
         session=db_session,
         collection_id=collection_id,
         embedding_model_name="test_embedding_model",
+        set_as_default=True,
     )
     helpers_resolvers.create_samples_with_embeddings(
         session=db_session,
@@ -637,6 +640,7 @@ def test_create_combination_sampling__video_filter_success(
         session=db_session,
         collection_id=collection_id,
         embedding_model_name="test_embedding_model",
+        set_as_default=True,
     )
     narrow_video = video_helpers.create_video(
         session=db_session,

@@ -145,7 +145,7 @@ def test_sampling_via_database__multi_embedding_diversity(
     collection_id = fill_db_with_samples_and_embeddings(
         db_session,
         n_samples=20,
-        embedding_model_names=["embedding_model_1", "embedding_model_2"],
+        embedding_model_names=["embedding_model_1"],
     )
 
     sampling_config = SamplingConfig(
@@ -154,7 +154,7 @@ def test_sampling_via_database__multi_embedding_diversity(
         sampling_result_tag_name="sampling_1",
         strategies=[
             EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1"),
-            EmbeddingDiversityStrategy(embedding_model_name="embedding_model_2"),
+            EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1"),
         ],
     )
     sampling_via_database(

@@ -84,7 +84,7 @@ class TestClassifierManager:
         )
         mocker.patch.object(
             embedding_model_resolver,
-            "get_by_model_hash",
+            "get_by_collection_id_and_hash",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
@@ -148,7 +148,7 @@ class TestClassifierManager:
         )
         mocker.patch.object(
             embedding_model_resolver,
-            "get_by_model_hash",
+            "get_by_collection_id_and_hash",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
@@ -290,7 +290,7 @@ class TestClassifierManager:
         )
         mocker.patch.object(
             embedding_model_resolver,
-            "get_by_model_hash",
+            "get_by_collection_id_and_hash",
             return_value=None,
         )
         with pytest.raises(
@@ -489,7 +489,7 @@ class TestClassifierManager:
 
         mocker.patch.object(
             embedding_model_resolver,
-            "get_by_model_hash",
+            "get_by_collection_id_and_hash",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
@@ -567,7 +567,7 @@ class TestClassifierManager:
 
         mocker.patch.object(
             embedding_model_resolver,
-            "get_by_model_hash",
+            "get_by_collection_id_and_hash",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
@@ -665,7 +665,7 @@ class TestClassifierManager:
         )
         mocker.patch.object(
             embedding_model_resolver,
-            "get_by_model_hash",
+            "get_by_collection_id_and_hash",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(

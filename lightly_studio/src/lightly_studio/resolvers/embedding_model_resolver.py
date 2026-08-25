@@ -10,6 +10,7 @@ from lightly_studio.models.embedding_model import (
     EmbeddingModelCreate,
     EmbeddingModelTable,
 )
+from lightly_studio.resolvers import default_embedding_space_resolver
 
 
 def create(session: Session, embedding_model: EmbeddingModelCreate) -> EmbeddingModelTable:
@@ -25,7 +26,7 @@ def get_or_create(session: Session, embedding_model: EmbeddingModelCreate) -> Em
     """Retrieve an existing EmbeddingModel by hash or create a new one if it does not exist."""
     db_model = get_by_model_hash(
         session=session,
-        collection_id=embedding_model.collection_id,
+        dataset_id=embedding_model.dataset_id,
         embedding_model_hash=embedding_model.embedding_model_hash,
     )
     if db_model is None:
@@ -44,13 +45,19 @@ def get_or_create(session: Session, embedding_model: EmbeddingModelCreate) -> Em
 
 
 def get_all_by_collection_id(session: Session, collection_id: UUID) -> list[EmbeddingModelTable]:
-    """Retrieve all embedding models."""
-    embedding_models = session.exec(
-        select(EmbeddingModelTable)
-        .where(EmbeddingModelTable.collection_id == collection_id)
-        .order_by(col(EmbeddingModelTable.created_at).asc())
-    ).all()
-    return list(embedding_models)
+    """Retrieve the collection's embedding model(s).
+
+    A collection is associated with a single model through ``default_embedding_space``, so
+    this returns that model as a one-element list, or an empty list if the collection has
+    no default.
+    """
+    embedding_model_id = default_embedding_space_resolver.get_by_collection_id(
+        session=session, collection_id=collection_id
+    )
+    if embedding_model_id is None:
+        return []
+    embedding_model = get_by_id(session=session, embedding_model_id=embedding_model_id)
+    return [embedding_model] if embedding_model is not None else []
 
 
 def get_by_id(session: Session, embedding_model_id: UUID) -> EmbeddingModelTable | None:
@@ -63,14 +70,38 @@ def get_by_id(session: Session, embedding_model_id: UUID) -> EmbeddingModelTable
 
 
 def get_by_model_hash(
+    session: Session, dataset_id: UUID, embedding_model_hash: str
+) -> EmbeddingModelTable | None:
+    """Retrieve a single embedding model by hash within a dataset.
+
+    The write path deduplicates per ``(dataset_id, embedding_model_hash)``, but no unique
+    constraint enforces it yet (it lands with the ``collection_id`` drop). The oldest match
+    is returned so legacy duplicates resolve deterministically to the canonical row.
+    """
+    query = (
+        select(EmbeddingModelTable)
+        .where(EmbeddingModelTable.embedding_model_hash == embedding_model_hash)
+        .where(EmbeddingModelTable.dataset_id == dataset_id)
+        .order_by(
+            col(EmbeddingModelTable.created_at).asc(),
+            col(EmbeddingModelTable.embedding_model_id).asc(),
+        )
+    )
+    return session.exec(query).first()
+
+
+def get_by_collection_id_and_hash(
     session: Session, collection_id: UUID, embedding_model_hash: str
 ) -> EmbeddingModelTable | None:
-    """Retrieve a single embedding model by hash and collection."""
-    query = select(EmbeddingModelTable).where(
-        EmbeddingModelTable.embedding_model_hash == embedding_model_hash
+    """Return the collection's embedding model if it carries the given hash.
+
+    A collection maps to a single model through ``default_embedding_space``; this returns it
+    only when its hash matches, and None otherwise.
+    """
+    models = get_all_by_collection_id(session=session, collection_id=collection_id)
+    return next(
+        (model for model in models if model.embedding_model_hash == embedding_model_hash), None
     )
-    query = query.where(EmbeddingModelTable.collection_id == collection_id)
-    return session.exec(query).one_or_none()
 
 
 def get_by_name(

@@ -165,7 +165,7 @@ class ClassifierManager:
         if classifier is None:
             raise ValueError(f"Classifier with ID {classifier_id} not found.")
 
-        embedding_model = embedding_model_resolver.get_by_model_hash(
+        embedding_model = embedding_model_resolver.get_by_collection_id_and_hash(
             session=session,
             embedding_model_hash=classifier.few_shot_classifier.embedding_model_hash,
             collection_id=classifier.collection_id,
@@ -255,7 +255,7 @@ class ClassifierManager:
         classifier = random_forest_classifier.load_random_forest_classifier(
             classifier_path=file_path, buffer=None
         )
-        embedding_model = embedding_model_resolver.get_by_model_hash(
+        embedding_model = embedding_model_resolver.get_by_collection_id_and_hash(
             session=session,
             embedding_model_hash=classifier.embedding_model_hash,
             collection_id=collection_id,
@@ -390,7 +390,7 @@ class ClassifierManager:
         annotations = classifier.annotations
         used_samples = {sample_id for samples in annotations.values() for sample_id in samples}
 
-        embedding_model = embedding_model_resolver.get_by_model_hash(
+        embedding_model = embedding_model_resolver.get_by_collection_id_and_hash(
             session=session,
             embedding_model_hash=classifier.few_shot_classifier.embedding_model_hash,
             collection_id=classifier.collection_id,
@@ -453,7 +453,7 @@ class ClassifierManager:
             raise ValueError(
                 f"Classifier with ID {classifier_id} is not active and cannot be used."
             )
-        embedding_model = embedding_model_resolver.get_by_model_hash(
+        embedding_model = embedding_model_resolver.get_by_collection_id_and_hash(
             session=session,
             embedding_model_hash=classifier.few_shot_classifier.embedding_model_hash,
             collection_id=classifier.collection_id,
@@ -589,7 +589,7 @@ class ClassifierManager:
         classifier = random_forest_classifier.load_random_forest_classifier(
             buffer=buffer, classifier_path=None
         )
-        embedding_model = embedding_model_resolver.get_by_model_hash(
+        embedding_model = embedding_model_resolver.get_by_collection_id_and_hash(
             session=session,
             embedding_model_hash=classifier.embedding_model_hash,
             collection_id=collection_id,
