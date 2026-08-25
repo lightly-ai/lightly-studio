@@ -108,7 +108,9 @@ def on_nav(
         if spec.get("default"):
             owned += [title for title in sections if title not in claimed]
 
-        url = _landing_url_of_first(items=[sections[title] for title in owned])
+        # The first section the tab claims that actually holds a page.
+        candidates = (_landing_url(sections[title]) for title in owned)
+        url = next((candidate for candidate in candidates if candidate is not None), None)
         if url is None:
             log.warning(f"Tab {name!r} has no page to link to and was dropped.")
             continue
@@ -156,23 +158,6 @@ def on_page_context(
     context["ls_active_tab"] = active
     context["ls_nav_sections"] = tab_sections[active] if active is not None else None
     return context
-
-
-def _landing_url_of_first(items: list[StructureItem]) -> str | None:
-    """Returns the URL of the first page found under any of `items`, in order.
-
-    Args:
-        items: Nav items to search, most preferred first.
-
-    Returns:
-        A URL relative to the site root, or None when none of the items holds a
-        page.
-    """
-    for item in items:
-        url = _landing_url(item)
-        if url is not None:
-            return url
-    return None
 
 
 def _landing_url(item: StructureItem) -> str | None:
