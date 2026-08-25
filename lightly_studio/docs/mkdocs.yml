@@ -106,33 +106,44 @@ hooks:
 # something up. Two of the five are their own header tab (see `extra.tabs`), so
 # the sidebar shows four at a time.
 #
-# One level of grouping inside a section, and only where a run of pages needs
-# it — Core Concepts and Python API. Every other page sits directly under its
-# section caption. The old tree put a second grouping level under every section
-# ("Data Types", "Setup Options", "Concepts", "Tools", "More"), which cost a
-# whole visual register to say things the section caption above it already said.
+# Workflows is the product pipeline, in the order a user runs it: ingest, curate,
+# annotate, evaluate, export. One caption per stage, so the section reads top to
+# bottom as the loop rather than as an alphabetical feature list. A page belongs
+# to the stage it serves, which is why the dataset pages sit under Data Ingest
+# rather than under Guides.
+#
+# Every other section keeps a single grouping level, and only where a run of
+# pages needs one — Core Concepts and Python API. The tree before last put a
+# grouping level under every section ("Data Types", "Setup Options", "Concepts",
+# "Tools", "More"), which cost a whole visual register to say things the section
+# caption above it already said.
 #
 # No page moved on disk, so no URL changed and nothing needs a redirect.
 nav:
   - Guides:
     - Welcome: index.md
-    - Image Dataset: dataset_setup/image_dataset.md
-    - Video Dataset: dataset_setup/video_dataset.md
     - Run LightlyStudio from a Notebook: dataset_setup/notebooks.md
     - Reuse Datasets: dataset_setup/reuse_datasets.md
     - Core Concepts:
-      - Annotations: concepts_and_tools/annotations.md
       - Tags: concepts_and_tools/tags.md
-      - Captions: concepts_and_tools/captions.md
       - Metadata: concepts_and_tools/metadata.md
       - Embeddings: concepts_and_tools/embeddings.md
   - Workflows:
-    - Search and Filter: concepts_and_tools/search_and_filter.md
-    - Lightly Query Language: concepts_and_tools/lightly_query_language.md
-    - Dataset Distributions: concepts_and_tools/dataset_distributions.md
-    - Sampling: concepts_and_tools/sampling.md
-    - Model Evaluation: concepts_and_tools/evaluation.md
-    - Export: concepts_and_tools/export.md
+    - Data Ingest:
+      - Image Dataset: dataset_setup/image_dataset.md
+      - Video Dataset: dataset_setup/video_dataset.md
+    - Curate:
+      - Search and Filter: concepts_and_tools/search_and_filter.md
+      - Lightly Query Language: concepts_and_tools/lightly_query_language.md
+      - Dataset Distributions: concepts_and_tools/dataset_distributions.md
+      - Sampling: concepts_and_tools/sampling.md
+    - Annotate:
+      - Annotations: concepts_and_tools/annotations.md
+      - Captions: concepts_and_tools/captions.md
+    - Evaluate:
+      - Model Evaluation: concepts_and_tools/evaluation.md
+    - Export and Train:
+      - Export: concepts_and_tools/export.md
   - Ecosystem:
     - Plugins: concepts_and_tools/plugins.md
     - Cloud Storage: dataset_setup/cloud_storage.md
@@ -273,7 +284,7 @@ extra:
           - label: Guides
             href: .
           - label: Workflows
-            href: concepts_and_tools/search_and_filter/
+            href: dataset_setup/image_dataset/
           - label: Tutorials
             href: tutorials/
           - label: Python API reference
