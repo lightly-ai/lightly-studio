@@ -12,19 +12,6 @@ _SEMVER_PART_RE = re.compile(r"^(?:0|[1-9]\d*)$")
 _SEMVER_PART_COUNT = 3
 
 
-def _project_section(pyproject_text: str) -> re.Match[str]:
-    """Locates the `[project]` table's text span, header included.
-
-    Scoping to this span (rather than searching the whole file) keeps a
-    `version = "..."` line in some other table, e.g. `[tool.foo]`, from
-    being mistaken for the release version.
-    """
-    match = _PROJECT_SECTION_RE.search(pyproject_text)
-    if match is None:
-        raise PrepareReleaseError("no `[project]` table found in pyproject.toml")
-    return match
-
-
 def current_pyproject_version(pyproject_text: str) -> str:
     """Reads the `[project] version` from a `pyproject.toml`'s text."""
     section = _project_section(pyproject_text).group(0)
@@ -98,3 +85,16 @@ def bump_pyproject_version(pyproject_text: str, new_version: str) -> str:
         + new_section
         + pyproject_text[section_match.end() :]
     )
+
+
+def _project_section(pyproject_text: str) -> re.Match[str]:
+    """Locates the `[project]` table's text span, header included.
+
+    Scoping to this span (rather than searching the whole file) keeps a
+    `version = "..."` line in some other table, e.g. `[tool.foo]`, from
+    being mistaken for the release version.
+    """
+    match = _PROJECT_SECTION_RE.search(pyproject_text)
+    if match is None:
+        raise PrepareReleaseError("no `[project]` table found in pyproject.toml")
+    return match

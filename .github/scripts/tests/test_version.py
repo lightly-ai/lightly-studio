@@ -24,6 +24,11 @@ def test_current_pyproject_version__missing_raises():
         version.current_pyproject_version('[project]\nname = "x"\n')
 
 
+def test_current_pyproject_version__ignores_version_in_preceding_tool_table():
+    text = '[tool.some-plugin]\nversion = "9.9.9"\n\n[project]\nname = "x"\nversion = "1.0.5"\n'
+    assert version.current_pyproject_version(text) == "1.0.5"
+
+
 @pytest.mark.parametrize(
     ("bump", "expected"),
     [("patch", "1.0.6"), ("minor", "1.1.0"), ("major", "2.0.0")],
@@ -35,6 +40,12 @@ def test_bump_semver(bump, expected):
 def test_bump_semver__non_semver_current_version_raises():
     with pytest.raises(PrepareReleaseError):
         version.bump_semver("1.0.0rc1", "patch")
+
+
+@pytest.mark.parametrize("version_string", ["1.02.3", "01.2.3", "1.2.03"])
+def test_bump_semver__leading_zero_component_raises(version_string):
+    with pytest.raises(PrepareReleaseError):
+        version.bump_semver(version_string, "patch")
 
 
 def test_check_labelformat_pin__version_requirement_is_fine():
@@ -67,20 +78,9 @@ def test_bump_pyproject_version():
     assert result.replace("1.0.6", "1.0.5") == SAMPLE_PYPROJECT
 
 
-def test_current_pyproject_version__ignores_version_in_preceding_tool_table():
-    text = '[tool.some-plugin]\nversion = "9.9.9"\n\n[project]\nname = "x"\nversion = "1.0.5"\n'
-    assert version.current_pyproject_version(text) == "1.0.5"
-
-
 def test_bump_pyproject_version__ignores_version_in_preceding_tool_table():
     text = '[tool.some-plugin]\nversion = "9.9.9"\n\n[project]\nname = "x"\nversion = "1.0.5"\n'
     result = version.bump_pyproject_version(text, "1.0.6")
     assert 'version = "9.9.9"' in result
     assert 'version = "1.0.6"' in result
     assert 'version = "1.0.5"' not in result
-
-
-@pytest.mark.parametrize("version_string", ["1.02.3", "01.2.3", "1.2.03"])
-def test_bump_semver__leading_zero_component_raises(version_string):
-    with pytest.raises(PrepareReleaseError):
-        version.bump_semver(version_string, "patch")
