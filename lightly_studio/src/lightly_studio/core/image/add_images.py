@@ -48,6 +48,8 @@ logger = logging.getLogger(__name__)
 
 # Constants
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
+# Cloud backends read ahead 5-50 MiB by default. Use 256 KiB chunks for image probes.
+_IMAGE_PROBE_BLOCK_SIZE = 256 * 1024
 
 
 class BrokenImageCollector:
@@ -524,7 +526,11 @@ def _probe_image(
     if not filesystem.exists(filesystem_path):
         return path, FileOutcome.MISSING
     try:
-        with filesystem.open(filesystem_path, "rb") as file, PIL.Image.open(file) as image:
+        with filesystem.open(
+            filesystem_path,
+            mode="rb",
+            block_size=_IMAGE_PROBE_BLOCK_SIZE,
+        ) as file, PIL.Image.open(file) as image:
             dimensions = image.size
     except BROKEN_IMAGE_ERRORS:
         return path, FileOutcome.BROKEN
