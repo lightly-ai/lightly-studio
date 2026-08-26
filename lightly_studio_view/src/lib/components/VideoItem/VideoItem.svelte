@@ -10,7 +10,7 @@
     } from '$lib/api/lightly_studio_local';
     import SampleClassificationPills from '$lib/components/SampleClassificationPills/SampleClassificationPills.svelte';
     import { routeHelpers } from '$lib/routes';
-    import { getSimilarityColor, isWholeVideoClassificationAnnotation } from '$lib/utils';
+    import { cn, getSimilarityColor, isWholeVideoClassificationAnnotation } from '$lib/utils';
     import VideoFrameAnnotationItem from '../VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
     import { goto } from '$app/navigation';
     import Video from '../Video/Video.svelte';
@@ -200,15 +200,19 @@
     />
     {#if shouldShowOrderValue}
         <div
-            class="absolute {caption
-                ? 'bottom-8'
-                : 'bottom-1'} right-1 z-10 box-border flex h-5 items-center rounded bg-black/60 px-1.5 text-xs font-medium text-white backdrop-blur-sm"
+            class={cn(
+                'absolute right-1 z-10 box-border flex h-5 items-center rounded bg-black/60 px-1.5 text-xs font-medium text-white backdrop-blur-sm',
+                caption ? 'bottom-8' : 'bottom-1'
+            )}
         >
             {orderValueLabel}
         </div>
     {:else if video.similarity_score != null}
         <div
-            class="absolute bottom-1 right-1 z-10 box-border flex h-5 items-center rounded bg-black/60 px-1.5 text-xs font-medium text-white backdrop-blur-sm"
+            class={cn(
+                'absolute right-1 z-10 box-border flex h-5 items-center rounded bg-black/60 px-1.5 text-xs font-medium text-white backdrop-blur-sm',
+                caption ? 'bottom-8' : 'bottom-1'
+            )}
         >
             <span
                 class="mr-1.5 block h-2 w-2 rounded-full"
