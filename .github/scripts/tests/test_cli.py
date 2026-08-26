@@ -69,32 +69,6 @@ def test_main__check_labelformat_pin__git_sha_fails(tmp_path: Path, capsys: pyte
     assert "git sha" in capsys.readouterr().err
 
 
-def test_main__compute_version__from_bump(tmp_path: Path, capsys: pytest.CaptureFixture):
-    pyproject = tmp_path / "pyproject.toml"
-    pyproject.write_text(SAMPLE_PYPROJECT)
-    cli.main(["compute-version", "--pyproject", str(pyproject), "--bump", "minor"])
-    assert capsys.readouterr().out.strip() == "1.1.0"
-
-
-def test_main__compute_version__explicit_version_overrides_bump(
-    tmp_path: Path, capsys: pytest.CaptureFixture
-):
-    pyproject = tmp_path / "pyproject.toml"
-    pyproject.write_text(SAMPLE_PYPROJECT)
-    cli.main(
-        [
-            "compute-version",
-            "--pyproject",
-            str(pyproject),
-            "--bump",
-            "minor",
-            "--version",
-            "1.0.0rc1",
-        ]
-    )
-    assert capsys.readouterr().out.strip() == "1.0.0rc1"
-
-
 def test_main__promote_changelog__writes_file(tmp_path: Path):
     changelog_file = tmp_path / "CHANGELOG.md"
     changelog_file.write_text(SAMPLE_CHANGELOG)
@@ -115,13 +89,6 @@ def test_main__promote_changelog__writes_file(tmp_path: Path):
     promoted = changelog_file.read_text()
     assert "## \\[1.1.0\\] - 2026-08-25" in promoted
     assert "Added thing one" in promoted
-
-
-def test_main__bump_pyproject__writes_file(tmp_path: Path):
-    pyproject = tmp_path / "pyproject.toml"
-    pyproject.write_text(SAMPLE_PYPROJECT)
-    assert cli.main(["bump-pyproject", "--pyproject", str(pyproject), "--version", "1.0.6"]) == 0
-    assert 'version = "1.0.6"' in pyproject.read_text()
 
 
 def test_main__assert_lock_diff__narrow_diff_passes(tmp_path: Path):

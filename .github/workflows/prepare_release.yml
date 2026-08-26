@@ -76,11 +76,14 @@ jobs:
 
       - name: Resolve inputs
         id: resolved
+        working-directory: lightly_studio
         run: |
-          version="$(python3 -m prepare_release compute-version \
-            --pyproject lightly_studio/pyproject.toml \
-            --bump "${{ inputs.bump }}" \
-            --version "${{ inputs.version }}")"
+          if [ -n "${{ inputs.version }}" ]; then
+            version="${{ inputs.version }}"
+          else
+            # --dry-run --frozen: compute the bumped version only, no write, no re-lock.
+            version="$(uv version --bump "${{ inputs.bump }}" --dry-run --frozen --short)"
+          fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "### Preparing release v$version" >> "$GITHUB_STEP_SUMMARY"
 
@@ -95,10 +98,10 @@ jobs:
             --date "$(date -u +%F)"
 
       - name: Bump pyproject.toml version
-        run: |
-          python3 -m prepare_release bump-pyproject \
-            --pyproject lightly_studio/pyproject.toml \
-            --version "${{ steps.resolved.outputs.version }}"
+        working-directory: lightly_studio
+        # --frozen: write the version only, no re-lock - the explicit uv sync
+        # below (and its narrow-diff check) is the one deliberate lock step.
+        run: uv version "${{ steps.resolved.outputs.version }}" --frozen
 
       - name: Snapshot uv.lock before sync
         run: cp lightly_studio/uv.lock /tmp/uv.lock.before
