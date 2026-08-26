@@ -35,6 +35,10 @@ def test_current_pyproject_version__ignores_version_in_preceding_tool_table():
         pytest.param(SAMPLE_PYPROJECT.replace("\n", "\r\n"), id="crlf"),
         pytest.param('[project]\nname = "x"\nversion="1.0.5"\n', id="no_spaces_around_equals"),
         pytest.param('[project]\nname = "x"\n    version = "1.0.5"\n', id="indented"),
+        pytest.param("[project]\nname = \"x\"\nversion = '1.0.5'\n", id="single_quoted"),
+        pytest.param(
+            '[project]\nname = "x"\nversion = "1.0.5"  # release\n', id="trailing_comment"
+        ),
     ],
 )
 def test_current_pyproject_version__tolerates_format_variations(text):
@@ -90,6 +94,12 @@ _GIT_PIN = "git+https://github.com/lightly-ai/labelformat.git@325a20b"
         # Not the array's first (or only) entry on its line - the check
         # must not stop at the first match, nor anchor to a line's start.
         pytest.param(f'"labelformat>=0.1.17", "labelformat @ {_GIT_PIN}"', id="after_plain_entry"),
+        # A `#` inside a *preceding* entry's URL fragment must not be mistaken
+        # for a comment and truncate the labelformat entry off the line.
+        pytest.param(
+            f'"other @ git+https://x/y.git#subdirectory=other", "labelformat @ {_GIT_PIN}"',
+            id="hash_in_preceding_url_fragment",
+        ),
     ],
 )
 def test_check_labelformat_pin__git_sha_raises(replacement):
@@ -125,4 +135,18 @@ def test_bump_pyproject_version__tolerates_no_spaces_around_equals():
     text = '[project]\nname = "x"\nversion="1.0.5"\n'
     result = version.bump_pyproject_version(text, "1.0.6")
     assert 'version = "1.0.6"' in result
+    assert "1.0.5" not in result
+
+
+def test_bump_pyproject_version__accepts_single_quoted_version():
+    text = "[project]\nname = \"x\"\nversion = '1.0.5'\n"
+    result = version.bump_pyproject_version(text, "1.0.6")
+    assert 'version = "1.0.6"' in result
+    assert "1.0.5" not in result
+
+
+def test_bump_pyproject_version__preserves_trailing_comment():
+    text = '[project]\nname = "x"\nversion = "1.0.5"  # release\n'
+    result = version.bump_pyproject_version(text, "1.0.6")
+    assert 'version = "1.0.6"  # release\n' in result
     assert "1.0.5" not in result

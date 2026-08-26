@@ -8,7 +8,9 @@ from prepare_release.errors import PrepareReleaseError
 
 _PROJECT_SECTION_RE = re.compile(r"^\[project\]\r?\n(?:(?!^\[).*(?:\r?\n|\Z))*", re.MULTILINE)
 _PYPROJECT_VERSION_RE = re.compile(
-    r'^[ \t]*version[ \t]*=[ \t]*"(?P<version>[^"]+)"(?=\r?$)', re.MULTILINE
+    r"^[ \t]*version[ \t]*=[ \t]*(?P<quote>[\"'])(?P<version>[^\"']+)(?P=quote)"
+    r"(?=[ \t]*(?:#.*)?\r?$)",
+    re.MULTILINE,
 )
 _SEMVER_PART_RE = re.compile(r"(?:0|[1-9][0-9]*)")
 _SEMVER_PART_COUNT = 3
@@ -60,12 +62,12 @@ def check_labelformat_pin(pyproject_text: str) -> None:
 
     A `git+` requirement means Labelformat itself needs a release first
     (see the Labelformat release runbook); a plain version requirement is
-    fine. Matched per line with `#`-comments stripped first (so a
+    fine. Matched per line with a trailing `#`-comment stripped first (so a
     commented-out example doesn't false-positive), not anchored to the
     line's start (so a non-first entry in an inline array still is caught).
     """
     for line in pyproject_text.splitlines():
-        active = line.split("#", 1)[0]
+        active = _strip_comment(line)
         for match in re.finditer(r'(?P<quote>["\'])labelformat[^"\']*\1', active, re.IGNORECASE):
             if "git+" in match.group(0):
                 raise PrepareReleaseError(
@@ -104,3 +106,20 @@ def _project_section(pyproject_text: str) -> re.Match[str]:
     if match is None:
         raise PrepareReleaseError("no `[project]` table found in pyproject.toml")
     return match
+
+
+def _strip_comment(line: str) -> str:
+    """Removes a trailing `#` comment, ignoring a `#` inside a quoted string.
+
+    E.g. a `#egg=...` URL fragment inside a `"... @ git+https://...#egg=..."`
+    dependency string is not mistaken for a comment.
+    """
+    quote = None
+    for i, char in enumerate(line):
+        if quote:
+            quote = None if char == quote else quote
+        elif char in "\"'":
+            quote = char
+        elif char == "#":
+            return line[:i]
+    return line
