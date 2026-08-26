@@ -7,11 +7,8 @@ from typing import Annotated, Literal, Union
 
 from pydantic import BaseModel, Field
 
+from lightly_studio.core.dataset_query import query_translation
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
-from lightly_studio.core.dataset_query.query_translation import (
-    evaluation_metric_sort_to_order_by,
-    sort_to_order_by,
-)
 from lightly_studio.models.sort_direction import SortDirection
 
 
@@ -98,7 +95,7 @@ def sort_field_expr_to_order_by(expr: SortFieldExprBase) -> OrderByExpression:
     Returns:
         An OrderByExpression ready to be applied to a database query.
     """
-    return sort_to_order_by(
+    return query_translation.sort_to_order_by(
         key=(expr.source, expr.field_name),
         direction=expr.direction,
     )
@@ -113,13 +110,8 @@ def image_sort_expr_to_order_by(expr: ImageSortExpr) -> OrderByExpression:
     Returns:
         An OrderByExpression ready to be applied to a database query.
     """
-    if isinstance(expr, EvaluationMetricSortExpr):
-        return evaluation_metric_sort_to_order_by(
-            evaluation_run_name=expr.evaluation_run_name,
-            metric_name=expr.metric_name,
-            direction=expr.direction,
-        )
-    return sort_field_expr_to_order_by(expr)
+    # ImageSortExpr is a subset of AdjacentSortExpr, so the shared translator handles it.
+    return adjacent_sort_expr_to_order_by(expr)
 
 
 def adjacent_sort_expr_to_order_by(expr: AdjacentSortExpr) -> OrderByExpression:
@@ -135,7 +127,7 @@ def adjacent_sort_expr_to_order_by(expr: AdjacentSortExpr) -> OrderByExpression:
         An OrderByExpression ready to be applied to a database query.
     """
     if isinstance(expr, EvaluationMetricSortExpr):
-        return evaluation_metric_sort_to_order_by(
+        return query_translation.evaluation_metric_sort_to_order_by(
             evaluation_run_name=expr.evaluation_run_name,
             metric_name=expr.metric_name,
             direction=expr.direction,

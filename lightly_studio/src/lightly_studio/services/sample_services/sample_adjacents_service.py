@@ -144,7 +144,7 @@ def get_adjacent_samples(
                 "Invalid filter provided. Expected ImageFilter"
                 f" for sample type '{request.sample_type.value}'."
             )
-        order_by = _build_sort_order_by(request.sort_by, SampleType.IMAGE)
+        order_by = _build_sort_order_by(sort_by=request.sort_by, sample_type=SampleType.IMAGE)
         return image_resolver.get_adjacent_images(
             session=session,
             sample_id=sample_id,
@@ -159,7 +159,7 @@ def get_adjacent_samples(
                 "Invalid filter provided. Expected VideoFilter"
                 f" for sample type '{request.sample_type.value}'."
             )
-        order_by = _build_sort_order_by(request.sort_by, SampleType.VIDEO)
+        order_by = _build_sort_order_by(sort_by=request.sort_by, sample_type=SampleType.VIDEO)
         return video_resolver.get_adjacent_videos(
             session=session,
             sample_id=sample_id,

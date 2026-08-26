@@ -37,6 +37,10 @@ def get_adjacent_videos(  # noqa: PLR0913
             ordering and ``order_by`` is ignored.
         order_by: Requested grid sort so prev/next follows it; empty for the
             default ``file_path_abs`` order.
+
+    Returns:
+        The adjacency result with the previous/next sample IDs and the anchor's
+        position, or ``None`` when the anchor is not in the (filtered) collection.
     """
     base_query = _base_query(order_by=order_by)
     base_query = base_query.where(col(SampleTable.collection_id) == collection_id)
@@ -66,6 +70,9 @@ def get_adjacent_videos(  # noqa: PLR0913
     )
 
 
+# TODO(Horatiu, 06/2026): This window/tiebreaker builder duplicates
+# get_adjacent_images_window; fold both into the shared adjacency-ordering unification
+# tracked there rather than maintaining two copies.
 def _base_query(
     ordering_expression: Any | None = None,
     order_by: list[OrderByExpression] | None = None,
@@ -127,14 +134,10 @@ def _window_order_columns(
     else:
         tiebreaker = []
 
+    # Similarity and grid sort never arrive together: the similarity call passes only
+    # ``ordering_expression``, the grid call passes only ``order_by``.
     if ordering_expression is not None:
-        return (
-            ordering_expression
-            + [e for expr in order_by for e in expr.to_column_elements()]
-            + tiebreaker
-            if order_by
-            else [*ordering_expression, *tiebreaker]
-        )
+        return [*ordering_expression, *tiebreaker]
     if order_by:
         return [e for expr in order_by for e in expr.to_column_elements()] + tiebreaker
     return col(VideoTable.file_path_abs).asc()
