@@ -47,6 +47,17 @@ def upgrade() -> None:
         "collection_embedding_model",
         sa.Column("is_default", sa.Boolean(), nullable=False),
     )
+    # A collection may now use several embedding models, so the primary key becomes the
+    # (collection_id, embedding_model_id) pair. Renaming the table left the old key
+    # constraint under its original name, so drop it before adding the composite one.
+    op.drop_constraint(
+        "default_embedding_space_pkey", "collection_embedding_model", type_="primary"
+    )
+    op.create_primary_key(
+        "collection_embedding_model_pkey",
+        "collection_embedding_model",
+        ["collection_id", "embedding_model_id"],
+    )
     _backfill_defaults()
     # At most one default embedding model per collection. Postgres-only: DuckDB cannot
     # create partial indexes, so on DuckDB the invariant is not enforced at the database
@@ -63,6 +74,12 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     op.drop_index("uq_collection_embedding_model_default", table_name="collection_embedding_model")
+    op.drop_constraint(
+        "collection_embedding_model_pkey", "collection_embedding_model", type_="primary"
+    )
+    op.create_primary_key(
+        "default_embedding_space_pkey", "collection_embedding_model", ["collection_id"]
+    )
     op.drop_column("collection_embedding_model", "is_default")
     op.rename_table("collection_embedding_model", "default_embedding_space")
 
