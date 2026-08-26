@@ -60,10 +60,9 @@ def check_labelformat_pin(pyproject_text: str) -> None:
 
     A `git+` requirement means Labelformat itself needs a release first
     (see the Labelformat release runbook); a plain version requirement is
-    fine. Checked per line, comments stripped but not anchored to the
-    line's start, so an entry that isn't the first item in an inline array
-    (e.g. `dependencies = ["a", "labelformat @ git+..."]`) is still caught,
-    while a commented-out example (`# - "labelformat @ git+..."`) is not.
+    fine. Matched per line with `#`-comments stripped first (so a
+    commented-out example doesn't false-positive), not anchored to the
+    line's start (so a non-first entry in an inline array still is caught).
     """
     for line in pyproject_text.splitlines():
         active = line.split("#", 1)[0]

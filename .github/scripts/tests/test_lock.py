@@ -98,8 +98,7 @@ def test_assert_lock_diff_narrow__unchanged_duplicate_blocks_are_ok():
 
 
 def test_assert_lock_diff_narrow__change_to_first_of_duplicate_blocks_raises():
-    # Regression test: a change to the *first* of two same-named blocks must
-    # not be masked by the second, unchanged, occurrence.
+    # A change to the first duplicate block must not be masked by the second.
     after = SAMPLE_LOCK_WITH_DUPLICATE.replace(
         'name = "alpha"\nversion = "1.0.0"\nsource = { registry = "https://pypi.org/simple" }\n'
         "resolution-markers = [\n    \"python_full_version < '3.11'\",\n]",

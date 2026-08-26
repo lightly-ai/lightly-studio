@@ -29,20 +29,15 @@ def test_current_pyproject_version__ignores_version_in_preceding_tool_table():
     assert version.current_pyproject_version(text) == "1.0.5"
 
 
-def test_current_pyproject_version__handles_crlf_line_endings():
-    text = SAMPLE_PYPROJECT.replace("\n", "\r\n")
-    assert version.current_pyproject_version(text) == "1.0.5"
-
-
 @pytest.mark.parametrize(
     "text",
     [
-        '[project]\nname = "x"\nversion="1.0.5"\n',
-        '[project]\nname = "x"\n    version = "1.0.5"\n',
+        pytest.param(SAMPLE_PYPROJECT.replace("\n", "\r\n"), id="crlf"),
+        pytest.param('[project]\nname = "x"\nversion="1.0.5"\n', id="no_spaces_around_equals"),
+        pytest.param('[project]\nname = "x"\n    version = "1.0.5"\n', id="indented"),
     ],
-    ids=["no_spaces_around_equals", "indented"],
 )
-def test_current_pyproject_version__tolerates_non_canonical_spacing(text):
+def test_current_pyproject_version__tolerates_format_variations(text):
     assert version.current_pyproject_version(text) == "1.0.5"
 
 
@@ -54,56 +49,24 @@ def test_bump_semver(bump, expected):
     assert version.bump_semver("1.0.5", bump) == expected
 
 
-def test_bump_semver__non_semver_current_version_raises():
-    with pytest.raises(PrepareReleaseError):
-        version.bump_semver("1.0.0rc1", "patch")
-
-
-@pytest.mark.parametrize("version_string", ["1.02.3", "01.2.3", "1.2.03"])
-def test_bump_semver__leading_zero_component_raises(version_string):
+@pytest.mark.parametrize(
+    "version_string",
+    [
+        pytest.param("1.0.0rc1", id="not_plain_semver"),
+        pytest.param("1.02.3", id="leading_zero"),
+        pytest.param("01.2.3", id="leading_zero_major"),
+        pytest.param("1.2.03", id="leading_zero_patch"),
+        pytest.param("1.2.3\n", id="trailing_newline"),
+        pytest.param("1.٢.3", id="non_ascii_digit"),  # "٢" is the Arabic-Indic digit two
+    ],
+)
+def test_bump_semver__invalid_version_raises(version_string):
     with pytest.raises(PrepareReleaseError):
         version.bump_semver(version_string, "patch")
 
 
-def test_bump_semver__trailing_newline_component_raises():
-    with pytest.raises(PrepareReleaseError):
-        version.bump_semver("1.2.3\n", "patch")
-
-
-def test_bump_semver__non_ascii_digit_component_raises():
-    with pytest.raises(PrepareReleaseError):
-        version.bump_semver("1.٢.3", "patch")  # "٢" is the Arabic-Indic digit two
-
-
 def test_check_labelformat_pin__version_requirement_is_fine():
     version.check_labelformat_pin(SAMPLE_PYPROJECT)
-
-
-def test_check_labelformat_pin__git_sha_raises():
-    text = SAMPLE_PYPROJECT.replace(
-        '"labelformat>=0.1.17"',
-        '"labelformat @ git+https://github.com/lightly-ai/labelformat.git@325a20b"',
-    )
-    with pytest.raises(PrepareReleaseError, match="git sha"):
-        version.check_labelformat_pin(text)
-
-
-def test_check_labelformat_pin__single_quoted_git_sha_raises():
-    text = SAMPLE_PYPROJECT.replace(
-        '"labelformat>=0.1.17"',
-        "'labelformat @ git+https://github.com/lightly-ai/labelformat.git@325a20b'",
-    )
-    with pytest.raises(PrepareReleaseError, match="git sha"):
-        version.check_labelformat_pin(text)
-
-
-def test_check_labelformat_pin__mixed_case_git_sha_raises():
-    text = SAMPLE_PYPROJECT.replace(
-        '"labelformat>=0.1.17"',
-        '"LabelFormat @ git+https://github.com/lightly-ai/labelformat.git@325a20b"',
-    )
-    with pytest.raises(PrepareReleaseError, match="git sha"):
-        version.check_labelformat_pin(text)
 
 
 def test_check_labelformat_pin__commented_out_example_is_ignored():
@@ -115,25 +78,22 @@ def test_check_labelformat_pin__commented_out_example_is_ignored():
     version.check_labelformat_pin(text)
 
 
-def test_check_labelformat_pin__git_sha_inside_inline_array_raises():
-    # A git-pinned entry that isn't the array's first element must still be
-    # caught - the check isn't anchored to the start of a line.
-    text = (
-        '[project]\nname = "x"\nversion = "1.0.5"\n\n'
-        'dependencies = ["torch>=2.0", '
-        '"labelformat @ git+https://github.com/lightly-ai/labelformat.git@325a20b"]\n'
-    )
-    with pytest.raises(PrepareReleaseError, match="git sha"):
-        version.check_labelformat_pin(text)
+_GIT_PIN = "git+https://github.com/lightly-ai/labelformat.git@325a20b"
 
 
-def test_check_labelformat_pin__git_sha_after_plain_entry_raises():
-    # A plain entry earlier in the file must not shadow a git-pinned one later.
-    text = SAMPLE_PYPROJECT.replace(
-        '"labelformat>=0.1.17"',
-        '"labelformat>=0.1.17",\n'
-        '    "labelformat @ git+https://github.com/lightly-ai/labelformat.git@325a20b"',
-    )
+@pytest.mark.parametrize(
+    "replacement",
+    [
+        pytest.param(f'"labelformat @ {_GIT_PIN}"', id="double_quoted"),
+        pytest.param(f"'labelformat @ {_GIT_PIN}'", id="single_quoted"),
+        pytest.param(f'"LabelFormat @ {_GIT_PIN}"', id="mixed_case"),
+        # Not the array's first (or only) entry on its line - the check
+        # must not stop at the first match, nor anchor to a line's start.
+        pytest.param(f'"labelformat>=0.1.17", "labelformat @ {_GIT_PIN}"', id="after_plain_entry"),
+    ],
+)
+def test_check_labelformat_pin__git_sha_raises(replacement):
+    text = SAMPLE_PYPROJECT.replace('"labelformat>=0.1.17"', replacement)
     with pytest.raises(PrepareReleaseError, match="git sha"):
         version.check_labelformat_pin(text)
 
