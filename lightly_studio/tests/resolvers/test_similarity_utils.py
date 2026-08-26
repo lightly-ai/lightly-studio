@@ -57,6 +57,25 @@ class TestGetDistanceExpression:
         assert embedding_model_id is None
         assert distance_expr is None
 
+    def test_embedding_model_without_default__returns_none(self, db_session: Session) -> None:
+        """When a model exists but no default is set, returns (None, None)."""
+        collection = create_collection(session=db_session)
+        create_embedding_model(
+            session=db_session,
+            collection_id=collection.collection_id,
+            embedding_model_name="test_model",
+            embedding_dimension=3,
+        )
+
+        embedding_model_id, distance_expr = get_distance_expression(
+            session=db_session,
+            collection_id=collection.collection_id,
+            text_embedding=[1.0, 0.0, 0.0],
+        )
+
+        assert embedding_model_id is None
+        assert distance_expr is None
+
     def test_with_embedding_model__returns_expression(self, db_session: Session) -> None:
         """When embedding model exists, returns the model ID and distance expression."""
         collection = create_collection(session=db_session)
@@ -75,4 +94,32 @@ class TestGetDistanceExpression:
         )
 
         assert embedding_model_id == embedding_model.embedding_model_id
+        assert distance_expr is not None
+
+    def test_multiple_models__returns_default(self, db_session: Session) -> None:
+        """With several models, returns the one marked as the collection's default."""
+        collection = create_collection(session=db_session)
+        create_embedding_model(
+            session=db_session,
+            collection_id=collection.collection_id,
+            embedding_model_name="other_model",
+            embedding_model_hash="other_hash",
+            embedding_dimension=3,
+        )
+        default_model = create_embedding_model(
+            session=db_session,
+            collection_id=collection.collection_id,
+            embedding_model_name="default_model",
+            embedding_model_hash="default_hash",
+            embedding_dimension=3,
+            set_as_default=True,
+        )
+
+        embedding_model_id, distance_expr = get_distance_expression(
+            session=db_session,
+            collection_id=collection.collection_id,
+            text_embedding=[1.0, 0.0, 0.0],
+        )
+
+        assert embedding_model_id == default_model.embedding_model_id
         assert distance_expr is not None
