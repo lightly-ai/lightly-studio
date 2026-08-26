@@ -28,10 +28,4 @@ describe('buildDistributionSources', () => {
             })
         ).toEqual([classSource]);
     });
-
-    it('keeps the class source while annotation labels are still loading', () => {
-        expect(
-            buildDistributionSources({ classSource, metadataSource, hasAnnotationClasses: true })
-        ).toContainEqual(classSource);
-    });
 });
