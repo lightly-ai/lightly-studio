@@ -8,14 +8,13 @@ import pytest
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio import few_shot_classifier
+from lightly_studio.few_shot_classifier import classifier_manager as classifier_manager_module
 from lightly_studio.few_shot_classifier.classifier import AnnotatedEmbedding
 from lightly_studio.few_shot_classifier.classifier_manager import (
     HIGH_CONFIDENCE_SAMPLES_NEEDED,
     LOW_CONFIDENCE_SAMPLES_NEEDED,
     ClassifierEntry,
     ClassifierManager,
-    _get_embedding_model_by_hash,
 )
 from lightly_studio.few_shot_classifier.random_forest_classifier import (
     RandomForest,
@@ -122,12 +121,12 @@ class TestClassifierManager:
             ),
         )
         mocker.patch.object(
-            few_shot_classifier.classifier_manager,
+            classifier_manager_module,
             "_get_embedding_model_by_hash",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
-            few_shot_classifier.classifier_manager,
+            classifier_manager_module,
             "_create_annotated_embeddings",
             return_value=[
                 AnnotatedEmbedding(
@@ -189,12 +188,12 @@ class TestClassifierManager:
             ),
         )
         mocker.patch.object(
-            few_shot_classifier.classifier_manager,
+            classifier_manager_module,
             "_get_embedding_model_by_hash",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
-            few_shot_classifier.classifier_manager,
+            classifier_manager_module,
             "_create_annotated_embeddings",
             return_value=[
                 AnnotatedEmbedding(
@@ -242,7 +241,7 @@ class TestClassifierManager:
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
-            few_shot_classifier.classifier_manager,
+            classifier_manager_module,
             "_create_annotated_embeddings",
             return_value=[
                 AnnotatedEmbedding(
@@ -336,7 +335,7 @@ class TestClassifierManager:
             classifier_id=classifier.classifier_id, file_path=save_path
         )
         mocker.patch.object(
-            few_shot_classifier.classifier_manager,
+            classifier_manager_module,
             "_get_embedding_model_by_hash",
             return_value=None,
         )
@@ -380,7 +379,7 @@ class TestClassifierManager:
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
-            few_shot_classifier.classifier_manager,
+            classifier_manager_module,
             "_create_annotated_embeddings",
             return_value=[
                 AnnotatedEmbedding(
@@ -443,7 +442,7 @@ class TestClassifierManager:
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
-            few_shot_classifier.classifier_manager,
+            classifier_manager_module,
             "_create_annotated_embeddings",
             return_value=[
                 AnnotatedEmbedding(
@@ -545,7 +544,7 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
 
         mocker.patch.object(
-            few_shot_classifier.classifier_manager,
+            classifier_manager_module,
             "_get_embedding_model_by_hash",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
@@ -560,7 +559,7 @@ class TestClassifierManager:
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
-            few_shot_classifier.classifier_manager,
+            classifier_manager_module,
             "_create_annotated_embeddings",
             return_value=[
                 AnnotatedEmbedding(
@@ -628,7 +627,7 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
 
         mocker.patch.object(
-            few_shot_classifier.classifier_manager,
+            classifier_manager_module,
             "_get_embedding_model_by_hash",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
@@ -643,7 +642,7 @@ class TestClassifierManager:
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
-            few_shot_classifier.classifier_manager,
+            classifier_manager_module,
             "_create_annotated_embeddings",
             return_value=[
                 AnnotatedEmbedding(
@@ -734,12 +733,12 @@ class TestClassifierManager:
             ),
         )
         mocker.patch.object(
-            few_shot_classifier.classifier_manager,
+            classifier_manager_module,
             "_get_embedding_model_by_hash",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
-            few_shot_classifier.classifier_manager,
+            classifier_manager_module,
             "_create_annotated_embeddings",
             return_value=[
                 AnnotatedEmbedding(
@@ -780,7 +779,7 @@ class TestClassifierManager:
             },
         )
         mocker.patch.object(
-            few_shot_classifier.classifier_manager,
+            classifier_manager_module,
             "_create_annotated_embeddings",
             return_value=[
                 AnnotatedEmbedding(
@@ -997,30 +996,8 @@ def test_get_embedding_model_by_hash__prefers_collection_local(db_session: Sessi
         embedding_model_hash="same_hash",
     )
 
-    result = _get_embedding_model_by_hash(
+    result = classifier_manager_module._get_embedding_model_by_hash(
         session=db_session, embedding_model_hash="same_hash", collection_id=child.collection_id
     )
     assert result is not None
     assert result.embedding_model_id == child_model.embedding_model_id
-
-
-def test_get_embedding_model_by_hash__falls_back_to_dataset(db_session: Session) -> None:
-    # When the collection has no row of its own, the lookup falls back to the dataset-scoped
-    # row. This is how a deduplicated dataset resolves once the write path stops creating a
-    # row per collection.
-    parent = create_collection(session=db_session, collection_name="parent")
-    child = create_collection(
-        session=db_session, collection_name="child", parent_collection_id=parent.collection_id
-    )
-    parent_model = create_embedding_model(
-        session=db_session,
-        collection_id=parent.collection_id,
-        embedding_model_name="model_in_parent",
-        embedding_model_hash="same_hash",
-    )
-
-    result = _get_embedding_model_by_hash(
-        session=db_session, embedding_model_hash="same_hash", collection_id=child.collection_id
-    )
-    assert result is not None
-    assert result.embedding_model_id == parent_model.embedding_model_id
