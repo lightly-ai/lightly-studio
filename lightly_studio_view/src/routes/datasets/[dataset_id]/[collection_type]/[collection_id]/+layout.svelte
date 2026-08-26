@@ -63,6 +63,8 @@
     import type { AnnotationsFilter, ImageFilter } from '$lib/api/lightly_studio_local/types.gen';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import type { DistributionSource } from '$lib/components/DatasetDistributionPanel';
+    import type { CategoryCount } from '$lib/components/BarChart';
+    import { buildDistributionSources } from './distributionSources';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
     import {
         buildVideoAnnotationCountsFilter,
@@ -329,6 +331,7 @@
     const {
         annotationFilter: annotationFilterStore,
         annotationFilterRows,
+        selectedAnnotationFilterNames,
         toggleAnnotationFilterSelection,
         setAnnotationCounts,
         pruneInvalidSelections
@@ -502,11 +505,30 @@
         ($allSourcesHidden ? [] : (countsData ?? []))
             .map((item) => {
                 const row = item as { [key: string]: unknown };
-                return { label: String(row['label_name']), count: Number(row['current_count']) };
+                const label = String(row['label_name']);
+                return {
+                    label,
+                    count: Number(row['current_count']),
+                    // Mirrors the sidebar's LabelsMenu selection so a class stays
+                    // highlighted in the plot after it's clicked into the filter.
+                    selected: $selectedAnnotationFilterNames.includes(label)
+                };
             })
             .filter((item) => item.count > 0);
 
     const classDistributionCounts = $derived(toCategoryCounts(annotationCounts.data));
+
+    // False only once annotation labels have loaded and come back empty — not
+    // while loading, and not just because current filters hide every class.
+    const hasAnnotationClasses = $derived(
+        annotationLabelsData === undefined || annotationLabelsData.length > 0
+    );
+
+    // Clicking a class bar toggles the same annotation-label filter as the
+    // sidebar's LabelsMenu, so the plot and sidebar stay in sync.
+    const handleClassBarClick = (item: CategoryCount) => {
+        toggleAnnotationFilterSelection(item.label, collectionId);
+    };
 
     const distributionPanelVisible = $derived($activePanel === 'distribution' && isImages);
 
@@ -806,9 +828,11 @@
     };
 
     const distributionSources = $derived<DistributionSource[]>(
-        metadataDistributionSource
-            ? [classDistributionSource, metadataDistributionSource]
-            : [classDistributionSource]
+        buildDistributionSources({
+            classSource: classDistributionSource,
+            metadataSource: metadataDistributionSource,
+            hasAnnotationClasses
+        })
     );
 
     function handleCombinedMetadataFilterChanged(fieldName: string, min: number, max: number) {
@@ -1010,6 +1034,7 @@
                                             sources={distributionSources}
                                             initialCountMode={distributionCountMode}
                                             onClose={() => setActivePanel('none')}
+                                            onBarClick={handleClassBarClick}
                                             onCountModeChange={(mode) => {
                                                 distributionCountMode = mode;
                                             }}
