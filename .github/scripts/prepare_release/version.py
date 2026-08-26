@@ -7,7 +7,9 @@ import re
 from prepare_release.errors import PrepareReleaseError
 
 _PROJECT_SECTION_RE = re.compile(r"^\[project\]\r?\n(?:(?!^\[).*(?:\r?\n|\Z))*", re.MULTILINE)
-_PYPROJECT_VERSION_RE = re.compile(r'^version = "(?P<version>[^"]+)"(?=\r?$)', re.MULTILINE)
+_PYPROJECT_VERSION_RE = re.compile(
+    r'^[ \t]*version[ \t]*=[ \t]*"(?P<version>[^"]+)"(?=\r?$)', re.MULTILINE
+)
 _SEMVER_PART_RE = re.compile(r"(?:0|[1-9][0-9]*)")
 _SEMVER_PART_COUNT = 3
 
@@ -58,18 +60,21 @@ def check_labelformat_pin(pyproject_text: str) -> None:
 
     A `git+` requirement means Labelformat itself needs a release first
     (see the Labelformat release runbook); a plain version requirement is
-    fine.
+    fine. Checked per line, comments stripped but not anchored to the
+    line's start, so an entry that isn't the first item in an inline array
+    (e.g. `dependencies = ["a", "labelformat @ git+..."]`) is still caught,
+    while a commented-out example (`# - "labelformat @ git+..."`) is not.
     """
-    for match in re.finditer(
-        r'^\s*(?P<quote>["\'])labelformat[^"\']*\1', pyproject_text, re.MULTILINE | re.IGNORECASE
-    ):
-        if "git+" in match.group(0):
-            raise PrepareReleaseError(
-                "labelformat is pinned by git sha in pyproject.toml "
-                f"({match.group(0).strip()}). Release Labelformat first, see "
-                "https://www.notion.so/Release-Labelformat-or-Lightly-Insights-"
-                "039ffe75cd8b4dd89dcb45a7338533b2?source=copy_link"
-            )
+    for line in pyproject_text.splitlines():
+        active = line.split("#", 1)[0]
+        for match in re.finditer(r'(?P<quote>["\'])labelformat[^"\']*\1', active, re.IGNORECASE):
+            if "git+" in match.group(0):
+                raise PrepareReleaseError(
+                    "labelformat is pinned by git sha in pyproject.toml "
+                    f"({match.group(0).strip()}). Release Labelformat first, see "
+                    "https://www.notion.so/Release-Labelformat-or-Lightly-Insights-"
+                    "039ffe75cd8b4dd89dcb45a7338533b2?source=copy_link"
+                )
 
 
 def bump_pyproject_version(pyproject_text: str, new_version: str) -> str:

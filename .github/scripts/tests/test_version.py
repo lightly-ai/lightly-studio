@@ -35,6 +35,18 @@ def test_current_pyproject_version__handles_crlf_line_endings():
 
 
 @pytest.mark.parametrize(
+    "text",
+    [
+        '[project]\nname = "x"\nversion="1.0.5"\n',
+        '[project]\nname = "x"\n    version = "1.0.5"\n',
+    ],
+    ids=["no_spaces_around_equals", "indented"],
+)
+def test_current_pyproject_version__tolerates_non_canonical_spacing(text):
+    assert version.current_pyproject_version(text) == "1.0.5"
+
+
+@pytest.mark.parametrize(
     ("bump", "expected"),
     [("patch", "1.0.6"), ("minor", "1.1.0"), ("major", "2.0.0")],
 )
@@ -94,6 +106,27 @@ def test_check_labelformat_pin__mixed_case_git_sha_raises():
         version.check_labelformat_pin(text)
 
 
+def test_check_labelformat_pin__commented_out_example_is_ignored():
+    text = SAMPLE_PYPROJECT.replace(
+        '"labelformat>=0.1.17"',
+        '# - "labelformat @ git+https://github.com/lightly-ai/labelformat.git@325a20b"\n'
+        '    "labelformat>=0.1.17"',
+    )
+    version.check_labelformat_pin(text)
+
+
+def test_check_labelformat_pin__git_sha_inside_inline_array_raises():
+    # A git-pinned entry that isn't the array's first element must still be
+    # caught - the check isn't anchored to the start of a line.
+    text = (
+        '[project]\nname = "x"\nversion = "1.0.5"\n\n'
+        'dependencies = ["torch>=2.0", '
+        '"labelformat @ git+https://github.com/lightly-ai/labelformat.git@325a20b"]\n'
+    )
+    with pytest.raises(PrepareReleaseError, match="git sha"):
+        version.check_labelformat_pin(text)
+
+
 def test_check_labelformat_pin__git_sha_after_plain_entry_raises():
     # A plain entry earlier in the file must not shadow a git-pinned one later.
     text = SAMPLE_PYPROJECT.replace(
@@ -126,3 +159,10 @@ def test_bump_pyproject_version__preserves_crlf_line_endings():
     result = version.bump_pyproject_version(text, "1.0.6")
     assert 'version = "1.0.6"\r\n' in result
     assert result.replace("1.0.6", "1.0.5") == text
+
+
+def test_bump_pyproject_version__tolerates_no_spaces_around_equals():
+    text = '[project]\nname = "x"\nversion="1.0.5"\n'
+    result = version.bump_pyproject_version(text, "1.0.6")
+    assert 'version = "1.0.6"' in result
+    assert "1.0.5" not in result
