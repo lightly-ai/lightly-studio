@@ -177,6 +177,13 @@ def test_video_sort_field_expr__rejects_evaluation_metric_source() -> None:
         )
 
 
+def test_image_and_video_sort_field_exprs_stay_structurally_identical() -> None:
+    # AdjacentSortExpr resolves a ``metadata`` source to ImageSortFieldExpr via left-to-right
+    # (LIG-10605). That is only safe while the two models carry the same fields; if one gains a
+    # field the other lacks, metadata sorts silently drop it.
+    assert ImageSortFieldExpr.model_fields.keys() == VideoSortFieldExpr.model_fields.keys()
+
+
 def test_sort_field_expr_to_order_by__image_metadata_ascending() -> None:
     expr = ImageSortFieldExpr(
         source=SortFieldSource.metadata,

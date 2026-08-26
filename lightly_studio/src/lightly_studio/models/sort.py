@@ -80,6 +80,10 @@ ImageSortExpr = Annotated[
 # discriminated union on ``source`` cannot build. Match left to right instead: a
 # metadata expression resolves to ``ImageSortFieldExpr``, which is harmless since
 # both translate through the same ``(source, field_name)`` key.
+# TODO(gabriel, 08/2026): Replace this left-to-right union with a source-discriminated one;
+# tracked in LIG-10605. Safe only while ImageSortFieldExpr and VideoSortFieldExpr stay
+# structurally identical, guarded by
+# tests/models/test_sort.py::test_image_and_video_sort_field_exprs_stay_structurally_identical.
 AdjacentSortExpr = Annotated[
     Union[ImageSortFieldExpr, VideoSortFieldExpr, EvaluationMetricSortExpr],
     Field(union_mode="left_to_right"),
