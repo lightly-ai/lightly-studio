@@ -8,7 +8,6 @@ crop-specific path lives in ``image_crop_embedding.py`` and reuses the same
 
 from __future__ import annotations
 
-import os
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from typing import TypeVar
@@ -26,7 +25,7 @@ from lightly_studio.core.file_outcome_report import (
     FileOutcomeReport,
 )
 from lightly_studio.dataset.embedding_result import EmbeddingResult
-from lightly_studio.utils import batching, parallelize
+from lightly_studio.utils import batching, executor, parallelize
 
 _ItemT = TypeVar("_ItemT")
 
@@ -164,7 +163,7 @@ def _embed_items_batched(
     preprocessed_tensors = parallelize.thread_imap_lazy(
         function=preprocess_item,
         iterable=items,
-        max_workers=_preprocess_workers(),
+        max_workers=executor.get_media_worker_count(),
         # Read at most one extra batch ahead so a full next batch is ready during inference
         # while memory stays bounded to a small multiple of the batch size.
         buffer_size=2 * context.max_batch_size,
@@ -234,13 +233,3 @@ def _encode_preprocessed_batches(
 
     # Truncate to the number of tensors actually encoded (``max_items`` was an upper bound).
     return embeddings[:position]
-
-
-def _preprocess_workers() -> int:
-    """Return the thread count for parallel per-item preprocessing.
-
-    Uses available cores - 1 (at least 1), capped at 16, matching the decode-thread and
-    shared-executor conventions elsewhere in the codebase.
-    """
-    cpu_count = os.cpu_count() or 1
-    return max(1, min(cpu_count - 1 or 1, 16))

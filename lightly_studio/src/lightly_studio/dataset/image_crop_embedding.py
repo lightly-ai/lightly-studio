@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from functools import partial
 from typing import Any
 
 import fsspec
@@ -19,6 +21,23 @@ from lightly_studio.core.file_outcome_report import (
 from lightly_studio.dataset.embedding_generator import ImageCrop
 from lightly_studio.dataset.embedding_result import EmbeddingResult
 from lightly_studio.dataset.image_embedding import EmbeddingContext
+from lightly_studio.utils import executor, parallelize
+
+
+@dataclass(frozen=True)
+class _SourceImageCrops:
+    """Crops from one source image, with their positions in the input list."""
+
+    filepath: str
+    indexed_crops: list[tuple[int, ImageCrop]]
+
+
+@dataclass(frozen=True)
+class _PreprocessedSourceImageCrops:
+    """Preprocessed crops from one source image, or ``None`` if it was broken."""
+
+    filepath: str
+    indexed_crops: list[tuple[int, torch.Tensor]] | None
 
 
 def embed_image_crops_batched(
@@ -75,24 +94,23 @@ def embed_image_crops_batched(
         ) as progress_bar,
         torch.no_grad(),
     ):
-        for filepath, indexed_crops in crops_by_filepath.items():
-            try:
-                with fsspec.open(filepath, "rb") as file:
-                    image = Image.open(file).convert("RGB")
-            except BROKEN_IMAGE_ERRORS:
-                report.record(path=filepath, outcome=FileOutcome.BROKEN)
+        source_image_crop_groups = (
+            _SourceImageCrops(filepath=filepath, indexed_crops=indexed_crops)
+            for filepath, indexed_crops in crops_by_filepath.items()
+        )
+        workers = executor.get_media_worker_count()
+        preprocessed_crops = parallelize.thread_imap_lazy(
+            function=partial(_load_and_preprocess_crops, context=context),
+            iterable=source_image_crop_groups,
+            max_workers=workers,
+            buffer_size=workers,
+        )
+        for preprocessed_image_crops in preprocessed_crops:
+            if preprocessed_image_crops.indexed_crops is None:
+                report.record(path=preprocessed_image_crops.filepath, outcome=FileOutcome.BROKEN)
                 continue
-            report.record(path=filepath, outcome=FileOutcome.ADDED)
-            for index, image_crop in indexed_crops:
-                cropped = image.crop(
-                    (
-                        image_crop.x,
-                        image_crop.y,
-                        image_crop.x + image_crop.width,
-                        image_crop.y + image_crop.height,
-                    )
-                )
-                preprocessed = context.preprocess(cropped)
+            report.record(path=preprocessed_image_crops.filepath, outcome=FileOutcome.ADDED)
+            for index, preprocessed in preprocessed_image_crops.indexed_crops:
                 if batch_buffer is None:
                     batch_buffer = torch.empty(
                         (context.max_batch_size, *preprocessed.shape),
@@ -124,6 +142,42 @@ def embed_image_crops_batched(
     # kept_indices in input order maps each returned row back to its input crop.
     kept_indices.sort()
     return EmbeddingResult(embeddings=embeddings[kept_indices], kept_indices=kept_indices)
+
+
+def _load_and_preprocess_crops(
+    source_image_crops: _SourceImageCrops,
+    context: EmbeddingContext,
+) -> _PreprocessedSourceImageCrops:
+    """Load one source image and preprocess all of its crops in a worker thread.
+
+    Opening and decoding happen once per source image. The worker then crops and
+    preprocesses every associated annotation, allowing this work to overlap with
+    inference on the caller thread. Broken source images are returned without crops
+    so the caller can record the failure and continue processing other images.
+    """
+    filepath = source_image_crops.filepath
+    try:
+        with fsspec.open(filepath, "rb") as file:
+            image = Image.open(file).convert("RGB")
+    except BROKEN_IMAGE_ERRORS:
+        return _PreprocessedSourceImageCrops(filepath=filepath, indexed_crops=None)
+    indexed_crops = [
+        (
+            index,
+            context.preprocess(
+                image.crop(
+                    (
+                        image_crop.x,
+                        image_crop.y,
+                        image_crop.x + image_crop.width,
+                        image_crop.y + image_crop.height,
+                    )
+                )
+            ),
+        )
+        for index, image_crop in source_image_crops.indexed_crops
+    ]
+    return _PreprocessedSourceImageCrops(filepath=filepath, indexed_crops=indexed_crops)
 
 
 def _flush_crop_batch(
