@@ -24,6 +24,7 @@ from lightly_studio.sampling.sampling_config import (
     EmbeddingDeduplicationStrategy,
     EmbeddingDiversityStrategy,
     EmbeddingSimilarityStrategy,
+    MetadataBalancingStrategy,
     SamplingConfig,
     SamplingStrategy,
 )
@@ -36,9 +37,11 @@ from tests.helpers_resolvers import (
     AnnotationDetails,
     create_annotation_label,
     create_annotations,
+    create_image,
     create_tag,
     fill_db_with_samples_and_embeddings,
 )
+from tests.sampling import helpers_sampling
 
 
 def test_sampling_via_database__embedding_diversity(
@@ -1234,6 +1237,97 @@ def test_check_result_tag_name_free__existing_tag_is_not_the_preselected_one(
                 strategies=[],
             ),
         )
+
+
+def test_sampling_via_database__metadata_balancing(db_session: Session) -> None:
+    """Balances a categorical metadata key towards a uniform distribution.
+
+    The distributions themselves are covered by `tests/sampling/test_metadata_balancing.py`.
+    """
+    collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
+        session=db_session,
+        metadata=["sunny", "sunny", "rainy"],
+        metadata_key="weather",
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+    config = SamplingConfig(
+        n_samples_to_select=2,
+        collection_id=collection_id,
+        sampling_result_tag_name="sampling-tag",
+        strategies=[
+            MetadataBalancingStrategy(metadata_key="weather", target_distribution="uniform")
+        ],
+    )
+
+    sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
+
+    tags = tag_resolver.get_all_by_collection_id(session=db_session, collection_id=collection_id)
+    selected = _sample_ids_by_tag(db_session, collection_id, tags[0].tag_id)
+    # One sunny and one rainy sample give the uniform distribution, so the only rainy
+    # sample must be selected.
+    assert len(selected) == 2
+    rainy_sample_id = sample_ids[2]
+    assert rainy_sample_id in selected
+
+
+def test_sampling_via_database__metadata_balancing_missing_values_not_dropped(
+    db_session: Session,
+) -> None:
+    """Keeps samples without a value for the balanced key selectable."""
+    collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
+        session=db_session,
+        metadata=["sunny", "rainy"],
+        metadata_key="weather",
+    )
+    # A third sample that has no "weather" value at all.
+    create_image(session=db_session, collection_id=collection_id, file_path_abs="no_weather.jpg")
+    sample_ids = _all_sample_ids(db_session, collection_id)
+    config = SamplingConfig(
+        n_samples_to_select=3,
+        collection_id=collection_id,
+        sampling_result_tag_name="sampling-tag",
+        strategies=[
+            MetadataBalancingStrategy(metadata_key="weather", target_distribution="uniform")
+        ],
+    )
+
+    sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
+
+    tags = tag_resolver.get_all_by_collection_id(session=db_session, collection_id=collection_id)
+    assert len(_sample_ids_by_tag(db_session, collection_id, tags[0].tag_id)) == 3
+
+
+def test_sampling_via_database__metadata_balancing_two_keys(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    """Balances two metadata keys by combining one strategy per key."""
+    collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
+        session=db_session,
+        metadata=["sunny", "sunny", "rainy"],
+        metadata_key="weather",
+    )
+    helpers_sampling.fill_db_metadata(
+        session=db_session,
+        collection_id=collection_id,
+        metadata=["day", "night", "night"],
+        metadata_key="time_of_day",
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+    config = SamplingConfig(
+        n_samples_to_select=2,
+        collection_id=collection_id,
+        sampling_result_tag_name="sampling-tag",
+        strategies=[
+            MetadataBalancingStrategy(metadata_key="weather", target_distribution="uniform"),
+            MetadataBalancingStrategy(metadata_key="time_of_day", target_distribution="uniform"),
+        ],
+    )
+
+    spy_add_class_balancing = mocker.spy(Mundig, "add_class_balancing")
+    sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
+
+    # Each key is balanced on its own, so each adds its own balancing strategy.
+    assert spy_add_class_balancing.call_count == 2
 
 
 def test_aggregate_class_distributions() -> None:
