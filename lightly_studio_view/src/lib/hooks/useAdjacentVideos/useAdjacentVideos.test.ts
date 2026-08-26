@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { writable } from 'svelte/store';
 import { SampleType } from '$lib/api/lightly_studio_local';
-import type { VideoFilter, VideoSortFieldExpr } from '$lib/api/lightly_studio_local/types.gen';
+import type { VideoFilter, VideoSortFieldExpr } from '$lib/api/lightly_studio_local';
 import type { TextEmbedding } from '../useGlobalStorage';
 
 const useAdjacentSamplesMock = vi.fn();

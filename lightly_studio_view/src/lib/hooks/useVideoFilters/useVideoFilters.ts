@@ -7,7 +7,7 @@ import type {
     VideoFilter,
     VideoFieldsBoundsView,
     VideoSortFieldExpr
-} from '$lib/api/lightly_studio_local/types.gen';
+} from '$lib/api/lightly_studio_local';
 import type { CategoricalMetadataValues } from '$lib/services/types';
 type MetadataValues = Record<string, { min: number; max: number }>;
 

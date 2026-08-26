@@ -9,7 +9,7 @@ import type {
     VideoFilter,
     VideoFrameAdjacentFilter,
     VideoSortFieldExpr
-} from '$lib/api/lightly_studio_local/types.gen';
+} from '$lib/api/lightly_studio_local';
 import type { ImageSortExpr } from '../useImagesInfinite/types';
 
 export type AdjacentSamplesRequestBody =
