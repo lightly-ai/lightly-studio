@@ -311,7 +311,7 @@ def create_embedding_model(  # noqa: PLR0913
 
     With ``set_as_default`` the model is recorded as the collection's default embedding
     model, so ``collection_embedding_model_resolver.get_by_collection_id`` resolves to it. It
-    is off by default to avoid the ``default_embedding_space`` foreign key blocking model
+    is off by default to avoid the ``collection_embedding_model`` foreign key blocking model
     or collection deletes in tests that do not need a default.
     """
     collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
