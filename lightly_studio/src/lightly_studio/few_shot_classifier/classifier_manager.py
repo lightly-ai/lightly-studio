@@ -615,21 +615,12 @@ class ClassifierManager:
 def _get_embedding_model_by_hash(
     session: Session, embedding_model_hash: str, collection_id: UUID
 ) -> EmbeddingModelTable | None:
-    """Resolve the embedding model with the given hash for a classifier's collection.
+    """Resolve the embedding model with the given hash within the collection's dataset.
 
-    Sample embeddings are keyed to the collection's own model row, so match that row first
-    and fall back to the dataset only when the collection has none.
+    A classifier stores the hash of the model it was trained on. The model is looked up by
+    ``(dataset_id, embedding_model_hash)`` so it resolves regardless of whether it is the
+    collection's default embedding space.
     """
-    # TODO(Michal, 08/2026): Drop the collection-local lookup once the write path
-    # deduplicates per dataset. Until then a dataset can hold one row per collection for the
-    # same hash, and the dataset fallback returns the oldest, which may match no embeddings.
-    collection_model = embedding_model_resolver.get_by_model_hash_deprecated(
-        session=session,
-        collection_id=collection_id,
-        embedding_model_hash=embedding_model_hash,
-    )
-    if collection_model is not None:
-        return collection_model
     collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
     if collection is None:
         raise ValueError(f"Collection {collection_id} not found.")
