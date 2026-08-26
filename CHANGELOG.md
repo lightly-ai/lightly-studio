@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `preselected_tag_name` parameter.
 - Python SDK: Select video-frame sequences with `selected_sequence_length` on `Sampling.diverse()`. It defaults to `None`, which selects individual frames. `n_samples_to_select` still counts frames and must be a multiple of the sequence length.
 - Compare the annotation class distribution of any sample tag against the current view in the Distribution panel.
-- Introduce support for azure storage
+- Azure Blob Storage is supported in the LightlyStudio Enterprise version.
 
 
 ### Changed
